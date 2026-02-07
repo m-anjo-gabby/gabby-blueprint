@@ -64,3 +64,99 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+---------------------------------------------
+-- DDL: com_m_client (顧客マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_client (
+  client_id BIGSERIAL PRIMARY KEY NOT NULL,
+  client_name TEXT NOT NULL,
+  industry_type SMALLINT NOT NULL DEFAULT 1, -- 業界種別（Pharma, Semi, etc.）
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_client IS '顧客情報マスタ';
+COMMENT ON COLUMN public.com_m_client.client_id IS '顧客ID';
+COMMENT ON COLUMN public.com_m_client.client_name IS '顧客名称（企業名・団体名）';
+COMMENT ON COLUMN public.com_m_client.industry_type IS '業界区分';
+COMMENT ON COLUMN public.com_m_client.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_client.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_client.update_date IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_m_corpus (コーパス管理マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_corpus (
+  corpus_id BIGSERIAL PRIMARY KEY NOT NULL,
+  corpus_name TEXT NOT NULL,
+  client_id BIGINT REFERENCES public.com_m_client(client_id),
+  seq_no SMALLINT NOT NULL DEFAULT 1,
+  description TEXT,
+  corpus_label TEXT NOT NULL,
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_corpus IS 'コーパス管理マスタ';
+COMMENT ON COLUMN public.com_m_corpus.corpus_id IS 'コーパスID';
+COMMENT ON COLUMN public.com_m_corpus.corpus_name IS 'コーパス名称';
+COMMENT ON COLUMN public.com_m_corpus.client_id IS '関連顧客ID';
+COMMENT ON COLUMN public.com_m_corpus.seq_no IS 'SEQNO';
+COMMENT ON COLUMN public.com_m_corpus.description IS 'コーパス説明・解析根拠';
+COMMENT ON COLUMN public.com_m_corpus.corpus_label IS 'コーパスラベル';
+COMMENT ON COLUMN public.com_m_corpus.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_corpus.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_corpus.update_date IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_m_word (コーパス単語マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_word (
+  word_id BIGSERIAL PRIMARY KEY NOT NULL,
+  corpus_id BIGINT REFERENCES public.com_m_corpus(corpus_id) ON DELETE CASCADE,
+  word_en TEXT NOT NULL,
+  word_ja TEXT NOT NULL,
+  frequency_rank INT,
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_word IS 'コーパス単語マスタ';
+COMMENT ON COLUMN public.com_m_word.word_id IS '単語ID';
+COMMENT ON COLUMN public.com_m_word.corpus_id IS 'コーパスID';
+COMMENT ON COLUMN public.com_m_word.word_en IS '単語（英語表記）';
+COMMENT ON COLUMN public.com_m_word.word_ja IS '単語（日本語表記）';
+COMMENT ON COLUMN public.com_m_word.frequency_rank IS '解析時の出現頻度順位';
+COMMENT ON COLUMN public.com_m_word.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_word.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_word.update_date IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_m_phrase (出題例文マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_phrase (
+  phrase_id BIGSERIAL PRIMARY KEY NOT NULL,
+  word_id BIGINT REFERENCES public.com_m_word(word_id) ON DELETE CASCADE,
+  seq_no SMALLINT NOT NULL DEFAULT 1,
+  phrase_type SMALLINT NOT NULL,
+  phrase_en TEXT NOT NULL,
+  phrase_ja TEXT NOT NULL,
+  section_id TEXT, 
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_phrase IS '出題例文マスタ';
+COMMENT ON COLUMN public.com_m_phrase.phrase_id IS 'フレーズID';
+COMMENT ON COLUMN public.com_m_phrase.word_id IS '単語ID';
+COMMENT ON COLUMN public.com_m_phrase.seq_no IS 'SEQNO';
+COMMENT ON COLUMN public.com_m_phrase.phrase_type IS 'フレーズ種別（1: S+V 2: Adding 3: Strategic Solution 4: PAST 5: PRESENT PERFECT）';
+COMMENT ON COLUMN public.com_m_phrase.phrase_en IS 'フレーズ（英語表記）';
+COMMENT ON COLUMN public.com_m_phrase.phrase_ja IS 'フレーズ（日本語表記）';
+COMMENT ON COLUMN public.com_m_phrase.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_phrase.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_phrase.update_date IS '更新日時';
