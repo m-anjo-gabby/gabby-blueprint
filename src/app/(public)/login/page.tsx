@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 px-4">
-      <div className="w-full max-w-[400px] space-y-8">
+      <div className="w-full max-w-100` space-y-8">
         
 
 
@@ -35,7 +35,7 @@ export default function LoginPage() {
                 alt="Gabby Mobile Logo" 
                 width={320} 
                 height={85} 
-                className="h-auto w-auto max-w-[240px] md:max-w-[320px]"
+                className="h-auto w-auto max-w-60 md:max-w-[320px]"
                 priority
               />
             </div>

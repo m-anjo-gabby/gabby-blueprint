@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Volume2, Mic, ChevronLeft, ArrowRight, BookOpen } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Volume2, Mic, ChevronLeft, ArrowRight } from 'lucide-react';
 import { useVoice } from '@/hooks/useVoice';
 import { getTrainingData, type TrainingWord } from '@/actions/corpusAction';
 
@@ -10,11 +10,15 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   const [wordIdx, setWordIdx] = useState(0);
   const [phraseIdx, setPhraseIdx] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [feedback, setFeedback] = useState<{ text: string; isSuccess: boolean } | null>(null);
   
-  const { speak, startListening, isListening } = useVoice();
+  const [heardText, setHeardText] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ text: string; isSuccess: boolean } | null>(null);
+  const [timeLeft, setTimeLeft] = useState(10);
+  
+  const lastHeardRef = useRef<string>("");
+  const { speak, startListening, stopListening, isListening } = useVoice();
 
-  // データ取得
+  // 初期データフェッチ
   useEffect(() => {
     async function init() {
       const data = await getTrainingData(sectionId);
@@ -24,13 +28,59 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     init();
   }, [sectionId]);
 
-  if (loading) return <div className="p-20 text-center animate-pulse text-primary">Loading Drill...</div>;
-  if (words.length === 0) return <div className="p-20 text-center">No data found.</div>;
+  /**
+   * 現在の表示対象データを安全に取得
+   * オプショナルチェイニング (?.) を使い、データ未ロード時のエラーを防ぎます。
+   */
+  const currentWord = words[wordIdx] || null;
+  const currentPhrase = currentWord?.phrases?.[phraseIdx] || null;
 
-  const currentWord = words[wordIdx];
-  const currentPhrase = currentWord.phrases[phraseIdx];
+  /**
+   * 録音終了時の自動評価ロジック
+   */
+  useEffect(() => {
+    // データが揃っていない、または音声入力がない場合は実行しない
+    if (!isListening && lastHeardRef.current !== "" && currentPhrase) {
+      const target = currentPhrase.phrase_en.toLowerCase().replace(/[.,?]/g, "");
+      const isOk = lastHeardRef.current.toLowerCase().includes(target.split(" ")[0]); 
+      
+      setFeedback({
+        text: isOk ? "Correct!" : "Try Again",
+        isSuccess: isOk
+      });
+      lastHeardRef.current = "";
+    }
+  }, [isListening, currentPhrase]);
 
-  // フレーズタイプのラベル変換
+  /**
+   * 録音中のカウントダウン制御
+   */
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isListening) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => { if (timer) clearInterval(timer); };
+  }, [isListening]);
+
+  /**
+   * 重要：フックの定義（useState, useEffect）よりも後に
+   * ローディングと空データのバリデーションを配置します。
+   */
+  if (loading) return <div className="p-20 text-center animate-pulse text-primary font-black">Loading Drill...</div>;
+  if (!currentWord || !currentPhrase) return <div className="p-20 text-center font-bold">No data found.</div>;
+
+  /**
+   * ステップごとのラベル定義
+   */
   const getStepLabel = (type: number) => {
     const labels: Record<number, string> = {
       1: "STEP 1: S+V (Core Business)",
@@ -42,101 +92,140 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     return labels[type] || `STEP ${type}`;
   };
 
+  /**
+   * 次のステップへの遷移
+   */
   const handleNext = () => {
     setFeedback(null);
+    setHeardText(null);
+    lastHeardRef.current = "";
     if (phraseIdx < currentWord.phrases.length - 1) {
       setPhraseIdx(prev => prev + 1);
     } else {
-      // 次の単語へ
       setPhraseIdx(0);
       setWordIdx(prev => (prev + 1) % words.length);
     }
   };
 
+  /**
+   * 音声認識の実行
+   */
   const handleVoiceCheck = () => {
+    if (isListening) {
+      // 既に実行中の場合は stopListening を呼び出す（トグル動作）
+      // これにより useEffect 内の判定ロジックがトリガーされます
+      stopListening(); 
+      return;
+    }
+    setFeedback(null);
+    setHeardText(null);
+    lastHeardRef.current = "";
+    setTimeLeft(10); 
+    
     startListening((heard) => {
-      const target = currentPhrase.phrase_en.toLowerCase().replace(/[.,?]/g, "");
-      const isOk = heard.toLowerCase().includes(target.split(" ")[0]); // 簡易判定
-      setFeedback({
-        text: isOk ? `✓ Good job: ${heard}` : `× Try again: ${heard}`,
-        isSuccess: isOk
-      });
+      setHeardText(heard);
+      lastHeardRef.current = heard;
     });
   };
 
   return (
-    <div className="bg-card text-card-foreground rounded-[40px] p-8 shadow-2xl border border-border space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <button onClick={onBack} className="text-primary flex items-center text-sm font-bold hover:opacity-70 transition-all">
-          <ChevronLeft size={20} className="mr-1" /> Back
-        </button>
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Vocabulary</span>
-          <span className="text-sm font-bold text-foreground">{currentWord.word_en}</span>
+    <div className="bg-white text-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto min-h-[600px] flex flex-col relative overflow-hidden">
+      
+      {/* Header Area */}
+      <div className="space-y-4 shrink-0">
+        <div className="flex justify-start">
+          <button onClick={onBack} className="group text-slate-400 hover:text-indigo-600 flex items-center text-[10px] font-black tracking-widest transition-all">
+            <ChevronLeft size={14} className="mr-1 group-hover:-translate-x-0.5 transition-transform" /> 
+            BACK TO DASHBOARD
+          </button>
+        </div>
+
+        <div className="flex justify-between items-end border-b border-slate-50 pb-5">
+          <div className="flex flex-col items-start space-y-1">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">Vocabulary</span>
+            <span className="text-xl font-black text-slate-900 leading-none tracking-tight">{currentWord.word_en}</span>
+          </div>
+
+          <div className="flex flex-col items-end space-y-1.5 text-right">
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] leading-none">
+                 Step {currentPhrase.phrase_type}
+               </span>
+               <div className="flex gap-0.5">
+                 {[1, 2, 3, 4, 5].map(s => (
+                   <div key={s} className={`w-1 h-1 rounded-full ${s <= currentPhrase.phrase_type ? 'bg-indigo-600' : 'bg-slate-100'}`} />
+                 ))}
+               </div>
+            </div>
+            <span className="text-[11px] font-bold text-slate-500 italic leading-none">
+              {getStepLabel(currentPhrase.phrase_type).split(': ')[1]}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Main Drill Area */}
-      <div className="min-h-[220px] flex flex-col items-center justify-center text-center space-y-6 px-4">
-        <div className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[10px] font-black tracking-widest uppercase">
-          {getStepLabel(currentPhrase.phrase_type)}
-        </div>
-        
-        <div className="space-y-4">
-          <div className="text-2xl md:text-4xl font-extrabold tracking-tight leading-tight">
+      <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
+        <div className="space-y-8 w-full">
+          <div className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.15] min-h-[3em] flex items-center justify-center">
             {currentPhrase.phrase_en}
           </div>
-          {/* 日本語表記は表示しない */}
-          {/* <div className="text-base md:text-lg text-muted-foreground font-medium opacity-80">
-            {currentPhrase.phrase_ja}
-          </div> */}
-        </div>
-
-        {feedback && (
-          <div className={`text-sm font-bold px-4 py-2 rounded-xl animate-bounce ${feedback.isSuccess ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-            {feedback.text}
+          
+          <div className="min-h-20 flex flex-col items-center justify-center gap-3">
+            {heardText && (
+              <div className="text-lg font-medium text-slate-500 italic animate-in fade-in slide-in-from-bottom-2">
+                &quot;{heardText}&quot;
+              </div>
+            )}
+            
+            {feedback && (
+              <div className={`text-xs font-black px-6 py-2 rounded-full animate-in zoom-in-95 duration-300 ${
+                feedback.isSuccess ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
+              }`}>
+                {feedback.text}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Controls */}
-      <div className="space-y-4">
+      <div className="space-y-4 shrink-0">
         <button 
           onClick={handleNext}
-          className="w-full py-6 bg-primary text-background rounded-[24px] font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+          className="w-full py-6 bg-indigo-600 text-white rounded-[28px] font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
-          {phraseIdx < currentWord.phrases.length - 1 ? "Next Step" : "Next Word"}
-          <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+          {phraseIdx < (currentWord?.phrases?.length ?? 0) - 1 ? "NEXT STEP" : "NEXT WORD"}
+          <ArrowRight size={20} />
         </button>
         
         <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={() => speak(currentPhrase.phrase_en)}
-            className="py-5 bg-muted/50 text-foreground rounded-[24px] font-bold flex items-center justify-center gap-3 hover:bg-muted transition-colors border border-border/50"
+            className="py-5 bg-slate-50 text-slate-700 rounded-[28px] font-bold flex items-center justify-center gap-3 border border-slate-200/50"
           >
-            <Volume2 size={22} className="text-primary" /> Listen
+            <Volume2 size={20} className="text-indigo-600" /> LISTEN
           </button>
+          
           <button 
             onClick={handleVoiceCheck}
-            disabled={isListening}
-            className={`py-5 rounded-[24px] font-bold flex items-center justify-center gap-3 transition-all ${
-              isListening ? 'bg-rose-500 text-white animate-pulse' : 'bg-foreground text-background hover:opacity-90'
+            className={`relative py-5 rounded-[28px] font-bold flex items-center justify-center gap-3 transition-all overflow-hidden ${
+              isListening ? 'bg-rose-500 text-white' : 'bg-slate-900 text-white hover:opacity-90'
             }`}
           >
-            <Mic size={22} /> {isListening ? '...' : 'Speak'}
+            {isListening && (
+              <div 
+                className="absolute inset-0 bg-rose-600 opacity-30 origin-left transition-transform duration-1000 ease-linear"
+                style={{ transform: `scaleX(${timeLeft / 10})` }}
+              />
+            )}
+            
+            <div className="relative z-10 flex items-center gap-2">
+              <Mic size={20} className={isListening ? 'animate-pulse' : ''} />
+              <span>{isListening ? `${timeLeft}s STOP` : 'SPEAK'}</span>
+            </div>
           </button>
         </div>
-      </div>
-
-      {/* Progress Indicator */}
-      <div className="pt-4 flex gap-1 justify-center">
-        {currentWord.phrases.map((_, idx) => (
-          <div 
-            key={idx}
-            className={`h-1.5 rounded-full transition-all duration-500 ${idx === phraseIdx ? 'w-8 bg-primary' : 'w-2 bg-border'}`}
-          />
-        ))}
       </div>
     </div>
   );

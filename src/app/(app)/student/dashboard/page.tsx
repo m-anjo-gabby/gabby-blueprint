@@ -62,7 +62,7 @@ export default function StudentDashboard() {
   // 読み込み中。プロフェッショナルな印象を与えるため、カスタムアニメーションを配置
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-[400px] space-y-4">
+      <div className="flex flex-col justify-center items-center min-h-100 space-y-4">
         <div className="relative w-12 h-12">
           <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
           <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
@@ -78,7 +78,7 @@ export default function StudentDashboard() {
       {/* Header Section: サービスロゴとガイドメッセージ */}
       <div className="flex flex-col items-center text-center space-y-4">
         {/* ロゴ外側のコンテナ：ここでもサイズを固定し、はみ出しを防ぐ */}
-        <div className="relative w-16 h-16 min-w-[64px] min-h-[64px]">
+        <div className="relative w-16 h-16 min-w-16 min-h-16">
           {/* ロゴ本体：
             - shrink-0: 親要素の都合で縮ませない
             - aspect-square: 比率を1:1に固定
