@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Volume2, Mic, ChevronLeft, ArrowRight } from 'lucide-react';
+import { Volume2, Mic, ChevronLeft, ArrowRight, List } from 'lucide-react';
 import { useVoice } from '@/hooks/useVoice';
 import { getTrainingData } from '@/actions/corpusAction';
 import { calculateSimilarity } from '@/utils/stringSimilarity';
@@ -36,8 +36,10 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   const [feedback, setFeedback] = useState<FeedbackConfig | null>(null);
   const [timeLeft, setTimeLeft] = useState(10);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [showIndex, setShowIndex] = useState(false);
   
   const lastHeardRef = useRef<string>("");
+  const activeWordRef = useRef<HTMLButtonElement | null>(null);
   const { speak, startListening, stopListening, isListening } = useVoice();
 
   // 初期データフェッチ
@@ -56,6 +58,17 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
    */
   const currentWord = words[wordIdx] || null;
   const currentPhrase = currentWord?.phrases?.[phraseIdx] || null;
+
+  // 目次が開いた瞬間に実行するスクロール処理
+  useEffect(() => {
+    if (showIndex && activeWordRef.current) {
+      // 画面中央付近にくるようにスクロール
+      activeWordRef.current.scrollIntoView({
+        behavior: 'auto',
+        block: 'center'
+      });
+    }
+  }, [showIndex]); // showIndex が true になった時だけ実行
 
   /**
    * 録音終了時の自動評価ロジック
@@ -167,9 +180,64 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     });
   };
 
+  /**
+   * 目次処理
+   */
+  const jumpToWord = (index: number) => {
+    setWordIdx(index);
+    setPhraseIdx(0);
+    setFeedback(null);
+    setHeardText(null);
+    setIsFlipped(false);
+    setShowIndex(false); // メニューを閉じる
+  };
+
   return (
     <div className="bg-white text-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto min-h-150 flex flex-col relative overflow-hidden">
       
+      {/* --- 単語目次オーバーレイ --- */}
+      {showIndex && (
+        <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm p-8 animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Select Word</span>
+            <button onClick={() => setShowIndex(false)} className="text-slate-400 hover:text-slate-900 font-bold text-xs uppercase tracking-widest">Close</button>
+          </div>
+          
+          {/* 単語リスト */}
+          <div className="flex-1 overflow-y-auto pr-2 space-y-1 custom-scrollbar">
+            {words.map((w, idx) => (
+              <button
+                key={w.word_id}
+                // 現在の単語にだけ ref をセット
+                ref={wordIdx === idx ? activeWordRef : null}
+                onClick={() => jumpToWord(idx)}
+                className={`w-full text-left px-4 py-3 rounded-2xl transition-all flex items-center justify-between group ${
+                  wordIdx === idx 
+                    ? 'bg-indigo-50 border border-indigo-100 ring-1 ring-indigo-100' 
+                    : 'hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex flex-col">
+                  <span className={`text-sm font-bold ${wordIdx === idx ? 'text-indigo-600' : 'text-slate-700'}`}>
+                    {idx + 1}. {w.word_en}
+                  </span>
+                  <span className="text-[10px] font-medium text-slate-400">
+                    {w.word_ja}
+                  </span>
+                </div>
+                
+                {wordIdx === idx && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter">Current</span>
+                    <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-pulse" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Header Area */}
       <div className="space-y-4 shrink-0">
         {/* 上段: バックボタンと全体進捗 */}
@@ -190,8 +258,22 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
         {/* 下段: Vocabulary と Step情報 */}
         <div className="flex justify-between items-end border-b border-slate-50 pb-5">
           <div className="flex flex-col items-start space-y-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">Vocabulary</span>
-            <span className="text-xl font-black text-slate-900 leading-none tracking-tight">{currentWord.word_en}</span>
+            <button 
+              onClick={() => setShowIndex(true)}
+              className="flex items-center gap-1.5 px-2 -ml-2 py-1 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all group"
+              title="単語一覧を表示"
+            >
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none">
+                Vocabulary
+              </span>
+              {/* アイコンを常時表示し、色を少し薄くしておく */}
+              <List size={14} className="text-indigo-500 group-hover:text-indigo-600 transition-colors" />
+            </button>
+            
+            {/* 単語本体はボタンに含めず、大きく表示 */}
+            <span className="text-xl font-black text-slate-900 leading-none tracking-tight">
+              {currentWord.word_en}
+            </span>
           </div>
 
           <div className="flex flex-col items-end space-y-1.5 text-right">
@@ -263,10 +345,25 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
           </div>
           
           {/* 情報表示エリア: 評価や認識テキスト */}
-          <div className="min-h-32 flex flex-col items-center justify-start">
-            {/* 録音中: 認識テキストを「思考の断片」のように表示 */}
+          <div className="min-h-32 flex flex-col items-center justify-center relative">
+  
+            {/* 未リスニング 且つ フィードバックなし の時の装飾 */}
+            {!isListening && !feedback && (
+              <div 
+                className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-700"
+              >
+                <div className="flex flex-col items-center gap-3 py-6 px-10 rounded-[32px] border-2 border-slate-100/50 border-dotted">
+                  <Mic size={18} className="text-slate-200" />
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] text-center">
+                    Ready for Voice Check
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 録音中: 認識テキストを中央に表示 */}
             {isListening && (
-              <div className="flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="z-10 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex gap-1.5 h-3 items-center">
                   {[...Array(3)].map((_, i) => (
                     <div 
@@ -282,9 +379,9 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
               </div>
             )}
 
-            {/* 録音終了後: 評価結果を洗練されたバッジで表示 */}
+            {/* 録音終了後: 評価結果を中央に表示 */}
             {!isListening && feedback && (
-              <div className="flex flex-col items-center gap-6 animate-in zoom-in-95 fade-in duration-500">
+              <div className="z-10 flex flex-col items-center gap-6 animate-in zoom-in-95 fade-in duration-500">
                 {/* 評価バッジ */}
                 <div 
                   className={`text-[10px] font-black px-8 py-2 rounded-full border uppercase tracking-[0.3em] shadow-sm ${feedback.text}`}
@@ -296,7 +393,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
                 >
                   {feedback.tagText}
                 </div>
-
+                
                 {/* 認識されたテキスト: ユーザーへのフィードバックとして非常に重要 */}
                 <div className="flex flex-col items-center gap-2 px-6">
                   <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">You said</span>
