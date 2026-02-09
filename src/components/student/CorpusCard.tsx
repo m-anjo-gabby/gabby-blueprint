@@ -352,7 +352,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
               <div 
                 className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-700"
               >
-                <div className="flex flex-col items-center gap-3 py-6 px-10 rounded-[32px] border-2 border-slate-100/50 border-dotted">
+                <div className="flex flex-col items-center gap-3 py-6 px-10 rounded-4xl border-2 border-slate-100/50 border-dotted">
                   <Mic size={18} className="text-slate-200" />
                   <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] text-center">
                     Ready for Voice Check
