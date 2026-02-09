@@ -1,13 +1,13 @@
 'use client';
 import { useUserStore } from '@/stores/userStore';
 import { signOut } from '@/actions/authAction';
-import { LogOut, User, UserIcon } from 'lucide-react';
+import { LogOut, UserIcon } from 'lucide-react';
 
 export default function Header() {
   const user = useUserStore((state) => state.user);
 
   return (
-    <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-5 flex items-center justify-between sticky top-0 z-[100] shrink-0">
+    <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-5 flex items-center justify-between sticky top-0 z-100 shrink-0">
       <div className="flex items-center gap-2">
         <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">G</div>
         <span className="font-bold text-slate-900 tracking-tight hidden xs:block">Gabby Mobile</span>
@@ -21,7 +21,7 @@ export default function Header() {
           </div>
           
           {/* ユーザー名：余計なラベルを消してシンプルに */}
-          <span className="text-xs font-bold text-slate-600 truncate max-w-[80px] sm:max-w-[120px]">
+          <span className="text-xs font-bold text-slate-600 truncate max-w-20 sm:max-w-30">
             {user?.email?.split('@')[0]}
           </span>
         </div>

@@ -129,7 +129,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   };
 
   return (
-    <div className="bg-white text-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto min-h-[600px] flex flex-col relative overflow-hidden">
+    <div className="bg-white text-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto min-h-150 flex flex-col relative overflow-hidden">
       
       {/* Header Area */}
       <div className="space-y-4 shrink-0">
