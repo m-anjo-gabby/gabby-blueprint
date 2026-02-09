@@ -4,6 +4,26 @@ import { useState, useEffect, useRef } from 'react';
 import { Volume2, Mic, ChevronLeft, ArrowRight } from 'lucide-react';
 import { useVoice } from '@/hooks/useVoice';
 import { getTrainingData, type TrainingWord } from '@/actions/corpusAction';
+import { calculateSimilarity } from '@/utils/stringSimilarity';
+
+// 評価設定の型定義
+type FeedbackConfig = {
+  fill: string;
+  text: string;
+  tagText: string;
+  isSuccess: boolean;
+};
+
+/**
+ * 類似度に基づいた5段階評価設定の取得
+ */
+const getFeedbackConfig = (ratio: number): FeedbackConfig => {
+  if (ratio >= 0.90) return { fill: '#10B981', text: 'text-green-600', tagText: 'Excellent', isSuccess: true };
+  if (ratio >= 0.80) return { fill: '#3B82F6', text: 'text-blue-600', tagText: 'Great', isSuccess: true };
+  if (ratio >= 0.60) return { fill: '#F59E0B', text: 'text-yellow-600', tagText: 'Good', isSuccess: true };
+  if (ratio >= 0.30) return { fill: '#F97316', text: 'text-orange-600', tagText: 'Fair', isSuccess: false };
+  return { fill: '#EF4444', text: 'text-red-600', tagText: 'Poor', isSuccess: false };
+};
 
 export default function CorpusCard({ sectionId, onBack }: { sectionId: string, onBack: () => void }) {
   const [words, setWords] = useState<TrainingWord[]>([]);
@@ -12,7 +32,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   const [loading, setLoading] = useState(true);
   
   const [heardText, setHeardText] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ text: string; isSuccess: boolean } | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackConfig | null>(null);
   const [timeLeft, setTimeLeft] = useState(10);
   
   const lastHeardRef = useRef<string>("");
@@ -41,13 +61,13 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   useEffect(() => {
     // データが揃っていない、または音声入力がない場合は実行しない
     if (!isListening && lastHeardRef.current !== "" && currentPhrase) {
-      const target = currentPhrase.phrase_en.toLowerCase().replace(/[.,?]/g, "");
-      const isOk = lastHeardRef.current.toLowerCase().includes(target.split(" ")[0]); 
+      // 1. 類似度を計算
+      const similarity = calculateSimilarity(lastHeardRef.current, currentPhrase.phrase_en);
       
-      setFeedback({
-        text: isOk ? "Correct!" : "Try Again",
-        isSuccess: isOk
-      });
+      // 2. 5段階評価を適用
+      const config = getFeedbackConfig(similarity);
+      
+      setFeedback(config);
       lastHeardRef.current = "";
     }
   }, [isListening, currentPhrase]);
@@ -96,6 +116,9 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
    * 次のステップへの遷移
    */
   const handleNext = () => {
+    // 次へ行くときに読み上げを止める
+    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+
     setFeedback(null);
     setHeardText(null);
     lastHeardRef.current = "";
@@ -125,11 +148,24 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     startListening((heard) => {
       setHeardText(heard);
       lastHeardRef.current = heard;
+
+      // 発話自動停止ロジック
+      if (currentPhrase) {
+        const similarity = calculateSimilarity(heard, currentPhrase.phrase_en);
+        
+        // 90%以上の精度（Excellent相当）に達したら自動で締め切る
+        if (similarity >= 0.90) {
+          // ユーザーに一瞬「言い切った」感覚を与えるため、わずかにディレイ（200ms）を挟んで停止
+          setTimeout(() => {
+            stopListening();
+          }, 200);
+        }
+      }
     });
   };
 
   return (
-    <div className="bg-white text-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto min-h-150 flex flex-col relative overflow-hidden">
+    <div className="bg-white text-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto min-h-[600px] flex flex-col relative overflow-hidden">
       
       {/* Header Area */}
       <div className="space-y-4 shrink-0">
@@ -166,23 +202,63 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
 
       {/* Main Drill Area */}
       <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-        <div className="space-y-8 w-full">
-          <div className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.15] min-h-[3em] flex items-center justify-center">
+        <div className="space-y-12 w-full max-w-lg">
+          
+          {/* ターゲット英文: 常に主役として中央に配置 */}
+          <div className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.2] transition-all">
             {currentPhrase.phrase_en}
           </div>
           
-          <div className="min-h-20 flex flex-col items-center justify-center gap-3">
-            {heardText && (
-              <div className="text-lg font-medium text-slate-500 italic animate-in fade-in slide-in-from-bottom-2">
-                &quot;{heardText}&quot;
+          {/* 情報表示エリア: 固定の高さを確保してガタつきを防止 */}
+          <div className="h-24 flex flex-col items-center justify-start">
+            
+            {/* 録音中: 認識テキストを「思考の断片」のように表示 */}
+            {isListening && (
+              <div className="flex flex-col items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex gap-1.5 h-3 items-center">
+                  {[...Array(3)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" 
+                      style={{ animationDelay: `${i * 0.15}s` }} 
+                    />
+                  ))}
+                </div>
+                <p className="text-xl font-medium text-slate-400 italic tracking-wide leading-relaxed px-4">
+                  {heardText || "Listening..."}
+                </p>
               </div>
             )}
-            
-            {feedback && (
-              <div className={`text-xs font-black px-6 py-2 rounded-full animate-in zoom-in-95 duration-300 ${
-                feedback.isSuccess ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
-              }`}>
-                {feedback.text}
+
+            {/* 録音終了後: 評価結果を洗練されたバッジで表示 */}
+            {/* 録音終了後: 評価結果と「認識の記録」を表示 */}
+            {!isListening && feedback && (
+              <div className="flex flex-col items-center gap-5 animate-in zoom-in-95 fade-in duration-500">
+                
+                {/* 評価バッジ */}
+                <div className="flex flex-col items-center gap-2">
+                  <div 
+                    className={`text-[10px] font-black px-8 py-2 rounded-full border uppercase tracking-[0.3em] shadow-sm ${feedback.text}`}
+                    style={{ 
+                      backgroundColor: `${feedback.fill}08`, 
+                      borderColor: `${feedback.fill}30`,
+                      color: feedback.fill 
+                    }}
+                  >
+                    {feedback.tagText}
+                  </div>
+                </div>
+
+                {/* 認識されたテキスト: ユーザーへのフィードバックとして非常に重要 */}
+                <div className="flex flex-col items-center gap-1.5 px-6">
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">You said</span>
+                  <p className="text-base font-medium text-slate-500 italic leading-relaxed max-w-sm">
+                    {heardText || " (No speech detected) "}
+                  </p>
+                </div>
+
+                {/* 次への案内: 視覚的な区切り線を入れる */}
+                <div className="w-8 h-px bg-slate-100" />
               </div>
             )}
           </div>
@@ -191,38 +267,42 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
 
       {/* Controls */}
       <div className="space-y-4 shrink-0">
+        {/* NEXT ボタン: 発話中は無効化 */}
         <button 
-          onClick={handleNext}
-          className="w-full py-6 bg-indigo-600 text-white rounded-[28px] font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          onClick={handleNext} 
+          disabled={isListening}
+          className="w-full py-6 bg-indigo-600 text-white rounded-[28px] font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all flex items-center justify-center gap-2 uppercase tracking-wide text-sm"
         >
-          {phraseIdx < (currentWord?.phrases?.length ?? 0) - 1 ? "NEXT STEP" : "NEXT WORD"}
-          <ArrowRight size={20} />
+          {phraseIdx < (currentWord?.phrases?.length ?? 0) - 1 ? "Next Step" : "Next Word"}
+          <ArrowRight size={18} />
         </button>
-        
+
         <div className="grid grid-cols-2 gap-4">
+          {/* LISTEN ボタン: 発話中は無効化 */}
           <button 
             onClick={() => speak(currentPhrase.phrase_en)}
-            className="py-5 bg-slate-50 text-slate-700 rounded-[28px] font-bold flex items-center justify-center gap-3 border border-slate-200/50"
+            disabled={isListening}
+            className="py-5 bg-slate-50 text-slate-700 rounded-[28px] font-bold flex items-center justify-center gap-3 border border-slate-200/50 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-sm uppercase"
           >
-            <Volume2 size={20} className="text-indigo-600" /> LISTEN
+            <Volume2 size={18} className="text-indigo-600" /> Listen
           </button>
-          
+
+          {/* SPEAK ボタン: これはトグル(停止用)として使うため、常に有効 */}
           <button 
-            onClick={handleVoiceCheck}
-            className={`relative py-5 rounded-[28px] font-bold flex items-center justify-center gap-3 transition-all overflow-hidden ${
+            onClick={handleVoiceCheck} 
+            className={`relative py-5 rounded-[28px] font-bold flex items-center justify-center gap-3 transition-all overflow-hidden text-sm uppercase ${
               isListening ? 'bg-rose-500 text-white' : 'bg-slate-900 text-white hover:opacity-90'
             }`}
           >
             {isListening && (
               <div 
-                className="absolute inset-0 bg-rose-600 opacity-30 origin-left transition-transform duration-1000 ease-linear"
-                style={{ transform: `scaleX(${timeLeft / 10})` }}
+                className="absolute inset-0 bg-rose-600 opacity-30 origin-left transition-transform duration-1000 ease-linear" 
+                style={{ transform: `scaleX(${timeLeft / 10})` }} 
               />
             )}
-            
             <div className="relative z-10 flex items-center gap-2">
-              <Mic size={20} className={isListening ? 'animate-pulse' : ''} />
-              <span>{isListening ? `${timeLeft}s STOP` : 'SPEAK'}</span>
+              <Mic size={18} className={isListening ? 'animate-pulse' : ''} />
+              <span>{isListening ? `${timeLeft}s Stop` : 'Speak'}</span>
             </div>
           </button>
         </div>
