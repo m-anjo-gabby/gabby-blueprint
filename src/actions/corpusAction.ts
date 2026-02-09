@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/server";
+import { TrainingWord } from "@/types/training";
 
 // 1. DBから返ってくる生のデータ構造を定義
 interface RawPhraseResponse {
@@ -16,22 +17,6 @@ interface RawWordResponse {
   word_en: string;
   word_ja: string;
   com_m_phrase: RawPhraseResponse[];
-}
-
-// 2. フロントエンドで使う型
-export interface PhraseRecord {
-  phrase_id: number;
-  phrase_en: string;
-  phrase_ja: string;
-  phrase_type: number;
-  seq_no: number;
-}
-
-export interface TrainingWord {
-  word_id: number;
-  word_en: string;
-  word_ja: string;
-  phrases: PhraseRecord[];
 }
 
 /**

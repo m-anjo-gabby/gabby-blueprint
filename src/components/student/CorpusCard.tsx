@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Volume2, Mic, ChevronLeft, ArrowRight } from 'lucide-react';
 import { useVoice } from '@/hooks/useVoice';
-import { getTrainingData, type TrainingWord } from '@/actions/corpusAction';
+import { getTrainingData } from '@/actions/corpusAction';
 import { calculateSimilarity } from '@/utils/stringSimilarity';
+import { TrainingWord } from '@/types/training';
 
 // 評価設定の型定義
 type FeedbackConfig = {
@@ -34,6 +35,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   const [heardText, setHeardText] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackConfig | null>(null);
   const [timeLeft, setTimeLeft] = useState(10);
+  const [isFlipped, setIsFlipped] = useState(false);
   
   const lastHeardRef = useRef<string>("");
   const { speak, startListening, stopListening, isListening } = useVoice();
@@ -121,6 +123,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
 
     setFeedback(null);
     setHeardText(null);
+    setIsFlipped(false); // 次へ行くときは英語に戻す
     lastHeardRef.current = "";
     if (phraseIdx < currentWord.phrases.length - 1) {
       setPhraseIdx(prev => prev + 1);
@@ -165,17 +168,26 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   };
 
   return (
-    <div className="bg-white text-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto min-h-[600px] flex flex-col relative overflow-hidden">
+    <div className="bg-white text-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto min-h-150 flex flex-col relative overflow-hidden">
       
       {/* Header Area */}
       <div className="space-y-4 shrink-0">
-        <div className="flex justify-start">
+        {/* 上段: バックボタンと全体進捗 */}
+        <div className="flex justify-between items-center">
           <button onClick={onBack} className="group text-slate-400 hover:text-indigo-600 flex items-center text-[10px] font-black tracking-widest transition-all">
             <ChevronLeft size={14} className="mr-1 group-hover:-translate-x-0.5 transition-transform" /> 
             BACK TO DASHBOARD
           </button>
+          
+          {/* 単語単位の進捗表示 */}
+          <div className="flex items-baseline gap-1">
+            <span className="text-sm font-black text-indigo-600">{wordIdx + 1}</span>
+            <span className="text-[10px] font-bold text-slate-300">/</span>
+            <span className="text-[10px] font-bold text-slate-400 tracking-tighter">{words.length} WORDS</span>
+          </div>
         </div>
 
+        {/* 下段: Vocabulary と Step情報 */}
         <div className="flex justify-between items-end border-b border-slate-50 pb-5">
           <div className="flex flex-col items-start space-y-1">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">Vocabulary</span>
@@ -201,20 +213,60 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
       </div>
 
       {/* Main Drill Area */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-        <div className="space-y-12 w-full max-w-lg">
+      <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+        <div className="w-full max-w-lg space-y-16">
           
-          {/* ターゲット英文: 常に主役として中央に配置 */}
-          <div className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.2] transition-all">
-            {currentPhrase.phrase_en}
+          {/* フリップコンテナ: 高さを確保し、めり込みを防止 */}
+          <div 
+            className="relative w-full min-h-40 cursor-pointer group"
+            style={{ perspective: '1000px' }}
+            onClick={() => setIsFlipped(!isFlipped)}
+          >
+            <div 
+              className="relative w-full h-full transition-all duration-500"
+              style={{ 
+                transformStyle: 'preserve-3d',
+                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                minHeight: '140px' // コンテナの高さを強制確保
+              }}
+            >
+              
+              {/* 表：英語 (Front) */}
+              <div 
+                className="absolute inset-0 w-full h-full flex items-center justify-center"
+                style={{ backfaceVisibility: 'hidden' }}
+              >
+                <div className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-[1.2] px-4">
+                  {currentPhrase.phrase_en}
+                </div>
+              </div>
+
+              {/* 裏：日本語 (Back) */}
+              <div 
+                className="absolute inset-0 w-full h-full flex items-center justify-center"
+                style={{ 
+                  backfaceVisibility: 'hidden', 
+                  transform: 'rotateY(180deg)' 
+                }}
+              >
+                <div className="text-2xl md:text-3xl font-bold text-indigo-600 tracking-tight leading-[1.4] px-6">
+                  {currentPhrase.phrase_ja}
+                </div>
+              </div>
+
+            </div>
+            
+            {/* ヒントラベル */}
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              Click to reveal translation
+            </div>
           </div>
           
-          {/* 情報表示エリア: 固定の高さを確保してガタつきを防止 */}
-          <div className="h-24 flex flex-col items-center justify-start">
-            
+          {/* 情報表示エリア: 評価や認識テキスト */}
+          <div className="min-h-32 flex flex-col items-center justify-start">
             {/* 録音中: 認識テキストを「思考の断片」のように表示 */}
             {isListening && (
-              <div className="flex flex-col items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex gap-1.5 h-3 items-center">
                   {[...Array(3)].map((_, i) => (
                     <div 
@@ -224,41 +276,34 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
                     />
                   ))}
                 </div>
-                <p className="text-xl font-medium text-slate-400 italic tracking-wide leading-relaxed px-4">
+                <p className="text-xl font-medium text-slate-400 italic tracking-wide px-4">
                   {heardText || "Listening..."}
                 </p>
               </div>
             )}
 
             {/* 録音終了後: 評価結果を洗練されたバッジで表示 */}
-            {/* 録音終了後: 評価結果と「認識の記録」を表示 */}
             {!isListening && feedback && (
-              <div className="flex flex-col items-center gap-5 animate-in zoom-in-95 fade-in duration-500">
-                
+              <div className="flex flex-col items-center gap-6 animate-in zoom-in-95 fade-in duration-500">
                 {/* 評価バッジ */}
-                <div className="flex flex-col items-center gap-2">
-                  <div 
-                    className={`text-[10px] font-black px-8 py-2 rounded-full border uppercase tracking-[0.3em] shadow-sm ${feedback.text}`}
-                    style={{ 
-                      backgroundColor: `${feedback.fill}08`, 
-                      borderColor: `${feedback.fill}30`,
-                      color: feedback.fill 
-                    }}
-                  >
-                    {feedback.tagText}
-                  </div>
+                <div 
+                  className={`text-[10px] font-black px-8 py-2 rounded-full border uppercase tracking-[0.3em] shadow-sm ${feedback.text}`}
+                  style={{ 
+                    backgroundColor: `${feedback.fill}08`, 
+                    borderColor: `${feedback.fill}30`,
+                    color: feedback.fill 
+                  }}
+                >
+                  {feedback.tagText}
                 </div>
 
                 {/* 認識されたテキスト: ユーザーへのフィードバックとして非常に重要 */}
-                <div className="flex flex-col items-center gap-1.5 px-6">
-                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">You said</span>
+                <div className="flex flex-col items-center gap-2 px-6">
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">You said</span>
                   <p className="text-base font-medium text-slate-500 italic leading-relaxed max-w-sm">
-                    {heardText || " (No speech detected) "}
+                    {heardText || "No speech detected"}
                   </p>
                 </div>
-
-                {/* 次への案内: 視覚的な区切り線を入れる */}
-                <div className="w-8 h-px bg-slate-100" />
               </div>
             )}
           </div>
