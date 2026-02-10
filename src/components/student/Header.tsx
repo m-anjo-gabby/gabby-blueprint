@@ -2,15 +2,23 @@
 import { useUserStore } from '@/stores/userStore';
 import { signOut } from '@/actions/authAction';
 import { LogOut, UserIcon } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Header() {
   const user = useUserStore((state) => state.user);
 
   return (
     <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-5 flex items-center justify-between sticky top-0 z-100 shrink-0">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">G</div>
-        <span className="font-bold text-slate-900 tracking-tight hidden xs:block">Gabby Mobile</span>
+      {/* ロゴエリア */}
+      <div className="flex items-center">
+        <Image 
+          src="/logo-01.png" 
+          alt="Gabby Logo" 
+          width={120} 
+          height={32} 
+          className="h-8 w-auto object-contain" // 高さを固定して横幅は自動調整
+          priority
+        />
       </div>
       
       <div className="flex items-center gap-3">

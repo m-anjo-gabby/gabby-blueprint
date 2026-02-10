@@ -42,7 +42,7 @@ export async function getTrainingData(corpusId: string): Promise<TrainingWord[]>
     `)
     .eq('corpus_id', corpusId)
     .eq('delete_flg', '0')
-    .order('word_id', { ascending: true });
+    .order('frequency_rank', { ascending: true });
 
   if (error) {
     console.error("DB Fetch Error:", error.message);
