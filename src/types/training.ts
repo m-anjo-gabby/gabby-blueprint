@@ -1,7 +1,7 @@
 // src/types/training.ts
 
 export interface PhraseRecord {
-  phrase_id: number;
+  phrase_id: string;
   phrase_en: string;
   phrase_ja: string;
   phrase_type: number;
@@ -9,7 +9,7 @@ export interface PhraseRecord {
 }
 
 export interface TrainingWord {
-  word_id: number;
+  word_id: string;
   word_en: string;
   word_ja: string;
   phrases: PhraseRecord[];

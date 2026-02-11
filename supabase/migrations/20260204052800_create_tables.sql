@@ -1,4 +1,26 @@
 ---------------------------------------------
+-- DDL: com_m_client (顧客マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_client (
+  client_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_name TEXT NOT NULL,
+  client_type SMALLINT NOT NULL DEFAULT 1, -- 0: 初期テナント 1:法人, 2:個人
+  industry_type SMALLINT NOT NULL DEFAULT 1, -- 業界種別（Pharma, Semi, etc.）
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_client IS '顧客情報マスタ';
+COMMENT ON COLUMN public.com_m_client.client_id IS '顧客ID';
+COMMENT ON COLUMN public.com_m_client.client_name IS '顧客名称（企業名・団体名）';
+COMMENT ON COLUMN public.com_m_client.client_type IS '顧客種別 0: 初期テナント 1:法人, 2:個人';
+COMMENT ON COLUMN public.com_m_client.industry_type IS '業界区分';
+COMMENT ON COLUMN public.com_m_client.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_client.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_client.update_date IS '更新日時';
+
+---------------------------------------------
 -- DDL: com_m_user テーブルの作成
 ---------------------------------------------
 CREATE TABLE public.com_m_user (
@@ -6,6 +28,7 @@ CREATE TABLE public.com_m_user (
   id uuid REFERENCES auth.users NOT NULL PRIMARY KEY, 
   -- 2. システム採番ID (BIGSERIALで自動採番)
   user_id BIGSERIAL UNIQUE NOT NULL, 
+  client_id uuid REFERENCES public.com_m_client(client_id),
   user_type text DEFAULT '1', -- デフォルトを '1' (生徒) 
   user_name text DEFAULT NULL,
   area_cd text NOT NULL DEFAULT '00',
@@ -22,6 +45,7 @@ COMMENT ON TABLE public.com_m_user IS 'ユーザ情報マスタ';
 -- カラム名にコメントを設定
 COMMENT ON COLUMN public.com_m_user.id IS '認証システムID (UUID)';
 COMMENT ON COLUMN public.com_m_user.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_m_user.client_id IS '顧客ID';
 COMMENT ON COLUMN public.com_m_user.user_type IS 'ユーザタイプ 0：管理者 1:生徒 2:モニター';
 COMMENT ON COLUMN public.com_m_user.user_name IS 'ユーザ名称';
 COMMENT ON COLUMN public.com_m_user.area_cd IS '地域コード';
@@ -31,66 +55,13 @@ COMMENT ON COLUMN public.com_m_user.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_user.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_user.update_date IS '更新日時';
 
--- RLSの有効化
-ALTER TABLE public.com_m_user ENABLE ROW LEVEL SECURITY;
-
--- ユーザー自身のみが自分のデータにアクセスできるポリシー
-CREATE POLICY "Users can view and update their own com_m_user."
-  ON public.com_m_user FOR ALL 
-  USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
-
----
--- サインアップ連動トリガー
----
-
--- ユーザー作成時に必須カラムを初期化してユーザマスタを作成する
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-DECLARE
-    new_user_id BIGINT;
-BEGIN
-    -- 1. 必須カラムの初期値を挿入（user_idは自動採番）
-    INSERT INTO public.com_m_user (id, area_cd)
-    VALUES (new.id, '00')
-    RETURNING user_id INTO new_user_id; -- 採番されたuser_idを取得
-    
-    RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- トリガーの登録
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
-
----------------------------------------------
--- DDL: com_m_client (顧客マスタ)
----------------------------------------------
-CREATE TABLE public.com_m_client (
-  client_id BIGSERIAL PRIMARY KEY NOT NULL,
-  client_name TEXT NOT NULL,
-  industry_type SMALLINT NOT NULL DEFAULT 1, -- 業界種別（Pharma, Semi, etc.）
-  delete_flg TEXT NOT NULL DEFAULT '0',
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE public.com_m_client IS '顧客情報マスタ';
-COMMENT ON COLUMN public.com_m_client.client_id IS '顧客ID';
-COMMENT ON COLUMN public.com_m_client.client_name IS '顧客名称（企業名・団体名）';
-COMMENT ON COLUMN public.com_m_client.industry_type IS '業界区分';
-COMMENT ON COLUMN public.com_m_client.delete_flg IS '論理削除フラグ';
-COMMENT ON COLUMN public.com_m_client.insert_date IS '登録日時';
-COMMENT ON COLUMN public.com_m_client.update_date IS '更新日時';
-
 ---------------------------------------------
 -- DDL: com_m_corpus (コーパス管理マスタ)
 ---------------------------------------------
 CREATE TABLE public.com_m_corpus (
-  corpus_id BIGSERIAL PRIMARY KEY NOT NULL,
+  corpus_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   corpus_name TEXT NOT NULL,
-  client_id BIGINT REFERENCES public.com_m_client(client_id),
+  corpus_type SMALLINT NOT NULL DEFAULT 1,
   seq_no SMALLINT NOT NULL DEFAULT 1,
   description TEXT,
   corpus_label TEXT NOT NULL,
@@ -102,7 +73,7 @@ CREATE TABLE public.com_m_corpus (
 COMMENT ON TABLE public.com_m_corpus IS 'コーパス管理マスタ';
 COMMENT ON COLUMN public.com_m_corpus.corpus_id IS 'コーパスID';
 COMMENT ON COLUMN public.com_m_corpus.corpus_name IS 'コーパス名称';
-COMMENT ON COLUMN public.com_m_corpus.client_id IS '関連顧客ID';
+COMMENT ON COLUMN public.com_m_corpus.corpus_type IS 'コーパス種別 0:共通, 1:クライアント限定';
 COMMENT ON COLUMN public.com_m_corpus.seq_no IS 'SEQNO';
 COMMENT ON COLUMN public.com_m_corpus.description IS 'コーパス説明・解析根拠';
 COMMENT ON COLUMN public.com_m_corpus.corpus_label IS 'コーパスラベル';
@@ -111,11 +82,39 @@ COMMENT ON COLUMN public.com_m_corpus.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_corpus.update_date IS '更新日時';
 
 ---------------------------------------------
+-- DDL: com_m_corpus_access (コーパスアクセス制御マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_corpus_access (
+  access_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid REFERENCES public.com_m_client(client_id) NOT NULL,
+  corpus_id uuid REFERENCES public.com_m_corpus(corpus_id) NOT NULL,
+  notes TEXT, -- 「2026年キャンペーンで付与」などのメモ
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  
+  -- 同じ顧客に同じコーパスを二重登録させない
+  UNIQUE(client_id, corpus_id)
+);
+
+COMMENT ON TABLE public.com_m_corpus_access IS 'コーパスアクセス制御マスタ';
+COMMENT ON COLUMN public.com_m_corpus_access.access_id IS 'アクセスID';
+COMMENT ON COLUMN public.com_m_corpus_access.client_id IS '顧客ID';
+COMMENT ON COLUMN public.com_m_corpus_access.corpus_id IS 'コーパスID';
+COMMENT ON COLUMN public.com_m_corpus_access.notes IS 'メモ';
+COMMENT ON COLUMN public.com_m_corpus_access.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_corpus_access.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_corpus_access.update_date IS '更新日時';
+
+-- 検索パフォーマンス向上のためのインデックス
+CREATE INDEX idx_corpus_access_client ON public.com_m_corpus_access(client_id);
+
+---------------------------------------------
 -- DDL: com_m_word (コーパス単語マスタ)
 ---------------------------------------------
 CREATE TABLE public.com_m_word (
-  word_id BIGSERIAL PRIMARY KEY NOT NULL,
-  corpus_id BIGINT REFERENCES public.com_m_corpus(corpus_id) ON DELETE CASCADE,
+  word_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  corpus_id uuid REFERENCES public.com_m_corpus(corpus_id) ON DELETE CASCADE,
   word_en TEXT NOT NULL,
   word_ja TEXT NOT NULL,
   frequency_rank INT,
@@ -138,8 +137,8 @@ COMMENT ON COLUMN public.com_m_word.update_date IS '更新日時';
 -- DDL: com_m_phrase (出題例文マスタ)
 ---------------------------------------------
 CREATE TABLE public.com_m_phrase (
-  phrase_id BIGSERIAL PRIMARY KEY NOT NULL,
-  word_id BIGINT REFERENCES public.com_m_word(word_id) ON DELETE CASCADE,
+  phrase_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  word_id uuid REFERENCES public.com_m_word(word_id) ON DELETE CASCADE,
   seq_no SMALLINT NOT NULL DEFAULT 1,
   phrase_type SMALLINT NOT NULL,
   phrase_en TEXT NOT NULL,
