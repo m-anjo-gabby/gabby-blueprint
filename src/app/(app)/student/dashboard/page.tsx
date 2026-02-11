@@ -26,15 +26,11 @@ export default function StudentDashboard() {
       }
     }, [selectedCorpusId]);
 
-  // --- Auth Configuration (Temporary) ---
-  // TODO: ログインユーザーの所属（com_m_user）から取得するように変更予定
-  const FIXED_CLIENT_ID = 1;
-
   // --- Data Fetching ---
   useEffect(() => {
     async function fetchCorpus() {
       try {
-        const data = await getClientCorpusList(FIXED_CLIENT_ID);
+        const data = await getClientCorpusList();
         // dataをCorpusRecord[]にマッピング
         setCorpusList(data);
       } catch (error) {
