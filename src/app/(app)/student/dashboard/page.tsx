@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import TrainingCard from '@/components/student/CorpusCard';
-import { getClientCorpusList, type CorpusRecord } from '@/actions/dashboardAction';
+import { ClientInfo, getClientCorpusList, getMyClientInfo, type CorpusRecord } from '@/actions/dashboardAction';
 import { BookOpen, GraduationCap, ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 
 /**
  * 学習者用メインダッシュボード
@@ -13,6 +14,7 @@ export default function StudentDashboard() {
   // --- State ---
   const [selectedCorpusId, setSelectedCorpusId] = useState<string | null>(null);
   const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);
+  const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   // --- スクロールリセット ---
@@ -28,19 +30,22 @@ export default function StudentDashboard() {
 
   // --- Data Fetching ---
   useEffect(() => {
-    async function fetchCorpus() {
+    async function initDashboard() {
       try {
-        const data = await getClientCorpusList();
-        // dataをCorpusRecord[]にマッピング
-        setCorpusList(data);
+        // 並列で取得
+        const [corpusData, clientData] = await Promise.all([
+          getClientCorpusList(),
+          getMyClientInfo()
+        ]);
+        setCorpusList(corpusData);
+        setClientInfo(clientData);
       } catch (error) {
-        // デモ環境でのエラー視認性を考慮し、console.errorを維持
         console.error("Dashboard Load Error:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchCorpus();
+    initDashboard();
   }, []);
 
   // --- View: Training Mode ---
@@ -73,23 +78,33 @@ export default function StudentDashboard() {
       
       {/* Header Section: サービスロゴとガイドメッセージ */}
       <div className="flex flex-col items-center text-center space-y-4">
-        {/* ロゴ外側のコンテナ：ここでもサイズを固定し、はみ出しを防ぐ */}
-        <div className="relative w-16 h-16 min-w-16 min-h-16">
-          {/* ロゴ本体：
-            - shrink-0: 親要素の都合で縮ませない
-            - aspect-square: 比率を1:1に固定
-            - w-full h-full: 親の w-16 h-16 を継承
-          */}
-          <div className="w-full h-full shrink-0 aspect-square bg-linear-to-br from-indigo-600 to-violet-700 rounded-[22px] flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-indigo-200 rotate-3 transition-transform hover:rotate-0 isolate">
-            B
-          </div>
-          
-          {/* オンライン状態インジケーター：ロゴの右下に固定 */}
-          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-slate-50 rounded-full z-10"></div>
+        {/* ロゴ外側のコンテナ：サイズを固定し、はみ出しを防ぐ */}
+        <div className="relative w-full max-w-60 h-20">
+          {clientInfo?.logo_url ? (
+            <Image 
+              src={clientInfo.logo_url} 
+              alt={clientInfo.client_name || "Client Logo"}
+              fill
+              sizes="240px"
+              /* object-contain で比率を維持しつつ、最大サイズまで広げる */
+              className="object-contain"
+              priority
+            />
+          ) : (
+            /* ロゴがない場合のフォールバック（テキストのみでシンプルに） */
+            <div className="text-4xl font-black text-indigo-600 tracking-tighter">
+              BLUEPRINT
+            </div>
+          )}
         </div>
         
         <div className="space-y-1">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Blueprint English</h1>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+            Blueprint English
+            <span className="text-indigo-600 block text-lg mt-2 font-bold">
+              for {clientInfo?.dashboard_title || 'Personal'}
+            </span>
+          </h1>
           <p className="text-slate-500 font-medium tracking-wide text-sm">学習する教材を選択してください</p>
         </div>
       </div>

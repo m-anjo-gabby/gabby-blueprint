@@ -6,6 +6,8 @@ CREATE TABLE public.com_m_client (
   client_name TEXT NOT NULL,
   client_type SMALLINT NOT NULL DEFAULT 1, -- 0: 初期テナント 1:法人, 2:個人
   industry_type SMALLINT NOT NULL DEFAULT 1, -- 業界種別（Pharma, Semi, etc.）
+  logo_url TEXT, -- ブランドロゴのURL
+  dashboard_title TEXT, -- 「Blueprint English for 〇〇」の〇〇部分
   delete_flg TEXT NOT NULL DEFAULT '0',
   insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -16,6 +18,8 @@ COMMENT ON COLUMN public.com_m_client.client_id IS '顧客ID';
 COMMENT ON COLUMN public.com_m_client.client_name IS '顧客名称（企業名・団体名）';
 COMMENT ON COLUMN public.com_m_client.client_type IS '顧客種別 0: 初期テナント 1:法人, 2:個人';
 COMMENT ON COLUMN public.com_m_client.industry_type IS '業界区分';
+COMMENT ON COLUMN public.com_m_client.logo_url IS 'ブランドロゴURL';
+COMMENT ON COLUMN public.com_m_client.dashboard_title IS 'ダッシュボードタイトル';
 COMMENT ON COLUMN public.com_m_client.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_client.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_client.update_date IS '更新日時';
