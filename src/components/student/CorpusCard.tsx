@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Volume2, Mic, ChevronLeft, ArrowRight, List } from 'lucide-react';
+import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star } from 'lucide-react';
 import { useVoice } from '@/hooks/useVoice';
-import { getTrainingData } from '@/actions/corpusAction';
+import { getTrainingData, toggleFavorite } from '@/actions/corpusAction';
 import { calculateSimilarity } from '@/utils/stringSimilarity';
 import { TrainingWord } from '@/types/training';
 
@@ -38,6 +38,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   const [isFlipped, setIsFlipped] = useState(false);
   const [showIndex, setShowIndex] = useState(false);
   const [sortOrder, setSortOrder] = useState<'default' | 'alpha'>('default');
+  const [isFavorite, setIsFavorite] = useState(false);
   
   const lastHeardRef = useRef<string>("");
   const activeWordRef = useRef<HTMLButtonElement | null>(null);
@@ -163,6 +164,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     setFeedback(null);
     setHeardText(null);
     setIsFlipped(false); // 次へ行くときは英語に戻す
+    setIsFavorite(false); // 追加：次の問題では星をオフにする（※DBから状態取得する場合はここを修正）
     lastHeardRef.current = "";
     if (phraseIdx < currentWord.phrases.length - 1) {
       setPhraseIdx(prev => prev + 1);
@@ -216,6 +218,22 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     setHeardText(null);
     setIsFlipped(false);
     setShowIndex(false); // メニューを閉じる
+  };
+
+  /**
+   * お気に入りの切り替え
+   */
+  const handleToggleFavorite = async () => {
+    if (!currentPhrase) return;
+    const nextState = !isFavorite;
+    setIsFavorite(nextState); // UIを即時更新（楽観的更新）
+    
+    try {
+      await toggleFavorite(currentPhrase.phrase_id, nextState);
+    } catch (error) {
+      console.error("Favorite toggle failed:", error);
+      setIsFavorite(!nextState); // 失敗したら戻す
+    }
   };
 
   return (
@@ -376,6 +394,23 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
       <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
         <div className="w-full max-w-lg space-y-16">
           
+          {/* お気に入りボタン */}
+          <div className="relative -top-12 right-0 z-20">
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // カードめくりを防止
+                handleToggleFavorite();
+              }}
+              className={`p-3 rounded-2xl transition-all duration-300 shadow-sm border ${
+                isFavorite 
+                  ? 'bg-amber-50 border-amber-200 text-amber-500 scale-110' 
+                  : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
+              }`}
+            >
+              <Star size={24} fill={isFavorite ? "currentColor" : "none"} />
+            </button>
+          </div>
+
           <div 
             className="relative w-full min-h-40 cursor-pointer group"
             style={{ perspective: '1000px' }}

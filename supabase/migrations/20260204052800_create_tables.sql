@@ -163,3 +163,21 @@ COMMENT ON COLUMN public.com_m_phrase.phrase_ja IS 'フレーズ（日本語表�
 COMMENT ON COLUMN public.com_m_phrase.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_phrase.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_phrase.update_date IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_t_favorite_phrase (お気に入りフレーズ)
+---------------------------------------------
+CREATE TABLE public.com_t_favorite_phrase (
+  favorite_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  phrase_id uuid NOT NULL REFERENCES public.com_m_phrase(phrase_id) ON DELETE CASCADE,
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  -- 同じユーザーが同じフレーズを二重登録できないように制約
+  UNIQUE(user_id, phrase_id)
+);
+
+COMMENT ON TABLE public.com_t_favorite_phrase IS 'お気に入りフレーズ';
+COMMENT ON COLUMN public.com_t_favorite_phrase.favorite_id IS 'お気に入りID';
+COMMENT ON COLUMN public.com_t_favorite_phrase.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_favorite_phrase.phrase_id IS 'フレーズID';
+COMMENT ON COLUMN public.com_t_favorite_phrase.insert_date IS '登録日時';

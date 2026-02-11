@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import TrainingCard from '@/components/student/CorpusCard';
+import CorpusCard from '@/components/student/CorpusCard';
 import { ClientInfo, getClientCorpusList, getMyClientInfo, type CorpusRecord } from '@/actions/dashboardAction';
-import { BookOpen, GraduationCap, ArrowRight } from 'lucide-react';
+import { BookOpen, ArrowRight, Star } from 'lucide-react';
 import Image from 'next/image';
+import { getFavoriteCount } from '@/actions/corpusAction';
+import FavoriteList from '@/components/student/FavoriteList';
+
+type ViewMode = 'dashboard' | 'training' | 'favorites';
 
 /**
  * 学習者用メインダッシュボード
@@ -15,30 +19,34 @@ export default function StudentDashboard() {
   const [selectedCorpusId, setSelectedCorpusId] = useState<string | null>(null);
   const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
+  const [favoriteCount, setFavoriteCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<ViewMode>('dashboard');
 
   // --- スクロールリセット ---
-    useEffect(() => {
-      // ページマウント時、またはコーパス選択解除（selectedCorpusIdがnullに戻った時）に実行
-      if (!selectedCorpusId) {
-        setTimeout(() => {
-          const main = document.querySelector('main');
-          main?.scrollTo(0, 0);
-        }, 50);
-      }
-    }, [selectedCorpusId]);
+  useEffect(() => {
+    // ページマウント時、またはコーパス選択解除（selectedCorpusIdがnullに戻った時）に実行
+    if (!selectedCorpusId) {
+      setTimeout(() => {
+        const main = document.querySelector('main');
+        main?.scrollTo(0, 0);
+      }, 50);
+    }
+  }, [selectedCorpusId]);
 
   // --- Data Fetching ---
   useEffect(() => {
     async function initDashboard() {
       try {
         // 並列で取得
-        const [corpusData, clientData] = await Promise.all([
+        const [corpusData, clientData, favCount] = await Promise.all([
           getClientCorpusList(),
-          getMyClientInfo()
+          getMyClientInfo(),
+          getFavoriteCount()
         ]);
         setCorpusList(corpusData);
         setClientInfo(clientData);
+        setFavoriteCount(favCount);
       } catch (error) {
         console.error("Dashboard Load Error:", error);
       } finally {
@@ -48,15 +56,15 @@ export default function StudentDashboard() {
     initDashboard();
   }, []);
 
-  // --- View: Training Mode ---
+  // --- View: Mode ---
   // コーパス選択時は学習カード画面（子コンポーネント）へ切り替え
-  if (selectedCorpusId) {
-    return (
-      <TrainingCard 
-        sectionId={selectedCorpusId} 
-        onBack={() => setSelectedCorpusId(null)} 
-      />
-    );
+  if (view === 'training' && selectedCorpusId) {
+    return <CorpusCard sectionId={selectedCorpusId} onBack={() => setView('dashboard')} />;
+  }
+
+  // お気に入り選択時はフレーズ一覧（子コンポーネント）へ切り替え
+  if (view === 'favorites') {
+    return <FavoriteList onBack={() => setView('dashboard')} />;
   }
 
   // --- View: Loading State ---
@@ -109,7 +117,7 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Info Stats Bar: デモ映えする学習状況の簡易概要 */}
+      {/* Info Stats Bar: 学習状況の簡易概要 */}
       <div className="grid grid-cols-2 gap-4 px-2">
         <div className="bg-white/60 backdrop-blur-sm p-4 rounded-3xl border border-slate-200/60 flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
@@ -120,13 +128,14 @@ export default function StudentDashboard() {
             <p className="text-sm font-bold text-slate-700">{corpusList.length} Available</p>
           </div>
         </div>
-        <div className="bg-white/60 backdrop-blur-sm p-4 rounded-3xl border border-slate-200/60 flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
-            <GraduationCap size={20} />
+        <div className="bg-white/60 backdrop-blur-sm p-4 rounded-3xl border border-slate-200/60 flex items-center gap-3 hover:bg-white transition-colors cursor-pointer" 
+            onClick={() => setView('favorites')}>
+          <div className="w-10 h-10 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
+            <Star size={20} fill="currentColor" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Status</p>
-            <p className="text-sm font-bold text-slate-700">Ready</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase">Favorites</p>
+            <p className="text-sm font-bold text-slate-700">{favoriteCount} Items</p>
           </div>
         </div>
       </div>
@@ -137,7 +146,10 @@ export default function StudentDashboard() {
           corpusList.map((corpus) => (
             <button
               key={corpus.corpus_id}
-              onClick={() => setSelectedCorpusId(corpus.corpus_id)}
+              onClick={() => {
+                  setSelectedCorpusId(corpus.corpus_id);
+                  setView('training');
+              }}
               className="group relative w-full text-left p-8 bg-white rounded-[36px] border border-slate-200/80 shadow-sm hover:shadow-2xl hover:shadow-indigo-100/50 hover:-translate-y-1.5 transition-all duration-500 isolate overflow-hidden"
             >
               {/* iPhone Safari対策の isolate / overflow-hidden。背景の装飾レイヤー */}

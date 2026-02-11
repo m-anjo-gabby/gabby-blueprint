@@ -98,3 +98,30 @@ USING (
     WHERE w.word_id = public.com_m_phrase.word_id
   )
 );
+
+---------------------------------------------
+-- SQLポリシー お気に入りフレーズ
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can manage their own favorites" ON public.com_t_favorite_phrase;
+DROP POLICY IF EXISTS "Managers can view client's favorites" ON public.com_t_favorite_phrase;
+
+-- RLS設定
+ALTER TABLE public.com_t_favorite_phrase ENABLE ROW LEVEL SECURITY;
+
+-- 利用者向けの参照ポリシー
+CREATE POLICY "Users can manage their own favorites" ON public.com_t_favorite_phrase
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- 管理者向けの参照ポリシー（オプション）
+CREATE POLICY "Managers can view client's favorites" ON public.com_t_favorite_phrase
+FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.com_m_user u
+    WHERE u.id = public.com_t_favorite_phrase.user_id
+    AND u.client_id = public.get_jwt_client_id()
+  )
+);
