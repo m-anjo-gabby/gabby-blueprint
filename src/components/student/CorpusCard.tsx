@@ -336,81 +336,86 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
         </div>
       )}
 
-      {/* Header Area */}
-      <div className="space-y-4 shrink-0">
-        {/* 上段: バックボタンと全体進捗 */}
-        <div className="flex justify-between items-center">
+      {/* ヘッダーエリア (最上部固定) --- */}
+      <div className="space-y-4 shrink-0 border-b border-slate-100 pb-5 mb-4">
+        {/* 上段: バックボタン */}
+        <div className="flex justify-start">
           <button onClick={onBack} className="group text-slate-400 hover:text-indigo-600 flex items-center text-[10px] font-black tracking-widest transition-all">
             <ChevronLeft size={14} className="mr-1 group-hover:-translate-x-0.5 transition-transform" /> 
             BACK TO DASHBOARD
           </button>
-          
-          {/* 単語単位の進捗表示 */}
-          <div className="flex items-baseline gap-1">
-            <span className="text-sm font-black text-indigo-600">{wordIdx + 1}</span>
-            <span className="text-[10px] font-bold text-slate-300">/</span>
-            <span className="text-[10px] font-bold text-slate-400 tracking-tighter">{words.length} WORDS</span>
-          </div>
         </div>
-
-        {/* 下段: Vocabulary と Step情報 */}
-        <div className="flex justify-between items-end border-b border-slate-50 pb-5">
+        {/* 下段: 左に単語、右に進捗数 */}
+        <div className="flex justify-between items-end">
           <div className="flex flex-col items-start space-y-1">
-            <button 
-              onClick={() => setShowIndex(true)}
-              className="flex items-center gap-1.5 px-2 -ml-2 py-1 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all group"
-              title="単語一覧を表示"
-            >
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none">
-                Vocabulary
-              </span>
-              <List size={14} className="text-indigo-500 group-hover:text-indigo-600 transition-colors" />
+            <button onClick={() => setShowIndex(true)} className="flex items-center gap-1.5 px-2 -ml-2 py-1 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all group">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none">Vocabulary</span>
+              <List size={14} className="text-indigo-500" />
             </button>
-            
             <span className="text-xl font-black text-slate-900 leading-none tracking-tight">
               {currentWord.word_en}
             </span>
           </div>
-
-          <div className="flex flex-col items-end space-y-1.5 text-right">
-            <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] leading-none">
-                  Step {currentPhrase.phrase_type}
-                </span>
-                <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map(s => (
-                    <div key={s} className={`w-1 h-1 rounded-full ${s <= currentPhrase.phrase_type ? 'bg-indigo-600' : 'bg-slate-100'}`} />
-                  ))}
-                </div>
+          <div className="flex flex-col items-end">
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-black text-indigo-600">{wordIdx + 1}</span>
+              <span className="text-[10px] font-bold text-slate-300">/</span>
+              <span className="text-[10px] font-bold text-slate-400 tracking-tighter">{words.length} WORDS</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-500 italic leading-none">
-              {getStepLabel(currentPhrase.phrase_type).split(': ')[1]}
-            </span>
           </div>
         </div>
       </div>
 
       {/* Main Drill Area */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-        <div className="w-full max-w-lg space-y-16">
+      <div className="flex-1 flex flex-col items-center">
+
+        {/* ステップ・お気に入りエリア */}
+        <div className="relative w-full max-w-lg mb-5 flex flex-col items-center">
           
-          {/* お気に入りボタン */}
-          <div className="relative -top-12 right-0 z-20">
-            <button
-              onClick={(e) => {
-                e.stopPropagation(); // カードめくりを防止
-                handleToggleFavorite();
-              }}
-              className={`p-3 rounded-2xl transition-all duration-300 shadow-sm border ${
-                isFavorite 
-                  ? 'bg-amber-50 border-amber-200 text-amber-500 scale-110' 
-                  : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
-              }`}
-            >
-              <Star size={24} fill={isFavorite ? "currentColor" : "none"} />
-            </button>
+          {/* 1. 上段中央：インジケータドット（常にど真ん中） */}
+          <div className="flex gap-1.5 mb-2">
+            {[1, 2, 3, 4, 5].map(s => (
+              <div 
+                key={s} 
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                  s <= currentPhrase.phrase_type ? 'bg-indigo-600' : 'bg-slate-100'
+                }`} 
+              />
+            ))}
           </div>
 
+          {/* 2. 下段：左右固定要素と中央ラベルのコンテナ */}
+          <div className="relative w-full flex items-center justify-center min-h-8">
+            {/* 左端：STEPタグ */}
+            <div className="absolute left-0">
+              <span className="text-[9px] font-black text-indigo-600 border border-indigo-200 bg-indigo-50/50 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                STEP {currentPhrase.phrase_type}
+              </span>
+            </div>
+            {/* 中央：ステップラベル（PXを確保して重なりを防止） */}
+            <div className="px-16">
+              <span className="text-[11px] font-bold text-slate-500 italic tracking-wide text-center block leading-tight">
+                {getStepLabel(currentPhrase.phrase_type).split(': ')[1]}
+              </span>
+            </div>
+            {/* 右端：スターボタン */}
+            <div className="absolute right-0 -top-2">
+              <button 
+                onClick={handleToggleFavorite} 
+                className={`p-2 transition-all duration-300 hover:scale-110 ${
+                  isFavorite ? 'text-amber-400' : 'text-slate-200 hover:text-slate-300'
+                }`}
+              >
+                <Star size={28} fill={isFavorite ? "currentColor" : "none"} strokeWidth={isFavorite ? 1 : 2} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* メインのカード表示 */}
+        <div className="w-full max-w-lg mt-4 mb-8 items-center justify-center text-center">
+
+          {/* フレーズ表示カード */}
           <div 
             className="relative w-full min-h-40 cursor-pointer group"
             style={{ perspective: '1000px' }}
