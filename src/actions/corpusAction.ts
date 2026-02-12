@@ -1,32 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/server";
-import { TrainingWord } from "@/types/training";
-
-// 1. DBから返ってくる生のデータ構造を定義
-interface RawPhraseResponse {
-  phrase_id: string;
-  phrase_en: string;
-  phrase_ja: string;
-  phrase_type: number;
-  seq_no: number;
-}
-
-interface RawWordResponse {
-  word_id: string;
-  word_en: string;
-  word_ja: string;
-  com_m_phrase: RawPhraseResponse[];
-}
-
-export interface FavoritePhraseRecord {
-  favorite_id: string;
-  phrase_id: string;
-  phrase_en: string;
-  phrase_ja: string;
-  word_en: string; // どの単語のフレーズか分かると親切
-  insert_date: string;
-}
+import { FavoritePhraseRecord, TrainingWord } from "@/types/training";
 
 /**
  * 指定されたコーパスIDに紐付く単語とフレーズを取得（お気に入り状態付き）
@@ -109,7 +84,12 @@ export async function getFavoriteCount(): Promise<number> {
   const { count, error } = await supabase
     .from('com_t_favorite_phrase')
     .select('*', { count: 'exact', head: true });
-    
+
+  if (error) {
+    console.error("Supabase Error Detail:", error);
+    throw new Error(`取得失敗: ${error.message}`);
+  }
+
   return count || 0;
 }
 
@@ -135,7 +115,10 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
     `)
     .order('insert_date', { ascending: false });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("Supabase Error Detail:", error);
+    throw new Error(`取得失敗: ${error.message}`);
+  }
   
   // ネストされたデータをフラットに整形
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -148,3 +131,4 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
     insert_date: fav.insert_date
   }));
 }
+

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { toggleFavorite, getFavoritePhrases, type FavoritePhraseRecord } from '@/actions/corpusAction';
+import { toggleFavorite, getFavoritePhrases } from '@/actions/corpusAction';
 import { ChevronLeft, Star, Volume2, Trash2 } from 'lucide-react';
+import { FavoritePhraseRecord } from '@/types/training';
 
 export default function FavoriteList({ onBack }: { onBack: () => void }) {
   const [favorites, setFavorites] = useState<FavoritePhraseRecord[]>([]);
