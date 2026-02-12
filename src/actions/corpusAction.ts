@@ -29,13 +29,12 @@ export interface FavoritePhraseRecord {
 }
 
 /**
- * 指定されたコーパスIDに紐付く単語とフレーズを取得
+ * 指定されたコーパスIDに紐付く単語とフレーズを取得（お気に入り状態付き）
  */
 export async function getTrainingData(corpusId: string): Promise<TrainingWord[]> {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser(); // ユーザーID取得
 
-  // selectの型推論を助けるため、RawWordResponse[] として扱う
-  // 子テーブル(com_m_phrase)のソートもselect内で指定可能です
   const { data, error } = await supabase
     .from('com_m_word')
     .select(`
@@ -47,30 +46,35 @@ export async function getTrainingData(corpusId: string): Promise<TrainingWord[]>
         phrase_en,
         phrase_ja,
         phrase_type,
-        seq_no
+        seq_no,
+        com_t_favorite_phrase ( phrase_id )
       )
     `)
     .eq('corpus_id', corpusId)
     .eq('delete_flg', '0')
-    .eq('com_m_phrase.delete_flg', '0') // フレーズ側の削除フラグも考慮
-    .order('frequency_rank', { ascending: true }) // com_m_wordのソート
-    .order('seq_no', { referencedTable: 'com_m_phrase', ascending: true }); // com_m_phraseのソート
+    .eq('com_m_phrase.delete_flg', '0')
+    .eq('com_m_phrase.com_t_favorite_phrase.user_id', user?.id) // 自分のデータのみ
+    .order('frequency_rank', { ascending: true })
+    .order('seq_no', { referencedTable: 'com_m_phrase', ascending: true });
 
   if (error) {
-    console.error("DB Fetch Error:", error.message);
-    throw new Error("トレーニングデータの取得に失敗しました。");
+    console.error("Supabase Error Detail:", error);
+    throw new Error(`取得失敗: ${error.message}`);
   }
 
-  // data を一度 unknown を経由して RawWordResponse[] にキャスト
-  const rawData = data as unknown as RawWordResponse[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawData = data as any[];
 
-  // 3. any を使わずにマッピング
   return rawData.map((word) => ({
     word_id: word.word_id,
     word_en: word.word_en,
     word_ja: word.word_ja,
-    // com_m_phrase が配列であることを保証しつつソート
-    phrases: [...(word.com_m_phrase || [])].sort((a, b) => a.seq_no - b.seq_no)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    phrases: word.com_m_phrase.map((p: any) => ({
+      ...p,
+      // お気に入りレコードが存在すれば true
+      is_favorite_initial: Array.isArray(p.com_t_favorite_phrase) && p.com_t_favorite_phrase.length > 0 
+    }))
   }));
 }
 

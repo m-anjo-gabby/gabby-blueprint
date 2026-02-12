@@ -38,7 +38,6 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   const [isFlipped, setIsFlipped] = useState(false);
   const [showIndex, setShowIndex] = useState(false);
   const [sortOrder, setSortOrder] = useState<'default' | 'alpha'>('default');
-  const [isFavorite, setIsFavorite] = useState(false);
   
   const lastHeardRef = useRef<string>("");
   const activeWordRef = useRef<HTMLButtonElement | null>(null);
@@ -60,6 +59,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
    */
   const currentWord = words[wordIdx] || null;
   const currentPhrase = currentWord?.phrases?.[phraseIdx] || null;
+  const isFavorite = !!currentPhrase?.is_favorite_initial;
 
   // 目次表示用のリストを計算（words 本体は書き換えない）
   const displayWords = useMemo(() => {
@@ -164,7 +164,6 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     setFeedback(null);
     setHeardText(null);
     setIsFlipped(false); // 次へ行くときは英語に戻す
-    setIsFavorite(false); // 追加：次の問題では星をオフにする（※DBから状態取得する場合はここを修正）
     lastHeardRef.current = "";
     if (phraseIdx < currentWord.phrases.length - 1) {
       setPhraseIdx(prev => prev + 1);
@@ -225,14 +224,37 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
    */
   const handleToggleFavorite = async () => {
     if (!currentPhrase) return;
+    
     const nextState = !isFavorite;
-    setIsFavorite(nextState); // UIを即時更新（楽観的更新）
+
+    // wordsステートを更新し、スターに即時切替
+    setWords(prevWords => {
+      const newWords = [...prevWords];
+      const targetWord = newWords[wordIdx];
+      if (targetWord && targetWord.phrases[phraseIdx]) {
+        // 既存の phrases 配列も新しいオブジェクトでコピーすることで、安全性確保
+        targetWord.phrases = [...targetWord.phrases];
+        targetWord.phrases[phraseIdx] = {
+          ...targetWord.phrases[phraseIdx],
+          is_favorite_initial: nextState
+        };
+      }
+      return newWords;
+    });
     
     try {
       await toggleFavorite(currentPhrase.phrase_id, nextState);
     } catch (error) {
       console.error("Favorite toggle failed:", error);
-      setIsFavorite(!nextState); // 失敗したら戻す
+      // 失敗時は逆の操作をしてロールバック
+      setWords(prevWords => {
+        const newWords = [...prevWords];
+        const targetWord = newWords[wordIdx];
+        if (targetWord && targetWord.phrases[phraseIdx]) {
+          targetWord.phrases[phraseIdx].is_favorite_initial = !nextState;
+        }
+        return newWords;
+      });
     }
   };
 

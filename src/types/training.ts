@@ -6,6 +6,7 @@ export interface PhraseRecord {
   phrase_ja: string;
   phrase_type: number;
   seq_no: number;
+  is_favorite_initial: boolean;
 }
 
 export interface TrainingWord {
