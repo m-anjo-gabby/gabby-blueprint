@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star } from 'lucide-react';
+import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star, X } from 'lucide-react';
 import { useVoice } from '@/hooks/useVoice';
 import { getTrainingData, toggleFavorite } from '@/actions/corpusAction';
 import { calculateSimilarity } from '@/utils/stringSimilarity';
@@ -96,6 +96,16 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
       });
     }
   }, [showIndex, sortOrder]); // showIndex が true（目次オープン）またはソートタブ切替時に実行
+
+  useEffect(() => {
+    // ポップアップまたは目次が開いている間、背後のスクロールを禁止
+    if (feedback || showIndex) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [feedback, showIndex]);
 
   /**
    * 録音終了時の自動評価ロジック
@@ -259,8 +269,59 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   };
 
   return (
-    <div className="bg-white text-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto min-h-150 flex flex-col relative overflow-hidden">
+    <div className="bg-white text-slate-900 rounded-[40px] p-6 shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto h-[75svh] md:min-h-150 flex flex-col relative overflow-hidden">
       
+      {/* --- 全画面フィードバックポップアップ --- */}
+      {feedback && (
+        <div 
+          className="absolute inset-0 z-100 flex items-center justify-center p-6 animate-in fade-in duration-200"
+          style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }} // Safari安定用のインラインCSS
+          onClick={() => setFeedback(null)} 
+        >
+          {/* ポップアップ本体 */}
+          <div 
+            className="relative z-110 bg-white w-full max-w-sm rounded-4xl p-8 shadow-2xl flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300 border border-slate-100"
+            onClick={(e) => e.stopPropagation()} 
+          >
+            <div className="absolute top-0 right-0 p-4">
+              <button 
+                onClick={() => setFeedback(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation"
+              >
+                <X size={24} strokeWidth={2.5} />
+              </button>
+            </div>
+
+            {/* 評価タグ */}
+            <div className={`text-[10px] font-black px-6 py-2 rounded-full border uppercase tracking-[0.3em] shadow-sm ${feedback.text}`}
+                style={{ backgroundColor: `${feedback.fill}15`, borderColor: `${feedback.fill}40`, color: feedback.fill }}>
+              {feedback.tagText}
+            </div>
+
+            <div className="text-center space-y-3">
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block">You said</span>
+              <p className="text-xl font-bold text-slate-800 italic leading-tight px-2">
+                {heardText}
+              </p>
+            </div>
+
+            {/* 今後のAIコメント用スペース（不透明な背景で読みやすく） */}
+            <div className="w-full p-5 bg-slate-50 rounded-3xl border border-slate-100">
+              <p className="text-[11px] text-slate-500 leading-relaxed italic text-center">
+                Tap anywhere to close
+              </p>
+            </div>
+
+            <button 
+              onClick={() => setFeedback(null)}
+              className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-indigo-600 transition-colors pt-2"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* --- 単語目次オーバーレイ --- */}
       {showIndex && (
         <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm p-8 animate-in fade-in zoom-in-95 duration-200 flex flex-col">
@@ -380,9 +441,10 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
           </div>
           <div className="flex flex-col items-end">
             <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black text-indigo-600">{wordIdx + 1}</span>
-              <span className="text-[10px] font-bold text-slate-300">/</span>
-              <span className="text-[10px] font-bold text-slate-400 tracking-tighter">{words.length} WORDS</span>
+              <span className="text-base font-black text-indigo-600">{wordIdx + 1}</span>
+              <span className="text-sm font-bold text-slate-300">/</span>
+              <span className="text-sm font-bold text-slate-400 tracking-tighter">{words.length}</span>
+              <span className="text-[10px] font-bold text-slate-400 tracking-tighter">WORDS</span>
             </div>
           </div>
         </div>
@@ -479,60 +541,21 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
               Click to reveal translation
             </div>
           </div>
-          
-          <div className="min-h-32 flex flex-col items-center justify-center relative">
-            {!isListening && !feedback && (
-              <div 
-                className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-700"
-              >
-                <div className="flex flex-col items-center gap-3 py-6 px-10 rounded-4xl border-2 border-slate-100/50 border-dotted">
-                  <Mic size={18} className="text-slate-200" />
-                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] text-center">
-                    Ready for Voice Check
-                  </span>
-                </div>
-              </div>
-            )}
+        </div>
 
-            {isListening && (
-              <div className="z-10 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="flex gap-1.5 h-3 items-center">
-                  {[...Array(3)].map((_, i) => (
-                    <div 
-                      key={i} 
-                      className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" 
-                      style={{ animationDelay: `${i * 0.15}s` }} 
-                    />
-                  ))}
-                </div>
-                <p className="text-xl font-medium text-slate-400 italic tracking-wide px-4">
-                  {heardText || "Listening..."}
-                </p>
-              </div>
-            )}
-
-            {!isListening && feedback && (
-              <div className="z-10 flex flex-col items-center gap-6 animate-in zoom-in-95 fade-in duration-500">
-                <div 
-                  className={`text-[10px] font-black px-8 py-2 rounded-full border uppercase tracking-[0.3em] shadow-sm ${feedback.text}`}
-                  style={{ 
-                    backgroundColor: `${feedback.fill}08`, 
-                    borderColor: `${feedback.fill}30`,
-                    color: feedback.fill 
-                  }}
-                >
-                  {feedback.tagText}
-                </div>
-                
-                <div className="flex flex-col items-center gap-2 px-6">
-                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">You said</span>
-                  <p className="text-base font-medium text-slate-500 italic leading-relaxed max-w-sm">
-                    {heardText || "No speech detected"}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Recording Status */}
+        <div className="min-h-16 flex items-center justify-center">
+          {isListening ? (
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping" />
+              <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em]">Recording...</span>
+            </div>
+          ) : (
+            <div className="opacity-20 flex items-center gap-2">
+              <Mic size={16} />
+              <span className="text-[9px] font-black uppercase tracking-[0.2em]">Ready for Voice Check</span>
+            </div>
+          )}
         </div>
       </div>
 
