@@ -15,6 +15,12 @@ type FeedbackConfig = {
   isSuccess: boolean;
 };
 
+// --- コンポーネントの外側で設定値を定義 ---
+const DRILL_CONFIG = {
+  RECORDING_LIMIT: 7, // 制限時間（秒）
+  AUTO_STOP_THRESHOLD: 0.90, // 自動合格（Excellent）とみなす類似度
+};
+
 /**
  * 類似度に基づいた5段階評価設定の取得
  */
@@ -34,7 +40,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   
   const [heardText, setHeardText] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackConfig | null>(null);
-  const [timeLeft, setTimeLeft] = useState(10);
+  const [timeLeft, setTimeLeft] = useState(DRILL_CONFIG.RECORDING_LIMIT);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showIndex, setShowIndex] = useState(false);
   const [sortOrder, setSortOrder] = useState<'default' | 'alpha'>('default');
@@ -134,6 +140,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
+            stopListening(); // 0秒で強制停止
             return 0;
           }
           return prev - 1;
@@ -141,7 +148,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
       }, 1000);
     }
     return () => { if (timer) clearInterval(timer); };
-  }, [isListening]);
+  }, [isListening, stopListening]);
 
   /**
    * 重要：フックの定義（useState, useEffect）よりも後に
@@ -174,6 +181,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     setFeedback(null);
     setHeardText(null);
     setIsFlipped(false); // 次へ行くときは英語に戻す
+    setTimeLeft(DRILL_CONFIG.RECORDING_LIMIT);
     lastHeardRef.current = "";
     if (phraseIdx < currentWord.phrases.length - 1) {
       setPhraseIdx(prev => prev + 1);
@@ -196,7 +204,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     setFeedback(null);
     setHeardText(null);
     lastHeardRef.current = "";
-    setTimeLeft(10); 
+    setTimeLeft(DRILL_CONFIG.RECORDING_LIMIT);
     
     startListening((heard) => {
       setHeardText(heard);
@@ -206,8 +214,8 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
       if (currentPhrase) {
         const similarity = calculateSimilarity(heard, currentPhrase.phrase_en);
         
-        // 90%以上の精度（Excellent相当）に達したら自動で締め切る
-        if (similarity >= 0.90) {
+        // 既定の精度に達したら自動で締め切る
+        if (similarity >= DRILL_CONFIG.AUTO_STOP_THRESHOLD) {
           // ユーザーに一瞬「言い切った」感覚を与えるため、わずかにディレイ（200ms）を挟んで停止
           setTimeout(() => {
             stopListening();
@@ -588,7 +596,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
             {isListening && (
               <div 
                 className="absolute inset-0 bg-rose-600 opacity-30 origin-left transition-transform duration-1000 ease-linear" 
-                style={{ transform: `scaleX(${timeLeft / 10})` }} 
+                style={{ transform: `scaleX(${timeLeft / DRILL_CONFIG.RECORDING_LIMIT})` }} 
               />
             )}
             <div className="relative z-10 flex items-center gap-2">

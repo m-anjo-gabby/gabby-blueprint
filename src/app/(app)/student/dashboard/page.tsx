@@ -7,8 +7,9 @@ import { BookOpen, ArrowRight, Star } from 'lucide-react';
 import Image from 'next/image';
 import { getFavoriteCount } from '@/actions/corpusAction';
 import FavoriteList from '@/components/student/FavoriteList';
+import CourseLibrary from '@/components/student/CourseLibrary';
 
-type ViewMode = 'dashboard' | 'training' | 'favorites';
+type ViewMode = 'dashboard' | 'training' | 'favorites' | 'library';
 
 /**
  * 学習者用メインダッシュボード
@@ -75,12 +76,26 @@ export default function StudentDashboard() {
     return <CorpusCard sectionId={selectedCorpusId} onBack={handleBackAndRefresh} />;
   }
 
+  // コース選択時はコース一覧（子コンポーネント）へ切り替え
+  if (view === 'library') {
+    return (
+      <CourseLibrary 
+        corpusList={corpusList} 
+        onSelect={(id) => {
+          setSelectedCorpusId(id);
+          setView('training');
+        }}
+        onBack={() => setView('dashboard')} 
+      />
+    );
+  }
+
   // お気に入り選択時はフレーズ一覧（子コンポーネント）へ切り替え
   if (view === 'favorites') {
     return <FavoriteList onBack={handleBackAndRefresh} />;
   }
   // --- View: Loading State ---
-  // 読み込み中。プロフェッショナルな印象を与えるため、カスタムアニメーションを配置
+  // 読み込み中
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-100 space-y-4">
@@ -131,18 +146,27 @@ export default function StudentDashboard() {
 
       {/* Info Stats Bar: 学習状況とアクション導線 */}
       <div className="grid grid-cols-2 gap-4 px-2">
-        {/* 左側：Courses（スタッツ表示） */}
-        <div className="bg-white/60 backdrop-blur-sm p-4 rounded-3xl border border-slate-200/60 flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-            <BookOpen size={20} />
+        
+        {/* 左側：Courses (教材一覧ライブラリへのボタン) */}
+        <button 
+          onClick={() => setView('library')}
+          className="group bg-white p-4 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-lg hover:shadow-indigo-100 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
+              <BookOpen size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-indigo-600/60 uppercase leading-none mb-1 tracking-wider">Courses</p>
+              <p className="text-sm font-black text-slate-800 leading-none">
+                {corpusList.length} <span className="text-[11px] font-medium text-slate-500">Books</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1">Courses</p>
-            <p className="text-sm font-bold text-slate-700 leading-none">{corpusList.length} Available</p>
-          </div>
-        </div>
+          <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+        </button>
 
-        {/* 右側：Favorites（ボタンとして強化） */}
+        {/* 右側：Favorites (お気に入り一覧ライブラリへのボタン)  */}
         <button 
           onClick={() => setView('favorites')}
           className="group bg-white p-4 rounded-3xl border border-amber-200 shadow-sm hover:shadow-lg hover:shadow-amber-100 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-between text-left"
