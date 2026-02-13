@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/server";
-import { FavoritePhraseRecord, TrainingWord } from "@/types/training";
+import { FavoritePhraseRecord, RawFavoriteResponse, TrainingWord } from "@/types/training";
 
 /**
  * 指定されたコーパスIDに紐付く単語とフレーズを取得（お気に入り状態付き）
@@ -109,7 +109,11 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
         phrase_en,
         phrase_ja,
         com_m_word (
-          word_en
+          word_en,
+          com_m_corpus (
+            corpus_id,
+            corpus_name
+          )
         )
       )
     `)
@@ -120,15 +124,16 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
     throw new Error(`取得失敗: ${error.message}`);
   }
   
-  // ネストされたデータをフラットに整形
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data as any[]).map(fav => ({
-    favorite_id: fav.favorite_id,
-    phrase_id: fav.phrase_id,
-    phrase_en: fav.com_m_phrase.phrase_en,
-    phrase_ja: fav.com_m_phrase.phrase_ja,
-    word_en: fav.com_m_phrase.com_m_word.word_en,
-    insert_date: fav.insert_date
-  }));
+  // ここでフラットな形に変換する
+    return (data as unknown as RawFavoriteResponse[]).map(item => ({
+      favorite_id: item.favorite_id,
+      phrase_id: item.phrase_id,
+      phrase_en: item.com_m_phrase.phrase_en,
+      phrase_ja: item.com_m_phrase.phrase_ja,
+      word_en: item.com_m_phrase.com_m_word.word_en,
+      corpus_id: item.com_m_phrase.com_m_word.com_m_corpus.corpus_id,
+      corpus_name: item.com_m_phrase.com_m_word.com_m_corpus.corpus_name,
+      insert_date: item.insert_date
+    }));
 }
 

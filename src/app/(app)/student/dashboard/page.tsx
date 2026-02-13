@@ -56,17 +56,29 @@ export default function StudentDashboard() {
     initDashboard();
   }, []);
 
+  // 共通の戻る処理 + カウント更新
+  const handleBackAndRefresh = async () => {
+    setView('dashboard'); // 画面を戻す
+    
+    try {
+      // 最新の件数を取得して反映
+      const favCount = await getFavoriteCount();
+      setFavoriteCount(favCount);
+    } catch (error) {
+      console.error("Failed to refresh favorite count:", error);
+    }
+  };
+
   // --- View: Mode ---
   // コーパス選択時は学習カード画面（子コンポーネント）へ切り替え
   if (view === 'training' && selectedCorpusId) {
-    return <CorpusCard sectionId={selectedCorpusId} onBack={() => setView('dashboard')} />;
+    return <CorpusCard sectionId={selectedCorpusId} onBack={handleBackAndRefresh} />;
   }
 
   // お気に入り選択時はフレーズ一覧（子コンポーネント）へ切り替え
   if (view === 'favorites') {
-    return <FavoriteList onBack={() => setView('dashboard')} />;
+    return <FavoriteList onBack={handleBackAndRefresh} />;
   }
-
   // --- View: Loading State ---
   // 読み込み中。プロフェッショナルな印象を与えるため、カスタムアニメーションを配置
   if (loading) {
@@ -117,27 +129,37 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Info Stats Bar: 学習状況の簡易概要 */}
+      {/* Info Stats Bar: 学習状況とアクション導線 */}
       <div className="grid grid-cols-2 gap-4 px-2">
+        {/* 左側：Courses（スタッツ表示） */}
         <div className="bg-white/60 backdrop-blur-sm p-4 rounded-3xl border border-slate-200/60 flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
             <BookOpen size={20} />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Courses</p>
-            <p className="text-sm font-bold text-slate-700">{corpusList.length} Available</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1">Courses</p>
+            <p className="text-sm font-bold text-slate-700 leading-none">{corpusList.length} Available</p>
           </div>
         </div>
-        <div className="bg-white/60 backdrop-blur-sm p-4 rounded-3xl border border-slate-200/60 flex items-center gap-3 hover:bg-white transition-colors cursor-pointer" 
-            onClick={() => setView('favorites')}>
-          <div className="w-10 h-10 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
-            <Star size={20} fill="currentColor" />
+
+        {/* 右側：Favorites（ボタンとして強化） */}
+        <button 
+          onClick={() => setView('favorites')}
+          className="group bg-white p-4 rounded-3xl border border-amber-200 shadow-sm hover:shadow-lg hover:shadow-amber-100 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+              <Star size={20} fill="currentColor" className={favoriteCount > 0 ? "animate-pulse" : ""} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-amber-600/60 uppercase leading-none mb-1 tracking-wider">Favorites</p>
+              <p className="text-sm font-black text-slate-800 leading-none">
+                {favoriteCount} <span className="text-[11px] font-medium text-slate-500">Items</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Favorites</p>
-            <p className="text-sm font-bold text-slate-700">{favoriteCount} Items</p>
-          </div>
-        </div>
+          <ArrowRight size={14} className="text-slate-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+        </button>
       </div>
 
       {/* Corpus Selection Grid: コーパス一覧をカード形式で表示 */}

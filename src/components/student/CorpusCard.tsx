@@ -269,7 +269,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   };
 
   return (
-    <div className="bg-white text-slate-900 rounded-[40px] p-6 shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto h-[75svh] md:min-h-150 flex flex-col relative overflow-hidden">
+    <div className="bg-white text-slate-900 rounded-[40px] p-6 shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto h-[95svh] md:h-[80svh] min-h-[80svh] max-h-[95svh] flex flex-col relative overflow-hidden">
       
       {/* --- 全画面フィードバックポップアップ --- */}
       {feedback && (
