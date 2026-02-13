@@ -113,8 +113,8 @@ export default function FavoriteList({ onBack }: { onBack: () => void }) {
             {filteredFavorites.map((fav) => (
               <div key={fav.favorite_id} className="bg-white p-5 rounded-4xl border border-slate-100 shadow-sm space-y-4">
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2.5 py-1 rounded-lg">
-                    Keyword: {fav.word_en}
+                  <span className="text-[10px] font-black text-indigo-500 tracking-widest bg-indigo-50 px-2.5 py-1 rounded-lg">
+                    {fav.word_en}
                   </span>
                   {/* ゴミ箱クリックでモーダルを開く */}
                   <button 
