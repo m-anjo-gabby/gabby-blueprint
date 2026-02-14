@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/server";
+import { CorpusRecord } from "@/types/corpus";
 import { FavoritePhraseRecord, RawFavoriteResponse, TrainingWord } from "@/types/training";
 
 /**
@@ -137,3 +138,49 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
     }));
 }
 
+// 全コーパスを取得
+export async function getAllCorpus(): Promise<CorpusRecord[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('com_m_corpus')
+    .select(`
+      *,
+      is_favorite:com_t_favorite_corpus(count)
+    `)
+    .eq('delete_flg', '0')
+    .order('seq_no', { ascending: true });
+
+  if (error) {
+    console.error("Fetch Error:", error);
+    return [];
+  }
+
+  // countをbooleanに変換し、全体をCorpusRecord[]として扱う
+  return (data || []).map(c => ({
+    ...c,
+    is_favorite: c.is_favorite[0]?.count > 0,
+    // metadataはDBからJSONとして返るのでそのまま渡す
+  })) as unknown as CorpusRecord[];
+}
+
+/**
+ * コーパス（教材）のお気に入り状態を切り替え
+ */
+export async function toggleCorpusFavorite(corpusId: string, isFavorite: boolean) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  if (isFavorite) {
+    // お気に入り登録
+    await supabase
+      .from('com_t_favorite_corpus')
+      .upsert({ user_id: user.id, corpus_id: corpusId });
+  } else {
+    // 解除
+    await supabase
+      .from('com_t_favorite_corpus')
+      .delete()
+      .match({ user_id: user.id, corpus_id: corpusId });
+  }
+}

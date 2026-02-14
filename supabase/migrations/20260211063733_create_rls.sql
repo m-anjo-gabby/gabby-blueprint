@@ -125,3 +125,33 @@ USING (
     AND u.client_id = public.get_jwt_client_id()
   )
 );
+
+---------------------------------------------
+-- SQLポリシー お気に入りコーパス
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can manage their own favorite corpus" ON public.com_t_favorite_corpus;
+
+-- RLS設定
+ALTER TABLE public.com_t_favorite_corpus ENABLE ROW LEVEL SECURITY;
+
+-- 利用者向けの参照ポリシー
+CREATE POLICY "Users can manage their own favorite corpus" ON public.com_t_favorite_corpus
+FOR ALL TO authenticated USING (
+  user_id = auth.uid()
+);
+
+---------------------------------------------
+-- SQLポリシー コーパスタグ管理
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Anyone can view tags" ON public.com_m_corpus_tag;
+
+-- RLS設定
+ALTER TABLE public.com_m_corpus_tag ENABLE ROW LEVEL SECURITY;
+
+-- 認証済みユーザーは誰でも参照可能
+CREATE POLICY "Anyone can view tags" ON public.com_m_corpus_tag
+FOR SELECT TO authenticated USING (delete_flg = '0');
+
+-- 管理（更新・追加）は authenticated には許可しない（デフォルトで制限）

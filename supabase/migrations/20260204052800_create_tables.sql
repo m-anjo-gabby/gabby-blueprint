@@ -66,9 +66,13 @@ CREATE TABLE public.com_m_corpus (
   corpus_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   corpus_name TEXT NOT NULL,
   corpus_type SMALLINT NOT NULL DEFAULT 1,
+  corpus_scope SMALLINT NOT NULL DEFAULT 0,
   seq_no SMALLINT NOT NULL DEFAULT 1,
+  difficulty_level SMALLINT NOT NULL DEFAULT 1,
+  recommend SMALLINT NOT NULL DEFAULT 0,
   description TEXT,
   corpus_label TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}',
   delete_flg TEXT NOT NULL DEFAULT '0',
   insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -77,8 +81,11 @@ CREATE TABLE public.com_m_corpus (
 COMMENT ON TABLE public.com_m_corpus IS 'コーパス管理マスタ';
 COMMENT ON COLUMN public.com_m_corpus.corpus_id IS 'コーパスID';
 COMMENT ON COLUMN public.com_m_corpus.corpus_name IS 'コーパス名称';
-COMMENT ON COLUMN public.com_m_corpus.corpus_type IS 'コーパス種別 0:共通, 1:クライアント限定';
+COMMENT ON COLUMN public.com_m_corpus.corpus_type IS 'コーパス種別 0:単語・フレーズ, 1:Gabbyスプリント';
+COMMENT ON COLUMN public.com_m_corpus.corpus_scope IS 'コーパス公開範囲 0:共通, 1:クライアント限定';
 COMMENT ON COLUMN public.com_m_corpus.seq_no IS 'SEQNO';
+COMMENT ON COLUMN public.com_m_corpus.difficulty_level IS '難易度';
+COMMENT ON COLUMN public.com_m_corpus.recommend IS 'おすすめ';
 COMMENT ON COLUMN public.com_m_corpus.description IS 'コーパス説明・解析根拠';
 COMMENT ON COLUMN public.com_m_corpus.corpus_label IS 'コーパスラベル';
 COMMENT ON COLUMN public.com_m_corpus.delete_flg IS '論理削除フラグ';
@@ -181,3 +188,44 @@ COMMENT ON COLUMN public.com_t_favorite_phrase.favorite_id IS 'お気に入りID
 COMMENT ON COLUMN public.com_t_favorite_phrase.user_id IS 'ユーザID';
 COMMENT ON COLUMN public.com_t_favorite_phrase.phrase_id IS 'フレーズID';
 COMMENT ON COLUMN public.com_t_favorite_phrase.insert_date IS '登録日時';
+
+---------------------------------------------
+-- DDL: com_t_favorite_corpus (お気に入りコーパス)
+---------------------------------------------
+CREATE TABLE public.com_t_favorite_corpus (
+  favorite_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  corpus_id uuid NOT NULL REFERENCES public.com_m_corpus(corpus_id) ON DELETE CASCADE,
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  
+  -- 二重登録防止
+  UNIQUE(user_id, corpus_id)
+);
+
+COMMENT ON TABLE public.com_t_favorite_corpus IS 'お気に入りコーパス';
+COMMENT ON COLUMN public.com_t_favorite_corpus.favorite_id IS 'お気に入りID';
+COMMENT ON COLUMN public.com_t_favorite_corpus.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_favorite_corpus.corpus_id IS 'コーパスID';
+COMMENT ON COLUMN public.com_t_favorite_corpus.insert_date IS '登録日時';
+
+---------------------------------------------
+-- DDL: com_m_corpus_tag (タグ管理マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_corpus_tag (
+  tag_id TEXT PRIMARY KEY, -- 'ind_it', 'sc_meeting' 等の可読ID
+  tag_name TEXT NOT NULL,
+  tag_type TEXT NOT NULL, -- 'industry', 'scene', 'skill' 等
+  seq_no SMALLINT NOT NULL DEFAULT 1,
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_corpus_tag IS 'コーパスタグ管理マスタ';
+COMMENT ON COLUMN public.com_m_corpus_tag.tag_id IS 'タグID（可読文字列）';
+COMMENT ON COLUMN public.com_m_corpus_tag.tag_name IS 'タグ表示名称';
+COMMENT ON COLUMN public.com_m_corpus_tag.tag_type IS 'タグ種別';
+COMMENT ON COLUMN public.com_m_corpus_tag.seq_no IS 'デフォルト表示順';
+COMMENT ON COLUMN public.com_m_corpus_tag.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_corpus_tag.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_corpus_tag.update_date IS '更新日時';

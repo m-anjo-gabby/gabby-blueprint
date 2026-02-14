@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import CorpusCard from '@/components/student/CorpusCard';
-import { ClientInfo, getClientCorpusList, getMyClientInfo, type CorpusRecord } from '@/actions/dashboardAction';
+import { ClientInfo, getDashboardCorpusData, getMyClientInfo } from '@/actions/dashboardAction';
 import { BookOpen, ArrowRight, Star } from 'lucide-react';
 import Image from 'next/image';
 import { getFavoriteCount } from '@/actions/corpusAction';
 import FavoriteList from '@/components/student/FavoriteList';
 import CourseLibrary from '@/components/student/CourseLibrary';
+import { CorpusRecord } from '@/types/corpus';
 
 type ViewMode = 'dashboard' | 'training' | 'favorites' | 'library';
 
@@ -23,6 +24,9 @@ export default function StudentDashboard() {
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>('dashboard');
+
+  const favorites = corpusList.filter(c => c.is_favorite);
+  const recommendations = corpusList.filter(c => c.recommend > 0 && !c.is_favorite);
 
   // --- スクロールリセット ---
   useEffect(() => {
@@ -41,7 +45,7 @@ export default function StudentDashboard() {
       try {
         // 並列で取得
         const [corpusData, clientData, favCount] = await Promise.all([
-          getClientCorpusList(),
+          getDashboardCorpusData(),
           getMyClientInfo(),
           getFavoriteCount()
         ]);
@@ -80,7 +84,6 @@ export default function StudentDashboard() {
   if (view === 'library') {
     return (
       <CourseLibrary 
-        corpusList={corpusList} 
         onSelect={(id) => {
           setSelectedCorpusId(id);
           setView('training');
@@ -186,73 +189,103 @@ export default function StudentDashboard() {
         </button>
       </div>
 
-      {/* Corpus Selection Grid: コーパス一覧をカード形式で表示 */}
-      <div className="grid gap-5">
-        {corpusList.length > 0 ? (
-          corpusList.map((corpus) => (
-            <button
-              key={corpus.corpus_id}
-              onClick={() => {
-                  setSelectedCorpusId(corpus.corpus_id);
-                  setView('training');
-              }}
-              className="group relative w-full text-left p-8 bg-white rounded-[36px] border border-slate-200/80 shadow-sm hover:shadow-2xl hover:shadow-indigo-100/50 hover:-translate-y-1.5 transition-all duration-500 isolate overflow-hidden"
-            >
-              {/* iPhone Safari対策の isolate / overflow-hidden。背景の装飾レイヤー */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-indigo-100/80 transition-colors"></div>
-
-              <div className="relative space-y-5">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1.5">
-                    {/* ラベル: 業界区分やバージョンを表示 */}
-                    <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 group-hover:scale-150 transition-transform duration-500"></span>
-                      <span className="text-[10px] font-bold text-indigo-500 tracking-[0.15em] uppercase">
-                        {corpus.corpus_label}
-                      </span>
-                    </div>
-                    {/* コーパス名称: 専門領域タイトル */}
-                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
-                      {corpus.corpus_name}
-                    </h2>
-                  </div>
-                  {/* 右側の矢印アイコン。ホバー時に強調 */}
-                  <div className="p-3 bg-slate-50 rounded-2xl text-slate-300 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-inner">
-                    <ArrowRight size={20} />
-                  </div>
-                </div>
-
-                {/* コーパス説明文: 2行までに制限（line-clamp-2） */}
-                <p className="text-sm text-slate-500 leading-relaxed font-medium opacity-90 line-clamp-2 pr-6">
-                  {corpus.description}
-                </p>
-
-                {/* Footer Meta: 学習実績を匂わせる装飾とアクション導線 */}
-                <div className="pt-5 flex items-center justify-between border-t border-slate-50">
-                  <div className="flex items-center gap-3">
-                    <div className="flex -space-x-2.5">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 shadow-sm overflow-hidden">
-                          <div className={`w-full h-full bg-indigo-${i}00/30`} />
-                        </div>
-                      ))}
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400 italic">Recommended for you</span>
-                  </div>
-                  <span className="text-[11px] font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">
-                    START TRAINING →
-                  </span>
-                </div>
-              </div>
-            </button>
-          ))
-        ) : (
-          /* Empty State: データ未登録時のフォールバック表示 */
-          <div className="text-center p-20 bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[40px]">
-             <p className="text-slate-400 font-bold italic tracking-wider text-sm">利用可能なコーパスがありません。</p>
+      {/* Section 1: My Favorites (お気に入り) */}
+      {favorites.length > 0 && (
+        <div className="space-y-4 px-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Star size={14} fill="currentColor" /> My Favorites
+            </h2>
           </div>
-        )}
+          <div className="grid gap-3">
+            {favorites.map((corpus) => (
+              <button
+                key={corpus.corpus_id}
+                onClick={() => { setSelectedCorpusId(corpus.corpus_id); setView('training'); }}
+                className="group bg-white/60 backdrop-blur-sm p-4 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-100 transition-all flex items-center gap-4 text-left active:scale-[0.98]"
+              >
+                <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-400 group-hover:bg-amber-400 group-hover:text-white transition-all duration-300">
+                  <Star size={20} fill="currentColor" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mb-0.5">
+                    {corpus.corpus_label} • Lv.{corpus.difficulty_level}
+                  </p>
+                  <h3 className="font-bold text-slate-800 truncate group-hover:text-amber-600 transition-colors">
+                    {corpus.corpus_name}
+                  </h3>
+                </div>
+                <ArrowRight size={16} className="text-slate-200 group-hover:text-amber-400 group-hover:translate-x-1 transition-all" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Section 2: Recommended (おすすめ) */}
+      <div className="space-y-6 px-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
+            <BookOpen size={14} /> Picked for You
+          </h2>
+        </div>
+        <div className="grid gap-6">
+          {recommendations.length > 0 ? (
+            recommendations.map((corpus) => (
+              <button
+                key={corpus.corpus_id}
+                onClick={() => { setSelectedCorpusId(corpus.corpus_id); setView('training'); }}
+                className="group relative w-full text-left p-8 bg-white rounded-[40px] border border-slate-200/60 shadow-sm hover:shadow-2xl hover:shadow-indigo-100/50 hover:-translate-y-1.5 transition-all duration-500 isolate overflow-hidden"
+              >
+                {/* 装飾的な背景グラデーション */}
+                <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50/40 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-indigo-100/60 transition-colors duration-700"></div>
+                
+                <div className="relative space-y-6">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold tracking-wider uppercase">
+                        {corpus.corpus_label}
+                      </div>
+                      <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
+                        {corpus.corpus_name}
+                      </h2>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-2xl text-slate-300 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-inner">
+                      <ArrowRight size={20} />
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-slate-500 leading-relaxed font-medium line-clamp-2">
+                    {corpus.description}
+                  </p>
+
+                  <div className="pt-6 flex items-center justify-between border-t border-slate-50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Level {corpus.difficulty_level}</span>
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map((step) => (
+                          <div key={step} className={`w-1.5 h-1.5 rounded-full ${step <= corpus.difficulty_level ? 'bg-indigo-500' : 'bg-slate-100'}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-indigo-600 font-black text-[11px] tracking-tighter">
+                      START LEARNING
+                      <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <ArrowRight size={10} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="text-center py-12 bg-slate-50/50 rounded-[40px] border border-dashed border-slate-200">
+              <p className="text-slate-400 text-sm font-medium">Explore more in Course Library</p>
+            </div>
+          )}
+        </div>
       </div>
+
     </div>
   );
 }

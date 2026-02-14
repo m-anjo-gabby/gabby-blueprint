@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@/components/auth/UserStoreInitializer';
+import ToastContainer from '@/components/common/ToastContainer';
 
 /**
  * ログイン後全域の基盤レイアウト
@@ -25,6 +26,9 @@ export default async function AppLogicLayout({
       
       {/* 実際のUIは下の階層の layout.tsx が描画する */}
       {children}
+
+      {/* トースト通知を下部に配置 */}
+      <ToastContainer />
     </>
   );
 }
