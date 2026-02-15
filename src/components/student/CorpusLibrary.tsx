@@ -6,12 +6,12 @@ import { getAllCorpus, toggleCorpusFavorite } from '@/actions/corpusAction';
 import { CorpusRecord } from '@/types/corpus';
 import { useToast } from '@/hooks/useToast';
 
-interface CourseLibraryProps {
+interface CorpusLibraryProps {
   onSelect: (corpusId: string) => void;
   onBack: () => void;
 }
 
-export default function CourseLibrary({ onSelect, onBack }: CourseLibraryProps) {
+export default function CorpusLibrary({ onSelect, onBack }: CorpusLibraryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);

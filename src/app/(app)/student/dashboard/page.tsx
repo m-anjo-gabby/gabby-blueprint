@@ -7,7 +7,7 @@ import { BookOpen, ArrowRight, Star } from 'lucide-react';
 import Image from 'next/image';
 import { getFavoriteCount } from '@/actions/corpusAction';
 import FavoriteList from '@/components/student/FavoriteList';
-import CourseLibrary from '@/components/student/CourseLibrary';
+import CorpusLibrary from '@/components/student/CorpusLibrary';
 import { CorpusRecord } from '@/types/corpus';
 
 type ViewMode = 'dashboard' | 'training' | 'favorites' | 'library';
@@ -83,7 +83,7 @@ export default function StudentDashboard() {
   // コース選択時はコース一覧（子コンポーネント）へ切り替え
   if (view === 'library') {
     return (
-      <CourseLibrary 
+      <CorpusLibrary 
         onSelect={(id) => {
           setSelectedCorpusId(id);
           setView('training');
