@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star, X, ChevronDown } from 'lucide-react';
+import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star, X, ChevronDown, BookOpen } from 'lucide-react';
 
 // Hooks & Actions
 import { useVoice } from '@/hooks/useVoice';
@@ -251,10 +251,18 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
   };
 
   if (loading) return (
-    <div className="flex items-center justify-center h-screen bg-slate-50">
-      <div className="text-center space-y-4">
-        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <p className="text-slate-400 font-black animate-pulse uppercase tracking-widest text-xs">Loading Drill...</p>
+    <div className="fixed inset-0 bg-[#f5f5f7] flex items-center justify-center p-6">
+      <div className="w-full max-w-sm text-center space-y-8">
+        {/* 1. アニメーションするアイコン */}
+        <div className="relative w-20 h-20 mx-auto">
+          {/* 外側の回転リング */}
+          <div className="absolute inset-0 border-4 border-indigo-100 rounded-2xl"></div>
+          <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-2xl animate-spin"></div>
+          {/* 中央のアイコン */}
+          <div className="absolute inset-0 flex items-center justify-center text-indigo-600">
+            <BookOpen size={32} className="animate-pulse" />
+          </div>
+        </div>
       </div>
     </div>
   );
