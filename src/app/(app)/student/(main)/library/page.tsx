@@ -1,22 +1,20 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft, Search, ArrowRight, Star, Filter, Tag, ChevronUp, ChevronDown } from 'lucide-react';
+
+// Actions & Utils
 import { getAllCorpus, toggleCorpusFavorite } from '@/actions/corpusAction';
 import { CorpusRecord } from '@/types/corpus';
 import { useToast } from '@/hooks/useToast';
-import { useRouter } from 'next/navigation';
 import { getTrainingPath } from '@/utils/navigation';
 
-interface CorpusLibraryProps {
-  onBack: () => void;
-}
-
 /**
- * 教材ライブラリ（一覧）コンポーネント
- * 各教材の表示、検索、フィルタリング、お気に入り登録を管理します。
+ * 教材ライブラリ（一覧）ページ
+ * 顧客に紐付く全ての教材を表示し、検索・フィルタリング・お気に入り登録・学習開始を提供します。
  */
-export default function CorpusLibrary({ onBack }: CorpusLibraryProps) {
+export default function LibraryPage() {
   const router = useRouter();
   const { showToast } = useToast();
   
@@ -62,10 +60,11 @@ export default function CorpusLibrary({ onBack }: CorpusLibraryProps) {
   // 検索クエリとタグによる絞り込み
   const filteredList = useMemo(() => {
     return corpusList.filter(c => {
+      const query = searchQuery.toLowerCase();
       const matchesSearch = 
-        c.corpus_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.corpus_label.toLowerCase().includes(searchQuery.toLowerCase());
+        c.corpus_name.toLowerCase().includes(query) ||
+        c.description?.toLowerCase().includes(query) ||
+        c.corpus_label.toLowerCase().includes(query);
       
       const matchesTag = selectedTag === 'All' || 
         c.metadata.tags?.some(t => t.label === selectedTag);
@@ -77,7 +76,7 @@ export default function CorpusLibrary({ onBack }: CorpusLibraryProps) {
   // --- Logic: 説明文の「もっと見る」判定 ---
   useLayoutEffect(() => {
     const observers: ResizeObserver[] = [];
-    corpusList.forEach((corpus) => {
+    filteredList.forEach((corpus) => {
       const el = descriptionRefs.current[corpus.corpus_id];
       if (!el) return;
 
@@ -93,27 +92,18 @@ export default function CorpusLibrary({ onBack }: CorpusLibraryProps) {
       observers.push(ro);
     });
     return () => observers.forEach(ro => ro.disconnect());
-  }, [corpusList, filteredList]);
+  }, [filteredList]);
 
   // --- Handlers ---
 
   /**
-   * 学習開始ボタン押下時の遷移処理
-   * 教材のタイプに基づいてパスを振り分けます。
-   */
-  const handleStartLearning = (corpus: CorpusRecord) => {
-    // ナビゲーションUtilで振り分け遷移
-    router.push(getTrainingPath(corpus));
-  };
-
-  /**
-   * お気に入り状態の切り替え
+   * お気に入り状態の切り替え（楽観的UI更新）
    */
   const handleToggleFavorite = async (e: React.MouseEvent, corpusId: string, currentState: boolean) => {
     e.stopPropagation();
     const nextState = !currentState;
     
-    // 楽観的UI更新: サーバーレスポンスを待たずにUIを書き換える
+    // 状態を先行して更新
     setCorpusList(prev => prev.map(c => c.corpus_id === corpusId ? { ...c, is_favorite: nextState } : c));
     
     try {
@@ -123,6 +113,7 @@ export default function CorpusLibrary({ onBack }: CorpusLibraryProps) {
       console.error("Favorite toggle error:", error);
       // エラー時は元の状態に戻す
       setCorpusList(prev => prev.map(c => c.corpus_id === corpusId ? { ...c, is_favorite: currentState } : c));
+      showToast('更新に失敗しました', 'error');
     }
   };
 
@@ -130,20 +121,26 @@ export default function CorpusLibrary({ onBack }: CorpusLibraryProps) {
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-screen bg-white space-y-4">
-      <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="relative w-10 h-10">
+        <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+        <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+      </div>
       <p className="text-slate-400 font-bold animate-pulse">Loading Library...</p>
     </div>
   );
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden">
       
       {/* Header Area: 検索とフィルタを固定表示 */}
       <div className="shrink-0 bg-white border-b border-slate-100 px-6 pt-10 pb-6 z-30 shadow-sm">
         <div className="max-w-2xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={onBack} className="p-2 -ml-2 hover:bg-slate-50 rounded-2xl transition-all active:scale-90 text-slate-400">
+              <button 
+                onClick={() => router.back()} 
+                className="p-2 -ml-2 hover:bg-slate-50 rounded-2xl transition-all active:scale-90 text-slate-400"
+              >
                 <ChevronLeft size={28} />
               </button>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Library</h1>
@@ -193,7 +190,10 @@ export default function CorpusLibrary({ onBack }: CorpusLibraryProps) {
                 const isExpanded = !!expandedIds[corpus.corpus_id];
                 const shouldShowMore = truncatedIds[corpus.corpus_id] || isExpanded;
                 return (
-                  <div key={corpus.corpus_id} className="relative bg-white border border-slate-100 rounded-[32px] p-6 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-2">
+                  <div 
+                    key={corpus.corpus_id} 
+                    className="relative bg-white border border-slate-100 rounded-4xl p-6 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-2"
+                  >
                     
                     {/* Card Header: Label & Difficulty & Favorite */}
                     <div className="flex items-center justify-between mb-4">
@@ -214,7 +214,7 @@ export default function CorpusLibrary({ onBack }: CorpusLibraryProps) {
                     {/* Card Content: Title & Description */}
                     <div className="mb-4">
                       <h3 
-                        onClick={() => handleStartLearning(corpus)} 
+                        onClick={() => router.push(getTrainingPath(corpus))} 
                         className="font-black text-slate-800 text-[19px] leading-tight group-hover:text-indigo-600 transition-colors mb-2 cursor-pointer"
                       >
                         {corpus.corpus_name}
@@ -256,7 +256,7 @@ export default function CorpusLibrary({ onBack }: CorpusLibraryProps) {
 
                     {/* Action Button: 詳細ページへの遷移 */}
                     <button 
-                      onClick={() => handleStartLearning(corpus)}
+                      onClick={() => router.push(getTrainingPath(corpus))}
                       className="w-full h-14 min-h-14 bg-indigo-50 rounded-2xl flex items-center justify-center gap-3 hover:bg-indigo-600 transition-all active:scale-[0.98] group/btn"
                     >
                       <span className="text-indigo-600 font-black text-[12px] tracking-widest group-hover/btn:text-white transition-colors uppercase">

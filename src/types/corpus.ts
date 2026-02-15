@@ -7,6 +7,7 @@ export interface CorpusTag {
 export interface CorpusRecord {
   corpus_id: string;
   corpus_name: string;
+  corpus_type: number;
   description: string;
   corpus_label: string;
   seq_no: number;

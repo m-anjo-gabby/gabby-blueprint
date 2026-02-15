@@ -2,14 +2,14 @@
 
 import { createClient } from "@/lib/server";
 import { CorpusRecord } from "@/types/corpus";
-import { FavoritePhraseRecord, RawFavoriteResponse, TrainingWord } from "@/types/training";
+import { FavoritePhraseRecord, RawFavoriteResponse, TrainingResponse, TrainingWord } from "@/types/training";
 
 /**
- * 指定されたコーパスIDに紐付く単語とフレーズを取得（お気に入り状態付き）
+ * 指定されたコーパスIDに紐付く単語とフレーズを取得
  */
-export async function getTrainingData(corpusId: string): Promise<TrainingWord[]> {
+export async function getTrainingData(corpusId: string): Promise<TrainingResponse> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser(); // ユーザーID取得
+  const { data: { user } } = await supabase.auth.getUser();
 
   const { data, error } = await supabase
     .from('com_m_word')
@@ -17,6 +17,7 @@ export async function getTrainingData(corpusId: string): Promise<TrainingWord[]>
       word_id,
       word_en,
       word_ja,
+      com_m_corpus ( corpus_name ),
       com_m_phrase (
         phrase_id,
         phrase_en,
@@ -29,7 +30,7 @@ export async function getTrainingData(corpusId: string): Promise<TrainingWord[]>
     .eq('corpus_id', corpusId)
     .eq('delete_flg', '0')
     .eq('com_m_phrase.delete_flg', '0')
-    .eq('com_m_phrase.com_t_favorite_phrase.user_id', user?.id) // 自分のデータのみ
+    .eq('com_m_phrase.com_t_favorite_phrase.user_id', user?.id)
     .order('frequency_rank', { ascending: true })
     .order('seq_no', { referencedTable: 'com_m_phrase', ascending: true });
 
@@ -41,17 +42,30 @@ export async function getTrainingData(corpusId: string): Promise<TrainingWord[]>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawData = data as any[];
 
-  return rawData.map((word) => ({
+  // コーパス名の取得ロジックを修正
+  // Supabaseの結合は[ { corpus_name: 'xxx' } ]のように配列で返ってくることが多いため
+  const firstItem = rawData[0];
+  let corpusName = 'Training';
+  
+  if (firstItem?.com_m_corpus) {
+    corpusName = Array.isArray(firstItem.com_m_corpus) 
+      ? firstItem.com_m_corpus[0]?.corpus_name 
+      : firstItem.com_m_corpus?.corpus_name;
+  }
+
+  const words: TrainingWord[] = rawData.map((word) => ({
     word_id: word.word_id,
     word_en: word.word_en,
     word_ja: word.word_ja,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     phrases: word.com_m_phrase.map((p: any) => ({
       ...p,
-      // お気に入りレコードが存在すれば true
       is_favorite_initial: Array.isArray(p.com_t_favorite_phrase) && p.com_t_favorite_phrase.length > 0 
     }))
   }));
+
+  // Promise<TrainingResponse> に合致するように返却
+  return { words, corpusName: corpusName || 'Training' };
 }
 
 /**

@@ -16,6 +16,11 @@ export interface TrainingWord {
   phrases: PhraseRecord[];
 }
 
+export interface TrainingResponse {
+  words: TrainingWord[];
+  corpusName: string;
+}
+
 export interface FavoritePhraseRecord {
   favorite_id: string;
   phrase_id: string;

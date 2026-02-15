@@ -33,7 +33,7 @@ const getFeedbackConfig = (ratio: number): FeedbackConfig => {
   return { fill: '#EF4444', text: 'text-red-600', tagText: 'Poor', isSuccess: false };
 };
 
-export default function CorpusCard({ sectionId, onBack }: { sectionId: string, onBack: () => void }) {
+export default function VocabularyCard({ sectionId, onBack }: { sectionId: string, onBack: () => void }) {
   const [words, setWords] = useState<TrainingWord[]>([]);
   const [wordIdx, setWordIdx] = useState(0);
   const [phraseIdx, setPhraseIdx] = useState(0);

@@ -1,49 +1,41 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import CorpusCard from '@/components/student/CorpusCard';
-import { ClientInfo, getDashboardCorpusData, getMyClientInfo } from '@/actions/dashboardAction';
-import { BookOpen, ArrowRight, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { getFavoriteCount } from '@/actions/corpusAction';
-import FavoriteList from '@/components/student/FavoriteList';
-import CorpusLibrary from '@/components/student/CorpusLibrary';
-import { CorpusRecord } from '@/types/corpus';
+import { BookOpen, ArrowRight, Star } from 'lucide-react';
 
-type ViewMode = 'dashboard' | 'training' | 'favorites' | 'library';
+// Actions & Utils
+import { ClientInfo, getDashboardCorpusData, getMyClientInfo } from '@/actions/dashboardAction';
+import { getFavoriteCount } from '@/actions/corpusAction';
+import { getTrainingPath } from '@/utils/navigation';
+import { CorpusRecord } from '@/types/corpus';
 
 /**
  * 学習者用メインダッシュボード
- * 顧客に紐付いたコーパス（学習教材）を一覧表示し、学習セクションへの入り口を提供します。
+ * 役割: 
+ * 1. 顧客ロゴや進捗統計の表示
+ * 2. おすすめ教材やお気に入り教材へのクイックアクセス
+ * 3. ライブラリや詳細ページへのルーティング（Next.js Routerを使用）
  */
 export default function StudentDashboard() {
-  // --- State ---
-  const [selectedCorpusId, setSelectedCorpusId] = useState<string | null>(null);
+  const router = useRouter();
+
+  // --- States ---
   const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<ViewMode>('dashboard');
 
+  // おすすめとお気に入りのフィルタリング（メモ化せずにシンプルに定義）
   const favorites = corpusList.filter(c => c.is_favorite);
   const recommendations = corpusList.filter(c => c.recommend > 0 && !c.is_favorite);
-
-  // --- スクロールリセット ---
-  useEffect(() => {
-    // ページマウント時、またはコーパス選択解除（selectedCorpusIdがnullに戻った時）に実行
-    if (!selectedCorpusId) {
-      setTimeout(() => {
-        const main = document.querySelector('main');
-        main?.scrollTo(0, 0);
-      }, 50);
-    }
-  }, [selectedCorpusId]);
 
   // --- Data Fetching ---
   useEffect(() => {
     async function initDashboard() {
       try {
-        // 並列で取得
+        // 全データを並列で取得して初期化
         const [corpusData, clientData, favCount] = await Promise.all([
           getDashboardCorpusData(),
           getMyClientInfo(),
@@ -61,47 +53,10 @@ export default function StudentDashboard() {
     initDashboard();
   }, []);
 
-  // 共通の戻る処理 + カウント更新
-  const handleBackAndRefresh = async () => {
-    setView('dashboard'); // 画面を戻す
-    
-    try {
-      // 最新の件数を取得して反映
-      const favCount = await getFavoriteCount();
-      setFavoriteCount(favCount);
-    } catch (error) {
-      console.error("Failed to refresh favorite count:", error);
-    }
-  };
-
-  // --- View: Mode ---
-  // コーパス選択時は学習カード画面（子コンポーネント）へ切り替え
-  if (view === 'training' && selectedCorpusId) {
-    return <CorpusCard sectionId={selectedCorpusId} onBack={handleBackAndRefresh} />;
-  }
-
-  // コース選択時はコース一覧（子コンポーネント）へ切り替え
-  if (view === 'library') {
-    return (
-      <CorpusLibrary 
-        onSelect={(id) => {
-          setSelectedCorpusId(id);
-          setView('training');
-        }}
-        onBack={() => setView('dashboard')} 
-      />
-    );
-  }
-
-  // お気に入り選択時はフレーズ一覧（子コンポーネント）へ切り替え
-  if (view === 'favorites') {
-    return <FavoriteList onBack={handleBackAndRefresh} />;
-  }
-  // --- View: Loading State ---
-  // 読み込み中
+  // --- Render: Loading State ---
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-100 space-y-4">
+      <div className="flex flex-col justify-center items-center min-h-[60vh] space-y-4">
         <div className="relative w-12 h-12">
           <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
           <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
@@ -112,11 +67,10 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700 ease-out">
+    <div className="max-w-2xl mx-auto space-y-10 py-10 px-4 animate-in fade-in slide-in-from-bottom-6 duration-700 ease-out">
       
-      {/* Header Section: サービスロゴとガイドメッセージ */}
+      {/* 1. Header Section: ロゴとパーソナライズされた挨拶 */}
       <div className="flex flex-col items-center text-center space-y-4">
-        {/* ロゴ外側のコンテナ：サイズを固定し、はみ出しを防ぐ */}
         <div className="relative w-full max-w-60 h-20">
           {clientInfo?.logo_url ? (
             <Image 
@@ -124,15 +78,11 @@ export default function StudentDashboard() {
               alt={clientInfo.client_name || "Client Logo"}
               fill
               sizes="240px"
-              /* object-contain で比率を維持しつつ、最大サイズまで広げる */
               className="object-contain"
               priority
             />
           ) : (
-            /* ロゴがない場合のフォールバック（テキストのみでシンプルに） */
-            <div className="text-4xl font-black text-indigo-600 tracking-tighter">
-              BLUEPRINT
-            </div>
+            <div className="text-4xl font-black text-indigo-600 tracking-tighter">BLUEPRINT</div>
           )}
         </div>
         
@@ -147,12 +97,11 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Info Stats Bar: 学習状況とアクション導線 */}
+      {/* 2. Info Stats Bar: 主要機能へのナビゲーション導線 */}
       <div className="grid grid-cols-2 gap-4 px-2">
-        
-        {/* 左側：Courses (教材一覧ライブラリへのボタン) */}
+        {/* 全教材（ライブラリ）へ */}
         <button 
-          onClick={() => setView('library')}
+          onClick={() => router.push('/student/library')}
           className="group bg-white p-4 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-lg hover:shadow-indigo-100 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-between text-left"
         >
           <div className="flex items-center gap-3">
@@ -169,9 +118,9 @@ export default function StudentDashboard() {
           <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
         </button>
 
-        {/* 右側：Favorites (お気に入り一覧ライブラリへのボタン)  */}
+        {/* お気に入り一覧へ */}
         <button 
-          onClick={() => setView('favorites')}
+          onClick={() => router.push('/student/favorites')}
           className="group bg-white p-4 rounded-3xl border border-amber-200 shadow-sm hover:shadow-lg hover:shadow-amber-100 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-between text-left"
         >
           <div className="flex items-center gap-3">
@@ -189,19 +138,17 @@ export default function StudentDashboard() {
         </button>
       </div>
 
-      {/* Section 1: My Favorites (お気に入り) */}
+      {/* 3. My Favorites Section: 最近のお気に入りへのショートカット */}
       {favorites.length > 0 && (
         <div className="space-y-4 px-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2">
-              <Star size={14} fill="currentColor" /> My Favorites
-            </h2>
-          </div>
+          <h2 className="text-xs font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Star size={14} fill="currentColor" /> My Favorites
+          </h2>
           <div className="grid gap-3">
             {favorites.map((corpus) => (
               <button
                 key={corpus.corpus_id}
-                onClick={() => { setSelectedCorpusId(corpus.corpus_id); setView('training'); }}
+                onClick={() => router.push(getTrainingPath(corpus))}
                 className="group bg-white/60 backdrop-blur-sm p-4 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-100 transition-all flex items-center gap-4 text-left active:scale-[0.98]"
               >
                 <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-400 group-hover:bg-amber-400 group-hover:text-white transition-all duration-300">
@@ -222,23 +169,21 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* Section 2: Recommended (おすすめ) */}
+      {/* 4. Recommended Section: おすすめ教材の強調表示 */}
       <div className="space-y-6 px-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
-            <BookOpen size={14} /> Picked for You
-          </h2>
-        </div>
+        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
+          <BookOpen size={14} /> Picked for You
+        </h2>
         <div className="grid gap-6">
           {recommendations.length > 0 ? (
             recommendations.map((corpus) => (
               <button
                 key={corpus.corpus_id}
-                onClick={() => { setSelectedCorpusId(corpus.corpus_id); setView('training'); }}
+                onClick={() => router.push(getTrainingPath(corpus))}
                 className="group relative w-full text-left p-8 bg-white rounded-[40px] border border-slate-200/60 shadow-sm hover:shadow-2xl hover:shadow-indigo-100/50 hover:-translate-y-1.5 transition-all duration-500 isolate overflow-hidden"
               >
-                {/* 装飾的な背景グラデーション */}
-                <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50/40 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-indigo-100/60 transition-colors duration-700"></div>
+                {/* 装飾背景 */}
+                <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50/40 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-indigo-100/60 transition-colors duration-700" />
                 
                 <div className="relative space-y-6">
                   <div className="flex justify-between items-start">
@@ -259,6 +204,7 @@ export default function StudentDashboard() {
                     {corpus.description}
                   </p>
 
+                  {/* Level & Action Footer */}
                   <div className="pt-6 flex items-center justify-between border-t border-slate-50">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Level {corpus.difficulty_level}</span>
@@ -285,7 +231,6 @@ export default function StudentDashboard() {
           )}
         </div>
       </div>
-
     </div>
   );
 }
