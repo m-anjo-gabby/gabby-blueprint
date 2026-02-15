@@ -7,7 +7,6 @@ import { BookOpen, ArrowRight, Star } from 'lucide-react';
 
 // Actions & Utils
 import { ClientInfo, getDashboardCorpusData, getMyClientInfo } from '@/actions/dashboardAction';
-import { getFavoriteCount } from '@/actions/corpusAction';
 import { getTrainingPath } from '@/utils/navigation';
 import { CorpusRecord } from '@/types/corpus';
 
@@ -24,7 +23,6 @@ export default function StudentDashboard() {
   // --- States ---
   const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
-  const [favoriteCount, setFavoriteCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // おすすめとお気に入りのフィルタリング（メモ化せずにシンプルに定義）
@@ -36,14 +34,12 @@ export default function StudentDashboard() {
     async function initDashboard() {
       try {
         // 全データを並列で取得して初期化
-        const [corpusData, clientData, favCount] = await Promise.all([
+        const [corpusData, clientData] = await Promise.all([
           getDashboardCorpusData(),
           getMyClientInfo(),
-          getFavoriteCount()
         ]);
         setCorpusList(corpusData);
         setClientInfo(clientData);
-        setFavoriteCount(favCount);
       } catch (error) {
         console.error("Dashboard Load Error:", error);
       } finally {
@@ -98,45 +94,37 @@ export default function StudentDashboard() {
       </div>
 
       {/* 2. Info Stats Bar: 主要機能へのナビゲーション導線 */}
-      <div className="grid grid-cols-2 gap-4 px-2">
-        {/* 全教材（ライブラリ）へ */}
-        <button 
-          onClick={() => router.push('/student/library')}
-          className="group bg-white p-4 rounded-3xl border border-indigo-100 shadow-sm hover:shadow-lg hover:shadow-indigo-100 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-between text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
-              <BookOpen size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-indigo-600/60 uppercase leading-none mb-1 tracking-wider">Courses</p>
-              <p className="text-sm font-black text-slate-800 leading-none">
-                {corpusList.length} <span className="text-[11px] font-medium text-slate-500">Books</span>
-              </p>
-            </div>
-          </div>
-          <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
-        </button>
+<div className="flex flex-col sm:flex-row justify-center gap-4 px-4 max-w-3xl mx-auto">
+  {/* 1. Library: 教材を探す */}
+  <button 
+    onClick={() => router.push('/student/library')} 
+    className="group flex items-center gap-4 bg-white px-6 py-5 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-100/40 hover:-translate-y-0.5 transition-all w-full sm:flex-1 min-w-[240px]"
+  >
+    <div className="shrink-0 w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+      <BookOpen size={22} />
+    </div>
+    <div className="flex-1 text-left min-w-0">
+      <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.15em] mb-0.5">Library</p>
+      <p className="text-[13px] font-black text-slate-800 leading-tight">ライブラリから選ぶ</p>
+    </div>
+    <ArrowRight size={16} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
+  </button>
 
-        {/* お気に入り一覧へ */}
-        <button 
-          onClick={() => router.push('/student/favorites')}
-          className="group bg-white p-4 rounded-3xl border border-amber-200 shadow-sm hover:shadow-lg hover:shadow-amber-100 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-between text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-              <Star size={20} fill="currentColor" className={favoriteCount > 0 ? "animate-pulse" : ""} />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-amber-600/60 uppercase leading-none mb-1 tracking-wider">Favorites</p>
-              <p className="text-sm font-black text-slate-800 leading-none">
-                {favoriteCount} <span className="text-[11px] font-medium text-slate-500">Items</span>
-              </p>
-            </div>
-          </div>
-          <ArrowRight size={14} className="text-slate-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
-        </button>
-      </div>
+  {/* 2. Favorites: 復習する */}
+  <button 
+    onClick={() => router.push('/student/favorites')} 
+    className="group flex items-center gap-4 bg-white px-6 py-5 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-amber-100/40 hover:-translate-y-0.5 transition-all w-full sm:flex-1 min-w-[240px]"
+  >
+    <div className="shrink-0 w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300">
+      <Star size={22} fill="currentColor" />
+    </div>
+    <div className="flex-1 text-left min-w-0">
+      <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.15em] mb-0.5">Favorites</p>
+      <p className="text-[13px] font-black text-slate-800 leading-tight">お気に入りを復習する</p>
+    </div>
+    <ArrowRight size={16} className="text-slate-200 group-hover:text-amber-400 group-hover:translate-x-1 transition-all" />
+  </button>
+</div>
 
       {/* 3. My Favorites Section: 最近のお気に入りへのショートカット */}
       {favorites.length > 0 && (
