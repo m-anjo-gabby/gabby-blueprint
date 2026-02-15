@@ -6,6 +6,7 @@ import { useVoice } from '@/hooks/useVoice';
 import { getTrainingData, toggleFavorite } from '@/actions/corpusAction';
 import { calculateSimilarity } from '@/utils/stringSimilarity';
 import { TrainingWord } from '@/types/training';
+import { useToast } from '@/hooks/useToast';
 
 // 評価設定の型定義
 type FeedbackConfig = {
@@ -48,6 +49,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
   const lastHeardRef = useRef<string>("");
   const activeWordRef = useRef<HTMLButtonElement | null>(null);
   const { speak, startListening, stopListening, isListening } = useVoice();
+  const { showToast } = useToast();
 
   // 初期データフェッチ
   useEffect(() => {
@@ -262,6 +264,7 @@ export default function CorpusCard({ sectionId, onBack }: { sectionId: string, o
     
     try {
       await toggleFavorite(currentPhrase.phrase_id, nextState);
+      showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りから削除しました', 'success');
     } catch (error) {
       console.error("Favorite toggle failed:", error);
       // 失敗時は逆の操作をしてロールバック

@@ -5,6 +5,7 @@ import { toggleFavorite, getFavoritePhrases } from '@/actions/corpusAction';
 import { ChevronLeft, Star, Volume2, Trash2 } from 'lucide-react';
 import { FavoritePhraseRecord } from '@/types/training';
 import { useVoice } from '@/hooks/useVoice';
+import { useToast } from '@/hooks/useToast';
 
 export default function FavoriteList({ onBack }: { onBack: () => void }) {
   const [favorites, setFavorites] = useState<FavoritePhraseRecord[]>([]);
@@ -14,6 +15,8 @@ export default function FavoriteList({ onBack }: { onBack: () => void }) {
   
   // speak関数を取得
   const { speak } = useVoice();
+  // トースト通知
+  const { showToast } = useToast();
 
   // 初期データフェッチ
   useEffect(() => {
@@ -48,6 +51,7 @@ export default function FavoriteList({ onBack }: { onBack: () => void }) {
       await toggleFavorite(deletingId, false);
       setFavorites(prev => prev.filter(f => f.phrase_id !== deletingId));
       setDeletingId(null); // モーダルを閉じる
+      showToast('お気に入りから削除しました', 'success');
     };
 
   if (loading) return (
