@@ -287,7 +287,51 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
     </div>
   );
 
-  if (!currentWord || !currentPhrase) return <div className="p-20 text-center font-bold">No data found.</div>;
+  // --- Render: Empty State (No Data) ---
+  if (!currentWord || !currentPhrase) {
+    return (
+      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm bg-white rounded-[40px] p-10 shadow-xl border border-slate-100 text-center space-y-8 animate-in zoom-in-95 duration-300">
+          
+          {/* 装飾アイコン */}
+          <div className="relative w-24 h-24 mx-auto">
+            <div className="absolute inset-0 bg-indigo-50 rounded-3xl rotate-6"></div>
+            <div className="absolute inset-0 bg-white border-2 border-slate-100 rounded-3xl flex items-center justify-center text-slate-300 shadow-sm">
+              <BookOpen size={40} strokeWidth={1.5} />
+            </div>
+            {/* 右上に小さなバツ印や注意マーク */}
+            <div className="absolute -top-2 -right-2 bg-amber-400 text-white p-1.5 rounded-full border-4 border-white">
+              <X size={14} strokeWidth={3} />
+            </div>
+          </div>
+
+          {/* メッセージ */}
+          <div className="space-y-2">
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">No Content Yet</h2>
+            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+              この教材は現在準備中です。<br />
+              他のライブラリをチェックしてみましょう。
+            </p>
+          </div>
+
+          {/* アクションボタン */}
+          <div className="pt-4 w-full">
+            <button
+              onClick={() => router.back()}
+              className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-slate-200 hover:bg-indigo-600 hover:shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <ChevronLeft size={18} strokeWidth={3} />
+              Return to List
+            </button>
+            
+            <p className="mt-6 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+              Content Update Pending
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // 親コンテナをfixedにし、画面揺れ抑止
@@ -553,7 +597,7 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
             {isListening ? (
               <div className="flex items-center gap-2 animate-pulse">
                 <div className="w-1.5 h-1.5 bg-rose-500 rounded-full" />
-                <span className="text-[9px] font-black text-rose-500 uppercase tracking-[0.2em]">Recording...</span>
+                <span className="text-xs font-black text-rose-500 uppercase tracking-[0.2em]">Recording...</span>
               </div>
             ) : (
               <p className="text-xs font-black text-slate-200 uppercase tracking-widest">Tap card to flip / Speak to check</p>

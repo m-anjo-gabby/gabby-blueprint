@@ -63,7 +63,7 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-10 py-10 px-4 animate-in fade-in slide-in-from-bottom-6 duration-700 ease-out">
+    <div className="max-w-2xl mx-auto space-y-10 py-10 px-4 ease-out">
       
       {/* 1. Header Section: ロゴとパーソナライズされた挨拶 */}
       <div className="flex flex-col items-center text-center space-y-4">
