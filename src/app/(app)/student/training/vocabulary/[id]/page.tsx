@@ -253,6 +253,7 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
   if (loading) return (
     <div className="fixed inset-0 bg-[#f5f5f7] flex items-center justify-center p-6">
       <div className="w-full max-w-sm text-center space-y-8">
+
         {/* 1. アニメーションするアイコン */}
         <div className="relative w-20 h-20 mx-auto">
           {/* 外側の回転リング */}
@@ -263,6 +264,25 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
             <BookOpen size={32} className="animate-pulse" />
           </div>
         </div>
+
+        {/* 2. テキストエリア */}
+        <div className="space-y-3">
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">Preparing your session</h2>
+          <div className="flex flex-col items-center gap-1.5">
+            <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] animate-pulse">
+              Loading Drill...
+            </p>
+            <div className="w-48 h-1 bg-slate-200 rounded-full overflow-hidden mt-2">
+              <motion.div 
+                initial={{ x: "-100%" }}
+                animate={{ x: "100%" }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                className="w-full h-full bg-indigo-600"
+              />
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
@@ -408,29 +428,34 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
           </div>
 
           {/* 下段: 左に単語、右に進捗数 */}
-          <div className="flex justify-between items-end">
-            <div>
+          <div className="flex justify-between items-end gap-3">
+            <div className="min-w-0 flex-1">
+              {/* 語彙エリア（クリッカブル） */}
               <button 
                 onClick={() => setShowIndex(true)} 
-                className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-all mb-1.5 group px-2 py-1 -ml-2 rounded-lg hover:bg-slate-50"
+                className="group flex flex-col items-start transition-all -ml-2 px-2 py-1 rounded-2xl hover:bg-slate-50 text-left w-full sm:w-auto"
               >
-                {/* リストアイコン：少しだけ存在感を出す */}
-                <List size={13} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                {/* 上段：語彙ラベル */}
+                <div className="flex items-center gap-1.5 text-slate-400 mb-0.5">
+                  <List size={12} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">Vocabulary</span>
+                </div>
                 
-                {/* テキスト：ラベルとしての品格を保つ */}
-                <span className="text-[10px] font-black uppercase tracking-[0.15em]">Vocabulary</span>
-                
-                {/* ChevronDown：常時表示にして「開ける」ことを明示 */}
-                <ChevronDown 
-                  size={12} 
-                  className="text-slate-300 group-hover:text-indigo-400 transition-transform group-hover:translate-y-0.5" 
-                />
+                {/* 下段：単語とChevron */}
+                <div className="flex items-start gap-2 w-full">
+                  <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-[1.1] wrap-break-word">
+                    {currentWord.word_en}
+                  </h1>
+                  <ChevronDown 
+                    size={18} 
+                    className="shrink-0 text-slate-300 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all mt-1" 
+                  />
+                </div>
               </button>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                {currentWord.word_en}
-              </h1>
             </div>
-            <div className="text-right bg-slate-50 px-3 py-1 rounded-xl border border-slate-100/50">
+
+            {/* 進捗表示 */}
+            <div className="shrink-0 text-right bg-slate-50 px-3 py-1 rounded-xl border border-slate-100/50 mb-1 self-end">
               <span className="text-lg font-black text-indigo-600 tabular-nums">{wordIdx + 1}</span>
               <span className="text-xs font-bold text-slate-200 mx-1">/</span>
               <span className="text-xs font-bold text-slate-400 tabular-nums">{words.length}</span>
@@ -462,7 +487,7 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
                 <span className="text-[11px] font-black text-white bg-indigo-600 px-2.5 py-1 rounded-md tracking-wider">
                   STEP {currentPhrase.phrase_type}
                 </span>
-                <span className="text-xs font-bold text-slate-500 italic truncate max-w-45 sm:max-w-none">
+                <span className="text-xs md:text-sm font-bold text-slate-500 italic truncate max-w-45 sm:max-w-none">
                   {getStepLabel(currentPhrase.phrase_type).split(': ')[1]}
                 </span>
               </div>
@@ -530,7 +555,7 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
                 <span className="text-[9px] font-black text-rose-500 uppercase tracking-[0.2em]">Recording...</span>
               </div>
             ) : (
-              <p className="text-[8px] font-black text-slate-200 uppercase tracking-widest">Tap card to flip / Speak to check</p>
+              <p className="text-xs font-black text-slate-200 uppercase tracking-widest">Tap card to flip / Speak to check</p>
             )}
           </div>
 
