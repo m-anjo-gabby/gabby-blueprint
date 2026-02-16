@@ -37,6 +37,7 @@ export default function VocabularyCard({ sectionId, onBack }: { sectionId: strin
   const [words, setWords] = useState<TrainingWord[]>([]);
   const [wordIdx, setWordIdx] = useState(0);
   const [phraseIdx, setPhraseIdx] = useState(0);
+  const [corpusName, setCorpusName] = useState("");
   const [loading, setLoading] = useState(true);
   
   const [heardText, setHeardText] = useState<string | null>(null);
@@ -54,8 +55,9 @@ export default function VocabularyCard({ sectionId, onBack }: { sectionId: strin
   // 初期データフェッチ
   useEffect(() => {
     async function init() {
-      const data = await getTrainingData(sectionId);
-      setWords(data);
+        const { words, corpusName } = await getTrainingData(sectionId);
+        setWords(words);
+        setCorpusName(corpusName);
       setLoading(false);
     }
     init();
