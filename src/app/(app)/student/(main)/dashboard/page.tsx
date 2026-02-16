@@ -26,7 +26,6 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
 
   // おすすめとお気に入りのフィルタリング（メモ化せずにシンプルに定義）
-  const favorites = corpusList.filter(c => c.is_favorite);
   const recommendations = corpusList.filter(c => c.recommend > 0 && !c.is_favorite);
 
   // --- Data Fetching ---
@@ -125,42 +124,21 @@ export default function StudentDashboard() {
         </button>
       </div>
 
-      {/* 3. My Favorites Section: 最近のお気に入りへのショートカット */}
-      {favorites.length > 0 && (
-        <div className="space-y-4 px-2">
-          <h2 className="text-xs font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2">
-            <Star size={14} fill="currentColor" /> My Favorites
-          </h2>
-          <div className="grid gap-3">
-            {favorites.map((corpus) => (
-              <button
-                key={corpus.corpus_id}
-                onClick={() => router.push(getTrainingPath(corpus))}
-                className="group bg-white/60 backdrop-blur-sm p-4 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-100 transition-all flex items-center gap-4 text-left active:scale-[0.98]"
-              >
-                <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-400 group-hover:bg-amber-400 group-hover:text-white transition-all duration-300">
-                  <Star size={20} fill="currentColor" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mb-0.5">
-                    {corpus.corpus_label} • Lv.{corpus.difficulty_level}
-                  </p>
-                  <h3 className="font-bold text-slate-800 truncate group-hover:text-amber-600 transition-colors">
-                    {corpus.corpus_name}
-                  </h3>
-                </div>
-                <ArrowRight size={16} className="text-slate-200 group-hover:text-amber-400 group-hover:translate-x-1 transition-all" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 4. Recommended Section: おすすめ教材の強調表示 */}
+      {/* 3 Recommended Section: おすすめ教材の強調表示 */}
       <div className="space-y-6 px-2">
-        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
-          <BookOpen size={14} /> Picked for You
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
+            <BookOpen size={14} /> Picked for You
+          </h2>
+          {/* ライブラリへのリンクをここにも置くと親切 */}
+          <button 
+            onClick={() => router.push('/student/library')}
+            className="text-[10px] font-black text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest"
+          >
+            View All
+          </button>
+        </div>
+
         <div className="grid gap-6">
           {recommendations.length > 0 ? (
             recommendations.map((corpus) => (

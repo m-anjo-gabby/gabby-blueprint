@@ -1,8 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/server";
-import { CorpusRecord } from "@/types/corpus";
-import { FavoritePhraseRecord, RawFavoriteResponse, TrainingResponse, TrainingWord } from "@/types/training";
+import { CorpusRecord, FavoriteCorpusRecord } from "@/types/corpus";
+import { FavoritePhraseRecord, TrainingResponse, TrainingWord } from "@/types/training";
 
 /**
  * 指定されたコーパスIDに紐付く単語とフレーズを取得
@@ -114,24 +114,29 @@ export async function getFavoriteCount(): Promise<number> {
 export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
   const supabase = await createClient();
   
+  // ユーザーIDを取得して確実に絞り込む
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from('com_t_favorite_phrase')
     .select(`
       favorite_id,
       phrase_id,
       insert_date,
-      com_m_phrase (
+      com_m_phrase!inner (
         phrase_en,
         phrase_ja,
-        com_m_word (
+        com_m_word!inner (
           word_en,
-          com_m_corpus (
+          com_m_corpus!inner (
             corpus_id,
             corpus_name
           )
         )
       )
     `)
+    .eq('user_id', user.id) // 自分のデータのみに絞り込み
     .order('insert_date', { ascending: false });
 
   if (error) {
@@ -139,17 +144,36 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
     throw new Error(`取得失敗: ${error.message}`);
   }
   
-  // ここでフラットな形に変換する
-    return (data as unknown as RawFavoriteResponse[]).map(item => ({
-      favorite_id: item.favorite_id,
-      phrase_id: item.phrase_id,
-      phrase_en: item.com_m_phrase.phrase_en,
-      phrase_ja: item.com_m_phrase.phrase_ja,
-      word_en: item.com_m_phrase.com_m_word.word_en,
-      corpus_id: item.com_m_phrase.com_m_word.com_m_corpus.corpus_id,
-      corpus_name: item.com_m_phrase.com_m_word.com_m_corpus.corpus_name,
-      insert_date: item.insert_date
-    }));
+  // 型アサーション用のインターフェース（一時的な定義でもOK）
+  interface RawFavoriteResponse {
+    favorite_id: string;
+    phrase_id: string;
+    insert_date: string;
+    com_m_phrase: {
+      phrase_en: string;
+      phrase_ja: string;
+      com_m_word: {
+        word_en: string;
+        com_m_corpus: {
+          corpus_id: string;
+          corpus_name: string;
+        };
+      };
+    };
+  }
+
+  return (data as unknown as RawFavoriteResponse[]).map(item => ({
+    // 一意なキーとして favorite_id を保持
+    favorite_id: item.favorite_id,
+    phrase_id: item.phrase_id,
+    phrase_en: item.com_m_phrase.phrase_en,
+    phrase_ja: item.com_m_phrase.phrase_ja,
+    word_en: item.com_m_phrase.com_m_word.word_en,
+    corpus_id: item.com_m_phrase.com_m_word.com_m_corpus.corpus_id,
+    corpus_name: item.com_m_phrase.com_m_word.com_m_corpus.corpus_name,
+    insert_date: item.insert_date,
+    is_favorite: true
+  }));
 }
 
 // 全コーパスを取得
@@ -175,6 +199,38 @@ export async function getAllCorpus(): Promise<CorpusRecord[]> {
     is_favorite: c.is_favorite[0]?.count > 0,
     // metadataはDBからJSONとして返るのでそのまま渡す
   })) as unknown as CorpusRecord[];
+}
+
+// お気に入りコーパスを取得
+// actions/corpusAction.ts
+
+export async function getFavoriteCorpuses(): Promise<FavoriteCorpusRecord[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('com_t_favorite_corpus')
+    .select(`
+      corpus:com_m_corpus!inner(*)
+    `)
+    .eq('user_id', user.id)
+    .eq('com_m_corpus.delete_flg', '0')
+    .order('seq_no', { referencedTable: 'com_m_corpus', ascending: true });
+
+  if (error || !data) {
+    console.error("Fetch Error:", error);
+    return [];
+  }
+
+  // d.corpus は FavoriteCorpusRecord から is_favorite を除いたものと一致するはずです
+  return data.map(d => {
+    const corpus = d.corpus as unknown as FavoriteCorpusRecord;
+    return {
+      ...corpus,
+      is_favorite: true,
+    };
+  });
 }
 
 /**
