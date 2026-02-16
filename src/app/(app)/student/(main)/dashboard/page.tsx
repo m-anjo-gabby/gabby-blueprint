@@ -67,20 +67,19 @@ export default function StudentDashboard() {
       
       {/* 1. Header Section: ロゴとパーソナライズされた挨拶 */}
       <div className="flex flex-col items-center text-center space-y-4">
-        <div className="relative w-full max-w-60 h-20">
-          {clientInfo?.logo_url ? (
+        {/* 顧客ロゴセクション：URLがある場合のみ表示 */}
+        {clientInfo?.logo_url && (
+          <div className="relative w-full max-w-60 h-20 mb-6">
             <Image 
               src={clientInfo.logo_url} 
               alt={clientInfo.client_name || "Client Logo"}
               fill
               sizes="240px"
-              className="object-contain"
+              className="object-contain object-center"
               priority
             />
-          ) : (
-            <div className="text-4xl font-black text-indigo-600 tracking-tighter">BLUEPRINT</div>
-          )}
-        </div>
+          </div>
+        )}
         
         <div className="space-y-1">
           <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
@@ -98,7 +97,7 @@ export default function StudentDashboard() {
         {/* 1. Library: 教材を探す */}
         <button 
           onClick={() => router.push('/student/library')} 
-          className="group flex items-center gap-4 bg-white px-6 py-5 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-100/40 hover:-translate-y-0.5 transition-all w-full sm:flex-1 min-w-[240px]"
+          className="group flex items-center gap-4 bg-white px-6 py-5 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-100/40 hover:-translate-y-0.5 transition-all w-full sm:flex-1 min-w-60"
         >
           <div className="shrink-0 w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
             <BookOpen size={22} />
@@ -113,7 +112,7 @@ export default function StudentDashboard() {
         {/* 2. Favorites: 復習する */}
         <button 
           onClick={() => router.push('/student/favorites')} 
-          className="group flex items-center gap-4 bg-white px-6 py-5 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-amber-100/40 hover:-translate-y-0.5 transition-all w-full sm:flex-1 min-w-[240px]"
+          className="group flex items-center gap-4 bg-white px-6 py-5 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-amber-100/40 hover:-translate-y-0.5 transition-all w-full sm:flex-1 min-w-60"
         >
           <div className="shrink-0 w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300">
             <Star size={22} fill="currentColor" />

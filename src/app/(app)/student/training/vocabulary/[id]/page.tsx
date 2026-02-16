@@ -349,10 +349,7 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
                   return (
                     <div key={`section-${w.word_id}`}>
                       {showSection && (
-                        <div 
-                          id={`section-head-${currentInitial}`}
-                          className="px-4 py-4 mt-2 mb-1 scroll-mt-4"
-                        >
+                        <div id={`section-head-${currentInitial}`} className="px-4 py-4 mt-2 mb-1 scroll-mt-4">
                           <span className="text-xl font-black text-indigo-200 italic tracking-tighter">
                             {currentInitial}
                           </span>
@@ -363,23 +360,27 @@ export default function VocabularyTrainingPage({ params }: { params: Promise<{ i
                       <button
                         ref={wordIdx === w.originalIdx ? activeWordRef : null}
                         onClick={() => jumpToWord(w.originalIdx)}
-                        className={`w-full text-left px-4 py-3 rounded-2xl transition-all flex items-center justify-between group ${
+                        className={`w-full text-left px-4 py-3 rounded-2xl transition-all flex items-center gap-3 group ${
                           wordIdx === w.originalIdx 
                             ? 'bg-indigo-50 border border-indigo-100 ring-1 ring-indigo-100' 
                             : 'hover:bg-slate-50'
                         }`}
                       >
-                        <div className="flex flex-col">
-                          <span className={`text-sm font-bold ${wordIdx === w.originalIdx ? 'text-indigo-600' : 'text-slate-700'}`}>
+                        {/* テキストコンテナ: flex-1 と min-w-0 で折り返しを有効に */}
+                        <div className="flex-1 min-w-0 flex flex-col py-0.5">
+                          <span className={`text-sm font-bold leading-tight wrap-break-word ${
+                            wordIdx === w.originalIdx ? 'text-indigo-600' : 'text-slate-700'
+                          }`}>
                             {sortOrder === 'default' ? `${w.originalIdx + 1}. ` : ''}{w.word_en}
                           </span>
-                          <span className="text-[10px] font-medium text-slate-400">
+                          <span className="text-[10px] font-medium text-slate-400 mt-0.5 wrap-break-word">
                             {w.word_ja}
                           </span>
                         </div>
                         
+                        {/* インジケーター: 右側に固定 */}
                         {wordIdx === w.originalIdx && (
-                          <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-pulse" />
+                          <div className="shrink-0 w-1.5 h-1.5 bg-indigo-600 rounded-full animate-pulse" />
                         )}
                       </button>
                     </div>
