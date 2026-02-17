@@ -77,8 +77,10 @@ export default function StudentDashboard() {
           </div>
 
           {/* キャッチコピー：余白を十分に取って、メッセージを際立たせる */}
-          <p className="text-slate-400 font-medium tracking-widest text-xs sm:text-sm uppercase opacity-80">
-            Build Your <span className="text-indigo-600/80">English Skills</span> Precisely
+          <p className="text-[10px] sm:text-xs font-black text-slate-400 uppercase 
+                        tracking-[0.18em] sm:tracking-[0.4em] 
+                        leading-none opacity-70 whitespace-nowrap">
+            Tailor-made for <span className="text-indigo-600/50">Professional ROI</span>
           </p>
         </div>
       </div>
