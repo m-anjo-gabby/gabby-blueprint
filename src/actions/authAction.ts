@@ -26,7 +26,7 @@ export async function signIn(formData: FormData) {
   });
 
   if (error || !data.user) {
-    console.error('Sign-in Error:', error);
+    console.error('Sign-in Error:', error?.message || 'No user data');
     // エラーを返却
     return { error: '認証情報が正しくありません。' };
   }
@@ -54,7 +54,7 @@ export async function signOut() {
   const { error } = await supabase.auth.signOut();
 
   if (error) {
-    console.error('Sign-out Error:', error);
+    console.error('Sign-out Error:', error?.message || 'invalid signOut');
     return { error: 'ログアウト中にエラーが発生しました。' };
   }
 
