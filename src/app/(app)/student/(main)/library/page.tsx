@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Search, ArrowRight, Star, Filter, Tag } from 'lucide-react';
+import { ChevronLeft, Search, ArrowRight, Star, Filter, BookOpen, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Actions & Utils
@@ -11,11 +11,20 @@ import { CorpusRecord } from '@/types/corpus';
 import { useToast } from '@/hooks/useToast';
 import { getTrainingPath } from '@/utils/navigation';
 
+// タブの定義
+const TABS = [
+  { id: 'All' as const, label: 'All' },
+  { id: 0 as const, label: '単語帳' },
+  { id: 1 as const, label: 'ビデオ' },
+  { id: 2 as const, label: 'Gabby' }
+];
+
 export default function LibraryPage() {
   const router = useRouter();
   const { showToast } = useToast();
   
   // --- States ---
+  const [selectedType, setSelectedType] = useState<number | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);
@@ -58,11 +67,17 @@ export default function LibraryPage() {
         c.corpus_name.toLowerCase().includes(q) ||
         c.description?.toLowerCase().includes(q) ||
         c.corpus_label.toLowerCase().includes(q);
+      
+      // 種別フィルタ（0:単語, 1:ビデオ, 2:Gabby...）
+      const matchesType = selectedType === 'All' || c.corpus_type === selectedType;
+      
+      // タグフィルタ（selectedTagが'All'でない場合のみ）
       const matchesTag = selectedTag === 'All' || 
         c.metadata.tags?.some(t => t.label === selectedTag);
-      return matchesSearch && matchesTag;
+        
+      return matchesSearch && matchesType && matchesTag;
     });
-  }, [corpusList, searchQuery, selectedTag]);
+  }, [corpusList, searchQuery, selectedType, selectedTag]);
 
   // --- Logic: 行数溢れ判定 ---
   useLayoutEffect(() => {
@@ -107,53 +122,91 @@ export default function LibraryPage() {
     /* h-full で親の main コンテナいっぱいに広げる */
     <div className="flex flex-col h-full bg-white rounded-[40px] shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
       
-      {/* 1. 固定ヘッダー（検索・タグ） */}
-      <div className="shrink-0 bg-white border-b border-slate-50 px-6 pt-8 pb-6 z-10">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-slate-50 rounded-2xl transition-all active:scale-90 text-slate-400">
-                <ChevronLeft size={28} />
-              </button>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Library</h1>
-            </div>
-            {/* アイコン + 件数のチップ */}
-            <div className="flex items-center gap-2 bg-slate-100/50 px-3 py-1.5 rounded-xl border border-slate-100">
-              <Tag size={14} className="text-slate-400" />
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                {corpusList.length} Books
-              </span>
-            </div>
+    {/* 1. 固定ヘッダー（検索・種別タブ） */}
+    <div className="shrink-0 bg-white border-b border-slate-50 px-6 pt-8 pb-4 z-10">
+      <div className="space-y-6">
+        {/* タイトル & 件数 */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-slate-50 rounded-2xl transition-all active:scale-90 text-slate-400">
+              <ChevronLeft size={28} />
+            </button>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Library</h1>
           </div>
 
-          <div className="relative">
+          {/* 件数表示、またはリセットボタン（フィルタ時） */}
+          {(searchQuery || selectedType !== 'All' || selectedTag !== 'All') ? (
+            <button 
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedType('All');
+                setSelectedTag('All');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-all group active:scale-95"
+            >
+              <span className="text-[10px] font-black uppercase tracking-widest">Reset Filters</span>
+              <X size={12} strokeWidth={3} className="text-indigo-400 group-hover:text-indigo-600" />
+            </button>
+          ) : (
+            /* 条件がない時は通常の件数表示 */
+            <div className="flex items-center gap-2 bg-slate-100/50 px-3 py-1.5 rounded-xl border border-slate-100">
+              <BookOpen size={12} className="text-slate-400" />
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider tabular-nums">
+                {filteredList.length} Items
+              </span>
+            </div>
+          )}
+
+        </div>
+
+        {/* 検索バー + オプションフィルタ */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
             <input
               type="text"
-              placeholder="Search courses..."
+              placeholder="キーワードを入力..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-12 bg-slate-50 border-none rounded-2xl pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+              className="w-full h-11 bg-slate-50 border-none rounded-xl pl-11 pr-4 text-base font-medium focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
             />
           </div>
-
-          <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-            {categoryChips.map(tag => (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(tag)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
-                  selectedTag === tag 
-                  ? 'bg-indigo-600 text-white border-indigo-600' 
-                  : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
+          {/* タグ選択ボタン：タグが多い場合はここからドロップダウン等を開く想定 */}
+          <div className="relative">
+            <select 
+              value={selectedTag}
+              onChange={(e) => setSelectedTag(e.target.value)}
+              className="appearance-none h-11 px-4 bg-slate-50 border-none rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 focus:ring-2 focus:ring-indigo-500/10 outline-none pr-8 cursor-pointer"
+            >
+              {/* 'All' の時だけ色を少し薄く見せる、といった制御も検討の余地あり */}
+              {categoryChips.map(tag => (
+                <option key={tag} value={tag}>
+                  {tag === 'All' ? 'All Tags' : `# ${tag}`} 
+                </option>
+              ))}
+            </select>
+            <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
           </div>
         </div>
+
+        {/* コーパス種別（Type）タブ：モバイルでも1行に収まる固定幅 */}
+        <div className="flex p-1 bg-slate-100/80 rounded-2xl">
+          {TABS.map((tab) => (
+            <button
+              key={tab.label}
+              onClick={() => setSelectedType(tab.id)}
+              className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                selectedType === tab.id
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
+    </div>
 
       {/* 2. スクロール可能なカードリスト */}
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth bg-slate-50/20">
@@ -171,9 +224,7 @@ export default function LibraryPage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       key={corpus.corpus_id} 
-                      className="group relative w-full p-px rounded-4xl transition-all duration-300
-                                /* ライブラリは1px境界。ホバーで優しくインディゴに */
-                                bg-slate-100 hover:bg-indigo-300 shadow-sm hover:shadow-md"
+                      className="group relative w-full p-px rounded-4xl bg-slate-100 hover:bg-indigo-300 shadow-sm hover:shadow-md"
                     >
                       <div className="relative bg-white rounded-[31px] p-6 overflow-hidden">
                         <div className="relative space-y-5">
@@ -201,20 +252,35 @@ export default function LibraryPage() {
                           </div>
 
                           {/* 2. Content: タイトルと説明文 */}
-                          <div className="space-y-2 cursor-pointer" onClick={() => router.push(getTrainingPath(corpus))}>
-                            <h3 className="text-[18px] font-black text-slate-800 tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
+                          <div className="space-y-3">
+                            {/* タイトル：クリックで学習開始 */}
+                            <h3 
+                              onClick={() => router.push(getTrainingPath(corpus))}
+                              className="inline-block text-[18px] font-[1000] text-slate-800 tracking-tight leading-tight cursor-pointer hover:text-indigo-600 transition-colors"
+                            >
                               {corpus.corpus_name}
                             </h3>
+
+                            {/* 説明文エリア */}
                             <div className="relative">
-                              <p ref={(el) => { descriptionRefs.current[corpus.corpus_id] = el; }}
-                                className={`text-[13px] text-slate-500 font-medium leading-relaxed overflow-hidden ${isExpanded ? 'line-clamp-none' : 'line-clamp-2'}`}
+                              <p 
+                                ref={(el) => { descriptionRefs.current[corpus.corpus_id] = el; }}
+                                className={`text-[13px] text-slate-500 font-medium leading-relaxed overflow-hidden ${
+                                  isExpanded ? 'line-clamp-none' : 'line-clamp-2'
+                                }`}
                                 style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical' }}
                               >
                                 {corpus.description}
                               </p>
+                              
                               {shouldShowMore && (
-                                <button onClick={(e) => { e.stopPropagation(); setExpandedIds(prev => ({ ...prev, [corpus.corpus_id]: !isExpanded })); }}
-                                  className="mt-1 flex items-center gap-1 text-indigo-400 text-[10px] font-black py-1 active:opacity-50 uppercase tracking-wider">
+                                <button 
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setExpandedIds(prev => ({ ...prev, [corpus.corpus_id]: !isExpanded })); 
+                                  }}
+                                  className="mt-1.5 flex items-center gap-1 text-indigo-400 text-[10px] font-black py-1 hover:text-indigo-600 active:opacity-50 uppercase tracking-wider transition-colors"
+                                >
                                   {isExpanded ? 'Show Less' : 'More Details'}
                                 </button>
                               )}
@@ -250,10 +316,32 @@ export default function LibraryPage() {
                   );
                 })
               ) : (
-                <div className="py-20 text-center space-y-4">
-                  <Filter className="text-slate-300 mx-auto" size={32} />
-                  <p className="text-slate-400 text-sm font-bold tracking-wide">No results found</p>
-                </div>
+                <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center px-6 text-center space-y-6 overscroll-none"
+                  >
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
+                      <Search className="text-slate-200" size={40} />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-slate-900 font-black text-lg">該当する教材が見つかりません</p>
+                      <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                        条件を変更するか、フィルタを解除して再検索してください。
+                      </p>
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedType('All');
+                        setSelectedTag('All');
+                      }}
+                      className="px-8 py-3 bg-indigo-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-md shadow-indigo-200 active:scale-95 transition-all"
+                    >
+                      Reset Filters
+                    </button>
+                  </motion.div>
               )}
             </AnimatePresence>
           </div>

@@ -81,13 +81,14 @@ CREATE TABLE public.com_m_corpus (
 COMMENT ON TABLE public.com_m_corpus IS 'コーパス管理マスタ';
 COMMENT ON COLUMN public.com_m_corpus.corpus_id IS 'コーパスID';
 COMMENT ON COLUMN public.com_m_corpus.corpus_name IS 'コーパス名称';
-COMMENT ON COLUMN public.com_m_corpus.corpus_type IS 'コーパス種別 0:単語・フレーズ, 1:Gabbyスプリント';
+COMMENT ON COLUMN public.com_m_corpus.corpus_type IS 'コーパス種別 0:単語・フレーズ, 1:ビデオ, 2:Gabbyスプリント';
 COMMENT ON COLUMN public.com_m_corpus.corpus_scope IS 'コーパス公開範囲 0:共通, 1:クライアント限定';
 COMMENT ON COLUMN public.com_m_corpus.seq_no IS 'SEQNO';
 COMMENT ON COLUMN public.com_m_corpus.difficulty_level IS '難易度';
 COMMENT ON COLUMN public.com_m_corpus.recommend IS 'おすすめ';
 COMMENT ON COLUMN public.com_m_corpus.description IS 'コーパス説明・解析根拠';
 COMMENT ON COLUMN public.com_m_corpus.corpus_label IS 'コーパスラベル';
+COMMENT ON COLUMN public.com_m_corpus.metadata IS 'メタデータ（タグなど）';
 COMMENT ON COLUMN public.com_m_corpus.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_corpus.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_corpus.update_date IS '更新日時';
