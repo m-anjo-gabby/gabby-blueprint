@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowRight, Star } from 'lucide-react';
+import { BookOpen, ArrowRight, Star, X } from 'lucide-react';
 
 // Actions & Utils
 import { getDashboardCorpusData } from '@/actions/dashboardAction';
-import { getTrainingPath } from '@/utils/navigation';
+import { getResumePath, getTrainingPath } from '@/utils/navigation';
 import { CorpusRecord } from '@/types/corpus';
+import { ResumeCorpusResponse, WordResumeMetadata } from '@/types/training';
+import { clearResumeCorpus, getLatestResumeCorpus } from '@/actions/corpusAction';
 
 /**
  * 学習者用メインダッシュボード
@@ -21,6 +23,7 @@ export default function StudentDashboard() {
 
   // --- States ---
   const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);
+  const [resumeData, setResumeData] = useState<ResumeCorpusResponse<WordResumeMetadata> | null>(null);
   const [loading, setLoading] = useState(true);
 
   // おすすめとお気に入りのフィルタリング（メモ化せずにシンプルに定義）
@@ -31,12 +34,13 @@ export default function StudentDashboard() {
       async function initDashboard() {
         try {
           // 複数のデータ取得処理を配列で定義
-          const [corpusData] = await Promise.all([
+          const [corpusData, resume] = await Promise.all([
             getDashboardCorpusData(),
-            // getUserProgressData(), // ← こんな感じ
+            getLatestResumeCorpus<WordResumeMetadata>(), 
           ]);
           
           setCorpusList(corpusData);
+          setResumeData(resume);
         } catch (error) {
           console.error("Dashboard Load Error:", error);
         } finally {
@@ -45,6 +49,18 @@ export default function StudentDashboard() {
       }
       initDashboard();
     }, []);
+
+  // 栞を削除するハンドラー
+  const handleClearResume = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // 親ボタンのクリックイベント（遷移）を防ぐ
+    if (!confirm('この再開地点を削除しますか？')) return;
+    try {
+      await clearResumeCorpus();
+      setResumeData(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // --- Render: Loading State ---
   if (loading) {
@@ -149,7 +165,55 @@ export default function StudentDashboard() {
         </button>
       </div>
 
-      {/* 3 Recommended Section: 整理されたおすすめカード */}
+      {/* 3. Resume Section (栞がある時のみ表示) */}
+      {resumeData && (
+        <div className="space-y-6 px-2 animate-in fade-in slide-in-from-top-4 duration-700">
+          {/* セクションタイトルを追加 */}
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
+              Jump Back In
+            </h2>
+          </div>
+          <button
+            onClick={() => router.push(getResumePath(resumeData))}
+            className="group relative w-full p-0.5 rounded-4xl bg-linear-to-br from-indigo-500 via-purple-400 to-indigo-600 shadow-xl shadow-indigo-100/50 transition-all hover:scale-[1.01] active:scale-[0.99]"
+          >
+            <div className="bg-white rounded-[31px] px-6 py-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="shrink-0 w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 group-hover:rotate-6 transition-transform">
+                  <BookOpen size={24} strokeWidth={2.5} />
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">Resume Learning</p>
+                  <h3 className="text-lg font-[1000] text-slate-800 tracking-tight truncate">
+                    {resumeData.com_m_corpus.corpus_name}
+                  </h3>
+                  <p className="text-[11px] font-bold text-slate-400">
+                    {resumeData.metadata.word_id ? '単語学習' : 'フレーズ学習'}の続きから再開
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* 削除ボタン */}
+                <div 
+                  onClick={handleClearResume}
+                  className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                >
+                  <X size={20} />
+                </div>
+                {/* 矢印 */}
+                <div className="w-10 h-10 rounded-full border-2 border-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                  <ArrowRight size={20} strokeWidth={3} />
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* 4. Recommended Section: 整理されたおすすめカード */}
       <div className="space-y-6 px-2">
         <div className="flex items-center justify-between px-2">
           <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">

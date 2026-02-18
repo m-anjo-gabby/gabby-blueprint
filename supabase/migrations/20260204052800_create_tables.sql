@@ -230,3 +230,21 @@ COMMENT ON COLUMN public.com_m_corpus_tag.seq_no IS 'デフォルト表示順';
 COMMENT ON COLUMN public.com_m_corpus_tag.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_corpus_tag.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_corpus_tag.update_date IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_t_resume_corpus (コーパス再開管理テーブル)
+---------------------------------------------
+CREATE TABLE public.com_t_resume_corpus (
+  user_id uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  corpus_id uuid NOT NULL REFERENCES public.com_m_corpus(corpus_id) ON DELETE CASCADE,
+  item_id uuid, 
+  metadata JSONB NOT NULL DEFAULT '{}',
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_t_resume_corpus IS 'コーパス再開管理テーブル';
+COMMENT ON COLUMN public.com_t_resume_corpus.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_resume_corpus.corpus_id IS 'コーパスID';
+COMMENT ON COLUMN public.com_t_resume_corpus.item_id IS 'アイテムID（word_id, phrase_idなどの一意なID）';
+COMMENT ON COLUMN public.com_t_resume_corpus.metadata IS 'メタデータ';
+COMMENT ON COLUMN public.com_t_resume_corpus.update_date IS '更新日時';

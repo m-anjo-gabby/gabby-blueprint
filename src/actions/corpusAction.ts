@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/server";
 import { CorpusRecord, FavoriteCorpusRecord } from "@/types/corpus";
-import { FavoritePhraseRecord, TrainingResponse, TrainingWord } from "@/types/training";
+import { BaseResumeMetadata, FavoritePhraseRecord, ResumeCorpusResponse, TrainingResponse, TrainingWord } from "@/types/training";
 
 /**
  * 指定されたコーパスIDに紐付く単語とフレーズを取得
@@ -253,4 +253,85 @@ export async function toggleCorpusFavorite(corpusId: string, isFavorite: boolean
       .delete()
       .match({ user_id: user.id, corpus_id: corpusId });
   }
+}
+
+/**
+ * コーパスの再開地点を保存する (栞を挟む)
+ * T は BaseResumeMetadata を継承した具体的なメタデータ型
+ */
+export async function saveResumeCorpus<T extends BaseResumeMetadata>(
+  corpusId: string, 
+  itemId: string, 
+  metadata: T
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { error } = await supabase
+    .from('com_t_resume_corpus')
+    .upsert({
+      user_id: user.id,
+      corpus_id: corpusId,
+      item_id: itemId,
+      metadata: metadata, // metadataフィールドはJSONBなので型安全に保存可能
+      update_date: new Date().toISOString()
+    });
+
+  if (error) {
+    console.error("Save resume corpus error:", error);
+    throw new Error(`栞の保存に失敗しました: ${error.message}`);
+  }
+}
+
+/**
+ * 再開地点を削除する (栞を抜く)
+ */
+export async function clearResumeCorpus() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { error } = await supabase
+    .from('com_t_resume_corpus')
+    .delete()
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error("Clear resume corpus error:", error);
+    throw new Error(`栞の削除に失敗しました: ${error.message}`);
+  }
+}
+
+/**
+ * 最新の再開地点を取得する
+ * 呼び出し側で const data = await getLatestResumeCorpus<WordResumeMetadata>(); のように利用可能
+ */
+export async function getLatestResumeCorpus<T = BaseResumeMetadata>() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('com_t_resume_corpus')
+    .select(`
+      corpus_id,
+      item_id,
+      metadata,
+      com_m_corpus (
+        corpus_name,
+        corpus_type
+      )
+    `)
+    .eq('user_id', user.id)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null; // 0件（レコードなし）は正常系として扱う
+    console.error("Fetch resume corpus error:", error);
+    return null;
+  }
+
+  // 取得したデータを定義したジェネリクス型へアサーション
+  return data as unknown as ResumeCorpusResponse<T>;
 }

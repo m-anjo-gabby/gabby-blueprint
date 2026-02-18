@@ -155,3 +155,21 @@ CREATE POLICY "Anyone can view tags" ON public.com_m_corpus_tag
 FOR SELECT TO authenticated USING (delete_flg = '0');
 
 -- 管理（更新・追加）は authenticated には許可しない（デフォルトで制限）
+
+---------------------------------------------
+-- SQLポリシー コーパス再開管理
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can manage their own resume points" ON public.com_t_resume_corpus;
+
+-- RLS設定
+ALTER TABLE public.com_t_resume_corpus ENABLE ROW LEVEL SECURITY;
+
+-- 認証済みユーザーは誰でも参照・更新可能
+CREATE POLICY "Users can manage their own resume points" ON public.com_t_resume_corpus
+FOR ALL TO authenticated USING (
+  user_id = auth.uid()
+)
+WITH CHECK (
+  user_id = auth.uid() -- 自分のデータとしてしか保存・更新できない
+);
