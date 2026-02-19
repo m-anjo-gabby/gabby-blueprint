@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star, X, ChevronDown, BookOpen } from 'lucide-react';
+import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star, X, ChevronDown, BookOpen, Bookmark, RotateCw } from 'lucide-react';
 
 // Hooks & Actions
 import { useVoice } from '@/hooks/useVoice';
@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/useToast';
 import { AnimatePresence, motion } from 'framer-motion';
 import { TrainingWord } from '@/types/word';
 import { getWordData, toggleFavorite } from '@/actions/wordAction';
+import { useConfirm } from '@/hooks/useConfirm';
 
 // --- Types ---
 // 評価設定
@@ -49,13 +50,15 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const searchParams = useSearchParams();
   const { id: sectionId } = use(params); // URLパラメータからIDを取得
   const { showToast } = useToast();
-  const { speak, startListening, stopListening, isListening } = useVoice();
+  const { showConfirm } = useConfirm();
+  const { speak, startListening, stopListening, isListening, isSpeaking } = useVoice();
 
   // --- States ---
   const [corpusName, setCorpusName] = useState("");
   const [words, setWords] = useState<TrainingWord[]>([]);
   const [wordIdx, setWordIdx] = useState(0);
   const [phraseIdx, setPhraseIdx] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   
   const [heardText, setHeardText] = useState<string | null>(null);
@@ -68,6 +71,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const lastHeardRef = useRef<string>("");
   const activeWordRef = useRef<HTMLButtonElement | null>(null);
   const isInitialized = useRef(false);
+  const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 初期データフェッチ
   useEffect(() => {
@@ -274,27 +278,88 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   };
 
   /**
-   * 現在の進捗を栞として保存する
+   * 現在の進捗を栞として保存し、確認後に終了する
    */
   const handleSaveResume = async () => {
     if (!currentPhrase || !sectionId) return;
 
-    try {
-      // 非同期で実行し、awaitせずに遷移させることも可能ですが、
-      // 確実性を期すなら await します。
-      await saveResumeCorpus<WordResumeMetadata>(
-        sectionId, 
-        currentPhrase.phrase_id, // item_idとして利用
-        {
-          phrase_id: currentPhrase.phrase_id,
-          word_id: currentWord.word_id,
-          last_index: wordIdx,
-        }
-      );
-    } catch (error) {
-      console.error("Failed to save resume point:", error);
+    const ok = await showConfirm(
+      "Save & Exit?", 
+      "現在の進捗をブックマークして、ダッシュボードに戻りますか？",
+      { variant: 'info', isModal: false } // 保存はポジティブなアクションなので info
+    );
+
+    if (ok) {
+      try {
+        await saveResumeCorpus<WordResumeMetadata>(
+          sectionId, 
+          currentPhrase.phrase_id,
+          {
+            phrase_id: currentPhrase.phrase_id,
+            word_id: currentWord.word_id,
+            last_index: wordIdx,
+          }
+        );
+        
+        showToast("ブックマークしました", "success");
+        router.push('/student/dashboard');
+      } catch (error) {
+        console.error("Failed to save resume point:", error);
+        showToast("保存に失敗しました", "error");
+      }
     }
   };
+
+  /**
+   * 自動再生の開始/停止
+   */
+  const toggleAutoPlay = async () => {
+    if (isAutoPlaying) {
+      setIsAutoPlaying(false);
+      return;
+    }
+
+    const ok = await showConfirm(
+      "Start Auto Play?",
+      "自動再生を開始しますか？",
+      { variant: 'info', isModal: false }
+    );
+
+    if (ok) {
+      setIsAutoPlaying(true);
+    }
+  };
+
+  /**
+   * 自動再生中の音声再生
+   */
+  useEffect(() => {
+    if (isAutoPlaying && currentPhrase && !isListening) {
+      speak(currentPhrase.phrase_en);
+    }
+  }, [wordIdx, phraseIdx, isAutoPlaying, currentPhrase, isListening, speak]); // インデックスの変化だけを監視
+
+  /**
+   * 自動再生のループ制御
+   */
+  useEffect(() => {
+    if (!isAutoPlaying || isSpeaking || isListening) return;
+
+    // 読み上げが終わった（isSpeaking: false）タイミングでタイマー開始
+    const timer = setTimeout(() => {
+      const isLastPhrase = phraseIdx === (currentWord?.phrases.length || 0) - 1;
+      const isLastWord = wordIdx === words.length - 1;
+
+      if (isLastPhrase && isLastWord) {
+        setIsAutoPlaying(false);
+        showToast("最後のフレーズを再生しました", "success");
+      } else {
+        handleNext();
+      }
+    }, 1500); // 読み上げ後の純粋な待機時間
+
+    return () => clearTimeout(timer);
+  }, [isSpeaking, isListening, isAutoPlaying, phraseIdx, currentWord?.phrases.length, wordIdx, words.length, showToast, handleNext]); // 音声の状態を監視
 
   // --- Render Helpers ---
   const getStepLabel = (type: number) => {
@@ -522,18 +587,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
               <ChevronLeft size={20} className="mr-0.5 group-hover:-translate-x-0.5 transition-transform" /> 
               BACK
             </button>
-            
-            {/* 栞ボタン：明示的に保存して終了 */}
-            <button 
-              onClick={async () => {
-                await handleSaveResume();
-                showToast("進捗を保存しました", "success");
-                router.push('/student/dashboard'); // ダッシュボードへ
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black tracking-widest hover:bg-indigo-100 transition-colors"
-            >
-              <BookOpen size={14} /> 栞を挟んで終了
-            </button>
 
             {/* コーパス名（現在のセクション名など）を表示 */}
             {/* words[0]?.section_name のようなプロパティがあればそれを表示してください */}
@@ -665,52 +718,104 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
           {/* ステータス（メッセージ） */}
           <div className="h-10 sm:h-12 shrink-0 flex items-center justify-center">
             {isListening ? (
-              <div className="flex items-center gap-2 animate-pulse">
-                <div className="w-1.5 h-1.5 bg-rose-500 rounded-full" />
-                <span className="text-xs font-black text-rose-500 uppercase tracking-[0.2em]">Recording...</span>
+              <div className="flex items-center gap-2 animate-pulse text-rose-500">
+                <div className="w-1.5 h-1.5 bg-current rounded-full" />
+                <span className="text-xs font-black uppercase tracking-[0.2em]">Recording...</span>
+              </div>
+            ) : isAutoPlaying ? (
+              <div className="flex items-center gap-2 text-indigo-600">
+                <span className="text-xs font-black uppercase tracking-[0.3em] animate-pulse">Auto Playing Mode</span>
               </div>
             ) : (
-              <p className="text-xs font-black text-slate-200 uppercase tracking-widest">Tap card to flip / Speak to check</p>
+              <p className="text-xs font-black text-slate-200 uppercase tracking-widest">
+                Tap card to flip / Speak to check
+              </p>
             )}
           </div>
 
         </div>
 
         {/* コントロール（ボタン）エリア */}
-        <div className="shrink-0 space-y-2 sm:space-y-3 pt-2 w-full flex flex-col items-center">
+        <div className="shrink-0 space-y-3 pt-2 w-full flex flex-col items-center">
           
-          {/* メインアクション: Next */}
-          <button 
-            onClick={handleNext} 
-            disabled={isListening}
-            className="w-full max-w-sm py-5 bg-indigo-600 text-white rounded-3xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:shadow-indigo-200 hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest disabled:opacity-50"
-          >
-            {phraseIdx < (currentWord.phrases.length - 1) ? "Next Step" : "Next Word"}
-            <ArrowRight size={16} />
-          </button>
+          {/* 上段：[栞] [   Next (メイン)   ] [自動] */}
+          <div className="flex items-center gap-3 w-full max-w-sm px-2">
+            {/* 栞ボタン：固定幅 */}
+            <button 
+              onClick={handleSaveResume}
+              disabled={isAutoPlaying}
+              className="shrink-0 w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 border border-slate-100 hover:bg-indigo-50 hover:text-indigo-600 transition-all active:scale-90 ${isAutoPlaying ? 'opacity-30 grayscale pointer-events-none' : ''}"
+            >
+              <Bookmark size={20} strokeWidth={2.5} />
+            </button>
 
-          {/* サブアクション: Listen / Speak */}
-          <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+            {/* Nextボタン：可変幅（下のListen/Speakと端を揃える） */}
             <button 
-              onClick={() => speak(currentPhrase.phrase_en)}
-              disabled={isListening}
-              className="py-4 bg-slate-50 text-slate-600 rounded-3xl font-bold border border-slate-100 hover:bg-slate-100 hover:border-slate-200 hover:-translate-y-0.5 flex items-center justify-center gap-2 text-[11px] uppercase transition-all disabled:opacity-50"
+              onClick={handleNext} 
+              disabled={isListening || isAutoPlaying}
+              className="flex-1 py-5 bg-indigo-600 text-white rounded-3xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
             >
-              <Volume2 size={16} className="text-indigo-500" /> Listen
+              {phraseIdx < (currentWord.phrases.length - 1) ? "Next Step" : "Next Word"}
+              <ArrowRight size={16} strokeWidth={3} />
             </button>
+
+            {/* 自動再生ボタン：固定幅 */}
             <button 
-              onClick={handleVoiceCheck} 
-              className={`relative py-4 rounded-3xl font-bold flex items-center justify-center gap-2 text-[11px] uppercase transition-all overflow-hidden hover:-translate-y-0.5 ${isListening ? 'bg-rose-500 text-white shadow-lg shadow-rose-100' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+              onClick={toggleAutoPlay}
+              className={`shrink-0 w-12 h-12 flex items-center justify-center rounded-2xl border transition-all active:scale-90 
+                ${isAutoPlaying 
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' 
+                  : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-indigo-50 hover:text-indigo-600'
+                }`}
             >
-              {isListening && (
-                <div 
-                  className="absolute inset-0 bg-rose-600/30 origin-left transition-transform duration-1000 ease-linear" 
-                  style={{ transform: `scaleX(${timeLeft / DRILL_CONFIG.RECORDING_LIMIT})` }} 
-                />
-              )}
-              <Mic size={16} className={isListening ? 'animate-pulse relative z-10' : 'relative z-10'} />
-              <span className="relative z-10">{isListening ? `${timeLeft}s Stop` : 'Speak'}</span>
+              <RotateCw 
+                size={20} 
+                strokeWidth={2.5} 
+                className={isAutoPlaying ? "animate-spin-slow" : ""} 
+              />
             </button>
+          </div>
+
+          {/* 下段：[余白] [ Listen ] [ Speak ] [余白] */}
+          <div className="flex items-center gap-3 w-full max-w-sm px-2">
+            {/* 上のボタン幅(w-12)に合わせたスペーサー */}
+            <div className="w-12 shrink-0" />
+
+            {/* メインのサブアクション：Nextボタンと幅がピッタリ揃う */}
+            <div className="flex-1 grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => speak(currentPhrase.phrase_en)}
+                disabled={isListening || isAutoPlaying}
+                className="py-4 bg-slate-50 text-slate-400 rounded-3xl border border-slate-100 hover:bg-slate-100 hover:text-indigo-600 transition-all flex items-center justify-center disabled:opacity-50"
+                title="Listen"
+              >
+                <Volume2 size={20} strokeWidth={2.5} />
+              </button>
+              
+              <button 
+                onClick={handleVoiceCheck} 
+                disabled={isAutoPlaying}
+                className={`relative py-3 w-full rounded-3xl flex items-center justify-center transition-all overflow-hidden 
+                  ${isAutoPlaying ? 'opacity-30 grayscale pointer-events-none' : 'active:scale-95'}
+                  ${isListening ? 'bg-rose-500 text-white shadow-lg' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={isListening ? "time" : "icon"}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.1 }}
+                    className="relative z-10 font-black tabular-nums"
+                  >
+                    {isListening ? `${timeLeft}s` : <Mic size={20} strokeWidth={2.5} />}
+                  </motion.div>
+                </AnimatePresence>
+              </button>
+            </div>
+
+            {/* 上のボタン幅(w-12)に合わせたスペーサー */}
+            <div className="w-12 shrink-0" />
           </div>
           
         </div>

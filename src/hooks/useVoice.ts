@@ -43,6 +43,7 @@ declare global {
  */
 export function useVoice() {
   const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   
   // 認識インスタンスとタイマーをRefで保持（再レンダリングを避け、外部から制御可能にする）
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -51,13 +52,24 @@ export function useVoice() {
   /**
    * 音声読み上げ (Text-to-Speech)
    */
-  const speak = useCallback((text: string) => {
+  const speak = useCallback((text: string, onEnd?: () => void) => {
     if (typeof window === 'undefined') return;
     window.speechSynthesis.cancel();
+
     const uttr = new SpeechSynthesisUtterance(text);
     uttr.lang = 'en-US';
     uttr.rate = 0.85;
+
+    // 再生開始・終了の管理
+    uttr.onstart = () => setIsSpeaking(true);
+    uttr.onend = () => {
+      setIsSpeaking(false);
+      if (onEnd) onEnd(); // 終了時のコールバックを実行可能に
+    };
+    uttr.onerror = () => setIsSpeaking(false);
+
     window.speechSynthesis.speak(uttr);
+
   }, []);
 
   /**
@@ -149,5 +161,5 @@ export function useVoice() {
     }
   }, [isListening, stopListening]);
 
-  return { speak, startListening, stopListening, isListening };
+  return { speak, startListening, stopListening, isListening, isSpeaking };
 }
