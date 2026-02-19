@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { toggleFavorite } from '@/actions/corpusAction';
 import { Star, Volume2, Trash2 } from 'lucide-react';
-import { FavoritePhraseRecord } from '@/types/training';
 import { useVoice } from '@/hooks/useVoice';
 import { useToast } from '@/hooks/useToast';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FavoritePageState } from '../page';
+import { FavoritePhraseRecord } from '@/types/word';
+import { toggleFavorite } from '@/actions/wordAction';
 
 interface PhraseFavoritesProps {
   phrases: FavoritePhraseRecord[];

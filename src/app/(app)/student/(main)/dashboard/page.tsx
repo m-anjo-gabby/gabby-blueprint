@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowRight, Star } from 'lucide-react';
+import { BookOpen, ArrowRight, Star, Trash2 } from 'lucide-react';
 
 // Actions & Utils
 import { getDashboardCorpusData } from '@/actions/dashboardAction';
@@ -60,7 +60,7 @@ export default function StudentDashboard() {
 
     // カスタムモーダルを呼び出す
     const ok = await showConfirm(
-      "Clear Resume?", 
+      "Clear Bookmark?", 
       "このブックマークを削除しますか？",
       { variant: 'danger', isModal: false }
     );
@@ -183,18 +183,23 @@ export default function StudentDashboard() {
       {/* 3. Resume Section (栞がある時のみ表示) */}
       {resumeData && (
         <div className="space-y-6 px-2 animate-in fade-in slide-in-from-top-4 duration-700 mb-12">
-          {/* セクションタイトル ＋ Clear Resume ボタン */}
+          {/* セクションタイトル ＋ Clearボタン */}
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
               <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
-              Resume Training
+              Continue Learning
             </h2>
+
+            {/* 削除ボタン：カードの右下に浮かせる */}
             <button 
               onClick={handleClearResume}
-              className="text-[10px] font-black text-slate-400 hover:text-rose-500 transition-colors uppercase tracking-widest border-b border-transparent hover:border-rose-500 pb-0.5"
+              className="flex items-center gap-1.5 py-1 pl-2 pr-0 rounded-lg text-slate-400 hover:text-rose-500 transition-all group/clear"
             >
-              Clear Resume
+              {/* モバイルではアイコンのみ、PCではテキストも出す制御（sm:inline） */}
+              <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Clear</span>
+              <Trash2 size={14} strokeWidth={2.5} className="group-hover/clear:rotate-12 transition-transform" />
             </button>
+
           </div>
 
           {/* 再開カード */}
@@ -240,21 +245,25 @@ export default function StudentDashboard() {
               </div>
             </div>
           </button>
+          
         </div>
       )}
 
       {/* 4. Recommended Section: 整理されたおすすめカード */}
       <div className="space-y-6 px-2">
+        {/* セクションタイトル ＋ Viewボタン */}
         <div className="flex items-center justify-between px-2">
           <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
             <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
             Picked for You
           </h2>
+
           <button 
             onClick={() => router.push('/student/library')}
-            className="text-[10px] font-black text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest border-b border-transparent hover:border-indigo-600 pb-0.5"
+            className="flex items-center gap-1.5 py-1 pl-2 pr-0 rounded-lg text-slate-400 opacity-60 hover:opacity-100 hover:text-indigo-600 transition-all group/view"
           >
-            View Library
+            <span className="text-[10px] font-[1000] uppercase tracking-widest hidden sm:inline">View All</span>
+            <ArrowRight size={14} strokeWidth={3} className="group-hover/view:translate-x-0.5 transition-transform" />
           </button>
         </div>
 

@@ -6,11 +6,13 @@ import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star, X, ChevronDown, Book
 
 // Hooks & Actions
 import { useVoice } from '@/hooks/useVoice';
-import { clearResumeCorpus, getLatestResumeCorpus, getTrainingData, saveResumeCorpus, toggleFavorite } from '@/actions/corpusAction';
+import { clearResumeCorpus, getLatestResumeCorpus, saveResumeCorpus } from '@/actions/corpusAction';
 import { calculateSimilarity } from '@/utils/stringSimilarity';
-import { TrainingWord, WordResumeMetadata } from '@/types/training';
+import { WordResumeMetadata } from '@/types/training';
 import { useToast } from '@/hooks/useToast';
 import { AnimatePresence, motion } from 'framer-motion';
+import { TrainingWord } from '@/types/word';
+import { getWordData, toggleFavorite } from '@/actions/wordAction';
 
 // --- Types ---
 // 評価設定
@@ -76,7 +78,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     async function init() {
       try {
         // Wordデータの取得
-        const { words, corpusName }= await getTrainingData(sectionId);
+        const { words, corpusName }= await getWordData(sectionId);
 
         let targetWordIdx = 0;
         let targetPhraseIdx = 0;

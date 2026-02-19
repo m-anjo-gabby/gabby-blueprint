@@ -29,7 +29,7 @@ export default function Header() {
             <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-indigo-500">
               <UserIcon size={14} />
             </div>
-            <span className="text-xs font-bold text-slate-600 truncate max-w-[80px] sm:max-w-[120px]">
+            <span className="text-xs font-bold text-slate-600 truncate max-w-20 sm:max-w-30 hidden sm:inline">
               {user?.email?.split('@')[0]}
             </span>
           </div>
@@ -46,7 +46,7 @@ export default function Header() {
 
       {/* ログアウト確認モーダル */}
       {showConfirm && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-4">
           {/* 背景オーバーレイ */}
           <div 
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"

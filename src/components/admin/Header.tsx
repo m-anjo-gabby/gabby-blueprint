@@ -24,7 +24,7 @@ export default function Header() {
           <div className="p-1.5 bg-slate-100 rounded-full md:hidden">
             <User size={16} className="text-slate-500" />
           </div>
-          <span className="text-xs md:text-sm font-semibold text-slate-700 max-w-[120px] md:max-w-none truncate">
+          <span className="text-xs md:text-sm font-semibold text-slate-700 max-w-30 md:max-w-none truncate">
             {user?.email || '---'}
           </span>
         </div>

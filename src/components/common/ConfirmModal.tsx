@@ -49,10 +49,10 @@ export const ConfirmModal = ({ title, message, onConfirm, onCancel, variant = 'd
 
         <div className="flex gap-3 pt-2">
           <button onClick={onCancel} className="flex-1 h-12 text-[11px] font-black text-slate-400 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">
-            CANCEL
+            キャンセル
           </button>
           <button onClick={onConfirm} className={`flex-1 h-12 text-[11px] font-black text-white ${theme.btn} rounded-2xl shadow-lg transition-all active:scale-95`}>
-            CONFIRM
+            OK
           </button>
         </div>
       </motion.div>

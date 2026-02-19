@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Star } from 'lucide-react';
-import { getFavoritePhrases, getFavoriteCorpuses } from '@/actions/corpusAction';
-import { FavoritePhraseRecord } from '@/types/training';
+import { getFavoriteCorpuses } from '@/actions/corpusAction';
 import { FavoriteCorpusRecord } from '@/types/corpus';
 import { useToast } from '@/hooks/useToast';
 import PhraseFavorites from './_components/PhraseFavorites';
 import CorpusFavorites from './_components/CorpusFavorites';
+import { FavoritePhraseRecord } from '@/types/word';
+import { getFavoritePhrases } from '@/actions/wordAction';
 
 export interface FavoritePageState {
   corpuses: FavoriteCorpusRecord[] | null;
