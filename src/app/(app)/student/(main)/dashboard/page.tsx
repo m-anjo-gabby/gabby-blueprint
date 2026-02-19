@@ -251,20 +251,12 @@ export default function StudentDashboard() {
 
       {/* 4. Recommended Section: 整理されたおすすめカード */}
       <div className="space-y-6 px-2">
-        {/* セクションタイトル ＋ Viewボタン */}
+        {/* セクションタイトル */}
         <div className="flex items-center justify-between px-2">
           <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
             <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
             Picked for You
           </h2>
-
-          <button 
-            onClick={() => router.push('/student/library')}
-            className="flex items-center gap-1.5 py-1 pl-2 pr-0 rounded-lg text-slate-400 opacity-60 hover:opacity-100 hover:text-indigo-600 transition-all group/view"
-          >
-            <span className="text-[10px] font-[1000] uppercase tracking-widest hidden sm:inline">View All</span>
-            <ArrowRight size={14} strokeWidth={3} className="group-hover/view:translate-x-0.5 transition-transform" />
-          </button>
         </div>
 
         <div className="grid gap-6">
