@@ -79,5 +79,7 @@ export interface ResumeCorpusResponse<T = BaseResumeMetadata> {
   com_m_corpus: {
     corpus_name: string;
     corpus_type: number;
+    difficulty_level: number;
+    corpus_label: string;
   };
 }

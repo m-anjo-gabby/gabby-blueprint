@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowRight, Star, X } from 'lucide-react';
+import { BookOpen, ArrowRight, Star } from 'lucide-react';
 
 // Actions & Utils
 import { getDashboardCorpusData } from '@/actions/dashboardAction';
@@ -10,6 +10,8 @@ import { getResumePath, getTrainingPath } from '@/utils/navigation';
 import { CorpusRecord } from '@/types/corpus';
 import { ResumeCorpusResponse, WordResumeMetadata } from '@/types/training';
 import { clearResumeCorpus, getLatestResumeCorpus } from '@/actions/corpusAction';
+import { useConfirm } from '@/hooks/useConfirm';
+import { useToast } from '@/hooks/useToast';
 
 /**
  * 学習者用メインダッシュボード
@@ -20,6 +22,8 @@ import { clearResumeCorpus, getLatestResumeCorpus } from '@/actions/corpusAction
  */
 export default function StudentDashboard() {
   const router = useRouter();
+  const { showConfirm } = useConfirm();
+  const { showToast } = useToast();
 
   // --- States ---
   const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);
@@ -52,13 +56,24 @@ export default function StudentDashboard() {
 
   // 栞を削除するハンドラー
   const handleClearResume = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // 親ボタンのクリックイベント（遷移）を防ぐ
-    if (!confirm('この再開地点を削除しますか？')) return;
-    try {
-      await clearResumeCorpus();
-      setResumeData(null);
-    } catch (err) {
-      console.error(err);
+    e.stopPropagation(); // カード自体のクリック（遷移）を防ぐ
+
+    // カスタムモーダルを呼び出す
+    const ok = await showConfirm(
+      "Clear Resume?", 
+      "このブックマークを削除しますか？",
+      { variant: 'danger', isModal: false }
+    );
+    
+    // 確認OKの場合
+    if (ok) {
+      try {
+        await clearResumeCorpus();
+        setResumeData(null);
+        showToast("ブックマークをクリアしました", "success");
+      } catch (err) {
+        console.error("Clear Resume Error:", err);
+      }
     }
   };
 
@@ -167,46 +182,61 @@ export default function StudentDashboard() {
 
       {/* 3. Resume Section (栞がある時のみ表示) */}
       {resumeData && (
-        <div className="space-y-6 px-2 animate-in fade-in slide-in-from-top-4 duration-700">
-          {/* セクションタイトルを追加 */}
+        <div className="space-y-6 px-2 animate-in fade-in slide-in-from-top-4 duration-700 mb-12">
+          {/* セクションタイトル ＋ Clear Resume ボタン */}
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
               <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
-              Jump Back In
+              Resume Training
             </h2>
+            <button 
+              onClick={handleClearResume}
+              className="text-[10px] font-black text-slate-400 hover:text-rose-500 transition-colors uppercase tracking-widest border-b border-transparent hover:border-rose-500 pb-0.5"
+            >
+              Clear Resume
+            </button>
           </div>
+
+          {/* 再開カード */}
           <button
             onClick={() => router.push(getResumePath(resumeData))}
             className="group relative w-full p-0.5 rounded-4xl bg-linear-to-br from-indigo-500 via-purple-400 to-indigo-600 shadow-xl shadow-indigo-100/50 transition-all hover:scale-[1.01] active:scale-[0.99]"
           >
-            <div className="bg-white rounded-[31px] px-6 py-5 flex items-center justify-between gap-4">
+            <div className="bg-white rounded-[31px] px-6 py-6 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4 min-w-0">
+                {/* アイコンを History (再開) に変更 */}
                 <div className="shrink-0 w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 group-hover:rotate-6 transition-transform">
-                  <BookOpen size={24} strokeWidth={2.5} />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
                 </div>
-                <div className="text-left min-w-0">
-                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">Resume Learning</p>
+                
+                <div className="text-left min-w-0 space-y-1">
+                  {/* 教材ラベルとレベルを表示 (おすすめカードと整合) */}
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[9px] font-black tracking-widest uppercase">
+                      {resumeData.com_m_corpus.corpus_label}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-300 tracking-wider">
+                      Lv.{resumeData.com_m_corpus.difficulty_level}
+                    </span>
+                  </div>
+
                   <h3 className="text-lg font-[1000] text-slate-800 tracking-tight truncate">
                     {resumeData.com_m_corpus.corpus_name}
                   </h3>
-                  <p className="text-[11px] font-bold text-slate-400">
-                    {resumeData.metadata.word_id ? '単語学習' : 'フレーズ学習'}の続きから再開
+                  
+                  <p className="text-[11px] font-bold text-indigo-500/80 flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                    </span>
+                    {resumeData.metadata.word_id ? '単語学習' : 'フレーズ学習'}の続き
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* 削除ボタン */}
-                <div 
-                  onClick={handleClearResume}
-                  className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                >
-                  <X size={20} />
-                </div>
-                {/* 矢印 */}
-                <div className="w-10 h-10 rounded-full border-2 border-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                  <ArrowRight size={20} strokeWidth={3} />
-                </div>
+              {/* 右側の矢印アクション */}
+              <div className="w-10 h-10 rounded-full border-2 border-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
+                <ArrowRight size={20} strokeWidth={3} />
               </div>
             </div>
           </button>

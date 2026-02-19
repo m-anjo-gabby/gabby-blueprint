@@ -320,7 +320,9 @@ export async function getLatestResumeCorpus<T = BaseResumeMetadata>() {
       metadata,
       com_m_corpus (
         corpus_name,
-        corpus_type
+        corpus_type,
+        difficulty_level,
+        corpus_label
       )
     `)
     .eq('user_id', user.id)

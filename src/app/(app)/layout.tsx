@@ -2,6 +2,7 @@ import { createClient } from '@/lib/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@/components/auth/UserStoreInitializer';
 import ToastContainer from '@/components/common/ToastContainer';
+import ConfirmContainer from '@/components/common/ConfirmContainer';
 
 /**
  * ログイン後全域の基盤レイアウト
@@ -29,6 +30,9 @@ export default async function AppLogicLayout({
 
       {/* トースト通知を下部に配置 */}
       <ToastContainer />
+
+      {/* 汎用確認ダイアログを下部に配置 */}
+      <ConfirmContainer />
     </>
   );
 }

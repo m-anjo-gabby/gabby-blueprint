@@ -1,51 +1,39 @@
 'use client';
-import { create } from 'zustand';
-import { Toast } from '@/types/toast';
+
+import { useToastStore } from '@/stores/useToastStore';
+import { useCallback } from 'react';
 
 /**
- * トースト通知の状態管理を行うStore
- * Zustandを使用し、アプリ全域から通知を表示・削除できる
+ * トースト通知（簡易通知）を操作するためのカスタムフック
+ * * アプリケーションのどこからでも呼び出し可能で、
+ * 指定したメッセージを画面下部に一定時間表示します。
+ * * @returns {Object} showToast - 通知を表示するための関数
  */
-type ToastStore = {
-  // 表示中のトーストリスト
-  toasts: Toast[];
-  // トーストを表示する（メッセージとタイプを指定、3秒後に自動消去）
-  showToast: (message: string, type?: Toast['type']) => void;
-  // 手動でトーストを削除する
-  removeToast: (id: number) => void;
-};
-
-// トーストの一意識別用カウンター（再レンダリングでリセットされないようスコープ外で定義）
-let idCounter = 0;
-
-export const useToast = create<ToastStore>((set) => ({
-  toasts: [],
+export const useToast = () => {
+  const addToast = useToastStore((state) => state.addToast);
+  const removeToast = useToastStore((state) => state.removeToast);
 
   /**
-   * 新しいトーストを追加し、一定時間後に自動で削除する
+   * トースト通知を表示する
+   * * 表示から3秒経過すると、自動的に画面から消去されます。
+   * * @param {string} message - 表示するメッセージ
+   * @param {'info' | 'success' | 'error'} [type='info'] - 通知の種類（見た目の色味）
+   * * @example
+   * const { showToast } = useToast();
+   * showToast("保存が完了しました", "success");
    */
-  showToast: (message, type = 'info') => {
-    const id = idCounter++;
+  const showToast = useCallback((
+    message: string, 
+    type: 'info' | 'success' | 'error' = 'info'
+  ) => {
+    // ストアに登録し、一意のIDを取得
+    const id = addToast(message, type);
 
-    // トーストを追加
-    set((state) => ({
-      toasts: [...state.toasts, { id, message, type }],
-    }));
-
-    // 3000ms (3秒) 後に該当のトーストを自動削除
+    // 3000ms（3秒）後に自動削除するロジックをHookで一元管理
     setTimeout(() => {
-      set((state) => ({
-        toasts: state.toasts.filter((t) => t.id !== id),
-      }));
+      removeToast(id);
     }, 3000);
-  },
+  }, [addToast, removeToast]);
 
-  /**
-   * 指定したIDのトーストをリストから即座に削除する
-   * （主にユーザーの閉じる操作や、Framer Motionのexit transition用）
-   */
-  removeToast: (id) =>
-    set((state) => ({
-      toasts: state.toasts.filter((t) => t.id !== id),
-    })),
-}));
+  return { showToast };
+};
