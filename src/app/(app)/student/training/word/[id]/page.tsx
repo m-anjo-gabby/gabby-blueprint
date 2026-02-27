@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, use } from 'react';
+import { useState, useEffect, useRef, useMemo, use, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star, X, ChevronDown, BookOpen, Bookmark, RotateCw } from 'lucide-react';
 
 // Hooks & Actions
 import { useVoice } from '@/hooks/useVoice';
 import { clearResumeCorpus, getLatestResumeCorpus, saveResumeCorpus } from '@/actions/corpusAction';
-import { calculateSimilarity } from '@/utils/stringSimilarity';
+import { analyzePhrase } from '@/utils/stringSimilarity';
 import { WordResumeMetadata } from '@/types/training';
 import { useToast } from '@/hooks/useToast';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -59,6 +59,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const [wordIdx, setWordIdx] = useState(0);
   const [phraseIdx, setPhraseIdx] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const [activeTooltipIndex, setActiveTooltipIndex] = useState<number>(-1);
   const [loading, setLoading] = useState(true);
   
   const [heardText, setHeardText] = useState<string | null>(null);
@@ -71,7 +72,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const lastHeardRef = useRef<string>("");
   const activeWordRef = useRef<HTMLButtonElement | null>(null);
   const isInitialized = useRef(false);
-  const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 初期データフェッチ
   useEffect(() => {
@@ -160,13 +160,21 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   // 音声認識終了時の評価判定
   useEffect(() => {
-    if (!isListening && lastHeardRef.current !== "" && currentPhrase) {
-      const similarity = calculateSimilarity(lastHeardRef.current, currentPhrase.phrase_en);
-      const config = getFeedbackConfig(similarity);
+    // 1. ガード節で currentWord と currentPhrase の存在を確認
+    if (!isListening && lastHeardRef.current !== "" && currentPhrase && currentWord) {
+      // 単語ベースで解析
+      const { score } = analyzePhrase(
+        lastHeardRef.current, 
+        currentPhrase.phrase_en, 
+        [currentWord.word_en]
+      );
+      
+      const config = getFeedbackConfig(score); // score (0.0~1.0) を渡す
       setFeedback(config);
       lastHeardRef.current = "";
     }
-  }, [isListening, currentPhrase]);
+    // 3. 依存配列はオブジェクト全体にする（値が変わったことを検知できる）
+  }, [isListening, currentPhrase, currentWord]);
 
   // 録音カウントダウン
   useEffect(() => {
@@ -191,7 +199,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   /**
    * Next処理
    */
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     setFeedback(null);
     setHeardText(null);
@@ -205,7 +213,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       setPhraseIdx(0);
       setWordIdx(prev => (prev + 1) % words.length);
     }
-  };
+    // 依存するもの（状態の更新に使う値）を配列に入れる
+  }, [phraseIdx, currentWord?.phrases.length, words.length]);
 
   /**
    * 音声認識の実行
@@ -225,15 +234,15 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       lastHeardRef.current = heard;
 
        // 発話自動停止ロジック
-      if (currentPhrase) {
-        const similarity = calculateSimilarity(heard, currentPhrase.phrase_en);
+      if (currentPhrase && currentWord) {
+        // 単語一致率で判定
+        const { score } = analyzePhrase(heard, currentPhrase.phrase_en, [currentWord.word_en]);
         
-        // 90%以上の類似度で自動停止
-        if (similarity >= DRILL_CONFIG.AUTO_STOP_THRESHOLD) {
-          // ユーザーが「言い切った」と感じるための僅かな余韻
+        // 90%（ほぼ全ての単語）を言えたら自動停止
+        if (score >= DRILL_CONFIG.AUTO_STOP_THRESHOLD) {
           setTimeout(() => {
             stopListening();
-          }, 250); 
+          }, 300); 
         }
       }
     });
@@ -462,23 +471,142 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       {/* ドリルカード全体 h-full と max-w を調整し、画面内に必ず収まるようにする */}
       <div className="bg-white text-slate-900 rounded-4xl sm:rounded-[40px] p-5 sm:p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 w-full max-w-2xl h-full max-h-225 flex flex-col relative overflow-hidden">
         
-        {/* 音声認識フィードバック オーバーレイ */}
-        {feedback && (
+      {/* 音声認識フィードバック オーバーレイ */}
+      {feedback && (() => {
+        // 解析を実行
+        const analysis = analyzePhrase(heardText || "", currentPhrase.phrase_en, [currentWord.word_en]);
+        
+        return (
           <div 
             className="absolute inset-0 z-100 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" 
             onClick={() => setFeedback(null)}
           >
-            <div className="relative bg-white w-full max-w-sm rounded-4xl p-8 shadow-2xl flex flex-col items-center gap-6 animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => setFeedback(null)} className="absolute top-4 right-4 p-2 text-slate-300 hover:text-slate-500"><X size={24} /></button>
-              <div className="px-6 py-2 rounded-full border uppercase text-[10px] font-black tracking-widest" style={{ backgroundColor: `${feedback.fill}15`, borderColor: `${feedback.fill}40`, color: feedback.fill }}>{feedback.tagText}</div>
-              <div className="text-center space-y-2">
-                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block">You said</span>
-                <p className="text-xl font-bold text-slate-800 italic leading-tight">{heardText}</p>
+            <div 
+              className="relative bg-white w-full max-w-sm rounded-4xl p-8 shadow-2xl flex flex-col items-center gap-6 animate-in zoom-in-95" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button onClick={() => setFeedback(null)} className="absolute top-4 right-4 p-2 text-slate-300 hover:text-slate-500">
+                <X size={24} />
+              </button>
+              
+              {/* 評価タグエリア */}
+              <div className="flex flex-col items-center gap-4">
+                {/* 評価タグ */}
+                <div className="px-6 py-2 rounded-full border uppercase text-[10px] font-black tracking-widest" 
+                  style={{ backgroundColor: `${feedback.fill}15`, borderColor: `${feedback.fill}40`, color: feedback.fill }}>
+                  {feedback.tagText}
+                </div>
+                
+                {/* プログレスバーとスコアのセット */}
+                <div className="flex items-center gap-3">
+                  {/* プログレスバー */}
+                  <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full transition-all duration-500" 
+                      style={{ width: `${analysis.score * 100}%`, backgroundColor: feedback.fill }} 
+                    />
+                  </div>
+                  {/* スコア */}
+                  <div className="text-sm font-bold text-slate-600 tabular-nums">
+                    {Math.round(analysis.score * 100)} <span className="text-[10px] text-slate-400">/ 100</span>
+                  </div>
+                </div>
               </div>
-              <div className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center text-[11px] text-slate-400 italic">Tap anywhere to close</div>
+
+              {/* 単語単位のフィードバックエリア */}
+              <div className="flex flex-wrap justify-center gap-x-3 gap-y-10 mt-6">
+                {analysis.matches.map((m, idx) => {
+                  // 「一致・不一致」と「ツールチップ表示条件」を定義
+                  const isMissing = !m.isMatch;
+                  // ヒントがある、または認識されなかった単語はタップ可能にする
+                  const isTargetForTooltip = (m.isMatch && (m.isFuzzy || m.isCombined)) || isMissing;
+                  const isVisible = activeTooltipIndex === idx;
+
+                  // 2. スタイルの決定
+                  let textColor = 'text-slate-800'; // デフォルトは黒
+                  let decoration = '';              // デフォルトは装飾なし
+
+                  if (isMissing) {
+                    // 脱落単語のスタイル（ゴースト）
+                    textColor = 'text-slate-300';
+                    decoration = 'border-b-2 border-dashed border-slate-300';
+                  } else if (m.isFuzzy) {
+                    // 発音ミス（忖度）
+                    textColor = 'text-orange-500';
+                    decoration = 'underline decoration-wavy decoration-orange-300 underline-offset-8';
+                  } else if (m.isCombined) {
+                    // リンキング（忖度）
+                    textColor = 'text-blue-500';
+                    decoration = 'underline decoration-dotted decoration-blue-300 underline-offset-8';
+                  }
+
+                  return (
+                    <div 
+                      key={idx} 
+                        className={`relative flex flex-col items-center select-none ${isTargetForTooltip ? 'cursor-pointer' : 'cursor-default'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isTargetForTooltip) {
+                            setActiveTooltipIndex(isVisible ? -1 : idx);
+                          }
+                        }}
+                      onMouseEnter={() => isTargetForTooltip && setActiveTooltipIndex(idx)}
+                      onMouseLeave={() => setActiveTooltipIndex(-1)}
+                    >
+                      {/* シンプルな対比ツールチップ */}
+                      {isVisible && isTargetForTooltip && (
+                        <div className="absolute -top-12 whitespace-nowrap px-3 py-2 bg-slate-900 text-white rounded-2xl shadow-xl z-30 animate-in zoom-in-50 duration-200">
+                          <div className="flex items-center gap-2 text-[11px] font-bold">
+                            {isMissing ? (
+                              <span className="text-slate-200">聞き取れませんでした</span>
+                            ) : (
+                              <>
+                                <span className="text-slate-400">{m.heard}</span>
+                                <span className="text-slate-600">→</span>
+                                <span className="text-sky-400">{m.word}</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45" />
+                        </div>
+                      )}
+
+                      <span className={`text-2xl font-bold transition-all ${textColor} ${decoration}`}>
+                        {m.word}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* アドバイス ＆ フィードバックエリア */}
+              <div className="w-full mt-4">
+                <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100/50">
+                  <div className="flex items-start gap-3">
+                    <div className="text-xl">💡</div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-slate-700 mb-1">
+                        {analysis.score === 100 && !analysis.hasIssues ? "パーフェクト！" : "上達のためのヒント"}
+                      </p>
+                      <p className="text-[12px] text-slate-600 leading-relaxed">
+                        {analysis.score === 100 && !analysis.hasIssues ? (
+                          "非常にクリアな発音です。その調子で練習しましょう！"
+                        ) : (
+                          <>
+                            {analysis.matches.some(m => !m.isMatch) && "抜けている単語があるか、別の単語に聞こえたようです。"}
+                            {analysis.matches.some(m => m.isFuzzy) && "オレンジの波線は、L/Rや時制の発音が惜しい箇所です。"}
+                            {analysis.matches.some(m => m.isCombined) && "青色の点線は、単語を繋げて発音するとより自然に聞こえます。"}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        )}
+        );
+      })()}
 
         {/* 目次  オーバーレイ */}
         {showIndex && (
