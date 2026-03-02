@@ -471,142 +471,156 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       {/* ドリルカード全体 h-full と max-w を調整し、画面内に必ず収まるようにする */}
       <div className="bg-white text-slate-900 rounded-4xl sm:rounded-[40px] p-5 sm:p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 w-full max-w-2xl h-full max-h-225 flex flex-col relative overflow-hidden">
         
-      {/* 音声認識フィードバック オーバーレイ */}
-      {feedback && (() => {
-        // 解析を実行
-        const analysis = analyzePhrase(heardText || "", currentPhrase.phrase_en, [currentWord.word_en]);
-        
-        return (
-          <div 
-            className="absolute inset-0 z-100 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" 
-            onClick={() => setFeedback(null)}
-          >
+        {/* 音声認識フィードバック オーバーレイ */}
+        {feedback && (() => {
+          // 解析を実行
+          const analysis = analyzePhrase(heardText || "", currentPhrase.phrase_en, [currentWord.word_en]);
+          
+          return (
             <div 
-              className="relative bg-white w-full max-w-sm rounded-4xl p-8 shadow-2xl flex flex-col items-center gap-6 animate-in zoom-in-95" 
-              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" 
+              onClick={() => setFeedback(null)}
             >
-              <button onClick={() => setFeedback(null)} className="absolute top-4 right-4 p-2 text-slate-300 hover:text-slate-500">
-                <X size={24} />
-              </button>
-              
-              {/* 評価タグエリア */}
-              <div className="flex flex-col items-center gap-4">
-                {/* 評価タグ */}
-                <div className="px-6 py-2 rounded-full border uppercase text-[10px] font-black tracking-widest" 
-                  style={{ backgroundColor: `${feedback.fill}15`, borderColor: `${feedback.fill}40`, color: feedback.fill }}>
-                  {feedback.tagText}
+              <div 
+                className="relative bg-white w-full max-w-sm rounded-4xl p-6 shadow-2xl flex flex-col items-center gap-6 animate-in zoom-in-95" 
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* ヘッダーエリア：見出しと閉じるボタンを水平に配置 */}
+                <div className="w-full flex justify-between items-center pb-1 mb-1">
+                  <h2 className="flex items-center gap-2 text-[12px] font-black text-slate-700 uppercase tracking-[0.2em]">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: feedback.fill }} />
+                    発話結果
+                  </h2>
+                  <button onClick={() => setFeedback(null)} className="p-1 text-slate-300 hover:text-slate-500 transition-colors">
+                    <X size={18} />
+                  </button>
                 </div>
                 
-                {/* プログレスバーとスコアのセット */}
-                <div className="flex items-center gap-3">
-                  {/* プログレスバー */}
-                  <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full transition-all duration-500" 
-                      style={{ width: `${analysis.score * 100}%`, backgroundColor: feedback.fill }} 
-                    />
+                {/* 円形プログレスと総合評価の二分割エリア */}
+                <div className="flex items-start gap-4 w-full">
+                  {/* 左側：円形プログレス（スコアとタグを内包） */}
+                  <div className="relative w-28  h-28 flex items-center justify-center shrink-0">
+                    <svg className="w-full h-full -rotate-90">
+                      <circle cx="56" cy="56" r="50" className="stroke-slate-100" strokeWidth="8" fill="none" />
+                      <circle 
+                        cx="56" cy="56" r="50" 
+                        className="transition-all duration-1000 ease-out"
+                        style={{ 
+                          stroke: feedback.fill, 
+                          strokeDasharray: 314, // 2 * PI * 50
+                          strokeDashoffset: 314 - (314 * analysis.score)
+                        }}
+                        strokeWidth="8" fill="none" strokeLinecap="round" 
+                      />
+                    </svg>
+                    {/* 中央のテキスト */}
+                    <div className="absolute flex flex-col items-center">
+                      <span className="text-[10px] font-black" style={{ color: feedback.fill }}>{feedback.tagText}</span>
+                      <span className="text-2xl font-black text-slate-800" style={{ color: feedback.fill }}>{Math.round(analysis.score * 100)}</span>
+                    </div>
                   </div>
-                  {/* スコア */}
-                  <div className="text-sm font-bold text-slate-600 tabular-nums">
-                    {Math.round(analysis.score * 100)} <span className="text-[10px] text-slate-400">/ 100</span>
+
+                  {/* 垂直点線区切り */}
+                  <div className="h-24 w-px border-l border-dashed border-slate-300 mt-1" />
+
+                  {/* 右：評価タグと総合コメント */}
+                  <div className="flex-1 flex flex-col gap-1 mt-1">
+                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">
+                      フィードバック
+                    </span>
+                    <p className="text-xs font-bold text-slate-700 leading-snug">
+                      {analysis.summary}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* 単語単位のフィードバックエリア */}
-              <div className="flex flex-wrap justify-center gap-x-3 gap-y-10 mt-6">
-                {analysis.matches.map((m, idx) => {
-                  // 「一致・不一致」と「ツールチップ表示条件」を定義
-                  const isMissing = !m.isMatch;
-                  // ヒントがある、または認識されなかった単語はタップ可能にする
-                  const isTargetForTooltip = (m.isMatch && (m.isFuzzy || m.isCombined)) || isMissing;
-                  const isVisible = activeTooltipIndex === idx;
+                {/* 単語単位のフィードバックエリア */}
+                <div className="flex flex-wrap justify-center gap-x-3 gap-y-4 mt-1">
+                  {analysis.matches.map((m, idx) => {
+                    // 「一致・不一致」と「ツールチップ表示条件」を定義
+                    const isMissing = !m.isMatch;
+                    // ヒントがある、または認識されなかった単語はタップ可能にする
+                    const isTargetForTooltip = (m.isMatch && (m.isFuzzy || m.isCombined)) || isMissing;
+                    const isVisible = activeTooltipIndex === idx;
 
-                  // 2. スタイルの決定
-                  let textColor = 'text-slate-800'; // デフォルトは黒
-                  let decoration = '';              // デフォルトは装飾なし
+                    // 2. スタイルの決定
+                    let textColor = 'text-slate-800'; // デフォルトは黒
+                    let decoration = '';              // デフォルトは装飾なし
 
-                  if (isMissing) {
-                    // 脱落単語のスタイル（ゴースト）
-                    textColor = 'text-slate-300';
-                    decoration = 'border-b-2 border-dashed border-slate-300';
-                  } else if (m.isFuzzy) {
-                    // 発音ミス（忖度）
-                    textColor = 'text-orange-500';
-                    decoration = 'underline decoration-wavy decoration-orange-300 underline-offset-8';
-                  } else if (m.isCombined) {
-                    // リンキング（忖度）
-                    textColor = 'text-blue-500';
-                    decoration = 'underline decoration-dotted decoration-blue-300 underline-offset-8';
-                  }
+                    if (isMissing) {
+                      // 脱落単語のスタイル（ゴースト）
+                      textColor = 'text-slate-300';
+                      decoration = 'border-b-2 border-dashed border-slate-300';
+                    } else if (m.isFuzzy) {
+                      // 発音ミス（忖度）
+                      textColor = 'text-orange-500';
+                      decoration = 'underline decoration-wavy decoration-orange-300 underline-offset-8';
+                    } else if (m.isCombined) {
+                      // リンキング（忖度）
+                      textColor = 'text-blue-500';
+                      decoration = 'underline decoration-dotted decoration-blue-300 underline-offset-8';
+                    }
 
-                  return (
-                    <div 
-                      key={idx} 
-                        className={`relative flex flex-col items-center select-none ${isTargetForTooltip ? 'cursor-pointer' : 'cursor-default'}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isTargetForTooltip) {
-                            setActiveTooltipIndex(isVisible ? -1 : idx);
-                          }
-                        }}
-                      onMouseEnter={() => isTargetForTooltip && setActiveTooltipIndex(idx)}
-                      onMouseLeave={() => setActiveTooltipIndex(-1)}
-                    >
-                      {/* シンプルな対比ツールチップ */}
-                      {isVisible && isTargetForTooltip && (
-                        <div className="absolute -top-12 whitespace-nowrap px-3 py-2 bg-slate-900 text-white rounded-2xl shadow-xl z-30 animate-in zoom-in-50 duration-200">
-                          <div className="flex items-center gap-2 text-[11px] font-bold">
-                            {isMissing ? (
-                              <span className="text-slate-200">聞き取れませんでした</span>
-                            ) : (
-                              <>
-                                <span className="text-slate-400">{m.heard}</span>
-                                <span className="text-slate-600">→</span>
-                                <span className="text-sky-400">{m.word}</span>
-                              </>
-                            )}
+                    return (
+                      <div 
+                        key={idx} 
+                          className={`relative flex flex-col items-center select-none ${isTargetForTooltip ? 'cursor-pointer' : 'cursor-default'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isTargetForTooltip) {
+                              setActiveTooltipIndex(isVisible ? -1 : idx);
+                            }
+                          }}
+                        onMouseEnter={() => isTargetForTooltip && setActiveTooltipIndex(idx)}
+                        onMouseLeave={() => setActiveTooltipIndex(-1)}
+                      >
+                        {/* シンプルな対比ツールチップ */}
+                        {isVisible && isTargetForTooltip && (
+                          <div className="absolute -top-12 whitespace-nowrap px-3 py-2 bg-slate-900 text-white rounded-2xl shadow-xl z-30 animate-in zoom-in-50 duration-200">
+                            <div className="flex items-center gap-2 text-[11px] font-bold">
+                              {isMissing ? (
+                                <span className="text-slate-200">聞き取れませんでした</span>
+                              ) : (
+                                <>
+                                  <span className="text-slate-400">{m.heard}</span>
+                                  <span className="text-slate-600">→</span>
+                                  <span className="text-sky-400">{m.word}</span>
+                                </>
+                              )}
+                            </div>
+                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45" />
                           </div>
-                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45" />
-                        </div>
-                      )}
-
-                      <span className={`text-2xl font-bold transition-all ${textColor} ${decoration}`}>
-                        {m.word}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* アドバイス ＆ フィードバックエリア */}
-              <div className="w-full mt-4">
-                <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100/50">
-                  <div className="flex items-start gap-3">
-                    <div className="text-xl">💡</div>
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-slate-700 mb-1">
-                        {analysis.score === 100 && !analysis.hasIssues ? "パーフェクト！" : "上達のためのヒント"}
-                      </p>
-                      <p className="text-[12px] text-slate-600 leading-relaxed">
-                        {analysis.score === 100 && !analysis.hasIssues ? (
-                          "非常にクリアな発音です。その調子で練習しましょう！"
-                        ) : (
-                          <>
-                            {analysis.matches.some(m => !m.isMatch) && "抜けている単語があるか、別の単語に聞こえたようです。"}
-                            {analysis.matches.some(m => m.isFuzzy) && "オレンジの波線は、L/Rや時制の発音が惜しい箇所です。"}
-                            {analysis.matches.some(m => m.isCombined) && "青色の点線は、単語を繋げて発音するとより自然に聞こえます。"}
-                          </>
                         )}
-                      </p>
+
+                        <span className={`text-2xl font-bold transition-all ${textColor} ${decoration}`}>
+                          {m.word}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* アドバイス ＆ フィードバックエリア */}
+                <div className="flex flex-col gap-4">
+                  {/* 改善ポイント */}
+                  {analysis.issues.length > 0 && (
+                    <div className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-2">改善のヒント</p>
+                      <ul className="space-y-1.5">
+                        {analysis.issues.map((issue, i) => (
+                          <li key={i} className="flex items-start gap-2 text-[11px] text-slate-600 leading-tight">
+                            <span className="text-slate-400 mt-0.5">•</span>
+                            {issue}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
         {/* 目次  オーバーレイ */}
         {showIndex && (

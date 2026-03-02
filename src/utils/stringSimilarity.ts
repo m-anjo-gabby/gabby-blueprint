@@ -22,6 +22,8 @@ export interface AnalysisResult {
   matches: WordMatch[];
   score: number;       // 0.0 ~ 1.0
   hasIssues: boolean;  // 何らかの忖度が発生したか
+  summary: string;     // 総合評価の一言
+  issues: string[];    // 具体的な改善点リスト
 }
 
 /**
@@ -130,5 +132,39 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
 
   const score = maxPossibleScore > 0 ? totalScore / maxPossibleScore : 0;
   
-  return { matches, score, hasIssues: matches.some(m => m.isFuzzy || m.isCombined || !m.isMatch) };
+  // メイン単語のどれかが正確に一致しているかチェック
+  const hasMainWordMatch = mainWords.every(mw => 
+    matches.some(m => m.word.toLowerCase() === mw.toLowerCase() && m.isMatch && !m.isFuzzy)
+  );
+
+  const { summary, issues } = getFeedback(matches, score, hasMainWordMatch);
+  
+  return { matches, score, hasIssues: matches.some(m => m.isFuzzy || m.isCombined || !m.isMatch), summary, issues };
+}
+
+// 優先順位に基づいたフィードバック生成ロジック
+function getFeedback(matches: WordMatch[], score: number, hasMainWordMatch: boolean): { summary: string, issues: string[] } {
+  const issues: string[] = [];
+
+  // 1. 総合評価コメント
+  let summary = "";
+  if (score >= 0.95) summary = "パーフェクト！非常にクリアな発音です。";
+  else if (score >= 0.7) summary = "あと少しで完璧です。自信を持って発音してみましょう。";
+  else summary = "フレーズ全体を意識して、もう一度挑戦してみましょう。";
+
+  // 2. 改善点の蓄積（優先順位順）
+  if (!hasMainWordMatch) {
+    issues.push("特にメインの単語を意識して発音してみてください。");
+  }
+  if (matches.some(m => !m.isMatch)) {
+    issues.push("抜けている単語があるか、うまく聞き取れませんでした。");
+  }
+  if (matches.some(m => m.isFuzzy)) {
+    issues.push("オレンジ色の箇所は、L/Rや時制の発音が惜しいようです。");
+  }
+  if (matches.some(m => m.isCombined)) {
+    issues.push("青色の箇所は、単語をつなげて読むとより自然になります。");
+  }
+
+  return { summary, issues };
 }
