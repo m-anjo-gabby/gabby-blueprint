@@ -26,6 +26,33 @@ export interface AnalysisResult {
   issues: string[];    // 具体的な改善点リスト
 }
 
+// 総合スコアによるフィードバックコメント
+const FEEDBACK_MATRIX = {
+  HIGH: [
+    "パーフェクト！非常にクリアで自信を感じる発音ですね。",
+    "素晴らしい！ネイティブに近いリズムで完璧に伝わりました。",
+    "素晴らしい調子です！今の発音を維持して練習を続けましょう。"
+  ],
+  MID: [
+    "良い線です！細かい音の響きを意識してみましょう。",
+    "惜しい！単語のつながりを滑らかにすると、さらに良くなります。",
+    "リズムはバッチリです。口をしっかり動かすことを意識して！"
+  ],
+  LOW: [
+    "難しいフレーズですが、繰り返すと必ず慣れてきます。もう一度！",
+    "一音一音を大切に、ゆっくり発音してみましょう。",
+    "フレーズ全体のリズムを意識して、もう一度挑戦してみましょう。"
+  ]
+};
+
+// 特定の改善ポイントを強調するための「トッピング」コメント
+const ISSUE_SPECIFIC_COMMENTS: Record<string, string> = {
+  MAIN: "メインの単語を強調して伝えると完璧です。",
+  MISSING: "聞き取りづらい単語があるようなので、注意しましょう。",
+  FUZZY: "L/Rや時制の発音を少し微調整すると、ぐっと良くなります。",
+  COMBINED: "単語同士をさらにつなげて読むと、より自然な響きになります。"
+};
+
 /**
  * 2つの文字列の類似度を計算 (Levenshtein距離ベース)
  */
@@ -143,28 +170,18 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
 }
 
 // 優先順位に基づいたフィードバック生成ロジック
-function getFeedback(matches: WordMatch[], score: number, hasMainWordMatch: boolean): { summary: string, issues: string[] } {
+function getFeedback(matches: WordMatch[], score: number, hasMainWordMatch: boolean) {
+  // 1. スコア帯（HIGH/MID/LOW）からランダムにメインコメントを選択
+  const range = score >= 0.9 ? 'HIGH' : score >= 0.6 ? 'MID' : 'LOW';
+  const baseComments = FEEDBACK_MATRIX[range];
+  const summary = baseComments[Math.floor(Math.random() * baseComments.length)];
+
+  // 2. 改善点の蓄積（最大2つまで抽出して具体的な指摘にする）
   const issues: string[] = [];
-
-  // 1. 総合評価コメント
-  let summary = "";
-  if (score >= 0.95) summary = "パーフェクト！非常にクリアな発音です。";
-  else if (score >= 0.7) summary = "あと少しで完璧です。自信を持って発音してみましょう。";
-  else summary = "フレーズ全体を意識して、もう一度挑戦してみましょう。";
-
-  // 2. 改善点の蓄積（優先順位順）
-  if (!hasMainWordMatch) {
-    issues.push("特にメインの単語を意識して発音してみてください。");
-  }
-  if (matches.some(m => !m.isMatch)) {
-    issues.push("抜けている単語があるか、うまく聞き取れませんでした。");
-  }
-  if (matches.some(m => m.isFuzzy)) {
-    issues.push("オレンジ色の箇所は、L/Rや時制の発音が惜しいようです。");
-  }
-  if (matches.some(m => m.isCombined)) {
-    issues.push("青色の箇所は、単語をつなげて読むとより自然になります。");
-  }
+  if (!hasMainWordMatch) issues.push(ISSUE_SPECIFIC_COMMENTS.MAIN);
+  if (matches.some(m => !m.isMatch)) issues.push(ISSUE_SPECIFIC_COMMENTS.MISSING);
+  if (matches.some(m => m.isFuzzy)) issues.push(ISSUE_SPECIFIC_COMMENTS.FUZZY);
+  if (matches.some(m => m.isCombined)) issues.push(ISSUE_SPECIFIC_COMMENTS.COMBINED);
 
   return { summary, issues };
 }
