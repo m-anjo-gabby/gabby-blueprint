@@ -1,6 +1,7 @@
 import { getUsersWithClient } from '@/actions/adminUserAction';
 import { getClients } from '@/actions/adminClientAction';
 import ClientFilter from './_components/ClientFilter';
+import { getUserTypeLabel } from '@/constants/userTypes';
 
 export default async function AdminUsersPage({
   searchParams,
@@ -31,6 +32,7 @@ export default async function AdminUsersPage({
             <tr>
               <th className="px-6 py-4">ID</th>
               <th className="px-6 py-4">名前</th>
+              <th className="px-6 py-4">Email</th>
               <th className="px-6 py-4">所属顧客</th>
               <th className="px-6 py-4">タイプ</th>
             </tr>
@@ -40,8 +42,15 @@ export default async function AdminUsersPage({
               <tr key={user.user_id} className="border-t hover:bg-slate-50">
                 <td className="px-6 py-4">{user.user_id}</td>
                 <td className="px-6 py-4 font-medium">{user.user_name}</td>
-                <td className="px-6 py-4">{user.com_m_client?.client_name || '-'}</td>
-                <td className="px-6 py-4">{user.user_type}</td>
+                <td className="px-6 py-4">{user.email}</td>
+                <td className="px-6 py-4">{user.client_name || '-'}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    user.user_type === '0' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'
+                  }`}>
+                    {getUserTypeLabel(user.user_type)}
+                  </span>
+                </td>
               </tr>
             ))}
             {users.length === 0 && (

@@ -17,5 +17,6 @@ export type UserRecord = {
   user_name: string | null;
   area_cd: string;
   locale_id: string;
-  com_m_client?: ClientRecord | null; // JOIN時に使用
+  email?: string;
+  client_name: string | null;
 };
