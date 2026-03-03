@@ -3,13 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LayoutDashboard, Users, Bell, MessageSquare } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Users, BookOpenCheck } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'ダッシュボード', href: '/admin/dashboard', icon: LayoutDashboard },
   { label: 'ユーザー管理', href: '/admin/users', icon: Users },
-  { label: 'お知らせ管理', href: '/notifications', icon: Bell },
-  { label: 'お問い合わせ管理', href: '/inquiries', icon: MessageSquare },
+  { label: 'コンテンツ検証', href: '/admin/contentsPoc', icon: BookOpenCheck },
 ];
 
 export default function Sidebar() {
