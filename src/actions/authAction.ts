@@ -61,3 +61,86 @@ export async function signOut() {
   // セッション破棄後、ログインページへリダイレクト
   redirect('/login');
 }
+
+/**
+ * パスワードリセット用のメールを送信するサーバーアクション
+ */
+export async function forgotPassword(formData: FormData) {
+  const email = formData.get('email') as string;
+
+  if (!email) {
+    return { error: 'メールアドレスを入力してください。' };
+  }
+
+  const supabase = await createClient();
+  
+  // パスワードリセット用メール送信
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/update-password`,
+  });
+
+  if (error) {
+    console.error('Reset Password Error:', error.message);
+    return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+  }
+
+  return { success: true };
+}
+
+/**
+ * パスワードを更新（リセット時）するサーバーアクション
+ */
+export async function resetPassword(formData: FormData) {
+  const password = formData.get('password') as string;
+
+  if (!password || password.length < 6) {
+    return { error: 'パスワードは6文字以上で入力してください。' };
+  }
+
+  const supabase = await createClient();
+  
+  // サーバーサイドで認証セッションを確認しつつ更新
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    console.error('Update Password Error:', error.message);
+    return { error: 'パスワードの更新に失敗しました。リンクの有効期限が切れている可能性があります。' };
+  }
+
+  return { success: true };
+}
+
+/**
+ * パスワードを更新（ログイン後）するサーバーアクション
+ */
+export async function updatePassword(formData: FormData) {
+  const currentPassword = formData.get('currentPassword') as string;
+  const newPassword = formData.get('newPassword') as string;
+
+  const supabase = await createClient();
+
+  // 1. 現在のユーザー情報を取得
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !user.email) return { error: '未ログインです。' };
+
+  // 2. 「現在のパスワード」が正しいか検証（ログイン試行）
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+
+  if (signInError) {
+    return { error: '現在のパスワードが正しくありません。' };
+  }
+
+  // 3. 検証が通ったら新しいパスワードに更新
+  const { error: updateError } = await supabase.auth.updateUser({ 
+    password: newPassword 
+  });
+
+  if (updateError) {
+    return { error: 'パスワードの更新に失敗しました。' };
+  }
+
+  return { success: true };
+}

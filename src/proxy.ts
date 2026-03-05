@@ -51,9 +51,14 @@ export async function proxy(req: NextRequest) {
 
   const isLoginPage = pathname === loginPath;
   const isAuthRoute = pathname.startsWith('/auth'); // Callback等を除外
+  const isPublicRoute = 
+    isLoginPage || 
+    isAuthRoute || 
+    pathname === '/forgot-password' || 
+    pathname === '/update-password';
 
   // A. 未ログインの場合
-  if (!user && !isLoginPage && !isAuthRoute) {
+  if (!user && !isPublicRoute) {
     // ログインページ以外にアクセス -> ログインへ
     return NextResponse.redirect(new URL(loginPath, req.url));
   }

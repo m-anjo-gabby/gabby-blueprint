@@ -1,18 +1,36 @@
-// src\components\student\Header.tsx
 'use client';
+
+import { useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { 
+  LogOut, 
+  UserIcon, 
+  AlertCircle, 
+  Lock, 
+  ChevronDown 
+} from 'lucide-react';
+
+// Shadcn UI Components
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+
 import { useUserStore } from '@/stores/userStore';
 import { signOut } from '@/actions/authAction';
-import { LogOut, UserIcon, AlertCircle } from 'lucide-react';
-import Image from 'next/image';
-import { useState } from 'react';
 
 export default function Header() {
   const user = useUserStore((state) => state.user);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
     <>
       <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-5 flex items-center justify-between sticky top-0 z-50 shrink-0">
+        {/* ロゴエリア */}
         <div className="flex items-center">
           <Image 
             src="/logo-01.png" 
@@ -20,40 +38,55 @@ export default function Header() {
             width={120} 
             height={32} 
             className="h-8 w-auto object-contain"
-            priority
+            priority 
           />
         </div>
         
+        {/* ユーザー操作エリア */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
-            <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-indigo-500">
-              <UserIcon size={14} />
-            </div>
-            <span className="text-xs font-bold text-slate-600 truncate max-w-20 sm:max-w-30 hidden sm:inline">
-              {user?.email?.split('@')[0]}
-            </span>
-          </div>
-          
-          <button 
-            onClick={() => setShowConfirm(true)} // 直接ログアウトせずダイアログを表示
-            className="p-2.5 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-full transition-all active:scale-90"
-            title="Logout"
-          >
-            <LogOut size={18} />
-          </button>
+          <DropdownMenu>
+            {/* ドロップダウンのトリガーボタン */}
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 hover:bg-slate-100 transition-all outline-none active:scale-95">
+                <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-indigo-500">
+                  <UserIcon size={14} />
+                </div>
+                <span className="text-xs font-bold text-slate-600 hidden sm:inline">
+                  {user?.email?.split('@')[0]}
+                </span>
+                <ChevronDown size={12} className="text-slate-400" />
+              </button>
+            </DropdownMenuTrigger>
+            
+            {/* ドロップダウンメニュー内容 */}
+            <DropdownMenuContent className="w-48 p-2 rounded-2xl shadow-xl border-slate-100" align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/student/profile/password" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
+                  <Lock size={14} /> パスワード変更
+                </Link>
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator className="my-1 border-slate-100" />
+              
+              <DropdownMenuItem 
+                onClick={() => setShowLogoutConfirm(true)} 
+                className="flex items-center gap-2 text-xs font-bold text-rose-500 cursor-pointer hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-600"
+              >
+                <LogOut size={14} /> ログアウト
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
-      {/* ログアウト確認モーダル */}
-      {showConfirm && (
+      {/* ログアウト確認ダイアログ */}
+      {showLogoutConfirm && (
         <div className="fixed inset-0 z-110 flex items-center justify-center p-4">
-          {/* 背景オーバーレイ */}
           <div 
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setShowConfirm(false)}
+            onClick={() => setShowLogoutConfirm(false)}
           />
           
-          {/* ダイアログ本体 */}
           <div className="relative bg-white w-full max-w-70 rounded-3xl shadow-2xl p-6 text-center animate-in zoom-in-95 duration-200">
             <div className="flex justify-center mb-4">
               <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center">
@@ -62,9 +95,7 @@ export default function Header() {
             </div>
             
             <h3 className="text-sm font-black text-slate-800 mb-2 uppercase tracking-wider">Logout</h3>
-            <p className="text-[11px] text-slate-500 mb-6 leading-relaxed">
-              ログアウトしますか？<br />終了してログイン画面に戻ります。
-            </p>
+            <p className="text-[11px] text-slate-500 mb-6">ログアウトしてログイン画面に戻りますか？</p>
 
             <div className="flex flex-col gap-2">
               <button
@@ -74,7 +105,7 @@ export default function Header() {
                 ログアウト
               </button>
               <button
-                onClick={() => setShowConfirm(false)}
+                onClick={() => setShowLogoutConfirm(false)}
                 className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors"
               >
                 キャンセル
