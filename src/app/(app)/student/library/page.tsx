@@ -120,7 +120,7 @@ export default function LibraryPage() {
 
   return (
     /* h-full で親の main コンテナいっぱいに広げる */
-    <div className="flex flex-col h-full bg-white rounded-[40px] shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+    <div className="flex flex-col max-w-3xl h-full bg-white rounded-[40px] shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
       
     {/* 1. 固定ヘッダー（検索・種別タブ） */}
     <div className="shrink-0 bg-white border-b border-slate-50 px-6 pt-8 pb-4 z-10">
