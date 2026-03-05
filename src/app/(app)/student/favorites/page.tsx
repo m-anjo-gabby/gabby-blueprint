@@ -57,7 +57,7 @@ export default function FavoritePage() {
   }, [activeTab]);
 
   return (
-    <div className="w-full max-w-3xl h-full flex flex-col bg-white rounded-[40px] shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden font-sans">
+    <div className="w-full max-w-3xl min-w-3xl h-full flex flex-col bg-white rounded-[40px] shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden font-sans">
       
       {/* Header Area */}
       <div className="shrink-0 bg-white border-b border-slate-50 px-6 pt-8 pb-6 z-30 space-y-6">
