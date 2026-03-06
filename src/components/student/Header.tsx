@@ -8,7 +8,8 @@ import {
   UserIcon, 
   AlertCircle, 
   Lock, 
-  ChevronDown 
+  ChevronDown, 
+  Loader2
 } from 'lucide-react';
 
 // Shadcn UI Components
@@ -26,6 +27,13 @@ import { signOut } from '@/actions/authAction';
 export default function Header() {
   const user = useUserStore((state) => state.user);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true); // オーバーレイを表示
+    await signOut();
+    // サインアウト後はログイン画面に自動遷移
+  };
 
   return (
     <>
@@ -80,7 +88,7 @@ export default function Header() {
       </header>
 
       {/* ログアウト確認ダイアログ */}
-      {showLogoutConfirm && (
+      {showLogoutConfirm && !isSigningOut && (
         <div className="fixed inset-0 z-110 flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
@@ -99,7 +107,7 @@ export default function Header() {
 
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => signOut()}
+                onClick={handleSignOut}
                 className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg shadow-rose-100"
               >
                 ログアウト
@@ -114,6 +122,15 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      {/* ローディングオーバーレイ */}
+      {isSigningOut && (
+        <div className="fixed inset-0 z-200 flex flex-col items-center justify-center bg-white/80 backdrop-blur-md animate-in fade-in duration-300">
+          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+          <p className="text-sm font-bold text-slate-800 animate-pulse">ログアウト中...</p>
+        </div>
+      )}
+
     </>
   );
 }
