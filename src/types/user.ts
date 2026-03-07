@@ -20,3 +20,11 @@ export type UserRecord = {
   email?: string;
   client_name: string | null;
 };
+
+/**
+ * 顧客情報の型定義
+ */
+export interface Client {
+  client_id: string;
+  client_name: string;
+}

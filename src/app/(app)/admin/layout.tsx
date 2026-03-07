@@ -1,5 +1,7 @@
 import Header from '@/components/admin/Header';
 import Sidebar from '@/components/admin/Sidebar';
+import ConfirmContainer from '@/components/common/ConfirmContainer';
+import ToastContainer from '@/components/common/ToastContainer';
 
 /**
  * 管理者用デザインレイアウト
@@ -24,6 +26,12 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
+
+      {/* トースト通知を下部に配置 */}
+      <ToastContainer />
+
+      {/* 汎用確認ダイアログを下部に配置 */}
+      <ConfirmContainer />
     </div>
   );
 }

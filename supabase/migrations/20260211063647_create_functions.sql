@@ -5,34 +5,29 @@
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
+    -- userメタデータから値を取得
+    param_client_id uuid := (new.raw_user_meta_data->>'client_id')::uuid;
+    param_user_name text := new.raw_user_meta_data->>'user_name';
+    param_user_type text := new.raw_user_meta_data->>'user_type';
+    -- 処理対象クライアントID
     target_client_id uuid;
 BEGIN
-    -- 1. 初期テナント (client_type=0) の有効なIDを取得
-    SELECT client_id INTO target_client_id
-    FROM public.com_m_client
-    WHERE client_type = 0 
-      AND delete_flg = '0'
-    ORDER BY insert_date ASC -- 最古の初期テナントを優先
-    LIMIT 1;
-
-    -- 2. 初期テナントが見つからない場合の考慮（運用ミス防止）
-    IF target_client_id IS NULL THEN
-        -- Postgresのログに記録（Supabaseのログエクスプローラーで確認可能）
-        RAISE WARNING 'No initial tenant (client_type=0) found during signup for user: %', new.id;
+    -- 優先順位に基づいた client_id の解決
+    IF param_client_id IS NOT NULL THEN
+        target_client_id := param_client_id;
+    ELSE
+        -- クライアントID未指定時は初期テナントを設定
+        SELECT client_id INTO target_client_id FROM public.com_m_client WHERE client_type = 0 LIMIT 1;
     END IF;
 
-    -- 3. ユーザマスタへの挿入
-    INSERT INTO public.com_m_user (
-        id, 
-        client_id, 
-        area_cd, 
-        user_type
-    )
+    -- ユーザマスタ登録
+    INSERT INTO public.com_m_user (id, client_id, area_cd, user_type, user_name) 
     VALUES (
         new.id, 
         target_client_id, 
         '00', 
-        '1'
+        COALESCE(param_user_type, '1'), -- デフォルト値の考慮
+        param_user_name
     );
 
     RETURN new;
