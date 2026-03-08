@@ -39,6 +39,23 @@ export const createUserColumns = (clients: Client[]): ColumnDef<UserRecord>[] =>
     },
   },
   {
+    accessorKey: "last_sign_in_at",
+    header: "ステータス",
+    cell: ({ row }) => {
+      const lastSignIn = row.original.last_sign_in_at;
+      const isActivated = !!lastSignIn;
+
+      return (
+        <div className="flex items-center gap-2">
+          <div className={`h-2 w-2 rounded-full ${isActivated ? 'bg-emerald-500' : 'bg-orange-400 animate-pulse'}`} />
+          <span className="text-xs font-medium text-slate-600">
+            {isActivated ? "アクティブ" : "未招待/未完了"}
+          </span>
+        </div>
+      );
+    },
+  },
+  {
     id: "actions",
     cell: ({ row }) => (
       <div className="text-right">

@@ -9,7 +9,9 @@ SELECT
   u.user_type,
   u.client_id,
   c.client_name,
-  au.email
+  au.email,
+  au.last_sign_in_at,
+  au.confirmed_at
 FROM 
   public.com_m_user u
   INNER JOIN auth.users au ON 

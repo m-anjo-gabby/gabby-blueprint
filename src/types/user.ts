@@ -19,6 +19,8 @@ export type UserRecord = {
   locale_id: string;
   email?: string;
   client_name: string | null;
+  last_sign_in_at?: string;
+  confirmed_at?: string | null;
 };
 
 /**

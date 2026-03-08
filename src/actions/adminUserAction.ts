@@ -36,7 +36,7 @@ export async function getUsersWithClient(
 }
 
 /**
- * ユーザー招待アクション
+ * ユーザー登録アクション
  * ユーザーを作成し、パスワード設定用の招待メールを送信します。
  * パスワードはユーザー自身が設定するため、サーバー側での固定値管理は不要です。
  */
@@ -46,23 +46,37 @@ export async function createUser(
   client_id: string,
   user_type: string
 ) {
-  const supabase = await createAdminClient();
+  try {
+    const supabase = await createAdminClient();
 
-  // 招待メールを送信し、アカウントを作成
-  const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    // ユーザーがリンクをクリックした際の遷移先（パスワード設定画面）
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/invite`,
-    // DB反映に必要なパラメータをメタデータに含める
-    data: { 
-      user_name,
-      user_type,
-      client_id
+    // 招待メールを送信し、アカウントを作成
+    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+      // ユーザーがリンクをクリックした際の遷移先（パスワード設定画面）
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/invite`,
+      // DB反映に必要なパラメータをメタデータに含める
+      data: { 
+        user_name,
+        user_type,
+        client_id
+      }
+    });
+
+    if (error) {
+      // Supabase固有のエラーコードに応じたメッセージ切り分け
+      if (error.status === 422 && error.code === 'email_exists') {
+        return { success: false, errorType: 'email_exists', message: "このメールアドレスは既に登録されています。" };
+      }
+      // その他認証エラー
+      return { success: false, errorType: 'unexpected_error', message: `登録に失敗しました: ${error.message}` };
     }
-  });
 
-  if (error) throw error;
+    return { success: true, userId: data.user.id };
 
-  return { success: true, userId: data.user.id };
+  } catch (err) {
+    // 予期せぬネットワークエラーなど
+    console.error("Unexpected Error:", err);
+    return { success: false, errorType: 'unexpected_error', message: "通信エラーが発生しました。時間を置いて再度お試しください。" };
+  }
 }
 
 /**
@@ -76,4 +90,54 @@ export async function resendInvite(email: string) {
   });
   if (error) throw error;
   return { success: true };
+}
+
+/**
+ * ユーザー更新アクション
+ */
+export async function updateUser(
+  id: string, // auth.users.id (UUID)
+  email: string,
+  user_name: string,
+  client_id: string,
+  user_type: string
+) {
+  try {
+    const supabase = await createAdminClient();
+
+    // 1. Auth情報の更新 (Metadataを更新)
+    const { error: authError } = await supabase.auth.admin.updateUserById(id, {
+      email: email,
+      user_metadata: {
+        user_name,
+        user_type,
+        client_id
+      }
+    });
+
+    if (authError) {
+      return { success: false, errorType: 'update_error', message: `Auth更新失敗: ${authError.message}` };
+    }
+
+    // 2. ユーザマスタ (public.com_m_user) の更新
+    const { error: dbError } = await supabase
+      .from('com_m_user')
+      .update({
+        user_name: user_name,
+        user_type: user_type,
+        client_id: client_id,
+        update_date: new Date().toISOString() // 明示的に更新日時をセット
+      })
+      .eq('id', id); // auth.users.id と一致するレコードを指定
+
+    if (dbError) {
+      console.error("DB Update Error:", dbError);
+      return { success: false, errorType: 'update_error', message: `マスタ更新に失敗しました: ${dbError.message}` };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("Unexpected Update Error:", err);
+    return { success: false, errorType: 'unexpected_error', message: "通信エラーが発生しました。" };
+  }
 }
