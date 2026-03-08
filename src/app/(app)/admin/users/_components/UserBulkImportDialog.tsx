@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/useToast';
-import { Upload, FileText, AlertCircle, Loader2, CheckCircle2, UserPlus, XCircle, RefreshCcw } from 'lucide-react';
+import { Upload, FileText, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw } from 'lucide-react';
 import { Client, RawCsvRow, BulkUser } from '@/types/user';
 import { bulkCreateUsers } from '@/actions/adminUserAction';
 import { useRouter } from 'next/navigation';
@@ -111,6 +111,7 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
         showToast(`${result.successCount}名成功、${result.errorCount}名失敗しました`, "error");
       }
     } catch (error) {
+      console.error("一括登録時のエラー", error)
       showToast("実行中にエラーが発生しました", "error");
     } finally {
       setIsProcessing(false);
@@ -153,7 +154,7 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            {hasCompleted ? "インポート結果レポート" : "ユーザーの一括招待"}
+            {hasCompleted ? "インポート結果レポート" : "新規ユーザーの一括登録"}
           </DialogTitle>
           <p className="text-xs text-slate-500">
             {hasCompleted ? "処理が完了しました。エラーがある場合は内容を確認してください。" : `CSV/TSVファイルをアップロードしてください（最大${MAX_BULK_COUNT}件）`}

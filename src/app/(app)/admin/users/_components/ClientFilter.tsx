@@ -15,6 +15,10 @@ export default function ClientFilter({ clients }: { clients: { client_id: string
     } else {
       params.delete('clientId');
     }
+
+    // 検索条件（顧客）が変わったので、強制的に1ページ目に戻す
+    params.delete('page');
+
     router.push(`${pathname}?${params.toString()}`);
   };
 
