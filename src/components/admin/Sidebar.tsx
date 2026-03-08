@@ -42,8 +42,8 @@ export default function Sidebar() {
         lg:translate-x-0 lg:static lg:inset-auto
       `}>
         <div className="p-6 text-xl font-bold border-b border-slate-700 tracking-wider flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-500 rounded flex items-center justify-center text-xs">G</div>
-          GABBY CMS
+          <div className="w-8 h-8 bg-indigo-500 rounded flex items-center justify-center text-xs">B</div>
+          Blueprint
         </div>
         <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-1">

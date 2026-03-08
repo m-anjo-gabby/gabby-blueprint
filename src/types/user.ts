@@ -30,3 +30,24 @@ export interface Client {
   client_id: string;
   client_name: string;
 }
+
+// CSVから直接読み込まれる生データの型（文字列のみ）
+export interface RawCsvRow {
+  'メールアドレス'?: string;
+  'email'?: string;
+  '名前'?: string;
+  'user_name'?: string;
+  '顧客名'?: string;
+  'client_name'?: string;
+}
+
+// バリデーション済みのインポート用レコード
+export interface BulkUser {
+  email: string;
+  user_name: string;
+  user_type: string;
+  client_id: string;
+  client_name: string; // 表示用
+  isValid: boolean;
+  error?: string;
+}

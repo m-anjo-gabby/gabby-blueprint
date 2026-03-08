@@ -42,15 +42,33 @@ export const createUserColumns = (clients: Client[]): ColumnDef<UserRecord>[] =>
     accessorKey: "last_sign_in_at",
     header: "ステータス",
     cell: ({ row }) => {
-      const lastSignIn = row.original.last_sign_in_at;
-      const isActivated = !!lastSignIn;
+      const { last_sign_in_at, confirmed_at } = row.original;
+      
+      // 1. アクティブ（ログイン済み）
+      if (last_sign_in_at) {
+        return (
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="text-xs font-medium text-slate-700">アクティブ</span>
+          </div>
+        );
+      }
 
+      // 2. 招待承諾済み・未ログイン（パスワード設定は終わっているが、まだ入っていない）
+      if (confirmed_at) {
+        return (
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-blue-400" />
+            <span className="text-xs font-medium text-slate-600">セットアップ済</span>
+          </div>
+        );
+      }
+
+      // 3. 招待中（未完了）
       return (
         <div className="flex items-center gap-2">
-          <div className={`h-2 w-2 rounded-full ${isActivated ? 'bg-emerald-500' : 'bg-orange-400 animate-pulse'}`} />
-          <span className="text-xs font-medium text-slate-600">
-            {isActivated ? "アクティブ" : "未招待/未完了"}
-          </span>
+          <div className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
+          <span className="text-xs font-bold text-orange-600 uppercase tracking-tighter">メール確認待ち</span>
         </div>
       );
     },

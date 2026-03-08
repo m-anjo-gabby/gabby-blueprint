@@ -2,7 +2,7 @@
 'use server';
 
 import { createAdminClient } from "@/lib/admin";
-import { UserRecord } from "@/types/user";
+import { BulkUser, UserRecord } from "@/types/user";
 
 export async function getUsersWithClient(
   clientId?: string,
@@ -140,4 +140,53 @@ export async function updateUser(
     console.error("Unexpected Update Error:", err);
     return { success: false, errorType: 'unexpected_error', message: "通信エラーが発生しました。" };
   }
+}
+
+/**
+ * ユーザー一括登録アクション
+ * 複数のユーザーを順番に招待し、各レコードの結果を返します。
+ */
+export async function bulkCreateUsers(users: BulkUser[]) {
+  const results = [];
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (const user of users) {
+    try {
+      // 既存の createUser ロジックを再利用
+      const result = await createUser(
+        user.email,
+        user.user_name,
+        user.client_id,
+        user.user_type
+      );
+
+      if (result.success) {
+        successCount++;
+        results.push({ email: user.email, status: 'success' });
+      } else {
+        errorCount++;
+        results.push({ 
+          email: user.email, 
+          status: 'error', 
+          message: result.message 
+        });
+      }
+    } catch (err) {
+      errorCount++;
+      results.push({ 
+        email: user.email, 
+        status: 'error', 
+        message: "予期せぬエラーが発生しました"
+      });
+    }
+  }
+
+  return {
+    success: true,
+    total: users.length,
+    successCount,
+    errorCount,
+    details: results
+  };
 }

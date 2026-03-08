@@ -156,7 +156,7 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isConfirming ? '登録内容の確認' : (mode === 'create' ? '新規ユーザー登録' : 'ユーザー編集')}
+            {isConfirming ? '登録内容の確認' : (mode === 'create' ? '新規ユーザーの登録' : 'ユーザーの編集')}
           </DialogTitle>
         </DialogHeader>
         
