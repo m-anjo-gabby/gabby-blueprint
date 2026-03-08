@@ -1,5 +1,5 @@
 import { getUsersWithClient } from '@/actions/adminUserAction';
-import { getClients } from '@/actions/adminClientAction';
+import { getClientsFilter } from '@/actions/adminClientAction';
 import ClientFilter from './_components/ClientFilter';
 import { UserFormDialog } from './_components/UserFormDialog';
 import { UserBulkImportDialog } from './_components/UserBulkImportDialog'; // 追加
@@ -18,7 +18,7 @@ export default async function AdminUsersPage({
   // データを並行取得
   const [userData, clients] = await Promise.all([
     getUsersWithClient(clientId, currentPage, pageSize),
-    getClients(),
+    getClientsFilter(),
   ]);
 
   // 全ページ数を計算

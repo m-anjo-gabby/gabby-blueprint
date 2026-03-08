@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/useToast';
 import { createUser, updateUser, resendInvite } from '@/actions/adminUserAction';
 import { useRouter } from 'next/navigation';
-import { Mail, AlertCircle } from 'lucide-react';
+import { Mail, AlertCircle, PlusCircle } from 'lucide-react';
 import { Client, UserRecord } from '@/types/user';
 import { Alert } from '@/components/ui/alert';
 
@@ -149,9 +149,15 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant={mode === 'create' ? 'default' : 'outline'} size={mode === 'edit' ? 'sm' : 'default'}>
-          {mode === 'create' ? '+ 新規登録' : '編集'}
-        </Button>
+        {mode === 'create' ? (
+          <Button className="gap-2 font-bold shadow-sm">
+            <PlusCircle size={16} /> 新規登録
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" className="h-8 px-2">
+            編集
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>

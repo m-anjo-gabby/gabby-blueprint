@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LayoutDashboard, Users, Speech } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Users, Speech, Building2 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'ダッシュボード', href: '/admin/dashboard', icon: LayoutDashboard },
+  { label: '顧客管理', href: '/admin/clients', icon: Building2 },
   { label: 'ユーザー管理', href: '/admin/users', icon: Users },
   { label: 'スピーチ検証', href: '/admin/speachPoc', icon: Speech },
 ];
