@@ -244,3 +244,63 @@ COMMENT ON COLUMN public.com_t_resume_corpus.corpus_id IS 'コーパスID';
 COMMENT ON COLUMN public.com_t_resume_corpus.item_id IS 'アイテムID（word_id, phrase_idなどの一意なID）';
 COMMENT ON COLUMN public.com_t_resume_corpus.metadata IS 'メタデータ';
 COMMENT ON COLUMN public.com_t_resume_corpus.update_date IS '更新日時';
+
+---------------------------------------------
+-- COM_M_CONTRACT (契約マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_contract (
+    contract_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id uuid REFERENCES public.com_m_client(client_id) NOT NULL,
+    plan_name TEXT NOT NULL,          -- 'Standard', 'Premium' 等
+    max_licenses INTEGER NOT NULL,    -- 契約ライセンス上限数
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status SMALLINT DEFAULT 1,        -- 1: 有効, 0: 無効, 9: 解約
+    note TEXT DEFAULT NULL,           -- アドミン用管理メモ
+    insert_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    update_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_contract IS '契約情報マスタ';
+COMMENT ON COLUMN public.com_m_contract.contract_id IS '契約ID';
+COMMENT ON COLUMN public.com_m_contract.client_id IS '顧客ID';
+COMMENT ON COLUMN public.com_m_contract.plan_name IS 'プラン名称（表示・制御用）';
+COMMENT ON COLUMN public.com_m_contract.max_licenses IS 'この契約で発行可能な最大ユーザー数';
+COMMENT ON COLUMN public.com_m_contract.start_date IS '開始日';
+COMMENT ON COLUMN public.com_m_contract.end_date IS '終了日';
+COMMENT ON COLUMN public.com_m_contract.status IS 'ステータス 1: 有効, 0: 無効, 9: 解約';
+COMMENT ON COLUMN public.com_m_contract.note IS '運用管理者用のメモ';
+COMMENT ON COLUMN public.com_m_contract.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_contract.update_date IS '更新日時';
+
+---------------------------------------------
+-- COM_T_USER_LICENSE (ライセンス割当実体)
+---------------------------------------------
+CREATE TABLE public.com_t_user_license (
+    license_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    contract_id uuid REFERENCES public.com_m_contract(contract_id) NOT NULL,
+    user_id uuid REFERENCES public.com_m_user(id) NOT NULL,
+    status SMALLINT NOT NULL DEFAULT 1, -- 1:有効, 0:停止, 9:満了
+    start_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    note TEXT DEFAULT NULL,           -- 個別対応の理由等のメモ
+    insert_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    update_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT unique_user_contract UNIQUE(user_id, contract_id),
+    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES public.com_m_user(id)
+);
+
+COMMENT ON TABLE public.com_t_user_license IS 'ユーザーライセンス割当情報';
+COMMENT ON COLUMN public.com_t_user_license.license_id IS 'ライセンスID';
+COMMENT ON COLUMN public.com_t_user_license.contract_id IS '契約ID';
+COMMENT ON COLUMN public.com_t_user_license.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_user_license.status IS 'ステータス 1:有効, 0:停止';
+COMMENT ON COLUMN public.com_t_user_license.start_date IS '開始日';
+COMMENT ON COLUMN public.com_t_user_license.end_date IS '終了日';
+COMMENT ON COLUMN public.com_t_user_license.note IS '個別対応時のメモ';
+COMMENT ON COLUMN public.com_t_user_license.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_user_license.update_date IS '更新日時';
+
+-- 認証・認可クエリの高速化
+CREATE INDEX idx_user_license_auth ON public.com_t_user_license (user_id, status, start_date, end_date);

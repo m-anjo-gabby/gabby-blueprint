@@ -173,3 +173,38 @@ FOR ALL TO authenticated USING (
 WITH CHECK (
   user_id = auth.uid() -- 自分のデータとしてしか保存・更新できない
 );
+
+---------------------------------------------
+-- SQLポリシー 契約マスタ
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can view their own client contracts" ON public.com_m_contract;
+
+-- RLS設定
+ALTER TABLE public.com_m_contract ENABLE ROW LEVEL SECURITY;
+
+-- 参照：所属する顧客（企業）の契約情報のみ閲覧可能
+CREATE POLICY "Users can view their own client contracts" ON public.com_m_contract
+FOR SELECT TO authenticated USING (
+    client_id = public.get_jwt_client_id()
+);
+
+---------------------------------------------
+-- SQLポリシー ユーザーライセンス割当情報
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can view relevant licenses" ON public.com_t_user_license;
+
+-- RLS設定
+ALTER TABLE public.com_t_user_license ENABLE ROW LEVEL SECURITY;
+
+-- 参照：自分のライセンス、または自社に所属するユーザーのライセンスを閲覧可能
+-- ※生徒は「自分」のみ、法人の管理者は「自社全員」
+CREATE POLICY "Users can view relevant licenses" ON public.com_t_user_license
+FOR SELECT TO authenticated USING (
+    user_id = auth.uid() OR 
+    contract_id IN (
+        SELECT contract_id FROM public.com_m_contract 
+        WHERE client_id = public.get_jwt_client_id()
+    )
+);

@@ -49,7 +49,7 @@ export async function getMyClientInfo(): Promise<ClientInfo | null> {
   
   const { data, error } = await supabase
     .from('com_m_client')
-    .select('client_name, logo_url, dashboard_title')
+    .select('*')
     .single(); // 自分の所属は1つなのでsingleで取得
 
   if (error) return null;

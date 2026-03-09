@@ -1,3 +1,4 @@
+// src/actions/adminClientAction.ts
 'use server';
 
 import { createAdminClient } from '@/lib/admin';
