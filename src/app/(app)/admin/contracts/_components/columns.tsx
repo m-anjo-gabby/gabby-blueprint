@@ -66,7 +66,7 @@ export const columns: ColumnDef<ContractInfo>[] = [
           {/* 補足：割当済み（期間外含む）が上限を超えている場合の警告表示なども検討可 */}
           {assigned > max && (
             <div className="text-[9px] text-rose-500 font-medium">
-              ※ 予約・超過あり ({assigned})
+              ※ 超過しています
             </div>
           )}
         </div>

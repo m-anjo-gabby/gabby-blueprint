@@ -1,4 +1,3 @@
-// src/app/(app)/admin/clients/_components/ClientFormDialog.tsx
 'use client';
 
 import { useState } from 'react';
@@ -13,11 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/useToast';
 import { createClient, updateClient } from '@/actions/adminClientAction';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, PlusCircle, Pencil } from 'lucide-react';
+import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { ClientRecord } from '@/types/client';
 
-// 1. スキーマ定義
+// --- 1. スキーマ定義 ---
 const clientSchema = z.object({
   client_name: z.string().min(1, '顧客名称は必須です'),
   client_type: z.string().min(1, '顧客種別を選択してください'),
@@ -31,22 +30,28 @@ interface ClientFormDialogProps {
   initialData?: ClientRecord;
 }
 
-const DEFAULT_VALUES = {
+const DEFAULT_VALUES: ClientFormValues = {
   client_name: '',
   client_type: '1',
   industry_type: '1',
 };
 
+/**
+ * 顧客情報の登録・編集ダイアログ
+ * 契約・ライセンスダイアログと共通のデザインシステムを採用
+ */
 export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDialogProps) {
+  // --- States ---
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  
   const { showToast } = useToast();
   const router = useRouter();
 
-  // 初期値の生成
+  // --- Helpers ---
   const getInitialValues = (data?: ClientRecord): ClientFormValues => {
-    if (!data) return DEFAULT_VALUES;
+    if (!data || mode === 'create') return DEFAULT_VALUES;
     return {
       client_name: data.client_name,
       client_type: String(data.client_type),
@@ -61,6 +66,9 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
 
   const { isSubmitting } = form.formState;
 
+  /**
+   * 送信処理
+   */
   const onSubmit = async (values: ClientFormValues) => {
     setServerError(null);
     try {
@@ -90,6 +98,9 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
     }
   };
 
+  /**
+   * ダイアログ開閉ハンドラ
+   */
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
     if (!isOpen) {
@@ -103,34 +114,47 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="gap-2 font-bold shadow-sm">
+          <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
             <PlusCircle size={16} /> 新規登録
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-8 px-2">
-            編集
+          <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
+            <Edit size={14} /> 編集
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {isConfirming ? '内容の確認' : (mode === 'create' ? '新規顧客の登録' : '顧客情報の編集')}
+      <DialogContent 
+        className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button]:focus-visible:ring-0 [&>button]:outline-none"
+      >
+        {/* ダークヘッダー: 隙間を埋めるネガティブマージン設定済み */}
+        <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
+          <DialogTitle className="flex items-center gap-2 text-lg font-black">
+            {isConfirming ? (
+              <><CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認</>
+            ) : mode === 'create' ? (
+              <><PlusCircle size={18} className="text-indigo-400" /> 新規顧客の登録</>
+            ) : (
+              <><Edit size={18} className="text-indigo-400" /> 顧客情報の編集</>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white">
             
             {/* 顧客名称 */}
             <FormField control={form.control} name="client_name" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500">顧客名称</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">顧客名称</FormLabel>
                 {isConfirming ? (
-                  <div className="p-2 bg-slate-50 rounded text-sm border font-medium">{field.value}</div>
+                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                    {field.value}
+                  </div>
                 ) : (
-                  <FormControl><Input {...field} placeholder="株式会社〇〇" /></FormControl>
+                  <FormControl>
+                    <Input {...field} placeholder="株式会社〇〇" className="bg-white rounded-xl border-slate-200" />
+                  </FormControl>
                 )}
                 <FormMessage />
               </FormItem>
@@ -140,14 +164,18 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
               {/* 顧客種別 */}
               <FormField control={form.control} name="client_type" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500">顧客種別</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">顧客種別</FormLabel>
                   {isConfirming ? (
-                    <div className="p-2 bg-slate-50 rounded text-sm border">
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
                       {field.value === '1' ? '法人' : '個人'}
                     </div>
                   ) : (
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <FormControl>
+                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
                       <SelectContent>
                         <SelectItem value="1">法人</SelectItem>
                         <SelectItem value="2">個人</SelectItem>
@@ -160,14 +188,18 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
               {/* 業界区分 */}
               <FormField control={form.control} name="industry_type" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500">業界区分</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">業界区分</FormLabel>
                   {isConfirming ? (
-                    <div className="p-2 bg-slate-50 rounded text-sm border">
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
                       {field.value === '1' ? '製薬' : field.value === '2' ? '半導体' : 'その他'}
                     </div>
                   ) : (
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <FormControl>
+                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
                       <SelectContent>
                         <SelectItem value="1">製薬 (Pharma)</SelectItem>
                         <SelectItem value="2">半導体 (Semi)</SelectItem>
@@ -179,25 +211,43 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
               )} />
             </div>
 
-            <div className="pt-4 border-t flex flex-col gap-3">
+            {/* アクションエリア */}
+            <div className="pt-4 mt-6 border-t border-slate-100">
               {isConfirming ? (
-                <>
-                  <p className="text-sm font-bold text-center">この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？</p>
+                <div className="space-y-4">
+                  <p className="text-sm font-bold text-center text-slate-800">
+                    この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？
+                  </p>
                   {serverError && (
-                    <Alert variant="destructive" className="py-2">
-                      <div className="flex items-center gap-2 text-xs"><AlertCircle size={14} />{serverError}</div>
+                    <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
+                      <AlertCircle size={14} />{serverError}
                     </Alert>
                   )}
-                  <div className="flex gap-2">
-                    <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsConfirming(false)}>いいえ</Button>
-                    <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                      {isSubmitting ? "実行中..." : "はい"}
+                  <div className="flex gap-3">
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      className="flex-1 rounded-xl font-bold text-slate-400" 
+                      onClick={() => setIsConfirming(false)}
+                    >
+                      いいえ
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg" 
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "処理中..." : "はい、確定します"}
                     </Button>
                   </div>
-                </>
+                </div>
               ) : (
-                <Button type="button" className="w-full" onClick={() => form.trigger().then(valid => valid && setIsConfirming(true))}>
-                  {mode === 'create' ? '登録内容を確認' : '編集内容を確認'}
+                <Button 
+                  type="button" 
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md" 
+                  onClick={() => form.trigger().then(valid => valid && setIsConfirming(true))}
+                >
+                  {mode === 'create' ? '登録内容を確認する' : '編集内容を確認する'}
                 </Button>
               )}
             </div>

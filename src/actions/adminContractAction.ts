@@ -148,7 +148,8 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
   const { data: currentAssignments, error: assignError } = await supabase
     .from('com_t_user_license')
     .select('user_id')
-    .eq('contract_id', contractId);
+    .eq('contract_id', contractId)
+    .gte('end_date', new Date().toISOString());
 
   if (assignError) throw new Error("割当情報の取得に失敗しました");
 
@@ -202,6 +203,52 @@ export async function updateLicenseAssignments(
     .insert(insertData);
 
   if (insertError) return { success: false, message: "割当の更新に失敗しました" };
+
+  revalidatePath('/admin/contracts');
+  return { success: true };
+}
+
+/**
+ * ライセンスの個別追加
+ */
+export async function assignLicenseToUser(
+  contractId: string,
+  userId: string,
+  startDate: string,
+  endDate: string
+) {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from('com_t_user_license')
+    .insert({
+      contract_id: contractId,
+      user_id: userId,
+      status: 1,
+      start_date: startDate,
+      end_date: endDate,
+    });
+
+  if (error) return { success: false, message: error.message };
+
+  revalidatePath('/admin/contracts');
+  return { success: true };
+}
+
+/**
+ * ライセンスの個別解除（物理削除）
+ * ※ ここでは「現在の有効な割当」を消す想定
+ */
+export async function removeLicenseFromUser(contractId: string, userId: string) {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from('com_t_user_license')
+    .delete()
+    .eq('contract_id', contractId)
+    .eq('user_id', userId);
+
+  if (error) return { success: false, message: error.message };
 
   revalidatePath('/admin/contracts');
   return { success: true };
