@@ -253,8 +253,8 @@ CREATE TABLE public.com_m_contract (
     client_id uuid REFERENCES public.com_m_client(client_id) NOT NULL,
     plan_name TEXT NOT NULL,          -- 'Standard', 'Premium' 等
     max_licenses INTEGER NOT NULL,    -- 契約ライセンス上限数
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
+    start_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_date TIMESTAMP WITH TIME ZONE NOT NULL,
     status SMALLINT DEFAULT 1,        -- 1: 有効, 0: 無効, 9: 解約
     note TEXT DEFAULT NULL,           -- アドミン用管理メモ
     insert_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
