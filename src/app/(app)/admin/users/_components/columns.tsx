@@ -5,6 +5,7 @@ import { Client, UserRecord } from "@/types/user"
 import { Badge } from "@/components/ui/badge"
 import { getUserTypeLabel } from "@/constants/userTypes"
 import { UserFormDialog } from "./UserFormDialog"
+import { LicenseFormDialog } from "./LicenseFormDialog"
 
 export const createUserColumns = (clients: Client[]): ColumnDef<UserRecord>[] => [
   {
@@ -75,14 +76,22 @@ export const createUserColumns = (clients: Client[]): ColumnDef<UserRecord>[] =>
   },
   {
     id: "actions",
-    cell: ({ row }) => (
-      <div className="text-right">
-        <UserFormDialog 
-          mode="edit" 
-          initialData={row.original} 
-          clients={clients} 
-        />
-      </div>
-    ),
+    header: () => <div className="text-right">操作</div>,
+    cell: ({ row }) => {
+      const user = row.original;
+      return (
+        <div className="flex justify-end items-center gap-2">
+          {/* 1. ライセンス管理（期間延長・プラン変更・解除） */}
+          <LicenseFormDialog user={user} />
+
+          {/* 2. ユーザー基本情報の編集 */}
+          <UserFormDialog 
+            mode="edit" 
+            initialData={user} 
+            clients={clients} 
+          />
+        </div>
+      );
+    },
   },
 ];

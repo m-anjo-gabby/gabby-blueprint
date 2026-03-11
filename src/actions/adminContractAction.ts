@@ -289,3 +289,37 @@ export async function removeLicenseFromUser(contractId: string, userId: string) 
   revalidatePath('/admin/contracts');
   return { success: true };
 }
+
+/**
+ * ライセンス情報の個別更新（期間延長・ステータス変更・備考更新）
+ */
+export async function updateUserLicense(
+  licenseId: string,
+  updates: {
+    start_date?: string;
+    end_date?: string;
+    status?: number;
+    note?: string | null;
+  }
+) {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from('com_t_user_license')
+    .update({
+      ...updates,
+      update_date: new Date().toISOString(),
+    })
+    .eq('license_id', licenseId);
+
+  if (error) {
+    console.error('Update License Error:', error);
+    return { success: false, message: error.message };
+  }
+
+  // ユーザー一覧と契約情報を最新にする
+  revalidatePath('/admin/contracts');
+  revalidatePath('/admin/users');
+
+  return { success: true };
+}

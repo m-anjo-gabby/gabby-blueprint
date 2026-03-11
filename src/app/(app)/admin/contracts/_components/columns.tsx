@@ -115,16 +115,16 @@ export const columns: ColumnDef<ContractDetail>[] = [
     },
   },
   {
-  id: "actions",
-  header: () => <div className="text-right"></div>,
-  cell: ({ row }) => (
-    <div className="flex justify-end items-center gap-2">
-      {/* 1. ライセンス割当状況ダイアログ */}
-      <ContractLicenseDialog contract={row.original} />
+    id: "actions",
+    header: () => <div className="text-right"></div>,
+    cell: ({ row }) => (
+      <div className="flex justify-end items-center gap-2">
+        {/* 1. ライセンス割当状況ダイアログ */}
+        <ContractLicenseDialog contract={row.original} />
 
-      {/* 2. 契約内容の編集ダイアログ */}
-      <ContractFormDialog mode="edit" initialData={row.original} />
-    </div>
-  ),
-},
+        {/* 2. 契約内容の編集ダイアログ */}
+        <ContractFormDialog mode="edit" initialData={row.original} />
+      </div>
+    ),
+  },
 ];

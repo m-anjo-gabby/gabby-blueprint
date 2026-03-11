@@ -221,6 +221,25 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
     router.refresh();
   };
 
+  /**
+   * ライセンス設定ステップへ直接スキップする処理 (編集モード用)
+   */
+  const handleSkipToLicense = async () => {
+    if (mode !== 'edit' || !initialData?.id) return;
+    
+    setServerError(null);
+    setTargetUserId(initialData.id);
+    
+    try {
+      // 顧客に紐付く契約をロード（これがないとStep2が表示できない）
+      const contracts = await getActiveContractsByClient(initialData.client_id || '');
+      setAvailableContracts(contracts as ContractDetail[]);
+      setIsLicenseStep(true);
+    } catch (error) {
+      showToast("契約情報の取得に失敗しました", "error");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose() || setOpen(isOpen)}>
       <DialogTrigger asChild>
@@ -255,6 +274,18 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
             /* --- STEP 1: 基本情報 --- */
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4">
+
+                {/* 編集モード時のみ表示するクイック導線 */}
+                {mode === 'edit' && !isConfirming && (
+                  <Alert className="bg-indigo-50 border-indigo-100 py-3 mb-2 cursor-pointer hover:bg-indigo-100 transition-colors" onClick={handleSkipToLicense}>
+                    <ShieldCheck className="h-4 w-4 text-indigo-600" />
+                    <div className="flex items-center justify-between w-full ml-2">
+                      <span className="text-xs font-bold text-indigo-700">ライセンスを変更する</span>
+                      <ArrowRight size={14} className="text-indigo-600" />
+                    </div>
+                  </Alert>
+                )}
+
                 <FormField control={form.control} name="email" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold text-slate-500 uppercase">メールアドレス</FormLabel>
@@ -316,11 +347,11 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
                 <div className="pt-4 mt-6 border-t border-slate-100">
                   {isConfirming ? (
                     <div className="space-y-4">
-                      <p className="text-sm font-bold text-center">内容を確定して次（ライセンス設定）へ進みますか？</p>
+                      <p className="text-sm font-bold text-center">この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？</p>
                       {serverError && <Alert variant="destructive" className="py-2 text-xs"><AlertCircle className="h-4 w-4" />{serverError}</Alert>}
                       <div className="flex gap-3">
                         <Button type="button" variant="ghost" className="flex-1 text-slate-400" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>戻る</Button>
-                        <Button type="submit" className="flex-1 bg-slate-900 text-white shadow-lg" disabled={isSubmitting}>{isSubmitting ? "保存中..." : "はい、次へ"}</Button>
+                        <Button type="submit" className="flex-1 bg-slate-900 text-white shadow-lg" disabled={isSubmitting}>{isSubmitting ? "保存中..." : "はい"}</Button>
                       </div>
                     </div>
                   ) : (
