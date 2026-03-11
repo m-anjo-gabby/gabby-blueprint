@@ -2,7 +2,7 @@
 'use server';
 
 import { createAdminClient } from "@/lib/admin";
-import { BulkUser, UserRecord } from "@/types/user";
+import { BulkUser, CreateUserResponse, UserRecord } from "@/types/user";
 
 export async function getUsersWithClient(
   clientId?: string,
@@ -45,7 +45,7 @@ export async function createUser(
   user_name: string,
   client_id: string,
   user_type: string
-) {
+): Promise<CreateUserResponse> {
   try {
     const supabase = await createAdminClient();
 
@@ -64,18 +64,18 @@ export async function createUser(
     if (error) {
       // Supabase固有のエラーコードに応じたメッセージ切り分け
       if (error.status === 422 && error.code === 'email_exists') {
-        return { success: false, errorType: 'email_exists', message: "このメールアドレスは既に登録されています。" };
+        return { success: false, user_id: null, errorType: 'email_exists', message: "このメールアドレスは既に登録されています。" };
       }
       // その他認証エラー
-      return { success: false, errorType: 'unexpected_error', message: `登録に失敗しました: ${error.message}` };
+      return { success: false, user_id: null, errorType: 'unexpected_error', message: `登録に失敗しました: ${error.message}` };
     }
 
-    return { success: true, userId: data.user.id };
+    return { success: true, user_id: data.user.id, errorType: null, message: null };
 
   } catch (err) {
     // 予期せぬネットワークエラーなど
     console.error("Unexpected Error:", err);
-    return { success: false, errorType: 'unexpected_error', message: "通信エラーが発生しました。時間を置いて再度お試しください。" };
+    return { success: false, user_id: null, errorType: 'unexpected_error', message: "通信エラーが発生しました。" };
   }
 }
 

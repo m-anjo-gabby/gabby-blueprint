@@ -5,11 +5,11 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { format, isAfter, isBefore, startOfDay } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ContractInfo } from '@/types/contract';
+import { ContractDetail } from '@/types/contract';
 import { ContractFormDialog } from './ContractFormDialog';
 import { ContractLicenseDialog } from './ContractLicenseDialog';
 
-export const columns: ColumnDef<ContractInfo>[] = [
+export const columns: ColumnDef<ContractDetail>[] = [
   {
     id: 'client_name',
     accessorKey: 'com_m_client.client_name',
@@ -17,7 +17,7 @@ export const columns: ColumnDef<ContractInfo>[] = [
     cell: ({ row }) => {
       return (
         <span className="font-medium text-slate-900">
-          {row.original.com_m_client?.client_name || '未紐付け'}
+          {row.original.client_name || '未紐付け'}
         </span>
       );
     },
@@ -35,10 +35,9 @@ export const columns: ColumnDef<ContractInfo>[] = [
     id: 'license_usage',
     header: 'ライセンス利用状況',
     cell: ({ row }) => {
-      const stats = row.original.stats;
       const max = row.original.max_licenses;
-      const active = stats?.current_active_count || 0;
-      const assigned = stats?.current_assigned_count || 0;
+      const active = row.original.current_active_count || 0;
+      const assigned = row.original.current_assigned_count || 0;
       
       // 利用率の計算
       const usageRate = Math.min(Math.ceil((active / max) * 100), 100);

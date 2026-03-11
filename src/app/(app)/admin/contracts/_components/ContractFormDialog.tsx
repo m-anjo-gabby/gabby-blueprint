@@ -16,7 +16,7 @@ import { getClientsFilter } from '@/actions/adminClientAction'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, PlusCircle, Edit, CheckCircle2 } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
-import { ContractInfo } from '@/types/contract'
+import { ContractDetail } from '@/types/contract'
 
 // --- スキーマ定義 ---
 const contractSchema = z.object({
@@ -42,7 +42,7 @@ const DEFAULT_VALUES: ContractFormInput = {
 
 interface ContractFormDialogProps {
   mode?: 'create' | 'edit'
-  initialData?: ContractInfo
+  initialData?: ContractDetail
 }
 
 /**
@@ -60,7 +60,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
   const router = useRouter()
 
   // --- Helpers ---
-  const getInitialValues = useCallback((data?: ContractInfo): ContractFormInput => {
+  const getInitialValues = useCallback((data?: ContractDetail): ContractFormInput => {
     if (!data || mode === 'create') return DEFAULT_VALUES
     return {
       client_id: data.client_id ?? '',

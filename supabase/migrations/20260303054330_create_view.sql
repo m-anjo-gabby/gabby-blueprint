@@ -12,6 +12,7 @@ SELECT
   au.email,
   au.last_sign_in_at,
   -- ライセンス情報の集約
+  l.contract_id,
   l.license_id,
   l.status as license_status,
   l.end_date as license_end_date,
@@ -63,20 +64,29 @@ COMMENT ON VIEW public.vw_my_license_status IS '最新ライセンス状態ビ�
 ALTER VIEW public.vw_my_license_status SET (security_invoker = on);
 
 ---------------------------------------------
--- VIEW: vw_contract_license_stats ライセンス状態
+-- VIEW: vw_contract_details (契約詳細ビュー)
 ---------------------------------------------
--- 契約ごとのライセンス消費状況を算出するビュー
-CREATE OR REPLACE VIEW public.vw_contract_license_stats AS
+CREATE OR REPLACE VIEW public.vw_contract_details AS
 SELECT 
-    c.contract_id,
-    COUNT(ul.license_id) AS current_assigned_count,
-    -- 「現在時刻」が開始〜終了の間、かつ status=1 のユーザーをカウント
-    COUNT(CASE WHEN ul.status = 1 AND NOW() BETWEEN ul.start_date AND ul.end_date THEN 1 END) AS current_active_count
+    c.*,
+    cl.client_name,
+    COALESCE(stats.current_assigned_count, 0) AS current_assigned_count,
+    COALESCE(stats.current_active_count, 0) AS current_active_count,
+    -- 残り枠数（バリデーション用）
+    c.max_licenses - COALESCE(stats.current_assigned_count, 0) AS remaining_licenses
 FROM 
     public.com_m_contract c
-LEFT JOIN 
-    public.com_t_user_license ul ON c.contract_id = ul.contract_id
-GROUP BY 
-    c.contract_id;
+JOIN 
+    public.com_m_client cl ON c.client_id = cl.client_id
+LEFT JOIN (
+    SELECT 
+        contract_id,
+        COUNT(license_id) AS current_assigned_count,
+        COUNT(CASE WHEN status = 1 AND NOW() BETWEEN start_date AND end_date THEN 1 END) AS current_active_count
+    FROM 
+        public.com_t_user_license
+    GROUP BY 
+        contract_id
+) stats ON c.contract_id = stats.contract_id;
 
-COMMENT ON VIEW public.vw_contract_license_stats IS '契約ごとのライセンス割当・有効数統計';
+COMMENT ON VIEW public.vw_contract_details IS '統計情報・顧客名を含む契約詳細ビュー';

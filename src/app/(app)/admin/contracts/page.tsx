@@ -2,8 +2,6 @@
 import { getContracts } from '@/actions/adminContractAction';
 import { ContractDataTable } from './_components/contract-data-table';
 import { columns } from './_components/columns';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import { ContractFormDialog } from './_components/ContractFormDialog';
 
 export default async function AdminContractsPage() {

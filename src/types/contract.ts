@@ -4,9 +4,11 @@ export interface ContractLicenseStats {
   contract_id: string;
   current_assigned_count: number; // 割当済み総数
   current_active_count: number;   // 現在有効な（期間内かつstatus=1）数
+  remaining_licenses: number;     // 割当可能数
 }
 
-export interface ContractInfo {
+// 契約情報の型定義（ビュー vw_contract_details に対応）
+export interface ContractDetail {
   contract_id: string;
   client_id: string;
   plan_name: string;
@@ -17,14 +19,10 @@ export interface ContractInfo {
   note: string | null;
   insert_date: string;
   update_date: string;
-  
-  // リレーション先の型
-  com_m_client: {
-    client_name: string;
-  } | null;
-
-  // 追加：統計情報（マージした後に付与される）
-  stats?: ContractLicenseStats | null;
+  client_name: string;
+  remaining_licenses: number;
+  current_assigned_count: number;
+  current_active_count: number;
 }
 
 // ライセンス割当画面で表示するためのユーザー簡略情報

@@ -12,6 +12,13 @@ export type UserRecord = {
   client_name: string | null;
   last_sign_in_at?: string;
   confirmed_at?: string | null;
+
+  // ライセンス関連（ビューから取得）
+  contract_id: string | null;
+  license_id: string | null;
+  license_status: number | null;
+  license_end_date: string | null;
+  plan_name: string | null;
 };
 
 /**
@@ -42,3 +49,18 @@ export interface BulkUser {
   isValid: boolean;
   error?: string;
 }
+
+// 成功時と失敗時で型を分けることで、result.success === true の時に user_id が存在することを保証します
+export type CreateUserResponse = 
+  | { 
+      success: true; 
+      user_id: string; 
+      errorType: null; 
+      message: null; 
+    }
+  | { 
+      success: false; 
+      user_id: null; 
+      errorType: string; 
+      message: string; 
+    };

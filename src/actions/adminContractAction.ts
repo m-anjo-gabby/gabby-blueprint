@@ -24,57 +24,55 @@ const formatToLocalDate = (dateString?: string) => {
 };
 
 /**
- * 契約情報の一覧取得
+ * 契約情報の一覧取得（管理画面一覧用）
  */
 export async function getContracts() {
   const supabase = createAdminClient();
   
-  // 契約情報の基本データを取得
-  const { data: contracts, error: contractError } = await supabase
-    .from('com_m_contract')
-    .select(`
-      *,
-      com_m_client (
-        client_name
-      )
-    `)
+  // 新しいビューから取得。リレーションの結合なしで1クエリで完結
+  const { data: contracts, error } = await supabase
+    .from('vw_contract_details')
+    .select('*')
     .order('insert_date', { ascending: false });
 
-  if (contractError) throw new Error(contractError.message);
+  if (error) throw new Error(error.message);
 
-  // 統計ビューから全件取得（リレーションを使わず単体で取得）
-  const { data: stats, error: statsError } = await supabase
-    .from('vw_contract_license_stats')
-    .select('*');
+  // 日付のフォーマット処理（JST変換）のみ行う
+  return contracts.map(contract => ({
+    ...contract,
+    start_date: contract.start_date ? formatToLocalDate(contract.start_date) : '',
+    end_date: contract.end_date ? formatToLocalDate(contract.end_date) : '',
+    // UI側の互換性のために stats オブジェクト形式に整形して返す
+    stats: {
+      current_assigned_count: contract.current_assigned_count,
+      current_active_count: contract.current_active_count,
+      remaining_licenses: contract.remaining_licenses
+    }
+  }));
+}
 
-  if (statsError) {
-    console.error("Stats View Error:", statsError.message);
-    return contracts.map(c => ({ ...c, stats: null }));
+/**
+ * 特定顧客の「現在有効かつ枠がある」契約一覧を取得（ユーザー登録フロー用）
+ */
+export async function getActiveContractsByClient(clientId: string) {
+  const supabase = createAdminClient();
+  
+  const { data: contracts, error } = await supabase
+    .from('vw_contract_details')
+    .select('*')
+    .eq('client_id', clientId)      // 顧客絞り込み
+    .eq('status', 1)               // 契約自体が有効
+    .lte('start_date', new Date().toISOString()) // 開始済み
+    .gte('end_date', new Date().toISOString())   // 未終了
+    .gt('remaining_licenses', 0)   // ライセンス残数あり
+    .order('plan_name', { ascending: true });
+
+  if (error) {
+    console.error("Fetch Active Contracts Error:", error.message);
+    return [];
   }
 
-  // 取得したデータをマージしつつ、日付をUIフレンドリーな形式（JSTの日付）に変換
-  const mergedData = contracts.map(contract => {
-    const stat = stats.find(s => s.contract_id === contract.contract_id);
-    
-    // TIMESTAMPTZ(UTC)をJSTの日付文字列(YYYY-MM-DD)に変換する
-    const formattedStartDate = contract.start_date 
-      ? formatToLocalDate(contract.start_date)
-      : '';
-    const formattedEndDate = contract.end_date 
-      ? formatToLocalDate(contract.end_date)
-      : '';
-
-    return {
-      ...contract,
-      // UIが期待する日付形式に上書き
-      start_date: formattedStartDate,
-      end_date: formattedEndDate,
-      // カラム名を直感的にするために stats というキーで入れる
-      stats: stat || { current_assigned_count: 0, current_active_count: 0 }
-    };
-  });
-
-  return mergedData;
+  return contracts;
 }
 
 /**
