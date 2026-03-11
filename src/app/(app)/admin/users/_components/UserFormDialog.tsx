@@ -11,9 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/useToast';
 import { createUser, updateUser, resendInvite } from '@/actions/adminUserAction';
-import { getActiveContractsByClient, assignLicenseToUser, removeLicenseFromUser } from '@/actions/adminContractAction';
+import { getActiveContractsByClient, assignLicenseToUser } from '@/actions/adminContractAction';
 import { useRouter } from 'next/navigation';
-import { Mail, AlertCircle, PlusCircle, CheckCircle2, Loader2, Edit, ArrowRight, ShieldCheck, RefreshCcw } from 'lucide-react';
+import { Mail, AlertCircle, PlusCircle, CheckCircle2, Loader2, Edit, ShieldCheck, RefreshCcw, Save } from 'lucide-react';
 import { Client, CreateUserResponse, UserRecord } from '@/types/user';
 import { Alert } from '@/components/ui/alert';
 import { ContractDetail } from '@/types/contract';
@@ -30,7 +30,7 @@ type UserFormValues = z.infer<typeof userSchema>;
 
 interface UserFormDialogProps {
   mode?: 'create' | 'edit';
-  initialData?: UserRecord; // ここに既存の contract_id が含まれている想定
+  initialData?: UserRecord;
   clients: Client[];
 }
 
@@ -43,27 +43,24 @@ const DEFAULT_VALUES: UserFormValues = {
 
 /**
  * ユーザー登録・編集ダイアログ
- * ユーザー情報更新後、ライセンスの割当（または変更）ステップへ移行可能
+ * 新規登録時のみ、完了後にライセンス割当ステップへ移行する
  */
 export function UserFormDialog({ mode = 'create', initialData, clients }: UserFormDialogProps) {
-  // --- States ---
   const [open, setOpen] = useState<boolean>(false);
   const [isConfirming, setIsConfirming] = useState<boolean>(false);
   const [isResending, setIsResending] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   
-  // ライセンス管理用
+  // ライセンス管理用 (新規作成時の連動用)
   const [isLicenseStep, setIsLicenseStep] = useState(false);
   const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [availableContracts, setAvailableContracts] = useState<ContractDetail[]>([]);
   const [selectedContractId, setSelectedContractId] = useState<string>("");
-  const [currentContractId, setCurrentContractId] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
 
   const { showToast } = useToast();
   const router = useRouter();
 
-  // --- Helpers ---
   const getInitialValues = (data?: UserRecord): UserFormValues => {
     if (!data || mode === 'create') return DEFAULT_VALUES;
     return {
@@ -79,19 +76,6 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
     defaultValues: getInitialValues(initialData),
   });
 
-  // 初期データから現在のライセンス情報をセット
-  useEffect(() => {
-    if (mode === 'edit' && initialData) {
-      const existingId = initialData.contract_id || null;
-      setCurrentContractId(existingId);
-      setSelectedContractId(existingId || "");
-    } else {
-      // 新規作成時はクリア
-      setCurrentContractId(null);
-      setSelectedContractId("");
-    }
-  }, [initialData, mode, open]);
-
   const { isSubmitting } = form.formState;
 
   /**
@@ -101,28 +85,23 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
     setServerError(null);
     try {
       if (mode === 'edit' && initialData?.id) {
-        // --- 編集モード ---
+        // --- 編集モード：更新して完了 ---
         const result = await updateUser(initialData.id, values.email, values.user_name, values.client_id, values.user_type);
         if (result.success) {
-          setTargetUserId(initialData.id);
-          // 顧客に紐付く有効な契約をロード
-          const contracts = await getActiveContractsByClient(values.client_id);
-          setAvailableContracts(contracts as ContractDetail[]);
-          
-          setIsLicenseStep(true); // ライセンス変更ステップへ
-          showToast("ユーザー情報を更新しました。次にライセンスを確認します。", "success");
+          showToast("ユーザー情報を更新しました", "success");
+          handleClose(); // 編集時はライセンスステップへ行かず閉じる
         } else {
           setServerError(result.message || "更新に失敗しました");
         }
       } else {
-        // --- 登録モード ---
+        // --- 登録モード：作成後、ライセンス設定へ ---
         const result: CreateUserResponse = await createUser(values.email, values.user_name, values.client_id, values.user_type);
         if (result.success) {
           setTargetUserId(result.user_id);
           const contracts = await getActiveContractsByClient(values.client_id);
           setAvailableContracts(contracts as ContractDetail[]);
           
-          setIsLicenseStep(true);
+          setIsLicenseStep(true); // 新規登録時のみステップ移行
           showToast("ユーザーを作成しました。続けてライセンスを設定します。", "success");
         } else {
           if (result.errorType === 'email_exists') {
@@ -137,39 +116,18 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
   };
 
   /**
-   * ライセンス割当・更新実行
-   * 既存の割当がある場合は削除してから新規登録（物理削除→追加）
+   * ライセンス割当実行 (新規作成時のみ利用)
    */
   const handleAssignLicense = async () => {
-    if (!targetUserId) return;
+    if (!targetUserId || !selectedContractId || selectedContractId === "none") {
+      handleClose(); // 割当なしで完了
+      return;
+    }
     
     setIsAssigning(true);
     try {
-      // 1. 契約が変更されていない場合は何もしない
-      if (mode === 'edit' && selectedContractId === currentContractId) {
-        showToast("ライセンスの変更はありません", "success");
-        handleClose();
-        return;
-      }
-
-      // 2. 既存のライセンス割当がある場合は解除
-      if (currentContractId) {
-        const removeRes = await removeLicenseFromUser(currentContractId, targetUserId);
-        if (!removeRes.success) {
-          showToast(`既存ライセンスの解除に失敗: ${removeRes.message}`, "error");
-          setIsAssigning(false);
-          return;
-        }
-      }
-
-      // 3. 新しいライセンスの割当（選択されている場合のみ）
-      if (selectedContractId) {
-        const contract = availableContracts.find(c => c.contract_id === selectedContractId);
-        if (!contract) {
-          showToast("契約情報が見つかりません", "error");
-          return;
-        }
-
+      const contract = availableContracts.find(c => c.contract_id === selectedContractId);
+      if (contract) {
         const assignRes = await assignLicenseToUser(
           selectedContractId,
           targetUserId,
@@ -177,15 +135,13 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
           contract.end_date
         );
 
-        if (!assignRes.success) {
+        if (assignRes.success) {
+          showToast("ライセンスを割り当てました", "success");
+          handleClose();
+        } else {
           showToast(assignRes.message || "割当に失敗しました", "error");
-          setIsAssigning(false);
-          return;
         }
       }
-
-      showToast(selectedContractId ? "ライセンスを更新しました" : "ライセンスを解除しました", "success");
-      handleClose();
     } catch (error) {
       showToast("処理中にエラーが発生しました", "error");
     } finally {
@@ -221,34 +177,15 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
     router.refresh();
   };
 
-  /**
-   * ライセンス設定ステップへ直接スキップする処理 (編集モード用)
-   */
-  const handleSkipToLicense = async () => {
-    if (mode !== 'edit' || !initialData?.id) return;
-    
-    setServerError(null);
-    setTargetUserId(initialData.id);
-    
-    try {
-      // 顧客に紐付く契約をロード（これがないとStep2が表示できない）
-      const contracts = await getActiveContractsByClient(initialData.client_id || '');
-      setAvailableContracts(contracts as ContractDetail[]);
-      setIsLicenseStep(true);
-    } catch (error) {
-      showToast("契約情報の取得に失敗しました", "error");
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose() || setOpen(isOpen)}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
+          <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none transition-all active:scale-95">
             <PlusCircle size={16} /> 新規登録
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
+          <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
             <Edit size={14} /> 編集
           </Button>
         )}
@@ -264,7 +201,7 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
             ) : mode === 'create' ? (
               <><PlusCircle size={18} className="text-indigo-400" /> 新規ユーザー登録</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> ユーザー編集</>
+              <><Edit size={18} className="text-indigo-400" /> ユーザー基本情報編集</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -273,95 +210,108 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
           {!isLicenseStep ? (
             /* --- STEP 1: 基本情報 --- */
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4">
-
-                {/* 編集モード時のみ表示するクイック導線 */}
-                {mode === 'edit' && !isConfirming && (
-                  <Alert className="bg-indigo-50 border-indigo-100 py-3 mb-2 cursor-pointer hover:bg-indigo-100 transition-colors" onClick={handleSkipToLicense}>
-                    <ShieldCheck className="h-4 w-4 text-indigo-600" />
-                    <div className="flex items-center justify-between w-full ml-2">
-                      <span className="text-xs font-bold text-indigo-700">ライセンスを変更する</span>
-                      <ArrowRight size={14} className="text-indigo-600" />
-                    </div>
-                  </Alert>
-                )}
-
-                <FormField control={form.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">メールアドレス</FormLabel>
-                    {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
-                    ) : (
-                      <FormControl><Input {...field} disabled={mode === 'edit'} className="rounded-xl border-slate-200" /></FormControl>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="user_name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">名前</FormLabel>
-                    {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
-                    ) : (
-                      <FormControl><Input {...field} className="rounded-xl border-slate-200" /></FormControl>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="client_id" render={({ field }) => (
+              <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-5">
+                
+                <div className="space-y-4">
+                  <FormField control={form.control} name="email" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase">所属顧客</FormLabel>
+                      <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">メールアドレス</FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">
-                          {clients.find((c) => c.client_id === field.value)?.client_name || '未選択'}
-                        </div>
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                       ) : (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="選択" /></SelectTrigger></FormControl>
-                          <SelectContent>{clients.map((c) => (<SelectItem key={c.client_id} value={c.client_id}>{c.client_name}</SelectItem>))}</SelectContent>
-                        </Select>
+                        <FormControl><Input {...field} disabled={mode === 'edit'} className="rounded-xl border-slate-200 h-11" placeholder="example@domain.com" /></FormControl>
                       )}
                       <FormMessage />
                     </FormItem>
                   )} />
 
-                  <FormField control={form.control} name="user_type" render={({ field }) => (
+                  <FormField control={form.control} name="user_name" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase">タイプ</FormLabel>
+                      <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">氏名</FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-center">{field.value === '1' ? '生徒' : 'その他'}</div>
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                       ) : (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent><SelectItem value="1">生徒</SelectItem></SelectContent>
-                        </Select>
+                        <FormControl><Input {...field} className="rounded-xl border-slate-200 h-11" placeholder="山田 太郎" /></FormControl>
                       )}
                       <FormMessage />
                     </FormItem>
                   )} />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="client_id" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">所属顧客</FormLabel>
+                        {isConfirming ? (
+                          <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                            {clients.find((c) => c.client_id === field.value)?.client_name || '未選択'}
+                          </div>
+                        ) : (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="選択" /></SelectTrigger></FormControl>
+                            <SelectContent>{clients.map((c) => (<SelectItem key={c.client_id} value={c.client_id}>{c.client_name}</SelectItem>))}</SelectContent>
+                          </Select>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="user_type" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">権限タイプ</FormLabel>
+                        {isConfirming ? (
+                          <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-center font-medium">{field.value === '1' ? '生徒' : 'その他'}</div>
+                        ) : (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent><SelectItem value="1">生徒</SelectItem></SelectContent>
+                          </Select>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
                 </div>
 
-                <div className="pt-4 mt-6 border-t border-slate-100">
+                <div className="pt-4 mt-2 border-t border-slate-100">
                   {isConfirming ? (
                     <div className="space-y-4">
-                      <p className="text-sm font-bold text-center">この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？</p>
-                      {serverError && <Alert variant="destructive" className="py-2 text-xs"><AlertCircle className="h-4 w-4" />{serverError}</Alert>}
+                      {serverError && (
+                        <div className="flex items-center gap-2 px-3 py-2.5 bg-rose-50 border border-rose-100 rounded-xl">
+                          <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                          <p className="text-[11px] font-bold text-rose-600 leading-none">
+                            {serverError}
+                          </p>
+                        </div>
+                      )}
                       <div className="flex gap-3">
-                        <Button type="button" variant="ghost" className="flex-1 text-slate-400" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>戻る</Button>
-                        <Button type="submit" className="flex-1 bg-slate-900 text-white shadow-lg" disabled={isSubmitting}>{isSubmitting ? "保存中..." : "はい"}</Button>
+                        <Button type="button" variant="ghost" className="flex-1 text-slate-400 h-12 rounded-xl" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>戻る</Button>
+                        <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white shadow-lg h-12 rounded-xl font-bold" disabled={isSubmitting}>
+                          {isSubmitting ? <Loader2 className="animate-spin" /> : "確定して保存"}
+                        </Button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-3">
-                      <Button type="button" className="w-full bg-slate-900 text-white h-11 shadow-md" onClick={() => form.trigger().then((v) => v && setIsConfirming(true))}>
+                      <Button 
+                        type="button" 
+                        className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl shadow-md font-bold gap-2" 
+                        onClick={() => {
+                          // 1. バリデーションを実行
+                          form.trigger().then((isValid) => {
+                            if (isValid) {
+                              // 2. 前回のサーバーエラーをクリア
+                              setServerError(null);
+                              // 3. 確認画面へ
+                              setIsConfirming(true);
+                            }
+                          });
+                        }}
+                      >
                         確認画面へ進む
                       </Button>
                       {mode === 'edit' && !initialData?.last_sign_in_at && (
-                        <Button type="button" variant="outline" className="w-full text-xs" disabled={isResending} onClick={handleResendInvite}>
-                          {isResending ? <Loader2 className="animate-spin" size={14} /> : <Mail size={14} />} 招待メール再送
+                        <Button type="button" variant="outline" className="w-full text-xs h-10 rounded-xl border-dashed border-slate-300 text-slate-500" disabled={isResending} onClick={handleResendInvite}>
+                          {isResending ? <Loader2 className="animate-spin" size={14} /> : <Mail size={14} />} 招待メールを再送する
                         </Button>
                       )}
                     </div>
@@ -370,32 +320,33 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
               </form>
             </Form>
           ) : (
-            /* --- STEP 2: ライセンス設定 --- */
+            /* --- STEP 2: ライセンス設定 (新規登録時のみ) --- */
             <div className="p-8 space-y-6 text-center">
               <div className="space-y-2">
-                <div className="mx-auto w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
-                  <RefreshCcw size={24} />
+                <div className="mx-auto w-14 h-14 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle2 size={32} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">ライセンスの割当変更</h3>
-                <p className="text-sm text-slate-500">
-                  現在の割当を解除し、新しい契約プランを割り当て直すことができます。
+                <h3 className="text-lg font-black text-slate-900">ユーザー登録完了！</h3>
+                <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                  続けてライセンスを割り当てますか？<br />
+                  後から一覧画面の「ライセンス」ボタンでも設定可能です。
                 </p>
               </div>
 
-              <div className="space-y-4 text-left">
+              <div className="space-y-4 text-left pt-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase">割当先プラン</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">割当プランを選択</label>
                   <Select onValueChange={setSelectedContractId} value={selectedContractId}>
-                    <SelectTrigger className="w-full bg-slate-50 rounded-xl h-12 font-medium">
-                      <SelectValue placeholder="割当なし（解除）" />
+                    <SelectTrigger className="w-full bg-slate-50 border-slate-200 rounded-xl h-12 font-bold">
+                      <SelectValue placeholder="今は割り当てない" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" className="text-rose-500 font-bold">--- 割当を解除する ---</SelectItem>
+                      <SelectItem value="none" className="text-slate-400 italic">今は割り当てない</SelectItem>
                       {availableContracts.map((c) => (
                         <SelectItem key={c.contract_id} value={c.contract_id} className="py-3">
                           <div className="flex flex-col">
-                            <span className="font-bold">{c.plan_name}</span>
-                            <span className="text-[10px] text-slate-400">残り {c.remaining_licenses} 枠 / 終了日: {c.end_date}</span>
+                            <span className="font-bold text-slate-800">{c.plan_name}</span>
+                            <span className="text-[10px] text-slate-400">残り {c.remaining_licenses} 枠 / 契約終了: {c.end_date.split('T')[0]}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -405,14 +356,14 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
 
                 <div className="flex flex-col gap-3 pt-4">
                   <Button 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold h-12 shadow-lg gap-2"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black h-12 shadow-lg gap-2 transition-all active:scale-95"
                     onClick={handleAssignLicense}
                     disabled={isAssigning}
                   >
-                    {isAssigning ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
-                    割当を確定する
+                    {isAssigning ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                    設定を完了する
                   </Button>
-                  <Button variant="ghost" className="text-slate-400" onClick={handleClose} disabled={isAssigning}>変更せずに閉じる</Button>
+                  <Button variant="ghost" className="text-slate-400 text-xs font-bold" onClick={handleClose} disabled={isAssigning}>設定せずに閉じる</Button>
                 </div>
               </div>
             </div>
