@@ -2,7 +2,7 @@
 'use server';
 
 import { createAdminClient } from "@/lib/admin";
-import { BulkUser, CreateUserResponse, UserRecord } from "@/types/user";
+import { BulkImportResponse, BulkImportResultDetail, BulkUser, CreateUserResponse, UserRecord } from "@/types/user";
 
 export async function getUsersWithClient(
   clientId?: string,
@@ -146,14 +146,13 @@ export async function updateUser(
  * ユーザー一括登録アクション
  * 複数のユーザーを順番に招待し、各レコードの結果を返します。
  */
-export async function bulkCreateUsers(users: BulkUser[]) {
-  const results = [];
+export async function bulkCreateUsers(users: BulkUser[]): Promise<BulkImportResponse> {
+  const results: BulkImportResultDetail[] = [];
   let successCount = 0;
   let errorCount = 0;
 
   for (const user of users) {
     try {
-      // 既存の createUser ロジックを再利用
       const result = await createUser(
         user.email,
         user.user_name,
@@ -161,15 +160,19 @@ export async function bulkCreateUsers(users: BulkUser[]) {
         user.user_type
       );
 
-      if (result.success) {
+      if (result.success && result.user_id) {
         successCount++;
-        results.push({ email: user.email, status: 'success' });
+        results.push({ 
+          id: result.user_id, 
+          email: user.email, 
+          status: 'success' 
+        });
       } else {
         errorCount++;
         results.push({ 
           email: user.email, 
           status: 'error', 
-          message: result.message 
+          message: result.message || "登録に失敗しました" 
         });
       }
     } catch (err) {
@@ -182,11 +185,5 @@ export async function bulkCreateUsers(users: BulkUser[]) {
     }
   }
 
-  return {
-    success: true,
-    total: users.length,
-    successCount,
-    errorCount,
-    details: results
-  };
+  return { success: true, total: users.length, successCount, errorCount, details: results };
 }

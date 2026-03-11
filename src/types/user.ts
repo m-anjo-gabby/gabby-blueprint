@@ -64,3 +64,18 @@ export type CreateUserResponse =
       errorType: string; 
       message: string; 
     };
+
+export interface BulkImportResultDetail {
+  id?: string;        // 成功時のみ存在
+  email: string;
+  status: 'success' | 'error';
+  message?: string;   // 失敗時の理由
+}
+
+export interface BulkImportResponse {
+  success: boolean;
+  total: number;
+  successCount: number;
+  errorCount: number;
+  details: BulkImportResultDetail[];
+}

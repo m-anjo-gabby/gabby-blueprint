@@ -9,6 +9,10 @@ import { revalidatePath } from 'next/cache';
  * アドミンが入力した日付（JST）の「開始日の00:00」から「終了日の23:59:59」をUTCとして正確に生成します。
  */
 const getUtcRangeFromJstDate = (startDateStr: string, endDateStr: string) => {
+  // 日付が空、または不正な場合のガード
+  if (!startDateStr || !endDateStr || isNaN(Date.parse(startDateStr)) || isNaN(Date.parse(endDateStr))) {
+    throw new Error(`Invalid date provided: start=${startDateStr}, end=${endDateStr}`);
+  }
   return {
     startUtc: new Date(`${startDateStr}T00:00:00+09:00`).toISOString(),
     endUtc: new Date(`${endDateStr}T23:59:59.999+09:00`).toISOString(),
@@ -42,12 +46,6 @@ export async function getContracts() {
     ...contract,
     start_date: contract.start_date ? formatToLocalDate(contract.start_date) : '',
     end_date: contract.end_date ? formatToLocalDate(contract.end_date) : '',
-    // UI側の互換性のために stats オブジェクト形式に整形して返す
-    stats: {
-      current_assigned_count: contract.current_assigned_count,
-      current_active_count: contract.current_active_count,
-      remaining_licenses: contract.remaining_licenses
-    }
   }));
 }
 
@@ -72,7 +70,12 @@ export async function getActiveContractsByClient(clientId: string) {
     return [];
   }
 
-  return contracts;
+  // 日付を JST の YYYY-MM-DD 形式に変換
+  return contracts.map(contract => ({
+    ...contract,
+    start_date: contract.start_date ? formatToLocalDate(contract.start_date) : '',
+    end_date: contract.end_date ? formatToLocalDate(contract.end_date) : '',
+  }));
 }
 
 /**
@@ -199,61 +202,18 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
 }
 
 /**
- * ライセンス割当の一括更新
- * 選択されたユーザーIDリストを受け取り、差分で追加・削除を行う
- */
-export async function updateLicenseAssignments(
-  contractId: string, 
-  userIds: string[], 
-  contractStartDate: string, 
-  contractEndDate: string
-) {
-  const supabase = createAdminClient();
-
-  // 1. 現在の割当を全削除（または差分更新）
-  // シンプルに一度全削除して再登録する方式（小〜中規模ならこれで十分）
-  const { error: deleteError } = await supabase
-    .from('com_t_user_license')
-    .delete()
-    .eq('contract_id', contractId);
-
-  if (deleteError) return { success: false, message: "既存データのクリアに失敗しました" };
-
-  if (userIds.length === 0) {
-    revalidatePath('/admin/contracts');
-    return { success: true };
-  }
-
-  // 2. 新しいリストで一括登録
-  // ここで受け取るcontractStartDate/EndDateは既にTIMESTAMPTZ(UTC)化されている前提
-  const insertData = userIds.map(uid => ({
-    contract_id: contractId,
-    user_id: uid,
-    status: 1,
-    start_date: contractStartDate,
-    end_date: contractEndDate,
-  }));
-
-  const { error: insertError } = await supabase
-    .from('com_t_user_license')
-    .insert(insertData);
-
-  if (insertError) return { success: false, message: "割当の更新に失敗しました" };
-
-  revalidatePath('/admin/contracts');
-  return { success: true };
-}
-
-/**
- * ライセンスの個別追加
+ * ライセンスの個別追加（UTC変換対応版）
  */
 export async function assignLicenseToUser(
   contractId: string,
   userId: string,
-  startDate: string,
-  endDate: string
+  startDateJst: string,
+  endDateJst: string
 ) {
   const supabase = createAdminClient();
+
+  // UTC変換
+  const { startUtc, endUtc } = getUtcRangeFromJstDate(startDateJst, endDateJst);
 
   const { error } = await supabase
     .from('com_t_user_license')
@@ -261,13 +221,14 @@ export async function assignLicenseToUser(
       contract_id: contractId,
       user_id: userId,
       status: 1,
-      start_date: startDate,
-      end_date: endDate,
+      start_date: startUtc,
+      end_date: endUtc,
     });
 
   if (error) return { success: false, message: error.message };
 
   revalidatePath('/admin/contracts');
+  revalidatePath('/admin/users');
   return { success: true };
 }
 
@@ -291,23 +252,41 @@ export async function removeLicenseFromUser(contractId: string, userId: string) 
 }
 
 /**
- * ライセンス情報の個別更新（期間延長・ステータス変更・備考更新）
+ * ライセンス情報の個別更新（UTC変換対応版）
  */
 export async function updateUserLicense(
   licenseId: string,
   updates: {
-    start_date?: string;
-    end_date?: string;
+    start_date?: string; // YYYY-MM-DD (JST)
+    end_date?: string;   // YYYY-MM-DD (JST)
     status?: number;
     note?: string | null;
   }
 ) {
   const supabase = createAdminClient();
 
+  // 更新用データのコピー
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload: any = { ...updates };
+
+  // 日付が指定されている場合、JST -> UTC 変換を行う
+  // 個別更新画面でも 00:00:00 〜 23:59:59 の範囲を維持するために getUtcRangeFromJstDate を流用
+  if (updates.start_date || updates.end_date) {
+    // どちらか片方しかない場合を考慮し、デフォルト値として空文字を避ける
+    // (getUtcRangeFromJstDate が両方の引数を必要とするため)
+    const tempStart = updates.start_date || "2000-01-01"; // ダミー
+    const tempEnd = updates.end_date || "2099-12-31";     // ダミー
+    
+    const { startUtc, endUtc } = getUtcRangeFromJstDate(tempStart, tempEnd);
+    
+    if (updates.start_date) payload.start_date = startUtc;
+    if (updates.end_date) payload.end_date = endUtc;
+  }
+
   const { error } = await supabase
     .from('com_t_user_license')
     .update({
-      ...updates,
+      ...payload,
       update_date: new Date().toISOString(),
     })
     .eq('license_id', licenseId);
@@ -317,9 +296,52 @@ export async function updateUserLicense(
     return { success: false, message: error.message };
   }
 
-  // ユーザー一覧と契約情報を最新にする
   revalidatePath('/admin/contracts');
   revalidatePath('/admin/users');
 
   return { success: true };
+}
+
+/**
+ * ライセンスの一括割当（UTC変換対応版）
+ */
+export async function bulkAssignLicenses(
+  contractId: string,
+  userIds: string[],
+  startDateJst: string, // YYYY-MM-DD
+  endDateJst: string    // YYYY-MM-DD
+) {
+  const supabase = createAdminClient();
+
+  // 1. JSTでの入力値をUTCの期間に変換（契約作成時と同じロジック）
+  const { startUtc, endUtc } = getUtcRangeFromJstDate(startDateJst, endDateJst);
+
+  // 2. インサート用データの作成
+  const insertData = userIds.map(userId => ({
+    contract_id: contractId,
+    user_id: userId,
+    status: 1,
+    start_date: startUtc, // UTCに統一
+    end_date: endUtc,     // UTCに統一
+  }));
+
+  // 3. まとめてインサート
+  const { data, error } = await supabase
+    .from('com_t_user_license')
+    .insert(insertData)
+    .select();
+
+  if (error) {
+    console.error("Bulk License Assignment Error:", error.message);
+    return { success: false, message: error.message, errorCount: userIds.length };
+  }
+
+  revalidatePath('/admin/users');
+  revalidatePath('/admin/contracts');
+  
+  return { 
+    success: true, 
+    successCount: data.length,
+    assignedUserIds: data.map(d => d.user_id)
+  };
 }

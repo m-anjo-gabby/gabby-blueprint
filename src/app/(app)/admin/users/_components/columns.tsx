@@ -18,7 +18,7 @@ export const createUserColumns = (clients: Client[]): ColumnDef<UserRecord>[] =>
   },
   {
     accessorKey: "user_name",
-    header: "ユーザー / アカウント状態",
+    header: "ユーザー",
     cell: ({ row }) => {
       const { user_name, email, last_sign_in_at, confirmed_at } = row.original;
       
