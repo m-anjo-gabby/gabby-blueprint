@@ -28,25 +28,39 @@ const formatToLocalDate = (dateString?: string) => {
 };
 
 /**
- * 契約情報の一覧取得（管理画面一覧用）
+ * 契約情報の一覧取得（ページネーション・検索対応）
  */
-export async function getContracts() {
-  const supabase = createAdminClient();
-  
-  // 新しいビューから取得。リレーションの結合なしで1クエリで完結
-  const { data: contracts, error } = await supabase
+export async function getContracts(page: number = 1, limit: number = 10, searchQuery?: string) {
+  const supabase = await createAdminClient();
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  let query = supabase
     .from('vw_contract_details')
-    .select('*')
-    .order('insert_date', { ascending: false });
+    .select('*', { count: 'exact' });
+
+  // 検索キーワードがあれば、顧客名でフィルタリング
+  if (searchQuery) {
+    query = query.ilike('client_name', `%${searchQuery}%`);
+  }
+
+  const { data: contracts, count, error } = await query
+    .order('insert_date', { ascending: false })
+    .range(from, to);
 
   if (error) throw new Error(error.message);
 
-  // 日付のフォーマット処理（JST変換）のみ行う
-  return contracts.map(contract => ({
+  // フォーマット処理
+  const formattedContracts = contracts.map(contract => ({
     ...contract,
     start_date: contract.start_date ? formatToLocalDate(contract.start_date) : '',
     end_date: contract.end_date ? formatToLocalDate(contract.end_date) : '',
   }));
+
+  return {
+    contracts: formattedContracts,
+    totalCount: count || 0,
+  };
 }
 
 /**

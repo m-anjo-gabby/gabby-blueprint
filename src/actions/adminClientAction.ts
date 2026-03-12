@@ -26,19 +26,26 @@ export async function getClientsFilter() {
 }
 
 /**
- * 顧客一覧取得（ページネーション・削除フラグ考慮）
+ * 顧客一覧取得（ページネーション・削除フラグ・検索対応）
  */
-export async function getClients(page: number = 1, limit: number = 10) {
+export async function getClients(page: number = 1, limit: number = 10, searchQuery?: string) {
   const supabase = await createAdminClient();
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, count, error } = await supabase
+  let query = supabase
     .from('com_m_client')
     .select('*', { count: 'exact' })
     .eq('delete_flg', '0') // 削除済みは除外
     .order('insert_date', { ascending: false })
     .range(from, to);
+
+  // 検索クエリがある場合、顧客名(client_name)で部分一致検索
+  if (searchQuery) {
+    query = query.ilike('client_name', `%${searchQuery}%`);
+  }
+
+  const { data, count, error } = await query;
 
   if (error) throw new Error(error.message);
 

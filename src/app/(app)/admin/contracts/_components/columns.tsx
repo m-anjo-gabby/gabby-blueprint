@@ -12,8 +12,9 @@ import { ContractLicenseDialog } from './ContractLicenseDialog';
 export const columns: ColumnDef<ContractDetail>[] = [
   {
     id: 'client_name',
-    accessorKey: 'com_m_client.client_name',
+    accessorKey: 'client_name',
     header: '顧客名',
+    filterFn: 'includesString',
     cell: ({ row }) => {
       return (
         <span className="font-medium text-slate-900">

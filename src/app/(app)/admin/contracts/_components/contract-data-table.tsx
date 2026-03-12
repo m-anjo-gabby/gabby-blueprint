@@ -1,17 +1,12 @@
-// src/app/(app)/admin/contracts/_components/contract-data-table.tsx
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
-  getPaginationRowModel,
-  getFilteredRowModel, // 追加
-  ColumnFiltersState,  // 追加
-} from '@tanstack/react-table';
-
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -19,69 +14,154 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 interface ContractDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  pageCount: number;
+  totalCount?: number;
 }
 
 export function ContractDataTable<TData, TValue>({
   columns,
   data,
+  pageCount,
+  totalCount = 0,
 }: ContractDataTableProps<TData, TValue>) {
-  // フィルター状態の定義
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // 検索キーワードのローカル状態
+  const [searchValue, setSearchValue] = React.useState(searchParams.get("q") || "");
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onColumnFiltersChange: setColumnFilters,    // 追加
-    getFilteredRowModel: getFilteredRowModel(), // 追加
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
   });
 
-  return (
-    <div className="space-y-4">
+  const currentPage = Number(searchParams.get("page")) || 1;
 
-      {/* フィルター入力エリア */}
-      <div className="flex items-center gap-2">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="顧客名で検索..."
-            value={(table.getColumn('client_name')?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-              table.getColumn('client_name')?.setFilterValue(event.target.value)
-            }
-            className="pl-9 bg-white border-slate-200"
-          />
+  /**
+   * 検索実行
+   */
+  const handleSearchTrigger = (term: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (term) {
+      params.set("q", term);
+      params.set("page", "1");
+    } else {
+      params.delete("q");
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  /**
+   * 検索リセット
+   */
+  const handleReset = () => {
+    setSearchValue("");
+    handleSearchTrigger("");
+  };
+
+  /**
+   * ページ変更
+   */
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", newPage.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  return (
+    <div className="space-y-0">
+      {/* 検索・ページネーションパネル */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-slate-50/80 rounded-t-lg border-x border-t border-slate-200">
+        
+        <div className="flex items-center gap-2 w-full max-w-md">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
+            <Input
+              placeholder="顧客名で契約を検索..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSearchTrigger(searchValue);
+              }}
+              className="pl-10 pr-10 h-9 bg-white border-slate-200 focus-visible:ring-1 focus-visible:ring-slate-400 shadow-sm"
+            />
+            {searchValue && (
+              <button
+                onClick={handleReset}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <Button 
+            onClick={() => handleSearchTrigger(searchValue)}
+            variant="secondary" 
+            size="sm" 
+            className="h-9 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 shadow-sm shrink-0 font-medium"
+          >
+            検索
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {totalCount > 0 && (
+            <div className="hidden md:block text-[13px] text-slate-500 whitespace-nowrap font-medium">
+              全 <span className="text-slate-900">{totalCount}</span> 件
+            </div>
+          )}
+          
+          <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="h-8 w-8 p-0 hover:bg-slate-100 disabled:opacity-30"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex items-center px-3 text-[13px] font-medium border-x border-slate-100 min-w-[4rem] justify-center text-slate-600">
+              <span>{currentPage}</span>
+              <span className="mx-1 text-slate-300">/</span>
+              <span>{pageCount || 1}</span>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= pageCount}
+              className="h-8 w-8 p-0 hover:bg-slate-100 disabled:opacity-30"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* テーブル本体 */}
-      <div className="rounded-md border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-b-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50/50">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="text-slate-600 font-semibold py-3">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                  <TableHead key={header.id} className="text-slate-600 font-bold py-3 px-4 text-xs uppercase tracking-wider">
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -92,11 +172,10 @@ export function ContractDataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className="hover:bg-slate-50/50 transition-colors cursor-default"
+                  className="hover:bg-slate-50/40 transition-colors border-slate-100"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3 px-4">
+                    <TableCell key={cell.id} className="py-3 px-4 text-slate-700">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -104,43 +183,13 @@ export function ContractDataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-slate-500">
-                  登録されている契約情報がありません。
+                <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400">
+                  一致する契約情報が見つかりませんでした。
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </div>
-
-      {/* 簡易パージネーション */}
-      <div className="flex items-center justify-between px-2 text-sm text-slate-500">
-        <div>
-          全 {data.length} 件
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="flex items-center gap-1 font-medium text-slate-700">
-            {table.getState().pagination.pageIndex + 1} / {table.getPageCount() || 1}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
     </div>
   );

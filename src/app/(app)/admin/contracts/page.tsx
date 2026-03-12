@@ -4,9 +4,22 @@ import { ContractDataTable } from './_components/contract-data-table';
 import { columns } from './_components/columns';
 import { ContractFormDialog } from './_components/ContractFormDialog';
 
-export default async function AdminContractsPage() {
-  // アクションから契約一覧を取得
-  const contracts = await getContracts();
+export default async function AdminContractsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; q?: string }>;
+}) {
+  // 1. Next.js 15 の仕様に基づき searchParams を await する
+  const params = await searchParams;
+  const currentPage = Number(params.page) || 1;
+  const searchQuery = params.q || "";
+  const pageSize = 10;
+
+  // 2. サーバーアクションから「データ」と「総件数」を取得
+  const { contracts, totalCount } = await getContracts(currentPage, pageSize, searchQuery);
+
+  // 3. 全ページ数を計算
+  const pageCount = Math.ceil(totalCount / pageSize);
 
   return (
     <div className="space-y-6">
@@ -19,14 +32,16 @@ export default async function AdminContractsPage() {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* 新規登録用のダイアログ */}
           <ContractFormDialog mode="create" />
         </div>
       </div>
 
+      {/* 4. 共通化した DataTable に必要なプロパティをすべて渡す */}
       <ContractDataTable 
         columns={columns} 
         data={contracts || []} 
+        pageCount={pageCount}
+        totalCount={totalCount}
       />
     </div>
   );

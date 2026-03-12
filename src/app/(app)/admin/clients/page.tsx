@@ -7,16 +7,16 @@ import { columns } from './_components/columns';
 export default async function AdminClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
+  const searchQuery = params.q || ""; // 検索クエリを取得
   const pageSize = 10;
 
-  // サーバーアクションで顧客一覧を取得
-  const { clients, totalCount } = await getClients(currentPage, pageSize);
+  // 検索クエリも一緒にサーバーアクションへ渡す
+  const { clients, totalCount } = await getClients(currentPage, pageSize, searchQuery);
 
-  // 全ページ数を計算
   const pageCount = Math.ceil(totalCount / pageSize);
 
   return (
@@ -30,16 +30,15 @@ export default async function AdminClientsPage({
         </div>
         
         <div className="flex items-center gap-3">
-          {/* 新規登録用のダイアログ */}
           <ClientFormDialog mode="create" />
         </div>
       </div>
 
-      {/* 顧客専用の DataTable を使用 */}
       <ClientDataTable 
         columns={columns} 
         data={clients || []} 
         pageCount={pageCount}
+        totalCount={totalCount} // 件数表示のために追加
       />
     </div>
   );
