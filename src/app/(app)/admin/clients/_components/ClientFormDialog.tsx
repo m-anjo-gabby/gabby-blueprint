@@ -89,7 +89,6 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
         showToast(mode === 'create' ? "顧客を登録しました" : "顧客を更新しました", "success");
         setOpen(false);
         setIsConfirming(false);
-        router.refresh();
       } else {
         setServerError(result.message || "処理に失敗しました");
       }

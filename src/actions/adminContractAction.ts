@@ -2,30 +2,8 @@
 'use server';
 
 import { createAdminClient } from "@/lib/admin";
+import { formatToJstDate, getUtcRangeFromJstDate } from "@/utils/date";
 import { revalidatePath } from 'next/cache';
-
-/**
- * ヘルパー：JSTの日付文字列をUTCの開始/終了日時に変換する
- * アドミンが入力した日付（JST）の「開始日の00:00」から「終了日の23:59:59」をUTCとして正確に生成します。
- */
-const getUtcRangeFromJstDate = (startDateStr: string, endDateStr: string) => {
-  // 日付が空、または不正な場合のガード
-  if (!startDateStr || !endDateStr || isNaN(Date.parse(startDateStr)) || isNaN(Date.parse(endDateStr))) {
-    throw new Error(`Invalid date provided: start=${startDateStr}, end=${endDateStr}`);
-  }
-  return {
-    startUtc: new Date(`${startDateStr}T00:00:00+09:00`).toISOString(),
-    endUtc: new Date(`${endDateStr}T23:59:59.999+09:00`).toISOString(),
-  };
-};
-
-// ISO形式(UTC)からJSTの YYYY-MM-DD を抽出する
-const formatToLocalDate = (dateString?: string) => {
-  if (!dateString) return "";
-  // 日本時間に変換した上で日付部分(YYYY-MM-DD)だけを切り出す
-  const date = new Date(dateString);
-  return date.toLocaleDateString('sv-SE'); // 'sv-SE' は YYYY-MM-DD 形式を返します
-};
 
 /**
  * 契約情報の一覧取得（ページネーション・検索対応）
@@ -53,8 +31,8 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
   // フォーマット処理
   const formattedContracts = contracts.map(contract => ({
     ...contract,
-    start_date: contract.start_date ? formatToLocalDate(contract.start_date) : '',
-    end_date: contract.end_date ? formatToLocalDate(contract.end_date) : '',
+    start_date: contract.start_date ? formatToJstDate(contract.start_date) : '',
+    end_date: contract.end_date ? formatToJstDate(contract.end_date) : '',
   }));
 
   return {
@@ -87,8 +65,8 @@ export async function getActiveContractsByClient(clientId: string) {
   // 日付を JST の YYYY-MM-DD 形式に変換
   return contracts.map(contract => ({
     ...contract,
-    start_date: contract.start_date ? formatToLocalDate(contract.start_date) : '',
-    end_date: contract.end_date ? formatToLocalDate(contract.end_date) : '',
+    start_date: contract.start_date ? formatToJstDate(contract.start_date) : '',
+    end_date: contract.end_date ? formatToJstDate(contract.end_date) : '',
   }));
 }
 

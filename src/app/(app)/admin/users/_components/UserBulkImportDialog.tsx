@@ -1,31 +1,34 @@
 'use client';
 
-import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
+import { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import Papa from 'papaparse';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/useToast';
-import { Upload, FileText, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw, ShieldCheck } from 'lucide-react';
+import { Upload, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw } from 'lucide-react';
 import { Client, RawCsvRow, BulkUser, BulkImportResponse } from '@/types/user';
 import { bulkCreateUsers } from '@/actions/adminUserAction';
-import { getActiveContractsByClient, bulkAssignLicenses } from '@/actions/adminContractAction'; // アクションを追加
+import { getActiveContractsByClient, bulkAssignLicenses } from '@/actions/adminContractAction';
+import { getClientsFilter } from '@/actions/adminClientAction'; // 追加
 import { useRouter } from 'next/navigation';
 import { ContractDetail } from '@/types/contract';
 import { Badge } from '@/components/ui/badge';
-
-interface UserBulkImportDialogProps {
-  clients: Client[];
-}
+import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { cn } from '@/lib/utils';
 
 const MAX_BULK_COUNT = 30;
 
-export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
+export function UserBulkImportDialog() {
   const router = useRouter();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   
+  // --- 自律取得のためのState ---
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(false);
+
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [contracts, setContracts] = useState<ContractDetail[]>([]); // 有効な契約一覧
   const [selectedContractId, setSelectedContractId] = useState<string>("none"); // 選択された契約ID
@@ -39,25 +42,53 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedClient = clients.find(c => c.client_id === selectedClientId);
 
-  // 顧客が選択されたら有効な契約を取得する
-  useEffect(() => {
-    async function fetchContracts() {
-      if (!selectedClientId) {
-        setContracts([]);
-        return;
+  /**
+   * ダイアログの開閉制御（onOpenChangeで使用）
+   */
+  const handleOpenChange = async (nextOpen: boolean) => {
+    if (nextOpen) {
+      setOpen(true);
+      // ダイアログが開かれた時に顧客リストを取得
+      if (clients.length === 0) {
+        setIsLoadingClients(true);
+        try {
+          const res = await getClientsFilter();
+          setClients(res);
+        } catch (error) {
+          showToast("顧客リストの取得に失敗しました", "error");
+        } finally {
+          setIsLoadingClients(false);
+        }
       }
-      setIsLoadingContracts(true);
-      try {
-        const activeContracts = await getActiveContractsByClient(selectedClientId);
-        setContracts(activeContracts);
-      } catch (error) {
-        showToast("契約情報の取得に失敗しました", "error");
-      } finally {
-        setIsLoadingContracts(false);
-      }
+    } else {
+      handleClose();
     }
-    fetchContracts();
-  }, [selectedClientId]);
+  };
+
+  /**
+   * 顧客が選択されたら有効な契約を取得する
+   * useEffectの代わりにSelectのonValueChangeから直接呼び出す
+   */
+  const handleClientChange = async (clientId: string) => {
+    setSelectedClientId(clientId);
+    setSelectedContractId("none");
+    setData([]);
+    
+    if (!clientId) {
+      setContracts([]);
+      return;
+    }
+
+    setIsLoadingContracts(true);
+    try {
+      const activeContracts = await getActiveContractsByClient(clientId);
+      setContracts(activeContracts);
+    } catch (error) {
+      showToast("契約情報の取得に失敗しました", "error");
+    } finally {
+      setIsLoadingContracts(false);
+    }
+  };
 
   const processFile = (file: File) => {
     if (!selectedClientId) {
@@ -104,12 +135,12 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
 
     setIsProcessing(true);
     
-    // ユーザー作成の結果を保持する変数（catchでも参照できるように外で定義）
+    // ユーザー作成の結果を保持する変数
     let userResult: BulkImportResponse | null = null;
     let assignedUserIds: string[] = [];
 
     try {
-      // 1. ユーザー作成（ここが失敗した場合は catch へ）
+      // 1. ユーザー作成
       userResult = await bulkCreateUsers(data);
       
       if (!userResult || !userResult.details) {
@@ -124,7 +155,6 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
       if (selectedContractId !== "none" && successIds.length > 0) {
         const targetContract = contracts.find(c => c.contract_id === selectedContractId);
         
-        // 日付が確実に渡せるかチェック（ビュー側でフォーマット済みの YYYY-MM-DD を使用）
         if (targetContract?.start_date && targetContract?.end_date) {
           const lResult = await bulkAssignLicenses(
             selectedContractId,
@@ -142,14 +172,13 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
       }
     } catch (error) {
       showToast("処理中にエラーが発生しました", "error");
-      // ユーザー作成自体が全くできなかった場合のみここで終了
       if (!userResult) {
         setIsProcessing(false);
         return;
       }
     }
 
-    // 3. レポート作成（userResultがあれば、ライセンス割当でエラーが起きても必ず実行される）
+    // 3. レポート作成
     if (userResult) {
       const reportData = data.map((item) => {
         const detail = userResult!.details.find(d => d.email === item.email);
@@ -177,7 +206,6 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
 
       setData(reportData);
       setHasCompleted(true);
-      router.refresh();
     }
     
     setIsProcessing(false);
@@ -189,9 +217,10 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
     setSelectedClientId("");
     setSelectedContractId("none");
     setHasCompleted(false);
+    setContracts([]);
   };
 
-  // --- ドラッグ&ドロップ系ハンドラは変更なし ---
+  // --- ドラッグ&ドロップ系ハンドラ ---
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) processFile(file);
@@ -206,7 +235,7 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => !val ? handleClose() : setOpen(true)}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2 border-dashed border-slate-300 hover:bg-slate-50 transition-colors font-bold">
           <UserPlus size={16} /> 一括登録
@@ -231,39 +260,78 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">1</span>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">所属顧客</label>
               </div>
-              <Select 
-                value={selectedClientId} 
-                onValueChange={(val) => { setSelectedClientId(val); setSelectedContractId("none"); setData([]); }}
-                disabled={isProcessing || hasCompleted}
-              >
-                <SelectTrigger className="bg-white rounded-xl border-slate-200 h-11"><SelectValue placeholder="顧客を選択してください" /></SelectTrigger>
-                <SelectContent className="rounded-xl">{clients.map(c => <SelectItem key={c.client_id} value={c.client_id}>{c.client_name}</SelectItem>)}</SelectContent>
-              </Select>
+              
+              <SearchableSelect
+                options={clients.map(c => ({ value: c.client_id, label: c.client_name }))}
+                value={selectedClientId}
+                onChange={handleClientChange}
+                placeholder={isLoadingClients ? "読み込み中..." : "顧客を選択してください"}
+                searchPlaceholder="顧客名で検索..."
+                disabled={isProcessing || hasCompleted || isLoadingClients}
+                className="bg-white shadow-sm" // 一括登録の背景に合わせて微調整
+              />
             </div>
 
             {/* STEP 2: ライセンスプラン選択 */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">2</span>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">初期ライセンス割当（任意）</label>
+                <span className={cn(
+                  "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white transition-colors",
+                  contracts.length > 0 ? "bg-indigo-600" : "bg-slate-300"
+                )}>
+                  2
+                </span>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  初期ライセンス割当（任意）
+                </label>
               </div>
+
               <Select 
                 value={selectedContractId} 
                 onValueChange={setSelectedContractId}
-                disabled={isProcessing || hasCompleted || !selectedClientId || isLoadingContracts}
+                disabled={isProcessing || hasCompleted || !selectedClientId || isLoadingContracts || contracts.length === 0}
               >
-                <SelectTrigger className="bg-white rounded-xl border-slate-200 h-11">
-                  {isLoadingContracts ? <Loader2 size={16} className="animate-spin mx-auto text-slate-400" /> : <SelectValue placeholder="割り当てない" />}
+                <SelectTrigger className={cn(
+                  "bg-white rounded-xl border-slate-200 h-11 transition-all",
+                  !selectedClientId && "opacity-50",
+                  selectedClientId && contracts.length === 0 && "border-orange-200 bg-orange-50/30"
+                )}>
+                  {isLoadingContracts ? (
+                    <Loader2 size={16} className="animate-spin mx-auto text-slate-400" />
+                  ) : selectedClientId && contracts.length === 0 ? (
+                    <>
+                      <div className="flex items-center gap-2 text-orange-600">
+                        <AlertCircle size={14} className="shrink-0" />
+                        <span className="text-xs font-bold whitespace-nowrap">
+                          有効な契約がないため、スキップします
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <SelectValue placeholder="割り当てない（ユーザー登録のみ）" />
+                  )}
                 </SelectTrigger>
+
                 <SelectContent className="rounded-xl">
-                  <SelectItem value="none">割り当てない（ユーザー登録のみ）</SelectItem>
-                  {contracts.map(c => (
-                    <SelectItem key={c.contract_id} value={c.contract_id} className="text-xs">
-                      {c.plan_name}（残 {c.remaining_licenses}枠）
-                    </SelectItem>
-                  ))}
+                  {/* 契約がある場合のみ「割り当てない」を表示 */}
+                  {contracts.length > 0 ? (
+                    <>
+                      <SelectItem value="none" className="text-xs text-slate-500 italic">
+                        割り当てない（ユーザー登録のみ）
+                      </SelectItem>
+                      {contracts.map(c => (
+                        <SelectItem key={c.contract_id} value={c.contract_id} className="text-xs">
+                          {c.plan_name}（残 {c.remaining_licenses}枠）
+                        </SelectItem>
+                      ))}
+                    </>
+                  ) : (
+                    /* ここは基本的に disabled で開けないが、万が一のフォールバック */
+                    <SelectItem value="none" disabled>有効な契約が見つかりません</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
+
             </div>
           </div>
 
@@ -310,33 +378,24 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
                             <div className="flex flex-col items-center gap-1">
                               {row.isProcessed ? (
                                 <>
-                                  {/* ユーザー作成ステータス */}
-                                        <Badge 
-                                          variant="outline" 
-                                          className={`text-[9px] h-4 px-1.5 font-bold border-transparent text-white ${
-                                            row.status === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
-                                          }`}
-                                        >
-                                          {row.status === 'success' ? '作成成功' : '作成失敗'}
-                                        </Badge>
-
-                                        {/* ライセンスステータス（成功/失敗時のみ表示） */}
-                                        {row.licenseStatus === 'success' && (
-                                          <Badge 
-                                            variant="outline" 
-                                            className="bg-emerald-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold"
-                                          >
-                                            ライセンス割当済
-                                          </Badge>
-                                        )}
-                                        {row.licenseStatus === 'error' && (
-                                          <Badge 
-                                            variant="outline" 
-                                            className="bg-rose-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold"
-                                          >
-                                            ライセンス割当失敗
-                                          </Badge>
-                                        )}
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`text-[9px] h-4 px-1.5 font-bold border-transparent text-white ${
+                                      row.status === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
+                                    }`}
+                                  >
+                                    {row.status === 'success' ? '作成成功' : '作成失敗'}
+                                  </Badge>
+                                  {row.licenseStatus === 'success' && (
+                                    <Badge variant="outline" className="bg-emerald-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
+                                      ライセンス割当済
+                                    </Badge>
+                                  )}
+                                  {row.licenseStatus === 'error' && (
+                                    <Badge variant="outline" className="bg-rose-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
+                                      ライセンス割当失敗
+                                    </Badge>
+                                  )}
                                 </>
                               ) : (
                                 row.isValid ? <CheckCircle2 size={18} className="text-emerald-500" /> : <AlertCircle size={18} className="text-rose-500" />
@@ -358,7 +417,6 @@ export function UserBulkImportDialog({ clients }: UserBulkImportDialogProps) {
           </div>
         </div>
 
-        {/* FOOTER */}
         <div className="bg-slate-50 p-6 flex justify-between items-center border-t border-slate-200">
           <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-600 font-bold text-xs rounded-lg" 
             onClick={() => { setData([]); setHasCompleted(false); setSelectedContractId("none"); }} 

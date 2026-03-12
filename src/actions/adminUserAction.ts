@@ -3,35 +3,54 @@
 
 import { createAdminClient } from "@/lib/admin";
 import { BulkImportResponse, BulkImportResultDetail, BulkUser, CreateUserResponse, UserRecord } from "@/types/user";
+import { formatToJstDate } from "@/utils/date";
+import { revalidatePath } from "next/cache";
 
-export async function getUsersWithClient(
-  clientId?: string,
+/**
+ * ユーザ情報の一覧取得（ページネーション・検索対応）
+ */
+export async function getUsers(
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  searchQuery?: string,
+  clientId?: string
 ): Promise<{ users: UserRecord[]; totalCount: number }> {
   const supabase = await createAdminClient();
 
-  // 1. 範囲の計算
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  // 2. クエリの作成（count: 'exact' を追加して全件数を取得）
   let query = supabase
     .from('vw_user_list')
-    .select('*', { count: 'exact' })
-    .order('user_id', { ascending: true })
-    .range(from, to); // 取得範囲を指定
+    .select('*', { count: 'exact' });
 
+  // 1. 検索キーワードがある場合（ユーザー名、メール、顧客名を横断検索）
+  if (searchQuery) {
+    // .or() を使って、複数のカラムのいずれかにヒットすればOKとする
+    query = query.or(`user_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,client_name.ilike.%${searchQuery}%`);
+  };
+
+  // 2. 顧客IDが指定されている場合（特定の顧客で絞り込む必要がある場合のみ）
   if (clientId) {
     query = query.eq('client_id', clientId);
-  }
+  };
 
-  const { data, error, count } = await query;
+  const { data, error, count } = await query
+    .order('user_id', { ascending: true })
+    .range(from, to);
+
   if (error) throw error;
 
+  // DB(UTC) -> UI(JST YYYY-MM-DD) へ変換
+  const formattedUsers = data.map((user: UserRecord) => ({
+    ...user,
+    license_start_date: user.license_start_date ? formatToJstDate(user.license_start_date) : null,
+    license_end_date: user.license_end_date ? formatToJstDate(user.license_end_date) : null,
+  }));
+
   return {
-    users: data as UserRecord[],
-    totalCount: count || 0
+    users: formattedUsers as UserRecord[],
+    totalCount: count || 0,
   };
 }
 
@@ -70,6 +89,8 @@ export async function createUser(
       return { success: false, user_id: null, errorType: 'unexpected_error', message: `登録に失敗しました: ${error.message}` };
     }
 
+    // 登録成功時にキャッシュを無効化
+    revalidatePath('/admin/users');
     return { success: true, user_id: data.user.id, errorType: null, message: null };
 
   } catch (err) {
@@ -89,6 +110,8 @@ export async function resendInvite(email: string) {
     redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/invite`,
   });
   if (error) throw error;
+  // 状態（招待中などの表示）が変わる可能性がある
+  revalidatePath('/admin/users');
   return { success: true };
 }
 
@@ -135,7 +158,10 @@ export async function updateUser(
       return { success: false, errorType: 'update_error', message: `マスタ更新に失敗しました: ${dbError.message}` };
     }
 
+    // 更新完了時にキャッシュを無効化
+    revalidatePath('/admin/users');
     return { success: true };
+
   } catch (err) {
     console.error("Unexpected Update Error:", err);
     return { success: false, errorType: 'unexpected_error', message: "通信エラーが発生しました。" };
@@ -185,5 +211,7 @@ export async function bulkCreateUsers(users: BulkUser[]): Promise<BulkImportResp
     }
   }
 
+  // ループ終了後に確実に最新の状態にする
+  revalidatePath('/admin/users');
   return { success: true, total: users.length, successCount, errorCount, details: results };
 }

@@ -17,6 +17,7 @@ export type UserRecord = {
   contract_id: string | null;
   license_id: string | null;
   license_status: number | null;
+  license_start_date: string | null;
   license_end_date: string | null;
   plan_name: string | null;
 };

@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/useToast'
 import { createContract, updateContract } from '@/actions/adminContractAction'
@@ -17,6 +16,7 @@ import { useRouter } from 'next/navigation'
 import { AlertCircle, PlusCircle, Edit, CheckCircle2 } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { ContractDetail } from '@/types/contract'
+import { SearchableSelect } from '@/components/common/SearchableSelect'
 
 // --- スキーマ定義 ---
 const contractSchema = z.object({
@@ -26,7 +26,16 @@ const contractSchema = z.object({
   start_date: z.string().min(1, '開始日は必須です'),
   end_date: z.string().min(1, '終了日は必須です'),
   note: z.string().nullable().optional(),
-})
+}).refine((data) => {
+  // 開始日と終了日が両方存在する場合のみチェック
+  if (data.start_date && data.end_date) {
+    return new Date(data.start_date) <= new Date(data.end_date);
+  }
+  return true;
+}, {
+  message: "終了日は開始日以降の日付を入力してください",
+  path: ["end_date"], // エラーを end_date フィールドに紐付ける
+});
 
 type ContractFormInput = z.input<typeof contractSchema>
 type ContractFormOutput = z.output<typeof contractSchema>
@@ -111,7 +120,6 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
       if (result.success) {
         showToast(mode === 'create' ? '契約を登録しました' : '契約を更新しました', 'success')
         setOpen(false)
-        router.refresh()
       } else {
         setServerError(result.message || '予期せぬエラーが発生しました')
       }
@@ -151,30 +159,40 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white">
             
             {/* --- 対象顧客 --- */}
-            <FormField control={form.control} name="client_id" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">対象顧客</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                    {clients.find((c) => c.client_id === (field.value as string))?.client_name || '未選択'}
-                  </div>
-                ) : (
-                  <Select value={field.value as string} onValueChange={field.onChange}>
+            <FormField
+              control={form.control}
+              name="client_id"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    対象顧客
+                  </FormLabel>
+                  
+                  {isConfirming ? (
+                    /* 確認モード：読み取り専用のスタイル */
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                      {clients.find((c) => c.client_id === (field.value as string))?.client_name || '未選択'}
+                    </div>
+                  ) : (
+                    /* 入力モード：汎用検索セレクター */
                     <FormControl>
-                      <SelectTrigger disabled={mode === 'edit'} className="bg-white rounded-xl border-slate-200">
-                        <SelectValue placeholder="顧客を選択" />
-                      </SelectTrigger>
+                      <SearchableSelect
+                        options={clients.map(c => ({ value: c.client_id, label: c.client_name }))}
+                        value={field.value as string}
+                        onChange={field.onChange}
+                        placeholder="顧客を選択"
+                        searchPlaceholder="顧客名で検索..."
+                        // 編集モード時は顧客変更不可
+                        disabled={mode === 'edit'} 
+                        className="bg-white"
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {clients.map((c) => (
-                        <SelectItem key={c.client_id} value={c.client_id}>{c.client_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
+                  )}
+                  
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* --- プラン & ライセンス --- */}
             <div className="grid grid-cols-2 gap-4">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,15 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/useToast';
 import { createUser, updateUser, resendInvite } from '@/actions/adminUserAction';
 import { getActiveContractsByClient, assignLicenseToUser } from '@/actions/adminContractAction';
-import { useRouter } from 'next/navigation';
-import { Mail, AlertCircle, PlusCircle, CheckCircle2, Loader2, Edit, ShieldCheck, RefreshCcw, Save } from 'lucide-react';
+import { Mail, AlertCircle, PlusCircle, CheckCircle2, Loader2, Edit, ShieldCheck, Save } from 'lucide-react';
 import { Client, CreateUserResponse, UserRecord } from '@/types/user';
-import { Alert } from '@/components/ui/alert';
 import { ContractDetail } from '@/types/contract';
+import { getClientsFilter } from '@/actions/adminClientAction';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 // --- スキーマ定義 ---
 const userSchema = z.object({
-  email: z.email({ message: "有効なメールアドレスを入力してください" }),
+  email: z.string().email({ message: "有効なメールアドレスを入力してください" }),
   user_name: z.string().min(1, '名前は必須です'),
   client_id: z.string().min(1, '所属顧客を選択してください'),
   user_type: z.string().min(1, 'タイプは必須です'),
@@ -31,7 +31,6 @@ type UserFormValues = z.infer<typeof userSchema>;
 interface UserFormDialogProps {
   mode?: 'create' | 'edit';
   initialData?: UserRecord;
-  clients: Client[];
 }
 
 const DEFAULT_VALUES: UserFormValues = { 
@@ -41,15 +40,15 @@ const DEFAULT_VALUES: UserFormValues = {
   user_type: '1' 
 };
 
-/**
- * ユーザー登録・編集ダイアログ
- * 新規登録時のみ、完了後にライセンス割当ステップへ移行する
- */
-export function UserFormDialog({ mode = 'create', initialData, clients }: UserFormDialogProps) {
+export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogProps) {
   const [open, setOpen] = useState<boolean>(false);
   const [isConfirming, setIsConfirming] = useState<boolean>(false);
   const [isResending, setIsResending] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  
+  // 自律取得用State
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(false);
   
   // ライセンス管理用 (新規作成時の連動用)
   const [isLicenseStep, setIsLicenseStep] = useState(false);
@@ -59,7 +58,6 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
   const [isAssigning, setIsAssigning] = useState(false);
 
   const { showToast } = useToast();
-  const router = useRouter();
 
   const getInitialValues = (data?: UserRecord): UserFormValues => {
     if (!data || mode === 'create') return DEFAULT_VALUES;
@@ -85,23 +83,23 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
     setServerError(null);
     try {
       if (mode === 'edit' && initialData?.id) {
-        // --- 編集モード：更新して完了 ---
+        // --- 編集モード ---
         const result = await updateUser(initialData.id, values.email, values.user_name, values.client_id, values.user_type);
         if (result.success) {
           showToast("ユーザー情報を更新しました", "success");
-          handleClose(); // 編集時はライセンスステップへ行かず閉じる
+          handleClose(); // アクション内でrevalidatePath済みのためrefresh不要
         } else {
           setServerError(result.message || "更新に失敗しました");
         }
       } else {
-        // --- 登録モード：作成後、ライセンス設定へ ---
+        // --- 登録モード ---
         const result: CreateUserResponse = await createUser(values.email, values.user_name, values.client_id, values.user_type);
         if (result.success) {
           setTargetUserId(result.user_id);
           const contracts = await getActiveContractsByClient(values.client_id);
           setAvailableContracts(contracts as ContractDetail[]);
           
-          setIsLicenseStep(true); // 新規登録時のみステップ移行
+          setIsLicenseStep(true); 
           showToast("ユーザーを作成しました。続けてライセンスを設定します。", "success");
         } else {
           if (result.errorType === 'email_exists') {
@@ -116,11 +114,11 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
   };
 
   /**
-   * ライセンス割当実行 (新規作成時のみ利用)
+   * ライセンス割当実行
    */
   const handleAssignLicense = async () => {
     if (!targetUserId || !selectedContractId || selectedContractId === "none") {
-      handleClose(); // 割当なしで完了
+      handleClose();
       return;
     }
     
@@ -166,19 +164,47 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
     }
   };
 
+  /**
+   * 閉じる時のリセット処理
+   */
   const handleClose = () => {
     setOpen(false);
+    // 状態のリセット
     setIsConfirming(false);
     setIsLicenseStep(false);
     setTargetUserId(null);
     setServerError(null);
     setSelectedContractId("");
+    // フォームリセット (initialDataがある場合はそれを、なければDEFAULTを反映)
     form.reset(getInitialValues(initialData));
-    router.refresh();
+    
+  };
+
+  /**
+   * ダイアログの開閉制御
+   */
+  const handleOpenChange = async (nextOpen: boolean) => {
+    if (nextOpen) {
+      setOpen(true);
+      // ダイアログを開いた際に顧客リストがなければ取得
+      if (clients.length === 0) {
+        setIsLoadingClients(true);
+        try {
+          const data = await getClientsFilter();
+          setClients(data);
+        } catch (error) {
+          showToast("顧客リストの取得に失敗しました", "error");
+        } finally {
+          setIsLoadingClients(false);
+        }
+      }
+    } else {
+      handleClose();
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose() || setOpen(isOpen)}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none transition-all active:scale-95">
@@ -208,11 +234,48 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
         
         <div className="bg-white">
           {!isLicenseStep ? (
-            /* --- STEP 1: 基本情報 --- */
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-5">
-                
                 <div className="space-y-4">
+
+                  {/* --- ID表示エリア（編集モード時のみ） --- */}
+                  {mode === 'edit' && initialData?.id && (
+                    <div className="space-y-1.5 px-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        ユーザーID (UUID)
+                      </label>
+                      <div className="group relative flex items-center">
+                        <code className="flex-1 bg-slate-50 text-slate-500 text-[10px] font-mono px-3 py-2 rounded-lg border border-slate-100 truncate">
+                          {initialData.id}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="ml-2 h-8 px-2 text-slate-400 hover:text-indigo-600 transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(initialData.id);
+                            showToast("IDをコピーしました", "success");
+                          }}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                          </svg>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   <FormField control={form.control} name="email" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">メールアドレス</FormLabel>
@@ -238,22 +301,38 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
                   )} />
 
                   <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="client_id" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">所属顧客</FormLabel>
-                        {isConfirming ? (
-                          <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                            {clients.find((c) => c.client_id === field.value)?.client_name || '未選択'}
-                          </div>
-                        ) : (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="選択" /></SelectTrigger></FormControl>
-                            <SelectContent>{clients.map((c) => (<SelectItem key={c.client_id} value={c.client_id}>{c.client_name}</SelectItem>))}</SelectContent>
-                          </Select>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )} />
+                    <FormField
+                      control={form.control}
+                      name="client_id"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            所属顧客
+                          </FormLabel>
+                          
+                          {isConfirming ? (
+                            /* --- 確認モード --- */
+                            <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-bold">
+                              {clients.find((c) => c.client_id === field.value)?.client_name || '未選択'}
+                            </div>
+                          ) : (
+                            /* --- 入力モード：汎用コンポーネントを使用 --- */
+                            <FormControl>
+                              <SearchableSelect
+                                options={clients.map(c => ({ value: c.client_id, label: c.client_name }))}
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder={isLoadingClients ? "読込中..." : "顧客を選択"}
+                                searchPlaceholder="顧客名で検索..."
+                                disabled={isLoadingClients}
+                              />
+                            </FormControl>
+                          )}
+                          
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <FormField control={form.control} name="user_type" render={({ field }) => (
                       <FormItem>
@@ -278,9 +357,7 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
                       {serverError && (
                         <div className="flex items-center gap-2 px-3 py-2.5 bg-rose-50 border border-rose-100 rounded-xl">
                           <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
-                          <p className="text-[11px] font-bold text-rose-600 leading-none">
-                            {serverError}
-                          </p>
+                          <p className="text-[11px] font-bold text-rose-600 leading-none">{serverError}</p>
                         </div>
                       )}
                       <div className="flex gap-3">
@@ -295,16 +372,12 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
                       <Button 
                         type="button" 
                         className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl shadow-md font-bold gap-2" 
-                        onClick={() => {
-                          // 1. バリデーションを実行
-                          form.trigger().then((isValid) => {
-                            if (isValid) {
-                              // 2. 前回のサーバーエラーをクリア
-                              setServerError(null);
-                              // 3. 確認画面へ
-                              setIsConfirming(true);
-                            }
-                          });
+                        onClick={async () => {
+                          const isValid = await form.trigger();
+                          if (isValid) {
+                            setServerError(null);
+                            setIsConfirming(true);
+                          }
                         }}
                       >
                         確認画面へ進む
@@ -320,7 +393,7 @@ export function UserFormDialog({ mode = 'create', initialData, clients }: UserFo
               </form>
             </Form>
           ) : (
-            /* --- STEP 2: ライセンス設定 (新規登録時のみ) --- */
+            /* --- STEP 2: ライセンス設定 --- */
             <div className="p-8 space-y-6 text-center">
               <div className="space-y-2">
                 <div className="mx-auto w-14 h-14 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4">

@@ -40,6 +40,11 @@ export function LicenseFormDialog({ user }: Props) {
 
   const { showToast } = useToast();
 
+  // バリデーション：開始日と終了日の前後関係をチェック
+  const isInvalidDateRange = startDate && endDate && new Date(startDate) > new Date(endDate);
+  // 保存ボタンを無効化する条件を整理
+  const isSaveDisabled = !!(loading || !selectedContractId || !startDate || !endDate || isInvalidDateRange);
+
   useEffect(() => {
     if (open) loadData();
   }, [open]);
@@ -50,8 +55,8 @@ export function LicenseFormDialog({ user }: Props) {
       const contracts = await getActiveContractsByClient(user.client_id || '');
       setAvailableContracts(contracts as ContractDetail[]);
       setSelectedContractId(user.contract_id || "");
-      setStartDate(user.license_end_date ? new Date().toISOString().split('T')[0] : ""); 
-      setEndDate(user.license_end_date ? user.license_end_date.split('T')[0] : "");
+      setStartDate(user.license_start_date || ""); 
+      setEndDate(user.license_end_date || "");
     } finally {
       setLoading(false);
     }
@@ -65,7 +70,8 @@ export function LicenseFormDialog({ user }: Props) {
     try {
       if (user.contract_id && selectedContractId === user.contract_id) {
         await updateUserLicense(user.license_id!, {
-          end_date: new Date(endDate).toISOString(),
+          start_date: startDate, // そのまま渡す (YYYY-MM-DD)
+          end_date: endDate,     // そのまま渡す (YYYY-MM-DD)
           note: note
         });
         showToast("ライセンス情報を更新しました", "success");
@@ -109,12 +115,15 @@ export function LicenseFormDialog({ user }: Props) {
     // 選択された契約の情報を取得
     const contract = availableContracts.find(c => c.contract_id === contractId);
     if (contract) {
-      // 契約の開始・終了日をデフォルト値としてセット
-      // ※ 既にライセンスがあるユーザーで、同じプランのままなら既存の値を優先、
-      //    プラン変更や新規割当なら契約マスタの値をセット
+      // 選択したプランが現在のユーザーのプランと異なる場合、
+      // 契約マスタに設定されているデフォルトの期間をセットする
       if (contractId !== user.contract_id) {
-        setStartDate(contract.start_date.split('T')[0]);
-        setEndDate(contract.end_date.split('T')[0]);
+        setStartDate(contract.start_date);
+        setEndDate(contract.end_date);
+      } else {
+        // 元のプランに戻した場合は、ユーザーの元の値を再セット
+        setStartDate(user.license_start_date || "");
+        setEndDate(user.license_end_date || "");
       }
     }
   };
@@ -168,6 +177,12 @@ export function LicenseFormDialog({ user }: Props) {
                 <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="rounded-xl border-slate-200 pl-9 text-xs font-bold" />
                 <Calendar className="absolute left-3 top-2.5 text-slate-400" size={14} />
               </div>
+              {/* 日付不整合のエラーメッセージ */}
+              {isInvalidDateRange && (
+                <p className="text-[10px] text-rose-500 font-bold flex items-center gap-1 mt-1 pl-1">
+                  <AlertCircle size={10} /> 終了日は開始日以降の日付を選択してください
+                </p>
+              )}
             </div>
           </div>
           <p className="text-[9px] text-slate-400 text-center italic">
@@ -186,7 +201,9 @@ export function LicenseFormDialog({ user }: Props) {
             {/* 保存確認 */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button className="w-full bg-slate-900 text-white rounded-xl h-12 font-black shadow-lg gap-2 hover:bg-slate-800 transition-all active:scale-95" disabled={loading || !selectedContractId}>
+                <Button className="w-full bg-slate-900 text-white rounded-xl h-12 font-black shadow-lg gap-2 hover:bg-slate-800 transition-all active:scale-95" 
+                        disabled={isSaveDisabled}
+                >
                   <Save size={18} /> 設定を保存する
                 </Button>
               </AlertDialogTrigger>

@@ -15,6 +15,7 @@ SELECT
   l.contract_id,
   l.license_id,
   l.status as license_status,
+  l.start_date as license_start_date,
   l.end_date as license_end_date,
   con.plan_name
 FROM 
