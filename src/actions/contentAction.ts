@@ -1,17 +1,17 @@
 "use server";
 
 import { createClient } from "@/lib/server";
-import { CorpusRecord, FavoriteCorpusRecord } from "@/types/corpus";
-import { BaseResumeMetadata, ResumeCorpusResponse } from "@/types/training";
+import { ContentRecord, FavoriteContentRecord } from "@/types/content";
+import { BaseResumeMetadata, ResumeContentResponse } from "@/types/training";
 
-// 全コーパスを取得
-export async function getAllCorpus(): Promise<CorpusRecord[]> {
+// 全コンテンツを取得
+export async function getAllContent(): Promise<ContentRecord[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('com_m_corpus')
+    .from('com_m_contents')
     .select(`
       *,
-      is_favorite:com_t_favorite_corpus(count)
+      is_favorite:com_t_favorite_contents(count)
     `)
     .eq('delete_flg', '0')
     .order('seq_no', { ascending: true });
@@ -21,50 +21,50 @@ export async function getAllCorpus(): Promise<CorpusRecord[]> {
     return [];
   }
 
-  // countをbooleanに変換し、全体をCorpusRecord[]として扱う
+  // countをbooleanに変換し、全体をContentRecord[]として扱う
   return (data || []).map(c => ({
     ...c,
     is_favorite: c.is_favorite[0]?.count > 0,
     // metadataはDBからJSONとして返るのでそのまま渡す
-  })) as unknown as CorpusRecord[];
+  })) as unknown as ContentRecord[];
 }
 
-// お気に入りコーパスを取得
-// actions/corpusAction.ts
+// お気に入りコンテンツを取得
+// actions/contentAction.ts
 
-export async function getFavoriteCorpuses(): Promise<FavoriteCorpusRecord[]> {
+export async function getFavoriteContentes(): Promise<FavoriteContentRecord[]> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
   const { data, error } = await supabase
-    .from('com_t_favorite_corpus')
+    .from('com_t_favorite_contents')
     .select(`
-      corpus:com_m_corpus!inner(*)
+      content:com_m_contents!inner(*)
     `)
     .eq('user_id', user.id)
-    .eq('com_m_corpus.delete_flg', '0')
-    .order('seq_no', { referencedTable: 'com_m_corpus', ascending: true });
+    .eq('com_m_contents.delete_flg', '0')
+    .order('seq_no', { referencedTable: 'com_m_contents', ascending: true });
 
   if (error || !data) {
     console.error("Fetch Error:", error);
     return [];
   }
 
-  // d.corpus は FavoriteCorpusRecord から is_favorite を除いたものと一致するはずです
+  // d.content は FavoriteContentRecord から is_favorite を除いたものと一致するはずです
   return data.map(d => {
-    const corpus = d.corpus as unknown as FavoriteCorpusRecord;
+    const content = d.content as unknown as FavoriteContentRecord;
     return {
-      ...corpus,
+      ...content,
       is_favorite: true,
     };
   });
 }
 
 /**
- * コーパス（教材）のお気に入り状態を切り替え
+ * コンテンツ（教材）のお気に入り状態を切り替え
  */
-export async function toggleCorpusFavorite(corpusId: string, isFavorite: boolean) {
+export async function toggleContentFavorite(contentId: string, isFavorite: boolean) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
@@ -72,23 +72,23 @@ export async function toggleCorpusFavorite(corpusId: string, isFavorite: boolean
   if (isFavorite) {
     // お気に入り登録
     await supabase
-      .from('com_t_favorite_corpus')
-      .upsert({ user_id: user.id, corpus_id: corpusId });
+      .from('com_t_favorite_contents')
+      .upsert({ user_id: user.id, content_id: contentId });
   } else {
     // 解除
     await supabase
-      .from('com_t_favorite_corpus')
+      .from('com_t_favorite_contents')
       .delete()
-      .match({ user_id: user.id, corpus_id: corpusId });
+      .match({ user_id: user.id, content_id: contentId });
   }
 }
 
 /**
- * コーパスの再開地点を保存する (栞を挟む)
+ * コンテンツの再開地点を保存する (栞を挟む)
  * T は BaseResumeMetadata を継承した具体的なメタデータ型
  */
-export async function saveResumeCorpus<T extends BaseResumeMetadata>(
-  corpusId: string, 
+export async function saveResumeContent<T extends BaseResumeMetadata>(
+  contentId: string, 
   itemId: string, 
   metadata: T
 ) {
@@ -97,17 +97,17 @@ export async function saveResumeCorpus<T extends BaseResumeMetadata>(
   if (!user) throw new Error("Unauthorized");
 
   const { error } = await supabase
-    .from('com_t_resume_corpus')
+    .from('com_t_resume_contents')
     .upsert({
       user_id: user.id,
-      corpus_id: corpusId,
+      content_id: contentId,
       item_id: itemId,
       metadata: metadata, // metadataフィールドはJSONBなので型安全に保存可能
       update_date: new Date().toISOString()
     });
 
   if (error) {
-    console.error("Save resume corpus error:", error);
+    console.error("Save resume content error:", error);
     throw new Error(`栞の保存に失敗しました: ${error.message}`);
   }
 }
@@ -115,42 +115,42 @@ export async function saveResumeCorpus<T extends BaseResumeMetadata>(
 /**
  * 再開地点を削除する (栞を抜く)
  */
-export async function clearResumeCorpus() {
+export async function clearResumeContent() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
   const { error } = await supabase
-    .from('com_t_resume_corpus')
+    .from('com_t_resume_contents')
     .delete()
     .eq('user_id', user.id);
 
   if (error) {
-    console.error("Clear resume corpus error:", error);
+    console.error("Clear resume content error:", error);
     throw new Error(`栞の削除に失敗しました: ${error.message}`);
   }
 }
 
 /**
  * 最新の再開地点を取得する
- * 呼び出し側で const data = await getLatestResumeCorpus<WordResumeMetadata>(); のように利用可能
+ * 呼び出し側で const data = await getLatestResumeContent<WordResumeMetadata>(); のように利用可能
  */
-export async function getLatestResumeCorpus<T = BaseResumeMetadata>() {
+export async function getLatestResumeContent<T = BaseResumeMetadata>() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
   const { data, error } = await supabase
-    .from('com_t_resume_corpus')
+    .from('com_t_resume_contents')
     .select(`
-      corpus_id,
+      content_id,
       item_id,
       metadata,
-      com_m_corpus (
-        corpus_name,
-        corpus_type,
+      com_m_contents (
+        content_name,
+        content_type,
         difficulty_level,
-        corpus_label
+        content_label
       )
     `)
     .eq('user_id', user.id)
@@ -158,10 +158,10 @@ export async function getLatestResumeCorpus<T = BaseResumeMetadata>() {
 
   if (error) {
     if (error.code === 'PGRST116') return null; // 0件（レコードなし）は正常系として扱う
-    console.error("Fetch resume corpus error:", error);
+    console.error("Fetch resume content error:", error);
     return null;
   }
 
   // 取得したデータを定義したジェネリクス型へアサーション
-  return data as unknown as ResumeCorpusResponse<T>;
+  return data as unknown as ResumeContentResponse<T>;
 }

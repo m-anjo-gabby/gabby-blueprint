@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib//server";
-import { CorpusRecord } from "@/types/corpus";
+import { ContentRecord } from "@/types/content";
 
 export interface ClientInfo {
   client_name: string;
@@ -13,14 +13,14 @@ export interface ClientInfo {
  * ダッシュボード用の軽量な教材リスト取得
  * 「お気に入り」と「おすすめ」に特化したデータを返します
  */
-export async function getDashboardCorpusData(): Promise<CorpusRecord[]> {
+export async function getDashboardContentData(): Promise<ContentRecord[]> {
   const supabase = await createClient();
   
   const { data, error } = await supabase
-    .from('com_m_corpus')
+    .from('com_m_contents')
     .select(`
       *,
-      is_favorite:com_t_favorite_corpus(count)
+      is_favorite:com_t_favorite_contents(count)
     `)
     .eq('delete_flg', '0')
     // 条件：おすすめ(recommend > 0) または RLSで許可されたもの
@@ -29,7 +29,7 @@ export async function getDashboardCorpusData(): Promise<CorpusRecord[]> {
     .order('seq_no', { ascending: true });
 
   if (error) {
-    console.error("Fetch Dashboard Corpus Error:", error.message);
+    console.error("Fetch Dashboard Content Error:", error.message);
     return [];
   }
 
@@ -37,7 +37,7 @@ export async function getDashboardCorpusData(): Promise<CorpusRecord[]> {
   return (data || []).map(c => ({
     ...c,
     is_favorite: c.is_favorite?.[0]?.count > 0
-  })) as unknown as CorpusRecord[];
+  })) as unknown as ContentRecord[];
 }
 
 /**

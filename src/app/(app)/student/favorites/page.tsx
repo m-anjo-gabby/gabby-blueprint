@@ -3,16 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Star } from 'lucide-react';
-import { getFavoriteCorpuses } from '@/actions/corpusAction';
-import { FavoriteCorpusRecord } from '@/types/corpus';
+import { getFavoriteContentes } from '@/actions/contentAction';
+import { FavoriteContentRecord } from '@/types/content';
 import { useToast } from '@/hooks/useToast';
 import PhraseFavorites from './_components/PhraseFavorites';
-import CorpusFavorites from './_components/CorpusFavorites';
+import ContentFavorites from './_components/ContentFavorites';
 import { FavoritePhraseRecord } from '@/types/word';
 import { getFavoritePhrases } from '@/actions/wordAction';
 
 export interface FavoritePageState {
-  corpuses: FavoriteCorpusRecord[] | null;
+  contentes: FavoriteContentRecord[] | null;
   phrases: FavoritePhraseRecord[] | null;
 }
 
@@ -21,15 +21,15 @@ export default function FavoritePage() {
   const { showToast } = useToast();
 
   // --- States ---
-  const [activeTab, setActiveTab] = useState<'corpuses' | 'phrases'>('corpuses');
+  const [activeTab, setActiveTab] = useState<'contentes' | 'phrases'>('contentes');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FavoritePageState>({
-      corpuses: null,
+      contentes: null,
       phrases: null,
   });
 
   // --- Logic: データ取得関数 ---
-  const fetchData = useCallback(async (tab: 'corpuses' | 'phrases') => {
+  const fetchData = useCallback(async (tab: 'contentes' | 'phrases') => {
     // キャッシュがあればスキップ
     if (data[tab]) return;
 
@@ -39,8 +39,8 @@ export default function FavoritePage() {
         const res = await getFavoritePhrases();
         setData(prev => ({ ...prev, phrases: res }));
       } else {
-        const res = await getFavoriteCorpuses();
-        setData(prev => ({ ...prev, corpuses: res }));
+        const res = await getFavoriteContentes();
+        setData(prev => ({ ...prev, contentes: res }));
       }
     } catch (error) {
       console.error(error);
@@ -79,7 +79,7 @@ export default function FavoritePage() {
 
         {/* Tab Switcher */}
         <div className="flex p-1.5 bg-slate-100 rounded-[22px]">
-          {(['corpuses', 'phrases'] as const).map((tab) => (
+          {(['contentes', 'phrases'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -89,7 +89,7 @@ export default function FavoritePage() {
                   : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              {tab === 'corpuses' ? 'コーパス' : 'フレーズ'}
+              {tab === 'contentes' ? 'コーパス' : 'フレーズ'}
             </button>
           ))}
         </div>
@@ -110,10 +110,10 @@ export default function FavoritePage() {
               />
             )}
             
-            {activeTab === 'corpuses' && data.corpuses && (
-              <CorpusFavorites 
-                  corpuses={data.corpuses}
-                  setCorpuses={setData} 
+            {activeTab === 'contentes' && data.contentes && (
+              <ContentFavorites 
+                  contentes={data.contentes}
+                  setContentes={setData} 
                 />
             )}
           </div>

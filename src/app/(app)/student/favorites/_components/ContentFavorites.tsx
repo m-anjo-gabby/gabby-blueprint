@@ -4,31 +4,31 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Star, ArrowRight, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FavoriteCorpusRecord } from '@/types/corpus';
-import { toggleCorpusFavorite } from '@/actions/corpusAction';
+import { FavoriteContentRecord } from '@/types/content';
+import { toggleContentFavorite } from '@/actions/contentAction';
 import { useToast } from '@/hooks/useToast';
 import { getTrainingPath } from '@/utils/navigation';
 import { FavoritePageState } from '../page';
 
-interface CorpusFavoritesProps {
-  corpuses: FavoriteCorpusRecord[];
-  setCorpuses: React.Dispatch<React.SetStateAction<FavoritePageState>>;
+interface ContentFavoritesProps {
+  contentes: FavoriteContentRecord[];
+  setContentes: React.Dispatch<React.SetStateAction<FavoritePageState>>;
 }
 
-export default function CorpusFavorites({ corpuses, setCorpuses }: CorpusFavoritesProps) {
+export default function ContentFavorites({ contentes, setContentes }: ContentFavoritesProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleConfirmRemove = async () => {
     if (!deletingId) return;
-    const corpusId = deletingId;
+    const contentId = deletingId;
     
     try {
-      await toggleCorpusFavorite(corpusId, false);
-      setCorpuses(prev => ({
+      await toggleContentFavorite(contentId, false);
+      setContentes(prev => ({
         ...prev,
-        corpuses: prev.corpuses ? prev.corpuses.filter(c => c.corpus_id !== corpusId) : null
+        contentes: prev.contentes ? prev.contentes.filter(c => c.content_id !== contentId) : null
       }));
       showToast('お気に入りから削除しました', 'success');
     } catch (error) {
@@ -39,11 +39,11 @@ export default function CorpusFavorites({ corpuses, setCorpuses }: CorpusFavorit
     }
   };
 
-  if (corpuses.length === 0) {
+  if (contentes.length === 0) {
     return (
       <div className="py-20 text-center space-y-4">
         <Star className="text-slate-200 mx-auto" size={48} />
-        <p className="text-slate-400 text-sm font-bold tracking-wide">No favorite corpuses</p>
+        <p className="text-slate-400 text-sm font-bold tracking-wide">No favorite contentes</p>
       </div>
     );
   }
@@ -51,13 +51,13 @@ export default function CorpusFavorites({ corpuses, setCorpuses }: CorpusFavorit
   return (
     <div className="grid gap-6">
       <AnimatePresence mode="popLayout">
-        {corpuses.map((corpus) => (
+        {contentes.map((content) => (
           <motion.div
             layout
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            key={corpus.corpus_id}
+            key={content.content_id}
             className="bg-white border border-slate-100 rounded-4xl p-6 shadow-sm group relative overflow-hidden"
           >
             {/* 解除確認オーバーレイ（フレーズと同様のUI体験） */}
@@ -83,12 +83,12 @@ export default function CorpusFavorites({ corpuses, setCorpuses }: CorpusFavorit
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-indigo-600 uppercase bg-indigo-50 px-2.5 py-1 rounded-lg">
-                  {corpus.corpus_label}
+                  {content.content_label}
                 </span>
-                <span className="text-[10px] font-bold text-slate-300">Lv.{corpus.difficulty_level}</span>
+                <span className="text-[10px] font-bold text-slate-300">Lv.{content.difficulty_level}</span>
               </div>
               <button
-                onClick={() => setDeletingId(corpus.corpus_id)}
+                onClick={() => setDeletingId(content.content_id)}
                 className="p-2 -mr-2 text-slate-200 hover:text-rose-400 transition-colors"
               >
                 <Trash2 size={20} strokeWidth={2.5} />
@@ -98,19 +98,19 @@ export default function CorpusFavorites({ corpuses, setCorpuses }: CorpusFavorit
             {/* コンテンツ */}
             <div className="mb-4">
               <h3 
-                onClick={() => router.push(getTrainingPath(corpus))}
+                onClick={() => router.push(getTrainingPath(content))}
                 className="font-black text-slate-800 text-[19px] leading-tight group-hover:text-indigo-600 transition-colors mb-2 cursor-pointer"
               >
-                {corpus.corpus_name}
+                {content.content_name}
               </h3>
               <p className="text-[14px] text-slate-500 font-medium leading-relaxed line-clamp-2">
-                {corpus.description}
+                {content.description}
               </p>
             </div>
 
             {/* タグ表示 */}
             <div className="flex flex-wrap gap-1.5 mb-6">
-              {corpus.metadata.tags?.map(t => (
+              {content.metadata.tags?.map(t => (
                 <span key={t.id} className="px-2.5 py-1 rounded-full border border-slate-100 bg-slate-50/50 text-slate-400 text-[9px] font-extrabold uppercase">
                   {t.label}
                 </span>
@@ -119,7 +119,7 @@ export default function CorpusFavorites({ corpuses, setCorpuses }: CorpusFavorit
 
             {/* アクションボタン */}
             <button 
-              onClick={() => router.push(getTrainingPath(corpus))}
+              onClick={() => router.push(getTrainingPath(content))}
               className="w-full h-14 bg-indigo-50 rounded-2xl flex items-center justify-center gap-3 hover:bg-indigo-600 transition-all active:scale-[0.98] group/btn"
             >
               <span className="text-indigo-600 font-black text-[12px] tracking-widest group-hover/btn:text-white transition-colors uppercase">

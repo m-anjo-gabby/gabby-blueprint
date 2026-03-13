@@ -1,20 +1,20 @@
-export interface CorpusTag {
+export interface ContentTag {
   id: string;
   label: string;
 }
 
 // 型定義（インターフェース）
-export interface CorpusRecord {
-  corpus_id: string;
-  corpus_name: string;
-  corpus_type: number;
+export interface ContentRecord {
+  content_id: string;
+  content_name: string;
+  content_type: number;
   description: string;
-  corpus_label: string;
+  content_label: string;
   seq_no: number;
   difficulty_level: number;
   recommend: number;
   metadata: {
-      tags?: CorpusTag[];
+      tags?: ContentTag[];
       [key: string]: unknown; // 他の動的なプロパティを許容
   };
   insert_date: string;
@@ -22,17 +22,17 @@ export interface CorpusRecord {
 }
 
 // 型定義（インターフェース）
-export interface FavoriteCorpusRecord {
-  corpus_id: string;
-  corpus_name: string;
-  corpus_type: number;
+export interface FavoriteContentRecord {
+  content_id: string;
+  content_name: string;
+  content_type: number;
   description: string;
-  corpus_label: string;
+  content_label: string;
   seq_no: number;
   difficulty_level: number;
   recommend: number;
   metadata: {
-      tags?: CorpusTag[];
+      tags?: ContentTag[];
       [key: string]: unknown; // 他の動的なプロパティを許容
   };
   insert_date: string;

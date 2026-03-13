@@ -6,8 +6,8 @@ import { ChevronLeft, Search, ArrowRight, Star, Filter, BookOpen, X } from 'luci
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Actions & Utils
-import { getAllCorpus, toggleCorpusFavorite } from '@/actions/corpusAction';
-import { CorpusRecord } from '@/types/corpus';
+import { getAllContent, toggleContentFavorite } from '@/actions/contentAction';
+import { ContentRecord } from '@/types/content';
 import { useToast } from '@/hooks/useToast';
 import { getTrainingPath } from '@/utils/navigation';
 
@@ -27,7 +27,7 @@ export default function LibraryPage() {
   const [selectedType, setSelectedType] = useState<number | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('All');
-  const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);
+  const [contentList, setContentList] = useState<ContentRecord[]>([]);
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [truncatedIds, setTruncatedIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -38,8 +38,8 @@ export default function LibraryPage() {
   useEffect(() => {
     async function fetchList() {
       try {
-        const data = await getAllCorpus();
-        setCorpusList(data);
+        const data = await getAllContent();
+        setContentList(data);
       } catch (error) {
         console.error("Failed to fetch library:", error);
       } finally {
@@ -52,24 +52,24 @@ export default function LibraryPage() {
   // --- Logic: フィルタリング ---
   const categoryChips = useMemo(() => {
     const tagsSet = new Set<string>(['All']);
-    corpusList.forEach(c => {
+    contentList.forEach(c => {
       c.metadata.tags?.forEach(t => {
         if (t.label) tagsSet.add(t.label);
       });
     });
     return Array.from(tagsSet).sort();
-  }, [corpusList]);
+  }, [contentList]);
 
   const filteredList = useMemo(() => {
-    return corpusList.filter(c => {
+    return contentList.filter(c => {
       const q = searchQuery.toLowerCase();
       const matchesSearch = 
-        c.corpus_name.toLowerCase().includes(q) ||
+        c.content_name.toLowerCase().includes(q) ||
         c.description?.toLowerCase().includes(q) ||
-        c.corpus_label.toLowerCase().includes(q);
+        c.content_label.toLowerCase().includes(q);
       
       // 種別フィルタ（0:単語, 1:ビデオ, 2:Gabby...）
-      const matchesType = selectedType === 'All' || c.corpus_type === selectedType;
+      const matchesType = selectedType === 'All' || c.content_type === selectedType;
       
       // タグフィルタ（selectedTagが'All'でない場合のみ）
       const matchesTag = selectedTag === 'All' || 
@@ -77,17 +77,17 @@ export default function LibraryPage() {
         
       return matchesSearch && matchesType && matchesTag;
     });
-  }, [corpusList, searchQuery, selectedType, selectedTag]);
+  }, [contentList, searchQuery, selectedType, selectedTag]);
 
   // --- Logic: 行数溢れ判定 ---
   useLayoutEffect(() => {
     const observers: ResizeObserver[] = [];
-    filteredList.forEach((corpus) => {
-      const el = descriptionRefs.current[corpus.corpus_id];
+    filteredList.forEach((content) => {
+      const el = descriptionRefs.current[content.content_id];
       if (!el) return;
       const check = () => {
         const isOverflow = el.scrollHeight > el.clientHeight;
-        setTruncatedIds(prev => ({ ...prev, [corpus.corpus_id]: isOverflow }));
+        setTruncatedIds(prev => ({ ...prev, [content.content_id]: isOverflow }));
       };
       check();
       const ro = new ResizeObserver(check);
@@ -98,16 +98,16 @@ export default function LibraryPage() {
   }, [filteredList]);
 
   // --- Handlers ---
-  const handleToggleFavorite = async (e: React.MouseEvent, corpusId: string, currentState: boolean) => {
+  const handleToggleFavorite = async (e: React.MouseEvent, contentId: string, currentState: boolean) => {
     e.stopPropagation();
     const nextState = !currentState;
-    setCorpusList(prev => prev.map(c => c.corpus_id === corpusId ? { ...c, is_favorite: nextState } : c));
+    setContentList(prev => prev.map(c => c.content_id === contentId ? { ...c, is_favorite: nextState } : c));
     try {
-      await toggleCorpusFavorite(corpusId, nextState);
+      await toggleContentFavorite(contentId, nextState);
       showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りから削除しました', 'success');
     } catch (error) {
       console.error("Failed to remove favorite:", error);
-      setCorpusList(prev => prev.map(c => c.corpus_id === corpusId ? { ...c, is_favorite: currentState } : c));
+      setContentList(prev => prev.map(c => c.content_id === contentId ? { ...c, is_favorite: currentState } : c));
     }
   };
 
@@ -214,16 +214,16 @@ export default function LibraryPage() {
           <div className="grid gap-4">
             <AnimatePresence mode="popLayout">
               {filteredList.length > 0 ? (
-                filteredList.map((corpus) => {
-                  const isExpanded = !!expandedIds[corpus.corpus_id];
-                  const shouldShowMore = truncatedIds[corpus.corpus_id] || isExpanded;
+                filteredList.map((content) => {
+                  const isExpanded = !!expandedIds[content.content_id];
+                  const shouldShowMore = truncatedIds[content.content_id] || isExpanded;
                   return (
                     <motion.div 
                       layout
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      key={corpus.corpus_id} 
+                      key={content.content_id} 
                       className="group relative w-full p-px rounded-4xl bg-slate-100 hover:bg-indigo-300 shadow-sm hover:shadow-md"
                     >
                       <div className="relative bg-white rounded-[31px] p-6 overflow-hidden">
@@ -233,21 +233,21 @@ export default function LibraryPage() {
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-3">
                               <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[9px] font-black tracking-widest uppercase">
-                                {corpus.corpus_label}
+                                {content.content_label}
                               </span>
                               <span className="text-[10px] font-bold text-slate-300 tracking-wider">
-                                Lv.{corpus.difficulty_level}
+                                Lv.{content.difficulty_level}
                               </span>
                             </div>
 
                             {/* お気に入りトグル：ここだけは「操作」のためにStarを維持 */}
                             <button
-                              onClick={(e) => handleToggleFavorite(e, corpus.corpus_id, corpus.is_favorite)}
+                              onClick={(e) => handleToggleFavorite(e, content.content_id, content.is_favorite)}
                               className={`p-2 -mr-2 transition-all active:scale-75 ${
-                                corpus.is_favorite ? 'text-amber-400' : 'text-slate-200 hover:text-slate-300'
+                                content.is_favorite ? 'text-amber-400' : 'text-slate-200 hover:text-slate-300'
                               }`}
                             >
-                              <Star size={22} fill={corpus.is_favorite ? "currentColor" : "none"} strokeWidth={2.5} />
+                              <Star size={22} fill={content.is_favorite ? "currentColor" : "none"} strokeWidth={2.5} />
                             </button>
                           </div>
 
@@ -255,29 +255,29 @@ export default function LibraryPage() {
                           <div className="space-y-3">
                             {/* タイトル：クリックで学習開始 */}
                             <h3 
-                              onClick={() => router.push(getTrainingPath(corpus))}
+                              onClick={() => router.push(getTrainingPath(content))}
                               className="inline-block text-[18px] font-[1000] text-slate-800 tracking-tight leading-tight cursor-pointer hover:text-indigo-600 transition-colors"
                             >
-                              {corpus.corpus_name}
+                              {content.content_name}
                             </h3>
 
                             {/* 説明文エリア */}
                             <div className="relative">
                               <p 
-                                ref={(el) => { descriptionRefs.current[corpus.corpus_id] = el; }}
+                                ref={(el) => { descriptionRefs.current[content.content_id] = el; }}
                                 className={`text-[13px] text-slate-500 font-medium leading-relaxed overflow-hidden ${
                                   isExpanded ? 'line-clamp-none' : 'line-clamp-2'
                                 }`}
                                 style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical' }}
                               >
-                                {corpus.description}
+                                {content.description}
                               </p>
                               
                               {shouldShowMore && (
                                 <button 
                                   onClick={(e) => { 
                                     e.stopPropagation(); 
-                                    setExpandedIds(prev => ({ ...prev, [corpus.corpus_id]: !isExpanded })); 
+                                    setExpandedIds(prev => ({ ...prev, [content.content_id]: !isExpanded })); 
                                   }}
                                   className="mt-1.5 flex items-center gap-1 text-indigo-400 text-[10px] font-black py-1 hover:text-indigo-600 active:opacity-50 uppercase tracking-wider transition-colors"
                                 >
@@ -289,7 +289,7 @@ export default function LibraryPage() {
 
                           {/* 3. Tags: ライブラリではより控えめに */}
                           <div className="flex flex-wrap gap-1.5">
-                            {corpus.metadata.tags?.map(t => (
+                            {content.metadata.tags?.map(t => (
                               <span key={t.id} className="px-2 py-0.5 rounded-md border border-slate-100 bg-slate-50/50 text-slate-400 text-[8px] font-black uppercase tracking-wider">
                                 #{t.label}
                               </span>
@@ -299,7 +299,7 @@ export default function LibraryPage() {
                           {/* 4. Action Button: センター寄せ・スリム版 */}
                           <div className="pt-1">
                             <button 
-                              onClick={() => router.push(getTrainingPath(corpus))}
+                              onClick={() => router.push(getTrainingPath(content))}
                               className="w-full h-12 bg-slate-50 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 group-hover:bg-indigo-600 group-hover:gap-5"
                             >
                               <span className="text-indigo-600 font-black text-[11px] tracking-[0.15em] uppercase group-hover:text-white transition-all">

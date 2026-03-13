@@ -4,9 +4,9 @@ import { createClient } from "@/lib/server";
 import { FavoritePhraseRecord, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@/types/word";
 
 /**
- * 指定されたコーパスIDに紐付く単語とフレーズを取得
+ * 指定されたコンテンツIDに紐付く単語とフレーズを取得
  */
-export async function getWordData(corpusId: string): Promise<TrainingWordResponse> {
+export async function getWordData(contentId: string): Promise<TrainingWordResponse> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -16,7 +16,7 @@ export async function getWordData(corpusId: string): Promise<TrainingWordRespons
       word_id,
       word_en,
       word_ja,
-      com_m_corpus ( corpus_name ),
+      com_m_contents ( content_name ),
       com_m_phrase (
         phrase_id,
         phrase_en,
@@ -26,7 +26,7 @@ export async function getWordData(corpusId: string): Promise<TrainingWordRespons
         com_t_favorite_phrase ( phrase_id )
       )
     `)
-    .eq('corpus_id', corpusId)
+    .eq('content_id', contentId)
     .eq('delete_flg', '0')
     .eq('com_m_phrase.delete_flg', '0')
     .eq('com_m_phrase.com_t_favorite_phrase.user_id', user?.id)
@@ -41,15 +41,15 @@ export async function getWordData(corpusId: string): Promise<TrainingWordRespons
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawData = data as any[];
 
-  // コーパス名の取得ロジックを修正
-  // Supabaseの結合は[ { corpus_name: 'xxx' } ]のように配列で返ってくることが多いため
+  // コンテンツ名の取得ロジックを修正
+  // Supabaseの結合は[ { content_name: 'xxx' } ]のように配列で返ってくることが多いため
   const firstItem = rawData[0];
-  let corpusName = 'Training';
+  let contentName = 'Training';
   
-  if (firstItem?.com_m_corpus) {
-    corpusName = Array.isArray(firstItem.com_m_corpus) 
-      ? firstItem.com_m_corpus[0]?.corpus_name 
-      : firstItem.com_m_corpus?.corpus_name;
+  if (firstItem?.com_m_contents) {
+    contentName = Array.isArray(firstItem.com_m_contents) 
+      ? firstItem.com_m_contents[0]?.content_name 
+      : firstItem.com_m_contents?.content_name;
   }
 
   const words: TrainingWord[] = rawData.map((word) => ({
@@ -64,7 +64,7 @@ export async function getWordData(corpusId: string): Promise<TrainingWordRespons
   }));
 
   // Promise<TrainingResponse> に合致するように返却
-  return { words, corpusName: corpusName || 'Training' };
+  return { words, contentName: contentName || 'Training' };
 }
 
 /**
@@ -128,9 +128,9 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
         phrase_ja,
         com_m_word!inner (
           word_en,
-          com_m_corpus!inner (
-            corpus_id,
-            corpus_name
+          com_m_contents!inner (
+            content_id,
+            content_name
           )
         )
       )
@@ -150,8 +150,8 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
     phrase_en: item.com_m_phrase.phrase_en,
     phrase_ja: item.com_m_phrase.phrase_ja,
     word_en: item.com_m_phrase.com_m_word.word_en,
-    corpus_id: item.com_m_phrase.com_m_word.com_m_corpus.corpus_id,
-    corpus_name: item.com_m_phrase.com_m_word.com_m_corpus.corpus_name,
+    content_id: item.com_m_phrase.com_m_word.com_m_contents.content_id,
+    content_name: item.com_m_phrase.com_m_word.com_m_contents.content_name,
     insert_date: item.insert_date,
     is_favorite: true
   }));

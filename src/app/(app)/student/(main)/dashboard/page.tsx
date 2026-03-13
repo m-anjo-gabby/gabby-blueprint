@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowRight, Star, Trash2 } from 'lucide-react';
 
 // Actions & Utils
-import { getDashboardCorpusData } from '@/actions/dashboardAction';
+import { getDashboardContentData } from '@/actions/dashboardAction';
 import { getResumePath, getTrainingPath } from '@/utils/navigation';
-import { CorpusRecord } from '@/types/corpus';
-import { ResumeCorpusResponse, WordResumeMetadata } from '@/types/training';
-import { clearResumeCorpus, getLatestResumeCorpus } from '@/actions/corpusAction';
+import { ContentRecord } from '@/types/content';
+import { ResumeContentResponse, WordResumeMetadata } from '@/types/training';
+import { clearResumeContent, getLatestResumeContent } from '@/actions/contentAction';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useToast } from '@/hooks/useToast';
 
@@ -26,24 +26,24 @@ export default function StudentDashboard() {
   const { showToast } = useToast();
 
   // --- States ---
-  const [corpusList, setCorpusList] = useState<CorpusRecord[]>([]);
-  const [resumeData, setResumeData] = useState<ResumeCorpusResponse<WordResumeMetadata> | null>(null);
+  const [contentList, setContentList] = useState<ContentRecord[]>([]);
+  const [resumeData, setResumeData] = useState<ResumeContentResponse<WordResumeMetadata> | null>(null);
   const [loading, setLoading] = useState(true);
 
   // おすすめとお気に入りのフィルタリング（メモ化せずにシンプルに定義）
-  const recommendations = corpusList.filter(c => c.recommend > 0 && !c.is_favorite);
+  const recommendations = contentList.filter(c => c.recommend > 0 && !c.is_favorite);
 
   // --- Data Fetching ---
     useEffect(() => {
       async function initDashboard() {
         try {
           // 複数のデータ取得処理を配列で定義
-          const [corpusData, resume] = await Promise.all([
-            getDashboardCorpusData(),
-            getLatestResumeCorpus<WordResumeMetadata>(), 
+          const [contentData, resume] = await Promise.all([
+            getDashboardContentData(),
+            getLatestResumeContent<WordResumeMetadata>(), 
           ]);
           
-          setCorpusList(corpusData);
+          setContentList(contentData);
           setResumeData(resume);
         } catch (error) {
           console.error("Dashboard Load Error:", error);
@@ -68,7 +68,7 @@ export default function StudentDashboard() {
     // 確認OKの場合
     if (ok) {
       try {
-        await clearResumeCorpus();
+        await clearResumeContent();
         setResumeData(null);
         showToast("ブックマークをクリアしました", "success");
       } catch (err) {
@@ -218,15 +218,15 @@ export default function StudentDashboard() {
                   {/* 教材ラベルとレベルを表示 (おすすめカードと整合) */}
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[9px] font-black tracking-widest uppercase">
-                      {resumeData.com_m_corpus.corpus_label}
+                      {resumeData.com_m_contents.content_label}
                     </span>
                     <span className="text-[10px] font-bold text-slate-300 tracking-wider">
-                      Lv.{resumeData.com_m_corpus.difficulty_level}
+                      Lv.{resumeData.com_m_contents.difficulty_level}
                     </span>
                   </div>
 
                   <h3 className="text-lg font-[1000] text-slate-800 tracking-tight truncate">
-                    {resumeData.com_m_corpus.corpus_name}
+                    {resumeData.com_m_contents.content_name}
                   </h3>
                   
                   <p className="text-[11px] font-bold text-indigo-500/80 flex items-center gap-1.5">
@@ -261,10 +261,10 @@ export default function StudentDashboard() {
 
         <div className="grid gap-6">
           {recommendations.length > 0 ? (
-            recommendations.map((corpus) => (
+            recommendations.map((content) => (
               <button
-                key={corpus.corpus_id}
-                onClick={() => router.push(getTrainingPath(corpus))}
+                key={content.content_id}
+                onClick={() => router.push(getTrainingPath(content))}
                 className="group relative w-full text-left p-0.5 rounded-4xl transition-all duration-500
                           /* 静止時：安定感のある2pxボーダー */
                           bg-slate-200 
@@ -284,33 +284,33 @@ export default function StudentDashboard() {
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
                         <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[9px] font-black tracking-widest uppercase">
-                          {corpus.corpus_label}
+                          {content.content_label}
                         </span>
                         <span className="text-[10px] font-bold text-slate-300 tracking-wider">
-                          Lv.{corpus.difficulty_level}
+                          Lv.{content.difficulty_level}
                         </span>
                       </div>
 
                       {/* おすすめ度（Match Score） */}
                       <div className="flex items-center gap-1.5 text-emerald-500 font-black text-[10px]">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                        <span className="tracking-tighter">{corpus.recommend}% Match</span>
+                        <span className="tracking-tighter">{content.recommend}% Match</span>
                       </div>
                     </div>
 
                     {/* 2. Main Info: タイトルと説明文をノイズなく配置 */}
                     <div className="space-y-2">
                       <h3 className="text-[20px] font-black text-slate-800 tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
-                        {corpus.corpus_name}
+                        {content.content_name}
                       </h3>
                       <p className="text-[13px] text-slate-500 leading-relaxed font-medium line-clamp-2">
-                        {corpus.description}
+                        {content.description}
                       </p>
                     </div>
 
                     {/* 3. Tags: 下部にコンパクトに配置 */}
                     <div className="flex flex-wrap gap-1.5 pt-1">
-                      {corpus.metadata.tags?.slice(0, 3).map(t => (
+                      {content.metadata.tags?.slice(0, 3).map(t => (
                         <span key={t.id} className="px-2 py-0.5 rounded-md border border-slate-100 bg-slate-50/50 text-slate-400 text-[8px] font-black uppercase tracking-wider">
                           #{t.label}
                         </span>

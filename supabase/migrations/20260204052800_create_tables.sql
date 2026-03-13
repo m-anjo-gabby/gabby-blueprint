@@ -56,196 +56,6 @@ COMMENT ON COLUMN public.com_m_user.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_user.update_date IS '更新日時';
 
 ---------------------------------------------
--- DDL: com_m_corpus (コーパス管理マスタ)
----------------------------------------------
-CREATE TABLE public.com_m_corpus (
-  corpus_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  corpus_name TEXT NOT NULL,
-  corpus_type SMALLINT NOT NULL DEFAULT 1,
-  corpus_scope SMALLINT NOT NULL DEFAULT 0,
-  seq_no SMALLINT NOT NULL DEFAULT 1,
-  difficulty_level SMALLINT NOT NULL DEFAULT 1,
-  recommend SMALLINT NOT NULL DEFAULT 0,
-  description TEXT,
-  corpus_label TEXT NOT NULL,
-  metadata JSONB NOT NULL DEFAULT '{}',
-  delete_flg TEXT NOT NULL DEFAULT '0',
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE public.com_m_corpus IS 'コーパス管理マスタ';
-COMMENT ON COLUMN public.com_m_corpus.corpus_id IS 'コーパスID';
-COMMENT ON COLUMN public.com_m_corpus.corpus_name IS 'コーパス名称';
-COMMENT ON COLUMN public.com_m_corpus.corpus_type IS 'コーパス種別 0:単語・フレーズ, 1:ビデオ, 2:Gabbyスプリント';
-COMMENT ON COLUMN public.com_m_corpus.corpus_scope IS 'コーパス公開範囲 0:共通, 1:クライアント限定';
-COMMENT ON COLUMN public.com_m_corpus.seq_no IS 'SEQNO';
-COMMENT ON COLUMN public.com_m_corpus.difficulty_level IS '難易度';
-COMMENT ON COLUMN public.com_m_corpus.recommend IS 'おすすめ';
-COMMENT ON COLUMN public.com_m_corpus.description IS 'コーパス説明・解析根拠';
-COMMENT ON COLUMN public.com_m_corpus.corpus_label IS 'コーパスラベル';
-COMMENT ON COLUMN public.com_m_corpus.metadata IS 'メタデータ（タグなど）';
-COMMENT ON COLUMN public.com_m_corpus.delete_flg IS '論理削除フラグ';
-COMMENT ON COLUMN public.com_m_corpus.insert_date IS '登録日時';
-COMMENT ON COLUMN public.com_m_corpus.update_date IS '更新日時';
-
----------------------------------------------
--- DDL: com_m_corpus_access (コーパスアクセス制御マスタ)
----------------------------------------------
-CREATE TABLE public.com_m_corpus_access (
-  access_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id uuid REFERENCES public.com_m_client(client_id) NOT NULL,
-  corpus_id uuid REFERENCES public.com_m_corpus(corpus_id) NOT NULL,
-  notes TEXT, -- 「2026年キャンペーンで付与」などのメモ
-  delete_flg TEXT NOT NULL DEFAULT '0',
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  
-  -- 同じ顧客に同じコーパスを二重登録させない
-  UNIQUE(client_id, corpus_id)
-);
-
-COMMENT ON TABLE public.com_m_corpus_access IS 'コーパスアクセス制御マスタ';
-COMMENT ON COLUMN public.com_m_corpus_access.access_id IS 'アクセスID';
-COMMENT ON COLUMN public.com_m_corpus_access.client_id IS '顧客ID';
-COMMENT ON COLUMN public.com_m_corpus_access.corpus_id IS 'コーパスID';
-COMMENT ON COLUMN public.com_m_corpus_access.notes IS 'メモ';
-COMMENT ON COLUMN public.com_m_corpus_access.delete_flg IS '論理削除フラグ';
-COMMENT ON COLUMN public.com_m_corpus_access.insert_date IS '登録日時';
-COMMENT ON COLUMN public.com_m_corpus_access.update_date IS '更新日時';
-
--- 検索パフォーマンス向上のためのインデックス
-CREATE INDEX idx_corpus_access_client ON public.com_m_corpus_access(client_id);
-
----------------------------------------------
--- DDL: com_m_word (コーパス単語マスタ)
----------------------------------------------
-CREATE TABLE public.com_m_word (
-  word_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  corpus_id uuid REFERENCES public.com_m_corpus(corpus_id) ON DELETE CASCADE,
-  word_en TEXT NOT NULL,
-  word_ja TEXT NOT NULL,
-  frequency_rank INT,
-  delete_flg TEXT NOT NULL DEFAULT '0',
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE public.com_m_word IS 'コーパス単語マスタ';
-COMMENT ON COLUMN public.com_m_word.word_id IS '単語ID';
-COMMENT ON COLUMN public.com_m_word.corpus_id IS 'コーパスID';
-COMMENT ON COLUMN public.com_m_word.word_en IS '単語（英語表記）';
-COMMENT ON COLUMN public.com_m_word.word_ja IS '単語（日本語表記）';
-COMMENT ON COLUMN public.com_m_word.frequency_rank IS '解析時の出現頻度順位';
-COMMENT ON COLUMN public.com_m_word.delete_flg IS '論理削除フラグ';
-COMMENT ON COLUMN public.com_m_word.insert_date IS '登録日時';
-COMMENT ON COLUMN public.com_m_word.update_date IS '更新日時';
-
----------------------------------------------
--- DDL: com_m_phrase (出題例文マスタ)
----------------------------------------------
-CREATE TABLE public.com_m_phrase (
-  phrase_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  word_id uuid REFERENCES public.com_m_word(word_id) ON DELETE CASCADE,
-  seq_no SMALLINT NOT NULL DEFAULT 1,
-  phrase_type SMALLINT NOT NULL,
-  phrase_en TEXT NOT NULL,
-  phrase_ja TEXT NOT NULL,
-  section_id TEXT, 
-  delete_flg TEXT NOT NULL DEFAULT '0',
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE public.com_m_phrase IS '出題例文マスタ';
-COMMENT ON COLUMN public.com_m_phrase.phrase_id IS 'フレーズID';
-COMMENT ON COLUMN public.com_m_phrase.word_id IS '単語ID';
-COMMENT ON COLUMN public.com_m_phrase.seq_no IS 'SEQNO';
-COMMENT ON COLUMN public.com_m_phrase.phrase_type IS 'フレーズ種別（1: S+V 2: Adding 3: Strategic Solution 4: PAST 5: PRESENT PERFECT）';
-COMMENT ON COLUMN public.com_m_phrase.phrase_en IS 'フレーズ（英語表記）';
-COMMENT ON COLUMN public.com_m_phrase.phrase_ja IS 'フレーズ（日本語表記）';
-COMMENT ON COLUMN public.com_m_phrase.delete_flg IS '論理削除フラグ';
-COMMENT ON COLUMN public.com_m_phrase.insert_date IS '登録日時';
-COMMENT ON COLUMN public.com_m_phrase.update_date IS '更新日時';
-
----------------------------------------------
--- DDL: com_t_favorite_phrase (お気に入りフレーズ)
----------------------------------------------
-CREATE TABLE public.com_t_favorite_phrase (
-  favorite_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-  phrase_id uuid NOT NULL REFERENCES public.com_m_phrase(phrase_id) ON DELETE CASCADE,
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  -- 同じユーザーが同じフレーズを二重登録できないように制約
-  UNIQUE(user_id, phrase_id)
-);
-
-COMMENT ON TABLE public.com_t_favorite_phrase IS 'お気に入りフレーズ';
-COMMENT ON COLUMN public.com_t_favorite_phrase.favorite_id IS 'お気に入りID';
-COMMENT ON COLUMN public.com_t_favorite_phrase.user_id IS 'ユーザID';
-COMMENT ON COLUMN public.com_t_favorite_phrase.phrase_id IS 'フレーズID';
-COMMENT ON COLUMN public.com_t_favorite_phrase.insert_date IS '登録日時';
-
----------------------------------------------
--- DDL: com_t_favorite_corpus (お気に入りコーパス)
----------------------------------------------
-CREATE TABLE public.com_t_favorite_corpus (
-  favorite_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-  corpus_id uuid NOT NULL REFERENCES public.com_m_corpus(corpus_id) ON DELETE CASCADE,
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  
-  -- 二重登録防止
-  UNIQUE(user_id, corpus_id)
-);
-
-COMMENT ON TABLE public.com_t_favorite_corpus IS 'お気に入りコーパス';
-COMMENT ON COLUMN public.com_t_favorite_corpus.favorite_id IS 'お気に入りID';
-COMMENT ON COLUMN public.com_t_favorite_corpus.user_id IS 'ユーザID';
-COMMENT ON COLUMN public.com_t_favorite_corpus.corpus_id IS 'コーパスID';
-COMMENT ON COLUMN public.com_t_favorite_corpus.insert_date IS '登録日時';
-
----------------------------------------------
--- DDL: com_m_corpus_tag (タグ管理マスタ)
----------------------------------------------
-CREATE TABLE public.com_m_corpus_tag (
-  tag_id TEXT PRIMARY KEY, -- 'ind_it', 'sc_meeting' 等の可読ID
-  tag_name TEXT NOT NULL,
-  tag_type TEXT NOT NULL, -- 'industry', 'scene', 'skill' 等
-  seq_no SMALLINT NOT NULL DEFAULT 1,
-  delete_flg TEXT NOT NULL DEFAULT '0',
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE public.com_m_corpus_tag IS 'コーパスタグ管理マスタ';
-COMMENT ON COLUMN public.com_m_corpus_tag.tag_id IS 'タグID（可読文字列）';
-COMMENT ON COLUMN public.com_m_corpus_tag.tag_name IS 'タグ表示名称';
-COMMENT ON COLUMN public.com_m_corpus_tag.tag_type IS 'タグ種別';
-COMMENT ON COLUMN public.com_m_corpus_tag.seq_no IS 'デフォルト表示順';
-COMMENT ON COLUMN public.com_m_corpus_tag.delete_flg IS '論理削除フラグ';
-COMMENT ON COLUMN public.com_m_corpus_tag.insert_date IS '登録日時';
-COMMENT ON COLUMN public.com_m_corpus_tag.update_date IS '更新日時';
-
----------------------------------------------
--- DDL: com_t_resume_corpus (コーパス再開管理テーブル)
----------------------------------------------
-CREATE TABLE public.com_t_resume_corpus (
-  user_id uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  corpus_id uuid NOT NULL REFERENCES public.com_m_corpus(corpus_id) ON DELETE CASCADE,
-  item_id uuid, 
-  metadata JSONB NOT NULL DEFAULT '{}',
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE public.com_t_resume_corpus IS 'コーパス再開管理テーブル';
-COMMENT ON COLUMN public.com_t_resume_corpus.user_id IS 'ユーザID';
-COMMENT ON COLUMN public.com_t_resume_corpus.corpus_id IS 'コーパスID';
-COMMENT ON COLUMN public.com_t_resume_corpus.item_id IS 'アイテムID（word_id, phrase_idなどの一意なID）';
-COMMENT ON COLUMN public.com_t_resume_corpus.metadata IS 'メタデータ';
-COMMENT ON COLUMN public.com_t_resume_corpus.update_date IS '更新日時';
-
----------------------------------------------
 -- COM_M_CONTRACT (契約マスタ)
 ---------------------------------------------
 CREATE TABLE public.com_m_contract (
@@ -304,3 +114,194 @@ COMMENT ON COLUMN public.com_t_user_license.update_date IS '更新日時';
 
 -- 認証・認可クエリの高速化
 CREATE INDEX idx_user_license_auth ON public.com_t_user_license (user_id, status, start_date, end_date);
+
+
+---------------------------------------------
+-- DDL: com_m_contents (コンテンツ管理マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_contents (
+  content_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  content_name TEXT NOT NULL,
+  content_type SMALLINT NOT NULL DEFAULT 1,
+  content_scope SMALLINT NOT NULL DEFAULT 0,
+  seq_no SMALLINT NOT NULL DEFAULT 1,
+  difficulty_level SMALLINT NOT NULL DEFAULT 1,
+  recommend SMALLINT NOT NULL DEFAULT 0,
+  description TEXT,
+  content_label TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_contents IS 'コンテンツ管理マスタ';
+COMMENT ON COLUMN public.com_m_contents.content_id IS 'コンテンツID';
+COMMENT ON COLUMN public.com_m_contents.content_name IS 'コンテンツ名称';
+COMMENT ON COLUMN public.com_m_contents.content_type IS 'コンテンツ種別 0:単語・フレーズ, 1:ビデオ, 2:Gabbyスプリント';
+COMMENT ON COLUMN public.com_m_contents.content_scope IS 'コンテンツ公開範囲 0:共通, 1:クライアント限定';
+COMMENT ON COLUMN public.com_m_contents.seq_no IS 'SEQNO';
+COMMENT ON COLUMN public.com_m_contents.difficulty_level IS '難易度';
+COMMENT ON COLUMN public.com_m_contents.recommend IS 'おすすめ';
+COMMENT ON COLUMN public.com_m_contents.description IS 'コンテンツ説明・解析根拠';
+COMMENT ON COLUMN public.com_m_contents.content_label IS 'コンテンツラベル';
+COMMENT ON COLUMN public.com_m_contents.metadata IS 'メタデータ（タグなど）';
+COMMENT ON COLUMN public.com_m_contents.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_contents.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_contents.update_date IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_m_contents_access (コンテンツアクセス制御マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_contents_access (
+  access_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid REFERENCES public.com_m_client(client_id) NOT NULL,
+  content_id uuid REFERENCES public.com_m_contents(content_id) NOT NULL,
+  notes TEXT, -- 「2026年キャンペーンで付与」などのメモ
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  
+  -- 同じ顧客に同じコンテンツを二重登録させない
+  UNIQUE(client_id, content_id)
+);
+
+COMMENT ON TABLE public.com_m_contents_access IS 'コンテンツアクセス制御マスタ';
+COMMENT ON COLUMN public.com_m_contents_access.access_id IS 'アクセスID';
+COMMENT ON COLUMN public.com_m_contents_access.client_id IS '顧客ID';
+COMMENT ON COLUMN public.com_m_contents_access.content_id IS 'コンテンツID';
+COMMENT ON COLUMN public.com_m_contents_access.notes IS 'メモ';
+COMMENT ON COLUMN public.com_m_contents_access.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_contents_access.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_contents_access.update_date IS '更新日時';
+
+-- 検索パフォーマンス向上のためのインデックス
+CREATE INDEX idx_contents_access_client ON public.com_m_contents_access(client_id);
+
+---------------------------------------------
+-- DDL: com_m_contents_tag (コンテンツタグ管理マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_contents_tag (
+  tag_id TEXT PRIMARY KEY, -- 'ind_it', 'sc_meeting' 等の可読ID
+  tag_name TEXT NOT NULL,
+  tag_type TEXT NOT NULL, -- 'industry', 'scene', 'skill' 等
+  seq_no SMALLINT NOT NULL DEFAULT 1,
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_contents_tag IS 'コンテンツタグ管理マスタ';
+COMMENT ON COLUMN public.com_m_contents_tag.tag_id IS 'タグID（可読文字列）';
+COMMENT ON COLUMN public.com_m_contents_tag.tag_name IS 'タグ表示名称';
+COMMENT ON COLUMN public.com_m_contents_tag.tag_type IS 'タグ種別';
+COMMENT ON COLUMN public.com_m_contents_tag.seq_no IS 'デフォルト表示順';
+COMMENT ON COLUMN public.com_m_contents_tag.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_contents_tag.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_contents_tag.update_date IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_m_word (単語マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_word (
+  word_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  content_id uuid REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+  word_en TEXT NOT NULL,
+  word_ja TEXT NOT NULL,
+  frequency_rank INT,
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_word IS '単語マスタ';
+COMMENT ON COLUMN public.com_m_word.word_id IS '単語ID';
+COMMENT ON COLUMN public.com_m_word.content_id IS 'コンテンツID';
+COMMENT ON COLUMN public.com_m_word.word_en IS '単語（英語表記）';
+COMMENT ON COLUMN public.com_m_word.word_ja IS '単語（日本語表記）';
+COMMENT ON COLUMN public.com_m_word.frequency_rank IS '解析時の出現頻度順位';
+COMMENT ON COLUMN public.com_m_word.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_word.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_word.update_date IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_m_phrase (出題例文マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_phrase (
+  phrase_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  word_id uuid REFERENCES public.com_m_word(word_id) ON DELETE CASCADE,
+  seq_no SMALLINT NOT NULL DEFAULT 1,
+  phrase_type SMALLINT NOT NULL,
+  phrase_en TEXT NOT NULL,
+  phrase_ja TEXT NOT NULL,
+  section_id TEXT, 
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_phrase IS '出題例文マスタ';
+COMMENT ON COLUMN public.com_m_phrase.phrase_id IS 'フレーズID';
+COMMENT ON COLUMN public.com_m_phrase.word_id IS '単語ID';
+COMMENT ON COLUMN public.com_m_phrase.seq_no IS 'SEQNO';
+COMMENT ON COLUMN public.com_m_phrase.phrase_type IS 'フレーズ種別（1: S+V 2: Adding 3: Strategic Solution 4: PAST 5: PRESENT PERFECT）';
+COMMENT ON COLUMN public.com_m_phrase.phrase_en IS 'フレーズ（英語表記）';
+COMMENT ON COLUMN public.com_m_phrase.phrase_ja IS 'フレーズ（日本語表記）';
+COMMENT ON COLUMN public.com_m_phrase.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_phrase.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_phrase.update_date IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_t_favorite_contents (お気に入りコンテンツ)
+---------------------------------------------
+CREATE TABLE public.com_t_favorite_contents (
+  favorite_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  content_id uuid NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  
+  -- 二重登録防止
+  UNIQUE(user_id, content_id)
+);
+
+COMMENT ON TABLE public.com_t_favorite_contents IS 'お気に入りコンテンツ';
+COMMENT ON COLUMN public.com_t_favorite_contents.favorite_id IS 'お気に入りID';
+COMMENT ON COLUMN public.com_t_favorite_contents.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_favorite_contents.content_id IS 'コンテンツID';
+COMMENT ON COLUMN public.com_t_favorite_contents.insert_date IS '登録日時';
+
+---------------------------------------------
+-- DDL: com_t_favorite_phrase (お気に入りフレーズ)
+---------------------------------------------
+CREATE TABLE public.com_t_favorite_phrase (
+  favorite_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  phrase_id uuid NOT NULL REFERENCES public.com_m_phrase(phrase_id) ON DELETE CASCADE,
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  -- 同じユーザーが同じフレーズを二重登録できないように制約
+  UNIQUE(user_id, phrase_id)
+);
+
+COMMENT ON TABLE public.com_t_favorite_phrase IS 'お気に入りフレーズ';
+COMMENT ON COLUMN public.com_t_favorite_phrase.favorite_id IS 'お気に入りID';
+COMMENT ON COLUMN public.com_t_favorite_phrase.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_favorite_phrase.phrase_id IS 'フレーズID';
+COMMENT ON COLUMN public.com_t_favorite_phrase.insert_date IS '登録日時';
+
+---------------------------------------------
+-- DDL: com_t_resume_contents (コンテンツ再開管理テーブル)
+---------------------------------------------
+CREATE TABLE public.com_t_resume_contents (
+  user_id uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  content_id uuid NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+  item_id uuid, 
+  metadata JSONB NOT NULL DEFAULT '{}',
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_t_resume_contents IS 'コンテンツ再開管理テーブル';
+COMMENT ON COLUMN public.com_t_resume_contents.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_resume_contents.content_id IS 'コンテンツID';
+COMMENT ON COLUMN public.com_t_resume_contents.item_id IS 'アイテムID（word_id, phrase_idなどの一意なID）';
+COMMENT ON COLUMN public.com_t_resume_contents.metadata IS 'メタデータ';
+COMMENT ON COLUMN public.com_t_resume_contents.update_date IS '更新日時';

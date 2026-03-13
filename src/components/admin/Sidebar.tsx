@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LayoutDashboard, Users, Speech, Building2, FileSignature } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Users, Speech, Building2, FileSignature, BookOpen } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'ダッシュボード', href: '/admin/dashboard', icon: LayoutDashboard },
   { label: '顧客管理', href: '/admin/clients', icon: Building2 },
   { label: '契約管理', href: '/admin/contracts', icon: FileSignature },
   { label: 'ユーザー管理', href: '/admin/users', icon: Users },
+  { label: '教材管理', href: '/admin/contents', icon: BookOpen },
   { label: 'スピーチ検証', href: '/admin/speachPoc', icon: Speech },
 ];
 

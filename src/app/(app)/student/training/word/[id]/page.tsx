@@ -6,7 +6,7 @@ import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star, X, ChevronDown, Book
 
 // Hooks & Actions
 import { useVoice } from '@/hooks/useVoice';
-import { clearResumeCorpus, getLatestResumeCorpus, saveResumeCorpus } from '@/actions/corpusAction';
+import { clearResumeContent, getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
 import { analyzePhrase } from '@/utils/stringSimilarity';
 import { WordResumeMetadata } from '@/types/training';
 import { useToast } from '@/hooks/useToast';
@@ -54,7 +54,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const { speak, startListening, stopListening, isListening, isSpeaking } = useVoice();
 
   // --- States ---
-  const [corpusName, setCorpusName] = useState("");
+  const [contentName, setContentName] = useState("");
   const [words, setWords] = useState<TrainingWord[]>([]);
   const [wordIdx, setWordIdx] = useState(0);
   const [phraseIdx, setPhraseIdx] = useState(0);
@@ -82,16 +82,16 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     async function init() {
       try {
         // Wordデータの取得
-        const { words, corpusName }= await getWordData(sectionId);
+        const { words, contentName }= await getWordData(sectionId);
 
         let targetWordIdx = 0;
         let targetPhraseIdx = 0;
 
         // URLに resume=true があれば栞を探す
         if (searchParams.get('resume') === 'true') {
-          const resume = await getLatestResumeCorpus();
+          const resume = await getLatestResumeContent();
           
-          if (resume && resume.corpus_id === sectionId) {
+          if (resume && resume.content_id === sectionId) {
             // 全単語の全フレーズをフラットに走査して、item_id が一致する場所を特定
             words.some((word, wIdx) => {
               const pIdx = word.phrases.findIndex(p => p.phrase_id === resume.item_id);
@@ -104,12 +104,12 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
             });
             
             showToast("前回の続きから再開しました", "success");
-            await clearResumeCorpus(); // 使用済みの栞をクリア
+            await clearResumeContent(); // 使用済みの栞をクリア
           }
         }
 
         setWords(words);
-        setCorpusName(corpusName);
+        setContentName(contentName);
         setWordIdx(targetWordIdx);
         setPhraseIdx(targetPhraseIdx);
       } catch (error) {
@@ -300,7 +300,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
     if (ok) {
       try {
-        await saveResumeCorpus<WordResumeMetadata>(
+        await saveResumeContent<WordResumeMetadata>(
           sectionId, 
           currentPhrase.phrase_id,
           {
@@ -765,7 +765,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
             {/* コーパス名（現在のセクション名など）を表示 */}
             {/* words[0]?.section_name のようなプロパティがあればそれを表示してください */}
             <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider truncate max-w-37.5 sm:max-w-none">
-              {corpusName || 'Business English Core'} 
+              {contentName || 'Business English Core'} 
             </span>
           </div>
 

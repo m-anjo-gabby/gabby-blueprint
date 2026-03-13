@@ -18,16 +18,16 @@ export interface VideoResumeMetadata extends BaseResumeMetadata {
   video_time: number;
 }
 
-// コーパス再開情報の共通レスポンス型
+// コンテンツ再開情報の共通レスポンス型
 // デフォルトで BaseResumeMetadata を使うように設定
-export interface ResumeCorpusResponse<T = BaseResumeMetadata> {
-  corpus_id: string;
+export interface ResumeContentResponse<T = BaseResumeMetadata> {
+  content_id: string;
   item_id: string;
   metadata: T; // 動的に指定
-  com_m_corpus: {
-    corpus_name: string;
-    corpus_type: number;
+  com_m_contents: {
+    content_name: string;
+    content_type: number;
     difficulty_level: number;
-    corpus_label: string;
+    content_label: string;
   };
 }

@@ -20,24 +20,24 @@ export default function PhraseFavorites({ phrases, setPhrases }: PhraseFavorites
   const { showToast } = useToast();
 
   // --- States ---
-  const [selectedCorpusId, setSelectedCorpusId] = useState<string>('all');
+  const [selectedContentId, setSelectedContentId] = useState<string>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // --- Logic: フィルタリング用タブの生成 ---
-  const corpusTabs = useMemo(() => {
+  const contentTabs = useMemo(() => {
     const map = new Map();
     phrases.forEach(f => {
-      if (!map.has(f.corpus_id)) {
-        map.set(f.corpus_id, f.corpus_name);
+      if (!map.has(f.content_id)) {
+        map.set(f.content_id, f.content_name);
       }
     });
     return Array.from(map.entries());
   }, [phrases]);
 
   const filteredFavorites = useMemo(() => {
-    if (selectedCorpusId === 'all') return phrases;
-    return phrases.filter(f => f.corpus_id === selectedCorpusId);
-  }, [phrases, selectedCorpusId]);
+    if (selectedContentId === 'all') return phrases;
+    return phrases.filter(f => f.content_id === selectedContentId);
+  }, [phrases, selectedContentId]);
 
   // --- Handlers ---
   const handleConfirmRemove = async () => {
@@ -69,25 +69,25 @@ export default function PhraseFavorites({ phrases, setPhrases }: PhraseFavorites
 
   return (
     <>
-      {/* Corpus Filter Tabs: 内包されたフィルタリング */}
-      {corpusTabs.length > 0 && (
+      {/* Content Filter Tabs: 内包されたフィルタリング */}
+      {contentTabs.length > 0 && (
         <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 pb-2">
           <button
-            onClick={() => setSelectedCorpusId('all')}
+            onClick={() => setSelectedContentId('all')}
             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
-              selectedCorpusId === 'all' 
+              selectedContentId === 'all' 
                 ? 'bg-slate-900 text-white border-slate-900 shadow-lg' 
                 : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50 shadow-sm'
             }`}
           >
             All
           </button>
-          {corpusTabs.map(([id, name]) => (
+          {contentTabs.map(([id, name]) => (
             <button
               key={id}
-              onClick={() => setSelectedCorpusId(id)}
+              onClick={() => setSelectedContentId(id)}
               className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
-                selectedCorpusId === id 
+                selectedContentId === id 
                   ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' 
                   : 'bg-white text-slate-400 border-slate-100 hover:bg-indigo-50 hover:text-indigo-400 shadow-sm'
               }`}
@@ -102,7 +102,7 @@ export default function PhraseFavorites({ phrases, setPhrases }: PhraseFavorites
       <AnimatePresence mode="popLayout" initial={false}>
         {filteredFavorites.length > 0 ? (
           <motion.div 
-            key={selectedCorpusId} 
+            key={selectedContentId} 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -147,7 +147,7 @@ export default function PhraseFavorites({ phrases, setPhrases }: PhraseFavorites
 
                 <div className="flex justify-between items-center">
                   <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">
-                    From: {fav.corpus_name}
+                    From: {fav.content_name}
                   </span>
                   <button 
                     onClick={() => speak(fav.phrase_en)}

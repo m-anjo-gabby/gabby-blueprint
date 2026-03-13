@@ -37,144 +37,6 @@ FOR UPDATE TO authenticated USING (
 );
 
 ---------------------------------------------
--- SQLポリシー コーパスアクセス
----------------------------------------------
--- 既存のポリシーを削除してから再作成
-DROP POLICY IF EXISTS "Users can view common or assigned corpora" ON public.com_m_corpus;
-DROP POLICY IF EXISTS "Users can view their own client corpus access" ON public.com_m_corpus_access;
-
--- 1. テーブルのRLSを有効化
-ALTER TABLE public.com_m_corpus ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.com_m_corpus_access ENABLE ROW LEVEL SECURITY;
-
--- 2. 参照（SELECT）ポリシーの作成
-CREATE POLICY "Users can view common or assigned corpora" ON public.com_m_corpus
-FOR SELECT TO authenticated USING (
-  corpus_type = 0
-  OR EXISTS (
-    SELECT 1 FROM public.com_m_corpus_access a
-    WHERE a.corpus_id = public.com_m_corpus.corpus_id
-    AND a.client_id = public.get_jwt_client_id()
-    AND a.delete_flg = '0'
-  )
-);
-
--- 3. 自分の所属する client_id に紐づくアクセス権設定だけが見える
-CREATE POLICY "Users can view their own client corpus access" ON public.com_m_corpus_access
-FOR SELECT USING (
-  client_id = public.get_jwt_client_id()
-);
-
----------------------------------------------
--- SQLポリシー 単語、フレーズ
----------------------------------------------
--- 既存のポリシーを削除してから再作成
-DROP POLICY IF EXISTS "Users can view words of accessible corpora" ON public.com_m_word;
-DROP POLICY IF EXISTS "Users can view phrases of accessible words" ON public.com_m_phrase;
-
--- 単語マスタのRLS
-ALTER TABLE public.com_m_word ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view words of accessible corpora" ON public.com_m_word
-FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.com_m_corpus c
-    WHERE c.corpus_id = public.com_m_word.corpus_id
-    -- ここで「コーパス自体のRLSポリシー」が再帰的に評価されるため、非常に安全
-  )
-);
-
--- フレーズマスタのRLS
-ALTER TABLE public.com_m_phrase ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view phrases of accessible words" ON public.com_m_phrase
-FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.com_m_word w
-    WHERE w.word_id = public.com_m_phrase.word_id
-  )
-);
-
----------------------------------------------
--- SQLポリシー お気に入りフレーズ
----------------------------------------------
--- 既存のポリシーを削除してから再作成
-DROP POLICY IF EXISTS "Users can manage their own favorites" ON public.com_t_favorite_phrase;
-DROP POLICY IF EXISTS "Managers can view client's favorites" ON public.com_t_favorite_phrase;
-
--- RLS設定
-ALTER TABLE public.com_t_favorite_phrase ENABLE ROW LEVEL SECURITY;
-
--- 利用者向けの参照ポリシー
-CREATE POLICY "Users can manage their own favorites" ON public.com_t_favorite_phrase
-FOR ALL TO authenticated
-USING (user_id = auth.uid())
-WITH CHECK (user_id = auth.uid());
-
--- 管理者向けの参照ポリシー（オプション）
-CREATE POLICY "Managers can view client's favorites" ON public.com_t_favorite_phrase
-FOR SELECT TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.com_m_user u
-    WHERE u.id = public.com_t_favorite_phrase.user_id
-    AND u.client_id = public.get_jwt_client_id()
-  )
-);
-
----------------------------------------------
--- SQLポリシー お気に入りコーパス
----------------------------------------------
--- 既存のポリシーを削除してから再作成
-DROP POLICY IF EXISTS "Users can manage their own favorite corpus" ON public.com_t_favorite_corpus;
-
--- RLS設定
-ALTER TABLE public.com_t_favorite_corpus ENABLE ROW LEVEL SECURITY;
-
--- 利用者向けの参照ポリシー
-CREATE POLICY "Users can manage their own favorite corpus" ON public.com_t_favorite_corpus
-FOR ALL TO authenticated USING (
-  user_id = auth.uid()
-);
-
----------------------------------------------
--- SQLポリシー コーパスタグ管理
----------------------------------------------
--- 既存のポリシーを削除してから再作成
-DROP POLICY IF EXISTS "Anyone can view tags" ON public.com_m_corpus_tag;
-
--- RLS設定
-ALTER TABLE public.com_m_corpus_tag ENABLE ROW LEVEL SECURITY;
-
--- 認証済みユーザーは誰でも参照可能
-CREATE POLICY "Anyone can view tags" ON public.com_m_corpus_tag
-FOR SELECT TO authenticated USING (delete_flg = '0');
-
--- 管理（更新・追加）は authenticated には許可しない（デフォルトで制限）
-
----------------------------------------------
--- SQLポリシー コーパス再開管理
----------------------------------------------
--- 既存のポリシーを削除してから再作成
-DROP POLICY IF EXISTS "Users can manage their own resume points" ON public.com_t_resume_corpus;
-
--- RLS設定
-ALTER TABLE public.com_t_resume_corpus ENABLE ROW LEVEL SECURITY;
-
--- 認証済みユーザーは誰でも参照・更新可能
-CREATE POLICY "Users can manage their own resume points" ON public.com_t_resume_corpus
-FOR ALL TO authenticated USING (
-  user_id = auth.uid()
-)
-WITH CHECK (
-  user_id = auth.uid() -- 自分のデータとしてしか保存・更新できない
-);
-
----------------------------------------------
 -- SQLポリシー 契約マスタ
 ---------------------------------------------
 -- 既存のポリシーを削除してから再作成
@@ -207,4 +69,142 @@ FOR SELECT TO authenticated USING (
         SELECT contract_id FROM public.com_m_contract 
         WHERE client_id = public.get_jwt_client_id()
     )
+);
+
+---------------------------------------------
+-- SQLポリシー コンテンツアクセス
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can view common or assigned corpora" ON public.com_m_contents;
+DROP POLICY IF EXISTS "Users can view their own client contents access" ON public.com_m_contents_access;
+
+-- 1. テーブルのRLSを有効化
+ALTER TABLE public.com_m_contents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.com_m_contents_access ENABLE ROW LEVEL SECURITY;
+
+-- 2. 参照（SELECT）ポリシーの作成
+CREATE POLICY "Users can view common or assigned corpora" ON public.com_m_contents
+FOR SELECT TO authenticated USING (
+  content_scope = 0
+  OR EXISTS (
+    SELECT 1 FROM public.com_m_contents_access a
+    WHERE a.content_id = public.com_m_contents.content_id
+    AND a.client_id = public.get_jwt_client_id()
+    AND a.delete_flg = '0'
+  )
+);
+
+-- 3. 自分の所属する client_id に紐づくアクセス権設定だけが見える
+CREATE POLICY "Users can view their own client contents access" ON public.com_m_contents_access
+FOR SELECT USING (
+  client_id = public.get_jwt_client_id()
+);
+
+---------------------------------------------
+-- SQLポリシー コンテンツタグ管理
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Anyone can view tags" ON public.com_m_contents_tag;
+
+-- RLS設定
+ALTER TABLE public.com_m_contents_tag ENABLE ROW LEVEL SECURITY;
+
+-- 認証済みユーザーは誰でも参照可能
+CREATE POLICY "Anyone can view tags" ON public.com_m_contents_tag
+FOR SELECT TO authenticated USING (delete_flg = '0');
+
+-- 管理（更新・追加）は authenticated には許可しない（デフォルトで制限）
+
+---------------------------------------------
+-- SQLポリシー コンテンツ再開管理
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can manage their own resume points" ON public.com_t_resume_contents;
+
+-- RLS設定
+ALTER TABLE public.com_t_resume_contents ENABLE ROW LEVEL SECURITY;
+
+-- 認証済みユーザーは誰でも参照・更新可能
+CREATE POLICY "Users can manage their own resume points" ON public.com_t_resume_contents
+FOR ALL TO authenticated USING (
+  user_id = auth.uid()
+)
+WITH CHECK (
+  user_id = auth.uid() -- 自分のデータとしてしか保存・更新できない
+);
+
+---------------------------------------------
+-- SQLポリシー 単語、フレーズ
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can view words of accessible corpora" ON public.com_m_word;
+DROP POLICY IF EXISTS "Users can view phrases of accessible words" ON public.com_m_phrase;
+
+-- 単語マスタのRLS
+ALTER TABLE public.com_m_word ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view words of accessible corpora" ON public.com_m_word
+FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.com_m_contents c
+    WHERE c.content_id = public.com_m_word.content_id
+    -- ここで「コンテンツ自体のRLSポリシー」が再帰的に評価されるため、非常に安全
+  )
+);
+
+-- フレーズマスタのRLS
+ALTER TABLE public.com_m_phrase ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view phrases of accessible words" ON public.com_m_phrase
+FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.com_m_word w
+    WHERE w.word_id = public.com_m_phrase.word_id
+  )
+);
+
+---------------------------------------------
+-- SQLポリシー お気に入りコンテンツ
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can manage their own favorite contents" ON public.com_t_favorite_contents;
+
+-- RLS設定
+ALTER TABLE public.com_t_favorite_contents ENABLE ROW LEVEL SECURITY;
+
+-- 利用者向けの参照ポリシー
+CREATE POLICY "Users can manage their own favorite contents" ON public.com_t_favorite_contents
+FOR ALL TO authenticated USING (
+  user_id = auth.uid()
+);
+
+---------------------------------------------
+-- SQLポリシー お気に入りフレーズ
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can manage their own favorites" ON public.com_t_favorite_phrase;
+DROP POLICY IF EXISTS "Managers can view client's favorites" ON public.com_t_favorite_phrase;
+
+-- RLS設定
+ALTER TABLE public.com_t_favorite_phrase ENABLE ROW LEVEL SECURITY;
+
+-- 利用者向けの参照ポリシー
+CREATE POLICY "Users can manage their own favorites" ON public.com_t_favorite_phrase
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- 管理者向けの参照ポリシー（オプション）
+CREATE POLICY "Managers can view client's favorites" ON public.com_t_favorite_phrase
+FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.com_m_user u
+    WHERE u.id = public.com_t_favorite_phrase.user_id
+    AND u.client_id = public.get_jwt_client_id()
+  )
 );
