@@ -159,28 +159,72 @@ export function ContractLicenseDialog({ contract }: Props) {
           ) : isAddMode ? (
             /* --- 追加モード UI --- */
             <div className="space-y-4">
-              <Button variant="ghost" size="sm" onClick={() => setIsAddMode(false)} className="h-8 text-slate-500 hover:text-indigo-600 p-0">
-                <ArrowLeft size={16} className="mr-1" /> 戻る
-              </Button>
+              {/* 戻るボタンエリア */}
+              <div className="flex items-center justify-between">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsAddMode(false)} 
+                  className="h-8 text-slate-500 hover:text-indigo-600 p-0 font-bold transition-colors"
+                >
+                  <ArrowLeft size={16} className="mr-1" /> 戻る
+                </Button>
+                
+                {isLicenseFull && (
+                  <Badge variant="destructive" className="bg-rose-50 text-rose-600 border-rose-100 text-[10px] font-bold shadow-none">
+                    上限に達しています
+                  </Badge>
+                )}
+              </div>
+
               <ScrollArea className="h-[350px] pr-4">
-                <div className="space-y-3">
-                  {unassignedUsers.map(user => (
-                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-xl hover:border-indigo-200 transition-colors bg-slate-50/50">
-                      <div className="overflow-hidden">
-                        <p className="text-sm font-bold text-slate-800 truncate">{user.user_name}</p>
-                        <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
-                      </div>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleAdd(user.id)} 
-                        disabled={loading}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg h-8"
-                      >
-                        追加
-                      </Button>
+                {unassignedUsers.length === 0 ? (
+                  /* --- エンプティステート：追加対象ユーザーなし --- */
+                  <div className="text-center py-20 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 px-6">
+                    <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4">
+                      <Users className="text-slate-300" size={24} />
                     </div>
-                  ))}
-                </div>
+                    <p className="text-sm text-slate-600 font-bold">追加可能なユーザーがいません</p>
+                    <p className="text-[10px] text-slate-400 mt-2 leading-relaxed max-w-[200px] mx-auto">
+                      全てのユーザーに割当済みか、<br />
+                      クライアントにユーザーが登録されていません。
+                    </p>
+                  </div>
+                ) : (
+                  /* --- ユーザーリスト --- */
+                  <div className="space-y-2.5">
+                    {unassignedUsers.map((user) => (
+                      <div 
+                        key={user.id} 
+                        className="flex items-center justify-between p-3 border border-slate-100 rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-all bg-slate-50/50 group"
+                      >
+                        <div className="overflow-hidden pr-2">
+                          <p className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-900 transition-colors">
+                            {user.user_name}
+                          </p>
+                          <p className="text-[11px] text-slate-400 truncate font-medium">
+                            {user.email}
+                          </p>
+                        </div>
+                        
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleAdd(user.id)} 
+                          disabled={loading || isLicenseFull}
+                          className={`
+                            h-8 px-4 rounded-xl font-bold transition-all active:scale-95
+                            ${isLicenseFull 
+                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                              : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100'
+                            }
+                          `}
+                        >
+                          {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : '追加'}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </ScrollArea>
             </div>
           ) : (

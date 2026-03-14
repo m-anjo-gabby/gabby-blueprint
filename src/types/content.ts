@@ -1,4 +1,16 @@
-// --- 1. 定数・区分値
+/**
+ * ----------------------------------------------
+ * 定数・区分値
+ * ----------------------------------------------
+ */
+// コンテンツ種別
+export const CONTENT_TYPES = {
+  0: { label: '単語・フレーズ', value: 0 },
+  1: { label: 'ビデオ', value: 1 },
+  2: { label: 'Gabbyスプリント', value: 2 },
+} as const;
+
+// タグ種別
 export const TAG_TYPES = {
   industry: { label: '業界', color: 'blue' },
   scene: { label: 'シチュエーション', color: 'purple' },
@@ -7,12 +19,28 @@ export const TAG_TYPES = {
   other: { label: 'その他', color: 'glay' },
 } as const;
 
-// 定数から型を生成 (industry | scene | skill | level | other)
+// 公開範囲
+export const CONTENT_SCOPES = {
+  0: { label: '共通', value: 0 },
+  1: { label: '限定', value: 1 },
+  9: { label: '非公開', value: 9 },
+} as const;
+
+/**
+ * ----------------------------------------------
+ * データ構造の定義
+ * ----------------------------------------------
+ */
+// コンテンツ種別の型定義
+export type ContentType = keyof typeof CONTENT_TYPES;
+
+// タグ種別の型定義
 export type TagType = keyof typeof TAG_TYPES;
 
-// --- 2. データ構造の定義
+// 公開範囲の型定義
+export type ContentScope = keyof typeof CONTENT_SCOPES;
 
-/** タグマスタ */
+// タグマスタの型定義
 export interface ContentTag {
   tag_id: string;
   tag_name: string;
@@ -23,7 +51,41 @@ export interface ContentTag {
   update_date: string;
 }
 
-/** メタデータ埋め込み用タグ */
+// 教材に関連付いたタグの簡易型
+export interface ContentTagSummary {
+  tag_id: string;
+  tag_name: string;
+  tag_type: string;
+}
+
+// クライアント割当の簡易型
+export interface ContentAccessSummary {
+  client_id: string;
+  client_name: string;
+}
+
+// 教材の型定義
+export interface Content {
+  content_id: string;
+  content_name: string;
+  content_type: ContentType;
+  content_scope: ContentScope;
+  seq_no: number;
+  difficulty_level: number;
+  recommend: number;
+  description: string | null;
+  content_label: string;
+  metadata: {
+      [key: string]: unknown; // 他の動的なプロパティを許容
+  };
+  delete_flg: string;
+  insert_date: string;
+  update_date: string;
+  tags?: ContentTagSummary[]; // リレーションで取得するタグ情報
+  access_clients?: ContentAccessSummary[]; // リレーションで取得するアクセス情報
+}
+
+// メタデータ埋め込み用タグ
 export interface MetadataTag {
   id: string;
   label: string;
