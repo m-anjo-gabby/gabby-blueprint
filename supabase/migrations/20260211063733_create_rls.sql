@@ -116,6 +116,19 @@ FOR SELECT TO authenticated USING (delete_flg = '0');
 -- 管理（更新・追加）は authenticated には許可しない（デフォルトで制限）
 
 ---------------------------------------------
+-- SQLポリシー コンテンツタグリレーション管理
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Allow select for authenticated"  ON public.com_t_contents_tag_rel;
+
+-- RLS設定
+ALTER TABLE public.com_t_contents_tag_rel ENABLE ROW LEVEL SECURITY;
+
+-- 参照ポリシー
+CREATE POLICY "Allow select for authenticated" 
+ON public.com_t_contents_tag_rel FOR SELECT TO authenticated USING (true);
+
+---------------------------------------------
 -- SQLポリシー コンテンツ再開管理
 ---------------------------------------------
 -- 既存のポリシーを削除してから再作成
