@@ -25,9 +25,10 @@ import { getActiveContractsByClient, assignLicenseToUser, removeLicenseFromUser,
 
 interface Props {
   user: UserRecord;
+  children: React.ReactNode;
 }
 
-export function LicenseFormDialog({ user }: Props) {
+export function LicenseFormDialog({ user, children }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [availableContracts, setAvailableContracts] = useState<ContractDetail[]>([]);
@@ -131,9 +132,7 @@ export function LicenseFormDialog({ user }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className={`h-8 gap-1.5 border-slate-200 font-bold ${user.contract_id ? "text-indigo-600 hover:bg-indigo-50 border-indigo-100" : "text-slate-400 hover:bg-slate-50 italic"}`}>
-          <ShieldCheck size={14} /> {user.contract_id ? "ライセンス" : "未割当"}
-        </Button>
+        {children}
       </DialogTrigger>
 
       <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">

@@ -8,6 +8,7 @@ import { ja } from 'date-fns/locale';
 import { ContractDetail } from '@/types/contract';
 import { ContractFormDialog } from './ContractFormDialog';
 import { ContractLicenseDialog } from './ContractLicenseDialog';
+import { Pencil } from 'lucide-react';
 
 export const columns: ColumnDef<ContractDetail>[] = [
   {
@@ -36,40 +37,59 @@ export const columns: ColumnDef<ContractDetail>[] = [
     id: 'license_usage',
     header: 'ライセンス利用状況',
     cell: ({ row }) => {
-      const max = row.original.max_licenses;
-      const active = row.original.current_active_count || 0;
-      const assigned = row.original.current_assigned_count || 0;
-      
-      // 利用率の計算
+      const contract = row.original;
+      const max = contract.max_licenses;
+      const active = contract.current_active_count || 0;
+      const assigned = contract.current_assigned_count || 0;
       const usageRate = Math.min(Math.ceil((active / max) * 100), 100);
       
       return (
-        <div className="flex flex-col gap-1.5 min-w-25">
-          <div className="flex items-baseline gap-1">
-            <span className={`text-sm font-bold font-mono ${active >= max ? 'text-amber-600' : 'text-slate-900'}`}>
-              {active}
-            </span>
-            <span className="text-slate-400 text-[10px]">/ {max}</span>
-            <span className="text-[10px] text-slate-400 ml-1">( {usageRate}% )</span>
-          </div>
+        <ContractLicenseDialog contract={contract}>
+          <div className="flex items-center gap-4 cursor-pointer group/usage py-2 w-fit">
+            {/* 左側：情報の塊（数値 ＋ バー） */}
+            <div className="flex flex-col gap-1.5 min-w-[120px]">
+              <div className="flex items-baseline gap-1">
+                <span className={`text-sm font-bold font-mono ${active >= max ? 'text-amber-600' : 'text-slate-900'} group-hover/usage:text-indigo-600 transition-colors`}>
+                  {active}
+                </span>
+                <span className="text-slate-400 text-[10px]">/ {max}</span>
+                <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap opacity-80">( {usageRate}% )</span>
+              </div>
 
-          {/* プログレスバー */}
-          <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-sm">
-            <div 
-              className={`h-full transition-all duration-500 ${
-                active >= max ? 'bg-amber-500' : 'bg-indigo-500'
-              }`}
-              style={{ width: `${usageRate}%` }}
-            />
-          </div>
+              {/* プログレスバー（幅を固定） */}
+              <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-sm transition-all group-hover/usage:border-indigo-200">
+                <div 
+                  className={`h-full transition-all duration-500 ${
+                    active >= max ? 'bg-amber-500' : 'bg-indigo-500'
+                  }`}
+                  style={{ width: `${usageRate}%` }}
+                />
+              </div>
 
-          {/* 補足：割当済み（期間外含む）が上限を超えている場合の警告表示なども検討可 */}
-          {assigned > max && (
-            <div className="text-[9px] text-rose-500 font-medium">
-              ※ 超過しています
+              {assigned > max && (
+                <div className="text-[9px] text-rose-500 font-black animate-pulse leading-none">
+                  ※ 超過
+                </div>
+              )}
             </div>
-          )}
-        </div>
+
+            {/* 右側：ペンシルボタン（少し大きく、目立たせる） */}
+            <div 
+              className="
+                flex items-center justify-center 
+                w-6 h-6 rounded-xl
+                bg-indigo-50 text-indigo-500 
+                border border-indigo-100 shadow-sm
+                transition-all duration-300
+                group-hover/usage:bg-indigo-600 group-hover/usage:text-white 
+                group-hover/usage:border-indigo-600 group-hover/usage:shadow-md
+                group-hover/usage:scale-105
+              "
+            >
+              <Pencil size={14} strokeWidth={2.5} />
+            </div>
+          </div>
+        </ContractLicenseDialog>
       );
     },
   },
@@ -120,10 +140,7 @@ export const columns: ColumnDef<ContractDetail>[] = [
     header: () => <div className="text-right"></div>,
     cell: ({ row }) => (
       <div className="flex justify-end items-center gap-2">
-        {/* 1. ライセンス割当状況ダイアログ */}
-        <ContractLicenseDialog contract={row.original} />
-
-        {/* 2. 契約内容の編集ダイアログ */}
+        {/* 契約内容の編集ダイアログ */}
         <ContractFormDialog mode="edit" initialData={row.original} />
       </div>
     ),

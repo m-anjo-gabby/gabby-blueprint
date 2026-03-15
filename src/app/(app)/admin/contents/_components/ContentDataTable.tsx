@@ -33,7 +33,8 @@ import {
   TagIcon,
   EyeOff,
   HelpCircle,
-  Building2
+  Building2,
+  Pencil
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Content, CONTENT_TYPES, CONTENT_SCOPES } from "@/types/content";
@@ -115,46 +116,52 @@ export function ContentDataTable({
         if (scope === 1) {
           return (
             <ContentAccessDialog content={content}>
-              <div className="group flex flex-col gap-1.5 min-w-[140px] cursor-pointer">
-                {/* 上段：バッジ ＋ プラスアイコン */}
-                <div className="flex items-center gap-2">
+              <div className="group/access flex items-center gap-4 cursor-pointer py-2 w-fit">
+                {/* 左側：公開状況の塊 */}
+                <div className="flex flex-col gap-1 min-w-32.5">
+                  {/* 上段：限定バッジ（状態を示すことに専念） */}
                   <div className={`
-                    flex items-center gap-1 px-2 py-0.5 rounded-full border transition-all
-                    ${styles.bg} ${styles.border} group-hover:bg-amber-100 group-hover:border-amber-300
+                    flex items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all w-fit
+                    ${isAlert ? 'bg-rose-50 border-rose-100' : 'bg-amber-50 border-amber-100 group-hover/access:bg-amber-100 group-hover/access:border-amber-300'}
                   `}>
-                    {isAlert ? (
-                      <div className="relative flex items-center">
-                        <Lock size={11} className="text-rose-500" />
-                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-rose-500 rounded-full border border-white animate-pulse" />
-                      </div>
-                    ) : (
-                      <span className="opacity-70">{styles.icon}</span>
-                    )}
-                    <span className={`text-[10px] font-black tracking-tight ${isAlert ? 'text-rose-600' : styles.text}`}>
+                    <Lock size={11} className={`${isAlert ? 'text-rose-500' : 'text-amber-600'} opacity-70`} />
+                    <span className={`text-[10px] font-black tracking-tight ${isAlert ? 'text-rose-600' : 'text-amber-600'}`}>
                       {config?.label}
                     </span>
                   </div>
-                  
-                  {/* ガイドとしてのプラスアイコン */}
-                  <Plus size={12} className="text-slate-300 group-hover:text-amber-600 transition-colors" />
+
+                  {/* 下段：クライアント名またはエラーメッセージ */}
+                  <div className="flex items-center gap-1.5 pl-1 transition-colors">
+                    {isAlert ? (
+                      <span className="text-[10px] font-bold text-rose-400 italic">公開先を設定してください</span>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-slate-500 group-hover/access:text-amber-700">
+                        <Building2 size={10} className="text-slate-300 group-hover/access:text-amber-400 shrink-0" />
+                        <span className="text-[11px] font-bold text-slate-600 group-hover/access:text-amber-800 truncate max-w-25">
+                          {clients[0]?.client_name}
+                        </span>
+                        {clients.length > 1 && (
+                          <span className="text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-1 rounded-sm">
+                            +{clients.length - 1}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* 下段：クライアント名 */}
-                <div className="flex items-center gap-1.5 pl-1 text-slate-500 group-hover:text-amber-700 transition-colors">
+                {/* 右側：アクションボタン（未設定ならPlus、設定済みならPencil） */}
+                <div className={`
+                  flex items-center justify-center w-6 h-6 rounded-xl shadow-sm transition-all duration-300 group-hover/access:scale-105 group-hover/access:shadow-md
+                  ${isAlert 
+                    ? "bg-rose-50 text-rose-500 border border-rose-100 group-hover/access:bg-rose-600 group-hover/access:text-white group-hover/access:border-rose-600" 
+                    : "bg-amber-50 text-amber-600 border border-amber-100 group-hover/access:bg-amber-600 group-hover/access:text-white group-hover/access:border-amber-600"
+                  }
+                `}>
                   {isAlert ? (
-                    <span className="text-[10px] font-bold text-rose-400 italic">未割当（非表示中）</span>
+                    <Plus size={16} strokeWidth={3} />
                   ) : (
-                    <>
-                      <Building2 size={10} className="text-slate-300 group-hover:text-amber-400 flex-shrink-0" />
-                      <span className="text-[11px] font-bold text-slate-600 group-hover:text-amber-700 truncate max-w-[100px]">
-                        {clients[0]?.client_name}
-                      </span>
-                      {clients.length > 1 && (
-                        <span className="text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-1 rounded-sm group-hover:bg-amber-100">
-                          +{clients.length - 1}
-                        </span>
-                      )}
-                    </>
+                    <Pencil size={14} strokeWidth={2.5} />
                   )}
                 </div>
               </div>

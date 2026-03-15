@@ -29,14 +29,15 @@ import { useToast } from '@/hooks/useToast'
 import { LicenseUserItem, ContractDetail } from '@/types/contract'
 
 interface Props {
-  contract: ContractDetail
+  contract: ContractDetail;
+  children: React.ReactNode;
 }
 
 /**
  * ライセンス割当管理ダイアログ
  * 特定の契約に対して、ユーザーの割当（追加）および解除（削除）を行う
  */
-export function ContractLicenseDialog({ contract }: Props) {
+export function ContractLicenseDialog({ contract, children }: Props) {
   // --- 状態管理 ---
   const [open, setOpen] = useState(false)
   const [isAddMode, setIsAddMode] = useState(false)
@@ -134,9 +135,7 @@ export function ContractLicenseDialog({ contract }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 border-indigo-200 hover:bg-indigo-50 text-indigo-700 font-bold">
-          <Users size={14} /> ライセンス
-        </Button>
+        {children}
       </DialogTrigger>
 
       <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button]:focus-visible:ring-0 [&>button]:outline-none">

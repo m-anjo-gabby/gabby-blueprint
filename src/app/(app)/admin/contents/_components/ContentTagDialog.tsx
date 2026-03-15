@@ -104,9 +104,10 @@ export function ContentTagDialog({ content }: Props) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 text-slate-300 group-hover:text-indigo-600 group-hover:bg-indigo-50 rounded-full transition-colors"
+              className="h-5 w-5 p-0 text-indigo-500 bg-indigo-50/50 border border-indigo-100 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 rounded-full transition-all duration-200 shadow-sm ml-1"
+              title="タグを編集"
             >
-              <Plus size={12} />
+              <Plus size={12} strokeWidth={3} />
             </Button>
           </div>
         ) : (
@@ -114,10 +115,16 @@ export function ContentTagDialog({ content }: Props) {
           <Button
             variant="outline"
             size="sm"
-            className="h-7 px-2 text-[10px] border-dashed border-slate-300 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 rounded-lg transition-all"
+            className="h-7 px-2 text-[10px] border-dashed border-slate-300 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 rounded-lg transition-all group/btn"
           >
             <TagIcon size={10} className="mr-1.5" />
-            未設定 [割当]
+            <span className="font-bold mr-1.5">未設定</span>
+            {/* プラスアイコン */}
+            <Plus 
+              size={12} 
+              strokeWidth={3} 
+              className="text-indigo-400 group-hover/btn:text-indigo-600 transition-colors" 
+            />
           </Button>
         )}
       </DialogTrigger>

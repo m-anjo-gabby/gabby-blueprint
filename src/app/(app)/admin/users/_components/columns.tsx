@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { getUserTypeLabel } from "@/constants/userTypes";
 import { UserFormDialog } from "./UserFormDialog";
 import { LicenseFormDialog } from "./LicenseFormDialog";
-import { Calendar, Building2 } from "lucide-react";
+import { Calendar, Building2, Plus, StickyNote, ShieldCheck, Pencil, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const columns: ColumnDef<UserRecord>[] = [
   {
@@ -96,21 +97,60 @@ export const columns: ColumnDef<UserRecord>[] = [
   },
   {
     accessorKey: "plan_name",
-    header: "ライセンス状況",
+    header: "ライセンス",
     cell: ({ row }) => {
-      const { plan_name, license_end_date } = row.original;
-      if (!plan_name) return <span className="text-[11px] text-slate-300 italic font-medium">ライセンスなし</span>;
-
+      const user = row.original;
+      const { plan_name, license_end_date } = user;
+      
       return (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-bold text-slate-700">{plan_name}</span>
-          {license_end_date && (
-            <div className="flex items-center gap-1 text-[10px] text-slate-400">
-              <Calendar size={10} />
-              <span>{license_end_date.split('T')[0]} まで</span>
+        <LicenseFormDialog user={user}>
+          <div className="flex items-center gap-4 cursor-pointer group/lic py-2 w-fit">
+            {/* 左側：プラン情報の塊 */}
+            <div className="flex flex-col gap-0.5 min-w-30">
+              {!plan_name ? (
+                /* 未割当：点線バッジ（厚みあり） */
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="
+                    h-7 px-2 text-[10px] border-dashed border-slate-300 
+                    text-slate-400 hover:text-indigo-600 hover:border-indigo-200 
+                    hover:bg-indigo-50 rounded-lg transition-all group/btn 
+                    bg-transparent font-black shadow-none
+                  "
+                >
+                  <ShieldAlert size={12} className="mr-1.5 opacity-70 group-hover/btn:text-indigo-500" />
+                  <span className="mr-1.5">未設定</span>
+                  <Plus 
+                    size={12} 
+                    strokeWidth={3} 
+                    className="text-indigo-400 group-hover/btn:text-indigo-600 transition-colors" 
+                  />
+                </Button>
+              ) : (
+                /* 割当済み：プラン名 ＋ 期限 */
+                <>
+                  <div className="text-[11px] font-black text-slate-700 leading-tight max-w-35 truncate group-hover/lic:text-indigo-700 transition-colors">
+                    {plan_name}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-slate-400 transition-colors group-hover/lic:text-indigo-500">
+                    <Calendar size={10} className="opacity-70" />
+                    <span className="font-bold tracking-tight">
+                      {license_end_date ? license_end_date.split('T')[0] : '無期限'}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
-          )}
-        </div>
+
+            {/* 右側：ペンシルボタン（割当済みのみ） */}
+            {plan_name && (
+              <div className="flex items-center justify-center w-6 h-6 rounded-xl bg-indigo-50 text-indigo-500 border border-indigo-100 shadow-sm transition-all duration-300 group-hover/lic:bg-indigo-600 group-hover/lic:text-white group-hover/lic:border-indigo-600 group-hover/lic:shadow-md group-hover/lic:scale-105">
+                <Pencil size={14} strokeWidth={2.5} />
+              </div>
+            )}
+          </div>
+        </LicenseFormDialog>
       );
     },
   },
@@ -119,8 +159,6 @@ export const columns: ColumnDef<UserRecord>[] = [
     header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">操作</div>,
     cell: ({ row }) => (
       <div className="flex justify-end items-center gap-2 px-2">
-        {/* ライセンス管理（プラン変更・解除） */}
-        <LicenseFormDialog user={row.original} />
         {/* ユーザー基本情報の編集 */}
         <UserFormDialog 
           mode="edit" 
