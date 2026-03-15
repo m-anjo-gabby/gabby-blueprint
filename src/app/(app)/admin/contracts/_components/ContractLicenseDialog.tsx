@@ -69,16 +69,6 @@ export function ContractLicenseDialog({ contract, children }: Props) {
     }
   }, [contract.contract_id, contract.client_id, showToast])
 
-  /**
-   * ダイアログ開閉時のデータ初期化
-   */
-  useEffect(() => {
-    if (open) {
-      loadData()
-      setIsAddMode(false)
-    }
-  }, [open, loadData])
-
   // --- ハンドラー ---
 
   /**
@@ -132,8 +122,26 @@ export function ContractLicenseDialog({ contract, children }: Props) {
     }
   }
 
+  /**
+   * ダイアログ開閉時の処理
+   */
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+    
+    if (nextOpen) {
+      // 開くときは必ず一覧モードから開始し、最新データをロード
+      setIsAddMode(false)
+      loadData()
+    } else {
+      // 閉じるときは状態をクリア（前回のリストを一瞬見せないため）
+      setAssignedUsers([])
+      setUnassignedUsers([])
+      setIsAddMode(false)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>

@@ -92,14 +92,19 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
    */
   const handleOpenChange = async (nextOpen: boolean) => {
     setOpen(nextOpen)
+
+    // 確認モードとエラーを常にリセット
+    setIsConfirming(false)
+    setServerError(null)
+
     if (nextOpen) {
+      // 開くときは最新のデータでフォームを初期化し、マスターを取得
       form.reset(getInitialValues(initialData))
-      setIsConfirming(false)
-      setServerError(null)
       const clientData = await getClientsFilter()
       setClients(clientData)
     } else {
-      setIsConfirming(false)
+      // 閉じるときもフォームをリセット（メモリリークや意図しない保持を防ぐ）
+      form.reset(getInitialValues(initialData))
     }
   }
 

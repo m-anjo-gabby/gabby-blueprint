@@ -46,10 +46,6 @@ export function LicenseFormDialog({ user, children }: Props) {
   // 保存ボタンを無効化する条件を整理
   const isSaveDisabled = !!(loading || !selectedContractId || !startDate || !endDate || isInvalidDateRange);
 
-  useEffect(() => {
-    if (open) loadData();
-  }, [open]);
-
   const loadData = async () => {
     setLoading(true);
     try {
@@ -129,8 +125,28 @@ export function LicenseFormDialog({ user, children }: Props) {
     }
   };
 
+  /**
+   * ダイアログ状態管理
+   */
+  const handleOpenChange = async (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    
+    if (nextOpen) {
+      // 開くときにデータをロード
+      await loadData();
+    } else {
+      // 閉じるときにフォーム入力をすべてリセット
+      // これをしないと、別のユーザーを開いた時に前回の値が残って見える
+      setSelectedContractId("");
+      setStartDate("");
+      setEndDate("");
+      setNote("");
+      setAvailableContracts([]);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>

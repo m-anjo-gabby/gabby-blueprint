@@ -103,11 +103,9 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
    */
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    if (!isOpen) {
-      form.reset(getInitialValues(initialData));
-      setIsConfirming(false);
-      setServerError(null);
-    }
+    form.reset(getInitialValues(initialData));
+    setIsConfirming(false);
+    setServerError(null);
   };
 
   return (

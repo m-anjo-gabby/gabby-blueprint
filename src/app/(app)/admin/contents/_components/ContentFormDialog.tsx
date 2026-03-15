@@ -19,13 +19,12 @@ import { useRouter } from 'next/navigation';
 
 /**
  * --- 1. スキーマ定義 ---
- * 基本情報に絞り、公開範囲(content_scope)などは初期値(0:共通)で内部処理します。
  */
 const contentSchema = z.object({
   content_name: z.string().min(1, '教材名称は必須です'),
   content_type: z.string().min(1, '種別を選択してください'),
   content_scope: z.string().min(1, '公開範囲を選択してください'),
-  content_label: z.string().min(1, '管理ラベルは必須です'),
+  content_label: z.string().min(1, '管理ラベルは必須です'), // 必須に変更
   seq_no: z.string().min(1, '表示順を入力してください'),
   difficulty_level: z.string().min(1, '難易度を入力してください'),
   description: z.string().optional(),
@@ -111,21 +110,32 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
     }
   };
 
+  // --- ダイアログが開かれたときに状態をリセット ---
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    if (!isOpen) {
-      form.reset(getInitialValues(initialData));
+    
+    // 閉じるとき、または「開くとき」にもリセットをかける
+    if (!isOpen || isOpen) {
       setIsConfirming(false);
       setServerError(null);
+      // initialDataに基づいてフォームをリセット
+      form.reset(getInitialValues(initialData));
     }
+  };
+
+  // --- TriggerのonClickでも念のためリセット ---
+  const onTriggerClick = (e: React.MouseEvent) => {
+    setIsConfirming(false);
+    setServerError(null);
+    form.reset(getInitialValues(initialData));
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
+      <DialogTrigger asChild onClick={onTriggerClick}>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
-            <PlusCircle size={16} /> 新規教材登録
+            <PlusCircle size={16} /> 新規登録
           </Button>
         ) : (
           <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
@@ -158,6 +168,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
               </div>
             )}
 
+            {/* --- 教材名 --- */}
             <FormField control={form.control} name="content_name" render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">教材名称</FormLabel>
@@ -165,6 +176,19 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                 ) : (
                   <FormControl><Input {...field} placeholder="例: 基礎英単語 100" className="bg-white rounded-xl border-slate-200" /></FormControl>
+                )}
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* --- 管理ラベル --- */}
+            <FormField control={form.control} name="content_label" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">管理ラベル</FormLabel>
+                {isConfirming ? (
+                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
+                ) : (
+                  <FormControl><Input {...field} placeholder="例: 〇〇社コーパス" className="bg-white rounded-xl border-slate-200" /></FormControl>
                 )}
                 <FormMessage />
               </FormItem>

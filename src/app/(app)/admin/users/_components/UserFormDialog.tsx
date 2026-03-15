@@ -169,24 +169,33 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
    */
   const handleClose = () => {
     setOpen(false);
-    // 状態のリセット
+    // UIの状態を一斉リセット
     setIsConfirming(false);
     setIsLicenseStep(false);
     setTargetUserId(null);
     setServerError(null);
     setSelectedContractId("");
-    // フォームリセット (initialDataがある場合はそれを、なければDEFAULTを反映)
-    form.reset(getInitialValues(initialData));
     
+    // フォームを初期値に戻す
+    // editモードならinitialDataを、createモードなら空のDEFAULT_VALUESをセット
+    form.reset(getInitialValues(initialData));
   };
 
   /**
    * ダイアログの開閉制御
    */
   const handleOpenChange = async (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    
     if (nextOpen) {
-      setOpen(true);
-      // ダイアログを開いた際に顧客リストがなければ取得
+      // 開く際、編集モードなら最新のinitialDataを即座に反映
+      if (mode === 'edit' && initialData) {
+        form.reset(getInitialValues(initialData));
+      } else {
+        form.reset(DEFAULT_VALUES);
+      }
+
+      // 顧客リストの取得（未取得時のみ）
       if (clients.length === 0) {
         setIsLoadingClients(true);
         try {
@@ -199,6 +208,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
         }
       }
     } else {
+      // 閉じる際のリセット
       handleClose();
     }
   };

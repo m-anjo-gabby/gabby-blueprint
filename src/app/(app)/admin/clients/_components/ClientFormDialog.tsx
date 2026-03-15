@@ -102,11 +102,10 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
    */
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    if (!isOpen) {
-      form.reset(getInitialValues(initialData));
-      setIsConfirming(false);
-      setServerError(null);
-    }
+    
+    setIsConfirming(false);
+    setServerError(null);
+    form.reset(getInitialValues(initialData));
   };
 
   return (

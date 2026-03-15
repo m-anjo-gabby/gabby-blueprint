@@ -46,22 +46,30 @@ export function UserBulkImportDialog() {
    * ダイアログの開閉制御（onOpenChangeで使用）
    */
   const handleOpenChange = async (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    
     if (nextOpen) {
-      setOpen(true);
-      // ダイアログが開かれた時に顧客リストを取得
-      if (clients.length === 0) {
-        setIsLoadingClients(true);
-        try {
-          const res = await getClientsFilter();
-          setClients(res);
-        } catch (error) {
-          showToast("顧客リストの取得に失敗しました", "error");
-        } finally {
-          setIsLoadingClients(false);
-        }
+      // 1. 開くときは常に初期状態へ
+      setData([]);
+      setHasCompleted(false);
+      setSelectedClientId("");
+      setSelectedContractId("none");
+      setContracts([]);
+
+      // 2. 顧客リストを取得（まだ持っていない場合のみ、または常に最新を取るなら毎回）
+      setIsLoadingClients(true);
+      try {
+        const res = await getClientsFilter();
+        setClients(res);
+      } catch (error) {
+        showToast("顧客リストの取得に失敗しました", "error");
+      } finally {
+        setIsLoadingClients(false);
       }
     } else {
-      handleClose();
+      // 3. 閉じるときは重いデータをメモリから解放
+      setData([]);
+      setHasCompleted(false);
     }
   };
 
