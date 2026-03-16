@@ -298,10 +298,13 @@ export function WordBulkImportDialog({ contentId, onSuccess }: WordBulkImportDia
                     <CheckCircle2 size={40} />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-xl font-black text-slate-800 tracking-tight">Ready to Import!</p>
+                    {/* より達成感のあるタイトル */}
+                    <p className="text-xl font-black text-slate-800 tracking-tight">Ready for Update!</p>
+                    
+                    {/* 安心感を与えるサブテキスト */}
                     <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
-                      全レコードの形式チェックに合格しました。<br />
-                      実行すると既存データは最新情報で上書きされます。
+                      すべてのデータが正常に読み込まれました。<br />
+                      インポート時に既存のデータは上書きされます。
                     </p>
                   </div>
                 </div>

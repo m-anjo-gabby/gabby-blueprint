@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
-import { useAzureSpeech } from "@/hooks/useAzureSpeech";
+import { useAzureSpeechTest } from "@/hooks/useAzureSpeechTest";
 import { useVoice } from "@/hooks/useVoice";
 
 const samplePhrases = [
@@ -75,7 +75,7 @@ export default function SpeechPoCPage() {
   const [granularity, setGranularity] = useState(SpeechSDK.PronunciationAssessmentGranularity.Phoneme);
   const [activeTab, setActiveTab] = useState<'tts' | 'assessment'>('tts');
 
-  const { speak: speakAzure, startAssessment, stopAssessment, resetResult, isSpeaking: isAzureSpeaking, isRecording, result, rawResult, timeLeft: timeLeftAzure, recordedAudioUrl } = useAzureSpeech();
+  const { speak: speakAzure, startAssessment, stopAssessment, resetResult, isSpeaking: isAzureSpeaking, isRecording, result, rawResult, timeLeft: timeLeftAzure, recordedAudioUrl } = useAzureSpeechTest();
   const { speak: speakWebSpeech, startEvaluation, resetFeedback, stopListening, isSpeaking: isWebSpeaking, isListening, feedback, timeLeft: timeLeftWeb } = useVoice();
 
   const assessmentData = useMemo(() => {
