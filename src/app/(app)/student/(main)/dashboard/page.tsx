@@ -7,7 +7,7 @@ import { BookOpen, ArrowRight, Star, Trash2 } from 'lucide-react';
 // Actions & Utils
 import { getDashboardContentData } from '@/actions/dashboardAction';
 import { getResumePath, getTrainingPath } from '@/utils/navigation';
-import { ContentRecord } from '@/types/content';
+import { ContentItem } from '@/types/content';
 import { ResumeContentResponse, WordResumeMetadata } from '@/types/training';
 import { clearResumeContent, getLatestResumeContent } from '@/actions/contentAction';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -26,7 +26,7 @@ export default function StudentDashboard() {
   const { showToast } = useToast();
 
   // --- States ---
-  const [contentList, setContentList] = useState<ContentRecord[]>([]);
+  const [contentList, setContentList] = useState<ContentItem[]>([]);
   const [resumeData, setResumeData] = useState<ResumeContentResponse<WordResumeMetadata> | null>(null);
   const [loading, setLoading] = useState(true);
 

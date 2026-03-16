@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/admin';
 import { revalidatePath } from 'next/cache';
-import { Content, ContentTagSummary } from '@/types/content';
+import { Content, ContentRecord, ContentTagSummary } from '@/types/content';
 
 /**
  * 教材一覧取得（サーバーサイドページネーション）
@@ -65,6 +65,32 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
     contents,
     totalCount: count || 0,
   };
+}
+
+/**
+ * IDを指定して教材情報を取得する
+ */
+export async function getContentById(contentId: string): Promise<ContentRecord | null> {
+  const supabase = createAdminClient();
+
+  try {
+    const { data, error } = await supabase
+      .from('com_m_contents')
+      .select('*')
+      .eq('content_id', contentId)
+      .eq('delete_flg', '0') // 論理削除されていないもの
+      .single();
+
+    if (error) {
+      console.error('Error fetching content:', error);
+      return null;
+    }
+
+    return data as ContentRecord;
+  } catch (err) {
+    console.error('System error:', err);
+    return null;
+  }
 }
 
 /**

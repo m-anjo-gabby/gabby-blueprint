@@ -248,12 +248,15 @@ COMMENT ON COLUMN public.com_m_word.update_date IS '更新日時';
 ---------------------------------------------
 CREATE TABLE public.com_m_phrase (
   phrase_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  word_id uuid REFERENCES public.com_m_word(word_id) ON DELETE CASCADE,
+  word_id uuid NOT NULL REFERENCES public.com_m_word(word_id) ON DELETE CASCADE,
   seq_no SMALLINT NOT NULL DEFAULT 1,
   phrase_type SMALLINT NOT NULL,
   phrase_en TEXT NOT NULL,
   phrase_ja TEXT NOT NULL,
-  section_id TEXT, 
+  audio_path TEXT,
+  tts_ssml TEXT,
+  tts_status SMALLINT NOT NULL DEFAULT 0, -- 0:未生成, 1:生成済, 2:要再生成, 9:エラー
+  last_tts_date TIMESTAMP WITH TIME ZONE,
   delete_flg TEXT NOT NULL DEFAULT '0',
   insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -266,6 +269,10 @@ COMMENT ON COLUMN public.com_m_phrase.seq_no IS 'SEQNO';
 COMMENT ON COLUMN public.com_m_phrase.phrase_type IS 'フレーズ種別（1: S+V 2: Adding 3: Strategic Solution 4: PAST 5: PRESENT PERFECT）';
 COMMENT ON COLUMN public.com_m_phrase.phrase_en IS 'フレーズ（英語表記）';
 COMMENT ON COLUMN public.com_m_phrase.phrase_ja IS 'フレーズ（日本語表記）';
+COMMENT ON COLUMN public.com_m_phrase.audio_path IS '音声ファイルパス（Storage）';
+COMMENT ON COLUMN public.com_m_phrase.tts_ssml IS 'TTS用SSMLテキスト';
+COMMENT ON COLUMN public.com_m_phrase.tts_status IS '音声生成ステータス';
+COMMENT ON COLUMN public.com_m_phrase.last_tts_date IS '最終音声生成日時';
 COMMENT ON COLUMN public.com_m_phrase.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_phrase.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_phrase.update_date IS '更新日時';

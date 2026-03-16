@@ -1,11 +1,11 @@
 "use server";
 
 import { createClient } from "@/lib/server";
-import { ContentRecord, FavoriteContentRecord } from "@/types/content";
+import { ContentItem, FavoriteContentRecord } from "@/types/content";
 import { BaseResumeMetadata, ResumeContentResponse } from "@/types/training";
 
 // 全コンテンツを取得
-export async function getAllContent(): Promise<ContentRecord[]> {
+export async function getAllContent(): Promise<ContentItem[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('com_m_contents')
@@ -21,12 +21,12 @@ export async function getAllContent(): Promise<ContentRecord[]> {
     return [];
   }
 
-  // countをbooleanに変換し、全体をContentRecord[]として扱う
+  // countをbooleanに変換し、全体をContentItem[]として扱う
   return (data || []).map(c => ({
     ...c,
     is_favorite: c.is_favorite[0]?.count > 0,
     // metadataはDBからJSONとして返るのでそのまま渡す
-  })) as unknown as ContentRecord[];
+  })) as unknown as ContentItem[];
 }
 
 // お気に入りコンテンツを取得

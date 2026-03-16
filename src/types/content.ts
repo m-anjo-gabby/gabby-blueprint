@@ -64,25 +64,30 @@ export interface ContentAccessSummary {
   client_name: string;
 }
 
-// 教材の型定義
-export interface Content {
+// DBレコード型 (com_m_contents)
+export interface ContentRecord {
   content_id: string;
   content_name: string;
   content_type: ContentType;
   content_scope: ContentScope;
+  content_label: string;
+  description: string | null;
   seq_no: number;
   difficulty_level: number;
   recommend: number;
-  description: string | null;
-  content_label: string;
   metadata: {
-      [key: string]: unknown; // 他の動的なプロパティを許容
+    tags?: MetadataTag[];
+    [key: string]: unknown;
   };
-  delete_flg: string;
+  delete_flg: '0' | '1';
   insert_date: string;
   update_date: string;
-  tags?: ContentTagSummary[]; // リレーションで取得するタグ情報
-  access_clients?: ContentAccessSummary[]; // リレーションで取得するアクセス情報
+}
+
+// 教材の型定義
+export interface Content extends ContentRecord {
+  tags?: ContentTagSummary[];
+  access_clients?: ContentAccessSummary[];
 }
 
 // メタデータ埋め込み用タグ
@@ -91,8 +96,8 @@ export interface MetadataTag {
   label: string;
 }
 
-// 型定義（インターフェース）
-export interface ContentRecord {
+// 生徒の教材用型定義
+export interface ContentItem {
   content_id: string;
   content_name: string;
   content_type: number;

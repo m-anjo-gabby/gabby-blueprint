@@ -211,11 +211,11 @@ export function ContentDataTable({
             variant="ghost" 
             size="sm" 
             asChild
-            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-900 hover:bg-slate-100"
-            title="詳細・エディタを開く"
+            className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+            title="エディタを起動"
           >
             <Link href={`/admin/contents/${row.original.content_id}`}>
-              <ExternalLink size={14} />
+              <ChevronRight size={18} />
             </Link>
           </Button>
         </div>

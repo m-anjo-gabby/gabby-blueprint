@@ -1,6 +1,41 @@
 // src/types/word.ts
 
+/**
+ * ----------------------------------------------
+ * 単語・フレーズ関連の型定義
+ * ----------------------------------------------
+ */
+
+// 単語マスタ (com_m_word)
+export interface WordRecord {
+  word_id: string;
+  content_id: string;
+  word_en: string;
+  word_ja: string;
+  frequency_rank?: number;
+  delete_flg: '0' | '1';
+  insert_date: string;
+  update_date: string;
+}
+
+// 出題例文マスタ (com_m_phrase)
 export interface PhraseRecord {
+  phrase_id: string;
+  word_id: string;
+  seq_no: number;
+  phrase_type: number; // 1: S+V, 2: Adding...
+  phrase_en: string;
+  phrase_ja: string;
+  audio_path: string | null;
+  tts_ssml: string | null;
+  tts_status: number; // 0:未生成, 1:完了, 2:要更新, 9:エラー
+  last_tts_date: string | null;
+  delete_flg: '0' | '1';
+  insert_date: string;
+  update_date: string;
+}
+
+export interface TrainingPhrase {
   phrase_id: string;
   phrase_en: string;
   phrase_ja: string;
@@ -13,7 +48,7 @@ export interface TrainingWord {
   word_id: string;
   word_en: string;
   word_ja: string;
-  phrases: PhraseRecord[];
+  phrases: TrainingPhrase[];
 }
 
 export interface TrainingWordResponse {

@@ -1,5 +1,5 @@
 // src/utils/navigation.ts
-import { ContentRecord } from '@/types/content';
+import { ContentItem } from '@/types/content';
 import { BaseResumeMetadata, ResumeContentResponse } from '@/types/training';
 
 /**
@@ -16,7 +16,7 @@ const getSegment = (type: number): string => {
 /**
  * 1. 通常のライブラリやおすすめ等から遷移する場合
  */
-export const getTrainingPath = (content: ContentRecord): string => {
+export const getTrainingPath = (content: ContentItem): string => {
   const segment = getSegment(content.content_type);
   return `/student/training/${segment}/${content.content_id}`;
 };

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Actions & Utils
 import { getAllContent, toggleContentFavorite } from '@/actions/contentAction';
-import { ContentRecord } from '@/types/content';
+import { ContentItem } from '@/types/content';
 import { useToast } from '@/hooks/useToast';
 import { getTrainingPath } from '@/utils/navigation';
 
@@ -27,7 +27,7 @@ export default function LibraryPage() {
   const [selectedType, setSelectedType] = useState<number | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('All');
-  const [contentList, setContentList] = useState<ContentRecord[]>([]);
+  const [contentList, setContentList] = useState<ContentItem[]>([]);
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [truncatedIds, setTruncatedIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);

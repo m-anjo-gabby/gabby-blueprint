@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib//server";
-import { ContentRecord } from "@/types/content";
+import { ContentItem } from "@/types/content";
 
 export interface ClientInfo {
   client_name: string;
@@ -13,7 +13,7 @@ export interface ClientInfo {
  * ダッシュボード用の軽量な教材リスト取得
  * 「お気に入り」と「おすすめ」に特化したデータを返します
  */
-export async function getDashboardContentData(): Promise<ContentRecord[]> {
+export async function getDashboardContentData(): Promise<ContentItem[]> {
   const supabase = await createClient();
   
   const { data, error } = await supabase
@@ -37,7 +37,7 @@ export async function getDashboardContentData(): Promise<ContentRecord[]> {
   return (data || []).map(c => ({
     ...c,
     is_favorite: c.is_favorite?.[0]?.count > 0
-  })) as unknown as ContentRecord[];
+  })) as unknown as ContentItem[];
 }
 
 /**
