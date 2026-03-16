@@ -38,7 +38,6 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
     throw new Error(`取得失敗: ${error.message}`);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawData = data as any[];
 
   // コンテンツ名の取得ロジックを修正
