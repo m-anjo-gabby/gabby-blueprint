@@ -2,55 +2,91 @@
 
 /**
  * ----------------------------------------------
- * 単語・フレーズ関連の型定義
+ * 定数・区分値
  * ----------------------------------------------
  */
 
-// 単語マスタ (com_m_word)
+// 公開ステータス (Word / Phrase 共通)
+export const WORD_STATUS = {
+  live: { label: '公開中', value: 'live', color: 'emerald' },
+  pending: { label: '準備中', value: 'pending', color: 'slate' },
+} as const;
+
+// TTS生成ステータス
+export const TTS_STATUS = {
+  0: { label: '未生成', value: 0, color: 'slate' },
+  1: { label: '生成済', value: 1, color: 'emerald' },
+  2: { label: '要更新', value: 2, color: 'amber' },
+  9: { label: 'エラー', value: 9, color: 'rose' },
+} as const;
+
+// フレーズ種別 (拡張性を持たせて定義)
+export const PHRASE_TYPES = {
+  1: { label: 'S + V', value: 1, description: '基本文型' },
+  2: { label: 'Adding info', value: 2, description: '情報追加' },
+  3: { label: 'Variation', value: 3, description: '言い換え' },
+} as const;
+
+/**
+ * ----------------------------------------------
+ * 型定義
+ * ----------------------------------------------
+ */
+
+export type WordStatus = keyof typeof WORD_STATUS;
+export type TtsStatus = keyof typeof TTS_STATUS;
+export type PhraseType = keyof typeof PHRASE_TYPES;
+
+// DBレコード型 (com_m_word)
 export interface WordRecord {
   word_id: string;
   content_id: string;
   word_en: string;
   word_ja: string;
-  frequency_rank?: number;
-  delete_flg: '0' | '1';
+  frequency_rank: number | null;
+  status: WordStatus; // status に変更
   insert_date: string;
   update_date: string;
 }
 
-// 出題例文マスタ (com_m_phrase)
+// DBレコード型 (com_m_phrase)
 export interface PhraseRecord {
   phrase_id: string;
   word_id: string;
   seq_no: number;
-  phrase_type: number; // 1: S+V, 2: Adding...
+  phrase_type: PhraseType;
   phrase_en: string;
   phrase_ja: string;
   audio_path: string | null;
   tts_ssml: string | null;
-  tts_status: number; // 0:未生成, 1:完了, 2:要更新, 9:エラー
+  tts_status: TtsStatus;
   last_tts_date: string | null;
-  delete_flg: '0' | '1';
+  status: WordStatus; // status に変更
   insert_date: string;
   update_date: string;
 }
 
+// --- 既存の Training 関連は継承しつつ status 等を反映 ---
 export interface TrainingPhrase {
   phrase_id: string;
   phrase_en: string;
   phrase_ja: string;
-  phrase_type: number;
+  phrase_type: PhraseType;
   seq_no: number;
   is_favorite_initial: boolean;
+  status: WordStatus; // 追加
+  tts_status: TtsStatus; // 追加
 }
 
 export interface TrainingWord {
   word_id: string;
   word_en: string;
   word_ja: string;
+  status: WordStatus;
   phrases: TrainingPhrase[];
 }
 
+// 整理されたレスポンス型
 export interface TrainingWordResponse {
   words: TrainingWord[];
   contentName: string;

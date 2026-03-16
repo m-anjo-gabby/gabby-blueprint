@@ -16,6 +16,7 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
       word_id,
       word_en,
       word_ja,
+      status,
       com_m_contents ( content_name ),
       com_m_phrase (
         phrase_id,
@@ -23,12 +24,14 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
         phrase_ja,
         phrase_type,
         seq_no,
+        status,
+        tts_status,
         com_t_favorite_phrase ( phrase_id )
       )
     `)
     .eq('content_id', contentId)
-    .eq('delete_flg', '0')
-    .eq('com_m_phrase.delete_flg', '0')
+    .eq('status', 'live')
+    .eq('com_m_phrase.status', 'live')
     .eq('com_m_phrase.com_t_favorite_phrase.user_id', user?.id)
     .order('frequency_rank', { ascending: true })
     .order('seq_no', { referencedTable: 'com_m_phrase', ascending: true });
@@ -39,9 +42,6 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
   }
 
   const rawData = data as any[];
-
-  // コンテンツ名の取得ロジックを修正
-  // Supabaseの結合は[ { content_name: 'xxx' } ]のように配列で返ってくることが多いため
   const firstItem = rawData[0];
   let contentName = 'Training';
   
@@ -51,13 +51,20 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
       : firstItem.com_m_contents?.content_name;
   }
 
+  // TrainingWord[] 型に準拠するようにマッピング
   const words: TrainingWord[] = rawData.map((word) => ({
     word_id: word.word_id,
     word_en: word.word_en,
     word_ja: word.word_ja,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    status: word.status, // 追加
     phrases: word.com_m_phrase.map((p: any) => ({
-      ...p,
+      phrase_id: p.phrase_id,
+      phrase_en: p.phrase_en,
+      phrase_ja: p.phrase_ja,
+      phrase_type: p.phrase_type,
+      seq_no: p.seq_no,
+      status: p.status,         // 追加
+      tts_status: p.tts_status, // 追加
       is_favorite_initial: Array.isArray(p.com_t_favorite_phrase) && p.com_t_favorite_phrase.length > 0 
     }))
   }));
