@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { createClient } from '@/lib/client';
 
 // Props の型定義を追加
