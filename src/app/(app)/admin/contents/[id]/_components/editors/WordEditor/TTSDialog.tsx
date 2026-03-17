@@ -60,6 +60,14 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     setAdjustments(words);
   }, [phrase.phrase_en]);
 
+  // 初期状態でのプレーン再生
+  const playOriginal = () => {
+    if (isSpeaking) return;
+    // 調整（adjustments）を一切適用しない、素のテキストでのSSMLを生成
+    const originalSsml = generateSSML(phrase.phrase_en, DEFAULT_PARAMS);
+    speak(originalSsml);
+  };
+
   // SSML再構築ロジック
   const rebuildSSML = useCallback((currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
     const processedText = currentAdjs.map(adj => {
@@ -460,11 +468,27 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
             </div>
           </div>
 
-          <DialogFooter className="p-4 bg-white border-t border-slate-100 flex items-center justify-end gap-4 sm:justify-end">
+          {/* フッター */}
+          <DialogFooter className="p-4 bg-white border-t border-slate-100 flex items-center justify-end gap-3 sm:justify-end">
+            {/* 比較用のORIGINALボタン */}
+            <Button 
+              variant="ghost" 
+              className="px-4 text-slate-400 font-bold h-12 rounded-full gap-2 hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+              onClick={playOriginal}
+              disabled={isSpeaking || isProcessing}
+            >
+              <Volume2 size={16} />
+              ORIGINAL
+            </Button>
+
+            {/* メインのLISTENボタン */}
             <Button 
               variant="outline" 
               className="px-8 border-2 border-indigo-100 text-indigo-600 font-bold h-12 rounded-full gap-2 hover:bg-indigo-50 transition-all"
-              onClick={() => speak(ssml)}
+              onClick={() => {
+                if (isSpeaking) return;
+                speak(ssml);
+              }}
               disabled={isSpeaking || isProcessing}
             >
               {isSpeaking ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} />}
