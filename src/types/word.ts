@@ -59,11 +59,25 @@ export interface PhraseRecord {
   phrase_ja: string;
   audio_path: string | null;
   tts_ssml: string | null;
+  tts_ssml_mode: 'auto' | 'manual';
+  tts_adjustments?: WordAdjustment[];
   tts_status: TtsStatus;
   last_tts_date: string | null;
   status: WordStatus; // status に変更
   insert_date: string;
   update_date: string;
+}
+
+// TTS用の単語ごとのカスタマイズ状態
+export interface WordAdjustment {
+  id: string; // インデックスを含む一意のID
+  text: string; // 記号を除いた純粋なテキスト
+  fullText: string; // 記号込みの表示用テキスト
+  emphasis: boolean;
+  emphasisLevel: 'reduced' | 'moderate' | 'strong'; // 強調レベル
+  breakAfter: boolean;
+  breakDuration: number; // ポーズミリ秒
+  ipa: string;
 }
 
 // --- 既存の Training 関連は継承しつつ status 等を反映 ---

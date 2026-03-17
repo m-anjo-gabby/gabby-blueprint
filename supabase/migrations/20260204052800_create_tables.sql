@@ -258,6 +258,8 @@ CREATE TABLE public.com_m_phrase (
   phrase_ja TEXT NOT NULL,
   audio_path TEXT,
   tts_ssml TEXT,
+  tts_ssml_mode TEXT NOT NULL DEFAULT 'auto', -- 'auto': UI生成, 'manual': 手動編集
+  tts_adjustments JSONB,                      -- ワード単位の調整パラメータ
   tts_status SMALLINT NOT NULL DEFAULT 0, -- 0:未生成, 1:生成済, 2:要再生成, 9:エラー
   last_tts_date TIMESTAMP WITH TIME ZONE,
   status TEXT NOT NULL DEFAULT 'live', -- 'live' (公開), 'pending' (非公開)
@@ -278,6 +280,8 @@ COMMENT ON COLUMN public.com_m_phrase.phrase_en IS 'フレーズ（英語表記�
 COMMENT ON COLUMN public.com_m_phrase.phrase_ja IS 'フレーズ（日本語表記）';
 COMMENT ON COLUMN public.com_m_phrase.audio_path IS '音声ファイルパス（Storage）';
 COMMENT ON COLUMN public.com_m_phrase.tts_ssml IS 'TTS用SSMLテキスト';
+COMMENT ON COLUMN public.com_m_phrase.tts_ssml_mode IS 'TTS用SSML生成モード（auto/manual）';
+COMMENT ON COLUMN public.com_m_phrase.tts_adjustments IS 'TTS用ワード単位調整データ（JSON）';
 COMMENT ON COLUMN public.com_m_phrase.tts_status IS '音声生成ステータス';
 COMMENT ON COLUMN public.com_m_phrase.last_tts_date IS '最終音声生成日時';
 COMMENT ON COLUMN public.com_m_phrase.status IS '公開ステータス';

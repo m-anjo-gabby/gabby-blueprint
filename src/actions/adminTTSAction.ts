@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/admin';
+import { WordAdjustment } from '@/types/word';
 import { revalidatePath } from 'next/cache';
 
 // Azure SDK を使用する場合のインポート（仮定）
@@ -34,7 +35,12 @@ export async function previewTTS(ssml: string) {
 /**
  * 2. 確定保存用 (Storage保存 + DB更新)
  */
-export async function generateAndSaveTTS(phraseId: string, ssml: string) {
+export async function generateAndSaveTTS(
+  phraseId: string,
+  ssml: string,
+  mode: 'auto' | 'manual',
+  adjustments: WordAdjustment[]
+) {
   const supabase = createAdminClient();
 
   try {
@@ -61,6 +67,8 @@ export async function generateAndSaveTTS(phraseId: string, ssml: string) {
       .from('com_m_phrase')
       .update({
         tts_ssml: ssml,
+        tts_ssml_mode: mode,
+        tts_adjustments: adjustments,
         audio_path: filePath,
         tts_status: 1, // 完了
         last_tts_date: new Date().toISOString()
