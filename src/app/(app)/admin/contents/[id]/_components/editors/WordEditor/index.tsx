@@ -31,7 +31,6 @@ export function WordEditor({ contentId, selectedWordId }: WordEditorProps) {
         >
           <WordList 
             contentId={contentId} 
-            selectedWordId={selectedWordId} 
           />
         </ResizablePanel>
 
