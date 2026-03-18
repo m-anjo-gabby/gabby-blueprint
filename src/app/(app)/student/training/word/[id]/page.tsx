@@ -387,10 +387,10 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   // --- Render Helpers ---
   const getStepLabel = (type: number) => {
     const labels: Record<number, string> = {
-      1: "STEP 1: S+V (Core Business)",
-      2: "STEP 2: Adding Technical Domain",
-      3: "STEP 3: Strategic Solution",
-      4: "STEP 4: PAST (Performance Result)",
+      1: "STEP 1: Use a Collocation	Step",
+      2: "STEP 2: Build a Sentence	Step",
+      3: "STEP 3: Use It at Work",
+      4: "STEP 4: Expand the Sentence",
       5: "STEP 5: PRESENT PERFECT (Key Success)"
     };
     return labels[type] || `STEP ${type}`;
@@ -811,13 +811,13 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
           <div className="w-full shrink-0 flex flex-col items-center mb-6 sm:mb-10">
             {/* プログレスドット: 少し大きく、間隔を広げて視認性アップ */}
             <div className="flex gap-2.5 mb-5 sm:mb-6">
-              {[1, 2, 3, 4, 5].map(s => (
+              {Array.from({ length: currentWord.phrases.length }, (_, i) => i + 1).map(s => (
                 <div 
                   key={s} 
                   className={`w-2 h-2 rounded-full transition-all duration-700 ${
                     s <= currentPhrase.phrase_type 
-                    ? 'bg-indigo-600 scale-125 shadow-[0_0_8px_rgba(79,70,229,0.4)]' 
-                    : 'bg-slate-200'
+                      ? 'bg-indigo-600 scale-125 shadow-[0_0_8px_rgba(79,70,229,0.4)]' 
+                      : 'bg-slate-200'
                   }`} 
                 />
               ))}
