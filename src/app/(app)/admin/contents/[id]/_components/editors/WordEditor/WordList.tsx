@@ -48,6 +48,9 @@ export function WordList({ contentId }: WordListProps) {
     fetchWords();
   }, [fetchWords, lastUpdated]);
 
+ /**
+   * 単語選択時
+   */
   const handleSelect = (id: string) => {
     router.push(`${pathname}?wordId=${id}`);
   };
@@ -68,7 +71,7 @@ export function WordList({ contentId }: WordListProps) {
       
       if (result.success) {
         showToast("単語を削除しました", "success");
-        
+
         // アクション側で revalidatePath されていますが、
         // クライアントサイドの state を即時更新するために fetchWords を呼びます
         await fetchWords();

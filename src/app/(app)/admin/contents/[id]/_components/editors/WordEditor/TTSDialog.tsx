@@ -13,9 +13,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, XCircle, PencilLine, Check, Copy } from 'lucide-react';
 import { PhraseRecord, WordAdjustment } from '@/types/word';
-import { generateAndSaveTTS } from '@/actions/adminTTSAction';
-import { useAzureSpeech, TTSParameters } from '@/hooks/useAzureSpeech';
+import { usePlayAzureSpeech, TTSParameters } from '@/hooks/usePlayAzureSpeech';
 import { useToast } from '@/hooks/useToast';
+import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
 
 interface TTSDialogProps {
   phrase: PhraseRecord;
@@ -42,7 +42,8 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
   const [showSaveAlert, setShowSaveAlert] = useState(false); // 保存確認用
   const [copied, setCopied] = useState(false);
 
-  const { speak, generateSSML, isSpeaking, error, setError } = useAzureSpeech();
+  const { speak, generateSSML, isSpeaking, error, setError } = usePlayAzureSpeech();
+  const { save, isSaving } = useSaveAzureSpeech();
   const { showToast } = useToast();
 
   // 単語配列の初期化
@@ -142,7 +143,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     setIsProcessing(true);
     try {
       // phrase_id, ssml に加え、現在のモードも保存
-      const result = await generateAndSaveTTS(phrase.phrase_id, ssml, ssmlMode, adjustments);
+      const result = await save(phrase.phrase_id, phrase.word_id, ssml, ssmlMode, adjustments);
       if (result.success) {
         showToast("Audio saved successfully.", "success");
         onUpdate();

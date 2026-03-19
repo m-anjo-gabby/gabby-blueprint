@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 
 interface PhraseListProps {
   wordId: string;
@@ -38,6 +39,7 @@ interface PhraseListProps {
  */
 export function PhraseList({ wordId }: PhraseListProps) {
   const { showToast } = useToast();
+  const { play, isPlaying } = useAudioPlayer();
   const [phrases, setPhrases] = useState<PhraseRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -65,7 +67,8 @@ export function PhraseList({ wordId }: PhraseListProps) {
    */
   const handleDelete = async (phraseId: string) => {
     try {
-      const result = await deletePhrase(phraseId);
+      // wordId を追加で渡すように変更
+      const result = await deletePhrase(phraseId, wordId); 
       if (result.success) {
         showToast("フレーズを削除しました", "success");
         fetchPhrases();
@@ -166,10 +169,27 @@ export function PhraseList({ wordId }: PhraseListProps) {
                       <div className="pt-1 flex items-center gap-4">
                         {renderStatusBadge(phrase.tts_status)}
                         
-                        {phrase.audio_path && (
-                          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5 rounded-lg border border-transparent hover:border-indigo-100">
-                            <Headphones size={14} />
-                            <span className="text-[11px] font-bold">Listen</span>
+                      {phrase.audio_path && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            disabled={!!isPlaying && isPlaying !== phrase.phrase_id} // 他を再生中は無効化（任意）
+                            onClick={() => play(phrase.audio_path!, phrase.phrase_id)}
+                            className={cn(
+                              "h-7 px-2.5 gap-1.5 rounded-lg border transition-all",
+                              isPlaying === phrase.phrase_id 
+                                ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 shadow-sm" 
+                                : "text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 border-transparent hover:border-indigo-100"
+                            )}
+                          >
+                            {isPlaying === phrase.phrase_id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Headphones size={14} />
+                            )}
+                            <span className="text-[11px] font-bold">
+                              {isPlaying === phrase.phrase_id ? "Playing..." : "Listen"}
+                            </span>
                           </Button>
                         )}
                       </div>

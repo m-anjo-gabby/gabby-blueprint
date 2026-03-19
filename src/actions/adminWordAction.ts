@@ -82,23 +82,53 @@ export async function upsertWord(payload: Partial<WordRecord>) {
 }
 
 /**
- * 単語の物理削除
+ * 単語の物理削除（関連するStorage内の音声ファイルも含む）
  */
 export async function deleteWord(wordId: string) {
-  const supabase = await createAdminClient();
+  const supabase = createAdminClient();
 
-  const { error } = await supabase
-    .from('com_m_word')
-    .delete()
-    .eq('word_id', wordId);
+  try {
+    // 1. Storage内の該当単語ディレクトリ (words/[wordId]/) 配下のファイルを特定
+    // phrases フォルダの中身を含めてリストアップ
+    const folderPath = `words/${wordId}/phrases`;
+    const { data: files, error: listError } = await supabase
+      .storage
+      .from('audio')
+      .list(folderPath);
 
-  if (error) {
+    // 2. ファイルが存在すれば一括削除を実行
+    if (files && files.length > 0) {
+      const pathsToDelete = files.map(f => `${folderPath}/${f.name}`);
+      
+      const { error: removeError } = await supabase
+        .storage
+        .from('audio')
+        .remove(pathsToDelete);
+
+      if (removeError) {
+        // 音声の削除失敗時はログ出力し、DB削除を優先する。
+        console.error("Storage Cleanup Error (non-critical):", removeError);
+      }
+    }
+
+    // 3. DBから単語を削除
+    // ※ 外部キー制約 (ON DELETE CASCADE) により、com_m_phrase のレコードも自動で消えます
+    const { error: dbError } = await supabase
+      .from('com_m_word')
+      .delete()
+      .eq('word_id', wordId);
+
+    if (dbError) throw dbError;
+    
+    return { success: true };
+
+  } catch (error: any) {
     console.error("Delete Word Error:", error);
-    return { success: false, message: "削除に失敗しました" };
+    return { 
+      success: false, 
+      message: error.message || "単語の削除処理に失敗しました" 
+    };
   }
-
-  revalidatePath('/admin/contents/[id]/words', 'page');
-  return { success: true };
 }
 
 /**
@@ -153,6 +183,15 @@ export async function upsertPhrase(payload: Partial<PhraseRecord>) {
 
   if (error) {
     console.error("Upsert Phrase Error:", error);
+
+    // ユニーク制約違反 (コード: 23505) のハンドリング
+    if (error.code === '23505') {
+      return { 
+        success: false, 
+        message: "表示順 (Seq No) が重複しています。別の数値を入力してください。" 
+      };
+    }
+
     return { success: false, message: error.message };
   }
 
@@ -161,22 +200,37 @@ export async function upsertPhrase(payload: Partial<PhraseRecord>) {
 }
 
 /**
- * フレーズの物理削除
+ * フレーズの物理削除（音声ファイルも含む）
  */
-export async function deletePhrase(phraseId: string) {
+export async function deletePhrase(phraseId: string, wordId: string) {
   const supabase = createAdminClient();
-  const { error } = await supabase
-    .from('com_m_phrase')
-    .delete()
-    .eq('phrase_id', phraseId);
 
-  if (error) {
+  try {
+    // 1. Storageから該当する音声ファイルを削除
+    const filePath = `words/${wordId}/phrases/${phraseId}.mp3`;
+    
+    // removeは配列を受け取るため、ファイルが存在しない場合もエラーにはならないが、ログ出力をしておく
+    const { error: storageError } = await supabase.storage
+      .from('audio')
+      .remove([filePath]);
+
+    if (storageError) {
+      console.warn("Storage deletion warning:", storageError);
+    }
+
+    // 2. DBレコードの削除
+    const { error: dbError } = await supabase
+      .from('com_m_phrase')
+      .delete()
+      .eq('phrase_id', phraseId);
+
+    if (dbError) throw dbError;
+
+    return { success: true };
+  } catch (error: any) {
     console.error("Delete Phrase Error:", error);
-    return { success: false, message: "削除に失敗しました" };
+    return { success: false, message: error.message };
   }
-
-  revalidatePath('/admin/contents/[id]/words', 'page');
-  return { success: true };
 }
 
 /**

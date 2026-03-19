@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/useToast';
 import { upsertPhrase } from '@/actions/adminWordAction';
-import { PlusCircle, CheckCircle2, Edit, MessageSquare, ListOrdered } from 'lucide-react';
+import { PlusCircle, CheckCircle2, Edit, MessageSquare, ListOrdered, XCircle } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { PhraseRecord, WORD_STATUS, WordStatus, PHRASE_TYPES, PhraseType } from '@/types/word';
 
@@ -80,6 +80,8 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
         setOpen(false);
         onSuccess?.();
       } else {
+        // エラー時は確認モードを解除して編集画面に戻す
+        setIsConfirming(false); 
         setServerError(result.message || "エラーが発生しました");
       }
     } catch (error) {
@@ -118,6 +120,14 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-5 bg-white">
+            {/* サーバーエラー表示 */}
+            {serverError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-100 flex items-center gap-2 text-rose-600 text-xs font-bold animate-in fade-in slide-in-from-top-1">
+                <XCircle size={14} />
+                {serverError}
+              </div>
+            )}
+
             <FormField control={form.control} name="phrase_en" render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">英文 (English)</FormLabel>
@@ -190,11 +200,25 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
             <div className="pt-4 border-t border-slate-100">
               {isConfirming ? (
                 <div className="flex gap-3">
-                  <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold" onClick={() => setIsConfirming(false)}>戻る</Button>
+                  <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold" 
+                    onClick={() => {
+                      setServerError(null)
+                      setIsConfirming(false)
+                    }}
+                  >
+                    戻る
+                  </Button>
                   <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold">確定する</Button>
                 </div>
               ) : (
-                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11" onClick={async () => { if (await form.trigger()) setIsConfirming(true); }}>
+                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11" 
+                  onClick={async () => { 
+                      if (await form.trigger()) {
+                        setServerError(null)
+                        setIsConfirming(true)
+                      } 
+                    }}
+                >
                   内容を確認する
                 </Button>
               )}

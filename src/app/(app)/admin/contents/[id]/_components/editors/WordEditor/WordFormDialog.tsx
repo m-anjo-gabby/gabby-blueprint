@@ -97,7 +97,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none shrink-0 h-9">
+          <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none shrink-0 h-8">
             <PlusCircle size={16} /> 単語追加
           </Button>
         ) : (

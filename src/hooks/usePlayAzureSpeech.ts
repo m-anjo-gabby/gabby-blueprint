@@ -11,7 +11,7 @@ export interface TTSParameters {
 /**
  * Azure Cognitive Services Speech SDK を使用した TTS 再生カスタムフック
  */
-export function useAzureSpeech() {
+export function usePlayAzureSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const synthRef = useRef<SpeechSDK.SpeechSynthesizer | null>(null);
