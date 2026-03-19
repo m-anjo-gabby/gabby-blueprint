@@ -11,7 +11,7 @@ import { analyzePhrase } from '@/utils/stringSimilarity';
 import { WordResumeMetadata } from '@/types/training';
 import { useToast } from '@/hooks/useToast';
 import { AnimatePresence, motion } from 'framer-motion';
-import { TrainingWord } from '@/types/word';
+import { PHRASE_TYPES, PhraseType, TrainingWord } from '@/types/word';
 import { getWordData, toggleFavorite } from '@/actions/wordAction';
 import { useConfirm } from '@/hooks/useConfirm';
 
@@ -384,16 +384,17 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     );
   }, [feedback, heardText, currentPhrase, currentWord]);
 
-  // --- Render Helpers ---
-  const getStepLabel = (type: number) => {
-    const labels: Record<number, string> = {
-      1: "STEP 1: Use a Collocation	Step",
-      2: "STEP 2: Build a Sentence	Step",
-      3: "STEP 3: Use It at Work",
-      4: "STEP 4: Expand the Sentence",
-      5: "STEP 5: PRESENT PERFECT (Key Success)"
-    };
-    return labels[type] || `STEP ${type}`;
+  /**
+   * PHRASE_TYPES からラベルを動的に取得するヘルパー
+   * @param type - PHRASE_TYPESのキー
+   * @returns フォーマットされたステップラベル
+   */
+  const getStepLabel = (type: number): string => {
+    const step = PHRASE_TYPES[type as PhraseType];
+    
+    if (!step) return `${type}`;
+
+    return `${type}: ${step.label}`;
   };
 
   if (loading) return (

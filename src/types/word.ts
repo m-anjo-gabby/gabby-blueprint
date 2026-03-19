@@ -22,9 +22,11 @@ export const TTS_STATUS = {
 
 // フレーズ種別 (拡張性を持たせて定義)
 export const PHRASE_TYPES = {
-  1: { label: 'S + V', value: 1, description: '基本文型' },
-  2: { label: 'Adding info', value: 2, description: '情報追加' },
-  3: { label: 'Variation', value: 3, description: '言い換え' },
+  1: { label: 'Use a Collocation', value: 1, description: '基本語順の習得' },
+  2: { label: 'Build a Sentence', value: 2, description: '文章への拡張' },
+  3: { label: 'Use It at Work', value: 3, description: '実務シーンへの適用' },
+  4: { label: 'Expand the Sentence', value: 3, description: '詳細情報の付加' },
+  5: { label: 'Variation', value: 3, description: '時制・表現のバリエーション' },
 } as const;
 
 /**
