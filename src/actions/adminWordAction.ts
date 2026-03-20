@@ -202,20 +202,27 @@ export async function upsertPhrase(payload: Partial<PhraseRecord>) {
 /**
  * フレーズの物理削除（音声ファイルも含む）
  */
-export async function deletePhrase(phraseId: string, wordId: string) {
+export async function deletePhrase(phraseId: string, audioPath?: string | null) {
   const supabase = createAdminClient();
 
   try {
     // 1. Storageから該当する音声ファイルを削除
-    const filePath = `words/${wordId}/phrases/${phraseId}.mp3`;
-    
-    // removeは配列を受け取るため、ファイルが存在しない場合もエラーにはならないが、ログ出力をしておく
-    const { error: storageError } = await supabase.storage
-      .from('audio')
-      .remove([filePath]);
+    if (audioPath) {
 
-    if (storageError) {
-      console.warn("Storage deletion warning:", storageError);
+      // セキュリティチェック：パスに自分のphraseIdが含まれているか確認
+      // words/[wordId]/phrases/[phraseId]-[timestamp].mp3 の形式を想定
+      if (!audioPath.includes(phraseId)) {
+        console.error(`Security Alert: Attempted to delete unauthorized path. phraseId: ${phraseId}, path: ${audioPath}`);
+        throw new Error("不正なファイルパスが指定されました。");
+      }
+
+      const { error: storageError } = await supabase.storage
+        .from('audio')
+        .remove([audioPath]);
+
+      if (storageError) {
+        console.warn("Storage deletion warning:", storageError);
+      }
     }
 
     // 2. DBレコードの削除

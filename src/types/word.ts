@@ -70,6 +70,19 @@ export interface PhraseRecord {
   update_date: string;
 }
 
+// TTS用の全体・単語ごとのカスタマイズ状態をまとめた型
+export interface TTSAdjustmentData {
+  // 左側のコントロールエリアの設定
+  settings: {
+    voice: string;
+    style: string;
+    rate: number;
+    pitch: number;
+  };
+  // 単語ごとの詳細設定（WordAdjustment 配列）
+  words: WordAdjustment[];
+}
+
 // TTS用の単語ごとのカスタマイズ状態
 export interface WordAdjustment {
   id: string; // インデックスを含む一意のID

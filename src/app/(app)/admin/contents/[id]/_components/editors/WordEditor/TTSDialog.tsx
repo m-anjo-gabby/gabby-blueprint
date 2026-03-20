@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, XCircle, PencilLine, Check, Copy } from 'lucide-react';
-import { PhraseRecord, WordAdjustment } from '@/types/word';
+import { PhraseRecord, TTSAdjustmentData, WordAdjustment } from '@/types/word';
 import { usePlayAzureSpeech, TTSParameters } from '@/hooks/usePlayAzureSpeech';
 import { useToast } from '@/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
+import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@/types/azure';
 
 interface TTSDialogProps {
   phrase: PhraseRecord;
@@ -142,8 +143,20 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
   const handleSave = async () => {
     setIsProcessing(true);
     try {
+
+      // 保存用のデータ構造を作成
+      const adjustmentData: TTSAdjustmentData = {
+        settings: {
+          voice: params.voice,
+          style: params.style,
+          rate: params.rate,
+          pitch: params.pitch,
+        },
+        words: adjustments,
+      };
+
       // phrase_id, ssml に加え、現在のモードも保存
-      const result = await save(phrase.phrase_id, phrase.word_id, ssml, ssmlMode, adjustments);
+      const result = await save(phrase.phrase_id, phrase.word_id, ssml, ssmlMode, adjustmentData, phrase.audio_path);
       if (result.success) {
         showToast("Audio saved successfully.", "success");
         onUpdate();
@@ -214,23 +227,53 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     }
   }, [phrase]);
 
-  // --- ダイアログ開閉ハンドラ ---
+  /**
+   * ダイアログの開閉状態が変更された際の処理
+   * 開く瞬間にDBから最新の調整状態（JSON）を各Stateに復元します
+   */
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
+    
     if (isOpen) {
-      // 開く時に既存データを反映
+      // 1. モードとSSMLの初期同期
       const mode = phrase.tts_ssml_mode || 'auto';
       setSsmlMode(mode);
       setSsml(phrase.tts_ssml || '');
-      setParams(DEFAULT_PARAMS); // 基本パラメータはリセット（必要ならDB保存対象に含める）
       setError(null);
 
-      if (mode === 'auto' && phrase.tts_adjustments) {
-        // 保存されたJSONから復元
-        setAdjustments(phrase.tts_adjustments);
+      // 2. 調整データ（JSON）の復元ロジック
+      if (phrase.tts_adjustments) {
+        const rawData = phrase.tts_adjustments;
+
+        // データが配列か、オブジェクトかを判定
+        if (!Array.isArray(rawData) && typeof rawData === 'object') {
+          // --- TTSAdjustmentData (settings + words) ---
+          const data = rawData as unknown as TTSAdjustmentData;
+
+          // 左側コントロールエリアの復元
+          if (data.settings) {
+            setParams({
+              voice: (data.settings.voice as AzureVoice) || DEFAULT_PARAMS.voice,
+              style: (data.settings.style as AzureStyle) || DEFAULT_PARAMS.style,
+              rate: data.settings.rate ?? DEFAULT_PARAMS.rate,
+              pitch: data.settings.pitch ?? DEFAULT_PARAMS.pitch,
+            });
+          }
+
+          // 原文フレーズの単語ごとの調整値の復元
+          if (data.words) {
+            setAdjustments(data.words);
+          }
+        } else if (Array.isArray(rawData)) {
+          // --- WordAdjustment[] 直接保存されていた場合 ---
+          setAdjustments(rawData as WordAdjustment[]);
+          setParams(DEFAULT_PARAMS); // パラメータは初期値へ
+        }
       } else {
-        // 新規または調整データがない場合は原文から生成
-        const words = phrase.phrase_en.split(' ').map((word, i) => ({
+        // --- 新規作成：データが存在しない場合は初期値を生成 ---
+        setParams(DEFAULT_PARAMS);
+        
+        const initialWords: WordAdjustment[] = phrase.phrase_en.split(' ').map((word, i) => ({
           id: `word-${i}`,
           fullText: word,
           text: word.replace(/[.,!?;:]/g, ''),
@@ -240,7 +283,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
           breakDuration: 300,
           ipa: '',
         }));
-        setAdjustments(words);
+        setAdjustments(initialWords);
       }
     }
   };
@@ -353,26 +396,38 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
             <div className={`p-8 space-y-8 border-r border-slate-100 transition-opacity ${ssmlMode === 'manual' ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
               <div className="space-y-4">
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Voice Settings</Label>
-                <Select value={params.voice} onValueChange={(v) => setParams(p => ({...p, voice: v}))}>
-                  <SelectTrigger className="w-full bg-slate-50 border-slate-200">
-                    <SelectValue />
+                
+                {/* Voice Select */}
+                <Select 
+                  value={params.voice} 
+                  onValueChange={(v) => setParams(p => ({...p, voice: v as AzureVoice}))}
+                >
+                  <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-medium">
+                    <SelectValue placeholder="Select Voice" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en-US-JennyNeural">Jenny (Female)</SelectItem>
-                    <SelectItem value="en-US-GuyNeural">Guy (Male)</SelectItem>
-                    <SelectItem value="en-US-AriaNeural">Aria (Formal)</SelectItem>
+                    {AZURE_VOICES.map((voice) => (
+                      <SelectItem key={voice.id} value={voice.id}>
+                        {voice.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
-                <Select value={params.style} onValueChange={(v) => setParams(p => ({...p, style: v}))}>
-                  <SelectTrigger className="w-full bg-slate-50 border-slate-200">
-                    <SelectValue />
+                {/* Style Select */}
+                <Select 
+                  value={params.style} 
+                  onValueChange={(v) => setParams(p => ({...p, style: v as AzureStyle}))}
+                >
+                  <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-medium">
+                    <SelectValue placeholder="Select Style" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="friendly">Friendly</SelectItem>
-                    <SelectItem value="cheerful">Cheerful</SelectItem>
-                    <SelectItem value="excited">Excited</SelectItem>
-                    <SelectItem value="shouting">Shouting</SelectItem>
+                    {AZURE_STYLES.map((style) => (
+                      <SelectItem key={style.id} value={style.id}>
+                        {style.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

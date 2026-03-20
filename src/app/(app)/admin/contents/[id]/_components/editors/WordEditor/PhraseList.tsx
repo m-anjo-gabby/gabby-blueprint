@@ -65,10 +65,10 @@ export function PhraseList({ wordId }: PhraseListProps) {
   /**
    * フレーズの削除実行
    */
-  const handleDelete = async (phraseId: string) => {
+  const handleDelete = async (phraseId: string, audioPath?: string | null) => {
     try {
-      // wordId を追加で渡すように変更
-      const result = await deletePhrase(phraseId, wordId); 
+      // phraseId と audioPath を渡す
+      const result = await deletePhrase(phraseId, audioPath); 
       if (result.success) {
         showToast("フレーズを削除しました", "success");
         fetchPhrases();
@@ -232,7 +232,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
                               キャンセル
                             </AlertDialogCancel>
                             <AlertDialogAction 
-                              onClick={() => handleDelete(phrase.phrase_id)}
+                              onClick={() => handleDelete(phrase.phrase_id, phrase.audio_path)}
                               className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg"
                             >
                               削除する

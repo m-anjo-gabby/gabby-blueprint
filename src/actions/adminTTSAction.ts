@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/admin';
-import { WordAdjustment } from '@/types/word';
+import { TTSAdjustmentData, WordAdjustment } from '@/types/word';
 import { revalidatePath } from 'next/cache';
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 
@@ -46,10 +46,11 @@ async function synthesizeAudio(ssml: string): Promise<Buffer> {
  */
 export async function savePhrase(
   phraseId: string,
-  wordId: string, // wordId を追加
+  wordId: string,
   ssml: string,
   mode: 'auto' | 'manual',
-  adjustments: WordAdjustment[]
+  adjustmentData: TTSAdjustmentData,
+  currentAudioPath?: string | null // フロントから現在のパスを受け取る
 ) {
   const supabase = createAdminClient();
 
@@ -57,28 +58,29 @@ export async function savePhrase(
     // 1. Azure で音声合成
     const audioBuffer = await synthesizeAudio(ssml);
 
-    // 2. audio バケットへ保存 (階層構造: words/[wordId]/phrases/)
-    const filePath = `words/${wordId}/phrases/${phraseId}.mp3`;
+    // 2. 新しいファイルパスの生成（タイムスタンプ付き）
+    const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+    const newFilePath = `words/${wordId}/phrases/${phraseId}-${timestamp}.mp3`;
 
-    const { error: uploadError } = await supabase
-      .storage
+    // 3. 新規アップロード
+    const { error: uploadError } = await supabase.storage
       .from('audio')
-      .upload(filePath, audioBuffer, {
+      .upload(newFilePath, audioBuffer, {
         contentType: 'audio/mpeg',
         cacheControl: '31536000',
-        upsert: true
+        upsert: false
       });
 
     if (uploadError) throw uploadError;
 
-    // 3. DB 更新
+    // 4. DB 更新
     const { error: dbError } = await supabase
       .from('com_m_phrase')
       .update({
         tts_ssml: ssml,
         tts_ssml_mode: mode,
-        tts_adjustments: adjustments as any,
-        audio_path: filePath, // 新しいパスを保存
+        tts_adjustments: adjustmentData,
+        audio_path: newFilePath,
         tts_status: 1,
         last_tts_date: new Date().toISOString(),
         update_date: new Date().toISOString()
@@ -87,11 +89,23 @@ export async function savePhrase(
 
     if (dbError) throw dbError;
 
+    // 5. 古いファイルがあれば削除（後始末）
+    // 引数で渡されたパスをそのまま使うので SELECT 不要
+    if (currentAudioPath && currentAudioPath !== newFilePath) {
+      // セキュリティチェック：渡されたパスが本当にこのフレーズのものか検証
+      if (currentAudioPath.includes(phraseId)) {
+        await supabase.storage.from('audio').remove([currentAudioPath]);
+      } else {
+        // ログを出力してスキップ（またはエラーを投げる）
+        console.error(`Warning: Attempted to delete invalid path during update. phraseId: ${phraseId}, path: ${currentAudioPath}`);
+      }
+    }
+
     // クライアント側で refresh/fetch するため revalidatePath は不要
     return { 
       success: true, 
-      message: "音声を生成し、保存しました",
-      path: filePath 
+      message: "音声を更新しました", 
+      path: newFilePath 
     };
 
   } catch (error: any) {
