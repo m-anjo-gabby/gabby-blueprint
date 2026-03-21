@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 import { useAzureSpeechTest } from "@/hooks/useAzureSpeechTest";
 import { useVoice } from "@/hooks/useVoice";
+import { AssessmentWord } from "@/types/azure";
 
 const samplePhrases = [
   "We start fermenting the soy.",

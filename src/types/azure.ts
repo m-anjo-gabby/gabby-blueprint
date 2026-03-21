@@ -28,7 +28,7 @@ export type AzureVoice = typeof AZURE_VOICES[number]['id'];
 export type AzureStyle = typeof AZURE_STYLES[number]['id'];
 
 // --- 型定義 ---
-interface AssessmentWord {
+export interface AssessmentWord {
   Word: string;
   PronunciationAssessment: {
     ErrorType: "None" | "Mispronunciation" | "Omission" | "Insertion";
@@ -39,7 +39,7 @@ interface AssessmentWord {
   }[];
 }
 
-interface AssessmentJson {
+export interface AssessmentJson {
   NBest: {
     Words: AssessmentWord[];
   }[];
