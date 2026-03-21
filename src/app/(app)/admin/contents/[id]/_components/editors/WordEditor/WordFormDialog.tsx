@@ -15,6 +15,9 @@ import { AlertCircle, PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-r
 import { Alert } from '@/components/ui/alert';
 import { WordRecord, WORD_STATUS, WordStatus } from '@/types/word';
 
+/**
+ * バリデーションスキーマ
+ */
 const wordSchema = z.object({
   word_en: z.string().min(1, '英語表記は必須です'),
   word_ja: z.string().min(1, '日本語表記は必須です'),
@@ -56,6 +59,9 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
 
   const { isSubmitting } = form.formState;
 
+  /**
+   * 送信処理
+   */
   const onSubmit = async (values: WordFormValues) => {
     setServerError(null);
     try {
@@ -85,9 +91,11 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
     }
   };
 
+  /**
+   * ダイアログ開閉時の初期化
+   */
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    
     setIsConfirming(false);
     setServerError(null);
     form.reset(getInitialValues(initialData));
@@ -107,7 +115,17 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
+      {/* 改善ポイント: 
+          1. focus:outline-none で起動時の白い縁取りを防止
+          2. [&>button]:... セレクタで、右上の×ボタンを白く、かつホバー時のみくっきり表示
+      */}
+      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl focus:outline-none [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button:focus]:ring-0 [&>button:focus]:outline-none">
+        
+        {/* 起動時の最初のフォーカスを吸い込むためのダミー要素。
+            これにより×ボタンや入力欄が不自然に光るのを防ぎます。
+        */}
+        <span className="sr-only" tabIndex={0} />
+
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
@@ -122,9 +140,11 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white">
+            
+            {/* 英語表記 */}
             <FormField control={form.control} name="word_en" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">English Word</     FormLabel>
+                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">English Word</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-base font-bold text-slate-800 border border-slate-100">{field.value}</div>
                 ) : (
@@ -134,6 +154,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
               </FormItem>
             )} />
 
+            {/* 日本語表記 */}
             <FormField control={form.control} name="word_ja" render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">日本語訳</FormLabel>
@@ -147,6 +168,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
             )} />
 
             <div className="grid grid-cols-2 gap-4">
+              {/* ステータス */}
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ステータス</FormLabel>
@@ -171,6 +193,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
                 </FormItem>
               )} />
 
+              {/* 表示順 */}
               <FormField control={form.control} name="frequency_rank" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rank / Seq</FormLabel>
@@ -183,6 +206,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
               )} />
             </div>
 
+            {/* アクションボタン */}
             <div className="pt-4 mt-6 border-t border-slate-100">
               {isConfirming ? (
                 <div className="space-y-4">

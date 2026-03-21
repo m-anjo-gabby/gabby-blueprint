@@ -126,3 +126,28 @@ export async function deletePhrase(phraseId: string) {
     return { success: false, message: 'システムエラーが発生しました' };
   }
 }
+
+/**
+ * 特定のコンテンツに紐づくすべてのフレーズを（単語を跨いで）取得する
+ */
+export async function getPhrasesByContentId(contentId: string): Promise<PhraseRecord[]> {
+  const supabase = createAdminClient();
+
+  // com_m_word を inner join して content_id で絞り込む
+  const { data, error } = await supabase
+    .from('com_m_phrase')
+    .select(`
+      *,
+      com_m_word!inner(content_id)
+    `)
+    .eq('com_m_word.content_id', contentId)
+    .order('word_id', { ascending: true })
+    .order('seq_no', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching phrases by content:', error);
+    return [];
+  }
+
+  return data as PhraseRecord[];
+}

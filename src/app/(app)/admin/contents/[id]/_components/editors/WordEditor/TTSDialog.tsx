@@ -195,8 +195,6 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
 
     // 4. WordAdjustmentの復元または新規作成
     if (mode === 'auto' && currentSsml) {
-      // TODO: 保存済みSSMLから調整状態をパースして復元するロジック
-      // 簡易的には既存の初期化を走らせ、SSMLのパース結果をマッピングします
       const words = phrase.phrase_en.split(' ').map((word, i) => ({
         id: `word-${i}`,
         fullText: word,
@@ -207,9 +205,6 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
         breakDuration: 300,
         ipa: '',
       }));
-      
-      // ここで本来は currentSsml を正規表現等で解析し、
-      // どの単語に emphasis や break が付いているか adjustments に反映させる処理が必要です。
       setAdjustments(words);
     } else {
       // 新規作成時（またはManual時）のデフォルト初期化
@@ -292,11 +287,19 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="max-w-5xl p-0 overflow-hidden border-none shadow-2xl">
-          <DialogHeader className="p-6 bg-slate-900 text-white">
+        <DialogContent className="max-w-5xl p-0 overflow-hidden border-none shadow-2xl focus:outline-none [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button:focus]:ring-0 [&>button:focus]:outline-none">
+          
+          {/* フォーカス奪取防止用の隠し要素 */}
+          <span className="sr-only" tabIndex={0} />
+
+          {/* -mx-1 -mt-1: ネガティブマージンでダイアログの境界ギリギリまで背景を広げる
+              pt-8: 上部の隙間調整
+              pr-14: ×ボタンとの重なり防止
+          */}
+          <DialogHeader className="-mx-1 -mt-1 pt-8 pb-6 px-8 pr-14 bg-slate-900 text-white rounded-t-none border-b border-slate-800">
             <div className="flex justify-between items-center">
-              <DialogTitle className="flex items-center gap-2 font-black">
-                <Volume2 className="text-indigo-400" size={20} />
+              <DialogTitle className="flex items-center gap-2 font-black text-xl">
+                <Volume2 className="text-indigo-400" size={24} />
                 Azure TTS Voice Designer
               </DialogTitle>
             </div>
@@ -526,7 +529,6 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
 
           {/* フッター */}
           <DialogFooter className="p-4 bg-white border-t border-slate-100 flex items-center justify-end gap-3 sm:justify-end">
-            {/* 比較用のORIGINALボタン */}
             <Button 
               variant="ghost" 
               className="px-4 text-slate-400 font-bold h-12 rounded-full gap-2 hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
@@ -537,7 +539,6 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
               ORIGINAL
             </Button>
 
-            {/* メインのLISTENボタン */}
             <Button 
               variant="outline" 
               className="px-8 border-2 border-indigo-100 text-indigo-600 font-bold h-12 rounded-full gap-2 hover:bg-indigo-50 transition-all"

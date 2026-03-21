@@ -4,8 +4,9 @@ import { WordEditor } from './_components/editors/WordEditor';
 import { EditorHeader } from './_components/EditorHeader';
 
 interface Props {
-  params: { id: string };
-  searchParams: { wordId?: string };
+  // Next.js 15 では params と searchParams は Promise になります
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ wordId?: string }>;
 }
 
 export default async function ContentDetailPage({ params, searchParams }: Props) {
@@ -23,7 +24,9 @@ export default async function ContentDetailPage({ params, searchParams }: Props)
   return (
     <div className="flex flex-col h-screen max-w-full overflow-hidden bg-slate-50">
       {/* 共通ヘッダー（タイトルや保存進捗などを表示） */}
-      <EditorHeader content={content} />
+      <EditorHeader 
+        content={content} 
+      />
 
       <main className="flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col">
         {content.content_type === 0 ? (

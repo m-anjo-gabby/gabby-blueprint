@@ -29,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+import { useWordStore } from '@/stores/useWordStore';
 
 interface PhraseListProps {
   wordId: string;
@@ -42,6 +43,9 @@ export function PhraseList({ wordId }: PhraseListProps) {
   const { play, isPlaying } = useAudioPlayer();
   const [phrases, setPhrases] = useState<PhraseRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Zustandから更新フラグを取得
+  const lastUpdated = useWordStore((state) => state.lastUpdated);
 
   /**
    * フレーズ一覧の取得：wordIdが変更されるたびに実行
@@ -60,7 +64,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
 
   useEffect(() => {
     fetchPhrases();
-  }, [fetchPhrases]);
+  }, [fetchPhrases, lastUpdated]);
 
   /**
    * フレーズの削除実行

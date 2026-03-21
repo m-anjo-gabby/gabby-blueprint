@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
+import { buildSSML } from "@/utils/ssml";
 
 export interface TTSParameters {
   voice: string;
@@ -20,16 +21,11 @@ export function usePlayAzureSpeech() {
    * パラメータに基づいて SSML 文字列を生成するヘルパー関数
    */
   const generateSSML = useCallback((text: string, params: TTSParameters) => {
-    const { voice, style, rate, pitch } = params;
-    const pitchStr = pitch >= 0 ? `+${pitch}%` : `${pitch}%`;
-
-    return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">
-      <voice name="${voice}">
-        <mstts:express-as style="${style}">
-          <prosody rate="${rate}" pitch="${pitchStr}">${text}</prosody>
-        </mstts:express-as>
-      </voice>
-    </speak>`;
+    // 再生フックからの呼び出し時は、単語ごとの個別調整（words）は空で実行
+    return buildSSML(text, {
+      settings: params,
+      words: [] 
+    });
   }, []);
 
   /**
