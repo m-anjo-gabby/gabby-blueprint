@@ -31,6 +31,7 @@ export function WordList({ contentId }: WordListProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const lastUpdated = useWordStore((state) => state.lastUpdated);
+  const setSelectedWord = useWordStore((state) => state.setSelectedWord); // ストアのアクションを取得
   
   const fetchWords = useCallback(async () => {
     setIsLoading(true);
@@ -48,11 +49,28 @@ export function WordList({ contentId }: WordListProps) {
     fetchWords();
   }, [fetchWords, lastUpdated]);
 
- /**
+  /**
+   * 初期読み込み時、またはURLのwordIdが変わった際の同期処理
+   */
+  useEffect(() => {
+    if (words.length > 0 && selectedWordId) {
+      const currentWord = words.find(w => w.word_id === selectedWordId);
+      if (currentWord) {
+        setSelectedWord(currentWord);
+      }
+    } else if (!selectedWordId) {
+      setSelectedWord(null);
+    }
+  }, [selectedWordId, words, setSelectedWord]);
+
+  /**
    * 単語選択時
    */
-  const handleSelect = (id: string) => {
-    router.push(`${pathname}?wordId=${id}`);
+  const handleSelect = (word: WordRecord) => {
+    // 1. URLを更新
+    router.push(`${pathname}?wordId=${word.word_id}`);
+    // 2. ストアに単語オブジェクトをまるごと保存
+    setSelectedWord(word);
   };
 
   const filteredWords = words.filter(w => 
@@ -119,7 +137,7 @@ export function WordList({ contentId }: WordListProps) {
               return (
                 <div 
                   key={word.word_id}
-                  onClick={() => handleSelect(word.word_id)}
+                  onClick={() => handleSelect(word)}
                   className={cn(
                     "group relative flex flex-col p-3 px-4 cursor-pointer transition-all hover:bg-slate-50 border-l-4",
                     selectedWordId === word.word_id ? "bg-indigo-50/50 border-indigo-500" : "border-transparent"

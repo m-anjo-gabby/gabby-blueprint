@@ -6,7 +6,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { 
   Loader2, Plus, Settings2, Trash2, 
-  AlertCircle, CheckCircle2, Music4, Headphones 
+  AlertCircle, CheckCircle2, Music4, Headphones, 
+  Download
 } from 'lucide-react';
 import { 
   getPhrasesByWordId, 
@@ -40,12 +41,13 @@ interface PhraseListProps {
  */
 export function PhraseList({ wordId }: PhraseListProps) {
   const { showToast } = useToast();
-  const { play, isPlaying } = useAudioPlayer();
+  const { play, isPlaying, download, isDownloading } = useAudioPlayer();
   const [phrases, setPhrases] = useState<PhraseRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Zustandから更新フラグを取得
+  // Zustandから更新フラグと単語情報を取得
   const lastUpdated = useWordStore((state) => state.lastUpdated);
+  const selectedWord = useWordStore((state) => state.selectedWord);
 
   /**
    * フレーズ一覧の取得：wordIdが変更されるたびに実行
@@ -83,6 +85,30 @@ export function PhraseList({ wordId }: PhraseListProps) {
       showToast("システムエラーが発生しました", "error");
     }
   };
+
+  /**
+   * 音声ダウンロードハンドラー
+   */
+  const handleDownload = useCallback(async (phrase: PhraseRecord) => {
+    if (!phrase.audio_path) return;
+
+    try {
+      // ファイル名の組み立て: "Word-Type-Seq.mp3" 
+      // 例: "apple-1-1.mp3"
+      const wordText = selectedWord?.word_en || 'phrase';
+      const type = phrase.phrase_type;
+      const seq = phrase.seq_no;
+      
+      // OSで禁止されている文字を置換
+      const safeBaseName = `${wordText}-type${type}-${seq}`
+        .replace(/[^a-z0-9]/gi, '_')
+        .toLowerCase();
+        
+      await download(phrase.audio_path, phrase.phrase_id, safeBaseName);
+    } catch (error) {
+      showToast("ダウンロードに失敗しました", "error");
+    }
+  }, [download, selectedWord, showToast]);
 
   /**
    * TTS（音声生成）ステータスに応じたバッジのレンダリング
@@ -173,28 +199,47 @@ export function PhraseList({ wordId }: PhraseListProps) {
                       <div className="pt-1 flex items-center gap-4">
                         {renderStatusBadge(phrase.tts_status)}
                         
-                      {phrase.audio_path && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            disabled={!!isPlaying && isPlaying !== phrase.phrase_id} // 他を再生中は無効化（任意）
-                            onClick={() => play(phrase.audio_path!, phrase.phrase_id)}
-                            className={cn(
-                              "h-7 px-2.5 gap-1.5 rounded-lg border transition-all",
-                              isPlaying === phrase.phrase_id 
-                                ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 shadow-sm" 
-                                : "text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 border-transparent hover:border-indigo-100"
-                            )}
-                          >
-                            {isPlaying === phrase.phrase_id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <Headphones size={14} />
-                            )}
-                            <span className="text-[11px] font-bold">
-                              {isPlaying === phrase.phrase_id ? "Playing..." : "Listen"}
-                            </span>
-                          </Button>
+                        {phrase.audio_path && (
+                          <div className="flex items-center gap-1">
+                            {/* 再生ボタン */}
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              disabled={!!isPlaying && isPlaying !== phrase.phrase_id}
+                              onClick={() => play(phrase.audio_path!, phrase.phrase_id)}
+                              className={cn(
+                                "h-7 px-2.5 gap-1.5 rounded-lg border transition-all",
+                                isPlaying === phrase.phrase_id 
+                                  ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 shadow-sm" 
+                                  : "text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 border-transparent hover:border-indigo-100"
+                              )}
+                            >
+                              {isPlaying === phrase.phrase_id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Headphones size={14} />
+                              )}
+                              <span className="text-[11px] font-bold">
+                                {isPlaying === phrase.phrase_id ? "Playing..." : "Listen"}
+                              </span>
+                            </Button>
+
+                            {/* ダウンロードボタン */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={isDownloading === phrase.phrase_id}
+                              onClick={() => handleDownload(phrase)}
+                              className="h-7 w-7 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                              title="Download MP3"
+                            >
+                              {isDownloading === phrase.phrase_id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Download size={14} />
+                              )}
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
