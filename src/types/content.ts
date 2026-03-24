@@ -5,9 +5,9 @@
  */
 // コンテンツ種別
 export const CONTENT_TYPES = {
-  0: { label: '単語・フレーズ', value: 0 },
+  0: { label: '単語帳', value: 0 },
   1: { label: 'ビデオ', value: 1 },
-  2: { label: 'Gabbyスプリント', value: 2 },
+  2: { label: 'スプリント', value: 2 },
 } as const;
 
 // タグ種別
@@ -96,38 +96,33 @@ export interface MetadataTag {
   label: string;
 }
 
-// 生徒の教材用型定義
-export interface ContentItem {
-  content_id: string;
-  content_name: string;
-  content_type: number;
-  description: string;
-  content_label: string;
-  seq_no: number;
-  difficulty_level: number;
-  recommend: number;
-  metadata: {
-      tags?: MetadataTag[];
-      [key: string]: unknown; // 他の動的なプロパティを許容
-  };
-  insert_date: string;
+/**
+ * 生徒用：ライブラリ表示用のコンテンツ型
+ * RLSによりアクセス権があるもののみが返ってくることを前提としています
+ */
+export interface ContentItem extends Omit<ContentRecord, 'metadata'> {
+  // DBリレーションから取得するタグ情報
+  display_tags: ContentTagSummary[];
+  // お気に入り状態
   is_favorite: boolean;
+  // メタデータ（必要に応じて。基本はdisplay_tagsを優先）
+  metadata: {
+    tags?: MetadataTag[];
+    [key: string]: unknown;
+  };
 }
 
-// 型定義（インターフェース）
-export interface FavoriteContentRecord {
-  content_id: string;
-  content_name: string;
-  content_type: number;
-  description: string;
-  content_label: string;
-  seq_no: number;
-  difficulty_level: number;
-  recommend: number;
-  metadata: {
-      tags?: MetadataTag[];
-      [key: string]: unknown; // 他の動的なプロパティを許容
-  };
-  insert_date: string;
-  is_favorite: boolean;
-}
+// お気に入りリスト用も共通の型を使用（一貫性を保つため）
+export type FavoriteContentItem = ContentItem;
+
+/**
+ * ライブラリ画面のタブ定義を CONTENT_TYPES から動的に生成
+ * Object.values を使うことで、定義が増えても自動で反映
+ */
+export const TABS = [
+  { id: 'All', label: 'すべて' },
+  ...Object.values(CONTENT_TYPES).map(type => ({
+    id: String(type.value), // Tabsのvalueはstringが扱いやすいため
+    label: type.label
+  }))
+];

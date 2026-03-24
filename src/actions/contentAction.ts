@@ -1,16 +1,21 @@
 "use server";
 
 import { createClient } from "@/lib/server";
-import { ContentItem, FavoriteContentRecord } from "@/types/content";
+import { ContentItem, FavoriteContentItem } from "@/types/content";
 import { BaseResumeMetadata, ResumeContentResponse } from "@/types/training";
 
 // 全コンテンツを取得
 export async function getAllContent(): Promise<ContentItem[]> {
   const supabase = await createClient();
+  
+  // RLSにより、ログインユーザーがアクセス権を持つレコードのみが自動的に返る
   const { data, error } = await supabase
     .from('com_m_contents')
     .select(`
       *,
+      tags:com_t_contents_tag_rel(
+        tag:com_m_contents_tag(tag_id, tag_name, tag_type)
+      ),
       is_favorite:com_t_favorite_contents(count)
     `)
     .eq('delete_flg', '0')
@@ -21,18 +26,19 @@ export async function getAllContent(): Promise<ContentItem[]> {
     return [];
   }
 
-  // countをbooleanに変換し、全体をContentItem[]として扱う
   return (data || []).map(c => ({
     ...c,
-    is_favorite: c.is_favorite[0]?.count > 0,
-    // metadataはDBからJSONとして返るのでそのまま渡す
+    // countオブジェクトからbooleanへ変換
+    is_favorite: ((c.is_favorite as any)?.[0]?.count || 0) > 0,
+    // タグのリレーションをフラット化
+    display_tags: c.tags
+      ?.map((t: any) => t.tag)
+      .filter((t: any) => t !== null) || []
   })) as unknown as ContentItem[];
 }
 
 // お気に入りコンテンツを取得
-// actions/contentAction.ts
-
-export async function getFavoriteContentes(): Promise<FavoriteContentRecord[]> {
+export async function getFavoriteContentes(): Promise<FavoriteContentItem[]> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -53,7 +59,7 @@ export async function getFavoriteContentes(): Promise<FavoriteContentRecord[]> {
 
   // d.content は FavoriteContentRecord から is_favorite を除いたものと一致するはずです
   return data.map(d => {
-    const content = d.content as unknown as FavoriteContentRecord;
+    const content = d.content as unknown as FavoriteContentItem;
     return {
       ...content,
       is_favorite: true,
