@@ -1,137 +1,139 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Star, ArrowRight, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FavoriteContentRecord } from '@/types/content';
+import { Star, Search } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ContentCard } from '@/components/student/ContentCard';
+import { ContentItem, CONTENT_TYPES } from '@/types/content'; 
 import { toggleContentFavorite } from '@/actions/contentAction';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
+import { useFavoriteStore } from '@/stores/useFavoriteStore';
 import { getTrainingPath } from '@/utils/navigation';
-import { FavoritePageState } from '../page';
 
-interface ContentFavoritesProps {
-  contentes: FavoriteContentRecord[];
-  setContentes: React.Dispatch<React.SetStateAction<FavoritePageState>>;
-}
+// shadcn components
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-export default function ContentFavorites({ contentes, setContentes }: ContentFavoritesProps) {
+export default function ContentFavorites() {
   const router = useRouter();
   const { showToast } = useToast();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { showConfirm } = useConfirm();
 
-  const handleConfirmRemove = async () => {
-    if (!deletingId) return;
-    const contentId = deletingId;
-    
+  // --- Zustand Store ---
+  const { contents, isLoadingContents, fetchContents, removeContent } = useFavoriteStore();
+
+  // --- Local States ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState<string>('all');
+
+  // --- Logic: 初回データ取得 ---
+  useEffect(() => {
+    fetchContents();
+  }, [fetchContents]);
+
+  // --- Logic: フィルタリング用の教材種別リスト生成 ---
+  const typeOptions = useMemo(() => {
+    if (!contents) return [];
+    const types = Array.from(new Set(contents.map(c => c.content_type)));
+    return types.map(typeId => ({
+      id: String(typeId),
+      label: CONTENT_TYPES[typeId as keyof typeof CONTENT_TYPES]?.label || 'その他'
+    }));
+  }, [contents]);
+
+  // --- Logic: 検索と種別フィルタの統合 ---
+  const filteredContents = useMemo(() => {
+    if (!contents) return [];
+    return contents.filter(c => {
+      const matchSearch = c.content_name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchType = selectedType === 'all' || String(c.content_type) === selectedType;
+      return matchSearch && matchType;
+    });
+  }, [contents, searchQuery, selectedType]);
+
+  const handleRemoveFavorite = async (contentId: string) => {
+    const ok = await showConfirm("Remove Course?", "お気に入りから削除しますか？", { variant: 'danger' });
+    if (!ok) return;
+
+    removeContent(contentId);
     try {
       await toggleContentFavorite(contentId, false);
-      setContentes(prev => ({
-        ...prev,
-        contentes: prev.contentes ? prev.contentes.filter(c => c.content_id !== contentId) : null
-      }));
       showToast('お気に入りから削除しました', 'success');
     } catch (error) {
-      console.error("Failed to remove favorite:", error);
+      await fetchContents(true);
       showToast('削除に失敗しました', 'error');
-    } finally {
-      setDeletingId(null);
     }
   };
 
-  if (contentes.length === 0) {
+  if (isLoadingContents && !contents) {
     return (
-      <div className="py-20 text-center space-y-4">
-        <Star className="text-slate-200 mx-auto" size={48} />
-        <p className="text-slate-400 text-sm font-bold tracking-wide">No favorite contentes</p>
+      <div className="py-20 flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-6">
-      <AnimatePresence mode="popLayout">
-        {contentes.map((content) => (
-          <motion.div
-            layout
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            key={content.content_id}
-            className="bg-white border border-slate-100 rounded-4xl p-6 shadow-sm group relative overflow-hidden"
-          >
-            {/* 解除確認オーバーレイ（フレーズと同様のUI体験） */}
-            <AnimatePresence>
-              {deletingId && (
-                <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
-                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white rounded-[40px] p-8 w-full max-w-xs shadow-2xl space-y-6 text-center">
-                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto shadow-inner"><Trash2 size={28} /></div>
-                    <div className="space-y-2">
-                      <p className="font-black text-slate-800 text-lg tracking-tight">Remove course?</p>
-                      <p className="text-[11px] text-slate-400 font-medium leading-relaxed">この教材をお気に入りから削除しますか？</p>
-                    </div>
-                    <div className="flex gap-3 pt-2">
-                      <button onClick={() => setDeletingId(null)} className="flex-1 h-12 text-[11px] font-black text-slate-400 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">CANCEL</button>
-                      <button onClick={handleConfirmRemove} className="flex-1 h-12 text-[11px] font-black text-white bg-rose-500 rounded-2xl hover:bg-rose-600 shadow-lg shadow-rose-100 transition-all active:scale-95">REMOVE</button>
-                    </div>
-                  </motion.div>
-                </div>
-              )}
-            </AnimatePresence>
+    <div className="space-y-6">
+      {/* --- Filter Header --- */}
+      <div className="flex flex-col sm:flex-row gap-3 bg-white p-2 rounded-[24px] border border-slate-100 shadow-sm">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-400 transition-colors z-10" size={18} />
+          <Input
+            placeholder="Search materials..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-11 h-12 bg-slate-50 border-none rounded-2xl text-base sm:text-sm font-bold focus-visible:ring-2 focus-visible:ring-indigo-500/20 transition-all"
+          />
+        </div>
 
-            {/* ヘッダー: ラベルと削除ボタン */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-indigo-600 uppercase bg-indigo-50 px-2.5 py-1 rounded-lg">
-                  {content.content_label}
-                </span>
-                <span className="text-[10px] font-bold text-slate-300">Lv.{content.difficulty_level}</span>
-              </div>
-              <button
-                onClick={() => setDeletingId(content.content_id)}
-                className="p-2 -mr-2 text-slate-200 hover:text-rose-400 transition-colors"
-              >
-                <Trash2 size={20} strokeWidth={2.5} />
-              </button>
-            </div>
+        <Select value={selectedType} onValueChange={setSelectedType}>
+          <SelectTrigger className="w-full sm:w-[180px] h-12 bg-slate-50 border-none rounded-2xl text-[11px] font-black uppercase tracking-wider focus:ring-2 focus:ring-indigo-500/20 text-slate-600 px-4">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
+            <SelectItem value="all" className="text-[11px] font-black uppercase tracking-wider">All Types</SelectItem>
+            {typeOptions.map((opt) => (
+              <SelectItem key={opt.id} value={opt.id} className="text-[11px] font-black uppercase tracking-wider">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-            {/* コンテンツ */}
-            <div className="mb-4">
-              <h3 
-                onClick={() => router.push(getTrainingPath(content))}
-                className="font-black text-slate-800 text-[19px] leading-tight group-hover:text-indigo-600 transition-colors mb-2 cursor-pointer"
-              >
-                {content.content_name}
-              </h3>
-              <p className="text-[14px] text-slate-500 font-medium leading-relaxed line-clamp-2">
-                {content.description}
-              </p>
-            </div>
-
-            {/* タグ表示 */}
-            <div className="flex flex-wrap gap-1.5 mb-6">
-              {content.metadata.tags?.map(t => (
-                <span key={t.id} className="px-2.5 py-1 rounded-full border border-slate-100 bg-slate-50/50 text-slate-400 text-[9px] font-extrabold uppercase">
-                  {t.label}
-                </span>
+      {/* --- Content Grid Area --- */}
+      <div className="min-h-[400px]">
+        <AnimatePresence mode="wait">
+          {filteredContents.length > 0 ? (
+            <motion.div key={selectedType + searchQuery} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid gap-6">
+              {filteredContents.map((content) => (
+                <motion.div key={content.content_id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                  <ContentCard
+                    content={content as unknown as ContentItem} 
+                    actionMode="favorite"
+                    onToggleFavorite={() => handleRemoveFavorite(content.content_id)}
+                    onStart={(c) => router.push(getTrainingPath(c))}
+                  />
+                </motion.div>
               ))}
-            </div>
-
-            {/* アクションボタン */}
-            <button 
-              onClick={() => router.push(getTrainingPath(content))}
-              className="w-full h-14 bg-indigo-50 rounded-2xl flex items-center justify-center gap-3 hover:bg-indigo-600 transition-all active:scale-[0.98] group/btn"
-            >
-              <span className="text-indigo-600 font-black text-[12px] tracking-widest group-hover/btn:text-white transition-colors uppercase">
-                Resume Learning
-              </span>
-              <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-indigo-600 group-hover/btn:bg-indigo-500 group-hover/btn:text-white transition-all shadow-sm">
-                <ArrowRight size={12} strokeWidth={3} />
-              </div>
-            </button>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+            </motion.div>
+          ) : (
+            <motion.div key="empty" className="py-32 text-center text-slate-400 font-bold text-sm">
+              該当する教材が見つかりません
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

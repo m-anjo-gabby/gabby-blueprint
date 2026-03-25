@@ -1,30 +1,43 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Star, Volume2, Trash2 } from 'lucide-react';
-import { useVoice } from '@/hooks/useVoice';
-import { useToast } from '@/hooks/useToast';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Star, Inbox } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FavoritePageState } from '../page';
-import { FavoritePhraseRecord } from '@/types/word';
+import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 import { toggleFavorite } from '@/actions/wordAction';
+import { useFavoriteStore } from '@/stores/useFavoriteStore';
+import { PhraseFavoriteItem } from './PhraseFavoriteItem';
 
-interface PhraseFavoritesProps {
-  phrases: FavoritePhraseRecord[];
-  // 親の FavoritePageState 型を使用
-  setPhrases: React.Dispatch<React.SetStateAction<FavoritePageState>>;
-}
+// shadcn components
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-export default function PhraseFavorites({ phrases, setPhrases }: PhraseFavoritesProps) {
-  const { speak } = useVoice();
+export default function PhraseFavorites() {
   const { showToast } = useToast();
+  const { showConfirm } = useConfirm();
 
-  // --- States ---
+  // --- Zustand Store ---
+  const { phrases, isLoadingPhrases, fetchPhrases, removePhrase } = useFavoriteStore();
+
+  // --- Local States ---
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedContentId, setSelectedContentId] = useState<string>('all');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // --- Logic: フィルタリング用タブの生成 ---
-  const contentTabs = useMemo(() => {
+  // --- Logic: データ取得 ---
+  useEffect(() => {
+    fetchPhrases();
+  }, [fetchPhrases]);
+
+  // --- Logic: フィルタリング用の教材リスト生成 ---
+  const contentOptions = useMemo(() => {
+    if (!phrases) return [];
     const map = new Map();
     phrases.forEach(f => {
       if (!map.has(f.content_id)) {
@@ -34,185 +47,108 @@ export default function PhraseFavorites({ phrases, setPhrases }: PhraseFavorites
     return Array.from(map.entries());
   }, [phrases]);
 
-  const filteredFavorites = useMemo(() => {
-    if (selectedContentId === 'all') return phrases;
-    return phrases.filter(f => f.content_id === selectedContentId);
-  }, [phrases, selectedContentId]);
+  // --- Logic: 検索と教材フィルタの統合 ---
+  const filteredPhrases = useMemo(() => {
+    if (!phrases) return [];
+    return phrases.filter(f => {
+      const matchSearch = f.phrase_en.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          f.phrase_ja.includes(searchQuery);
+      const matchContent = selectedContentId === 'all' || f.content_id === selectedContentId;
+      return matchSearch && matchContent;
+    });
+  }, [phrases, searchQuery, selectedContentId]);
 
-  // --- Handlers ---
-  const handleConfirmRemove = async () => {
-    if (!deletingId) return;
-    
-    const targetPhrase = phrases.find(f => f.phrase_id === deletingId);
-    // 楽観的UI更新: 先にリストから消す
-    setPhrases(prev => ({
-      ...prev,
-      phrases: prev.phrases ? prev.phrases.filter(f => f.phrase_id !== deletingId) : null
-    }));
-    setDeletingId(null);
+  /**
+   * お気に入り解除ハンドラー
+   */
+  const handleRemoveClick = async (phraseId: string) => {
+    const ok = await showConfirm(
+      "Remove Phrase?", 
+      "このフレーズをお気に入りから削除しますか？", 
+      { variant: 'danger' }
+    );
+    if (!ok) return;
+
+    removePhrase(phraseId);
 
     try {
-      await toggleFavorite(deletingId, false);
+      await toggleFavorite(phraseId, false);
       showToast('お気に入りから削除しました', 'success');
     } catch (error) {
-      console.error("Failed to remove favorite:", error);
-      // 失敗した場合は元に戻す
-      if (targetPhrase) {
-        setPhrases(prev => ({
-          ...prev,
-          phrases: prev.phrases ? [...prev.phrases, targetPhrase] : [targetPhrase]
-        }));
-      }
+      await fetchPhrases(true);
       showToast('削除に失敗しました', 'error');
     }
   };
 
+  // --- Render: Loading ---
+  if (isLoadingPhrases && !phrases) {
+    return (
+      <div className="py-20 flex flex-col items-center justify-center space-y-4">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading Phrases...</p>
+      </div>
+    );
+  }
+
   return (
-    <>
-      {/* Content Filter Tabs: 内包されたフィルタリング */}
-      {contentTabs.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 pb-2">
-          <button
-            onClick={() => setSelectedContentId('all')}
-            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
-              selectedContentId === 'all' 
-                ? 'bg-slate-900 text-white border-slate-900 shadow-lg' 
-                : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50 shadow-sm'
-            }`}
-          >
-            All
-          </button>
-          {contentTabs.map(([id, name]) => (
-            <button
-              key={id}
-              onClick={() => setSelectedContentId(id)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
-                selectedContentId === id 
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' 
-                  : 'bg-white text-slate-400 border-slate-100 hover:bg-indigo-50 hover:text-indigo-400 shadow-sm'
-              }`}
-            >
-              {name}
-            </button>
-          ))}
+    <div className="space-y-8">
+      {/* --- Filter Header: ここは操作系としてまとめて配置 --- */}
+      <div className="flex flex-col sm:flex-row gap-3 bg-white p-2 rounded-[24px] border border-slate-100 shadow-sm">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-400 transition-colors z-10" size={18} />
+          <Input
+            placeholder="Search phrases..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-11 h-12 bg-slate-50 border-none rounded-2xl text-base sm:text-sm font-bold focus-visible:ring-2 focus-visible:ring-indigo-500/20 transition-all placeholder:text-slate-300"
+          />
         </div>
-      )}
 
-      {/* List Content: Framer Motionによるアニメーションリスト */}
-      <AnimatePresence mode="popLayout" initial={false}>
-        {filteredFavorites.length > 0 ? (
-          <motion.div 
-            key={selectedContentId} 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="grid gap-4"
-          >
-            {filteredFavorites.map((fav) => (
-              <motion.div 
-                layout="position" 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 500, 
-                  damping: 50, 
-                  mass: 1 
-                }}
-                key={fav.favorite_id}
-                className="bg-white p-6 rounded-4xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-[10px] font-black text-indigo-600 tracking-widest bg-indigo-50 px-2.5 py-1 rounded-lg uppercase">
-                    {fav.word_en || 'PHRASE'}
-                  </span>
-                  <button 
-                    onClick={() => setDeletingId(fav.phrase_id)} 
-                    className="text-slate-200 hover:text-rose-500 transition-colors p-2 -mr-2 active:scale-75"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-                
-                <div className="space-y-2 mb-6">
-                  <p className="text-lg font-bold text-slate-800 leading-tight group-hover:text-indigo-900 transition-colors">
-                    {fav.phrase_en}
-                  </p>
-                  <p className="text-sm text-slate-400 font-medium tracking-wide">
-                    {fav.phrase_ja}
-                  </p>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">
-                    From: {fav.content_name}
-                  </span>
-                  <button 
-                    onClick={() => speak(fav.phrase_en)}
-                    className="flex items-center gap-2 text-[11px] font-black text-indigo-600 bg-indigo-50 px-5 py-2.5 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-sm"
-                  >
-                    <Volume2 size={14} strokeWidth={3} />
-                    LISTEN
-                  </button>
-                </div>
-              </motion.div>
+        <Select value={selectedContentId} onValueChange={setSelectedContentId}>
+          <SelectTrigger className="w-full sm:w-[200px] h-12 bg-slate-50 border-none rounded-2xl text-[11px] font-black uppercase tracking-wider focus:ring-2 focus:ring-indigo-500/20 text-slate-600 px-4">
+            <SelectValue placeholder="All Materials" />
+          </SelectTrigger>
+          <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
+            <SelectItem value="all" className="text-[11px] font-black uppercase tracking-wider">All Materials</SelectItem>
+            {contentOptions.map(([id, name]) => (
+              <SelectItem key={id} value={id} className="text-[11px] font-black uppercase tracking-wider">
+                {name}
+              </SelectItem>
             ))}
-          </motion.div>
-        ) : (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center py-20 text-center space-y-4"
-          >
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-slate-200 shadow-inner">
-              <Star size={40} />
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* --- List Area: 外枠を消し、直接アイテムを並べる --- */}
+      <div className="min-h-[400px]">
+        <AnimatePresence mode="popLayout">
+          {filteredPhrases.length > 0 ? (
+            <div className="grid gap-4">
+              {filteredPhrases.map((phrase) => (
+                <PhraseFavoriteItem 
+                  key={phrase.phrase_id} 
+                  phrase={phrase} 
+                  onRemove={handleRemoveClick} 
+                />
+              ))}
             </div>
-            <p className="text-slate-500 font-bold">No phrases found</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {deletingId && (
-          <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+          ) : (
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-[40px] p-8 w-full max-w-xs shadow-2xl space-y-6 text-center"
+              key="empty" 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="py-32 text-center space-y-4"
             >
-              <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                <Trash2 size={28} />
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-slate-50">
+                <Star className="text-slate-200" size={32} />
               </div>
-
-              <div className="space-y-2">
-                <p className="font-black text-slate-800 text-lg tracking-tight">Remove phrase?</p>
-                <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
-                  お気に入りから削除してもよろしいですか？
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button 
-                  onClick={() => setDeletingId(null)}
-                  className="flex-1 h-12 text-[11px] font-black text-slate-400 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all"
-                >
-                  CANCEL
-                </button>
-                <button 
-                  onClick={handleConfirmRemove}
-                  className="flex-1 h-12 text-[11px] font-black text-white bg-rose-500 rounded-2xl hover:bg-rose-600 shadow-lg shadow-rose-100 transition-all active:scale-95"
-                >
-                  REMOVE
-                </button>
-              </div>
+              <p className="text-slate-400 font-bold text-sm tracking-wide">
+                {searchQuery ? '該当するフレーズが見つかりません' : 'お気に入りフレーズはありません'}
+              </p>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }

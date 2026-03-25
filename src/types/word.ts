@@ -1,5 +1,3 @@
-// src/types/word.ts
-
 /**
  * ----------------------------------------------
  * 定数・区分値
@@ -46,7 +44,7 @@ export interface WordRecord {
   word_en: string;
   word_ja: string;
   frequency_rank: number | null;
-  status: WordStatus; // status に変更
+  status: WordStatus;
   insert_date: string;
   update_date: string;
 }
@@ -65,73 +63,80 @@ export interface PhraseRecord {
   tts_adjustments?: WordAdjustment[];
   tts_status: TtsStatus;
   last_tts_date: string | null;
-  status: WordStatus; // status に変更
+  status: WordStatus;
   insert_date: string;
   update_date: string;
 }
 
 // TTS用の全体・単語ごとのカスタマイズ状態をまとめた型
 export interface TTSAdjustmentData {
-  // 左側のコントロールエリアの設定
   settings: {
     voice: string;
     style: string;
     rate: number;
     pitch: number;
   };
-  // 単語ごとの詳細設定（WordAdjustment 配列）
   words: WordAdjustment[];
 }
 
 // TTS用の単語ごとのカスタマイズ状態
 export interface WordAdjustment {
-  id: string; // インデックスを含む一意のID
-  text: string; // 記号を除いた純粋なテキスト
-  fullText: string; // 記号込みの表示用テキスト
+  id: string;
+  text: string;
+  fullText: string;
   emphasis: boolean;
-  emphasisLevel: 'reduced' | 'moderate' | 'strong'; // 強調レベル
+  emphasisLevel: 'reduced' | 'moderate' | 'strong';
   breakAfter: boolean;
-  breakDuration: number; // ポーズミリ秒
+  breakDuration: number;
   ipa: string;
 }
 
-// --- 既存の Training 関連は継承しつつ status 等を反映 ---
-export interface TrainingPhrase {
-  phrase_id: string;
-  phrase_en: string;
-  phrase_ja: string;
-  phrase_type: PhraseType;
-  seq_no: number;
-  is_favorite_initial: boolean;
-  status: WordStatus; // 追加
-  tts_status: TtsStatus; // 追加
+/**
+ * ----------------------------------------------
+ * 生徒用・UI用拡張型 (Inheritance Base)
+ * ----------------------------------------------
+ */
+
+/**
+ * UI表示用のフレーズ共通型
+ * PhraseRecord を継承し、お気に入り状態やリレーション情報を付加
+ */
+export interface PhraseItem extends PhraseRecord {
+  is_favorite: boolean;      // お気に入り状態 (旧 is_favorite_initial)
+  word_en?: string;          // 単語帳やリスト表示用
+  content_id?: string;       // コンテンツ切替用
+  content_name?: string;     // タブやラベル表示用
+  favorite_id?: string;      // お気に入り削除Actionに必要
 }
 
-export interface TrainingWord {
-  word_id: string;
-  word_en: string;
-  word_ja: string;
-  status: WordStatus;
-  phrases: TrainingPhrase[];
+/**
+ * 単語帳ドリル機能用 (Training)
+ * WordRecord を継承し、ネストされたフレーズを UI用の PhraseItem に差し替え
+ */
+export interface TrainingWord extends WordRecord {
+  phrases: PhraseItem[];
 }
 
-// 整理されたレスポンス型
+/**
+ * ドリル機能のレスポンス型
+ */
 export interface TrainingWordResponse {
   words: TrainingWord[];
   contentName: string;
 }
 
-export interface FavoritePhraseRecord {
+/**
+ * お気に入り一覧用の型定義
+ * 基本的に PhraseItem と同じだが、お気に入り画面では favorite_id が必須
+ */
+export interface FavoritePhraseItem extends PhraseItem {
   favorite_id: string;
-  phrase_id: string;
-  phrase_en: string;
-  phrase_ja: string;
-  word_en: string;
-  content_id: string;   // コンテンツ切替に必要
-  content_name: string; // タブに表示する名前に必要
-  insert_date: string;
+  insert_date: string; // お気に入りに登録した日時
 }
 
+/**
+ * サーバーアクションからの生レスポンス型 (Join結果)
+ */
 export type FavoriteResponse = {
   favorite_id: string;
   phrase_id: string;
@@ -139,6 +144,10 @@ export type FavoriteResponse = {
   com_m_phrase: {
     phrase_en: string;
     phrase_ja: string;
+    phrase_type: PhraseType;
+    seq_no: number;
+    status: WordStatus;
+    tts_status: TtsStatus;
     com_m_word: {
       word_en: string;
       com_m_contents: {

@@ -7,14 +7,14 @@ import { Search, X, BookOpen, ChevronLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Components
-import { ContentCard } from './_components/ContentCard';
+import { ContentCard } from '@/components/student/ContentCard';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Actions & Utils
 import { getAllContent, toggleContentFavorite } from '@/actions/contentAction';
-import { ContentItem, TABS } from '@/types/content';
+import { ContentItem, LIBRALY_TABS } from '@/types/content';
 import { useToast } from '@/hooks/useToast';
 import { getTrainingPath } from '@/utils/navigation';
 import { Button } from '@/components/ui/button';
@@ -132,7 +132,7 @@ export default function LibraryPage() {
         {/* タブ：背景を少し落ち着かせ、アクティブなタブを強調 */}
         <Tabs value={selectedType} onValueChange={setSelectedType} className="w-full">
           <TabsList className="grid grid-cols-4 w-full h-12 bg-slate-100/50 rounded-2xl p-1.5 border border-slate-50">
-            {TABS.map(tab => {
+            {LIBRALY_TABS.map(tab => {
               const count = contentList.filter(c => tab.id === 'All' || String(c.content_type) === String(tab.id)).length;
               return (
                 <TabsTrigger 
@@ -164,6 +164,7 @@ export default function LibraryPage() {
                 content={content}
                 onToggleFavorite={handleToggleFavorite}
                 onStart={(c) => router.push(getTrainingPath(c))}
+                actionMode='library'
               />
             ))
           ) : (

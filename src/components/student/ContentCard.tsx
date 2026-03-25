@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Star, ArrowRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { ContentItem } from "@/types/content";
 import { motion } from "framer-motion";
 import { getTagStyle, getContentTypeConfig } from "@/utils/content";
@@ -14,11 +14,18 @@ interface ContentCardProps {
   content: ContentItem;
   onToggleFavorite: (id: string, current: boolean) => void;
   onStart: (content: ContentItem) => void;
+  // モード切り替え ('dashboard' | 'library | favorite')
+  actionMode?: 'dashboard' | 'library' | 'favorite';
 }
 
-export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardProps) => {
+export const ContentCard = ({ 
+  content, 
+  onToggleFavorite, 
+  onStart,
+  actionMode = 'library' // デフォルトはライブラリ用の星アイコン
+}: ContentCardProps) => {
   // --- Config ---
-  const clampLines = 3; // 省略行数
+  const clampLines = 3; 
 
   // --- States & Refs ---
   const [isExpanded, setIsExpanded] = useState(false);
@@ -33,11 +40,8 @@ export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardP
     if (!el) return;
 
     const checkClamped = () => {
-      // 展開中の場合は、一時的にクランプをシミュレートして高さを測るか、
-      // 展開前（!isExpanded）のタイミングで確定した isClamped 状態を維持する必要があります。
       if (!isExpanded) {
         if (el.clientHeight > 0) {
-          // Safari誤差対策の +1px
           setIsClamped(el.scrollHeight > el.clientHeight + 1);
         }
       }
@@ -45,10 +49,7 @@ export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardP
 
     const observer = new ResizeObserver(checkClamped);
     observer.observe(el);
-    
-    // 初回実行
     checkClamped();
-
     return () => observer.disconnect();
   }, [content.description, isExpanded, clampLines]);
 
@@ -65,9 +66,7 @@ export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardP
         <div className={cn("px-6 py-3.5 border-b flex justify-between items-center gap-4", theme.bg, theme.border)}>
           <div className="flex items-center gap-4 flex-1">
             <div className="flex items-center gap-2">
-              {/* 装飾を削除し、色だけを指定 */}
               <TypeIcon size={18} strokeWidth={2.5} className={cn("shrink-0", theme.text)} />
-              {/* モバイル時は非表示、PC時は横並びで表示 */}
               <span className={cn(
                 "text-[10px] font-black uppercase tracking-widest whitespace-nowrap hidden sm:inline", 
                 theme.text
@@ -96,17 +95,26 @@ export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardP
             </div>
           </div>
 
+          {/* 右端のボタン：モードによって Star または Trash2 を切り替え */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onToggleFavorite(content.content_id, content.is_favorite);
+              onToggleFavorite(content.content_id, content.is_favorite || false);
             }}
             className={cn(
               "transition-all active:scale-75 p-2 rounded-full",
-              content.is_favorite ? "text-amber-500 bg-amber-50" : "text-slate-300 hover:bg-white/50"
+              actionMode === 'favorite' 
+                ? "text-slate-300 hover:text-rose-500 hover:bg-rose-50" // 削除モード
+                : content.is_favorite 
+                  ? "text-amber-500 bg-amber-50" // お気に入りON
+                  : "text-slate-300 hover:bg-white/50" // お気に入りOFF
             )}
           >
-            <Star size={18} fill={content.is_favorite ? "currentColor" : "none"} />
+            {actionMode === 'favorite' ? (
+              <Trash2 size={18} strokeWidth={2.5} />
+            ) : (
+              <Star size={18} fill={content.is_favorite ? "currentColor" : "none"} />
+            )}
           </button>
         </div>
 
@@ -115,7 +123,6 @@ export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardP
             {content.content_name}
           </h3>
 
-          {/* 3. Description Area */}
           <div
             onClick={() => isClamped && setIsExpanded(!isExpanded)}
             className={cn(
@@ -141,7 +148,6 @@ export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardP
               {content.description}
             </p>
             
-            {/* isClamped が一度 true になれば、展開中もボタンを表示し続ける */}
             {isClamped && (
               <div className="flex items-center gap-1 mt-1 text-indigo-500 font-bold text-[10px] uppercase tracking-wider">
                 {isExpanded ? (

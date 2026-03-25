@@ -125,7 +125,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   // 語彙データ
   const currentWord = words[wordIdx] || null;
   const currentPhrase = currentWord?.phrases?.[phraseIdx] || null;
-  const isFavorite = !!currentPhrase?.is_favorite_initial;
+  const isFavorite = !!currentPhrase?.is_favorite;
 
   // 目次用：現在のソート順に基づいたリスト
   const displayWords = useMemo(() => {
@@ -261,7 +261,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       const target = newWords[wordIdx];
       if (target?.phrases[phraseIdx]) {
         target.phrases = [...target.phrases];
-        target.phrases[phraseIdx] = { ...target.phrases[phraseIdx], is_favorite_initial: nextState };
+        target.phrases[phraseIdx] = { ...target.phrases[phraseIdx], is_favorite: nextState };
       }
       return newWords;
     });

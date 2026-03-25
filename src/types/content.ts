@@ -97,7 +97,7 @@ export interface MetadataTag {
 }
 
 /**
- * 生徒用：ライブラリ表示用のコンテンツ型
+ * 生徒用：表示用のコンテンツ型
  * RLSによりアクセス権があるもののみが返ってくることを前提としています
  */
 export interface ContentItem extends Omit<ContentRecord, 'metadata'> {
@@ -119,7 +119,7 @@ export type FavoriteContentItem = ContentItem;
  * ライブラリ画面のタブ定義を CONTENT_TYPES から動的に生成
  * Object.values を使うことで、定義が増えても自動で反映
  */
-export const TABS = [
+export const LIBRALY_TABS = [
   { id: 'All', label: 'すべて' },
   ...Object.values(CONTENT_TYPES).map(type => ({
     id: String(type.value), // Tabsのvalueはstringが扱いやすいため

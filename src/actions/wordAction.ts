@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/server";
-import { FavoritePhraseRecord, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@/types/word";
+import { FavoritePhraseItem, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@/types/word";
 
 /**
  * 指定されたコンテンツIDに紐付く単語とフレーズを取得
@@ -13,19 +13,10 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
   const { data, error } = await supabase
     .from('com_m_word')
     .select(`
-      word_id,
-      word_en,
-      word_ja,
-      status,
+      *,
       com_m_contents ( content_name ),
       com_m_phrase (
-        phrase_id,
-        phrase_en,
-        phrase_ja,
-        phrase_type,
-        seq_no,
-        status,
-        tts_status,
+        *,
         com_t_favorite_phrase ( phrase_id )
       )
     `)
@@ -53,23 +44,14 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
 
   // TrainingWord[] 型に準拠するようにマッピング
   const words: TrainingWord[] = rawData.map((word) => ({
-    word_id: word.word_id,
-    word_en: word.word_en,
-    word_ja: word.word_ja,
-    status: word.status, // 追加
+    ...word, // word_id, word_en, word_ja, status, insert_date 等をすべて継承
     phrases: word.com_m_phrase.map((p: any) => ({
-      phrase_id: p.phrase_id,
-      phrase_en: p.phrase_en,
-      phrase_ja: p.phrase_ja,
-      phrase_type: p.phrase_type,
-      seq_no: p.seq_no,
-      status: p.status,         // 追加
-      tts_status: p.tts_status, // 追加
-      is_favorite_initial: Array.isArray(p.com_t_favorite_phrase) && p.com_t_favorite_phrase.length > 0 
+      ...p, // phrase_id, phrase_en, phrase_ja, phrase_type, status, tts_status 等をすべて継承
+      // UI制御用のプロパティをセット（is_favorite に統一）
+      is_favorite: Array.isArray(p.com_t_favorite_phrase) && p.com_t_favorite_phrase.length > 0 
     }))
   }));
 
-  // Promise<TrainingResponse> に合致するように返却
   return { words, contentName: contentName || 'Training' };
 }
 
@@ -116,10 +98,9 @@ export async function getFavoriteCount(): Promise<number> {
 /**
  * お気に入りのフレーズ一覧を取得
  */
-export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
+export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
   const supabase = await createClient();
   
-  // ユーザーIDを取得して確実に絞り込む
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
@@ -130,8 +111,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
       phrase_id,
       insert_date,
       com_m_phrase!inner (
-        phrase_en,
-        phrase_ja,
+        *,
         com_m_word!inner (
           word_en,
           com_m_contents!inner (
@@ -141,7 +121,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
         )
       )
     `)
-    .eq('user_id', user.id) // 自分のデータのみに絞り込み
+    .eq('user_id', user.id)
     .order('insert_date', { ascending: false });
 
   if (error) {
@@ -150,7 +130,8 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
   }
 
   return (data as unknown as FavoriteResponse[]).map(item => ({
-    // 一意なキーとして favorite_id を保持
+    // PhraseRecord の全フィールドをマッピングに含める
+    ...item.com_m_phrase as any, 
     favorite_id: item.favorite_id,
     phrase_id: item.phrase_id,
     phrase_en: item.com_m_phrase.phrase_en,
@@ -158,7 +139,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseRecord[]> {
     word_en: item.com_m_phrase.com_m_word.word_en,
     content_id: item.com_m_phrase.com_m_word.com_m_contents.content_id,
     content_name: item.com_m_phrase.com_m_word.com_m_contents.content_name,
-    insert_date: item.insert_date,
+    insert_date: item.insert_date, // お気に入り登録日を優先
     is_favorite: true
   }));
 }
