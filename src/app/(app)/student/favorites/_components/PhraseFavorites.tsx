@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Star, Inbox } from 'lucide-react';
+import { Search, Star } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { toggleFavorite } from '@/actions/wordAction';
-import { useFavoriteStore } from '@/stores/useFavoriteStore';
+import { usePhraseStore } from '@/stores/usePhraseStore'; // 分離したPhrase専用ストア
 import { PhraseFavoriteItem } from './PhraseFavoriteItem';
 
 // shadcn components
@@ -24,39 +24,42 @@ export default function PhraseFavorites() {
   const { showConfirm } = useConfirm();
 
   // --- Zustand Store ---
-  const { phrases, isLoadingPhrases, fetchPhrases, removePhrase } = useFavoriteStore();
+  // favoritePhrases: お気に入りフレーズのリスト
+  // removeFavorite: キャッシュから即座に削除するアクション
+  const { favoritePhrases, isLoading, fetchFavorites, removeFavorite } = usePhraseStore();
 
   // --- Local States ---
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContentId, setSelectedContentId] = useState<string>('all');
 
-  // --- Logic: データ取得 ---
+  // --- Logic: 初回データ取得 ---
   useEffect(() => {
-    fetchPhrases();
-  }, [fetchPhrases]);
+    fetchFavorites();
+  }, [fetchFavorites]);
 
   // --- Logic: フィルタリング用の教材リスト生成 ---
+  // どのお気に入りがどの教材に紐づいているかを抽出
   const contentOptions = useMemo(() => {
-    if (!phrases) return [];
+    if (!favoritePhrases) return [];
     const map = new Map();
-    phrases.forEach(f => {
+    favoritePhrases.forEach(f => {
       if (!map.has(f.content_id)) {
         map.set(f.content_id, f.content_name);
       }
     });
     return Array.from(map.entries());
-  }, [phrases]);
+  }, [favoritePhrases]);
 
-  // --- Logic: 検索と教材フィルタの統合 ---
+  // --- Logic: 検索(日・英)と教材フィルタの統合 ---
   const filteredPhrases = useMemo(() => {
-    if (!phrases) return [];
-    return phrases.filter(f => {
+    if (!favoritePhrases) return [];
+    return favoritePhrases.filter(f => {
       const matchSearch = f.phrase_en.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           f.phrase_ja.includes(searchQuery);
       const matchContent = selectedContentId === 'all' || f.content_id === selectedContentId;
       return matchSearch && matchContent;
     });
-  }, [phrases, searchQuery, selectedContentId]);
+  }, [favoritePhrases, searchQuery, selectedContentId]);
 
   /**
    * お気に入り解除ハンドラー
@@ -69,19 +72,22 @@ export default function PhraseFavorites() {
     );
     if (!ok) return;
 
-    removePhrase(phraseId);
+    // 1. 楽観的UI更新（リストから即座に消去）
+    removeFavorite(phraseId);
 
     try {
+      // 2. サーバーサイド処理
       await toggleFavorite(phraseId, false);
       showToast('お気に入りから削除しました', 'success');
     } catch (error) {
-      await fetchPhrases(true);
+      // 3. 失敗時は再取得して整合性を戻す
+      await fetchFavorites(true);
       showToast('削除に失敗しました', 'error');
     }
   };
 
   // --- Render: Loading ---
-  if (isLoadingPhrases && !phrases) {
+  if (isLoading && !favoritePhrases) {
     return (
       <div className="py-20 flex flex-col items-center justify-center space-y-4">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
@@ -92,7 +98,7 @@ export default function PhraseFavorites() {
 
   return (
     <div className="space-y-8">
-      {/* --- Filter Header: ここは操作系としてまとめて配置 --- */}
+      {/* --- Filter Header --- */}
       <div className="flex flex-col sm:flex-row gap-3 bg-white p-2 rounded-[24px] border border-slate-100 shadow-sm">
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-400 transition-colors z-10" size={18} />
@@ -100,6 +106,7 @@ export default function PhraseFavorites() {
             placeholder="Search phrases..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            // iOSズーム防止の text-base
             className="pl-11 h-12 bg-slate-50 border-none rounded-2xl text-base sm:text-sm font-bold focus-visible:ring-2 focus-visible:ring-indigo-500/20 transition-all placeholder:text-slate-300"
           />
         </div>
@@ -119,17 +126,25 @@ export default function PhraseFavorites() {
         </Select>
       </div>
 
-      {/* --- List Area: 外枠を消し、直接アイテムを並べる --- */}
+      {/* --- List Area --- */}
       <div className="min-h-[400px]">
         <AnimatePresence mode="popLayout">
           {filteredPhrases.length > 0 ? (
             <div className="grid gap-4">
               {filteredPhrases.map((phrase) => (
-                <PhraseFavoriteItem 
-                  key={phrase.phrase_id} 
-                  phrase={phrase} 
-                  onRemove={handleRemoveClick} 
-                />
+                <motion.div
+                  key={phrase.phrase_id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <PhraseFavoriteItem 
+                    phrase={phrase} 
+                    onRemove={handleRemoveClick} 
+                  />
+                </motion.div>
               ))}
             </div>
           ) : (
