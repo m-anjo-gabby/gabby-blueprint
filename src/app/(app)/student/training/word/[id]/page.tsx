@@ -6,7 +6,7 @@ import { Volume2, Mic, ChevronLeft, ArrowRight, List, Star, X, ChevronDown, Book
 
 // Hooks & Actions
 import { useVoice } from '@/hooks/useVoice';
-import { clearResumeContent, getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
+import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
 import { analyzePhrase } from '@/utils/stringSimilarity';
 import { WordResumeMetadata } from '@/types/training';
 import { useToast } from '@/hooks/useToast';
@@ -14,6 +14,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { PHRASE_TYPES, PhraseType, TrainingWord } from '@/types/word';
 import { getWordData, toggleFavorite } from '@/actions/wordAction';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useResumeStore } from '@/stores/useResumeStore';
 
 // --- Types ---
 // 評価設定
@@ -104,7 +105,9 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
             });
             
             showToast("前回の続きから再開しました", "success");
-            await clearResumeContent(); // 使用済みの栞をクリア
+
+            // 使用済みの栞をクリア（キャッシュも更新）
+            await useResumeStore.getState().clearResume();
           }
         }
 
@@ -290,26 +293,44 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 現在の進捗を栞として保存し、確認後に終了する
    */
   const handleSaveResume = async () => {
-    if (!currentPhrase || !sectionId) return;
+    if (!currentPhrase || !sectionId || !currentWord) return;
 
     const ok = await showConfirm(
       "Save & Exit?", 
       "現在の進捗をブックマークして、ダッシュボードに戻りますか？",
-      { variant: 'info', isModal: false } // 保存はポジティブなアクションなので info
+      { variant: 'info', isModal: false }
     );
 
     if (ok) {
       try {
+        // --- 進捗計算ロジック ---
+        const total = words.length;
+        const currentIndex = wordIdx + 1; // 1-indexed
+        const progress = Math.round((currentIndex / total) * 100);
+
+        // 再開情報構造に従ってデータを構築
+        const metadata: WordResumeMetadata = {
+          type: 'word',
+          phrase_id: currentPhrase.phrase_id,
+          word_id: currentWord.word_id,
+          last_index: wordIdx,
+          display: {
+            progress_percent: progress,
+            position_text: `Word ${currentIndex} / ${total}`,
+            last_unit_name: currentWord.word_en // 最後に学習した単語名を保持
+          }
+        };
+
+        // 保存実行（ジェネリック型を適用）
         await saveResumeContent<WordResumeMetadata>(
           sectionId, 
           currentPhrase.phrase_id,
-          {
-            phrase_id: currentPhrase.phrase_id,
-            word_id: currentWord.word_id,
-            last_index: wordIdx,
-          }
+          metadata
         );
         
+        // 再開キャッシュを強制リフレッシュ
+        await useResumeStore.getState().fetchResume(true);
+
         showToast("ブックマークしました", "success");
         router.push('/student/dashboard');
       } catch (error) {

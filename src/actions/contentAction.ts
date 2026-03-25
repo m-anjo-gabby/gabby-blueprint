@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/server";
 import { ContentItem, FavoriteContentItem } from "@/types/content";
-import { BaseResumeMetadata, ResumeContentResponse } from "@/types/training";
+import { ResumeContentResponse, ResumeMetadata } from "@/types/training";
 
 // 全コンテンツを取得
 export async function getAllContent(): Promise<ContentItem[]> {
@@ -91,9 +91,9 @@ export async function toggleContentFavorite(contentId: string, isFavorite: boole
 
 /**
  * コンテンツの再開地点を保存する (栞を挟む)
- * T は BaseResumeMetadata を継承した具体的なメタデータ型
+ * metadata は ResumeMetadata (WordResumeMetadata | VideoResumeMetadata) を想定
  */
-export async function saveResumeContent<T extends BaseResumeMetadata>(
+export async function saveResumeContent<T extends ResumeMetadata>(
   contentId: string, 
   itemId: string, 
   metadata: T
@@ -102,14 +102,17 @@ export async function saveResumeContent<T extends BaseResumeMetadata>(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
+  // upsertにより、ユーザーごとに1件のみの再開情報を維持
   const { error } = await supabase
     .from('com_t_resume_contents')
     .upsert({
       user_id: user.id,
       content_id: contentId,
       item_id: itemId,
-      metadata: metadata, // metadataフィールドはJSONBなので型安全に保存可能
+      metadata: metadata, // JSONBとして保存
       update_date: new Date().toISOString()
+    }, {
+      onConflict: 'user_id' // user_idが衝突したら更新
     });
 
   if (error) {
@@ -139,9 +142,10 @@ export async function clearResumeContent() {
 
 /**
  * 最新の再開地点を取得する
- * 呼び出し側で const data = await getLatestResumeContent<WordResumeMetadata>(); のように利用可能
+ * 戻り値は自動的に ResumeContentResponse 型となり、
+ * metadata.type によって型ガードが可能です。
  */
-export async function getLatestResumeContent<T = BaseResumeMetadata>() {
+export async function getLatestResumeContent(): Promise<ResumeContentResponse | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -149,9 +153,11 @@ export async function getLatestResumeContent<T = BaseResumeMetadata>() {
   const { data, error } = await supabase
     .from('com_t_resume_contents')
     .select(`
+      user_id,
       content_id,
       item_id,
       metadata,
+      update_date,
       com_m_contents (
         content_name,
         content_type,
@@ -163,11 +169,11 @@ export async function getLatestResumeContent<T = BaseResumeMetadata>() {
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') return null; // 0件（レコードなし）は正常系として扱う
+    if (error.code === 'PGRST116') return null; // レコードなし
     console.error("Fetch resume content error:", error);
     return null;
   }
 
-  // 取得したデータを定義したジェネリクス型へアサーション
-  return data as unknown as ResumeContentResponse<T>;
+  // dataを ResumeContentResponse にキャストして返す
+  return data as unknown as ResumeContentResponse;
 }
