@@ -65,9 +65,8 @@ export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardP
         <div className={cn("px-6 py-3.5 border-b flex justify-between items-center gap-4", theme.bg, theme.border)}>
           <div className="flex items-center gap-4 flex-1">
             <div className="flex items-center gap-2">
-              <div className={cn("p-1.5 rounded-xl shadow-sm bg-white/80", theme.text)}>
-                <TypeIcon size={18} strokeWidth={3} />
-              </div>
+              {/* 装飾を削除し、色だけを指定 */}
+              <TypeIcon size={18} strokeWidth={2.5} className={cn("shrink-0", theme.text)} />
               {/* モバイル時は非表示、PC時は横並びで表示 */}
               <span className={cn(
                 "text-[10px] font-black uppercase tracking-widest whitespace-nowrap hidden sm:inline", 
