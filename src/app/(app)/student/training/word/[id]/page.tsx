@@ -236,32 +236,64 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   if (!currentWord || !currentPhrase) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center p-2 overflow-hidden touch-none">
-      <div className="bg-white text-slate-900 rounded-[40px] p-6 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[90vh] flex flex-col relative overflow-hidden">
-        <DrillHeader />
-        <DrillCard onToggleFavorite={handleToggleFavorite} />
-        <div className="h-12 shrink-0 flex items-center justify-center">
-          {isListening ? (
-             <span className="text-xs font-black text-rose-500 animate-pulse uppercase tracking-[0.2em]">Recording...</span>
-          ) : isAutoPlaying ? (
-             <span className="text-xs font-black text-indigo-600 animate-pulse uppercase tracking-[0.3em]">Auto Playing</span>
-          ) : (
-            <p className="text-xs font-black text-slate-200 uppercase tracking-widest">Tap card to flip</p>
-          )}
+    // 1. 背景全体：揺れ防止のため fixed inset-0 と overflow-hidden を維持
+    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-4 overflow-hidden touch-none selection:bg-indigo-100">
+      
+      {/* 2. メインカード：max-h-[90vh] を戻すことで、外枠との余白（浮遊感）を再現 */}
+      <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[90vh] rounded-[40px] flex flex-col relative overflow-hidden">
+        
+        {/* 3. コンテンツ全体を包むコンテナ：ここで適切なパディングを確保 */}
+        <div className="flex-1 flex flex-col overflow-hidden p-6 pb-2">
+          <DrillHeader />
+          
+          {/* カードエリア：上下のバランスをとるため flex-1 */}
+          <div className="flex-1 flex flex-col justify-center overflow-hidden py-2">
+            <DrillCard onToggleFavorite={handleToggleFavorite} />
+          </div>
+          
+          {/* ステータス表示 */}
+          <div className="h-10 shrink-0 flex items-center justify-center">
+            {isListening ? (
+              <span className="text-[10px] font-black text-rose-500 animate-pulse uppercase tracking-[0.2em]">Recording...</span>
+            ) : isAutoPlaying ? (
+              <span className="text-[10px] font-black text-indigo-600 animate-pulse uppercase tracking-[0.3em]">Auto Playing</span>
+            ) : (
+              <p className="text-[10px] font-black text-slate-200 uppercase tracking-widest">Tap card to flip</p>
+            )}
+          </div>
         </div>
-        <DrillControls 
-          isListening={isListening}
-          timeLeft={timeLeft}
-          onNext={handleNext}
-          onSaveResume={handleSaveAndExit}
-          onToggleAutoPlay={handleToggleAutoPlay}
-          onSpeak={() => speak(currentPhrase.phrase_en)}
-          onVoiceCheck={handleVoiceCheck}
-        />
+
+        {/* 4. 操作ボタン：下部に配置 */}
+        <div className="px-6 pb-8 shrink-0">
+          <DrillControls 
+            isListening={isListening}
+            timeLeft={timeLeft}
+            onNext={handleNext}
+            onSaveResume={handleSaveAndExit}
+            onToggleAutoPlay={handleToggleAutoPlay}
+            onSpeak={() => speak(currentPhrase.phrase_en)}
+            onVoiceCheck={handleVoiceCheck}
+          />
+        </div>
+
+        {/* ポータル系コンポーネント */}
         <DrillFeedback feedback={feedback} analysis={analysis} onClose={() => setFeedback(null)} />
         <DrillIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
-      </div>
+      </main>
+
       <style jsx global>{`
+        /* Radix UI が付与する padding-right を強制的に 0 にして横揺れを防止 */
+        :root {
+          --removed-body-scroll-bar-size: 0px !important;
+        }
+        body {
+          padding-right: 0px !important;
+          overflow: hidden !important;
+          /* iOSでのバウンススクロール防止 */
+          position: fixed;
+          width: 100%;
+          height: 100%;
+        }
         .perspective-1000 { perspective: 1000px; }
         .preserve-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }

@@ -66,6 +66,7 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
     contentName: name,
     wordIdx: startW,
     phraseIdx: startP,
+    sortOrder: 'default',
     isFlipped: false,
     feedback: null,
     analysis: null,
