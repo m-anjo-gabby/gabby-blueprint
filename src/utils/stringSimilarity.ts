@@ -1,4 +1,5 @@
 // src/utils/stringSimilarity.ts
+import { AnalysisResult, WordMatch } from '@/types/wordDrill';
 
 // 重みの定義
 const WEIGHTS = {
@@ -8,23 +9,6 @@ const WEIGHTS = {
   MISSING: 0.0,
   MAIN_WORD_MULTIPLIER: 1.5,
 };
-
-export interface WordMatch {
-  word: string;
-  isMatch: boolean;
-  isFuzzy: boolean;    // 類似度による救済か (例: collect vs correct)
-  isCombined: boolean; // 単語結合による救済か (例: filtrate vs filter rate)
-  heard?: string;      // 実際に聞き取られた単語
-  message?: string;    // ツールチップ用メッセージ
-}
-
-export interface AnalysisResult {
-  matches: WordMatch[];
-  score: number;       // 0.0 ~ 1.0
-  hasIssues: boolean;  // 何らかの忖度が発生したか
-  summary: string;     // 総合評価の一言
-  issues: string[];    // 具体的な改善点リスト
-}
 
 // 総合スコアによるフィードバックコメント
 const FEEDBACK_MATRIX = {
@@ -113,15 +97,11 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
       return { word: tWord, isMatch: true, isFuzzy: false, isCombined: false, heard: tLower };
     }
 
-    // --- ここから「結合（リンキング）」の判定を強化 ---
     // 2. 単語結合による一致 (filter + rate = filtrate などを救済)
-    //    結合リストの中に「完全一致」または「ファジー一致」するものがあるか探す
-    // ※ rawInputWords（単体）に含まれていないことは手順1で確定済みなので、
-    // スペースを抜いて比較
     const combinedMatch = inputWordsWithCombined.find(iWord => 
       iWord.replace(/\s+/g, "") === tLower || checkFuzzy(tLower, iWord.replace(/\s+/g, ""))
     );
-    if (combinedMatch && combinedMatch.includes(" ")) { // スペースを含めば結合とみなす
+    if (combinedMatch && combinedMatch.includes(" ")) {
       return { word: tWord, isMatch: true, isFuzzy: false, isCombined: true, heard: combinedMatch };
     }
 
@@ -131,8 +111,8 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
       return { word: tWord, isMatch: true, isFuzzy: true, isCombined: false, heard: fuzzyMatch };
     }
 
-    // 4. 不一致
-    return { word: tWord, isMatch: false, isFuzzy: false, isCombined: false };
+    // 4. 不一致 (heardを空文字にして型を合わせる)
+    return { word: tWord, isMatch: false, isFuzzy: false, isCombined: false, heard: "" };
   });
 
   // スコア算出
@@ -144,14 +124,13 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
       else wordScore = WEIGHTS.EXACT;
     }
 
-    // メイン単語なら重み付け
     const isMain = mainWords.some(mw => mw.toLowerCase() === m.word.toLowerCase());
     const weight = isMain ? WEIGHTS.MAIN_WORD_MULTIPLIER : 1.0;
     
     return acc + (wordScore * weight);
   }, 0);
 
-  // 最大スコア（全単語が完全一致した場合）
+  // 最大スコア
   const maxPossibleScore = targetWords.reduce((acc, word) => {
     const isMain = mainWords.some(mw => mw.toLowerCase() === word.toLowerCase());
     return acc + (isMain ? WEIGHTS.MAIN_WORD_MULTIPLIER : 1.0);
@@ -159,24 +138,28 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
 
   const score = maxPossibleScore > 0 ? totalScore / maxPossibleScore : 0;
   
-  // メイン単語のどれかが正確に一致しているかチェック
   const hasMainWordMatch = mainWords.every(mw => 
     matches.some(m => m.word.toLowerCase() === mw.toLowerCase() && m.isMatch && !m.isFuzzy)
   );
 
   const { summary, issues } = getFeedback(matches, score, hasMainWordMatch);
   
-  return { matches, score, hasIssues: matches.some(m => m.isFuzzy || m.isCombined || !m.isMatch), summary, issues };
+  return { 
+    matches, 
+    score, 
+    summary, 
+    issues,
+    // hasIssuesはUI側で使う可能性があるため付与
+    hasIssues: matches.some(m => m.isFuzzy || m.isCombined || !m.isMatch) 
+  };
 }
 
 // 優先順位に基づいたフィードバック生成ロジック
 function getFeedback(matches: WordMatch[], score: number, hasMainWordMatch: boolean) {
-  // 1. スコア帯（HIGH/MID/LOW）からランダムにメインコメントを選択
   const range = score >= 0.9 ? 'HIGH' : score >= 0.6 ? 'MID' : 'LOW';
   const baseComments = FEEDBACK_MATRIX[range];
   const summary = baseComments[Math.floor(Math.random() * baseComments.length)];
 
-  // 2. 改善点の蓄積（最大2つまで抽出して具体的な指摘にする）
   const issues: string[] = [];
   if (!hasMainWordMatch) issues.push(ISSUE_SPECIFIC_COMMENTS.MAIN);
   if (matches.some(m => !m.isMatch)) issues.push(ISSUE_SPECIFIC_COMMENTS.MISSING);
