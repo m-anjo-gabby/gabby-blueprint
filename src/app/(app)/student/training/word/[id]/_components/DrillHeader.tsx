@@ -1,71 +1,96 @@
 'use client';
 
 import React from 'react';
-import { ChevronLeft, List, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
-/**
- * Propsを排除し、Storeから直接状態を取得
- */
 export const DrillHeader: React.FC = () => {
   const router = useRouter();
-  
-  // Storeから必要な値とアクションを抽出
-  const contentName = useWordDrillStore((state) => state.contentName);
-  const words = useWordDrillStore((state) => state.words);
-  const wordIdx = useWordDrillStore((state) => state.wordIdx);
-  const setShowIndex = useWordDrillStore((state) => state.setShowIndex);
+  const { contentName, words, wordIdx, setShowIndex } = useWordDrillStore();
   
   const currentWord = words[wordIdx];
+  const total = words.length;
+  const current = wordIdx + 1;
 
-  // データがない場合のフォールバック
-  if (!currentWord) return <div className="h-24 animate-pulse bg-slate-50 rounded-2xl" />;
+  const progress = total > 1 ? (wordIdx / (total - 1)) * 100 : 0;
+
+  if (!currentWord) return <div className="h-16 animate-pulse bg-slate-50 rounded-xl mb-4" />;
 
   return (
-    <div className="shrink-0 border-b border-slate-50 pb-3 sm:pb-5">
-      {/* 上段: バックボタン & コーパス名 */}
-      <div className="flex justify-between items-center mb-4">
+    <div className="shrink-0 pt-1 w-full overflow-hidden select-none">
+      {/* 1. ナビゲーション・タイトルエリア */}
+      <div className="flex items-center justify-between gap-2 h-12 px-2">
         <button 
           onClick={() => router.back()} 
-          className="group text-slate-400 hover:text-indigo-600 flex items-center text-[10px] font-black tracking-widest transition-colors p-1 -ml-1"
+          // 質感修正：背景を白、微細な境界線と影を追加
+          className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
         >
-          <ChevronLeft size={20} className="mr-0.5 group-hover:-translate-x-0.5 transition-transform" /> 
-          BACK
+          <ChevronLeft size={20} strokeWidth={2.5} />
         </button>
-        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider truncate max-w-[150px] sm:max-w-none">
-          {contentName || 'Vocabulary Training'} 
-        </span>
+
+        <button 
+          onClick={() => setShowIndex(true)}
+          className="flex-1 min-w-0 flex flex-col items-center group active:opacity-70 transition-opacity"
+        >
+          <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.15em] leading-none mb-1.5 truncate w-full text-center px-4">
+            {contentName || 'Vocabulary'}
+          </span>
+          <div className="flex items-center justify-center gap-1.5 w-full">
+            <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none truncate">
+              {currentWord.word_en}
+            </h1>
+            {/* 質感修正：hover時に少し動くアニメーション */}
+            <ChevronDown size={14} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all shrink-0" />
+          </div>
+        </button>
+
+        <div className="w-9 shrink-0" />
       </div>
 
-      {/* 下段: 左に単語、右に進捗数 */}
-      <div className="flex justify-between items-end gap-3">
-        <div className="min-w-0 flex-1">
-          <button 
-            onClick={() => setShowIndex(true)} 
-            className="group flex flex-col items-start transition-all -ml-2 px-2 py-1 rounded-2xl hover:bg-slate-50 text-left w-full sm:w-auto"
-          >
-            <div className="flex items-center gap-1.5 text-slate-400 mb-0.5">
-              <List size={12} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
-              <span className="text-[9px] font-black uppercase tracking-[0.2em]">Vocabulary</span>
-            </div>
-            <div className="flex items-start gap-2 w-full">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-[1.1] break-words">
-                {currentWord.word_en}
-              </h1>
-              <ChevronDown size={18} className="shrink-0 text-slate-300 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all mt-1" />
-            </div>
-          </button>
-        </div>
+      {/* 2. プログレスバー & ピルインジケーター */}
+      <div className="mt-3 px-8 relative h-6 flex items-center">
+        {/* レール背景：質感修正（内側にわずかな影） */}
+        <div className="w-full h-[3px] bg-slate-100 rounded-full shadow-[inset_0_1px_1px_rgba(0,0,0,0.05)]" />
+        
+        {/* 進捗ライン：質感修正（グラデーションと光彩を追加） */}
+        <div 
+          className="absolute h-[3px] rounded-full transition-all duration-500 ease-out origin-left bg-gradient-to-r from-indigo-600 to-indigo-400 shadow-[0_0_7px_rgba(79,70,229,0.4)]"
+          style={{ 
+            left: '32px',
+            right: '32px',
+            width: 'auto',
+            transformOrigin: 'left',
+            transform: `scaleX(${progress / 100})`
+          }}
+        />
 
-        <div className="shrink-0 text-right bg-slate-50 px-3 py-1 rounded-xl border border-slate-100/50 mb-1 self-end">
-          <span className="text-lg font-black text-indigo-600 tabular-nums">
-            {wordIdx + 1}
-          </span>
-          <span className="text-xs font-bold text-slate-200 mx-1">/</span>
-          <span className="text-xs font-bold text-slate-400 tabular-nums">
-            {words.length}
-          </span>
+        {/* ピル型マーカー */}
+        <div 
+          className="absolute transition-all duration-500 ease-out flex items-center justify-center"
+          style={{ 
+            left: `calc(32px + ( (100% - 64px) * ${progress} / 100 ))`,
+          }}
+        >
+          {/* マーカー本体：質感修正（2層の影、微かな透過、リング色の調整） */}
+          <div className="
+            bg-white/95 backdrop-blur-[1px]
+            ring-[1.5px] ring-indigo-500/20 
+            border border-slate-200/50 shadow-[0_2px_10px_-2px_rgba(0,0,0,0.1),0_1px_3px_rgba(0,0,0,0.05)]
+            h-[22px] min-w-[60px] px-2.5 rounded-full 
+            flex items-center justify-center gap-1.5 z-10
+            antialiased -translate-x-1/2
+          ">
+            <span className="text-[11px] font-black text-indigo-600 tabular-nums leading-none translate-y-[0.5px]">
+              {current}
+            </span>
+            <span className="text-[10px] font-medium text-slate-300 leading-none">
+              /
+            </span>
+            <span className="text-[10px] font-bold text-indigo-400/80 tabular-nums leading-none translate-y-[0.5px]">
+              {total}
+            </span>
+          </div>
         </div>
       </div>
     </div>

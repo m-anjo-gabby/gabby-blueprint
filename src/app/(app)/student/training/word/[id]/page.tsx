@@ -237,13 +237,13 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   return (
     // 1. 背景全体：揺れ防止のため fixed inset-0 と overflow-hidden を維持
-    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-4 overflow-hidden touch-none selection:bg-indigo-100">
+    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none selection:bg-indigo-100">
       
       {/* 2. メインカード：max-h-[90vh] を戻すことで、外枠との余白（浮遊感）を再現 */}
-      <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[90vh] rounded-[40px] flex flex-col relative overflow-hidden">
+      <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
         
         {/* 3. コンテンツ全体を包むコンテナ：ここで適切なパディングを確保 */}
-        <div className="flex-1 flex flex-col overflow-hidden p-6 pb-2">
+        <div className="flex-1 flex flex-col overflow-hidden p-4 pb-2">
           <DrillHeader />
           
           {/* カードエリア：上下のバランスをとるため flex-1 */}
