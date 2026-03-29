@@ -7,7 +7,7 @@ import { createClient } from '@/lib/client';
  * 音声再生およびダウンロードを管理するカスタムフック
  * Supabase Storageのパス解決からブラウザのダウンロード発火までを一括で扱う
  */
-export function useAudioPlayer() {
+export function usePlayAudioSpeech() {
   // 現在再生中のアイテムID（phrase_idなど）
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
   // 現在ダウンロード処理中のアイテムID

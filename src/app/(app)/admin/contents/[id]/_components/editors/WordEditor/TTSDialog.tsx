@@ -230,55 +230,53 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     setOpen(isOpen);
     
     if (isOpen) {
-      // 1. モードとSSMLの初期同期
-      const mode = phrase.tts_ssml_mode || 'auto';
-      setSsmlMode(mode);
+      // 1. 基本情報の同期
+      setSsmlMode(phrase.tts_ssml_mode || 'auto');
       setSsml(phrase.tts_ssml || '');
-      setError(null);
 
-      // 2. 調整データ（JSON）の復元ロジック
+      // 2. 原文から最新の単語リスト（Base）を必ず生成
+      const textToSplit = phrase.phrase_en || "";
+      const currentWordsBase: WordAdjustment[] = textToSplit.split(' ').filter(Boolean).map((word, i) => ({
+        id: `word-${i}`,
+        fullText: word,
+        text: word.replace(/[.,!?;:]/g, ''),
+        emphasis: false,
+        emphasisLevel: 'moderate' as const,
+        breakAfter: false,
+        breakDuration: 300,
+        ipa: '',
+      }));
+
+      // 3. 調整データの復元
       if (phrase.tts_adjustments) {
-        const rawData = phrase.tts_adjustments;
+        const data = phrase.tts_adjustments as unknown as TTSAdjustmentData;
 
-        // データが配列か、オブジェクトかを判定
-        if (!Array.isArray(rawData) && typeof rawData === 'object') {
-          // --- TTSAdjustmentData (settings + words) ---
-          const data = rawData as unknown as TTSAdjustmentData;
+        // 設定の復元
+        if (data.settings) {
+          setParams({
+            voice: (data.settings.voice as AzureVoice) || DEFAULT_PARAMS.voice,
+            style: (data.settings.style as AzureStyle) || DEFAULT_PARAMS.style,
+            rate: data.settings.rate ?? DEFAULT_PARAMS.rate,
+            pitch: data.settings.pitch ?? DEFAULT_PARAMS.pitch,
+          });
+        }
 
-          // 左側コントロールエリアの復元
-          if (data.settings) {
-            setParams({
-              voice: (data.settings.voice as AzureVoice) || DEFAULT_PARAMS.voice,
-              style: (data.settings.style as AzureStyle) || DEFAULT_PARAMS.style,
-              rate: data.settings.rate ?? DEFAULT_PARAMS.rate,
-              pitch: data.settings.pitch ?? DEFAULT_PARAMS.pitch,
-            });
-          }
-
-          // 原文フレーズの単語ごとの調整値の復元
-          if (data.words) {
-            setAdjustments(data.words);
-          }
-        } else if (Array.isArray(rawData)) {
-          // --- WordAdjustment[] 直接保存されていた場合 ---
-          setAdjustments(rawData as WordAdjustment[]);
-          setParams(DEFAULT_PARAMS); // パラメータは初期値へ
+        // wordsが空ならcurrentWordsBaseを使う
+        if (data.words && data.words.length > 0) {
+          // 保存された単語データがある場合のみマージ
+          const mergedWords = currentWordsBase.map((base, i) => {
+            const saved = data.words[i];
+            return (saved && saved.text === base.text) ? { ...base, ...saved } : base;
+          });
+          setAdjustments(mergedWords);
+        } else {
+          // words: [] の場合は、生成したばかりのリストをセット
+          setAdjustments(currentWordsBase);
         }
       } else {
-        // --- 新規作成：データが存在しない場合は初期値を生成 ---
+        // 全くデータがない新規時
         setParams(DEFAULT_PARAMS);
-        
-        const initialWords: WordAdjustment[] = phrase.phrase_en.split(' ').map((word, i) => ({
-          id: `word-${i}`,
-          fullText: word,
-          text: word.replace(/[.,!?;:]/g, ''),
-          emphasis: false,
-          emphasisLevel: 'moderate' as const,
-          breakAfter: false,
-          breakDuration: 300,
-          ipa: '',
-        }));
-        setAdjustments(initialWords);
+        setAdjustments(currentWordsBase);
       }
     }
   };

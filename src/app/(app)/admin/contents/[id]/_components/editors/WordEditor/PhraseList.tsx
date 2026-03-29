@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+import { usePlayAudioSpeech } from '@/hooks/usePlayAudioSpeech';
 import { useWordStore } from '@/stores/useWordStore';
 
 interface PhraseListProps {
@@ -41,7 +41,7 @@ interface PhraseListProps {
  */
 export function PhraseList({ wordId }: PhraseListProps) {
   const { showToast } = useToast();
-  const { play, isPlaying, download, isDownloading } = useAudioPlayer();
+  const { play, isPlaying, download, isDownloading } = usePlayAudioSpeech();
   const [phrases, setPhrases] = useState<PhraseRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
