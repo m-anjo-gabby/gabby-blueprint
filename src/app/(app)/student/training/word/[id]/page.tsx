@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, use, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useVoice } from '@/hooks/useVoice';
+import { useWebSpeech } from '@/hooks/useWebSpeech';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { getWordData, toggleFavorite } from '@/actions/wordAction';
@@ -41,7 +41,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const { showConfirm } = useConfirm();
   
   // 音声エンジン・録音・評価ロジック
-  const { speak, startEvaluation, stopListening, isListening, isSpeaking, timeLeft } = useVoice();
+  const { speak, startAssessment, stopListening, isListening, isSpeaking, timeLeft } = useWebSpeech();
 
   // ドリル状態管理（Zustand）
   const { 
@@ -144,7 +144,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     setAnalysis(null);
 
     // 単語ターゲットを含めた発話評価を開始
-    startEvaluation(currentPhrase.phrase_en, [currentWord.word_en], (result) => {
+    startAssessment(currentPhrase.phrase_en, [currentWord.word_en], (result) => {
       setAnalysis(result);
       setFeedback(getFeedbackConfig(result.score));
     });

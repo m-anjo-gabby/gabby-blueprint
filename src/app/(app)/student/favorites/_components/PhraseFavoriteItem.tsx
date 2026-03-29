@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Volume2, Trash2, BookOpen, Headphones } from 'lucide-react';
 import { FavoritePhraseItem } from '@/types/word';
-import { useVoice } from '@/hooks/useVoice';
+import { useWebSpeech } from '@/hooks/useWebSpeech';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ interface Props {
 
 export function PhraseFavoriteItem({ phrase, onRemove }: Props) {
   // 既存の音声再生フックを使用
-  const { speak } = useVoice();
+  const { speak } = useWebSpeech();
 
   return (
     <motion.div
