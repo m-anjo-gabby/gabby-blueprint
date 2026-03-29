@@ -13,7 +13,7 @@ import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { WordResumeMetadata } from '@/types/training';
 import { FeedbackConfig } from '@/types/wordDrill';
 
-// 子コンポーネント
+// Components
 import { DrillHeader } from './_components/DrillHeader';
 import { DrillCard } from './_components/DrillCard';
 import { DrillControls } from './_components/DrillControls';
@@ -22,6 +22,9 @@ import { DrillIndex } from './_components/DrillIndex';
 import { BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+/**
+ * 発話スコアに基づいたフィードバックUIの設定を返す
+ */
 const getFeedbackConfig = (score: number): FeedbackConfig => {
   if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
   if (score >= 0.80) return { fill: '#3B82F6', tagText: 'Great' };
@@ -37,43 +40,43 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   
+  // 音声エンジン・録音・評価ロジック
   const { speak, startEvaluation, stopListening, isListening, isSpeaking, timeLeft } = useVoice();
 
-  // --- 1. Storeから状態とアクションを抽出 ---
+  // ドリル状態管理（Zustand）
   const { 
     words, wordIdx, phraseIdx, isAutoPlaying, showIndex, 
     feedback, analysis, loading,
-    initDrill, setFeedback, setAnalysis, setLoading, nextStep, 
+    initDrill, setFeedback, setAnalysis, setLoading, nextStep, prevStep,
     toggleAutoPlay, jumpTo, updatePhraseFavorite, reset 
   } = useWordDrillStore();
 
-  // sectionIdを保持できるように型を指定 (string | null)
+  // 初期化管理と二重遷移防止用Ref
   const isInitialized = useRef<string | null>(null);
-  const isNextProcessing = useRef(false);
+  const isNavigating = useRef(false);
 
   const currentWord = words[wordIdx];
   const currentPhrase = currentWord?.phrases[phraseIdx];
 
-  // --- 2. データ初期化ロジック (教材切り替え時のチラつきを完全に防止) ---
+  /**
+   * 教材データの読み込みとレジューム（再開）処理
+   */
   useEffect(() => {
-    // 現在保持しているIDと異なる（＝別の教材を開いた）場合のみ実行
     if (isInitialized.current === sectionId) return;
     isInitialized.current = sectionId;
 
     async function init() {
-      // A. 開始直後にローディングをONにし、既存の古いデータをリセットする
       setLoading(true); 
-      reset(); // これで前の教材のインデックスやフィードバックがクリアされる
+      reset(); // 前のセッション情報をクリア
 
       try {
-        // 1. データを取得
         const { words: fetchedWords, contentName: name } = await getWordData(sectionId);
         
         let startW = 0;
         let startP = 0;
         let isResumed = false;
 
-        // 2. ブックマークからの再開確認
+        // クエリパラメータに resume=true がある場合、DBから最終学習位置を取得
         if (searchParams.get('resume') === 'true') {
           const resume = await getLatestResumeContent();
           if (resume && resume.content_id === sectionId) {
@@ -90,61 +93,86 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
           }
         }
 
-        // 3. Storeを初期化 (新しいデータをセット)
         initDrill(fetchedWords, name, startW, startP);
-
-        if (isResumed) {
-          showToast("続きから再開しました", "success");
-        }
+        if (isResumed) showToast("続きから再開しました", "success");
       } catch (e) {
         showToast("データの読み込みに失敗しました", "error");
       } finally {
-        // 4. データセットが完了してからローディングを解除
         setLoading(false);
       }
     }
     init();
   }, [sectionId, searchParams, showToast, initDrill, setLoading, reset]);
 
-  // --- 3. ナビゲーション (useCallbackでメモ化) ---
+  /**
+   * ナビゲーション：次へ進む
+   * 発話の中断とダブルクリック防止を制御
+   */
   const handleNext = useCallback(() => {
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    isNextProcessing.current = true;
+    if (isNavigating.current) return;
+
+    isNavigating.current = true;
     const { isLast } = nextStep();
     if (isLast) showToast("全ての学習が完了しました！", "success");
-    setTimeout(() => { isNextProcessing.current = false; }, 400);
+    
+    // 遷移アニメーション時間を考慮したインターバル
+    setTimeout(() => { isNavigating.current = false; }, 400);
   }, [nextStep, showToast]);
 
-  // --- 4. 音声認識・評価 ---
+  /**
+   * ナビゲーション：前へ戻る
+   */
+  const handlePrev = useCallback(() => {
+    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    if (isNavigating.current) return;
+
+    isNavigating.current = true;
+    prevStep(); 
+    
+    setTimeout(() => { isNavigating.current = false; }, 400);
+  }, [prevStep]);
+
+  /**
+   * 音声認識の開始/停止とAI評価の実行
+   */
   const handleVoiceCheck = () => {
     if (isListening) { stopListening(); return; }
     if (!currentWord || !currentPhrase) return;
+
     setFeedback(null);
     setAnalysis(null);
+
+    // 単語ターゲットを含めた発話評価を開始
     startEvaluation(currentPhrase.phrase_en, [currentWord.word_en], (result) => {
       setAnalysis(result);
       setFeedback(getFeedbackConfig(result.score));
     });
   };
 
-  // --- 5. お気に入り更新 ---
+  /**
+   * お気に入り状態の同期（楽観的UI更新）
+   */
   const handleToggleFavorite = async (phraseId: string, currentState: boolean) => {
     const nextState = !currentState;
-    updatePhraseFavorite(phraseId, nextState);
+    updatePhraseFavorite(phraseId, nextState); // 先に表示を更新
+
     try {
       await toggleFavorite(phraseId, nextState);
       usePhraseStore.getState().clearCache();
       showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りを解除しました', 'success');
     } catch (e) {
-      updatePhraseFavorite(phraseId, currentState);
+      updatePhraseFavorite(phraseId, currentState); // 失敗時にロールバック
       showToast("更新に失敗しました", "error");
     }
   };
 
-  // --- 6. 進捗保存して終了 ---
+  /**
+   * 学習進捗を保存してダッシュボードへ戻る
+   */
   const handleSaveAndExit = async () => {
     if (!currentWord || !currentPhrase) return;
-    const ok = await showConfirm("終了しますか？", "進捗を保存してダッシュボードに戻ります。");
+    const ok = await showConfirm("Bookmark?", "進捗を保存してダッシュボードに戻ります。", { variant: 'warning', isModal: false });
     if (!ok) return;
 
     const metadata: WordResumeMetadata = {
@@ -169,9 +197,10 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  // --- 7. 自動再生ロジック (発話と遷移を分離) ---
-
-  // A. 発話：インデックス変更時に発火
+  /**
+   * 自動再生：発話トリガー
+   * カードが切り替わった後、少し間を置いて英語を読み上げる
+   */
   useEffect(() => {
     if (!isAutoPlaying || !currentPhrase || isListening || loading) return;
 
@@ -185,13 +214,16 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     };
   }, [wordIdx, phraseIdx, isAutoPlaying, isListening, loading, currentPhrase, speak]); 
 
-  // B. 次へ：発話完了から1.5秒後に実行
+  /**
+   * 自動再生：次ステップへの遷移
+   * 読み上げが完了し、一定時間経過後に次のカードへ
+   */
   useEffect(() => {
     if (!isAutoPlaying || isListening || isSpeaking || loading) return;
 
     const nextTimer = setTimeout(() => {
       const latestState = useWordDrillStore.getState();
-      if (latestState.isAutoPlaying && !isNextProcessing.current) {
+      if (latestState.isAutoPlaying && !isNavigating.current) {
         handleNext();
       }
     }, 1500); 
@@ -199,6 +231,9 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     return () => clearTimeout(nextTimer);
   }, [isAutoPlaying, isSpeaking, isListening, loading, handleNext]);
 
+  /**
+   * 自動再生モードの切り替え
+   */
   const handleToggleAutoPlay = async () => {
     if (!isAutoPlaying) {
       const ok = await showConfirm("Start Auto Play?", "自動再生を開始しますか？", { variant: 'info', isModal: false });
@@ -207,13 +242,15 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     toggleAutoPlay();
   };
 
-  // --- 8. レンダリング ---
+  // --- View 層 ---
+
+  // ロード中画面
   if (loading) return (
     <div className="fixed inset-0 bg-[#f5f5f7] flex items-center justify-center p-6">
       <div className="w-full max-w-sm text-center space-y-8">
         <div className="relative w-20 h-20 mx-auto">
-          <div className="absolute inset-0 border-4 border-indigo-100 rounded-2xl"></div>
-          <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-2xl animate-spin"></div>
+          <div className="absolute inset-0 border-4 border-indigo-100 rounded-2xl" />
+          <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-2xl animate-spin" />
           <div className="absolute inset-0 flex items-center justify-center text-indigo-600">
             <BookOpen size={32} className="animate-pulse" />
           </div>
@@ -236,39 +273,27 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   if (!currentWord || !currentPhrase) return null;
 
   return (
-    // 1. 背景全体：揺れ防止のため fixed inset-0 と overflow-hidden を維持
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none selection:bg-indigo-100">
       
-      {/* 2. メインカード：max-h-[90vh] を戻すことで、外枠との余白（浮遊感）を再現 */}
+      {/* メイン・コンテナ：iPhoneでの操作性を考慮し高さ制限と角丸を適用 */}
       <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
         
-        {/* 3. コンテンツ全体を包むコンテナ：ここで適切なパディングを確保 */}
-        <div className="flex-1 flex flex-col overflow-hidden p-4 pb-2">
+        {/* コンテンツエリア：DrillControlsに高さを譲るため flex-col */}
+        <div className="flex-1 flex flex-col overflow-hidden p-4 pb-0">
           <DrillHeader />
           
-          {/* カードエリア：上下のバランスをとるため flex-1 */}
-          <div className="flex-1 flex flex-col justify-center overflow-hidden py-2">
+          <div className="flex-1 flex flex-col justify-center overflow-hidden">
             <DrillCard onToggleFavorite={handleToggleFavorite} />
-          </div>
-          
-          {/* ステータス表示 */}
-          <div className="h-10 shrink-0 flex items-center justify-center">
-            {isListening ? (
-              <span className="text-[10px] font-black text-rose-500 animate-pulse uppercase tracking-[0.2em]">Recording...</span>
-            ) : isAutoPlaying ? (
-              <span className="text-[10px] font-black text-indigo-600 animate-pulse uppercase tracking-[0.3em]">Auto Playing</span>
-            ) : (
-              <p className="text-[10px] font-black text-slate-200 uppercase tracking-widest">Tap card to flip</p>
-            )}
           </div>
         </div>
 
-        {/* 4. 操作ボタン：下部に配置 */}
+        {/* コントロールエリア：最下部に固定 */}
         <div className="px-6 pb-8 shrink-0">
           <DrillControls 
             isListening={isListening}
             timeLeft={timeLeft}
             onNext={handleNext}
+            onPrev={handlePrev}
             onSaveResume={handleSaveAndExit}
             onToggleAutoPlay={handleToggleAutoPlay}
             onSpeak={() => speak(currentPhrase.phrase_en)}
@@ -276,20 +301,19 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
           />
         </div>
 
-        {/* ポータル系コンポーネント */}
+        {/* Portals: Overlay components */}
         <DrillFeedback feedback={feedback} analysis={analysis} onClose={() => setFeedback(null)} />
         <DrillIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
       </main>
 
+      {/* グローバルスタイル：スクロールの無効化と3Dカード用設定 */}
       <style jsx global>{`
-        /* Radix UI が付与する padding-right を強制的に 0 にして横揺れを防止 */
         :root {
           --removed-body-scroll-bar-size: 0px !important;
         }
         body {
           padding-right: 0px !important;
           overflow: hidden !important;
-          /* iOSでのバウンススクロール防止 */
           position: fixed;
           width: 100%;
           height: 100%;

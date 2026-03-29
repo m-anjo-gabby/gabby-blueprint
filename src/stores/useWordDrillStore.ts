@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { TrainingWord, PhraseItem } from '@/types/word';
+import { TrainingWord } from '@/types/word';
 import { AnalysisResult, FeedbackConfig } from '@/types/wordDrill';
 
 interface WordDrillState {
@@ -26,6 +26,7 @@ interface WordDrillState {
   
   // Navigation
   nextStep: () => { isLast: boolean };
+  prevStep: () => void; // 追加
   jumpTo: (wIdx: number, pIdx: number) => void;
   
   // UI Controls
@@ -60,7 +61,6 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
   feedback: null,
   analysis: null,
 
-  // 初期化：データ注入と開始位置の設定
   initDrill: (words, name, startW = 0, startP = 0) => set({
     words,
     contentName: name,
@@ -75,12 +75,11 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
 
   setLoading: (loading) => set({ loading }),
 
-  // 【重要】次へ進む：全ステートを一括リセットして競合を防ぐ
+  // 次へ進む
   nextStep: () => {
     const { words, wordIdx, phraseIdx } = get();
     const currentWord = words[wordIdx];
     
-    // 表示のリセット（反転・評価を消す）
     const resetDisplay = {
       isFlipped: false,
       feedback: null,
@@ -88,17 +87,42 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
     };
 
     if (phraseIdx < (currentWord?.phrases.length || 0) - 1) {
-      // 同じ単語内の次のフレーズへ
       set({ ...resetDisplay, phraseIdx: phraseIdx + 1 });
       return { isLast: false };
     } else if (wordIdx < words.length - 1) {
-      // 次の単語の最初のフレーズへ
       set({ ...resetDisplay, wordIdx: wordIdx + 1, phraseIdx: 0 });
       return { isLast: false };
     } else {
-      // 全て終了
       set({ ...resetDisplay, isAutoPlaying: false });
       return { isLast: true };
+    }
+  },
+
+  // 【新規】前へ戻る
+  prevStep: () => {
+    const { words, wordIdx, phraseIdx } = get();
+
+    const resetDisplay = {
+      isFlipped: false,
+      feedback: null,
+      analysis: null
+    };
+
+    // 1. 最初の単語の最初のフレーズなら何もしない
+    if (wordIdx === 0 && phraseIdx === 0) return;
+
+    if (phraseIdx > 0) {
+      // 2. 同じ単語内の前のフレーズへ
+      set({ ...resetDisplay, phraseIdx: phraseIdx - 1 });
+    } else {
+      // 3. 前の単語の最後のフレーズへ移動
+      const prevWordIdx = wordIdx - 1;
+      const prevWord = words[prevWordIdx];
+      set({ 
+        ...resetDisplay, 
+        wordIdx: prevWordIdx, 
+        phraseIdx: (prevWord?.phrases.length || 1) - 1 
+      });
     }
   },
 
@@ -119,17 +143,14 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
   
   toggleAutoPlay: (val) => set((state) => ({ 
     isAutoPlaying: val !== undefined ? val : !state.isAutoPlaying,
-    // 自動再生開始時は評価を一旦隠す
     feedback: val || !state.isAutoPlaying ? null : state.feedback
   })),
 
   setFeedback: (feedback) => set({ feedback }),
   setAnalysis: (analysis) => set({ analysis }),
 
-  // 全単語データの差し替え（お気に入り更新時などに使用）
   updateWords: (words) => set({ words }),
 
-  // 特定フレーズのお気に入り状態のみを高速に書き換える
   updatePhraseFavorite: (phraseId, isFavorite) => {
     const { words } = get();
     const newWords = words.map(word => ({

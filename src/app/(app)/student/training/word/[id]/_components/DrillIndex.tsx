@@ -80,12 +80,26 @@ export const DrillIndex: React.FC<DrillIndexProps> = ({ isOpen, onSelect }) => {
   }, [isOpen, sortOrder, wordIdx]);
 
   return (
-    <Drawer open={isOpen} onOpenChange={setShowIndex}>
-      <DrawerContent className="max-w-2xl mx-auto h-[85vh] bg-white border-none rounded-t-[40px] shadow-2xl outline-none flex flex-col overflow-hidden text-slate-900">
+    <Drawer 
+      open={isOpen} 
+      onOpenChange={setShowIndex}
+      // ハンドル以外でのドラッグによるクローズを無効化し、操作を安定させる
+      dismissible={true}
+    >
+      <DrawerContent 
+        className="max-w-2xl mx-auto h-[85vh] bg-white border-none rounded-t-[40px] shadow-2xl outline-none flex flex-col overflow-hidden text-slate-900"
+        onPointerDownOutside={(e) => {
+          // PC操作対応: スクロールバー操作中の誤判定（外部クリックとみなされる挙動）を防ぐ
+          const target = e.target as HTMLElement;
+          if (target?.closest('[data-radix-scroll-area-viewport]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         
-        {/* 固定ヘッダーセクション */}
+        {/* 固定ヘッダーセクション: ハンドルエリアのみドラッグ可能に制限 */}
         <div className="shrink-0">
-          <div className="flex justify-center py-4">
+          <div className="flex justify-center py-4 cursor-grab active:cursor-grabbing">
             <div className="w-10 h-1 rounded-full bg-slate-100" />
           </div>
 
@@ -101,8 +115,8 @@ export const DrillIndex: React.FC<DrillIndexProps> = ({ isOpen, onSelect }) => {
             </DrawerClose>
           </DrawerHeader>
 
-          {/* モード切替タブ */}
-          <div className="px-8 pt-6 pb-4">
+          {/* モード切替タブ: data-vaul-no-drag でスワイプ干渉を回避 */}
+          <div className="px-8 pt-6 pb-4" data-vaul-no-drag>
             <Tabs value={sortOrder} onValueChange={(v) => setSortOrder(v as 'default' | 'alpha')}>
               <TabsList className="flex w-full bg-slate-100/50 p-1 rounded-2xl h-11 border border-slate-100">
                 <TabsTrigger value="default" className="flex-1 text-xs font-bold rounded-xl data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm transition-all">
@@ -117,7 +131,7 @@ export const DrillIndex: React.FC<DrillIndexProps> = ({ isOpen, onSelect }) => {
 
           {/* A-Z 水平インデックスナビ */}
           {sortOrder === 'alpha' && alphabetIndex.length > 0 && (
-            <div className="relative px-8 pb-4 group">
+            <div className="relative px-8 pb-4 group" data-vaul-no-drag>
               {/* PC向け視認性向上: 左右のフェードエフェクト */}
               <div className="absolute left-8 top-0 bottom-4 w-4 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="absolute right-8 top-0 bottom-4 w-4 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -143,9 +157,9 @@ export const DrillIndex: React.FC<DrillIndexProps> = ({ isOpen, onSelect }) => {
           )}
         </div>
 
-        {/* 単語リストスクロール領域 */}
-        <div className="flex-1 relative min-h-0 overflow-hidden border-t border-slate-50">
-          <ScrollArea ref={scrollAreaRef} className="h-full w-full">
+        {/* 単語リストスクロール領域: data-vaul-no-drag でDrawerのスワイプクローズを抑制 */}
+        <div className="flex-1 relative min-h-0 overflow-hidden border-t border-slate-50" data-vaul-no-drag>
+          <ScrollArea ref={scrollAreaRef} className="h-full w-full pr-2">
             <div className="px-6 py-4 space-y-2 pb-32">
               {displayWords.map((w, idx) => {
                 const initial = w.word_en.charAt(0).toUpperCase();
@@ -211,6 +225,8 @@ export const DrillIndex: React.FC<DrillIndexProps> = ({ isOpen, onSelect }) => {
                 );
               })}
             </div>
+            {/* 垂直スクロールバー: マウス操作時の干渉を防ぐため属性を付与 */}
+            <ScrollBar orientation="vertical" className="w-2.5 bg-slate-50/30" data-vaul-no-drag />
           </ScrollArea>
         </div>
       </DrawerContent>
