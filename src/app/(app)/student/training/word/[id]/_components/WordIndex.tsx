@@ -14,12 +14,12 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { X, ChevronRight } from 'lucide-react';
 
-interface DrillIndexProps {
+interface WordIndexProps {
   isOpen: boolean;
   onSelect: (idx: number) => void;
 }
 
-export const DrillIndex: React.FC<DrillIndexProps> = ({ isOpen, onSelect }) => {
+export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
   const activeWordRef = useRef<HTMLButtonElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const horizontalScrollRef = useRef<HTMLDivElement | null>(null);

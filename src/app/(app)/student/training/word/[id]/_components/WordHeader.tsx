@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
-export const DrillHeader: React.FC = () => {
+export const WordHeader: React.FC = () => {
   const router = useRouter();
   const { contentName, words, wordIdx, setShowIndex } = useWordDrillStore();
   

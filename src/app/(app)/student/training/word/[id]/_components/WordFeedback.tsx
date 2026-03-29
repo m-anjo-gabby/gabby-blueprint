@@ -6,13 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AnalysisResult, FeedbackConfig } from '@/types/wordDrill';
 import { cn } from "@/lib/utils";
 
-interface DrillFeedbackProps {
+interface WordFeedbackProps {
   feedback: FeedbackConfig | null;
   analysis: AnalysisResult | null;
   onClose: () => void;
 }
 
-export const DrillFeedback: React.FC<DrillFeedbackProps> = ({ 
+export const WordFeedback: React.FC<WordFeedbackProps> = ({ 
   feedback, 
   analysis, 
   onClose 

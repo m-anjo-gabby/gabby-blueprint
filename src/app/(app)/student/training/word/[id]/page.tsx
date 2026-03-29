@@ -14,11 +14,11 @@ import { WordResumeMetadata } from '@/types/training';
 import { FeedbackConfig } from '@/types/wordDrill';
 
 // Components
-import { DrillHeader } from './_components/DrillHeader';
-import { DrillCard } from './_components/DrillCard';
-import { DrillControls } from './_components/DrillControls';
-import { DrillFeedback } from './_components/DrillFeedback';
-import { DrillIndex } from './_components/DrillIndex';
+import { WordHeader } from './_components/WordHeader';
+import { WordCard } from './_components/WordCard';
+import { WordControls } from './_components/WordControls';
+import { WordFeedback } from './_components/WordFeedback';
+import { WordIndex } from './_components/WordIndex';
 import { BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -278,18 +278,18 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       {/* メイン・コンテナ：iPhoneでの操作性を考慮し高さ制限と角丸を適用 */}
       <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
         
-        {/* コンテンツエリア：DrillControlsに高さを譲るため flex-col */}
+        {/* コンテンツエリア：WordControlsに高さを譲るため flex-col */}
         <div className="flex-1 flex flex-col overflow-hidden p-4 pb-0">
-          <DrillHeader />
+          <WordHeader />
           
           <div className="flex-1 flex flex-col justify-center overflow-hidden">
-            <DrillCard onToggleFavorite={handleToggleFavorite} />
+            <WordCard onToggleFavorite={handleToggleFavorite} />
           </div>
         </div>
 
         {/* コントロールエリア：最下部に固定 */}
         <div className="px-6 pb-8 shrink-0">
-          <DrillControls 
+          <WordControls 
             isListening={isListening}
             timeLeft={timeLeft}
             onNext={handleNext}
@@ -302,8 +302,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         </div>
 
         {/* Portals: Overlay components */}
-        <DrillFeedback feedback={feedback} analysis={analysis} onClose={() => setFeedback(null)} />
-        <DrillIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
+        <WordFeedback feedback={feedback} analysis={analysis} onClose={() => setFeedback(null)} />
+        <WordIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
       </main>
 
       {/* グローバルスタイル：スクロールの無効化と3Dカード用設定 */}

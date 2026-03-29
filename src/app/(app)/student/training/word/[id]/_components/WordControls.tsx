@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { cn } from "@/lib/utils";
 
-interface DrillControlsProps {
+interface WordControlsProps {
   isListening: boolean;
   timeLeft: number;
   onNext: () => void;
@@ -17,7 +17,7 @@ interface DrillControlsProps {
   onVoiceCheck: () => void;
 }
 
-export const DrillControls: React.FC<DrillControlsProps> = ({
+export const WordControls: React.FC<WordControlsProps> = ({
   isListening,
   timeLeft,
   onNext,

@@ -4,15 +4,14 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { PHRASE_TYPES, PhraseType } from '@/types/word';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
-interface DrillCardProps {
+interface WordCardProps {
   onToggleFavorite: (phraseId: string, currentState: boolean) => void;
 }
 
-export const DrillCard: React.FC<DrillCardProps> = ({ onToggleFavorite }) => {
+export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
   const { words, wordIdx, phraseIdx, isFlipped, toggleFlip } = useWordDrillStore();
   
   const currentWord = words[wordIdx];
