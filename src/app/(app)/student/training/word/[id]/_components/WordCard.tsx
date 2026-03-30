@@ -55,20 +55,22 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
       </div>
 
       {/* 2. Step Badge Section: Headerのレール位置(px-8)と完全に同期 */}
-      <div className="w-full shrink-0 flex flex-col items-start mt-4 mb-2 pt-1 px-8"> 
-        <div className="flex items-center gap-2 mb-2.5">
-          <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">
-            Step {phrase.phrase_type}
-          </span>
+      <div className="w-full shrink-0 flex flex-col items-start mt-4 mb-2 pt-1 px-6"> 
+        <div className="flex items-center h-5 overflow-hidden rounded-md border border-indigo-100 shadow-sm mb-3">
+          <div className="bg-indigo-600 px-2 h-full flex items-center border-r border-white/20">
+            <span className="text-[9px] font-black text-white uppercase tracking-wider">
+              Step {phrase.seq_no}
+            </span>
+          </div>
           
-          <div className="w-[1px] h-3 bg-slate-200" />
-
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider truncate max-w-[140px]">
-            {PHRASE_TYPES[phrase.phrase_type as PhraseType]?.label}
-          </span>
+          <div className="bg-indigo-50/50 px-2 h-full flex items-center">
+            <span className="text-[9px] font-black text-indigo-600/80 uppercase tracking-tight">
+              {PHRASE_TYPES[phrase.phrase_type as PhraseType]?.label}
+            </span>
+          </div>
         </div>
 
-        {/* 分割プログレスバー: 左寄せにすることでHeaderの進捗と視覚的にリンク */}
+        {/* 分割ステッププログレスバー: 左寄せにすることでHeaderの進捗と視覚的にリンク */}
         <div 
           className="grid gap-1 w-32" 
           style={{ gridTemplateColumns: `repeat(${totalSteps}, 1fr)` }}

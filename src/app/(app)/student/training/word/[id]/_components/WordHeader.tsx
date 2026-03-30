@@ -13,7 +13,7 @@ export const WordHeader: React.FC = () => {
   const total = words.length;
   const current = wordIdx + 1;
 
-  const progress = total > 1 ? (wordIdx / (total - 1)) * 100 : 0;
+  const progress = total > 0 ? ((wordIdx + 1) / total) * 100 : 0;
 
   if (!currentWord) return <div className="h-16 animate-pulse bg-slate-50 rounded-xl mb-4" />;
 
@@ -46,59 +46,39 @@ export const WordHeader: React.FC = () => {
                 {currentWord.word_en}
               </h1>
               {/* アイコン */}
-              <ChevronDown size={16} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all ml-1 shrink-0" />
+              <ChevronDown size={20} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all ml-1 shrink-0" />
             </div>
         </button>
 
         <div className="w-9 shrink-0" />
       </div>
 
-      {/* 2. プログレスバー & ピルインジケーター */}
-      <div className="mt-3 px-8 relative h-6 flex items-center">
-        {/* レール背景 */}
-        <div className="w-full h-[3px] bg-slate-100 rounded-full shadow-[inset_0_1px_1px_rgba(0,0,0,0.05)]" />
+      {/* 2. プログレスバー */}
+      <div className="mt-2 px-6 pb-4">
+      <div className="flex justify-between items-end mb-1.5 px-0.5">
+        <div className="flex items-baseline gap-1">
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">
+            Word
+          </span>
+          <span className="text-[11px] font-black text-indigo-600 ml-1 tabular-nums">
+            {current}
+          </span>
+          <span className="text-[9px] font-bold text-slate-300">/</span>
+          <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+            {total}
+          </span>
+        </div>
+        <span className="text-[10px] font-black text-slate-400 tabular-nums">
+          {Math.round(progress)}%
+        </span>
+      </div>
         
-        {/* 進捗ライン */}
-        <div 
-          className="absolute h-[3px] rounded-full transition-all duration-500 ease-out origin-left bg-gradient-to-r from-indigo-600 to-indigo-400 shadow-[0_0_7px_rgba(79,70,229,0.4)]"
-          style={{ 
-            left: '32px',
-            right: '32px',
-            width: 'auto',
-            transformOrigin: 'left',
-            transform: `scaleX(${progress / 100})`
-          }}
-        />
-
-        {/* ピル型マーカーをボタン化 */}
-        <div 
-          className="absolute transition-all duration-500 ease-out flex items-center justify-center"
-          style={{ 
-            left: `calc(32px + ( (100% - 64px) * ${progress} / 100 ))`,
-          }}
-        >
-          {/* 変更：div から button に変更し、クリックイベントを追加 */}
-          <button
-            onClick={() => setShowIndex(true)}
-            className="
-              bg-white/95 backdrop-blur-[1px]
-              ring-[1.5px] ring-indigo-500/20 
-              border border-slate-200/50 shadow-[0_2px_10px_-2px_rgba(0,0,0,0.1),0_1px_3px_rgba(0,0,0,0.05)]
-              h-[22px] min-w-[60px] px-2.5 rounded-full 
-              flex items-center justify-center gap-1.5 z-10
-              antialiased -translate-x-1/2
-              cursor-pointer hover:bg-white hover:ring-indigo-500/40 
-              active:scale-90 transition-all duration-200
-            "
-          >
-            <span className="text-[11px] font-black text-indigo-600 tabular-nums leading-none translate-y-[0.5px]">
-              {current}
-            </span>
-            <span className="text-[10px] font-medium text-slate-300 leading-none">/</span>
-            <span className="text-[10px] font-bold text-indigo-400/80 tabular-nums leading-none translate-y-[0.5px]">
-              {total}
-            </span>
-          </button>
+        {/* プログレスバー本体 */}
+        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner relative">
+          <div 
+            className="absolute top-0 left-0 h-full bg-indigo-600 transition-all duration-500 ease-out rounded-full"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
     </div>
