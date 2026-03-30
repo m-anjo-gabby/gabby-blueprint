@@ -13,6 +13,9 @@ export function useWebSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   
+  // 再生速度の保持用（デフォルト 1.0）
+  const speechRateRef = useRef<number>(1.0);
+  
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -93,9 +96,6 @@ export function useWebSpeech() {
 
   /**
    * 発音評価を開始するメインメソッド
-   * @param targetPhrase お手本となる英文
-   * @param mainWords 重要単語のリスト
-   * @param onComplete 評価完了時に呼ばれるコールバック
    */
   const startAssessment = useCallback((
     targetPhrase: string, 
@@ -104,27 +104,22 @@ export function useWebSpeech() {
   ) => {
     clearAllTimers();
     onCompleteRef.current = onComplete;
-    // 初期化（何も聞こえていない状態）
     latestResultRef.current = analyzePhrase("", targetPhrase, mainWords);
 
-    // 1. カウントダウン（制限時間）の設定
     setTimeLeft(7);
     intervalRef.current = setInterval(() => {
       setTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
 
-    // 2. 音声認識とリアルタイム解析の開始
     startListening((heard) => {
       const result = analyzePhrase(heard, targetPhrase, mainWords);
       latestResultRef.current = result;
 
-      // 【自動終了条件】スコアが極めて高い場合は即座に確定させる
       if (result.score >= 0.95) {
         finalize(result);
       }
     });
 
-    // 3. タイムアップによる終了
     timerRef.current = setTimeout(() => {
       finalize();
     }, 7000);
@@ -133,8 +128,10 @@ export function useWebSpeech() {
 
   /**
    * ブラウザ標準機能によるテキスト読み上げ
+   * @param text 読み上げるテキスト
+   * @param rate 再生速度 (オプション)
    */
-  const speak = useCallback((text: string) => {
+  const speak = useCallback((text: string, rate?: number) => {
     if (typeof window === 'undefined') return;
     
     // 二重再生防止
@@ -143,6 +140,10 @@ export function useWebSpeech() {
     const uttr = new SpeechSynthesisUtterance(text);
     uttr.lang = 'en-US';
     
+    // 速度の設定：引数のrateがあれば優先、なければRefの現在値を採用
+    const targetRate = rate ?? speechRateRef.current;
+    uttr.rate = targetRate;
+    
     uttr.onstart = () => setIsSpeaking(true);
     uttr.onend = () => setIsSpeaking(false);
     uttr.onerror = () => setIsSpeaking(false);
@@ -150,13 +151,24 @@ export function useWebSpeech() {
     window.speechSynthesis.speak(uttr);
   }, []);
 
+  /**
+   * 外部から再生速度を同期させるためのメソッド
+   */
+  const setSpeechRate = useCallback((rate: number) => {
+    speechRateRef.current = rate;
+  }, []);
+
   // コンポーネントのアンマウント時にタイマーを掃除
   useEffect(() => {
-    return () => clearAllTimers();
+    return () => {
+      clearAllTimers();
+      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    };
   }, [clearAllTimers]);
 
   return { 
     speak, 
+    setSpeechRate, // 速度設定用に追加
     startAssessment, 
     stopListening, 
     timeLeft, 

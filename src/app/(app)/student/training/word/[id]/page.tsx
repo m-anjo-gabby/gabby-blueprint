@@ -21,6 +21,8 @@ import { WordFeedback } from './_components/WordFeedback';
 import { WordIndex } from './_components/WordIndex';
 import { BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { usePlayAudioSpeech } from '@/hooks/usePlayAudioSpeech';
+import { PhraseItem } from '@/types/word';
 
 /**
  * 発話スコアに基づいたフィードバックUIの設定を返す
@@ -41,7 +43,9 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const { showConfirm } = useConfirm();
   
   // 音声エンジン・録音・評価ロジック
-  const { speak, startAssessment, stopListening, isListening, isSpeaking, timeLeft } = useWebSpeech();
+  const { speak, setSpeechRate, startAssessment, stopListening, isListening, isSpeaking, timeLeft } = useWebSpeech();
+  // 音声再生フック
+  const { play, preload, isPlaying: isAudioPlaying, playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
   // ドリル状態管理（Zustand）
   const { 
@@ -103,6 +107,27 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     }
     init();
   }, [sectionId, searchParams, showToast, initDrill, setLoading, reset]);
+
+  /**
+   * 再生速度の同期
+   * usePlayAudioSpeech側の速度をマスターとし、WebSpeech側にも反映させる
+   */
+  useEffect(() => {
+    setSpeechRate(playbackRate);
+  }, [playbackRate, setSpeechRate]);
+
+  /**
+   * 音声再生用統合ハンドラ
+   */
+  const handleGlobalSpeak = useCallback((phrase: PhraseItem) => {
+    // 生成済み音声ファイルがあれば優先
+    if (phrase.audio_path && phrase.tts_status === 1) {
+      play(phrase.audio_path, phrase.phrase_id, { restart: true });
+    } else {
+      // フォールバック：ブラウザTTS（現在の速度を反映）
+      speak(phrase.phrase_en, playbackRate);
+    }
+  }, [play, speak, playbackRate]);
 
   /**
    * ナビゲーション：次へ進む
@@ -205,21 +230,25 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     if (!isAutoPlaying || !currentPhrase || isListening || loading) return;
 
     const t = setTimeout(() => {
-      speak(currentPhrase.phrase_en);
+      handleGlobalSpeak(currentPhrase); // 統合ハンドラを使用
     }, 600); 
 
     return () => {
       clearTimeout(t);
+      // ブラウザTTSとAudioPlayerの両方をケア
       if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     };
-  }, [wordIdx, phraseIdx, isAutoPlaying, isListening, loading, currentPhrase, speak]); 
+  }, [wordIdx, phraseIdx, isAutoPlaying, isListening, loading, currentPhrase, handleGlobalSpeak]);
 
   /**
    * 自動再生：次ステップへの遷移
-   * 読み上げが完了し、一定時間経過後に次のカードへ
+   * 読み上げ完了（isSpeaking or isAudioPlaying が false になる）を待機
    */
   useEffect(() => {
-    if (!isAutoPlaying || isListening || isSpeaking || loading) return;
+    // どちらかが再生中なら待機
+    const stillSpeaking = isSpeaking || (isAudioPlaying !== null);
+    
+    if (!isAutoPlaying || isListening || stillSpeaking || loading) return;
 
     const nextTimer = setTimeout(() => {
       const latestState = useWordDrillStore.getState();
@@ -229,7 +258,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     }, 1500); 
 
     return () => clearTimeout(nextTimer);
-  }, [isAutoPlaying, isSpeaking, isListening, loading, handleNext]);
+  }, [isAutoPlaying, isSpeaking, isAudioPlaying, isListening, loading, handleNext]);
 
   /**
    * 自動再生モードの切り替え
@@ -241,6 +270,38 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     }
     toggleAutoPlay();
   };
+
+  /**
+   * 次の音声のプリロード（先読み）
+   */
+  useEffect(() => {
+    // 次のインデックスを計算
+    const nextPIdx = phraseIdx + 1;
+    const nextWIdx = wordIdx;
+    
+    let nextPhrase = null;
+
+    // 同じ単語内の次のフレーズがあるか
+    if (currentWord?.phrases[nextPIdx]) {
+      nextPhrase = currentWord.phrases[nextPIdx];
+    } 
+    // 次の単語の最初のフレーズがあるか
+    else if (words[nextWIdx + 1]?.phrases[0]) {
+      nextPhrase = words[nextWIdx + 1].phrases[0];
+    }
+
+    // プリロード実行
+    if (nextPhrase?.audio_path && nextPhrase.tts_status === 1) {
+      // 画面のメイン処理を邪魔しないよう、少し遅らせて実行（Safari互換フォールバック付き）
+      const idleId = (window.requestIdleCallback || ((cb) => setTimeout(cb, 1)))(() => {
+        preload(nextPhrase.audio_path!);
+      });
+      return () => {
+        if (window.cancelIdleCallback) window.cancelIdleCallback(idleId as number);
+        else clearTimeout(idleId as number);
+      };
+    }
+  }, [wordIdx, phraseIdx, words, currentWord, preload]);
 
   // --- View 層 ---
 
@@ -292,11 +353,13 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
           <WordControls 
             isListening={isListening}
             timeLeft={timeLeft}
+            playbackRate={playbackRate}
+            onChangePlaybackRate={changePlaybackRate}
             onNext={handleNext}
             onPrev={handlePrev}
             onSaveResume={handleSaveAndExit}
             onToggleAutoPlay={handleToggleAutoPlay}
-            onSpeak={() => speak(currentPhrase.phrase_en)}
+            onSpeak={() => handleGlobalSpeak(currentPhrase)}
             onVoiceCheck={handleVoiceCheck}
           />
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Bookmark, ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 interface WordControlsProps {
   isListening: boolean;
   timeLeft: number;
+  playbackRate: number;
+  onChangePlaybackRate: (rate: number) => void;
   onNext: () => void;
   onPrev: () => void;
   onSaveResume: () => void;
@@ -17,9 +19,15 @@ interface WordControlsProps {
   onVoiceCheck: () => void;
 }
 
+/**
+ * 学習画面のメイン操作パネル
+ * 上下2段の「スプリットボタン構造」により、高い機能性と誤操作防止を両立
+ */
 export const WordControls: React.FC<WordControlsProps> = ({
   isListening,
   timeLeft,
+  playbackRate,
+  onChangePlaybackRate,
   onNext,
   onPrev,
   onSaveResume,
@@ -29,7 +37,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
 }) => {
   const { isAutoPlaying, words, wordIdx, phraseIdx } = useWordDrillStore();
 
-  // --- Logic / derived states ---
+  // --- 状態判定ロジック ---
   const currentWord = words[wordIdx];
   const isLastStep = useMemo(() => 
     wordIdx === words.length - 1 && 
@@ -39,14 +47,25 @@ export const WordControls: React.FC<WordControlsProps> = ({
   const isFirstStep = wordIdx === 0 && phraseIdx === 0;
   const isInteractionDisabled = isListening || isAutoPlaying;
 
-  // --- Common Styles (Maintenance Friendly) ---
-  const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none";
-  const subBtnBase = "h-14 rounded-2xl flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative";
+  /**
+   * 再生速度をサイクル切替 (1.0 -> 1.2 -> 1.5 -> 0.8 -> 1.0)
+   */
+  const handleCycleRate = useCallback(() => {
+    const rates = [1.0, 1.2, 1.5, 0.8];
+    const currentIndex = rates.indexOf(playbackRate);
+    const nextIndex = (currentIndex + 1) % rates.length;
+    onChangePlaybackRate(rates[nextIndex]);
+  }, [playbackRate, onChangePlaybackRate]);
+
+  // --- 共通スタイル定義 ---
+  const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50";
+  const unitBase = "flex items-center rounded-2xl border overflow-hidden shadow-sm transition-all";
+  const splitLeftBase = "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r";
 
   return (
     <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2">
       
-      {/* 1. Status Indicator (Fixed Height) */}
+      {/* 1. ステータス・インジケーター（録音中や自動再生の状態表示） */}
       <div className="h-6 flex items-center justify-center">
         <AnimatePresence mode="wait">
           {isListening ? (
@@ -67,88 +86,99 @@ export const WordControls: React.FC<WordControlsProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* 2. Main Navigation Layer */}
-      <div className="flex items-center justify-between w-full gap-2">
-        {/* Save/Exit */}
+      {/* 2. 上段：ナビゲーション・レイヤー（戻る・進む・保存） */}
+      <div className="flex items-center justify-between w-full gap-2 h-14">
+        {/* ブックマーク・保存ボタン */}
         <button
           onClick={onSaveResume}
           disabled={isAutoPlaying}
-          className={cn(sideBtnBase, "bg-slate-50 text-slate-400 border border-slate-100 hover:bg-indigo-50 hover:text-indigo-600")}
+          className={cn(sideBtnBase, "hover:bg-indigo-50 hover:text-indigo-600")}
         >
-          <Bookmark size={18} strokeWidth={2.5} />
+          <Bookmark size={18} strokeWidth={2.5} className="text-slate-400" />
         </button>
 
-        {/* Pill-shaped Navigation Unit */}
-        <div className="flex-1 flex items-center bg-slate-100/50 p-1 rounded-[28px] border border-slate-100">
-          {/* Back Button */}
-          <button
-            onClick={onPrev}
-            disabled={isInteractionDisabled || isFirstStep}
-            className={cn(
-              "w-12 h-12 shrink-0 flex items-center justify-center rounded-[22px] transition-all",
-              "bg-white text-slate-400 shadow-sm hover:text-indigo-600 active:scale-90",
-              "disabled:opacity-20 disabled:shadow-none disabled:pointer-events-none"
-            )}
+        {/* スプリット・ナビゲーションユニット（ボーダーは控えめなindigo-100） */}
+        <div className={cn("flex-1 h-full bg-white border-indigo-100", unitBase)}>
+          {/* 戻るボタン：白背景に薄いグレーのアクション */}
+          <button 
+            onClick={onPrev} 
+            disabled={isInteractionDisabled || isFirstStep} 
+            className={cn(splitLeftBase, "text-slate-400 hover:bg-slate-50 border-indigo-50")}
           >
-            <ArrowLeft size={20} strokeWidth={3} />
+            <ArrowLeft size={18} strokeWidth={3} />
           </button>
-
-          {/* Vertical Separator */}
-          <div className="w-[1px] h-6 bg-slate-200 mx-1" />
-
-          {/* Next/Finish Button */}
-          <button
-            onClick={onNext}
-            disabled={isInteractionDisabled}
+          
+          {/* 次へ/完了ボタン：塗りつぶしで最重要アクションを強調 */}
+          <button 
+            onClick={onNext} 
+            disabled={isInteractionDisabled} 
             className={cn(
-              "flex-1 h-12 rounded-[22px] font-black flex items-center justify-center gap-2.5 transition-all text-xs uppercase tracking-widest active:scale-[0.97]",
-              isLastStep ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "bg-indigo-600 text-white shadow-lg shadow-indigo-100",
-              "disabled:opacity-40 disabled:shadow-none disabled:pointer-events-none"
+              "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40",
+              isLastStep 
+                ? "bg-emerald-500 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]" 
+                : "bg-indigo-600 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
             )}
           >
-            <span className="tabular-nums">{isLastStep ? 'Finish' : 'Next'}</span>
-            <motion.div
-              animate={{ x: isInteractionDisabled ? 0 : [0, 5, 0] }}
-              transition={{ repeat: isLastStep ? Infinity : 0, duration: 1, delay: 0.5 }}
-            >
-              {isLastStep ? <Check size={18} strokeWidth={3} /> : <ArrowRight size={18} strokeWidth={3} />}
-            </motion.div>
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] tabular-nums">
+              {isLastStep ? 'Finish' : 'Next'}
+            </span>
+            {isLastStep ? <Check size={18} strokeWidth={3} /> : <ArrowRight size={18} strokeWidth={3} />}
           </button>
         </div>
 
-        {/* Auto Play Toggle */}
+        {/* 自動再生トグル */}
         <button
           onClick={onToggleAutoPlay}
           className={cn(
             sideBtnBase,
-            "border",
-            isAutoPlaying 
-              ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" 
-              : "bg-slate-50 text-slate-400 border-slate-100 hover:bg-indigo-50 hover:text-indigo-600"
+            isAutoPlaying ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" : "hover:bg-indigo-50 hover:text-indigo-600"
           )}
         >
-          <RotateCw size={18} strokeWidth={2.5} className={isAutoPlaying ? 'animate-spin-slow' : ''} />
+          <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-slate-400")} />
         </button>
       </div>
 
-      {/* 3. Sub Action Row (Listen & Practice) */}
-      <div className="grid grid-cols-2 gap-3 w-full max-w-sm px-2 mt-1">
-        {/* Listen Button */}
-        <button
-          onClick={onSpeak}
-          disabled={isInteractionDisabled}
-          className={cn(subBtnBase, "bg-slate-50 text-slate-500 border border-slate-100 hover:bg-slate-100 active:scale-95 disabled:opacity-30 disabled:pointer-events-none")}
-        >
-          <Volume2 size={22} strokeWidth={2.5} />
-          <span className="hidden xs:block">Listen</span>
-        </button>
+      {/* 3. 下段：アクション・レイヤー（再生速度・聴く・練習する） */}
+      <div className="grid grid-cols-2 gap-3 w-full max-w-sm px-2 mt-1 h-14">
+        
+        {/* スプリット・オーディオユニット（速度設定 + 再生） */}
+        <div className={cn("h-full bg-slate-50 border-slate-200", unitBase)}>
+          {/* 速度切り替えセクション：等速(1.0)以外でIndigoベタ塗りに強調 */}
+          <button
+            onClick={handleCycleRate}
+            disabled={isInteractionDisabled}
+            className={cn(
+              splitLeftBase,
+              playbackRate !== 1.0 
+                ? "bg-indigo-600 text-white border-indigo-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]" 
+                : "text-slate-400 border-slate-200 hover:bg-slate-100 active:bg-slate-200"
+            )}
+          >
+            {/* iPhone対策で10pxを維持しつつ、字間を詰めてバランスを調整 */}
+            <span className="text-[10px] font-black leading-none">{playbackRate.toFixed(1)}</span>
+            <span className={cn(
+              "text-[10px] font-bold uppercase tracking-tighter",
+              playbackRate !== 1.0 ? "opacity-90" : "opacity-70"
+            )}>Rate</span>
+          </button>
 
-        {/* Practice/Stop Button */}
+          {/* 音声再生セクション */}
+          <button
+            onClick={onSpeak}
+            disabled={isInteractionDisabled}
+            className={cn("flex-1 h-full flex items-center justify-center gap-2 text-slate-600 hover:text-indigo-600 transition-all")}
+          >
+            <Volume2 size={20} strokeWidth={2.5} />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden xs:block">Listen</span>
+          </button>
+        </div>
+
+        {/* 音声認識・練習ボタン（単体で最も強いアクションのためスプリットにせず強調） */}
         <button
           onClick={onVoiceCheck}
           disabled={isAutoPlaying}
           className={cn(
-            subBtnBase,
+            "h-full rounded-2xl flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative",
             isListening ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
             isAutoPlaying && "opacity-20 disabled:pointer-events-none"
           )}
@@ -158,18 +188,19 @@ export const WordControls: React.FC<WordControlsProps> = ({
           <AnimatePresence mode="wait">
             {isListening ? (
               <motion.div key="stop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 relative z-10">
-                <Square size={16} fill="currentColor" strokeWidth={0} />
-                <span className="tracking-[0.15em]">Stop</span>
+                <Square size={14} fill="currentColor" strokeWidth={0} />
+                <span className="tracking-[0.1em]">Stop</span>
               </motion.div>
             ) : (
               <motion.div key="mic" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 relative z-10">
-                <Mic size={22} strokeWidth={2.5} />
-                <span className="hidden xs:block">Practice</span>
+                <Mic size={20} strokeWidth={2.5} />
+                <span className="hidden xs:block tracking-[0.1em]">Practice</span>
               </motion.div>
             )}
           </AnimatePresence>
         </button>
       </div>
+
     </div>
   );
 };
