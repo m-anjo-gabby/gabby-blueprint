@@ -97,7 +97,7 @@ export default function TTSAssetTable({ assets = [], onRefresh }: TTSAssetTableP
             {/* ファイル名バッジ */}
             <div className="flex items-center gap-2 font-mono text-[10px] text-slate-500 bg-slate-50/50 px-2 py-1 rounded-md border border-slate-100 min-w-[140px]">
               <FileAudio size={12} className={path ? "text-indigo-400" : "text-slate-300 animate-pulse"}/>
-              <span className="truncate max-w-[100px]">{fileName}</span>
+              <span className="truncate max-w-[150px]">{fileName}</span>
             </div>
 
             {path && (
