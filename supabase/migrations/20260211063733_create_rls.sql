@@ -221,3 +221,17 @@ USING (
     AND u.client_id = public.get_jwt_client_id()
   )
 );
+
+---------------------------------------------
+-- SQLポリシー: com_t_tts_asset
+---------------------------------------------
+ALTER TABLE public.com_t_tts_asset ENABLE ROW LEVEL SECURITY;
+
+-- 1. 全操作（SELECT, INSERT, UPDATE, DELETE）を認証済みユーザーに許可
+-- ※アドミン画面からの利用を想定しているため、TO authenticated を指定
+-- ※より厳格にするなら、auth.jwt() 内のロールやメールアドレスドメインで縛ることも可能
+CREATE POLICY "Admin users can manage tts assets" ON public.com_t_tts_asset
+FOR ALL
+TO authenticated
+USING (true)
+WITH CHECK (true);

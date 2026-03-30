@@ -18,7 +18,7 @@ const NAV_ITEMS = [
   { label: '契約管理', href: '/admin/contracts', icon: FileSignature },
   { label: 'ユーザー管理', href: '/admin/users', icon: Users },
   { label: '教材管理', href: '/admin/contents', icon: BookOpen },
-  { label: 'スピーチ検証', href: '/admin/speachPoc', icon: Speech },
+  { label: 'TTS Designer', href: '/admin/tools/tts-designer', icon: Speech },
 ];
 
 export default function Sidebar() {
