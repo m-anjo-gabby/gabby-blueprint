@@ -19,10 +19,11 @@ import { WordCard } from './_components/WordCard';
 import { WordControls } from './_components/WordControls';
 import { WordFeedback } from './_components/WordFeedback';
 import { WordIndex } from './_components/WordIndex';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, ArrowLeft, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePlayAudioSpeech } from '@/hooks/usePlayAudioSpeech';
 import { PhraseItem } from '@/types/word';
+import { cn } from "@/lib/utils";
 
 /**
  * 発話スコアに基づいたフィードバックUIの設定を返す
@@ -110,7 +111,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   /**
    * 再生速度の同期
-   * usePlayAudioSpeech側の速度をマスターとし、WebSpeech側にも反映させる
    */
   useEffect(() => {
     setSpeechRate(playbackRate);
@@ -120,18 +120,15 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 音声再生用統合ハンドラ
    */
   const handleGlobalSpeak = useCallback((phrase: PhraseItem) => {
-    // 生成済み音声ファイルがあれば優先
     if (phrase.audio_path && phrase.tts_status === 1) {
       play(phrase.audio_path, phrase.phrase_id, { restart: true });
     } else {
-      // フォールバック：ブラウザTTS（現在の速度を反映）
       speak(phrase.phrase_en, playbackRate);
     }
   }, [play, speak, playbackRate]);
 
   /**
    * ナビゲーション：次へ進む
-   * 発話の中断とダブルクリック防止を制御
    */
   const handleNext = useCallback(() => {
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
@@ -141,7 +138,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     const { isLast } = nextStep();
     if (isLast) showToast("全ての学習が完了しました！", "success");
     
-    // 遷移アニメーション時間を考慮したインターバル
     setTimeout(() => { isNavigating.current = false; }, 400);
   }, [nextStep, showToast]);
 
@@ -159,7 +155,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   }, [prevStep]);
 
   /**
-   * 音声認識の開始/停止とAI評価の実行
+   * 音声認識の開始/停止
    */
   const handleVoiceCheck = () => {
     if (isListening) { stopListening(); return; }
@@ -168,7 +164,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     setFeedback(null);
     setAnalysis(null);
 
-    // 単語ターゲットを含めた発話評価を開始
     startAssessment(currentPhrase.phrase_en, [currentWord.word_en], (result) => {
       setAnalysis(result);
       setFeedback(getFeedbackConfig(result.score));
@@ -176,18 +171,18 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   };
 
   /**
-   * お気に入り状態の同期（楽観的UI更新）
+   * お気に入り状態の同期
    */
   const handleToggleFavorite = async (phraseId: string, currentState: boolean) => {
     const nextState = !currentState;
-    updatePhraseFavorite(phraseId, nextState); // 先に表示を更新
+    updatePhraseFavorite(phraseId, nextState);
 
     try {
       await toggleFavorite(phraseId, nextState);
       usePhraseStore.getState().clearCache();
       showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りを解除しました', 'success');
     } catch (e) {
-      updatePhraseFavorite(phraseId, currentState); // 失敗時にロールバック
+      updatePhraseFavorite(phraseId, currentState);
       showToast("更新に失敗しました", "error");
     }
   };
@@ -224,30 +219,25 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   /**
    * 自動再生：発話トリガー
-   * カードが切り替わった後、少し間を置いて英語を読み上げる
    */
   useEffect(() => {
     if (!isAutoPlaying || !currentPhrase || isListening || loading) return;
 
     const t = setTimeout(() => {
-      handleGlobalSpeak(currentPhrase); // 統合ハンドラを使用
+      handleGlobalSpeak(currentPhrase);
     }, 600); 
 
     return () => {
       clearTimeout(t);
-      // ブラウザTTSとAudioPlayerの両方をケア
       if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     };
   }, [wordIdx, phraseIdx, isAutoPlaying, isListening, loading, currentPhrase, handleGlobalSpeak]);
 
   /**
    * 自動再生：次ステップへの遷移
-   * 読み上げ完了（isSpeaking or isAudioPlaying が false になる）を待機
    */
   useEffect(() => {
-    // どちらかが再生中なら待機
     const stillSpeaking = isSpeaking || (isAudioPlaying !== null);
-    
     if (!isAutoPlaying || isListening || stillSpeaking || loading) return;
 
     const nextTimer = setTimeout(() => {
@@ -272,27 +262,20 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   };
 
   /**
-   * 次の音声のプリロード（先読み）
+   * 次の音声のプリロード
    */
   useEffect(() => {
-    // 次のインデックスを計算
     const nextPIdx = phraseIdx + 1;
     const nextWIdx = wordIdx;
-    
     let nextPhrase = null;
 
-    // 同じ単語内の次のフレーズがあるか
     if (currentWord?.phrases[nextPIdx]) {
       nextPhrase = currentWord.phrases[nextPIdx];
-    } 
-    // 次の単語の最初のフレーズがあるか
-    else if (words[nextWIdx + 1]?.phrases[0]) {
+    } else if (words[nextWIdx + 1]?.phrases[0]) {
       nextPhrase = words[nextWIdx + 1].phrases[0];
     }
 
-    // プリロード実行
     if (nextPhrase?.audio_path && nextPhrase.tts_status === 1) {
-      // 画面のメイン処理を邪魔しないよう、少し遅らせて実行（Safari互換フォールバック付き）
       const idleId = (window.requestIdleCallback || ((cb) => setTimeout(cb, 1)))(() => {
         preload(nextPhrase.audio_path!);
       });
@@ -305,7 +288,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   // --- View 層 ---
 
-  // ロード中画面
+  // 1. ロード中画面
   if (loading) return (
     <div className="fixed inset-0 bg-[#f5f5f7] flex items-center justify-center p-6">
       <div className="w-full max-w-sm text-center space-y-8">
@@ -331,15 +314,53 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     </div>
   );
 
+  // 2. エンプティステート：コンテンツが存在しない場合
+  if (words.length === 0) return (
+    <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-sm text-center"
+      >
+        <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+          <AlertCircle size={40} className="text-amber-500" />
+        </div>
+        <h2 className="text-xl font-black text-slate-900 mb-2">No Content Yet</h2>
+        <p className="text-slate-500 text-[13px] font-medium leading-relaxed mb-8 px-2">
+          この教材にはまだ単語が登録されていません。<br/>
+          別の教材を選択してください。
+        </p>
+        
+        <div className="space-y-3">
+          <button
+            onClick={() => router.push('/student/dashboard')}
+            className="w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-indigo-100"
+          >
+            Go to Dashboard
+          </button>
+          
+          {/* ヘッダーの戻るボタンと同じ挙動を期待するユーザー向けのサブボタン */}
+          <button
+            onClick={() => router.back()}
+            className="w-full h-12 bg-transparent text-slate-400 rounded-2xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:opacity-60"
+          >
+            <ArrowLeft size={14} strokeWidth={3} />
+            Back to previous page
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+
+  // 安全装置（words[0]はあるが何らかの理由で現在のインデックスが異常な場合）
   if (!currentWord || !currentPhrase) return null;
 
+  // 3. メイン学習画面
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none selection:bg-indigo-100">
       
-      {/* メイン・コンテナ：iPhoneでの操作性を考慮し高さ制限と角丸を適用 */}
       <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
         
-        {/* コンテンツエリア：WordControlsに高さを譲るため flex-col */}
         <div className="flex-1 flex flex-col overflow-hidden p-4 pb-0">
           <WordHeader />
           
@@ -348,7 +369,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        {/* コントロールエリア：最下部に固定 */}
         <div className="px-6 pb-8 shrink-0">
           <WordControls 
             isListening={isListening}
@@ -364,12 +384,10 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
           />
         </div>
 
-        {/* Portals: Overlay components */}
         <WordFeedback feedback={feedback} analysis={analysis} onClose={() => setFeedback(null)} />
         <WordIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
       </main>
 
-      {/* グローバルスタイル：スクロールの無効化と3Dカード用設定 */}
       <style jsx global>{`
         :root {
           --removed-body-scroll-bar-size: 0px !important;
