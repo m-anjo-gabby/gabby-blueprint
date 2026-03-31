@@ -261,7 +261,7 @@ export default function TTSAssetGenerator() {
                   <SelectValue placeholder="Select a voice profile" />
                 </SelectTrigger>
                 
-                <SelectContent className="max-h-[380px] w-[320px] shadow-xl border-slate-200">
+                <SelectContent className="max-h-[250px] w-full shadow-xl border-slate-200">
                   {AZURE_GENERAL_VOICES.map((v) => (
                     <SelectItem 
                       key={v.id} 

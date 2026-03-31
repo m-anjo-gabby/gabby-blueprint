@@ -138,7 +138,13 @@ export function usePlayAudioSpeech() {
       
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `${fileName || id}.mp3`;
+      
+      // 拡張子の二重付与を防止
+      let finalFileName = fileName || id;
+      if (!finalFileName.toLowerCase().endsWith('.mp3')) {
+        finalFileName += '.mp3';
+      }
+      link.download = finalFileName;
       document.body.appendChild(link);
       link.click();
       
