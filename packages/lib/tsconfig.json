@@ -12,12 +12,12 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@gabby/lib": ["packages/lib/index.ts"],
-      "@gabby/lib/*": ["packages/lib/*"]
+      "@/*": ["./*"]
     }
   },
-  "exclude": ["node_modules", "dist", ".next"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
 }
