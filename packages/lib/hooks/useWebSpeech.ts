@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { analyzePhrase } from '@/utils/stringSimilarity';
-import { AnalysisResult } from '@/types/wordDrill';
+import { analyzePhrase } from '../assessment/native-speech';
+import { AnalysisResult } from '../../types/wordDrill';
 
 /**
  * ブラウザ標準の Web Speech API (Synthesis & Recognition) を利用した

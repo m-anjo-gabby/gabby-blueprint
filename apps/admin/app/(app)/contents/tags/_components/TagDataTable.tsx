@@ -30,7 +30,7 @@ import {
 import { ContentTag, TAG_TYPES, TagType } from '@/types/content';
 import { TagFormDialog } from './TagFormDialog';
 import { deleteTag } from '@/actions/adminTagAction';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { 
   AlertDialog, 
   AlertDialogAction, 

@@ -10,7 +10,7 @@ import { Loader2, Search, Trash2, Hash, AlertCircle } from 'lucide-react';
 import { getWordsByContentId, deleteWord } from '@/actions/adminWordAction';
 import { WordRecord, WORD_STATUS } from '@/types/word'; 
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { WordFormDialog } from './WordFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useWordStore } from '@/stores/useWordStore';

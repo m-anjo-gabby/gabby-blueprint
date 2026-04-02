@@ -1,5 +1,5 @@
 'use client';
-import { useConfirmStore } from '@/stores/useConfirmStore';
+import { useConfirmStore } from '../stores/useConfirmStore';
 import { useCallback } from 'react';
 
 export const useConfirm = () => {

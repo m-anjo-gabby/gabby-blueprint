@@ -13,8 +13,8 @@ import {
   Loader2, Zap, CheckCircle2, AlertCircle, FileAudio, 
   RefreshCw, Volume2, AlertTriangle, ChevronRight, ArrowLeft 
 } from 'lucide-react';
-import { TTSParameters, usePlayAzureSpeech } from '@/hooks/usePlayAzureSpeech';
-import { useToast } from '@/hooks/useToast';
+import { TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
 import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@/types/azure';
 import { buildSSML } from '@/utils/ssml';

@@ -17,9 +17,9 @@ import {
   Download, Loader2, Headphones, Trash2, AlertCircle, Search, X 
 } from "lucide-react";
 import { format } from "date-fns";
-import { usePlayAudioSpeech } from "@/hooks/usePlayAudioSpeech";
+import { usePlayAudioSpeech } from "@gabby/lib/hooks/usePlayAudioSpeech";
 import { deleteTTSAssetAction } from "@/actions/adminTTSAction";
-import { useToast } from "@/hooks/useToast";
+import { useToast } from "@gabby/lib/hooks/useToast";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,

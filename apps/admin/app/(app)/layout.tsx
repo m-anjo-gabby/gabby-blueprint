@@ -2,8 +2,8 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
 import Sidebar from '@/components/common/Sidebar';
-import ToastContainer from '@/components/common/ToastContainer';
-import ConfirmContainer from '@/components/common/ConfirmContainer';
+import ToastContainer from '@gabby/lib/components/common/ToastContainer';
+import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 
 /**
  * 管理者用 統合アプリケーションレイアウト

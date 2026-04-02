@@ -8,9 +8,9 @@ import {
   FileSignature, BookOpen, LogOut, User, ChevronRight,
   PanelLeftClose, PanelLeftOpen 
 } from 'lucide-react';
-import { useUserStore } from '@/stores/useUserStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { signOut } from '@/actions/adminAuthAction';
-import { useConfirm } from '@/hooks/useConfirm';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 
 const NAV_ITEMS = [
   { label: 'ダッシュボード', href: '/dashboard', icon: LayoutDashboard },

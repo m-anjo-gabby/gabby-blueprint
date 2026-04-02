@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { createClient } from '@/lib/client';
+import { createBrowserClient } from '../supabase/client';
 
 /**
  * 音声再生およびダウンロードを管理するカスタムフック
@@ -20,7 +20,7 @@ export function usePlayAudioSpeech() {
   const playbackRateRef = useRef<number>(1.0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  const supabase = createClient();
+  const supabase = createBrowserClient();
 
   /**
    * 音声を再生する

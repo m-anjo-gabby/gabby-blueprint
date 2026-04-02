@@ -1,6 +1,6 @@
 'use client';
 
-import { useUserStore } from '@/stores/useUserStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { signOut } from '@/actions/adminAuthAction';
 import { LogOut, User } from 'lucide-react';
 

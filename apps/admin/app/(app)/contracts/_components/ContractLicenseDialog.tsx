@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Users, UserPlus, Trash2, Loader2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
 import { getLicenseAssignmentUsers, assignLicenseToUser, removeLicenseFromUser } from '@/actions/adminContractAction'
-import { useToast } from '@/hooks/useToast'
+import { useToast } from '@gabby/lib/hooks/useToast'
 import { LicenseUserItem, ContractDetail } from '@/types/contract'
 
 interface Props {

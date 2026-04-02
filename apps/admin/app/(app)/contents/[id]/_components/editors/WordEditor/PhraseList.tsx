@@ -14,7 +14,7 @@ import {
   deletePhrase 
 } from '@/actions/adminWordAction';
 import { PhraseRecord } from '@/types/word';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { TTSDialog } from './TTSDialog';
 import { PhraseFormDialog } from './PhraseFormDialog';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { usePlayAudioSpeech } from '@/hooks/usePlayAudioSpeech';
+import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWordStore } from '@/stores/useWordStore';
 
 interface PhraseListProps {

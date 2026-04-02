@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tag as TagIcon, Plus, X, Loader2, ArrowLeft, CheckCircle2, Hash } from 'lucide-react'
 import { getTagAssignmentData, assignTag, removeTag } from '@/actions/adminContentAction'
-import { useToast } from '@/hooks/useToast'
+import { useToast } from '@gabby/lib/hooks/useToast'
 import { Content, ContentTagSummary } from '@/types/content'
 
 interface Props {

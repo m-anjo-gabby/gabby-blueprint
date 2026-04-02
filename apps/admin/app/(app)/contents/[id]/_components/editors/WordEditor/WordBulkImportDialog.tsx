@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '@/components/ui/table';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { 
   Upload, AlertCircle, Loader2, CheckCircle2, FileUp, 
   RefreshCcw, Download, Info

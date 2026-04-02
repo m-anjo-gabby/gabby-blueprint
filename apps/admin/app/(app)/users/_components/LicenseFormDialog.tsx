@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { ShieldCheck, RefreshCcw, Calendar, StickyNote, Trash2, Loader2, AlertCircle, Save } from 'lucide-react';
 import { ContractDetail } from '@/types/contract';
 import { getActiveContractsByClient, assignLicenseToUser, removeLicenseFromUser, updateUserLicense } from '@/actions/adminContractAction';

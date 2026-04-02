@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 import { useAzureSpeechTest } from "@/hooks/useAzureSpeechTest";
-import { useWebSpeech } from "@/hooks/useWebSpeech";
+import { useWebSpeech } from "@gabby/lib/hooks/useWebSpeech";
 import { AssessmentWord } from "@/types/azure";
 import { AnalysisResult } from "@/types/wordDrill"; // AnalysisResultの型をインポート
 

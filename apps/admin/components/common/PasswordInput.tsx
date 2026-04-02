@@ -2,7 +2,7 @@
 'use client';
 
 import { Eye, EyeOff, Lock } from 'lucide-react';
-import { usePasswordVisibility } from '@/hooks/usePasswordVisibility';
+import { usePasswordVisibility } from '@gabby/lib/hooks/usePasswordVisibility';
 import { InputHTMLAttributes } from 'react';
 
 interface PasswordInputProps extends InputHTMLAttributes<HTMLInputElement> {

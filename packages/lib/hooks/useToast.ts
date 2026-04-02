@@ -1,6 +1,6 @@
 'use client';
 
-import { useToastStore } from '@/stores/useToastStore';
+import { useToastStore } from '../stores/useToastStore';
 import { useCallback } from 'react';
 
 /**

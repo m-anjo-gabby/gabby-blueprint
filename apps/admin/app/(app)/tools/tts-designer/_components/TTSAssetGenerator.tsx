@@ -16,8 +16,8 @@ import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 import { WordAdjustment } from '@/types/word';
-import { usePlayAzureSpeech, TTSParameters } from '@/hooks/usePlayAzureSpeech';
-import { useToast } from '@/hooks/useToast';
+import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_GENERAL_VOICES, AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@/types/azure';
 import { saveTTSAssetAction } from '@/actions/adminTTSAction';
 import { cn } from '@/lib/utils';

@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { createAdminClient } from '@/lib/admin';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { Speech, History, Sparkles } from 'lucide-react';
 import TTSAssetGenerator from './_components/TTSAssetGenerator';
 import TTSAssetTable from './_components/TTSAssetTable';
