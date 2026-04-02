@@ -1,8 +1,13 @@
-// src/actions/adminClientAction.ts
+// apps/admin/actions/adminClientAction.ts
 'use server';
 
 import { createAdminClient } from '@/lib/admin';
-import { ClientOption } from '@gabby/types/client';
+import { 
+  ClientOption, 
+  ClientPayload, 
+  ClientResponse, 
+  ClientRecord 
+} from '@gabby/types/client';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -14,7 +19,7 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
   const { data, error } = await supabase
     .from('com_m_client')
     .select('client_id, client_name')
-    .eq('delete_flg', '0')
+    .eq('delete_flg', '0') // 論理削除されていないものを対象
     .order('client_name');
 
   if (error) {
@@ -22,7 +27,6 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
     return [];
   }
 
-  // 型アサーションで ClientOption[] として返す
   return (data || []) as ClientOption[];
 }
 
@@ -41,7 +45,6 @@ export async function getClients(page: number = 1, limit: number = 10, searchQue
     .order('insert_date', { ascending: false })
     .range(from, to);
 
-  // 検索クエリがある場合、顧客名(client_name)で部分一致検索
   if (searchQuery) {
     query = query.ilike('client_name', `%${searchQuery}%`);
   }
@@ -51,7 +54,7 @@ export async function getClients(page: number = 1, limit: number = 10, searchQue
   if (error) throw new Error(error.message);
 
   return {
-    clients: data,
+    clients: data as ClientRecord[],
     totalCount: count || 0,
   };
 }
@@ -59,26 +62,20 @@ export async function getClients(page: number = 1, limit: number = 10, searchQue
 /**
  * 顧客新規作成
  */
-export async function createClient(clientName: string, clientType: number, industryType: number) {
+export async function createClient(payload: ClientPayload): Promise<ClientResponse> {
   const supabase = await createAdminClient();
 
   const { data, error } = await supabase
     .from('com_m_client')
-    .insert([
-      { 
-        client_name: clientName, 
-        client_type: clientType, 
-        industry_type: industryType 
-      }
-    ])
+    .insert([payload])
     .select();
 
   if (error) {
     return { success: false, message: error.message };
   }
 
-  revalidatePath('/admin/clients');
-  return { success: true, client: data[0] };
+  revalidatePath('/clients');
+  return { success: true, client: data[0] as ClientRecord };
 }
 
 /**
@@ -86,18 +83,14 @@ export async function createClient(clientName: string, clientType: number, indus
  */
 export async function updateClient(
   clientId: string, 
-  clientName: string, 
-  clientType: number, 
-  industryType: number
-) {
+  payload: ClientPayload
+): Promise<ClientResponse> {
   const supabase = await createAdminClient();
 
   const { data, error } = await supabase
     .from('com_m_client')
     .update({ 
-      client_name: clientName, 
-      client_type: clientType, 
-      industry_type: industryType,
+      ...payload,
       update_date: new Date().toISOString() // 更新日時を記録
     })
     .eq('client_id', clientId)
@@ -108,14 +101,14 @@ export async function updateClient(
     return { success: false, message: error.message };
   }
 
-  revalidatePath('/admin/clients');
-  return { success: true, client: data[0] };
+  revalidatePath('/clients');
+  return { success: true, client: data[0] as ClientRecord };
 }
 
 /**
  * 顧客の論理削除
  */
-export async function deleteClient(clientId: string) {
+export async function deleteClient(clientId: string): Promise<ClientResponse> {
   const supabase = await createAdminClient();
 
   const { error } = await supabase
@@ -131,6 +124,6 @@ export async function deleteClient(clientId: string) {
     return { success: false, message: error.message };
   }
 
-  revalidatePath('/admin/clients');
+  revalidatePath('/clients');
   return { success: true };
 }

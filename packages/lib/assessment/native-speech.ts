@@ -1,5 +1,5 @@
-// src/utils/stringSimilarity.ts
-import { AnalysisResult, WordMatch } from '@/types/wordDrill';
+// packages/lib/assessment/native-speech.ts
+import { AnalysisResult, WordMatch } from '@gabby/types/wordDrill';
 
 // 重みの定義
 const WEIGHTS = {

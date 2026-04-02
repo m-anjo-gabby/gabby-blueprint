@@ -1,10 +1,11 @@
-import { ContentItem } from '@/types/content';
-import { ResumeContentResponse } from '@/types/training';
+// packages/lib/navigation/student-path.ts
+import { ContentItem } from '@gabby/types/content';
+import { ResumeContentResponse } from '@gabby/types/training';
 
 /**
  * コンテンツタイプからパスのセグメント名を取得する
  */
-const getSegment = (type: number): string => {
+const getTrainingSegment = (type: number): string => {
   const pathSegments: Record<number, string> = {
     0: 'word',
     1: 'video',
@@ -16,7 +17,7 @@ const getSegment = (type: number): string => {
  * 1. 通常のライブラリやおすすめ等から遷移する場合
  */
 export const getTrainingPath = (content: ContentItem): string => {
-  const segment = getSegment(content.content_type);
+  const segment = getTrainingSegment(content.content_type);
   return `/student/training/${segment}/${content.content_id}`;
 };
 
@@ -25,7 +26,7 @@ export const getTrainingPath = (content: ContentItem): string => {
  * ResumeContentResponse は現在ジェネリックではないため、そのまま受け取ります
  */
 export const getResumePath = (resume: ResumeContentResponse): string => {
-  const segment = getSegment(resume.com_m_contents.content_type);
+  const segment = getTrainingSegment(resume.com_m_contents.content_type);
   // 再開フラグを付与
-  return `/student/training/${segment}/${resume.content_id}?resume=true`;
+  return `/training/${segment}/${resume.content_id}?resume=true`;
 };

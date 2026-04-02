@@ -1,5 +1,5 @@
-// src/utils/content.ts
-import { TAG_TYPES, TagType } from "@/types/content";
+// packages/lib/content/ui.ts
+import { TAG_TYPES, TagType } from "@gabby/types/content";
 import { FileText, HelpCircle, LucideIcon, Video, Zap } from "lucide-react";
 
 export const getTagStyle = (tagType: string) => {

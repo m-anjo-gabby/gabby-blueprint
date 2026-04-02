@@ -16,7 +16,7 @@ import { Mail, AlertCircle, PlusCircle, CheckCircle2, Loader2, Edit, ShieldCheck
 // 型定義の参照先をパッケージ側へ変更
 import { CreateUserResponse, UserRecord } from '@gabby/types/user';
 import { ClientOption } from '@gabby/types/client';
-import { ContractDetail } from '@/types/contract';
+import { ContractDetail } from '@gabby/types/contract';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 

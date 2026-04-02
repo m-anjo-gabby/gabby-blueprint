@@ -1,5 +1,5 @@
-// utils/ssml.ts
-import { TTSAdjustmentData, WordAdjustment } from '@/types/word';
+// lib/tts/ssml.ts
+import { TTSAdjustmentData, WordAdjustment } from '@gabby/types/word';
 
 export function buildSSML(phraseText: string, data: TTSAdjustmentData): string {
   const { settings, words } = data;

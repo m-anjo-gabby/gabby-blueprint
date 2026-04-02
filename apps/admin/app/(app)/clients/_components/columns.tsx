@@ -4,7 +4,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { ClientFormDialog } from './ClientFormDialog';
 import { Badge } from '@/components/ui/badge';
-import { ClientRecord } from '@/types/client';
+import { ClientRecord } from '@gabby/types/client';
 
 export const columns: ColumnDef<ClientRecord>[] = [
   {

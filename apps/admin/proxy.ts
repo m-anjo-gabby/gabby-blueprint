@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { createSupabaseProxy } from '@gabby/lib/proxy-base';
+import { createSupabaseProxy } from '@gabby/lib';
 
 export async function proxy(req: NextRequest) {
   const { res, user } = await createSupabaseProxy(req);

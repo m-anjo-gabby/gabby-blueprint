@@ -8,15 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/useToast';
 import { Upload, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw } from 'lucide-react';
-import { Client, RawCsvRow, BulkUser, BulkImportResponse } from '@/types/user';
+import { RawCsvRow, BulkUser, BulkImportResponse } from '@gabby/types/user';
 import { bulkCreateUsers } from '@/actions/adminUserAction';
 import { getActiveContractsByClient, bulkAssignLicenses } from '@/actions/adminContractAction';
 import { getClientsFilter } from '@/actions/adminClientAction'; // 追加
 import { useRouter } from 'next/navigation';
-import { ContractDetail } from '@/types/contract';
+import { ContractDetail } from '@gabby/types/contract';
 import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { cn } from '@/lib/utils';
+import { ClientOption } from '@gabby/types/client';
 
 const MAX_BULK_COUNT = 30;
 
@@ -26,7 +27,7 @@ export function UserBulkImportDialog() {
   const [open, setOpen] = useState(false);
   
   // --- 自律取得のためのState ---
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
 
   const [selectedClientId, setSelectedClientId] = useState<string>("");

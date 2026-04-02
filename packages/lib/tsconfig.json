@@ -15,7 +15,9 @@
     "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@gabby/types/*": ["../types/*"],
+      "@gabby/lib/*": ["./*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

@@ -1,3 +1,4 @@
+// apps\admin\app\(app)\clients\_components\ClientFormDialog.tsx
 'use client';
 
 import { useState } from 'react';
@@ -11,10 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/useToast';
 import { createClient, updateClient } from '@/actions/adminClientAction';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { ClientRecord } from '@/types/client';
+import { ClientRecord, ClientPayload } from '@gabby/types/client';
 
 // --- 1. スキーマ定義 ---
 const clientSchema = z.object({
@@ -38,7 +38,6 @@ const DEFAULT_VALUES: ClientFormValues = {
 
 /**
  * 顧客情報の登録・編集ダイアログ
- * 契約・ライセンスダイアログと共通のデザインシステムを採用
  */
 export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDialogProps) {
   // --- States ---
@@ -47,7 +46,6 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
   const [serverError, setServerError] = useState<string | null>(null);
   
   const { showToast } = useToast();
-  const router = useRouter();
 
   // --- Helpers ---
   const getInitialValues = (data?: ClientRecord): ClientFormValues => {
@@ -72,17 +70,20 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
   const onSubmit = async (values: ClientFormValues) => {
     setServerError(null);
     try {
-      let result;
-      const payload = {
-        name: values.client_name,
-        type: Number(values.client_type),
-        industry: Number(values.industry_type),
+      // Payloadオブジェクトの構築
+      const payload: ClientPayload = {
+        client_name: values.client_name,
+        client_type: Number(values.client_type),
+        industry_type: Number(values.industry_type),
       };
 
+      let result;
       if (mode === 'edit' && initialData?.client_id) {
-        result = await updateClient(initialData.client_id, payload.name, payload.type, payload.industry);
+        // updateClient(ID, Payload) の形式で呼び出し
+        result = await updateClient(initialData.client_id, payload);
       } else {
-        result = await createClient(payload.name, payload.type, payload.industry);
+        // createClient(Payload) の形式で呼び出し
+        result = await createClient(payload);
       }
 
       if (result.success) {
@@ -102,10 +103,11 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
    */
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    
-    setIsConfirming(false);
-    setServerError(null);
-    form.reset(getInitialValues(initialData));
+    if (!isOpen) {
+      setIsConfirming(false);
+      setServerError(null);
+      form.reset(getInitialValues(initialData));
+    }
   };
 
   return (
@@ -125,7 +127,6 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
       <DialogContent 
         className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button]:focus-visible:ring-0 [&>button]:outline-none"
       >
-        {/* ダークヘッダー: 隙間を埋めるネガティブマージン設定済み */}
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (

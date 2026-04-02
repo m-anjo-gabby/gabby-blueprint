@@ -3,15 +3,24 @@
  * 定数・区分値
  * ----------------------------------------------
  */
-export const USER_TYPE_MAP: Record<string, string> = {
-  '0': '管理者',
-  '1': '生徒',
-  '2': 'モニター',
-  // 必要に応じてここに追加
+export const USER_TYPES = {
+  ADMIN: '0',
+  STUDENT: '1',
+  MONITOR: '2',
+} as const;
+
+// 値の型を抽出 ( '0' | '1' | '2' )
+export type UserType = typeof USER_TYPES[keyof typeof USER_TYPES];
+
+export const USER_TYPE_MAP: Record<UserType, string> = {
+  [USER_TYPES.ADMIN]: '管理者',
+  [USER_TYPES.STUDENT]: '生徒',
+  [USER_TYPES.MONITOR]: 'モニター',
 };
 
 export const getUserTypeLabel = (type: string | null | undefined): string => {
-  return USER_TYPE_MAP[type || ''] || '不明';
+  // type が UserType に該当すればラベルを返し、なければ '不明'
+  return USER_TYPE_MAP[type as UserType] ?? '不明';
 };
 
 /**
@@ -64,16 +73,6 @@ export interface CreateUserPayload {
   user_name: string;
   client_id: string;
   user_type: string;
-}
-
-/**
- * Client: 顧客マスタ (com_m_client)
- */
-export interface Client {
-  client_id: string;
-  client_name: string;
-  client_type: number;   // 0:初期, 1:法人, 2:個人
-  industry_type: number; // 業界種別
 }
 
 /**
