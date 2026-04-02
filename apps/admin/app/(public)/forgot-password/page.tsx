@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { forgotPassword } from '@/actions/authAction';
+import { forgotPassword } from '@/actions/adminAuthAction';
 import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 

@@ -1,7 +1,7 @@
 // src/actions/adminContractAction.ts
 'use server';
 
-import { createAdminClient } from "@/lib/admin";
+import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { formatToJstDate, getUtcRangeFromJstDate } from "@/utils/date";
 import { revalidatePath } from 'next/cache';
 

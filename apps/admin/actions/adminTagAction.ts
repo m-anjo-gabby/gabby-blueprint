@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdminClient } from '@/lib/admin';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { ContentTag } from '@/types/content';
 import { revalidatePath } from 'next/cache';
 

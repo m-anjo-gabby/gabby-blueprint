@@ -3,13 +3,13 @@
 
 import { useEffect, useState } from 'react'; // useStateを追加
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/client';
+import { createBrowserClient } from '@gabby/lib/supabase/client';
 import { Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function InvitePage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = createBrowserClient();
   const [errorStatus, setErrorStatus] = useState<'loading' | 'expired' | 'error'>('loading');
 
   useEffect(() => {

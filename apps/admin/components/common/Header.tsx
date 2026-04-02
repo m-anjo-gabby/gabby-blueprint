@@ -1,7 +1,7 @@
 'use client';
 
 import { useUserStore } from '@/stores/useUserStore';
-import { signOut } from '@/actions/authAction';
+import { signOut } from '@/actions/adminAuthAction';
 import { LogOut, User } from 'lucide-react';
 
 export default function Header() {

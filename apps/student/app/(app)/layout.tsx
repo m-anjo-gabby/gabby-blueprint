@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/server';
 import { redirect } from 'next/navigation';
-import UserStoreInitializer from '@/components/auth/UserStoreInitializer';
+import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmContainer from '@/components/common/ConfirmContainer';
 

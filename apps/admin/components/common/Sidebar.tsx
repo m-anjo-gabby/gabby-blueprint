@@ -9,7 +9,7 @@ import {
   PanelLeftClose, PanelLeftOpen 
 } from 'lucide-react';
 import { useUserStore } from '@/stores/useUserStore';
-import { signOut } from '@/actions/authAction';
+import { signOut } from '@/actions/adminAuthAction';
 import { useConfirm } from '@/hooks/useConfirm';
 
 const NAV_ITEMS = [

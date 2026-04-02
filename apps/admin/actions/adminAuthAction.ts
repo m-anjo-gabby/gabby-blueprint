@@ -10,32 +10,33 @@ import {
 import { redirect } from 'next/navigation';
 
 /**
- * 生徒ログイン
- * 誤って管理者がここからログインした場合は管理画面へ転送します
+ * 管理者ログイン
+ * 認証後、Roleを確認して管理画面または生徒画面へ振り分けます
  */
 export async function signIn(formData: FormData) {
   const { user, error } = await signInCore(formData);
   
+  // 認証エラー時は呼び出し元のフォームにメッセージを返す
   if (error || !user) return { error };
 
   const role = user.app_metadata?.role as string | undefined;
   
-  // 管理者がログインした場合は管理サイトのダッシュボードへ転送
+  // Roleが admin の場合は管理ダッシュボードへ
   if (role === 'admin') {
-    const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || '';
-    redirect(`${adminUrl}/dashboard`);
+    redirect('/dashboard');
   } 
   
-  // 通常の生徒は自身のダッシュボードへ
-  redirect('/dashboard');
+  // 管理者でない（生徒等）が管理画面からログインした場合は、生徒用サイトへ強制移動
+  const studentUrl = process.env.NEXT_PUBLIC_STUDENT_URL || '';
+  redirect(`${studentUrl}/dashboard`);
 }
 
 /**
- * 生徒ログアウト
+ * 管理者ログアウト
  */
 export async function signOut() {
   await signOutCore();
-  // 生徒用ログイン画面へ
+  // 管理用ログイン画面へ戻す
   redirect('/login');
 }
 
@@ -51,12 +52,13 @@ export async function forgotPassword(formData: FormData) {
  */
 export async function resetPassword(formData: FormData) {
   const { success, error } = await resetPasswordCore(formData);
+  // 更新成功時はログイン画面へ遷移（クエリで通知を表示させる運用を想定）
   if (success) redirect('/login?message=password-updated');
   return { error };
 }
 
 /**
- * 学習画面や設定画面からのパスワード変更
+ * プロフィール画面等からのパスワード変更
  */
 export async function updatePassword(formData: FormData) {
   return await updatePasswordCore(formData);

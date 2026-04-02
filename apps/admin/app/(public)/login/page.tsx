@@ -1,7 +1,7 @@
 // src/app/(public)/login/page.tsx
 'use client';
 
-import { signIn } from '@/actions/authAction';
+import { signIn } from '@/actions/adminAuthAction';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';

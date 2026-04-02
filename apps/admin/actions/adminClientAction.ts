@@ -1,7 +1,7 @@
 // apps/admin/actions/adminClientAction.ts
 'use server';
 
-import { createAdminClient } from '@/lib/admin';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { 
   ClientOption, 
   ClientPayload, 

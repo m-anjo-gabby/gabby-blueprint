@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/server';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import UserStoreInitializer from '@/components/auth/UserStoreInitializer';
+import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
 import Sidebar from '@/components/common/Sidebar';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmContainer from '@/components/common/ConfirmContainer';
@@ -16,7 +16,7 @@ export default async function AdminAppLayout({
   children: React.ReactNode;
 }) {
   // --- 旧 AppLogicLayout のロジック ---
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
