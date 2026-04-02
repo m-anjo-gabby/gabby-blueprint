@@ -1,8 +1,14 @@
-// src/actions/adminUserAction.ts
 'use server';
 
 import { createAdminClient } from "@/lib/admin";
-import { BulkImportResponse, BulkImportResultDetail, BulkUser, CreateUserResponse, UserRecord } from "@/types/user";
+import { 
+  UserRecord, 
+  CreateUserPayload, 
+  CreateUserResponse, 
+  BulkUser, 
+  BulkImportResponse, 
+  BulkImportResultDetail 
+} from "@gabby/types/user";
 import { formatToJstDate } from "@/utils/date";
 import { revalidatePath } from "next/cache";
 
@@ -42,7 +48,7 @@ export async function getUsers(
   if (error) throw error;
 
   // DB(UTC) -> UI(JST YYYY-MM-DD) へ変換
-  const formattedUsers = data.map((user: UserRecord) => ({
+  const formattedUsers = (data || []).map((user: UserRecord) => ({
     ...user,
     license_start_date: user.license_start_date ? formatToJstDate(user.license_start_date) : null,
     license_end_date: user.license_end_date ? formatToJstDate(user.license_end_date) : null,
@@ -59,12 +65,8 @@ export async function getUsers(
  * ユーザーを作成し、パスワード設定用の招待メールを送信します。
  * パスワードはユーザー自身が設定するため、サーバー側での固定値管理は不要です。
  */
-export async function createUser(
-  email: string,
-  user_name: string,
-  client_id: string,
-  user_type: string
-): Promise<CreateUserResponse> {
+export async function createUser(payload: CreateUserPayload): Promise<CreateUserResponse> {
+  const { email, user_name, client_id, user_type } = payload;
   try {
     const supabase = await createAdminClient();
 
@@ -120,11 +122,9 @@ export async function resendInvite(email: string) {
  */
 export async function updateUser(
   id: string, // auth.users.id (UUID)
-  email: string,
-  user_name: string,
-  client_id: string,
-  user_type: string
+  payload: CreateUserPayload
 ) {
+  const { email, user_name, client_id, user_type } = payload;
   try {
     const supabase = await createAdminClient();
 
@@ -179,12 +179,12 @@ export async function bulkCreateUsers(users: BulkUser[]): Promise<BulkImportResp
 
   for (const user of users) {
     try {
-      const result = await createUser(
-        user.email,
-        user.user_name,
-        user.client_id,
-        user.user_type
-      );
+      const result = await createUser({
+        email: user.email,
+        user_name: user.user_name,
+        client_id: user.client_id,
+        user_type: user.user_type
+      });
 
       if (result.success && result.user_id) {
         successCount++;

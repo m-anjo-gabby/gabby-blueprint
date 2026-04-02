@@ -1,13 +1,12 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { UserRecord } from "@/types/user";
 import { Badge } from "@/components/ui/badge";
-import { getUserTypeLabel } from "@/constants/userTypes";
 import { UserFormDialog } from "./UserFormDialog";
 import { LicenseFormDialog } from "./LicenseFormDialog";
 import { Calendar, Building2, Plus, StickyNote, ShieldCheck, Pencil, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getUserTypeLabel, UserRecord } from "@gabby/types/user";
 
 export const columns: ColumnDef<UserRecord>[] = [
   {

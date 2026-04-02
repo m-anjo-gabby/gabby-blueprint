@@ -13,7 +13,9 @@ import { useToast } from '@/hooks/useToast';
 import { createUser, updateUser, resendInvite } from '@/actions/adminUserAction';
 import { getActiveContractsByClient, assignLicenseToUser } from '@/actions/adminContractAction';
 import { Mail, AlertCircle, PlusCircle, CheckCircle2, Loader2, Edit, ShieldCheck, Save } from 'lucide-react';
-import { Client, CreateUserResponse, UserRecord } from '@/types/user';
+// 型定義の参照先をパッケージ側へ変更
+import { CreateUserResponse, UserRecord } from '@gabby/types/user';
+import { ClientOption } from '@gabby/types/client';
 import { ContractDetail } from '@/types/contract';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
@@ -47,7 +49,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
   const [serverError, setServerError] = useState<string | null>(null);
   
   // 自律取得用State
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
   
   // ライセンス管理用 (新規作成時の連動用)
@@ -84,7 +86,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
     try {
       if (mode === 'edit' && initialData?.id) {
         // --- 編集モード ---
-        const result = await updateUser(initialData.id, values.email, values.user_name, values.client_id, values.user_type);
+        // 引数をオブジェクト形式(values)に変更
+        const result = await updateUser(initialData.id, values);
         if (result.success) {
           showToast("ユーザー情報を更新しました", "success");
           handleClose(); // アクション内でrevalidatePath済みのためrefresh不要
@@ -93,7 +96,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
         }
       } else {
         // --- 登録モード ---
-        const result: CreateUserResponse = await createUser(values.email, values.user_name, values.client_id, values.user_type);
+        // 引数をオブジェクト形式(values)に変更
+        const result: CreateUserResponse = await createUser(values);
         if (result.success) {
           setTargetUserId(result.user_id);
           const contracts = await getActiveContractsByClient(values.client_id);

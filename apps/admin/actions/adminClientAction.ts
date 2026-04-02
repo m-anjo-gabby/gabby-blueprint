@@ -2,19 +2,19 @@
 'use server';
 
 import { createAdminClient } from '@/lib/admin';
+import { ClientOption } from '@gabby/types/client';
 import { revalidatePath } from 'next/cache';
 
 /**
  * 顧客一覧取得 フィルター・選択肢用（軽量・全件）
  */
-export async function getClientsFilter() {
+export async function getClientsFilter(): Promise<ClientOption[]> {
   const supabase = await createAdminClient();
 
-  // 必要なカラムのみを取得して通信量を削減
   const { data, error } = await supabase
     .from('com_m_client')
     .select('client_id, client_name')
-    .eq('delete_flg', '0') // 論理削除されていないものを対象
+    .eq('delete_flg', '0')
     .order('client_name');
 
   if (error) {
@@ -22,7 +22,8 @@ export async function getClientsFilter() {
     return [];
   }
 
-  return data || [];
+  // 型アサーションで ClientOption[] として返す
+  return (data || []) as ClientOption[];
 }
 
 /**

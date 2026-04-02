@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@/components/auth/UserStoreInitializer';
-import Sidebar from '@/components/admin/Sidebar';
+import Sidebar from '@/components/common/Sidebar';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmContainer from '@/components/common/ConfirmContainer';
 

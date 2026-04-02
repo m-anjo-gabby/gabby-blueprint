@@ -16,7 +16,8 @@
     "baseUrl": ".",
     "paths": {
       "@gabby/lib": ["packages/lib/index.ts"],
-      "@gabby/lib/*": ["packages/lib/*"]
+      "@gabby/lib/*": ["packages/lib/*"],
+      "@gabby/types/*": ["packages/types/*"]
     }
   },
   "exclude": ["node_modules", "dist", ".next"]

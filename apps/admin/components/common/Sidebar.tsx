@@ -13,12 +13,12 @@ import { signOut } from '@/actions/authAction';
 import { useConfirm } from '@/hooks/useConfirm';
 
 const NAV_ITEMS = [
-  { label: 'ダッシュボード', href: '/admin/dashboard', icon: LayoutDashboard },
-  { label: '顧客管理', href: '/admin/clients', icon: Building2 },
-  { label: '契約管理', href: '/admin/contracts', icon: FileSignature },
-  { label: 'ユーザー管理', href: '/admin/users', icon: Users },
-  { label: '教材管理', href: '/admin/contents', icon: BookOpen },
-  { label: 'TTS Designer', href: '/admin/tools/tts-designer', icon: Speech },
+  { label: 'ダッシュボード', href: '/dashboard', icon: LayoutDashboard },
+  { label: '顧客管理', href: '/clients', icon: Building2 },
+  { label: '契約管理', href: '/contracts', icon: FileSignature },
+  { label: 'ユーザー管理', href: '/users', icon: Users },
+  { label: '教材管理', href: '/contents', icon: BookOpen },
+  { label: 'TTS Designer', href: '/tools/tts-designer', icon: Speech },
 ];
 
 export default function Sidebar() {
