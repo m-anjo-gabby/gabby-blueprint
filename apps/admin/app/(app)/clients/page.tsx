@@ -1,4 +1,4 @@
-// src/app/(app)/admin/clients/page.tsx
+// apps/app/(app)/clients/page.tsx
 import { getClients } from '@/actions/adminClientAction';
 import { ClientFormDialog } from './_components/ClientFormDialog';
 import { ClientDataTable } from './_components/client-data-table';

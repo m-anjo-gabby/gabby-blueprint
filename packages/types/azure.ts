@@ -1,4 +1,4 @@
-// src/types/azure.ts
+// packages/types/azure.ts
 
 /**
  * ----------------------------------------------

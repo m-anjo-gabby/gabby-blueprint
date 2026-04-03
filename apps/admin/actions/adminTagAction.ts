@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { ContentTag } from '@/types/content';
+import { ContentTag } from '@gabby/types/content';
 import { revalidatePath } from 'next/cache';
 
 /** タグ一覧取得 */
@@ -35,7 +35,7 @@ export async function upsertTag(payload: Partial<ContentTag>) {
     return { success: false, message: error.message };
   }
   
-  revalidatePath('/admin/contents/tags');
+  revalidatePath('/contents/tags');
   return { success: true, data };
 }
 
@@ -51,6 +51,6 @@ export async function deleteTag(tagId: string) {
     return { success: false, message: error.message };
   }
 
-  revalidatePath('/admin/contents/tags');
+  revalidatePath('/contents/tags');
   return { success: true };
 }

@@ -5,7 +5,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { format, isAfter, isBefore, startOfDay } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ContractDetail } from '@/types/contract';
+import { ContractDetail } from '@gabby/types/contract';
 import { ContractFormDialog } from './ContractFormDialog';
 import { ContractLicenseDialog } from './ContractLicenseDialog';
 import { Pencil } from 'lucide-react';

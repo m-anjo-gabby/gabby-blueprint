@@ -12,11 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, XCircle, PencilLine, Check, Copy } from 'lucide-react';
-import { PhraseRecord, TTSAdjustmentData, WordAdjustment } from '@/types/word';
+import { PhraseRecord, TTSAdjustmentData, WordAdjustment } from '@gabby/types/word';
 import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
-import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@/types/azure';
+import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
 
 interface TTSDialogProps {
   phrase: PhraseRecord;

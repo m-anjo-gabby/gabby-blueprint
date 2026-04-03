@@ -9,7 +9,7 @@ import {
   BulkImportResponse, 
   BulkImportResultDetail 
 } from "@gabby/types/user";
-import { formatToJstDate } from "@/utils/date";
+import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -92,7 +92,7 @@ export async function createUser(payload: CreateUserPayload): Promise<CreateUser
     }
 
     // 登録成功時にキャッシュを無効化
-    revalidatePath('/admin/users');
+    revalidatePath('/users');
     return { success: true, user_id: data.user.id, errorType: null, message: null };
 
   } catch (err) {
@@ -113,7 +113,7 @@ export async function resendInvite(email: string) {
   });
   if (error) throw error;
   // 状態（招待中などの表示）が変わる可能性がある
-  revalidatePath('/admin/users');
+  revalidatePath('/users');
   return { success: true };
 }
 
@@ -159,7 +159,7 @@ export async function updateUser(
     }
 
     // 更新完了時にキャッシュを無効化
-    revalidatePath('/admin/users');
+    revalidatePath('/users');
     return { success: true };
 
   } catch (err) {
@@ -212,6 +212,6 @@ export async function bulkCreateUsers(users: BulkUser[]): Promise<BulkImportResp
   }
 
   // ループ終了後に確実に最新の状態にする
-  revalidatePath('/admin/users');
+  revalidatePath('/users');
   return { success: true, total: users.length, successCount, errorCount, details: results };
 }

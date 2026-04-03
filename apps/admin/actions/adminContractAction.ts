@@ -2,7 +2,7 @@
 'use server';
 
 import { createAdminClient } from "@gabby/lib/supabase/admin";
-import { formatToJstDate, getUtcRangeFromJstDate } from "@/utils/date";
+import { formatToJstDate, getUtcRangeFromJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -106,7 +106,7 @@ export async function createContract(params: {
     return { success: false, message: error.message };
   }
 
-  revalidatePath('/admin/contracts');
+  revalidatePath('/contracts');
   return { success: true, contract: data[0] };
 }
 
@@ -149,7 +149,7 @@ export async function updateContract(
   }
 
   // 一覧画面のキャッシュを更新して最新の状態を反映させる
-  revalidatePath('/admin/contracts');
+  revalidatePath('/contracts');
   
   return { success: true, contract: data[0] };
 }
@@ -219,8 +219,8 @@ export async function assignLicenseToUser(
 
   if (error) return { success: false, message: error.message };
 
-  revalidatePath('/admin/contracts');
-  revalidatePath('/admin/users');
+  revalidatePath('/contracts');
+  revalidatePath('/users');
   return { success: true };
 }
 
@@ -239,7 +239,7 @@ export async function removeLicenseFromUser(contractId: string, userId: string) 
 
   if (error) return { success: false, message: error.message };
 
-  revalidatePath('/admin/contracts');
+  revalidatePath('/contracts');
   return { success: true };
 }
 
@@ -288,8 +288,8 @@ export async function updateUserLicense(
     return { success: false, message: error.message };
   }
 
-  revalidatePath('/admin/contracts');
-  revalidatePath('/admin/users');
+  revalidatePath('/contracts');
+  revalidatePath('/users');
 
   return { success: true };
 }
@@ -328,8 +328,8 @@ export async function bulkAssignLicenses(
     return { success: false, message: error.message, errorCount: userIds.length };
   }
 
-  revalidatePath('/admin/users');
-  revalidatePath('/admin/contracts');
+  revalidatePath('/users');
+  revalidatePath('/contracts');
   
   return { 
     success: true, 

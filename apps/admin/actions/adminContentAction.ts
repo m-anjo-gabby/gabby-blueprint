@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
-import { Content, ContentRecord, ContentTagSummary } from '@/types/content';
+import { Content, ContentRecord, ContentTagSummary } from '@gabby/types/content';
 
 /**
  * 教材一覧取得（サーバーサイドページネーション）
@@ -128,7 +128,7 @@ export async function upsertContent(payload: Partial<Content>) {
     return { success: false, message: error.message };
   }
 
-  revalidatePath('/admin/contents');
+  revalidatePath('/contents');
   return { success: true, data: data?.[0] as Content };
 }
 
@@ -151,7 +151,7 @@ export async function deleteContent(contentId: string) {
     return { success: false, message: error.message };
   }
 
-  revalidatePath('/admin/contents');
+  revalidatePath('/contents');
   return { success: true };
 }
 
@@ -215,7 +215,7 @@ export async function assignTag(contentId: string, tagId: string) {
   }
 
   // 一覧側のキャッシュ更新（Next.jsのタグ機能などを使っている場合）
-  // revalidatePath('/admin/contents'); 
+  // revalidatePath('/contents'); 
   
   return { success: true };
 }
@@ -292,7 +292,7 @@ export async function assignAccess(contentId: string, clientId: string) {
 
   if (error) return { success: false, message: error.message };
 
-  revalidatePath('/admin/contents');
+  revalidatePath('/contents');
   return { success: true };
 }
 
@@ -309,6 +309,6 @@ export async function removeAccess(contentId: string, clientId: string) {
 
   if (error) return { success: false, message: error.message };
 
-  revalidatePath('/admin/contents');
+  revalidatePath('/contents');
   return { success: true };
 }

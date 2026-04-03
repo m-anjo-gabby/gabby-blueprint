@@ -15,7 +15,7 @@ import { getClientsFilter } from '@/actions/adminClientAction'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, PlusCircle, Edit, CheckCircle2 } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
-import { ContractDetail } from '@/types/contract'
+import { ContractDetail } from '@gabby/types/contract'
 import { SearchableSelect } from '@/components/common/SearchableSelect'
 
 // --- スキーマ定義 ---

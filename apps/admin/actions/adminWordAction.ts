@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdminClient } from "@gabby/lib/supabase/admin";
-import { PhraseRecord, WordRecord } from '@/types/word';
+import { PhraseRecord, WordRecord } from '@gabby/types/word';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -76,7 +76,7 @@ export async function upsertWord(payload: Partial<WordRecord>) {
   }
 
   // キャッシュの更新（管理画面のパスを指定）
-  revalidatePath('/admin/contents/[id]/words', 'page');
+  revalidatePath('/contents/[id]/words', 'page');
 
   return { success: true };
 }
@@ -195,7 +195,7 @@ export async function upsertPhrase(payload: Partial<PhraseRecord>) {
     return { success: false, message: error.message };
   }
 
-  revalidatePath('/admin/contents/[id]/words', 'page');
+  revalidatePath('/contents/[id]/words', 'page');
   return { success: true };
 }
 
@@ -307,7 +307,7 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
       if (phraseError) throw phraseError;
     }
 
-    revalidatePath(`/admin/contents/${contentId}/words`);
+    revalidatePath(`/contents/${contentId}/words`);
     return { success: true };
 
   } catch (err: any) {

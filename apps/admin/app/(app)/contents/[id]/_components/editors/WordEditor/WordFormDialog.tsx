@@ -13,7 +13,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertWord } from '@/actions/adminWordAction';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { WordRecord, WORD_STATUS, WordStatus } from '@/types/word';
+import { WordRecord, WORD_STATUS, WordStatus } from '@gabby/types/word';
 
 /**
  * バリデーションスキーマ

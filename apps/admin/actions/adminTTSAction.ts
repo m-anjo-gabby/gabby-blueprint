@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { generateAzureAudioBuffer, generateTTSFileName } from '@/utils/tts';
+import { generateAzureAudioBuffer, generateTTSFileName } from '@gabby/lib/azure/tts';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -123,7 +123,7 @@ export async function saveTTSAssetAction(payload: {
     if (dbError) throw dbError;
 
     // 履歴一覧を再検証
-    revalidatePath('/admin/tools/tts-designer');
+    revalidatePath('/tools/tts-designer');
 
     return { 
       success: true, 
@@ -164,7 +164,7 @@ export async function deleteTTSAssetAction(assetId: string, audioPath: string) {
       }
     }
 
-    revalidatePath('/admin/tools/tts-designer');
+    revalidatePath('/tools/tts-designer');
     return { success: true, message: "削除しました" };
 
   } catch (error: any) {

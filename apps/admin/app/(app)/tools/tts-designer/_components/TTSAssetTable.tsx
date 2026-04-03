@@ -130,7 +130,7 @@ export default function TTSAssetTable({ assets = [], onRefresh }: TTSAssetTableP
     },
     {
       accessorKey: "created_at",
-      header: "Date",
+      header: "Date (UTC)",
       cell: ({ row }) => (
         <div className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
           <Calendar size={12} className="opacity-30"/>

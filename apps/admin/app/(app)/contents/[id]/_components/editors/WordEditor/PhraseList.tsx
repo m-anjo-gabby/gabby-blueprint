@@ -13,7 +13,7 @@ import {
   getPhrasesByWordId, 
   deletePhrase 
 } from '@/actions/adminWordAction';
-import { PhraseRecord } from '@/types/word';
+import { PhraseRecord } from '@gabby/types/word';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { TTSDialog } from './TTSDialog';
 import { PhraseFormDialog } from './PhraseFormDialog';

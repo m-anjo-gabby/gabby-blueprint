@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Lock, Plus, X, Loader2, ArrowLeft, Building2, ShieldCheck, AlertCircle } from 'lucide-react'
 import { getContentAccessData, assignAccess, removeAccess } from '@/actions/adminContentAction'
 import { useToast } from '@gabby/lib/hooks/useToast'
-import { Content, ContentAccessSummary } from '@/types/content'
+import { Content, ContentAccessSummary } from '@gabby/types/content'
 
 interface Props {
   content: Content

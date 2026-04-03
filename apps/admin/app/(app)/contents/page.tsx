@@ -36,7 +36,7 @@ export default async function AdminContentsPage({
         <div className="flex items-center gap-3">
           {/* タグ管理への導線 */}
           <Button variant="outline" asChild>
-            <Link href="/admin/contents/tags">
+            <Link href="/contents/tags">
               <Tag className="mr-2 h-4 w-4" />
               タグ管理
             </Link>

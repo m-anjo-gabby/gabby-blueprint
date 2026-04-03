@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { ShieldCheck, RefreshCcw, Calendar, StickyNote, Trash2, Loader2, AlertCircle, Save } from 'lucide-react';
-import { ContractDetail } from '@/types/contract';
+import { ContractDetail } from '@gabby/types/contract';
 import { getActiveContractsByClient, assignLicenseToUser, removeLicenseFromUser, updateUserLicense } from '@/actions/adminContractAction';
 import { UserRecord } from '@gabby/types/user';
 

@@ -16,9 +16,9 @@ import {
 import { TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
-import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@/types/azure';
-import { buildSSML } from '@/utils/ssml';
-import { PhraseRecord, TTSAdjustmentData } from '@/types/word';
+import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
+import { buildSSML } from '@gabby/lib/azure/ssml';
+import { PhraseRecord, TTSAdjustmentData } from '@gabby/types/word';
 import { getPhrasesByContentId } from '@/actions/adminPhraseAction';
 import { useWordStore } from '@/stores/useWordStore';
 

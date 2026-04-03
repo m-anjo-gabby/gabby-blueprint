@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType } from '@/types/content';
+import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType } from '@gabby/types/content';
 import { upsertContent } from '@/actions/adminContentAction';
 import { useRouter } from 'next/navigation';
 

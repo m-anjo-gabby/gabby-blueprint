@@ -4,8 +4,8 @@ import { useState, useMemo } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 import { useAzureSpeechTest } from "@/hooks/useAzureSpeechTest";
 import { useWebSpeech } from "@gabby/lib/hooks/useWebSpeech";
-import { AssessmentWord } from "@/types/azure";
-import { AnalysisResult } from "@/types/wordDrill"; // AnalysisResultの型をインポート
+import { AssessmentWord } from "@gabby/types/azure";
+import { AnalysisResult } from "@gabby/types/wordDrill"; // AnalysisResultの型をインポート
 
 const samplePhrases = [
   "We start fermenting the soy.",

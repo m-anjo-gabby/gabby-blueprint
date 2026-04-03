@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { PhraseRecord } from '@/types/word'; // 定義した Record 型
+import { PhraseRecord } from '@gabby/types/word'; // 定義した Record 型
 import { revalidatePath } from 'next/cache';
 
 /**

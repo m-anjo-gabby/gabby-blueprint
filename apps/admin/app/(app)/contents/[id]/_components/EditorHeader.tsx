@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ChevronLeft, BookOpen, Layers, CheckCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ContentRecord, CONTENT_TYPES } from '@/types/content';
+import { ContentRecord, CONTENT_TYPES } from '@gabby/types/content';
 import { WordBulkImportDialog } from './editors/WordEditor/WordBulkImportDialog';
 import { TTSBulkDialog } from './editors/WordEditor/TTSBulkDialog';
 
@@ -19,7 +19,7 @@ export function EditorHeader({ content }: ContentHeaderProps) {
     <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild className="text-slate-500 hover:text-slate-900 -ml-2">
-          <Link href="/admin/contents">
+          <Link href="/contents">
             <ChevronLeft size={20} className="mr-1" />
             一覧へ戻る
           </Link>

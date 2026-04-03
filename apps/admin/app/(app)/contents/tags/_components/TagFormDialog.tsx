@@ -13,7 +13,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertTag } from '@/actions/adminTagAction';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { ContentTag, TAG_TYPES, TagType } from '@/types/content';
+import { ContentTag, TAG_TYPES, TagType } from '@gabby/types/content';
 
 /**
  * --- 1. スキーマ定義 ---

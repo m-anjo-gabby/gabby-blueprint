@@ -14,7 +14,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertPhrase } from '@/actions/adminWordAction';
 import { PlusCircle, CheckCircle2, Edit, MessageSquare, XCircle } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { PhraseRecord, WORD_STATUS, WordStatus, PHRASE_TYPES, PhraseType } from '@/types/word';
+import { PhraseRecord, WORD_STATUS, WordStatus, PHRASE_TYPES, PhraseType } from '@gabby/types/word';
 
 /**
  * フレーズバリデーションスキーマ

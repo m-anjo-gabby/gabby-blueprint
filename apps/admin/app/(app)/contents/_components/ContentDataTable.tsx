@@ -37,7 +37,7 @@ import {
   Pencil
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Content, CONTENT_TYPES, CONTENT_SCOPES } from "@/types/content";
+import { Content, CONTENT_TYPES, CONTENT_SCOPES } from "@gabby/types/content";
 import { ContentFormDialog } from "./ContentFormDialog";
 import Link from "next/link";
 import { ContentTagDialog } from "./ContentTagDialog";
@@ -214,7 +214,7 @@ export function ContentDataTable({
             className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
             title="エディタを起動"
           >
-            <Link href={`/admin/contents/${row.original.content_id}`}>
+            <Link href={`/contents/${row.original.content_id}`}>
               <ChevronRight size={18} />
             </Link>
           </Button>

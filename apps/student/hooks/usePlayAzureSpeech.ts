@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
-import { buildSSML } from "@/utils/ssml";
+import { buildSSML } from "@gabby/lib/azure/ssml";
 
 export interface TTSParameters {
   voice: string;
