@@ -6,10 +6,10 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { LoginButton } from './_components/LoginButton';
-import { useConfirm } from '@/hooks/useConfirm';
-import ConfirmContainer from '@/components/common/ConfirmContainer';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { useRouter } from 'next/navigation';
-import { PasswordInput } from '@/components/common/PasswordInput';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);

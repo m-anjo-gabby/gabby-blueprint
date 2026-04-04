@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { PasswordInput } from '@/components/common/PasswordInput';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
 import { Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { createBrowserClient } from '@gabby/lib/supabase/client';

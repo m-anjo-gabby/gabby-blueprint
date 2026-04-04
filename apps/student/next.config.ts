@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
   // experimental の中から外に出します
   reactCompiler: true, 
   
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ndgbknqkgbgguzbbqgwu.supabase.co', // SupabaseのプロジェクトIDに書き換え
+      },
+    ],
+  },
+
   experimental: {
     // 空にするか、他の設定があれば残す
   },

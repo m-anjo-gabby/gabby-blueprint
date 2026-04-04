@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { Upload, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw } from 'lucide-react';
+import { Upload, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw, Download } from 'lucide-react';
 import { RawCsvRow, BulkUser, BulkImportResponse } from '@gabby/types/user';
 import { bulkCreateUsers } from '@/actions/adminUserAction';
 import { getActiveContractsByClient, bulkAssignLicenses } from '@/actions/adminContractAction';
@@ -252,13 +252,43 @@ export function UserBulkImportDialog() {
       </DialogTrigger>
 
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:outline-none">
-        <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
-          <DialogTitle className="text-xl font-black flex items-center gap-2">
-            {hasCompleted ? <><CheckCircle2 className="text-emerald-400" size={20} /> インポート結果レポート</> : <><UserPlus className="text-indigo-400" size={20} /> 新規ユーザーの一括登録</>}
-          </DialogTitle>
-          <p className="text-xs text-slate-400 font-medium">
-            {hasCompleted ? "ユーザー作成とライセンス割当の結果を確認してください。" : `CSV/TSVファイルをアップロードしてください（最大${MAX_BULK_COUNT}件）`}
-          </p>
+        <DialogHeader className="p-8 pr-14 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <DialogTitle className="text-2xl font-black flex items-center gap-2">
+                {hasCompleted ? (
+                  <>
+                    <CheckCircle2 className="text-emerald-400" size={24} /> 
+                    インポート結果レポート
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="text-indigo-400" size={24} /> 
+                    新規ユーザーの一括登録
+                  </>
+                )}
+              </DialogTitle>
+              <p className="text-xs text-slate-400 font-medium">
+                {hasCompleted 
+                  ? "ユーザー作成とライセンス割当の結果を確認してください。" 
+                  : `CSVファイルをアップロードしてください（最大${MAX_BULK_COUNT}件）`
+                }
+              </p>
+            </div>
+
+            {/* インポート完了前のみダウンロードボタンを表示 */}
+            {!hasCompleted && (
+              <Button 
+                variant="outline" 
+                asChild 
+                className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white h-9 text-[11px] font-bold shrink-0"
+              >
+                <a href="/templates/balk_user_sample.csv" download>
+                  <Download size={14} className="mr-2 text-indigo-400" /> サンプルCSVをDL
+                </a>
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col gap-6 p-8 bg-white">
