@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/server';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
-import ToastContainer from '@/components/common/ToastContainer';
-import ConfirmContainer from '@/components/common/ConfirmContainer';
+import ToastContainer from '@gabby/lib/components/common/ToastContainer';
+import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 
 /**
  * 生徒用 統合アプリケーションレイアウト
@@ -14,7 +14,7 @@ export default async function StudentAppLayout({
   children: React.ReactNode;
 }) {
   // --- 旧 AppLogicLayout のロジック ---
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

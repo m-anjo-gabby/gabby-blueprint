@@ -1,5 +1,5 @@
 // src/app/(app)/student/(main)/layout.tsx
-import Header from '@/components/student/Header';
+import Header from '@/components/common/Header';
 
 export default function MainLayout({
   children,

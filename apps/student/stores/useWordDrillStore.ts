@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { TrainingWord } from '@/types/word';
-import { AnalysisResult, FeedbackConfig } from '@/types/wordDrill';
+import { TrainingWord } from '@gabby/types/word';
+import { AnalysisResult, FeedbackConfig } from '@gabby/types/wordDrill';
 
 interface WordDrillState {
   // --- Data States ---

@@ -1,13 +1,13 @@
 "use server";
 
-import { createClient } from "@/lib/server";
-import { FavoritePhraseItem, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@/types/word";
+import { createServerClient } from "@gabby/lib/supabase/server";
+import { FavoritePhraseItem, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@gabby/types/word";
 
 /**
  * 指定されたコンテンツIDに紐付く単語とフレーズを取得
  */
 export async function getWordData(contentId: string): Promise<TrainingWordResponse> {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   const { data, error } = await supabase
@@ -59,7 +59,7 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
  * お気に入りの状態を切り替える (Toggle)
  */
 export async function toggleFavorite(phraseId: string, isFavorite: boolean) {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -82,7 +82,7 @@ export async function toggleFavorite(phraseId: string, isFavorite: boolean) {
  * お気に入りの総数を取得
  */
 export async function getFavoriteCount(): Promise<number> {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { count, error } = await supabase
     .from('com_t_favorite_phrase')
     .select('*', { count: 'exact', head: true });
@@ -99,7 +99,7 @@ export async function getFavoriteCount(): Promise<number> {
  * お気に入りのフレーズ一覧を取得
  */
 export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];

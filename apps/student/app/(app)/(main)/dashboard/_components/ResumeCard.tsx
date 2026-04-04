@@ -1,13 +1,12 @@
 'use client';
 
 import { History, ArrowRight, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { getContentTypeConfig } from "@/utils/content";
+import { getContentTypeConfig } from "@gabby/lib/content/ui";
 import { cn } from "@/lib/utils";
-import { ResumeContentResponse } from "@/types/training";
+import { ResumeContentResponse } from "@gabby/types/training";
 import { useRouter } from "next/navigation";
-import { getResumePath } from "@/utils/navigation";
+import { getResumePath } from "@gabby/lib/navigation/student-path";
 
 interface ResumeCardProps {
   data: ResumeContentResponse;

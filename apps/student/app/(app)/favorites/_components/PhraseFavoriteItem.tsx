@@ -1,12 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Volume2, Trash2, BookOpen, Headphones } from 'lucide-react';
-import { FavoritePhraseItem } from '@/types/word';
-import { useWebSpeech } from '@/hooks/useWebSpeech';
+import { Volume2, Trash2, BookOpen } from 'lucide-react';
+import { FavoritePhraseItem } from '@gabby/types/word';
+import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 interface Props {
   phrase: FavoritePhraseItem;

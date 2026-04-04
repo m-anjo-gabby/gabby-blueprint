@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getAllContent, toggleContentFavorite } from '@/actions/contentAction';
-import { ContentItem } from '@/types/content';
+import { ContentItem } from '@gabby/types/content';
 
 interface ContentState {
   // --- Data States ---

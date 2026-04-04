@@ -9,12 +9,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useContentStore } from '@/stores/useContentStore';
 import { useResumeStore } from '@/stores/useResumeStore';
 import { toggleContentFavorite } from '@/actions/contentAction';
-import { getTrainingPath } from '@/utils/navigation';
-import { useToast } from '@/hooks/useToast';
-import { useConfirm } from '@/hooks/useConfirm';
+import { getTrainingPath } from '@gabby/lib/navigation/student-path';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 
 // Components
-import { ContentCard } from '@/components/student/ContentCard';
+import { ContentCard } from '@/components/common/ContentCard';
 import { DashboardHero } from './_components/DashboardHero';
 import { NavigationGrid } from './_components/NavigationGrid';
 import { ResumeCard } from './_components/ResumeCard';

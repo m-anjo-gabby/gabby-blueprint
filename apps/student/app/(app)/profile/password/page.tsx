@@ -4,9 +4,9 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { updatePassword } from '@/actions/authAction';
-import { useToast } from '@/hooks/useToast';
-import { PasswordInput } from '@/components/common/PasswordInput';
-import { SubmitButton } from '@/components/common/SubmitButton';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 

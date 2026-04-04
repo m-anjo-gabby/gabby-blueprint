@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getFavoritePhrases } from '@/actions/wordAction';
-import { FavoritePhraseItem } from '@/types/word';
+import { FavoritePhraseItem } from '@gabby/types/word';
 
 interface PhraseState {
   // --- Data States ---

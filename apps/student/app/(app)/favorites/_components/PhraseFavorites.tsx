@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search, Star } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useToast } from '@/hooks/useToast';
-import { useConfirm } from '@/hooks/useConfirm';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { toggleFavorite } from '@/actions/wordAction';
 import { usePhraseStore } from '@/stores/usePhraseStore'; // 分離したPhrase専用ストア
 import { PhraseFavoriteItem } from './PhraseFavoriteItem';

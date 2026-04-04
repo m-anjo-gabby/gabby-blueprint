@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib//server";
-import { ContentItem } from "@/types/content";
+import { createServerClient } from "@gabby/lib/supabase/server";
+import { ContentItem } from "@gabby/types/content";
 
 export interface ClientInfo {
   client_name: string;
@@ -14,7 +14,7 @@ export interface ClientInfo {
  * 「お気に入り」と「おすすめ」に特化したデータを返します
  */
 export async function getDashboardContentData(): Promise<ContentItem[]> {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   
   const { data, error } = await supabase
     .from('com_m_contents')
@@ -45,7 +45,7 @@ export async function getDashboardContentData(): Promise<ContentItem[]> {
  * RLSにより、所属クライアントに許可されたもののみが自動的に返ります
  */
 export async function getMyClientInfo(): Promise<ClientInfo | null> {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   
   const { data, error } = await supabase
     .from('com_m_client')

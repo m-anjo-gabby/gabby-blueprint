@@ -6,13 +6,13 @@ import { Search, Inbox } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Components
-import { ContentCard } from '@/components/student/ContentCard';
-import { ContentItem, CONTENT_TYPES } from '@/types/content'; 
+import { ContentCard } from '@/components/common/ContentCard';
+import { CONTENT_TYPES } from '@gabby/types/content'; 
 import { toggleContentFavorite } from '@/actions/contentAction';
-import { useToast } from '@/hooks/useToast';
-import { useConfirm } from '@/hooks/useConfirm';
-import { useContentStore } from '@/stores/useContentStore'; // 新しいストア
-import { getTrainingPath } from '@/utils/navigation';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useContentStore } from '@/stores/useContentStore';
+import { getTrainingPath } from '@gabby/lib/navigation/student-path';
 
 // shadcn components
 import { Input } from "@/components/ui/input";

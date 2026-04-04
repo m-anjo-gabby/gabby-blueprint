@@ -6,7 +6,7 @@ import { Search, X, BookOpen, ChevronLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Components
-import { ContentCard } from '@/components/student/ContentCard';
+import { ContentCard } from '@/components/common/ContentCard';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,10 +14,10 @@ import { Button } from '@/components/ui/button';
 
 // Actions & Hooks
 import { toggleContentFavorite } from '@/actions/contentAction';
-import { LIBRALY_TABS } from '@/types/content';
-import { useToast } from '@/hooks/useToast';
-import { useContentStore } from '@/stores/useContentStore'; // 新設したストア
-import { getTrainingPath } from '@/utils/navigation';
+import { LIBRALY_TABS } from '@gabby/types/content';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { useContentStore } from '@/stores/useContentStore';
+import { getTrainingPath } from '@gabby/lib/navigation/student-path';
 
 export default function LibraryPage() {
   const router = useRouter();

@@ -1,12 +1,12 @@
 "use server";
 
-import { createClient } from "@/lib/server";
-import { ContentItem, FavoriteContentItem } from "@/types/content";
-import { ResumeContentResponse, ResumeMetadata } from "@/types/training";
+import { createServerClient } from "@gabby/lib/supabase/server";
+import { ContentItem, FavoriteContentItem } from "@gabby/types/content";
+import { ResumeContentResponse, ResumeMetadata } from "@gabby/types/training";
 
 // 全コンテンツを取得
 export async function getAllContent(): Promise<ContentItem[]> {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   
   // RLSにより、ログインユーザーがアクセス権を持つレコードのみが自動的に返る
   const { data, error } = await supabase
@@ -39,7 +39,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
 
 // お気に入りコンテンツを取得
 export async function getFavoriteContentes(): Promise<FavoriteContentItem[]> {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
@@ -71,7 +71,7 @@ export async function getFavoriteContentes(): Promise<FavoriteContentItem[]> {
  * コンテンツ（教材）のお気に入り状態を切り替え
  */
 export async function toggleContentFavorite(contentId: string, isFavorite: boolean) {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
@@ -98,7 +98,7 @@ export async function saveResumeContent<T extends ResumeMetadata>(
   itemId: string, 
   metadata: T
 ) {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -125,7 +125,7 @@ export async function saveResumeContent<T extends ResumeMetadata>(
  * 再開地点を削除する (栞を抜く)
  */
 export async function clearResumeContent() {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -146,7 +146,7 @@ export async function clearResumeContent() {
  * metadata.type によって型ガードが可能です。
  */
 export async function getLatestResumeContent(): Promise<ResumeContentResponse | null> {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 

@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { PasswordInput } from '@/components/common/PasswordInput';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
 import { Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { createClient } from '@/lib/client';
+import { createBrowserClient } from '@gabby/lib/supabase/client';
 
 export default function UpdatePasswordPage() {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -13,7 +13,7 @@ export default function UpdatePasswordPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = createBrowserClient();
 
   useEffect(() => {
     // 招待/リセットのハッシュトークンを確実に処理するための監視

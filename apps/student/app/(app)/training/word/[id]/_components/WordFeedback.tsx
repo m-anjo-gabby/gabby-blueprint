@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { X, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AnalysisResult, FeedbackConfig } from '@/types/wordDrill';
+import { AnalysisResult, FeedbackConfig } from '@gabby/types/wordDrill';
 import { cn } from "@/lib/utils";
 
 interface WordFeedbackProps {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getLatestResumeContent, clearResumeContent } from '@/actions/contentAction';
-import { ResumeContentResponse } from '@/types/training';
+import { ResumeContentResponse } from '@gabby/types/training';
 
 interface ResumeState {
   resumeData: ResumeContentResponse | null; 

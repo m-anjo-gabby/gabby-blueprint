@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, use, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useWebSpeech } from '@/hooks/useWebSpeech';
-import { useToast } from '@/hooks/useToast';
-import { useConfirm } from '@/hooks/useConfirm';
+import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getWordData, toggleFavorite } from '@/actions/wordAction';
 import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
 import { useResumeStore } from '@/stores/useResumeStore';
 import { usePhraseStore } from '@/stores/usePhraseStore';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
-import { WordResumeMetadata } from '@/types/training';
-import { FeedbackConfig } from '@/types/wordDrill';
+import { WordResumeMetadata } from '@gabby/types/training';
+import { FeedbackConfig } from '@gabby/types/wordDrill';
 
 // Components
 import { WordHeader } from './_components/WordHeader';
@@ -21,8 +21,8 @@ import { WordFeedback } from './_components/WordFeedback';
 import { WordIndex } from './_components/WordIndex';
 import { BookOpen, ArrowLeft, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { usePlayAudioSpeech } from '@/hooks/usePlayAudioSpeech';
-import { PhraseItem } from '@/types/word';
+import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import { PhraseItem } from '@gabby/types/word';
 import { cn } from "@/lib/utils";
 
 /**

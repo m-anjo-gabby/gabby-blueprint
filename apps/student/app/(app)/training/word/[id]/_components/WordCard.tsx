@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { PHRASE_TYPES, PhraseType } from '@/types/word';
+import { PHRASE_TYPES, PhraseType } from '@gabby/types/word';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
 interface WordCardProps {

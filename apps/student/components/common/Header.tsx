@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
-import { useUserStore } from '@/stores/useUserStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { signOut } from '@/actions/authAction';
 
 export default function Header() {
