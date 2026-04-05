@@ -31,3 +31,22 @@ yarn-error.log*
 
 # Vercel
 .vercel
+
+# Turborepo
+.turbo/
+
+# Playwright/Cypress などのテスト結果（将来用）
+test-results/
+playwright-report/
+blob-report/
+
+# TypeScript 
+# ※既に *.tsbuildinfo はありますが、念のため
+.tsbuildinfo
+
+# ログファイル
+*.log
+
+# 各パッケージ固有のキャッシュ
+.eslintcache
+.stylelintcache
