@@ -18,7 +18,7 @@ const getTrainingSegment = (type: number): string => {
  */
 export const getTrainingPath = (content: ContentItem): string => {
   const segment = getTrainingSegment(content.content_type);
-  return `/student/training/${segment}/${content.content_id}`;
+  return `/training/${segment}/${content.content_id}`;
 };
 
 /**

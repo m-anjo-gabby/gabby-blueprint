@@ -61,7 +61,7 @@ export default function PasswordChangePage() {
     } else {
       // 成功時の処理
       showToast('パスワードを正常に更新しました', 'success');
-      router.push('/student/dashboard');
+      router.push('/dashboard');
     }
   };
 
@@ -125,7 +125,7 @@ export default function PasswordChangePage() {
           <SubmitButton label="パスワードを更新" loadingLabel="更新中..." />
 
           <Link 
-            href="/student/dashboard" 
+            href="/dashboard" 
             className="text-xs text-slate-500 hover:text-indigo-600 flex items-center justify-center gap-1 transition-colors"
           >
             <ArrowLeft size={14} /> ダッシュボードに戻る

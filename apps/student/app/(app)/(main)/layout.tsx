@@ -1,4 +1,4 @@
-// src/app/(app)/student/(main)/layout.tsx
+// apps/student/app/(app)/(main)/layout.tsx
 import Header from '@/components/common/Header';
 
 export default function MainLayout({

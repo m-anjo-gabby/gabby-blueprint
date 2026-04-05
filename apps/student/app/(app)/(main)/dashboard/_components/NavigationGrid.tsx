@@ -9,7 +9,7 @@ export const NavigationGrid = () => {
     {
       label: 'Library',
       title: '教材を選択する',
-      path: '/student/library',
+      path: '/library',
       icon: BookOpen,
       color: 'indigo',
       bgClass: 'bg-indigo-300 hover:bg-linear-to-br hover:from-blue-600 hover:via-slate-100 hover:to-indigo-700',
@@ -19,7 +19,7 @@ export const NavigationGrid = () => {
     {
       label: 'Favorites',
       title: 'お気に入りを復習する',
-      path: '/student/favorites',
+      path: '/favorites',
       icon: Star,
       color: 'amber',
       bgClass: 'bg-amber-300 hover:bg-linear-to-br hover:from-amber-400 hover:via-slate-100 hover:to-orange-500',

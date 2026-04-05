@@ -211,7 +211,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       await saveResumeContent(sectionId, currentPhrase.phrase_id, metadata);
       await useResumeStore.getState().fetchResume(true);
       showToast("ブックマークしました", "success");
-      router.push('/student/dashboard');
+      router.push('/dashboard');
     } catch (e) {
       showToast("保存に失敗しました", "error");
     }
@@ -333,7 +333,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         
         <div className="space-y-3">
           <button
-            onClick={() => router.push('/student/dashboard')}
+            onClick={() => router.push('/dashboard')}
             className="w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-indigo-100"
           >
             Go to Dashboard

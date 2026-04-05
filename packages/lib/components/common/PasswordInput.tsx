@@ -1,4 +1,4 @@
-// src/components/common/PasswordInput.tsx
+// packages/lib/components/common/PasswordInput.tsx
 'use client';
 
 import { Eye, EyeOff, Lock } from 'lucide-react';

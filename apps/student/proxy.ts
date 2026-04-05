@@ -5,38 +5,50 @@ export async function proxy(req: NextRequest) {
   const { res, user } = await createSupabaseProxy(req);
   const { pathname } = req.nextUrl;
 
-  // 環境変数からURLを取得
+  // 環境変数から他方アプリのURLを取得
   const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL!;
-  const studentUrl = process.env.NEXT_PUBLIC_STUDENT_URL!;
-
+  
   const loginPath = '/login';
-  const isPublicRoute = pathname === loginPath || 
-                        pathname.startsWith('/auth') || 
-                        ['/forgot-password', '/update-password'].includes(pathname);
+  const dashboardPath = '/dashboard';
+  
+  // 公開ルートの判定
+  const isPublicRoute = 
+    pathname === loginPath || 
+    pathname.startsWith('/auth') || 
+    ['/forgot-password', '/update-password', '/favicon.ico'].includes(pathname);
 
-  // A. 未ログインの場合
-  if (!user && !isPublicRoute) {
-    return NextResponse.redirect(new URL(loginPath, req.url));
+  // --- A. 未ログインの場合 ---
+  if (!user) {
+    if (!isPublicRoute) {
+      // ログインしていない状態で保護されたページへアクセスした場合はログインへ
+      return NextResponse.redirect(new URL(loginPath, req.url));
+    }
+    return res;
   }
 
-  // B. ログイン済みの場合
-  if (user) {
-    const role = user.app_metadata?.role as string | undefined;
+  // --- B. ログイン済みの場合 ---
+  // メタデータに role がない場合は 'student' (生徒) としてフォールバック
+  const role = (user.app_metadata?.role as string | undefined) || 'student';
 
-    // ログイン済みでルート(/)やログインページにアクセスした場合
-    if (pathname === '/' || pathname === loginPath) {
-      // ロールに応じて適切なアプリのダッシュボードへ振り分け
-      const dest = role === 'student' ? `${studentUrl}/dashboard` : `${adminUrl}/dashboard`;
-      return NextResponse.redirect(new URL(dest));
-    }
-
-    // 認可ガード: StudentアプリなのにStudentロール以外（Admin等）がアクセスした場合
-    if (role !== 'student' && !isPublicRoute) {
-      // Admin用ダッシュボードへ強制リダイレクト
-      return NextResponse.redirect(new URL(`${adminUrl}/dashboard`));
+  // 1. ログイン済みでルート(/)やログインページにアクセスした場合
+  if (pathname === '/' || pathname === loginPath) {
+    if (role === 'admin') {
+      // 管理者がStudentアプリに来た場合は、Adminアプリのダッシュボードへ強制移動
+      return NextResponse.redirect(new URL(`${adminUrl}${dashboardPath}`));
+    } else {
+      // 生徒（またはロールなし）の場合は自身のダッシュボードへ
+      // 絶対URL(studentUrl)を使わず、現在のドメイン(req.url)内でのリダイレクトにする
+      return NextResponse.redirect(new URL(dashboardPath, req.url));
     }
   }
 
+  // 2. 認可ガード: Studentアプリ(3000番)なのにAdminロールがアクセスしてきた場合
+  if (role === 'admin' && !isPublicRoute) {
+    // AdminはAdminアプリ(3001番)へリダイレクト
+    return NextResponse.redirect(new URL(`${adminUrl}${dashboardPath}`));
+  }
+
+  // 3. 生徒ロール（またはロールなし）が /dashboard などにアクセスしている場合はそのまま通す
   return res;
 }
 

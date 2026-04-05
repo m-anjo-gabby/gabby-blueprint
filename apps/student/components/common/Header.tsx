@@ -69,7 +69,7 @@ export default function Header() {
             {/* ドロップダウンメニュー内容 */}
             <DropdownMenuContent className="w-48 p-2 rounded-2xl shadow-xl border-slate-100" align="end">
               <DropdownMenuItem asChild>
-                <Link href="/student/profile/password" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
+                <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
                   <Lock size={14} /> パスワード変更
                 </Link>
               </DropdownMenuItem>

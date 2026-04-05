@@ -1,4 +1,4 @@
-// src/app/(app)/student/training/layout.tsx
+// apps/student/app/(app)/(main)/training/layout.tsx
 export default function TrainingLayout({
   children,
 }: {

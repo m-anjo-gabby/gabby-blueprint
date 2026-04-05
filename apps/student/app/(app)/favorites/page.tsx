@@ -1,4 +1,4 @@
-// src/app/(app)/student/favorites/page.tsx
+// apps/student/app/(app)/(main)/favorites/page.tsx
 'use client';
 
 import { useState } from 'react';

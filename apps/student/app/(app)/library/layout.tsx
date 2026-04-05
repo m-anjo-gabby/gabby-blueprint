@@ -1,4 +1,4 @@
-// src/app/(app)/student/(main)/library/layout.tsx
+// apps/student/app/(app)/(main)/library/layout.tsx
 
 export default function PanelLockLayout({
   children,
