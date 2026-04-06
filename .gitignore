@@ -50,3 +50,4 @@ blob-report/
 # 各パッケージ固有のキャッシュ
 .eslintcache
 .stylelintcache
+.vercel
