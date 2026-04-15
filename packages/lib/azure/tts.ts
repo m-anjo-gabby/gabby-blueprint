@@ -8,8 +8,8 @@ import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 export async function generateAzureAudioBuffer(ssml: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-      process.env.NEXT_PUBLIC_AZURE_SPEECH_SERVICE_KEY!,
-      process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION || "japaneast"
+      process.env.AZURE_SPEECH_SERVICE_KEY!,
+      process.env.AZURE_SPEECH_REGION || "japaneast"
     );
 
     // 低ビットレートMP3を指定して容量削減

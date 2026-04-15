@@ -33,7 +33,7 @@ export function useAzureSpeechTest() {
     }
       
     const config = SpeechSDK.SpeechConfig.fromSubscription(
-      process.env.NEXT_PUBLIC_AZURE_SPEECH_SERVICE_KEY!, "japaneast"
+      process.env.AZURE_SPEECH_SERVICE_KEY!, "japaneast"
     );
     
     // 毎回新しいインスタンスを生成
@@ -92,7 +92,7 @@ export function useAzureSpeechTest() {
     
     // Azure Speech設定
     const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-      process.env.NEXT_PUBLIC_AZURE_SPEECH_SERVICE_KEY!, "japaneast"
+      process.env.AZURE_SPEECH_SERVICE_KEY!, "japaneast"
     );
     speechConfig.speechRecognitionLanguage = "en-US";
     const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
