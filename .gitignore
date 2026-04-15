@@ -51,3 +51,9 @@ blob-report/
 .eslintcache
 .stylelintcache
 .vercel
+
+# --- Database Sync & Security ---
+# 本番データを含む一時フォルダを丸ごと無視
+temp_data/
+# バックアップやダンプのログ
+*.dump
