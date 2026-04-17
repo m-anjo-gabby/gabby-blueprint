@@ -21,7 +21,7 @@ export default function Page() {
     { title: "顧客管理", count: "13", desc: "法人・団体アカウントの管理", color: "blue" },
     { title: "契約管理", count: "52", desc: "ライセンス発行・有効期限確認", color: "emerald" },
     { title: "ユーザ管理", count: "1,204", desc: "受講生・講師の権限管理", color: "orange" },
-    { title: "教材管理", count: "85", desc: "カリキュラム・コンテンツ更新", color: "purple" },
+    { title: "教材管理", count: "92", desc: "カリキュラム・コンテンツ更新", color: "purple" },
   ];
 
   return (
