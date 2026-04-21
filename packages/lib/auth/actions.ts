@@ -14,8 +14,12 @@ export type AuthResponse = {
 /**
  * 1. ログイン（サインイン）処理
  * @param formData - email, password を含むフォームデータ
+ * @param options.checkLicense - ライセンス検証を強制する場合に true
  */
-export async function signInCore(formData: FormData): Promise<AuthResponse> {
+export async function signInCore(
+  formData: FormData, 
+  options: { checkLicense?: boolean } = { checkLicense: false }
+): Promise<AuthResponse> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
@@ -34,6 +38,16 @@ export async function signInCore(formData: FormData): Promise<AuthResponse> {
   if (error || !data.user) {
     console.error('Auth Error (signIn):', error?.message);
     return { error: '認証情報が正しくありません。' };
+  }
+
+  // ライセンスチェックが必要な場合のガード
+  if (options.checkLicense) {
+    const isLicensed = await checkLicense(data.user.id);
+    if (!isLicensed) {
+      // ライセンスがない場合は即座にサインアウトさせる
+      await supabase.auth.signOut();
+      return { error: '有効なライセンスが見つかりません。管理者にお問い合わせください。' };
+    }
   }
 
   return { user: data.user, success: true };
@@ -143,4 +157,24 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
   }
 
   return { success: true };
+}
+
+/**
+ * ユーザーの有効なライセンスを確認する
+ * @param userId 
+ */
+export async function checkLicense(userId: string): Promise<boolean> {
+  const supabase = await createServerClient();
+  
+  // SQL内で NOW() を使用するため、クライアント側の Date オブジェクト生成のズレを考慮する必要がない
+  const { data, error } = await supabase
+    .from('com_t_user_license')
+    .select('license_id')
+    .eq('user_id', userId)
+    .eq('status', 1)
+    .lte('start_date', 'now()') // DB側の現在時刻(UTC)と比較
+    .gte('end_date', 'now()')   // DB側の現在時刻(UTC)と比較
+    .maybeSingle();
+
+  return !!data && !error;
 }

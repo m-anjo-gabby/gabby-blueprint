@@ -14,7 +14,9 @@ import { redirect } from 'next/navigation';
  * 誤って管理者がここからログインした場合は管理画面へ転送します
  */
 export async function signIn(formData: FormData) {
-  const { user, error } = await signInCore(formData);
+
+  // ライセンスチェックを有効化して呼び出す
+  const { user, error } = await signInCore(formData, { checkLicense: true });
   
   if (error || !user) return { error };
 

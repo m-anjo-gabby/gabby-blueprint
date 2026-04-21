@@ -72,3 +72,35 @@ $$ LANGUAGE sql STABLE;
 
 -- 権限付与（認証済みユーザーがこの関数を実行できるようにする）
 GRANT EXECUTE ON FUNCTION public.get_jwt_client_id() TO authenticated;
+
+---------------------------------------------
+-- 有効ライセンス情報のメタデータ同期
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.sync_user_license_metadata()
+RETURNS TRIGGER AS $$
+DECLARE
+    is_licensed boolean;
+BEGIN
+    -- 現在有効なライセンスが存在するかチェック
+    SELECT EXISTS (
+        SELECT 1 FROM public.com_t_user_license
+        WHERE user_id = COALESCE(NEW.user_id, OLD.user_id)
+          AND status = 1
+          AND start_date <= NOW()
+          AND end_date >= NOW()
+    ) INTO is_licensed;
+
+    -- auth.users の raw_app_meta_data を更新
+    UPDATE auth.users
+    SET raw_app_meta_data = 
+        COALESCE(raw_app_meta_data, '{}'::jsonb) || 
+        jsonb_build_object('is_licensed', is_licensed)
+    WHERE id = COALESCE(NEW.user_id, OLD.user_id);
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_license_change
+AFTER INSERT OR UPDATE OR DELETE ON public.com_t_user_license
+FOR EACH ROW EXECUTE PROCEDURE public.sync_user_license_metadata();
