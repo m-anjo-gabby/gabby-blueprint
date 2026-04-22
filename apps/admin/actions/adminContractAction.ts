@@ -42,9 +42,10 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
 }
 
 /**
- * 特定顧客の「現在有効かつ枠がある」契約一覧を取得（ユーザー登録フロー用）
+ * 特定顧客の「現在有効かつ枠がある」契約一覧を取得
+ * @param userId 新規登録時は未指定でOK（その場合、除外フィルタをスキップ）
  */
-export async function getActiveContractsByClient(clientId: string, userId: string) {
+export async function getActiveContractsByClient(clientId: string, userId?: string) {
   const supabase = createAdminClient();
   
   // 1. 有効かつ空きがある契約を一括取得
@@ -57,23 +58,33 @@ export async function getActiveContractsByClient(clientId: string, userId: strin
     .gt('remaining_licenses', 0)
     .order('plan_name', { ascending: true });
 
-  if (error) {
-    console.error("Fetch Active Contracts Error:", error.message);
+  if (error || !contracts) {
+    console.error("Fetch Active Contracts Error:", error?.message);
     return [];
   }
 
-  // 2. このユーザーが既に持っている契約IDを取得
-  const { data: userLicenses } = await supabase
-    .from('com_t_user_license')
-    .select('contract_id')
-    .eq('user_id', userId);
+  // 2. userIdがある場合のみ除外フィルタを適用
+  if (userId) {
+    const { data: userLicenses } = await supabase
+      .from('com_t_user_license')
+      .select('contract_id')
+      .eq('user_id', userId);
 
-  const existingIds = new Set(userLicenses?.map(l => l.contract_id));
+    const existingIds = new Set(userLicenses?.map(l => l.contract_id));
+    
+    // 3. メモリ上でフィルタリング
+    const available = contracts.filter(c => !existingIds.has(c.contract_id));
+    
+    return formatContracts(available);
+  }
 
-  // 3. メモリ上で除外フィルタリング
-  const available = contracts.filter(c => !existingIds.has(c.contract_id));
+  // userIdがない（新規登録）場合は全件そのまま返す
+  return formatContracts(contracts);
+}
 
-  return available.map(contract => ({
+// フォーマット処理を共通関数に切り出すとスッキリします
+function formatContracts(contracts: any[]) {
+  return contracts.map(contract => ({
     ...contract,
     start_date: contract.start_date ? formatToJstDate(contract.start_date) : '',
     end_date: contract.end_date ? formatToJstDate(contract.end_date) : '',
