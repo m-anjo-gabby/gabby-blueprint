@@ -11,25 +11,38 @@ SELECT
   c.client_name,
   au.email,
   au.last_sign_in_at,
+  au.confirmed_at,
   -- ライセンス情報の集約
   l.contract_id,
   l.license_id,
   l.status as license_status,
   l.start_date as license_start_date,
   l.end_date as license_end_date,
-  con.plan_name
+  con.plan_name,
+  -- フロントエンド判定用フラグ
+  CASE 
+    WHEN l.license_id IS NULL THEN 'none'
+    WHEN l.start_date > NOW() THEN 'future'
+    WHEN l.end_date < NOW() THEN 'expired'
+    ELSE 'active'
+  END as license_state
 FROM 
   public.com_m_user u
   INNER JOIN auth.users au ON u.id = au.id
   LEFT JOIN public.com_m_client c ON u.client_id = c.client_id
-  -- 最新の有効なライセンスを1件だけ紐付ける（または直近のもの）
   LEFT JOIN LATERAL (
     SELECT * FROM public.com_t_user_license 
     WHERE user_id = u.id 
-    ORDER BY status ASC, end_date DESC 
+    ORDER BY 
+      -- 有効(status=1)な現在進行中のものを最優先
+      (status = 1 AND NOW() BETWEEN start_date AND end_date) DESC,
+      -- 次に未来の有効なもの
+      (status = 1 AND start_date > NOW()) DESC,
+      -- 最後は直近の終了済み
+      end_date DESC
     LIMIT 1
   ) l ON true
-  LEFT JOIN public.com_m_contract con ON l.contract_id = con.contract_id;
+  LEFT JOIN public.com_m_contract con ON l.contract_id = con.contract_id
 ;
 
 COMMENT ON VIEW public.vw_user_list IS 'ユーザー管理用一覧ビュー';
@@ -71,10 +84,10 @@ CREATE OR REPLACE VIEW public.vw_contract_details AS
 SELECT 
     c.*,
     cl.client_name,
-    COALESCE(stats.current_assigned_count, 0) AS current_assigned_count,
-    COALESCE(stats.current_active_count, 0) AS current_active_count,
-    -- 残り枠数（バリデーション用）
-    c.max_licenses - COALESCE(stats.current_assigned_count, 0) AS remaining_licenses
+    COALESCE(stats.total_assigned_count, 0) AS current_assigned_count,
+    -- 終了済み契約は「終了時点の有効数」、稼働中は「現在の有効数」を返す
+    COALESCE(stats.active_snapshot_count, 0) AS current_active_count,
+    c.max_licenses - COALESCE(stats.total_assigned_count, 0) AS remaining_licenses
 FROM 
     public.com_m_contract c
 JOIN 
@@ -82,8 +95,9 @@ JOIN
 LEFT JOIN (
     SELECT 
         contract_id,
-        COUNT(license_id) AS current_assigned_count,
-        COUNT(CASE WHEN status = 1 AND NOW() BETWEEN start_date AND end_date THEN 1 END) AS current_active_count
+        COUNT(license_id) AS total_assigned_count,
+        -- ステータス1のものをカウント。過去データもそのままの数値で表示される
+        COUNT(CASE WHEN status = 1 THEN 1 END) AS active_snapshot_count
     FROM 
         public.com_t_user_license
     GROUP BY 

@@ -1,4 +1,4 @@
-// src/actions/adminContractAction.ts
+// apps/admin/actions/adminContractAction.ts
 'use server';
 
 import { createAdminClient } from "@gabby/lib/supabase/admin";
@@ -44,17 +44,17 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
 /**
  * 特定顧客の「現在有効かつ枠がある」契約一覧を取得（ユーザー登録フロー用）
  */
-export async function getActiveContractsByClient(clientId: string) {
+export async function getActiveContractsByClient(clientId: string, userId: string) {
   const supabase = createAdminClient();
   
+  // 1. 有効かつ空きがある契約を一括取得
   const { data: contracts, error } = await supabase
     .from('vw_contract_details')
     .select('*')
-    .eq('client_id', clientId)      // 顧客絞り込み
-    .eq('status', 1)               // 契約自体が有効
-    .lte('start_date', new Date().toISOString()) // 開始済み
-    .gte('end_date', new Date().toISOString())   // 未終了
-    .gt('remaining_licenses', 0)   // ライセンス残数あり
+    .eq('client_id', clientId)
+    .eq('status', 1)
+    .gte('end_date', new Date().toISOString())
+    .gt('remaining_licenses', 0)
     .order('plan_name', { ascending: true });
 
   if (error) {
@@ -62,8 +62,18 @@ export async function getActiveContractsByClient(clientId: string) {
     return [];
   }
 
-  // 日付を JST の YYYY-MM-DD 形式に変換
-  return contracts.map(contract => ({
+  // 2. このユーザーが既に持っている契約IDを取得
+  const { data: userLicenses } = await supabase
+    .from('com_t_user_license')
+    .select('contract_id')
+    .eq('user_id', userId);
+
+  const existingIds = new Set(userLicenses?.map(l => l.contract_id));
+
+  // 3. メモリ上で除外フィルタリング
+  const available = contracts.filter(c => !existingIds.has(c.contract_id));
+
+  return available.map(contract => ({
     ...contract,
     start_date: contract.start_date ? formatToJstDate(contract.start_date) : '',
     end_date: contract.end_date ? formatToJstDate(contract.end_date) : '',
@@ -166,7 +176,8 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
   const { data: allUsers, error: userError } = await supabase
     .from('vw_user_list')
     .select('id, user_name, email, license_id') // license_idがある＝何らかの割当がある
-    .eq('client_id', clientId);
+    .eq('client_id', clientId)
+    .eq('user_type', 1);
 
   if (userError) {
     console.error("View Fetch Error Details:", userError);
@@ -174,12 +185,10 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
   }
 
   // 2. 現在「この特定の契約(contractId)」に紐付いているユーザーを取得
-  // end_dateをNOW()と比較することで有効なものに絞る（UTC同士の比較）
   const { data: currentAssignments, error: assignError } = await supabase
     .from('com_t_user_license')
     .select('user_id')
-    .eq('contract_id', contractId)
-    .gte('end_date', new Date().toISOString());
+    .eq('contract_id', contractId);
 
   if (assignError) throw new Error("割当情報の取得に失敗しました");
 
@@ -336,4 +345,28 @@ export async function bulkAssignLicenses(
     successCount: data.length,
     assignedUserIds: data.map(d => d.user_id)
   };
+}
+
+/**
+ * ユーザーのライセンス履歴・現在・未来すべてを取得
+ */
+export async function getLicenseTimeline(userId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('com_t_user_license')
+    .select(`
+      *,
+      com_m_contract (plan_name)
+    `)
+    .eq('user_id', userId)
+    .order('start_date', { ascending: false }); // 新しい順
+
+  if (error) throw error;
+
+  return data.map(l => ({
+    ...l,
+    start_date: formatToJstDate(l.start_date),
+    end_date: formatToJstDate(l.end_date),
+    plan_name: l.com_m_contract?.plan_name || '不明なプラン'
+  }));
 }

@@ -7,6 +7,7 @@ import { LicenseFormDialog } from "./LicenseFormDialog";
 import { Calendar, Building2, Plus, StickyNote, ShieldCheck, Pencil, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserTypeLabel, UserRecord } from "@gabby/types/user";
+import { isBefore, startOfDay } from "date-fns";
 
 export const columns: ColumnDef<UserRecord>[] = [
   {
@@ -99,58 +100,57 @@ export const columns: ColumnDef<UserRecord>[] = [
     header: "ライセンス",
     cell: ({ row }) => {
       const user = row.original;
-      const { plan_name, license_end_date } = user;
+      const { license_state, plan_name, license_end_date, user_type } = user;
       
-      return (
-        <LicenseFormDialog user={user}>
-          <div className="flex items-center gap-4 cursor-pointer group/lic py-2 w-fit">
-            {/* 左側：プラン情報の塊 */}
-            <div className="flex flex-col gap-0.5 min-w-30">
-              {!plan_name ? (
-                /* 未割当：点線バッジ（厚みあり） */
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="
-                    h-7 px-2 text-[10px] border-dashed border-slate-300 
-                    text-slate-400 hover:text-indigo-600 hover:border-indigo-200 
-                    hover:bg-indigo-50 rounded-lg transition-all group/btn 
-                    bg-transparent font-black shadow-none
-                  "
-                >
-                  <ShieldAlert size={12} className="mr-1.5 opacity-70 group-hover/btn:text-indigo-500" />
-                  <span className="mr-1.5">未設定</span>
-                  <Plus 
-                    size={12} 
-                    strokeWidth={3} 
-                    className="text-indigo-400 group-hover/btn:text-indigo-600 transition-colors" 
-                  />
-                </Button>
-              ) : (
-                /* 割当済み：プラン名 ＋ 期限 */
-                <>
-                  <div className="text-[11px] font-black text-slate-700 leading-tight max-w-35 truncate group-hover/lic:text-indigo-700 transition-colors">
+      // 生徒(user_type === '1')のみを編集対象とする
+      const isStudent = user_type === '1';
+      const canAssign = isStudent;
+
+      // 生徒以外は「対象外」や「空」として扱うためのUI
+      if (!isStudent) {
+        return <div className="text-[10px] text-slate-300 italic">対象外</div>;
+      }
+
+      const LicenseContent = (
+        <div className={`flex items-center gap-4 ${canAssign ? 'cursor-pointer group/lic' : 'cursor-default'} py-2 w-fit`}>
+          {/* 左側：プラン情報 */}
+          <div className="flex flex-col gap-0.5 min-w-30">
+            {license_state === 'none' ? (
+              <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] border-dashed border-slate-300 text-slate-400">
+                <ShieldAlert size={12} className="mr-1.5" /> 未設定
+              </Button>
+            ) : (
+              <>
+                <div className={`flex items-center gap-1`}>
+                  <div className={`text-[11px] font-black truncate transition-colors ${
+                    license_state === 'active' ? 'text-slate-700 group-hover/lic:text-indigo-600' :
+                    license_state === 'future' ? 'text-blue-600' : 'text-rose-500'
+                  }`}>
                     {plan_name}
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] text-slate-400 transition-colors group-hover/lic:text-indigo-500">
-                    <Calendar size={10} className="opacity-70" />
-                    <span className="font-bold tracking-tight">
-                      {license_end_date ? license_end_date.split('T')[0] : '無期限'}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* 右側：ペンシルボタン（割当済みのみ） */}
-            {plan_name && (
-              <div className="flex items-center justify-center w-6 h-6 rounded-xl bg-indigo-50 text-indigo-500 border border-indigo-100 shadow-sm transition-all duration-300 group-hover/lic:bg-indigo-600 group-hover/lic:text-white group-hover/lic:border-indigo-600 group-hover/lic:shadow-md group-hover/lic:scale-105">
-                <Pencil size={14} strokeWidth={2.5} />
-              </div>
+                  {license_state === 'future' && <span className="text-[9px] text-blue-400 font-bold">[開始待ち]</span>}
+                  {license_state === 'expired' && <span className="text-[9px] text-rose-400 font-bold">[期限切れ]</span>}
+                </div>
+                
+                <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                  <Calendar size={10} />
+                  <span>{license_end_date ? license_end_date.split('T')[0] : ''}</span>
+                </div>
+              </>
             )}
           </div>
-        </LicenseFormDialog>
+
+          {/* 生徒のみペンシルを表示 */}
+          {canAssign && (
+            <div className="flex items-center justify-center w-6 h-6 rounded-xl bg-indigo-50 text-indigo-500 border border-indigo-100 shadow-sm transition-all duration-300 group-hover/lic:bg-indigo-600 group-hover/lic:text-white group-hover/lic:border-indigo-600 group-hover/lic:shadow-md group-hover/lic:scale-105">
+              <Pencil size={14} strokeWidth={2.5} />
+            </div>
+          )}
+        </div>
       );
+
+      // 生徒の場合のみダイアログをラップ
+      return canAssign ? <LicenseFormDialog user={user}>{LicenseContent}</LicenseFormDialog> : LicenseContent;
     },
   },
   {

@@ -62,6 +62,7 @@ export interface UserRecord extends UserBase {
   license_start_date: string | null;
   license_end_date: string | null;
   plan_name: string | null;
+  license_state: 'none' | 'active' | 'future' | 'expired';
 }
 
 /**

@@ -8,7 +8,7 @@ import { ja } from 'date-fns/locale';
 import { ContractDetail } from '@gabby/types/contract';
 import { ContractFormDialog } from './ContractFormDialog';
 import { ContractLicenseDialog } from './ContractLicenseDialog';
-import { Pencil } from 'lucide-react';
+import { Eye, Pencil } from 'lucide-react';
 
 export const columns: ColumnDef<ContractDetail>[] = [
   {
@@ -38,57 +38,64 @@ export const columns: ColumnDef<ContractDetail>[] = [
     header: 'ライセンス利用状況',
     cell: ({ row }) => {
       const contract = row.original;
+      const end = new Date(contract.end_date);
+      const now = startOfDay(new Date());
+      
+      // 契約終了フラグ（終了日を過ぎている場合は操作不可）
+      const isExpired = isBefore(end, now);
+      
       const max = contract.max_licenses;
       const active = contract.current_active_count || 0;
       const assigned = contract.current_assigned_count || 0;
       const usageRate = Math.min(Math.ceil((active / max) * 100), 100);
-      
+
+      // 表示用の共通UIコンポーネント
+      const UsageDisplay = (
+        <div className={`flex items-center gap-4 py-2 w-fit cursor-pointer group/usage ${isExpired ? 'opacity-50' : ''}`}>
+          {/* 左側：数値 ＋ プログレスバー */}
+          <div className="flex flex-col gap-1.5 min-w-[120px]">
+            <div className="flex items-baseline gap-1">
+              <span className={`text-sm font-bold font-mono ${active >= max ? 'text-amber-600' : 'text-slate-900'} ${!isExpired && 'group-hover/usage:text-indigo-600'} transition-colors`}>
+                {active}
+              </span>
+              <span className="text-slate-400 text-[10px]">/ {max}</span>
+              <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap opacity-80">( {usageRate}% )</span>
+            </div>
+
+            <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-sm transition-all">
+              <div 
+                className={`h-full transition-all duration-500 ${active >= max ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                style={{ width: `${usageRate}%` }}
+              />
+            </div>
+
+            {assigned > max && (
+              <div className="text-[9px] text-rose-500 font-black animate-pulse leading-none">
+                ※ 超過
+              </div>
+            )}
+          </div>
+
+          {/* 右側：ペンシルまたは参照ボタン（有効無効で切替表示） */}
+          <div className={`flex items-center justify-center w-6 h-6 rounded-xl border transition-all duration-300
+            ${isExpired 
+              ? 'bg-slate-50 text-slate-400 border-slate-200 group-hover/usage:bg-indigo-50 group-hover/usage:text-indigo-600 group-hover/usage:border-indigo-200' 
+              : 'bg-indigo-50 text-indigo-500 border-indigo-100 shadow-sm group-hover/usage:bg-indigo-600 group-hover/usage:text-white group-hover/usage:border-indigo-600 group-hover/usage:shadow-md'
+            }`}
+          >
+            {isExpired ? (
+              <Eye size={14} strokeWidth={2.5} />
+            ) : (
+              <Pencil size={14} strokeWidth={2.5} />
+            )}
+          </div>
+        </div>
+      );
+
+      // 契約終了時も含めてダイアログ表示
       return (
         <ContractLicenseDialog contract={contract}>
-          <div className="flex items-center gap-4 cursor-pointer group/usage py-2 w-fit">
-            {/* 左側：情報の塊（数値 ＋ バー） */}
-            <div className="flex flex-col gap-1.5 min-w-[120px]">
-              <div className="flex items-baseline gap-1">
-                <span className={`text-sm font-bold font-mono ${active >= max ? 'text-amber-600' : 'text-slate-900'} group-hover/usage:text-indigo-600 transition-colors`}>
-                  {active}
-                </span>
-                <span className="text-slate-400 text-[10px]">/ {max}</span>
-                <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap opacity-80">( {usageRate}% )</span>
-              </div>
-
-              {/* プログレスバー（幅を固定） */}
-              <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-sm transition-all group-hover/usage:border-indigo-200">
-                <div 
-                  className={`h-full transition-all duration-500 ${
-                    active >= max ? 'bg-amber-500' : 'bg-indigo-500'
-                  }`}
-                  style={{ width: `${usageRate}%` }}
-                />
-              </div>
-
-              {assigned > max && (
-                <div className="text-[9px] text-rose-500 font-black animate-pulse leading-none">
-                  ※ 超過
-                </div>
-              )}
-            </div>
-
-            {/* 右側：ペンシルボタン（少し大きく、目立たせる） */}
-            <div 
-              className="
-                flex items-center justify-center 
-                w-6 h-6 rounded-xl
-                bg-indigo-50 text-indigo-500 
-                border border-indigo-100 shadow-sm
-                transition-all duration-300
-                group-hover/usage:bg-indigo-600 group-hover/usage:text-white 
-                group-hover/usage:border-indigo-600 group-hover/usage:shadow-md
-                group-hover/usage:scale-105
-              "
-            >
-              <Pencil size={14} strokeWidth={2.5} />
-            </div>
-          </div>
+          {UsageDisplay}
         </ContractLicenseDialog>
       );
     },

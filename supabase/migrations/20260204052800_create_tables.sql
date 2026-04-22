@@ -83,6 +83,9 @@ COMMENT ON COLUMN public.com_m_contract.note IS '運用管理者用のメモ';
 COMMENT ON COLUMN public.com_m_contract.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_contract.update_date IS '更新日時';
 
+-- 顧客単位での契約検索を高速化
+CREATE INDEX idx_contract_client_id ON public.com_m_contract (client_id, status);
+
 ---------------------------------------------
 -- COM_T_USER_LICENSE (ライセンス割当実体)
 ---------------------------------------------
@@ -114,7 +117,8 @@ COMMENT ON COLUMN public.com_t_user_license.update_date IS '更新日時';
 
 -- 認証・認可クエリの高速化
 CREATE INDEX idx_user_license_auth ON public.com_t_user_license (user_id, status, start_date, end_date);
-
+-- ビュー内での集計用インデックス
+CREATE INDEX idx_license_contract_stats ON public.com_t_user_license (contract_id, status, start_date, end_date);
 
 ---------------------------------------------
 -- DDL: com_m_contents (コンテンツ管理マスタ)
