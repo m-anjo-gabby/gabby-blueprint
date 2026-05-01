@@ -20,10 +20,10 @@ export async function signIn(formData: FormData) {
   
   if (error || !user) return { error };
 
-  const role = user.app_metadata?.role as string | undefined;
+  const userType = user.app_metadata?.user_type as string | undefined;
   
   // 管理者がログインした場合は管理サイトのダッシュボードへ転送
-  if (role === 'admin') {
+  if (userType === '0') {
     const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || '';
     redirect(`${adminUrl}/dashboard`);
   } 

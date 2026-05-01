@@ -25,12 +25,15 @@ export async function proxy(req: NextRequest) {
   }
 
   // --- B. ログイン済みの場合 ---
-  const role = (user.app_metadata?.role as string | undefined) || 'student';
+  const userType = user.app_metadata?.user_type as string | undefined; // '0': admin, '1': student
   const isLicensed = user.app_metadata?.is_licensed === true;
+
+  const isAdmin = userType === '0';
+  const isStudent = userType === '1';
 
   // 1. 認可ガード：管理者アプリへの権限確認とライセンスチェック
   // 管理者以外は有効なライセンスが必須
-  if (!isPublicRoute && role !== 'admin' && !isLicensed) {
+  if (!isPublicRoute && isStudent && !isLicensed) {
     // 1. リダイレクトレスポンスを作成
     const response = NextResponse.redirect(new URL(loginPath, req.url));
     
@@ -47,7 +50,7 @@ export async function proxy(req: NextRequest) {
 
   // 2. ログイン済みでルート(/)やログインページにアクセスした場合の振り分け
   if (pathname === '/' || pathname === loginPath) {
-    if (role === 'admin') {
+    if (isAdmin) {
       // 管理者は管理者アプリへ強制移動
       return NextResponse.redirect(new URL(`${adminUrl}${dashboardPath}`));
     } else {
@@ -57,7 +60,7 @@ export async function proxy(req: NextRequest) {
   }
 
   // 3. 認可ガード: 管理者アプリURLを直接叩いた場合
-  if (role !== 'admin' && pathname.startsWith('/admin')) {
+  if (isAdmin && pathname.startsWith('/admin')) {
     return NextResponse.redirect(new URL(dashboardPath, req.url));
   }
 

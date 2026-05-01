@@ -11,7 +11,6 @@ import {
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { signOut } from '@/actions/adminAuthAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { hasPathPermission } from '@/lib/permissions';
 import { ADMIN_NAV_CONFIG } from '@/lib/navigation';
 
 export default function Sidebar() {
