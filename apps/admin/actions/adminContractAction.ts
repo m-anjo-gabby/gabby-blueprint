@@ -185,6 +185,7 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
 
   // 1. ビューから、その顧客に属する全ユーザーの最新情報を取得
   const { data: allUsers, error: userError } = await supabase
+    .schema('private') // privateスキーマを指定
     .from('vw_user_list')
     .select('id, user_name, email, license_id') // license_idがある＝何らかの割当がある
     .eq('client_id', clientId)

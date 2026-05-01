@@ -55,6 +55,9 @@ export interface UserRecord extends UserBase {
   last_sign_in_at?: string;   // auth.users から取得
   confirmed_at?: string | null;
 
+  // ロール情報
+  roles?: string[]; 
+
   // ライセンス関連 (com_t_user_license 等の結合情報)
   contract_id: string | null;
   license_id: string | null;
@@ -63,6 +66,7 @@ export interface UserRecord extends UserBase {
   license_end_date: string | null;
   plan_name: string | null;
   license_state: 'none' | 'active' | 'future' | 'expired';
+
 }
 
 /**
@@ -74,6 +78,7 @@ export interface CreateUserPayload {
   user_name: string;
   client_id: string;
   user_type: string;
+  roles?: string[];
 }
 
 /**
@@ -124,4 +129,14 @@ export interface BulkImportResponse {
   successCount: number;
   errorCount: number;
   details: BulkImportResultDetail[];
+}
+
+/**
+ * RoleDefinition: マスタ選択用
+ * com_m_role から取得するデータの型
+ */
+export interface RoleDefinition {
+  role_id: string;
+  role_name: string;
+  seq_no: number;
 }

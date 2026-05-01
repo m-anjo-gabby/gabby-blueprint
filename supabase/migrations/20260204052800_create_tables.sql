@@ -56,6 +56,41 @@ COMMENT ON COLUMN public.com_m_user.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_user.update_date IS '更新日時';
 
 ---------------------------------------------
+-- DDL: com_m_role (ロールマスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_role (
+  role_id TEXT PRIMARY KEY, -- 'admin', 'content_manager'
+  role_name TEXT NOT NULL,
+  seq_no SMALLINT NOT NULL DEFAULT 1,
+  delete_flg TEXT NOT NULL DEFAULT '0'
+);
+
+-- テーブル名にコメントを設定
+COMMENT ON TABLE public.com_m_role IS 'ロールマスタ';
+
+-- カラム名にコメントを設定
+COMMENT ON COLUMN public.com_m_role.role_id IS 'ロールID';
+COMMENT ON COLUMN public.com_m_role.role_name IS 'ロール名';
+COMMENT ON COLUMN public.com_m_role.seq_no IS 'SEQ';
+COMMENT ON COLUMN public.com_m_role.delete_flg IS '削除フラグ';
+
+---------------------------------------------
+-- DDL: com_t_user_role (ユーザロール紐付け情報)
+---------------------------------------------
+CREATE TABLE public.com_t_user_role (
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  role_id TEXT REFERENCES public.com_m_role(role_id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, role_id)
+);
+
+-- テーブル名にコメントを設定
+COMMENT ON TABLE public.com_t_user_role IS 'ユーザロール紐付け情報';
+
+-- カラム名にコメントを設定
+COMMENT ON COLUMN public.com_t_user_role.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_user_role.role_id IS 'ロールID';
+
+---------------------------------------------
 -- COM_M_CONTRACT (契約マスタ)
 ---------------------------------------------
 CREATE TABLE public.com_m_contract (

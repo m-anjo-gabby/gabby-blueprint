@@ -1,7 +1,9 @@
 ---------------------------------------------
--- VIEW: vw_user_list ユーザリスト
+-- VIEW: vw_user_list ユーザリスト (priavateスキーマに隔離)
 ---------------------------------------------
-CREATE OR REPLACE VIEW public.vw_user_list AS
+CREATE OR REPLACE VIEW private.vw_user_list 
+WITH (security_invoker = false) -- falseにすることで定義者権限
+AS
 SELECT 
   u.id,
   u.user_id,
@@ -12,7 +14,9 @@ SELECT
   au.email,
   au.last_sign_in_at,
   au.confirmed_at,
-  -- ライセンス情報の集約
+  -- ロール情報の集約 (配列として取得)
+  r.roles,
+  -- ライセンス情報の集約 (配列として取得)
   l.contract_id,
   l.license_id,
   l.status as license_status,
@@ -31,6 +35,11 @@ FROM
   INNER JOIN auth.users au ON u.id = au.id
   LEFT JOIN public.com_m_client c ON u.client_id = c.client_id
   LEFT JOIN LATERAL (
+    SELECT array_agg(role_id) as roles
+    FROM public.com_t_user_role
+    WHERE user_id = u.id
+  ) r ON true
+  LEFT JOIN LATERAL (
     SELECT * FROM public.com_t_user_license 
     WHERE user_id = u.id 
     ORDER BY 
@@ -45,10 +54,14 @@ FROM
   LEFT JOIN public.com_m_contract con ON l.contract_id = con.contract_id
 ;
 
-COMMENT ON VIEW public.vw_user_list IS 'ユーザー管理用一覧ビュー';
+COMMENT ON VIEW private.vw_user_list IS 'ユーザー管理用一覧ビュー';
 
--- RLS設定：ビューの定義を維持しつつ、RLSを透過させる設定
--- ALTER VIEW public.vw_user_list SET (security_invoker = on);
+-- 権限設定
+-- API(anon/authenticated)からは見えないようにし、
+-- サーバーサイドの管理者キーでのみ操作可能にする
+REVOKE ALL ON private.vw_user_list FROM anon, authenticated;
+GRANT USAGE ON SCHEMA private TO service_role;
+GRANT SELECT ON private.vw_user_list TO service_role;
 
 ---------------------------------------------
 -- VIEW: vw_my_license_status ライセンス状態
@@ -105,3 +118,6 @@ LEFT JOIN (
 ) stats ON c.contract_id = stats.contract_id;
 
 COMMENT ON VIEW public.vw_contract_details IS '統計情報・顧客名を含む契約詳細ビュー';
+
+-- RLS設定：ビューの定義を維持しつつ、RLSを透過させる設定
+ALTER VIEW public.vw_contract_details SET (security_invoker = on);

@@ -7,7 +7,8 @@ import {
   CreateUserResponse, 
   BulkUser, 
   BulkImportResponse, 
-  BulkImportResultDetail 
+  BulkImportResultDetail, 
+  RoleDefinition
 } from "@gabby/types/user";
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
@@ -21,12 +22,13 @@ export async function getUsers(
   searchQuery?: string,
   clientId?: string
 ): Promise<{ users: UserRecord[]; totalCount: number }> {
-  const supabase = await createAdminClient();
+  const supabase = createAdminClient();
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
   let query = supabase
+    .schema('private') // privateスキーマを指定
     .from('vw_user_list')
     .select('*', { count: 'exact' });
 
@@ -65,12 +67,12 @@ export async function getUsers(
  * ユーザーを作成し、パスワード設定用の招待メールを送信します。
  * パスワードはユーザー自身が設定するため、サーバー側での固定値管理は不要です。
  */
-export async function createUser(payload: CreateUserPayload): Promise<CreateUserResponse> {
-  const { email, user_name, client_id, user_type } = payload;
+export async function createUser(payload: CreateUserPayload & { roles?: string[] }): Promise<CreateUserResponse> {
+  const { email, user_name, client_id, user_type, roles = [] } = payload;
   try {
     const supabase = await createAdminClient();
 
-    // 招待メールを送信し、アカウントを作成
+    // 1. 招待メールを送信し、アカウントを作成
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
       // ユーザーがリンクをクリックした際の遷移先（パスワード設定画面）
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/invite`,
@@ -78,25 +80,31 @@ export async function createUser(payload: CreateUserPayload): Promise<CreateUser
       data: { 
         user_name,
         user_type,
-        client_id
+        client_id,
+        roles // 初期ロールをメタデータに含める
       }
     });
 
     if (error) {
-      // Supabase固有のエラーコードに応じたメッセージ切り分け
       if (error.status === 422 && error.code === 'email_exists') {
-        return { success: false, user_id: null, errorType: 'email_exists', message: "このメールアドレスは既に登録されています。" };
+        return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
       }
-      // その他認証エラー
-      return { success: false, user_id: null, errorType: 'unexpected_error', message: `登録に失敗しました: ${error.message}` };
+      return { success: false, user_id: null, errorType: 'unexpected_error', message: error.message };
     }
 
-    // 登録成功時にキャッシュを無効化
+    const userId = data.user.id;
+
+    // 2. DB側のロール紐付け（新規作成時）
+    if (roles.length > 0) {
+      await supabase
+        .from('com_t_user_role')
+        .insert(roles.map(roleId => ({ user_id: userId, role_id: roleId })));
+    }
+
     revalidatePath('/users');
-    return { success: true, user_id: data.user.id, errorType: null, message: null };
+    return { success: true, user_id: userId, errorType: null, message: null };
 
   } catch (err) {
-    // 予期せぬネットワークエラーなど
     console.error("Unexpected Error:", err);
     return { success: false, user_id: null, errorType: 'unexpected_error', message: "通信エラーが発生しました。" };
   }
@@ -119,22 +127,42 @@ export async function resendInvite(email: string) {
 
 /**
  * ユーザー更新アクション
+ * DB(com_m_user, com_t_user_role)とAuthメタデータを同期します
  */
 export async function updateUser(
-  id: string, // auth.users.id (UUID)
-  payload: CreateUserPayload
+  id: string,
+  payload: CreateUserPayload & { roles?: string[] } // rolesを追加
 ) {
-  const { email, user_name, client_id, user_type } = payload;
+  const { email, user_name, client_id, user_type, roles = [] } = payload;
+  
   try {
     const supabase = await createAdminClient();
 
-    // 1. Auth情報の更新 (Metadataを更新)
+    // 1. ユーザロール (com_t_user_role) の更新
+    // 一旦削除して入れ直す（最もシンプルな同期方法）
+    const { error: roleDeleteError } = await supabase
+      .from('com_t_user_role')
+      .delete()
+      .eq('user_id', id);
+
+    if (roleDeleteError) throw roleDeleteError;
+
+    if (roles.length > 0) {
+      const { error: roleInsertError } = await supabase
+        .from('com_t_user_role')
+        .insert(roles.map(roleId => ({ user_id: id, role_id: roleId })));
+      
+      if (roleInsertError) throw roleInsertError;
+    }
+
+    // 2. Auth情報の更新 (Metadataにrolesを含める)
     const { error: authError } = await supabase.auth.admin.updateUserById(id, {
       email: email,
       user_metadata: {
         user_name,
         user_type,
-        client_id
+        client_id,
+        roles // ここでProxyが参照する配列を更新
       }
     });
 
@@ -142,23 +170,22 @@ export async function updateUser(
       return { success: false, errorType: 'update_error', message: `Auth更新失敗: ${authError.message}` };
     }
 
-    // 2. ユーザマスタ (public.com_m_user) の更新
+    // 3. ユーザマスタ (public.com_m_user) の更新
     const { error: dbError } = await supabase
       .from('com_m_user')
       .update({
-        user_name: user_name,
-        user_type: user_type,
-        client_id: client_id,
-        update_date: new Date().toISOString() // 明示的に更新日時をセット
+        user_name,
+        user_type,
+        client_id,
+        update_date: new Date().toISOString()
       })
-      .eq('id', id); // auth.users.id と一致するレコードを指定
+      .eq('id', id);
 
     if (dbError) {
       console.error("DB Update Error:", dbError);
       return { success: false, errorType: 'update_error', message: `マスタ更新に失敗しました: ${dbError.message}` };
     }
 
-    // 更新完了時にキャッシュを無効化
     revalidatePath('/users');
     return { success: true };
 
@@ -214,4 +241,25 @@ export async function bulkCreateUsers(users: BulkUser[]): Promise<BulkImportResp
   // ループ終了後に確実に最新の状態にする
   revalidatePath('/users');
   return { success: true, total: users.length, successCount, errorCount, details: results };
+}
+
+/**
+ * ロールマスタの一覧取得
+ * ユーザー編集・登録時のチェックボックス選択肢として利用
+ */
+export async function getRoles(): Promise<RoleDefinition[]> {
+  const supabase = await createAdminClient();
+
+  const { data, error } = await supabase
+    .from('com_m_role')
+    .select('role_id, role_name, seq_no')
+    .eq('delete_flg', '0')
+    .order('seq_no', { ascending: true });
+
+  if (error) {
+    console.error("Fetch Roles Error:", error.message);
+    return [];
+  }
+
+  return data as RoleDefinition[];
 }

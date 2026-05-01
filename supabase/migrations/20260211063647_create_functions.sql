@@ -40,26 +40,74 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 ---------------------------------------------
--- 認証用スキーマのJWTの内容をカスタマイズ
+-- app_metadata 統合同期ファンクション
 ---------------------------------------------
--- auth.users の metadata に client_id を自動でコピーするトリガーを作成します
-CREATE OR REPLACE FUNCTION public.sync_user_metadata_client_id()
+CREATE OR REPLACE FUNCTION public.sync_user_app_metadata()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_roles text[];
+    v_user_type text;
+    v_client_id uuid;
+    v_target_id uuid;
+    v_data jsonb;
 BEGIN
-  -- auth.users の raw_app_meta_data に client_id を書き込む
-  UPDATE auth.users
-  SET raw_app_meta_data = 
-    coalesce(raw_app_meta_data, '{}'::jsonb) || 
-    jsonb_build_object('client_id', NEW.client_id)
-  WHERE id = NEW.id;
-  RETURN NEW;
+    -- 1. 操作種別に応じてレコードを jsonb として取得
+    IF (TG_OP = 'DELETE') THEN
+        v_data := to_jsonb(OLD);
+    ELSE
+        v_data := to_jsonb(NEW);
+    END IF;
+
+    -- 2. jsonb から id または user_id を安全に取り出す
+    v_target_id := COALESCE(
+        (v_data->>'id')::uuid, 
+        (v_data->>'user_id')::uuid
+    );
+
+    -- 3. ユーザー本体(com_m_user)の削除時は、auth.users も消えるため処理をスキップ
+    IF (TG_OP = 'DELETE' AND TG_TABLE_NAME = 'com_m_user') THEN
+        RETURN OLD;
+    END IF;
+
+    -- 4. auth.users が存在するかチェック
+    IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = v_target_id) THEN
+        RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+    END IF;
+
+    -- 5. 最新情報をマスタから取得
+    SELECT user_type, client_id INTO v_user_type, v_client_id 
+    FROM public.com_m_user WHERE id = v_target_id;
+
+    SELECT array_agg(role_id) INTO v_roles 
+    FROM public.com_t_user_role WHERE user_id = v_target_id;
+
+    -- 6. メタデータの更新実行
+    UPDATE auth.users
+    SET raw_app_meta_data = 
+        COALESCE(raw_app_meta_data, '{}'::jsonb) || 
+        jsonb_build_object(
+            'client_id', v_client_id,
+            'user_type', v_user_type,
+            'roles', COALESCE(v_roles, '{}'::text[])
+        )
+    WHERE id = v_target_id;
+
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- com_m_user が作成・更新されたらメタデータを同期
-CREATE TRIGGER on_com_m_user_client_id_update
-  AFTER INSERT OR UPDATE OF client_id ON public.com_m_user
-  FOR EACH ROW EXECUTE PROCEDURE public.sync_user_metadata_client_id();
+-- トリガーの登録
+-- 1. com_m_user の変更時 (client_id, user_type)
+DROP TRIGGER IF EXISTS trg_sync_app_meta_m_user ON public.com_m_user;
+CREATE TRIGGER trg_sync_app_meta_m_user
+    AFTER INSERT OR UPDATE OF client_id, user_type ON public.com_m_user
+    FOR EACH ROW EXECUTE PROCEDURE public.sync_user_app_metadata();
+
+-- 2. com_t_user_role の変更時 (roles)
+DROP TRIGGER IF EXISTS trg_sync_app_meta_roles ON public.com_t_user_role;
+CREATE TRIGGER trg_sync_app_meta_roles
+    AFTER INSERT OR UPDATE OR DELETE ON public.com_t_user_role
+    FOR EACH ROW EXECUTE PROCEDURE public.sync_user_app_metadata();
 
 ---------------------------------------------
 -- JWTから client_id を安全に取り出すヘルパー関数
