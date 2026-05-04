@@ -11,21 +11,14 @@ import {
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { signOut } from '@/actions/adminAuthAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-
-const NAV_ITEMS = [
-  { label: 'ダッシュボード', href: '/dashboard', icon: LayoutDashboard },
-  { label: '顧客管理', href: '/clients', icon: Building2 },
-  { label: '契約管理', href: '/contracts', icon: FileSignature },
-  { label: 'ユーザー管理', href: '/users', icon: Users },
-  { label: '教材管理', href: '/contents', icon: BookOpen },
-  { label: 'TTS Designer', href: '/tools/tts-designer', icon: Speech },
-];
+import { ADMIN_NAV_CONFIG } from '@/lib/navigation';
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false); // モバイル用
   const [isCollapsed, setIsCollapsed] = useState(false); // デスクトップ用折りたたみ
   const pathname = usePathname();
   const user = useUserStore((state) => state.user);
+  const userRoles = user?.app_metadata?.roles || [];
   const { showConfirm } = useConfirm();
 
   const toggleMobileSidebar = () => setIsOpen(!isOpen);
@@ -39,6 +32,13 @@ export default function Sidebar() {
     );
     if (ok) await signOut();
   };
+
+  // 権限に基づいて表示するメニューを決定
+  const filteredNavItems = ADMIN_NAV_CONFIG.filter((item) => {
+    if (userRoles.includes('admin')) return true;
+    if (item.requiredRoles.length === 0) return true;
+    return item.requiredRoles.some(role => userRoles.includes(role));
+  });
 
   return (
     <>
@@ -83,7 +83,7 @@ export default function Sidebar() {
 
         {/* ナビゲーション */}
         <nav className="flex-1 p-4 overflow-x-hidden overflow-y-auto scrollbar-hide space-y-2">
-          {NAV_ITEMS.map((item) => {
+          {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname.startsWith(item.href);
             return (

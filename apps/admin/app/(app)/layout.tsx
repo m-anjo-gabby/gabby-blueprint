@@ -4,6 +4,7 @@ import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
 import Sidebar from '@/components/common/Sidebar';
 import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
+import { UserAppMetadata } from '@gabby/lib/stores/useUserStore';
 
 /**
  * 管理者用 統合アプリケーションレイアウト
@@ -29,7 +30,7 @@ export default async function AdminAppLayout({
   return (
     <>
       {/* Zustandへのデータ流し込みとAuth監視 */}
-      <UserStoreInitializer user={{ id: user.id, email: user.email }} />
+      <UserStoreInitializer user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }} />
       
       {/* --- 旧 AdminLayout のデザイン構造 --- */}
       <div className="flex h-screen overflow-hidden bg-slate-50">

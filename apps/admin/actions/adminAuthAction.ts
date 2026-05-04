@@ -11,7 +11,7 @@ import { redirect } from 'next/navigation';
 
 /**
  * 管理者ログイン
- * 認証後、Roleを確認して管理画面または生徒画面へ振り分けます
+ * 認証後、user_typeを確認して管理画面または生徒画面へ振り分けます
  */
 export async function signIn(formData: FormData) {
   const { user, error } = await signInCore(formData);
@@ -19,14 +19,19 @@ export async function signIn(formData: FormData) {
   // 認証エラー時は呼び出し元のフォームにメッセージを返す
   if (error || !user) return { error };
 
-  const role = user.app_metadata?.role as string | undefined;
+  // app_metadata から user_type を取得 ('0': 管理者, '1': 生徒)
+  const userType = user.app_metadata?.user_type as string | undefined;
   
-  // Roleが admin の場合は管理ダッシュボードへ
-  if (role === 'admin') {
+  /**
+   * 判定基準を Proxy と統一
+   * user_type が '0' であればアドミンアプリの権限ありとみなす
+   */
+  if (userType === '0') {
     redirect('/dashboard');
   } 
   
   // 管理者でない（生徒等）が管理画面からログインした場合は、生徒用サイトへ強制移動
+  // 環境変数に /dashboard まで含まれていないことを想定して組み立て
   const studentUrl = process.env.NEXT_PUBLIC_STUDENT_URL || '';
   redirect(`${studentUrl}/dashboard`);
 }

@@ -56,6 +56,43 @@ COMMENT ON COLUMN public.com_m_user.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_user.update_date IS '更新日時';
 
 ---------------------------------------------
+-- DDL: com_m_role (ロールマスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_role (
+  role_id TEXT PRIMARY KEY, -- 'admin', 'content_manager'
+  role_name TEXT NOT NULL,
+  target_user_type TEXT DEFAULT '0',
+  seq_no SMALLINT NOT NULL DEFAULT 1,
+  delete_flg TEXT NOT NULL DEFAULT '0'
+);
+
+-- テーブル名にコメントを設定
+COMMENT ON TABLE public.com_m_role IS 'ロールマスタ';
+
+-- カラム名にコメントを設定
+COMMENT ON COLUMN public.com_m_role.role_id IS 'ロールID';
+COMMENT ON COLUMN public.com_m_role.role_name IS 'ロール名';
+COMMENT ON COLUMN public.com_m_role.target_user_type IS '対象ユーザー種別 (0:管理者, 1:生徒';
+COMMENT ON COLUMN public.com_m_role.seq_no IS 'SEQ';
+COMMENT ON COLUMN public.com_m_role.delete_flg IS '削除フラグ';
+
+---------------------------------------------
+-- DDL: com_t_user_role (ユーザロール紐付け情報)
+---------------------------------------------
+CREATE TABLE public.com_t_user_role (
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  role_id TEXT REFERENCES public.com_m_role(role_id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, role_id)
+);
+
+-- テーブル名にコメントを設定
+COMMENT ON TABLE public.com_t_user_role IS 'ユーザロール紐付け情報';
+
+-- カラム名にコメントを設定
+COMMENT ON COLUMN public.com_t_user_role.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_user_role.role_id IS 'ロールID';
+
+---------------------------------------------
 -- COM_M_CONTRACT (契約マスタ)
 ---------------------------------------------
 CREATE TABLE public.com_m_contract (
@@ -82,6 +119,9 @@ COMMENT ON COLUMN public.com_m_contract.status IS 'ステータス 1: 有効, 0:
 COMMENT ON COLUMN public.com_m_contract.note IS '運用管理者用のメモ';
 COMMENT ON COLUMN public.com_m_contract.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_contract.update_date IS '更新日時';
+
+-- 顧客単位での契約検索を高速化
+CREATE INDEX idx_contract_client_id ON public.com_m_contract (client_id, status);
 
 ---------------------------------------------
 -- COM_T_USER_LICENSE (ライセンス割当実体)
@@ -114,7 +154,8 @@ COMMENT ON COLUMN public.com_t_user_license.update_date IS '更新日時';
 
 -- 認証・認可クエリの高速化
 CREATE INDEX idx_user_license_auth ON public.com_t_user_license (user_id, status, start_date, end_date);
-
+-- ビュー内での集計用インデックス
+CREATE INDEX idx_license_contract_stats ON public.com_t_user_license (contract_id, status, start_date, end_date);
 
 ---------------------------------------------
 -- DDL: com_m_contents (コンテンツ管理マスタ)

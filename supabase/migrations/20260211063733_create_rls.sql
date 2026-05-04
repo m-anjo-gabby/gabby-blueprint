@@ -37,6 +37,45 @@ FOR UPDATE TO authenticated USING (
 );
 
 ---------------------------------------------
+-- SQLポリシー ロールマスタ
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Anyone can view roles" ON public.com_m_role;
+
+-- RLS設定
+ALTER TABLE public.com_m_role ENABLE ROW LEVEL SECURITY;
+
+-- 参照：認証済みユーザーであれば誰でも可能（プルダウン選択等で利用するため）
+CREATE POLICY "Anyone can view roles" ON public.com_m_role
+FOR SELECT TO authenticated USING (delete_flg = '0');
+
+-- 更新・削除・追加：管理者（Service Role等）のみ。
+-- 必要に応じて特定のroleを持つユーザーに許可することも可能ですが、
+-- 基本はサーバーアクション(Admin Client)経由で行うため、ここではポリシーを定義せず制限します。
+
+---------------------------------------------
+-- SQLポリシー ユーザロール紐付け情報
+---------------------------------------------
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Users can view their own roles or admins can view all" ON public.com_t_user_role;
+
+-- RLS設定
+ALTER TABLE public.com_t_user_role ENABLE ROW LEVEL SECURITY;
+
+-- 参照：自分のロール設定、または管理者が他人のロールを確認するために参照を許可
+CREATE POLICY "Users can view their own roles or admins can view all" ON public.com_t_user_role
+FOR SELECT TO authenticated 
+USING (
+  auth.uid() = user_id 
+  OR 
+  (auth.jwt() -> 'app_metadata' ->> 'roles')::jsonb ? 'admin'
+);
+
+-- 書き込み：不正な書き換えを防ぐため、デフォルトで拒否。
+-- adminUserAction.ts 内の createAdminClient() を使った操作（Service Role）であれば、
+-- RLSをバイパスして書き込みが可能です。
+
+---------------------------------------------
 -- SQLポリシー 契約マスタ
 ---------------------------------------------
 -- 既存のポリシーを削除してから再作成

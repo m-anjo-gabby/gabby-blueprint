@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { createBrowserClient } from '../supabase/client';
-import { useUserStore } from '../stores/useUserStore';
+import { UserAppMetadata, useUserStore } from '../stores/useUserStore';
 
 /**
  * UserStoreInitializer の Props
@@ -12,6 +12,7 @@ export interface UserStoreInitializerProps {
   user: {
     id: string;
     email: string | undefined;
+    app_metadata?: UserAppMetadata;
   };
 }
 
@@ -39,6 +40,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
         user_id: 0,           // 詳細取得までの仮値
         user_name: '...',    // ローディング表示用
         email: user.email,
+        app_metadata: user.app_metadata || { user_type: '1', roles: [] },
       });
 
       // --- Step 2: プロフィール情報の補完 ---
@@ -60,6 +62,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
           user_id: profile.user_id,
           user_name: profile.user_name,
           email: user.email,
+          app_metadata: user.app_metadata || { user_type: '1', roles: [] },
         });
       }
     };

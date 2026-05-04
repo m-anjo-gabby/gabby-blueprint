@@ -27,6 +27,7 @@ import { Users, UserPlus, Trash2, Loader2, ArrowLeft, CheckCircle2, AlertCircle 
 import { getLicenseAssignmentUsers, assignLicenseToUser, removeLicenseFromUser } from '@/actions/adminContractAction'
 import { useToast } from '@gabby/lib/hooks/useToast'
 import { LicenseUserItem, ContractDetail } from '@gabby/types/contract'
+import { startOfDay } from 'date-fns'
 
 interface Props {
   contract: ContractDetail;
@@ -46,6 +47,11 @@ export function ContractLicenseDialog({ contract, children }: Props) {
   const [unassignedUsers, setUnassignedUsers] = useState<LicenseUserItem[]>([])
   
   const { showToast } = useToast()
+
+  // 契約終了判定
+  const isExpired = useMemo(() => {
+    return new Date(contract.end_date) < startOfDay(new Date());
+  }, [contract.end_date]);
 
   // --- 算出プロパティ ---
   const isLicenseFull = useMemo(() => 
@@ -237,16 +243,19 @@ export function ContractLicenseDialog({ contract, children }: Props) {
           ) : (
             /* --- 一覧モード UI --- */
             <div className="space-y-4">
-              <div className="flex justify-end">
-                <Button 
-                  size="sm" 
-                  disabled={isLicenseFull || loading}
-                  onClick={() => setIsAddMode(true)}
-                  className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 rounded-lg shadow-md transition-all active:scale-95"
-                >
-                  <UserPlus size={14} /> ユーザーを追加
-                </Button>
-              </div>
+              {!isExpired && (
+                /* 有効契約のみ追加可能 */
+                <div className="flex justify-end">
+                  <Button 
+                    size="sm" 
+                    disabled={isLicenseFull || loading}
+                    onClick={() => setIsAddMode(true)}
+                    className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 rounded-lg shadow-md transition-all active:scale-95"
+                  >
+                    <UserPlus size={14} /> ユーザーを追加
+                  </Button>
+                </div>
+              )}
               <ScrollArea className="h-[350px] pr-4">
                 {assignedUsers.length === 0 ? (
                   <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
@@ -265,39 +274,40 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                           </div>
                         </div>
 
-                        {/* 解除確認ダイアログ */}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" disabled={loading} className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors">
-                              <Trash2 size={16} />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
-                            <AlertDialogHeader className="space-y-4">
-                              <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
-                                <AlertCircle size={32} />
-                              </div>
-                              <div className="text-center space-y-2">
-                                <AlertDialogTitle className="text-xl font-black text-slate-800">ライセンス解除の確認</AlertDialogTitle>
-                                <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
-                                  {user.user_name} さんのライセンスを解除します。<br />
-                                  解除後は即座にシステムへのアクセスができなくなります。<br />
-                                  この操作を実行してもよろしいですか？
-                                </AlertDialogDescription>
-                              </div>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter className="flex gap-3 sm:justify-center mt-6">
-                              <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">キャンセル</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleRemove(user.id)}
-                                className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 border-none"
-                              >
-                                実行する
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-
+                        {/* 解除確認ダイアログ（有効契約時のみ） */}
+                        {!isExpired && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" disabled={loading} className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors">
+                                <Trash2 size={16} />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
+                              <AlertDialogHeader className="space-y-4">
+                                <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
+                                  <AlertCircle size={32} />
+                                </div>
+                                <div className="text-center space-y-2">
+                                  <AlertDialogTitle className="text-xl font-black text-slate-800">ライセンス解除の確認</AlertDialogTitle>
+                                  <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
+                                    {user.user_name} さんのライセンスを解除します。<br />
+                                    解除後は即座にシステムへのアクセスができなくなります。<br />
+                                    この操作を実行してもよろしいですか？
+                                  </AlertDialogDescription>
+                                </div>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex gap-3 sm:justify-center mt-6">
+                                <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">キャンセル</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleRemove(user.id)}
+                                  className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 border-none"
+                                >
+                                  実行する
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     ))}
                   </div>
