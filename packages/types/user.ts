@@ -138,5 +138,6 @@ export interface BulkImportResponse {
 export interface RoleDefinition {
   role_id: string;
   role_name: string;
+  target_user_type: string | null; // NULL（共通ロール）を許容
   seq_no: number;
 }

@@ -61,6 +61,7 @@ COMMENT ON COLUMN public.com_m_user.update_date IS '更新日時';
 CREATE TABLE public.com_m_role (
   role_id TEXT PRIMARY KEY, -- 'admin', 'content_manager'
   role_name TEXT NOT NULL,
+  target_user_type TEXT DEFAULT '0',
   seq_no SMALLINT NOT NULL DEFAULT 1,
   delete_flg TEXT NOT NULL DEFAULT '0'
 );
@@ -71,6 +72,7 @@ COMMENT ON TABLE public.com_m_role IS 'ロールマスタ';
 -- カラム名にコメントを設定
 COMMENT ON COLUMN public.com_m_role.role_id IS 'ロールID';
 COMMENT ON COLUMN public.com_m_role.role_name IS 'ロール名';
+COMMENT ON COLUMN public.com_m_role.target_user_type IS '対象ユーザー種別 (0:管理者, 1:生徒';
 COMMENT ON COLUMN public.com_m_role.seq_no IS 'SEQ';
 COMMENT ON COLUMN public.com_m_role.delete_flg IS '削除フラグ';
 

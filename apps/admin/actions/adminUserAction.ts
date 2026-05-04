@@ -252,7 +252,7 @@ export async function getRoles(): Promise<RoleDefinition[]> {
 
   const { data, error } = await supabase
     .from('com_m_role')
-    .select('role_id, role_name, seq_no')
+    .select('role_id, role_name, target_user_type, seq_no') // target_user_type を追加
     .eq('delete_flg', '0')
     .order('seq_no', { ascending: true });
 
@@ -261,5 +261,6 @@ export async function getRoles(): Promise<RoleDefinition[]> {
     return [];
   }
 
+  // 型安全のためにキャスト
   return data as RoleDefinition[];
 }

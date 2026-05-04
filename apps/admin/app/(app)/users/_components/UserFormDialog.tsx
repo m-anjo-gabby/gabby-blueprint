@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -44,7 +44,7 @@ const DEFAULT_VALUES: UserFormValues = {
   email: '', 
   user_name: '', 
   client_id: '', 
-  user_type: '1',
+  user_type: '1', // デフォルトは生徒
   roles: [] 
 };
 
@@ -90,8 +90,23 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
   });
 
   const { isSubmitting } = form.formState;
+
   // 権限タイプによるロール表示切り替えのための監視
   const watchUserType = form.watch("user_type");
+
+  /**
+   * ★ ユーザー種別(user_type)に連動した表示ロールのフィルタリング
+   * target_user_type が現在の種別と一致するもの、または共通ロール(null)のみを抽出
+   */
+  const filteredRoles = useMemo(() => {
+    if (!roleMaster) return [];
+    return roleMaster.filter(role => 
+      role.target_user_type === watchUserType || role.target_user_type === null
+    );
+  }, [roleMaster, watchUserType]);
+
+  // 現在のユーザー種別で選択可能なロールが存在するか
+  const hasAvailableRoles = filteredRoles.length > 0;
 
   /**
    * フォーム送信ハンドラ
@@ -344,8 +359,14 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                           <Select 
                             onValueChange={(val) => {
                               field.onChange(val);
-                              // 管理者以外に変更された場合はロールをクリア
-                              if (val !== '0') form.setValue('roles', []);
+                              // ★ ユーザータイプが変更された際、変更後のタイプで選択不可能なロールを除去する
+                              const currentRoles = form.getValues('roles');
+                              const validRoleIds = roleMaster
+                                .filter(r => r.target_user_type === val || r.target_user_type === null)
+                                .map(r => r.role_id);
+                              
+                              const nextRoles = currentRoles.filter(id => validRoleIds.includes(id));
+                              form.setValue('roles', nextRoles);
                             }} 
                             value={field.value}
                           >
@@ -362,8 +383,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                     )} />
                   </div>
 
-                  {/* --- ★ ロール選択エリア (管理者タイプのみ表示) --- */}
-                  {watchUserType === '0' && (
+                  {/* --- ★ ロール選択エリア (現在のユーザー種別で設定可能なロールがある場合のみ表示) --- */}
+                  {hasAvailableRoles && (
                     <FormField
                       control={form.control}
                       name="roles"
@@ -371,7 +392,9 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                         <FormItem className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                           <div className="flex items-center gap-2">
                             <Shield size={14} className="text-indigo-500" />
-                            <FormLabel className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">管理者ロール設定</FormLabel>
+                            <FormLabel className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
+                              {watchUserType === '0' ? '管理者ロール設定' : '権限・属性設定'}
+                            </FormLabel>
                           </div>
                           
                           {isConfirming ? (
@@ -383,12 +406,13 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-[11px] text-slate-400 italic">ロール未選択</span>
+                                <span className="text-[11px] text-slate-400 italic">ロール設定なし</span>
                               )}
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 gap-3 pt-1">
-                              {roleMaster.map((role) => (
+                              {/* フィルタリング済みのロール一覧(filteredRoles)を表示 */}
+                              {filteredRoles.map((role) => (
                                 <FormField
                                   key={role.role_id}
                                   control={form.control}
