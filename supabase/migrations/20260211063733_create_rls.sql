@@ -274,3 +274,54 @@ FOR ALL
 TO authenticated
 USING (true)
 WITH CHECK (true);
+
+---------------------------------------------
+-- SQLポリシー: com_m_terms
+---------------------------------------------
+-- 既存ポリシーの削除
+DROP POLICY IF EXISTS "Admins can manage terms" ON public.com_m_terms;
+
+-- RLSを有効化
+ALTER TABLE public.com_m_terms ENABLE ROW LEVEL SECURITY;
+
+-- 参照：誰でも閲覧可能（変更なし）
+CREATE POLICY "Terms are viewable by everyone" ON public.com_m_terms FOR SELECT USING (true);
+
+-- 管理者権限：JWTの user_type が '0' の場合のみ許可
+CREATE POLICY "Admins can manage terms" ON public.com_m_terms
+FOR ALL TO authenticated 
+USING (
+  public.get_jwt_user_type() = '0'
+)
+WITH CHECK (
+  public.get_jwt_user_type() = '0'
+);
+
+---------------------------------------------
+-- SQLポリシー: com_t_user_terms_agreement
+---------------------------------------------
+-- 既存ポリシーの削除
+DROP POLICY IF EXISTS "Users and Admins can view agreement history" ON public.com_t_user_terms_agreement;
+DROP POLICY IF EXISTS "Users and Admins can insert agreement history" ON public.com_t_user_terms_agreement;
+
+-- RLSを有効化
+ALTER TABLE public.com_t_user_terms_agreement ENABLE ROW LEVEL SECURITY;
+
+-- 参照：自分自身、または管理者の場合に許可
+CREATE POLICY "Users and Admins can view agreement history" ON public.com_t_user_terms_agreement
+FOR SELECT TO authenticated 
+USING (
+  user_id = auth.uid() 
+  OR 
+  public.get_jwt_user_type() = '0'
+);
+
+-- 挿入：自分自身、または管理者の場合に許可
+-- （基本は本人が同意するものですが、アドミンロジックも念のため含めます）
+CREATE POLICY "Users and Admins can insert agreement history" ON public.com_t_user_terms_agreement
+FOR INSERT TO authenticated 
+WITH CHECK (
+  user_id = auth.uid() 
+  OR 
+  public.get_jwt_user_type() = '0'
+);
