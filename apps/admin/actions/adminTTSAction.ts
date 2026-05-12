@@ -3,6 +3,9 @@
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { generateAzureAudioBuffer, generateTTSFileName } from '@gabby/lib/azure/tts';
 import { revalidatePath } from 'next/cache';
+import { createLogger } from '@gabby/lib/logger/logger';
+
+const logger = createLogger('admin');
 
 /**
  * 単語ドリルエディタ保存処理
@@ -16,9 +19,9 @@ export async function savePhrase(
   adjustmentData: any,             // TTSAdjustmentData
   currentAudioPath?: string | null // フロントから現在のパスを受け取る
 ) {
-  const supabase = createAdminClient();
-
   try {
+    const supabase = createAdminClient();
+
     // 1. Azure で音声合成 (共通エンジンを利用)
     const audioBuffer = await generateAzureAudioBuffer(ssml);
 
@@ -35,7 +38,10 @@ export async function savePhrase(
         upsert: false
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      logger.error('tts:upload_failed', uploadError.message, { phraseId, wordId, newFilePath });
+      throw uploadError;
+    }
 
     // 4. DB 更新 (com_m_phrase)
     const { error: dbError } = await supabase
@@ -51,7 +57,10 @@ export async function savePhrase(
       })
       .eq('phrase_id', phraseId);
 
-    if (dbError) throw dbError;
+    if (dbError) {
+      logger.error('tts:db_update_failed', dbError.message, { phraseId, wordId, newFilePath });
+      throw dbError;
+    }
 
     // 5. 古いファイルがあれば削除（後始末）
     // セキュリティチェック：渡されたパスが本当にこのフレーズのものか検証
@@ -59,9 +68,13 @@ export async function savePhrase(
       if (currentAudioPath.includes(phraseId)) {
         await supabase.storage.from('audio').remove([currentAudioPath]);
       } else {
-        console.error(`Warning: Attempted to delete invalid path. phraseId: ${phraseId}, path: ${currentAudioPath}`);
+        logger.warn('tts:invalid_delete_path', `Attempted to delete invalid path. phraseId: ${phraseId}, path: ${currentAudioPath}`);
       }
     }
+
+    logger.info('tts:save_phrase_success', `Phrase audio updated: ${phraseId}`, { 
+      payload: { phraseId, wordId, path: newFilePath } 
+    });
 
     return { 
       success: true, 
@@ -70,8 +83,8 @@ export async function savePhrase(
     };
 
   } catch (error: any) {
-    console.error("TTS Save Error (Phrase):", error);
-    return { success: false, message: error.message || "保存に失敗しました" };
+    logger.error("tts:save_phrase_unexpected", error instanceof Error ? error.message : 'Unknown error', { phraseId, wordId, ssml });
+    return { success: false, message: "予期せぬエラーが発生しました" };
   }
 }
 
@@ -86,9 +99,9 @@ export async function saveTTSAssetAction(payload: {
   mode: 'auto' | 'manual';
   adjustments: any;
 }) {
-  const supabase = createAdminClient();
-
   try {
+    const supabase = createAdminClient();
+
     // 1. Azure で音声合成
     const audioBuffer = await generateAzureAudioBuffer(payload.ssml);
 
@@ -104,7 +117,10 @@ export async function saveTTSAssetAction(payload: {
         cacheControl: '31536000'
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      logger.error('tts:asset_upload_failed', uploadError.message, { payload, filePath });
+      throw uploadError;
+    }
 
     // 4. DB 登録 (com_t_tts_asset)
     const { data, error: dbError } = await supabase
@@ -120,7 +136,15 @@ export async function saveTTSAssetAction(payload: {
       .select()
       .single();
 
-    if (dbError) throw dbError;
+    if (dbError) {
+      logger.error('tts:asset_db_insert_failed', dbError.message, { payload, filePath });
+      throw dbError;
+    }
+
+    const savedAsset = data;
+    logger.info('tts:save_asset_success', `TTS Asset saved: ${payload.raw_text.slice(0, 20)}...`, { 
+      payload: { assetId: savedAsset.asset_id, path: filePath } 
+    });
 
     // 履歴一覧を再検証
     revalidatePath('/tools/tts-designer');
@@ -132,8 +156,8 @@ export async function saveTTSAssetAction(payload: {
     };
 
   } catch (error: any) {
-    console.error("TTS Save Error (Asset):", error);
-    return { success: false, message: error.message || "資産の保存に失敗しました" };
+    logger.error("tts:save_asset_unexpected", error instanceof Error ? error.message : 'Unknown error', { payload });
+    return { success: false, message: "予期せぬエラーが発生しました" };
   }
 }
 
@@ -142,16 +166,19 @@ export async function saveTTSAssetAction(payload: {
  * DBレコードの削除 + Storage上の物理ファイル削除
  */
 export async function deleteTTSAssetAction(assetId: string, audioPath: string) {
-  const supabase = createAdminClient();
-
   try {
+    const supabase = createAdminClient();
+
     // 1. DBレコード削除
     const { error: dbError } = await supabase
       .from('com_t_tts_asset')
       .delete()
       .eq('asset_id', assetId);
 
-    if (dbError) throw dbError;
+    if (dbError) {
+      logger.error('tts:asset_delete_failed', dbError.message, { assetId, audioPath });
+      throw dbError;
+    }
 
     // 2. Storage上の物理ファイルを削除 (一過性要件に基づき確実に掃除)
     if (audioPath) {
@@ -160,15 +187,19 @@ export async function deleteTTSAssetAction(assetId: string, audioPath: string) {
         .remove([audioPath]);
       
       if (storageError) {
-        console.warn("Storage deletion failed, but DB record was removed:", storageError);
+        logger.warn("tts:asset_storage_delete_failed", `Storage deletion failed, but DB record was removed: ${storageError.message}`, { assetId, audioPath });
       }
     }
+
+    logger.info('tts:delete_asset_success', `TTS Asset deleted`, { 
+      payload: { assetId, audioPath } 
+    });
 
     revalidatePath('/tools/tts-designer');
     return { success: true, message: "削除しました" };
 
   } catch (error: any) {
-    console.error("TTS Delete Error:", error);
-    return { success: false, message: error.message || "削除に失敗しました" };
+    logger.error("tts:delete_asset_unexpected", error instanceof Error ? error.message : 'Unknown error', { assetId, audioPath });
+    return { success: false, message: "予期せぬエラーが発生しました" };
   }
 }

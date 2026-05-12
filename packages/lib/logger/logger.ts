@@ -15,6 +15,7 @@ export interface LogEvent {
   path?: string;
   payload?: any;      // 追加のコンテキスト情報
   timestamp?: string;
+  [key: string]: any; // その他のプロパティ
 }
 
 export const createLogger = (service: LogService) => {
@@ -38,6 +39,12 @@ export const createLogger = (service: LogService) => {
         break;
       case 'warn':
         console.warn(output);
+        break;
+      case 'debug':
+        // 本番環境ではdebugログは出力しない
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug(output);
+        }
         break;
       default:
         console.log(output);
