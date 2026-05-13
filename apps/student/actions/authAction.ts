@@ -7,7 +7,7 @@ import {
   resetPasswordCore, 
   updatePasswordCore 
 } from '@gabby/lib/auth/actions';
-import { createLogger } from '@gabby/lib/logger/logger';
+import { createLogger, getLogContext } from '@gabby/lib/logger';
 import { redirect } from 'next/navigation';
 
 const logger = createLogger('student');
@@ -23,6 +23,7 @@ export async function signIn(formData: FormData) {
   const { user, error } = await signInCore(formData, { checkLicense: true });
   
   if (error || !user) {
+    // ログイン失敗時はコンテキストが取れないため、メールアドレスのみ記録
     logger.error('auth:login_failed', error || 'Unknown error', {
       payload: { email } 
     });
@@ -35,7 +36,8 @@ export async function signIn(formData: FormData) {
   if (userType === '0') {
     logger.warn('auth:invalid_portal', 'Admin user tried to login to student portal', {
       userId: user.id,
-      payload: { email: user.email }
+      email: user.email,
+      payload: { email: user.email, userType }
     });
     // セッションをクリアするためにログアウト処理を実行
     await signOutCore();
@@ -45,6 +47,7 @@ export async function signIn(formData: FormData) {
   // 通常の生徒は自身のダッシュボードへ
   logger.info('auth:login_success', `User logged in: ${user.email}`, { 
     userId: user.id,
+    email: user.email,
     payload: { isLicensed: user.app_metadata?.is_licensed }
   });
   redirect('/dashboard');
@@ -54,8 +57,9 @@ export async function signIn(formData: FormData) {
  * 生徒ログアウト
  */
 export async function signOut() {
+  const ctx = await getLogContext();
   // ログアウト前にイベントを記録（セッションが切れる前に行う）
-  logger.info('auth:logout', 'User initiated logout');
+  logger.info('auth:logout', 'User initiated logout', ctx);
   
   await signOutCore();
   // 生徒用ログイン画面へ
@@ -70,9 +74,10 @@ export async function forgotPassword(formData: FormData) {
   const result = await forgotPasswordCore(formData);
 
   if (result.error) {
+    // 未ログイン状態のため、直接ペイロードを入れる
     logger.error('auth:forgot_password_failed', result.error, { payload: { email } });
   } else {
-    logger.info('auth:forgot_password_sent', `Reset email sent to: ${email}`);
+    logger.info('auth:forgot_password_sent', `Reset email sent to: ${email}`, { payload: { email } });
   }
 
   return result;
@@ -85,7 +90,9 @@ export async function resetPassword(formData: FormData) {
   const { success, error } = await resetPasswordCore(formData);
 
   if (success) {
-    logger.info('auth:reset_password_success', 'User successfully reset password via email link');
+    // パスワードリセット成功時は、通常その後の自動ログイン状態になるため ctx 取得を試みる
+    const ctx = await getLogContext();
+    logger.info('auth:reset_password_success', 'User successfully reset password via email link', ctx);
     redirect('/login?message=password-updated');
   }
 
@@ -97,12 +104,13 @@ export async function resetPassword(formData: FormData) {
  * 学習画面や設定画面からのパスワード変更
  */
 export async function updatePassword(formData: FormData) {
+  const ctx = await getLogContext();
   const result = await updatePasswordCore(formData);
 
   if (result.error) {
-    logger.error('auth:update_password_failed', result.error);
+    logger.error('auth:update_password_failed', result.error, { ...ctx });
   } else {
-    logger.info('auth:update_password_success', 'User updated password from settings');
+    logger.info('auth:update_password_success', 'User updated password from settings', ctx);
   }
 
   return result;
