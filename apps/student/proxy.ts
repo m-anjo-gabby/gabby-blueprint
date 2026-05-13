@@ -1,7 +1,7 @@
-// apps/student/proxy.ts
 import { type NextRequest, NextResponse } from 'next/server';
 import { createSupabaseProxy } from '@gabby/lib/proxy-base';
-import { createLogger } from '@gabby/lib/logger/logger';
+// lib/logger/index.ts から createLogger をインポート
+import { createLogger } from '@gabby/lib/logger';
 
 export async function proxy(req: NextRequest) {
   const { res, user } = await createSupabaseProxy(req);
@@ -33,6 +33,7 @@ export async function proxy(req: NextRequest) {
   if (isAdmin && !isPublicRoute) {
     logger.warn('proxy:admin_access_denied', `Admin access denied: ${user.email} -> ${pathname}`, {
       userId: user.id,
+      email: user.email,
       path: pathname,
       payload: { userType }
     });
@@ -43,6 +44,7 @@ export async function proxy(req: NextRequest) {
   if (!isAdmin && !isLicensed && !isPublicRoute) {
     logger.error('proxy:license_check_failed', `License check failed: ${user.email}`, {
       userId: user.id,
+      email: user.email,
       path: pathname,
       payload: { appMetadata: user.app_metadata }
     });
@@ -65,6 +67,7 @@ export async function proxy(req: NextRequest) {
   if (!isPublicRoute && user) {
     logger.info('page_view', `Access: ${pathname}`, {
       userId: user.id,
+      email: user.email,
       path: pathname,
       payload: {
         method: req.method,

@@ -2,11 +2,12 @@
  * サーバーサイド専用: Azure Speech Tokenを取得する共通関数
  */
 export async function getAzureSpeechToken() {
-  const region = process.env.AZURE_SPEECH_REGION || 'japaneast';
+  const region = process.env.AZURE_SPEECH_REGION;
   const key = process.env.AZURE_SPEECH_SERVICE_KEY;
 
-  if (!key) {
-    throw new Error('AZURE_SPEECH_SERVICE_KEY is not defined in environment variables.');
+  // リージョンが未設定の場合、デフォルトに頼らずエラーを出す方が安全です
+  if (!region || !key) {
+    throw new Error('Azure configuration (REGION or KEY) is missing.');
   }
 
   const response = await fetch(
@@ -23,7 +24,9 @@ export async function getAzureSpeechToken() {
   );
 
   if (!response.ok) {
-    throw new Error(`Azure Token Error: ${response.statusText}`);
+    // statusTextだけでなく、可能であればボディの中身も取得して詳細を確認する
+    const errorBody = await response.text().catch(() => 'No detail');
+    throw new Error(`Azure Token Error: ${response.status} ${response.statusText} - ${errorBody}`);
   }
 
   return response.text();

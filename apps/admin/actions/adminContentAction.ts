@@ -4,7 +4,8 @@
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { Content, ContentRecord, ContentTagSummary } from '@gabby/types/content';
-import { createLogger } from '@gabby/lib/logger/logger';
+// パスを index.ts 参照へ修正し、getLogContext を追加
+import { createLogger, getLogContext } from '@gabby/lib/logger';
 
 const logger = createLogger('admin');
 
@@ -12,12 +13,12 @@ const logger = createLogger('admin');
  * 教材一覧取得（サーバーサイドページネーション）
  */
 export async function getContents(page: number = 1, limit: number = 10, searchQuery?: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // selectの中身をリレーションを含めた形に修正
     let query = supabase
       .from('com_m_contents')
       .select(`
@@ -38,14 +39,11 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
       `, { count: 'exact' })
       .eq('delete_flg', '0')
       .eq('access.delete_flg', '0')
-      // メインの教材リストのソート
       .order('content_type', { ascending: true })
       .order('seq_no', { ascending: true })
-      // リレーション先のタグのソート（テーブル名をドットで繋いで指定）
       .order('seq_no', { referencedTable: 'com_t_contents_tag_rel.com_m_contents_tag', ascending: true })
       .range(from, to);
 
-    // 検索クエリ（教材名、ラベル）
     if (searchQuery) {
       query = query.or(`content_name.ilike.%${searchQuery}%,content_label.ilike.%${searchQuery}%`);
     }
@@ -53,16 +51,13 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
     const { data, count, error } = await query;
 
     if (error) {
-      logger.error('content:get_contents_failed', error.message, { payload: { page, limit, searchQuery } });
+      logger.error('content:get_contents_failed', error.message, { ...ctx, payload: { page, limit, searchQuery } });
       throw new Error(error.message);
     }
 
-    // データ整形
     const contents: Content[] = (data || []).map((item: any) => ({
       ...item,
-      // タグのフラット化
       tags: item.tags?.map((t: any) => t.tag).filter(Boolean) || [],
-      // アクセス権（クライアント）のフラット化
       access_clients: item.access?.map((a: any) => a.client).filter(Boolean) || []
     }));
 
@@ -71,7 +66,7 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', { payload: { page, limit, searchQuery } });
+    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, limit, searchQuery } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -80,6 +75,7 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
  * IDを指定して教材情報を取得する
  */
 export async function getContentById(contentId: string): Promise<ContentRecord | null> {
+  const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
@@ -87,17 +83,17 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
       .from('com_m_contents')
       .select('*')
       .eq('content_id', contentId)
-      .eq('delete_flg', '0') // 論理削除されていないもの
+      .eq('delete_flg', '0')
       .single();
 
     if (error) {
-      logger.error('content:get_content_by_id_failed', error.message, { contentId });
+      logger.error('content:get_content_by_id_failed', error.message, { ...ctx, payload: { contentId } });
       return null;
     }
 
     return data as ContentRecord;
   } catch (err) {
-    logger.error('content:get_content_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { contentId });
+    logger.error('content:get_content_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
     return null;
   }
 }
@@ -106,6 +102,7 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
  * 教材の登録・更新 (Upsert)
  */
 export async function upsertContent(payload: Partial<Content>) {
+  const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
     const isEdit = !!payload.content_id;
@@ -117,14 +114,12 @@ export async function upsertContent(payload: Partial<Content>) {
 
     let query;
     if (isEdit) {
-      // 更新
       query = supabase
         .from('com_m_contents')
         .update(dataToSave)
         .eq('content_id', payload.content_id)
         .select();
     } else {
-      // 新規作成
       query = supabase
         .from('com_m_contents')
         .insert([dataToSave])
@@ -134,19 +129,20 @@ export async function upsertContent(payload: Partial<Content>) {
     const { data, error } = await query;
 
     if (error) {
-      logger.error('content:upsert_content_failed', error.message, { payload });
+      logger.error('content:upsert_content_failed', error.message, { ...ctx, payload });
       return { success: false, message: error.message };
     }
 
     const savedContent = data?.[0] as Content;
     logger.info('content:upsert_content_success', `Content ${isEdit ? 'updated' : 'created'}: ${savedContent.content_name}`, { 
+      ...ctx,
       payload: { contentId: savedContent.content_id, isEdit } 
     });
 
     revalidatePath('/contents');
     return { success: true, data: savedContent };
   } catch (error) {
-    logger.error('content:upsert_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { payload });
+    logger.error('content:upsert_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -155,6 +151,7 @@ export async function upsertContent(payload: Partial<Content>) {
  * 教材の論理削除
  */
 export async function deleteContent(contentId: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
 
@@ -167,31 +164,31 @@ export async function deleteContent(contentId: string) {
       .eq('content_id', contentId);
 
     if (error) {
-      logger.error('content:delete_content_failed', error.message, { contentId });
+      logger.error('content:delete_content_failed', error.message, { ...ctx, payload: { contentId } });
       return { success: false, message: error.message };
     }
 
     logger.info('content:delete_content_success', `Content logically deleted`, { 
+      ...ctx,
       payload: { contentId } 
     });
 
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:delete_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { contentId });
+    logger.error('content:delete_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
 
 /**
  * タグ割当用データの取得
- * 指定した教材に「割当済みのタグ」と「未割当のタグ」を分けて返す
  */
 export async function getTagAssignmentData(contentId: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
 
-    // 1. すべての有効なタグマスタを取得
     const { data: allTags, error: tagError } = await supabase
       .from('com_m_contents_tag')
       .select('tag_id, tag_name, tag_type, seq_no')
@@ -199,24 +196,21 @@ export async function getTagAssignmentData(contentId: string) {
       .order('seq_no', { ascending: true });
 
     if (tagError) {
-      logger.error('content:get_tag_assignment_all_tags_failed', tagError.message, { contentId });
+      logger.error('content:get_tag_assignment_all_tags_failed', tagError.message, { ...ctx, payload: { contentId } });
       throw new Error(tagError.message);
     }
 
-    // 2. 現在その教材に紐づいているタグIDの一覧を取得
     const { data: relData, error: relError } = await supabase
       .from('com_t_contents_tag_rel')
       .select('tag_id')
       .eq('content_id', contentId);
 
     if (relError) {
-      logger.error('content:get_tag_assignment_rel_data_failed', relError.message, { contentId });
+      logger.error('content:get_tag_assignment_rel_data_failed', relError.message, { ...ctx, payload: { contentId } });
       throw new Error(relError.message);
     }
 
     const assignedTagIds = new Set((relData as any[]).map(r => r.tag_id));
-
-    // 3. 割当済みと未割当に振り分け
     const assignedTags: ContentTagSummary[] = [];
     const unassignedTags: ContentTagSummary[] = [];
 
@@ -230,7 +224,7 @@ export async function getTagAssignmentData(contentId: string) {
 
     return { assignedTags, unassignedTags };
   } catch (error) {
-    logger.error('content:get_tag_assignment_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { contentId });
+    logger.error('content:get_tag_assignment_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -239,6 +233,7 @@ export async function getTagAssignmentData(contentId: string) {
  * 教材にタグを割り当てる
  */
 export async function assignTag(contentId: string, tagId: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
 
@@ -250,17 +245,18 @@ export async function assignTag(contentId: string, tagId: string) {
       });
 
     if (error) {
-      logger.error('content:assign_tag_failed', error.message, { contentId, tagId });
+      logger.error('content:assign_tag_failed', error.message, { ...ctx, payload: { contentId, tagId } });
       return { success: false, message: error.message };
     }
 
     logger.info('content:assign_tag_success', `Tag assigned to content`, { 
+      ...ctx,
       payload: { contentId, tagId } 
     });
 
     return { success: true };
   } catch (error) {
-    logger.error('content:assign_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { contentId, tagId });
+    logger.error('content:assign_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId, tagId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -269,6 +265,7 @@ export async function assignTag(contentId: string, tagId: string) {
  * 教材からタグの割当を解除する
  */
 export async function removeTag(contentId: string, tagId: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
 
@@ -279,17 +276,18 @@ export async function removeTag(contentId: string, tagId: string) {
       .eq('tag_id', tagId);
 
     if (error) {
-      logger.error('content:remove_tag_failed', error.message, { contentId, tagId });
+      logger.error('content:remove_tag_failed', error.message, { ...ctx, payload: { contentId, tagId } });
       return { success: false, message: error.message };
     }
 
     logger.info('content:remove_tag_success', `Tag removed from content`, { 
+      ...ctx,
       payload: { contentId, tagId } 
     });
 
     return { success: true };
   } catch (error) {
-    logger.error('content:remove_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { contentId, tagId });
+    logger.error('content:remove_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId, tagId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -298,10 +296,10 @@ export async function removeTag(contentId: string, tagId: string) {
  * 教材のアクセス権限（クライアント割当）データ取得
  */
 export async function getContentAccessData(contentId: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
 
-    // 1. 全クライアントマスタ取得
     const { data: allClients, error: clientError } = await supabase
       .from('com_m_client')
       .select('client_id, client_name')
@@ -309,11 +307,10 @@ export async function getContentAccessData(contentId: string) {
       .order('client_name', { ascending: true });
 
     if (clientError) {
-      logger.error('content:get_content_access_all_clients_failed', clientError.message, { contentId });
+      logger.error('content:get_content_access_all_clients_failed', clientError.message, { ...ctx, payload: { contentId } });
       throw new Error(clientError.message);
     }
 
-    // 2. 現在の割当状況取得
     const { data: accessData, error: accessError } = await supabase
       .from('com_m_contents_access')
       .select('client_id')
@@ -321,13 +318,11 @@ export async function getContentAccessData(contentId: string) {
       .eq('delete_flg', '0');
 
     if (accessError) {
-      logger.error('content:get_content_access_data_failed', accessError.message, { contentId });
+      logger.error('content:get_content_access_data_failed', accessError.message, { ...ctx, payload: { contentId } });
       throw new Error(accessError.message);
     }
 
     const assignedClientIds = new Set((accessData as any[]).map(a => a.client_id));
-
-    // 3. 振り分け
     const assignedClients: any[] = [];
     const unassignedClients: any[] = [];
 
@@ -341,7 +336,7 @@ export async function getContentAccessData(contentId: string) {
 
     return { assignedClients, unassignedClients };
   } catch (error) {
-    logger.error('content:get_content_access_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { contentId });
+    logger.error('content:get_content_access_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -350,6 +345,7 @@ export async function getContentAccessData(contentId: string) {
  * クライアントに教材アクセス権を付与
  */
 export async function assignAccess(contentId: string, clientId: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
     const { error } = await supabase
@@ -357,18 +353,19 @@ export async function assignAccess(contentId: string, clientId: string) {
       .insert({ content_id: contentId, client_id: clientId });
 
     if (error) {
-      logger.error('content:assign_access_failed', error.message, { contentId, clientId });
+      logger.error('content:assign_access_failed', error.message, { ...ctx, payload: { contentId, clientId } });
       return { success: false, message: error.message };
     }
 
     logger.info('content:assign_access_success', `Access assigned to client`, { 
+      ...ctx,
       payload: { contentId, clientId } 
     });
 
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:assign_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { contentId, clientId });
+    logger.error('content:assign_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId, clientId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -377,6 +374,7 @@ export async function assignAccess(contentId: string, clientId: string) {
  * クライアントの教材アクセス権を解除
  */
 export async function removeAccess(contentId: string, clientId: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
     const { error } = await supabase
@@ -386,18 +384,19 @@ export async function removeAccess(contentId: string, clientId: string) {
       .eq('client_id', clientId);
 
     if (error) {
-      logger.error('content:remove_access_failed', error.message, { contentId, clientId });
+      logger.error('content:remove_access_failed', error.message, { ...ctx, payload: { contentId, clientId } });
       return { success: false, message: error.message };
     }
 
     logger.info('content:remove_access_success', `Access removed from client`, { 
+      ...ctx,
       payload: { contentId, clientId } 
     });
 
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:remove_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { contentId, clientId });
+    logger.error('content:remove_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId, clientId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

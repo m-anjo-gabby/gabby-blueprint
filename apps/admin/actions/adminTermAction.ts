@@ -1,9 +1,9 @@
-// apps/admin/actions/adminTermAction.ts
 'use server';
 
 import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { createLogger } from '@gabby/lib/logger/logger';
+// インポートパスを index.ts 参照へ修正し、getLogContext を追加
+import { createLogger, getLogContext } from '@gabby/lib/logger';
 
 const logger = createLogger('admin');
 
@@ -11,6 +11,7 @@ const logger = createLogger('admin');
  * 規約情報の一覧取得
  */
 export async function getTerms(page: number = 1, pageSize: number = 10, searchQuery?: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const from = (page - 1) * pageSize;
@@ -24,29 +25,20 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
       query = query.ilike('version_name', `%${searchQuery}%`);
     }
 
-    // published_dateの降順で取得
     const { data, error, count } = await query
       .order('term_type', { ascending: true })
       .order('published_date', { ascending: false })
       .range(from, to);
 
     if (error) {
-      logger.error('term:get_terms_failed', error.message, { payload: { page, pageSize, searchQuery } });
+      logger.error('term:get_terms_failed', error.message, { ...ctx, payload: { page, pageSize, searchQuery } });
       throw error;
     }
 
     const now = new Date();
-
-    // --- 公開中（Current）を判定するロジック ---
-    // 種別ごとに「現在時刻以下で最も新しいもの」のIDを保持する
     const currentActiveIds = new Map();
-    
-    // ソート済みデータから、各タイプごとに「公開中」となるべきIDを1つだけ特定する
-    // (データは日付降順なので、最初に見つかった「現在時刻以下のレコード」がその時点の最新版)
     const allDataForLogic = data || [];
     
-    // 重複を避けるため、全データから判定（ページネーションを跨ぐ場合は本来全件取得が必要ですが、
-    // 直近の数件であればこのデータ内での判定で十分です）
     ["TERMS", "PRIVACY"].forEach(type => {
       const latestActive = allDataForLogic.find(t => 
         t.term_type === type && new Date(t.published_date) <= now
@@ -58,7 +50,6 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
 
     const formattedTerms = allDataForLogic.map((term) => ({
       ...term,
-      // DataTable側での判定用にフラグを整理
       is_current: currentActiveIds.get(term.term_type) === term.term_id,
     }));
 
@@ -67,39 +58,43 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('term:get_terms_unexpected', error instanceof Error ? error.message : 'Unknown error', { payload: { page, pageSize, searchQuery } });
+    logger.error('term:get_terms_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, pageSize, searchQuery } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
 
 /**
- * 規約の削除（物理削除または論理削除は運用に合わせて調整）
+ * 規約の削除
  */
 export async function deleteTerm(termId: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const { error } = await supabase.from('com_m_terms').delete().eq('term_id', termId);
+    
     if (error) {
-      logger.error('term:delete_term_failed', error.message, { termId });
+      logger.error('term:delete_term_failed', error.message, { ...ctx, payload: { termId } });
       throw error;
     }
 
     logger.info('term:delete_term_success', `Term deleted`, { 
+      ...ctx,
       payload: { termId } 
     });
 
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
-    logger.error('term:delete_term_unexpected', error instanceof Error ? error.message : 'Unknown error', { termId });
+    logger.error('term:delete_term_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
 
 /**
- * 規約の個別取得（編集画面用）
+ * 規約の個別取得
  */
 export async function getTermById(termId: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
@@ -109,12 +104,12 @@ export async function getTermById(termId: string) {
       .single();
 
     if (error) {
-      logger.error('term:get_term_by_id_failed', error.message, { termId });
+      logger.error('term:get_term_by_id_failed', error.message, { ...ctx, payload: { termId } });
       throw error;
     }
     return data;
   } catch (error) {
-    logger.error('term:get_term_by_id_unexpected', error instanceof Error ? error.message : 'Unknown error', { termId });
+    logger.error('term:get_term_by_id_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -123,6 +118,7 @@ export async function getTermById(termId: string) {
  * StorageからMarkdownの内容を取得
  */
 export async function getTermContent(storagePath: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase.storage
@@ -130,12 +126,12 @@ export async function getTermContent(storagePath: string) {
       .download(storagePath);
 
     if (error) {
-      logger.error("term:get_term_content_failed", error.message, { storagePath });
+      logger.error("term:get_term_content_failed", error.message, { ...ctx, payload: { storagePath } });
       return "";
     }
     return await data.text();
   } catch (error) {
-    logger.error("term:get_term_content_unexpected", error instanceof Error ? error.message : 'Unknown error', { storagePath });
+    logger.error("term:get_term_content_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { storagePath } });
     return "";
   }
 }
@@ -144,10 +140,9 @@ export async function getTermContent(storagePath: string) {
  * Markdownの内容をStorageに上書き保存
  */
 export async function updateTermContent(storagePath: string, content: string) {
+  const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    
-    // pathの先頭にスラッシュがあるとエラーになる場合があるため除去
     const cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
 
     const { error } = await supabase.storage
@@ -159,18 +154,19 @@ export async function updateTermContent(storagePath: string, content: string) {
       });
 
     if (error) {
-      logger.error("term:update_term_content_failed", error.message, { storagePath });
+      logger.error("term:update_term_content_failed", error.message, { ...ctx, payload: { storagePath: cleanPath } });
       throw error;
     }
 
     logger.info('term:update_term_content_success', `Term content updated in storage`, { 
+      ...ctx,
       payload: { storagePath: cleanPath } 
     });
     
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
-    logger.error("term:update_term_content_unexpected", error instanceof Error ? error.message : 'Unknown error', { storagePath });
+    logger.error("term:update_term_content_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { storagePath } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

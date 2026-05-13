@@ -1,7 +1,7 @@
 // apps/admin/proxy.ts
 import { type NextRequest, NextResponse } from 'next/server';
 import { createSupabaseProxy } from '@gabby/lib/proxy-base';
-import { createLogger } from '@gabby/lib/logger/logger';
+import { createLogger } from '@gabby/lib/logger';
 import { canAccessPath } from './lib/navigation';
 
 export async function proxy(req: NextRequest) {
@@ -56,9 +56,11 @@ export async function proxy(req: NextRequest) {
 
   // --- C. アクセスログ（PageView）の記録 ---
   if (!isPublicRoute) {
-    // prefetchを除外する場合はここで判定を入れる
+    // prefetchを除外判定
     const isPrefetch = req.headers.get('purpose') === 'prefetch' || !!req.headers.get('x-nextjs-data');
     
+    // Pino版ロガーでの出力
+    // userId は明示的に user.id を渡す（Middleware内では headers() がまだ未確定な場合があるため）
     logger.info('page_view', `Admin Access: ${pathname}`, {
       userId: user.id,
       path: pathname,
