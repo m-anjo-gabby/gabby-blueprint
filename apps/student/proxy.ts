@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createSupabaseProxy } from '@gabby/lib/proxy-base';
-// lib/logger/index.ts から createLogger をインポート
 import { createLogger } from '@gabby/lib/logger';
 
 export async function proxy(req: NextRequest) {

@@ -7,7 +7,6 @@ import {
   resetPasswordCore, 
   updatePasswordCore 
 } from '@gabby/lib/auth/actions';
-// index.tsへの集約に伴うパス修正とコンテキスト取得関数の追加
 import { createLogger, getLogContext } from '@gabby/lib/logger';
 import { redirect } from 'next/navigation';
 
