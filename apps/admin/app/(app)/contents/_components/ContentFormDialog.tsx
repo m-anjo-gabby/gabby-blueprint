@@ -100,7 +100,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         setOpen(false);
         // 新規登録時はそのまま詳細編集画面へ遷移
         if (mode === 'create') {
-          router.push(`/admin/contents/${result.data.content_id}`);
+          router.push(`/contents/${result.data.content_id}`);
         }
       } else {
         setServerError(result.message || "処理に失敗しました");

@@ -372,6 +372,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         <div className="px-6 pb-8 shrink-0">
           <WordControls 
             isListening={isListening}
+            isPlaying={isSpeaking || (isAudioPlaying !== null)}
             timeLeft={timeLeft}
             playbackRate={playbackRate}
             onChangePlaybackRate={changePlaybackRate}
