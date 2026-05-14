@@ -152,3 +152,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_license_change
 AFTER INSERT OR UPDATE OR DELETE ON public.com_t_user_license
 FOR EACH ROW EXECUTE PROCEDURE public.sync_user_license_metadata();
+
+---------------------------------------------
+-- JWTから user_type を安全に取り出すヘルパー関数
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_jwt_user_type()
+RETURNS text AS $$
+  -- app_metadata 内の user_type を取得
+  SELECT NULLIF(current_setting('request.jwt.claims', true)::jsonb -> 'app_metadata' ->> 'user_type', '');
+$$ LANGUAGE sql STABLE;
+
+-- 権限付与
+GRANT EXECUTE ON FUNCTION public.get_jwt_user_type() TO authenticated;

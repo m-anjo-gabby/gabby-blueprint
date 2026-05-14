@@ -27,5 +27,15 @@ export async function createSupabaseProxy(req: NextRequest) {
   await supabase.auth.getSession();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // --- 共通ヘッダーの注入 ---
+  if (user) {
+    // リクエストヘッダー（Action側で headers() で取れる値）にセット
+    res.headers.set('x-user-id', user.id);
+    
+    // 将来的な拡張の例
+    // const requestId = crypto.randomUUID();
+    // res.headers.set('x-request-id', requestId);
+  }
+
   return { res, user, supabase };
 }

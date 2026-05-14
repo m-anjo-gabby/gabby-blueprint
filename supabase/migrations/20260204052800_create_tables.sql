@@ -425,3 +425,67 @@ COMMENT ON COLUMN public.com_t_tts_asset.tts_adjustments IS 'TTS調整パラメ�
 COMMENT ON COLUMN public.com_t_tts_asset.created_by IS '作成者ID';
 COMMENT ON COLUMN public.com_t_tts_asset.created_at IS '作成日時';
 COMMENT ON COLUMN public.com_t_tts_asset.updated_at IS '更新日時';
+
+---------------------------------------------
+-- DDL: com_m_terms (規約マスタ)
+-- 規約のメタ情報（タイプ、バージョン、ファイルパス）を管理
+---------------------------------------------
+CREATE TABLE public.com_m_terms (
+  term_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  term_type text NOT NULL,        -- 'TERMS':利用規約, 'PRIVACY':プライバシーポリシー
+  version_name text NOT NULL,     -- 'v1.0.0', '2026-05-07' 等
+  storage_path text NOT NULL,     -- Supabase Storage内のパス ('terms/tos_v1.md'等)
+  is_required boolean DEFAULT true NOT NULL, -- 同意が必須かどうか
+  published_date timestamp with time zone DEFAULT now() NOT NULL, -- 公開日
+  insert_date timestamp with time zone DEFAULT now() NOT NULL,
+  update_date timestamp with time zone DEFAULT now() NOT NULL,
+  
+  -- 同じタイプでバージョン名が重複するのを防ぐ
+  UNIQUE(term_type, version_name)
+);
+
+-- コメント設定
+COMMENT ON TABLE public.com_m_terms IS '規約マスタ：規約のバージョンとStorageパスを管理';
+COMMENT ON COLUMN public.com_m_terms.term_type IS '規約タイプ（TERMS/PRIVACY等）';
+COMMENT ON COLUMN public.com_m_terms.version_name IS '規約のバージョン名';
+COMMENT ON COLUMN public.com_m_terms.storage_path IS 'Supabase Storage上のファイル参照パス';
+COMMENT ON COLUMN public.com_m_terms.is_required IS '同意必須フラグ';
+COMMENT ON COLUMN public.com_m_terms.published_date IS '公開日時';
+COMMENT ON COLUMN public.com_m_terms.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_terms.update_date IS '更新日時';
+
+-- 最新の規約をタイプ別に取得するためのインデックス
+CREATE INDEX idx_m_terms_type_published ON public.com_m_terms(term_type, published_date DESC);
+
+---------------------------------------------
+-- DDL: com_t_user_terms_agreement (規約同意履歴)
+-- どのユーザーが、どの規約（バージョン）に、いつ同意したかを記録
+---------------------------------------------
+CREATE TABLE public.com_t_user_terms_agreement (
+  agreement_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES public.com_m_user(id) ON DELETE CASCADE NOT NULL,
+  term_id uuid REFERENCES public.com_m_terms(term_id) NOT NULL,
+  agreed_date timestamp with time zone DEFAULT now() NOT NULL,
+  ip_address text,                 -- 同意時のIPアドレス（証跡用）
+  user_agent text,                 -- 同意時のブラウザ情報（証跡用）
+  insert_date timestamp with time zone DEFAULT now() NOT NULL,
+  update_date timestamp with time zone DEFAULT now() NOT NULL,
+
+  -- 同じユーザーが同じバージョンの規約に重複して同意レコードを作らない制約
+  UNIQUE(user_id, term_id)
+);
+
+-- コメント設定
+COMMENT ON TABLE public.com_t_user_terms_agreement IS '規約同意履歴：ユーザーが同意した規約の記録';
+COMMENT ON COLUMN public.com_t_user_terms_agreement.user_id IS 'ユーザID (auth.users連携)';
+COMMENT ON COLUMN public.com_t_user_terms_agreement.term_id IS '規約マスタID';
+COMMENT ON COLUMN public.com_t_user_terms_agreement.agreed_date IS '同意日付';
+COMMENT ON COLUMN public.com_t_user_terms_agreement.ip_address IS '同意時の接続元IP';
+COMMENT ON COLUMN public.com_t_user_terms_agreement.user_agent IS '同意時のブラウザ情報';
+COMMENT ON COLUMN public.com_t_user_terms_agreement.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_user_terms_agreement.update_date IS '更新日時';
+
+-- ユーザーごとの同意状況を高速に検索
+CREATE INDEX idx_user_agreement_user_id ON public.com_t_user_terms_agreement(user_id);
+-- 特定の規約に対する同意者一覧を高速に検索
+CREATE INDEX idx_user_agreement_term_id ON public.com_t_user_terms_agreement(term_id);

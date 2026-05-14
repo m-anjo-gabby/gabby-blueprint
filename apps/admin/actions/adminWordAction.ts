@@ -3,28 +3,32 @@
 import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { PhraseRecord, WordRecord } from '@gabby/types/word';
 import { revalidatePath } from 'next/cache';
+import { createLogger, getLogContext } from '@gabby/lib/logger';
+
+const logger = createLogger('admin');
 
 /**
  * 特定の教材に紐づく単語一覧を取得する
  */
 export async function getWordsByContentId(contentId: string): Promise<WordRecord[]> {
-  const supabase = createAdminClient();
-
+  const ctx = await getLogContext();
   try {
+    const supabase = await createAdminClient();
+
     const { data, error } = await supabase
       .from('com_m_word')
       .select('*')
       .eq('content_id', contentId)
-      .order('frequency_rank', { ascending: true }); // 頻出度のランク昇順
+      .order('frequency_rank', { ascending: true });
 
     if (error) {
-      console.error('Error fetching words:', error);
+      logger.error('word:get_words_by_content_id_failed', error.message, { ...ctx, payload: { contentId } });
       return [];
     }
 
     return data as WordRecord[];
   } catch (err) {
-    console.error('System error:', err);
+    logger.error('word:get_words_by_content_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
     return [];
   }
 }
@@ -33,101 +37,105 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
  * 単語の登録または更新 (Upsert)
  */
 export async function upsertWord(payload: Partial<WordRecord>) {
-  const supabase = await createAdminClient();
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createAdminClient();
+    const isEdit = !!payload.word_id;
 
-  const isEdit = !!payload.word_id;
-
-  // 送信データの整形
-  const wordData = {
-    content_id: payload.content_id,
-    word_en: payload.word_en,
-    word_ja: payload.word_ja,
-    frequency_rank: payload.frequency_rank,
-    status: payload.status,
-    update_date: new Date().toISOString(),
-  };
-
-  let error;
-
-  if (isEdit) {
-    // 更新
-    const { error: updateError } = await supabase
-      .from('com_m_word')
-      .update(wordData)
-      .eq('word_id', payload.word_id as string);
-    error = updateError;
-  } else {
-    // 新規登録
-    const { error: insertError } = await supabase
-      .from('com_m_word')
-      .insert([{ 
-        ...wordData, 
-        insert_date: new Date().toISOString() 
-      }]);
-    error = insertError;
-  }
-
-  if (error) {
-    console.error("Upsert Word Error:", error);
-    return { 
-      success: false, 
-      message: error.message || "データベース操作に失敗しました" 
+    const wordData = {
+      content_id: payload.content_id,
+      word_en: payload.word_en,
+      word_ja: payload.word_ja,
+      frequency_rank: payload.frequency_rank,
+      status: payload.status,
+      update_date: new Date().toISOString(),
     };
+
+    let error;
+    let savedWordId = payload.word_id;
+
+    if (isEdit) {
+      const { error: updateError } = await supabase
+        .from('com_m_word')
+        .update(wordData)
+        .eq('word_id', payload.word_id as string);
+      error = updateError;
+    } else {
+      const { data: insertData, error: insertError } = await supabase
+        .from('com_m_word')
+        .insert([{ 
+          ...wordData, 
+          insert_date: new Date().toISOString() 
+        }])
+        .select('word_id')
+        .single();
+      error = insertError;
+      if (insertData) savedWordId = insertData.word_id;
+    }
+
+    if (error) {
+      logger.error('word:upsert_word_failed', error.message, { ...ctx, payload });
+      return { success: false, message: error.message || "データベース操作に失敗しました" };
+    }
+
+    logger.info('word:upsert_word_success', `Word ${isEdit ? 'updated' : 'created'}: ${payload.word_en}`, { 
+      ...ctx,
+      payload: { wordId: savedWordId, wordEn: payload.word_en, isEdit } 
+    });
+
+    revalidatePath('/contents/[id]/words', 'page');
+    return { success: true };
+  } catch (error) {
+    logger.error('word:upsert_word_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    return { success: false, message: '予期せぬエラーが発生しました' };
   }
-
-  // キャッシュの更新（管理画面のパスを指定）
-  revalidatePath('/contents/[id]/words', 'page');
-
-  return { success: true };
 }
 
 /**
  * 単語の物理削除（関連するStorage内の音声ファイルも含む）
  */
 export async function deleteWord(wordId: string) {
-  const supabase = createAdminClient();
-
+  const ctx = await getLogContext();
   try {
-    // 1. Storage内の該当単語ディレクトリ (words/[wordId]/) 配下のファイルを特定
-    // phrases フォルダの中身を含めてリストアップ
+    const supabase = await createAdminClient();
+
+    // 1. Storage内の該当単語ディレクトリ配下のファイルをリストアップ
     const folderPath = `words/${wordId}/phrases`;
     const { data: files, error: listError } = await supabase
       .storage
       .from('audio')
       .list(folderPath);
 
-    // 2. ファイルが存在すれば一括削除を実行
+    // 2. ファイルが存在すれば一括削除
     if (files && files.length > 0) {
       const pathsToDelete = files.map(f => `${folderPath}/${f.name}`);
-      
       const { error: removeError } = await supabase
         .storage
         .from('audio')
         .remove(pathsToDelete);
 
       if (removeError) {
-        // 音声の削除失敗時はログ出力し、DB削除を優先する。
-        console.error("Storage Cleanup Error (non-critical):", removeError);
+        logger.warn("word:storage_cleanup_failed", `Storage Cleanup Error (non-critical): ${removeError.message}`, { ...ctx, payload: { wordId, folderPath } });
       }
     }
 
     // 3. DBから単語を削除
-    // ※ 外部キー制約 (ON DELETE CASCADE) により、com_m_phrase のレコードも自動で消えます
     const { error: dbError } = await supabase
       .from('com_m_word')
       .delete()
       .eq('word_id', wordId);
 
-    if (dbError) throw dbError;
-    
+    if (dbError) {
+      logger.error('word:delete_word_db_failed', dbError.message, { ...ctx, payload: { wordId } });
+      throw dbError;
+    }
+
+    logger.info('word:delete_word_success', `Word deleted`, { ...ctx, payload: { wordId } });
     return { success: true };
 
-  } catch (error: any) {
-    console.error("Delete Word Error:", error);
-    return { 
-      success: false, 
-      message: error.message || "単語の削除処理に失敗しました" 
-    };
+  } catch (error) {
+    logger.error("word:delete_word_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { wordId } });
+    return { success: false, message: "予期せぬエラーが発生しました" };
   }
 }
 
@@ -135,85 +143,97 @@ export async function deleteWord(wordId: string) {
  * 特定の単語に紐づくフレーズ一覧を取得する
  */
 export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('com_m_phrase')
-    .select('*')
-    .eq('word_id', wordId)
-    .order('seq_no', { ascending: true });
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createAdminClient();
+    const { data, error } = await supabase
+      .from('com_m_phrase')
+      .select('*')
+      .eq('word_id', wordId)
+      .order('seq_no', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching phrases:', error);
+    if (error) {
+      logger.error('word:get_phrases_by_word_id_failed', error.message, { ...ctx, payload: { wordId } });
+      return [];
+    }
+    return data as PhraseRecord[];
+  } catch (err) {
+    logger.error('word:get_phrases_by_word_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { wordId } });
     return [];
   }
-  return data as PhraseRecord[];
 }
 
 /**
  * フレーズの登録または更新 (Upsert)
  */
 export async function upsertPhrase(payload: Partial<PhraseRecord>) {
-  const supabase = createAdminClient();
-  const isEdit = !!payload.phrase_id;
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createAdminClient();
+    const isEdit = !!payload.phrase_id;
 
-  const phraseData = {
-    word_id: payload.word_id,
-    phrase_en: payload.phrase_en,
-    phrase_ja: payload.phrase_ja,
-    phrase_type: payload.phrase_type,
-    seq_no: payload.seq_no,
-    status: payload.status,
-    // 編集時は既存のTTS情報を維持、新規はデフォルト値を想定（DDLに準拠）
-    update_date: new Date().toISOString(),
-  };
+    const phraseData = {
+      word_id: payload.word_id,
+      phrase_en: payload.phrase_en,
+      phrase_ja: payload.phrase_ja,
+      phrase_type: payload.phrase_type,
+      seq_no: payload.seq_no,
+      status: payload.status,
+      update_date: new Date().toISOString(),
+    };
 
-  let error;
-  if (isEdit) {
-    const { error: updateError } = await supabase
-      .from('com_m_phrase')
-      .update(phraseData)
-      .eq('phrase_id', payload.phrase_id as string);
-    error = updateError;
-  } else {
-    const { error: insertError } = await supabase
-      .from('com_m_phrase')
-      .insert([{ ...phraseData, insert_date: new Date().toISOString() }]);
-    error = insertError;
-  }
+    let error;
+    let savedPhraseId = payload.phrase_id;
 
-  if (error) {
-    console.error("Upsert Phrase Error:", error);
-
-    // ユニーク制約違反 (コード: 23505) のハンドリング
-    if (error.code === '23505') {
-      return { 
-        success: false, 
-        message: "表示順 (Seq No) が重複しています。別の数値を入力してください。" 
-      };
+    if (isEdit) {
+      const { error: updateError } = await supabase
+        .from('com_m_phrase')
+        .update(phraseData)
+        .eq('phrase_id', payload.phrase_id as string);
+      error = updateError;
+    } else {
+      const { data: insertData, error: insertError } = await supabase
+        .from('com_m_phrase')
+        .insert([{ ...phraseData, insert_date: new Date().toISOString() }])
+        .select('phrase_id')
+        .single();
+      error = insertError;
+      if (insertData) savedPhraseId = insertData.phrase_id;
     }
 
-    return { success: false, message: error.message };
-  }
+    if (error) {
+      logger.error('word:upsert_phrase_failed', error.message, { ...ctx, payload });
+      if (error.code === '23505') {
+        return { success: false, message: "表示順 (Seq No) が重複しています。" };
+      }
+      return { success: false, message: error.message };
+    }
 
-  revalidatePath('/contents/[id]/words', 'page');
-  return { success: true };
+    logger.info('word:upsert_phrase_success', `Phrase ${isEdit ? 'updated' : 'created'} for word: ${payload.word_id}`, { 
+      ...ctx,
+      payload: { phraseId: savedPhraseId, wordId: payload.word_id, isEdit } 
+    });
+
+    revalidatePath('/contents/[id]/words', 'page');
+    return { success: true };
+  } catch (error) {
+    logger.error('word:upsert_phrase_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
 }
 
 /**
- * フレーズの物理削除（音声ファイルも含む）
+ * フレーズの物理削除
  */
 export async function deletePhrase(phraseId: string, audioPath?: string | null) {
-  const supabase = createAdminClient();
-
+  const ctx = await getLogContext();
   try {
-    // 1. Storageから該当する音声ファイルを削除
-    if (audioPath) {
+    const supabase = await createAdminClient();
 
-      // セキュリティチェック：パスに自分のphraseIdが含まれているか確認
-      // words/[wordId]/phrases/[phraseId]-[timestamp].mp3 の形式を想定
+    if (audioPath) {
       if (!audioPath.includes(phraseId)) {
-        console.error(`Security Alert: Attempted to delete unauthorized path. phraseId: ${phraseId}, path: ${audioPath}`);
-        throw new Error("不正なファイルパスが指定されました。");
+        logger.error('word:delete_phrase_security_alert', `Attempted unauthorized path deletion. phraseId: ${phraseId}, path: ${audioPath}`, ctx);
+        throw new Error("不正なファイルパスです。");
       }
 
       const { error: storageError } = await supabase.storage
@@ -221,22 +241,25 @@ export async function deletePhrase(phraseId: string, audioPath?: string | null) 
         .remove([audioPath]);
 
       if (storageError) {
-        console.warn("Storage deletion warning:", storageError);
+        logger.warn("word:delete_phrase_storage_failed", `Storage deletion warning: ${storageError.message}`, { ...ctx, payload: { phraseId, audioPath } });
       }
     }
 
-    // 2. DBレコードの削除
     const { error: dbError } = await supabase
       .from('com_m_phrase')
       .delete()
       .eq('phrase_id', phraseId);
 
-    if (dbError) throw dbError;
+    if (dbError) {
+      logger.error('word:delete_phrase_db_failed', dbError.message, { ...ctx, payload: { phraseId } });
+      throw dbError;
+    }
 
+    logger.info('word:delete_phrase_success', `Phrase deleted`, { ...ctx, payload: { phraseId, audioPath } });
     return { success: true };
-  } catch (error: any) {
-    console.error("Delete Phrase Error:", error);
-    return { success: false, message: error.message };
+  } catch (error) {
+    logger.error("word:delete_phrase_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { phraseId, audioPath } });
+    return { success: false, message: error instanceof Error ? error.message : '予期せぬエラーが発生しました' };
   }
 }
 
@@ -244,12 +267,11 @@ export async function deletePhrase(phraseId: string, audioPath?: string | null) 
  * 単語とフレーズの一括Upsert
  */
 export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[]) {
-  const supabase = createAdminClient();
-
+  const ctx = await getLogContext();
   try {
+    const supabase = await createAdminClient();
+
     // 1. 単語の Upsert
-    // content_id と word_en の組み合わせで競合判定を行います。
-    // ※ DB側に UNIQUE(content_id, word_en) の制約がある前提です。
     const wordPromises = payload.map(async (item) => {
       const { data: word, error: wordError } = await supabase
         .from('com_m_word')
@@ -260,34 +282,34 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
           frequency_rank: item.frequency_rank,
           status: 'live',
           update_date: new Date().toISOString(),
-          // insert_date は upsert だと既存行に干渉するため、省略するか、
-          // 既存チェックを厳密にする必要があります。
         }, { onConflict: 'content_id,word_en' })
         .select('word_id')
         .single();
 
-      if (wordError) throw wordError;
+      if (wordError) {
+        logger.error('word:bulk_upsert_word_failed', wordError.message, { ...ctx, payload: { contentId, item } });
+        throw wordError;
+      }
       return { word_id: word.word_id, phrases: item.phrases };
     });
 
-    // すべての単語のUpsertが終わるのを待つ（ここで各 word_id が確定する）
     const results = await Promise.all(wordPromises);
 
-    // 2. フレーズの更新（既存削除 -> 新規投入）
+    // 2. フレーズの更新
     const wordIds = results.map(r => r.word_id);
-    
-    // 対象となる単語の既存フレーズを一括削除
     const { error: deleteError } = await supabase
       .from('com_m_phrase')
       .delete()
       .in('word_id', wordIds);
 
-    if (deleteError) throw deleteError;
+    if (deleteError) {
+      logger.error('word:bulk_upsert_delete_phrases_failed', deleteError.message, { ...ctx, payload: { wordIds } });
+      throw deleteError;
+    }
 
-    // 全フレーズをフラットな配列に変換
     const allPhrasesToInsert = results.flatMap((res) => {
       return res.phrases.map((p: any, index: number) => ({
-        word_id: res.word_id, // ここが null だと今回のエラーになります
+        word_id: res.word_id,
         phrase_en: p.phrase_en,
         phrase_ja: p.phrase_ja,
         phrase_type: p.phrase_type,
@@ -298,23 +320,27 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
       }));
     });
 
-    // フレーズが存在する場合のみ一括インサート
     if (allPhrasesToInsert.length > 0) {
       const { error: phraseError } = await supabase
         .from('com_m_phrase')
         .insert(allPhrasesToInsert);
       
-      if (phraseError) throw phraseError;
+      if (phraseError) {
+        logger.error('word:bulk_upsert_insert_phrases_failed', phraseError.message, { ...ctx, payload: { contentId } });
+        throw phraseError;
+      }
     }
+
+    logger.info('word:bulk_upsert_success', `Bulk upsert completed`, { 
+      ...ctx,
+      payload: { contentId, wordCount: results.length, phraseCount: allPhrasesToInsert.length } 
+    });
 
     revalidatePath(`/contents/${contentId}/words`);
     return { success: true };
 
-  } catch (err: any) {
-    console.error("Bulk Upsert Error:", err);
-    return { 
-      success: false, 
-      message: err.message || "データの保存中にエラーが発生しました" 
-    };
+  } catch (err) {
+    logger.error("word:bulk_upsert_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    return { success: false, message: "予期せぬエラーが発生しました" };
   }
 }

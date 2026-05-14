@@ -1,6 +1,7 @@
 // apps/admin/lib/navigation.ts
 import { 
-  LayoutDashboard, Building2, FileSignature, Users, BookOpen, Speech 
+  LayoutDashboard, Building2, FileSignature, Users, BookOpen, Speech, 
+  ShieldCheck
 } from 'lucide-react';
 
 export const ADMIN_NAV_CONFIG = [
@@ -26,6 +27,12 @@ export const ADMIN_NAV_CONFIG = [
     label: 'ユーザー管理', 
     href: '/users', 
     icon: Users, 
+    requiredRoles: ['admin'] 
+  },
+  { 
+    label: '規約管理', 
+    href: '/terms', 
+    icon: ShieldCheck, 
     requiredRoles: ['admin'] 
   },
   { 
