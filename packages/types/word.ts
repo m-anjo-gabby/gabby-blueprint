@@ -20,10 +20,10 @@ export const TTS_STATUS = {
 
 // フレーズ種別 (拡張性を持たせて定義)
 export const PHRASE_TYPES = {
-  1: { label: 'Use a Collocation', value: 1, description: '基本語順の習得' },
-  2: { label: 'Build a Sentence', value: 2, description: '文章への拡張' },
-  3: { label: 'Use It at Work', value: 3, description: '実務シーンへの適用' },
-  4: { label: 'Expand the Sentence', value: 3, description: '詳細情報の付加' },
+  1: { label: 'Target Vocabulary', value: 1, description: 'ターゲット単語の習得' },
+  2: { label: 'Use a Collocation', value: 2, description: '基本語順・頻出表現の習得' },
+  3: { label: 'Build a Sentence', value: 3, description: '文章への拡張' },
+  4: { label: 'Use It at Work', value: 4, description: '実務シーンへの適用' },
   5: { label: 'Variation', value: 3, description: '時制・表現のバリエーション' },
 } as const;
 

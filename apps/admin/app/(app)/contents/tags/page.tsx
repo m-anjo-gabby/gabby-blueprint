@@ -13,7 +13,7 @@ export default async function TagsPage() {
       <div className="flex justify-between items-center">
         <div className="space-y-1">
           <Link 
-            href="/admin/contents" 
+            href="/contents" 
             className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
           >
             <ChevronLeft size={14} /> 教材管理に戻る
