@@ -77,7 +77,12 @@ export const ResumeCard = ({ data, onClear }: ResumeCardProps) => {
               
               {cefr && (
                 <span className={cn(
-                  "px-1.5 py-0.5 rounded-md text-[8px] font-black tracking-tighter uppercase leading-none",
+                  // inline-flex に変更し、中央揃えを徹底
+                  "inline-flex items-center justify-center",
+                  // 左右のパディングを少し広げ、高さを明示的に微調整（必要に応じて）
+                  "px-2 py-0.5 min-w-[28px]", 
+                  // rounded-full で完全なカプセル型を強制
+                  "rounded-full text-[8px] font-black tracking-tighter uppercase leading-none",
                   getCefrStyle(cefr.id)
                 )}>
                   {cefr.label}

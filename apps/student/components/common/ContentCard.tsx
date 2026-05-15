@@ -84,11 +84,18 @@ export const ContentCard = ({
             {/* Level表示エリア: CEFRバッジを優先し、なければドットを表示 */}
             {cefr ? (
               <Badge className={cn(
-                "px-2 py-0.5 rounded-lg text-[10px] font-black shadow-md flex gap-1 items-center border-none shrink-0",
+                "px-2 py-1 rounded-full text-[10px] font-black shadow-md flex gap-1 items-center border-none shrink-0",
                 cefrStyle
               )}>
-                <span className="opacity-70 text-[7px] font-bold tracking-tighter">CEFR</span>
-                {cefr.label}
+                {/* CEFRラベルの調整 */}
+                <span className="opacity-70 text-[7px] font-bold tracking-tighter leading-none translate-y-[0.5px]">
+                  CEFR
+                </span>
+                
+                {/* A2 などのレベル名の調整 */}
+                <span className="leading-none">
+                  {cefr.label}
+                </span>
               </Badge>
             ) : (
               <div className="flex items-center gap-2">
