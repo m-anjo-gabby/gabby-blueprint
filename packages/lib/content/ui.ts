@@ -86,3 +86,34 @@ export const getContentTypeConfig = (type: number): { label: string; icon: Lucid
       };
   }
 };
+
+/**
+ * CEFRレベルのスタイルを取得
+ */
+export const getCefrStyle = (cefrId: string) => {
+  const level = cefrId.toUpperCase();
+  
+  switch (level) {
+    // A系: 基礎 (青〜シアン)
+    case 'A1':
+      return "bg-blue-600 text-white border-transparent shadow-sm";
+    case 'A2':
+      return "bg-cyan-600 text-white border-transparent shadow-sm";
+
+    // B系: 自立 (エメラルド〜ライム)
+    // B1とB2で色味を変えることで、ステップアップを視覚化
+    case 'B1':
+      return "bg-emerald-600 text-white border-transparent shadow-sm";
+    case 'B2':
+      return "bg-lime-600 text-white border-transparent shadow-sm";
+
+    // C系: 熟達 (オレンジ〜ローズ)
+    case 'C1':
+      return "bg-orange-600 text-white border-transparent shadow-sm";
+    case 'C2':
+      return "bg-rose-600 text-white border-transparent shadow-sm";
+
+    default:
+      return "bg-slate-600 text-white border-transparent";
+  }
+};

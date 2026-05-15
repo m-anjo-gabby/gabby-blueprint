@@ -27,6 +27,19 @@ export const CONTENT_SCOPES = {
 } as const;
 
 /**
+ * CEFRレベル定義
+ * 色分けは Tailwind のカラークラス名を指定
+ */
+export const CEFR_CONFIG = {
+  'A1': { id: 'a1', label: 'A1', color: 'blue',  description: 'Beginner' },
+  'A2': { id: 'a2', label: 'A2', color: 'cyan',  description: 'Elementary' },
+  'B1': { id: 'b1', label: 'B1', color: 'emerald', description: 'Intermediate' },
+  'B2': { id: 'b2', label: 'B2', color: 'lime',   description: 'Upper Intermediate' },
+  'C1': { id: 'c1', label: 'C1', color: 'orange', description: 'Advanced' },
+  'C2': { id: 'c2', label: 'C2', color: 'rose',   description: 'Proficiency' },
+} as const;
+
+/**
  * ----------------------------------------------
  * データ構造の定義
  * ----------------------------------------------
@@ -39,6 +52,9 @@ export type TagType = keyof typeof TAG_TYPES;
 
 // 公開範囲の型定義
 export type ContentScope = keyof typeof CONTENT_SCOPES;
+
+// CEFRの型定義
+export type CefrLevel = keyof typeof CEFR_CONFIG;
 
 // タグマスタの型定義
 export interface ContentTag {
@@ -64,6 +80,26 @@ export interface ContentAccessSummary {
   client_name: string;
 }
 
+// メタデータ埋め込み用タグ
+export interface MetadataTag {
+  id: string;
+  label: string;
+}
+
+// メタデータ埋め込み用CEFR
+export interface MetadataCefr {
+  id: string;
+  label: string;
+  color?: string; // 後の変更に備えて色も保持可能にしておく
+}
+
+// ContentRecord の metadata 型を具体化
+export interface ContentMetadata {
+  tags?: MetadataTag[];
+  cefr?: MetadataCefr; // CEFRを追加
+  [key: string]: unknown;
+}
+
 // DBレコード型 (com_m_contents)
 export interface ContentRecord {
   content_id: string;
@@ -75,10 +111,7 @@ export interface ContentRecord {
   seq_no: number;
   difficulty_level: number;
   recommend: number;
-  metadata: {
-    tags?: MetadataTag[];
-    [key: string]: unknown;
-  };
+  metadata: ContentMetadata;
   delete_flg: '0' | '1';
   insert_date: string;
   update_date: string;
@@ -88,12 +121,6 @@ export interface ContentRecord {
 export interface Content extends ContentRecord {
   tags?: ContentTagSummary[];
   access_clients?: ContentAccessSummary[];
-}
-
-// メタデータ埋め込み用タグ
-export interface MetadataTag {
-  id: string;
-  label: string;
 }
 
 /**
@@ -106,10 +133,7 @@ export interface ContentItem extends Omit<ContentRecord, 'metadata'> {
   // お気に入り状態
   is_favorite: boolean;
   // メタデータ（必要に応じて。基本はdisplay_tagsを優先）
-  metadata: {
-    tags?: MetadataTag[];
-    [key: string]: unknown;
-  };
+  metadata: ContentMetadata;
 }
 
 // お気に入りリスト用も共通の型を使用（一貫性を保つため）

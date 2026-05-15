@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Star, ArrowRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { ContentItem } from "@gabby/types/content";
 import { motion } from "framer-motion";
-import { getTagStyle, getContentTypeConfig } from "@gabby/lib/content/ui";
+import { getTagStyle, getContentTypeConfig, getCefrStyle } from "@gabby/lib/content/ui";
 import { cn } from "@/lib/utils";
 
 interface ContentCardProps {
@@ -33,6 +33,10 @@ export const ContentCard = ({
   const descriptionRef = useRef<HTMLParagraphElement>(null);
 
   const { icon: TypeIcon, label: typeLabel, theme } = getContentTypeConfig(content.content_type);
+  
+  // CEFR情報の取得
+  const cefr = content.metadata?.cefr;
+  const cefrStyle = cefr ? getCefrStyle(cefr.id) : "";
 
   // --- Effects ---
   useEffect(() => {
@@ -64,11 +68,11 @@ export const ContentCard = ({
       >
         {/* 1. Header Area */}
         <div className={cn("px-6 py-3.5 border-b flex justify-between items-center gap-4", theme.bg, theme.border)}>
-          <div className="flex items-center gap-4 flex-1">
+          <div className="flex items-center gap-3 flex-1">
             <div className="flex items-center gap-2">
               <TypeIcon size={18} strokeWidth={2.5} className={cn("shrink-0", theme.text)} />
               <span className={cn(
-                "text-[10px] font-black uppercase tracking-widest whitespace-nowrap hidden sm:inline", 
+                "text-[12px] font-black uppercase tracking-widest whitespace-nowrap hidden sm:inline", 
                 theme.text
               )}>
                 {typeLabel}
@@ -77,22 +81,33 @@ export const ContentCard = ({
 
             <div className={cn("w-px h-3 opacity-20", theme.dotActive)} />
 
-            <div className="flex items-center gap-2.5">
-              <span className={cn("text-[9px] font-bold uppercase tracking-wider opacity-60", theme.text)}>
-                Level
-              </span>
-              <div className="flex gap-1.5">
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "w-1.5 h-1.5 rounded-full transition-colors duration-500",
-                      i < content.difficulty_level ? theme.dotActive : theme.dotInactive
-                    )}
-                  />
-                ))}
+            {/* Level表示エリア: CEFRバッジを優先し、なければドットを表示 */}
+            {cefr ? (
+              <Badge className={cn(
+                "px-2 py-0.5 rounded-lg text-[10px] font-black shadow-md flex gap-1 items-center border-none shrink-0",
+                cefrStyle
+              )}>
+                <span className="opacity-70 text-[7px] font-bold tracking-tighter">CEFR</span>
+                {cefr.label}
+              </Badge>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className={cn("text-[9px] font-bold uppercase tracking-wider opacity-60", theme.text)}>
+                  Level
+                </span>
+                <div className="flex gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full transition-colors duration-500",
+                        i < content.difficulty_level ? theme.dotActive : theme.dotInactive
+                      )}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* 右端のボタン：モードによって Star または Trash2 を切り替え */}
@@ -102,7 +117,7 @@ export const ContentCard = ({
               onToggleFavorite(content.content_id, content.is_favorite || false);
             }}
             className={cn(
-              "transition-all active:scale-75 p-2 rounded-full",
+              "transition-all active:scale-75 p-2 rounded-full shrink-0",
               actionMode === 'favorite' 
                 ? "text-slate-300 hover:text-rose-500 hover:bg-rose-50" // 削除モード
                 : content.is_favorite 
