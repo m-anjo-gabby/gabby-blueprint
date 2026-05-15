@@ -24,6 +24,10 @@ export function useWebSpeech() {
   const latestResultRef = useRef<AnalysisResult | null>(null);
   const onCompleteRef = useRef<((result: AnalysisResult) => void) | null>(null);
 
+  // 【追加】現在の評価セッションが有効かどうかを管理
+  // ブラウザ側のイベント発火タイミングの差（Edge/Safari等）による不整合を防ぐガードレール
+  const isAssessingRef = useRef(false);
+
   const clearAllTimers = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -35,17 +39,26 @@ export function useWebSpeech() {
    * 評価を確定させてリソースを解放する内部関数
    */
   const finalize = useCallback((result?: AnalysisResult) => {
+    // 既に評価が終了している場合は二重実行を防止
+    if (!isAssessingRef.current) return;
+    isAssessingRef.current = false;
+
     const finalResult = result || latestResultRef.current;
     
-    // 完了コールバックの実行
+    // 【重要】Reactのレンダリング中（setTimeLeft内）に store 更新が走るのを防ぐため、
+    // コールバックをイベントループの次に回す。これにより Chrome の警告を解消。
     if (finalResult && onCompleteRef.current) {
-      onCompleteRef.current(finalResult);
+      const callback = onCompleteRef.current;
+      setTimeout(() => {
+        callback(finalResult);
+      }, 0);
     }
     
     // 音声認識の停止
     if (recognitionRef.current) {
       try {
-        recognitionRef.current.stop();
+        // abort() を使用することで、Edge等での不要な後追いイベントを遮断
+        recognitionRef.current.abort();
       } catch (e) {
         // すでに停止している場合の型エラー回避
       }
@@ -74,15 +87,37 @@ export function useWebSpeech() {
       return;
     }
 
+    // 既存のインスタンスがあれば確実に破棄
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+    }
+
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = true;
     recognition.continuous = true;
 
     recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
+    
+    // Edge等で勝手に認識が終了した場合のハンドリング
+    recognition.onend = () => {
+      if (isAssessingRef.current) {
+        setIsListening(false);
+      }
+    };
+
+    // エラーハンドリング（Edge等でマイクが不安定な場合の安全策）
+    recognition.onerror = (event: any) => {
+      console.warn("Speech Recognition Error:", event.error);
+      if (event.error !== 'no-speech' && isAssessingRef.current) {
+        finalize();
+      }
+    };
 
     recognition.onresult = (event: any) => {
+      // 評価セッションが終了している場合は結果を無視
+      if (!isAssessingRef.current) return;
+
       let currentText = '';
       for (let i = 0; i < event.results.length; i++) {
         currentText += event.results[i][0].transcript;
@@ -92,7 +127,7 @@ export function useWebSpeech() {
 
     recognitionRef.current = recognition;
     recognition.start();
-  }, []);
+  }, [finalize]);
 
   /**
    * 発音評価を開始するメインメソッド
@@ -102,27 +137,48 @@ export function useWebSpeech() {
     mainWords: string[], 
     onComplete: (result: AnalysisResult) => void
   ) => {
+    // 前回のセッションが残っていれば強制終了
+    if (isAssessingRef.current) {
+      finalize();
+    }
+
+    // セッション開始
+    isAssessingRef.current = true;
     clearAllTimers();
     onCompleteRef.current = onComplete;
     latestResultRef.current = analyzePhrase("", targetPhrase, mainWords);
 
     setTimeLeft(7);
     intervalRef.current = setInterval(() => {
-      setTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          // Edge/Safari 対策: 0秒になった後、ブラウザが最後の音声バッファを
+          // テキスト化して onresult を叩くまでの猶予（500ms）を置いてから確定する
+          setTimeout(() => {
+            if (isAssessingRef.current) finalize();
+          }, 500);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     startListening((heard) => {
       const result = analyzePhrase(heard, targetPhrase, mainWords);
       latestResultRef.current = result;
 
+      // エクセレント達成時は即座に確定
       if (result.score >= 0.95) {
         finalize(result);
       }
     });
 
+    // セーフティタイマー（猶予分を考慮して調整）
     timerRef.current = setTimeout(() => {
-      finalize();
-    }, 7000);
+      if (isAssessingRef.current) {
+        finalize();
+      }
+    }, 8500);
 
   }, [startListening, clearAllTimers, finalize]);
 
@@ -158,17 +214,21 @@ export function useWebSpeech() {
     speechRateRef.current = rate;
   }, []);
 
-  // コンポーネントのアンマウント時にタイマーを掃除
+  // コンポーネントのアンマウント時に徹底的に掃除
   useEffect(() => {
     return () => {
+      isAssessingRef.current = false;
       clearAllTimers();
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
       if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     };
   }, [clearAllTimers]);
 
   return { 
     speak, 
-    setSpeechRate, // 速度設定用に追加
+    setSpeechRate, 
     startAssessment, 
     stopListening, 
     timeLeft, 
