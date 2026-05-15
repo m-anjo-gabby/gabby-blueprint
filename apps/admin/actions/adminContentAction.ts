@@ -104,9 +104,10 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
 export async function upsertContent(payload: Partial<Content>) {
   const ctx = await getLogContext();
   try {
-    const supabase = await createAdminClient();
+    const supabase = createAdminClient();
     const isEdit = !!payload.content_id;
 
+    // クライアント側で既存の metadata とマージされたものが送られてくる想定
     const dataToSave = {
       ...payload,
       update_date: new Date().toISOString(),
@@ -135,7 +136,7 @@ export async function upsertContent(payload: Partial<Content>) {
 
     const savedContent = data?.[0] as Content;
     logger.info('content:upsert_content_success', `Content ${isEdit ? 'updated' : 'created'}: ${savedContent.content_name}`, { 
-      ...ctx,
+      ...ctx, 
       payload: { contentId: savedContent.content_id, isEdit } 
     });
 

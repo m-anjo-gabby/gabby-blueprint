@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType } from '@gabby/types/content';
+import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType, CEFR_CONFIG } from '@gabby/types/content';
 import { upsertContent } from '@/actions/adminContentAction';
 import { useRouter } from 'next/navigation';
 
@@ -24,10 +24,11 @@ const contentSchema = z.object({
   content_name: z.string().min(1, '教材名称は必須です'),
   content_type: z.string().min(1, '種別を選択してください'),
   content_scope: z.string().min(1, '公開範囲を選択してください'),
-  content_label: z.string().min(1, '管理ラベルは必須です'), // 必須に変更
+  content_label: z.string().min(1, '管理ラベルは必須です'),
   seq_no: z.string().min(1, '表示順を入力してください'),
   difficulty_level: z.string().min(1, '難易度を入力してください'),
   description: z.string().optional(),
+  cefr_id: z.string().optional(), // CEFR用フィールド
 });
 
 type ContentFormValues = z.infer<typeof contentSchema>;
@@ -39,12 +40,13 @@ interface ContentFormDialogProps {
 
 const DEFAULT_VALUES: ContentFormValues = {
   content_name: '',
-  content_type: '0', // デフォルト：単語・フレーズ
-  content_scope: '9', // デフォルト：非公開
+  content_type: '0',
+  content_scope: '9',
   content_label: '',
   seq_no: '1',
   difficulty_level: '1',
   description: '',
+  cefr_id: 'none', // Radix UI Selectの制約により空文字の代わりに"none"を使用
 };
 
 export function ContentFormDialog({ mode = 'create', initialData }: ContentFormDialogProps) {
@@ -64,6 +66,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       seq_no: String(data.seq_no),
       difficulty_level: String(data.difficulty_level),
       description: data.description || '',
+      // metadataからCEFR IDを復元。存在しない場合は "none"
+      cefr_id: data.metadata?.cefr?.id || 'none',
     };
   };
 
@@ -77,6 +81,12 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
   const onSubmit = async (values: ContentFormValues) => {
     setServerError(null);
     try {
+      // 選択されたCEFR IDから設定オブジェクトを取得
+      // "none"の場合は未設定として扱う
+      const isNone = !values.cefr_id || values.cefr_id === 'none';
+      const cefrKey = isNone ? null : (values.cefr_id!.toUpperCase() as keyof typeof CEFR_CONFIG);
+      const selectedCefr = cefrKey ? CEFR_CONFIG[cefrKey] : undefined;
+
       const payload: Partial<Content> = {
         content_name: values.content_name,
         content_type: Number(values.content_type) as ContentType,
@@ -85,7 +95,11 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         seq_no: Number(values.seq_no),
         difficulty_level: Number(values.difficulty_level),
         description: values.description,
-        // 新規作成時は共通(0)をデフォルトに設定
+        // ここで既存のmetadataを保持しつつcefrをマージ
+        metadata: {
+          ...(initialData?.metadata || {}),
+          cefr: selectedCefr ? { id: selectedCefr.id, label: selectedCefr.label } : undefined
+        },
         ...(mode === 'create' ? { content_scope: 0 } : {}),
       };
 
@@ -98,7 +112,6 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       if (result.success && result.data) {
         showToast(mode === 'create' ? "教材を登録しました" : "教材を更新しました", "success");
         setOpen(false);
-        // 新規登録時はそのまま詳細編集画面へ遷移
         if (mode === 'create') {
           router.push(`/contents/${result.data.content_id}`);
         }
@@ -110,20 +123,15 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
     }
   };
 
-  // --- ダイアログが開かれたときに状態をリセット ---
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    
-    // 閉じるとき、または「開くとき」にもリセットをかける
     if (!isOpen || isOpen) {
       setIsConfirming(false);
       setServerError(null);
-      // initialDataに基づいてフォームをリセット
       form.reset(getInitialValues(initialData));
     }
   };
 
-  // --- TriggerのonClickでも念のためリセット ---
   const onTriggerClick = (e: React.MouseEvent) => {
     setIsConfirming(false);
     setServerError(null);
@@ -144,8 +152,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100">
-        <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
+      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
               <><CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認</>
@@ -160,15 +168,6 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white">
             
-            {/* 編集モード時のID表示 */}
-            {mode === 'edit' && !isConfirming && (
-              <div className="mb-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Content ID</p>
-                <p className="text-[10px] font-mono text-slate-400/70 truncate">{initialData?.content_id}</p>
-              </div>
-            )}
-
-            {/* --- 教材名 --- */}
             <FormField control={form.control} name="content_name" render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">教材名称</FormLabel>
@@ -181,21 +180,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
               </FormItem>
             )} />
 
-            {/* --- 管理ラベル --- */}
-            <FormField control={form.control} name="content_label" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">管理ラベル</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
-                ) : (
-                  <FormControl><Input {...field} placeholder="例: 〇〇社コーパス" className="bg-white rounded-xl border-slate-200" /></FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
-
             <div className="grid grid-cols-2 gap-4">
-              {/* コンテンツ種別 */}
               <FormField control={form.control} name="content_type" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">種別</FormLabel>
@@ -216,20 +201,25 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                 </FormItem>
               )} />
 
-              {/* 公開範囲 --- ここを追加 --- */}
-              <FormField control={form.control} name="content_scope" render={({ field }) => (
+              <FormField control={form.control} name="cefr_id" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">公開範囲</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">CEFR レベル</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                      {CONTENT_SCOPES[Number(field.value) as ContentScope]?.label}
+                      {field.value && field.value !== 'none' ? field.value.toUpperCase() : '未設定'}
                     </div>
                   ) : (
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue /></SelectTrigger></FormControl>
+                      <FormControl>
+                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                          <SelectValue placeholder="選択なし" />
+                        </SelectTrigger>
+                      </FormControl>
                       <SelectContent>
-                        {Object.entries(CONTENT_SCOPES).map(([val, info]) => (
-                          <SelectItem key={val} value={val}>{info.label}</SelectItem>
+                        {/* Radix UIは空文字を許容しないため "none" を使用 */}
+                        <SelectItem value="none">選択なし</SelectItem>
+                        {Object.values(CEFR_CONFIG).map((cefr) => (
+                          <SelectItem key={cefr.id} value={cefr.id.toLowerCase()}>{cefr.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -261,6 +251,18 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
               )} />
             </div>
 
+            <FormField control={form.control} name="content_label" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">管理ラベル</FormLabel>
+                {isConfirming ? (
+                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
+                ) : (
+                  <FormControl><Input {...field} placeholder="管理用タグ" className="bg-white rounded-xl border-slate-200" /></FormControl>
+                )}
+                <FormMessage />
+              </FormItem>
+            )} />
+
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">説明・解析根拠</FormLabel>
@@ -275,24 +277,16 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
             <div className="pt-4 mt-6 border-t border-slate-100">
               {isConfirming ? (
                 <div className="space-y-4">
-                  <p className="text-sm font-bold text-center text-slate-800">
-                    この内容で{mode === 'create' ? '登録して詳細編集へ進みますか？' : '更新しますか？'}
-                  </p>
-                  {serverError && (
-                    <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
-                      <AlertCircle size={14} />{serverError}
-                    </Alert>
-                  )}
                   <div className="flex gap-3">
                     <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>いいえ</Button>
-                    <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg" disabled={isSubmitting}>
+                    <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold" disabled={isSubmitting}>
                       {isSubmitting ? "処理中..." : "はい、確定します"}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md" onClick={() => form.trigger().then(valid => valid && setIsConfirming(true))}>
-                  {mode === 'create' ? '登録内容を確認する' : '編集内容を確認する'}
+                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11" onClick={() => form.trigger().then(valid => valid && setIsConfirming(true))}>
+                  内容を確認する
                 </Button>
               )}
             </div>
