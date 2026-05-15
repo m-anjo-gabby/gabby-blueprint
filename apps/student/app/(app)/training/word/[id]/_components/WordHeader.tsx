@@ -4,10 +4,12 @@ import React from 'react';
 import { ChevronLeft, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
+import { getCefrStyle } from '@gabby/lib/content/ui';
+import { cn } from '@/lib/utils';
 
 export const WordHeader: React.FC = () => {
   const router = useRouter();
-  const { contentName, words, wordIdx, setShowIndex } = useWordDrillStore();
+  const { contentName, cefr, words, wordIdx, setShowIndex } = useWordDrillStore();
   
   const currentWord = words[wordIdx];
   const total = words.length;
@@ -33,21 +35,29 @@ export const WordHeader: React.FC = () => {
           onClick={() => setShowIndex(true)}
           className="flex-1 min-w-0 flex flex-col items-center group active:opacity-70 transition-opacity"
         >
-          {/* 教材名を「バッジ風」 */}
-            <div className="mb-2 px-2.5 py-0.5 rounded-full bg-slate-100/80 group-hover:bg-indigo-50 transition-colors">
-              <span className="text-[8px] font-black text-slate-400 group-hover:text-indigo-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">
-                {contentName || 'Vocabulary'}
+          {/* 教材名バッジ（CEFRレベルを統合） */}
+          <div className="mb-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/80 group-hover:bg-indigo-50 transition-colors">
+            {cefr && (
+              <span className={cn(
+                "px-1 py-0.5 rounded-[4px] text-[7px] font-black leading-none uppercase",
+                getCefrStyle(cefr.id)
+              )}>
+                {cefr.label}
               </span>
-            </div>
+            )}
+            <span className="text-[8px] font-black text-slate-400 group-hover:text-indigo-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">
+              {contentName || 'Vocabulary'}
+            </span>
+          </div>
 
-            {/* 単語*/}
-            <div className="flex items-center justify-center gap-1.5 w-full">
-              <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none truncate translate-x-2">
-                {currentWord.word_en}
-              </h1>
-              {/* アイコン */}
-              <ChevronDown size={20} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all ml-1 shrink-0" />
-            </div>
+          {/* 単語*/}
+          <div className="flex items-center justify-center gap-1.5 w-full">
+            <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none truncate translate-x-2">
+              {currentWord.word_en}
+            </h1>
+            {/* アイコン */}
+            <ChevronDown size={20} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all ml-1 shrink-0" />
+          </div>
         </button>
 
         <div className="w-9 shrink-0" />

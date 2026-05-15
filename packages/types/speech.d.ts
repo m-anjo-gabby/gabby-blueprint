@@ -25,12 +25,14 @@ declare global {
     continuous: boolean;
     interimResults: boolean;
     lang: string;
+    maxAlternatives: number;
     onstart: (event: Event) => void;
     onend: (event: Event) => void;
     onerror: (event: any) => void;
     onresult: (event: SpeechRecognitionEvent) => void;
     start(): void;
     stop(): void;
+    abort(): void;
   }
 
   interface SpeechRecognitionEvent extends Event {

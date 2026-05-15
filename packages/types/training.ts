@@ -1,3 +1,5 @@
+import { ContentMetadata } from "./content";
+
 /**
  * UI（再開カード）で共通して使用する表示用プロパティ
  */
@@ -48,5 +50,6 @@ export interface ResumeContentResponse {
     content_type: number;
     difficulty_level: number;
     content_label: string;
+    metadata: ContentMetadata;
   };
 }

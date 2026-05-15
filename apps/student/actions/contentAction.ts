@@ -208,7 +208,8 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
           content_name,
           content_type,
           difficulty_level,
-          content_label
+          content_label,
+          metadata
         )
       `)
       .eq('user_id', user.id)

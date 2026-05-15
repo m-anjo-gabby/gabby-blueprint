@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { ResumeContentResponse } from "@gabby/types/training";
 import { useRouter } from "next/navigation";
 import { getResumePath } from "@gabby/lib/navigation/student-path";
+import { getCefrStyle } from "@gabby/lib/content/ui";
 
 interface ResumeCardProps {
   data: ResumeContentResponse;
@@ -24,13 +25,15 @@ export const ResumeCard = ({ data, onClear }: ResumeCardProps) => {
   // メタデータから表示情報を抽出
   const progress = metadata.display?.progress_percent ?? 0;
   const positionLabel = metadata.display?.position_text || `Item ${data.item_id ? 'Active' : 'N/A'}`;
+  
+  // 教材マスター側のmetadataからCEFR情報を取得
+  const cefr = content.metadata?.cefr;
 
   return (
     <motion.div 
       layout 
       initial={{ opacity: 0, y: 10 }} 
       animate={{ opacity: 1, y: 0 }}
-      // 外側はdivで実装し、アクセシビリティ対応（Button in Button回避）
       role="button"
       tabIndex={0}
       onClick={() => router.push(getResumePath(data))}
@@ -41,7 +44,7 @@ export const ResumeCard = ({ data, onClear }: ResumeCardProps) => {
       )}
     >
       <div className="p-6">
-        {/* Header: 種別ラベルと削除ボタン */}
+        {/* Header: ステータス表示と削除ボタン */}
         <div className="flex justify-between items-center mb-5">
           <div className="flex items-center gap-3">
             <div className={cn("p-2 rounded-xl bg-slate-50", theme.text)}>
@@ -62,14 +65,32 @@ export const ResumeCard = ({ data, onClear }: ResumeCardProps) => {
 
         {/* Body: 教材名と進捗バー */}
         <div className="space-y-5">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5 opacity-60">
-              <TypeIcon size={12} className={theme.text} />
-              <span className={cn("text-[9px] font-bold uppercase tracking-tighter", theme.text)}>
-                {typeLabel}
-              </span>
+          <div className="space-y-2">
+            {/* 種別ラベルとCEFRバッジを横並びに配置（共通カードと統一） */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 opacity-60">
+                <TypeIcon size={12} className={theme.text} />
+                <span className={cn("text-[9px] font-bold uppercase tracking-tighter", theme.text)}>
+                  {typeLabel}
+                </span>
+              </div>
+              
+              {cefr && (
+                <span className={cn(
+                  // inline-flex に変更し、中央揃えを徹底
+                  "inline-flex items-center justify-center",
+                  // 左右のパディングを少し広げ、高さを明示的に微調整（必要に応じて）
+                  "px-2 py-0.5 min-w-[28px]", 
+                  // rounded-full で完全なカプセル型を強制
+                  "rounded-full text-[8px] font-black tracking-tighter uppercase leading-none",
+                  getCefrStyle(cefr.id)
+                )}>
+                  {cefr.label}
+                </span>
+              )}
             </div>
-            <h3 className="text-xl font-[1000] text-slate-800 leading-tight tracking-tight">
+
+            <h3 className="text-xl font-[1000] text-slate-800 leading-tight tracking-tight line-clamp-2">
               {content.content_name}
             </h3>
           </div>
@@ -93,7 +114,7 @@ export const ResumeCard = ({ data, onClear }: ResumeCardProps) => {
           </div>
         </div>
 
-        {/* Footer: アクションボタン（装飾用でクリック不可設定） */}
+        {/* Footer: アクションボタン */}
         <div className={cn(
           "mt-6 w-full rounded-2xl flex items-center justify-center gap-2 h-12 font-black text-[11px] tracking-[0.2em] uppercase transition-all shadow-lg group-hover:scale-[1.02]",
           theme.button, "text-white"

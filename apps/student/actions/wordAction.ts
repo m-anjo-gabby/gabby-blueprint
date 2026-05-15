@@ -19,7 +19,7 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
       .from('com_m_word')
       .select(`
         *,
-        com_m_contents ( content_name ),
+        com_m_contents ( content_name, metadata ),
         com_m_phrase (
           *,
           com_t_favorite_phrase ( phrase_id )
@@ -43,12 +43,19 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
     }
 
     const firstItem = rawData[0];
+
+    // --- 教材情報の抽出 ---
     let contentName = 'Training';
-    
+    let cefrData: { id: string; label: string } | undefined = undefined;
+
     if (firstItem?.com_m_contents) {
-      contentName = Array.isArray(firstItem.com_m_contents) 
-        ? firstItem.com_m_contents[0]?.content_name 
-        : firstItem.com_m_contents?.content_name;
+      const contents = Array.isArray(firstItem.com_m_contents) 
+        ? firstItem.com_m_contents[0] 
+        : firstItem.com_m_contents;
+      
+      contentName = contents?.content_name || 'Training';
+      // 教材マスターのmetadataからcefrを抽出
+      cefrData = contents?.metadata?.cefr;
     }
 
     // TrainingWord[] 型に準拠するようにマッピング
@@ -61,7 +68,12 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
       }))
     }));
 
-    return { words, contentName: contentName || 'Training' };
+    return { 
+      words, 
+      contentName,
+      cefr: cefrData // 戻り値にCEFR情報を追加
+    };
+    
   } catch (err) {
     logger.error("word:get_training_data_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
     throw err;
