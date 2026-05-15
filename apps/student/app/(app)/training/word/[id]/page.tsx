@@ -75,7 +75,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       reset(); // 前のセッション情報をクリア
 
       try {
-        const { words: fetchedWords, contentName: name } = await getWordData(sectionId);
+        const { words: fetchedWords, contentName: name, cefr } = await getWordData(sectionId);
         
         let startW = 0;
         let startP = 0;
@@ -98,7 +98,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
           }
         }
 
-        initDrill(fetchedWords, name, startW, startP);
+        initDrill(fetchedWords, name, cefr, startW, startP);
         if (isResumed) showToast("続きから再開しました", "success");
       } catch (e) {
         showToast("データの読み込みに失敗しました", "error");

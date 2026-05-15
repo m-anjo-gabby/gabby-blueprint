@@ -1,3 +1,5 @@
+'use client';
+
 import { create } from 'zustand';
 import { TrainingWord } from '@gabby/types/word';
 import { AnalysisResult, FeedbackConfig } from '@gabby/types/wordDrill';
@@ -6,6 +8,7 @@ interface WordDrillState {
   // --- Data States ---
   words: TrainingWord[];
   contentName: string;
+  cefr: { id: string; label: string } | undefined; // CEFR情報を保持するステートを追加
   loading: boolean;
   
   // --- Progress States ---
@@ -21,7 +24,8 @@ interface WordDrillState {
   analysis: AnalysisResult | null;
 
   // --- Actions ---
-  initDrill: (words: TrainingWord[], name: string, startW?: number, startP?: number) => void;
+  // cefr をオプション引数として追加
+  initDrill: (words: TrainingWord[], name: string, cefr?: { id: string; label: string }, startW?: number, startP?: number) => void;
   setLoading: (loading: boolean) => void;
   
   // Navigation
@@ -51,6 +55,7 @@ interface WordDrillState {
 export const useWordDrillStore = create<WordDrillState>((set, get) => ({
   words: [],
   contentName: '',
+  cefr: undefined,
   loading: true,
   wordIdx: 0,
   phraseIdx: 0,
@@ -61,9 +66,10 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
   feedback: null,
   analysis: null,
 
-  initDrill: (words, name, startW = 0, startP = 0) => set({
+  initDrill: (words, name, cefr = undefined, startW = 0, startP = 0) => set({
     words,
     contentName: name,
+    cefr, // CEFR情報をセット
     wordIdx: startW,
     phraseIdx: startP,
     sortOrder: 'default',

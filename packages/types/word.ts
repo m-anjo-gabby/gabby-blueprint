@@ -123,6 +123,7 @@ export interface TrainingWord extends WordRecord {
 export interface TrainingWordResponse {
   words: TrainingWord[];
   contentName: string;
+  cefr?: { id: string; label: string }; // CEFR情報を追加
 }
 
 /**
