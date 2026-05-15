@@ -23,7 +23,6 @@ import { BookOpen, ArrowLeft, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { PhraseItem } from '@gabby/types/word';
-import { cn } from "@/lib/utils";
 
 /**
  * 発話スコアに基づいたフィードバックUIの設定を返す
