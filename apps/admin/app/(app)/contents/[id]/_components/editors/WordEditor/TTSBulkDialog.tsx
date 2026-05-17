@@ -185,8 +185,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-120 p-0 overflow-hidden border-none shadow-2xl focus:outline-none [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button:focus]:ring-0 [&>button:focus]:outline-none">
+        <DialogTrigger asChild>{children}</DialogTrigger>        <DialogContent className="sm:max-w-120 p-0 overflow-hidden border-none shadow-2xl focus:outline-none [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button:focus]:ring-0 [&>button:focus]:outline-none max-h-[90vh] flex flex-col">
           {/* フォーカス奪取用のダミー要素 */}
           <span className="sr-only" tabIndex={0} />
           
@@ -198,7 +197,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
             </DialogTitle>
           </DialogHeader>
 
-          <div className="p-8 space-y-8 bg-white">
+          <div className="p-8 space-y-8 bg-white flex-1 overflow-y-auto">
             {isLoadingData ? (
               <div className="py-12 flex flex-col items-center justify-center space-y-4">
                 <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
