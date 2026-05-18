@@ -100,7 +100,6 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
           ...(initialData?.metadata || {}),
           cefr: selectedCefr ? { id: selectedCefr.id, label: selectedCefr.label } : undefined
         },
-        ...(mode === 'create' ? { content_scope: 0 } : {}),
       };
 
       if (mode === 'edit' && initialData?.content_id) {
@@ -201,6 +200,25 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                   </FormItem>
                 )} />
 
+                <FormField control={form.control} name="content_scope" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">公開範囲</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {CONTENT_SCOPES[Number(field.value) as ContentScope]?.label}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {Object.entries(CONTENT_SCOPES).map(([val, info]) => (
+                            <SelectItem key={val} value={val}>{info.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )} />
                 <FormField control={form.control} name="cefr_id" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">CEFR レベル</FormLabel>

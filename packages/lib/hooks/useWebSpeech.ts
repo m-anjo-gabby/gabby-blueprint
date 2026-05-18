@@ -148,7 +148,7 @@ export function useWebSpeech() {
     onCompleteRef.current = onComplete;
     latestResultRef.current = analyzePhrase("", targetPhrase, mainWords);
 
-    setTimeLeft(7);
+    setTimeLeft(10);
     intervalRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -178,7 +178,7 @@ export function useWebSpeech() {
       if (isAssessingRef.current) {
         finalize();
       }
-    }, 8500);
+    }, 11500);
 
   }, [startListening, clearAllTimers, finalize]);
 
