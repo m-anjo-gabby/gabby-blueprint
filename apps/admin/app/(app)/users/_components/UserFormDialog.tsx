@@ -261,8 +261,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70">
-        <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
+      <DialogContent className="max-w-md p-0 border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 rounded-xl overflow-hidden">
+        <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isLicenseStep ? (
               <><ShieldCheck size={18} className="text-emerald-400" /> ライセンス設定</>
@@ -279,40 +279,39 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
         <div className="bg-white">
           {!isLicenseStep ? (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-5">
-                <div className="space-y-4">
-                  
-                  {/* --- ID表示エリア（編集モード時のみ） --- */}
-                  {mode === 'edit' && initialData?.id && (
-                    <div className="space-y-1.5 px-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ユーザーID (UUID)</label>
-                      <div className="group relative flex items-center">
-                        <code className="flex-1 bg-slate-50 text-slate-500 text-[10px] font-mono px-3 py-2 rounded-lg border border-slate-100 truncate">{initialData.id}</code>
-                        <Button type="button" variant="ghost" className="ml-2 h-8 px-2 text-slate-400 hover:text-indigo-600 transition-colors"
-                          onClick={() => {
-                            navigator.clipboard.writeText(initialData.id);
-                            showToast("IDをコピーしました", "success");
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
-                        </Button>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                  <div className="space-y-4">
+                    {/* --- ID表示エリア（編集モード時のみ） --- */}
+                    {mode === 'edit' && initialData?.id && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ユーザーID (UUID)</label>
+                        <div className="group relative flex items-center">
+                          <code className="flex-1 bg-slate-50 text-slate-500 text-[10px] font-mono px-3 py-2 rounded-lg border border-slate-100 truncate">{initialData.id}</code>
+                          <Button type="button" variant="ghost" className="ml-2 h-8 px-2 text-slate-400 hover:text-indigo-600 transition-colors"
+                            onClick={() => {
+                              navigator.clipboard.writeText(initialData.id);
+                              showToast("IDをコピーしました", "success");
+                            }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                    <FormField control={form.control} name="email" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">メールアドレス</FormLabel>
+                        {isConfirming ? (
+                          <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
+                        ) : (
+                          <FormControl><Input {...field} disabled={mode === 'edit'} className="rounded-xl border-slate-200 h-11" placeholder="example@domain.com" /></FormControl>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )} />
 
-                  <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">メールアドレス</FormLabel>
-                      {isConfirming ? (
-                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
-                      ) : (
-                        <FormControl><Input {...field} disabled={mode === 'edit'} className="rounded-xl border-slate-200 h-11" placeholder="example@domain.com" /></FormControl>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-
-                  <FormField control={form.control} name="user_name" render={({ field }) => (
+                    <FormField control={form.control} name="user_name" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">氏名</FormLabel>
                       {isConfirming ? (
@@ -322,9 +321,9 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       )}
                       <FormMessage />
                     </FormItem>
-                  )} />
+                    )} />
 
-                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="client_id" render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">所属顧客</FormLabel>
@@ -382,9 +381,9 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       </FormItem>
                     )} />
                   </div>
-
-                  {/* --- ★ ロール選択エリア (現在のユーザー種別で設定可能なロールがある場合のみ表示) --- */}
-                  {hasAvailableRoles && (
+                    
+                    {/* --- ★ ロール選択エリア (現在のユーザー種別で設定可能なロールがある場合のみ表示) --- */}
+                    {hasAvailableRoles && (
                     <FormField
                       control={form.control}
                       name="roles"
@@ -441,10 +440,10 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       )}
                     />
                   )}
+                  </div>
                 </div>
 
-                {/* --- フッターボタンエリア --- */}
-                <div className="pt-4 mt-2 border-t border-slate-100">
+                <div className="p-6 pt-4 border-t border-slate-100">
                   {isConfirming ? (
                     <div className="space-y-4">
                       {serverError && (

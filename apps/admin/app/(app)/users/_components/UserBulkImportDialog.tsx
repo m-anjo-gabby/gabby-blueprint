@@ -251,8 +251,8 @@ export function UserBulkImportDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:outline-none">
-        <DialogHeader className="p-8 pr-14 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0 border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:outline-none rounded-xl overflow-hidden">
+        <DialogHeader className="p-8 pr-14 bg-slate-900 text-white border-b border-slate-800">
           <div className="flex justify-between items-start">
             <div className="space-y-1">
               <DialogTitle className="text-2xl font-black flex items-center gap-2">

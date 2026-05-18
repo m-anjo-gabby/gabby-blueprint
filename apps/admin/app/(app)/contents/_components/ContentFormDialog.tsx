@@ -100,7 +100,6 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
           ...(initialData?.metadata || {}),
           cefr: selectedCefr ? { id: selectedCefr.id, label: selectedCefr.label } : undefined
         },
-        ...(mode === 'create' ? { content_scope: 0 } : {}),
       };
 
       if (mode === 'edit' && initialData?.content_id) {
@@ -152,7 +151,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
         <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
@@ -166,115 +165,135 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white">
-            
-            <FormField control={form.control} name="content_name" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">教材名称</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
-                ) : (
-                  <FormControl><Input {...field} placeholder="例: 基礎英単語 100" className="bg-white rounded-xl border-slate-200" /></FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="content_type" render={({ field }) => (
+          <form onSubmit={form.handleSubmit(onSubmit)} className="bg-white flex-1 flex flex-col overflow-hidden">
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+              <FormField control={form.control} name="content_name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">種別</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">教材名称</FormLabel>
                   {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                      {CONTENT_TYPES[Number(field.value) as ContentType]?.label}
-                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                   ) : (
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={mode === 'edit'}>
-                      <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {Object.entries(CONTENT_TYPES).map(([val, info]) => (
-                          <SelectItem key={val} value={val}>{info.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl><Input {...field} placeholder="例: 基礎英単語 100" className="bg-white rounded-xl border-slate-200" /></FormControl>
                   )}
+                  <FormMessage />
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="cefr_id" render={({ field }) => (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="content_type" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">種別</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {CONTENT_TYPES[Number(field.value) as ContentType]?.label}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={mode === 'edit'}>
+                        <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {Object.entries(CONTENT_TYPES).map(([val, info]) => (
+                            <SelectItem key={val} value={val}>{info.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="content_scope" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">公開範囲</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {CONTENT_SCOPES[Number(field.value) as ContentScope]?.label}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {Object.entries(CONTENT_SCOPES).map(([val, info]) => (
+                            <SelectItem key={val} value={val}>{info.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="cefr_id" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">CEFR レベル</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {field.value && field.value !== 'none' ? field.value.toUpperCase() : '未設定'}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                            <SelectValue placeholder="選択なし" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {/* Radix UIは空文字を許容しないため "none" を使用 */}
+                          <SelectItem value="none">選択なし</SelectItem>
+                          {Object.values(CEFR_CONFIG).map((cefr) => (
+                            <SelectItem key={cefr.id} value={cefr.id.toLowerCase()}>{cefr.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="difficulty_level" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">難易度 (1-5)</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
+                    ) : (
+                      <FormControl><Input {...field} type="number" min="1" max="5" className="bg-white rounded-xl border-slate-200" /></FormControl>
+                    )}
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="seq_no" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">表示順</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
+                    ) : (
+                      <FormControl><Input {...field} type="number" className="bg-white rounded-xl border-slate-200" /></FormControl>
+                    )}
+                  </FormItem>
+                )} />
+              </div>
+
+              <FormField control={form.control} name="content_label" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">CEFR レベル</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">管理ラベル</FormLabel>
                   {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                      {field.value && field.value !== 'none' ? field.value.toUpperCase() : '未設定'}
-                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                   ) : (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                          <SelectValue placeholder="選択なし" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {/* Radix UIは空文字を許容しないため "none" を使用 */}
-                        <SelectItem value="none">選択なし</SelectItem>
-                        {Object.values(CEFR_CONFIG).map((cefr) => (
-                          <SelectItem key={cefr.id} value={cefr.id.toLowerCase()}>{cefr.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl><Input {...field} placeholder="管理用タグ" className="bg-white rounded-xl border-slate-200" /></FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="description" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">説明・解析根拠</FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-xs border-2 border-slate-100 min-h-[60px] whitespace-pre-wrap text-slate-600">{field.value || '-'}</div>
+                  ) : (
+                    <FormControl><Textarea {...field} className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]" /></FormControl>
                   )}
                 </FormItem>
               )} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="difficulty_level" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">難易度 (1-5)</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
-                  ) : (
-                    <FormControl><Input {...field} type="number" min="1" max="5" className="bg-white rounded-xl border-slate-200" /></FormControl>
-                  )}
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="seq_no" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">表示順</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
-                  ) : (
-                    <FormControl><Input {...field} type="number" className="bg-white rounded-xl border-slate-200" /></FormControl>
-                  )}
-                </FormItem>
-              )} />
-            </div>
-
-            <FormField control={form.control} name="content_label" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">管理ラベル</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
-                ) : (
-                  <FormControl><Input {...field} placeholder="管理用タグ" className="bg-white rounded-xl border-slate-200" /></FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <FormField control={form.control} name="description" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">説明・解析根拠</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-xs border-2 border-slate-100 min-h-[60px] whitespace-pre-wrap text-slate-600">{field.value || '-'}</div>
-                ) : (
-                  <FormControl><Textarea {...field} className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]" /></FormControl>
-                )}
-              </FormItem>
-            )} />
-
-            <div className="pt-4 mt-6 border-t border-slate-100">
+            <div className="p-6 pt-4 border-t border-slate-100">
               {isConfirming ? (
                 <div className="space-y-4">
                   <div className="flex gap-3">
@@ -285,7 +304,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                   </div>
                 </div>
               ) : (
-                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11" onClick={() => form.trigger().then(valid => valid && setIsConfirming(true))}>
+                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md" onClick={() => form.trigger().then(valid => valid && setIsConfirming(true))}>
                   内容を確認する
                 </Button>
               )}

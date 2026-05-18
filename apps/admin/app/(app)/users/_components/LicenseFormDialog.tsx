@@ -138,7 +138,7 @@ export function LicenseFormDialog({ user, children }: Props) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-lg p-0 overflow-hidden shadow-2xl border-none [&>button]:text-white [&>button]:opacity-70">
+      <DialogContent className="max-w-md p-0 shadow-2xl border-none [&>button]:text-white [&>button]:opacity-70 max-h-[90vh] flex flex-col rounded-xl overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             <RefreshCcw size={18} className="text-emerald-400" /> ライセンス管理
@@ -146,13 +146,13 @@ export function LicenseFormDialog({ user, children }: Props) {
           <p className="text-slate-400 text-[11px] font-bold mt-1">{user.user_name} / {user.client_name}</p>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6 flex flex-col flex-1 overflow-hidden">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="list" className="gap-2" onClick={resetForm}><ClipboardList size={14}/>一覧・履歴</TabsTrigger>
             <TabsTrigger value="form" className="gap-2">{editingLicense ? '編集モード' : '新規割当'}</TabsTrigger>
           </TabsList>
 
-          <div className="h-[400px] overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-[380px]">
             {loading ? (
               <div className="h-full flex items-center justify-center text-slate-400"><Loader2 size={32} className="animate-spin" /></div>
             ) : (

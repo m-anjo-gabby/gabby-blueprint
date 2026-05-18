@@ -1,8 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Volume2, Trash2, BookOpen } from 'lucide-react';
+import { Volume2, Trash2, BookOpen, Music4, Mic } from 'lucide-react';
 import { FavoritePhraseItem } from '@gabby/types/word';
+import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,19 @@ interface Props {
 }
 
 export function PhraseFavoriteItem({ phrase, onRemove }: Props) {
-  // 既存の音声再生フックを使用
-  const { speak } = useWebSpeech();
+  // 音声ファイル再生用フック
+  const { play, isPlaying: isAudioPlaying } = usePlayAudioSpeech();
+  // ブラウザTTS再生用フック
+  const { speak, isSpeaking } = useWebSpeech();
+
+  const handleSpeak = (p: FavoritePhraseItem) => {
+    window.speechSynthesis.cancel();
+    if (p.audio_path && p.tts_status === 1) {
+      play(p.audio_path, p.phrase_id, { restart: true });
+    } else {
+      speak(p.phrase_en);
+    }
+  };
 
   return (
     <motion.div
@@ -57,10 +69,15 @@ export function PhraseFavoriteItem({ phrase, onRemove }: Props) {
           {/* Listenボタン：横幅を広くとって押しやすく */}
           <Button
             variant="secondary"
-            onClick={() => speak(phrase.phrase_en)}
+            onClick={() => handleSpeak(phrase)}
             className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-none rounded-2xl h-11 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 group/btn"
           >
-            <Volume2 size={16} strokeWidth={2.5} className="mr-2 group-hover/btn:animate-pulse" />
+            {isAudioPlaying === phrase.phrase_id
+              ? <Music4 size={16} strokeWidth={2.5} className="mr-2 animate-pulse text-indigo-500" />
+              : isSpeaking
+                ? <Mic size={16} strokeWidth={2.5} className="mr-2 animate-pulse text-indigo-500" />
+                : <Volume2 size={16} strokeWidth={2.5} className="mr-2 group-hover/btn:animate-pulse" />
+            }
             Listen Now
           </Button>
 

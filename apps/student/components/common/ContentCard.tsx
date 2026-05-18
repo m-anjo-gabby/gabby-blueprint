@@ -82,7 +82,7 @@ export const ContentCard = ({
             <div className={cn("w-px h-3 opacity-20", theme.dotActive)} />
 
             {/* Level表示エリア: CEFRバッジを優先し、なければドットを表示 */}
-            {cefr ? (
+            {cefr && (
               <Badge className={cn(
                 "px-2 py-1 rounded-full text-[10px] font-black shadow-md flex gap-1 items-center border-none shrink-0",
                 cefrStyle
@@ -91,29 +91,12 @@ export const ContentCard = ({
                 <span className="opacity-70 text-[7px] font-bold tracking-tighter leading-none translate-y-[0.5px]">
                   CEFR
                 </span>
-                
+
                 {/* A2 などのレベル名の調整 */}
                 <span className="leading-none">
                   {cefr.label}
                 </span>
               </Badge>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className={cn("text-[9px] font-bold uppercase tracking-wider opacity-60", theme.text)}>
-                  Level
-                </span>
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full transition-colors duration-500",
-                        i < content.difficulty_level ? theme.dotActive : theme.dotInactive
-                      )}
-                    />
-                  ))}
-                </div>
-              </div>
             )}
           </div>
 
