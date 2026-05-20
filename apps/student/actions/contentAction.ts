@@ -24,6 +24,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
         is_favorite:com_t_favorite_contents(count)
       `)
       .eq('delete_flg', '0')
+      .neq('content_scope', 9)
       .order('seq_no', { ascending: true });
 
     if (error) {
@@ -61,6 +62,7 @@ export async function getFavoriteContentes(): Promise<FavoriteContentItem[]> {
       `)
       .eq('user_id', user.id)
       .eq('com_m_contents.delete_flg', '0')
+      .neq('com_m_contents.content_scope', 9)
       .order('seq_no', { referencedTable: 'com_m_contents', ascending: true });
 
     if (error) {

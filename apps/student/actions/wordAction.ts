@@ -19,13 +19,14 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
       .from('com_m_word')
       .select(`
         *,
-        com_m_contents ( content_name, metadata ),
+        com_m_contents!inner ( content_name, metadata ),
         com_m_phrase (
           *,
           com_t_favorite_phrase ( phrase_id )
         )
       `)
       .eq('content_id', contentId)
+      .neq('com_m_contents.content_scope', 9)
       .eq('status', 'live')
       .eq('com_m_phrase.status', 'live')
       .eq('com_m_phrase.com_t_favorite_phrase.user_id', user?.id)
@@ -174,6 +175,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
         )
       `)
       .eq('user_id', user.id)
+      .neq('com_m_phrase.com_m_word.com_m_contents.content_scope', 9)
       .order('insert_date', { ascending: false });
 
     if (error) {

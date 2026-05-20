@@ -8,6 +8,7 @@ import {
   updatePasswordCore 
 } from '@gabby/lib/auth/actions';
 import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 const logger = createLogger('student');
@@ -62,8 +63,13 @@ export async function signOut() {
   logger.info('auth:logout', 'User initiated logout', ctx);
   
   await signOutCore();
-  // 生徒用ログイン画面へ
-  redirect('/login');
+
+  // 全てのサーバーキャッシュを無効化
+  revalidatePath('/', 'layout');
+
+  // クライアント側でリダイレクトを処理するため、ここではredirectしない。
+  // クライアント側で `window.location.href = '/login'` を実行し、
+  // ブラウザのメモリを完全にクリアすることを推奨します。
 }
 
 /**

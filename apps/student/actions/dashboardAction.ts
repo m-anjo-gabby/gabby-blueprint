@@ -28,6 +28,7 @@ export async function getDashboardContentData(): Promise<ContentItem[]> {
         is_favorite:com_t_favorite_contents(count)
       `)
       .eq('delete_flg', '0')
+      .neq('content_scope', 9)
       // 条件：おすすめ(recommend > 0) または RLSで許可されたもの
       // 実際にはRLSでフィルタされるため、ここでは表示優先度順に取得
       .order('recommend', { ascending: false })
