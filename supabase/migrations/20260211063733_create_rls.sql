@@ -325,3 +325,33 @@ WITH CHECK (
   OR 
   public.get_jwt_user_type() = '0'
 );
+
+---------------------------------------------
+-- RLS: com_m_sprint_questions 安全性の担保
+---------------------------------------------
+-- 既存ポリシーの削除
+DROP POLICY IF EXISTS "Allow select access for authenticated users" ON public.com_m_sprint_questions;
+DROP POLICY IF EXISTS "Allow all access for service_role" ON public.com_m_sprint_questions;
+
+-- 1. テーブルに対する RLS を有効化
+ALTER TABLE public.com_m_sprint_questions ENABLE ROW LEVEL SECURITY;
+
+-- 🔑 権限の明示的付与
+-- RLSが有効な場合でも、そもそもSELECT権限がないとポリシー評価前に0件になります
+GRANT SELECT ON TABLE public.com_m_sprint_questions TO authenticated;
+
+-- 2. 認証済みユーザー（アプリのログイン生徒・管理者など）に対して参照ポリシーを付与
+-- 論理削除(delete_flg = '1')されたデータはフロントエンドに流さないようにここでガード
+CREATE POLICY "Allow select access for authenticated users" 
+ON public.com_m_sprint_questions
+FOR SELECT 
+TO authenticated
+USING (delete_flg = '0');
+
+-- 3. 管理者やバックエンドデータ移行スクリプト（service_role）用にすべての操作を全許可
+CREATE POLICY "Allow all access for service_role" 
+ON public.com_m_sprint_questions
+FOR ALL 
+TO service_role
+USING (true)
+WITH CHECK (true);

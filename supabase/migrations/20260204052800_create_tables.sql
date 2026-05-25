@@ -489,3 +489,74 @@ COMMENT ON COLUMN public.com_t_user_terms_agreement.update_date IS '更新日時
 CREATE INDEX idx_user_agreement_user_id ON public.com_t_user_terms_agreement(user_id);
 -- 特定の規約に対する同意者一覧を高速に検索
 CREATE INDEX idx_user_agreement_term_id ON public.com_t_user_terms_agreement(term_id);
+
+---------------------------------------------
+-- DDL: com_m_sprint_questions (スプリント問題マスタ)
+---------------------------------------------
+CREATE TABLE public.com_m_sprint_questions (
+  -- 【基本情報】
+  question_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_type TEXT NOT NULL,                  -- '0':Speed, '4':Structure, '5':Builders, '6':Mastery
+  difficulty_level SMALLINT NOT NULL DEFAULT 1, -- 難易度レベル
+  group_id UUID DEFAULT NULL,                   -- 共通グループID
+  seq_no SMALLINT NOT NULL DEFAULT 1,           -- グループ内の出題順序
+
+  ---------------------------------------------
+  -- ① ステートメント（親文）セクション
+  ---------------------------------------------
+  statement TEXT DEFAULT NULL,
+  statement_voice TEXT DEFAULT NULL,            -- 生成された音声URL
+  statement_tts_ssml TEXT DEFAULT NULL,
+  statement_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
+  statement_tts_adjustments JSONB DEFAULT NULL,
+  statement_tts_status SMALLINT NOT NULL DEFAULT 0, -- 0:未生成, 1:生成済, 2:要再生成, 9:エラー
+  
+  ---------------------------------------------
+  -- ② クエスチョン（指示文・問い）セクション
+  ---------------------------------------------
+  question TEXT NOT NULL,
+  question_voice TEXT DEFAULT NULL,              -- 生成された音声URL
+  question_tts_ssml TEXT DEFAULT NULL,
+  question_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
+  question_tts_adjustments JSONB DEFAULT NULL,
+  question_tts_status SMALLINT NOT NULL DEFAULT 0,
+  
+  ---------------------------------------------
+  -- ③ 解答（YES・通常正解文）セクション
+  ---------------------------------------------
+  answer_sentence_yes TEXT NOT NULL,
+  answer_sentence_yes_voice TEXT DEFAULT NULL,   -- 生成された音声URL
+  answer_sentence_yes_tts_ssml TEXT DEFAULT NULL,
+  answer_sentence_yes_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
+  answer_sentence_yes_tts_adjustments JSONB DEFAULT NULL,
+  answer_sentence_yes_tts_status SMALLINT NOT NULL DEFAULT 0,
+  
+  ---------------------------------------------
+  -- ④ 解答（NO・否定文 ※Speed専用）セクション
+  ---------------------------------------------
+  answer_sentence_no TEXT DEFAULT NULL,
+  answer_sentence_no_voice TEXT DEFAULT NULL,    -- 生成された音声URL
+  answer_sentence_no_tts_ssml TEXT DEFAULT NULL,
+  answer_sentence_no_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
+  answer_sentence_no_tts_adjustments JSONB DEFAULT NULL,
+  answer_sentence_no_tts_status SMALLINT NOT NULL DEFAULT 0,
+
+  ---------------------------------------------
+  -- 【共通管理・移行用カラム】
+  ---------------------------------------------
+  last_tts_date TIMESTAMP WITH TIME ZONE DEFAULT NULL, -- 最終TTS生成日
+  legacy_question_id BIGINT DEFAULT NULL,
+  legacy_group_id INTEGER DEFAULT NULL,
+  
+  delete_flg TEXT NOT NULL DEFAULT '0',
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- ---------------------------------------------
+-- 高速検索・ソートのための複合インデックス
+-- ---------------------------------------------
+-- 開いた際に対象種別・レベルから問題群を一発で、かつグループ順・ステップ順に綺麗に引き出すための最適化
+CREATE INDEX idx_com_m_sprint_questions_lookup 
+ON public.com_m_sprint_questions (question_type, difficulty_level, group_id, seq_no)
+WHERE delete_flg = '0';
