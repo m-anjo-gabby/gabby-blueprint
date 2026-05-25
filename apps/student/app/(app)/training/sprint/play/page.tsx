@@ -1,70 +1,59 @@
-import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { getSprintQuestionsAction } from '@/actions/sprintAction';
-import { SprintTimePlayer } from './_components/SprintTimePlayer';
-import { SprintDrillPlayer } from './_components/SprintDrillPlayer';
+import { getSprintQuestionsAction } from "@/actions/sprintAction";
+import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
+import { SprintQuestionType } from "@gabby/types/sprint";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: 'Sprint Training | Gabby Academy',
-  description: 'Gabby Sprint hybrid training room.',
-};
-
-interface PlayPageProps {
-  // Next.js App Router標準のsearchParams型
+interface PageProps {
   searchParams: Promise<{
-    type?: string;  // '0' | '4' | '5' | '6'
-    level?: string; // 難易度数値
-    mode?: string;  // 'sprint' | 'drill'
+    mode?: string;
+    type?: string;
+    level?: string;
   }>;
 }
 
-export default async function SprintPlayPage({ searchParams }: PlayPageProps) {
-  // 1. クエリパラメータの非同期解決と安全なフォールバックパース
+export default async function SprintPlayPage({ searchParams }: PageProps) {
+  // 1. クエリパラメータの安全な解決 (非同期 Await)
   const resolvedParams = await searchParams;
-  const questionType = (resolvedParams.type ?? '0') as '0' | '4' | '5' | '6';
-  const difficultyLevel = parseInt(resolvedParams.level ?? '1', 10);
-  const mode = (resolvedParams.mode ?? 'sprint') as 'sprint' | 'drill';
+  
+  const mode = resolvedParams.mode === 'drill' ? 'drill' : 'sprint';
+  const rawType = resolvedParams.type || '0';
+  const rawLevel = resolvedParams.level || '1';
 
-  // パラメータが不正な場合は安全にライブラリ（教材一覧）にリダイレクト
-  if (!['0', '4', '5', '6'].includes(questionType) || isNaN(difficultyLevel)) {
-    redirect('/library');
-  }
+  // 2. 引数の型合わせ (型安全ガード)
+  // question_type は '0' | '4' | '5' | '6' のいずれかに厳密に絞り込む
+  const validTypes: SprintQuestionType[] = ['0', '4', '5', '6'];
+  const questionType = validTypes.includes(rawType as SprintQuestionType)
+    ? (rawType as SprintQuestionType)
+    : '0';
 
-  // 2. 先ほど定義したお作法通りのServer Actionを叩いてデータを一括フェッチ
+  // difficulty_level は Server Action 側が number を要求しているため数値変換
+  const difficultyLevel = parseInt(rawLevel, 10) || 1;
+
+  // 3. サーバーアクションを呼び出してデータをフェッチ (mode も確実に渡す)
   const response = await getSprintQuestionsAction(questionType, difficultyLevel, mode);
 
-  // エラーハンドリング、または問題データが空だった場合の処理
-  if (!response.success || !response.data || response.data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <p className="text-muted-foreground text-sm font-medium">
-          対象のトレーニング問題が見つかりませんでした。
-        </p>
-        <a href="/library" className="text-primary underline text-sm">
-          教材一覧に戻る
-        </a>
-      </div>
-    );
+  // エラー、もしくはデータが取得できなかった場合は安全のためトレーニング一覧へ戻す
+  if (!response.success || !response.data) {
+    redirect("/training");
   }
 
   const questions = response.data;
 
-  // 3. モードに応じて、関心の分離を徹底した専用コンポーネントを動的マウント
+  // 4. モードの切り替え判定（ハイブリッド配線）
+  if (mode === 'drill') {
+    // 📖 教材ドリルモード
+    return <SprintDrillPlayer questions={questions} />;
+  }
+
+  // ⚡ スプリントモード (現状はプレースホルダー、今後TimePlayerを作成したらここに差し替え)
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8 flex flex-col min-h-[calc(100vh-4rem)]">
-      {mode === 'sprint' ? (
-        // ⏳ タイムアタックモード（制限時間あり、10問リミット盤面）
-        <SprintTimePlayer 
-          initialQuestions={questions} 
-          questionType={questionType} 
-        />
-      ) : (
-        // 📖 教材ドリルモード（無制限、全件しらみつぶし盤面）
-        <SprintDrillPlayer 
-          initialQuestions={questions} 
-          questionType={questionType} 
-        />
-      )}
+    <div className="w-full min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center space-y-2">
+        <h2 className="text-xl font-bold text-gray-800">Sprint Mode Coming Soon</h2>
+        <p className="text-sm text-gray-500">
+          型: {questionType} / レベル: {difficultyLevel} のスプリントプレイヤーは準備中です。
+        </p>
+      </div>
     </div>
   );
 }
