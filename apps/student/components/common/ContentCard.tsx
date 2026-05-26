@@ -13,8 +13,7 @@ import { cn } from "@/lib/utils";
 interface ContentCardProps {
   content: ContentItem;
   onToggleFavorite: (id: string, current: boolean) => void;
-  onStart: (content: ContentItem) => void;
-  // モード切り替え ('dashboard' | 'library | favorite')
+  onStart: (content: ContentItem) => void; // 🔄 常に新規のため第2引数のフラグは不要に
   actionMode?: 'dashboard' | 'library' | 'favorite';
 }
 
@@ -22,9 +21,8 @@ export const ContentCard = ({
   content, 
   onToggleFavorite, 
   onStart,
-  actionMode = 'library' // デフォルトはライブラリ用の星アイコン
+  actionMode = 'library'
 }: ContentCardProps) => {
-  // --- Config ---
   const clampLines = 3; 
 
   // --- States & Refs ---
@@ -34,11 +32,11 @@ export const ContentCard = ({
 
   const { icon: TypeIcon, label: typeLabel, theme } = getContentTypeConfig(content.content_type);
   
-  // CEFR情報の取得
+  // metadata から安全に取得
   const cefr = content.metadata?.cefr;
   const cefrStyle = cefr ? getCefrStyle(cefr.id) : "";
 
-  // --- Effects ---
+  // --- Description Clamp Observer ---
   useEffect(() => {
     const el = descriptionRef.current;
     if (!el) return;
@@ -81,18 +79,14 @@ export const ContentCard = ({
 
             <div className={cn("w-px h-3 opacity-20", theme.dotActive)} />
 
-            {/* Level表示エリア: CEFRバッジを優先し、なければドットを表示 */}
             {cefr && (
               <Badge className={cn(
                 "px-2 py-1 rounded-full text-[10px] font-black shadow-md flex gap-1 items-center border-none shrink-0",
                 cefrStyle
               )}>
-                {/* CEFRラベルの調整 */}
                 <span className="opacity-70 text-[7px] font-bold tracking-tighter leading-none translate-y-[0.5px]">
                   CEFR
                 </span>
-
-                {/* A2 などのレベル名の調整 */}
                 <span className="leading-none">
                   {cefr.label}
                 </span>
@@ -100,7 +94,6 @@ export const ContentCard = ({
             )}
           </div>
 
-          {/* 右端のボタン：モードによって Star または Trash2 を切り替え */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -109,10 +102,10 @@ export const ContentCard = ({
             className={cn(
               "transition-all active:scale-75 p-2 rounded-full shrink-0",
               actionMode === 'favorite' 
-                ? "text-slate-300 hover:text-rose-500 hover:bg-rose-50" // 削除モード
+                ? "text-slate-300 hover:text-rose-500 hover:bg-rose-50" 
                 : content.is_favorite 
-                  ? "text-amber-500 bg-amber-50" // お気に入りON
-                  : "text-slate-300 hover:bg-white/50" // お気に入りOFF
+                  ? "text-amber-500 bg-amber-50" 
+                  : "text-slate-300 hover:bg-white/50" 
             )}
           >
             {actionMode === 'favorite' ? (
@@ -123,8 +116,9 @@ export const ContentCard = ({
           </button>
         </div>
 
+        {/* 2. Content Area */}
         <CardContent className="p-6">
-          <h3 className="text-lg font-black text-slate-800 mb-3 leading-tight group-hover:text-indigo-600 transition-colors">
+          <h3 className="text-lg font-black text-slate-800 mb-3 tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
             {content.content_name}
           </h3>
 
@@ -180,6 +174,7 @@ export const ContentCard = ({
           </div>
         </CardContent>
 
+        {/* 3. Footer Area */}
         <CardFooter className="px-6 pb-6 pt-0">
           <Button
             onClick={() => onStart(content)}

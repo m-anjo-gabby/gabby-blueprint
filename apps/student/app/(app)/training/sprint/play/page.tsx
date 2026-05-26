@@ -1,13 +1,16 @@
 import { getSprintQuestionsAction } from "@/actions/sprintAction";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
-import { SprintQuestionType } from "@gabby/types/sprint";
-import { redirect } from "next/navigation";
+import { SprintQuestion, SprintQuestionType } from "@gabby/types/sprint";
+import { AlertCircle, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 interface PageProps {
   searchParams: Promise<{
     mode?: string;
     type?: string;
     level?: string;
+    content_id?: string;
+    resume_id?: string;
   }>;
 }
 
@@ -18,34 +21,83 @@ export default async function SprintPlayPage({ searchParams }: PageProps) {
   const mode = resolvedParams.mode === 'drill' ? 'drill' : 'sprint';
   const rawType = resolvedParams.type || '0';
   const rawLevel = resolvedParams.level || '1';
+  const contentId = resolvedParams.content_id || '';
+  const resumeId = resolvedParams.resume_id || undefined;
 
-  // 2. 引数の型合わせ (型安全ガード)
-  // question_type は '0' | '4' | '5' | '6' のいずれかに厳密に絞り込む
+  // 2. パラメータのバリデーションチェック
   const validTypes: SprintQuestionType[] = ['0', '4', '5', '6'];
   const questionType = validTypes.includes(rawType as SprintQuestionType)
     ? (rawType as SprintQuestionType)
     : '0';
 
-  // difficulty_level は Server Action 側が number を要求しているため数値変換
-  const difficultyLevel = parseInt(rawLevel, 10) || 1;
+  const parsedLevel = parseInt(rawLevel, 10);
+  const difficultyLevel = isNaN(parsedLevel) ? 1 : parsedLevel;
 
-  // 3. サーバーアクションを呼び出してデータをフェッチ (mode も確実に渡す)
-  const response = await getSprintQuestionsAction(questionType, difficultyLevel, mode);
+  // 💡 不整合チェック (ドリルモードなのに contentId がない不正なURL状態を検知)
+  const isInvalidParams = mode === 'drill' && !contentId;
 
-  // エラー、もしくはデータが取得できなかった場合は安全のためトレーニング一覧へ戻す
-  if (!response.success || !response.data) {
-    redirect("/training");
+  // 3. サーバーアクションを呼び出してデータをフェッチ
+  // ✨ 修正ポイント: `let questions: SprintQuestion[] = [];` と明示的に型をバインドします
+  let questions: SprintQuestion[] = [];
+  let isFetchSuccess = false;
+
+  if (!isInvalidParams) {
+    const response = await getSprintQuestionsAction(
+      questionType,
+      difficultyLevel,
+      mode
+    );
+    
+    if (response.success && response.data) {
+      questions = response.data;
+      isFetchSuccess = true;
+    }
   }
 
-  const questions = response.data;
+  // ────────────────────────────────────────────────────────────
+  // 🚫 4. エンプティステート表示 (不整合またはデータ未取得時)
+  // ────────────────────────────────────────────────────────────
+  if (isInvalidParams || !isFetchSuccess || questions.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-6">
+          <div className="w-16 h-16 bg-rose-50 rounded-3xl flex items-center justify-center mx-auto text-rose-500">
+            <AlertCircle size={32} strokeWidth={2.5} />
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+              Data Not Found
+            </h2>
+            <p className="text-sm text-slate-500 leading-relaxed px-2">
+              教材データの取得に失敗したか、不整合が発生しました。もう一度一覧からお試しください。
+            </p>
+          </div>
 
-  // 4. モードの切り替え判定（ハイブリッド配線）
+          <Link 
+            href="/dashboard"
+            className="inline-flex items-center justify-center gap-2 w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-700 active:scale-98 transition-all shadow-md"
+          >
+            <ArrowLeft size={14} strokeWidth={2.5} />
+            Go Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // 5. モードの切り替え判定（ハイブリッド配線）
   if (mode === 'drill') {
-    // 📖 教材ドリルモード
-    return <SprintDrillPlayer questions={questions} />;
+    return (
+      <SprintDrillPlayer 
+        questions={questions} 
+        contentId={contentId} 
+        initialQuestionId={resumeId} 
+      />
+    );
   }
 
-  // ⚡ スプリントモード (現状はプレースホルダー、今後TimePlayerを作成したらここに差し替え)
+  // ⚡ スプリントモード
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center space-y-2">

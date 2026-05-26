@@ -1,23 +1,26 @@
 'use client';
 
 import React from 'react';
-import { ArrowRight, RotateCw, Volume2, Mic, Check, Square, Eye } from 'lucide-react';
+import { ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square, Bookmark } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 
-// 📐 エラーを解消するためにPropsのインターフェースを拡張
 interface SprintPlayControlsProps {
   mode: 'drill' | 'sprint';
   isRevealed: boolean;
   isRecording: boolean;
+  isAutoPlaying?: boolean; // ➕ 追加：自動再生状態
+  isFirstStep: boolean;    // ➕ 追加：最初のカードか
+  isLastStep: boolean;     // ➕ 追加：最後のカードか
   onReveal: () => void;
   onNext: () => void;
-  onPlayAudio: () => void;
+  onPrev: () => void;      // ➕ 追加：前へ戻る
+  onPlayAudio: () => void; // 💡 Listen 押下（プレイヤー側で必ず先頭から再生するように制御）
   onStartRecord: () => void;
   onStopRecord: () => void;
+  onSaveResume?: () => void;     // ➕ 追加：ブックマークして閉じる用
+  onToggleAutoPlay?: () => void; // ➕ 追加：自動再生トグル
   hasAudio: boolean;
-  
-  // ➕ 追加された音声状態管理用のプロパティ
   isPlaying: boolean;
   playbackRate: number;
   onChangePlaybackRate: () => void;
@@ -26,24 +29,31 @@ interface SprintPlayControlsProps {
 
 /**
  * スプリントドリル用のメイン操作パネル
- * 単語帳（WordControls）の洗練されたスプリット構造、型定義、アニメーションを100%継承
+ * 単語帳（WordControls）の洗練されたスプリット構造、型定義、アニメーションを100%継承・最適化
  */
 export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
   mode,
   isRevealed,
   isRecording,
+  isAutoPlaying = false,
+  isFirstStep,
+  isLastStep,
   onReveal,
   onNext,
+  onPrev,
   onPlayAudio,
   onStartRecord,
   onStopRecord,
+  onSaveResume,
+  onToggleAutoPlay,
   hasAudio,
   isPlaying,
   playbackRate,
   onChangePlaybackRate,
   timeLeft
 }) => {
-  const isInteractionDisabled = isRecording;
+  const isInteractionDisabled = isRecording || isAutoPlaying || isPlaying;
+  const isManualPlaying = isPlaying && !isAutoPlaying;
 
   // --- 共通スタイル定義 (WordControlsから完全継承) ---
   const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50 text-slate-400";
@@ -54,7 +64,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
     <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2">
       
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 1. ステータス・インジケーター (WordControlsと100%シンクロするモーション) */}
+      {/* 1. ステータス・インジケーター (WordControlsと完全同期) */}
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="h-6 flex items-center justify-center">
         <AnimatePresence mode="wait">
@@ -63,6 +73,11 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
               <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
               <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em]">Recording {timeLeft}s</span>
             </motion.div>
+          ) : isAutoPlaying ? (
+            <motion.div key="auto" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
+              <RotateCw size={10} className="animate-spin text-indigo-600" />
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Auto Playing</span>
+            </motion.div>
           ) : isPlaying ? (
             <motion.div key="play" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
               <RotateCw size={10} className="animate-spin text-indigo-600" />
@@ -70,7 +85,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
             </motion.div>
           ) : !isRevealed ? (
             <motion.span key="hint-reveal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-              Tap Eye or Reveal to check answer
+              Tap Card or Reveal to check answer
             </motion.span>
           ) : (
             <motion.span key="hint-next" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
@@ -81,65 +96,59 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
       </div>
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 2. 上段：ナビゲーション・レイヤー（Reveal / Next をスプリット化） */}
+      {/* 2. 上段：ナビゲーション・レイヤー（戻る・進む・ブックマーク） */}
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between w-full gap-2 h-14">
         
-        {/* 左サイド：目を模したRevealショートカットボタン（単語帳のBookmark位置） */}
+        {/* 左サイド：ブックマークして閉じるボタン（単語帳と完全一致） */}
         <button
-          onClick={onReveal}
-          disabled={isRevealed || isInteractionDisabled || isPlaying}
-          className={cn(sideBtnBase, "hover:bg-indigo-50 hover:text-indigo-600 disabled:bg-slate-100 disabled:text-slate-300")}
+          onClick={onSaveResume}
+          disabled={isAutoPlaying || isPlaying}
+          className={cn(sideBtnBase, "hover:bg-indigo-50 hover:text-indigo-600")}
         >
-          <Eye size={18} strokeWidth={2.5} />
+          <Bookmark size={18} strokeWidth={2.5} />
         </button>
 
-        {/* スプリット・コントロールユニット */}
+        {/* スプリット・ナビゲーションユニット */}
         <div className={cn("flex-1 h-full bg-white border-indigo-100", unitBase)}>
           
-          {/* 左スプリット：Revealボタン (未回答時はここを目立たせる) */}
+          {/* 左スプリット：戻る（Prev）ボタン */}
           <button 
-            onClick={onReveal} 
-            disabled={isRevealed || isInteractionDisabled || isPlaying} 
-            className={cn(
-              "h-full px-4 flex items-center justify-center gap-2 transition-all font-black text-[10px] uppercase tracking-[0.15em]",
-              !isRevealed 
-                ? "bg-indigo-50 text-indigo-600 font-black" 
-                : "text-slate-300 bg-slate-50 pointer-events-none"
-            )}
-            style={{ width: '84px' }}
+            onClick={onPrev} 
+            disabled={isInteractionDisabled || isFirstStep} 
+            className={cn(splitLeftBase, "text-slate-400 hover:bg-slate-50 border-indigo-50 disabled:opacity-20")}
           >
-            Reveal
+            <ArrowLeft size={18} strokeWidth={3} />
           </button>
           
-          {/* 右スプリット：次へ(Next)ボタン */}
+          {/* 右スプリット：次へ（Next）/ 完了（Finish）ボタン */}
           <button 
             onClick={onNext} 
-            disabled={isInteractionDisabled || isPlaying} 
+            disabled={isInteractionDisabled} 
             className={cn(
               "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40",
-              isRevealed
-                ? "bg-indigo-600 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed"
+              isLastStep 
+                ? "bg-emerald-500 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]" 
+                : "bg-indigo-600 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
             )}
           >
             <span className="text-[10px] font-black uppercase tracking-[0.15em]">
-              Next
+              {isLastStep ? 'Finish' : 'Next'}
             </span>
-            <ArrowRight size={18} strokeWidth={3} />
+            {isLastStep ? <Check size={18} strokeWidth={3} /> : <ArrowRight size={18} strokeWidth={3} />}
           </button>
         </div>
 
-        {/* 右サイド：クイックオーディオ再生トグル（単語帳のAutoPlay位置をインスパイア、再生中はインディゴにハイライト） */}
+        {/* 右サイド：自動再生（AutoPlay）トグル */}
         <button
-          onClick={onPlayAudio}
-          disabled={isInteractionDisabled || !hasAudio}
+          onClick={onToggleAutoPlay}
+          disabled={isManualPlaying}
           className={cn(
             sideBtnBase, 
-            isPlaying ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" : "hover:bg-indigo-50 hover:text-indigo-600"
+            isAutoPlaying ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" : "hover:bg-indigo-50 hover:text-indigo-600"
           )}
         >
-          <Volume2 size={18} strokeWidth={2.5} className={cn(isPlaying && "text-white")} />
+          <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-slate-400")} />
         </button>
       </div>
 
@@ -148,12 +157,12 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 w-full max-w-sm px-2 mt-1 h-14">
         
-        {/* 左側：単語帳仕様の「Rate切り替え ＋ Listen」ハイブリッドユニット */}
+        {/* 左側：「Rate切り替え ＋ Listen」ハイブリッドユニット */}
         <div className={cn("h-full bg-slate-50 border-slate-200", unitBase)}>
           {/* 再生速度セクション */}
           <button
             onClick={onChangePlaybackRate}
-            disabled={isInteractionDisabled || isPlaying}
+            disabled={isInteractionDisabled}
             className={cn(
               splitLeftBase,
               playbackRate !== 1.0 
@@ -168,34 +177,34 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
             )}>Rate</span>
           </button>
 
-          {/* 音声再生セクション（手動再生中、アイコンを単語帳のくるくるへ変更） */}
+          {/* 音声再生（Listen）セクション */}
           <button
             onClick={onPlayAudio}
             disabled={isInteractionDisabled || !hasAudio}
             className={cn(
               "flex-1 h-full flex items-center justify-center gap-2 transition-all",
-              isPlaying ? "bg-indigo-50 text-indigo-600" : "text-slate-600 hover:text-indigo-600"
+              isManualPlaying ? "bg-indigo-50 text-indigo-600" : "text-slate-600 hover:text-indigo-600"
             )}
           >
-            {isPlaying ? (
+            {isManualPlaying ? (
               <RotateCw size={20} strokeWidth={2.5} className="animate-spin" />
             ) : (
               <Volume2 size={20} strokeWidth={2.5} />
             )}
             <span className="text-[10px] font-black uppercase tracking-widest">
-              {isPlaying ? 'Playing' : 'Listen'}
+              {isManualPlaying ? 'Playing' : 'Listen'}
             </span>
           </button>
         </div>
 
-        {/* 右側：音声認識・練習ボタン (WordControlsから完全移植・100%同一挙動) */}
+        {/* 右側：音声認識・練習ボタン */}
         <button
           onClick={isRecording ? onStopRecord : onStartRecord}
-          disabled={(isInteractionDisabled && !isRecording) || isPlaying}
+          disabled={(isInteractionDisabled && !isRecording) || isManualPlaying}
           className={cn(
             "h-full rounded-2xl flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative",
             isRecording ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
-            ((isInteractionDisabled && !isRecording) || isPlaying) && "opacity-20 disabled:pointer-events-none"
+            ((isInteractionDisabled && !isRecording) || isManualPlaying) && "opacity-20 disabled:pointer-events-none"
           )}
         >
           {isRecording && <span className="absolute inset-0 bg-white/20 animate-pulse" />}
