@@ -21,12 +21,14 @@ interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
   contentId: string;
   initialQuestionId?: string;
+  initialStarted?: boolean; // ➕ 追加：親からの開始状態の上書き
 }
 
 export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({ 
-  questions = [], 
-  contentId, 
-  initialQuestionId 
+  questions = [],
+  contentId,
+  initialQuestionId,
+  initialStarted
 }) => {
   const router = useRouter();
   const { showToast } = useToast();
@@ -35,9 +37,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   // ────────────────────────────────────────────────────────────
   // 🛡️ 修正ポイント：開始ステートの初期値を「栞からの再開か否か」で決定
   // ────────────────────────────────────────────────────────────
+  // initialStarted が true の場合（SPA遷移など親でアクション済み）は即開始
   // initialQuestionId が無い(通常遷移) ＝ 選択画面でタップ済みなの、即時 true
   // initialQuestionId が有る(栞再開) ＝ 物理タップがないため、ウェルカム表示のために false に倒す
-  const [isStarted, setIsStarted] = useState<boolean>(!initialQuestionId);
+  const [isStarted, setIsStarted] = useState<boolean>(!!initialStarted || !initialQuestionId);
 
   // 🔌 Zustand ストア
   const {

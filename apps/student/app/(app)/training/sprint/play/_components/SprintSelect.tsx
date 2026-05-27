@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -10,7 +10,8 @@ import {
   type SprintQuestionType,
   type SprintAnswerType,
   SPRINT_THEMES,
-  SPRINT_NOTES
+  SPRINT_NOTES,
+  type SprintConfig
 } from '@gabby/types/sprint';
 
 import {
@@ -41,9 +42,10 @@ interface SprintSelectProps {
     mode?: 'drill' | 'sprint';
     questionType?: SprintQuestionType;
   };
+  onStart: (config: SprintConfig & { answerType: SprintAnswerType }) => void;
 }
 
-export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => {
+export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onStart }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const contentId = searchParams.get('content_id') || '';
@@ -83,25 +85,24 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
     setSelectedLevel(SPRINT_TYPES[typeId].hasBasic ? '0' : '1');
   };
 
-  // ────────────── 🚀 修正ポイント：ルーティングの最適化 ──────────────
   const handleStartSubmit = (answerType: SprintAnswerType = '0') => {
-    const params = new URLSearchParams();
-    params.set('mode', mode);
-    params.set('type', selectedType);
-    params.set('level', selectedLevel);
-    
-    // スプリントかつYES/NOタイプ（'0'）の場合のみanswer_typeを動的に反映
-    if (mode === 'sprint' && selectedType === '0') {
-      params.set('answer_type', answerType);
-    } else {
-      params.set('answer_type', '0'); // デフォルト
+    // 🔊 iOSジェスチャー要件への対応
+    // クリックイベントのコールバック内で一度音声を再生し、以後の自動再生を許可させる
+    if (typeof window !== 'undefined') {
+      const audio = new Audio();
+      audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
+      audio.play().catch(() => {});
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
     }
 
-    if (contentId) params.set('content_id', contentId);
-    if (mode === 'sprint') params.set('duration', String(selectedDuration));
-
-    // 💡 プレイ用コンポーネントが配置されている正しいエンドポイントへPush
-    router.push(`/training/sprint/play?${params.toString()}`);
+    // 親コンポーネント（page.tsx）へ選択内容を通知し、表示を切り替える
+    onStart({
+      mode,
+      questionType: selectedType,
+      level: selectedLevel,
+      duration: selectedDuration,
+      answerType: (mode === 'sprint' && selectedType === '0') ? answerType : '0'
+    });
   };
 
   const isSpeedSelected = selectedType === '0';
