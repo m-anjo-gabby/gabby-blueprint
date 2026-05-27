@@ -5,38 +5,25 @@ import { create } from 'zustand';
 import { SprintQuestion } from "@gabby/types/sprint";
 
 interface SprintState {
-  // --- Data States ---
   questions: SprintQuestion[];
   currentIndex: number;
   mode: 'drill' | 'sprint';
   loading: boolean;
-
-  // --- UI States ---
   isRevealed: boolean;
   isAutoPlaying: boolean;
   isRecording: boolean;
-  
-  // --- Lock / Phase Flags (タイミングバグを防ぐ強固なフラグ) ---
   isPlayingQuestionSequence: boolean;
   isPlayingAnswerSequence: boolean;
 
-  // --- Actions ---
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
   setLoading: (loading: boolean) => void;
-  
-  // Navigation
   nextStep: () => { isLast: boolean };
   prevStep: () => void;
-  
-  // UI Controls
   setIsRevealed: (val: boolean) => void;
   setIsRecording: (val: boolean) => void;
   toggleAutoPlay: (val?: boolean) => void;
-  
-  // Sequence Locks
   setPlayingQuestionSequence: (val: boolean) => void;
   setPlayingAnswerSequence: (val: boolean) => void;
-  
   resetStore: () => void;
 }
 
@@ -56,7 +43,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     mode,
     currentIndex: startIndex,
     isRevealed: false,
-    isAutoPlaying: false,
+    isAutoPlaying: mode === 'sprint', // スプリント時は最初から自動再生フラグを有効化
     isRecording: false,
     isPlayingQuestionSequence: false,
     isPlayingAnswerSequence: false,
@@ -79,7 +66,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
       return { isLast: false };
     } else {
       set({ ...resetDisplay, isAutoPlaying: false });
-      return { isLast: true };
+      return { isLast: true }; // 最後の問題に到達
     }
   },
 
@@ -101,9 +88,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   
   toggleAutoPlay: (val) => set((state) => {
     const nextAutoPlay = val !== undefined ? val : !state.isAutoPlaying;
-
     if (nextAutoPlay) {
-      // 🟩 【開始時】進捗（currentIndex）はそのままに、カードを未開示に戻して先頭からリスタート
       return {
         isAutoPlaying: true,
         isRevealed: false, 
@@ -112,10 +97,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
         isPlayingAnswerSequence: false,
       };
     } else {
-      // 🟥 【停止時】その瞬間の開示状態（isRevealed）をキープし、勝手な遷移をガード
-      return {
-        isAutoPlaying: false
-      };
+      return { isAutoPlaying: false };
     }
   }),
 

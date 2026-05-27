@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check, Lock, Zap, ChevronLeft, Sliders, Settings2, Edit3, BookOpen, HelpCircle, X, ArrowRight } from 'lucide-react';
+import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { 
   SPRINT_TYPES, 
@@ -13,7 +13,6 @@ import {
   SPRINT_NOTES
 } from '@gabby/types/sprint';
 
-// ボトムシート共通コンポーネント（単語帳ドリルと同じものを想定）
 import {
   Drawer,
   DrawerContent,
@@ -34,7 +33,7 @@ const mockUserRecord: Record<string, number> = {
   CTS_LEVEL_YN: 3,
   CTS_LEVEL_UGBUILDERS: 1,
   CTS_LEVEL_UGCV: 2,
-  CTS_LEVEL_UGMASTERY: 0,
+  CTS_LEVEL_UGMASTERY: 2,
 };
 
 interface SprintSelectProps {
@@ -84,11 +83,25 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
     setSelectedLevel(SPRINT_TYPES[typeId].hasBasic ? '0' : '1');
   };
 
+  // ────────────── 🚀 修正ポイント：ルーティングの最適化 ──────────────
   const handleStartSubmit = (answerType: SprintAnswerType = '0') => {
-    const baseQuery = `mode=${mode}&type=${selectedType}&answer_type=${answerType}&level=${selectedLevel}`;
-    const contentQuery = contentId ? `&content_id=${contentId}` : '';
-    const durationQuery = mode === 'sprint' ? `&duration=${selectedDuration}` : '';
-    router.push(`/training/sprint/play?${baseQuery}${contentQuery}${durationQuery}`);
+    const params = new URLSearchParams();
+    params.set('mode', mode);
+    params.set('type', selectedType);
+    params.set('level', selectedLevel);
+    
+    // スプリントかつYES/NOタイプ（'0'）の場合のみanswer_typeを動的に反映
+    if (mode === 'sprint' && selectedType === '0') {
+      params.set('answer_type', answerType);
+    } else {
+      params.set('answer_type', '0'); // デフォルト
+    }
+
+    if (contentId) params.set('content_id', contentId);
+    if (mode === 'sprint') params.set('duration', String(selectedDuration));
+
+    // 💡 プレイ用コンポーネントが配置されている正しいエンドポイントへPush
+    router.push(`/training/sprint/play?${params.toString()}`);
   };
 
   const isSpeedSelected = selectedType === '0';
@@ -98,7 +111,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
     <div className="fixed inset-0 w-full h-[100dvh] bg-slate-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden overscroll-none touch-none select-none">
       <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full flex flex-col relative overflow-hidden rounded-[40px]">
         
-        {/* 💳 ヘッダー */}
+        {/* ヘッダー */}
         <div className="shrink-0 pt-4 w-full overflow-hidden px-4">
           <div className="grid grid-cols-5 items-center h-12 px-2">
             <div className="col-span-1 flex justify-start">
@@ -121,11 +134,11 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
           </div>
         </div>
 
-        {/* 🎴 中央：コンテンツエリア */}
+        {/* 中央：コンテンツエリア */}
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 overscroll-contain">
           <div className="w-full max-w-xl mx-auto space-y-7 pt-2 pb-6">
 
-            {/* 🌟 1. 現在の設定要約（立体メインカード） */}
+            {/* 🌟 1. 現在の設定要約 */}
             <div 
               onClick={() => setIsSettingsOpen(true)}
               className="bg-indigo-50/75 border border-indigo-100/80 text-indigo-950 p-5 rounded-[28px] relative overflow-hidden group cursor-pointer active:scale-[0.99] transition-all shadow-md shadow-indigo-600/[0.03]"
@@ -136,7 +149,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                   
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-lg font-black tracking-tight text-indigo-900 truncate">
-                      {SPRINT_TYPES[selectedType].label}
+                      {SPRINT_TYPES[selectedType]?.label || '---'}
                     </h3>
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-600 text-white shrink-0">
                       {selectedLevel === '0' ? 'Basic' : `Lvl ${selectedLevel}`}
@@ -174,7 +187,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                   {mode === 'sprint' ? (
                     "制限時間内に一問一答でテンポよく回答を重ねる、瞬発力強化モードです。"
                   ) : (
-                    "自分のペースで英文を聞き、発話を繰り返す練習モードです。"
+                    "自分のペースで英文を聞き、発話を繰り返流練習モードです。"
                   )}
                 </p>
               </div>
@@ -218,6 +231,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
         {/* 🎮 下部確定エリア */}
         <div className="px-6 pt-4 shrink-0 border-t border-slate-50 bg-white pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <div className="w-full max-w-xl mx-auto">
+            {/* 💡 改善点: スプリントかつYES/NO選択時でも、基本的には「スプリントを開始」の1つのエントリーにする方がセッション初期化としては安全です */}
             {mode === 'sprint' && isSpeedSelected ? (
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -225,14 +239,14 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                   className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                 >
                   <Zap size={14} className="fill-current" />
-                  YESで回答
+                  YES主軸で開始
                 </button>
                 <button
                   onClick={() => handleStartSubmit('1')}
                   className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-slate-900/10 bg-slate-900 hover:bg-slate-800 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                 >
                   <Zap size={14} className="fill-current" />
-                  NOで回答
+                  NO主軸で開始
                 </button>
               </div>
             ) : (
@@ -247,12 +261,8 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
           </div>
         </div>
 
-        {/* 🛠️ ボトムシート詳細設定 (WordIndexベースに最適化) */}
-        <Drawer 
-          open={isSettingsOpen} 
-          onOpenChange={setIsSettingsOpen}
-          dismissible={true}
-        >
+        {/* 詳細設定ボトムシート */}
+        <Drawer open={isSettingsOpen} onOpenChange={setIsSettingsOpen} dismissible={true}>
           <DrawerContent 
             className="max-w-2xl mx-auto h-[85vh] bg-white border-none rounded-t-[40px] shadow-2xl outline-none flex flex-col overflow-hidden text-slate-900"
             onPointerDownOutside={(e) => {
@@ -262,7 +272,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
               }
             }}
           >
-            {/* ドラッグハンドル */}
             <div className="shrink-0">
               <div className="flex justify-center py-4 cursor-grab active:cursor-grabbing">
                 <div className="w-10 h-1 rounded-full bg-slate-100" />
@@ -285,22 +294,23 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
               </DrawerHeader>
             </div>
 
-            {/* スクロールコンテンツエリア */}
             <div className="flex-1 relative min-h-0 overflow-hidden border-t border-slate-50 mt-6" data-vaul-no-drag>
               <ScrollArea className="h-full w-full pr-2">
                 <div className="px-8 py-4 space-y-6 pb-32">
                   
-                  {/* 🔄 A. モード選択 */}
+                  {/* モード選択 */}
                   <div className="space-y-2">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Training Mode / モード設定</span>
                     <div className="bg-slate-100 p-1 rounded-2xl grid grid-cols-2 text-center font-black text-xs border border-slate-200/40">
                       <button
+                        type="button"
                         onClick={() => setMode('drill')}
                         className={cn("py-3 rounded-xl transition-all flex items-center justify-center gap-2", mode === 'drill' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500")}
                       >
                         <Sliders size={14} strokeWidth={2.5} /> ドリル
                       </button>
                       <button
+                        type="button"
                         onClick={() => setMode('sprint')}
                         className={cn("py-3 rounded-xl transition-all flex items-center justify-center gap-2", mode === 'sprint' ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500")}
                       >
@@ -309,7 +319,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                     </div>
                   </div>
 
-                  {/* 🧩 B. スプリント種別 */}
+                  {/* スプリント種別 */}
                   <div className="space-y-2">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">01. Type / 種別の選択</span>
                     <div className="grid grid-cols-2 gap-2">
@@ -317,6 +327,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                         const isSelected = selectedType === type.value;
                         return (
                           <button
+                            type="button"
                             key={type.value}
                             onClick={() => handleTypeChange(type.value)}
                             className={cn("h-12 rounded-xl border text-xs font-black transition-all", isSelected ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10" : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50")}
@@ -328,7 +339,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                     </div>
                   </div>
 
-                  {/* 🎯 C. レベルマップ */}
+                  {/* レベルマップ */}
                   <div className="space-y-2">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">02. Target Level / ターゲットレベル</span>
                     <div className="grid grid-cols-4 gap-2">
@@ -337,6 +348,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                         const isLocked = item.isLocked;
                         return (
                           <button
+                            type="button"
                             key={item.value}
                             disabled={isLocked}
                             onClick={() => setSelectedLevel(item.value)}
@@ -350,7 +362,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                     </div>
                   </div>
 
-                  {/* ⏱️ D. 制限時間 */}
+                  {/* 制限時間 */}
                   {mode === 'sprint' && (
                     <div className="space-y-2">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">03. Duration / 制限時間</span>
@@ -359,6 +371,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                           const isSelected = selectedDuration === opt.value;
                           return (
                             <button
+                              type="button"
                               key={opt.value}
                               onClick={() => setSelectedDuration(opt.value)}
                               className={cn("p-3 rounded-xl border text-left transition-all flex items-center justify-between", isSelected ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10" : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50")}
@@ -380,9 +393,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
               </ScrollArea>
             </div>
 
-            {/* ボトムシート下部固定確定ボタン */}
             <div className="shrink-0 px-8 pt-2 bg-white pb-[max(2rem,env(safe-area-inset-bottom))] border-t border-slate-50">
               <button
+                type="button"
                 onClick={() => setIsSettingsOpen(false)}
                 className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
               >

@@ -1,9 +1,7 @@
-// 📄 apps/student/app/(app)/training/sprint/play/page.tsx
-
 import { getSprintQuestionsAction } from "@/actions/sprintAction";
 import { SprintSelect } from "./_components/SprintSelect";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
-// import { SprintTimePlayer } from "./_components/SprintTimePlayer"; // ⏱️ 実装時にインポート
+import { SprintTimePlayer } from "./_components/SprintTimePlayer";
 import { SprintQuestion, SprintQuestionType, SprintAnswerType } from "@gabby/types/sprint";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -12,7 +10,7 @@ interface PageProps {
   searchParams: Promise<{
     mode?: string;
     type?: string;
-    answer_type?: string; // ⚡ 追加：Speed用の回答タイプを受け取る
+    answer_type?: string; // ⚡ Speed用の回答タイプ
     level?: string;
     content_id?: string;
     resume_id?: string;
@@ -27,7 +25,7 @@ export default async function SprintPlayPage({ searchParams }: PageProps) {
   
   const mode = resolvedParams.mode === 'sprint' ? 'sprint' : 'drill';
   const rawType = resolvedParams.type || '0';
-  const rawAnswerType = resolvedParams.answer_type || '0'; // ⚡ 追加
+  const rawAnswerType = resolvedParams.answer_type || '0';
   const rawLevel = resolvedParams.level; // 💡 選択された時のみ値が入る
   const contentId = resolvedParams.content_id || '';
   const resumeId = resolvedParams.resume_id || undefined;
@@ -39,14 +37,12 @@ export default async function SprintPlayPage({ searchParams }: PageProps) {
     ? (rawType as SprintQuestionType)
     : '0';
 
-  // ⚡ 追加：answerType のバリデーション（Speedかつ'1'のときのみ'1'(NO)、それ以外はすべて'0'(YES/通常)）
+  // ⚡ answerType のバリデーション（Speedかつ'1'のときのみ'1'(NO)、それ以外はすべて'0'(YES/通常)）
   const answerType: SprintAnswerType = (rawAnswerType === '1' && questionType === '0') ? '1' : '0';
 
   // ────────────────────────────────────────────────────────────
   // 🧭 分岐レイヤーA: レベル未指定 ＆ 栞ではない ＝ 「Ready画面」を表示
   // ────────────────────────────────────────────────────────────
-  // 教材カード一覧から遷移してきた直後（levelがまだURLにない状態）は、
-  // サーバーでのデータ取得は行わず、即座に設定画面をクライアントに返します。
   if (!rawLevel && !isResume) {
     return (
       <SprintSelect 
@@ -59,9 +55,8 @@ export default async function SprintPlayPage({ searchParams }: PageProps) {
   }
 
   // ────────────────────────────────────────────────────────────
-  // ⚙️ データフェッチレイヤー (栞再開、またはReady画面で確定した後の処理)
+  // ⚙️ データフェッチレイヤー
   // ────────────────────────────────────────────────────────────
-  // 確定したレベルのパース（栞再開時でlevelが省略されている場合はデフォルトをBasic、または1に設定）
   const parsedLevel = parseInt(rawLevel || '', 10);
   const defaultLevel = (questionType === '0' || questionType === '4') ? 0 : 1; // Basic対応種別は0
   const difficultyLevel = isNaN(parsedLevel) ? defaultLevel : parsedLevel;
@@ -119,7 +114,7 @@ export default async function SprintPlayPage({ searchParams }: PageProps) {
   // 🏎️ 5. モードごとのプレイヤー切り替え（ハイブリッド配線）
   // ────────────────────────────────────────────────────────────
   
-  // A. ドリルモード (通常確定後、または栞からのダイレクト突入ケース)
+  // A. ドリルモード
   if (mode === 'drill') {
     return (
       <SprintDrillPlayer 
@@ -133,21 +128,13 @@ export default async function SprintPlayPage({ searchParams }: PageProps) {
   // B. ⚡ スプリントモード
   const duration = resolvedParams.duration || '60';
 
+  // 💡 コメントアウトされていたダミーUIを完全に排除し、本物のコンポーネントへ接続
   return (
-    <div className="w-full min-h-screen bg-slate-900 flex items-center justify-center text-white">
-      {/* <SprintTimePlayer 
-        questions={questions} 
-        contentId={contentId} 
-        answerType={answerType} // ⚡ YES('0') / NO('1') モードの引き渡し
-        duration={parseInt(duration, 10)} 
-      /> 
-      */}
-      <div className="text-center space-y-2">
-        <h2 className="text-xl font-bold text-amber-400">Sprint Mode Coming Soon</h2>
-        <p className="text-sm text-slate-400">
-          型: {questionType} (回答モード: {answerType === '1' ? 'NO' : 'YES'}) / レベル: {difficultyLevel} / 制限時間: {duration}s のタイムアタックプレイヤーは準備中です。
-        </p>
-      </div>
-    </div>
+    <SprintTimePlayer 
+      questions={questions} 
+      contentId={contentId} 
+      answerType={answerType} // ⚡ YES('0') / NO('1') モードをプレイヤーにバインド
+      duration={parseInt(duration, 10)} 
+    />
   );
 }
