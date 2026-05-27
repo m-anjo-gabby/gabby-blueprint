@@ -4,5 +4,4 @@ export * from './content/ui';
 export * from './date/date';
 export * from './navigation/student-path';
 export * from './supabase/client';
-export * from './sprint/constants';
 export * from './sprint/utils';

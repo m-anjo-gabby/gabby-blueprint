@@ -1,5 +1,4 @@
-import { SPRINT_TYPES } from './constants';
-import { SprintQuestionType } from '@gabby/types/sprint';
+import { SPRINT_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 
 /**
  * 安全な動的教材タイトル生成ヘルパー

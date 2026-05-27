@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
-import { SprintQuestion } from "@gabby/types/sprint";
+import { DRILL_TIMING, SprintQuestion } from "@gabby/types/sprint";
 import { QuestionCard } from "./shared/QuestionCard";
 import { SprintPlayControls } from "./shared/SprintPlayControls";
 import { ChevronLeft, Loader2, Square, Volume2 } from 'lucide-react';
@@ -14,7 +14,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { saveResumeContent } from '@/actions/contentAction';
 import { useResumeStore } from '@/stores/useResumeStore';
-import { DRILL_TIMING, getSprintTitle } from '@gabby/lib';
+import { getSprintTitle } from '@gabby/lib';
 import { SprintResumeMetadata } from '@gabby/types/training';
 
 interface SprintDrillPlayerProps {
@@ -32,12 +32,14 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
 
-  // 🛡️ iOS/全ブラウザの自動再生ポリシーをクリーンに突破するための開始フラグ
-  const [isStarted, setIsStarted] = useState<boolean>(false);
+  // ────────────────────────────────────────────────────────────
+  // 🛡️ 修正ポイント：開始ステートの初期値を「栞からの再開か否か」で決定
+  // ────────────────────────────────────────────────────────────
+  // initialQuestionId が無い(通常遷移) ＝ 選択画面でタップ済みなの、即時 true
+  // initialQuestionId が有る(栞再開) ＝ 物理タップがないため、ウェルカム表示のために false に倒す
+  const [isStarted, setIsStarted] = useState<boolean>(!initialQuestionId);
 
-  // ────────────────────────────────────────────────────────────
-  // 🔌 1. Zustand ストアから状態とアクションの抽出
-  // ────────────────────────────────────────────────────────────
+  // 🔌 Zustand ストア
   const {
     currentIndex,
     isRevealed,
@@ -54,9 +56,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     resetStore
   } = useSprintStore();
 
-  // ────────────────────────────────────────────────────────────
-  // 🔌 2. 音声フックの初期化
-  // ────────────────────────────────────────────────────────────
+  // 🔌 音声フック
   const { speak: ttsSpeak, setSpeechRate: ttsSetRate, startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
@@ -68,7 +68,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
   const isInitialized = useRef<boolean>(false);
 
-  // 💡 useEffectが不要に再実行されるのを防ぐため、状態をRefに同期
   const isAutoPlayingRef = useRef(isAutoPlaying);
   const isRevealedRef = useRef(isRevealed);
   
@@ -88,9 +87,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return { groupCurrentIndex: groupCurrentIndex >= 0 ? groupCurrentIndex : 0, groupTotalCount: groupQuestions.length };
   }, [currentQuestion, questions]);
 
-  // ────────────────────────────────────────────────────────────
-  // 🔊 3. 音声再生コアロジック
-  // ────────────────────────────────────────────────────────────
+  // 🔊 音声再生コアロジック
   const stopAllAudio = useCallback(() => {
     if (autoPlayTimerRef.current) {
       clearTimeout(autoPlayTimerRef.current);
@@ -151,11 +148,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setPlayingAnswerSequence(false);
   }, [playSingleTrack, setPlayingAnswerSequence]);
 
-  // ────────────────────────────────────────────────────────────
-  // 🎮 4. 操作ハンドラー
-  // ────────────────────────────────────────────────────────────
+  // 🎮 操作ハンドラー
   const handleReveal = useCallback(() => {
-    // 🛡️ ウェルカム画面が表示されている間は背後のカードタップイベントを無効化
     if (!isStarted || !currentQuestion || isRevealed) return;
     stopAllAudio();
     setIsRevealed(true);
@@ -269,9 +263,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     }
   }, [currentQuestion, currentIndex, totalQuestions, contentId, stopAllAudio, showConfirm, showToast, router]);
 
-  // ────────────────────────────────────────────────────────────
-  // ⚙️ 5. リアクティブ・ライフサイクル（タイムラインの完全分離）
-  // ────────────────────────────────────────────────────────────
+  // ⚙️ 5. リアクティブ・ライフサイクル
   
   // 🔌 初期注入
   useEffect(() => {
@@ -290,9 +282,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => resetStore();
   }, [questions, initialQuestionId, initSprint, resetStore, showToast]);
 
-  // 🔄 タイムライン1：純粋に問題（カード）が変わった瞬間、かつ「ユーザーが開始した」瞬間だけ発火
+  // 🔄 タイムライン1：問題カード変更検知
   useEffect(() => {
-    // 🛡️ ユーザーがウェルカム画面のスタートを押すまでは音声を鳴らさない
     if (!currentQuestion || !isStarted) return;
 
     const runQuestionFlow = async () => {
@@ -311,9 +302,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
-  }, [currentIndex, currentQuestion, playQuestionSequence, setIsRevealed, stopAllAudio, isStarted]); // 👈 isStarted を追加
+  }, [currentIndex, currentQuestion, playQuestionSequence, setIsRevealed, stopAllAudio, isStarted]);
 
-  // 🔄 タイムライン2：解答がオープンされた瞬間だけ発火
+  // 🔄 タイムライン2：解答オープン検知
   useEffect(() => {
     if (!isRevealed || !currentQuestion) return;
 
@@ -341,9 +332,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => { document.body.style.overflow = originalOverflow; stopAllAudio(); };
   }, [stopAllAudio]);
 
-  // ────────────────────────────────────────────────────────────
-  // 🛡️ 6. View 層
-  // ────────────────────────────────────────────────────────────
+  // 🛡️ View 層：読み込みスケルトン
   if (!questions || totalQuestions === 0 || !currentQuestion) {
     return (
       <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
@@ -446,12 +435,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
           <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-4 z-[100] transition-all duration-300">
             <div className="bg-white p-8 rounded-[36px] shadow-2xl border border-slate-100 w-full max-w-sm text-center space-y-6 transform scale-100 transition-all duration-300">
               
-              {/* 美しいパルスアイコン演出 */}
               <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 text-indigo-600 animate-pulse">
                 <Volume2 size={26} strokeWidth={2.5} />
               </div>
 
-              {/* 親切な案内メッセージ */}
               <div className="space-y-2">
                 <span className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
                   Ready for Drill
@@ -465,21 +452,14 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
                 </p>
               </div>
 
-              {/* 運命のアンロックトリガーボタン */}
               <button
                 onClick={() => {
-                  // 🔥 【重要】ユーザーの「物理的生タップ」のコールスタック内でブラウザのオーディオロックを完全解凍
                   if (typeof window !== 'undefined') {
-                    // 1. Native Audio (HTMLAudioElement) の解凍用ダミー
                     const audio = new Audio();
-                    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=='; // 1msの無音WAV
+                    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
                     audio.play().catch(() => {});
-                    
-                    // 2. Web Speech API (TTS) の解凍用ダミー
                     window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
                   }
-
-                  // 🚀 フラグを立てて、タイムライン1のエフェクトを安全に点火させる
                   setIsStarted(true);
                 }}
                 className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
