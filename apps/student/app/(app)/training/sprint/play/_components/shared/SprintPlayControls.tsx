@@ -5,40 +5,26 @@ import { ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square, Bookmark 
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 
+// 🔌 Zustand ストアのインポート
+import { useSprintStore } from '@/stores/useSprintStore';
+
 interface SprintPlayControlsProps {
-  mode: 'drill' | 'sprint';
-  isRevealed: boolean;
-  isRecording: boolean;
-  isAutoPlaying?: boolean; // ➕ 追加：自動再生状態
-  isFirstStep: boolean;    // ➕ 追加：最初のカードか
-  isLastStep: boolean;     // ➕ 追加：最後のカードか
-  onReveal: () => void;
   onNext: () => void;
-  onPrev: () => void;      // ➕ 追加：前へ戻る
-  onPlayAudio: () => void; // 💡 Listen 押下（プレイヤー側で必ず先頭から再生するように制御）
+  onPrev: () => void;
+  onPlayAudio: () => void; // 💡 Listen 押下（プレイヤー側で制御）
   onStartRecord: () => void;
   onStopRecord: () => void;
-  onSaveResume?: () => void;     // ➕ 追加：ブックマークして閉じる用
-  onToggleAutoPlay?: () => void; // ➕ 追加：自動再生トグル
-  hasAudio: boolean;
-  isPlaying: boolean;
+  onSaveResume?: () => void; // ➕ ブックマーク用
+  onToggleAutoPlay?: () => void; // ➕ 自動再生トグル
   playbackRate: number;
   onChangePlaybackRate: () => void;
   timeLeft: number;
 }
 
 /**
- * スプリントドリル用のメイン操作パネル
- * 単語帳（WordControls）の洗練されたスプリット構造、型定義、アニメーションを100%継承・最適化
+ * スプリントドリル用のメイン操作パネル（Zustand 同期版）
  */
 export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
-  mode,
-  isRevealed,
-  isRecording,
-  isAutoPlaying = false,
-  isFirstStep,
-  isLastStep,
-  onReveal,
   onNext,
   onPrev,
   onPlayAudio,
@@ -46,16 +32,28 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
   onStopRecord,
   onSaveResume,
   onToggleAutoPlay,
-  hasAudio,
-  isPlaying,
   playbackRate,
   onChangePlaybackRate,
   timeLeft
 }) => {
+  // 🔌 Zustand ストアから状態を直接マッピング
+  const currentIndex = useSprintStore((state) => state.currentIndex);
+  const totalQuestions = useSprintStore((state) => state.questions.length);
+  const isRevealed = useSprintStore((state) => state.isRevealed);
+  const isRecording = useSprintStore((state) => state.isRecording);
+  const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying);
+  const isPlayingQuestionSequence = useSprintStore((state) => state.isPlayingQuestionSequence);
+  const isPlayingAnswerSequence = useSprintStore((state) => state.isPlayingAnswerSequence);
+
+  // 🤖 内部合成フラグ
+  const isFirstStep = currentIndex === 0;
+  const isLastStep = currentIndex === totalQuestions - 1;
+  const isPlaying = isPlayingQuestionSequence || isPlayingAnswerSequence;
+
   const isInteractionDisabled = isRecording || isAutoPlaying || isPlaying;
   const isManualPlaying = isPlaying && !isAutoPlaying;
 
-  // --- 共通スタイル定義 (WordControlsから完全継承) ---
+  // --- 共通スタイル定義 ---
   const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50 text-slate-400";
   const unitBase = "flex items-center rounded-2xl border overflow-hidden shadow-sm transition-all";
   const splitLeftBase = "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r";
@@ -64,7 +62,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
     <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2">
       
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 1. ステータス・インジケーター (WordControlsと完全同期) */}
+      {/* 1. ステータス・インジケーター */}
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="h-6 flex items-center justify-center">
         <AnimatePresence mode="wait">
@@ -100,7 +98,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between w-full gap-2 h-14">
         
-        {/* 左サイド：ブックマークして閉じるボタン（単語帳と完全一致） */}
+        {/* 左サイド：ブックマークして閉じるボタン */}
         <button
           onClick={onSaveResume}
           disabled={isAutoPlaying || isPlaying}
@@ -180,7 +178,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
           {/* 音声再生（Listen）セクション */}
           <button
             onClick={onPlayAudio}
-            disabled={isInteractionDisabled || !hasAudio}
+            disabled={isInteractionDisabled}
             className={cn(
               "flex-1 h-full flex items-center justify-center gap-2 transition-all",
               isManualPlaying ? "bg-indigo-50 text-indigo-600" : "text-slate-600 hover:text-indigo-600"

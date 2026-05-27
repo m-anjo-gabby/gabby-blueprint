@@ -297,7 +297,9 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">選択してください</SelectItem>
-                            {Object.values(SPRINT_TYPES).map((sprint) => (
+                            {Object.values(SPRINT_TYPES)
+                              .sort((a, b) => a.seq_no - b.seq_no) // seq_noの昇順で並び替え
+                              .map((sprint) => (
                               <SelectItem key={sprint.value} value={sprint.value}>{sprint.label}</SelectItem>
                             ))}
                           </SelectContent>
