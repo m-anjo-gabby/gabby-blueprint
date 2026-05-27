@@ -187,7 +187,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig }) => 
                   {mode === 'sprint' ? (
                     "制限時間内に一問一答でテンポよく回答を重ねる、瞬発力強化モードです。"
                   ) : (
-                    "自分のペースで英文を聞き、発話を繰り返流練習モードです。"
+                    "自分のペースで英文を聞き、発話を繰り返す練習モードです。"
                   )}
                 </p>
               </div>
