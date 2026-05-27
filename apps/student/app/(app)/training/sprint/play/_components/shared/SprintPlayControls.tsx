@@ -19,6 +19,7 @@ interface SprintPlayControlsProps {
   playbackRate: number;
   onChangePlaybackRate: () => void;
   timeLeft: number;
+  isStarted?: boolean; // 🛡️ ➕ iOS対策：初期ウェルカム画面を突破したかどうかのフラグ
 }
 
 /**
@@ -34,7 +35,8 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
   onToggleAutoPlay,
   playbackRate,
   onChangePlaybackRate,
-  timeLeft
+  timeLeft,
+  isStarted = true // 💡 デフォルトはtrueにすることで他画面での影響を防止
 }) => {
   // 🔌 Zustand ストアから状態を直接マッピング
   const currentIndex = useSprintStore((state) => state.currentIndex);
@@ -50,7 +52,8 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
   const isLastStep = currentIndex === totalQuestions - 1;
   const isPlaying = isPlayingQuestionSequence || isPlayingAnswerSequence;
 
-  const isInteractionDisabled = isRecording || isAutoPlaying || isPlaying;
+  // 🛡️ 変更点：まだウェルカムオーバーレイを突破していない場合は、無条件ですべての操作をロックする
+  const isInteractionDisabled = !isStarted || isRecording || isAutoPlaying || isPlaying;
   const isManualPlaying = isPlaying && !isAutoPlaying;
 
   // --- 共通スタイル定義 ---
@@ -66,7 +69,12 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="h-6 flex items-center justify-center">
         <AnimatePresence mode="wait">
-          {isRecording ? (
+          {!isStarted ? (
+            // 🛡️ 未スタート時は「準備完了」系の控えめなテキストを出しておく
+            <motion.span key="not-started" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
+              Waiting for Start
+            </motion.span>
+          ) : isRecording ? (
             <motion.div key="rec" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
               <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em]">Recording {timeLeft}s</span>
@@ -101,7 +109,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
         {/* 左サイド：ブックマークして閉じるボタン */}
         <button
           onClick={onSaveResume}
-          disabled={isAutoPlaying || isPlaying}
+          disabled={!isStarted || isAutoPlaying || isPlaying} // 💡 !isStarted を追加
           className={cn(sideBtnBase, "hover:bg-indigo-50 hover:text-indigo-600")}
         >
           <Bookmark size={18} strokeWidth={2.5} />
@@ -140,7 +148,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
         {/* 右サイド：自動再生（AutoPlay）トグル */}
         <button
           onClick={onToggleAutoPlay}
-          disabled={isManualPlaying}
+          disabled={!isStarted || isManualPlaying} // 💡 !isStarted を追加
           className={cn(
             sideBtnBase, 
             isAutoPlaying ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" : "hover:bg-indigo-50 hover:text-indigo-600"

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { SprintQuestion } from "@gabby/types/sprint";
 import { QuestionCard } from "./shared/QuestionCard";
 import { SprintPlayControls } from "./shared/SprintPlayControls";
-import { ChevronLeft, Loader2, Square } from 'lucide-react';
+import { ChevronLeft, Loader2, Square, Volume2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useSprintStore } from '@/stores/useSprintStore';
@@ -14,7 +14,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { saveResumeContent } from '@/actions/contentAction';
 import { useResumeStore } from '@/stores/useResumeStore';
-import { getSprintTitle } from '@gabby/lib';
+import { DRILL_TIMING, getSprintTitle } from '@gabby/lib';
 import { SprintResumeMetadata } from '@gabby/types/training';
 
 interface SprintDrillPlayerProps {
@@ -31,6 +31,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const router = useRouter();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
+
+  // 🛡️ iOS/全ブラウザの自動再生ポリシーをクリーンに突破するための開始フラグ
+  const [isStarted, setIsStarted] = useState<boolean>(false);
 
   // ────────────────────────────────────────────────────────────
   // 🔌 1. Zustand ストアから状態とアクションの抽出
@@ -131,7 +134,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setPlayingQuestionSequence(true);
     if (question.statement) {
       await playSingleTrack(question.statement, question.statement_voice);
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, DRILL_TIMING.audioGap));
     }
     await playSingleTrack(question.question, question.question_voice);
     setPlayingQuestionSequence(false);
@@ -152,10 +155,11 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   // 🎮 4. 操作ハンドラー
   // ────────────────────────────────────────────────────────────
   const handleReveal = useCallback(() => {
-    if (!currentQuestion || isRevealed) return;
+    // 🛡️ ウェルカム画面が表示されている間は背後のカードタップイベントを無効化
+    if (!isStarted || !currentQuestion || isRevealed) return;
     stopAllAudio();
     setIsRevealed(true);
-  }, [currentQuestion, isRevealed, setIsRevealed, stopAllAudio]);
+  }, [isStarted, currentQuestion, isRevealed, setIsRevealed, stopAllAudio]);
 
   const handleNext = useCallback(() => {
     if (isNavigating.current) return;
@@ -182,7 +186,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     playQuestionSequence(currentQuestion);
   }, [currentQuestion, isRecording, playQuestionSequence]);
 
-  // ✨ Compilerエラーが出ないよう、依存配列に isRecording, isAutoPlayingRef を正しく追加
   const handleIndividualPlayAudio = useCallback((voiceUrl: string | null, text: string) => {
     if (isRecording || isAutoPlayingRef.current) return; 
     playSingleTrack(text, voiceUrl);
@@ -210,18 +213,16 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     stopListening();
   }, [setIsRecording, stopListening]);
 
-  // 💡 【リスタート処理のコア】
   const forceRestartQuestionFlow = useCallback(() => {
     if (!currentQuestion) return;
     stopAllAudio();
     
     const runRestart = async () => {
       await playQuestionSequence(currentQuestion);
-      // 再生終了時に自動再生中、かつカードが閉じていればシンキングタイム2秒をセット
       if (isAutoPlayingRef.current && !isRevealedRef.current) {
         autoPlayTimerRef.current = setTimeout(() => {
           setIsRevealed(true);
-        }, 2000);
+        }, DRILL_TIMING.thinkingTime);
       }
     };
     runRestart();
@@ -232,11 +233,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       const ok = await showConfirm("Start Auto Play?", "自動再生を開始しますか？", { variant: 'info', isModal: false });
       if (!ok) return;
       
-      // 🟩 【開始時専用】現在の再生状態をリセットし、この問題の最初から確実に再生を走らせる
       toggleAutoPlay(true);
       forceRestartQuestionFlow();
     } else {
-      // 🟥 【停止時専用】遷移待ちタイマーをピンポイントでクリアしてその場で静止
       if (autoPlayTimerRef.current) {
         clearTimeout(autoPlayTimerRef.current);
         autoPlayTimerRef.current = null;
@@ -279,26 +278,31 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     let startIdx = 0;
     if (initialQuestionId && questions.length > 0) {
       const idx = questions.findIndex(q => q.question_id === initialQuestionId);
-      if (idx >= 0) { startIdx = idx; if (!isInitialized.current) { isInitialized.current = true; showToast("続きから再開しました", "success"); } }
+      if (idx >= 0) { 
+        startIdx = idx; 
+        if (!isInitialized.current) { 
+          isInitialized.current = true; 
+          showToast("続きから再開しました", "success"); 
+        } 
+      }
     }
     initSprint(questions, 'drill', startIdx);
     return () => resetStore();
   }, [questions, initialQuestionId, initSprint, resetStore, showToast]);
 
-  // 🔄 タイムライン1：純粋に問題（カード）が変わった瞬間だけ発火
-  // 💡 依存配列から `isRevealed` を完全に除去！解答表示後に再発火するバグ（デッドロック）を元絶ち
+  // 🔄 タイムライン1：純粋に問題（カード）が変わった瞬間、かつ「ユーザーが開始した」瞬間だけ発火
   useEffect(() => {
-    if (!currentQuestion) return;
+    // 🛡️ ユーザーがウェルカム画面のスタートを押すまでは音声を鳴らさない
+    if (!currentQuestion || !isStarted) return;
 
     const runQuestionFlow = async () => {
       stopAllAudio();
       await playQuestionSequence(currentQuestion);
       
-      // 音声が流れた後に「自動再生モード」であればシンキングタイムへ進む
       if (isAutoPlayingRef.current && !isRevealedRef.current) {
         autoPlayTimerRef.current = setTimeout(() => {
           setIsRevealed(true);
-        }, 2000);
+        }, DRILL_TIMING.thinkingTime);
       }
     };
 
@@ -307,20 +311,19 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
-  }, [currentIndex, currentQuestion, playQuestionSequence, setIsRevealed, stopAllAudio]);
+  }, [currentIndex, currentQuestion, playQuestionSequence, setIsRevealed, stopAllAudio, isStarted]); // 👈 isStarted を追加
 
-  // 🔄 タイムライン2：解答がオープンされた(isRevealed === true) 瞬間だけ発火
+  // 🔄 タイムライン2：解答がオープンされた瞬間だけ発火
   useEffect(() => {
     if (!isRevealed || !currentQuestion) return;
 
     const runAnswerFlow = async () => {
       await playAnswerSequence(currentQuestion);
 
-      // 解答音声がすべて終了した時点で、自動再生がONのままなら次のカードへ進む
       if (isAutoPlayingRef.current) {
         autoPlayTimerRef.current = setTimeout(() => {
           handleNext();
-        }, 2000);
+        }, DRILL_TIMING.nextCardDelay);
       }
     };
 
@@ -418,6 +421,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               playbackRate={playbackRate}
               onChangePlaybackRate={handleCycleRate}
               timeLeft={timeLeft}
+              isStarted={isStarted}
             />
           </div>
 
@@ -434,6 +438,57 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
             </div>
           )}
         </div>
+
+        {/* ──────────────────────────────────────────────────────────── */}
+        {/* 🚀 🛡️ iOS/全OS共通：自動再生アンロック用ウェルカムオーバーレイ */}
+        {/* ──────────────────────────────────────────────────────────── */}
+        {!isStarted && (
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-4 z-[100] transition-all duration-300">
+            <div className="bg-white p-8 rounded-[36px] shadow-2xl border border-slate-100 w-full max-w-sm text-center space-y-6 transform scale-100 transition-all duration-300">
+              
+              {/* 美しいパルスアイコン演出 */}
+              <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 text-indigo-600 animate-pulse">
+                <Volume2 size={26} strokeWidth={2.5} />
+              </div>
+
+              {/* 親切な案内メッセージ */}
+              <div className="space-y-2">
+                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                  Ready for Drill
+                </span>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                  {courseTitle}
+                </h3>
+                <p className="text-xs font-bold text-slate-500 leading-relaxed max-w-[250px] mx-auto">
+                  このモードでは音声が自動再生されます。<br />
+                  静かな環境、またはイヤホンを推奨します。
+                </p>
+              </div>
+
+              {/* 運命のアンロックトリガーボタン */}
+              <button
+                onClick={() => {
+                  // 🔥 【重要】ユーザーの「物理的生タップ」のコールスタック内でブラウザのオーディオロックを完全解凍
+                  if (typeof window !== 'undefined') {
+                    // 1. Native Audio (HTMLAudioElement) の解凍用ダミー
+                    const audio = new Audio();
+                    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=='; // 1msの無音WAV
+                    audio.play().catch(() => {});
+                    
+                    // 2. Web Speech API (TTS) の解凍用ダミー
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+                  }
+
+                  // 🚀 フラグを立てて、タイムライン1のエフェクトを安全に点火させる
+                  setIsStarted(true);
+                }}
+                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+              >
+                Start Drill Mode 🎯
+              </button>
+            </div>
+          </div>
+        )}
 
       </main>
     </div>

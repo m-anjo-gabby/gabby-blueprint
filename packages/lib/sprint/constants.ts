@@ -12,3 +12,9 @@ export const SPRINT_TYPES: Record<SprintQuestionType, { label: string; value: Sp
   '5': { label: 'UG Builders', value: '5', seq_no: 2 },
   '6': { label: 'UG Mastery', value: '6', seq_no: 4 },
 } as const;
+
+export const DRILL_TIMING = {
+  thinkingTime: 2000,   // 問いのあとの沈黙
+  nextCardDelay: 2000,  // 解答が終わって次へ行くまでの余韻
+  audioGap: 200,        // 基本文と問いの間の隙間
+};
