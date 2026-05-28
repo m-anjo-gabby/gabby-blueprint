@@ -6,10 +6,11 @@ import { ChevronLeft, Loader2, Volume2, Timer, CircleDot, ArrowRight, RotateCcw 
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getSprintTitle } from '@gabby/lib';
-import { SprintQuestion, SprintAnswerType, SprintQuestionType } from "@gabby/types/sprint";
+import { SprintQuestion } from "@gabby/types/sprint";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintStore } from '@/stores/useSprintStore';
+import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction'; // 🔥 サーバーアクションの直接結合
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
@@ -27,10 +28,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // ────────────── 🔌 Zustand ストア ──────────────
   const {
     currentIndex,
-    contentId,
     questionType,
-    timeLimitSec,
     answerType,
+    timeLimitSec,
     isAutoPlaying,
     initSprint,
     nextStep,
@@ -42,6 +42,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // ────────────── 📦 ローカル管理ステート ──────────────
   const [secondsLeft, setSecondsLeft] = useState<number>(60);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'thinking'>('idle');
+  const [isSaving, setIsSaving] = useState<boolean>(false); // 🔥 ストアに依存しない非同期保存用ローディング
 
   // ────────────── 🔊 音声・タイマー参照 ──────────────
   const { speak: ttsSpeak, setSpeechRate: ttsSetRate } = useWebSpeech();
@@ -62,7 +63,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 🎯 質問ベースの種別判定（'0': Speed, '6': Mastery）
   const isQuestionBased = questionType === '0' || questionType === '6';
 
-  // 📝 クエスチョンタイプに応じた文言出し分け（Speed / Mastery は 質問、それ以外は 指示）
+  // 📝 クエスチョンタイプに応じた文言出し分け
   const questionLabelEN = isQuestionBased ? "Listen Question" : "Listen Instructions";
   const questionLabelJA = isQuestionBased ? "質問文再生中" : "指示文再生中";
 
@@ -72,12 +73,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
 
     const currentGroupId = currentQuestion.group_id;
-
-    // 全ユニークグループIDから「何番目のグループか」を算出
     const uniqueGroupIds = Array.from(new Set(questions.map(q => q.group_id)));
     const uniqueGroupIndex = uniqueGroupIds.indexOf(currentGroupId) + 1;
-
-    // 現在のグループに属する問題群と現在のインデックスを抽出
     const groupQuestions = questions.filter(q => q.group_id === currentGroupId);
     const currentInGroup = groupQuestions.findIndex(q => q.question_id === currentQuestion.question_id);
 
@@ -90,7 +87,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const isTimeWarning = secondsLeft <= 30;
 
-  // 🤍 【改善】タイムアップ時に残りが生じない同期型プログレスバー計算
   const progressPercent = useMemo(() => {
     if (secondsLeft <= 0) return 0;
     return (secondsLeft / timeLimitSec) * 100;
@@ -106,6 +102,61 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     setAudioPhase('idle');
   }, []);
+
+  // 💾 🧪 【コアロジック】実績保存＆次ページへリダイレクト
+  const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
+    stopAllAudio();
+    toggleAutoPlay(false);
+    
+    // 💡 多重送信を確実に防止するガードロック
+    setIsSaving(true); 
+
+    const { level, timeLimitSec: storeTimeLimit } = useSprintStore.getState();
+    if (!questionType) {
+      setIsSaving(false);
+      onExit?.();
+      return;
+    }
+
+    // ⚡ ユーザーがどこまで正確に進んだかを算出
+    // タイムアップ(0秒)の場合はcurrentIndexまで、Next押し切り完了時は全問消化として処理
+    const answeredCount = currentSecondsLeft <= 0 ? currentIndex : Math.min(currentIndex + 1, questions.length);
+    const slicedQuestions = questions.slice(0, answeredCount);
+
+    // 最新のJSON履歴オブジェクト配列を作成
+    const history: SprintHistoryItem[] = slicedQuestions.map((q) => ({
+      question_id: q.question_id,
+      group_id: q.group_id || null,
+      seq_no: q.seq_no || 0,
+    }));
+
+    try {
+      // 🚀 サーバーアクションをストレートに実行
+      const res = await createSprintScoreAction({
+        question_type: questionType,
+        answer_type: answerType,
+        difficulty_level: Number(level),
+        time_limit_sec: storeTimeLimit,
+        total_answered: answeredCount,
+        history: history,
+      });
+
+      if (res.success && res.data) {
+        // プレイ用セッションストアを初期化して、結果画面へ遷移
+        resetStore();
+        router.push(`/training/sprint/result/${res.data.self_sprint_id}`);
+      } else {
+        throw new Error(res.error || "Failed to persist score history");
+      }
+    } catch (err) {
+      console.error("Sprint score save transaction failed:", err);
+      showToast("実績の保存に失敗しました。一覧に戻ります。", "error");
+      resetStore();
+      onExit?.();
+    } finally {
+      setIsSaving(false);
+    }
+  }, [stopAllAudio, toggleAutoPlay, resetStore, router, showToast, onExit, currentIndex, questions, questionType]);
 
   // 音声再生コア
   const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
@@ -195,43 +246,39 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // ⏭️ 次の問題へ
   const handleNextQuestion = useCallback(() => {
-    stopAllAudio();
     const { isLast } = nextStep();
     
     if (isLast) {
-      toggleAutoPlay(false);
       showToast("すべての問題を消化しました！スプリント完了です。", "success");
-      onExit?.();
+      handlePersistAndRedirect(secondsLeft);
     }
-  }, [nextStep, stopAllAudio, toggleAutoPlay, showToast, onExit]);
+  }, [nextStep, showToast, handlePersistAndRedirect, secondsLeft]);
 
   // ⏱️ タイマーロジック
   useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
     if (isAutoPlaying && secondsLeft > 0) {
-      timerIntervalRef.current = setInterval(() => {
-        setSecondsLeft((prev) => {
-          if (prev <= 1) {
-            toggleAutoPlay(false);
-            stopAllAudio();
-            showToast("Time up! スプリントセッションが終了しました。", "success");
-            onExit?.();
-            return 0;
-          }
-          return prev - 1;
-        });
+      interval = setInterval(() => {
+        setSecondsLeft((prev) => prev - 1);
       }, 1000);
     }
-    return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-  }, [isAutoPlaying, secondsLeft, onExit, showToast, stopAllAudio, toggleAutoPlay]);
+    return () => { if (interval) clearInterval(interval); };
+  }, [isAutoPlaying, secondsLeft > 0]);
+
+  // タイムアップ監視
+  useEffect(() => {
+    if (isAutoPlaying && secondsLeft <= 0) {
+      isFlowRunningRef.current = false;
+      showToast("Time up! スプリントセッションが終了しました。", "success");
+      handlePersistAndRedirect(0);
+    }
+  }, [isAutoPlaying, secondsLeft, showToast, handlePersistAndRedirect]);
 
   // 🔄 初期マウント & 設定同期
   useEffect(() => {
     initSprint(questions, 'sprint', 0);
     setSecondsLeft(timeLimitSec);
     toggleAutoPlay(true);
-    // プレイヤー終了時はセッションデータのみクリアし、設定（種別等）はストアに残す
     return () => {
       clearSession();
     };
@@ -245,7 +292,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         await runSprintFlow(currentQuestion);
       })();
     }
-  }, [currentIndex, currentQuestion, runSprintFlow]);
+  }, [currentIndex, currentQuestion, runSprintFlow, stopAllAudio]);
 
   // ⚙️ 画面固定クリーンアップ
   useEffect(() => {
@@ -271,7 +318,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const ok = await showConfirm(
       "Quit Sprint?", 
-      "進行中のスプリントを終了して戻りますか？", 
+      "進行中のスプリントを終了して戻りますか？（スコアは記録されません）", 
       { variant: 'warning', isModal: false }
     );
 
@@ -283,6 +330,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     onExit?.();
   };
+
+  // ⏳ 🔒 サーバーへの非同期処理送信中のフルスクリーン画面ロック
+  if (isSaving) {
+    return (
+      <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fade-in select-none">
+        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-4 animate-scale-up">
+          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
+          <h2 className="text-xl font-black text-slate-800 tracking-tight">Syncing Performance</h2>
+          <p className="text-xs font-bold text-slate-400">今回のスプリント成績をクラウドに安全に同期しています...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!questions || questions.length === 0 || !currentQuestion) {
     return (
@@ -299,7 +359,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none select-none text-slate-900">
       <main className="bg-white border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden shadow-2xl">
         
-        {/* 🤍 ヘッダーエリア */}
+        {/* ヘッダーエリア */}
         <div className="shrink-0 pt-6 w-full px-6">
           <div className="flex items-center justify-between h-12">
             <button 
@@ -327,7 +387,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             </div>
           </div>
 
-          {/* 🤍 【改善】Framer-motion非依存のネイティブCSS同期プログレスバー */}
           <div className="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
             <div 
               className={`absolute top-0 left-0 h-full rounded-full ${
@@ -343,11 +402,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           </div>
         </div>
 
-        {/* 🎧 中央：メインコンテンツエリア */}
+        {/* 中央：メインコンテンツエリア */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-8">
           <div className="w-full flex flex-col items-center space-y-6">
             
-            {/* 再生状態インジケーター */}
             <div className="relative w-32 h-32 flex items-center justify-center">
               {audioPhase !== 'idle' && audioPhase !== 'thinking' && (
                 <>
@@ -373,26 +431,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               </div>
             </div>
 
-            {/* メッセージ＆問題インデックスバッジ群 */}
             <div className="space-y-4 min-h-[120px] flex flex-col items-center justify-start">
-              
-              {/* 🏷️ 表示表記を「Question」に完全統一 ＆ カウント分岐 */}
               <div className="flex flex-col items-center gap-2">
                 {questionType === '0' ? (
-                  /* 🟦 Speedの場合: 母数なしのクリーンな単一カウント表示 (例: Question 3) */
                   <div className="h-5.5 px-3 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 font-mono text-[11px] font-bold tracking-wider gap-1">
                     <span>Question</span>
                     <span className="text-indigo-600 font-black">{currentIndex + 1}</span>
                   </div>
                 ) : (
-                  /* 🟪 Speed以外の場合: グループIDをQuestion番号としてカウント ＋ 下部にドットインジケータ */
                   <div className="flex flex-col items-center gap-2.5">
-                    {/* グループ（問題）番号バッジ */}
                     <div className="h-5.5 px-3 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100/80 font-mono text-[11px] font-black tracking-wider gap-1">
                       <span>Question</span>
                       <span className="text-indigo-700 font-black">{groupData.uniqueGroupIndex}</span>
                     </div>
-                    {/* 🟢 グループ内ドットインジケータ */}
                     <div className="flex items-center gap-1.5 h-2">
                       {Array.from({ length: groupData.totalInGroup }).map((_, i) => (
                         <div
@@ -409,7 +460,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 )}
               </div>
 
-              {/* 🔊 動的な文言切り替えエリア（ちらつきなし） */}
               <div className="space-y-1">
                 <h2 className="text-lg font-black tracking-tight text-slate-800 transition-colors duration-200">
                   {audioPhase === 'statement' && "Listen Base Sentence"}
@@ -426,7 +476,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               </div>
             </div>
 
-            {/* ⚡ 個別リピートコントローラー */}
             <div className="flex items-center justify-center gap-3 w-full max-w-xs pt-2">
               <button
                 onClick={() => handlePlayIndividualPart('statement')}
@@ -449,11 +498,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           </div>
         </div>
 
-        {/* 🤍 コントロールエリア */}
+        {/* コントロールエリア */}
         <div className="px-6 pb-10 shrink-0 border-t border-slate-100 bg-white">
           <div className="w-full max-w-md mx-auto pt-6 flex items-center gap-3">
             
-            {/* スピード倍率 */}
             <button
               onClick={handleCycleRate}
               className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 text-xs font-black font-mono tracking-tight border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
@@ -462,7 +510,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               {playbackRate.toFixed(1)}x
             </button>
 
-            {/* 🔥 メインボタン：Next */}
             <button
               onClick={handleNextQuestion}
               className="flex-1 h-14 rounded-2xl bg-indigo-600 text-white font-black text-sm uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-[0.97] flex items-center justify-center gap-2"
@@ -471,7 +518,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               <ArrowRight size={16} strokeWidth={3} />
             </button>
 
-            {/* 最初からリプレイ */}
             <button
               onClick={handleReplayFromStart}
               className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"

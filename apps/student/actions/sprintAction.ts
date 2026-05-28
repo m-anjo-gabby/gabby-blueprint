@@ -7,6 +7,58 @@ import { createLogger, getLogContext } from "@gabby/lib/logger";
 const logger = createLogger("student");
 const SPRINT_LIMIT_COUNT = 10;
 
+// ========================================================================
+// 📊 型定義（Types）
+// ========================================================================
+
+/**
+ * 出題順序やグループ構造を完全再現するための履歴オブジェクト型
+ */
+export interface SprintHistoryItem {
+  question_id: string;
+  group_id: string | null;
+  seq_no: number;
+}
+
+/**
+ * 自主トレスプリント結果登録用の入力ペイロード型
+ */
+export interface CreateSprintScoreInput {
+  question_type: '0' | '4' | '5' | '6';
+  answer_type: string;
+  difficulty_level: number;
+  time_limit_sec: number;
+  total_answered: number;
+  history: SprintHistoryItem[]; // answered_historyに入る配列オブジェクト
+}
+
+/**
+ * スプリント結果取得のレスポンス型
+ */
+export interface SprintResultResponse {
+  success: boolean;
+  data: {
+    scoreRecord: {
+      self_sprint_id: string;
+      user_id: string;
+      question_type: string;
+      answer_type: string;
+      difficulty_level: number;
+      time_limit_sec: number;
+      total_answered: number;
+      answered_history: SprintHistoryItem[];
+      insert_date: string;
+      update_date: string;
+    };
+    questions: SprintQuestion[]; // 当時の出題順に完璧にソートされた問題エンティティ配列
+  } | null;
+  error?: string;
+}
+
+// ========================================================================
+// 🛠️ ユーティリティ・ヘルパー
+// ========================================================================
+
 /**
  * Fisher-Yatesシャッフル（メモリ上での軽量高速サンプリング）
  */
@@ -18,6 +70,10 @@ function shuffleArray<T>(array: T[]): T[] {
   }
   return result;
 }
+
+// ========================================================================
+// 🚀 Server Actions
+// ========================================================================
 
 /**
  * スプリント教材データをフェッチ・サンプリングするServer Action
@@ -35,15 +91,11 @@ export async function getSprintQuestionsAction(
   });
 
   try {
-    // 🔑 apps/studentルール遵守: サーバー用クライアントを使用
     const supabase = await createServerClient();
 
-    // 🔒 パラメータの型不整合を完全に防止する安全なキャスト
     const safeType = String(question_type).trim();
     const safeLevel = Number(difficulty_level);
 
-    // 🛡️ 最適化: RLSポリシー「Users can view sprint questions (authenticated)」を通過させ、
-    // 条件に合致する対象データを一度のクエリでストレートに全件取得
     const { data: fetchedData, error } = await supabase
       .from("com_m_sprint_questions")
       .select("*")
@@ -55,7 +107,6 @@ export async function getSprintQuestionsAction(
 
     const rawRows = (fetchedData as SprintQuestion[]) ?? [];
 
-    // データが1件も存在しない場合は早期リターン
     if (rawRows.length === 0) {
       logger.info("sprint:fetch_empty", "No questions found at all for this type/level", ctx);
       return { success: true, data: [] };
@@ -63,30 +114,18 @@ export async function getSprintQuestionsAction(
 
     let finalData: SprintQuestion[] = [];
 
-    // ========================================================================
-    // ⚡ CASE 1: Speed問題仕様 (question_type === "0" / group_id なし)
-    // ========================================================================
     if (safeType === "0") {
       if (mode === 'sprint') {
-        // スプリントならランダムに10問切り出し
         finalData = shuffleArray(rawRows).slice(0, SPRINT_LIMIT_COUNT);
       } else {
-        // ドリルなら毎回新鮮に解けるよう全件シャッフル
         finalData = shuffleArray(rawRows);
       }
     } 
-    // ========================================================================
-    // 📑 CASE 2: Structure, Builders, Mastery仕様 (3問1組のグループ制御)
-    // ========================================================================
     else {
       if (mode === 'sprint') {
-        // ① JavaScriptの高速なSetオブジェクトを使い、一撃でユニークなグループID群を抽出
         const allUniqueGroupIds = Array.from(new Set(rawRows.map(item => item.group_id).filter(Boolean)));
-        
-        // ② グループIDの配列自体をシャッフルし、最大10グループを抽選
         const sampledGroupIds = shuffleArray(allUniqueGroupIds).slice(0, SPRINT_LIMIT_COUNT);
 
-        // ③ 抽選されたグループに属するデータだけに絞り込み、[グループID ➡️ 配列順(seq_no)] にソート
         finalData = rawRows
           .filter(item => sampledGroupIds.includes(item.group_id))
           .sort((a, b) => {
@@ -95,7 +134,6 @@ export async function getSprintQuestionsAction(
             return (a.seq_no || 0) - (b.seq_no || 0);
           });
       } else {
-        // 教材ドリルモード: 履修順序通りにしっかり網羅できるよう、そのまま group_id ➡️ seq_no でソート
         finalData = [...rawRows].sort((a, b) => {
           if (a.group_id! < b.group_id!) return -1;
           if (a.group_id! > b.group_id!) return 1;
@@ -122,5 +160,128 @@ export async function getSprintQuestionsAction(
       data: null,
       error: error.message || "Failed to fetch sprint questions"
     };
+  }
+}
+
+/**
+ * 自主トレスプリント結果・履歴をDBに登録するServer Action
+ */
+export async function createSprintScoreAction(
+  input: CreateSprintScoreInput
+): Promise<{ success: boolean; data: { self_sprint_id: string } | null; error?: string }> {
+  const ctx = await getLogContext();
+  logger.info("sprint:create_score_start", "createSprintScoreAction start", { 
+    ...ctx, 
+    payload: { ...input, history: `[Array(${input.history.length})]` } 
+  });
+
+  try {
+    const supabase = await createServerClient();
+
+    // サーバー側でセッションから安全に本人のユーザーIDを検証・取得（偽装防止）
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
+
+    // com_t_self_sprint へのインサート
+    const { data, error } = await supabase
+      .from("com_t_self_sprint")
+      .insert([
+        {
+          user_id: user.id,
+          question_type: input.question_type,
+          answer_type: input.answer_type,
+          difficulty_level: Number(input.difficulty_level),
+          time_limit_sec: Number(input.time_limit_sec),
+          total_answered: Number(input.total_answered),
+          answered_history: input.history, // JSONBに履歴配列を丸ごと格納
+        }
+      ])
+      .select("self_sprint_id")
+      .single();
+
+    if (error) throw error;
+
+    logger.info("sprint:create_score_success", "Successfully saved sprint result", {
+      ...ctx,
+      self_sprint_id: data.self_sprint_id
+    });
+
+    return { success: true, data: { self_sprint_id: data.self_sprint_id } };
+
+  } catch (error: any) {
+    logger.error("sprint:create_score_error", "Failed to create sprint score", {
+      ...ctx,
+      payload: { error: error.message }
+    });
+    return { success: false, data: null, error: error.message || "Failed to save sprint results" };
+  }
+}
+
+/**
+ * 指定された結果IDから、当時の「出題・解答順序」の通りに問題を再構築してフェッチするServer Action
+ */
+export async function getSprintResultAction(
+  self_sprint_id: string
+): Promise<SprintResultResponse> {
+  const ctx = await getLogContext();
+  logger.info("sprint:get_result_start", "getSprintResultAction start", { ...ctx, self_sprint_id });
+
+  try {
+    const supabase = await createServerClient();
+
+    // ① スコア・履歴レコードを1件取得
+    const { data: scoreRecord, error: scoreError } = await supabase
+      .from("com_t_self_sprint")
+      .select("*")
+      .eq("self_sprint_id", self_sprint_id)
+      .single();
+
+    if (scoreError) throw scoreError;
+    if (!scoreRecord) throw new Error("Sprint record not found");
+
+    const history = (scoreRecord.answered_history as SprintHistoryItem[]) ?? [];
+
+    // 履歴が空の場合は空配列で早期リターン
+    if (history.length === 0) {
+      return { success: true, data: { scoreRecord: scoreRecord as any, questions: [] } };
+    }
+
+    // ② 履歴に記録されている全ての question_id を抽出
+    const targetIds = history.map(h => h.question_id);
+
+    // ③ 問題マスタから該当する問題データを一括フェッチ
+    const { data: questionsData, error: qError } = await supabase
+      .from("com_m_sprint_questions")
+      .select("*")
+      .in("question_id", targetIds);
+
+    if (qError) throw qError;
+
+    const rawQuestions = (questionsData as SprintQuestion[]) ?? [];
+
+    // ④ 問題マスタから取得したデータを、保存されていた history 配列のインデックス順に完全に再ソート
+    const sortedQuestions = history
+      .map(hist => rawQuestions.find(q => q.question_id === hist.question_id))
+      .filter((q): q is SprintQuestion => !!q); // 存在しない場合（万が一のデータ削除など）の型ガード除外
+
+    logger.info("sprint:get_result_success", "Successfully recovered sprint session playlist order", {
+      ...ctx,
+      total_recovered: sortedQuestions.length
+    });
+
+    return {
+      success: true,
+      data: {
+        scoreRecord: scoreRecord as any,
+        questions: sortedQuestions // 結果画面へ当時の順序のまま受け渡される
+      }
+    };
+
+  } catch (error: any) {
+    logger.error("sprint:get_result_error", "Failed to recover sprint result", {
+      ...ctx,
+      payload: { error: error.message }
+    });
+    return { success: false, data: null, error: error.message || "Failed to load session results" };
   }
 }

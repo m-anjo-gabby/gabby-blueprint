@@ -560,3 +560,44 @@ CREATE TABLE public.com_m_sprint_questions (
 CREATE INDEX idx_com_m_sprint_questions_lookup 
 ON public.com_m_sprint_questions (question_type, difficulty_level, group_id, seq_no)
 WHERE delete_flg = '0';
+
+---------------------------------------------
+-- DDL: com_t_self_sprint テーブル（自主トレスプリント結果・履歴）
+---------------------------------------------
+CREATE TABLE public.com_t_self_sprint (
+  self_sprint_id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  
+  -- 設定情報 (sprint.ts マスタと完全同期)
+  question_type VARCHAR(2) NOT NULL,    -- '0': Speed, '4': Structure, '5': Builders, '6': Mastery
+  answer_type VARCHAR(2) NOT NULL,      -- '0': YES回答, '1': NO回答
+  difficulty_level SMALLINT NOT NULL,   -- 0 (Basic) 〜 10
+  time_limit_sec SMALLINT NOT NULL,     -- 60, 90, 120, 150
+  
+  -- スコア・実績データ
+  total_answered SMALLINT NOT NULL,     -- タイムアップまでに答えた総問題数 (スコア)
+  
+  -- 問題履歴をJSONで保持
+  answered_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+  
+  -- 共通タイムスタンプ (末尾のカンマを除去して修正)
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- コメント設定
+COMMENT ON TABLE public.com_t_self_sprint IS '自主トレスプリント結果・履歴管理テーブル';
+COMMENT ON COLUMN public.com_t_self_sprint.self_sprint_id IS 'スプリント結果ユニークID (UUID)';
+COMMENT ON COLUMN public.com_t_self_sprint.user_id IS 'ユーザーID (com_m_user.id)';
+COMMENT ON COLUMN public.com_t_self_sprint.question_type IS 'スプリント問題種別 (''0'': Speed, ''4'': Structure, ''5'': Builders, ''6'': Mastery)';
+COMMENT ON COLUMN public.com_t_self_sprint.answer_type IS '解答種別（''0'': YES回答, ''1'': NO回答）';
+COMMENT ON COLUMN public.com_t_self_sprint.difficulty_level IS '難易度レベル (0: Basic 〜 10)';
+COMMENT ON COLUMN public.com_t_self_sprint.time_limit_sec IS '制限時間 (60, 90, 120, 150秒)';
+COMMENT ON COLUMN public.com_t_self_sprint.total_answered IS '総回答数';
+COMMENT ON COLUMN public.com_t_self_sprint.answered_history IS '実施問題の履歴情報(JSON)';
+COMMENT ON COLUMN public.com_t_self_sprint.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_self_sprint.update_date IS '更新日時';
+
+-- 高速集計のためのインデックス（ユーザーごと、または種別ごとのランキングや履歴用）
+CREATE INDEX idx_com_t_self_sprint_user_type 
+ON public.com_t_self_sprint (user_id, question_type, difficulty_level);

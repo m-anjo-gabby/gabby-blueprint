@@ -355,3 +355,33 @@ FOR ALL
 TO service_role
 USING (true)
 WITH CHECK (true);
+
+---------------------------------------------
+-- SQLポリシー: 自主トレスプリント結果履歴 (com_t_self_sprint)
+---------------------------------------------
+
+-- 1. 既存のポリシーをクリーンアップ（再実行可能にするための防御）
+DROP POLICY IF EXISTS "Users can manage their own sprint scores" ON public.com_t_self_sprint;
+DROP POLICY IF EXISTS "Managers can view client's sprint scores" ON public.com_t_self_sprint;
+
+-- 2. 行レベルセキュリティ (RLS) を確実に有効化
+ALTER TABLE public.com_t_self_sprint ENABLE ROW LEVEL SECURITY;
+
+-- 3. 【受講生向け】本人のみがデータの参照・登録（CRUDすべて）を行えるポリシー
+-- サインイン済みユーザー(authenticated) かつ、データの所有者がJWT内のユーザーID(auth.uid())と一致すること
+CREATE POLICY "Users can manage their own sprint scores" ON public.com_t_self_sprint
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- 4. 【管理者・マネージャー向け】同じ法人の受講生データのみを監査・閲覧できる参照ポリシー
+-- 組織管理者がダッシュボード等でクライアント（企業・学校）に属する受講生の実績を一覧抽出するために使用
+CREATE POLICY "Managers can view client's sprint scores" ON public.com_t_self_sprint
+FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.com_m_user u
+    WHERE u.id = public.com_t_self_sprint.user_id
+    AND u.client_id = public.get_jwt_client_id()
+  )
+);
