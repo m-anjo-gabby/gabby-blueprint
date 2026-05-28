@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Trophy, Timer, CheckCircle2, Volume2, HelpCircle, MessageSquare, ArrowRight, Zap, PlayCircle, Hourglass } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -31,9 +31,23 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const { playbackRate } = usePlayAudioSpeech();
   
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [focusedCardId, setFocusedCardId] = useState<string | null>(null); // カード単位のフォーカス管理
   const [isBatchPlaying, setIsBatchPlaying] = useState(false);
   const isBatchPlayingRef = useRef(false); // ループ制御用のRef
   const currentAudioRef = useRef<HTMLAudioElement | null>(null); // 現在再生中のAudioオブジェクトを保持
+
+  // 🔄 再生中のカードへ自動スクロールする処理
+  useEffect(() => {
+    if (focusedCardId && isBatchPlaying) {
+      const element = document.getElementById(`card-${focusedCardId}`);
+      if (element) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+    }
+  }, [focusedCardId, isBatchPlaying]);
 
   // すべての音声を停止するヘルパー関数
   const stopAllAudio = useCallback(() => {
@@ -57,6 +71,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
       if (isManualClick) {
         isBatchPlayingRef.current = false;
         setIsBatchPlaying(false);
+        setFocusedCardId(questionId.split('-')[0]); // 手動クリック時もそのカードにフォーカス
       }
       setPlayingId(questionId);
       stopAllAudio(); // 新しい音声を再生する前に、既存の音声をすべて停止
@@ -84,6 +99,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
       isBatchPlayingRef.current = false;
       setIsBatchPlaying(false);
       stopAllAudio();
+      setFocusedCardId(null);
       return;
     }
 
@@ -96,6 +112,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     try {
       for (const q of questions) {
         if (!isBatchPlayingRef.current) break;
+
+        setFocusedCardId(q.question_id); // カード全体のフォーカスを開始
 
         // 💡 改善点1: Speedモード以外、かつ基本文(statement)が存在する場合は最初に再生
         if (!isSpeedMode && q.statement) {
@@ -121,6 +139,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     } finally {
       isBatchPlayingRef.current = false;
       setIsBatchPlaying(false);
+      setFocusedCardId(null); // 終了時にフォーカスを解除
     }
   };
 
@@ -207,11 +226,16 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             <div className="space-y-3">
               {questions.map((q, index) => {
                 const isSpeedModePayload = scoreData.question_type === '0' && q.answer_sentence_no;
+                const isFocused = focusedCardId === q.question_id; // playingId ではなく focusedCardId で判定
 
                 return (
                   <div 
+                    id={`card-${q.question_id}`}
                     key={q.question_id || index}
-                    className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5 transition-all duration-200 flex flex-col gap-4 relative shadow-sm"
+                    className={cn(
+                      "bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5 transition-all duration-300 flex flex-col gap-4 relative shadow-sm",
+                      isFocused && "ring-2 ring-blue-500 border-transparent shadow-md scale-[1.01]"
+                    )}
                   >
                     {/* インデックス */}
                     <div className="absolute top-4 right-5 text-slate-200 italic font-black text-xl select-none">
