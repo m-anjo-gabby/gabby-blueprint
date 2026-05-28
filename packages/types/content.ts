@@ -96,7 +96,6 @@ export interface MetadataCefr {
 // メタデータ埋め込み用スプリント
 export interface MetadataSprint {
   question_type: string; // '0' | '4' | '5' | '6'
-  level: string;         // '0' ~ '10'
 }
 
 // ContentRecord の metadata 型を具体化

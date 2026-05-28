@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,7 +30,6 @@ const contentSchema = z.object({
   description: z.string().optional(),
   cefr_id: z.string().optional(),
   sprint_question_type: z.string().optional(),
-  sprint_level: z.string().optional(),
 }).superRefine((data, ctx) => {
   // 教材種別が「スプリント (2)」の場合のバリデーション
   if (data.content_type === '2') {
@@ -40,23 +39,6 @@ const contentSchema = z.object({
         message: 'スプリント種別を選択してください',
         path: ['sprint_question_type'],
       });
-    }
-    if (!data.sprint_level) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'レベルは必須です',
-        path: ['sprint_level'],
-      });
-    } else {
-      const lvl = Number(data.sprint_level);
-      // レベル制限を 0 〜 10 に設定
-      if (isNaN(lvl) || lvl < 0 || lvl > 10) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'レベルは0〜10の間で入力してください',
-          path: ['sprint_level'],
-        });
-      }
     }
   }
 });
@@ -74,11 +56,10 @@ const DEFAULT_VALUES: ContentFormValues = {
   content_scope: '9',
   content_label: '',
   seq_no: '1',
-  difficulty_level: '1',
+  difficulty_level: '1', // デフォルト値は1固定
   description: '',
   cefr_id: 'none',
   sprint_question_type: 'none',
-  sprint_level: '1', // 初期値は 1
 };
 
 export function ContentFormDialog({ mode = 'create', initialData }: ContentFormDialogProps) {
@@ -100,7 +81,6 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       description: data.description || '',
       cefr_id: data.metadata?.cefr?.id || 'none',
       sprint_question_type: data.metadata?.sprint?.question_type || 'none',
-      sprint_level: data.metadata?.sprint?.level !== undefined ? String(data.metadata.sprint.level) : '1',
     };
   };
 
@@ -110,20 +90,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
   });
 
   const { isSubmitting } = form.formState;
-  
   const currentContentType = form.watch('content_type');
-  const currentSprintLevel = form.watch('sprint_level');
-
-  // スプリントのときは sprint_level を、そうでないときは 1 固定を difficulty_level カラムに自動同期
-  useEffect(() => {
-    if (currentContentType === '2') {
-      if (currentSprintLevel !== undefined) {
-        form.setValue('difficulty_level', currentSprintLevel);
-      }
-    } else {
-      form.setValue('difficulty_level', '1');
-    }
-  }, [currentContentType, currentSprintLevel, form]);
 
   const onSubmit = async (values: ContentFormValues) => {
     setServerError(null);
@@ -136,7 +103,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       const sprintMetadata = isSprint && values.sprint_question_type !== 'none'
         ? {
             question_type: values.sprint_question_type!,
-            level: values.sprint_level!,
+            // level はここに含めない
           }
         : undefined;
 
@@ -146,12 +113,11 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         content_scope: Number(values.content_scope) as ContentScope,
         content_label: values.content_label,
         seq_no: Number(values.seq_no),
-        // スプリント時は 0-10 のレベル、通常時は 1 をマッピング
-        difficulty_level: isSprint ? Number(values.sprint_level) : 1,
+        // スプリントかどうかに関わらず、難易度は1固定（または既存の値を踏襲）
+        difficulty_level: Number(values.difficulty_level || 1),
         description: values.description,
         metadata: {
           ...(initialData?.metadata || {}),
-          // スプリント選択時でも CEFR を保持できるように修正
           cefr: selectedCefr ? { id: selectedCefr.id, label: selectedCefr.label } : undefined,
           sprint: sprintMetadata,
         },
@@ -277,12 +243,12 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                 )} />
               </div>
 
-              {/* --- スプリント選択時のみ表示する特化セクション --- */}
+              {/* --- スプリント選択時のみ表示する特化セクション（レベル削除に伴い、横幅全体表示に修正） --- */}
               {currentContentType === '2' && (
-                <div className="grid grid-cols-2 gap-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80 space-y-0">
+                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80">
                   {/* スプリント種別 */}
                   <FormField control={form.control} name="sprint_question_type" render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="w-full">
                       <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">スプリント種別</FormLabel>
                       {isConfirming ? (
                         <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-medium">
@@ -298,33 +264,12 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                           <SelectContent>
                             <SelectItem value="none">選択してください</SelectItem>
                             {Object.values(SPRINT_TYPES)
-                              .sort((a, b) => a.seq_no - b.seq_no) // seq_noの昇順で並び替え
+                              .sort((a, b) => a.seq_no - b.seq_no)
                               .map((sprint) => (
-                              <SelectItem key={sprint.value} value={sprint.value}>{sprint.label}</SelectItem>
-                            ))}
+                                <SelectItem key={sprint.value} value={sprint.value}>{sprint.label}</SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-
-                  {/* レベル (0-10) */}
-                  <FormField control={form.control} name="sprint_level" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">レベル (0-10)</FormLabel>
-                      {isConfirming ? (
-                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-bold">{field.value}</div>
-                      ) : (
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="number" 
-                            min="0" 
-                            max="10" 
-                            className="bg-white rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500" 
-                          />
-                        </FormControl>
                       )}
                       <FormMessage />
                     </FormItem>
