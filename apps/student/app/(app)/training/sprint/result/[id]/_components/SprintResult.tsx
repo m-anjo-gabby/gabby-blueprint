@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Trophy, Timer, CheckCircle2, Volume2, HelpCircle, MessageSquare, ArrowRight, Zap, PlayCircle } from 'lucide-react';
+import { ChevronLeft, Trophy, Timer, CheckCircle2, Volume2, HelpCircle, MessageSquare, ArrowRight, Zap, PlayCircle, Hourglass } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
@@ -29,26 +29,46 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const router = useRouter();
   const { speak: ttsSpeak } = useWebSpeech();
   const { playbackRate } = usePlayAudioSpeech();
+  
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [isBatchPlaying, setIsBatchPlaying] = useState(false);
+  const isBatchPlayingRef = useRef(false); // ループ制御用のRef
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null); // 現在再生中のAudioオブジェクトを保持
+
+  // すべての音声を停止するヘルパー関数
+  const stopAllAudio = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    setPlayingId(null);
+  }, []);
 
   // 音声再生ヘルパー
-  const handlePlayAudio = (questionId: string, text: string, audioPath: string | null): Promise<void> => {
+  const handlePlayAudio = (
+    questionId: string, 
+    text: string, 
+    audioPath: string | null,
+    isManualClick = false
+  ): Promise<void> => {
     return new Promise((resolve) => {
+      if (isManualClick) {
+        isBatchPlayingRef.current = false;
+        setIsBatchPlaying(false);
+      }
       setPlayingId(questionId);
-      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+      stopAllAudio(); // 新しい音声を再生する前に、既存の音声をすべて停止
 
       if (audioPath) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
         const audio = new Audio(bucketUrl);
         audio.playbackRate = playbackRate;
-        audio.onended = () => { setPlayingId(null); resolve(); };
-        audio.onerror = () => {
-          ttsSpeak(text, playbackRate);
-          setPlayingId(null);
-          resolve();
-        };
-        audio.play().catch(() => { setPlayingId(null); resolve(); });
+        currentAudioRef.current = audio; // Audioオブジェクトをrefに保存
+        audio.onended = () => { currentAudioRef.current = null; setPlayingId(null); resolve(); };
+        audio.onerror = () => { currentAudioRef.current = null; ttsSpeak(text, playbackRate); setPlayingId(null); resolve(); };
+        audio.play().catch(() => { currentAudioRef.current = null; setPlayingId(null); resolve(); });
       } else {
         ttsSpeak(text, playbackRate);
         // TTSの終了検知を簡易的にシミュレート
@@ -60,26 +80,48 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
   // 一括再生
   const handlePlayAll = async () => {
-    if (isBatchPlaying) {
-      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    if (isBatchPlayingRef.current) {
+      isBatchPlayingRef.current = false;
       setIsBatchPlaying(false);
-      setPlayingId(null);
+      stopAllAudio();
       return;
     }
 
+    isBatchPlayingRef.current = true;
     setIsBatchPlaying(true);
-    for (const q of questions) {
-      if (!setIsBatchPlaying) break; // 中断判定
-      // 1. 質問を再生
-      await handlePlayAudio(q.question_id + '-q', q.question, q.question_voice);
-      await new Promise(r => setTimeout(r, 400));
-      // 2. 解答を再生
-      const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no : q.answer_sentence_yes;
-      const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
-      await handlePlayAudio(q.question_id + '-ans', ansText, ansVoice);
-      await new Promise(r => setTimeout(r, 800));
+
+    // question_type が '0' (Speed) 以外の場合は基本文を再生するフラグ
+    const isSpeedMode = scoreData.question_type === '0';
+
+    try {
+      for (const q of questions) {
+        if (!isBatchPlayingRef.current) break;
+
+        // 💡 改善点1: Speedモード以外、かつ基本文(statement)が存在する場合は最初に再生
+        if (!isSpeedMode && q.statement) {
+          await handlePlayAudio(q.question_id + '-st', q.statement, q.statement_voice);
+          if (!isBatchPlayingRef.current) break;
+          await new Promise(r => setTimeout(r, 400));
+        }
+
+        if (!isBatchPlayingRef.current) break;
+        // 2. 質問を再生
+        await handlePlayAudio(q.question_id + '-q', q.question, q.question_voice);
+        if (!isBatchPlayingRef.current) break;
+        await new Promise(r => setTimeout(r, 400));
+        
+        if (!isBatchPlayingRef.current) break;
+        // 3. 解答を再生
+        const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no : q.answer_sentence_yes;
+        const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
+        await handlePlayAudio(q.question_id + '-ans', ansText ?? "", ansVoice);
+        if (!isBatchPlayingRef.current) break;
+        await new Promise(r => setTimeout(r, 800));
+      }
+    } finally {
+      isBatchPlayingRef.current = false;
+      setIsBatchPlaying(false);
     }
-    setIsBatchPlaying(false);
   };
 
   const isQuestionBased = scoreData.question_type === '0' || scoreData.question_type === '6';
@@ -183,7 +225,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           <MessageSquare size={14} />
                           <span className="text-xs font-bold tracking-wider">基本文</span>
                           <button 
-                            onClick={() => handlePlayAudio(q.question_id + '-st', q.statement, q.statement_voice)}
+                            onClick={() => handlePlayAudio(q.question_id + '-st', q.statement!, q.statement_voice, true)}
                             className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-st' ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-blue-500 hover:bg-slate-100')}
                           >
                             <Volume2 size={16} />
@@ -199,7 +241,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                         <HelpCircle size={14} strokeWidth={2.5} />
                         <span className="text-xs font-bold tracking-wider">{isQuestionBased ? "質問" : "指示"}</span>
                         <button 
-                          onClick={() => handlePlayAudio(q.question_id + '-q', q.question, q.question_voice)}
+                          onClick={() => handlePlayAudio(q.question_id + '-q', q.question, q.question_voice, true)}
                           className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-q' ? 'text-blue-600 bg-blue-50' : 'text-blue-400 hover:text-blue-600 hover:bg-blue-50')}
                         >
                           <Volume2 size={16} strokeWidth={2.5} />
@@ -216,7 +258,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-2 py-2 rounded-r-xl">
                               <div className="flex items-center gap-x-1 mb-1 text-emerald-600">
                                 <span className="text-xs font-black tracking-widest uppercase">解答</span>
-                                <button onClick={() => handlePlayAudio(q.question_id + '-yes', q.answer_sentence_yes, q.answer_sentence_yes_voice)} className="w-6 h-6 flex items-center justify-center text-emerald-500"><Volume2 size={16} /></button>
+                                <button onClick={() => handlePlayAudio(q.question_id + '-yes', q.answer_sentence_yes, q.answer_sentence_yes_voice, true)} className="w-6 h-6 flex items-center justify-center text-emerald-500"><Volume2 size={16} /></button>
                               </div>
                               <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{q.answer_sentence_yes}</p>
                             </div>
@@ -225,7 +267,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-3 pr-2 py-2 rounded-r-xl">
                               <div className="flex items-center gap-x-1 mb-1 text-amber-600">
                                 <span className="text-xs font-black tracking-widest uppercase">解答</span>
-                                <button onClick={() => handlePlayAudio(q.question_id + '-no', q.answer_sentence_no, q.answer_sentence_no_voice)} className="w-6 h-6 flex items-center justify-center text-amber-500"><Volume2 size={16} /></button>
+                                <button onClick={() => handlePlayAudio(q.question_id + '-no', q.answer_sentence_no!, q.answer_sentence_no_voice, true)} className="w-6 h-6 flex items-center justify-center text-amber-500"><Volume2 size={16} /></button>
                               </div>
                               <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{q.answer_sentence_no}</p>
                             </div>
@@ -235,7 +277,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                         <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-3 py-2.5 rounded-r-xl">
                           <div className="flex items-center gap-x-1.5 text-emerald-600 mb-1.5">
                             <span className="text-xs font-black tracking-widest uppercase">解答</span>
-                            <button onClick={() => handlePlayAudio(q.question_id + '-ans', q.answer_sentence_yes, q.answer_sentence_yes_voice)} className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-ans' ? 'text-blue-600' : 'text-emerald-500')}><Volume2 size={16} strokeWidth={2.5} /></button>
+                            <button onClick={() => handlePlayAudio(q.question_id + '-ans', q.answer_sentence_yes, q.answer_sentence_yes_voice, true)} className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-ans' ? 'text-blue-600' : 'text-emerald-500')}><Volume2 size={16} strokeWidth={2.5} /></button>
                           </div>
                           <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">{q.answer_sentence_yes}</p>
                         </div>
@@ -250,14 +292,14 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
         {/* ────────────── フッター：固定アクション ────────────── */}
         <div className="shrink-0 p-5 sm:p-6 bg-white border-t border-slate-100 flex items-center justify-center gap-3">
-          <button
+          <button // 一括再生ボタン
             onClick={handlePlayAll}
             className={cn(
-              "flex-1 max-w-[200px] h-12 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 border-2",
+              "flex-1 max-w-[160px] h-12 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 border-2",
               isBatchPlaying ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
             )}
           >
-            <PlayCircle size={16} strokeWidth={3} className={isBatchPlaying ? "animate-pulse" : ""} />
+            <PlayCircle size={16} strokeWidth={3} className={isBatchPlaying ? "animate-pulse" : "text-slate-400"} />
             <span>{isBatchPlaying ? "停止" : "一括再生"}</span>
           </button>
           <button
