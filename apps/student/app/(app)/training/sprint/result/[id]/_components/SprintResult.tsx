@@ -141,7 +141,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-blue-100">
       <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-100 rounded-[40px] shadow-2xl flex flex-col overflow-hidden animate-fade-in">
         
-        {/* ────────────── ヘッダー：セッション情報 (コンパクト化) ────────────── */}
+        {/* ────────────── ヘッダー：セッション情報  ────────────── */}
         <div className="shrink-0 bg-blue-600 p-5 sm:p-6 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
             <Trophy size={120} strokeWidth={1} />

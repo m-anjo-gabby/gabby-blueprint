@@ -26,7 +26,7 @@ export function ContentTagDialog({ content }: Props) {
   const [isAddMode, setIsAddMode] = useState(false)
   const [loading, setLoading] = useState(false)
   
-  // 割当済みタグと、まだ割り当てていない全マスタタグ
+  // 割当済みタグと、まだ割り当てていないマスタに登録されているタグ
   const [assignedTags, setAssignedTags] = useState<ContentTagSummary[]>(content.tags || [])
   const [unassignedTags, setUnassignedTags] = useState<ContentTagSummary[]>([])
   
