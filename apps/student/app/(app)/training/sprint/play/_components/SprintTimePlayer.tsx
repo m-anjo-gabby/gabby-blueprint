@@ -13,15 +13,10 @@ import { useSprintStore } from '@/stores/useSprintStore';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
-  contentId: string;
-  answerType?: SprintAnswerType;
-  duration?: number;
 }
 
 export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({ 
-  questions = [], 
-  contentId,
-  duration = 60
+  questions = []
 }) => {
   const router = useRouter();
   const { showToast } = useToast();
@@ -30,6 +25,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // ────────────── 🔌 Zustand ストア ──────────────
   const {
     currentIndex,
+    contentId,
+    timeLimitSec,
+    answerType,
     isAutoPlaying,
     initSprint,
     nextStep,
@@ -38,7 +36,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   } = useSprintStore();
 
   // ────────────── 📦 ローカル管理ステート ──────────────
-  const [secondsLeft, setSecondsLeft] = useState<number>(duration);
+  const [secondsLeft, setSecondsLeft] = useState<number>(60);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'thinking'>('idle');
 
   // ────────────── 🔊 音声・タイマー参照 ──────────────
@@ -99,8 +97,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 🤍 【改善】タイムアップ時に残りが生じない同期型プログレスバー計算
   const progressPercent = useMemo(() => {
     if (secondsLeft <= 0) return 0;
-    return (secondsLeft / duration) * 100;
-  }, [secondsLeft, duration]);
+    return (secondsLeft / timeLimitSec) * 100;
+  }, [secondsLeft, timeLimitSec]);
 
   // 🔊 音声ストップ
   const stopAllAudio = useCallback(() => {
@@ -232,12 +230,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     };
   }, [isAutoPlaying, secondsLeft, router, showToast, stopAllAudio, toggleAutoPlay]);
 
-  // 🔄 初期マウント
+  // 🔄 初期マウント & 設定同期
   useEffect(() => {
     initSprint(questions, 'sprint', 0);
+    setSecondsLeft(timeLimitSec);
     toggleAutoPlay(true);
-    return () => resetStore();
-  }, [questions, initSprint, resetStore, toggleAutoPlay]);
+    return () => {
+      resetStore();
+    };
+  }, [questions, initSprint, resetStore, toggleAutoPlay, timeLimitSec]);
 
   // 🔄 問題切り替え時
   useEffect(() => {

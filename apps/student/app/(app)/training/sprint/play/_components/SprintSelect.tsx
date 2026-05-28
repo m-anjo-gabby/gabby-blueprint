@@ -27,7 +27,7 @@ const mockLastSession = {
   mode: 'drill' as 'drill' | 'sprint',
   questionType: '0' as SprintQuestionType,
   level: '0',
-  duration: 60,
+  timeLimitSec: 60,
 };
 
 const mockUserRecord: Record<string, number> = {
@@ -53,7 +53,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const [mode, setMode] = useState<'drill' | 'sprint'>(initialConfig?.mode || mockLastSession.mode);
   const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialConfig?.questionType || mockLastSession.questionType);
   const [selectedLevel, setSelectedLevel] = useState<string>(mockLastSession.level);
-  const [selectedDuration, setSelectedDuration] = useState<number>(mockLastSession.duration);
+  const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(mockLastSession.timeLimitSec);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const sortedTypes = useMemo(() => Object.values(SPRINT_TYPES).sort((a, b) => a.seq_no - b.seq_no), []);
@@ -100,7 +100,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       mode,
       questionType: selectedType,
       level: selectedLevel,
-      duration: selectedDuration,
+      timeLimitSec: selectedTimeLimitSec,
       answerType: (mode === 'sprint' && selectedType === '0') ? answerType : '0'
     });
   };
@@ -157,7 +157,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     </span>
                     {mode === 'sprint' && (
                       <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 border border-indigo-200 text-indigo-700 font-mono shrink-0">
-                        {selectedDuration}s
+                        {selectedTimeLimitSec}s
                       </span>
                     )}
                   </div>
@@ -174,7 +174,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   {mode === 'sprint' ? (
                     <>
                       <Zap size={13} className="text-indigo-600 fill-indigo-600" />
-                      <span>スプリントモード / 制限時間: {selectedDuration}秒</span>
+                      <span>スプリントモード / 制限時間: {selectedTimeLimitSec}秒</span>
                     </>
                   ) : (
                     <>
@@ -369,12 +369,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">03. Duration / 制限時間</span>
                       <div className="grid grid-cols-2 gap-2">
                         {sortedTimes.map((opt) => {
-                          const isSelected = selectedDuration === opt.value;
+                          const isSelected = selectedTimeLimitSec === opt.value;
                           return (
                             <button
                               type="button"
                               key={opt.value}
-                              onClick={() => setSelectedDuration(opt.value)}
+                              onClick={() => setSelectedTimeLimitSec(opt.value)}
                               className={cn("p-3 rounded-xl border text-left transition-all flex items-center justify-between", isSelected ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10" : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50")}
                             >
                               <div>

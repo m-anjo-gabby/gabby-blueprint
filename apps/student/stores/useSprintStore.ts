@@ -2,12 +2,17 @@
 'use client';
 
 import { create } from 'zustand';
-import { SprintQuestion } from "@gabby/types/sprint";
+import { SprintQuestion, SprintQuestionType, SprintAnswerType } from "@gabby/types/sprint";
 
 interface SprintState {
   questions: SprintQuestion[];
   currentIndex: number;
   mode: 'drill' | 'sprint';
+  contentId: string;
+  questionType: SprintQuestionType | null;
+  level: string;
+  answerType: SprintAnswerType;
+  timeLimitSec: number;
   loading: boolean;
   isRevealed: boolean;
   isAutoPlaying: boolean;
@@ -16,6 +21,7 @@ interface SprintState {
   isPlayingAnswerSequence: boolean;
 
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
+  setSprintConfig: (config: { contentId: string, questionType: SprintQuestionType, level: string, answerType: SprintAnswerType, timeLimitSec: number }) => void;
   setLoading: (loading: boolean) => void;
   nextStep: () => { isLast: boolean };
   prevStep: () => void;
@@ -31,6 +37,11 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   questions: [],
   currentIndex: 0,
   mode: 'drill',
+  contentId: '',
+  questionType: null,
+  level: '0',
+  answerType: '0',
+  timeLimitSec: 60,
   loading: true,
   isRevealed: false,
   isAutoPlaying: false,
@@ -51,6 +62,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   }),
 
   setLoading: (loading) => set({ loading }),
+
+  setSprintConfig: (config) => set({ ...config }),
 
   nextStep: () => {
     const { questions, currentIndex } = get();

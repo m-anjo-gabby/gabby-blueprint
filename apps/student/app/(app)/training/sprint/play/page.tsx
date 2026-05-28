@@ -6,6 +6,7 @@ import { SprintSelect } from "./_components/SprintSelect";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
 import { SprintQuestion, SprintQuestionType, SprintAnswerType, SprintConfig } from "@gabby/types/sprint";
+import { useSprintStore } from "@/stores/useSprintStore";
 import { AlertCircle, ArrowLeft, Loader2, Volume2 } from "lucide-react";
 import Link from "next/link";
 interface PageProps {
@@ -17,7 +18,7 @@ interface PageProps {
     content_id?: string;
     resume_id?: string;
     resume?: string; // 🔖 栞判定用のクエリ
-    duration?: string; // ⏱️ スプリント制限時間
+    time_limit_sec?: string; // ⏱️ スプリント制限時間
   }>;
 }
 
@@ -43,7 +44,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   const [view, setView] = useState<PlayerView>(initialView);
   const [questions, setQuestions] = useState<SprintQuestion[]>([]);
-  const [activeConfig, setActiveConfig] = useState<(SprintConfig & { answerType: SprintAnswerType, resumeId?: string, contentId: string }) | null>(null);
+  const [resumeId, setResumeId] = useState<string | undefined>();
+  const setSprintConfig = useSprintStore((state) => state.setSprintConfig);
 
   // パラメータが外部（ブラウザバック等）で変わった場合にViewを同期する
   const [prevParams, setPrevParams] = useState(resolvedParams);
@@ -76,11 +78,17 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
 
     if (response.success && response.data && response.data.length > 0) {
       setQuestions(response.data);
-      setActiveConfig({
-        ...config,
+      setResumeId(resolvedParams.resume_id);
+      
+      // Zustandストアに設定を保存
+      setSprintConfig({
         contentId: resolvedParams.content_id || '',
-        resumeId: resolvedParams.resume_id,
+        questionType,
+        level: String(difficultyLevel),
+        answerType: config.answerType,
+        timeLimitSec: config.timeLimitSec,
       });
+
       setView(config.mode);
     } else {
       setView('error');
@@ -130,7 +138,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
                 mode: resolvedParams.mode === 'sprint' ? 'sprint' : 'drill',
                 questionType: (resolvedParams.type as SprintQuestionType) || '0',
                 level: resolvedParams.level || '1',
-                duration: parseInt(resolvedParams.duration || '60', 10),
+                timeLimitSec: parseInt(resolvedParams.time_limit_sec || '60', 10),
                 answerType: (resolvedParams.answer_type as SprintAnswerType) || '0'
               });
             }}
@@ -171,24 +179,20 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   }
 
   // 5. プレイヤー（SPA切り替え）
-  if (view === 'drill' && activeConfig) {
+  if (view === 'drill') {
     return (
       <SprintDrillPlayer 
         questions={questions} 
-        contentId={activeConfig.contentId} 
-        initialQuestionId={activeConfig.resumeId} 
+        initialQuestionId={resumeId} 
         initialStarted={true} // SelectまたはReady画面でタップ済みであることを子に伝える
       />
     );
   }
 
-  if (view === 'sprint' && activeConfig) {
+  if (view === 'sprint') {
     return (
       <SprintTimePlayer 
         questions={questions} 
-        contentId={activeConfig.contentId} 
-        answerType={activeConfig.answerType} // ⚡ YES('0') / NO('1') モードをプレイヤーにバインド
-        duration={activeConfig.duration} 
       />
     );
   }

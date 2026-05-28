@@ -66,7 +66,7 @@ export interface SprintConfig {
   mode: 'drill' | 'sprint';
   questionType: SprintQuestionType;
   level: string;
-  duration: number; // スプリント時は秒数(60, 90...)、ドリル時は9999などのダミー
+  timeLimitSec: number; // スプリント時は秒数(60, 90...)、ドリル時は9999などのダミー
 }
 
 export const DRILL_TIMING = {

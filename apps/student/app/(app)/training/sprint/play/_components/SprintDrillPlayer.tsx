@@ -19,14 +19,12 @@ import { SprintResumeMetadata } from '@gabby/types/training';
 
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
-  contentId: string;
   initialQuestionId?: string;
   initialStarted?: boolean; // ➕ 追加：親からの開始状態の上書き
 }
 
 export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({ 
   questions = [],
-  contentId,
   initialQuestionId,
   initialStarted
 }) => {
@@ -45,6 +43,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   // 🔌 Zustand ストア
   const {
     currentIndex,
+    contentId,
     isRevealed,
     isAutoPlaying,
     isRecording,
