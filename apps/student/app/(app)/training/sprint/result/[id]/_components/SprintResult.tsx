@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Trophy, Timer, CheckCircle2, Volume2, HelpCircle, MessageSquare, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Trophy, Timer, CheckCircle2, Volume2, HelpCircle, MessageSquare, ArrowRight, Zap, PlayCircle } from 'lucide-react';
+import { cn } from "@/lib/utils";
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 
@@ -29,243 +30,244 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const { speak: ttsSpeak } = useWebSpeech();
   const { playbackRate } = usePlayAudioSpeech();
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [isBatchPlaying, setIsBatchPlaying] = useState(false);
 
   // 音声再生ヘルパー
-  const handlePlayAudio = async (questionId: string, text: string, audioPath: string | null) => {
-    setPlayingId(questionId);
-    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+  const handlePlayAudio = (questionId: string, text: string, audioPath: string | null): Promise<void> => {
+    return new Promise((resolve) => {
+      setPlayingId(questionId);
+      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
 
-    if (audioPath) {
-      const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-      const audio = new Audio(bucketUrl);
-      audio.playbackRate = playbackRate;
-      audio.onended = () => setPlayingId(null);
-      audio.onerror = () => {
+      if (audioPath) {
+        const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
+        const audio = new Audio(bucketUrl);
+        audio.playbackRate = playbackRate;
+        audio.onended = () => { setPlayingId(null); resolve(); };
+        audio.onerror = () => {
+          ttsSpeak(text, playbackRate);
+          setPlayingId(null);
+          resolve();
+        };
+        audio.play().catch(() => { setPlayingId(null); resolve(); });
+      } else {
         ttsSpeak(text, playbackRate);
-        setPlayingId(null);
-      };
-      await audio.play().catch(() => setPlayingId(null));
-    } else {
-      ttsSpeak(text, playbackRate);
-      // 簡易判定（TTSの終了検知）
-      setTimeout(() => setPlayingId(null), text.length * 80 + 1000);
+        // TTSの終了検知を簡易的にシミュレート
+        const duration = text.length * 80 + 1000;
+        setTimeout(() => { setPlayingId(null); resolve(); }, duration);
+      }
+    });
+  };
+
+  // 一括再生
+  const handlePlayAll = async () => {
+    if (isBatchPlaying) {
+      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+      setIsBatchPlaying(false);
+      setPlayingId(null);
+      return;
     }
+
+    setIsBatchPlaying(true);
+    for (const q of questions) {
+      if (!setIsBatchPlaying) break; // 中断判定
+      // 1. 質問を再生
+      await handlePlayAudio(q.question_id + '-q', q.question, q.question_voice);
+      await new Promise(r => setTimeout(r, 400));
+      // 2. 解答を再生
+      const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no : q.answer_sentence_yes;
+      const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
+      await handlePlayAudio(q.question_id + '-ans', ansText, ansVoice);
+      await new Promise(r => setTimeout(r, 800));
+    }
+    setIsBatchPlaying(false);
   };
 
   const isQuestionBased = scoreData.question_type === '0' || scoreData.question_type === '6';
 
   // Speedモードかつ回答タイプが指定されている場合（'0': YES, '1': NO）
-  const speedModeLabel = scoreData.question_type === '0' 
-    ? (scoreData.answer_type === '1' 
-        ? { label: 'NO Focusing', class: 'bg-amber-500/20 text-amber-400 border-amber-400/20' }
-        : { label: 'YES Focusing', class: 'bg-emerald-500/20 text-emerald-400 border-emerald-400/20' }
-      )
-    : null;
+  const speedModeLabel = scoreData.question_type === '0' && (
+    <div className={cn("px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider",
+      scoreData.answer_type === '1' 
+        ? "bg-amber-50 border-amber-200 text-amber-600"
+        : "bg-emerald-50 border-emerald-200 text-emerald-600"
+    )}>
+      {scoreData.answer_type === '1' ? 'NOで回答' : 'YESで回答'}
+    </div>
+  );
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col items-center p-4 sm:p-8 select-none text-slate-900 selection:bg-indigo-100">
-      <div className="w-full max-w-2xl bg-white border border-slate-100 rounded-[40px] shadow-xl flex flex-col overflow-hidden p-6 sm:p-10 space-y-8 animate-fade-in">
+    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-blue-100">
+      <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-100 rounded-[40px] shadow-2xl flex flex-col overflow-hidden animate-fade-in">
         
-        {/* ────────────── ヘッダー ────────────── */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-5">
-          <button 
-            onClick={() => router.push('/training/sprint')} // 💡 スプリント一覧やダッシュボードへ戻す
-            className="h-10 px-4 flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200/80 active:scale-95 transition-all text-xs font-bold"
-          >
-            <ChevronLeft size={16} strokeWidth={2.5} />
-            <span>スプリント一覧</span>
-          </button>
-          <div className="text-right">
-            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em]">Sprint Result</span>
-            <p className="text-xs font-bold text-slate-400">
-              {new Date(scoreData.created_at).toLocaleDateString('ja-JP')} 実施
-            </p>
-          </div>
-        </div>
-
-        {/* ────────────── 核心スコアカード（要約） ────────────── */}
-        <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-[32px] p-6 sm:p-8 relative overflow-hidden shadow-lg">
-          <div className="absolute -right-6 -bottom-6 text-indigo-500/10 pointer-events-none transform -rotate-12">
-            <Trophy size={160} strokeWidth={1} />
+        {/* ────────────── ヘッダー：セッション情報 (コンパクト化) ────────────── */}
+        <div className="shrink-0 bg-blue-600 p-5 sm:p-6 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+            <Trophy size={120} strokeWidth={1} />
           </div>
           
-          <div className="relative space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-2.5 py-1 rounded-md border border-indigo-400/20">
+          <div className="relative space-y-5">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => router.push('/training/sprint')}
+                className="h-8 px-2.5 flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all text-[10px] font-black uppercase tracking-wider backdrop-blur-md border border-white/10"
+              >
+                <ChevronLeft size={12} strokeWidth={3} />
+                <span>戻る</span>
+              </button>
+              <div className="text-right">
+                <span className="text-[10px] font-black text-blue-200 uppercase tracking-[0.2em]">セッション記録</span>
+                <p className="text-[9px] font-bold text-blue-100 opacity-80">
+                  {new Date(scoreData.created_at).toLocaleDateString('ja-JP')}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">
                   {courseTitle}
-                </span>
-                {speedModeLabel && (
-                  <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${speedModeLabel.class}`}>
-                    {speedModeLabel.label}
-                  </span>
-                )}
-              </div>
-              <h2 className="text-2xl font-black tracking-tight mt-3">セッション完了！</h2>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-white/10">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1 text-slate-400">
-                  <CheckCircle2 size={13} className="text-emerald-400" />
-                  <span className="text-[11px] font-bold tracking-wider">総回答数</span>
-                </div>
-                <p className="text-2xl font-black font-mono tracking-tight text-white">
-                  {scoreData.total_answered} <span className="text-xs font-bold text-slate-400">問</span>
-                </p>
+                </h1>
+                {speedModeLabel}
               </div>
 
-              <div className="space-y-1">
-                <div className="flex items-center gap-1 text-slate-400">
-                  <Timer size={13} className="text-indigo-400" />
-                  <span className="text-[11px] font-bold tracking-wider">制限時間</span>
+              <div className="flex items-center gap-5 pt-2 border-t border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                    <Zap size={16} className="text-blue-200" fill="currentColor" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-black text-blue-200 uppercase tracking-widest">回答数</span>
+                    <span className="text-lg font-black font-mono leading-none">{scoreData.total_answered}</span>
+                  </div>
                 </div>
-                <p className="text-2xl font-black font-mono tracking-tight text-white">
-                  {scoreData.time_limit_sec} <span className="text-xs font-bold text-slate-400">秒</span>
-                </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                    <Timer size={16} className="text-blue-200" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-black text-blue-200 uppercase tracking-widest">制限時間</span>
+                    <span className="text-lg font-black font-mono leading-none">{scoreData.time_limit_sec}s</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ────────────── 今回の出題リスト（ドリルカード風アライン） ────────────── */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-black text-slate-400 tracking-wider uppercase pl-1">
-            Review Timeline ({questions.length})
-          </h3>
+        {/* ────────────── メイン：出題リスト（スクロールエリア、問題情報拡大） ────────────── */}
+        <div className="flex-1 overflow-y-auto bg-slate-50/50 p-5 sm:p-6">
+          <div className="max-w-xl mx-auto space-y-3">
+            <h3 className="text-xs font-black text-slate-400 tracking-[0.2em] uppercase pl-1 flex items-center gap-2">
+              <CheckCircle2 size={14} strokeWidth={3} className="text-blue-500" />
+              回答履歴 ({questions.length})
+            </h3>
 
-          <div className="space-y-6">
-            {questions.map((q, index) => {
-              const isSpeedModePayload = scoreData.question_type === '0' && q.answer_sentence_no;
+            <div className="space-y-3">
+              {questions.map((q, index) => {
+                const isSpeedModePayload = scoreData.question_type === '0' && q.answer_sentence_no;
 
-              return (
-                <div 
-                  key={q.question_id || index}
-                  className="bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-[28px] p-5 sm:p-6 transition-all duration-200 flex flex-col gap-4 relative"
-                >
-                  {/* インデックスバッジ */}
-                  <div className="absolute top-4 right-5 h-5 px-2 flex items-center justify-center rounded-md border border-slate-200 bg-white shadow-sm">
-                    <span className="font-mono text-[10px] font-black text-slate-500">
-                      #{index + 1}
-                    </span>
-                  </div>
-
-                  {/* 【A】基本文（グレー）※ドリル仕様を踏襲 */}
-                  {q.statement && (
-                    <div className="w-full text-left border-l-4 border-slate-200 pl-3 py-0.5">
-                      <div className="flex items-center gap-x-1.5 text-slate-400 mb-1">
-                        <MessageSquare size={12} />
-                        <span className="text-[10px] font-bold tracking-wider">基本文</span>
-                        <button 
-                          onClick={() => handlePlayAudio(q.question_id + '-st', q.statement, q.statement_voice)}
-                          className={`w-5 h-5 flex items-center justify-center rounded-full transition-colors ${
-                            playingId === q.question_id + '-st' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-indigo-500 hover:bg-slate-100'
-                          }`}
-                        >
-                          <Volume2 size={12} />
-                        </button>
-                      </div>
-                      <p className="text-xs sm:text-sm font-bold text-slate-600 leading-relaxed">
-                        {q.statement}
-                      </p>
+                return (
+                  <div 
+                    key={q.question_id || index}
+                    className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5 transition-all duration-200 flex flex-col gap-4 relative shadow-sm"
+                  >
+                    {/* インデックス */}
+                    <div className="absolute top-4 right-5 text-slate-200 italic font-black text-xl select-none">
+                      {String(index + 1).padStart(2, '0')}
                     </div>
-                  )}
 
-                  {/* 【B】質問 / 指示（インディゴ） */}
-                  <div className="w-full text-left border-l-4 border-indigo-500 pl-3 py-0.5">
-                    <div className="flex items-center gap-x-1.5 text-indigo-500 mb-1">
-                      <HelpCircle size={12} strokeWidth={2.5} />
-                      <span className="text-[10px] font-bold tracking-wider">
-                        {isQuestionBased ? "質問文" : "指示文"}
-                      </span>
-                      <button 
-                        onClick={() => handlePlayAudio(q.question_id + '-q', q.question, q.question_voice)}
-                        className={`w-5 h-5 flex items-center justify-center rounded-full transition-colors ${
-                          playingId === q.question_id + '-q' ? 'text-indigo-600 bg-indigo-50' : 'text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50'
-                        }`}
-                      >
-                        <Volume2 size={12} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                    <p className="text-base sm:text-lg font-black text-slate-800 leading-snug tracking-tight">
-                      {q.question}
-                    </p>
-                  </div>
-
-                  {/* 【C】解答（サクセスエメラルド & アンバー） */}
-                  {isSpeedModePayload ? (
-                    /* Speed専用の2ペインアライン */
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full pt-1">
-                      <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/10 pl-3 pr-2 py-1.5 rounded-r-xl">
-                        <div className="flex items-center gap-x-1 mb-1 text-emerald-600">
-                          <CheckCircle2 size={11} strokeWidth={2.5} />
-                          <span className="text-[9px] font-bold tracking-wider">YES</span>
+                    {/* 基本文 */}
+                    {q.statement && (
+                      <div className="w-full text-left border-l-4 border-slate-200 pl-3 py-0.5">
+                        <div className="flex items-center gap-x-1.5 text-slate-400 mb-1.5">
+                          <MessageSquare size={14} />
+                          <span className="text-xs font-bold tracking-wider">基本文</span>
                           <button 
-                            onClick={() => handlePlayAudio(q.question_id + '-yes', q.answer_sentence_yes, q.answer_sentence_yes_voice)}
-                            className="w-4 h-4 flex items-center justify-center text-emerald-500"
+                            onClick={() => handlePlayAudio(q.question_id + '-st', q.statement, q.statement_voice)}
+                            className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-st' ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-blue-500 hover:bg-slate-100')}
                           >
-                            <Volume2 size={11} />
+                            <Volume2 size={16} />
                           </button>
                         </div>
-                        <p className="text-xs sm:text-sm font-black text-emerald-700 tracking-tight">
-                          {q.answer_sentence_yes}
-                        </p>
+                        <p className="text-sm font-bold text-slate-600 leading-relaxed">{q.statement}</p>
                       </div>
+                    )}
 
-                      <div className="text-left border-l-4 border-amber-500 bg-amber-50/10 pl-3 pr-2 py-1.5 rounded-r-xl">
-                        <div className="flex items-center gap-x-1 mb-1 text-amber-600">
-                          <CheckCircle2 size={11} strokeWidth={2.5} />
-                          <span className="text-[9px] font-bold tracking-wider">NO</span>
-                          <button 
-                            onClick={() => handlePlayAudio(q.question_id + '-no', q.answer_sentence_no, q.answer_sentence_no_voice)}
-                            className="w-4 h-4 flex items-center justify-center text-amber-500"
-                          >
-                            <Volume2 size={11} />
-                          </button>
-                        </div>
-                        <p className="text-xs sm:text-sm font-black text-amber-700 tracking-tight">
-                          {q.answer_sentence_no}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    /* 通常の一択解答 */
-                    <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/10 pl-3 pr-3 py-2 rounded-r-xl pt-1">
-                      <div className="flex items-center gap-x-1.5 text-emerald-600 mb-1">
-                        <CheckCircle2 size={11} strokeWidth={2.5} />
-                        <span className="text-[9px] font-bold tracking-wider">正しい解答例</span>
+                    {/* 質問 / 指示 */}
+                    <div className="w-full text-left border-l-4 border-blue-500 pl-3 py-0.5">
+                      <div className="flex items-center gap-x-1.5 text-blue-500 mb-1.5">
+                        <HelpCircle size={14} strokeWidth={2.5} />
+                        <span className="text-xs font-bold tracking-wider">{isQuestionBased ? "質問" : "指示"}</span>
                         <button 
-                          onClick={() => handlePlayAudio(q.question_id + '-ans', q.answer_sentence_yes, q.answer_sentence_yes_voice)}
-                          className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors ${
-                            playingId === q.question_id + '-ans' ? 'text-indigo-600' : 'text-emerald-500'
-                          }`}
+                          onClick={() => handlePlayAudio(q.question_id + '-q', q.question, q.question_voice)}
+                          className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-q' ? 'text-blue-600 bg-blue-50' : 'text-blue-400 hover:text-blue-600 hover:bg-blue-50')}
                         >
-                          <Volume2 size={11} strokeWidth={2.5} />
+                          <Volume2 size={16} strokeWidth={2.5} />
                         </button>
                       </div>
-                      <p className="text-sm font-black text-emerald-600 tracking-tight">
-                        {q.answer_sentence_yes}
-                      </p>
+                      <p className="text-lg sm:text-xl font-black text-slate-800 leading-snug tracking-tight">{q.question}</p>
                     </div>
-                  )}
 
-                </div>
-              );
-            })}
+                    {/* 解答 */}
+                    <div className="w-full pt-1">
+                      {isSpeedModePayload ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                          {scoreData.answer_type === '0' && ( // YES主軸の場合のみYESを表示
+                            <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-2 py-2 rounded-r-xl">
+                              <div className="flex items-center gap-x-1 mb-1 text-emerald-600">
+                                <span className="text-xs font-black tracking-widest uppercase">解答</span>
+                                <button onClick={() => handlePlayAudio(q.question_id + '-yes', q.answer_sentence_yes, q.answer_sentence_yes_voice)} className="w-6 h-6 flex items-center justify-center text-emerald-500"><Volume2 size={16} /></button>
+                              </div>
+                              <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{q.answer_sentence_yes}</p>
+                            </div>
+                          )}
+                          {scoreData.answer_type === '1' && ( // NO主軸の場合のみNOを表示
+                            <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-3 pr-2 py-2 rounded-r-xl">
+                              <div className="flex items-center gap-x-1 mb-1 text-amber-600">
+                                <span className="text-xs font-black tracking-widest uppercase">解答</span>
+                                <button onClick={() => handlePlayAudio(q.question_id + '-no', q.answer_sentence_no, q.answer_sentence_no_voice)} className="w-6 h-6 flex items-center justify-center text-amber-500"><Volume2 size={16} /></button>
+                              </div>
+                              <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{q.answer_sentence_no}</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-3 py-2.5 rounded-r-xl">
+                          <div className="flex items-center gap-x-1.5 text-emerald-600 mb-1.5">
+                            <span className="text-xs font-black tracking-widest uppercase">解答</span>
+                            <button onClick={() => handlePlayAudio(q.question_id + '-ans', q.answer_sentence_yes, q.answer_sentence_yes_voice)} className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-ans' ? 'text-blue-600' : 'text-emerald-500')}><Volume2 size={16} strokeWidth={2.5} /></button>
+                          </div>
+                          <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">{q.answer_sentence_yes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* ────────────── フッターアクション ────────────── */}
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
+        {/* ────────────── フッター：固定アクション ────────────── */}
+        <div className="shrink-0 p-5 sm:p-6 bg-white border-t border-slate-100 flex items-center justify-center gap-3">
           <button
-            onClick={() => router.push('/training/sprint')}
-            className="h-12 px-6 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-md shadow-indigo-600/10 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+            onClick={handlePlayAll}
+            className={cn(
+              "flex-1 max-w-[200px] h-12 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 border-2",
+              isBatchPlaying ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+            )}
           >
-            <span>トレーニング選択に戻る</span>
-            <ArrowRight size={14} strokeWidth={2.5} />
+            <PlayCircle size={16} strokeWidth={3} className={isBatchPlaying ? "animate-pulse" : ""} />
+            <span>{isBatchPlaying ? "停止" : "一括再生"}</span>
+          </button>
+          <button
+            onClick={() => router.push('/training/sprint/play')}
+            className="flex-[2] max-w-sm h-12 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+          >
+            <span>Next Sprint</span>
+            <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
-
       </div>
     </div>
   );

@@ -53,7 +53,7 @@ export interface SprintTimeOption {
  * 制限時間オプションの実体マスタデータ
  */
 export const SPRINT_TIME_OPTIONS: Record<number, SprintTimeOption> = {
-  60:  { value: 60,  label: '60s',  desc: 'クイックアタック', seq_no: 1 },
+  20:  { value: 20,  label: '20s',  desc: 'クイックアタック', seq_no: 1 },
   90:  { value: 90,  label: '90s',  desc: 'スタンダード',   seq_no: 2 },
   120: { value: 120, label: '120s', desc: 'ディープラン',     seq_no: 3 },
   150: { value: 150, label: '150s', desc: 'インテンシブ',   seq_no: 4 },

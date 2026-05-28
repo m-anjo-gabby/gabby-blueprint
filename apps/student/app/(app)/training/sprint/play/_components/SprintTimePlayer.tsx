@@ -2,7 +2,8 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Loader2, Volume2, Timer, CircleDot, ArrowRight, RotateCcw } from 'lucide-react';
+import { ChevronLeft, Loader2, Volume2, Timer, CircleDot, ArrowRight, RotateCcw, Award, Hourglass } from 'lucide-react';
+import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getSprintTitle } from '@gabby/lib';
@@ -10,7 +11,7 @@ import { SprintQuestion } from "@gabby/types/sprint";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintStore } from '@/stores/useSprintStore';
-import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction'; // 🔥 サーバーアクションの直接結合
+import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
@@ -42,7 +43,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // ────────────── 📦 ローカル管理ステート ──────────────
   const [secondsLeft, setSecondsLeft] = useState<number>(60);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'thinking'>('idle');
-  const [isSaving, setIsSaving] = useState<boolean>(false); // 🔥 ストアに依存しない非同期保存用ローディング
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [resultId, setResultId] = useState<string | null>(null);
+  const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
 
   // ────────────── 🔊 音声・タイマー参照 ──────────────
   const { speak: ttsSpeak, setSpeechRate: ttsSetRate } = useWebSpeech();
@@ -55,15 +58,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isFlowRunningRef = useRef<boolean>(false);
 
-  // 📋 コースタイトルの取得
   const courseTitle = useMemo(() => {
     return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
   }, [questionType]);
 
-  // 🎯 質問ベースの種別判定（'0': Speed, '6': Mastery）
   const isQuestionBased = questionType === '0' || questionType === '6';
-
-  // 📝 クエスチョンタイプに応じた文言出し分け
   const questionLabelEN = isQuestionBased ? "Listen Question" : "Listen Instructions";
   const questionLabelJA = isQuestionBased ? "質問文再生中" : "指示文再生中";
 
@@ -92,7 +91,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     return (secondsLeft / timeLimitSec) * 100;
   }, [secondsLeft, timeLimitSec]);
 
-  // 🔊 音声ストップ
   const stopAllAudio = useCallback(() => {
     isFlowRunningRef.current = false;
     if (nativeAudioRef.current) {
@@ -103,12 +101,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     setAudioPhase('idle');
   }, []);
 
-  // 💾 🧪 【コアロジック】実績保存＆次ページへリダイレクト
   const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
-    stopAllAudio();
     toggleAutoPlay(false);
-    
-    // 💡 多重送信を確実に防止するガードロック
     setIsSaving(true); 
 
     const { level, timeLimitSec: storeTimeLimit } = useSprintStore.getState();
@@ -118,12 +112,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       return;
     }
 
-    // ⚡ ユーザーがどこまで正確に進んだかを算出
-    // タイムアップ(0秒)の場合はcurrentIndexまで、Next押し切り完了時は全問消化として処理
     const answeredCount = currentSecondsLeft <= 0 ? currentIndex : Math.min(currentIndex + 1, questions.length);
     const slicedQuestions = questions.slice(0, answeredCount);
 
-    // 最新のJSON履歴オブジェクト配列を作成
     const history: SprintHistoryItem[] = slicedQuestions.map((q) => ({
       question_id: q.question_id,
       group_id: q.group_id || null,
@@ -131,7 +122,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }));
 
     try {
-      // 🚀 サーバーアクションをストレートに実行
       const res = await createSprintScoreAction({
         question_type: questionType,
         answer_type: answerType,
@@ -142,9 +132,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       });
 
       if (res.success && res.data) {
-        // プレイ用セッションストアを初期化して、結果画面へ遷移
-        resetStore();
-        router.push(`/training/sprint/result/${res.data.self_sprint_id}`);
+        if (currentSecondsLeft <= 0) {
+          setResultId(res.data.self_sprint_id);
+          setShowTimeUpOverlay(true);
+        } else {
+          stopAllAudio();
+          resetStore();
+          router.push(`/training/sprint/result/${res.data.self_sprint_id}`);
+        }
       } else {
         throw new Error(res.error || "Failed to persist score history");
       }
@@ -158,7 +153,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [stopAllAudio, toggleAutoPlay, resetStore, router, showToast, onExit, currentIndex, questions, questionType]);
 
-  // 音声再生コア
   const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
     return new Promise((resolve) => {
       if (nativeAudioRef.current) { nativeAudioRef.current.pause(); nativeAudioRef.current = null; }
@@ -186,7 +180,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     });
   }, [playbackRate, ttsSpeak]);
 
-  // 🏃‍♂️ スプリントフロー再生
   const runSprintFlow = useCallback(async (question: SprintQuestion) => {
     if (!question || isFlowRunningRef.current) return;
     isFlowRunningRef.current = true;
@@ -214,7 +207,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [playTrack]);
 
-  // 🎯 個別パーツ再生
   const handlePlayIndividualPart = useCallback(async (type: 'statement' | 'question') => {
     if (!currentQuestion) return;
     stopAllAudio();
@@ -237,24 +229,20 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [currentQuestion, playTrack, stopAllAudio]);
 
-  // 全体再生リスタート
   const handleReplayFromStart = useCallback(() => {
     if (!currentQuestion) return;
     stopAllAudio();
     runSprintFlow(currentQuestion);
   }, [currentQuestion, stopAllAudio, runSprintFlow]);
 
-  // ⏭️ 次の問題へ
   const handleNextQuestion = useCallback(() => {
     const { isLast } = nextStep();
-    
     if (isLast) {
       showToast("すべての問題を消化しました！スプリント完了です。", "success");
       handlePersistAndRedirect(secondsLeft);
     }
   }, [nextStep, showToast, handlePersistAndRedirect, secondsLeft]);
 
-  // ⏱️ タイマーロジック
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isAutoPlaying && secondsLeft > 0) {
@@ -263,9 +251,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       }, 1000);
     }
     return () => { if (interval) clearInterval(interval); };
-  }, [isAutoPlaying, secondsLeft > 0]);
+  }, [isAutoPlaying, secondsLeft]);
 
-  // タイムアップ監視
   useEffect(() => {
     if (isAutoPlaying && secondsLeft <= 0) {
       isFlowRunningRef.current = false;
@@ -274,7 +261,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [isAutoPlaying, secondsLeft, showToast, handlePersistAndRedirect]);
 
-  // 🔄 初期マウント & 設定同期
   useEffect(() => {
     initSprint(questions, 'sprint', 0);
     setSecondsLeft(timeLimitSec);
@@ -284,7 +270,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     };
   }, [questions, initSprint, clearSession, toggleAutoPlay, timeLimitSec]);
 
-  // 🔄 問題切り替え時
   useEffect(() => {
     if (currentQuestion) {
       stopAllAudio();
@@ -294,7 +279,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [currentIndex, currentQuestion, runSprintFlow, stopAllAudio]);
 
-  // ⚙️ 画面固定クリーンアップ
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -327,22 +311,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       if (currentQuestion) runSprintFlow(currentQuestion);
       return;
     }
-
     onExit?.();
   };
-
-  // ⏳ 🔒 サーバーへの非同期処理送信中のフルスクリーン画面ロック
-  if (isSaving) {
-    return (
-      <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fade-in select-none">
-        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-4 animate-scale-up">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
-          <h2 className="text-xl font-black text-slate-800 tracking-tight">Syncing Performance</h2>
-          <p className="text-xs font-bold text-slate-400">今回のスプリント成績をクラウドに安全に同期しています...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!questions || questions.length === 0 || !currentQuestion) {
     return (
@@ -354,6 +324,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       </div>
     );
   }
+
+  const handleGoToResult = () => {
+    if (resultId) {
+      stopAllAudio();
+      resetStore();
+      router.push(`/training/sprint/result/${resultId}`);
+    }
+  };
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none select-none text-slate-900">
@@ -375,12 +353,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               <h1 className="text-sm font-black text-slate-800 tracking-tight text-center max-w-[200px] truncate">{courseTitle}</h1>
             </div>
 
-            <div className={`h-10 min-w-[75px] border rounded-xl flex items-center justify-center gap-1.5 px-3 transition-colors duration-300 ${
-              isTimeWarning 
-                ? 'bg-amber-50 border-amber-200 text-amber-700 animate-[pulse_2s_infinite_ease-in-out]' 
+            {/* ⏱️ タイマー：0秒でブリンク停止。揺れのないパルスアニメーションを採用 */}
+            <div className={cn(
+              "h-10 min-w-[85px] border rounded-xl flex items-center justify-center gap-2 px-3 transition-all duration-500",
+              (isTimeWarning && secondsLeft > 0)
+                ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-[0_0_15px_rgba(225,29,72,0.05)] animate-pulse' 
                 : 'bg-slate-50 border-slate-200 text-slate-700'
-            }`}>
-              <Timer size={14} className={isTimeWarning ? "text-amber-600" : "text-slate-400"} />
+            )}>
+              <Timer size={14} className={cn("transition-colors", (isTimeWarning && secondsLeft > 0) ? "text-rose-500" : "text-slate-400")} />
               <span className="text-sm font-black font-mono tracking-tight tabular-nums">
                 {secondsLeft}s
               </span>
@@ -396,13 +376,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               }`}
               style={{ 
                 width: `${progressPercent}%`,
-                transition: secondsLeft <= 0 ? 'none' : 'width 1s linear'
+                transition: secondsLeft <= 0 ? 'width 0.2s ease-out' : 'width 1s linear'
               }}
             />
           </div>
         </div>
 
-        {/* 中央：メインコンテンツエリア */}
+        {/* メインコンテンツエリア */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-8">
           <div className="w-full flex flex-col items-center space-y-6">
             
@@ -494,14 +474,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 <span>{isQuestionBased ? "質問のみ" : "指示のみ"}</span>
               </button>
             </div>
-
           </div>
         </div>
 
         {/* コントロールエリア */}
         <div className="px-6 pb-10 shrink-0 border-t border-slate-100 bg-white">
           <div className="w-full max-w-md mx-auto pt-6 flex items-center gap-3">
-            
             <button
               onClick={handleCycleRate}
               className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 text-xs font-black font-mono tracking-tight border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
@@ -525,9 +503,65 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             >
               <RotateCcw size={16} strokeWidth={2.5} className="text-slate-500" />
             </button>
-
           </div>
         </div>
+
+        {/* ────────────── Overlays ────────────── */}
+
+        {/* ⏳ 保存中オーバーレイ */}
+        {isSaving && (
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fade-in">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
+              <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Saving Results...</p>
+            </div>
+          </div>
+        )}
+
+        {/* タイムアップ表示オーバーレイ */}
+        {showTimeUpOverlay && (
+          <div 
+            className="absolute inset-0 bg-slate-950/10 backdrop-blur-[2px] flex items-center justify-center p-6 z-[60] transition-all animate-in fade-in duration-500 cursor-pointer"
+            onClick={handleGoToResult}
+          >
+            <div 
+              className="bg-white rounded-[48px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)] border border-white/50 w-full max-w-xs text-center overflow-hidden transform transition-all animate-in zoom-in-95 duration-500 ease-out cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 上部バーを上品なインディゴ〜スレートのグラデーションにしてボタンと統一 */}
+              <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-slate-400 to-indigo-500" />
+              
+              <div className="p-8 sm:p-10 space-y-6">
+                
+                {/* アイコンエリアをニュートラルで洗練されたトーンに。砂時計に「少しだけインディゴ」を混ぜる */}
+                <div className="relative w-20 h-20 bg-gradient-to-b from-slate-50 to-slate-100/50 rounded-2xl flex items-center justify-center mx-auto border border-slate-200/60 shadow-sm text-slate-700">
+                  <Hourglass size={32} strokeWidth={1.8} className="relative z-10 text-slate-600 animate-[spin_4s_infinite_ease-in-out]" />
+                  {/* 微細なグロー効果 */}
+                  <div className="absolute inset-0 bg-indigo-500/5 blur-xl rounded-full" />
+                </div>
+
+                <div className="space-y-2">
+                  {/* バッジを「終了」を表すシックなモノトーン（ダークスレート）へ変更 */}
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.25em] bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60 inline-block">
+                    Sprint Finished
+                  </span>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-[200px] mx-auto">
+                    今回の成果を確認しましょう。
+                  </p>
+                </div>
+
+                {/* ボタンのフォントをさらにモダンに、シャドウも最適化 */}
+                <button
+                  onClick={handleGoToResult}
+                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-sm tracking-wider shadow-[0_12px_20px_-6px_rgba(79,70,229,0.3)] hover:shadow-[0_16px_24px_-4px_rgba(79,70,229,0.4)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2.5 group"
+                >
+                  <span>結果を確認する</span>
+                  <ArrowRight size={16} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
     </div>
