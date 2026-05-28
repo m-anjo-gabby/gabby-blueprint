@@ -28,12 +28,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const {
     currentIndex,
     contentId,
+    questionType,
     timeLimitSec,
     answerType,
     isAutoPlaying,
     initSprint,
     nextStep,
     toggleAutoPlay,
+    clearSession,
     resetStore
   } = useSprintStore();
 
@@ -54,26 +56,18 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // 📋 コースタイトルの取得
   const courseTitle = useMemo(() => {
-    if (!currentQuestion) return "UG Sprint";
-    return getSprintTitle(currentQuestion.question_type, currentQuestion.difficulty_level);
-  }, [currentQuestion]);
+    return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
+  }, [questionType]);
 
-  // 🎯 【改善】型定義に基づいた厳密な種別コード判定
-  const isSpeedType = useMemo(() => {
-    return (currentQuestion?.question_type as SprintQuestionType) === '0';
-  }, [currentQuestion]);
-
-  const isMasteryType = useMemo(() => {
-    return (currentQuestion?.question_type as SprintQuestionType) === '6';
-  }, [currentQuestion]);
+  // 🎯 質問ベースの種別判定（'0': Speed, '6': Mastery）
+  const isQuestionBased = questionType === '0' || questionType === '6';
 
   // 📝 クエスチョンタイプに応じた文言出し分け（Speed / Mastery は 質問、それ以外は 指示）
-  const questionLabelEN = isSpeedType || isMasteryType ? "Listen Question" : "Listen Instructions";
-  const questionLabelJA = isSpeedType || isMasteryType ? "質問文再生中" : "指示文再生中";
+  const questionLabelEN = isQuestionBased ? "Listen Question" : "Listen Instructions";
+  const questionLabelJA = isQuestionBased ? "質問文再生中" : "指示文再生中";
 
-  // 📊 カウント計算（表示は全て "Question" に統一）
   const groupData = useMemo(() => {
-    if (!currentQuestion || !questions.length || isSpeedType) {
+    if (!currentQuestion || !questions.length || questionType === '0') {
       return { uniqueGroupIndex: 1, currentInGroup: 0, totalInGroup: 0 };
     }
 
@@ -92,7 +86,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       currentInGroup,
       totalInGroup: groupQuestions.length
     };
-  }, [currentQuestion, questions, isSpeedType]);
+  }, [currentQuestion, questions, questionType]);
 
   const isTimeWarning = secondsLeft <= 30;
 
@@ -237,10 +231,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     initSprint(questions, 'sprint', 0);
     setSecondsLeft(timeLimitSec);
     toggleAutoPlay(true);
+    // プレイヤー終了時はセッションデータのみクリアし、設定（種別等）はストアに残す
     return () => {
-      resetStore();
+      clearSession();
     };
-  }, [questions, initSprint, resetStore, toggleAutoPlay, timeLimitSec]);
+  }, [questions, initSprint, clearSession, toggleAutoPlay, timeLimitSec]);
 
   // 🔄 問題切り替え時
   useEffect(() => {
@@ -383,7 +378,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               
               {/* 🏷️ 表示表記を「Question」に完全統一 ＆ カウント分岐 */}
               <div className="flex flex-col items-center gap-2">
-                {isSpeedType ? (
+                {questionType === '0' ? (
                   /* 🟦 Speedの場合: 母数なしのクリーンな単一カウント表示 (例: Question 3) */
                   <div className="h-5.5 px-3 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 font-mono text-[11px] font-bold tracking-wider gap-1">
                     <span>Question</span>
@@ -447,7 +442,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
               >
                 <Volume2 size={12} className="text-indigo-500" />
-                <span>{isSpeedType || isMasteryType ? "質問のみ" : "指示のみ"}</span>
+                <span>{isQuestionBased ? "質問のみ" : "指示のみ"}</span>
               </button>
             </div>
 

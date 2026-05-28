@@ -46,6 +46,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const {
     currentIndex,
     contentId,
+    questionType,
     isRevealed,
     isAutoPlaying,
     isRecording,
@@ -57,6 +58,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setPlayingQuestionSequence,
     setPlayingAnswerSequence,
     toggleAutoPlay,
+    clearSession,
     resetStore
   } = useSprintStore();
 
@@ -79,15 +81,14 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   useEffect(() => { isRevealedRef.current = isRevealed; }, [isRevealed]);
 
   const courseTitle = useMemo(() => {
-    if (!currentQuestion) return "UG Sprint";
-    return getSprintTitle(currentQuestion.question_type, currentQuestion.difficulty_level);
-  }, [currentQuestion]);
+    return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
+  }, [questionType]);
 
   const groupProgress = useMemo(() => {
     if (!currentQuestion || !questions.length) return { groupCurrentIndex: 0, groupTotalCount: 1 };
     const currentGroupId = currentQuestion.group_id;
-    const groupQuestions = questions.filter(q => q.group_id === currentGroupId);
-    const groupCurrentIndex = groupQuestions.findIndex(q => q.question_id === currentQuestion.question_id);
+    const groupQuestions = currentGroupId ? questions.filter(q => q.group_id === currentGroupId) : [currentQuestion];
+    const groupCurrentIndex = groupQuestions.indexOf(currentQuestion);
     return { groupCurrentIndex: groupCurrentIndex >= 0 ? groupCurrentIndex : 0, groupTotalCount: groupQuestions.length };
   }, [currentQuestion, questions]);
 
@@ -283,8 +284,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       }
     }
     initSprint(questions, 'drill', startIdx);
-    return () => resetStore();
-  }, [questions, initialQuestionId, initSprint, resetStore, showToast]);
+    // プレイヤー終了時はセッションデータのみクリアし、設定（種別等）はストアに残す
+    return () => clearSession();
+  }, [questions, initialQuestionId, initSprint, clearSession, showToast]);
 
   // 🔄 タイムライン1：問題カード変更検知
   useEffect(() => {

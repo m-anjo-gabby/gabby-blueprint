@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, use, useMemo } from "react";
+import { useState, use, useMemo, useEffect } from "react";
 import { getSprintQuestionsAction } from "@/actions/sprintAction";
 import { SprintSelect } from "./_components/SprintSelect";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
-import { SprintQuestion, SprintQuestionType, SprintAnswerType, SprintConfig } from "@gabby/types/sprint";
+import { SprintQuestion, SprintQuestionType, SprintAnswerType, SprintConfig, SPRINT_TYPES } from "@gabby/types/sprint";
 import { useSprintStore } from "@/stores/useSprintStore";
 import { AlertCircle, ArrowLeft, Loader2, Volume2 } from "lucide-react";
 import Link from "next/link";
@@ -45,7 +45,14 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   const [view, setView] = useState<PlayerView>(initialView);
   const [questions, setQuestions] = useState<SprintQuestion[]>([]);
   const [resumeId, setResumeId] = useState<string | undefined>();
+  const resetStore = useSprintStore((state) => state.resetStore);
   const setSprintConfig = useSprintStore((state) => state.setSprintConfig);
+
+  // ページマウント時にストアを完全に初期化
+  // これにより教材一覧（外部）から来た際はストアが空になり、URLパラメータが優先される
+  useEffect(() => {
+    resetStore();
+  }, [resetStore]);
 
   // パラメータが外部（ブラウザバック等）で変わった場合にViewを同期する
   const [prevParams, setPrevParams] = useState(resolvedParams);
@@ -67,8 +74,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       : '0';
 
     const parsedLevel = parseInt(config.level || '', 10);
-    const defaultLevel = (questionType === '0' || questionType === '4') ? 0 : 1; // Basic対応種別は0
-    const difficultyLevel = isNaN(parsedLevel) ? defaultLevel : parsedLevel;
+    const difficultyLevel = isNaN(parsedLevel) ? SPRINT_TYPES[questionType].minLevel : parsedLevel;
 
     const response = await getSprintQuestionsAction(
       questionType,
@@ -134,10 +140,12 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
               audio.play().catch(() => {});
               window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
               
+              const qType = (resolvedParams.type as SprintQuestionType) || '0';
+
               handleStartSession({
                 mode: resolvedParams.mode === 'sprint' ? 'sprint' : 'drill',
-                questionType: (resolvedParams.type as SprintQuestionType) || '0',
-                level: resolvedParams.level || '1',
+                questionType: qType,
+                level: resolvedParams.level || String(SPRINT_TYPES[qType].minLevel),
                 timeLimitSec: parseInt(resolvedParams.time_limit_sec || '60', 10),
                 answerType: (resolvedParams.answer_type as SprintAnswerType) || '0'
               });

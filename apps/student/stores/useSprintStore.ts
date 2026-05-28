@@ -30,6 +30,7 @@ interface SprintState {
   toggleAutoPlay: (val?: boolean) => void;
   setPlayingQuestionSequence: (val: boolean) => void;
   setPlayingAnswerSequence: (val: boolean) => void;
+  clearSession: () => void;
   resetStore: () => void;
 }
 
@@ -117,12 +118,31 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   setPlayingQuestionSequence: (isPlayingQuestionSequence) => set({ isPlayingQuestionSequence }),
   setPlayingAnswerSequence: (isPlayingAnswerSequence) => set({ isPlayingAnswerSequence }),
 
-  resetStore: () => set({
+  clearSession: () => set({
+    questions: [],
     currentIndex: 0,
     isRevealed: false,
     isAutoPlaying: false,
     isRecording: false,
     isPlayingQuestionSequence: false,
     isPlayingAnswerSequence: false,
+    loading: true,
+  }),
+
+  resetStore: () => set({
+    questions: [],
+    currentIndex: 0,
+    mode: 'drill',
+    contentId: '',
+    questionType: null,
+    level: '0',
+    answerType: '0',
+    timeLimitSec: 60,
+    isRevealed: false,
+    isAutoPlaying: false,
+    isRecording: false,
+    isPlayingQuestionSequence: false,
+    isPlayingAnswerSequence: false,
+    loading: true,
   })
 }));

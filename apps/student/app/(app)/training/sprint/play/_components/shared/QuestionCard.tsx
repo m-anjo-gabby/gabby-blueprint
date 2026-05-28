@@ -15,46 +15,13 @@ interface QuestionCardProps {
 }
 
 /**
- * スプリント種別ごとの表示文言定義インターフェース
- */
-interface QuestionConfig {
-  sectionTitle: string;
-  instruction: string;
-}
-
-/**
  * 🛠️ question_type に応じた文言マッピング
  */
-const getQuestionConfig = (type: SprintQuestionType, isSprintMode: boolean, hasNoAnswer: boolean): QuestionConfig => {
-  switch (type) {
-    case '0': // Speed
-      return {
-        sectionTitle: "質問",
-        instruction: isSprintMode 
-          ? (hasNoAnswer ? "「No＋否定文」で回答" : "「Yes＋肯定文」で回答")
-          : "「Yes＋肯定文」または「No＋否定文」で回答"
-      };
-    case '4': // Structure
-      return {
-        sectionTitle: "指示",
-        instruction: "指示に従って単語を入れ替えて解答"
-      };
-    case '5': // Builders
-      return {
-        sectionTitle: "指示",
-        instruction: "指示された単語を適切な位置に追加して回答"
-      };
-    case '6': // Mastery
-      return {
-        sectionTitle: "質問",
-        instruction: "基本文とその内容に対する質問に回答"
-      };
-    default:
-      return {
-        sectionTitle: "問題",
-        instruction: isSprintMode ? "Sprint Mode" : "Drill Mode"
-      };
-  }
+const SPRINT_LABELS: Record<SprintQuestionType, { sectionTitle: string; instruction: string }> = {
+  '0': { sectionTitle: "質問", instruction: "「Yes」または「No」で回答" },
+  '4': { sectionTitle: "指示", instruction: "指示に従って単語を入れ替え" },
+  '5': { sectionTitle: "指示", instruction: "指示された単語を追加して回答" },
+  '6': { sectionTitle: "質問", instruction: "内容に関する質問に回答" },
 };
 
 /**
@@ -69,6 +36,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   // 🔌 Zustand ストアから必要な状態とアクションを抽出
   const question = useSprintStore((state) => state.questions[state.currentIndex]);
   const mode = useSprintStore((state) => state.mode);
+  const questionType = useSprintStore((state) => state.questionType);
   const isRevealed = useSprintStore((state) => state.isRevealed);
   const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying); // 👈 自動再生フラグを追加取得
   const handleReveal = useSprintStore((state) => state.setIsRevealed);
@@ -79,10 +47,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   }
 
   const isSprintMode = mode === 'sprint';
-  const hasNoSentence = !!question.answer_sentence_no;
+  const config = SPRINT_LABELS[questionType || '0'] || { sectionTitle: "問題", instruction: "" };
 
-  // 種別ごとの設定を安全に取得
-  const { sectionTitle, instruction } = getQuestionConfig(question.question_type, isSprintMode, hasNoSentence);
+  // SpeedかつSprintモードの時だけ、特別なインストラクションを表示
+  const displayInstruction = (questionType === '0' && mode === 'sprint') 
+    ? (useSprintStore.getState().answerType === '1' ? "「No＋否定文」で回答" : "「Yes＋肯定文」で回答")
+    : config.instruction;
 
   // 音声再生トリガー時のバブルアップ防止ヘルパー
   const triggerAudio = (e: React.MouseEvent, voiceUrl: string | null, text: string) => {
@@ -111,7 +81,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
           <div className="bg-indigo-50/50 px-2 h-full flex items-center">
             <span className="text-[9px] font-black text-indigo-600/80 tracking-tight">
-              {instruction}
+              {displayInstruction}
             </span>
           </div>
         </div>
@@ -160,7 +130,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         <div className="w-full text-left border-l-4 border-indigo-500 pl-3 sm:pl-4 py-0.5">
           <div className="flex items-center gap-x-1.5 text-indigo-500 mb-1 sm:mb-2">
             <HelpCircle size={13} strokeWidth={2.5} />
-            <span className="text-[10px] font-bold tracking-wider leading-none">{sectionTitle}</span>
+            <span className="text-[10px] font-bold tracking-wider leading-none">{config.sectionTitle}</span>
             <button 
               onClick={(e) => triggerAudio(e, question.question_voice, question.question)}
               disabled={isAutoPlaying}

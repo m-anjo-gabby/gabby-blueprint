@@ -25,6 +25,7 @@ export interface SprintTypeMetadata {
   seq_no: number;
   dbKey: string;          // ユーザー進捗レコードのDBカラム名
   hasBasic: boolean;      // レベル0(Basic)が存在するかどうか
+  minLevel: number;       // 最小レベル (0 または 1)
   maxLevel: number;       // 上限レベル (5 または 10)
 }
 
@@ -32,10 +33,10 @@ export interface SprintTypeMetadata {
  * スプリント問題種別の画面表示用マスタ
  */
 export const SPRINT_TYPES: Record<SprintQuestionType, SprintTypeMetadata> = {
-  '0': { label: 'UG Speed', value: '0', seq_no: 1, dbKey: 'CTS_LEVEL_YN', hasBasic: true, maxLevel: 10 },
-  '5': { label: 'UG Builders', value: '5', seq_no: 2, dbKey: 'CTS_LEVEL_UGBUILDERS', hasBasic: false, maxLevel: 5 },
-  '4': { label: 'UG Structure', value: '4', seq_no: 3, dbKey: 'CTS_LEVEL_UGCV', hasBasic: true, maxLevel: 10 },
-  '6': { label: 'UG Mastery', value: '6', seq_no: 4, dbKey: 'CTS_LEVEL_UGMASTERY', hasBasic: false, maxLevel: 5 },
+  '0': { label: 'UG Speed', value: '0', seq_no: 1, dbKey: 'CTS_LEVEL_YN', hasBasic: true, minLevel: 0, maxLevel: 10 },
+  '5': { label: 'UG Builders', value: '5', seq_no: 2, dbKey: 'CTS_LEVEL_UGBUILDERS', hasBasic: false, minLevel: 1, maxLevel: 5 },
+  '4': { label: 'UG Structure', value: '4', seq_no: 3, dbKey: 'CTS_LEVEL_UGCV', hasBasic: true, minLevel: 0, maxLevel: 10 },
+  '6': { label: 'UG Mastery', value: '6', seq_no: 4, dbKey: 'CTS_LEVEL_UGMASTERY', hasBasic: false, minLevel: 1, maxLevel: 5 },
 } as const;
 
 /**

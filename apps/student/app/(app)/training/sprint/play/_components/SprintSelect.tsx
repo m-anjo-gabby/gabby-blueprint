@@ -51,14 +51,20 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const searchParams = useSearchParams();
   const contentId = searchParams.get('content_id') || '';
   const store = useSprintStore();
+  
+  // ストアに一度でも設定が保存されたか（＝プレイして戻ってきたか）を確認
+  // かつ、現在の URL の content_id とストアの contentId が一致している場合のみ「戻り」とみなす
+  const isReturningFromSession = store.questionType !== null && store.contentId === contentId;
 
-  // ストアに値があれば優先し、なければ URL パラメータ、それもなければデフォルトを使用
-  const [mode, setMode] = useState<'drill' | 'sprint'>(store.mode || initialConfig?.mode || mockLastSession.mode);
-  const [selectedType, setSelectedType] = useState<SprintQuestionType>(
-    (store.questionType as SprintQuestionType) || initialConfig?.questionType || mockLastSession.questionType
-  );
-  const [selectedLevel, setSelectedLevel] = useState<string>(store.questionType ? store.level : mockLastSession.level);
-  const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(store.questionType ? store.timeLimitSec : mockLastSession.timeLimitSec);
+  const initialType = isReturningFromSession 
+    ? (store.questionType as SprintQuestionType) 
+    : (initialConfig?.questionType || mockLastSession.questionType);
+
+  // 1. プレイ後ならストアの値を、教材一覧などからの新規遷移なら URL パラメータを優先する
+  const [mode, setMode] = useState<'drill' | 'sprint'>(isReturningFromSession ? store.mode : (initialConfig?.mode || mockLastSession.mode));
+  const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType);
+  const [selectedLevel, setSelectedLevel] = useState<string>(isReturningFromSession ? store.level : (searchParams.get('level') || String(SPRINT_TYPES[initialType].minLevel)));
+  const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(isReturningFromSession ? store.timeLimitSec : mockLastSession.timeLimitSec);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const sortedTypes = useMemo(() => Object.values(SPRINT_TYPES).sort((a, b) => a.seq_no - b.seq_no), []);
@@ -74,20 +80,20 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     const allowedLevel = mockUserRecord[meta.dbKey] ?? 0;
     const items = [];
 
-    if (meta.hasBasic) {
-      items.push({ value: '0', label: 'Basic', isLocked: false });
-    }
-    for (let i = 1; i <= meta.maxLevel; i++) {
-      const maxAllowed = allowedLevel + (meta.hasBasic ? 1 : 0);
-      const isLocked = i > maxAllowed;
-      items.push({ value: String(i), label: `Lvl ${i}`, isLocked });
+    for (let i = meta.minLevel; i <= meta.maxLevel; i++) {
+      const label = i === 0 ? 'Basic' : `Lvl ${i}`;
+      // ロック判定: Basicがある場合は許容値に+1の余裕を持たせる（既存ロジック踏襲）
+      const maxAllowed = allowedLevel + (meta.minLevel === 0 ? 1 : 0);
+      const isLocked = i > 0 && i > maxAllowed; 
+      
+      items.push({ value: String(i), label, isLocked });
     }
     return items;
   }, [selectedType]);
 
   const handleTypeChange = (typeId: SprintQuestionType) => {
     setSelectedType(typeId);
-    setSelectedLevel(SPRINT_TYPES[typeId].hasBasic ? '0' : '1');
+    setSelectedLevel(String(SPRINT_TYPES[typeId].minLevel));
   };
 
   const handleStartSubmit = (answerType: SprintAnswerType = '0') => {
