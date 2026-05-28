@@ -21,12 +21,14 @@ interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
   initialQuestionId?: string;
   initialStarted?: boolean; // ➕ 追加：親からの開始状態の上書き
+  onExit?: () => void;
 }
 
 export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({ 
   questions = [],
   initialQuestionId,
-  initialStarted
+  initialStarted,
+  onExit
 }) => {
   const router = useRouter();
   const { showToast } = useToast();
@@ -164,10 +166,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     const { isLast } = nextStep();
     if (isLast) {
       showToast("すべてのドリルが完了しました！お疲れ様でした。", "success");
-      router.back();
+      onExit?.();
     }
     setTimeout(() => { isNavigating.current = false; }, 400);
-  }, [stopAllAudio, nextStep, showToast, router]);
+  }, [stopAllAudio, nextStep, showToast, onExit]);
 
   const handlePrev = useCallback(() => {
     if (isNavigating.current) return;
@@ -358,7 +360,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         <div className="shrink-0 pt-4 w-full overflow-hidden px-4">
           <div className="grid grid-cols-5 items-center h-12 px-2">
             <div className="col-span-1 flex justify-start">
-              <button onClick={() => router.back()} disabled={isAutoPlaying} className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
+              <button onClick={() => onExit?.()} disabled={isAutoPlaying} className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
                 <ChevronLeft size={20} strokeWidth={2.5} />
               </button>
             </div>

@@ -13,10 +13,12 @@ import { useSprintStore } from '@/stores/useSprintStore';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
+  onExit?: () => void;
 }
 
 export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({ 
-  questions = []
+  questions = [],
+  onExit
 }) => {
   const router = useRouter();
   const { showToast } = useToast();
@@ -205,9 +207,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     if (isLast) {
       toggleAutoPlay(false);
       showToast("すべての問題を消化しました！スプリント完了です。", "success");
-      router.back();
+      onExit?.();
     }
-  }, [nextStep, stopAllAudio, toggleAutoPlay, showToast, router]);
+  }, [nextStep, stopAllAudio, toggleAutoPlay, showToast, onExit]);
 
   // ⏱️ タイマーロジック
   useEffect(() => {
@@ -218,7 +220,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             toggleAutoPlay(false);
             stopAllAudio();
             showToast("Time up! スプリントセッションが終了しました。", "success");
-            router.back();
+            onExit?.();
             return 0;
           }
           return prev - 1;
@@ -228,7 +230,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isAutoPlaying, secondsLeft, router, showToast, stopAllAudio, toggleAutoPlay]);
+  }, [isAutoPlaying, secondsLeft, onExit, showToast, stopAllAudio, toggleAutoPlay]);
 
   // 🔄 初期マウント & 設定同期
   useEffect(() => {
@@ -284,7 +286,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       return;
     }
 
-    router.back();
+    onExit?.();
   };
 
   if (!questions || questions.length === 0 || !currentQuestion) {

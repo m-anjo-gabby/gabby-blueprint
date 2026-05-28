@@ -22,6 +22,7 @@ import {
   DrawerClose,
 } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useSprintStore } from '@/stores/useSprintStore';
 
 const mockLastSession = {
   mode: 'drill' as 'drill' | 'sprint',
@@ -49,11 +50,15 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const router = useRouter();
   const searchParams = useSearchParams();
   const contentId = searchParams.get('content_id') || '';
+  const store = useSprintStore();
 
-  const [mode, setMode] = useState<'drill' | 'sprint'>(initialConfig?.mode || mockLastSession.mode);
-  const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialConfig?.questionType || mockLastSession.questionType);
-  const [selectedLevel, setSelectedLevel] = useState<string>(mockLastSession.level);
-  const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(mockLastSession.timeLimitSec);
+  // ストアに値があれば優先し、なければ URL パラメータ、それもなければデフォルトを使用
+  const [mode, setMode] = useState<'drill' | 'sprint'>(store.mode || initialConfig?.mode || mockLastSession.mode);
+  const [selectedType, setSelectedType] = useState<SprintQuestionType>(
+    (store.questionType as SprintQuestionType) || initialConfig?.questionType || mockLastSession.questionType
+  );
+  const [selectedLevel, setSelectedLevel] = useState<string>(store.questionType ? store.level : mockLastSession.level);
+  const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(store.questionType ? store.timeLimitSec : mockLastSession.timeLimitSec);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const sortedTypes = useMemo(() => Object.values(SPRINT_TYPES).sort((a, b) => a.seq_no - b.seq_no), []);

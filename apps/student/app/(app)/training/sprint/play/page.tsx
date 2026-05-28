@@ -185,6 +185,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         questions={questions} 
         initialQuestionId={resumeId} 
         initialStarted={true} // SelectまたはReady画面でタップ済みであることを子に伝える
+        onExit={() => setView('selecting')}
       />
     );
   }
@@ -193,6 +194,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     return (
       <SprintTimePlayer 
         questions={questions} 
+        onExit={() => setView('selecting')}
       />
     );
   }
