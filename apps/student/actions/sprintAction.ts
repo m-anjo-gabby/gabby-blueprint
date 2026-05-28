@@ -285,3 +285,55 @@ export async function getSprintResultAction(
     return { success: false, data: null, error: error.message || "Failed to load session results" };
   }
 }
+
+/**
+ * ユーザーの特定月のスプリント履歴一覧を取得する
+ * @param yearMonth 'YYYY-MM' 形式の文字列
+ */
+export async function getUserSprintHistoryAction(yearMonth: string) {
+  const ctx = await getLogContext();
+  logger.info("sprint:get_history_start", "getUserSprintHistoryAction start", { ...ctx, yearMonth });
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
+
+    // 月の開始日と終了日を計算 (UTCベースでクエリ)
+    const [year, month] = yearMonth.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
+    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
+
+    const { data, error } = await supabase
+      .from("com_t_self_sprint")
+      .select(`
+        self_sprint_id,
+        question_type,
+        answer_type,
+        difficulty_level,
+        time_limit_sec,
+        total_answered,
+        insert_date
+      `)
+      .eq("user_id", user.id)
+      .gte("insert_date", startDate)
+      .lte("insert_date", endDate)
+      .order("insert_date", { ascending: false });
+
+    if (error) throw error;
+
+    logger.info("sprint:get_history_success", "Successfully fetched sprint history", {
+      ...ctx,
+      count: data?.length || 0
+    });
+
+    return { success: true, data: data || [] };
+
+  } catch (error: any) {
+    logger.error("sprint:get_history_error", "Failed to fetch sprint history", {
+      ...ctx,
+      payload: { error: error.message }
+    });
+    return { success: false, data: [], error: error.message };
+  }
+}
