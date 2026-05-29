@@ -327,7 +327,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             <span>{isBatchPlaying ? "停止" : "一括再生"}</span>
           </button>
           <button
-            onClick={() => router.push('/training/sprint/play')}
+            onClick={() => router.push('/training/sprint/play?mode=sprint')}
             className="flex-[2] max-w-sm h-12 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
             <span>Next Sprint</span>
