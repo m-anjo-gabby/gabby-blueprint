@@ -12,10 +12,7 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { saveResumeContent } from '@/actions/contentAction';
-import { useResumeStore } from '@/stores/useResumeStore';
 import { getSprintTitle } from '@gabby/lib';
-import { SprintResumeMetadata } from '@gabby/types/training';
 
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
@@ -243,31 +240,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     }
   }, [isAutoPlaying, showConfirm, toggleAutoPlay, forceRestartQuestionFlow]);
 
-  const handleSaveResume = useCallback(async () => {
-    if (!currentQuestion || totalQuestions === 0) return;
-    const ok = await showConfirm("Bookmark?", "進捗を保存して戻りますか？", { variant: 'warning', isModal: false });
-    if (!ok) return;
-    stopAllAudio();
-    const metadata: SprintResumeMetadata = {
-      type: 'sprint_drill',
-      question_id: currentQuestion.question_id,
-      last_index: currentIndex,
-      display: {
-        progress_percent: Math.round(((currentIndex + 1) / totalQuestions) * 100),
-        position_text: `Card ${currentIndex + 1} / ${totalQuestions}`,
-        last_unit_name: currentQuestion.question.slice(0, 20) + "..."
-      }
-    };
-    try {
-      await saveResumeContent(contentId, currentQuestion.question_id, metadata);
-      await useResumeStore.getState().fetchResume(true);
-      showToast("ブックマークしました", "success");
-      router.push('/dashboard');
-    } catch {
-      showToast("保存に失敗しました", "error");
-    }
-  }, [currentQuestion, currentIndex, totalQuestions, contentId, stopAllAudio, showConfirm, showToast, router]);
-
   // ⚙️ 5. リアクティブ・ライフサイクル
   
   // 🔌 初期注入
@@ -351,9 +323,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     );
   }
 
-  const progress = totalQuestions > 0 ? ((currentIndex + 1) / totalQuestions) * 100 : 0;
-  const current = currentIndex + 1;
-
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none select-none">
       <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
@@ -373,21 +342,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none truncate w-full text-center">{courseTitle}</h1>
             </div>
             <div className="col-span-1" />
-          </div>
-
-          <div className="mt-2 px-6 pb-2">
-            <div className="flex justify-between items-end mb-1.5 px-0.5">
-              <div className="flex items-baseline gap-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Card</span>
-                <span className="text-[11px] font-black text-indigo-600 ml-1 tabular-nums">{current}</span>
-                <span className="text-[9px] font-bold text-slate-300">/</span>
-                <span className="text-[10px] font-bold text-slate-400 tabular-nums">{totalQuestions}</span>
-              </div>
-              <span className="text-[10px] font-black text-slate-400 tabular-nums">{Math.round(progress)}%</span>
-            </div>
-            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner relative">
-              <div className="absolute top-0 left-0 h-full bg-indigo-600 transition-all duration-500 ease-out rounded-full" style={{ width: `${progress}%` }} />
-            </div>
           </div>
         </div>
 
@@ -410,8 +364,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               onPrev={handlePrev}
               onPlayAudio={handleManualPlayAudio}
               onStartRecord={handleStartRecord}
-              onStopRecord={handleStopRecord}
-              onSaveResume={handleSaveResume}
+              onStopRecord={handleStopRecord}              
               onToggleAutoPlay={handleToggleAutoPlay}
               playbackRate={playbackRate}
               onChangePlaybackRate={handleCycleRate}

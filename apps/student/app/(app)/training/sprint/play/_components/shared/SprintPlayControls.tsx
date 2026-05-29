@@ -14,7 +14,6 @@ interface SprintPlayControlsProps {
   onPlayAudio: () => void; // 💡 Listen 押下（プレイヤー側で制御）
   onStartRecord: () => void;
   onStopRecord: () => void;
-  onSaveResume?: () => void; // ➕ ブックマーク用
   onToggleAutoPlay?: () => void; // ➕ 自動再生トグル
   playbackRate: number;
   onChangePlaybackRate: () => void;
@@ -30,8 +29,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
   onPrev,
   onPlayAudio,
   onStartRecord,
-  onStopRecord,
-  onSaveResume,
+  onStopRecord, // Keep onStopRecord as it's part of the core recording functionality
   onToggleAutoPlay,
   playbackRate,
   onChangePlaybackRate,
@@ -104,16 +102,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
       {/* ──────────────────────────────────────────────────────────── */}
       {/* 2. 上段：ナビゲーション・レイヤー（戻る・進む・ブックマーク） */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between w-full gap-2 h-14">
-        
-        {/* 左サイド：ブックマークして閉じるボタン */}
-        <button
-          onClick={onSaveResume}
-          disabled={!isStarted || isAutoPlaying || isPlaying} // 💡 !isStarted を追加
-          className={cn(sideBtnBase, "hover:bg-indigo-50 hover:text-indigo-600")}
-        >
-          <Bookmark size={18} strokeWidth={2.5} />
-        </button>
+      <div className="flex items-center justify-between w-full gap-2 h-14">        
 
         {/* スプリット・ナビゲーションユニット */}
         <div className={cn("flex-1 h-full bg-white border-indigo-100", unitBase)}>
