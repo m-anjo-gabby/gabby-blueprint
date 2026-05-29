@@ -271,13 +271,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [questions, initSprint, clearSession, toggleAutoPlay, timeLimitSec]);
 
   useEffect(() => {
-    if (currentQuestion) {
+    // タイムアップ画面の表示中や保存処理中、または残り時間が0の場合は音声を再生しない
+    if (currentQuestion && secondsLeft > 0 && !showTimeUpOverlay && !isSaving) {
       stopAllAudio();
       (async () => {
         await runSprintFlow(currentQuestion);
       })();
     }
-  }, [currentIndex, currentQuestion, runSprintFlow, stopAllAudio]);
+  }, [currentIndex, currentQuestion, runSprintFlow, stopAllAudio, showTimeUpOverlay, isSaving]);
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -328,7 +329,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const handleGoToResult = () => {
     if (resultId) {
       stopAllAudio();
-      resetStore();
       router.push(`/training/sprint/result/${resultId}`);
     }
   };
