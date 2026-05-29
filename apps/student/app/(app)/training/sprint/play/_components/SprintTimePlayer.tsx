@@ -414,15 +414,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             <div className="space-y-4 min-h-[120px] flex flex-col items-center justify-start">
               <div className="flex flex-col items-center gap-2">
                 {questionType === '0' ? (
-                  <div className="h-5.5 px-3 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 font-mono text-[11px] font-bold tracking-wider gap-1">
-                    <span>Question</span>
-                    <span className="text-indigo-600 font-black">{currentIndex + 1}</span>
+                  <div className="h-5.5 px-3 flex items-center justify-center rounded-full bg-slate-100 text-slate-700 border border-slate-200/60 font-mono text-[11px] font-black tracking-wider">
+                    Q{currentIndex + 1}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2.5">
-                    <div className="h-5.5 px-3 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100/80 font-mono text-[11px] font-black tracking-wider gap-1">
-                      <span>Question</span>
-                      <span className="text-indigo-700 font-black">{groupData.uniqueGroupIndex}</span>
+                    <div className="h-5.5 px-3 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100/80 font-mono text-[11px] font-black tracking-wider">
+                      Q{groupData.uniqueGroupIndex}-{groupData.currentInGroup + 1}
                     </div>
                     <div className="flex items-center gap-1.5 h-2">
                       {Array.from({ length: groupData.totalInGroup }).map((_, i) => (

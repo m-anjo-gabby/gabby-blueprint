@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SprintQuestionType } from "@gabby/types/sprint";
 import { HelpCircle, MessageSquare, CheckCircle2, Volume2 } from 'lucide-react';
@@ -35,19 +35,33 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   
   // 🔌 Zustand ストアから必要な状態とアクションを抽出
   const question = useSprintStore((state) => state.questions[state.currentIndex]);
+  const questions = useSprintStore((state) => state.questions);
+  const currentIndex = useSprintStore((state) => state.currentIndex);
   const mode = useSprintStore((state) => state.mode);
   const questionType = useSprintStore((state) => state.questionType);
   const isRevealed = useSprintStore((state) => state.isRevealed);
   const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying); // 👈 自動再生フラグを追加取得
   const handleReveal = useSprintStore((state) => state.setIsRevealed);
 
-  // 🛡️ ガード節: データ不在時の早期リターン
+  // 問題番号のラベル生成 (Speed: Q1, Q2... / Others: Q1-1, Q1-2...)
+  const questionNumberLabel = useMemo(() => {
+    if (!question) return '';
+    if (questionType === '0') {
+      return `Q${currentIndex + 1}`;
+    }
+    // グループIDの集合から現在のグループが何番目かを特定
+    const uniqueGroupIds = Array.from(new Set(questions.map(q => q.group_id)));
+    const groupIndex = uniqueGroupIds.indexOf(question.group_id) + 1;
+    return `Q${groupIndex}-${groupCurrentIndex + 1}`;
+  }, [questions, currentIndex, question, questionType, groupCurrentIndex]);
+
+  // 🛡️ ガード節: データ不在時の早期リターン（全てのフック呼び出しの後に配置）
   if (!question) {
     return <div className="flex-1 w-full animate-pulse bg-slate-50/50 rounded-[40px]" />;
   }
 
-  const isSprintMode = mode === 'sprint';
   const config = SPRINT_LABELS[questionType || '0'] || { sectionTitle: "問題", instruction: "" };
+  const isSprintMode = mode === 'sprint';
 
   // SpeedかつSprintモードの時だけ、特別なインストラクションを表示
   const displayInstruction = (questionType === '0' && mode === 'sprint') 
@@ -76,7 +90,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         <div className="flex items-center h-5 overflow-hidden rounded-md border border-indigo-100 shadow-sm mb-2">
           <div className="bg-indigo-600 px-2 h-full flex items-center border-r border-white/20">
             <span className="text-[9px] font-black text-white uppercase tracking-wider">
-              Q {groupCurrentIndex + 1}
+              {questionNumberLabel}
             </span>
           </div>
           <div className="bg-indigo-50/50 px-2 h-full flex items-center">
@@ -86,18 +100,20 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
         </div>
 
-        <div className="grid gap-1 w-28 sm:w-32" style={{ gridTemplateColumns: `repeat(${groupTotalCount}, 1fr)` }}>
-          {Array.from({ length: groupTotalCount }).map((_, i) => (
-            <div key={i} className="h-[2.5px] sm:h-[3px] bg-slate-100 rounded-full overflow-hidden relative">
-              <motion.div 
-                initial={false} 
-                animate={{ x: i <= groupCurrentIndex ? "0%" : "-100%" }} 
-                transition={{ duration: 0.35, ease: "circOut" }} 
-                className="absolute inset-0 bg-indigo-500" 
-              />
-            </div>
-          ))}
-        </div>
+        {questionType !== '0' && (
+          <div className="grid gap-1 w-28 sm:w-32" style={{ gridTemplateColumns: `repeat(${groupTotalCount}, 1fr)` }}>
+            {Array.from({ length: groupTotalCount }).map((_, i) => (
+              <div key={i} className="h-[2.5px] sm:h-[3px] bg-slate-100 rounded-full overflow-hidden relative">
+                <motion.div 
+                  initial={false} 
+                  animate={{ x: i <= groupCurrentIndex ? "0%" : "-100%" }} 
+                  transition={{ duration: 0.35, ease: "circOut" }} 
+                  className="absolute inset-0 bg-indigo-500" 
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ──────────────────────────────────────────────────────────── */}
