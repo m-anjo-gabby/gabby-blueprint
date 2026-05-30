@@ -72,12 +72,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
    * 🗺️ 利用者が何をするかの「タスク進行ステップ」の配列定義
    */
   const userActionSteps = useMemo(() => {
+    // シンプルな名詞のみの表記に統一
     if (questionType === '0') {
-      return ["質問文を聴く", "回答する"]; // Speed
+      return ["質問文", "回答"]; // Speed
     } else if (questionType === '6') {
-      return ["基本文を聴く", "質問文を聴く", "回答する"]; // Mastery
+      return ["基本文", "質問文", "回答"]; // Mastery
     } else {
-      return ["基本文を聴く", "指示文を聴く", "回答する"]; // Builders, Structure
+      return ["基本文", "指示文", "回答"]; // Builders, Structure
     }
   }, [questionType]);
 
@@ -103,16 +104,16 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   // 再生状態の日本語テキスト中央 HUD 用
   const statusMessage = useMemo(() => {
-    if (isRevealed) return { text: "答え合わせ", sub: "テキストを確認してください", color: "text-slate-400" };
+    if (isRevealed) return { text: "答え合わせ", color: "text-slate-400" };
     switch (audioPhase) {
       case 'statement':
-        return { text: "基本文を再生中...", sub: "音声をしっかり聴き取りましょう", color: "text-indigo-600" };
+        return { text: "基本文を再生中...", color: "text-indigo-600" };
       case 'question':
-        return { text: `${config.phaseLabel}を再生中...`, sub: "次の音声を聴き逃さないように", color: "text-violet-600" };
+        return { text: `${config.phaseLabel}を再生中...`, color: "text-indigo-600" };
       case 'answer':
-        return { text: "回答時間", sub: "声に出して瞬時に回答してください！", color: "text-amber-500" };
+        return { text: "回答しましょう", color: "text-amber-500" };
       default:
-        return { text: "待機中", sub: "いつでも再生できます", color: "text-slate-400" };
+        return { text: "待機中", color: "text-slate-400" };
     }
   }, [audioPhase, isRevealed, config.phaseLabel]);
 
@@ -131,12 +132,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const isHidingProblemText = isDrillMode && !isProblemVisible;
 
   return (
-    <div className="w-full flex flex-col items-stretch text-left select-none gap-y-4">
+    <div className="w-full flex flex-col items-stretch text-left select-none gap-y-3">
       
       {/* ──────────────────────────────────────────────────────────── */}
       {/* 【ヘッダー領域】位置を確実に固定するために absolute を廃止 */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <div className="w-full flex items-center pb-2 px-0.5">
+      <div className="w-full flex items-center pb-1 px-0.5">
         {/* 🏆 コンパウンド・バッジ：Question と Step を1つのユニットに統合 */}
         <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600">
           {/* Question 部分 */}
@@ -211,7 +212,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             "w-11 h-11 rounded-xl flex items-center justify-center shadow-xs border shrink-0 transition-all duration-300",
             isRevealed ? "bg-slate-100 border-slate-200 text-slate-400" :
             audioPhase === 'statement' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
-            audioPhase === 'question' ? "bg-violet-50 border-violet-200 text-violet-600" :
+            audioPhase === 'question' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
             audioPhase === 'answer' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
           )}>
             {audioPhase === 'answer' && !isRevealed ? (
@@ -222,12 +223,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
           
           <div className="flex flex-col text-left">
-            <h3 className={cn("text-xs font-black uppercase tracking-wider leading-none", statusMessage.color)}>
+            <h3 className={cn("text-[11px] font-black uppercase tracking-wider leading-none", statusMessage.color)}>
               {statusMessage.text}
             </h3>
-            <p className="text-[10px] text-slate-400 font-medium mt-1">
-              {statusMessage.sub}
-            </p>
           </div>
         </div>
       </div>

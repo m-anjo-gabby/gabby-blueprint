@@ -2,7 +2,7 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Loader2, Volume2, Timer, CircleDot, ArrowRight, RotateCcw, Award, Hourglass } from 'lucide-react';
+import { ChevronLeft, Loader2, Volume2, Timer, CircleDot, ArrowRight, RotateCcw, Award, Hourglass, Headphones } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
@@ -118,7 +118,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     };
   }, [currentQuestion, questions, questionType]);
 
-  const isTimeWarning = secondsLeft <= 30;
+  const timeRatio = useMemo(() => secondsLeft / timeLimitSec, [secondsLeft, timeLimitSec]);
+  const isWarning = timeRatio <= 0.5 && timeRatio > 0.2;
+  const isCritical = timeRatio <= 0.2;
 
   const progressPercent = useMemo(() => {
     if (secondsLeft <= 0) return 0;
@@ -388,14 +390,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               <p className="text-[9px] font-bold text-slate-400 mt-1 tracking-tight">{instruction}</p>
             </div>
 
-            {/* ⏱️ タイマー：0秒でブリンク停止。揺れのないパルスアニメーションを採用 */}
+            {/* ⏱️ タイマー：3段階表示 ＆ 控えめなエフェクト */}
             <div className={cn(
-              "h-10 min-w-[85px] border rounded-xl flex items-center justify-center gap-2 px-3 transition-all duration-500",
-              (isTimeWarning && secondsLeft > 0)
-                ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-[0_0_15px_rgba(225,29,72,0.05)] animate-pulse' 
-                : 'bg-slate-50 border-slate-200 text-slate-700'
+              "h-10 min-w-[85px] border rounded-xl flex items-center justify-center gap-2 px-3 transition-all duration-700",
+              (isCritical && secondsLeft > 0) ? "bg-rose-50 border-rose-200 text-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.1)]" :
+              (isWarning && secondsLeft > 0) ? "bg-amber-50 border-amber-200 text-amber-600" :
+              "bg-slate-50 border-slate-200 text-slate-700"
             )}>
-              <Timer size={14} className={cn("transition-colors", (isTimeWarning && secondsLeft > 0) ? "text-rose-500" : "text-slate-400")} />
+              <Timer size={14} className={cn("transition-colors", isCritical ? "text-rose-500" : isWarning ? "text-amber-500" : "text-slate-400")} />
               <span className="text-sm font-black font-mono tracking-tight tabular-nums">
                 {secondsLeft}s
               </span>
@@ -404,11 +406,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
           <div className="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
             <div 
-              className={`absolute top-0 left-0 h-full rounded-full ${
-                isTimeWarning 
-                  ? 'bg-gradient-to-r from-amber-400 to-amber-500' 
-                  : 'bg-gradient-to-r from-indigo-500 to-indigo-600'
-              }`}
+              className={cn(
+                "absolute top-0 left-0 h-full rounded-full transition-colors duration-700",
+                isCritical ? "bg-rose-500" :
+                isWarning ? "bg-amber-400" :
+                "bg-indigo-600"
+              )}
               style={{ 
                 width: `${progressPercent}%`,
                 transition: secondsLeft <= 0 ? 'width 0.2s ease-out' : 'width 1s linear'
@@ -418,10 +421,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         </div>
 
         {/* メインコンテンツエリア */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-8">
+        <div className="flex-1 flex flex-col items-center justify-start p-6 pt-12 text-center space-y-20">
           
           {/* 🏆 ヘッダー情報の集約（左上にバッジ、中央にプログレスバー） */}
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-6">
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-10">
             {/* 問題番号バッジ：左上に配置してバランスを改善 */}
             <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600 self-start">
               <div className="flex items-center gap-2.5 px-3 py-1.5">
@@ -440,9 +443,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               )}
             </div>
 
-            {/* 🎯 タスク進行バー（日本語ラベル ＆ 中央配置） */}
+            {/* 🎯 タスク進行バー（日本語ラベル ＆ 横幅を広げて安定感を向上） */}
             <div className="w-full flex justify-center">
-              <div className="w-64 flex items-center justify-between gap-1.5">
+              <div className="w-72 flex items-center justify-between gap-2">
                 {userActionSteps.map((step, idx) => {
                   const isCurrent = idx === currentActionIndex;
                   const isCompleted = idx < currentActionIndex;
@@ -479,20 +482,17 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   <span className="animate-pulse absolute inline-flex h-28 w-28 rounded-full bg-indigo-600/5 opacity-50"></span>
                 </>
               )}
-              {audioPhase === 'thinking' && (
-                <span className="animate-ping absolute inline-flex h-24 w-24 rounded-full bg-emerald-500/10 opacity-60"></span>
-              )}
               
               <div className={`w-28 h-28 rounded-[32px] flex items-center justify-center border transition-all duration-300 shadow-md ${
                 audioPhase === 'statement' ? 'bg-indigo-50 border-indigo-200 text-indigo-600' :
                 audioPhase === 'question' ? 'bg-indigo-600 border-indigo-600 text-white' :
-                audioPhase === 'thinking' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' :
+                audioPhase === 'thinking' ? 'bg-amber-50 border-amber-200 text-amber-500' :
                 'bg-slate-50 border-slate-200 text-slate-400'
               }`}>
                 {audioPhase === 'thinking' ? (
-                  <CircleDot size={36} className="animate-pulse" />
+                  <CircleDot size={36} />
                 ) : (
-                  <Volume2 size={36} strokeWidth={2.5} className={audioPhase !== 'idle' ? "animate-bounce" : ""} />
+                  <Headphones size={36} strokeWidth={2.5} className={audioPhase !== 'idle' ? "animate-pulse" : ""} />
                 )}
               </div>
             </div>
@@ -501,19 +501,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               <div className="space-y-1">
                 <h2 className={cn(
                   "text-xl font-black tracking-tight transition-colors duration-200",
-                  audioPhase === 'thinking' ? "text-emerald-600" : "text-slate-800"
+                  audioPhase === 'thinking' ? "text-amber-500" : "text-slate-800"
                 )}>
-                  {audioPhase === 'statement' && "基本文"}
-                  {audioPhase === 'question' && (isQuestionBased ? "質問文" : "指示文")}
-                  {audioPhase === 'thinking' && "Time to Speak!"}
+                  {audioPhase === 'statement' && "基本文を再生中..."}
+                  {audioPhase === 'question' && (isQuestionBased ? "質問を再生中..." : "指示文を再生中...")}
+                  {audioPhase === 'thinking' && "回答しましょう"}
                   {audioPhase === 'idle' && "Ready..."}
                 </h2>
-                <p className="text-xs font-bold text-slate-400 max-w-[280px] mx-auto leading-relaxed transition-colors duration-200">
-                  {audioPhase === 'statement' && "基本文再生中"}
-                  {audioPhase === 'question' && questionLabelJA}
-                  {audioPhase === 'thinking' && "声に出して即答してください！"}
-                  {audioPhase === 'idle' && "音声ロード中..."}
-                </p>
               </div>
             </div>
 
