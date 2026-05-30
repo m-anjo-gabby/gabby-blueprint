@@ -88,6 +88,7 @@ export interface SprintQuestion {
 
   // ① ステートメント（親文）セクション
   statement: string | null;
+  statement_ja: string | null;
   statement_voice: string | null;
   statement_tts_ssml: string | null;
   statement_tts_ssml_mode: TtsSsmlMode;
@@ -96,6 +97,7 @@ export interface SprintQuestion {
 
   // ② クエスチョン（問い・指示）セクション
   question: string;
+  question_ja: string | null;
   question_voice: string | null;
   question_tts_ssml: string | null;
   question_tts_ssml_mode: TtsSsmlMode;
@@ -104,6 +106,7 @@ export interface SprintQuestion {
 
   // ③ 解答（YES・通常正解文）セクション
   answer_sentence_yes: string;
+  answer_sentence_yes_ja: string | null;
   answer_sentence_yes_voice: string | null;
   answer_sentence_yes_tts_ssml: string | null;
   answer_sentence_yes_tts_ssml_mode: TtsSsmlMode;
@@ -112,6 +115,7 @@ export interface SprintQuestion {
 
   // ④ 解答（NO・否定文 ※Speed専用）セクション
   answer_sentence_no: string | null;
+  answer_sentence_no_ja: string | null;
   answer_sentence_no_voice: string | null;
   answer_sentence_no_tts_ssml: string | null;
   answer_sentence_no_tts_ssml_mode: TtsSsmlMode;

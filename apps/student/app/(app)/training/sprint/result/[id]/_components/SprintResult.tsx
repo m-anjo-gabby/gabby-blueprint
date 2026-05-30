@@ -2,7 +2,7 @@
 
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Trophy, Timer, CheckCircle2, Volume2, HelpCircle, MessageSquare, ArrowRight, Zap, PlayCircle, Hourglass } from 'lucide-react';
+import { ChevronLeft, Trophy, Timer, CheckCircle2, Volume2, HelpCircle, MessageSquare, ArrowRight, Zap, PlayCircle, Hourglass, Languages } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
@@ -33,6 +33,12 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null); // カード単位のフォーカス管理
   const [isBatchPlaying, setIsBatchPlaying] = useState(false);
+  const [jaVisibleMap, setJaVisibleMap] = useState<Record<string, boolean>>({});
+
+  const toggleJa = (key: string) => {
+    setJaVisibleMap(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const isBatchPlayingRef = useRef(false); // ループ制御用のRef
   const currentAudioRef = useRef<HTMLAudioElement | null>(null); // 現在再生中のAudioオブジェクトを保持
 
@@ -244,8 +250,9 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
                     {/* 基本文 */}
                     {q.statement && (
-                      <div className="w-full text-left border-l-4 border-slate-200 pl-3 py-0.5">
-                        <div className="flex items-center gap-x-1.5 text-slate-400 mb-1.5">
+                      <div className="w-full text-left border-l-4 border-slate-200 pl-3 py-0.5 flex flex-col gap-1">
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <div className="flex items-center gap-x-1.5 text-slate-400">
                           <MessageSquare size={14} />
                           <span className="text-xs font-bold tracking-wider">基本文</span>
                           <button 
@@ -255,13 +262,23 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             <Volume2 size={16} />
                           </button>
                         </div>
-                        <p className="text-sm font-bold text-slate-600 leading-relaxed">{q.statement}</p>
+                        {q.statement_ja && (
+                          <button
+                            onClick={() => toggleJa(q.question_id + '-st')}
+                            className={cn("p-1 rounded-md transition-all", jaVisibleMap[q.question_id + '-st'] ? "bg-slate-100 text-blue-600" : "text-slate-300 hover:text-slate-400")}
+                          >
+                            <Languages size={14} />
+                          </button>
+                        )}
+                        </div>
+                        <p className="text-sm font-bold text-slate-600 leading-relaxed">{jaVisibleMap[q.question_id + '-st'] ? q.statement_ja : q.statement}</p>
                       </div>
                     )}
 
                     {/* 質問 / 指示 */}
-                    <div className="w-full text-left border-l-4 border-blue-500 pl-3 py-0.5">
-                      <div className="flex items-center gap-x-1.5 text-blue-500 mb-1.5">
+                    <div className="w-full text-left border-l-4 border-blue-500 pl-3 py-0.5 flex flex-col gap-1">
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <div className="flex items-center gap-x-1.5 text-blue-500">
                         <HelpCircle size={14} strokeWidth={2.5} />
                         <span className="text-xs font-bold tracking-wider">{isQuestionBased ? "質問" : "指示"}</span>
                         <button 
@@ -271,7 +288,16 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           <Volume2 size={16} strokeWidth={2.5} />
                         </button>
                       </div>
-                      <p className="text-lg sm:text-xl font-black text-slate-800 leading-snug tracking-tight">{q.question}</p>
+                      {q.question_ja && (
+                        <button
+                          onClick={() => toggleJa(q.question_id + '-q')}
+                          className={cn("p-1 rounded-md transition-all", jaVisibleMap[q.question_id + '-q'] ? "bg-blue-50 text-blue-600" : "text-blue-200 hover:text-blue-400")}
+                        >
+                          <Languages size={14} />
+                        </button>
+                      )}
+                      </div>
+                      <p className="text-lg sm:text-xl font-black text-slate-800 leading-snug tracking-tight">{jaVisibleMap[q.question_id + '-q'] ? q.question_ja : q.question}</p>
                     </div>
 
                     {/* 解答 */}
@@ -279,31 +305,61 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                       {isSpeedModePayload ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                           {scoreData.answer_type === '0' && ( // YES主軸の場合のみYESを表示
-                            <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-2 py-2 rounded-r-xl">
-                              <div className="flex items-center gap-x-1 mb-1 text-emerald-600">
+                            <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
+                              <div className="flex items-center justify-between w-full mb-1">
+                                <div className="flex items-center gap-x-1 text-emerald-600">
                                 <span className="text-xs font-black tracking-widest uppercase">解答</span>
                                 <button onClick={() => handlePlayAudio(q.question_id + '-yes', q.answer_sentence_yes, q.answer_sentence_yes_voice, true)} className="w-6 h-6 flex items-center justify-center text-emerald-500"><Volume2 size={16} /></button>
                               </div>
-                              <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{q.answer_sentence_yes}</p>
+                              {q.answer_sentence_yes_ja && (
+                                <button
+                                  onClick={() => toggleJa(q.question_id + '-yes')}
+                                  className={cn("p-1 rounded-md transition-all", jaVisibleMap[q.question_id + '-yes'] ? "bg-emerald-100 text-emerald-600" : "text-emerald-300 hover:text-emerald-400")}
+                                >
+                                  <Languages size={12} />
+                                </button>
+                              )}
+                              </div>
+                              <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{jaVisibleMap[q.question_id + '-yes'] ? q.answer_sentence_yes_ja : q.answer_sentence_yes}</p>
                             </div>
                           )}
                           {scoreData.answer_type === '1' && ( // NO主軸の場合のみNOを表示
-                            <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-3 pr-2 py-2 rounded-r-xl">
-                              <div className="flex items-center gap-x-1 mb-1 text-amber-600">
+                            <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-3 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
+                              <div className="flex items-center justify-between w-full mb-1">
+                                <div className="flex items-center gap-x-1 text-amber-600">
                                 <span className="text-xs font-black tracking-widest uppercase">解答</span>
                                 <button onClick={() => handlePlayAudio(q.question_id + '-no', q.answer_sentence_no!, q.answer_sentence_no_voice, true)} className="w-6 h-6 flex items-center justify-center text-amber-500"><Volume2 size={16} /></button>
                               </div>
-                              <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{q.answer_sentence_no}</p>
+                              {q.answer_sentence_no_ja && (
+                                <button
+                                  onClick={() => toggleJa(q.question_id + '-no')}
+                                  className={cn("p-1 rounded-md transition-all", jaVisibleMap[q.question_id + '-no'] ? "bg-amber-100 text-amber-600" : "text-amber-300 hover:text-amber-400")}
+                                >
+                                  <Languages size={12} />
+                                </button>
+                              )}
+                              </div>
+                              <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{jaVisibleMap[q.question_id + '-no'] ? q.answer_sentence_no_ja : q.answer_sentence_no}</p>
                             </div>
                           )}
                         </div>
                       ) : (
-                        <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-3 py-2.5 rounded-r-xl">
-                          <div className="flex items-center gap-x-1.5 text-emerald-600 mb-1.5">
+                        <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-3 py-2.5 rounded-r-xl flex flex-col gap-1">
+                          <div className="flex items-center justify-between w-full mb-1">
+                            <div className="flex items-center gap-x-1.5 text-emerald-600">
                             <span className="text-xs font-black tracking-widest uppercase">解答</span>
                             <button onClick={() => handlePlayAudio(q.question_id + '-ans', q.answer_sentence_yes, q.answer_sentence_yes_voice, true)} className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-ans' ? 'text-blue-600' : 'text-emerald-500')}><Volume2 size={16} strokeWidth={2.5} /></button>
                           </div>
-                          <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">{q.answer_sentence_yes}</p>
+                          {q.answer_sentence_yes_ja && (
+                            <button
+                              onClick={() => toggleJa(q.question_id + '-ans')}
+                              className={cn("p-1 rounded-md transition-all", jaVisibleMap[q.question_id + '-ans'] ? "bg-emerald-100 text-emerald-600" : "text-emerald-300 hover:text-emerald-400")}
+                            >
+                              <Languages size={14} />
+                            </button>
+                          )}
+                          </div>
+                          <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">{jaVisibleMap[q.question_id + '-ans'] ? q.answer_sentence_yes_ja : q.answer_sentence_yes}</p>
                         </div>
                       )}
                     </div>

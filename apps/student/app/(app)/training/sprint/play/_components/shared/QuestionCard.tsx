@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SprintQuestionType } from "@gabby/types/sprint";
-import { HelpCircle, MessageSquare, CheckCircle2, Volume2, Eye, CircleDot, Headphones, ArrowRight } from 'lucide-react';
+import { HelpCircle, MessageSquare, CheckCircle2, Volume2, Eye, CircleDot, Headphones, ArrowRight, Languages } from 'lucide-react';
 
 // 🔌 Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
@@ -45,12 +45,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   // 📝 問題文を表示するかどうかのローカルステート（ドリルモード用）
   const [isProblemVisible, setIsProblemVisible] = useState(false);
+  const [showJaStatement, setShowJaStatement] = useState(false);
+  const [showJaQuestion, setShowJaQuestion] = useState(false);
+  const [showJaAnswer, setShowJaAnswer] = useState(false);
   const [prevIndex, setPrevIndex] = useState(currentIndex);
 
   // 🔄 修正：useEffectを使わずにレンダー中にステートを調整（Cascading Renders 警告の回避）
   if (currentIndex !== prevIndex) {
     setPrevIndex(currentIndex);
     setIsProblemVisible(false);
+    setShowJaStatement(false);
+    setShowJaQuestion(false);
+    setShowJaAnswer(false);
   }
 
   // 設定マッピングの取得
@@ -250,8 +256,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         
         {/* 🎯 修正：【A】基本文セクション（問題テキスト表示アクション前は丸ごと非表示） */}
         {!isSprintMode && question.statement && !isHidingProblemText && (
-          <div className="w-full text-left border-l-4 border-slate-200 pl-3 sm:pl-4 py-0.5 animate-in fade-in duration-350">
-            <div className="flex items-center gap-x-1.5 text-slate-400 mb-1">
+          <div className="w-full text-left border-l-4 border-slate-200 pl-3 sm:pl-4 py-0.5 animate-in fade-in duration-350 flex flex-col gap-1">
+            <div className="flex items-center justify-between w-full mb-0.5">
+              <div className="flex items-center gap-x-1.5 text-slate-400">
               <MessageSquare size={12} />
               <span className="text-[10px] font-bold tracking-wider leading-none">基本文</span>
               <button 
@@ -262,17 +269,27 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               >
                 <Volume2 size={13} />
               </button>
+              </div>
+              {question.statement_ja && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowJaStatement(!showJaStatement); }}
+                  className={cn("p-1 rounded-md transition-all", showJaStatement ? "bg-indigo-50 text-indigo-600" : "text-slate-300 hover:text-slate-400")}
+                >
+                  <Languages size={14} />
+                </button>
+              )}
             </div>
             <p className="text-sm sm:text-base font-bold text-slate-600 leading-relaxed tracking-tight">
-              {question.statement}
+              {showJaStatement ? question.statement_ja : question.statement}
             </p>
           </div>
         )}
 
         {/* 🎯 修正：【B】質問 / 指示セクション（問題テキスト表示アクション前は丸ごと非表示） */}
         {!isHidingProblemText && (
-          <div className="w-full text-left border-l-4 border-indigo-500 pl-3 sm:pl-4 py-0.5 animate-in fade-in duration-350">
-            <div className="flex items-center gap-x-1.5 text-indigo-500 mb-1">
+          <div className="w-full text-left border-l-4 border-indigo-500 pl-3 sm:pl-4 py-0.5 animate-in fade-in duration-350 flex flex-col gap-1">
+            <div className="flex items-center justify-between w-full mb-0.5">
+              <div className="flex items-center gap-x-1.5 text-indigo-500">
               <HelpCircle size={13} strokeWidth={2.5} />
               <span className="text-[10px] font-bold tracking-wider leading-none">{config.sectionTitle}</span>
               <button 
@@ -283,9 +300,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               >
                 <Volume2 size={13} strokeWidth={2.5} />
               </button>
+              </div>
+              {question.question_ja && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowJaQuestion(!showJaQuestion); }}
+                  className={cn("p-1 rounded-md transition-all", showJaQuestion ? "bg-indigo-50 text-indigo-600" : "text-slate-300 hover:text-slate-400")}
+                >
+                  <Languages size={14} />
+                </button>
+              )}
             </div>
             <p className="text-2xl sm:text-[32px] font-black text-slate-800 leading-[1.25] tracking-tighter antialiased">
-              {question.question}
+              {showJaQuestion ? question.question_ja : question.question}
             </p>
           </div>
         )}
@@ -334,8 +360,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 {/* 解答文（Speed専用 2カラム or 通常 1カラムモデル） */}
                 {question.answer_sentence_no ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-                    <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-4 pr-2 py-2 rounded-r-xl">
-                      <div className="flex items-center gap-x-1 text-emerald-600 mb-1">
+                    <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-4 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
+                      <div className="flex items-center justify-between w-full mb-0.5">
+                        <div className="flex items-center gap-x-1 text-emerald-600">
                         <CheckCircle2 size={12} strokeWidth={2.5} />
                         <span className="text-[9px] font-bold tracking-wider">解答（YES）</span>
                         <button 
@@ -345,14 +372,24 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         >
                           <Volume2 size={11} strokeWidth={2.5} />
                         </button>
+                        </div>
+                        {question.answer_sentence_yes_ja && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
+                            className={cn("p-1 rounded-md transition-all", showJaAnswer ? "bg-emerald-100 text-emerald-600" : "text-emerald-300 hover:text-emerald-400")}
+                          >
+                            <Languages size={12} />
+                          </button>
+                        )}
                       </div>
                       <p className="text-lg sm:text-xl font-black text-emerald-700 leading-snug tracking-tight">
-                        {question.answer_sentence_yes}
+                        {showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes}
                       </p>
                     </div>
 
-                    <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-4 pr-2 py-2 rounded-r-xl">
-                      <div className="flex items-center gap-x-1 text-amber-600 mb-1">
+                    <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-4 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
+                      <div className="flex items-center justify-between w-full mb-0.5">
+                        <div className="flex items-center gap-x-1 text-amber-600">
                         <CheckCircle2 size={12} strokeWidth={2.5} />
                         <span className="text-[9px] font-bold tracking-wider">解答（NO）</span>
                         <button 
@@ -362,15 +399,25 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         >
                           <Volume2 size={11} strokeWidth={2.5} />
                         </button>
+                        </div>
+                        {question.answer_sentence_no_ja && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
+                            className={cn("p-1 rounded-md transition-all", showJaAnswer ? "bg-amber-100 text-amber-600" : "text-amber-300 hover:text-amber-400")}
+                          >
+                            <Languages size={12} />
+                          </button>
+                        )}
                       </div>
                       <p className="text-lg sm:text-xl font-black text-amber-700 leading-snug tracking-tight">
-                        {question.answer_sentence_no}
+                        {showJaAnswer ? question.answer_sentence_no_ja : question.answer_sentence_no}
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/25 pl-4 pr-3 py-2.5 rounded-r-xl">
-                    <div className="flex items-center gap-x-1.5 text-emerald-600 mb-1">
+                  <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/25 pl-4 pr-3 py-2.5 rounded-r-xl flex flex-col gap-1">
+                    <div className="flex items-center justify-between w-full mb-0.5">
+                      <div className="flex items-center gap-x-1.5 text-emerald-600">
                       <CheckCircle2 size={13} strokeWidth={2.5} />
                       <span className="text-[10px] font-bold tracking-wider uppercase">解答</span>
                       <button 
@@ -380,9 +427,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                       >
                         <Volume2 size={12} strokeWidth={2.5} />
                       </button>
+                      </div>
+                      {question.answer_sentence_yes_ja && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
+                          className={cn("p-1 rounded-md transition-all", showJaAnswer ? "bg-emerald-100 text-emerald-600" : "text-emerald-300 hover:text-emerald-400")}
+                        >
+                          <Languages size={13} />
+                        </button>
+                      )}
                     </div>
                     <p className="text-xl sm:text-2xl font-black text-emerald-600 leading-snug tracking-tight">
-                      {question.answer_sentence_yes}
+                      {showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes}
                     </p>
                   </div>
                 )}

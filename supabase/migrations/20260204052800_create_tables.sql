@@ -505,6 +505,7 @@ CREATE TABLE public.com_m_sprint_questions (
   -- ① ステートメント（親文）セクション
   ---------------------------------------------
   statement TEXT DEFAULT NULL,
+  statement_ja TEXT DEFAULT NULL,
   statement_voice TEXT DEFAULT NULL,            -- 生成された音声URL
   statement_tts_ssml TEXT DEFAULT NULL,
   statement_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
@@ -515,6 +516,7 @@ CREATE TABLE public.com_m_sprint_questions (
   -- ② クエスチョン（指示文・問い）セクション
   ---------------------------------------------
   question TEXT NOT NULL,
+  question_ja TEXT DEFAULT NULL,
   question_voice TEXT DEFAULT NULL,              -- 生成された音声URL
   question_tts_ssml TEXT DEFAULT NULL,
   question_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
@@ -525,6 +527,7 @@ CREATE TABLE public.com_m_sprint_questions (
   -- ③ 解答（YES・通常正解文）セクション
   ---------------------------------------------
   answer_sentence_yes TEXT NOT NULL,
+  answer_sentence_yes_ja TEXT DEFAULT NULL,
   answer_sentence_yes_voice TEXT DEFAULT NULL,   -- 生成された音声URL
   answer_sentence_yes_tts_ssml TEXT DEFAULT NULL,
   answer_sentence_yes_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
@@ -535,6 +538,7 @@ CREATE TABLE public.com_m_sprint_questions (
   -- ④ 解答（NO・否定文 ※Speed専用）セクション
   ---------------------------------------------
   answer_sentence_no TEXT DEFAULT NULL,
+  answer_sentence_no_ja TEXT DEFAULT NULL,
   answer_sentence_no_voice TEXT DEFAULT NULL,    -- 生成された音声URL
   answer_sentence_no_tts_ssml TEXT DEFAULT NULL,
   answer_sentence_no_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
@@ -552,6 +556,59 @@ CREATE TABLE public.com_m_sprint_questions (
   insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+COMMENT ON TABLE public.com_m_sprint_questions IS 'スプリント問題マスタテーブル';
+
+-- 【基本情報】
+COMMENT ON COLUMN public.com_m_sprint_questions.question_id IS '問題ユニークID (UUID)';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_type IS '問題種別 (''0'':Speed, ''4'':Structure, ''5'':Builders, ''6'':Mastery)';
+COMMENT ON COLUMN public.com_m_sprint_questions.difficulty_level IS '難易度レベル (0:Basic 〜)';
+COMMENT ON COLUMN public.com_m_sprint_questions.group_id IS '共通グループID (問題群をグルーピングするUUID)';
+COMMENT ON COLUMN public.com_m_sprint_questions.seq_no IS 'グループ内の出題順序';
+
+-- ① ステートメント（親文）セクション
+COMMENT ON COLUMN public.com_m_sprint_questions.statement IS 'ステートメント（親文・英語）';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_ja IS 'ステートメント（親文・日本語訳）';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_voice IS 'ステートメント生成音声URL';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml IS 'ステートメント用TTS SSMLテキスト';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml_mode IS 'ステートメント用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_adjustments IS 'ステートメント用TTS調整パラメーター (JSONB)';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_status IS 'ステートメント用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
+
+-- ② クエスチョン（指示文・問い）セクション
+COMMENT ON COLUMN public.com_m_sprint_questions.question IS 'クエスチョン（指示文/問い・英語）';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_ja IS 'クエスチョン（指示文/問い・日本語訳）';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_voice IS 'クエスチョン生成音声URL';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml IS 'クエスチョン用TTS SSMLテキスト';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml_mode IS 'クエスチョン用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_adjustments IS 'クエスチョン用TTS調整パラメーター (JSONB)';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_status IS 'クエスチョン用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
+
+-- ③ 解答（YES・通常正解文）セクション
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes IS '解答（YES/通常正解文・英語）';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_ja IS '解答（YES/通常正解文・日本語訳）';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_voice IS '解答（YES）生成音声URL';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml IS '解答（YES）用TTS SSMLテキスト';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml_mode IS '解答（YES）用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_adjustments IS '解答（YES）用TTS調整パラメーター (JSONB)';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_status IS '解答（YES）用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
+
+-- ④ 解答（NO・否定文 ※Speed専用）セクション
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no IS '解答（NO/否定文・英語 ※Speed専用）';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_ja IS '解答（NO/否定文・日本語訳 ※Speed専用）';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_voice IS '解答（NO）生成音声URL';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml IS '解答（NO）用TTS SSMLテキスト';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml_mode IS '解答（NO）用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_adjustments IS '解答（NO）用TTS調整パラメーター (JSONB)';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_status IS '解答（NO）用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
+
+-- 【共通管理・移行用カラム】
+COMMENT ON COLUMN public.com_m_sprint_questions.last_tts_date IS '最終TTS音声生成日時';
+COMMENT ON COLUMN public.com_m_sprint_questions.legacy_question_id IS '移行元レガシー問題ID';
+COMMENT ON COLUMN public.com_m_sprint_questions.legacy_group_id IS '移行元レガシーグループID';
+COMMENT ON COLUMN public.com_m_sprint_questions.delete_flg IS '削除フラグ (''0'':有効, ''1'':削除済)';
+COMMENT ON COLUMN public.com_m_sprint_questions.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_sprint_questions.update_date IS '更新日時';
 
 -- ---------------------------------------------
 -- 高速検索・ソートのための複合インデックス
