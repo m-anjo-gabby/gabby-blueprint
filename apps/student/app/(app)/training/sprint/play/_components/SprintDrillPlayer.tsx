@@ -358,7 +358,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">Drill Mode</span>
               </div>
               <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none truncate w-full text-center">{courseTitle}</h1>
-              <p className="text-[10px] font-bold text-slate-400 mt-1.5 tracking-tight">{instruction}</p>
             </div>
             <div className="col-span-1" />
           </div>

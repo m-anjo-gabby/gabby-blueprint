@@ -378,16 +378,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           <div className="flex items-center justify-between h-12">
             <button 
               onClick={handleExit}
-              className="h-10 px-4 flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200/80 active:scale-95 transition-all text-xs font-bold"
+              className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200/80 active:scale-95 transition-all"
             >
               <ChevronLeft size={16} strokeWidth={2.5} />
-              <span>終了</span>
             </button>
 
             <div className="flex flex-col items-center">
               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">Sprint Mode</span>
               <h1 className="text-sm font-black text-slate-800 tracking-tight text-center max-w-[200px] truncate">{courseTitle}</h1>
-              <p className="text-[9px] font-bold text-slate-400 mt-1 tracking-tight">{instruction}</p>
             </div>
 
             {/* ⏱️ タイマー：3段階表示 ＆ 控えめなエフェクト */}
@@ -433,13 +431,22 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   {questionType === '0' ? currentIndex + 1 : groupData.uniqueGroupIndex}
                 </span>
               </div>
-              {questionType !== '0' && (
-                 <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
-                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
-                   <span className="text-xs font-bold text-indigo-600 font-mono leading-none">
-                     {groupData.currentInGroup + 1} <span className="text-slate-300 mx-0.5">/</span> {groupData.totalInGroup}
-                   </span>
-                 </div>
+
+              {questionType === '0' ? (
+                /* Speedモード：YES/NO回答を表示（ノイズ低減のため黒系のシンプル表示に修正） */
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
+                  <span className="text-[10px] font-black tracking-tight text-slate-700">
+                    {answerType === '1' ? 'NOで回答' : 'YESで回答'}
+                  </span>
+                </div>
+              ) : (
+                /* 通常モード：Step表示 */
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
+                  <span className="text-xs font-bold text-indigo-600 font-mono leading-none">
+                    {groupData.currentInGroup + 1} <span className="text-slate-300 mx-0.5">/</span> {groupData.totalInGroup}
+                  </span>
+                </div>
               )}
             </div>
 

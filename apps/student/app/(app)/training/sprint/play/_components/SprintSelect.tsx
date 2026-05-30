@@ -251,14 +251,14 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                 >
                   <Zap size={14} className="fill-current" />
-                  YES主軸で開始
+                  YESで回答する
                 </button>
                 <button
                   onClick={() => handleStartSubmit('1')}
                   className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-slate-900/10 bg-slate-900 hover:bg-slate-800 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                 >
                   <Zap size={14} className="fill-current" />
-                  NO主軸で開始
+                  NOで回答する
                 </button>
               </div>
             ) : (

@@ -30,7 +30,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   groupCurrentIndex = 0,
   groupTotalCount = 3,
   onPlayAudio,
-  audioPhase = 'idle'
+  audioPhase = 'idle',
 }) => {
   
   // 🔌 Zustand ストアから必要な状態とアクションを抽出
