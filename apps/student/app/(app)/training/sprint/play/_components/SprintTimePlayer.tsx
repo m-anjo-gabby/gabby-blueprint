@@ -18,6 +18,13 @@ interface SprintTimePlayerProps {
   onExit?: () => void;
 }
 
+const SPRINT_INSTRUCTIONS: Record<string, string> = {
+  '0': "質問に対し、指定された回答タイプで即答してください。",
+  '4': "指示に従って、瞬時に文章を変換してください。",
+  '5': "指示された語句を組み込み、素早く回答してください。",
+  '6': "質問に対し、完全な文章で素早く回答してください。",
+};
+
 export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({ 
   questions = [],
   onExit
@@ -60,6 +67,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const courseTitle = useMemo(() => {
     return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
+  }, [questionType]);
+
+  const instruction = useMemo(() => {
+    if (questionType === '0') {
+      return useSprintStore.getState().answerType === '1' ? "「No」主軸で回答してください。" : "「Yes」主軸で回答してください。";
+    }
+    return SPRINT_INSTRUCTIONS[questionType || '0'] || "";
   }, [questionType]);
 
   const isQuestionBased = questionType === '0' || questionType === '6';
@@ -351,6 +365,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             <div className="flex flex-col items-center">
               <span className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">Sprint Mode</span>
               <h1 className="text-sm font-black text-slate-800 tracking-tight text-center max-w-[200px] truncate">{courseTitle}</h1>
+              <p className="text-[9px] font-bold text-slate-400 mt-1 tracking-tight">{instruction}</p>
             </div>
 
             {/* ⏱️ タイマー：0秒でブリンク停止。揺れのないパルスアニメーションを採用 */}

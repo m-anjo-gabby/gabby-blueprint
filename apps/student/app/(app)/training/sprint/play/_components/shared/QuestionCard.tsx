@@ -20,10 +20,10 @@ interface QuestionCardProps {
  * 🛠️ question_type に応じた文言マッピング
  */
 const SPRINT_LABELS: Record<SprintQuestionType, { sectionTitle: string; instruction: string; phaseLabel: string }> = {
-  '0': { sectionTitle: "質問", instruction: "「Yes」または「No」で回答", phaseLabel: "質問文" },
-  '4': { sectionTitle: "指示", instruction: "指示に従って単語を入れ替え", phaseLabel: "指示文" },
-  '5': { sectionTitle: "指示", instruction: "指示された単語を追加して回答", phaseLabel: "指示文" },
-  '6': { sectionTitle: "質問", instruction: "内容に関する質問に回答", phaseLabel: "質問文" },
+  '0': { sectionTitle: "質問", instruction: "", phaseLabel: "質問文" },
+  '4': { sectionTitle: "指示", instruction: "", phaseLabel: "指示文" },
+  '5': { sectionTitle: "指示", instruction: "", phaseLabel: "指示文" },
+  '6': { sectionTitle: "質問", instruction: "", phaseLabel: "質問文" },
 };
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -45,11 +45,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   // 📝 問題文を表示するかどうかのローカルステート（ドリルモード用）
   const [isProblemVisible, setIsProblemVisible] = useState(false);
+  const [prevIndex, setPrevIndex] = useState(currentIndex);
 
-  // 問題が変わったら表示状態をリセット
-  useEffect(() => { 
-    setIsProblemVisible(false); 
-  }, [currentIndex]);
+  // 🔄 修正：useEffectを使わずにレンダー中にステートを調整（Cascading Renders 警告の回避）
+  if (currentIndex !== prevIndex) {
+    setPrevIndex(currentIndex);
+    setIsProblemVisible(false);
+  }
 
   // 設定マッピングの取得
   const config = SPRINT_LABELS[questionType || '0'] || { sectionTitle: "問題", instruction: "", phaseLabel: "問題文" };
@@ -59,19 +61,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   // 問題番号のラベル生成 (ヘッダー用配置)
   const questionNumberLabel = useMemo(() => {
     if (!question) return '';
-    if (questionType === '0') return `Q${currentIndex + 1}`;
+    // Speedモードなら全体の通し番号、それ以外はグループの通し番号を表示
+    if (questionType === '0') return String(currentIndex + 1);
     
     const uniqueGroupIds = Array.from(new Set(questions.map(q => q.group_id)));
-    const groupIndex = uniqueGroupIds.indexOf(question.group_id) + 1;
-    return `Q${groupIndex}-${groupCurrentIndex + 1}`;
-  }, [questions, currentIndex, question, questionType, groupCurrentIndex]);
-
-  const displayInstruction = useMemo(() => {
-    if (questionType === '0' && mode === 'sprint') {
-      return useSprintStore.getState().answerType === '1' ? "「No＋否定文」で回答" : "「Yes＋肯定文」で回答";
-    }
-    return config.instruction;
-  }, [questionType, mode, config.instruction]);
+    return String(uniqueGroupIds.indexOf(question.group_id) + 1);
+  }, [questions, currentIndex, question, questionType]);
 
   /**
    * 🗺️ 利用者が何をするかの「タスク進行ステップ」の配列定義
@@ -141,41 +136,27 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       {/* ──────────────────────────────────────────────────────────── */}
       {/* 【ヘッダー領域】位置を確実に固定するために absolute を廃止 */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <div className="w-full flex items-center justify-between pb-1"> 
-        {/* 左側：問題番号と解説ラベル */}
-        <div className="flex items-center h-5 overflow-hidden rounded-md border border-indigo-100 shadow-xs shrink-0">
-          <div className="bg-indigo-600 px-2 h-full flex items-center border-r border-white/20">
-            <span className="text-[9px] font-black text-white uppercase tracking-wider font-mono">
+      <div className="w-full flex items-center pb-2 px-0.5">
+        {/* 🏆 コンパウンド・バッジ：Question と Step を1つのユニットに統合 */}
+        <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600">
+          {/* Question 部分 */}
+          <div className="flex items-center gap-2.5 px-3 py-1.5">
+            <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
+            <span className="text-sm font-black text-white font-mono leading-none">
               {questionNumberLabel}
             </span>
           </div>
-          <div className="bg-indigo-50/50 px-2 h-full flex items-center">
-            <span className="text-[9px] font-black text-indigo-600/80 tracking-tight">
-              {displayInstruction}
-            </span>
-          </div>
-        </div>
 
-        {/* 右側：Step 1 / 3 表記 ＆ ドット型インジケーター（常時確実表示） */}
-        {questionType !== '0' && (
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-wider">
-              {`Step ${groupCurrentIndex + 1} / ${groupTotalCount}`}
-            </span>
-            <div className="flex gap-1 w-14 sm:w-16">
-              {Array.from({ length: groupTotalCount }).map((_, i) => (
-                <div key={i} className="h-[2.5px] flex-1 bg-slate-100 rounded-full overflow-hidden relative">
-                  <motion.div 
-                    initial={false} 
-                    animate={{ x: i <= groupCurrentIndex ? "0%" : "-100%" }} 
-                    transition={{ duration: 0.35, ease: "circOut" }} 
-                    className="absolute inset-0 bg-indigo-500" 
-                  />
-                </div>
-              ))}
+          {/* Step 部分（Speed以外のみ表示：白抜きデザイン） */}
+          {questionType !== '0' && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
+              <span className="text-xs font-bold text-indigo-600 font-mono leading-none">
+                {groupCurrentIndex + 1} <span className="text-slate-300 mx-0.5">/</span> {groupTotalCount}
+              </span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ──────────────────────────────────────────────────────────── */}

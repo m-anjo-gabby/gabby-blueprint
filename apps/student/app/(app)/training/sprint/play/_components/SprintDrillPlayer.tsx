@@ -21,6 +21,13 @@ interface SprintDrillPlayerProps {
   onExit?: () => void;
 }
 
+const DRILL_INSTRUCTIONS: Record<string, string> = {
+  '0': "質問を聞き、「Yes」または「No」で回答してください。",
+  '4': "指示に従って、聞こえてくる文章を変換してください。",
+  '5': "語句を加えて、文法的に正しい文章を作ってください。",
+  '6': "基本文の内容や関連する質問に回答してください。",
+};
+
 export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({ 
   questions = [],
   initialQuestionId,
@@ -80,6 +87,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const courseTitle = useMemo(() => {
     return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
+  }, [questionType]);
+
+  const instruction = useMemo(() => {
+    return DRILL_INSTRUCTIONS[questionType || '0'] || "";
   }, [questionType]);
 
   const groupProgress = useMemo(() => {
@@ -335,8 +346,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
         
         {/* ヘッダー */}
-        <div className="shrink-0 pt-4 w-full overflow-hidden px-4">
-          <div className="grid grid-cols-5 items-center h-12 px-2">
+        <div className="shrink-0 pt-4 w-full px-4 border-b border-slate-50 pb-2">
+          <div className="grid grid-cols-5 items-center min-h-[3rem] px-2">
             <div className="col-span-1 flex justify-start">
               <button onClick={() => onExit?.()} disabled={isAutoPlaying} className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
                 <ChevronLeft size={20} strokeWidth={2.5} />
@@ -346,7 +357,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               <div className="mb-1 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100/80">
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">Drill Mode</span>
               </div>
-              <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none truncate w-full text-center">{courseTitle}</h1>
+              <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none truncate w-full text-center">{courseTitle}</h1>
+              <p className="text-[10px] font-bold text-slate-400 mt-1.5 tracking-tight">{instruction}</p>
             </div>
             <div className="col-span-1" />
           </div>
@@ -356,6 +368,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         <div className="flex-1 flex items-start justify-center p-6 pt-6 overflow-y-auto" onClick={handleReveal}>
           <div className="w-full max-w-xl mx-auto">
             <QuestionCard 
+              key={currentIndex}
               groupCurrentIndex={groupProgress.groupCurrentIndex}
               groupTotalCount={groupProgress.groupTotalCount}
               onPlayAudio={handleIndividualPlayAudio}
