@@ -1,36 +1,36 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SprintQuestionType } from "@gabby/types/sprint";
-import { HelpCircle, MessageSquare, CheckCircle2, Volume2 } from 'lucide-react';
+import { HelpCircle, MessageSquare, CheckCircle2, Volume2, Eye, CircleDot, Headphones, ArrowRight } from 'lucide-react';
 
 // 🔌 Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
+import { cn } from '@/lib/utils';
 
 interface QuestionCardProps {
   groupCurrentIndex?: number;
   groupTotalCount?: number;
   onPlayAudio?: (voiceUrl: string | null, text: string) => void;
+  audioPhase?: 'idle' | 'statement' | 'question' | 'answer';
 }
 
 /**
  * 🛠️ question_type に応じた文言マッピング
  */
-const SPRINT_LABELS: Record<SprintQuestionType, { sectionTitle: string; instruction: string }> = {
-  '0': { sectionTitle: "質問", instruction: "「Yes」または「No」で回答" },
-  '4': { sectionTitle: "指示", instruction: "指示に従って単語を入れ替え" },
-  '5': { sectionTitle: "指示", instruction: "指示された単語を追加して回答" },
-  '6': { sectionTitle: "質問", instruction: "内容に関する質問に回答" },
+const SPRINT_LABELS: Record<SprintQuestionType, { sectionTitle: string; instruction: string; phaseLabel: string }> = {
+  '0': { sectionTitle: "質問", instruction: "「Yes」または「No」で回答", phaseLabel: "質問文" },
+  '4': { sectionTitle: "指示", instruction: "指示に従って単語を入れ替え", phaseLabel: "指示文" },
+  '5': { sectionTitle: "指示", instruction: "指示された単語を追加して回答", phaseLabel: "指示文" },
+  '6': { sectionTitle: "質問", instruction: "内容に関する質問に回答", phaseLabel: "質問文" },
 };
 
-/**
- * スプリントドリル・問題カード（Zustand 同期版）
- */
 export const QuestionCard: React.FC<QuestionCardProps> = ({
   groupCurrentIndex = 0,
   groupTotalCount = 3,
-  onPlayAudio
+  onPlayAudio,
+  audioPhase = 'idle'
 }) => {
   
   // 🔌 Zustand ストアから必要な状態とアクションを抽出
@@ -40,56 +40,112 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const mode = useSprintStore((state) => state.mode);
   const questionType = useSprintStore((state) => state.questionType);
   const isRevealed = useSprintStore((state) => state.isRevealed);
-  const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying); // 👈 自動再生フラグを追加取得
+  const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying);
   const handleReveal = useSprintStore((state) => state.setIsRevealed);
 
-  // 問題番号のラベル生成 (Speed: Q1, Q2... / Others: Q1-1, Q1-2...)
+  // 📝 問題文を表示するかどうかのローカルステート（ドリルモード用）
+  const [isProblemVisible, setIsProblemVisible] = useState(false);
+
+  // 問題が変わったら表示状態をリセット
+  useEffect(() => { 
+    setIsProblemVisible(false); 
+  }, [currentIndex]);
+
+  // 設定マッピングの取得
+  const config = SPRINT_LABELS[questionType || '0'] || { sectionTitle: "問題", instruction: "", phaseLabel: "問題文" };
+  const isSprintMode = mode === 'sprint';
+  const isDrillMode = mode === 'drill';
+
+  // 問題番号のラベル生成 (ヘッダー用配置)
   const questionNumberLabel = useMemo(() => {
     if (!question) return '';
-    if (questionType === '0') {
-      return `Q${currentIndex + 1}`;
-    }
-    // グループIDの集合から現在のグループが何番目かを特定
+    if (questionType === '0') return `Q${currentIndex + 1}`;
+    
     const uniqueGroupIds = Array.from(new Set(questions.map(q => q.group_id)));
     const groupIndex = uniqueGroupIds.indexOf(question.group_id) + 1;
     return `Q${groupIndex}-${groupCurrentIndex + 1}`;
   }, [questions, currentIndex, question, questionType, groupCurrentIndex]);
 
-  // 🛡️ ガード節: データ不在時の早期リターン（全てのフック呼び出しの後に配置）
+  const displayInstruction = useMemo(() => {
+    if (questionType === '0' && mode === 'sprint') {
+      return useSprintStore.getState().answerType === '1' ? "「No＋否定文」で回答" : "「Yes＋肯定文」で回答";
+    }
+    return config.instruction;
+  }, [questionType, mode, config.instruction]);
+
+  /**
+   * 🗺️ 利用者が何をするかの「タスク進行ステップ」の配列定義
+   */
+  const userActionSteps = useMemo(() => {
+    if (questionType === '0') {
+      return ["質問文を聴く", "回答する"]; // Speed
+    } else if (questionType === '6') {
+      return ["基本文を聴く", "質問文を聴く", "回答する"]; // Mastery
+    } else {
+      return ["基本文を聴く", "指示文を聴く", "回答する"]; // Builders, Structure
+    }
+  }, [questionType]);
+
+  /**
+   * 🎯 修正：指示・質問文の再生が終わったら（＝audioPhase が answer になったら）回答状態に進む
+   */
+  const currentActionIndex = useMemo(() => {
+    if (isRevealed) return userActionSteps.length; // 解答表示後はすべて完了
+    
+    if (questionType === '0') {
+      // UG Speed
+      if (audioPhase === 'question') return 0; // まだ再生中
+      if (audioPhase === 'answer') return 1;   // 再生終了 ➔ 回答状態
+      return 0;
+    } else {
+      // Builders, Structure, Mastery
+      if (audioPhase === 'statement') return 0;
+      if (audioPhase === 'question') return 1;  // 指示・質問文を再生中
+      if (audioPhase === 'answer') return 2;    // 再生終了 ➔ 回答状態へ進む
+      return 0;
+    }
+  }, [audioPhase, isRevealed, questionType, userActionSteps.length]);
+
+  // 再生状態の日本語テキスト中央 HUD 用
+  const statusMessage = useMemo(() => {
+    if (isRevealed) return { text: "答え合わせ", sub: "テキストを確認してください", color: "text-slate-400" };
+    switch (audioPhase) {
+      case 'statement':
+        return { text: "基本文を再生中...", sub: "音声をしっかり聴き取りましょう", color: "text-indigo-600" };
+      case 'question':
+        return { text: `${config.phaseLabel}を再生中...`, sub: "次の音声を聴き逃さないように", color: "text-violet-600" };
+      case 'answer':
+        return { text: "回答時間", sub: "声に出して瞬時に回答してください！", color: "text-amber-500" };
+      default:
+        return { text: "待機中", sub: "いつでも再生できます", color: "text-slate-400" };
+    }
+  }, [audioPhase, isRevealed, config.phaseLabel]);
+
+  // 🛡️ 全てのHook呼び出しの後に配置（エラー回避）
   if (!question) {
     return <div className="flex-1 w-full animate-pulse bg-slate-50/50 rounded-[40px]" />;
   }
 
-  const config = SPRINT_LABELS[questionType || '0'] || { sectionTitle: "問題", instruction: "" };
-  const isSprintMode = mode === 'sprint';
-
-  // SpeedかつSprintモードの時だけ、特別なインストラクションを表示
-  const displayInstruction = (questionType === '0' && mode === 'sprint') 
-    ? (useSprintStore.getState().answerType === '1' ? "「No＋否定文」で回答" : "「Yes＋肯定文」で回答")
-    : config.instruction;
-
-  // 音声再生トリガー時のバブルアップ防止ヘルパー
   const triggerAudio = (e: React.MouseEvent, voiceUrl: string | null, text: string) => {
-    e.stopPropagation(); // Revealイベント等の発火を完全に遮断
-    
-    // 🛡️ 自動再生中は、個別オーディオ再生ボタンも誤動作防止のためロック
+    e.stopPropagation();
     if (isAutoPlaying) return;
-
-    if (onPlayAudio) {
-      onPlayAudio(voiceUrl, text);
-    }
+    if (onPlayAudio) onPlayAudio(voiceUrl, text);
   };
 
+  // ドリルモードかつ、問題表示ボタンを押していない隠蔽状態フラグ
+  const isHidingProblemText = isDrillMode && !isProblemVisible;
+
   return (
-    <div className="w-full flex flex-col items-stretch text-left relative pt-14 sm:pt-16">
+    <div className="w-full flex flex-col items-stretch text-left select-none gap-y-4">
       
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 1. Step Badge & 分割プログレスバー */}
+      {/* 【ヘッダー領域】位置を確実に固定するために absolute を廃止 */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <div className="absolute top-0 left-0 w-full shrink-0 flex flex-col items-start px-0.5 select-none"> 
-        <div className="flex items-center h-5 overflow-hidden rounded-md border border-indigo-100 shadow-sm mb-2">
+      <div className="w-full flex items-center justify-between pb-1"> 
+        {/* 左側：問題番号と解説ラベル */}
+        <div className="flex items-center h-5 overflow-hidden rounded-md border border-indigo-100 shadow-xs shrink-0">
           <div className="bg-indigo-600 px-2 h-full flex items-center border-r border-white/20">
-            <span className="text-[9px] font-black text-white uppercase tracking-wider">
+            <span className="text-[9px] font-black text-white uppercase tracking-wider font-mono">
               {questionNumberLabel}
             </span>
           </div>
@@ -100,31 +156,110 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
         </div>
 
+        {/* 右側：Step 1 / 3 表記 ＆ ドット型インジケーター（常時確実表示） */}
         {questionType !== '0' && (
-          <div className="grid gap-1 w-28 sm:w-32" style={{ gridTemplateColumns: `repeat(${groupTotalCount}, 1fr)` }}>
-            {Array.from({ length: groupTotalCount }).map((_, i) => (
-              <div key={i} className="h-[2.5px] sm:h-[3px] bg-slate-100 rounded-full overflow-hidden relative">
-                <motion.div 
-                  initial={false} 
-                  animate={{ x: i <= groupCurrentIndex ? "0%" : "-100%" }} 
-                  transition={{ duration: 0.35, ease: "circOut" }} 
-                  className="absolute inset-0 bg-indigo-500" 
-                />
-              </div>
-            ))}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-wider">
+              {`Step ${groupCurrentIndex + 1} / ${groupTotalCount}`}
+            </span>
+            <div className="flex gap-1 w-14 sm:w-16">
+              {Array.from({ length: groupTotalCount }).map((_, i) => (
+                <div key={i} className="h-[2.5px] flex-1 bg-slate-100 rounded-full overflow-hidden relative">
+                  <motion.div 
+                    initial={false} 
+                    animate={{ x: i <= groupCurrentIndex ? "0%" : "-100%" }} 
+                    transition={{ duration: 0.35, ease: "circOut" }} 
+                    className="absolute inset-0 bg-indigo-500" 
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 2. メインコンテンツ（垂直左線アライン） */}
+      {/* 【メインエリア】タスク進行状況 ＆ 再生アイコン HUD */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-y-4 sm:gap-y-7 w-full select-none mt-1">
+      <div className="w-full flex flex-col items-stretch bg-slate-50/40 rounded-[24px] border border-slate-100 p-4 sm:p-5">
+        {/* タスク進行バー：問題テキスト表示時も隠さず常時表示 */}
+        <AnimatePresence initial={false}>
+          <motion.div 
+            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+            animate={{ opacity: 1, height: "auto", marginBottom: "1rem" }}
+            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="w-full overflow-hidden"
+          >
+            <div className="w-full flex items-center justify-between gap-1 sm:gap-2 px-0.5 pt-0.5">
+              {userActionSteps.map((stepName, index) => {
+                const isCurrent = index === currentActionIndex;
+                const isCompleted = index < currentActionIndex;
+                return (
+                  <div key={stepName} className="flex-1 flex flex-col gap-1 text-center relative">
+                    {/* ステップバーのライン */}
+                    <div className="h-[3px] w-full rounded-full bg-slate-200 overflow-hidden relative">
+                      <motion.div
+                        initial={false}
+                        animate={{ x: isCompleted || isCurrent ? "0%" : "-100%" }}
+                        transition={{ duration: 0.25 }}
+                        className={cn(
+                          "absolute inset-0",
+                          isCompleted ? "bg-emerald-500" : "bg-indigo-500"
+                        )}
+                      />
+                    </div>
+                    {/* ステップ文言 */}
+                    <span className={cn(
+                      "text-[9px] font-black tracking-tight transition-colors duration-200",
+                      isCurrent ? "text-indigo-600 font-extrabold" : 
+                      isCompleted ? "text-emerald-600" : "text-slate-400"
+                    )}>
+                      {stepName}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* 再生状態メッセージ ＆ 丸型アイコン：常時表示 */}
+        <div className="flex items-center gap-x-4 w-full">
+          <div className={cn(
+            "w-11 h-11 rounded-xl flex items-center justify-center shadow-xs border shrink-0 transition-all duration-300",
+            isRevealed ? "bg-slate-100 border-slate-200 text-slate-400" :
+            audioPhase === 'statement' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
+            audioPhase === 'question' ? "bg-violet-50 border-violet-200 text-violet-600" :
+            audioPhase === 'answer' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
+          )}>
+            {audioPhase === 'answer' && !isRevealed ? (
+              <CircleDot size={20} className="animate-ping" />
+            ) : (
+              <Headphones size={20} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />
+            )}
+          </div>
+          
+          <div className="flex flex-col text-left">
+            <h3 className={cn("text-xs font-black uppercase tracking-wider leading-none", statusMessage.color)}>
+              {statusMessage.text}
+            </h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-1">
+              {statusMessage.sub}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────── */}
+      {/* 【コンテンツエリア】元の洗練されたデザインベース */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-y-4 sm:gap-y-5 w-full mt-2 relative">
         
-        {/* 【A】基本文セクション（グレー） */}
-        {!isSprintMode && question.statement && (
-          <div className="w-full text-left border-l-4 border-slate-200 pl-3 sm:pl-4 py-0.5">
-            <div className="flex items-center gap-x-1.5 text-slate-400 mb-1 sm:mb-2">
+        {/* 🎯 修正：【A】基本文セクション（問題テキスト表示アクション前は丸ごと非表示） */}
+        {!isSprintMode && question.statement && !isHidingProblemText && (
+          <div className="w-full text-left border-l-4 border-slate-200 pl-3 sm:pl-4 py-0.5 animate-in fade-in duration-350">
+            <div className="flex items-center gap-x-1.5 text-slate-400 mb-1">
               <MessageSquare size={12} />
               <span className="text-[10px] font-bold tracking-wider leading-none">基本文</span>
               <button 
@@ -142,130 +277,141 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
         )}
 
-        {/* 【B】質問 / 指示セクション（インディゴ） */}
-        <div className="w-full text-left border-l-4 border-indigo-500 pl-3 sm:pl-4 py-0.5">
-          <div className="flex items-center gap-x-1.5 text-indigo-500 mb-1 sm:mb-2">
-            <HelpCircle size={13} strokeWidth={2.5} />
-            <span className="text-[10px] font-bold tracking-wider leading-none">{config.sectionTitle}</span>
-            <button 
-              onClick={(e) => triggerAudio(e, question.question_voice, question.question)}
-              disabled={isAutoPlaying}
-              className="w-5 h-5 flex items-center justify-center rounded-full text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
-              title="音声を再生"
-            >
-              <Volume2 size={13} strokeWidth={2.5} />
-            </button>
-          </div>
-          <p className="text-2xl sm:text-[34px] font-black text-slate-800 leading-[1.25] tracking-tighter antialiased">
-            {question.question}
-          </p>
-        </div>
-
-        {/* 【C】解答セクション（サクセスエメラルド） */}
-        <div className="w-full min-h-[80px] sm:min-h-[96px] flex items-center justify-center mt-0.5">
-          <AnimatePresence mode="wait">
-            {isRevealed ? (
-              <motion.div
-                key="answer-box"
-                initial={{ opacity: 0, y: 3 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -3 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                className="w-full flex flex-col gap-3 sm:gap-5"
+        {/* 🎯 修正：【B】質問 / 指示セクション（問題テキスト表示アクション前は丸ごと非表示） */}
+        {!isHidingProblemText && (
+          <div className="w-full text-left border-l-4 border-indigo-500 pl-3 sm:pl-4 py-0.5 animate-in fade-in duration-350">
+            <div className="flex items-center gap-x-1.5 text-indigo-500 mb-1">
+              <HelpCircle size={13} strokeWidth={2.5} />
+              <span className="text-[10px] font-bold tracking-wider leading-none">{config.sectionTitle}</span>
+              <button 
+                onClick={(e) => triggerAudio(e, question.question_voice, question.question)}
+                disabled={isAutoPlaying}
+                className="w-5 h-5 flex items-center justify-center rounded-full text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
+                title="音声を再生"
               >
+                <Volume2 size={13} strokeWidth={2.5} />
+              </button>
+            </div>
+            <p className="text-2xl sm:text-[32px] font-black text-slate-800 leading-[1.25] tracking-tighter antialiased">
+              {question.question}
+            </p>
+          </div>
+        )}
+
+        {/* 【C】解答表示エリア ＆ 各種アクションコントロールボタン */}
+        <div className="w-full min-h-[90px] flex flex-col items-stretch justify-center mt-1">
+          <AnimatePresence mode="wait">
+            {!isRevealed ? (
+              /* 未回答状態：「タップして解答を表示」ボタンを大きく配置 */
+              <motion.div
+                key="reveal-action-container"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="w-full flex flex-col gap-3"
+              >
+                <button
+                  onClick={() => { if (!isAutoPlaying) handleReveal(true); }}
+                  disabled={isAutoPlaying}
+                  className={cn(
+                    "w-full min-h-[80px] sm:min-h-[92px] flex flex-col items-center justify-center border border-dashed rounded-[20px] px-4 py-3 outline-none focus:ring-2 transition-all cursor-pointer",
+                    isAutoPlaying 
+                      ? "border-slate-200 bg-slate-50/40 text-slate-400 cursor-not-allowed" 
+                      : "border-indigo-300 bg-indigo-50/20 hover:bg-indigo-50/40 text-indigo-600 shadow-2xs focus:ring-indigo-500/20"
+                  )}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    {!isAutoPlaying && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping shrink-0" />
+                    )}
+                    <span className={cn("text-xs font-black tracking-[0.15em]", isAutoPlaying ? "text-slate-400" : "text-indigo-700")}>
+                      {isAutoPlaying ? "自動再生中..." : "タップして解答を表示"}
+                    </span>
+                    {!isAutoPlaying && <ArrowRight size={13} strokeWidth={2.5} className="text-indigo-500" />}
+                  </div>
+                </button>
+              </motion.div>
+            ) : (
+              /* 解答テキスト開示後フェーズ */
+              <motion.div
+                key="answer-content-container"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full flex flex-col gap-4"
+              >
+                {/* 解答文（Speed専用 2カラム or 通常 1カラムモデル） */}
                 {question.answer_sentence_no ? (
-                  /* Speed専用：YES / NO の2ペイン並び */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 w-full">
-                    {/* YESブロック */}
-                    <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 sm:pl-4 pr-2 py-1 sm:py-1.5 rounded-r-xl">
-                      <div className="flex items-center gap-x-1.5 text-emerald-600 mb-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                    <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-4 pr-2 py-2 rounded-r-xl">
+                      <div className="flex items-center gap-x-1 text-emerald-600 mb-1">
                         <CheckCircle2 size={12} strokeWidth={2.5} />
                         <span className="text-[9px] font-bold tracking-wider">解答（YES）</span>
                         <button 
                           onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes)}
                           disabled={isAutoPlaying}
-                          className="w-5 h-5 flex items-center justify-center rounded-full text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100/50 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
+                          className="w-4 h-4 flex items-center justify-center text-emerald-500 hover:bg-emerald-100 rounded-full ml-1"
                         >
-                          <Volume2 size={12} strokeWidth={2.5} />
+                          <Volume2 size={11} strokeWidth={2.5} />
                         </button>
                       </div>
-                      <p className="text-lg sm:text-2xl font-black text-emerald-700 leading-[1.25] tracking-tighter antialiased">
+                      <p className="text-lg sm:text-xl font-black text-emerald-700 leading-snug tracking-tight">
                         {question.answer_sentence_yes}
                       </p>
                     </div>
 
-                    {/* NOブロック */}
-                    <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-3 sm:pl-4 pr-2 py-1 sm:py-1.5 rounded-r-xl">
-                      <div className="flex items-center gap-x-1.5 text-amber-600 mb-1">
+                    <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-4 pr-2 py-2 rounded-r-xl">
+                      <div className="flex items-center gap-x-1 text-amber-600 mb-1">
                         <CheckCircle2 size={12} strokeWidth={2.5} />
                         <span className="text-[9px] font-bold tracking-wider">解答（NO）</span>
                         <button 
                           onClick={(e) => triggerAudio(e, question.answer_sentence_no_voice, question.answer_sentence_no || "")}
                           disabled={isAutoPlaying}
-                          className="w-5 h-5 flex items-center justify-center rounded-full text-amber-500 hover:text-amber-700 hover:bg-amber-100/50 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
+                          className="w-4 h-4 flex items-center justify-center text-amber-500 hover:bg-amber-100 rounded-full ml-1"
                         >
-                          <Volume2 size={12} strokeWidth={2.5} />
+                          <Volume2 size={11} strokeWidth={2.5} />
                         </button>
                       </div>
-                      <p className="text-lg sm:text-2xl font-black text-amber-700 leading-[1.25] tracking-tighter antialiased">
+                      <p className="text-lg sm:text-xl font-black text-amber-700 leading-snug tracking-tight">
                         {question.answer_sentence_no}
                       </p>
                     </div>
                   </div>
                 ) : (
-                  /* 通常：1択解答ブロック */
-                  <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/25 pl-3 sm:pl-4 pr-3 py-1.5 sm:py-2 rounded-r-2xl">
-                    <div className="flex items-center gap-x-1.5 text-emerald-600 mb-1 sm:mb-2">
+                  <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/25 pl-4 pr-3 py-2.5 rounded-r-xl">
+                    <div className="flex items-center gap-x-1.5 text-emerald-600 mb-1">
                       <CheckCircle2 size={13} strokeWidth={2.5} />
-                      <span className="text-[10px] font-bold tracking-wider">解答</span>
+                      <span className="text-[10px] font-bold tracking-wider uppercase">解答</span>
                       <button 
                         onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes)}
                         disabled={isAutoPlaying}
-                        className="w-5 h-5 flex items-center justify-center rounded-full text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
+                        className="w-5 h-5 flex items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-100"
                       >
-                        <Volume2 size={13} strokeWidth={2.5} />
+                        <Volume2 size={12} strokeWidth={2.5} />
                       </button>
                     </div>
-                    <p className="text-2xl sm:text-[34px] font-black text-emerald-600 leading-[1.2] tracking-tighter antialiased">
+                    <p className="text-xl sm:text-2xl font-black text-emerald-600 leading-snug tracking-tight">
                       {question.answer_sentence_yes}
                     </p>
                   </div>
                 )}
-              </motion.div>
-            ) : (
-              /* 開示用点線ボタン */
-              <motion.button
-                key="placeholder-box"
-                onClick={() => {
-                  // 🛡️ 自動再生中はタップによる開示アクションを完全に拒否
-                  if (isAutoPlaying) return;
-                  handleReveal(true);
-                }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                // 🛡️ 自動再生中（isAutoPlaying === true）は、ホバーやタップ時の拡大アニメーション効果を無効化
-                whileHover={isAutoPlaying ? {} : { scale: 1.002, backgroundColor: "rgba(241, 245, 249, 0.6)" }}
-                whileTap={isAutoPlaying ? {} : { scale: 0.998 }}
-                // 🛡️ `disabled` 属性の付与、および自動再生中専用のスタイル調整（カーソル禁止、アニメーションのピンを隠すなど）
-                disabled={isAutoPlaying}
-                className={`w-full h-full min-h-[80px] sm:min-h-[96px] flex flex-col items-center justify-center border border-dashed rounded-[20px] sm:rounded-[24px] px-4 py-3 outline-none focus:ring-2 transition-colors
-                  ${isAutoPlaying 
-                    ? "border-slate-200 bg-slate-50/10 text-slate-400 cursor-not-allowed focus:ring-transparent" 
-                    : "border-slate-200 hover:border-indigo-300 text-indigo-500/80 bg-slate-50/30 cursor-pointer focus:ring-indigo-500/20"
-                  }`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  {!isAutoPlaying && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping shrink-0" />
-                  )}
-                  <span className={`text-[11px] sm:text-xs font-black tracking-[0.15em]
-                    ${isAutoPlaying ? "text-slate-400/80" : "text-indigo-600/90"}`}
+
+                {/* 👁️ 問題をテキスト表示するためのトリガー（解答開示後、かつ未表示の場合のみ出現） */}
+                {isDrillMode && !isProblemVisible && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full flex justify-center pt-2"
                   >
-                    {isAutoPlaying ? "自動再生中..." : "タップして解答を表示"}
-                  </span>
-                </div>
-              </motion.button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setIsProblemVisible(true); }}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100/70 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-100 transition-all text-[10px] font-black uppercase tracking-widest cursor-pointer active:scale-95"
+                    >
+                      <Eye size={13} strokeWidth={2.5} />
+                      <span>問題（テキスト）を表示する</span>
+                    </button>
+                  </motion.div>
+                )}
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

@@ -39,6 +39,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   // initialQuestionId が有る(栞再開) ＝ 物理タップがないため、ウェルカム表示のために false に倒す
   const [isStarted, setIsStarted] = useState<boolean>(!!initialStarted || !initialQuestionId);
 
+  const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
   // 🔌 Zustand ストア
   const {
     currentIndex,
@@ -99,6 +100,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     setPlayingQuestionSequence(false);
     setPlayingAnswerSequence(false);
+    setAudioPhase('idle');
   }, [setPlayingQuestionSequence, setPlayingAnswerSequence]);
 
   const playSingleTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
@@ -132,21 +134,26 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     if (!question) return;
     setPlayingQuestionSequence(true);
     if (question.statement) {
+      setAudioPhase('statement');
       await playSingleTrack(question.statement, question.statement_voice);
       await new Promise(r => setTimeout(r, DRILL_TIMING.audioGap));
     }
+    setAudioPhase('question');
     await playSingleTrack(question.question, question.question_voice);
+    setAudioPhase('answer');
     setPlayingQuestionSequence(false);
   }, [playSingleTrack, setPlayingQuestionSequence]);
 
   const playAnswerSequence = useCallback(async (question: SprintQuestion) => {
     if (!question) return;
     setPlayingAnswerSequence(true);
+    setAudioPhase('answer');
     await playSingleTrack(question.answer_sentence_yes, question.answer_sentence_yes_voice);
     if (question.answer_sentence_no) {
       await new Promise(r => setTimeout(r, 500));
       await playSingleTrack(question.answer_sentence_no, question.answer_sentence_no_voice);
     }
+    setAudioPhase('idle');
     setPlayingAnswerSequence(false);
   }, [playSingleTrack, setPlayingAnswerSequence]);
 
@@ -352,6 +359,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               groupCurrentIndex={groupProgress.groupCurrentIndex}
               groupTotalCount={groupProgress.groupTotalCount}
               onPlayAudio={handleIndividualPlayAudio}
+              audioPhase={audioPhase}
             />
           </div>
         </div>
