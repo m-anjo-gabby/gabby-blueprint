@@ -499,7 +499,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 {audioPhase === 'thinking' || audioPhase === 'idle' ? (
                   <CircleDot size={36} />
                 ) : (
-                  <Headphones size={36} strokeWidth={2.5} className={audioPhase !== 'idle' ? "animate-pulse" : ""} />
+                  <Headphones size={36} strokeWidth={2.5} className="animate-pulse" />
                 )}
               </div>
             </div>

@@ -104,7 +104,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   // 再生状態の日本語テキスト中央 HUD 用
   const statusMessage = useMemo(() => {
-    if (isRevealed) return { text: "答え合わせ", color: "text-slate-400" };
+    if (isRevealed) return { text: "解答をCheck", color: "text-slate-400" };
     switch (audioPhase) {
       case 'statement':
         return { text: "基本文を再生中...", color: "text-indigo-600" };
@@ -207,26 +207,39 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </AnimatePresence>
 
         {/* 再生状態メッセージ ＆ 丸型アイコン：常時表示 */}
-        <div className="flex items-center gap-x-4 w-full">
-          <div className={cn(
-            "w-11 h-11 rounded-xl flex items-center justify-center shadow-xs border shrink-0 transition-all duration-300",
-            isRevealed ? "bg-slate-100 border-slate-200 text-slate-400" :
-            audioPhase === 'statement' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
-            audioPhase === 'question' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
-            audioPhase === 'answer' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
-          )}>
-            {audioPhase === 'answer' && !isRevealed ? (
-              <CircleDot size={20} className="animate-ping" />
-            ) : (
-              <Headphones size={20} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />
-            )}
+        <div className="flex items-center justify-between w-full gap-2">
+          <div className="flex items-center gap-x-4">
+            <div className={cn(
+              "w-11 h-11 rounded-xl flex items-center justify-center shadow-xs border shrink-0 transition-all duration-300",
+              isRevealed ? "bg-slate-100 border-slate-200 text-slate-400" :
+              audioPhase === 'statement' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
+              audioPhase === 'question' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
+              audioPhase === 'answer' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
+            )}>
+              {audioPhase === 'answer' && !isRevealed ? (
+                <CircleDot size={20} className="animate-ping" />
+              ) : (
+                <Headphones size={20} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />
+              )}
+            </div>
+            
+            <div className="flex flex-col text-left">
+              <h3 className={cn("text-[11px] font-black uppercase tracking-wider leading-none", statusMessage.color)}>
+                {statusMessage.text}
+              </h3>
+            </div>
           </div>
-          
-          <div className="flex flex-col text-left">
-            <h3 className={cn("text-[11px] font-black uppercase tracking-wider leading-none", statusMessage.color)}>
-              {statusMessage.text}
-            </h3>
-          </div>
+
+          {/* 👁️ 問題をテキスト表示するためのトリガー（解答開示後、かつ未表示の場合のみ出現） */}
+          {isDrillMode && isRevealed && !isProblemVisible && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsProblemVisible(true); }}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-indigo-600 border border-indigo-100 shadow-sm transition-all text-[10px] font-black uppercase tracking-tight cursor-pointer active:scale-95 ml-auto"
+            >
+              <Eye size={13} strokeWidth={2.5} />
+              <span>問題を表示</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -372,23 +385,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                       {question.answer_sentence_yes}
                     </p>
                   </div>
-                )}
-
-                {/* 👁️ 問題をテキスト表示するためのトリガー（解答開示後、かつ未表示の場合のみ出現） */}
-                {isDrillMode && !isProblemVisible && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="w-full flex justify-center pt-2"
-                  >
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setIsProblemVisible(true); }}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100/70 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-100 transition-all text-[10px] font-black uppercase tracking-widest cursor-pointer active:scale-95"
-                    >
-                      <Eye size={13} strokeWidth={2.5} />
-                      <span>問題（テキスト）を表示する</span>
-                    </button>
-                  </motion.div>
                 )}
               </motion.div>
             )}

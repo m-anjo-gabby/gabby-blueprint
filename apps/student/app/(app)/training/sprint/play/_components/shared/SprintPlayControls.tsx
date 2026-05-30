@@ -61,46 +61,9 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
 
   return (
     <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2">
-      
-      {/* ──────────────────────────────────────────────────────────── */}
-      {/* 1. ステータス・インジケーター */}
-      {/* ──────────────────────────────────────────────────────────── */}
-      <div className="h-6 flex items-center justify-center">
-        <AnimatePresence mode="wait">
-          {!isStarted ? (
-            // 🛡️ 未スタート時は「準備完了」系の控えめなテキストを出しておく
-            <motion.span key="not-started" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
-              Waiting for Start
-            </motion.span>
-          ) : isRecording ? (
-            <motion.div key="rec" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-              <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em]">Recording {timeLeft}s</span>
-            </motion.div>
-          ) : isAutoPlaying ? (
-            <motion.div key="auto" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
-              <RotateCw size={10} className="animate-spin text-indigo-600" />
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Auto Playing</span>
-            </motion.div>
-          ) : isPlaying ? (
-            <motion.div key="play" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
-              <RotateCw size={10} className="animate-spin text-indigo-600" />
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Playing</span>
-            </motion.div>
-          ) : !isRevealed ? (
-            <motion.span key="hint-reveal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-              Tap Card or Reveal to check answer
-            </motion.span>
-          ) : (
-            <motion.span key="hint-next" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
-              Listen & Practice then go Next
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </div>
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 2. 上段：ナビゲーション・レイヤー（戻る・進む・ブックマーク） */}
+      {/* 1. 上段：ナビゲーション・レイヤー（戻る・進む・ブックマーク） */}
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between w-full gap-2 h-14">        
 
@@ -148,7 +111,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
       </div>
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 3. 下段：アクション・レイヤー（再生速度 ＋ マイク録音） */}
+      {/* 2. 下段：アクション・レイヤー（再生速度 ＋ マイク録音） */}
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 w-full max-w-sm px-2 mt-1 h-14">
         
@@ -176,8 +139,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
           <button
             onClick={onPlayAudio}
             disabled={isInteractionDisabled}
-            className={cn(
-              "flex-1 h-full flex items-center justify-center gap-2 transition-all",
+            className={cn("flex-1 h-full flex items-center justify-center transition-all",
               isManualPlaying ? "bg-indigo-50 text-indigo-600" : "text-slate-600 hover:text-indigo-600"
             )}
           >
@@ -186,9 +148,6 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
             ) : (
               <Volume2 size={20} strokeWidth={2.5} />
             )}
-            <span className="text-[10px] font-black uppercase tracking-widest">
-              {isManualPlaying ? 'Playing' : 'Listen'}
-            </span>
           </button>
         </div>
 
@@ -196,8 +155,7 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
         <button
           onClick={isRecording ? onStopRecord : onStartRecord}
           disabled={(isInteractionDisabled && !isRecording) || isManualPlaying}
-          className={cn(
-            "h-full rounded-2xl flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative",
+          className={cn("h-full rounded-2xl flex items-center justify-center font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative",
             isRecording ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
             ((isInteractionDisabled && !isRecording) || isManualPlaying) && "opacity-20 disabled:pointer-events-none"
           )}
@@ -206,14 +164,12 @@ export const SprintPlayControls: React.FC<SprintPlayControlsProps> = ({
           
           <AnimatePresence mode="wait">
             {isRecording ? (
-              <motion.div key="stop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 relative z-10">
+              <motion.div key="stop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center justify-center relative z-10">
                 <Square size={14} fill="currentColor" strokeWidth={0} />
-                <span className="tracking-[0.1em]">Stop</span>
               </motion.div>
             ) : (
-              <motion.div key="mic" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 relative z-10">
+              <motion.div key="mic" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center justify-center relative z-10">
                 <Mic size={20} strokeWidth={2.5} />
-                <span className="tracking-[0.1em]">Practice</span>
               </motion.div>
             )}
           </AnimatePresence>
