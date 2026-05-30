@@ -257,27 +257,28 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         {/* 🎯 修正：【A】基本文セクション（問題テキスト表示アクション前は丸ごと非表示） */}
         {!isSprintMode && question.statement && !isHidingProblemText && (
           <div className="w-full text-left border-l-4 border-slate-200 pl-3 sm:pl-4 py-0.5 animate-in fade-in duration-350 flex flex-col gap-1">
-            <div className="flex items-center justify-between w-full mb-0.5">
+            <div className="flex items-center w-full mb-0.5">
               <div className="flex items-center gap-x-1.5 text-slate-400">
-              <MessageSquare size={12} />
-              <span className="text-[10px] font-bold tracking-wider leading-none">基本文</span>
-              <button 
-                onClick={(e) => triggerAudio(e, question.statement_voice, question.statement || "")}
-                disabled={isAutoPlaying}
-                className="w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-indigo-500 hover:bg-slate-100 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
-                title="音声を再生"
-              >
-                <Volume2 size={13} />
-              </button>
-              </div>
-              {question.statement_ja && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowJaStatement(!showJaStatement); }}
-                  className={cn("p-1 rounded-md transition-all", showJaStatement ? "bg-indigo-50 text-indigo-600" : "text-slate-300 hover:text-slate-400")}
+                <MessageSquare size={12} />
+                <span className="text-[10px] font-bold tracking-wider leading-none">基本文</span>
+                <button 
+                  onClick={(e) => triggerAudio(e, question.statement_voice, question.statement || "")}
+                  disabled={isAutoPlaying}
+                  className="w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-indigo-500 hover:bg-slate-100 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
+                  title="音声を再生"
                 >
-                  <Languages size={14} />
+                  <Volume2 size={13} />
                 </button>
-              )}
+                {question.statement_ja && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowJaStatement(!showJaStatement); }}
+                    className={cn("w-6 h-6 flex items-center justify-center rounded-md transition-all", showJaStatement ? "bg-indigo-50 text-indigo-600" : "text-slate-300 hover:text-slate-400 hover:bg-slate-50")}
+                    title="和訳を切り替え"
+                  >
+                    <Languages size={13} />
+                  </button>
+                )}
+              </div>
             </div>
             <p className="text-sm sm:text-base font-bold text-slate-600 leading-relaxed tracking-tight">
               {showJaStatement ? question.statement_ja : question.statement}
@@ -288,27 +289,28 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         {/* 🎯 修正：【B】質問 / 指示セクション（問題テキスト表示アクション前は丸ごと非表示） */}
         {!isHidingProblemText && (
           <div className="w-full text-left border-l-4 border-indigo-500 pl-3 sm:pl-4 py-0.5 animate-in fade-in duration-350 flex flex-col gap-1">
-            <div className="flex items-center justify-between w-full mb-0.5">
+            <div className="flex items-center w-full mb-0.5">
               <div className="flex items-center gap-x-1.5 text-indigo-500">
-              <HelpCircle size={13} strokeWidth={2.5} />
-              <span className="text-[10px] font-bold tracking-wider leading-none">{config.sectionTitle}</span>
-              <button 
-                onClick={(e) => triggerAudio(e, question.question_voice, question.question)}
-                disabled={isAutoPlaying}
-                className="w-5 h-5 flex items-center justify-center rounded-full text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
-                title="音声を再生"
-              >
-                <Volume2 size={13} strokeWidth={2.5} />
-              </button>
-              </div>
-              {question.question_ja && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowJaQuestion(!showJaQuestion); }}
-                  className={cn("p-1 rounded-md transition-all", showJaQuestion ? "bg-indigo-50 text-indigo-600" : "text-slate-300 hover:text-slate-400")}
+                <HelpCircle size={13} strokeWidth={2.5} />
+                <span className="text-[10px] font-bold tracking-wider leading-none">{config.sectionTitle}</span>
+                <button 
+                  onClick={(e) => triggerAudio(e, question.question_voice, question.question)}
+                  disabled={isAutoPlaying}
+                  className="w-5 h-5 flex items-center justify-center rounded-full text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
+                  title="音声を再生"
                 >
-                  <Languages size={14} />
+                  <Volume2 size={13} strokeWidth={2.5} />
                 </button>
-              )}
+                {question.question_ja && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowJaQuestion(!showJaQuestion); }}
+                    className={cn("w-6 h-6 flex items-center justify-center rounded-md transition-all", showJaQuestion ? "bg-indigo-50 text-indigo-600" : "text-slate-300 hover:text-slate-400 hover:bg-slate-50")}
+                    title="和訳を切り替え"
+                  >
+                    <Languages size={13} />
+                  </button>
+                )}
+              </div>
             </div>
             <p className="text-2xl sm:text-[32px] font-black text-slate-800 leading-[1.25] tracking-tighter antialiased">
               {showJaQuestion ? question.question_ja : question.question}
@@ -361,26 +363,26 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 {question.answer_sentence_no ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                     <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-4 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
-                      <div className="flex items-center justify-between w-full mb-0.5">
-                        <div className="flex items-center gap-x-1 text-emerald-600">
-                        <CheckCircle2 size={12} strokeWidth={2.5} />
-                        <span className="text-[9px] font-bold tracking-wider">解答（YES）</span>
-                        <button 
-                          onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes)}
-                          disabled={isAutoPlaying}
-                          className="w-4 h-4 flex items-center justify-center text-emerald-500 hover:bg-emerald-100 rounded-full ml-1"
-                        >
-                          <Volume2 size={11} strokeWidth={2.5} />
-                        </button>
-                        </div>
-                        {question.answer_sentence_yes_ja && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
-                            className={cn("p-1 rounded-md transition-all", showJaAnswer ? "bg-emerald-100 text-emerald-600" : "text-emerald-300 hover:text-emerald-400")}
+                      <div className="flex items-center w-full mb-0.5">
+                        <div className="flex items-center gap-x-1.5 text-emerald-600">
+                          <CheckCircle2 size={12} strokeWidth={2.5} />
+                          <span className="text-[9px] font-bold tracking-wider">解答（YES）</span>
+                          <button 
+                            onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes)}
+                            disabled={isAutoPlaying}
+                            className="w-4 h-4 flex items-center justify-center text-emerald-500 hover:bg-emerald-100 rounded-full"
                           >
-                            <Languages size={12} />
+                            <Volume2 size={11} strokeWidth={2.5} />
                           </button>
-                        )}
+                          {question.answer_sentence_yes_ja && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
+                              className={cn("w-5 h-5 flex items-center justify-center rounded-md transition-all", showJaAnswer ? "bg-emerald-100 text-emerald-600" : "text-emerald-400/60 hover:text-emerald-600 hover:bg-emerald-100/50")}
+                            >
+                              <Languages size={12} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <p className="text-lg sm:text-xl font-black text-emerald-700 leading-snug tracking-tight">
                         {showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes}
@@ -388,26 +390,26 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     </div>
 
                     <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-4 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
-                      <div className="flex items-center justify-between w-full mb-0.5">
-                        <div className="flex items-center gap-x-1 text-amber-600">
-                        <CheckCircle2 size={12} strokeWidth={2.5} />
-                        <span className="text-[9px] font-bold tracking-wider">解答（NO）</span>
-                        <button 
-                          onClick={(e) => triggerAudio(e, question.answer_sentence_no_voice, question.answer_sentence_no || "")}
-                          disabled={isAutoPlaying}
-                          className="w-4 h-4 flex items-center justify-center text-amber-500 hover:bg-amber-100 rounded-full ml-1"
-                        >
-                          <Volume2 size={11} strokeWidth={2.5} />
-                        </button>
-                        </div>
-                        {question.answer_sentence_no_ja && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
-                            className={cn("p-1 rounded-md transition-all", showJaAnswer ? "bg-amber-100 text-amber-600" : "text-amber-300 hover:text-amber-400")}
+                      <div className="flex items-center w-full mb-0.5">
+                        <div className="flex items-center gap-x-1.5 text-amber-600">
+                          <CheckCircle2 size={12} strokeWidth={2.5} />
+                          <span className="text-[9px] font-bold tracking-wider">解答（NO）</span>
+                          <button 
+                            onClick={(e) => triggerAudio(e, question.answer_sentence_no_voice, question.answer_sentence_no || "")}
+                            disabled={isAutoPlaying}
+                            className="w-4 h-4 flex items-center justify-center text-amber-500 hover:bg-amber-100 rounded-full"
                           >
-                            <Languages size={12} />
+                            <Volume2 size={11} strokeWidth={2.5} />
                           </button>
-                        )}
+                          {question.answer_sentence_no_ja && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
+                              className={cn("w-5 h-5 flex items-center justify-center rounded-md transition-all", showJaAnswer ? "bg-amber-100 text-amber-600" : "text-amber-400/60 hover:text-amber-600 hover:bg-amber-100/50")}
+                            >
+                              <Languages size={12} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <p className="text-lg sm:text-xl font-black text-amber-700 leading-snug tracking-tight">
                         {showJaAnswer ? question.answer_sentence_no_ja : question.answer_sentence_no}
@@ -415,27 +417,27 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/25 pl-4 pr-3 py-2.5 rounded-r-xl flex flex-col gap-1">
-                    <div className="flex items-center justify-between w-full mb-0.5">
+                  <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/25 pl-4 pr-3 py-2.5 rounded-r-xl flex flex-col gap-0.5">
+                    <div className="flex items-center w-full mb-0.5">
                       <div className="flex items-center gap-x-1.5 text-emerald-600">
-                      <CheckCircle2 size={13} strokeWidth={2.5} />
-                      <span className="text-[10px] font-bold tracking-wider uppercase">解答</span>
-                      <button 
-                        onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes)}
-                        disabled={isAutoPlaying}
-                        className="w-5 h-5 flex items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-100"
-                      >
-                        <Volume2 size={12} strokeWidth={2.5} />
-                      </button>
-                      </div>
-                      {question.answer_sentence_yes_ja && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
-                          className={cn("p-1 rounded-md transition-all", showJaAnswer ? "bg-emerald-100 text-emerald-600" : "text-emerald-300 hover:text-emerald-400")}
+                        <CheckCircle2 size={13} strokeWidth={2.5} />
+                        <span className="text-[10px] font-bold tracking-wider uppercase">解答</span>
+                        <button 
+                          onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes)}
+                          disabled={isAutoPlaying}
+                          className="w-5 h-5 flex items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-100"
                         >
-                          <Languages size={13} />
+                          <Volume2 size={12} strokeWidth={2.5} />
                         </button>
-                      )}
+                        {question.answer_sentence_yes_ja && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
+                            className={cn("w-6 h-6 flex items-center justify-center rounded-md transition-all", showJaAnswer ? "bg-emerald-100 text-emerald-600" : "text-emerald-400/60 hover:text-emerald-600 hover:bg-emerald-100/50")}
+                          >
+                            <Languages size={13} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-xl sm:text-2xl font-black text-emerald-600 leading-snug tracking-tight">
                       {showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes}
