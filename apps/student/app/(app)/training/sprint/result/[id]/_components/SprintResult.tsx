@@ -99,6 +99,36 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     });
   };
 
+  /**
+   * カード単体の一括再生（基本文・質問・解答を連続再生）
+   */
+  const handlePlaySingleQuestion = async (q: any) => {
+    // 全体の一括再生（ループ）が走っていたら停止させる
+    isBatchPlayingRef.current = false;
+    setIsBatchPlaying(false);
+    
+    stopAllAudio();
+    setFocusedCardId(q.question_id);
+    const isSpeedMode = scoreData.question_type === '0';
+
+    try {
+      // 1. 基本文（Speedモード以外の場合）
+      if (!isSpeedMode && q.statement) {
+        await handlePlayAudio(q.question_id + '-st', q.statement, q.statement_voice);
+        await new Promise(r => setTimeout(r, 400));
+      }
+      // 2. 質問 / 指示
+      await handlePlayAudio(q.question_id + '-q', q.question, q.question_voice);
+      await new Promise(r => setTimeout(r, 400));
+      // 3. 解答
+      const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no : q.answer_sentence_yes;
+      const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
+      await handlePlayAudio(q.question_id + '-ans', ansText ?? "", ansVoice);
+    } catch (e) {
+      console.error("Single sequence play error:", e);
+    }
+  };
+
   // 一括再生
   const handlePlayAll = async () => {
     if (isBatchPlayingRef.current) {
@@ -243,9 +273,22 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                       isFocused && "ring-2 ring-blue-500 border-transparent shadow-md scale-[1.01]"
                     )}
                   >
-                    {/* インデックス */}
-                    <div className="absolute top-4 right-5 text-slate-200 italic font-black text-xl select-none">
-                      {String(index + 1).padStart(2, '0')}
+                    {/* インデックス ＆ 単体再生ボタン */}
+                    <div className="absolute top-4 right-5 flex items-center gap-2 z-10">
+                      <button
+                        onClick={() => handlePlaySingleQuestion(q)}
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95",
+                          isFocused && playingId ? "bg-blue-600 text-white shadow-md" : "bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                        )}
+                        title="この問題を一括再生"
+                      >
+                        <PlayCircle size={18} fill={isFocused && playingId ? "currentColor" : "none"} className={cn(isFocused && playingId && "animate-pulse")} />
+                      </button>
+                      
+                      <div className="text-slate-200 italic font-black text-xl select-none leading-none">
+                        {String(index + 1).padStart(2, '0')}
+                      </div>
                     </div>
 
                     {/* 基本文 */}
