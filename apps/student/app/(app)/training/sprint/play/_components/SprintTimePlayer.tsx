@@ -419,10 +419,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         </div>
 
         {/* メインコンテンツエリア */}
-        <div className="flex-1 flex flex-col items-center justify-start p-6 pt-12 text-center space-y-20">
+        <div className="flex-1 flex flex-col items-center justify-start p-6 pt-6 sm:pt-12 text-center space-y-10 sm:space-y-20 overflow-y-auto overscroll-contain">
           
           {/* 🏆 ヘッダー情報の集約（左上にバッジ、中央にプログレスバー） */}
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-10">
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-6 sm:gap-10">
             {/* 問題番号バッジ：左上に配置してバランスを改善 */}
             <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600 self-start">
               <div className="flex items-center gap-2.5 px-3 py-1.5">
@@ -452,7 +452,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
             {/* 🎯 タスク進行バー（日本語ラベル ＆ 横幅を広げて安定感を向上） */}
             <div className="w-full flex justify-center">
-              <div className="w-72 flex items-center justify-between gap-2">
+              <div className="w-full max-w-[280px] sm:w-72 flex items-center justify-between gap-2">
                 {userActionSteps.map((step, idx) => {
                   const isCurrent = idx === currentActionIndex;
                   const isCompleted = idx < currentActionIndex;
@@ -482,7 +482,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
           <div className="w-full flex flex-col items-center space-y-6">
             
-            <div className="relative w-36 h-36 flex items-center justify-center">
+            <div className="relative w-32 h-32 sm:w-36 sm:h-36 flex items-center justify-center shrink-0">
               {audioPhase !== 'idle' && audioPhase !== 'thinking' && (
                 <>
                   <span className="animate-ping absolute inline-flex h-24 w-24 rounded-full bg-indigo-500/10 opacity-75"></span>
@@ -496,7 +496,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 audioPhase === 'thinking' ? 'bg-amber-50 border-amber-200 text-amber-500' :
                 'bg-slate-50 border-slate-200 text-slate-400'
               }`}>
-                {audioPhase === 'thinking' ? (
+                {audioPhase === 'thinking' || audioPhase === 'idle' ? (
                   <CircleDot size={36} />
                 ) : (
                   <Headphones size={36} strokeWidth={2.5} className={audioPhase !== 'idle' ? "animate-pulse" : ""} />
@@ -540,8 +540,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         </div>
 
         {/* コントロールエリア */}
-        <div className="px-6 pb-10 shrink-0 border-t border-slate-100 bg-white">
-          <div className="w-full max-w-md mx-auto pt-6 flex items-center gap-3">
+        <div className="px-6 pb-6 sm:pb-10 shrink-0 border-t border-slate-100 bg-white z-10">
+          <div className="w-full max-w-md mx-auto pt-4 sm:pt-6 flex items-center gap-3">
             <button
               onClick={handleCycleRate}
               className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 text-xs font-black font-mono tracking-tight border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
