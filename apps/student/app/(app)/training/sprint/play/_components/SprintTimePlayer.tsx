@@ -71,7 +71,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const instruction = useMemo(() => {
     if (questionType === '0') {
-      return useSprintStore.getState().answerType === '1' ? "「No」主軸で回答してください。" : "「Yes」主軸で回答してください。";
+      return useSprintStore.getState().answerType === '1' ? "「No」で回答してください。" : "「Yes」で回答してください。";
     }
     return SPRINT_INSTRUCTIONS[questionType || '0'] || "";
   }, [questionType]);
@@ -79,6 +79,26 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const isQuestionBased = questionType === '0' || questionType === '6';
   const questionLabelEN = isQuestionBased ? "Listen Question" : "Listen Instructions";
   const questionLabelJA = isQuestionBased ? "質問文再生中" : "指示文再生中";
+
+  /**
+   * 🗺️ タスク進行ステップの定義（QuestionCardと同期）
+   */
+  const userActionSteps = useMemo(() => {
+    if (questionType === '0') return ["質問文", "回答"];
+    const isQuestion = questionType === '6';
+    return ["基本文", isQuestion ? "質問文" : "指示文", "回答"];
+  }, [questionType]);
+
+  const currentActionIndex = useMemo(() => {
+    if (questionType === '0') {
+      if (audioPhase === 'question') return 0;
+      if (audioPhase === 'thinking') return 1;
+      return 0;
+    }
+    if (audioPhase === 'statement') return 0;
+    if (audioPhase === 'question') return 1;
+    return 2;
+  }, [audioPhase, questionType]);
 
   const groupData = useMemo(() => {
     if (!currentQuestion || !questions.length || questionType === '0') {
@@ -363,7 +383,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             </button>
 
             <div className="flex flex-col items-center">
-              <span className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">Sprint Mode</span>
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">Sprint Mode</span>
               <h1 className="text-sm font-black text-slate-800 tracking-tight text-center max-w-[200px] truncate">{courseTitle}</h1>
               <p className="text-[9px] font-bold text-slate-400 mt-1 tracking-tight">{instruction}</p>
             </div>
@@ -399,9 +419,60 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
         {/* メインコンテンツエリア */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-8">
+          
+          {/* 🏆 ヘッダー情報の集約（左上にバッジ、中央にプログレスバー） */}
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-6">
+            {/* 問題番号バッジ：左上に配置してバランスを改善 */}
+            <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600 self-start">
+              <div className="flex items-center gap-2.5 px-3 py-1.5">
+                <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
+                <span className="text-sm font-black text-white font-mono leading-none">
+                  {questionType === '0' ? currentIndex + 1 : groupData.uniqueGroupIndex}
+                </span>
+              </div>
+              {questionType !== '0' && (
+                 <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
+                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
+                   <span className="text-xs font-bold text-indigo-600 font-mono leading-none">
+                     {groupData.currentInGroup + 1} <span className="text-slate-300 mx-0.5">/</span> {groupData.totalInGroup}
+                   </span>
+                 </div>
+              )}
+            </div>
+
+            {/* 🎯 タスク進行バー（日本語ラベル ＆ 中央配置） */}
+            <div className="w-full flex justify-center">
+              <div className="w-64 flex items-center justify-between gap-1.5">
+                {userActionSteps.map((step, idx) => {
+                  const isCurrent = idx === currentActionIndex;
+                  const isCompleted = idx < currentActionIndex;
+                  return (
+                    <div key={idx} className="flex-1 flex flex-col gap-1.5">
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
+                        <div 
+                          className={cn(
+                            "absolute inset-0 transition-transform duration-300",
+                            isCompleted ? "bg-emerald-500" : isCurrent ? "bg-indigo-500" : "bg-transparent"
+                          )}
+                          style={{ transform: isCompleted || isCurrent ? 'translateX(0)' : 'translateX(-100%)' }}
+                        />
+                      </div>
+                      <span className={cn(
+                        "text-[10px] font-black tracking-tight",
+                        isCurrent ? "text-indigo-600" : isCompleted ? "text-emerald-600" : "text-slate-300"
+                      )}>
+                        {step}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           <div className="w-full flex flex-col items-center space-y-6">
             
-            <div className="relative w-32 h-32 flex items-center justify-center">
+            <div className="relative w-36 h-36 flex items-center justify-center">
               {audioPhase !== 'idle' && audioPhase !== 'thinking' && (
                 <>
                   <span className="animate-ping absolute inline-flex h-24 w-24 rounded-full bg-indigo-500/10 opacity-75"></span>
@@ -412,7 +483,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 <span className="animate-ping absolute inline-flex h-24 w-24 rounded-full bg-emerald-500/10 opacity-60"></span>
               )}
               
-              <div className={`w-24 h-24 rounded-3xl flex items-center justify-center border transition-all duration-300 shadow-sm ${
+              <div className={`w-28 h-28 rounded-[32px] flex items-center justify-center border transition-all duration-300 shadow-md ${
                 audioPhase === 'statement' ? 'bg-indigo-50 border-indigo-200 text-indigo-600' :
                 audioPhase === 'question' ? 'bg-indigo-600 border-indigo-600 text-white' :
                 audioPhase === 'thinking' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' :
@@ -427,36 +498,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             </div>
 
             <div className="space-y-4 min-h-[120px] flex flex-col items-center justify-start">
-              <div className="flex flex-col items-center gap-2">
-                {questionType === '0' ? (
-                  <div className="h-5.5 px-3 flex items-center justify-center rounded-full bg-slate-100 text-slate-700 border border-slate-200/60 font-mono text-[11px] font-black tracking-wider">
-                    Q{currentIndex + 1}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2.5">
-                    <div className="h-5.5 px-3 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100/80 font-mono text-[11px] font-black tracking-wider">
-                      Q{groupData.uniqueGroupIndex}-{groupData.currentInGroup + 1}
-                    </div>
-                    <div className="flex items-center gap-1.5 h-2">
-                      {Array.from({ length: groupData.totalInGroup }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            i === groupData.currentInGroup 
-                              ? 'w-4 bg-indigo-600' 
-                              : 'w-2 bg-slate-200'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
               <div className="space-y-1">
-                <h2 className="text-lg font-black tracking-tight text-slate-800 transition-colors duration-200">
-                  {audioPhase === 'statement' && "Listen Base Sentence"}
-                  {audioPhase === 'question' && questionLabelEN}
+                <h2 className={cn(
+                  "text-xl font-black tracking-tight transition-colors duration-200",
+                  audioPhase === 'thinking' ? "text-emerald-600" : "text-slate-800"
+                )}>
+                  {audioPhase === 'statement' && "基本文"}
+                  {audioPhase === 'question' && (isQuestionBased ? "質問文" : "指示文")}
                   {audioPhase === 'thinking' && "Time to Speak!"}
                   {audioPhase === 'idle' && "Ready..."}
                 </h2>
