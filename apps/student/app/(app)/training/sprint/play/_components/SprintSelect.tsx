@@ -326,20 +326,38 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                 <div className="w-10 h-1 rounded-full bg-slate-100" />
               </div>
 
-              <DrawerHeader className="px-8 py-0 flex items-center justify-between h-10">
-                <div className="flex flex-col text-left">
+              <DrawerHeader className="px-8 py-0 flex flex-col gap-3">
+                <div className="flex items-center justify-between h-10">
                   <DrawerTitle className="text-xl font-black tracking-tight text-slate-800 leading-none">
-                    Session Config
+                    トレーニング設定
                   </DrawerTitle>
-                  <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-1">
-                    トレーニングの詳細設定
-                  </span>
+                  <DrawerClose asChild>
+                    <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+                      <X size={20} strokeWidth={2.5} />
+                    </button>
+                  </DrawerClose>
                 </div>
-                <DrawerClose asChild>
-                  <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                    <X size={20} strokeWidth={2.5} />
-                  </button>
-                </DrawerClose>
+
+                {/* 現在の設定情報をバッジで表示（スクロールで見失わないように） */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className={cn(
+                    "text-[9px] font-black px-2 py-0.5 rounded-lg border",
+                    mode === 'sprint' ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-100 border-slate-200 text-slate-600"
+                  )}>
+                    {mode === 'sprint' ? 'スプリント' : 'ドリル'}
+                  </span>
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
+                    {SPRINT_TYPES[selectedType]?.label}
+                  </span>
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
+                    {selectedLevel === '0' ? 'Basic' : `Lvl ${selectedLevel}`}
+                  </span>
+                  {mode === 'sprint' && (
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 font-mono">
+                      {selectedTimeLimitSec}s
+                    </span>
+                  )}
+                </div>
               </DrawerHeader>
             </div>
 
@@ -404,7 +422,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                             className={cn("h-10 rounded-xl border text-xs font-black relative transition-all disabled:opacity-40", isSelected ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10" : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50")}
                           >
                             {item.label}
-                            {isLocked && <Lock size={9} className="absolute bottom-1.5 right-1.5 text-slate-300" />}
+                            {isLocked && <Lock size={11} strokeWidth={2.5} className="absolute top-1.5 left-1.5 text-slate-500" />}
                           </button>
                         );
                       })}
