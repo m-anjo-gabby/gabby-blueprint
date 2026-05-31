@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DRILL_TIMING, SprintQuestion } from "@gabby/types/sprint";
 import { QuestionCard } from "./shared/QuestionCard";
 import { SprintPlayControls } from "./shared/SprintPlayControls";
 import { SprintFeedback } from "./SprintFeedback";
-import { ChevronLeft, Loader2, Square, Volume2 } from 'lucide-react';
+import { ChevronLeft, Loader2, Square, Volume2, Mic } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useSprintStore } from '@/stores/useSprintStore';
@@ -437,6 +438,46 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
             </div>
           )}
         </div>
+
+        {/* 🎙️ 録音中オーバーレイ（単語ドリル準拠） */}
+        <AnimatePresence>
+          {isRecording && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[200] bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-6"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white w-full max-w-sm rounded-[48px] p-10 shadow-2xl flex flex-col items-center gap-8"
+              >
+                <div className="relative">
+                  <div className="absolute inset-0 bg-rose-500/20 rounded-full animate-ping" />
+                  <div className="relative w-24 h-24 bg-rose-500 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-rose-200">
+                    <Mic size={40} fill="currentColor" />
+                  </div>
+                </div>
+
+                <div className="text-center space-y-2">
+                  <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em]">Recording...</p>
+                  <div className="text-5xl font-black font-mono tabular-nums text-slate-800 tracking-tighter">
+                    {timeLeft}s
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleStopRecord}
+                  className="w-20 h-20 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-xl active:scale-95 transition-all"
+                >
+                  <Square size={28} fill="currentColor" />
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* 発話フィードバックオーバーレイ */}
         <SprintFeedback 
