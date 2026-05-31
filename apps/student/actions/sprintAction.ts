@@ -182,9 +182,9 @@ export async function createSprintScoreAction(
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    // com_t_self_sprint へのインサート
+    // self_t_sprint へのインサート
     const { data, error } = await supabase
-      .from("com_t_self_sprint")
+      .from("self_t_sprint")
       .insert([
         {
           user_id: user.id,
@@ -231,7 +231,7 @@ export async function getSprintResultAction(
 
     // ① スコア・履歴レコードを1件取得
     const { data: scoreRecord, error: scoreError } = await supabase
-      .from("com_t_self_sprint")
+      .from("self_t_sprint")
       .select("*")
       .eq("self_sprint_id", self_sprint_id)
       .single();
@@ -305,7 +305,7 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
     const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
 
     const { data, error } = await supabase
-      .from("com_t_self_sprint")
+      .from("self_t_sprint")
       .select(`
         self_sprint_id,
         question_type,
