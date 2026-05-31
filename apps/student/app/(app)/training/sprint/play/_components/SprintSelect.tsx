@@ -11,7 +11,7 @@ import {
   type SprintAnswerType,
   SPRINT_THEMES,
   SPRINT_NOTES,
-  type SprintConfig
+  type SprintConfig,
 } from '@gabby/types/sprint';
 
 import {
@@ -23,13 +23,7 @@ import {
 } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSprintStore } from '@/stores/useSprintStore';
-
-const mockLastSession = {
-  mode: 'drill' as 'drill' | 'sprint',
-  questionType: '0' as SprintQuestionType,
-  level: '0',
-  timeLimitSec: 60,
-};
+import { getLastSprintSessionAction } from '@/actions/sprintAction';
 
 const mockUserRecord: Record<string, number> = {
   CTS_LEVEL_YN: 3,
@@ -52,20 +46,58 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const contentId = searchParams.get('content_id') || '';
   const store = useSprintStore();
   
+  // デフォルト値の定義 (履歴がない場合のフォールバック)
+  const DEFAULT_TYPE: SprintQuestionType = '0';
+  const DEFAULT_TIME = 60;
+
   // ストアに一度でも設定が保存されたか（＝プレイして戻ってきたか）を確認
   // かつ、現在の URL の content_id とストアの contentId が一致している場合のみ「戻り」とみなす
   const isReturningFromSession = store.questionType !== null && store.contentId === contentId;
 
-  const initialType = isReturningFromSession 
-    ? (store.questionType as SprintQuestionType) 
-    : (initialConfig?.questionType || mockLastSession.questionType);
+  // 1. 状態の初期化
+  // initialConfig.questionType は page.tsx で '0' がフォールバックされているため、初期値として安全に使用可能
+  const initialType = isReturningFromSession
+    ? (store.questionType as SprintQuestionType)
+    : (initialConfig?.questionType || DEFAULT_TYPE);
 
-  // 1. プレイ後ならストアの値を、教材一覧などからの新規遷移なら URL パラメータを優先する
-  const [mode, setMode] = useState<'drill' | 'sprint'>(isReturningFromSession ? store.mode : (initialConfig?.mode || mockLastSession.mode));
+  const [mode, setMode] = useState<'drill' | 'sprint'>(
+    isReturningFromSession ? store.mode : (initialConfig?.mode || 'drill')
+  );
   const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType);
-  const [selectedLevel, setSelectedLevel] = useState<string>(isReturningFromSession ? store.level : (searchParams.get('level') || String(SPRINT_TYPES[initialType].minLevel)));
-  const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(isReturningFromSession ? store.timeLimitSec : mockLastSession.timeLimitSec);
+  const [selectedLevel, setSelectedLevel] = useState<string>(
+    isReturningFromSession ? store.level : (searchParams.get('level') || String(SPRINT_TYPES[initialType].minLevel))
+  );
+  const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(
+    isReturningFromSession ? store.timeLimitSec : DEFAULT_TIME
+  );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // 2. 履歴からの初期値復元（URLパラメータで指定がない場合のみ実行）
+  useEffect(() => {
+    // セッションから戻ってきた場合は現在のストア状態を維持するため、DBからの取得は行わない
+    if (isReturningFromSession) return;
+
+    const fetchLastSession = async () => {
+      const res = await getLastSprintSessionAction();
+      if (res.success && res.data) {
+        const last = res.data;
+        
+        // URLに明示的な指定がない項目を、最新の学習履歴に基づき復元する
+        const urlType = searchParams.get('type');
+        const urlLevel = searchParams.get('level');
+
+        if (!urlType) {
+          setSelectedType(last.question_type as SprintQuestionType);
+          if (!urlLevel) setSelectedLevel(String(last.difficulty_level));
+        } else if (!urlLevel && last.question_type === urlType) {
+          setSelectedLevel(String(last.difficulty_level));
+        }
+
+        setSelectedTimeLimitSec(last.time_limit_sec);
+      }
+    };
+    fetchLastSession();
+  }, [isReturningFromSession, searchParams]);
 
   const sortedTypes = useMemo(() => Object.values(SPRINT_TYPES).sort((a, b) => a.seq_no - b.seq_no), []);
   const sortedTimes = useMemo(() => Object.values(SPRINT_TIME_OPTIONS).sort((a, b) => a.seq_no - b.seq_no), []);

@@ -337,3 +337,37 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
     return { success: false, data: [], error: error.message };
   }
 }
+
+/**
+ * ユーザーの最後のスプリントセッション設定（種別・レベル・制限時間）を取得する
+ * 目的: セッション開始前の設定画面での初期値復元
+ */
+export async function getLastSprintSessionAction() {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
+
+    // 最新の1件を取得
+    const { data, error } = await supabase
+      .from("self_t_sprint")
+      .select("question_type, difficulty_level, time_limit_sec")
+      .eq("user_id", user.id)
+      .order("insert_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return { success: true, data };
+
+  } catch (error: any) {
+    logger.error("sprint:get_last_session_error", "Failed to fetch last session info", {
+      ...ctx,
+      payload: { error: error.message }
+    });
+    return { success: false, data: null, error: error.message };
+  }
+}
