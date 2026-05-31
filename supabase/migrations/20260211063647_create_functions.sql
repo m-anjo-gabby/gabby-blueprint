@@ -12,7 +12,7 @@ DECLARE
     -- 処理対象クライアントID
     target_client_id uuid;
 BEGIN
-    -- 優先順位に基づいた client_id の解決
+    -- 1. 優先順位に基づいた client_id の解決
     IF param_client_id IS NOT NULL THEN
         target_client_id := param_client_id;
     ELSE
@@ -20,7 +20,7 @@ BEGIN
         SELECT client_id INTO target_client_id FROM public.com_m_client WHERE client_type = 0 LIMIT 1;
     END IF;
 
-    -- ユーザマスタ登録
+    -- 2. ユーザマスタ登録
     INSERT INTO public.com_m_user (id, client_id, area_cd, user_type, user_name) 
     VALUES (
         new.id, 
@@ -29,6 +29,11 @@ BEGIN
         COALESCE(param_user_type, '1'), -- デフォルト値の考慮
         param_user_name
     );
+
+    -- 3. [追加] ユーザースプリント進捗マスタの初期レコード作成
+    -- カラム定義に DEFAULT が設定されているため、user_id のみを指定してクリーンに初期化します
+    INSERT INTO public.student_m_sprint_progress (user_id)
+    VALUES (new.id);
 
     RETURN new;
 END;

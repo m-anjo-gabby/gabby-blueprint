@@ -33,10 +33,10 @@ export interface SprintTypeMetadata {
  * スプリント問題種別の画面表示用マスタ
  */
 export const SPRINT_TYPES: Record<SprintQuestionType, SprintTypeMetadata> = {
-  '0': { label: 'UG Speed', value: '0', seq_no: 1, dbKey: 'CTS_LEVEL_YN', hasBasic: true, minLevel: 0, maxLevel: 10 },
-  '5': { label: 'UG Builders', value: '5', seq_no: 2, dbKey: 'CTS_LEVEL_UGBUILDERS', hasBasic: false, minLevel: 1, maxLevel: 5 },
-  '4': { label: 'UG Structure', value: '4', seq_no: 3, dbKey: 'CTS_LEVEL_UGCV', hasBasic: true, minLevel: 0, maxLevel: 10 },
-  '6': { label: 'UG Mastery', value: '6', seq_no: 4, dbKey: 'CTS_LEVEL_UGMASTERY', hasBasic: false, minLevel: 1, maxLevel: 5 },
+  '0': { label: 'UG Speed', value: '0', seq_no: 1, dbKey: 'level_speed', hasBasic: true, minLevel: 0, maxLevel: 10 },
+  '5': { label: 'UG Builders', value: '5', seq_no: 2, dbKey: 'level_builders', hasBasic: false, minLevel: 1, maxLevel: 5 },
+  '4': { label: 'UG Structure', value: '4', seq_no: 3, dbKey: 'level_structure', hasBasic: true, minLevel: 0, maxLevel: 10 },
+  '6': { label: 'UG Mastery', value: '6', seq_no: 4, dbKey: 'level_mastery', hasBasic: false, minLevel: 1, maxLevel: 5 },
 } as const;
 
 /**

@@ -385,3 +385,18 @@ USING (
     AND u.client_id = public.get_jwt_client_id()
   )
 );
+
+---------------------------------------------
+-- SQLポリシー: ユーザースプリント進捗 (student_m_sprint_progress)
+---------------------------------------------
+-- 既存ポリシーの削除
+DROP POLICY IF EXISTS "Users can manage their own sprint progress" ON public.student_m_sprint_progress;
+
+-- テーブルに対する RLS を有効化
+ALTER TABLE public.student_m_sprint_progress ENABLE ROW LEVEL SECURITY;
+
+-- 自分の進捗のみ参照・操作可能
+CREATE POLICY "Users can manage their own sprint progress" ON public.student_m_sprint_progress
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());

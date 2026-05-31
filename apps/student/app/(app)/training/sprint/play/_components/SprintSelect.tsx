@@ -23,14 +23,7 @@ import {
 } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSprintStore } from '@/stores/useSprintStore';
-import { getLastSprintSessionAction } from '@/actions/sprintAction';
-
-const mockUserRecord: Record<string, number> = {
-  CTS_LEVEL_YN: 3,
-  CTS_LEVEL_UGBUILDERS: 1,
-  CTS_LEVEL_UGCV: 2,
-  CTS_LEVEL_UGMASTERY: 2,
-};
+import { getLastSprintSessionAction, getSprintProgressAction } from '@/actions/sprintAction';
 
 interface SprintSelectProps {
   initialConfig?: {
@@ -46,6 +39,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const contentId = searchParams.get('content_id') || '';
   const store = useSprintStore();
   
+  const [userProgress, setUserProgress] = useState<any>(null);
   // デフォルト値の定義 (履歴がない場合のフォールバック)
   const DEFAULT_TYPE: SprintQuestionType = '0';
   const DEFAULT_TIME = 60;
@@ -72,7 +66,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // 2. 履歴からの初期値復元（URLパラメータで指定がない場合のみ実行）
+  // 2. 履歴・進捗からの初期値復元
   useEffect(() => {
     // セッションから戻ってきた場合は現在のストア状態を維持するため、DBからの取得は行わない
     if (isReturningFromSession) return;
@@ -95,6 +89,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
         setSelectedTimeLimitSec(last.time_limit_sec);
       }
+
+      // 到達レベル進捗の取得
+      const progRes = await getSprintProgressAction();
+      if (progRes.success) {
+        setUserProgress(progRes.data);
+      }
     };
     fetchLastSession();
   }, [isReturningFromSession, searchParams]);
@@ -109,19 +109,24 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   const levelItems = useMemo(() => {
     const meta = SPRINT_TYPES[selectedType];
-    const allowedLevel = mockUserRecord[meta.dbKey] ?? 0;
+    // DBから取得した到達レベル（クリア済みレベル）。データがない場合は0とみなす
+    const clearedLevel = userProgress?.[meta.dbKey] ?? 0;
+
+    // 許可される最大レベルは「クリア済みレベル + 1」
+    const maxAllowed = clearedLevel + 1;
+
     const items = [];
 
     for (let i = meta.minLevel; i <= meta.maxLevel; i++) {
       const label = i === 0 ? 'Basic' : `Lvl ${i}`;
-      // ロック判定: Basicがある場合は許容値に+1の余裕を持たせる（既存ロジック踏襲）
-      const maxAllowed = allowedLevel + (meta.minLevel === 0 ? 1 : 0);
-      const isLocked = i > 0 && i > maxAllowed; 
+      
+      // 最小レベル(minLevel)は常にプレイ可能。それ以外は maxAllowed を超えたらロック。
+      const isLocked = i > meta.minLevel && i > maxAllowed; 
       
       items.push({ value: String(i), label, isLocked });
     }
     return items;
-  }, [selectedType]);
+  }, [selectedType, userProgress]);
 
   const handleTypeChange = (typeId: SprintQuestionType) => {
     setSelectedType(typeId);

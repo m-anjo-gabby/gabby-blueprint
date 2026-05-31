@@ -371,3 +371,34 @@ export async function getLastSprintSessionAction() {
     return { success: false, data: null, error: error.message };
   }
 }
+
+/**
+ * ユーザーのスプリント進捗状況（各種別の到達レベル）を取得する
+ */
+export async function getSprintProgressAction() {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
+
+    const { data, error } = await supabase
+      .from("student_m_sprint_progress")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    // データが存在しない場合は null を返し、呼び出し側でデフォルト値を扱う
+    return { success: true, data };
+
+  } catch (error: any) {
+    logger.error("sprint:get_progress_error", "Failed to fetch sprint progress", {
+      ...ctx,
+      payload: { error: error.message }
+    });
+    return { success: false, data: null, error: error.message };
+  }
+}
