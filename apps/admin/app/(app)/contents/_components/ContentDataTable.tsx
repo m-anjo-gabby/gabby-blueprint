@@ -214,7 +214,13 @@ export function ContentDataTable({
             className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
             title="エディタを起動"
           >
-            <Link href={`/contents/${row.original.content_id}`}>
+            <Link 
+              href={
+                row.original.content_type === 2 
+                  ? `/contents/${row.original.content_id}?type=${(row.original.metadata as any)?.question_type || '0'}`
+                  : `/contents/${row.original.content_id}`
+              }
+            >
               <ChevronRight size={18} />
             </Link>
           </Button>
