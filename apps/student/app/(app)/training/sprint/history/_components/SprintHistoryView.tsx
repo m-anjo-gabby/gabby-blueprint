@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Calendar, Zap, ArrowRight, History, Timer } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { SPRINT_TYPES } from '@gabby/types/sprint';
@@ -24,7 +24,38 @@ interface SprintHistoryViewProps {
 
 export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialData, targetMonth }) => {
   const router = useRouter();
-  const [expandedDates, setExpandedDates] = useState<string[]>([]);
+  const searchParams = useSearchParams();
+  const focusId = searchParams.get('focus');
+
+  // 🎯 初期レンダリング時に URL パラメータから展開すべき日付を特定する
+  const [expandedDates, setExpandedDates] = useState<string[]>(() => {
+    if (!focusId || !initialData.length) return [];
+    const targetSession = initialData.find(s => s.self_sprint_id === focusId);
+    if (targetSession) {
+      return [
+        new Date(targetSession.insert_date).toLocaleDateString('ja-JP', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        })
+      ];
+    }
+    return [];
+  });
+
+  // 🎯 スクロール処理のみを Effect で行う（setStateは含まない）
+  useEffect(() => {
+    if (!focusId || initialData.length === 0) return;
+
+    const timer = setTimeout(() => {
+      const element = document.getElementById(`session-${focusId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'auto', block: 'center' });
+      }
+    }, 50); // レンダリング確定後、瞬時にジャンプさせる
+
+    return () => clearTimeout(timer);
+  }, [focusId, initialData.length]);
 
   // 日付ごとにグループ化
   const groupedData = useMemo(() => {
@@ -171,8 +202,12 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                             return (
                               <div 
                                 key={session.self_sprint_id}
+                                id={`session-${session.self_sprint_id}`}
                                 onClick={() => router.push(`/training/sprint/result/${session.self_sprint_id}`)}
-                                className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer"
+                                className={cn(
+                                  "flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer",
+                                  focusId === session.self_sprint_id && "ring-2 ring-blue-500 border-transparent bg-blue-50/30 shadow-sm"
+                                )}
                               >
                                 <div className="flex items-center gap-4">
                                   <span className="text-xs font-black text-slate-300 font-mono w-4">{idx + 1}</span>

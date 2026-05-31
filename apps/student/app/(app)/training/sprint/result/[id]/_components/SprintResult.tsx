@@ -205,7 +205,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
           <div className="relative space-y-5">
             <div className="flex items-center justify-between">
               <button 
-                onClick={() => router.push('/training/sprint/history')}
+                onClick={() => {
+                  const date = new Date(scoreData.created_at);
+                  const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                  router.push(`/training/sprint/history?month=${monthStr}&focus=${scoreData.self_sprint_id}`);
+                }}
                 className="h-8 px-2.5 flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all text-[10px] font-black uppercase tracking-wider backdrop-blur-md border border-white/10"
               >
                 <ChevronLeft size={12} strokeWidth={3} />
