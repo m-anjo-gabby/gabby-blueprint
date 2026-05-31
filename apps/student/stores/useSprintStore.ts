@@ -3,6 +3,7 @@
 
 import { create } from 'zustand';
 import { SprintQuestion, SprintQuestionType, SprintAnswerType } from "@gabby/types/sprint";
+import { AnalysisResult, FeedbackConfig } from '@gabby/types/wordDrill';
 
 interface SprintState {
   questions: SprintQuestion[];
@@ -19,6 +20,8 @@ interface SprintState {
   isRecording: boolean;
   isPlayingQuestionSequence: boolean;
   isPlayingAnswerSequence: boolean;
+  feedback: FeedbackConfig | null;
+  analysis: AnalysisResult | null;
 
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
   setSprintConfig: (config: { contentId: string, questionType: SprintQuestionType, level: string, answerType: SprintAnswerType, timeLimitSec: number }) => void;
@@ -30,6 +33,8 @@ interface SprintState {
   toggleAutoPlay: (val?: boolean) => void;
   setPlayingQuestionSequence: (val: boolean) => void;
   setPlayingAnswerSequence: (val: boolean) => void;
+  setFeedback: (val: FeedbackConfig | null) => void;
+  setAnalysis: (val: AnalysisResult | null) => void;
   clearSession: () => void;
   resetStore: () => void;
 }
@@ -49,6 +54,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   isRecording: false,
   isPlayingQuestionSequence: false,
   isPlayingAnswerSequence: false,
+  feedback: null,
+  analysis: null,
 
   initSprint: (questions, mode, startIndex = 0) => set({
     questions,
@@ -59,6 +66,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     isRecording: false,
     isPlayingQuestionSequence: false,
     isPlayingAnswerSequence: false,
+    feedback: null,
+    analysis: null,
     loading: false
   }),
 
@@ -73,6 +82,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
       isRecording: false,
       isPlayingQuestionSequence: false,
       isPlayingAnswerSequence: false,
+      feedback: null,
+      analysis: null,
     };
 
     if (currentIndex < questions.length - 1) {
@@ -93,6 +104,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
       isRecording: false,
       isPlayingQuestionSequence: false,
       isPlayingAnswerSequence: false,
+      feedback: null,
+      analysis: null,
       currentIndex: currentIndex - 1
     });
   },
@@ -109,6 +122,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
         isRecording: false,
         isPlayingQuestionSequence: false,
         isPlayingAnswerSequence: false,
+        feedback: null,
+        analysis: null,
       };
     } else {
       return { isAutoPlaying: false };
@@ -118,6 +133,9 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   setPlayingQuestionSequence: (isPlayingQuestionSequence) => set({ isPlayingQuestionSequence }),
   setPlayingAnswerSequence: (isPlayingAnswerSequence) => set({ isPlayingAnswerSequence }),
 
+  setFeedback: (feedback) => set({ feedback }),
+  setAnalysis: (analysis) => set({ analysis }),
+
   clearSession: () => set({
     questions: [],
     currentIndex: 0,
@@ -126,6 +144,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     isRecording: false,
     isPlayingQuestionSequence: false,
     isPlayingAnswerSequence: false,
+    feedback: null,
+    analysis: null,
     loading: true,
   }),
 
@@ -143,6 +163,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     isRecording: false,
     isPlayingQuestionSequence: false,
     isPlayingAnswerSequence: false,
+    feedback: null,
+    analysis: null,
     loading: true,
   })
 }));

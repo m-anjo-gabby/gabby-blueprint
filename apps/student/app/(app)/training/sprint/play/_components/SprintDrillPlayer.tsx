@@ -4,6 +4,7 @@ import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react'
 import { DRILL_TIMING, SprintQuestion } from "@gabby/types/sprint";
 import { QuestionCard } from "./shared/QuestionCard";
 import { SprintPlayControls } from "./shared/SprintPlayControls";
+import { SprintFeedback } from "./SprintFeedback";
 import { ChevronLeft, Loader2, Square, Volume2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +14,7 @@ import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getSprintTitle } from '@gabby/lib';
+import { FeedbackConfig } from '@gabby/types/wordDrill';
 
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
@@ -26,6 +28,14 @@ const DRILL_INSTRUCTIONS: Record<string, string> = {
   '4': "指示に従って、聞こえてくる文章を変換してください。",
   '5': "語句を加えて、文法的に正しい文章を作ってください。",
   '6': "基本文の内容や関連する質問に回答してください。",
+};
+
+const getFeedbackConfig = (score: number): FeedbackConfig => {
+  if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
+  if (score >= 0.80) return { fill: '#3B82F6', tagText: 'Great' };
+  if (score >= 0.60) return { fill: '#F59E0B', tagText: 'Good' };
+  if (score >= 0.30) return { fill: '#F97316', tagText: 'Fair' };
+  return { fill: '#EF4444', tagText: 'Poor' };
 };
 
 export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({ 
@@ -55,6 +65,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     isRevealed,
     isAutoPlaying,
     isRecording,
+    feedback,
+    analysis,
     initSprint,
     nextStep,
     prevStep,
@@ -62,6 +74,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setIsRecording,
     setPlayingQuestionSequence,
     setPlayingAnswerSequence,
+    setFeedback,
+    setAnalysis,
     toggleAutoPlay,
     clearSession,
     resetStore
@@ -216,11 +230,19 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const handleStartRecord = useCallback(() => {
     if (!currentQuestion) return;
     stopAllAudio();
+    setFeedback(null);
+    setAnalysis(null);
     setIsRecording(true);
+
     const targetText = isRevealed ? currentQuestion.answer_sentence_yes : currentQuestion.question;
     const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ");
-    startAssessment(targetText, cleanWords, (result) => { console.log(result.score); });
-  }, [currentQuestion, isRevealed, stopAllAudio, setIsRecording, startAssessment]);
+
+    startAssessment(targetText, cleanWords, (result) => {
+      setAnalysis(result);
+      setFeedback(getFeedbackConfig(result.score));
+      setIsRecording(false);
+    });
+  }, [currentQuestion, isRevealed, stopAllAudio, setIsRecording, startAssessment, setFeedback, setAnalysis]);
 
   const handleStopRecord = useCallback(() => {
     setIsRecording(false);
@@ -406,6 +428,13 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
             </div>
           )}
         </div>
+
+        {/* 発話フィードバックオーバーレイ */}
+        <SprintFeedback 
+          feedback={feedback} 
+          analysis={analysis} 
+          onClose={() => setFeedback(null)} 
+        />
 
         {/* ──────────────────────────────────────────────────────────── */}
         {/* 🚀 🛡️ iOS/全OS共通：自動再生アンロック用ウェルカムオーバーレイ */}
