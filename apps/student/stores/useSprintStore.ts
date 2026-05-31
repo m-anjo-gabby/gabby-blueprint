@@ -15,6 +15,7 @@ interface SprintState {
   answerType: SprintAnswerType;
   timeLimitSec: number;
   loading: boolean;
+  drillEvalType: 'yes' | 'no';
   isRevealed: boolean;
   isAutoPlaying: boolean;
   isRecording: boolean;
@@ -35,6 +36,7 @@ interface SprintState {
   setPlayingAnswerSequence: (val: boolean) => void;
   setFeedback: (val: FeedbackConfig | null) => void;
   setAnalysis: (val: AnalysisResult | null) => void;
+  setDrillEvalType: (val: 'yes' | 'no') => void;
   clearSession: () => void;
   resetStore: () => void;
 }
@@ -49,6 +51,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   answerType: '0',
   timeLimitSec: 60,
   loading: true,
+  drillEvalType: 'yes',
   isRevealed: false,
   isAutoPlaying: false,
   isRecording: false,
@@ -63,6 +66,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     currentIndex: startIndex,
     isRevealed: false,
     isAutoPlaying: mode === 'sprint', // スプリント時は最初から自動再生フラグを有効化
+    drillEvalType: get().answerType === '1' ? 'no' : 'yes',
     isRecording: false,
     isPlayingQuestionSequence: false,
     isPlayingAnswerSequence: false,
@@ -136,6 +140,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   setFeedback: (feedback) => set({ feedback }),
   setAnalysis: (analysis) => set({ analysis }),
 
+  setDrillEvalType: (drillEvalType) => set({ drillEvalType }),
+
   clearSession: () => set({
     questions: [],
     currentIndex: 0,
@@ -144,6 +150,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     isRecording: false,
     isPlayingQuestionSequence: false,
     isPlayingAnswerSequence: false,
+    drillEvalType: 'yes',
     feedback: null,
     analysis: null,
     loading: true,

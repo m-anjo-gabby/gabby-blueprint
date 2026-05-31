@@ -62,6 +62,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     currentIndex,
     contentId,
     questionType,
+    answerType,
     isRevealed,
     isAutoPlaying,
     isRecording,
@@ -76,6 +77,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setPlayingAnswerSequence,
     setFeedback,
     setAnalysis,
+    drillEvalType,
     toggleAutoPlay,
     clearSession,
     resetStore
@@ -233,16 +235,22 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setFeedback(null);
     setAnalysis(null);
     setIsRecording(true);
+    
+    // 💡 評価対象テキストの決定：Speedモードの場合は常に drillEvalType（スイッチ）を優先する
+    // これにより、解答表示後でもスイッチを切り替えて再評価が可能になる
+    const targetText = (questionType === '0')
+      ? (drillEvalType === 'no' ? (currentQuestion.answer_sentence_no ?? "") : currentQuestion.answer_sentence_yes)
+      : currentQuestion.answer_sentence_yes;
 
-    const targetText = isRevealed ? currentQuestion.answer_sentence_yes : currentQuestion.question;
-    const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ");
+    const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
 
     startAssessment(targetText, cleanWords, (result) => {
       setAnalysis(result);
       setFeedback(getFeedbackConfig(result.score));
       setIsRecording(false);
+      setIsRevealed(true); // 💡 発話評価完了後、自動的に解答を表示する
     });
-  }, [currentQuestion, isRevealed, stopAllAudio, setIsRecording, startAssessment, setFeedback, setAnalysis]);
+  }, [currentQuestion, questionType, drillEvalType, stopAllAudio, setIsRecording, startAssessment, setFeedback, setAnalysis, setIsRevealed]);
 
   const handleStopRecord = useCallback(() => {
     setIsRecording(false);
@@ -393,6 +401,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               groupCurrentIndex={groupProgress.groupCurrentIndex}
               groupTotalCount={groupProgress.groupTotalCount}
               onPlayAudio={handleIndividualPlayAudio}
+              onStartRecord={handleStartRecord}
               audioPhase={audioPhase}
             />
           </div>

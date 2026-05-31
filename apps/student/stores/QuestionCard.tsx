@@ -149,44 +149,23 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       {/* 【ヘッダー領域】位置を確実に固定するために absolute を廃止 */}
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="w-full flex items-center pb-1 px-0.5">
-        <div className="flex items-center gap-3">
-          {/* 🏆 コンパウンド・バッジ：Question と Step を1つのユニットに統合 */}
-          <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600">
-            {/* Question 部分 */}
-            <div className="flex items-center gap-2.5 px-3 py-1.5">
-              <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
-              <span className="text-sm font-black text-white font-mono leading-none">
-                {questionNumberLabel}
-              </span>
-            </div>
-
-            {/* Step 部分（Speed以外のみ表示：白抜きデザイン） */}
-            {questionType !== '0' && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
-                <span className="text-xs font-bold text-indigo-600 font-mono leading-none">
-                  {groupCurrentIndex + 1} <span className="text-slate-300 mx-0.5">/</span> {groupTotalCount}
-                </span>
-              </div>
-            )}
+        {/* 🏆 コンパウンド・バッジ：Question と Step を1つのユニットに統合 */}
+        <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600">
+          {/* Question 部分 */}
+          <div className="flex items-center gap-2.5 px-3 py-1.5">
+            <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
+            <span className="text-sm font-black text-white font-mono leading-none">
+              {questionNumberLabel}
+            </span>
           </div>
 
-          {/* 🆕 Speed用のYES/NO切り替え：バッジの横に独立して配置 */}
-          {questionType === '0' && (
-            <div className="flex items-center gap-2 px-1">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">
-                発話評価
+          {/* Step 部分（Speed以外のみ表示：白抜きデザイン） */}
+          {questionType !== '0' && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
+              <span className="text-xs font-bold text-indigo-600 font-mono leading-none">
+                {groupCurrentIndex + 1} <span className="text-slate-300 mx-0.5">/</span> {groupTotalCount}
               </span>
-              <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200 h-8">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setDrillEvalType('yes'); }}
-                  className={cn("px-2.5 py-1 text-[9px] font-black rounded-md transition-all", drillEvalType === 'yes' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
-                >YES</button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setDrillEvalType('no'); }}
-                  className={cn("px-2.5 py-1 text-[9px] font-black rounded-md transition-all", drillEvalType === 'no' ? "bg-white text-amber-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
-                >NO</button>
-              </div>
             </div>
           )}
         </div>
@@ -259,15 +238,41 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <h3 className={cn("text-[11px] font-black uppercase tracking-wider leading-none", statusMessage.color)}>
                 {statusMessage.text}
               </h3>
-              {/* 🎯 回答待ち状態でのみ表示されるサブテキスト */}
-              {audioPhase === 'answer' && !isRevealed && (
-                <div className="flex items-center gap-1 mt-1 text-slate-400">
-                  <Mic size={10} className="text-rose-400" fill="currentColor" />
-                  <span className="text-[9px] font-bold leading-none">マイクボタンで発話評価</span>
-                </div>
-              )}
             </div>
           </div>
+
+          {/* 🎯 回答誘導セクション：回答待ち状態（!isRevealed）の時だけ表示 */}
+          <AnimatePresence>
+            {audioPhase === 'answer' && !isRevealed && !isRecording && (
+              <motion.div 
+                initial={{ opacity: 0, x: 10 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex items-center gap-2 ml-auto"
+              >
+                {/* UG Speed用のYES/NO切り替え（ドリル評価対象の選択） */}
+                {questionType === '0' && (
+                  <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200 h-9">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setDrillEvalType('yes'); }}
+                      className={cn("px-2.5 py-1 text-[9px] font-black rounded-md transition-all", drillEvalType === 'yes' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400")}
+                    >YES</button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setDrillEvalType('no'); }}
+                      className={cn("px-2.5 py-1 text-[9px] font-black rounded-md transition-all", drillEvalType === 'no' ? "bg-white text-amber-600 shadow-sm" : "text-slate-400")}
+                    >NO</button>
+                  </div>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onStartRecord?.(); }}
+                  className="h-9 px-3 bg-rose-500 text-white rounded-xl shadow-lg flex items-center gap-1.5 active:scale-95 transition-all animate-pulse"
+                >
+                  <Mic size={14} fill="currentColor" />
+                  <span className="text-[9px] font-black uppercase tracking-wider">Practice</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* 👁️ 問題をテキスト表示するためのトリガー（解答開示後、かつ未表示の場合のみ出現） */}
           {isDrillMode && isRevealed && !isProblemVisible && (
