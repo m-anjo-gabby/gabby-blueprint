@@ -72,111 +72,154 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
         ) : (
           groupedQuestions.map((group) => (
             <div key={group.groupId} className="space-y-4">
-              {/* グループヘッダー (Speed以外) */}
-              {!isSpeed && (
-                <div className="flex items-center gap-3 px-2">
-                  <Badge className="bg-slate-900 text-white font-mono rounded-lg h-6">GROUP: {group.groupId.slice(0,8)}</Badge>
-                  <div className="flex-1 h-px bg-slate-200" />
-                </div>
-              )}
-
-              <div className="grid gap-4">
-                {group.items.map((q, idx) => (
-                  <div key={q.question_id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden group hover:border-indigo-300 transition-all duration-300">
-                    <div className="p-5 flex gap-5">
-                      {/* 左：SEQ */}
-                      <div className="flex flex-col items-center shrink-0">
-                        <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                          {q.seq_no}
-                        </div>
+              {!isSpeed ? (
+                /* Speed以外：グループ単位で1つのカード */
+                <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-6 bg-slate-50/50 border-b border-slate-100">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Badge className="bg-slate-900 text-white font-mono rounded-lg h-6 px-2.5">GROUP: {group.groupId.slice(0,8)}</Badge>
+                    </div>
+                    {group.items[0]?.statement && (
+                      <div className="border-l-4 border-slate-300 pl-4 py-1">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Shared Statement</span>
+                        <p className="text-sm font-bold text-slate-600">{group.items[0].statement}</p>
                       </div>
-
-                      {/* 中央：コンテンツ */}
-                      <div className="flex-1 min-w-0 space-y-4">
-                        {/* ステートメント (グループ内の最初だけ、またはSpeedなら常に) */}
-                        {q.statement && (idx === 0 || isSpeed) && (
-                          <div className="border-l-4 border-slate-100 pl-4 py-1">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Statement</span>
-                            <p className="text-sm font-bold text-slate-600">{q.statement}</p>
+                    )}
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {group.items.map((q) => (
+                      <div key={q.question_id} className="p-6 flex gap-5 hover:bg-indigo-50/20 transition-colors">
+                        {/* 左：SEQ */}
+                        <div className="flex flex-col items-center shrink-0">
+                          <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-400">
+                            {q.seq_no}
                           </div>
-                        )}
-
-                        {/* クエスチョン */}
-                        <div className="border-l-4 border-indigo-500 pl-4 py-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Question</span>
-                            {q.question_voice && (
-                              <Button variant="ghost" size="icon" className="h-5 w-5 text-indigo-400" onClick={() => play(q.question_voice!, q.question_id)}>
-                                <Headphones size={12} />
-                              </Button>
-                            )}
-                          </div>
-                          <p className="text-lg font-black text-slate-800 leading-tight">{q.question}</p>
                         </div>
 
-                        {/* 解答 (Yes/No) */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* 中央：コンテンツ */}
+                        <div className="flex-1 min-w-0 space-y-4">
+                          <div className="border-l-4 border-indigo-500 pl-4 py-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Question</span>
+                              {q.question_voice && (
+                                <Button variant="ghost" size="icon" className="h-5 w-5 text-indigo-400" onClick={() => play(q.question_voice!, q.question_id)}>
+                                  <Headphones size={12} />
+                                </Button>
+                              )}
+                            </div>
+                            <p className="text-lg font-black text-slate-800 leading-tight">{q.question}</p>
+                          </div>
                           <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3">
                             <span className="text-[9px] font-black text-emerald-500 uppercase block mb-1">Answer (Yes)</span>
                             <p className="text-sm font-bold text-emerald-700">{q.answer_sentence_yes}</p>
                           </div>
-                          {isSpeed && q.answer_sentence_no && (
-                            <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-3">
-                              <span className="text-[9px] font-black text-amber-500 uppercase block mb-1">Answer (No)</span>
-                              <p className="text-sm font-bold text-amber-700">{q.answer_sentence_no}</p>
-                            </div>
-                          )}
+                        </div>
+
+                        {/* 右：アクション */}
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} />
                         </div>
                       </div>
-
-                      {/* 右：アクション */}
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <SprintQuestionFormDialog 
-                          mode="edit" 
-                          initialData={q} 
-                          type={type} 
-                          level={q.difficulty_level} 
-                          onSuccess={onUpdate} 
-                        />
-                        
-                        {/* TTSダイアログは別途作成し、ここに配置 */}
-                        
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50">
-                              <Trash2 size={16} />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="rounded-3xl">
-                            <AlertDialogHeader>
-                              <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <AlertCircle size={32} />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* Speed：現状維持（一問一答の個別カード） */
+                <div className="grid gap-4">
+                  {group.items.map((q) => (
+                    <div key={q.question_id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden group hover:border-indigo-300 transition-all duration-300">
+                      <div className="p-5 flex gap-5">
+                        <div className="flex flex-col items-center shrink-0">
+                          <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                            {q.seq_no}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-4">
+                          {q.statement && (
+                            <div className="border-l-4 border-slate-100 pl-4 py-1">
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Statement</span>
+                              <p className="text-sm font-bold text-slate-600">{q.statement}</p>
+                            </div>
+                          )}
+                          <div className="border-l-4 border-indigo-500 pl-4 py-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Question</span>
+                              {q.question_voice && (
+                                <Button variant="ghost" size="icon" className="h-5 w-5 text-indigo-400" onClick={() => play(q.question_voice!, q.question_id)}>
+                                  <Headphones size={12} />
+                                </Button>
+                              )}
+                            </div>
+                            <p className="text-lg font-black text-slate-800 leading-tight">{q.question}</p>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3">
+                              <span className="text-[9px] font-black text-emerald-500 uppercase block mb-1">Answer (Yes)</span>
+                              <p className="text-sm font-bold text-emerald-700">{q.answer_sentence_yes}</p>
+                            </div>
+                            {q.answer_sentence_no && (
+                              <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-3">
+                                <span className="text-[9px] font-black text-amber-500 uppercase block mb-1">Answer (No)</span>
+                                <p className="text-sm font-bold text-amber-700">{q.answer_sentence_no}</p>
                               </div>
-                              <AlertDialogTitle className="text-center font-black">問題を削除しますか？</AlertDialogTitle>
-                              <AlertDialogDescription className="text-center text-xs">
-                                この操作は取り消せません。音声ファイルは自動的には削除されません。
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter className="flex gap-2">
-                              <AlertDialogCancel className="flex-1 rounded-2xl">キャンセル</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDelete(q.question_id)}
-                                className="flex-1 bg-rose-500 hover:bg-rose-600 rounded-2xl font-bold"
-                              >
-                                削除する
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))
         )}
       </div>
     </ScrollArea>
+  );
+}
+
+/* アクションボタン部分を共通化 */
+function SprintQuestionActionButtons({ q, type, onUpdate, handleDelete }: { q: SprintQuestion, type: SprintQuestionType, onUpdate: () => void, handleDelete: (id: string) => void }) {
+  return (
+    <>
+      <SprintQuestionFormDialog 
+        mode="edit" 
+        initialData={q} 
+        type={type} 
+        level={q.difficulty_level} 
+        onSuccess={onUpdate} 
+      />
+      
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50">
+            <Trash2 size={16} />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle size={32} />
+            </div>
+            <AlertDialogTitle className="text-center font-black">問題を削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-xs">
+              この操作は取り消せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2">
+            <AlertDialogCancel className="flex-1 rounded-2xl">キャンセル</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => handleDelete(q.question_id)}
+              className="flex-1 bg-rose-500 hover:bg-rose-600 rounded-2xl font-bold"
+            >
+              削除する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

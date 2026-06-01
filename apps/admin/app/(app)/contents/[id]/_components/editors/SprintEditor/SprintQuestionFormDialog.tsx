@@ -130,9 +130,12 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, onSuc
 
             {/* 質問セクション */}
             <div className="space-y-4">
-               <FormLabel className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Question / 質問文</FormLabel>
                <FormField control={form.control} name="question" render={({ field }) => (
-                 <FormItem><FormControl><Textarea {...field} placeholder="Question..." className="rounded-xl min-h-[80px] font-bold text-lg" /></FormControl><FormMessage /></FormItem>
+                 <FormItem className="space-y-2">
+                   <FormLabel className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Question / 質問文</FormLabel>
+                   <FormControl><Textarea {...field} placeholder="Question..." className="rounded-xl min-h-[80px] font-bold text-lg" /></FormControl>
+                   <FormMessage />
+                 </FormItem>
                )} />
                <FormField control={form.control} name="question_ja" render={({ field }) => (
                  <FormItem><FormControl><Input {...field} placeholder="質問の日本語訳..." className="rounded-xl" /></FormControl></FormItem>
@@ -142,9 +145,12 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, onSuc
             {/* 解答セクション */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div className="space-y-4">
-                  <FormLabel className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Answer (Yes)</FormLabel>
                   <FormField control={form.control} name="answer_sentence_yes" render={({ field }) => (
-                    <FormItem><FormControl><Textarea {...field} className="rounded-xl min-h-[60px] border-emerald-100" /></FormControl><FormMessage /></FormItem>
+                    <FormItem className="space-y-2">
+                      <FormLabel className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Answer (Yes)</FormLabel>
+                      <FormControl><Textarea {...field} className="rounded-xl min-h-[60px] border-emerald-100" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="answer_sentence_yes_ja" render={({ field }) => (
                     <FormItem><FormControl><Input {...field} className="rounded-xl border-emerald-50 text-xs" /></FormControl></FormItem>
@@ -153,9 +159,12 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, onSuc
 
                {isSpeed && (
                  <div className="space-y-4">
-                    <FormLabel className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Answer (No)</FormLabel>
                     <FormField control={form.control} name="answer_sentence_no" render={({ field }) => (
-                      <FormItem><FormControl><Textarea {...field} className="rounded-xl min-h-[60px] border-amber-100" /></FormControl></FormItem>
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Answer (No)</FormLabel>
+                        <FormControl><Textarea {...field} className="rounded-xl min-h-[60px] border-amber-100" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )} />
                     <FormField control={form.control} name="answer_sentence_no_ja" render={({ field }) => (
                       <FormItem><FormControl><Input {...field} className="rounded-xl border-amber-50 text-xs" /></FormControl></FormItem>
