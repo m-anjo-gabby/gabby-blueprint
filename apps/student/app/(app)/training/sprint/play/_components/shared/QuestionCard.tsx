@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import React, { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { SprintQuestionType } from "@gabby/types/sprint";
 import { HelpCircle, MessageSquare, CheckCircle2, Volume2, Eye, CircleDot, Headphones, ArrowRight, Languages, Mic } from 'lucide-react';
 

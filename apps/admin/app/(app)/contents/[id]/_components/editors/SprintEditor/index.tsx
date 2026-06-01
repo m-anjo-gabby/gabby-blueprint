@@ -6,7 +6,7 @@ import { SPRINT_TYPES, SprintQuestionType, SprintQuestion } from '@gabby/types/s
 import { getSprintQuestionsByFilter } from '@/actions/adminSprintAction';
 import { SprintQuestionList } from './SprintQuestionList';
 import { SprintQuestionFormDialog } from './SprintQuestionFormDialog';
-import { Loader2, Layers, Filter, Zap } from 'lucide-react';
+import { Loader2, Filter, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SprintTTSBulkDialog } from './SprintTTSBulkDialog';
 import { Button } from '@/components/ui/button';
