@@ -37,6 +37,10 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
   const { showToast } = useToast();
   const { play, isPlaying } = usePlayAudioSpeech();
   const isSpeed = type === '0';
+  const isCueType = type === '4' || type === '5'; // 指示/Cueタイプ
+  const isMastery = type === '6';
+  
+  const questionLabel = isCueType ? "指示 / Cue" : "Question";
 
   // グループ化ロジック (Speed以外)
   const groupedQuestions = useMemo(() => {
@@ -76,10 +80,21 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                 /* Speed以外：グループ単位で1つのカード */
                 <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
                   <div className="p-6 bg-slate-50/50 border-b border-slate-100">
-                    <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center justify-between mb-4">
                       <Badge className="bg-slate-900 text-white font-mono rounded-lg h-6 px-2.5">GROUP: {group.groupId.slice(0,8)}</Badge>
+                      
+                      {/* このグループに問題を追加するボタン */}
+                      <SprintQuestionFormDialog 
+                        mode="create" 
+                        type={type} 
+                        level={group.items[0].difficulty_level}
+                        initialGroupId={group.groupId}
+                        initialStatement={group.items[0].statement || ''}
+                        initialStatementJa={group.items[0].statement_ja || ''}
+                        onSuccess={onUpdate} 
+                      />
                     </div>
-                    {group.items[0]?.statement && (
+                    {isMastery && group.items[0]?.statement && (
                       <div className="border-l-4 border-slate-300 pl-4 py-1">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Shared Statement</span>
                         <p className="text-sm font-bold text-slate-600">{group.items[0].statement}</p>
@@ -98,9 +113,17 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
 
                         {/* 中央：コンテンツ */}
                         <div className="flex-1 min-w-0 space-y-4">
+                          {/* Structure/Buildersの場合は各行にStatementを表示 */}
+                          {isCueType && q.statement && (
+                            <div className="border-l-4 border-slate-200 pl-4 py-0.5">
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Statement</span>
+                              <p className="text-xs font-bold text-slate-500">{q.statement}</p>
+                            </div>
+                          )}
+
                           <div className="border-l-4 border-indigo-500 pl-4 py-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Question</span>
+                              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{questionLabel}</span>
                               {q.question_voice && (
                                 <Button variant="ghost" size="icon" className="h-5 w-5 text-indigo-400" onClick={() => play(q.question_voice!, q.question_id)}>
                                   <Headphones size={12} />
@@ -143,7 +166,7 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                           )}
                           <div className="border-l-4 border-indigo-500 pl-4 py-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Question</span>
+                              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{questionLabel}</span>
                               {q.question_voice && (
                                 <Button variant="ghost" size="icon" className="h-5 w-5 text-indigo-400" onClick={() => play(q.question_voice!, q.question_id)}>
                                   <Headphones size={12} />

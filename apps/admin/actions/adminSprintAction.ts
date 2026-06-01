@@ -72,6 +72,40 @@ export async function upsertSprintQuestion(payload: Partial<SprintQuestion>) {
 }
 
 /**
+ * スプリント問題の複数一括登録・更新
+ */
+export async function bulkUpsertSprintQuestions(questions: Partial<SprintQuestion>[]) {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createAdminClient();
+    const now = new Date().toISOString();
+
+    const dataToSave = questions.map(q => ({
+      ...q,
+      update_date: now,
+      insert_date: q.question_id ? undefined : now,
+      delete_flg: '0'
+    }));
+
+    // Supabaseのupsertを使用（question_idが既にあれば更新、なければ挿入）
+    const { error } = await supabase
+      .from('com_m_sprint_questions')
+      .upsert(dataToSave, { 
+        onConflict: 'question_id' 
+      });
+
+    if (error) throw error;
+
+    logger.info('sprint:bulk_upsert_success', `${questions.length} questions processed`, { ...ctx });
+    revalidatePath('/contents/[id]', 'layout');
+    return { success: true };
+  } catch (err: any) {
+    logger.error('sprint:bulk_upsert_failed', err.message, { ...ctx, payload: questions });
+    return { success: false, message: err.message };
+  }
+}
+
+/**
  * スプリント問題の論理削除
  */
 export async function deleteSprintQuestion(questionId: string) {
