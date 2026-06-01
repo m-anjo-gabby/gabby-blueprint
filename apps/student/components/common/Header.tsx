@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
@@ -8,6 +8,7 @@ import {
   UserIcon, 
   AlertCircle, 
   Lock, 
+  FileText,
   ChevronDown, 
   Loader2
 } from 'lucide-react';
@@ -25,11 +26,31 @@ import {
 
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { signOut } from '@/actions/authAction';
+import { getLatestTerms } from '@/actions/termAction';
+import { TermsAgreementModal } from './TermsAgreementModal';
+
+interface TermItem {
+  term_id: string;
+  term_type: string;
+  version_name: string;
+  storage_path: string;
+}
 
 export default function Header() {
   const user = useUserStore((state) => state.user);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [terms, setTerms] = useState<TermItem[]>([]);
+
+  // 参照モード用に最新の規約セットを取得
+  useEffect(() => {
+    const fetchLatestTerms = async () => {
+      const data = await getLatestTerms();
+      setTerms(data as TermItem[]);
+    };
+    fetchLatestTerms();
+  }, []);
 
   const handleSignOut = async () => {
     setIsSigningOut(true); // オーバーレイを表示
@@ -82,6 +103,16 @@ export default function Header() {
                 <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
                   <Lock size={14} /> パスワード変更
                 </Link>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setShowTermsModal(true);
+                }}
+                className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50"
+              >
+                <FileText size={14} /> 利用規約・ポリシー
               </DropdownMenuItem>
               
               <DropdownMenuSeparator className="my-1 border-slate-100" />
@@ -166,6 +197,15 @@ export default function Header() {
           <p className="text-sm font-bold text-slate-800 animate-pulse">ログアウト中...</p>
         </div>
       )}
+
+      {/* 利用規約・プライバシーポリシー表示（参照モード） */}
+      <TermsAgreementModal 
+        userId={user?.id || ''}
+        terms={terms}
+        mode="reference"
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+      />
 
     </>
   );

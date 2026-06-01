@@ -22,6 +22,9 @@ import { ResumeCard } from './_components/ResumeCard';
 import { DashboardEmptyState } from './_components/DashboardEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// 🚀 未確定機能の表示フラグ（採用時に true に変更）
+const SHOW_EXPERIMENTAL_FEATURES = false;
+
 export default function StudentDashboard() {
   const router = useRouter();
   const { showToast } = useToast();
@@ -88,27 +91,29 @@ export default function StudentDashboard() {
       {/* クイックナビゲーション */}
       <NavigationGrid />
 
-      {/* 📊 改善版: 白ベースで他カードと調和させた学習ログ導線 */}
-      <section className="px-2">
-        <button 
-          onClick={() => router.push('/training/sprint/history')}
-          className="w-full p-4 bg-white border border-slate-100 rounded-[28px] shadow-sm flex items-center justify-between hover:bg-slate-50/80 hover:border-slate-200 transition-all group active:scale-[0.99] cursor-pointer"
-        >
-          <div className="flex items-center gap-3 text-left">
-            {/* アイコン背景をインディゴのグラデーションにしてアクセントに */}
-            <div className="w-10 h-10 bg-linear-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs">
-              <BarChart3 size={18} />
+      {SHOW_EXPERIMENTAL_FEATURES && (
+        /* 📊 改善版: 白ベースで他カードと調和させた学習ログ導線 */
+        <section className="px-2">
+          <button 
+            onClick={() => router.push('/training/sprint/history')}
+            className="w-full p-4 bg-white border border-slate-100 rounded-[28px] shadow-sm flex items-center justify-between hover:bg-slate-50/80 hover:border-slate-200 transition-all group active:scale-[0.99] cursor-pointer"
+          >
+            <div className="flex items-center gap-3 text-left">
+              {/* アイコン背景をインディゴのグラデーションにしてアクセントに */}
+              <div className="w-10 h-10 bg-linear-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs">
+                <BarChart3 size={18} />
+              </div>
+              <div>
+                <p className="text-[9px] font-black tracking-wider text-indigo-600 uppercase">Learning Logs</p>
+                <p className="text-xs font-black text-slate-700 mt-0.5">これまでの学習履歴と統計を確認</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[9px] font-black tracking-wider text-indigo-600 uppercase">Learning Logs</p>
-              <p className="text-xs font-black text-slate-700 mt-0.5">これまでの学習履歴と統計を確認</p>
+            <div className="flex items-center gap-2 shrink-0">
+              <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
             </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
-          </div>
-        </button>
-      </section>
+          </button>
+        </section>
+      )}
 
       {/* 再開セクション：学習リズムを維持するための重要エリア */}
       <section className="space-y-6 px-2">
@@ -133,40 +138,42 @@ export default function StudentDashboard() {
         </AnimatePresence>
       </section>
 
-      {/* おすすめセクション */}
-      <section className="space-y-6 px-2">
-        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 px-2">
-          <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
-          Picked for You
-        </h2>
-        
-        <div className="space-y-5">
-          <AnimatePresence mode="popLayout">
-            {isLoading ? (
-              [...Array(2)].map((_, i) => (
-                <Skeleton key={`rec-skeleton-${i}`} className="h-48 w-full rounded-[32px] opacity-50" />
-              ))
-            ) : recommendations.length > 0 ? (
-              recommendations.map((content) => (
-                <ContentCard 
-                  key={content.content_id}
-                  content={content}
-                  onToggleFavorite={handleToggleFavorite}
-                  onStart={(c) => router.push(getTrainingPath(c))}
-                  actionMode="dashboard"
+      {SHOW_EXPERIMENTAL_FEATURES && (
+        /* おすすめセクション */
+        <section className="space-y-6 px-2">
+          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 px-2">
+            <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
+            Picked for You
+          </h2>
+          
+          <div className="space-y-5">
+            <AnimatePresence mode="popLayout">
+              {isLoading ? (
+                [...Array(2)].map((_, i) => (
+                  <Skeleton key={`rec-skeleton-${i}`} className="h-48 w-full rounded-[32px] opacity-50" />
+                ))
+              ) : recommendations.length > 0 ? (
+                recommendations.map((content) => (
+                  <ContentCard 
+                    key={content.content_id}
+                    content={content}
+                    onToggleFavorite={handleToggleFavorite}
+                    onStart={(c) => router.push(getTrainingPath(c))}
+                    actionMode="dashboard"
+                  />
+                ))
+              ) : (
+                <DashboardEmptyState 
+                  key="empty-rec"
+                  icon={CheckCircle2}
+                  title="すべてチェック済みです！"
+                  description="新しい教材の追加をお楽しみに"
                 />
-              ))
-            ) : (
-              <DashboardEmptyState 
-                key="empty-rec"
-                icon={CheckCircle2}
-                title="すべてチェック済みです！"
-                description="新しい教材の追加をお楽しみに"
-              />
-            )}
-          </AnimatePresence>
-        </div>
-      </section>
+              )}
+            </AnimatePresence>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

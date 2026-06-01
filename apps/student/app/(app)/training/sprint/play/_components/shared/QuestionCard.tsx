@@ -249,7 +249,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               audioPhase === 'answer' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
             )}>
               {audioPhase === 'answer' && !isRevealed ? (
-                <CircleDot size={20} className="animate-ping" />
+                <CircleDot size={20} />
               ) : (
                 <Headphones size={20} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />
               )}
@@ -374,9 +374,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   )}
                 >
                   <div className="flex items-center justify-center gap-2">
-                    {!isAutoPlaying && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping shrink-0" />
-                    )}
                     <span className={cn("text-xs font-black tracking-[0.15em]", isAutoPlaying ? "text-slate-400" : "text-indigo-700")}>
                       {isAutoPlaying ? "自動再生中..." : "タップして解答を表示"}
                     </span>

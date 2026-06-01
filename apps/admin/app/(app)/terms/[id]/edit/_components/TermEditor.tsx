@@ -1,4 +1,3 @@
-// apps/admin/app/(app)/terms/[id]/edit/_components/TermEditor.tsx
 "use client"
 
 import * as React from "react";
@@ -7,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { updateTermContent } from "@/actions/adminTermAction";
 import { useToast } from '@gabby/lib/hooks/useToast'
 import { Save, Eye, FileEdit, Loader2 } from "lucide-react";
-import ReactMarkdown from "react-markdown"; // インストールが必要
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 interface TermEditorProps {
@@ -67,7 +66,7 @@ export function TermEditor({ initialContent, storagePath }: TermEditorProps) {
       </div>
 
       {/* メインエリア */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden flex flex-col w-full min-w-0">
         {viewMode === "edit" ? (
           <Textarea
             value={content}
@@ -76,12 +75,16 @@ export function TermEditor({ initialContent, storagePath }: TermEditorProps) {
             placeholder="Markdown形式で入力してください..."
           />
         ) : (
-          <div className="h-full overflow-y-auto p-8 bg-slate-50/30">
-            <div className="max-w-3xl mx-auto bg-white p-12 border shadow-sm prose prose-slate">
-              {/* prose クラスは tailwindcss/typography を想定 */}
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {content}
-              </ReactMarkdown>
+          /* 💡 生徒側のScrollArea内のViewportおよび背景設定と同期 */
+          <div className="h-full overflow-y-auto p-4 sm:p-8 bg-slate-50/50 w-full min-w-0">
+            {/* 💡 生徒側モーダルのインナーコンテナ構造（幅・余白・影・折り返し制御）を完全に再現 */}
+            <div className="max-w-3xl mx-auto bg-white px-8 py-10 sm:px-12 border rounded-2xl shadow-sm w-full min-w-0 break-words">
+              {/* 💡 生徒側と同じ prose-indigo およびフォントウェイト、折り返しルールを適用 */}
+              <article className="prose prose-indigo prose-sm sm:prose-base max-w-none prose-headings:font-black prose-headings:tracking-tight prose-strong:font-black break-words whitespace-pre-wrap [word-break:break-word]">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {content}
+                </ReactMarkdown>
+              </article>
             </div>
           </div>
         )}
