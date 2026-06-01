@@ -112,7 +112,7 @@ export default function Header() {
                 }}
                 className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50"
               >
-                <FileText size={14} /> 利用規約・ポリシー
+                <FileText size={14} /> 利用規約
               </DropdownMenuItem>
               
               <DropdownMenuSeparator className="my-1 border-slate-100" />

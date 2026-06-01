@@ -12,39 +12,54 @@ export default async function TermEditPage({
 }) {
   const { id } = await params;
   
+  let term;
+  let content;
+
   try {
-    const term = await getTermById(id);
-    if (!term) return notFound();
-
-    const content = await getTermContent(term.storage_path);
-
+    term = await getTermById(id);
+    if (!term) {
+      notFound(); // データが見つからない場合はNext.jsのnot-foundページを表示
+    }
+    content = await getTermContent(term.storage_path);
+  } catch (error) {
+    // データ取得中にエラーが発生した場合
+    console.error("Failed to load term data:", error);
     return (
-      <div className="flex flex-col h-[calc(100vh-120px)] space-y-4">
-        <div className="flex flex-col">
-          {/* 戻る導線 */}
-          <Link 
-              href="/terms" 
-              className="flex items-center text-[13px] text-slate-500 hover:text-indigo-600 transition-colors mb-2 w-fit"
-          >
-              <ChevronLeft size={14} className="mr-1" />
-              規約管理一覧に戻る
-          </Link>
-
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">
-              規約編集: {term.version_name}
-          </h1>
-          <p className="text-[13px] text-slate-500 mt-1">
-              {term.term_type === "TERMS" ? "利用規約" : "プライバシーポリシー"} の文言を直接修正します。
-          </p>
-        </div>
-
-        <TermEditor 
-          initialContent={content} 
-          storagePath={term.storage_path} 
-        />
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] text-rose-600">
+        <p>データの読み込みに失敗しました。</p>
+        <p className="text-sm text-slate-500 mt-2">時間をおいて再度お試しください。</p>
       </div>
     );
-  } catch (error) {
-    return <div>データの読み込みに失敗しました。</div>;
   }
+
+  // データが正常に取得できた場合のみJSXをレンダリング
+  return (
+    <div className="flex flex-col h-[calc(100vh-120px)] space-y-4">
+      <div className="flex flex-col">
+        {/* 戻る導線 */}
+        <Link 
+            href="/terms" 
+            className="flex items-center text-[13px] text-slate-500 hover:text-indigo-600 transition-colors mb-2 w-fit"
+        >
+            <ChevronLeft size={14} className="mr-1" />
+            規約管理一覧に戻る
+        </Link>
+
+        <h1 className="text-xl font-bold text-slate-800 tracking-tight">
+            規約編集: {term.version_name}
+        </h1>
+        <p className="text-[13px] text-slate-500 mt-1">
+            {term.term_type === "TERMS" ? "利用規約" : "プライバシーポリシー"} の文言を直接修正します。
+        </p>
+      </div>
+
+      <TermEditor 
+        termId={term.term_id}
+        termType={term.term_type}
+        initialVersion={term.version_name}
+        initialContent={content} 
+        storagePath={term.storage_path} 
+      />
+    </div>
+  );
 }

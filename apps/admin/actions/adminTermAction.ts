@@ -137,36 +137,74 @@ export async function getTermContent(storagePath: string) {
 }
 
 /**
- * Markdownの内容をStorageに上書き保存
+ * 規約の更新（内容の上書き・バージョン名変更）
+ * キャッシュ対策のため、保存のたびにタイムスタンプを含んだ新しいパスを作成して保存します。
  */
-export async function updateTermContent(storagePath: string, content: string) {
+export async function updateTerm(
+  termId: string, 
+  termType: string,
+  versionName: string,
+  content: string,
+  oldStoragePath: string
+) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    const cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
 
-    const { error } = await supabase.storage
+    // 1. キャッシュ対策のためタイムスタンプを含んだ新しいパスを生成
+    // 例: tos/tos_v1.1.0_20260508121011.md
+    const folder = termType.toUpperCase() === 'TERMS' ? 'tos' : 'privacy';
+    const timestamp = new Date().toISOString()
+      .replace(/[-:T]/g, '')  // 記号を削除
+      .split('.')[0];        // ミリ秒以降を削除 (YYYYMMDDHHMMSS)
+    const newPath = `${folder}/${folder}_${versionName}_${timestamp}.md`;
+
+    // 2. Storageにアップロード (upsert: false で常に新規ファイルとして扱う)
+    const { error: uploadError } = await supabase.storage
       .from('terms')
-      .upload(cleanPath, content, {
-        upsert: true,
+      .upload(newPath, content, {
         contentType: 'text/markdown',
-        cacheControl: '3600'
+        cacheControl: '3600',
+        upsert: false 
       });
 
-    if (error) {
-      logger.error("term:update_term_content_failed", error.message, { ...ctx, payload: { storagePath: cleanPath } });
-      throw error;
+    if (uploadError) {
+      logger.error("term:update_storage_failed", uploadError.message, { ...ctx, payload: { path: newPath } });
+      throw uploadError;
     }
 
-    logger.info('term:update_term_content_success', `Term content updated in storage`, { 
+    // 3. DBレコードを更新 (storage_pathを新しいファイルに差し替え)
+    const { error: dbError } = await supabase
+      .from('com_m_terms')
+      .update({
+        version_name: versionName,
+        storage_path: newPath,
+        update_date: new Date().toISOString()
+      })
+      .eq('term_id', termId);
+
+    if (dbError) {
+      // DB更新失敗時はアップロードしたファイルを削除してロールバック
+      await supabase.storage.from('terms').remove([newPath]);
+      logger.error("term:update_db_failed", dbError.message, { ...ctx, payload: { termId } });
+      throw dbError;
+    }
+
+    // 4. 古いファイルを削除（ストレージの肥大化を防ぐため）
+    const cleanOldPath = oldStoragePath?.startsWith('/') ? oldStoragePath.substring(1) : oldStoragePath;
+    if (cleanOldPath && cleanOldPath !== newPath) {
+      await supabase.storage.from('terms').remove([cleanOldPath]);
+    }
+
+    logger.info('term:update_term_success', `Term updated with cache busting path`, { 
       ...ctx,
-      payload: { storagePath: cleanPath } 
+      payload: { termId, newPath, oldPath: oldStoragePath } 
     });
     
     revalidatePath('/terms');
-    return { success: true };
+    return { success: true, newPath };
   } catch (error) {
-    logger.error("term:update_term_content_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { storagePath } });
+    logger.error("term:update_term_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
