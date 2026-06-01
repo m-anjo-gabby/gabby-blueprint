@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -55,6 +55,32 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
   const isMastery = type === '6';
   const questionLabel = isCueType ? "指示 / Cue" : "Question";
 
+  // ダイアログが開くたびにフォームをリセット
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        group_id: initialData?.group_id || initialGroupId || (isSpeed ? '' : crypto.randomUUID()),
+        items: initialData ? [
+          {
+            question_id: initialData.question_id,
+            seq_no: String(initialData.seq_no),
+            statement: initialData.statement || '',
+            statement_ja: initialData.statement_ja || '',
+            question: initialData.question,
+            question_ja: initialData.question_ja || '',
+            answer_sentence_yes: initialData.answer_sentence_yes,
+            answer_sentence_yes_ja: initialData.answer_sentence_yes_ja || '',
+            answer_sentence_no: initialData.answer_sentence_no || '',
+            answer_sentence_no_ja: initialData.answer_sentence_no_ja || '',
+          }
+        ] : [
+          { seq_no: '1', statement: initialStatement || '', statement_ja: initialStatementJa || '', question: '', question_ja: '', answer_sentence_yes: '', answer_sentence_yes_ja: '', answer_sentence_no: '', answer_sentence_no_ja: '' }
+        ],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialData, initialGroupId, initialStatement, initialStatementJa, isSpeed]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(sprintSchema),
     defaultValues: {
@@ -89,7 +115,8 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
 
     const payload = values.items.map(item => ({
       ...item,
-      group_id: isSpeed ? null : values.group_id,
+      // 空文字をnullに変換してUUID型エラーを回避
+      group_id: (isSpeed || !values.group_id) ? null : values.group_id,
       question_type: type,
       difficulty_level: level,
       seq_no: Number(item.seq_no),
@@ -198,7 +225,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                 )}
 
                 {/* 質問／指示セクション */}
-                <div className="space-y-4">
+                <div className={cn("space-y-4", isCueType && "p-5 bg-indigo-50/30 rounded-[24px] border border-indigo-100")}>
                   <FormField control={form.control} name={`items.${index}.question`} render={({ field }) => (
                     <FormItem className="space-y-2">
                       <div className="flex items-center justify-between">
