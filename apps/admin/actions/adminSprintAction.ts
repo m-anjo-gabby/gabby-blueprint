@@ -131,6 +131,8 @@ export async function deleteSprintQuestion(questionId: string) {
 export async function saveSprintAudio(
   questionId: string,
   section: 'statement' | 'question' | 'answer_yes' | 'answer_no',
+  type: SprintQuestionType,
+  level: number,
   ssml: string,
   mode: 'auto' | 'manual',
   adjustmentData: any,
@@ -143,10 +145,14 @@ export async function saveSprintAudio(
     // 1. Azure 生成
     const audioBuffer = await generateAzureAudioBuffer(ssml);
 
-    // 2. パス生成 (sprint/question_id/section-timestamp.mp3)
+    // 2. パス生成 (sprints/[type]/level[n]/question_id-section-timestamp.mp3)
+    const typeMap: Record<string, string> = { '0': 'speed', '4': 'structure', '5': 'builders', '6': 'mastery' };
+    const typeDir = typeMap[type] || 'unknown';
+    const levelDir = `level${level}`;
+    
     const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
-    const fileName = `${section}-${timestamp}.mp3`;
-    const filePath = `sprint/${questionId}/${fileName}`;
+    const fileName = `${questionId}-${section}-${timestamp}.mp3`;
+    const filePath = `sprints/${typeDir}/${levelDir}/${fileName}`;
 
     // 3. Storage アップロード
     const { error: uploadError } = await supabase.storage

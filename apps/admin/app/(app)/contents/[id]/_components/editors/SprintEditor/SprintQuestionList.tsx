@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   PlayCircle, MessageSquare, HelpCircle, CheckCircle2, 
   Trash2, Edit, Settings2, MoreVertical, 
-  AlertCircle, Music4, Headphones, Layout
+  AlertCircle, Music4, Headphones, Layout, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SprintQuestionFormDialog } from './SprintQuestionFormDialog';
@@ -26,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import { SprintTTSDialog } from './SprintTTSDialog';
 
 interface SprintQuestionListProps {
   questions: SprintQuestion[];
@@ -63,6 +64,49 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
     } else {
       showToast(res.message || "削除に失敗しました", "error");
     }
+  };
+
+  // 音声ステータスと管理ボタンのレンダリング
+  const renderAudioControls = (q: SprintQuestion, section: 'statement' | 'question' | 'answer_yes' | 'answer_no') => {
+    const prefix = section.startsWith('answer') ? `answer_sentence_${section.split('_')[1]}` : section;
+    const statusKey = `${prefix}_tts_status` as keyof SprintQuestion;
+    const voiceKey = `${prefix}_voice` as keyof SprintQuestion;
+    
+    const status = q[statusKey] as number;
+    const audioPath = q[voiceKey] as string | null;
+
+    return (
+      <div className="flex items-center gap-2">
+        {/* 再生ボタン: パスがある場合のみ表示 */}
+        {audioPath && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={cn(
+              "h-6 w-6 rounded-md transition-colors",
+              isPlaying === `${q.question_id}-${section}` 
+                ? "text-indigo-600 bg-indigo-50" 
+                : "text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+            )} 
+            onClick={() => play(audioPath, `${q.question_id}-${section}`)}
+          >
+            {isPlaying === `${q.question_id}-${section}` ? <Loader2 size={12} className="animate-spin" /> : <Headphones size={12} />}
+          </Button>
+        )}
+
+        <Badge variant="outline" className={cn(
+          "h-5 px-1.5 gap-1 text-[9px] font-bold border-none",
+          status === 1 ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"
+        )}>
+          {status === 1 ? <CheckCircle2 size={10} /> : <Music4 size={10} />}
+          {status === 1 ? "生成済" : "未生成"}
+        </Badge>
+        
+        <SprintTTSDialog question={q} section={section} onUpdate={onUpdate}>
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"><Settings2 size={12} /></Button>
+        </SprintTTSDialog>
+      </div>
+    );
   };
 
   return (
@@ -116,24 +160,28 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                           {/* Structure/Buildersの場合は各行にStatementを表示 */}
                           {isCueType && q.statement && (
                             <div className="border-l-4 border-slate-200 pl-4 py-0.5">
-                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Statement</span>
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Statement</span>
+                                {renderAudioControls(q, 'statement')}
+                              </div>
                               <p className="text-xs font-bold text-slate-500">{q.statement}</p>
                             </div>
                           )}
 
                           <div className="border-l-4 border-indigo-500 pl-4 py-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{questionLabel}</span>
-                              {q.question_voice && (
-                                <Button variant="ghost" size="icon" className="h-5 w-5 text-indigo-400" onClick={() => play(q.question_voice!, q.question_id)}>
-                                  <Headphones size={12} />
-                                </Button>
-                              )}
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{questionLabel}</span>
+                              </div>
+                              {renderAudioControls(q, 'question')}
                             </div>
                             <p className="text-lg font-black text-slate-800 leading-tight">{q.question}</p>
                           </div>
-                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3">
-                            <span className="text-[9px] font-black text-emerald-500 uppercase block mb-1">Answer (Yes)</span>
+                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3 space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[9px] font-black text-emerald-500 uppercase block">Answer (Yes)</span>
+                              {renderAudioControls(q, 'answer_yes')}
+                            </div>
                             <p className="text-sm font-bold text-emerald-700">{q.answer_sentence_yes}</p>
                           </div>
                         </div>
@@ -159,30 +207,37 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                         </div>
                         <div className="flex-1 min-w-0 space-y-4">
                           {q.statement && (
-                            <div className="border-l-4 border-slate-100 pl-4 py-1">
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Statement</span>
+                            <div className="border-l-4 border-slate-100 pl-4 py-1 group/item">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Statement</span>
+                                {renderAudioControls(q, 'statement')}
+                              </div>
                               <p className="text-sm font-bold text-slate-600">{q.statement}</p>
                             </div>
                           )}
                           <div className="border-l-4 border-indigo-500 pl-4 py-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{questionLabel}</span>
-                              {q.question_voice && (
-                                <Button variant="ghost" size="icon" className="h-5 w-5 text-indigo-400" onClick={() => play(q.question_voice!, q.question_id)}>
-                                  <Headphones size={12} />
-                                </Button>
-                              )}
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{questionLabel}</span>
+                              </div>
+                              {renderAudioControls(q, 'question')}
                             </div>
                             <p className="text-lg font-black text-slate-800 leading-tight">{q.question}</p>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3">
-                              <span className="text-[9px] font-black text-emerald-500 uppercase block mb-1">Answer (Yes)</span>
+                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3 space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[9px] font-black text-emerald-500 uppercase block">Answer (Yes)</span>
+                                {renderAudioControls(q, 'answer_yes')}
+                              </div>
                               <p className="text-sm font-bold text-emerald-700">{q.answer_sentence_yes}</p>
                             </div>
                             {q.answer_sentence_no && (
-                              <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-3">
-                                <span className="text-[9px] font-black text-amber-500 uppercase block mb-1">Answer (No)</span>
+                              <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-3 space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[9px] font-black text-amber-500 uppercase block">Answer (No)</span>
+                                  {renderAudioControls(q, 'answer_no')}
+                                </div>
                                 <p className="text-sm font-bold text-amber-700">{q.answer_sentence_no}</p>
                               </div>
                             )}

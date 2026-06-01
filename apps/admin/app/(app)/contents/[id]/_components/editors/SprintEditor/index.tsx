@@ -6,8 +6,10 @@ import { SPRINT_TYPES, SprintQuestionType, SprintQuestion } from '@gabby/types/s
 import { getSprintQuestionsByFilter } from '@/actions/adminSprintAction';
 import { SprintQuestionList } from './SprintQuestionList';
 import { SprintQuestionFormDialog } from './SprintQuestionFormDialog';
-import { Loader2, Layers, Filter } from 'lucide-react';
+import { Loader2, Layers, Filter, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { SprintTTSBulkDialog } from './SprintTTSBulkDialog';
+import { Button } from '@/components/ui/button';
 
 interface SprintEditorProps {
   contentId: string;
@@ -109,6 +111,19 @@ export function SprintEditor({ contentId, initialType }: SprintEditorProps) {
         </div>
 
         <div className="mt-6 flex items-center gap-2">
+          {/* 一括音声生成ボタン */}
+          <SprintTTSBulkDialog 
+            questions={questions} 
+            type={selectedType} 
+            level={Number(selectedLevel)} 
+            onComplete={fetchQuestions}
+          >
+            <Button variant="outline" className="border-indigo-100 text-indigo-600 font-bold h-10 rounded-xl gap-2 hover:bg-indigo-50">
+              <Zap size={16} className="text-amber-500" fill="currentColor" />
+              一括音声作成
+            </Button>
+          </SprintTTSBulkDialog>
+
           <SprintQuestionFormDialog 
             mode="create" 
             type={selectedType} 
