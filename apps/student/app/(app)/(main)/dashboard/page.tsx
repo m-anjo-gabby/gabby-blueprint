@@ -22,7 +22,7 @@ import { ResumeCard } from './_components/ResumeCard';
 import { DashboardEmptyState } from './_components/DashboardEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// 🚀 未確定機能の表示フラグ（採用時に true に変更）
+// 未確定機能の表示フラグ（採用時に true に変更）
 const SHOW_EXPERIMENTAL_FEATURES = false;
 
 export default function StudentDashboard() {
