@@ -6,8 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { updateTerm } from "@/actions/adminTermAction";
 import { useToast } from '@gabby/lib/hooks/useToast'
 import { Save, Eye, FileEdit, Loader2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { TermViewer } from "@gabby/lib/components/term/TermViewer";
 
 interface TermEditorProps {
   termId: string;
@@ -94,34 +93,11 @@ export function TermEditor({ termId, termType, initialVersion, initialContent, s
             placeholder="Markdown形式で入力してください..."
           />
         ) : (
-          /* 💡 生徒側のScrollArea内のViewportおよび背景設定と同期 */
-          <div className="h-full overflow-y-auto p-4 sm:p-8 bg-slate-50/50 w-full min-w-0">
-            {/* 💡 生徒側モーダルのインナーコンテナ構造（幅・余白・影・折り返し制御）を完全に再現 */}
-            <div className="max-w-3xl mx-auto bg-white px-8 py-10 sm:px-12 border rounded-2xl shadow-sm w-full min-w-0 break-words">
-              {/* 💡 proseクラスから不要な装飾設定を除去し、最優先の独自タグコンポーネントを差し込み */}
-              <article className="prose prose-indigo prose-sm sm:prose-base max-w-none break-words [word-break:break-word]">
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    // 💡 H1 (#) の見た目を強制上書き（最優先にするため ! を付与）
-                    h1: ({ node, ...props }) => (
-                      <h1 {...props} className="!text-xl sm:!text-2xl !font-black !tracking-tight !text-slate-900 !mt-2 !mb-6" />
-                    ),
-                    // 💡 H3 (###) の見た目を強制上書き
-                    h3: ({ node, ...props }) => (
-                      <h3 {...props} className="!text-sm sm:!text-base !font-bold !text-slate-700 !mt-8 !mb-3" />
-                    ),
-                    // 💡 段落 (<p>) の改行制御を強制上書き。これで Enter 単体の改行が100%効きます
-                    p: ({ node, ...props }) => (
-                      <p {...props} className="!whitespace-pre-wrap !leading-relaxed !text-slate-600 !my-4" />
-                    )
-                  }}
-                >
-                  {content}
-                </ReactMarkdown>
-              </article>
-            </div>
-          </div>
+          <TermViewer 
+            content={content} 
+            containerClassName="bg-slate-50/50 p-4 sm:p-8"
+            contentClassName="max-w-3xl mx-auto bg-white border rounded-2xl shadow-sm sm:px-12"
+          />
         )}
       </div>
     </div>

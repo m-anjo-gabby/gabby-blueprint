@@ -316,12 +316,18 @@ importers:
 
   packages/lib:
     dependencies:
+      '@radix-ui/react-scroll-area':
+        specifier: ^1.2.10
+        version: 1.2.10(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@supabase/ssr':
         specifier: ^0.8.0
         version: 0.8.0(@supabase/supabase-js@2.101.0)
       '@supabase/supabase-js':
         specifier: ^2.94.0
         version: 2.101.0
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       framer-motion:
         specifier: ^12.34.0
         version: 12.38.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -340,6 +346,15 @@ importers:
       react:
         specifier: 19.2.3
         version: 19.2.3
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.2.14)(react@19.2.3)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
       zustand:
         specifier: ^5.0.11
         version: 5.0.12(@types/react@19.2.14)(react@19.2.3)

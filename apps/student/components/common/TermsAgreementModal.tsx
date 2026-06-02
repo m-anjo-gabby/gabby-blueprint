@@ -2,15 +2,13 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import * as ScrollArea from "@radix-ui/react-scroll-area";
 import * as Tabs from "@radix-ui/react-tabs";
 import { motion } from "framer-motion";
 import { Loader2, CheckCircle2, X, FileText, ShieldCheck } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { createBrowserClient } from "@gabby/lib/supabase/client";
 import { agreeToTerms } from "@/actions/termAction";
+import { TermViewer } from "@gabby/lib/components/term/TermViewer";
 
 interface TermItem {
   term_id: string;
@@ -86,12 +84,9 @@ export const TermsAgreementModal = ({
 
   const allRead = useMemo(() => terms.length > 0 && terms.every((t) => readTerms[t.term_id]), [terms, readTerms]);
 
-  const handleScroll = (termId: string, e: React.UIEvent<HTMLDivElement>) => {
+  const handleScrollEnd = (termId: string) => {
     if (!isAgreementMode) return;
-
-    const target = e.currentTarget;
-    const isBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 20;
-    if (isBottom && !readTerms[termId]) {
+    if (!readTerms[termId]) {
       setReadTerms((prev) => ({ ...prev, [termId]: true }));
     }
   };
@@ -215,49 +210,11 @@ export const TermsAgreementModal = ({
                           isSingleTerm ? "flex flex-col" : "data-[state=active]:flex flex-col"
                         )}
                       >
-                        <ScrollArea.Root className="flex-1 w-full min-w-0 overflow-hidden flex flex-col">
-                          <ScrollArea.Viewport
-                            className="h-full w-full overflow-y-auto overscroll-contain" 
-                            onScroll={(e) => handleScroll(term.term_id, e)}
-                          >
-                            <div className="px-8 py-10 w-full max-w-full min-w-0 break-words">
-                              {contents[term.term_id] ? (
-                                /* 💡 変更: proseの一律指定クラス(prose-headings等)を取り除き、componentsにアドミン側と同一の上書きルールを適用 */
-                                <article className="prose prose-indigo prose-sm sm:prose-base max-w-none break-words [word-break:break-word]">
-                                  <ReactMarkdown 
-                                    remarkPlugins={[remarkGfm]}
-                                    components={{
-                                      // 💡 H1 (#) の見た目を強制上書き（最優先にするため ! を付与）
-                                      h1: ({ node, ...props }) => (
-                                        <h1 {...props} className="!text-xl sm:!text-2xl !font-black !tracking-tight !text-slate-900 !mt-2 !mb-6" />
-                                      ),
-                                      // 💡 H3 (###) の見た目を強制上書き
-                                      h3: ({ node, ...props }) => (
-                                        <h3 {...props} className="!text-sm sm:!text-base !font-bold !text-slate-700 !mt-8 !mb-3" />
-                                      ),
-                                      // 💡 段落 (<p>) の改行制御を強制上書き。これで通常の改行が100%再現されます
-                                      p: ({ node, ...props }) => (
-                                        <p {...props} className="!whitespace-pre-wrap !leading-relaxed !text-slate-600 !my-4" />
-                                      )
-                                    }}
-                                  >
-                                    {contents[term.term_id]}
-                                  </ReactMarkdown>
-                                </article>
-                              ) : (
-                                <div className="flex flex-col items-center justify-center py-32 gap-4 text-slate-400">
-                                  <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-                                  <p className="text-xs font-bold tracking-widest uppercase animate-pulse">
-                                    Fetching Document Content...
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </ScrollArea.Viewport>
-                          <ScrollArea.Scrollbar className="w-2.5 bg-slate-100/50" orientation="vertical">
-                            <ScrollArea.Thumb className="bg-slate-200 rounded-full" />
-                          </ScrollArea.Scrollbar>
-                        </ScrollArea.Root>
+                        <TermViewer
+                          content={contents[term.term_id]}
+                          onScrollEnd={() => handleScrollEnd(term.term_id)}
+                          isLoading={!contents[term.term_id]}
+                        />
                       </Tabs.Content>
                     ))}
                   </div>
