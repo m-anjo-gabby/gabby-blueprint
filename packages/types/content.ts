@@ -93,10 +93,16 @@ export interface MetadataCefr {
   color?: string; // 後の変更に備えて色も保持可能にしておく
 }
 
+// メタデータ埋め込み用スプリント
+export interface MetadataSprint {
+  question_type: string; // '0' | '4' | '5' | '6'
+}
+
 // ContentRecord の metadata 型を具体化
 export interface ContentMetadata {
   tags?: MetadataTag[];
   cefr?: MetadataCefr; // CEFRを追加
+  sprint?: MetadataSprint;
   [key: string]: unknown;
 }
 

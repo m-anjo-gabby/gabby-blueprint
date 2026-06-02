@@ -27,11 +27,25 @@ import {
   ShieldCheck, 
   FileText,
   Eye,
-  Edit
+  Edit,
+  Trash2,
+  AlertCircle
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { formatToJstDate } from "@gabby/lib/date/date";
 import Link from "next/link";
+import { deleteTerm } from "@/actions/adminTermAction";
+import { useToast } from "@gabby/lib/hooks/useToast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TermDataTableProps {
   data: any[];
@@ -47,9 +61,31 @@ export function TermDataTable({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const [searchValue, setSearchValue] = React.useState(searchParams.get("q") || "");
+  const [deletingTerm, setDeletingTerm] = React.useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const currentPage = Number(searchParams.get("page")) || 1;
+
+  const handleDelete = async () => {
+    if (!deletingTerm) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteTerm(deletingTerm.term_id);
+      if (result.success) {
+        showToast("規約を削除しました", "success");
+        router.refresh();
+      } else {
+        showToast(result.message || "削除に失敗しました", "error");
+      }
+    } catch (error) {
+      showToast("予期せぬエラーが発生しました", "error");
+    } finally {
+      setIsDeleting(false);
+      setDeletingTerm(null);
+    }
+  };
 
   // --- カラム定義 (ContentDataTable のスタイルに準拠) ---
   const columns = React.useMemo<ColumnDef<any>[]>(() => [
@@ -118,10 +154,9 @@ export function TermDataTable({
     accessorKey: "published_date",
     header: "公開開始日 (JST)",
     cell: ({ row }) => (
-        <span className="text-slate-500 text-[12px] font-medium font-mono">
-        {/* formatToJstDate が内部で UTC -> JST 変換を行う想定 */}
-        {formatToJstDate(row.original.published_date)}
-        </span>
+      <span className="text-slate-500 text-[12px] font-medium font-mono">
+        {row.original.published_date}
+      </span>
     ),
     },
     {
@@ -132,10 +167,13 @@ export function TermDataTable({
         </div>
       ),
       cell: ({ row }) => {
-        const termId = row.original.term_id;
+        const term = row.original;
+        const now = new Date();
+        const pubDate = new Date(term.published_date);
+        const isDeletable = pubDate > now;
 
         return (
-          <div className="flex justify-end items-center px-2">
+          <div className="flex justify-end items-center px-2 gap-1">
             <Button
               variant="ghost"
               size="sm"
@@ -143,15 +181,27 @@ export function TermDataTable({
               asChild
               title="規約を編集"
             >
-              <Link href={`/terms/${termId}/edit`}>
+              <Link href={`/terms/${term.term_id}/edit`}>
                 <Edit size={16} />
               </Link>
             </Button>
+
+            {isDeletable && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                onClick={() => setDeletingTerm(term)}
+                title="規約を削除"
+              >
+                <Trash2 size={16} />
+              </Button>
+            )}
           </div>
         );
       },
     },
-  ], []);
+  ], [setDeletingTerm]);
 
   const table = useReactTable({
     data,
@@ -216,7 +266,17 @@ export function TermDataTable({
       </div>
 
       {/* テーブル本体 */}
-      <div className="rounded-b-lg border-x border-b border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-b-lg border-x border-b border-slate-200 bg-white shadow-sm overflow-hidden relative">
+        {/* 削除中オーバーレイ */}
+        {isDeleting && (
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
+            <div className="bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3 border">
+              <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-bold text-slate-700">削除しています...</span>
+            </div>
+          </div>
+        )}
+
         <Table>
           <TableHeader className="bg-slate-50/50">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -250,6 +310,39 @@ export function TermDataTable({
           </TableBody>
         </Table>
       </div>
+
+      {/* 削除確認ダイアログ */}
+      <AlertDialog open={!!deletingTerm} onOpenChange={(open) => !open && !isDeleting && setDeletingTerm(null)}>
+        <AlertDialogContent className="max-w-md rounded-[32px] border-none shadow-2xl p-8">
+          <AlertDialogHeader className="space-y-4">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500 mb-2 rotate-12">
+              <Trash2 size={28} />
+            </div>
+            <AlertDialogTitle className="text-center text-xl font-black text-slate-800 tracking-tight">
+              規約を削除しますか？
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-500 font-bold text-sm leading-relaxed">
+              {deletingTerm?.term_type === "TERMS" ? "利用規約" : "プライバシーポリシー"} のバージョン「{deletingTerm?.version_name}」を完全に削除します。<br />
+              この操作は取り消すことができません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 flex gap-3 sm:justify-center">
+            <AlertDialogCancel className="flex-1 h-12 rounded-2xl font-bold text-slate-400 border-none bg-slate-50 hover:bg-slate-100 transition-all" disabled={isDeleting}>
+              キャンセル
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="flex-1 h-12 rounded-2xl font-black bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 border-none transition-all active:scale-[0.98]"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "削除中..." : "はい、削除します"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

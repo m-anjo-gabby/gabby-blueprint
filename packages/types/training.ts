@@ -31,9 +31,22 @@ export interface VideoResumeMetadata {
 }
 
 /**
+ * スプリント（Sprint）の再開メタデータ
+ */
+export interface SprintResumeMetadata {
+  type: 'sprint_drill'; // Union判別用
+  question_id: string;
+  last_index: number;
+  display: ResumeDisplayData;
+}
+
+/**
  * 全ての教材タイプのメタデータUnion型
  */
-export type ResumeMetadata = WordResumeMetadata | VideoResumeMetadata;
+export type ResumeMetadata = 
+  | WordResumeMetadata 
+  | VideoResumeMetadata 
+  | SprintResumeMetadata;
 
 /**
  * コンテンツ再開情報のレスポンス型

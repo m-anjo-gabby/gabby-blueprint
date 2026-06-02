@@ -160,23 +160,41 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
+    const PAGE_SIZE = 1000;
+    let allData: any[] = [];
+    let from = 0;
+    let hasMore = true;
 
-    const { data, error } = await supabase
-      .from('com_m_phrase')
-      .select(`
-        *,
-        com_m_word!inner(content_id)
-      `)
-      .eq('com_m_word.content_id', contentId)
-      .order('word_id', { ascending: true })
-      .order('seq_no', { ascending: true });
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('com_m_phrase')
+        .select(`
+          *,
+          com_m_word!inner(content_id)
+        `)
+        .eq('com_m_word.content_id', contentId)
+        .order('word_id', { ascending: true })
+        .order('seq_no', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (error) {
-      logger.error('phrase:get_phrases_by_content_id_failed', error.message, { ...ctx, payload: { contentId } });
-      return [];
+      if (error) {
+        logger.error('phrase:get_phrases_by_content_id_failed', error.message, { ...ctx, payload: { contentId } });
+        return [];
+      }
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        if (data.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          from += PAGE_SIZE;
+        }
+      } else {
+        hasMore = false;
+      }
     }
 
-    return data as PhraseRecord[];
+    return allData as PhraseRecord[];
   } catch (err) {
     logger.error('phrase:get_phrases_by_content_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
     return [];

@@ -8,6 +8,44 @@ import { createLogger, getLogContext } from "@gabby/lib/logger";
 const logger = createLogger('student');
 
 /**
+ * 最新の必須規約リストを取得する（参照用）
+ */
+export async function getLatestTerms() {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createServerClient();
+
+    // 1. 最新の必須規約を全て取得
+    const { data: terms, error } = await supabase
+      .from("com_m_terms")
+      .select("term_id, term_type, version_name, storage_path, published_date")
+      .eq("is_required", true)
+      .lte("published_date", new Date().toISOString())
+      .order("published_date", { ascending: false });
+
+    if (error) {
+      logger.error('term:get_latest_failed', error.message, ctx);
+      return [];
+    }
+
+    if (!terms) return [];
+
+    // 2. メモリ上で「タイプごとの最新」のみを抽出（checkPendingAgreementsと同様のロジック）
+    const latestMap = new Map<string, typeof terms[0]>();
+    for (const term of terms) {
+      if (!latestMap.has(term.term_type)) {
+        latestMap.set(term.term_type, term);
+      }
+    }
+
+    return Array.from(latestMap.values());
+  } catch (err) {
+    logger.error('term:get_latest_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return [];
+  }
+}
+
+/**
  * 未同意の必須規約があるかチェックする
  */
 export async function checkPendingAgreements(userId: string) {
@@ -29,6 +67,7 @@ export async function checkPendingAgreements(userId: string) {
         )
       `)
       .eq("is_required", true)
+      .lte("published_date", new Date().toISOString())
       .eq("com_t_user_terms_agreement.user_id", userId)
       .order("published_date", { ascending: false });
 

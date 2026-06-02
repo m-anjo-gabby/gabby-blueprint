@@ -11,9 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { PlusCircle, Edit, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Alert } from '@/components/ui/alert';
+import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType, CEFR_CONFIG } from '@gabby/types/content';
+import { SPRINT_TYPES } from '@gabby/types/sprint';
 import { upsertContent } from '@/actions/adminContentAction';
 import { useRouter } from 'next/navigation';
 
@@ -28,7 +28,19 @@ const contentSchema = z.object({
   seq_no: z.string().min(1, '表示順を入力してください'),
   difficulty_level: z.string().min(1, '難易度を入力してください'),
   description: z.string().optional(),
-  cefr_id: z.string().optional(), // CEFR用フィールド
+  cefr_id: z.string().optional(),
+  sprint_question_type: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // 教材種別が「スプリント (2)」の場合のバリデーション
+  if (data.content_type === '2') {
+    if (!data.sprint_question_type || data.sprint_question_type === 'none') {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'スプリント種別を選択してください',
+        path: ['sprint_question_type'],
+      });
+    }
+  }
 });
 
 type ContentFormValues = z.infer<typeof contentSchema>;
@@ -44,9 +56,10 @@ const DEFAULT_VALUES: ContentFormValues = {
   content_scope: '9',
   content_label: '',
   seq_no: '1',
-  difficulty_level: '1',
+  difficulty_level: '1', // デフォルト値は1固定
   description: '',
-  cefr_id: 'none', // Radix UI Selectの制約により空文字の代わりに"none"を使用
+  cefr_id: 'none',
+  sprint_question_type: 'none',
 };
 
 export function ContentFormDialog({ mode = 'create', initialData }: ContentFormDialogProps) {
@@ -64,10 +77,10 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       content_scope: String(data.content_scope),
       content_label: data.content_label,
       seq_no: String(data.seq_no),
-      difficulty_level: String(data.difficulty_level),
+      difficulty_level: String(data.difficulty_level || 1),
       description: data.description || '',
-      // metadataからCEFR IDを復元。存在しない場合は "none"
       cefr_id: data.metadata?.cefr?.id || 'none',
+      sprint_question_type: data.metadata?.sprint?.question_type || 'none',
     };
   };
 
@@ -77,15 +90,22 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
   });
 
   const { isSubmitting } = form.formState;
+  const currentContentType = form.watch('content_type');
 
   const onSubmit = async (values: ContentFormValues) => {
     setServerError(null);
     try {
-      // 選択されたCEFR IDから設定オブジェクトを取得
-      // "none"の場合は未設定として扱う
       const isNone = !values.cefr_id || values.cefr_id === 'none';
       const cefrKey = isNone ? null : (values.cefr_id!.toUpperCase() as keyof typeof CEFR_CONFIG);
       const selectedCefr = cefrKey ? CEFR_CONFIG[cefrKey] : undefined;
+
+      const isSprint = values.content_type === '2';
+      const sprintMetadata = isSprint && values.sprint_question_type !== 'none'
+        ? {
+            question_type: values.sprint_question_type!,
+            // level はここに含めない
+          }
+        : undefined;
 
       const payload: Partial<Content> = {
         content_name: values.content_name,
@@ -93,12 +113,13 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         content_scope: Number(values.content_scope) as ContentScope,
         content_label: values.content_label,
         seq_no: Number(values.seq_no),
-        difficulty_level: Number(values.difficulty_level),
+        // スプリントかどうかに関わらず、難易度は1固定（または既存の値を踏襲）
+        difficulty_level: Number(values.difficulty_level || 1),
         description: values.description,
-        // ここで既存のmetadataを保持しつつcefrをマージ
         metadata: {
           ...(initialData?.metadata || {}),
-          cefr: selectedCefr ? { id: selectedCefr.id, label: selectedCefr.label } : undefined
+          cefr: selectedCefr ? { id: selectedCefr.id, label: selectedCefr.label } : undefined,
+          sprint: sprintMetadata,
         },
       };
 
@@ -124,22 +145,16 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    if (!isOpen || isOpen) {
+    if (!isOpen) {
       setIsConfirming(false);
       setServerError(null);
       form.reset(getInitialValues(initialData));
     }
   };
 
-  const onTriggerClick = (e: React.MouseEvent) => {
-    setIsConfirming(false);
-    setServerError(null);
-    form.reset(getInitialValues(initialData));
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild onClick={onTriggerClick}>
+      <DialogTrigger asChild onClick={() => { setIsConfirming(false); setServerError(null); form.reset(getInitialValues(initialData)); }}>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
             <PlusCircle size={16} /> 新規登録
@@ -167,19 +182,25 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="bg-white flex-1 flex flex-col overflow-hidden">
             <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+              {serverError && (
+                <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-xl font-medium">{serverError}</div>
+              )}
+
+              {/* 教材名称 */}
               <FormField control={form.control} name="content_name" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">教材名称</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                   ) : (
-                    <FormControl><Input {...field} placeholder="例: 基礎英単語 100" className="bg-white rounded-xl border-slate-200" /></FormControl>
+                    <FormControl><Input {...field} placeholder="例: Gabby Sprint UG" className="bg-white rounded-xl border-slate-200" /></FormControl>
                   )}
                   <FormMessage />
                 </FormItem>
               )} />
 
               <div className="grid grid-cols-2 gap-4">
+                {/* 種別 */}
                 <FormField control={form.control} name="content_type" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">種別</FormLabel>
@@ -200,6 +221,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                   </FormItem>
                 )} />
 
+                {/* 公開範囲 */}
                 <FormField control={form.control} name="content_scope" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">公開範囲</FormLabel>
@@ -219,6 +241,45 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                     )}
                   </FormItem>
                 )} />
+              </div>
+
+              {/* --- スプリント選択時のみ表示する特化セクション（レベル削除に伴い、横幅全体表示に修正） --- */}
+              {currentContentType === '2' && (
+                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80">
+                  {/* スプリント種別 */}
+                  <FormField control={form.control} name="sprint_question_type" render={({ field }) => (
+                    <FormItem className="w-full">
+                      <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">スプリント種別</FormLabel>
+                      {isConfirming ? (
+                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-medium">
+                          {field.value && field.value !== 'none' ? SPRINT_TYPES[field.value as keyof typeof SPRINT_TYPES]?.label : '未選択'}
+                        </div>
+                      ) : (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500">
+                              <SelectValue placeholder="選択してください" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">選択してください</SelectItem>
+                            {Object.values(SPRINT_TYPES)
+                              .sort((a, b) => a.seq_no - b.seq_no)
+                              .map((sprint) => (
+                                <SelectItem key={sprint.value} value={sprint.value}>{sprint.label}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+              )}
+
+              {/* CEFR レベル & 表示順 の2カラム横並び配置 */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* CEFR レベル */}
                 <FormField control={form.control} name="cefr_id" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">CEFR レベル</FormLabel>
@@ -228,13 +289,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                       </div>
                     ) : (
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                            <SelectValue placeholder="選択なし" />
-                          </SelectTrigger>
-                        </FormControl>
+                        <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue placeholder="選択なし" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          {/* Radix UIは空文字を許容しないため "none" を使用 */}
                           <SelectItem value="none">選択なし</SelectItem>
                           {Object.values(CEFR_CONFIG).map((cefr) => (
                             <SelectItem key={cefr.id} value={cefr.id.toLowerCase()}>{cefr.label}</SelectItem>
@@ -244,19 +300,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                     )}
                   </FormItem>
                 )} />
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={form.control} name="difficulty_level" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">難易度 (1-5)</FormLabel>
-                    {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
-                    ) : (
-                      <FormControl><Input {...field} type="number" min="1" max="5" className="bg-white rounded-xl border-slate-200" /></FormControl>
-                    )}
-                  </FormItem>
-                )} />
+                {/* 表示順 */}
                 <FormField control={form.control} name="seq_no" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">表示順</FormLabel>
@@ -269,6 +314,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                 )} />
               </div>
 
+              {/* 管理ラベル（単一1行で幅いっぱいに表示） */}
               <FormField control={form.control} name="content_label" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">管理ラベル</FormLabel>
@@ -281,6 +327,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                 </FormItem>
               )} />
 
+              {/* 説明・解析根拠 */}
               <FormField control={form.control} name="description" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">説明・解析根拠</FormLabel>
@@ -293,15 +340,14 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
               )} />
             </div>
 
+            {/* フッターアクション */}
             <div className="p-6 pt-4 border-t border-slate-100">
               {isConfirming ? (
-                <div className="space-y-4">
-                  <div className="flex gap-3">
-                    <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>いいえ</Button>
-                    <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold" disabled={isSubmitting}>
-                      {isSubmitting ? "処理中..." : "はい、確定します"}
-                    </Button>
-                  </div>
+                <div className="flex gap-3">
+                  <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>いいえ</Button>
+                  <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold" disabled={isSubmitting}>
+                    {isSubmitting ? "処理中..." : "はい、確定します"}
+                  </Button>
                 </div>
               ) : (
                 <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md" onClick={() => form.trigger().then(valid => valid && setIsConfirming(true))}>

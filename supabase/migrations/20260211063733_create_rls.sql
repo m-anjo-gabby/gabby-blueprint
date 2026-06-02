@@ -325,3 +325,78 @@ WITH CHECK (
   OR 
   public.get_jwt_user_type() = '0'
 );
+
+---------------------------------------------
+-- RLS: com_m_sprint_questions 安全性の担保
+---------------------------------------------
+-- 既存ポリシーの削除
+DROP POLICY IF EXISTS "Allow select access for authenticated users" ON public.com_m_sprint_questions;
+DROP POLICY IF EXISTS "Allow all access for service_role" ON public.com_m_sprint_questions;
+
+-- 1. テーブルに対する RLS を有効化
+ALTER TABLE public.com_m_sprint_questions ENABLE ROW LEVEL SECURITY;
+
+-- 🔑 権限の明示的付与
+-- RLSが有効な場合でも、そもそもSELECT権限がないとポリシー評価前に0件になります
+GRANT SELECT ON TABLE public.com_m_sprint_questions TO authenticated;
+
+-- 2. 認証済みユーザー（アプリのログイン生徒・管理者など）に対して参照ポリシーを付与
+-- 論理削除(delete_flg = '1')されたデータはフロントエンドに流さないようにここでガード
+CREATE POLICY "Allow select access for authenticated users" 
+ON public.com_m_sprint_questions
+FOR SELECT 
+TO authenticated
+USING (delete_flg = '0');
+
+-- 3. 管理者やバックエンドデータ移行スクリプト（service_role）用にすべての操作を全許可
+CREATE POLICY "Allow all access for service_role" 
+ON public.com_m_sprint_questions
+FOR ALL 
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+---------------------------------------------
+-- SQLポリシー: 自主トレスプリント結果履歴 (self_t_sprint)
+---------------------------------------------
+
+-- 1. 既存のポリシーをクリーンアップ（再実行可能にするための防御）
+DROP POLICY IF EXISTS "Users can manage their own sprint scores" ON public.self_t_sprint;
+DROP POLICY IF EXISTS "Managers can view client's sprint scores" ON public.self_t_sprint;
+
+-- 2. 行レベルセキュリティ (RLS) を確実に有効化
+ALTER TABLE public.self_t_sprint ENABLE ROW LEVEL SECURITY;
+
+-- 3. 【受講生向け】本人のみがデータの参照・登録（CRUDすべて）を行えるポリシー
+-- サインイン済みユーザー(authenticated) かつ、データの所有者がJWT内のユーザーID(auth.uid())と一致すること
+CREATE POLICY "Users can manage their own sprint scores" ON public.self_t_sprint
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- 4. 【管理者・マネージャー向け】同じ法人の受講生データのみを監査・閲覧できる参照ポリシー
+-- 組織管理者がダッシュボード等でクライアント（企業・学校）に属する受講生の実績を一覧抽出するために使用
+CREATE POLICY "Managers can view client's sprint scores" ON public.self_t_sprint
+FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.com_m_user u
+    WHERE u.id = public.self_t_sprint.user_id
+    AND u.client_id = public.get_jwt_client_id()
+  )
+);
+
+---------------------------------------------
+-- SQLポリシー: ユーザースプリント進捗 (student_m_sprint_progress)
+---------------------------------------------
+-- 既存ポリシーの削除
+DROP POLICY IF EXISTS "Users can manage their own sprint progress" ON public.student_m_sprint_progress;
+
+-- テーブルに対する RLS を有効化
+ALTER TABLE public.student_m_sprint_progress ENABLE ROW LEVEL SECURITY;
+
+-- 自分の進捗のみ参照・操作可能
+CREATE POLICY "Users can manage their own sprint progress" ON public.student_m_sprint_progress
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
