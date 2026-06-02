@@ -20,6 +20,7 @@ export async function getLatestTerms() {
       .from("com_m_terms")
       .select("term_id, term_type, version_name, storage_path, published_date")
       .eq("is_required", true)
+      .lte("published_date", new Date().toISOString())
       .order("published_date", { ascending: false });
 
     if (error) {
@@ -66,6 +67,7 @@ export async function checkPendingAgreements(userId: string) {
         )
       `)
       .eq("is_required", true)
+      .lte("published_date", new Date().toISOString())
       .eq("com_t_user_terms_agreement.user_id", userId)
       .order("published_date", { ascending: false });
 

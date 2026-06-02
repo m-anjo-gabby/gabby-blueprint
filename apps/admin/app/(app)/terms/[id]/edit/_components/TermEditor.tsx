@@ -3,8 +3,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { updateTerm } from "@/actions/adminTermAction";
 import { useToast } from '@gabby/lib/hooks/useToast'
 import { Save, Eye, FileEdit, Loader2 } from "lucide-react";
@@ -20,12 +18,10 @@ interface TermEditorProps {
 }
 
 export function TermEditor({ termId, termType, initialVersion, initialContent, storagePath }: TermEditorProps) {
-  const [version, setVersion] = React.useState(initialVersion);
   const [content, setContent] = React.useState(initialContent);
   const [currentStoragePath, setCurrentStoragePath] = React.useState(storagePath);
   
   // 保存判定用のベース値
-  const [baseVersion, setBaseVersion] = React.useState(initialVersion);
   const [baseContent, setBaseContent] = React.useState(initialContent);
 
   const [isSaving, setIsSaving] = React.useState(false);
@@ -35,11 +31,10 @@ export function TermEditor({ termId, termType, initialVersion, initialContent, s
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      const result = await updateTerm(termId, termType, version, content, currentStoragePath);
+      const result = await updateTerm(termId, termType, initialVersion, content, currentStoragePath);
       
       if (result.success && result.newPath) {
         setCurrentStoragePath(result.newPath);
-        setBaseVersion(version);
         setBaseContent(content);
         showToast('規約を更新しました', 'success');
       } else {
@@ -52,7 +47,7 @@ export function TermEditor({ termId, termType, initialVersion, initialContent, s
     }
   };
 
-  const hasChanges = content !== baseContent || version !== baseVersion;
+  const hasChanges = content !== baseContent;
 
   return (
     <div className="flex flex-col flex-1 border rounded-lg bg-white overflow-hidden shadow-sm">
@@ -77,18 +72,6 @@ export function TermEditor({ termId, termType, initialVersion, initialContent, s
               <Eye size={14} /> プレビュー
             </Button>
           </div>
-
-          {viewMode === "edit" && (
-            <div className="flex items-center gap-2">
-              <Label htmlFor="version" className="text-[11px] font-black uppercase tracking-wider text-slate-400">Version</Label>
-              <Input 
-                id="version"
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                className="h-8 w-40 text-xs font-bold focus-visible:ring-indigo-500"
-              />
-            </div>
-          )}
         </div>
 
         <Button 

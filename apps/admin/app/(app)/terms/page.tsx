@@ -1,9 +1,7 @@
 // apps/admin/app/(app)/terms/page.tsx
 import { getTerms } from "@/actions/adminTermAction";
 import { TermDataTable } from "./_components/TermDataTable";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import Link from "next/link";
+import { TermFormDialog } from "./_components/TermFormDialog";
 
 export default async function TermsPage({
   searchParams,
@@ -29,12 +27,7 @@ export default async function TermsPage({
         </div>
         
         <div className="flex items-center gap-3">
-          <Button asChild>
-            <Link href="/terms/new">
-              <Plus className="mr-2 h-4 w-4" />
-              規約を新規作成
-            </Link>
-          </Button>
+          <TermFormDialog />
         </div>
       </div>
 
