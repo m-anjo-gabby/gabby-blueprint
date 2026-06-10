@@ -8,6 +8,8 @@ import { Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { createBrowserClient } from '@gabby/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { resetPassword } from '@/actions/authAction';
+
 
 type PageViewStatus = 'initializing' | 'form' | 'success';
 
@@ -51,13 +53,21 @@ export default function UpdatePasswordPage() {
     };
   }, [supabase]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const password = formData.get('password') as string;
 
-    if (!password || password.length < 6) {
-      setError('パスワードは6文字以上で入力してください。');
+    // 💡 共通コアの強度変更（8文字以上、英数混在）に合わせてフロント側もバリデーションを同期
+    if (!password || password.length < 8) {
+      setError('パスワードは8文字以上で入力してください。');
+      return;
+    }
+
+    const hasAlpha = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    if (!hasAlpha || !hasNumber) {
+      setError('パスワードには英字と数字を両方含めてください。');
       return;
     }
 
@@ -65,23 +75,12 @@ export default function UpdatePasswordPage() {
     setError(null);
 
     try {
-      // クライアントサイドSDKで直接更新
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
-      });
+      // 💡 クライアントサイドSDKによる直接更新を廃止し、セキュアな Server Action 経由に変更
+      const result = await resetPassword(formData);
 
-      if (updateError) {
-        console.error('Update Error:', updateError);
-        
-        // 💡 [修正ポイント]: 文字列の完全一致ではなく、部分一致 (.includes) に変更することで
-        // 大文字小文字の差異や細かな表記揺れ、前後の空白に影響されず、確実に日本語メッセージへ変換します
-        const errorMsg = updateError.message || '';
-        if (errorMsg.toLowerCase().includes('different from the old')) {
-          setError('新しいパスワードは現在と同じものは使用できません。');
-        } else {
-          setError(updateError.message);
-        }
-        
+      if (result.error) {
+        // 💡 コア側で翻訳された綺麗な日本語エラー（漏洩検知や同一パスワード制限など）がそのまま設定されます
+        setError(result.error);
         setLoading(false);
       } else {
         // 成功時
@@ -139,11 +138,12 @@ export default function UpdatePasswordPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* 💡 最小文字数を 8 に引き上げ */}
                 <PasswordInput
                   label="新しいパスワード"
                   name="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   placeholder="••••••••"
                 />
 

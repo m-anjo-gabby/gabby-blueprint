@@ -35,13 +35,22 @@ export const getUserTypeLabel = (type: string | null | undefined): string => {
  * アプリ全体で「ユーザー」を指す際に必須となる基本フィールド
  */
 export interface UserBase {
-  id: string;        // auth.users.id (UUID)
-  user_id: number;   // com_m_user.user_id (BIGSERIAL)
-  user_name: string | null;
-  user_type: string; // '1': student, '0': admin 等
+  id: string;               // auth.users.id (UUID)
+  user_id: number;          // com_m_user.user_id (BIGSERIAL)
   client_id: string | null;
-  area_cd: string;
+  user_type: string;        // '1': student, '0': admin 等
+  user_name: string | null;
+  timezone: string;         // IANAタイムゾーン名 (例: 'Asia/Tokyo')
   locale_id: string;
+  
+  // パスワード連続失敗・ロックアウト制御用
+  login_failed_count: number;       // 連続ログイン失敗回数
+  locked_until: string | null;      // ロック解除日時 (ISO文字列、NULL時は非ロック)
+  
+  // DDLの物理順序に合わせてフッター情報を整理
+  delete_flg: string;       // 論理削除フラグ ('0': 未削除, '1': 削除済)
+  insert_date: string;      // 登録日時 (ISO文字列)
+  update_date: string;      // 更新日時 (ISO文字列)
 }
 
 /**
@@ -78,6 +87,7 @@ export interface CreateUserPayload {
   user_name: string;
   client_id: string;
   user_type: string;
+  timezone?: string; // オプショナルでフロントから指定可能にする場合
   roles?: string[];
 }
 

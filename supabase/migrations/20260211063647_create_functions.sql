@@ -8,6 +8,7 @@ DECLARE
     param_client_id uuid := (new.raw_user_meta_data->>'client_id')::uuid;
     param_user_name text := new.raw_user_meta_data->>'user_name';
     param_user_type text := new.raw_user_meta_data->>'user_type';
+    param_timezone  text := new.raw_user_meta_data->>'timezone';
     target_client_id uuid;
 BEGIN
     -- 1. 優先順位に基づいた client_id の解決
@@ -19,22 +20,30 @@ BEGIN
     END IF;
 
     -- 2. ユーザマスタ登録
-    INSERT INTO public.com_m_user (id, client_id, area_cd, user_type, user_name) 
+    INSERT INTO public.com_m_user (
+        id, 
+        client_id, 
+        timezone, 
+        user_type, 
+        user_name
+    ) 
     VALUES (
         new.id, 
         target_client_id, 
-        '00', 
-        COALESCE(param_user_type, '1'),
+        COALESCE(param_timezone, 'Asia/Tokyo'), 
+        COALESCE(param_user_type, '1'), -- 未指定時はデフォルトで '1' (生徒)
         param_user_name
     );
 
     -- 3. ユーザースプリント進捗マスタの初期レコード作成
-    INSERT INTO public.student_m_sprint_progress (user_id)
-    VALUES (new.id);
+    -- ユーザタイプが '1'、または未指定（デフォルトで生徒扱いになる）場合のみ実行
+    IF param_user_type = '1' OR param_user_type IS NULL THEN
+        INSERT INTO public.student_m_sprint_progress (user_id)
+        VALUES (new.id);
+    END IF;
 
     RETURN new;
 END;
--- SECURITY DEFINER 警告への対策: search_path の固定
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- トリガーの再登録用に一旦削除してクリーンに作成
@@ -45,7 +54,6 @@ CREATE TRIGGER on_auth_user_created
 
 -- API(RPC)経由での不正実行を完全に防御（トリガーからは問題なく起動します）
 REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
-
 
 ---------------------------------------------
 -- app_metadata 統合同期ファンクション
@@ -189,3 +197,80 @@ BEGIN
         EXECUTE 'REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated;';
     END IF;
 END $$;
+
+---------------------------------------------
+-- ユーザーロック状態取得
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_user_lock_status_by_email(p_email TEXT)
+RETURNS TABLE (
+    id UUID,
+    user_type TEXT,
+    login_failed_count INT,
+    locked_until TIMESTAMP WITH TIME ZONE
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER -- Next.js(サーバー)から auth.users を安全にJOINして検索できます
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        u.id,
+        u.user_type,
+        u.login_failed_count,
+        u.locked_until
+    FROM public.com_m_user u
+    JOIN auth.users a ON u.id = a.id
+    WHERE a.email = p_email 
+      AND u.delete_flg = '0'
+    LIMIT 1;
+END;
+$$;
+
+-- 1. 安全のため、一度すべてのデフォルト権限をリセット（剥奪）する
+REVOKE EXECUTE ON FUNCTION public.get_user_lock_status_by_email(TEXT) FROM PUBLIC, anon, authenticated;
+-- 2. Next.js サーバー（ログイン済み、またはサーバーサイド処理）からの実行権限を明示的に付与する
+GRANT EXECUTE ON FUNCTION public.get_user_lock_status_by_email(TEXT) TO anon, authenticated, service_role;
+-- 補足：セキュリティの再確認
+-- この関数は「SECURITY DEFINER」かつ「SET search_path = public」で定義されているため、
+-- anonロールから呼び出されても、内部で安全に auth.users を結合して指定したemailのロック状態のみを返却します。
+-- 全ユーザーの一覧をぶっこ抜かれるような脆弱性（SQLインジェクションなど）は構造上発生しません。
+
+---------------------------------------------
+-- ユーザーログイン失敗カウントアップ
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.increment_login_failed_count(p_user_id UUID, p_max_attempts INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER -- 未ログイン状態からでも安全にマスタを更新できます
+SET search_path = public
+AS $$
+DECLARE
+    v_current_count INT;
+    v_lockout_until TIMESTAMP WITH TIME ZONE := NULL;
+BEGIN
+    -- 現在の失敗回数を取得
+    SELECT login_failed_count INTO v_current_count FROM public.com_m_user WHERE id = p_user_id;
+    
+    -- カウントを1増やす
+    v_current_count := COALESCE(v_current_count, 0) + 1;
+    
+    -- 設定された上限回数を超えたら30分ロック
+    IF v_current_count >= p_max_attempts THEN
+        v_lockout_until := clock_timestamp() + INTERVAL '30 minutes';
+    END IF;
+
+    -- マスタを更新
+    UPDATE public.com_m_user
+    SET 
+        login_failed_count = v_current_count,
+        locked_until = v_lockout_until,
+        update_date = clock_timestamp()
+    WHERE id = p_user_id;
+END;
+$$;
+
+-- 安全のため、一度すべてのデフォルト権限をリセット（剥奪）する
+REVOKE EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) FROM PUBLIC, anon, authenticated;
+-- 未ログインのログイン画面から実行されるため、anon にも実行権限を与えます
+GRANT EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) TO anon, authenticated, service_role;
