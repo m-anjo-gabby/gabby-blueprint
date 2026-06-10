@@ -31,8 +31,8 @@ CREATE TABLE public.com_m_user (
   client_id uuid REFERENCES public.com_m_client(client_id),
   user_type text DEFAULT '1', -- デフォルトを '1' (生徒) 
   user_name text DEFAULT NULL,
-  area_cd text NOT NULL DEFAULT '00',
   locale_id text DEFAULT 'ja',
+  timezone text NOT NULL DEFAULT 'Asia/Tokyo'
   agree_date timestamp with time zone NULL, 
   delete_flg text NOT NULL DEFAULT '0',
   insert_date timestamp with time zone not null default now(),
@@ -48,9 +48,10 @@ COMMENT ON COLUMN public.com_m_user.user_id IS 'ユーザID';
 COMMENT ON COLUMN public.com_m_user.client_id IS '顧客ID';
 COMMENT ON COLUMN public.com_m_user.user_type IS 'ユーザタイプ 0：管理者 1:生徒 2:モニター';
 COMMENT ON COLUMN public.com_m_user.user_name IS 'ユーザ名称';
-COMMENT ON COLUMN public.com_m_user.area_cd IS '地域コード';
 COMMENT ON COLUMN public.com_m_user.locale_id IS 'ロケールID';
-COMMENT ON COLUMN public.com_m_user.agree_date IS '利用規約同意日付';
+COMMENT ON COLUMN public.com_m_user.timezone IS 'IANAタイムゾーン名（例: Asia/Tokyo）';
+COMMENT ON COLUMN public.com_m_user.login_failed_count IS 'ログイン連続失敗回数';
+COMMENT ON COLUMN public.com_m_user.locked_until IS 'アカウントロックアウト終了日時';
 COMMENT ON COLUMN public.com_m_user.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_user.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_user.update_date IS '更新日時';

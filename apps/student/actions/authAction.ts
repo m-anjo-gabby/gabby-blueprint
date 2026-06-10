@@ -99,9 +99,13 @@ export async function resetPassword(formData: FormData) {
     // パスワードリセット成功時は、通常その後の自動ログイン状態になるため ctx 取得を試みる
     const ctx = await getLogContext();
     logger.info('auth:reset_password_success', 'User successfully reset password via email link', ctx);
-    redirect('/login?message=password-updated');
+    
+    // 💡 クライアント側（UpdatePasswordPage）で成功アニメーションを表示してから
+    // 画面側で安全に遷移させるため、ここではリダイレクトせず正常ステータスを返却します
+    return { success: true };
   }
 
+  // 強度バリデーションエラーや漏洩パスワードエラーなど、翻訳されたメッセージをログとクライアントに引き渡す
   logger.error('auth:reset_password_failed', error || 'Failed to reset password');
   return { error };
 }

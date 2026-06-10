@@ -118,9 +118,13 @@ export async function resetPassword(formData: FormData) {
     
     if (success) {
       logger.info('auth:admin_reset_password_success', 'Admin successfully reset password via email link', ctx);
-      redirect('/login?message=password-updated');
+      
+      // 💡 クライアント側（UpdatePasswordPage）で完了表示を見せてから
+      // 画面側で安全に遷移させるため、ここではリダイレクトせず正常ステータスを返却します
+      return { success: true };
     }
 
+    // 強度バリデーションエラーや重複・漏洩エラーなど、コアで翻訳されたメッセージを安全に中継
     logger.error('auth:admin_reset_password_failed', error || 'Failed to reset password', ctx);
     return { error };
   } catch (error) {

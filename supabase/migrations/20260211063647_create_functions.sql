@@ -1,7 +1,6 @@
 ---------------------------------------------
 -- サインアップ連動トリガー
 ---------------------------------------------
--- ユーザー作成時に必須カラムを初期化してユーザマスタを作成する
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -9,7 +8,7 @@ DECLARE
     param_client_id uuid := (new.raw_user_meta_data->>'client_id')::uuid;
     param_user_name text := new.raw_user_meta_data->>'user_name';
     param_user_type text := new.raw_user_meta_data->>'user_type';
-    -- 処理対象クライアントID
+    param_timezone  text := new.raw_user_meta_data->>'timezone';
     target_client_id uuid;
 BEGIN
     -- 1. 優先順位に基づいた client_id の解決
@@ -21,28 +20,40 @@ BEGIN
     END IF;
 
     -- 2. ユーザマスタ登録
-    INSERT INTO public.com_m_user (id, client_id, area_cd, user_type, user_name) 
+    INSERT INTO public.com_m_user (
+        id, 
+        client_id, 
+        timezone, 
+        user_type, 
+        user_name
+    ) 
     VALUES (
         new.id, 
         target_client_id, 
-        '00', 
-        COALESCE(param_user_type, '1'), -- デフォルト値の考慮
+        COALESCE(param_timezone, 'Asia/Tokyo'), 
+        COALESCE(param_user_type, '1'), -- 未指定時はデフォルトで '1' (生徒)
         param_user_name
     );
 
-    -- 3. [追加] ユーザースプリント進捗マスタの初期レコード作成
-    -- カラム定義に DEFAULT が設定されているため、user_id のみを指定してクリーンに初期化します
-    INSERT INTO public.student_m_sprint_progress (user_id)
-    VALUES (new.id);
+    -- 3. ユーザースプリント進捗マスタの初期レコード作成
+    -- ユーザタイプが '1'、または未指定（デフォルトで生徒扱いになる）場合のみ実行
+    IF param_user_type = '1' OR param_user_type IS NULL THEN
+        INSERT INTO public.student_m_sprint_progress (user_id)
+        VALUES (new.id);
+    END IF;
 
     RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- トリガーの登録
+-- トリガーの再登録用に一旦削除してクリーンに作成
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- API(RPC)経由での不正実行を完全に防御（トリガーからは問題なく起動します）
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 
 ---------------------------------------------
 -- app_metadata 統合同期ファンクション
@@ -56,37 +67,31 @@ DECLARE
     v_target_id uuid;
     v_data jsonb;
 BEGIN
-    -- 1. 操作種別に応じてレコードを jsonb として取得
     IF (TG_OP = 'DELETE') THEN
         v_data := to_jsonb(OLD);
     ELSE
         v_data := to_jsonb(NEW);
     END IF;
 
-    -- 2. jsonb から id または user_id を安全に取り出す
     v_target_id := COALESCE(
         (v_data->>'id')::uuid, 
         (v_data->>'user_id')::uuid
     );
 
-    -- 3. ユーザー本体(com_m_user)の削除時は、auth.users も消えるため処理をスキップ
     IF (TG_OP = 'DELETE' AND TG_TABLE_NAME = 'com_m_user') THEN
         RETURN OLD;
     END IF;
 
-    -- 4. auth.users が存在するかチェック
     IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = v_target_id) THEN
         RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
     END IF;
 
-    -- 5. 最新情報をマスタから取得
     SELECT user_type, client_id INTO v_user_type, v_client_id 
     FROM public.com_m_user WHERE id = v_target_id;
 
     SELECT array_agg(role_id) INTO v_roles 
     FROM public.com_t_user_role WHERE user_id = v_target_id;
 
-    -- 6. メタデータの更新実行
     UPDATE auth.users
     SET raw_app_meta_data = 
         COALESCE(raw_app_meta_data, '{}'::jsonb) || 
@@ -99,32 +104,37 @@ BEGIN
 
     RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- SECURITY DEFINER 警告への対策: search_path の固定
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- トリガーの登録
--- 1. com_m_user の変更時 (client_id, user_type)
+-- トリガーのバインド
 DROP TRIGGER IF EXISTS trg_sync_app_meta_m_user ON public.com_m_user;
 CREATE TRIGGER trg_sync_app_meta_m_user
     AFTER INSERT OR UPDATE OF client_id, user_type ON public.com_m_user
     FOR EACH ROW EXECUTE PROCEDURE public.sync_user_app_metadata();
 
--- 2. com_t_user_role の変更時 (roles)
 DROP TRIGGER IF EXISTS trg_sync_app_meta_roles ON public.com_t_user_role;
 CREATE TRIGGER trg_sync_app_meta_roles
     AFTER INSERT OR UPDATE OR DELETE ON public.com_t_user_role
     FOR EACH ROW EXECUTE PROCEDURE public.sync_user_app_metadata();
+
+-- API(RPC)経由での不正実行を完全に防御
+REVOKE EXECUTE ON FUNCTION public.sync_user_app_metadata() FROM PUBLIC, anon, authenticated;
+
 
 ---------------------------------------------
 -- JWTから client_id を安全に取り出すヘルパー関数
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_jwt_client_id()
 RETURNS uuid AS $$
-  -- app_metadata 内の client_id を UUID 型で取得
   SELECT NULLIF(current_setting('request.jwt.claims', true)::jsonb -> 'app_metadata' ->> 'client_id', '')::uuid;
-$$ LANGUAGE sql STABLE;
+-- 行レベルセキュリティ、ビューの参照をセキュアにするための設定
+$$ LANGUAGE sql STABLE SET search_path = public;
 
--- 権限付与（認証済みユーザーがこの関数を実行できるようにする）
+-- 全体公開(PUBLIC)を剥奪した上で、認証済みロールにのみクリーンに許可
+REVOKE EXECUTE ON FUNCTION public.get_jwt_client_id() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_jwt_client_id() TO authenticated;
+
 
 ---------------------------------------------
 -- 有効ライセンス情報のメタデータ同期
@@ -134,7 +144,6 @@ RETURNS TRIGGER AS $$
 DECLARE
     is_licensed boolean;
 BEGIN
-    -- 現在有効なライセンスが存在するかチェック
     SELECT EXISTS (
         SELECT 1 FROM public.com_t_user_license
         WHERE user_id = COALESCE(NEW.user_id, OLD.user_id)
@@ -143,7 +152,6 @@ BEGIN
           AND end_date >= NOW()
     ) INTO is_licensed;
 
-    -- auth.users の raw_app_meta_data を更新
     UPDATE auth.users
     SET raw_app_meta_data = 
         COALESCE(raw_app_meta_data, '{}'::jsonb) || 
@@ -152,20 +160,117 @@ BEGIN
 
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- SECURITY DEFINER 警告への対策: search_path の固定
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
+DROP TRIGGER IF EXISTS on_license_change ON public.com_t_user_license;
 CREATE TRIGGER on_license_change
 AFTER INSERT OR UPDATE OR DELETE ON public.com_t_user_license
 FOR EACH ROW EXECUTE PROCEDURE public.sync_user_license_metadata();
+
+-- API(RPC)経由での不正実行を完全に防御
+REVOKE EXECUTE ON FUNCTION public.sync_user_license_metadata() FROM PUBLIC, anon, authenticated;
+
 
 ---------------------------------------------
 -- JWTから user_type を安全に取り出すヘルパー関数
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_jwt_user_type()
 RETURNS text AS $$
-  -- app_metadata 内の user_type を取得
   SELECT NULLIF(current_setting('request.jwt.claims', true)::jsonb -> 'app_metadata' ->> 'user_type', '');
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE SET search_path = public;
 
--- 権限付与
+-- 全体公開(PUBLIC)を剥奪した上で、認証済みロールにのみクリーンに許可
+REVOKE EXECUTE ON FUNCTION public.get_jwt_user_type() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_jwt_user_type() TO authenticated;
+
+
+---------------------------------------------
+-- 警告にあったrls_auto_enable の防御措置
+---------------------------------------------
+-- もしデータベース内に実体が存在する場合、外部からの RPC 実行を安全に遮断します。
+-- (不要であれば DROP FUNCTION IF EXISTS public.rls_auto_enable(); で削除しても構いません)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'rls_auto_enable') THEN
+        ALTER FUNCTION public.rls_auto_enable() SET search_path = public;
+        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated;';
+    END IF;
+END $$;
+
+---------------------------------------------
+-- ユーザーロック状態取得
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_user_lock_status_by_email(p_email TEXT)
+RETURNS TABLE (
+    id UUID,
+    user_type TEXT,
+    login_failed_count INT,
+    locked_until TIMESTAMP WITH TIME ZONE
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER -- Next.js(サーバー)から auth.users を安全にJOINして検索できます
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        u.id,
+        u.user_type,
+        u.login_failed_count,
+        u.locked_until
+    FROM public.com_m_user u
+    JOIN auth.users a ON u.id = a.id
+    WHERE a.email = p_email 
+      AND u.delete_flg = '0'
+    LIMIT 1;
+END;
+$$;
+
+-- 1. 安全のため、一度すべてのデフォルト権限をリセット（剥奪）する
+REVOKE EXECUTE ON FUNCTION public.get_user_lock_status_by_email(TEXT) FROM PUBLIC, anon, authenticated;
+-- 2. Next.js サーバー（ログイン済み、またはサーバーサイド処理）からの実行権限を明示的に付与する
+GRANT EXECUTE ON FUNCTION public.get_user_lock_status_by_email(TEXT) TO anon, authenticated, service_role;
+-- 補足：セキュリティの再確認
+-- この関数は「SECURITY DEFINER」かつ「SET search_path = public」で定義されているため、
+-- anonロールから呼び出されても、内部で安全に auth.users を結合して指定したemailのロック状態のみを返却します。
+-- 全ユーザーの一覧をぶっこ抜かれるような脆弱性（SQLインジェクションなど）は構造上発生しません。
+
+---------------------------------------------
+-- ユーザーログイン失敗カウントアップ
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.increment_login_failed_count(p_user_id UUID, p_max_attempts INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER -- 未ログイン状態からでも安全にマスタを更新できます
+SET search_path = public
+AS $$
+DECLARE
+    v_current_count INT;
+    v_lockout_until TIMESTAMP WITH TIME ZONE := NULL;
+BEGIN
+    -- 現在の失敗回数を取得
+    SELECT login_failed_count INTO v_current_count FROM public.com_m_user WHERE id = p_user_id;
+    
+    -- カウントを1増やす
+    v_current_count := COALESCE(v_current_count, 0) + 1;
+    
+    -- 設定された上限回数を超えたら30分ロック
+    IF v_current_count >= p_max_attempts THEN
+        v_lockout_until := clock_timestamp() + INTERVAL '30 minutes';
+    END IF;
+
+    -- マスタを更新
+    UPDATE public.com_m_user
+    SET 
+        login_failed_count = v_current_count,
+        locked_until = v_lockout_until,
+        update_date = clock_timestamp()
+    WHERE id = p_user_id;
+END;
+$$;
+
+-- 安全のため、一度すべてのデフォルト権限をリセット（剥奪）する
+REVOKE EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) FROM PUBLIC, anon, authenticated;
+-- 未ログインのログイン画面から実行されるため、anon にも実行権限を与えます
+GRANT EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) TO anon, authenticated, service_role;

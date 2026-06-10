@@ -8,7 +8,8 @@ import {
   BulkUser, 
   BulkImportResponse, 
   BulkImportResultDetail, 
-  RoleDefinition
+  RoleDefinition,
+  USER_TYPES
 } from "@gabby/types/user";
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
@@ -80,9 +81,14 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
   try {
     const supabase = await createAdminClient();
 
+    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え
+    const redirectBase = user_type === USER_TYPES.ADMIN
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : process.env.NEXT_PUBLIC_STUDENT_URL;
+
     // 1. 招待メールを送信し、アカウントを作成
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/invite`,
+      redirectTo: `${redirectBase}/auth/invite`,
       data: { 
         user_name,
         user_type,
@@ -129,12 +135,17 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
 /**
  * ユーザー再招待招待アクション
  */
-export async function resendInvite(email: string) {
+export async function resendInvite(email: string, userType?: string) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
+
+    const redirectBase = userType === USER_TYPES.ADMIN
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : process.env.NEXT_PUBLIC_STUDENT_URL;
+
     const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/invite`,
+      redirectTo: `${redirectBase}/auth/invite`,
     });
     if (error) {
       logger.error('user:resend_invite_failed', error.message, { ...ctx, payload: { email } });

@@ -1,11 +1,13 @@
+// apps\admin\app\(public)\update-password\page.tsx
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
 import { Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { createBrowserClient } from '@gabby/lib/supabase/client';
+import { resetPassword } from '@/actions/adminAuthAction'; 
 
 export default function UpdatePasswordPage() {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -14,6 +16,9 @@ export default function UpdatePasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createBrowserClient();
+  
+  // アンマウント後のタイマー実行を安全にクリーンアップするための参照
+  const redirectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // 招待/リセットのハッシュトークンを確実に処理するための監視
@@ -34,22 +39,33 @@ export default function UpdatePasswordPage() {
     // 5秒経ってもセッションが来ない場合は、リンク切れか無効なアクセスとして扱う
     const timer = setTimeout(() => {
       setIsInitializing(false);
-      // ここで session がなければ UI側で「リンク無効」と出しても良い
     }, 5000);
 
     return () => {
       subscription.unsubscribe();
       clearTimeout(timer);
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
     };
   }, [supabase]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // 💡 React 19 に向けて FormEvent から SubmitEvent へ変更 (ts(6385)警告の回避)
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const password = formData.get('password') as string;
 
-    if (!password || password.length < 6) {
-      setError('パスワードは6文字以上で入力してください。');
+    // 💡 共通ポリシーの強度（8文字以上、英数混在）に合わせてフロント側も同期
+    if (!password || password.length < 8) {
+      setError('パスワードは8文字以上で入力してください。');
+      return;
+    }
+
+    const hasAlpha = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    if (!hasAlpha || !hasNumber) {
+      setError('パスワードには英字と数字を両方含めてください。');
       return;
     }
 
@@ -57,22 +73,20 @@ export default function UpdatePasswordPage() {
     setError(null);
 
     try {
-      // クライアントサイドSDKで直接更新
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
-      });
+      // 💡 クライアントサイドSDKによる直接更新を廃止し、バックエンドの安全なコアロジックを通過させる
+      const result = await resetPassword(formData);
 
-      if (updateError) {
-        console.error("Update Error:", updateError);
-        setError(updateError.message === 'New password should be different from the old password' 
-          ? '新しいパスワードは以前と同じものは使用できません。' 
-          : updateError.message);
+      if (result.error) {
+        // 💡 共通コアで翻訳された綺麗な日本語エラーメッセージがそのままセットされます
+        setError(result.error);
         setLoading(false);
       } else {
         // 成功時
         setIsSuccess(true);
-        // 少し余韻を持たせてからログインへ（即リダイレクトよりUXが良い）
-        setTimeout(() => {
+        setLoading(false);
+        
+        // 少し余韻を持たせてからログインへ（クリーンアップを保証）
+        redirectTimerRef.current = setTimeout(() => {
           router.push('/login?message=updated');
         }, 1500);
       }
@@ -116,11 +130,12 @@ export default function UpdatePasswordPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* 💡 最小文字数を 8 に引き上げ */}
           <PasswordInput
             label="新しいパスワード"
             name="password"
             required
-            minLength={6}
+            minLength={8}
             placeholder="••••••••"
           />
 

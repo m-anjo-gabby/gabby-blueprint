@@ -26,6 +26,14 @@ export default function PasswordChangePage() {
   const { showToast } = useToast();
   const router = useRouter();
 
+  // 💡 新しいパスワードの強度（英数混在）判定をリアルタイムで算出
+  const strengthStatus = useMemo(() => {
+    if (!newPassword) return null;
+    const hasAlpha = /[a-zA-Z]/.test(newPassword);
+    const hasNumber = /[0-9]/.test(newPassword);
+    return hasAlpha && hasNumber;
+  }, [newPassword]);
+
   // パスワードの一致判定をリアルタイムで算出
   const matchStatus = useMemo(() => {
     if (!newPassword || !confirmPassword) return null;
@@ -37,16 +45,27 @@ export default function PasswordChangePage() {
    * 送信時のバリデーションと、サーバーからのレスポンスに応じた状態更新を担当
    */
   const handleSubmit = async (formData: FormData) => {
-    // 1. パスワード一致チェック
+    // 💡 1. サーバー送信前の強度チェック（文字数と英数混在）
+    if (newPassword.length < 8) {
+      showToast('新しいパスワードは8文字以上で入力してください。', 'error');
+      return;
+    }
+
+    if (strengthStatus === false) {
+      showToast('パスワードには英字と数字を両方含めてください。', 'error');
+      return;
+    }
+
+    // 2. パスワード一致チェック
     if (matchStatus === false) {
       showToast('新しいパスワードが一致していません', 'error');
       return;
     }
 
-    // 2. エラーメッセージのリセット
+    // 3. エラーメッセージのリセット
     setCurrentPasswordError(null);
 
-    // 3. サーバーアクションの実行
+    // 4. サーバーアクションの実行
     const result = await updatePassword(formData);
 
     if (result?.error) {
@@ -55,7 +74,7 @@ export default function PasswordChangePage() {
         setCurrentPasswordError(result.error);
         setCurrentPassword(''); // 問題箇所のみクリア
       } else {
-        // システムエラーはトーストで通知
+        // 💡 共通コアで翻訳された「漏洩パスワード警告」や「過去と同じパスワードエラー」はトーストで綺麗に通知されます
         showToast(result.error, 'error');
       }
     } else {
@@ -88,14 +107,22 @@ export default function PasswordChangePage() {
           </div>
 
           {/* 新しいパスワード入力 */}
-          <PasswordInput 
-            label="新しいパスワード" 
-            name="newPassword" 
-            value={newPassword}
-            required 
-            minLength={6}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
+          <div className="space-y-1">
+            <PasswordInput 
+              label="新しいパスワード" 
+              name="newPassword" 
+              value={newPassword}
+              required 
+              minLength={8} /* 💡 8文字以上に引き上げ */
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            {/* 💡 英数混在のインラインフィードバックを追加 */}
+            {strengthStatus !== null && !strengthStatus && (
+              <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in">
+                英字と数字を両方含めてください
+              </p>
+            )}
+          </div>
           
           {/* パスワード（確認用）入力と一致確認のインラインフィードバック */}
           <div className="relative">
@@ -104,7 +131,7 @@ export default function PasswordChangePage() {
               name="confirmPassword" 
               value={confirmPassword}
               required 
-              minLength={6}
+              minLength={8} /* 💡 8文字以上に引き上げ */
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
             
