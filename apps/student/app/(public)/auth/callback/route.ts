@@ -6,7 +6,8 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
 
   const code = searchParams.get('code')
-  const token = searchParams.get('token')
+  const token = searchParams.get('token') // For invite and recovery (from Supabase generated link)
+  const tokenHash = searchParams.get('token_hash') // For specific OTP verification (e.g., email change, if Supabase sends it)
   const type = searchParams.get('type')
   const next = searchParams.get('next') ?? '/dashboard'
 
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
     /**
      * PKCE フロー
      * 対象:
-     * - password reset
+     * - password reset (標準フロー時)
      * - magic link
      * - email confirmation
      * 💡 既存の重要フロー：完全無修正でそのまま残し、機能影響をゼロにします
@@ -29,6 +30,30 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/login?error=auth`)
       }
 
+      return NextResponse.redirect(`${origin}${next}`)
+    }
+
+    /**
+     * 🚀 新設: 独自パスワードリセットフロー (recovery)
+     * generateLink({ type: 'recovery' }) で発行されたトークンを検証し、
+     * 認証セッションを確立してパスワード更新画面へリダイレクトします。
+     */
+    // 💡 修正: generateLink から直接 callback へ届く場合、パラメータ名は token_hash または token
+    // の可能性があるため、両方をフォールバックとして受け入れます。
+    const recoveryToken = tokenHash || token;
+    if (recoveryToken && type === 'recovery') {
+      const { error } = await supabase.auth.verifyOtp({ // verifyOtp expects token_hash
+        token_hash: recoveryToken,
+        type: 'recovery',
+      })
+
+      if (error) {
+        console.error('Password reset verify error:', error.message)
+        return NextResponse.redirect(`${origin}/login?error=reset_expired`)
+      }
+
+      // トークン検証が成功すると、裏で一時的なログインセッションが張られます。
+      // そのままパスワード入力画面（/update-password）へ安全にリダイレクトします。
       return NextResponse.redirect(`${origin}${next}`)
     }
 

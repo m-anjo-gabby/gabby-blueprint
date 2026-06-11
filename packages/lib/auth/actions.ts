@@ -5,6 +5,7 @@ import { createAdminClient } from '../supabase/admin';
 import { User } from '@supabase/supabase-js';
 import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger, getLogContext } from '../logger';
+import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
 
 // 💡 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');
@@ -222,18 +223,54 @@ export async function forgotPasswordCore(formData: FormData): Promise<AuthRespon
     return { error: 'メールアドレスを入力してください。' };
   }
 
-  const supabase = await createServerClient();
-  
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/update-password`,
-  });
+  try {
+    // 💡 改善: メール自体は独自で送るため、Supabase側からは「送信」ではなく「認証リンク（トークン）」のみを行政権限で発行させる
+    const supabaseAdmin = await createAdminClient();
+    
+    const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        // 💡 既存のリダイレクト設定をそのまま引き継ぐ（認証後のパスワード入力画面パス）
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/update-password`,
+      }
+    });
 
-  if (error) {
-    logger.error('auth:reset_email_dispatch_failed', error.message, { payload: { email } });
-    return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+    if (linkError) {
+      logger.error('auth:reset_email_link_generation_failed', linkError.message, { payload: { email } });
+      return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+    }
+
+    if (!data || !data.properties?.action_link) {
+      logger.error('auth:reset_email_link_empty', '生成されたアクションリンクが空です', { payload: { email } });
+      return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+    }
+
+    // 💡 修正: Supabase内部の verify エンドポイントを経由すると、非PKCE時はセッションが
+    // フラグメント (#) で返りサーバーサイドの callback で取得できなくなるため、
+    // 直接アプリのコールバック URL を生成してトークン (hashed_token) を渡します。
+    const tokenHash = data.properties.hashed_token;
+    const appResetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?token_hash=${tokenHash}&type=recovery&next=/update-password`;
+
+    // 独自にデザインしたリッチHTMLメールを Resend から安全に送信！
+    // 考慮点: 有効期限テキストは、SupabaseのAuth設定（Inactivity timeout / Gotrue設定）のデフォルトに合わせて調整（通常は30分や60分）
+    const mailResult = await sendPasswordResetEmail({
+      to: email,
+      resetUrl: appResetUrl,
+      expiresText: '30分間' 
+    });
+
+    if (!mailResult.success) {
+      logger.error('auth:reset_email_dispatch_failed', mailResult.error || 'Unknown error', { payload: { email } });
+      return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+    }
+
+    return { success: true };
+
+  } catch (err) {
+    logger.error('auth:forgot_password_unexpected', err instanceof Error ? err.message : 'Unknown error', { payload: { email } });
+    return { error: '予期せぬエラーが発生しました。時間をおいて再度お試しください。' };
   }
-
-  return { success: true };
 }
 
 /**
