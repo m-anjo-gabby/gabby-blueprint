@@ -144,7 +144,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
         user_name,
         user_type,
         client_id: client_id || null,
-        contract_id: contract_id || null,
+        contract_id: contract_id === 'none' ? null : (contract_id || null), // 'none'の場合はnullに変換
         roles,
         token: invitationToken,
         expires_at: expiresAt.toISOString(),

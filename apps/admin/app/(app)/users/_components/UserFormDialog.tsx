@@ -29,7 +29,16 @@ const userSchema = z.object({
   client_id: z.string().min(1, '所属顧客を選択してください'),
   user_type: z.string().min(1, 'タイプは必須です'),
   roles: z.array(z.string()), // 必須配列として定義（初期値で[]をセット）
-  contract_id: z.string().optional(),
+  contract_id: z.string().optional(), // 一旦optionalにしておき、superRefineで条件付き必須にする
+}).superRefine((data, ctx) => {
+  // 生徒(user_type === '1')の場合、contract_idが'none'であってはならない
+  if (data.user_type === '1' && data.contract_id === 'none') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: '生徒には初期ライセンスの割当が必須です。',
+      path: ['contract_id'],
+    });
+  }
 });
 
 // Zodから推論した型をそのまま使うことで、useForm(resolver)との型不一致を解消
@@ -357,22 +366,23 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                     
                     {/* --- 新規作成時のみライセンス選択を表示 --- */}
                     {mode === 'create' && watchUserType === '1' && (
-                      <FormField control={form.control} name="contract_id" render={({ field }) => (
+                      <FormField control={form.control} name="contract_id" render={({ field, fieldState }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">初期ライセンス（任意）</FormLabel>
+                          <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">初期ライセンス</FormLabel>
                           {isConfirming ? (
                             <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                               {availableContracts.find(c => c.contract_id === field.value)?.plan_name || '割り当てなし'}
                             </div>
                           ) : (
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={availableContracts.length === 0}>
                               <FormControl>
-                                <SelectTrigger className="rounded-xl h-11">
-                                  <SelectValue placeholder={isLoadingContracts ? "読込中..." : "今は割り当てない"} />
+                                <SelectTrigger className={`rounded-xl h-11 ${fieldState.error ? 'border-rose-500' : ''}`}>
+                                  <SelectValue placeholder={isLoadingContracts 
+                                    ? "読込中..." 
+                                    : (availableContracts.length === 0 ? "割当可能なライセンスがありません" : "ライセンスを選択してください") } />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="none" className="text-slate-400 italic">今は割り当てない</SelectItem>
                                 {availableContracts.map((c) => (
                                   <SelectItem key={c.contract_id} value={c.contract_id}>
                                     {c.plan_name} (残:{c.remaining_licenses})
@@ -381,6 +391,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                               </SelectContent>
                             </Select>
                           )}
+                          <FormMessage />
                         </FormItem>
                       )} />
                     )}

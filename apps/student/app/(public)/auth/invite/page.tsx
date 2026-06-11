@@ -1,12 +1,14 @@
 // apps/student/app/(public)/auth/invite/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, AlertCircle, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { verifyInvitationToken, acceptInvitationAction } from '@gabby/lib/auth/actions';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import { signIn } from '@/actions/authAction';
 
 type PageStatus = 'loading' | 'expired' | 'error' | 'form' | 'success';
 
@@ -23,6 +25,20 @@ export default function InvitePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 💡 リアルタイムのパスワード強度判定
+  const strengthStatus = useMemo(() => {
+    if (!password) return null;
+    const hasAlpha = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    return hasAlpha && hasNumber;
+  }, [password]);
+
+  // 💡 パスワード一致判定
+  const matchStatus = useMemo(() => {
+    if (!password || !confirmPassword) return null;
+    return password === confirmPassword;
+  }, [password, confirmPassword]);
 
   useEffect(() => {
     const checkToken = async () => {
@@ -59,9 +75,14 @@ export default function InvitePage() {
     e.preventDefault();
     setFormError(null);
 
-    if (!token) return;
+    if (!token || !invitedUser) return;
+
     if (password.length < 8) {
       setFormError('パスワードは8文字以上で入力してください。');
+      return;
+    }
+    if (strengthStatus === false) {
+      setFormError('パスワードには英字と数字を両方含めてください。');
       return;
     }
     if (password !== confirmPassword) {
@@ -71,7 +92,7 @@ export default function InvitePage() {
 
     setIsSubmitting(true);
     try {
-      // 2. 修正された acceptInvitationAction アクションを実行
+      // 1. 本登録（アカウント作成・マスタ同期・ライセンス付与）を実行
       const result = await acceptInvitationAction({ token, password });
 
       if (!result.success) {
@@ -80,9 +101,23 @@ export default function InvitePage() {
         return;
       }
 
-      setStatus('success');
+      // 2. 💡 自動ログイン処理の実行
+      // signInアクションは成功時に自動的に /dashboard へリダイレクトします。
+      const loginFormData = new FormData();
+      loginFormData.append('email', invitedUser.email);
+      loginFormData.append('password', password);
+
+      const loginResult = await signIn(loginFormData);
+
+      // ライセンス未割当などでリダイレクトされずに戻ってきた場合、エラーを表示する
+      if (loginResult?.error) {
+        setFormError(loginResult.error);
+        setIsSubmitting(false);
+      }
     } catch (err) {
-      setFormError('予期せぬエラーが発生しました。時間をおいて再度お試しください。');
+      // Next.js の redirect() による内部エラーは無視
+      if (err instanceof Error && err.message === 'NEXT_REDIRECT') return;
+      setFormError('予期せぬエラーが発生しました。');
       setIsSubmitting(false);
     }
   };
@@ -114,38 +149,44 @@ export default function InvitePage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                    新しいパスワード
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="8文字以上、英数混在"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-800"
-                      required
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <PasswordInput
+                    label="新しいパスワード"
+                    name="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="8文字以上、英数混在"
+                    required
+                    minLength={8}
+                  />
+                  {strengthStatus !== null && !strengthStatus && (
+                    <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in">
+                      英字と数字を両方含めてください
+                    </p>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                    パスワード（確認用）
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="もう一度入力してください"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-800"
-                      required
-                    />
-                  </div>
+                <div className="relative">
+                  <PasswordInput
+                    label="パスワード（確認用）"
+                    name="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="もう一度入力してください"
+                    required
+                    minLength={8}
+                  />
+                  {matchStatus !== null && (
+                    <p className={`text-[11px] font-bold mt-1 ml-1 flex items-center gap-1 animate-in fade-in ${
+                      matchStatus ? 'text-emerald-600' : 'text-red-500'
+                    }`}>
+                      {matchStatus ? (
+                        <><CheckCircle2 size={12} /> パスワードが一致しました</>
+                      ) : (
+                        'パスワードが一致していません'
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 {formError && (
