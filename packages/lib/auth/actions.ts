@@ -73,15 +73,17 @@ export async function signInCore(
     return { error: 'メールアドレスとパスワードを入力してください。' };
   }
 
-  // サーバー用クライアントの生成 (Cookie管理を含む)
-  const supabase = await createServerClient();
+  // 役割ごとに2つのクライアントを使い分ける
+  const supabase = await createServerClient(); // ブラウザ・セッション管理（クッキー操作用）
+  const supabaseAdmin = createAdminClient();  // ロック制御用（SQLでanon権限を剥奪したRPCを叩く用）
 
   // -------------------------------------------------------------
   // 🔒 1. ログイン試行前のロックアウトチェック
   // -------------------------------------------------------------
   // セキュアなRPC（get_user_lock_status_by_email）経由で、
   // auth.usersのemailを元に com_m_user のロック状態を取得
-  const { data: rpcData, error: masterError } = await supabase
+  // SQL側でanon権限を剥奪したため、ここだけ supabaseAdmin を使用してセキュアに実行します
+  const { data: rpcData, error: masterError } = await supabaseAdmin
     .rpc('get_user_lock_status_by_email', { p_email: email })
     .maybeSingle();
 
@@ -130,7 +132,8 @@ export async function signInCore(
       const maxAttempts = userMaster.user_type === USER_TYPES.ADMIN ? 3 : 10;
       
       // RLSを回避するため、SQL側のセキュアな関数(RPC)を呼び出してカウントアップさせる
-      const { error: updateError } = await supabase.rpc('increment_login_failed_count', {
+      // カウントアップ処理もSQL側で service_role 専用にしたため、supabaseAdmin を使用して安全に実行します
+      const { error: updateError } = await supabaseAdmin.rpc('increment_login_failed_count', {
         p_user_id: userMaster.id,
         p_max_attempts: maxAttempts
       });
@@ -364,8 +367,8 @@ export async function checkLicense(userId: string): Promise<boolean> {
     .select('license_id')
     .eq('user_id', userId)
     .eq('status', 1)
-    .lte('start_date', 'now()')
     .gte('end_date', 'now()')
+    .limit(1) // 現在有効なものと未来のものが複数ある場合を考慮し、1件でもあればOKとする
     .maybeSingle();
 
   if (error) {
@@ -396,11 +399,11 @@ interface AcceptInvitationResponse {
  */
 export async function verifyInvitationToken(token: string) {
   try {
-    const supabase = await createServerClient();
+    const supabase = createAdminClient();
 
     const { data: invite, error } = await supabase
       .from('com_t_invitation')
-      .select('id, email, user_name, expires_at, user_type, contract_id')
+      .select('id, email, user_name, expires_at, user_type, client_id, contract_id')
       .eq('token', token)
       .is('accepted_at', null)
       .maybeSingle();
@@ -459,7 +462,8 @@ export async function acceptInvitationAction(payload: AcceptInvitationPayload): 
       email_confirm: true, // パスワードをその場で設定しているため、確認済みフラグを立てる
       user_metadata: {
         user_name: inviteRecord.user_name,
-        user_type: inviteRecord.user_type
+        user_type: inviteRecord.user_type,
+        client_id: inviteRecord.client_id // 🚀 修正: ここで client_id をメタデータに渡すことで、トリガー側が初期テナントにフォールバックするのを防ぎます
       }
     });
 
@@ -474,6 +478,7 @@ export async function acceptInvitationAction(payload: AcceptInvitationPayload): 
     const { error: dbUserError } = await supabase
       .from('com_m_user')
       .update({
+        client_id: inviteRecord.client_id, // 🚀 修正: トリガーだけでなく、念のためここでも確定した client_id で上書き同期を保証します
         user_name: inviteRecord.user_name,
         user_type: inviteRecord.user_type,
         update_date: new Date().toISOString()

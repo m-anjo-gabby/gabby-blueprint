@@ -87,7 +87,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
       client_id: data.client_id || '',
       user_type: data.user_type || '1',
       roles: data.roles || [], 
-      contract_id: 'none'
+      contract_id: undefined
     };
   };
 

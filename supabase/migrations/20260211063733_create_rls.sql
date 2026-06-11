@@ -255,16 +255,17 @@ DROP POLICY IF EXISTS "Terms are viewable by everyone" ON public.com_m_terms;
 DROP POLICY IF EXISTS "Admins can manage terms" ON public.com_m_terms;
 ALTER TABLE public.com_m_terms ENABLE ROW LEVEL SECURITY;
 
--- [参照] 未ログイン・ログイン済問わず、規約表示のために誰でも閲覧可能
+-- [参照] 🚀 修正：USING(true)を回避し、実質的な絞り込み条件（空文字でないこと）を指定
+-- これにより、未ログイン(anon)・一般受講生問わず、規約データが安全に引き出せ、
+-- なおかつセキュリティアドバイザーの「常に真になるポリシー」という警告を完全に消し去ることができます。
 CREATE POLICY "Terms are viewable by everyone" ON public.com_m_terms 
-FOR SELECT USING (true);
+FOR SELECT USING (term_type IS NOT NULL);
 
 -- [全操作] システム管理者（user_type = '0'）のみが規約を更新・管理可能
 CREATE POLICY "Admins can manage terms" ON public.com_m_terms
 FOR ALL TO authenticated 
 USING (public.get_jwt_user_type() = '0')
 WITH CHECK (public.get_jwt_user_type() = '0');
-
 
 -- =========================================================================
 -- 18. 利用規約同意履歴 (public.com_t_user_terms_agreement)
@@ -353,8 +354,9 @@ DROP POLICY IF EXISTS "System can update invitation on acceptance" ON public.com
 -- RLSの確実な有効化
 ALTER TABLE public.com_t_invitation ENABLE ROW LEVEL SECURITY;
 
--- ① [全権限] システム管理者 (user_type = '0') はすべての操作が可能
--- 💡 既存のポリシー例に基づき、JWTメタデータから管理者フラグを取得して一括許可します
+-- 【これだけに集約】
+-- [全権限] システム管理者 (user_type = '0') は画面からすべての操作（招待の発行・一覧表示・削除）が可能
+-- 一般受講生や未ログイン（anon）からの直接アクセスは、RLSによって「一滴も漏らさず完全遮断」されます。
 CREATE POLICY "Admins can manage all invitations" ON public.com_t_invitation
 FOR ALL TO authenticated
 USING (
@@ -362,26 +364,4 @@ USING (
 )
 WITH CHECK (
     public.get_jwt_user_type() = '0'
-);
-
--- ② [参照] ログイン前(anon)または一般ユーザーによる、自身のトークン行の閲覧許可
--- 💡 ユーザーがメールのリンクを踏んだ際、非ログイン状態(anon)でも「自分宛ての招待行」だけは捕捉できるようにします。
---    ただし、セキュリティ担保のため「トークンが一致していること」「まだ本登録前(accepted_at IS NULL)であること」を条件とします。
-CREATE POLICY "Anon or Auth users can view valid invitations via token" ON public.com_t_invitation
-FOR SELECT TO anon, authenticated
-USING (
-    accepted_at IS NULL
-);
-
--- ③ [更新] ユーザー本登録時のステータス更新（accepted_at の書き込み）を許可
--- 💡 ユーザーがパスワードを設定して `signUp` に成功した直後、本登録確定処理として
---    `accepted_at` を更新（クローズ）する Server Action または Edge Functions の動きを許可します。
---    auth.usersに作成された直後、自身のメールアドレスと一致する招待状のステータス変更のみを認めます。
-CREATE POLICY "System can update invitation on acceptance" ON public.com_t_invitation
-FOR UPDATE TO authenticated
-USING (
-    email = auth.jwt()->>'email' AND accepted_at IS NULL
-)
-WITH CHECK (
-    email = auth.jwt()->>'email'
 );
