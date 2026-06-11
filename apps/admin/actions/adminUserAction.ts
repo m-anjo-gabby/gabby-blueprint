@@ -14,10 +14,43 @@ import {
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
 import { createLogger, getLogContext } from '@gabby/lib/logger';
-import { sendInvitationEmail } from "@gabby/lib/mail/send"; // 💡 追加: 独自メール配信用ユーティリティ
-import { randomBytes } from "crypto"; // 💡 追加: 暗号トークン生成用
+import { sendInvitationEmail } from "@gabby/lib/mail/actions/sendInvitation"; // 独自メール配信用ユーティリティ
+import { randomBytes } from "crypto"; // 暗号トークン生成用
 
 const logger = createLogger('admin');
+
+/**
+ * 💡 改善: ユーザ種別に応じたリダイレクト先（招待画面のベースURL）を解決する共通ヘルパー
+ * 今後、コーチ用サイト(COACH)などが追加された場合も、この switch 文に定義を追加するだけで安全に拡張可能です。
+ */
+function getRedirectBase(userType?: string): string {
+  switch (userType) {
+    case USER_TYPES.ADMIN:
+      return process.env.NEXT_PUBLIC_SITE_URL || '';
+    // 将来的な拡張例:
+    // case USER_TYPES.COACH:
+    //   return process.env.NEXT_PUBLIC_COACH_URL || '';
+    default:
+      return process.env.NEXT_PUBLIC_STUDENT_URL || '';
+  }
+}
+
+/**
+ * トークン付きの最終的な招待リダイレクトURLを生成する共通ヘルパー
+ */
+function getInvitationUrl(userType: string | undefined, token: string): string {
+  const base = getRedirectBase(userType);
+  return `${base}/auth/invite?token=${token}`;
+}
+
+/**
+ * 招待リンクの有効期限（送信から7日間）を一元的に生成するヘルパー
+ */
+function getInvitationExpiry(days: number = 7): Date {
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + days);
+  return expiresAt;
+}
 
 /**
  * ユーザ情報の一覧取得（ページネーション・検索対応）
@@ -83,10 +116,8 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
   try {
     const supabase = await createAdminClient();
 
-    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え
-    const redirectBase = user_type === USER_TYPES.ADMIN
-      ? process.env.NEXT_PUBLIC_SITE_URL
-      : process.env.NEXT_PUBLIC_STUDENT_URL;
+    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 💡 共通ヘルパーを利用
+    // const redirectBase = user_type === USER_TYPES.ADMIN ? process.env.NEXT_PUBLIC_SITE_URL : process.env.NEXT_PUBLIC_STUDENT_URL;
 
     // 💡 改善: 本登録用マスタ(com_m_user)にすでに存在していないか先に確認します
     const { data: existingUser } = await supabase
@@ -99,9 +130,8 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
     }
 
-    // 💡 改善: 有効期限を 7日間に設定（従来の24時間制限を突破）
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    // 💡 改善: 有効期限を 7日間に設定（従来の24時間制限を突破） -> 💡 共通ヘルパーを利用
+    const expiresAt = getInvitationExpiry(7);
 
     // 💡 改善: 暗号論的に安全なランダムトークンを生成
     const invitationToken = randomBytes(32).toString('hex');
@@ -150,8 +180,8 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     }
     */
 
-    // 💡 改善: 独自メール送信処理を実行 (Resend)
-    const inviteUrl = `${redirectBase}/auth/invite?token=${inviteData.token}`;
+    // 💡 改善: 独自メール送信処理を実行 (Resend) -> 💡 共通ヘルパーを利用してURLを解決
+    const inviteUrl = getInvitationUrl(user_type, inviteData.token);
     const mailResult = await sendInvitationEmail({
       to: email,
       userName: user_name || '会員',
@@ -185,9 +215,8 @@ export async function resendInvite(email: string, userType?: string) {
   try {
     const supabase = await createAdminClient();
 
-    const redirectBase = userType === USER_TYPES.ADMIN
-      ? process.env.NEXT_PUBLIC_SITE_URL
-      : process.env.NEXT_PUBLIC_STUDENT_URL;
+    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 💡 共通ヘルパーへ移譲
+    // const redirectBase = userType === USER_TYPES.ADMIN ? process.env.NEXT_PUBLIC_SITE_URL : process.env.NEXT_PUBLIC_STUDENT_URL;
 
     // 💡 改善: 既存の承認待ち(accepted_at IS NULL)の招待状を取得します
     const { data: currentInvite, error: fetchError } = await supabase
@@ -202,9 +231,8 @@ export async function resendInvite(email: string, userType?: string) {
       return { success: false, message: '対象の招待データが見つからないか、既に登録が完了しています。' };
     }
 
-    // 💡 改善: 安全性の向上として有効期限を +7日 にリフレッシュし、新しいワンタイムトークンを再生成します
-    const newExpiresAt = new Date();
-    newExpiresAt.setDate(newExpiresAt.getDate() + 7);
+    // 💡 改善: 安全性の向上として有効期限を +7日 にリフレッシュし、新しいワンタイムトークンを再生成します -> 💡 共通ヘルパーを利用
+    const newExpiresAt = getInvitationExpiry(7);
     const newWeightToken = randomBytes(32).toString('hex');
 
     const { error: updateError } = await supabase
@@ -221,8 +249,9 @@ export async function resendInvite(email: string, userType?: string) {
       throw updateError;
     }
 
-    // 💡 改善: 再生成したトークンで Resend 経由でメールを再送
-    const inviteUrl = `${redirectBase}/auth/invite?token=${newWeightToken}`;
+    // 💡 改善: 再生成したトークンで Resend 経由でメールを再送 -> 💡 共通ヘルパーを利用してURLを解決
+    // 💡 考慮点: 引数の userType が省略されて渡された場合でも、DBから取得した一貫性のある currentInvite.user_type をフォールバックとして優先適用
+    const inviteUrl = getInvitationUrl(userType || currentInvite.user_type, newWeightToken);
     const mailResult = await sendInvitationEmail({
       to: email,
       userName: currentInvite.user_name || '会員',

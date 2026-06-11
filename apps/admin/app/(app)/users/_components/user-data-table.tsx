@@ -36,7 +36,7 @@ export function UserDataTable<TData, TValue>({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [searchValue, setSearchValue] = React.useState(searchParams.get("q") || "");
+  const [searchValue, setSearchValue] = React.useState(searchParams?.get("q") || "");
 
   const table = useReactTable({
     data,
@@ -44,7 +44,7 @@ export function UserDataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const currentPage = Number(searchParams.get("page")) || 1;
+  const currentPage = Number(searchParams?.get("page")) || 1;
 
   const handleSearchTrigger = (term: string) => {
     const params = new URLSearchParams(searchParams);

@@ -4,87 +4,123 @@ import * as React from 'react';
 interface InviteEmailTemplateProps {
   userName: string;
   inviteUrl: string;
-  expiresDays?: number;
+  expiresDays: number;
 }
 
 export const InviteEmailTemplate: React.FC<InviteEmailTemplateProps> = ({
   userName,
   inviteUrl,
-  expiresDays = 7,
+  expiresDays,
 }) => {
   return (
     <div style={{
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-      backgroundColor: '#f9fafb',
-      padding: '40px 20px',
-      color: '#1f2937',
+      fontFamily: "'Helvetica Neue', Arial, sans-serif",
+      backgroundColor: '#f4f5f7',
+      color: '#333333',
+      margin: 0,
+      padding: '0 0 40px 0',
+      width: '100%',
     }}>
       <div style={{
+        maxWidth: '600px',
+        margin: '40px auto 0 auto',
         backgroundColor: '#ffffff',
-        maxWidth: '560px',
-        margin: '0 auto',
-        padding: '32px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       }}>
-        {/* ロゴやブランドヘッダー */}
-        <div style={{ marginBottom: '24px', textAlign: 'center' as const }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
+        {/* ヘッダー */}
+        <div style={{ backgroundColor: '#1e3a8a', padding: '32px', textAlign: 'center' }}>
+          <h1 style={{ color: '#ffffff', margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
             Gabby Blueprint English
           </h1>
         </div>
+        
+        {/* メインコンテンツ */}
+        <div style={{ padding: '40px 32px', lineHeight: '1.6' }}>
+          <p style={{ fontSize: '16px', margin: '0 0 20px 0', fontWeight: 'bold' }}>
+            {userName ? `${userName} 様` : '会員様'}
+          </p>
+          
+          <p style={{ fontSize: '16px', margin: '0 0 20px 0' }}>
+            Gabby Blueprint English へようこそ！<br />
+            サポート窓口より、あなたのアカウントへの招待が届いています。
+          </p>
+          <p style={{ fontSize: '16px', margin: '0 0 20px 0' }}>
+            まだ本登録手続きは完了していません。以下のボタンをクリックしてメールアドレスを認証し、<strong>パスワードの設定</strong>へお進みください。
+          </p>
+          
+          {/* ボタンエリア */}
+          <div style={{ textAlign: 'center', margin: '32px 0' }}>
+            <a
+              href={inviteUrl}
+              style={{
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                textDecoration: 'none',
+                padding: '14px 36px',
+                borderRadius: '6px',
+                fontWeight: 'bold',
+                display: 'inline-block',
+                fontSize: '16px',
+                boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.2)',
+              }}
+            >
+              メールを認証してパスワードを設定する
+            </a>
+          </div>
 
-        <p style={{ fontSize: '16px', lineHeight: '24px', marginBottom: '16px' }}>
-          {userName ? `${userName} 様` : '会員様'}
-        </p>
-
-        <p style={{ fontSize: '16px', lineHeight: '24px', marginBottom: '24px' }}>
-          Gabby Blueprint English へようこそ！<br />
-          管理者より、あなたのアカウント招待状が発行されました。<br />
-          以下のボタンをクリックしてパスワードを設定し、本登録を完了してください。
-        </p>
-
-        {/* コール・トゥ・アクション (CTA) ボタン */}
-        <div style={{ textAlign: 'center' as const, margin: '32px 0' }}>
-          <a
-            href={inviteUrl}
-            style={{
-              backgroundColor: '#2563eb', // アプリのテーマカラーに合わせて変更してください
-              color: '#ffffff',
-              padding: '14px 32px',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              fontWeight: '600',
-              fontSize: '16px',
-              display: 'inline-block',
-              boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)',
-            }}
-          >
-            アカウントを有効化する
-          </a>
+          {/* 🚀 企業向けHTML禁止端末/メーラー崩れ 救済用セクション */}
+          {/* HTML上でテキストとしてURLを露出させておくことで、Resendがプレーンテキストに変換した際も完璧にURLが抽出されます */}
+          <div style={{ textAlign: 'center', margin: '0 0 32px 0', padding: '0 16px' }}>
+            <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 8px 0' }}>
+              ※ボタンがクリックできない場合は、以下のURLからユーザー登録を完了させてください。
+            </p>
+            <p style={{ fontSize: '13px', margin: 0, wordBreak: 'break-all' }}>
+              <a href={inviteUrl} style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                {inviteUrl}
+              </a>
+            </p>
+          </div>
+          
+          {/* 注意事項 (修正案1ベース：重複なしシンプルな表現) */}
+          <div style={{
+            backgroundColor: '#fffbeb',
+            borderLeft: '4px solid #f59e0b',
+            padding: '16px',
+            margin: '32px 0 0 0',
+          }}>
+            <p style={{ fontSize: '13px', color: '#b45309', margin: 0 }}>
+              <strong>⚠️ リンクの有効期限に関するご注意</strong><br />
+              この招待リンクの有効期限は、メール送信から <strong>{expiresDays}日間</strong> です。期限が切れた場合はリンクが無効化されますので、お手数ですが担当の管理者まで再発行をご依頼ください。
+            </p>
+          </div>
         </div>
-
-        {/* 注意事項 */}
+        
+        {/* フッターエリア */}
         <div style={{
-          backgroundColor: '#f3f4f6',
-          padding: '16px',
-          borderRadius: '8px',
-          fontSize: '14px',
-          color: '#4b5563',
-          lineHeight: '20px',
-          marginBottom: '24px',
+          textAlign: 'center',
+          padding: '32px 24px',
+          fontSize: '12px',
+          color: '#9ca3af',
+          backgroundColor: '#f9fafb',
+          borderTop: '1px solid #e5e7eb',
         }}>
-          <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#374151' }}>⚠️ 注意事項</p>
-          <ul style={{ margin: 0, paddingLeft: '20px' }}>
-            <li>この招待リンクの有効期限は <strong>{expiresDays}日間</strong> です。</li>
-            <li>期限が切れた場合は、お手数ですが管理者へ再送を依頼してください。</li>
-          </ul>
+          <p style={{ margin: '0 0 8px 0', lineHeight: '1.5' }}>
+            <strong>【お問い合わせ先】</strong><br />
+            Gabby Blueprint サポート窓口:{' '}
+            <a href="mailto:support@gabbyacademy.com" style={{ color: '#9ca3af', textDecoration: 'underline' }}>
+              support@gabbyacademy.com
+            </a>
+          </p>
+          <p style={{ marginTop: '16px', marginBottom: '8px' }}>
+            <strong>株式会社ギャビーアカデミー / Gabby Academy Co., Ltd.</strong><br />
+            <a href="https://gabbyacademy.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>
+              https://gabbyacademy.com/
+            </a>
+          </p>
+          <p style={{ marginTop: '24px', marginBottom: 0 }}>&copy; Gabby All rights reserved.</p>
         </div>
-
-        <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: '18px', borderTop: '1px solid #e5e7eb', paddingTop: '24px', margin: 0 }}>
-          ※このメールに心当たりがない場合は、破棄していただくようお願いいたします。<br />
-          ※本メールはシステムからの自動配信です。
-        </p>
       </div>
     </div>
   );
