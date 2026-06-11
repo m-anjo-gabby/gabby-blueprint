@@ -1,4 +1,4 @@
-// src/app/(public)/auth/callback/route.ts
+// apps/student/app/(public)/auth/callback/route.ts
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@gabby/lib/supabase/server'
 
@@ -13,13 +13,13 @@ export async function GET(request: Request) {
   const supabase = await createServerClient()
 
   try {
-
     /**
      * PKCE フロー
      * 対象:
      * - password reset
      * - magic link
      * - email confirmation
+     * 💡 既存の重要フロー：完全無修正でそのまま残し、機能影響をゼロにします
      */
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
@@ -34,6 +34,8 @@ export async function GET(request: Request) {
 
     /**
      * 招待メール (invite)
+     * 💡 移行メモ: 独自招待フローは直接 /auth/invite ページがクエリパラメータを受け取るため
+     * このコールバックルートは通過しませんが、後方互換性と安全のため、元のコードブロックをそのまま維持します。
      */
     if (token && type === 'invite') {
       const { error } = await supabase.auth.verifyOtp({

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,6 +29,7 @@ const userSchema = z.object({
   client_id: z.string().min(1, '所属顧客を選択してください'),
   user_type: z.string().min(1, 'タイプは必須です'),
   roles: z.array(z.string()), // 必須配列として定義（初期値で[]をセット）
+  contract_id: z.string().optional(),
 });
 
 // Zodから推論した型をそのまま使うことで、useForm(resolver)との型不一致を解消
@@ -45,7 +46,8 @@ const DEFAULT_VALUES: UserFormValues = {
   user_name: '', 
   client_id: '', 
   user_type: '1', // デフォルトは生徒
-  roles: [] 
+  roles: [],
+  contract_id: 'none'
 };
 
 export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogProps) {
@@ -60,12 +62,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
   const [roleMaster, setRoleMaster] = useState<RoleDefinition[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
   
-  // ライセンス管理用 (新規作成時の連動用)
-  const [isLicenseStep, setIsLicenseStep] = useState(false);
-  const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [availableContracts, setAvailableContracts] = useState<ContractDetail[]>([]);
-  const [selectedContractId, setSelectedContractId] = useState<string>("");
-  const [isAssigning, setIsAssigning] = useState(false);
+  const [isLoadingContracts, setIsLoadingContracts] = useState(false);
 
   const { showToast } = useToast();
 
@@ -80,6 +78,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
       client_id: data.client_id || '',
       user_type: data.user_type || '1',
       roles: data.roles || [], 
+      contract_id: 'none'
     };
   };
 
@@ -93,6 +92,23 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
 
   // 権限タイプによるロール表示切り替えのための監視
   const watchUserType = form.watch("user_type");
+  const watchClientId = form.watch("client_id");
+
+  // 所属顧客が変更されたらライセンスリストを更新
+  useEffect(() => {
+    if (watchClientId && mode === 'create') {
+      const fetchContracts = async () => {
+        setIsLoadingContracts(true);
+        try {
+          const data = await getActiveContractsByClient(watchClientId);
+          setAvailableContracts(data as ContractDetail[]);
+        } finally {
+          setIsLoadingContracts(false);
+        }
+      };
+      fetchContracts();
+    }
+  }, [watchClientId, mode]);
 
   /**
    * ★ ユーザー種別(user_type)に連動した表示ロールのフィルタリング
@@ -127,13 +143,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
         // --- 新規登録モード ---
         const result: CreateUserResponse = await createUser(values);
         if (result.success) {
-          setTargetUserId(result.user_id);
-          // 作成したユーザーの顧客に紐づく有効な契約を取得
-          const contracts = await getActiveContractsByClient(values.client_id);
-          setAvailableContracts(contracts as ContractDetail[]);
-          
-          setIsLicenseStep(true); // ライセンス割当ステップへ
-          showToast("ユーザーを作成しました。続けてライセンスを設定します。", "success");
+          showToast("ユーザーを招待しました", "success");
+          handleClose();
         } else {
           // 重複エラーなどの個別ハンドリング
           if (result.errorType === 'email_exists') {
@@ -144,38 +155,6 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
       }
     } catch (error) {
       setServerError("システムエラーが発生しました。");
-    }
-  };
-
-  /**
-   * ライセンス割当実行（STEP 2）
-   */
-  const handleAssignLicense = async () => {
-    if (!targetUserId || !selectedContractId || selectedContractId === "none") {
-      handleClose();
-      return;
-    }
-    setIsAssigning(true);
-    try {
-      const contract = availableContracts.find(c => c.contract_id === selectedContractId);
-      if (contract) {
-        const assignRes = await assignLicenseToUser(
-          selectedContractId,
-          targetUserId,
-          contract.start_date, 
-          contract.end_date
-        );
-        if (assignRes.success) {
-          showToast("ライセンスを割り当てました", "success");
-          handleClose();
-        } else {
-          showToast(assignRes.message || "割当に失敗しました", "error");
-        }
-      }
-    } catch (error) {
-      showToast("処理中にエラーが発生しました", "error");
-    } finally {
-      setIsAssigning(false);
     }
   };
 
@@ -202,10 +181,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
   const handleClose = () => {
     setOpen(false);
     setIsConfirming(false);
-    setIsLicenseStep(false);
-    setTargetUserId(null);
     setServerError(null);
-    setSelectedContractId("");
     form.reset(getInitialValues(initialData));
   };
 
@@ -264,9 +240,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
       <DialogContent className="max-w-md p-0 border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 rounded-xl overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
-            {isLicenseStep ? (
-              <><ShieldCheck size={18} className="text-emerald-400" /> ライセンス設定</>
-            ) : isConfirming ? (
+            {isConfirming ? (
               <><CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認</>
             ) : mode === 'create' ? (
               <><PlusCircle size={18} className="text-indigo-400" /> 新規ユーザー登録</>
@@ -277,11 +251,10 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
         </DialogHeader>
         
         <div className="bg-white">
-          {!isLicenseStep ? (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-                  <div className="space-y-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                <div className="space-y-4">
                     {/* --- ID表示エリア（編集モード時のみ） --- */}
                     {mode === 'edit' && initialData?.id && (
                       <div className="space-y-1.5">
@@ -382,6 +355,36 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                     )} />
                   </div>
                     
+                    {/* --- 新規作成時のみライセンス選択を表示 --- */}
+                    {mode === 'create' && watchUserType === '1' && (
+                      <FormField control={form.control} name="contract_id" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">初期ライセンス（任意）</FormLabel>
+                          {isConfirming ? (
+                            <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                              {availableContracts.find(c => c.contract_id === field.value)?.plan_name || '割り当てなし'}
+                            </div>
+                          ) : (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="rounded-xl h-11">
+                                  <SelectValue placeholder={isLoadingContracts ? "読込中..." : "今は割り当てない"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-slate-400 italic">今は割り当てない</SelectItem>
+                                {availableContracts.map((c) => (
+                                  <SelectItem key={c.contract_id} value={c.contract_id}>
+                                    {c.plan_name} (残:{c.remaining_licenses})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </FormItem>
+                      )} />
+                    )}
+
                     {/* --- ★ ロール選択エリア (現在のユーザー種別で設定可能なロールがある場合のみ表示) --- */}
                     {hasAvailableRoles && (
                     <FormField
@@ -481,49 +484,9 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       )}
                     </div>
                   )}
-                </div>
-              </form>
-            </Form>
-          ) : (
-            /* --- STEP 2: ライセンス割当画面 --- */
-            <div className="p-8 space-y-6 text-center">
-              <div className="space-y-2">
-                <div className="mx-auto w-14 h-14 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle2 size={32} />
-                </div>
-                <h3 className="text-lg font-black text-slate-900">ユーザー登録完了！</h3>
-                <p className="text-xs text-slate-500 leading-relaxed font-medium">続けてライセンスを割り当てますか？<br />後から一覧画面の「ライセンス」ボタンでも設定可能です。</p>
               </div>
-              <div className="space-y-4 text-left pt-2">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">割当プランを選択</label>
-                  <Select onValueChange={setSelectedContractId} value={selectedContractId}>
-                    <SelectTrigger className="w-full bg-slate-50 border-slate-200 rounded-xl h-12 font-bold">
-                      <SelectValue placeholder="今は割り当てない" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none" className="text-slate-400 italic">今は割り当てない</SelectItem>
-                      {availableContracts.map((c) => (
-                        <SelectItem key={c.contract_id} value={c.contract_id} className="py-3">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-slate-800">{c.plan_name}</span>
-                            <span className="text-[10px] text-slate-400">残り {c.remaining_licenses} 枠 / 契約終了: {c.end_date.split('T')[0]}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-3 pt-4">
-                  <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black h-12 shadow-lg gap-2 transition-all active:scale-95"
-                    onClick={handleAssignLicense} disabled={isAssigning}>
-                    {isAssigning ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}設定を完了する
-                  </Button>
-                  <Button variant="ghost" className="text-slate-400 text-xs font-bold" onClick={handleClose} disabled={isAssigning}>設定せずに閉じる</Button>
-                </div>
-              </div>
-            </div>
-          )}
+            </form>
+          </Form>
         </div>
       </DialogContent>
     </Dialog>

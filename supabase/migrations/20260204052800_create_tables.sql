@@ -125,6 +125,52 @@ COMMENT ON COLUMN public.com_m_contract.update_date IS '更新日時';
 CREATE INDEX idx_contract_client_id ON public.com_m_contract (client_id, status);
 
 ---------------------------------------------
+-- DDL: com_t_invitation テーブルの作成
+---------------------------------------------
+CREATE TABLE public.com_t_invitation (
+  -- 1. 主キー（仮のユーザーIDとしても機能するUUID）
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- 2. 招待対象の基本属性
+  email TEXT NOT NULL UNIQUE,
+  user_name TEXT DEFAULT NULL,
+  user_type TEXT NOT NULL DEFAULT '1', -- 0:管理者 1:生徒 2:モニター
+  client_id UUID REFERENCES public.com_m_client(client_id) ON DELETE SET NULL,
+  contract_id UUID REFERENCES public.com_m_contract(contract_id) ON DELETE SET NULL,
+  
+  -- 3. ロール割当情報 (複数ロールを保持するため TEXT配列型 [TEXT[]] で管理)
+  roles TEXT[] DEFAULT '{}'::TEXT[],
+
+  -- 4. 招待トークンとセキュリティ管理
+  token TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  accepted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  
+  -- 5. 監査用カラム
+  invited_by UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- 招待した管理者のAuth.UUID
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- テーブル・カラムコメントの設定
+COMMENT ON TABLE public.com_t_invitation IS 'ユーザー招待管理テーブル';
+COMMENT ON COLUMN public.com_t_invitation.id IS '招待ID（仮ユーザーID）';
+COMMENT ON COLUMN public.com_t_invitation.email IS '招待メールアドレス';
+COMMENT ON COLUMN public.com_t_invitation.user_name IS '招待ユーザー名称';
+COMMENT ON COLUMN public.com_t_invitation.user_type IS 'ユーザータイプ 0:管理者 1:生徒 2:モニター';
+COMMENT ON COLUMN public.com_t_invitation.client_id IS '顧客ID';
+COMMENT ON COLUMN public.com_t_invitation.contract_id IS '紐付けるライセンス契約ID';
+COMMENT ON COLUMN public.com_t_invitation.roles IS '付与するロールID配列';
+COMMENT ON COLUMN public.com_t_invitation.token IS 'セキュアな招待用トークン';
+COMMENT ON COLUMN public.com_t_invitation.expires_at IS '招待リンク有効期限日時';
+COMMENT ON COLUMN public.com_t_invitation.accepted_at IS 'ユーザー本登録完了日時';
+COMMENT ON COLUMN public.com_t_invitation.invited_by IS '招待を発行した管理者UUID';
+
+-- インデックス設計（検索・検証の高速化）
+CREATE INDEX idx_invitation_token ON public.com_t_invitation(token);
+CREATE INDEX idx_invitation_email ON public.com_t_invitation(email);
+
+---------------------------------------------
 -- COM_T_USER_LICENSE (ライセンス割当実体)
 ---------------------------------------------
 CREATE TABLE public.com_t_user_license (

@@ -1,86 +1,205 @@
-// src/app/(public)/auth/invite/page.tsx
+// apps/student/app/(public)/auth/invite/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@gabby/lib/supabase/client';
-import { Loader2, AlertCircle, ArrowRight } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader2, AlertCircle, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { verifyInvitationToken, acceptInvitationAction } from '@gabby/lib/auth/actions';
 
-type ErrorStatus = 'loading' | 'expired' | 'error';
+type PageStatus = 'loading' | 'expired' | 'error' | 'form' | 'success';
 
 export default function InvitePage() {
   const router = useRouter();
-  const supabase = createBrowserClient();
-  const [status, setStatus] = useState<ErrorStatus>('loading');
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token'); // URLの「?token=xxxx」から抽出
+
+  const [status, setStatus] = useState<PageStatus>('loading');
+  const [invitedUser, setInvitedUser] = useState<{ email: string; user_name: string } | null>(null);
+  
+  // フォーム用ステート
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const handleInvite = async () => {
-      const hash = window.location.hash;
+    const checkToken = async () => {
+      if (!token) {
+        setStatus('error');
+        return;
+      }
+
+      // 1. 修正された verifyInvitationToken アクションを呼び出して検証
+      const result = await verifyInvitationToken(token);
       
-      if (hash && hash.includes('access_token=')) {
-        const params = new URLSearchParams(hash.substring(1));
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
-        const errorDescription = params.get('error_description');
-
-        // URLにerrorが含まれている場合は有効期限切れの可能性が高い
-        if (errorDescription?.includes('expired')) {
+      if (!result.valid || !result.data) {
+        if (result.errorType === 'expired_token') {
           setStatus('expired');
-          return;
-        }
-
-        if (accessToken && refreshToken) {
-          // 💡 開発環境での正常系UIテスト用の特別なダミートークン判定
-          if (process.env.NODE_ENV === 'development' && accessToken === 'dummy_success_token') {
-            console.log('[Debug] 正常系UIのモックモードが有効です。');
-            setStatus('loading');
-            return;
-          }
-
-          // 💡 不正な文字列による Supabase 内部の console.error を未然に防ぐガード節
-          const isInvalidJWT = accessToken.split('.').length !== 3;
-          
-          if (isInvalidJWT) {
-            setStatus('error');
-          }
-
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (!error) {
-            router.push('/update-password');
-            return;
-          }
-          console.error('Error setting session:', error.message);
+        } else {
           setStatus('error');
-          return;
         }
+        return;
       }
 
-      // 既存セッションの確認
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.push('/update-password');
-      } else {
-        // セッションが取れない場合は期限切れとして扱う
-        setStatus('expired');
-      }
+      // トークンが有効な場合、ユーザー情報を保持して入力フォームを表示
+      setInvitedUser({
+        email: result.data.email,
+        user_name: result.data.user_name || '会員'
+      });
+      setStatus('form');
     };
 
-    handleInvite();
-  }, [supabase, router]);
+    checkToken();
+  }, [token]);
+
+  // 本登録ボタン押下時のサブミットハンドラ
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    if (!token) return;
+    if (password.length < 8) {
+      setFormError('パスワードは8文字以上で入力してください。');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setFormError('パスワードが一致しません。');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // 2. 修正された acceptInvitationAction アクションを実行
+      const result = await acceptInvitationAction({ token, password });
+
+      if (!result.success) {
+        setFormError(result.message || '本登録処理に失敗しました。');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setStatus('success');
+    } catch (err) {
+      setFormError('予期せぬエラーが発生しました。時間をおいて再度お試しください。');
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 px-4">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100">
         <AnimatePresence mode="wait">
           {status === 'loading' && <LoadingState key="loading" />}
+          
           {(status === 'expired' || status === 'error') && (
-            <ErrorState key="error" type={status} />
+            <ErrorState key="error" type={status === 'expired' ? 'expired' : 'error'} />
+          )}
+
+          {status === 'form' && invitedUser && (
+            <motion.div
+              key="form"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            >
+              <div className="text-center mb-6">
+                <h1 className="text-2xl font-bold text-slate-800">アカウント初期設定</h1>
+                <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                  {invitedUser.user_name} 様（{invitedUser.email}）<br />
+                  ログインに使用するパスワードを設定してください。
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                    新しいパスワード
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="8文字以上、英数混在"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-800"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                    パスワード（確認用）
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="もう一度入力してください"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-800"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {formError && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="p-3 bg-red-50 text-red-600 text-xs rounded-xl flex items-center gap-2 font-medium"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{formError}</span>
+                  </motion.div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mt-2"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      本登録を完了する
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            </motion.div>
+          )}
+
+          {status === 'success' && (
+            <motion.div
+              key="success"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="flex flex-col items-center text-center"
+            >
+              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              </div>
+              <h1 className="text-xl font-bold text-slate-800">登録が完了しました！</h1>
+              <p className="text-sm text-slate-500 mt-2 mb-8 leading-relaxed">
+                Gabby Blueprint のアカウント設定がすべて完了しました。<br />設定したパスワードでログインしてください。
+              </p>
+              <Link
+                href="/login"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                ログイン画面へ
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -89,12 +208,9 @@ export default function InvitePage() {
 }
 
 // ==========================================
-// Sub Components (Clean Code & Separation)
+// Sub Components
 // ==========================================
 
-/**
- * ローディング状態のUIコンポーネント（パスワード忘れ画面のトーンに統一）
- */
 function LoadingState() {
   return (
     <motion.div
@@ -113,9 +229,6 @@ function LoadingState() {
   );
 }
 
-/**
- * エラー・期限切れ状態のUIコンポーネント（パスワード忘れ画面のトーンに統一）
- */
 function ErrorState({ type }: { type: 'expired' | 'error' }) {
   const isExpired = type === 'expired';
 

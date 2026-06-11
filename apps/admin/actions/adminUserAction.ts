@@ -14,6 +14,8 @@ import {
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
 import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { sendInvitationEmail } from "@gabby/lib/mail/send"; // 💡 追加: 独自メール配信用ユーティリティ
+import { randomBytes } from "crypto"; // 💡 追加: 暗号トークン生成用
 
 const logger = createLogger('admin');
 
@@ -47,7 +49,7 @@ export async function getUsers(
     };
 
     const { data, error, count } = await query
-      .order('user_id', { ascending: true })
+      .order('insert_date', { ascending: false }) // 💡 改善: 統合されたビューの特性に合わせ、最新の招待・登録者が一番上に来るように降順に最適化
       .range(from, to);
 
     if (error) {
@@ -55,7 +57,7 @@ export async function getUsers(
       throw error;
     }
 
-    const formattedUsers = (data || []).map((user: UserRecord) => ({
+    const formattedUsers = (data || []).map((user: any) => ({
       ...user,
       license_start_date: user.license_start_date ? formatToJstDate(user.license_start_date) : null,
       license_end_date: user.license_end_date ? formatToJstDate(user.license_end_date) : null,
@@ -74,9 +76,9 @@ export async function getUsers(
 /**
  * ユーザー登録アクション
  */
-export async function createUser(payload: CreateUserPayload & { roles?: string[] }): Promise<CreateUserResponse> {
+export async function createUser(payload: CreateUserPayload & { roles?: string[], contract_id?: string }): Promise<CreateUserResponse> {
   const ctx = await getLogContext();
-  const { email, user_name, client_id, user_type, roles = [] } = payload;
+  const { email, user_name, client_id, user_type, roles = [], contract_id } = payload;
   
   try {
     const supabase = await createAdminClient();
@@ -86,28 +88,57 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       ? process.env.NEXT_PUBLIC_SITE_URL
       : process.env.NEXT_PUBLIC_STUDENT_URL;
 
-    // 1. 招待メールを送信し、アカウントを作成
-    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${redirectBase}/auth/invite`,
-      data: { 
+    // 💡 改善: 本登録用マスタ(com_m_user)にすでに存在していないか先に確認します
+    const { data: existingUser } = await supabase
+      .from('com_m_user')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingUser) {
+      return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
+    }
+
+    // 💡 改善: 有効期限を 7日間に設定（従来の24時間制限を突破）
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // 💡 改善: 暗号論的に安全なランダムトークンを生成
+    const invitationToken = randomBytes(32).toString('hex');
+
+    // 1. 招待メールを送信し、アカウントを作成 -> 【変更】独自招待テーブルへのレコード挿入にリプレイス
+    const { data: inviteData, error } = await supabase
+      .from('com_t_invitation')
+      .insert({
+        email,
         user_name,
         user_type,
-        client_id,
-        roles
-      }
-    });
+        client_id: client_id || null,
+        contract_id: contract_id || null,
+        roles,
+        token: invitationToken,
+        expires_at: expiresAt.toISOString(),
+        invited_by: ctx.userId || null
+      })
+      .select('id, token')
+      .single();
 
     if (error) {
-      if (error.status === 422 && error.code === 'email_exists') {
+      if (error.code === '23505') { // Postgresの一意制約違反（既に同じメールアドレスが招待中）
         return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
       }
       logger.error('user:create_user_invite_failed', error.message, { ...ctx, payload });
       return { success: false, user_id: null, errorType: 'unexpected_error', message: error.message };
     }
 
-    const userId = data.user.id;
+    if (!inviteData) {
+      return { success: false, user_id: null, errorType: 'unexpected_error', message: "データの作成に失敗しました。" };
+    }
 
-    // 2. DB側のロール紐付け
+    const userId = inviteData.id; // 💡 既存機能（一括インポートなど）との互換性のため、発行された招待ID(UUID)を仮のuserIdとして引き継ぐ
+
+    // 2. DB側のロール紐付け -> 【変更】本登録時(メールリンク承認時)に移行するため、この時点での com_t_user_role への直接挿入はスキップ（上記で配列として保存済み）
+    /*
     if (roles.length > 0) {
       const { error: roleError } = await supabase
         .from('com_t_user_role')
@@ -116,6 +147,20 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       if (roleError) {
         logger.error('user:create_user_role_insert_failed', roleError.message, { ...ctx, payload: { userId, roles } });
       }
+    }
+    */
+
+    // 💡 改善: 独自メール送信処理を実行 (Resend)
+    const inviteUrl = `${redirectBase}/auth/invite?token=${inviteData.token}`;
+    const mailResult = await sendInvitationEmail({
+      to: email,
+      userName: user_name || '会員',
+      inviteUrl: inviteUrl
+    });
+
+    if (!mailResult.success) {
+      logger.error('user:create_user_mail_dispatch_failed', mailResult.error || 'Unknown error', { ...ctx, email });
+      // メール送信に失敗しても、レコードは作成されているため管理画面一覧からいつでも「再送」が可能です。
     }
 
     logger.info('user:create_user_success', `User invited: ${email}`, { 
@@ -144,12 +189,48 @@ export async function resendInvite(email: string, userType?: string) {
       ? process.env.NEXT_PUBLIC_SITE_URL
       : process.env.NEXT_PUBLIC_STUDENT_URL;
 
-    const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${redirectBase}/auth/invite`,
+    // 💡 改善: 既存の承認待ち(accepted_at IS NULL)の招待状を取得します
+    const { data: currentInvite, error: fetchError } = await supabase
+      .from('com_t_invitation')
+      .select('*')
+      .eq('email', email)
+      .is('accepted_at', null)
+      .maybeSingle();
+
+    if (fetchError || !currentInvite) {
+      logger.warn('user:resend_invite_not_found', `No active invitation found for: ${email}`, { ...ctx });
+      return { success: false, message: '対象の招待データが見つからないか、既に登録が完了しています。' };
+    }
+
+    // 💡 改善: 安全性の向上として有効期限を +7日 にリフレッシュし、新しいワンタイムトークンを再生成します
+    const newExpiresAt = new Date();
+    newExpiresAt.setDate(newExpiresAt.getDate() + 7);
+    const newWeightToken = randomBytes(32).toString('hex');
+
+    const { error: updateError } = await supabase
+      .from('com_t_invitation')
+      .update({
+        token: newWeightToken,
+        expires_at: newExpiresAt.toISOString(),
+        update_date: new Date().toISOString()
+      })
+      .eq('id', currentInvite.id);
+
+    if (updateError) {
+      logger.error('user:resend_invite_failed', updateError.message, { ...ctx, payload: { email } });
+      throw updateError;
+    }
+
+    // 💡 改善: 再生成したトークンで Resend 経由でメールを再送
+    const inviteUrl = `${redirectBase}/auth/invite?token=${newWeightToken}`;
+    const mailResult = await sendInvitationEmail({
+      to: email,
+      userName: currentInvite.user_name || '会員',
+      inviteUrl: inviteUrl
     });
-    if (error) {
-      logger.error('user:resend_invite_failed', error.message, { ...ctx, payload: { email } });
-      throw error;
+
+    if (!mailResult.success) {
+      return { success: false, message: 'メールの再送に失敗しました。' };
     }
 
     logger.info('user:resend_invite_success', `Invite resent to: ${email}`, { 
