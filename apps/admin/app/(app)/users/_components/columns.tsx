@@ -114,7 +114,9 @@ export const columns: ColumnDef<UserRecord>[] = [
       
       // 生徒(user_type === '1')のみを編集対象とする
       const isStudent = user_type === '1';
-      const canAssign = isStudent;
+      // 💡 招待中のユーザー（まだ本登録が完了していない）にはライセンス割当を許可しない
+      const isRegistered = !!user.last_sign_in_at || !!user.confirmed_at;
+      const canAssign = isStudent && isRegistered;
 
       // 生徒以外は「対象外」や「空」として扱うためのUI
       if (!isStudent) {

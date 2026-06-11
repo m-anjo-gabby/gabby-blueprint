@@ -99,6 +99,10 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
 
   const { isSubmitting } = form.formState;
 
+  // 💡 招待中のユーザーかどうかを判定（編集モードかつ、最終ログイン日時もメール確認日時もない場合）
+  const isInvitingUser = mode === 'edit' && !initialData?.last_sign_in_at && !initialData?.confirmed_at;
+
+
   // 権限タイプによるロール表示切り替えのための監視
   const watchUserType = form.watch("user_type");
   const watchClientId = form.watch("client_id");
@@ -287,7 +291,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                         {isConfirming ? (
                           <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                         ) : (
-                          <FormControl><Input {...field} disabled={mode === 'edit'} className="rounded-xl border-slate-200 h-11" placeholder="example@domain.com" /></FormControl>
+                          <FormControl><Input {...field} disabled={mode === 'edit' || isInvitingUser} className="rounded-xl border-slate-200 h-11" placeholder="example@domain.com" /></FormControl>
                         )}
                         <FormMessage />
                       </FormItem>
@@ -299,7 +303,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       {isConfirming ? (
                         <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                       ) : (
-                        <FormControl><Input {...field} className="rounded-xl border-slate-200 h-11" placeholder="山田 太郎" /></FormControl>
+                        <FormControl><Input {...field} disabled={isInvitingUser} className="rounded-xl border-slate-200 h-11" placeholder="山田 太郎" /></FormControl>
                       )}
                       <FormMessage />
                     </FormItem>
@@ -321,7 +325,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                               onChange={field.onChange}
                               placeholder={isLoadingClients ? "読込中..." : "顧客を選択"}
                               searchPlaceholder="顧客名で検索..."
-                              disabled={isLoadingClients}
+                              disabled={isLoadingClients || isInvitingUser}
                             />
                           </FormControl>
                         )}
@@ -343,6 +347,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                               // ★ ユーザータイプが変更された際、変更後のタイプで選択不可能なロールを除去する
                               const currentRoles = form.getValues('roles');
                               const validRoleIds = roleMaster
+                                // eslint-disable-next-line @typescript-eslint/no-shadow
                                 .filter(r => r.target_user_type === val || r.target_user_type === null)
                                 .map(r => r.role_id);
                               
@@ -350,6 +355,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                               form.setValue('roles', nextRoles);
                             }} 
                             value={field.value}
+                            disabled={isInvitingUser}
                           >
                             <FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>
@@ -374,7 +380,11 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                               {availableContracts.find(c => c.contract_id === field.value)?.plan_name || '割り当てなし'}
                             </div>
                           ) : (
-                            <Select onValueChange={field.onChange} value={field.value} disabled={availableContracts.length === 0}>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              value={field.value} 
+                              disabled={isInvitingUser || availableContracts.length === 0}
+                            >
                               <FormControl>
                                 <SelectTrigger className={`rounded-xl h-11 ${fieldState.error ? 'border-rose-500' : ''}`}>
                                   <SelectValue placeholder={isLoadingContracts 
@@ -410,7 +420,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                             </FormLabel>
                           </div>
                           
-                          {isConfirming ? (
+                          {isConfirming || isInvitingUser ? (
                             <div className="flex flex-wrap gap-2">
                               {form.getValues('roles').length > 0 ? (
                                 form.getValues('roles').map(rId => (
@@ -424,7 +434,6 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 gap-3 pt-1">
-                              {/* フィルタリング済みのロール一覧(filteredRoles)を表示 */}
                               {filteredRoles.map((role) => (
                                 <FormField
                                   key={role.role_id}
@@ -473,22 +482,24 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                         </Button>
                       </div>
                     </div>
-                  ) : (
+                  ) : ( // 確認画面ではない場合
                     <div className="flex flex-col gap-3">
-                      <Button 
-                        type="button" 
-                        className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl shadow-md font-bold gap-2" 
-                        onClick={async () => {
-                          const isValid = await form.trigger();
-                          if (isValid) {
-                            setServerError(null);
-                            setIsConfirming(true);
-                          }
-                        }}
-                      >
-                        確認画面へ進む
-                      </Button>
-                      {mode === 'edit' && !initialData?.last_sign_in_at && (
+                      {!isInvitingUser && ( // 招待中のユーザーでなければ「確認画面へ進む」を表示
+                        <Button 
+                          type="button" 
+                          className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl shadow-md font-bold gap-2" 
+                          onClick={async () => {
+                            const isValid = await form.trigger();
+                            if (isValid) {
+                              setServerError(null);
+                              setIsConfirming(true);
+                            }
+                          }}
+                        >
+                          確認画面へ進む
+                        </Button>
+                      )}
+                      {mode === 'edit' && isInvitingUser && ( // 編集モードかつ招待中のユーザーの場合のみ再送ボタンを表示
                         <Button type="button" variant="outline" className="w-full text-xs h-10 rounded-xl border-dashed border-slate-300 text-slate-500" disabled={isResending} onClick={handleResendInvite}>
                           {isResending ? <Loader2 className="animate-spin" size={14} /> : <Mail size={14} />} 招待メールを再送する
                         </Button>
