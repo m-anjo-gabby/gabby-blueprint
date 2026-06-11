@@ -24,6 +24,8 @@ SELECT
   l.start_date AS license_start_date,
   l.end_date AS license_end_date,
   con.plan_name,
+  NULL AS mail_sent_at,
+  NULL AS last_mail_error,
   CASE 
     WHEN l.license_id IS NULL THEN 'none'
     WHEN l.start_date > NOW() THEN 'future'
@@ -73,8 +75,12 @@ SELECT
   NULL AS license_start_date,
   NULL AS license_end_date,
   NULL AS plan_name,
+  i.mail_sent_at,
+  i.last_mail_error,
   -- 💡 フロントエンドが「招待状態」を識別するためのステータスを生成
   CASE 
+    -- メール送信失敗を最優先で表示
+    WHEN i.last_mail_error IS NOT NULL THEN 'mail_failed'
     WHEN i.expires_at < NOW() THEN 'expired_invite' -- 招待の有効期限切れ(7日経過)
     ELSE 'inviting'                                 -- 招待中（リンク有効期間内）
   END AS license_state,

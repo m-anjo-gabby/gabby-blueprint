@@ -35,7 +35,7 @@ export function UserBulkImportDialog() {
   const [selectedContractId, setSelectedContractId] = useState<string>("none"); // 選択された契約ID
   const [isLoadingContracts, setIsLoadingContracts] = useState(false);
 
-  const [data, setData] = useState<(BulkUser & { isProcessed?: boolean; status?: 'success' | 'error'; licenseStatus?: 'success' | 'error' | 'skipped' })[]>([]);
+  const [data, setData] = useState<(BulkUser & { isProcessed?: boolean; status?: 'success' | 'error'; mailStatus?: 'success' | 'error' })[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
@@ -146,39 +146,16 @@ export function UserBulkImportDialog() {
     
     // ユーザー作成の結果を保持する変数
     let userResult: BulkImportResponse | null = null;
-    let assignedUserIds: string[] = [];
 
     try {
-      // 1. ユーザー作成
-      userResult = await bulkCreateUsers(data);
+      // 1. ユーザー作成 (招待テーブルへの登録とメール送信)
+      // selectedContractId を渡すことで、createUser 内で招待レコードにライセンス情報が紐付けられます
+      userResult = await bulkCreateUsers(data, selectedContractId);
       
       if (!userResult || !userResult.details) {
         throw new Error("ユーザー登録のレスポンスが不正です");
       }
 
-      const successIds = userResult.details
-        .map(d => d.id)
-        .filter((id): id is string => !!id);
-
-      // 2. ライセンス割当
-      if (selectedContractId !== "none" && successIds.length > 0) {
-        const targetContract = contracts.find(c => c.contract_id === selectedContractId);
-        
-        if (targetContract?.start_date && targetContract?.end_date) {
-          const lResult = await bulkAssignLicenses(
-            selectedContractId,
-            successIds,
-            targetContract.start_date,
-            targetContract.end_date
-          );
-          
-          if (lResult.success) {
-            assignedUserIds = lResult.assignedUserIds ?? [];
-          } else {
-            showToast(`一部のユーザーのライセンス割当に失敗しました: ${lResult.message}`, "error");
-          }
-        }
-      }
     } catch (error) {
       showToast("処理中にエラーが発生しました", "error");
       if (!userResult) {
@@ -192,23 +169,18 @@ export function UserBulkImportDialog() {
       const reportData = data.map((item) => {
         const detail = userResult!.details.find(d => d.email === item.email);
         const isUserSuccess = detail?.status === 'success';
-        const isLicenseSuccess = isUserSuccess && !!detail?.id && assignedUserIds.includes(detail.id);
-
-        let licenseStatus: "success" | "error" | "skipped" | undefined = undefined;
-        if (isUserSuccess) {
-          if (selectedContractId === "none") {
-            licenseStatus = "skipped";
-          } else {
-            licenseStatus = isLicenseSuccess ? "success" : "error";
-          }
-        }
+        
+        // ユーザー作成成功かつ、詳細メッセージ（エラーメッセージ）がなければメール送信成功とみなす
+        const mailStatus: "success" | "error" | undefined = isUserSuccess 
+          ? (detail?.message ? "error" : "success") 
+          : undefined;
 
         return {
           ...item,
           isProcessed: true,
           status: detail?.status,
-          licenseStatus,
-          error: detail?.status === 'error' ? detail.message : (isUserSuccess && selectedContractId !== "none" && !isLicenseSuccess ? "ライセンス割当失敗" : undefined),
+          mailStatus,
+          error: detail?.message || undefined,
           isValid: isUserSuccess
         };
       });
@@ -405,7 +377,7 @@ export function UserBulkImportDialog() {
                   <Table>
                     <TableHeader className="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10">
                       <TableRow className="hover:bg-transparent border-slate-200">
-                        <TableHead className="w-32 text-[10px] uppercase font-bold text-center text-slate-500">アカウント / ライセンス</TableHead>
+                        <TableHead className="w-32 text-[10px] uppercase font-bold text-center text-slate-500">データ / メール</TableHead>
                         <TableHead className="w-48 text-[10px] uppercase font-bold text-slate-500">メールアドレス</TableHead>
                         <TableHead className="text-[10px] uppercase font-bold text-slate-500">名前</TableHead>
                       </TableRow>
@@ -423,16 +395,16 @@ export function UserBulkImportDialog() {
                                       row.status === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
                                     }`}
                                   >
-                                    {row.status === 'success' ? '作成成功' : '作成失敗'}
+                                    {row.status === 'success' ? 'データ作成済' : '作成失敗'}
                                   </Badge>
-                                  {row.licenseStatus === 'success' && (
+                                  {row.mailStatus === 'success' && (
                                     <Badge variant="outline" className="bg-emerald-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
-                                      ライセンス割当済
+                                      メール送信済
                                     </Badge>
                                   )}
-                                  {row.licenseStatus === 'error' && (
+                                  {row.mailStatus === 'error' && (
                                     <Badge variant="outline" className="bg-rose-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
-                                      ライセンス割当失敗
+                                      メール送信失敗
                                     </Badge>
                                   )}
                                 </>

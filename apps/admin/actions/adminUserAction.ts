@@ -188,6 +188,15 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       inviteUrl: inviteUrl
     });
 
+    // 💡 改善: メール送信結果をDBに記録
+    await supabase
+      .from('com_t_invitation')
+      .update({
+        mail_sent_at: mailResult.success ? new Date().toISOString() : null,
+        last_mail_error: mailResult.success ? null : (mailResult.error || "Unknown Error")
+      })
+      .eq('id', userId);
+
     if (!mailResult.success) {
       logger.error('user:create_user_mail_dispatch_failed', mailResult.error || 'Unknown error', { ...ctx, email });
       // メール送信に失敗しても、レコードは作成されているため管理画面一覧からいつでも「再送」が可能です。
@@ -199,7 +208,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     });
 
     revalidatePath('/users');
-    return { success: true, user_id: userId, errorType: null, message: null };
+    return { success: true, user_id: userId, errorType: null, message: mailResult.success ? null : (mailResult.error || "招待メールの送信に失敗しました") };
 
   } catch (err) {
     logger.error("user:create_user_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload });
@@ -257,6 +266,15 @@ export async function resendInvite(email: string, userType?: string) {
       userName: currentInvite.user_name || '会員',
       inviteUrl: inviteUrl
     });
+
+    // 💡 改善: 再送結果をDBに記録（成功時はエラーをクリア）
+    await supabase
+      .from('com_t_invitation')
+      .update({
+        mail_sent_at: mailResult.success ? new Date().toISOString() : currentInvite.mail_sent_at,
+        last_mail_error: mailResult.success ? null : (mailResult.error || "Resend Failed")
+      })
+      .eq('id', currentInvite.id);
 
     if (!mailResult.success) {
       return { success: false, message: 'メールの再送に失敗しました。' };
@@ -359,7 +377,7 @@ export async function updateUser(
 /**
  * ユーザー一括登録アクション
  */
-export async function bulkCreateUsers(users: BulkUser[]): Promise<BulkImportResponse> {
+export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): Promise<BulkImportResponse> {
   const ctx = await getLogContext();
   const results: BulkImportResultDetail[] = [];
   let successCount = 0;
@@ -367,19 +385,25 @@ export async function bulkCreateUsers(users: BulkUser[]): Promise<BulkImportResp
 
   for (const user of users) {
     try {
+      // 💡 改善: メールAPI (Resend) のレートリミット(2req/s)を考慮し、2人目以降は少し待機する
+      if (results.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 600)); // 0.6秒待機
+      }
+
       const result = await createUser({
         email: user.email,
         user_name: user.user_name,
         client_id: user.client_id,
-        user_type: user.user_type
+        user_type: user.user_type,
+        contract_id: contract_id === 'none' ? undefined : contract_id
       });
 
       if (result.success && result.user_id) {
         successCount++;
-        results.push({ id: result.user_id, email: user.email, status: 'success' });
+        results.push({ id: result.user_id, email: user.email, status: 'success', message: result.message });
       } else {
         errorCount++;
-        results.push({ email: user.email, status: 'error', message: result.message || "登録に失敗しました" });
+        results.push({ email: user.email, status: 'error', message: result.message || "招待データの作成に失敗しました" });
       }
     } catch (err) {
       logger.error("user:bulk_create_users_loop_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { email: user.email } });

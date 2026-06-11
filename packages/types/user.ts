@@ -74,8 +74,11 @@ export interface UserRecord extends UserBase {
   license_start_date: string | null;
   license_end_date: string | null;
   plan_name: string | null;
-  license_state: 'none' | 'active' | 'future' | 'expired';
+  license_state: 'none' | 'active' | 'future' | 'expired' | 'mail_failed' | 'expired_invite' | 'inviting';
 
+  // 招待メール関連
+  mail_sent_at?: string | null;
+  last_mail_error?: string | null;
 }
 
 /**
@@ -99,7 +102,7 @@ export type CreateUserResponse =
       success: true; 
       user_id: string; 
       errorType: null; 
-      message: null; 
+      message: string | null; 
     }
   | { 
       success: false; 
@@ -130,7 +133,7 @@ export interface BulkImportResultDetail {
   id?: string;
   email: string;
   status: 'success' | 'error';
-  message?: string;
+  message?: string | null;
 }
 
 export interface BulkImportResponse {
