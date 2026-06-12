@@ -20,7 +20,7 @@ import { randomBytes } from "crypto"; // 暗号トークン生成用
 const logger = createLogger('admin');
 
 /**
- * 💡 改善: ユーザ種別に応じたリダイレクト先（招待画面のベースURL）を解決する共通ヘルパー
+ * ユーザ種別に応じたリダイレクト先（招待画面のベースURL）を解決する共通ヘルパー
  * 今後、コーチ用サイト(COACH)などが追加された場合も、この switch 文に定義を追加するだけで安全に拡張可能です。
  */
 function getRedirectBase(userType?: string): string {
