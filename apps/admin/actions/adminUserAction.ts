@@ -116,10 +116,10 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
   try {
     const supabase = await createAdminClient();
 
-    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 💡 共通ヘルパーを利用
+    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 共通ヘルパーを利用
     // const redirectBase = user_type === USER_TYPES.ADMIN ? process.env.NEXT_PUBLIC_SITE_URL : process.env.NEXT_PUBLIC_STUDENT_URL;
 
-    // 💡 改善: 本登録用マスタ(com_m_user)にすでに存在していないか先に確認します
+    // 本登録用マスタ(com_m_user)にすでに存在していないか先に確認します
     const { data: existingUser } = await supabase
       .from('com_m_user')
       .select('id')
