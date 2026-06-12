@@ -21,7 +21,7 @@ export async function sendInvitationEmail({
   to, 
   userName, 
   inviteUrl, 
-  expiresDays = 7 
+  expiresDays = 3 
 }: SendInvitationParams): Promise<{ success: boolean; error?: string }> {
   try {
     const payload = { userName, inviteUrl, expiresDays };
@@ -32,7 +32,7 @@ export async function sendInvitationEmail({
     // 2. コア共通関数を呼び出して送信
     const data = await sendCore({
       to,
-      subject: '【Gabby Blueprint】会員登録手続きのご案内',
+      subject: '【Gabby Blueprint】コーパス単語帳利用開始のご案内',
       html,
     });
 

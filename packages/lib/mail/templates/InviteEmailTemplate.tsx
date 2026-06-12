@@ -92,7 +92,7 @@ export const InviteEmailTemplate: React.FC<InviteEmailTemplateProps> = ({
           }}>
             <p style={{ fontSize: '13px', color: '#b45309', margin: 0 }}>
               <strong>⚠️ リンクの有効期限に関するご注意</strong><br />
-              この招待リンクの有効期限は、メール送信から <strong>{expiresDays}日間</strong> です。期限が切れた場合はリンクが無効化されますので、お手数ですが担当の管理者まで再発行をご依頼ください。
+              この招待リンクの有効期限は、メール送信から <strong>{expiresDays}日間</strong> です。期限が切れた場合はリンクが無効化されますので、お手数ですが下記のお問い合わせ先のサポート窓口まで再発行をご依頼ください。
             </p>
           </div>
         </div>

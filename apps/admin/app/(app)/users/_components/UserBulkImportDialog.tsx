@@ -143,7 +143,7 @@ export function UserBulkImportDialog() {
   const handleImport = async () => {
     if (data.some(d => !d.isValid) || data.length === 0) return;
 
-    // 💡 生徒(user_type === '1')が含まれる場合、ライセンス割当は必須とする
+    // 生徒(user_type === '1')が含まれる場合、ライセンス割当は必須とする
     const hasStudent = data.some(user => user.user_type === '1');
     if (hasStudent && !selectedContractId) {
       showToast("生徒が含まれるため、ライセンスの割当が必須です。", "error");
