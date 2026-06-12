@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 
     /**
      * 招待メール (invite)
-     * 💡 移行メモ: 独自招待フローは直接 /auth/invite ページがクエリパラメータを受け取るため
+     * 移行メモ: 独自招待フローは直接 /auth/invite ページがクエリパラメータを受け取るため
      * このコールバックルートは通過しませんが、後方互換性と安全のため、元のコードブロックをそのまま維持します。
      */
     if (token && type === 'invite') {
