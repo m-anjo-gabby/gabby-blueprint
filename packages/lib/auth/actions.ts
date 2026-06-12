@@ -403,7 +403,7 @@ export async function verifyInvitationToken(token: string) {
 
     const { data: invite, error } = await supabase
       .from('com_t_invitation')
-      .select('id, email, user_name, expires_at, user_type, client_id, contract_id')
+      .select('id, email, user_name, expires_at, user_type, client_id, contract_id, roles')
       .eq('token', token)
       .is('accepted_at', null)
       .maybeSingle();
@@ -463,7 +463,8 @@ export async function acceptInvitationAction(payload: AcceptInvitationPayload): 
       user_metadata: {
         user_name: inviteRecord.user_name,
         user_type: inviteRecord.user_type,
-        client_id: inviteRecord.client_id // 🚀 修正: ここで client_id をメタデータに渡すことで、トリガー側が初期テナントにフォールバックするのを防ぎます
+        client_id: inviteRecord.client_id, // 🚀 修正: ここで client_id をメタデータに渡すことで、トリガー側が初期テナントにフォールバックするのを防ぎます
+        roles: inviteRecord.roles // 招待時のロールをメタデータにも同期
       }
     });
 
@@ -491,13 +492,7 @@ export async function acceptInvitationAction(payload: AcceptInvitationPayload): 
     }
 
     // 4. 招待時に紐付けられていたロールを取得して一括挿入
-    const { data: fullInviteData } = await supabase
-      .from('com_t_invitation')
-      .select('roles')
-      .eq('id', inviteRecord.id)
-      .single();
-
-    const targetRoles = (fullInviteData?.roles as string[]) || [];
+    const targetRoles = (inviteRecord.roles as string[]) || [];
     if (targetRoles.length > 0) {
       const { error: roleError } = await supabase
         .from('com_t_user_role')

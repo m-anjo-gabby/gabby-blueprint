@@ -180,7 +180,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     }
     */
 
-    // 💡 改善: 独自メール送信処理を実行 (Resend) -> 💡 共通ヘルパーを利用してURLを解決
+    // 独自メール送信処理を実行 (Resend) -> 💡 共通ヘルパーを利用してURLを解決
     const inviteUrl = getInvitationUrl(user_type, inviteData.token);
     const mailResult = await sendInvitationEmail({
       to: email,

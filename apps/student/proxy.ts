@@ -2,6 +2,15 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createSupabaseProxy } from '@gabby/lib/proxy-base';
 import { createLogger } from '@gabby/lib/logger';
 
+// ディレクトリ構成に基づいた、生徒がアクセス可能な有効な画面ルートのホワイトリスト
+const VALID_STUDENT_ROUTES = [
+  '/dashboard',
+  '/favorites',
+  '/library',
+  '/profile',
+  '/training',
+];
+
 export async function proxy(req: NextRequest) {
   const { res, user } = await createSupabaseProxy(req);
   const { pathname } = req.nextUrl;
@@ -58,6 +67,19 @@ export async function proxy(req: NextRequest) {
 
   // C. ログイン済みでのルート/ログインページアクセス
   if (pathname === '/' || pathname === loginPath) {
+    return NextResponse.redirect(new URL(dashboardPath, req.url));
+  }
+
+  // --- C-2. 直接入力および無効なアドレスへのアクセス制御 ---
+  // 公開ルート（メールリンク等）ではなく、かつ定義された有効な生徒ルート（ホワイトリスト）にも前方一致しない場合
+  const isValidStudentRoute = VALID_STUDENT_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));
+
+  if (!isPublicRoute && !isValidStudentRoute) {
+    logger.info('proxy:invalid_route_redirect', `Invalid path direct access redirected to dashboard: ${pathname}`, {
+      userId: user.id,
+      email: user.email,
+      path: pathname,
+    });
     return NextResponse.redirect(new URL(dashboardPath, req.url));
   }
 
