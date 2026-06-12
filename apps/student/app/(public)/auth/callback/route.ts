@@ -20,7 +20,7 @@ export async function GET(request: Request) {
      * - password reset (標準フロー時)
      * - magic link
      * - email confirmation
-     * 💡 既存の重要フロー：完全無修正でそのまま残し、機能影響をゼロにします
+     * 
      */
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
