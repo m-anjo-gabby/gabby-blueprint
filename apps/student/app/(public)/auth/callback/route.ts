@@ -34,11 +34,11 @@ export async function GET(request: Request) {
     }
 
     /**
-     * 🚀 新設: 独自パスワードリセットフロー (recovery)
+     * 独自パスワードリセットフロー (recovery)
      * generateLink({ type: 'recovery' }) で発行されたトークンを検証し、
      * 認証セッションを確立してパスワード更新画面へリダイレクトします。
      */
-    // 💡 修正: generateLink から直接 callback へ届く場合、パラメータ名は token_hash または token
+    // generateLink から直接 callback へ届く場合、パラメータ名は token_hash または token
     // の可能性があるため、両方をフォールバックとして受け入れます。
     const recoveryToken = tokenHash || token;
     if (recoveryToken && type === 'recovery') {

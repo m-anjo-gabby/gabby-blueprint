@@ -73,11 +73,11 @@ export default function UpdatePasswordPage() {
     setError(null);
 
     try {
-      // 💡 クライアントサイドSDKによる直接更新を廃止し、バックエンドの安全なコアロジックを通過させる
+      // クライアントサイドSDKによる直接更新を廃止し、バックエンドの安全なコアロジックを通過させる
       const result = await resetPassword(formData);
 
       if (result.error) {
-        // 💡 共通コアで翻訳された綺麗な日本語エラーメッセージがそのままセットされます
+        // 共通コアで翻訳された綺麗な日本語エラーメッセージがそのままセットされます
         setError(result.error);
         setLoading(false);
       } else {
