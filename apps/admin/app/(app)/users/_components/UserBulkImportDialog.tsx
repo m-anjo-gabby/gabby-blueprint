@@ -32,13 +32,14 @@ export function UserBulkImportDialog() {
 
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [contracts, setContracts] = useState<ContractDetail[]>([]); // 有効な契約一覧
-  const [selectedContractId, setSelectedContractId] = useState<string>("none"); // 選択された契約ID
+  const [selectedContractId, setSelectedContractId] = useState<string>(""); // 選択された契約ID
   const [isLoadingContracts, setIsLoadingContracts] = useState(false);
 
-  const [data, setData] = useState<(BulkUser & { isProcessed?: boolean; status?: 'success' | 'error'; licenseStatus?: 'success' | 'error' | 'skipped' })[]>([]);
+  const [data, setData] = useState<(BulkUser & { isProcessed?: boolean; status?: 'success' | 'error'; mailStatus?: 'success' | 'error' })[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
+  const hasStudentsLoaded = data.length > 0 && data.some(user => user.user_type === '1');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedClient = clients.find(c => c.client_id === selectedClientId);
@@ -54,7 +55,7 @@ export function UserBulkImportDialog() {
       setData([]);
       setHasCompleted(false);
       setSelectedClientId("");
-      setSelectedContractId("none");
+      setSelectedContractId("");
       setContracts([]);
 
       // 2. 顧客リストを取得（まだ持っていない場合のみ、または常に最新を取るなら毎回）
@@ -80,7 +81,7 @@ export function UserBulkImportDialog() {
    */
   const handleClientChange = async (clientId: string) => {
     setSelectedClientId(clientId);
-    setSelectedContractId("none");
+    setSelectedContractId("");
     setData([]);
     
     if (!clientId) {
@@ -142,43 +143,27 @@ export function UserBulkImportDialog() {
   const handleImport = async () => {
     if (data.some(d => !d.isValid) || data.length === 0) return;
 
+    // 💡 生徒(user_type === '1')が含まれる場合、ライセンス割当は必須とする
+    const hasStudent = data.some(user => user.user_type === '1');
+    if (hasStudent && !selectedContractId) {
+      showToast("生徒が含まれるため、ライセンスの割当が必須です。", "error");
+      return;
+    }
+
     setIsProcessing(true);
     
     // ユーザー作成の結果を保持する変数
     let userResult: BulkImportResponse | null = null;
-    let assignedUserIds: string[] = [];
 
     try {
-      // 1. ユーザー作成
-      userResult = await bulkCreateUsers(data);
+      // 1. ユーザー作成 (招待テーブルへの登録とメール送信)
+      // selectedContractId を渡すことで、createUser 内で招待レコードにライセンス情報が紐付けられます
+      userResult = await bulkCreateUsers(data, selectedContractId);
       
       if (!userResult || !userResult.details) {
         throw new Error("ユーザー登録のレスポンスが不正です");
       }
 
-      const successIds = userResult.details
-        .map(d => d.id)
-        .filter((id): id is string => !!id);
-
-      // 2. ライセンス割当
-      if (selectedContractId !== "none" && successIds.length > 0) {
-        const targetContract = contracts.find(c => c.contract_id === selectedContractId);
-        
-        if (targetContract?.start_date && targetContract?.end_date) {
-          const lResult = await bulkAssignLicenses(
-            selectedContractId,
-            successIds,
-            targetContract.start_date,
-            targetContract.end_date
-          );
-          
-          if (lResult.success) {
-            assignedUserIds = lResult.assignedUserIds ?? [];
-          } else {
-            showToast(`一部のユーザーのライセンス割当に失敗しました: ${lResult.message}`, "error");
-          }
-        }
-      }
     } catch (error) {
       showToast("処理中にエラーが発生しました", "error");
       if (!userResult) {
@@ -192,23 +177,18 @@ export function UserBulkImportDialog() {
       const reportData = data.map((item) => {
         const detail = userResult!.details.find(d => d.email === item.email);
         const isUserSuccess = detail?.status === 'success';
-        const isLicenseSuccess = isUserSuccess && !!detail?.id && assignedUserIds.includes(detail.id);
-
-        let licenseStatus: "success" | "error" | "skipped" | undefined = undefined;
-        if (isUserSuccess) {
-          if (selectedContractId === "none") {
-            licenseStatus = "skipped";
-          } else {
-            licenseStatus = isLicenseSuccess ? "success" : "error";
-          }
-        }
+        
+        // ユーザー作成成功かつ、詳細メッセージ（エラーメッセージ）がなければメール送信成功とみなす
+        const mailStatus: "success" | "error" | undefined = isUserSuccess 
+          ? (detail?.message ? "error" : "success") 
+          : undefined;
 
         return {
           ...item,
           isProcessed: true,
           status: detail?.status,
-          licenseStatus,
-          error: detail?.status === 'error' ? detail.message : (isUserSuccess && selectedContractId !== "none" && !isLicenseSuccess ? "ライセンス割当失敗" : undefined),
+          mailStatus,
+          error: detail?.message || undefined,
           isValid: isUserSuccess
         };
       });
@@ -224,7 +204,7 @@ export function UserBulkImportDialog() {
     setOpen(false);
     setData([]);
     setSelectedClientId("");
-    setSelectedContractId("none");
+    setSelectedContractId("");
     setHasCompleted(false);
     setContracts([]);
   };
@@ -275,7 +255,7 @@ export function UserBulkImportDialog() {
                 }
               </p>
             </div>
-
+            
             {/* インポート完了前のみダウンロードボタンを表示 */}
             {!hasCompleted && (
               <Button 
@@ -321,14 +301,16 @@ export function UserBulkImportDialog() {
                   2
                 </span>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  初期ライセンス割当（任意）
+                  初期ライセンス割当
                 </label>
               </div>
-
+              
               <Select 
                 value={selectedContractId} 
                 onValueChange={setSelectedContractId}
-                disabled={isProcessing || hasCompleted || !selectedClientId || isLoadingContracts || contracts.length === 0}
+                // 💡 生徒が含まれる場合は「割り当てない」を無効化するため、selectedClientId のみで判断
+                // disabled={isProcessing || hasCompleted || !selectedClientId || isLoadingContracts || contracts.length === 0}
+                disabled={isProcessing || hasCompleted || !selectedClientId || isLoadingContracts}
               >
                 <SelectTrigger className={cn(
                   "bg-white rounded-xl border-slate-200 h-11 transition-all",
@@ -338,35 +320,24 @@ export function UserBulkImportDialog() {
                   {isLoadingContracts ? (
                     <Loader2 size={16} className="animate-spin mx-auto text-slate-400" />
                   ) : selectedClientId && contracts.length === 0 ? (
-                    <>
-                      <div className="flex items-center gap-2 text-orange-600">
-                        <AlertCircle size={14} className="shrink-0" />
-                        <span className="text-xs font-bold whitespace-nowrap">
-                          有効な契約がないため、スキップします
-                        </span>
-                      </div>
-                    </>
+                    <div className="flex items-center gap-2 text-orange-600">
+                      <AlertCircle size={14} className="shrink-0" />
+                      <span className="text-xs font-bold whitespace-nowrap">有効な契約がありません（割当必須）</span>
+                    </div>
                   ) : (
-                    <SelectValue placeholder="割り当てない（ユーザー登録のみ）" />
+                    <SelectValue placeholder="ライセンスを選択してください" />
                   )}
                 </SelectTrigger>
 
                 <SelectContent className="rounded-xl">
-                  {/* 契約がある場合のみ「割り当てない」を表示 */}
                   {contracts.length > 0 ? (
-                    <>
-                      <SelectItem value="none" className="text-xs text-slate-500 italic">
-                        割り当てない（ユーザー登録のみ）
+                    contracts.map(c => (
+                      <SelectItem key={c.contract_id} value={c.contract_id} className="text-xs">
+                        {c.plan_name}（残 {c.remaining_licenses}枠）
                       </SelectItem>
-                      {contracts.map(c => (
-                        <SelectItem key={c.contract_id} value={c.contract_id} className="text-xs">
-                          {c.plan_name}（残 {c.remaining_licenses}枠）
-                        </SelectItem>
-                      ))}
-                    </>
+                    ))
                   ) : (
-                    /* ここは基本的に disabled で開けないが、万が一のフォールバック */
-                    <SelectItem value="none" disabled>有効な契約が見つかりません</SelectItem>
+                    <SelectItem value="none" disabled>有効な契約がありません（割当必須）</SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -405,7 +376,7 @@ export function UserBulkImportDialog() {
                   <Table>
                     <TableHeader className="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10">
                       <TableRow className="hover:bg-transparent border-slate-200">
-                        <TableHead className="w-32 text-[10px] uppercase font-bold text-center text-slate-500">アカウント / ライセンス</TableHead>
+                        <TableHead className="w-32 text-[10px] uppercase font-bold text-center text-slate-500">データ / メール</TableHead>
                         <TableHead className="w-48 text-[10px] uppercase font-bold text-slate-500">メールアドレス</TableHead>
                         <TableHead className="text-[10px] uppercase font-bold text-slate-500">名前</TableHead>
                       </TableRow>
@@ -423,16 +394,16 @@ export function UserBulkImportDialog() {
                                       row.status === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
                                     }`}
                                   >
-                                    {row.status === 'success' ? '作成成功' : '作成失敗'}
+                                    {row.status === 'success' ? 'データ作成済' : '作成失敗'}
                                   </Badge>
-                                  {row.licenseStatus === 'success' && (
+                                  {row.mailStatus === 'success' && (
                                     <Badge variant="outline" className="bg-emerald-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
-                                      ライセンス割当済
+                                      メール送信済
                                     </Badge>
                                   )}
-                                  {row.licenseStatus === 'error' && (
+                                  {row.mailStatus === 'error' && (
                                     <Badge variant="outline" className="bg-rose-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
-                                      ライセンス割当失敗
+                                      メール送信失敗
                                     </Badge>
                                   )}
                                 </>
@@ -458,7 +429,7 @@ export function UserBulkImportDialog() {
 
         <div className="bg-slate-50 p-6 flex justify-between items-center border-t border-slate-200">
           <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-600 font-bold text-xs rounded-lg" 
-            onClick={() => { setData([]); setHasCompleted(false); setSelectedContractId("none"); }} 
+            onClick={() => { setData([]); setHasCompleted(false); setSelectedContractId(""); }} 
             disabled={isProcessing}
           >
             {hasCompleted ? <><RefreshCcw size={14} className="mr-1.5" /> 別のファイルを読み込む</> : "リセット"}

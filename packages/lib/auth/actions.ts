@@ -1,8 +1,11 @@
-// packages/lib/auth/actions.ts
+'use server';
+
 import { createServerClient } from '../supabase/server';
+import { createAdminClient } from '../supabase/admin';
 import { User } from '@supabase/supabase-js';
 import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger, getLogContext } from '../logger';
+import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
 
 // 💡 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');
@@ -70,15 +73,17 @@ export async function signInCore(
     return { error: 'メールアドレスとパスワードを入力してください。' };
   }
 
-  // サーバー用クライアントの生成 (Cookie管理を含む)
-  const supabase = await createServerClient();
+  // 役割ごとに2つのクライアントを使い分ける
+  const supabase = await createServerClient(); // ブラウザ・セッション管理（クッキー操作用）
+  const supabaseAdmin = createAdminClient();  // ロック制御用（SQLでanon権限を剥奪したRPCを叩く用）
 
   // -------------------------------------------------------------
   // 🔒 1. ログイン試行前のロックアウトチェック
   // -------------------------------------------------------------
   // セキュアなRPC（get_user_lock_status_by_email）経由で、
   // auth.usersのemailを元に com_m_user のロック状態を取得
-  const { data: rpcData, error: masterError } = await supabase
+  // SQL側でanon権限を剥奪したため、ここだけ supabaseAdmin を使用してセキュアに実行します
+  const { data: rpcData, error: masterError } = await supabaseAdmin
     .rpc('get_user_lock_status_by_email', { p_email: email })
     .maybeSingle();
 
@@ -127,7 +132,8 @@ export async function signInCore(
       const maxAttempts = userMaster.user_type === USER_TYPES.ADMIN ? 3 : 10;
       
       // RLSを回避するため、SQL側のセキュアな関数(RPC)を呼び出してカウントアップさせる
-      const { error: updateError } = await supabase.rpc('increment_login_failed_count', {
+      // カウントアップ処理もSQL側で service_role 専用にしたため、supabaseAdmin を使用して安全に実行します
+      const { error: updateError } = await supabaseAdmin.rpc('increment_login_failed_count', {
         p_user_id: userMaster.id,
         p_max_attempts: maxAttempts
       });
@@ -220,18 +226,54 @@ export async function forgotPasswordCore(formData: FormData): Promise<AuthRespon
     return { error: 'メールアドレスを入力してください。' };
   }
 
-  const supabase = await createServerClient();
-  
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/update-password`,
-  });
+  try {
+    // 💡 改善: メール自体は独自で送るため、Supabase側からは「送信」ではなく「認証リンク（トークン）」のみを行政権限で発行させる
+    const supabaseAdmin = await createAdminClient();
+    
+    const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        // 💡 既存のリダイレクト設定をそのまま引き継ぐ（認証後のパスワード入力画面パス）
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/update-password`,
+      }
+    });
 
-  if (error) {
-    logger.error('auth:reset_email_dispatch_failed', error.message, { payload: { email } });
-    return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+    if (linkError) {
+      logger.error('auth:reset_email_link_generation_failed', linkError.message, { payload: { email } });
+      return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+    }
+
+    if (!data || !data.properties?.action_link) {
+      logger.error('auth:reset_email_link_empty', '生成されたアクションリンクが空です', { payload: { email } });
+      return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+    }
+
+    // 💡 修正: Supabase内部の verify エンドポイントを経由すると、非PKCE時はセッションが
+    // フラグメント (#) で返りサーバーサイドの callback で取得できなくなるため、
+    // 直接アプリのコールバック URL を生成してトークン (hashed_token) を渡します。
+    const tokenHash = data.properties.hashed_token;
+    const appResetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?token_hash=${tokenHash}&type=recovery&next=/update-password`;
+
+    // 独自にデザインしたリッチHTMLメールを Resend から安全に送信！
+    // 考慮点: 有効期限テキストは、SupabaseのAuth設定（Inactivity timeout / Gotrue設定）のデフォルトに合わせて調整（通常は30分や60分）
+    const mailResult = await sendPasswordResetEmail({
+      to: email,
+      resetUrl: appResetUrl,
+      expiresText: '30分間' 
+    });
+
+    if (!mailResult.success) {
+      logger.error('auth:reset_email_dispatch_failed', mailResult.error || 'Unknown error', { payload: { email } });
+      return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+    }
+
+    return { success: true };
+
+  } catch (err) {
+    logger.error('auth:forgot_password_unexpected', err instanceof Error ? err.message : 'Unknown error', { payload: { email } });
+    return { error: '予期せぬエラーが発生しました。時間をおいて再度お試しください。' };
   }
-
-  return { success: true };
 }
 
 /**
@@ -325,8 +367,8 @@ export async function checkLicense(userId: string): Promise<boolean> {
     .select('license_id')
     .eq('user_id', userId)
     .eq('status', 1)
-    .lte('start_date', 'now()')
     .gte('end_date', 'now()')
+    .limit(1) // 現在有効なものと未来のものが複数ある場合を考慮し、1件でもあればOKとする
     .maybeSingle();
 
   if (error) {
@@ -334,4 +376,183 @@ export async function checkLicense(userId: string): Promise<boolean> {
   }
 
   return !!data && !error;
+}
+
+// =============================================================
+// 💡 以下、独自招待テーブル（com_t_invitation）用の新規アクション
+// =============================================================
+
+interface AcceptInvitationPayload {
+  token: string;
+  password?: string;
+}
+
+interface AcceptInvitationResponse {
+  success: boolean;
+  message: string | null;
+  errorType: 'invalid_token' | 'expired_token' | 'auth_failed' | 'validation_error' | 'unexpected_error' | null;
+}
+
+/**
+ * 6. 招待用ワンタイムトークンの事前検証（クライアント初期ロード用）
+ * @param token - 招待状の一意な暗号トークン
+ */
+export async function verifyInvitationToken(token: string) {
+  try {
+    const supabase = createAdminClient();
+
+    const { data: invite, error } = await supabase
+      .from('com_t_invitation')
+      .select('id, email, user_name, expires_at, user_type, client_id, contract_id, roles')
+      .eq('token', token)
+      .is('accepted_at', null)
+      .maybeSingle();
+
+    if (error || !invite) {
+      return { valid: false, errorType: 'invalid_token', message: 'この招待リンクは無効か、すでに本登録が完了しています。' };
+    }
+
+    if (new Date(invite.expires_at) < new Date()) {
+      return { valid: false, errorType: 'expired_token', message: '招待リンクの有効期限が切れています。管理者に再送を依頼してください。' };
+    }
+
+    return { valid: true, data: invite };
+  } catch (err) {
+    return { valid: false, errorType: 'unexpected_error', message: 'トークンの検証中にエラーが発生しました。' };
+  }
+}
+
+/**
+ * 7. 招待リンクからのユーザー本登録（パスワード設定・マスタ同期）処理
+ * @param payload - token とユーザーによって入力された password
+ */
+export async function acceptInvitationAction(payload: AcceptInvitationPayload): Promise<AcceptInvitationResponse> {
+  const ctx = await getLogContext();
+  const { token, password } = payload;
+
+  try {
+    if (!password) {
+      return { success: false, errorType: 'validation_error', message: 'パスワードを入力してください。' };
+    }
+
+    // 💡 改善: ファイル上部に定義されている共通の強度バリデーションを完全流用
+    const validationError = validatePasswordStrength(password);
+    if (validationError) {
+      return { success: false, errorType: 'validation_error', message: validationError };
+    }
+
+    // 1. トークンの厳密な有効性検証
+    const verification = await verifyInvitationToken(token);
+    if (!verification.valid || !verification.data) {
+      return { 
+        success: false, 
+        errorType: verification.errorType as any, 
+        message: verification.message ?? '不正なリクエストです。' 
+      };
+    }
+
+    const inviteRecord = verification.data;
+    const supabase = createAdminClient();
+
+    // 2. Supabase Auth側へ正式なログインユーザーとしてアカウントを作成
+    // ※ 既存のDBトリガーにより、public.com_m_user への基本レコードの自動同期が行われます
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: inviteRecord.email,
+      password: password,
+      email_confirm: true, // パスワードをその場で設定しているため、確認済みフラグを立てる
+      user_metadata: {
+        user_name: inviteRecord.user_name,
+        user_type: inviteRecord.user_type,
+        client_id: inviteRecord.client_id, // 🚀 修正: ここで client_id をメタデータに渡すことで、トリガー側が初期テナントにフォールバックするのを防ぎます
+        roles: inviteRecord.roles // 招待時のロールをメタデータにも同期
+      }
+    });
+
+    if (authError || !authData.user) {
+      logger.error('auth:accept_invite_signup_failed', authError?.message || 'User object null', { ...ctx, email: inviteRecord.email });
+      return { success: false, errorType: 'auth_failed', message: `アカウントの作成に失敗しました: ${authError?.message}` };
+    }
+
+    const newUserId = authData.user.id;
+
+    // 3. トリガーで自動作成されたマスタレコード(com_m_user)を確定情報でアップデート
+    const { error: dbUserError } = await supabase
+      .from('com_m_user')
+      .update({
+        client_id: inviteRecord.client_id, // 🚀 修正: トリガーだけでなく、念のためここでも確定した client_id で上書き同期を保証します
+        user_name: inviteRecord.user_name,
+        user_type: inviteRecord.user_type,
+        update_date: new Date().toISOString()
+      })
+      .eq('id', newUserId);
+
+    if (dbUserError) {
+      logger.error('auth:accept_invite_m_user_sync_failed', dbUserError.message, { ...ctx, userId: newUserId });
+      throw dbUserError;
+    }
+
+    // 4. 招待時に紐付けられていたロールを取得して一括挿入
+    const targetRoles = (inviteRecord.roles as string[]) || [];
+    if (targetRoles.length > 0) {
+      const { error: roleError } = await supabase
+        .from('com_t_user_role')
+        .insert(targetRoles.map((roleId: string) => ({
+          user_id: newUserId,
+          role_id: roleId
+        })));
+
+      if (roleError) {
+        logger.error('auth:accept_invite_roles_insert_failed', roleError.message, { ...ctx, userId: newUserId, roles: targetRoles });
+      }
+    }
+
+    // 5. 招待時に指定されたライセンスがあれば有効化
+    if (inviteRecord.contract_id) {
+      // 契約期間を取得
+      const { data: contract } = await supabase
+        .from('com_m_contract')
+        .select('start_date, end_date')
+        .eq('contract_id', inviteRecord.contract_id)
+        .single();
+
+      if (contract) {
+        const { error: licenseError } = await supabase
+          .from('com_t_user_license')
+          .insert({
+            user_id: newUserId,
+            contract_id: inviteRecord.contract_id,
+            start_date: contract.start_date,
+            end_date: contract.end_date,
+            status: 1
+          });
+        if (licenseError) {
+          logger.error('auth:accept_invite_license_insert_failed', licenseError.message, { ...ctx, userId: newUserId });
+        }
+      }
+    }
+
+    // 6. 最後に招待状レコードをクローズ（承認日時の記録）
+    const { error: closeError } = await supabase
+      .from('com_t_invitation')
+      .update({
+        accepted_at: new Date().toISOString(),
+        update_date: new Date().toISOString()
+      })
+      .eq('id', inviteRecord.id);
+
+    if (closeError) {
+      logger.error('auth:accept_invite_close_record_failed', closeError.message, { ...ctx, inviteId: inviteRecord.id });
+    }
+
+    logger.info('auth:accept_invite_all_success', `User registration fully completed: ${inviteRecord.email}`, {
+      ...ctx,
+      userId: newUserId
+    });
+
+    return { success: true, message: '本登録が正常に完了しました。', errorType: null };
+
+  } catch (err) {
+    logger.error('auth:accept_invite_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorType: 'unexpected_error', message: '予期せぬシステムエラーが発生しました。' };
+  }
 }

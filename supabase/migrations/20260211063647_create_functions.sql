@@ -148,7 +148,6 @@ BEGIN
         SELECT 1 FROM public.com_t_user_license
         WHERE user_id = COALESCE(NEW.user_id, OLD.user_id)
           AND status = 1
-          AND start_date <= NOW()
           AND end_date >= NOW()
     ) INTO is_licensed;
 
@@ -229,12 +228,11 @@ $$;
 
 -- 1. 安全のため、一度すべてのデフォルト権限をリセット（剥奪）する
 REVOKE EXECUTE ON FUNCTION public.get_user_lock_status_by_email(TEXT) FROM PUBLIC, anon, authenticated;
--- 2. Next.js サーバー（ログイン済み、またはサーバーサイド処理）からの実行権限を明示的に付与する
-GRANT EXECUTE ON FUNCTION public.get_user_lock_status_by_email(TEXT) TO anon, authenticated, service_role;
--- 補足：セキュリティの再確認
--- この関数は「SECURITY DEFINER」かつ「SET search_path = public」で定義されているため、
--- anonロールから呼び出されても、内部で安全に auth.users を結合して指定したemailのロック状態のみを返却します。
--- 全ユーザーの一覧をぶっこ抜かれるような脆弱性（SQLインジェクションなど）は構造上発生しません。
+
+-- 一般ロール(anon, authenticated)への再付与をやめ、管理用サービスロール(service_role)のみに限定
+-- これにより、外部API(/rest/v1/rpc)経由での一般ブラウザからの不正な直接実行を100%遮断し、警告を解消します。
+GRANT EXECUTE ON FUNCTION public.get_user_lock_status_by_email(TEXT) TO service_role;
+
 
 ---------------------------------------------
 -- ユーザーログイン失敗カウントアップ
@@ -272,5 +270,7 @@ $$;
 
 -- 安全のため、一度すべてのデフォルト権限をリセット（剥奪）する
 REVOKE EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) FROM PUBLIC, anon, authenticated;
--- 未ログインのログイン画面から実行されるため、anon にも実行権限を与えます
-GRANT EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) TO anon, authenticated, service_role;
+
+-- 未ログイン画面の裏で動くNext.jsサーバー(Server Action)から、AdminClient(service_role)を用いて叩く運用に統一
+-- anon への直接公開を停止し、service_role のみに絞ることで安全性を引き上げ、警告を解消します。
+GRANT EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) TO service_role;

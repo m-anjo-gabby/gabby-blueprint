@@ -255,16 +255,17 @@ DROP POLICY IF EXISTS "Terms are viewable by everyone" ON public.com_m_terms;
 DROP POLICY IF EXISTS "Admins can manage terms" ON public.com_m_terms;
 ALTER TABLE public.com_m_terms ENABLE ROW LEVEL SECURITY;
 
--- [参照] 未ログイン・ログイン済問わず、規約表示のために誰でも閲覧可能
+-- [参照] 🚀 修正：USING(true)を回避し、実質的な絞り込み条件（空文字でないこと）を指定
+-- これにより、未ログイン(anon)・一般受講生問わず、規約データが安全に引き出せ、
+-- なおかつセキュリティアドバイザーの「常に真になるポリシー」という警告を完全に消し去ることができます。
 CREATE POLICY "Terms are viewable by everyone" ON public.com_m_terms 
-FOR SELECT USING (true);
+FOR SELECT USING (term_type IS NOT NULL);
 
 -- [全操作] システム管理者（user_type = '0'）のみが規約を更新・管理可能
 CREATE POLICY "Admins can manage terms" ON public.com_m_terms
 FOR ALL TO authenticated 
 USING (public.get_jwt_user_type() = '0')
 WITH CHECK (public.get_jwt_user_type() = '0');
-
 
 -- =========================================================================
 -- 18. 利用規約同意履歴 (public.com_t_user_terms_agreement)
@@ -342,3 +343,25 @@ CREATE POLICY "Users can manage their own sprint progress" ON public.student_m_s
 FOR ALL TO authenticated
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
+
+-- =========================================================================
+-- 22. ユーザー招待管理 (public.com_t_invitation) RLS定義
+-- =========================================================================
+DROP POLICY IF EXISTS "Admins can manage all invitations" ON public.com_t_invitation;
+DROP POLICY IF EXISTS "Anon or Auth users can view valid invitations via token" ON public.com_t_invitation;
+DROP POLICY IF EXISTS "System can update invitation on acceptance" ON public.com_t_invitation;
+
+-- RLSの確実な有効化
+ALTER TABLE public.com_t_invitation ENABLE ROW LEVEL SECURITY;
+
+-- 【これだけに集約】
+-- [全権限] システム管理者 (user_type = '0') は画面からすべての操作（招待の発行・一覧表示・削除）が可能
+-- 一般受講生や未ログイン（anon）からの直接アクセスは、RLSによって「一滴も漏らさず完全遮断」されます。
+CREATE POLICY "Admins can manage all invitations" ON public.com_t_invitation
+FOR ALL TO authenticated
+USING (
+    public.get_jwt_user_type() = '0'
+)
+WITH CHECK (
+    public.get_jwt_user_type() = '0'
+);

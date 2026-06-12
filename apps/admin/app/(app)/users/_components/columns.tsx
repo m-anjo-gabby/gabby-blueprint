@@ -32,7 +32,7 @@ export const columns: ColumnDef<UserRecord>[] = [
     accessorKey: "status",
     header: "",
     cell: ({ row }) => {
-      const { last_sign_in_at, confirmed_at, user_id } = row.original;
+      const { last_sign_in_at, confirmed_at, mail_sent_at, last_mail_error } = row.original;
       
       let statusBadge;
       if (last_sign_in_at) {
@@ -45,6 +45,16 @@ export const columns: ColumnDef<UserRecord>[] = [
         statusBadge = (
           <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-blue-100 h-5 px-1.5 text-[10px] font-bold shadow-sm whitespace-nowrap">
             招待確認済
+          </Badge>
+        );
+      } else if (last_mail_error || (!mail_sent_at && !last_sign_in_at)) {
+        // エラーメッセージがある、または送信記録がなくログインもしていない場合を「送信失敗」とみなす
+        statusBadge = (
+          <Badge 
+            className="bg-rose-50 text-rose-600 border-rose-200 h-5 px-1.5 text-[10px] font-black shadow-sm whitespace-nowrap gap-1 cursor-help"
+            title={last_mail_error || "招待メールが送信されていません"}
+          >
+            <ShieldAlert size={10} /> 送信失敗
           </Badge>
         );
       } else {
@@ -104,7 +114,9 @@ export const columns: ColumnDef<UserRecord>[] = [
       
       // 生徒(user_type === '1')のみを編集対象とする
       const isStudent = user_type === '1';
-      const canAssign = isStudent;
+      // 💡 招待中のユーザー（まだ本登録が完了していない）にはライセンス割当を許可しない
+      const isRegistered = !!user.last_sign_in_at || !!user.confirmed_at;
+      const canAssign = isStudent && isRegistered;
 
       // 生徒以外は「対象外」や「空」として扱うためのUI
       if (!isStudent) {
