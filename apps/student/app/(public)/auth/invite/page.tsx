@@ -26,7 +26,7 @@ export default function InvitePage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 💡 リアルタイムのパスワード強度判定
+  // リアルタイムのパスワード強度判定
   const strengthStatus = useMemo(() => {
     if (!password) return null;
     const hasAlpha = /[a-zA-Z]/.test(password);
@@ -34,7 +34,7 @@ export default function InvitePage() {
     return hasAlpha && hasNumber;
   }, [password]);
 
-  // 💡 パスワード一致判定
+  // パスワード一致判定
   const matchStatus = useMemo(() => {
     if (!password || !confirmPassword) return null;
     return password === confirmPassword;
@@ -101,7 +101,7 @@ export default function InvitePage() {
         return;
       }
 
-      // 2. 💡 自動ログイン処理の実行
+      // 2. 自動ログイン処理の実行
       // signInアクションは成功時に自動的に /dashboard へリダイレクトします。
       const loginFormData = new FormData();
       loginFormData.append('email', invitedUser.email);
