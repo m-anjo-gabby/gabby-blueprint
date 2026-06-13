@@ -101,7 +101,7 @@ export default function InvitePage() {
         return;
       }
 
-      // 2. 💡 自動ログイン処理の実行
+      // 2. 自動ログイン処理の実行
       // signInアクションは成功時に自動的に /dashboard へリダイレクトします。
       const loginFormData = new FormData();
       loginFormData.append('email', invitedUser.email);
