@@ -324,10 +324,10 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
           <AlertCircle size={40} className="text-amber-500" />
         </div>
-        <h2 className="text-xl font-black text-slate-900 mb-2">No Content Yet</h2>
-        <p className="text-slate-500 text-[13px] font-medium leading-relaxed mb-8 px-2">
-          この教材にはまだ単語が登録されていません。<br/>
-          別の教材を選択してください。
+        <h2 className="text-xl font-black text-slate-900 mb-2">Unavailable</h2>
+        <p className="text-slate-500 text-[13px] font-medium leading-relaxed mb-8 px-4">
+          この教材は現在ご利用いただけないか、<br/>
+          アクセスする権限がありません。
         </p>
         
         <div className="space-y-3">
