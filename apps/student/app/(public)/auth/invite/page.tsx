@@ -26,7 +26,7 @@ export default function InvitePage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 💡 リアルタイムのパスワード強度判定
+  // リアルタイムのパスワード強度判定
   const strengthStatus = useMemo(() => {
     if (!password) return null;
     const hasAlpha = /[a-zA-Z]/.test(password);
