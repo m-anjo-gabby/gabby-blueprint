@@ -34,7 +34,7 @@ export default function InvitePage() {
     return hasAlpha && hasNumber;
   }, [password]);
 
-  // 💡 パスワード一致判定
+  // パスワード一致判定
   const matchStatus = useMemo(() => {
     if (!password || !confirmPassword) return null;
     return password === confirmPassword;
