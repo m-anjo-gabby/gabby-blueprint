@@ -20,7 +20,7 @@ import { randomBytes } from "crypto"; // 暗号トークン生成用
 const logger = createLogger('admin');
 
 /**
- * 💡 改善: ユーザ種別に応じたリダイレクト先（招待画面のベースURL）を解決する共通ヘルパー
+ * ユーザ種別に応じたリダイレクト先（招待画面のベースURL）を解決する共通ヘルパー
  * 今後、コーチ用サイト(COACH)などが追加された場合も、この switch 文に定義を追加するだけで安全に拡張可能です。
  */
 function getRedirectBase(userType?: string): string {
@@ -116,10 +116,10 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
   try {
     const supabase = await createAdminClient();
 
-    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 💡 共通ヘルパーを利用
+    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 共通ヘルパーを利用
     // const redirectBase = user_type === USER_TYPES.ADMIN ? process.env.NEXT_PUBLIC_SITE_URL : process.env.NEXT_PUBLIC_STUDENT_URL;
 
-    // 💡 改善: 本登録用マスタ(com_m_user)にすでに存在していないか先に確認します
+    // 本登録用マスタ(com_m_user)にすでに存在していないか先に確認します
     const { data: existingUser } = await supabase
       .from('com_m_user')
       .select('id')
@@ -130,10 +130,10 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
     }
 
-    // 💡 改善: 有効期限を 7日間に設定（従来の24時間制限を突破） -> 💡 共通ヘルパーを利用
-    const expiresAt = getInvitationExpiry(7);
+    // 有効期限を 3日間に設定（従来の24時間制限を突破） -> 共通ヘルパーを利用
+    const expiresAt = getInvitationExpiry(3);
 
-    // 💡 改善: 暗号論的に安全なランダムトークンを生成
+    // 暗号論的に安全なランダムトークンを生成
     const invitationToken = randomBytes(32).toString('hex');
 
     // 1. 招待メールを送信し、アカウントを作成 -> 【変更】独自招待テーブルへのレコード挿入にリプレイス
@@ -165,7 +165,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       return { success: false, user_id: null, errorType: 'unexpected_error', message: "データの作成に失敗しました。" };
     }
 
-    const userId = inviteData.id; // 💡 既存機能（一括インポートなど）との互換性のため、発行された招待ID(UUID)を仮のuserIdとして引き継ぐ
+    const userId = inviteData.id; // 既存機能（一括インポートなど）との互換性のため、発行された招待ID(UUID)を仮のuserIdとして引き継ぐ
 
     // 2. DB側のロール紐付け -> 【変更】本登録時(メールリンク承認時)に移行するため、この時点での com_t_user_role への直接挿入はスキップ（上記で配列として保存済み）
     /*
@@ -180,7 +180,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     }
     */
 
-    // 独自メール送信処理を実行 (Resend) -> 💡 共通ヘルパーを利用してURLを解決
+    // 独自メール送信処理を実行 (Resend) -> 共通ヘルパーを利用してURLを解決
     const inviteUrl = getInvitationUrl(user_type, inviteData.token);
     const mailResult = await sendInvitationEmail({
       to: email,
@@ -188,7 +188,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       inviteUrl: inviteUrl
     });
 
-    // 💡 改善: メール送信結果をDBに記録
+    // メール送信結果をDBに記録
     await supabase
       .from('com_t_invitation')
       .update({
