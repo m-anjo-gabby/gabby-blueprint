@@ -1,10 +1,29 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { Home, Compass, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { logClientError } from '@gabby/lib/logger/actions'; // 共通パッケージからインポート
 
 export default function NotFound() {
+  useEffect(() => {
+    // 404が発生した際のコンテキスト（アクセスURLと流入元）を収集
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'Unknown URL';
+    const referrer = typeof document !== 'undefined' ? document.referrer : 'No referrer';
+
+    // サーバー側の共通アクション（Pino）を呼び出し、Vercelログへ構造化データとして記録
+    logClientError({
+      service: 'student',
+      message: `404 Not Found: User tried to access an invalid page`,
+      // system:runtime_error と区別しやすくするために digest の領域等にコンテキストを詰める
+      digest: '404_NOT_FOUND',
+      stack: `Requested URL: ${currentUrl}\nReferrer: ${referrer}`
+    }).catch((err) => {
+      console.error('Failed to send 404 log to Vercel:', err);
+    });
+  }, []);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 px-4">
       {/* 統一された外枠カード（インディゴ系デザインのガタつき防止コンテナ） */}
@@ -47,7 +66,7 @@ export default function NotFound() {
 
             {/* 補助用のセカンダリ導線 */}
             <p className="text-xs text-slate-400 mt-4 leading-normal">
-              『Gabby Blueprint English』で英語学習を続けるには、上のボタンからダッシュボードへ戻ってください。
+              上のボタンからダッシュボードへ戻ってください。
             </p>
           </div>
 
