@@ -130,10 +130,10 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
     }
 
-    // 💡 改善: 有効期限を 7日間に設定（従来の24時間制限を突破） -> 💡 共通ヘルパーを利用
-    const expiresAt = getInvitationExpiry(7);
+    // 有効期限を 3日間に設定（従来の24時間制限を突破） -> 共通ヘルパーを利用
+    const expiresAt = getInvitationExpiry(3);
 
-    // 💡 改善: 暗号論的に安全なランダムトークンを生成
+    // 暗号論的に安全なランダムトークンを生成
     const invitationToken = randomBytes(32).toString('hex');
 
     // 1. 招待メールを送信し、アカウントを作成 -> 【変更】独自招待テーブルへのレコード挿入にリプレイス
