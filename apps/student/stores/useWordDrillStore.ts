@@ -15,6 +15,8 @@ interface WordDrillState {
   wordIdx: number;
   phraseIdx: number;
   sortOrder: 'default' | 'alpha';
+  pendingWordCount: number;   // 未送信の単語消化数
+  pendingPhraseCount: number; // 未送信のフレーズ消化数
   
   // --- UI States ---
   isFlipped: boolean;
@@ -32,6 +34,7 @@ interface WordDrillState {
   nextStep: () => { isLast: boolean };
   prevStep: () => void; // 追加
   jumpTo: (wIdx: number, pIdx: number) => void;
+  clearPendingCounts: () => { wordCount: number, phraseCount: number }; // カウントを取得してリセット
   
   // UI Controls
   setIsFlipped: (val: boolean) => void;
@@ -60,6 +63,8 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
   wordIdx: 0,
   phraseIdx: 0,
   sortOrder: 'default',
+  pendingWordCount: 0,
+  pendingPhraseCount: 0,
   isFlipped: false,
   isAutoPlaying: false,
   showIndex: false,
@@ -73,6 +78,8 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
     wordIdx: startW,
     phraseIdx: startP,
     sortOrder: 'default',
+    pendingWordCount: 1, // 初期表示分
+    pendingPhraseCount: 1, // 初期表示分
     isFlipped: false,
     feedback: null,
     analysis: null,
@@ -83,7 +90,7 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
 
   // 次へ進む
   nextStep: () => {
-    const { words, wordIdx, phraseIdx } = get();
+    const { words, wordIdx, phraseIdx, pendingWordCount, pendingPhraseCount } = get();
     const currentWord = words[wordIdx];
     
     const resetDisplay = {
@@ -93,10 +100,10 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
     };
 
     if (phraseIdx < (currentWord?.phrases.length || 0) - 1) {
-      set({ ...resetDisplay, phraseIdx: phraseIdx + 1 });
+      set({ ...resetDisplay, phraseIdx: phraseIdx + 1, pendingPhraseCount: pendingPhraseCount + 1 });
       return { isLast: false };
     } else if (wordIdx < words.length - 1) {
-      set({ ...resetDisplay, wordIdx: wordIdx + 1, phraseIdx: 0 });
+      set({ ...resetDisplay, wordIdx: wordIdx + 1, phraseIdx: 0, pendingWordCount: pendingWordCount + 1, pendingPhraseCount: pendingPhraseCount + 1 });
       return { isLast: false };
     } else {
       set({ ...resetDisplay, isAutoPlaying: false });
@@ -132,15 +139,23 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
     }
   },
 
-  jumpTo: (wIdx, pIdx) => set({
+  clearPendingCounts: () => {
+    const { pendingWordCount, pendingPhraseCount } = get();
+    set({ pendingWordCount: 0, pendingPhraseCount: 0 });
+    return { wordCount: pendingWordCount, phraseCount: pendingPhraseCount };
+  },
+
+  jumpTo: (wIdx, pIdx) => set((state) => ({
     wordIdx: wIdx,
     phraseIdx: pIdx,
+    pendingWordCount: state.pendingWordCount + 1,
+    pendingPhraseCount: state.pendingPhraseCount + 1,
     isFlipped: false,
     isAutoPlaying: false,
     feedback: null,
     analysis: null,
     showIndex: false
-  }),
+  })),
 
   setIsFlipped: (val) => set({ isFlipped: val }),
   toggleFlip: () => set((state) => ({ isFlipped: !state.isFlipped })),

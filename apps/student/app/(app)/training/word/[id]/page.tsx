@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getWordData, toggleFavorite } from '@/actions/wordAction';
+import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
 import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
 import { useResumeStore } from '@/stores/useResumeStore';
 import { usePhraseStore } from '@/stores/usePhraseStore';
@@ -52,12 +52,14 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     words, wordIdx, phraseIdx, isAutoPlaying, showIndex, 
     feedback, analysis, loading,
     initDrill, setFeedback, setAnalysis, setLoading, nextStep, prevStep,
-    toggleAutoPlay, jumpTo, updatePhraseFavorite, reset 
+    toggleAutoPlay, jumpTo, updatePhraseFavorite, reset,
+    pendingWordCount, pendingPhraseCount, clearPendingCounts
   } = useWordDrillStore();
 
   // 初期化管理と二重遷移防止用Ref
   const isInitialized = useRef<string | null>(null);
   const isNavigating = useRef(false);
+  const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentWord = words[wordIdx];
   const currentPhrase = currentWord?.phrases[phraseIdx];
@@ -107,6 +109,36 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     }
     init();
   }, [sectionId, searchParams, showToast, initDrill, setLoading, reset]);
+
+  /**
+   * 学習進捗の同期（デバウンス送信 ＆ 離脱時送信）
+   */
+  const performSync = useCallback(async () => {
+    const { wordCount, phraseCount } = clearPendingCounts();
+    if (wordCount > 0 || phraseCount > 0) {
+      await reportWordProgress(sectionId, wordCount, phraseCount);
+    }
+  }, [sectionId, clearPendingCounts]);
+
+  // カウントの変化を監視してデバウンス
+  useEffect(() => {
+    if (pendingWordCount > 0 || pendingPhraseCount > 0) {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = setTimeout(performSync, 3000); // 3秒間操作が止まったら送信
+    }
+  }, [pendingWordCount, pendingPhraseCount, performSync]);
+
+  // コンポーネント離脱時に未送信分があれば即時同期
+  useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+      // アンマウント時は非同期で実行（awaitしない）
+      const { wordCount, phraseCount } = useWordDrillStore.getState().clearPendingCounts();
+      if (wordCount > 0 || phraseCount > 0) {
+        reportWordProgress(sectionId, wordCount, phraseCount);
+      }
+    };
+  }, [sectionId]);
 
   /**
    * 再生速度の同期

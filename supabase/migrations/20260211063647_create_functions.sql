@@ -274,3 +274,48 @@ REVOKE EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) FROM P
 -- 未ログイン画面の裏で動くNext.jsサーバー(Server Action)から、AdminClient(service_role)を用いて叩く運用に統一
 -- anon への直接公開を停止し、service_role のみに絞ることで安全性を引き上げ、警告を解消します。
 GRANT EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) TO service_role;
+
+---------------------------------------------
+-- 単語ドリル日次サマリーカウントアップ
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.increment_word_summary(
+  p_user_id UUID,
+  p_content_id UUID,
+  p_word_count INT,
+  p_phrase_count INT
+)
+RETURNS VOID AS $$
+DECLARE
+  v_user_timezone TEXT;
+  v_local_today DATE;
+BEGIN
+  -- 1. ユーザーマスタからタイムゾーンを取得（デフォルトは 'Asia/Tokyo'）
+  SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_user_timezone
+  FROM public.com_m_user
+  WHERE id = p_user_id AND delete_flg = '0';
+
+  -- 2. ユーザーのタイムゾーン基準で現在日付を切り出す
+  v_local_today := (CURRENT_TIMESTAMP AT TIME ZONE v_user_timezone)::date;
+
+  -- 3. サマリーテーブルへUpsert
+  INSERT INTO public.self_t_word_summary (
+    user_id, content_id, training_date, word_count, phrase_count
+  )
+  VALUES (
+    p_user_id, 
+    p_content_id, 
+    v_local_today, 
+    p_word_count, 
+    p_phrase_count
+  )
+  ON CONFLICT (user_id, content_id, training_date)
+  DO UPDATE SET 
+    word_count = self_t_word_summary.word_count + p_word_count,
+    phrase_count = self_t_word_summary.phrase_count + p_phrase_count,
+    update_date = NOW();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 一般公開を剥奪し、ログイン済みユーザーのみに実行を許可
+REVOKE EXECUTE ON FUNCTION public.increment_word_summary(UUID, UUID, INT, INT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.increment_word_summary(UUID, UUID, INT, INT) TO authenticated;

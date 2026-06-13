@@ -210,3 +210,29 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
     return [];
   }
 }
+
+/**
+ * 学習進捗（単語・フレーズの消化数）をサマリーテーブルに同期
+ */
+export async function reportWordProgress(contentId: string, wordCount: number, phraseCount: number) {
+  const ctx = await getLogContext();
+  if (wordCount === 0 && phraseCount === 0) return;
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase.rpc('increment_word_summary', {
+      p_user_id: user.id,
+      p_content_id: contentId,
+      p_word_count: wordCount,
+      p_phrase_count: phraseCount
+    });
+
+    if (error) throw error;
+    logger.info("word:report_progress_success", `Reported progress: ${wordCount} words, ${phraseCount} phrases`, { ...ctx, payload: { contentId, wordCount, phraseCount } });
+  } catch (err) {
+    logger.error("word:report_progress_failed", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId, wordCount, phraseCount } });
+  }
+}

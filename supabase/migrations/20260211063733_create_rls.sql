@@ -371,3 +371,26 @@ USING (
 WITH CHECK (
     public.get_jwt_user_type() = '0'
 );
+
+-- =========================================================================
+-- 23. 単語ドリル日次サマリー (public.self_t_word_summary)
+-- =========================================================================
+DROP POLICY IF EXISTS "Users can manage their own word summaries" ON public.self_t_word_summary;
+DROP POLICY IF EXISTS "Managers can view client's word summaries" ON public.self_t_word_summary;
+ALTER TABLE public.self_t_word_summary ENABLE ROW LEVEL SECURITY;
+
+-- [全操作] 受講生本人のみが自身の学習ログ（日次サマリー）を管理可能
+CREATE POLICY "Users can manage their own word summaries" ON public.self_t_word_summary
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- [参照] 組織管理者が自社受講生の進捗状況を分析・監査するための参照許可
+CREATE POLICY "Managers can view client's word summaries" ON public.self_t_word_summary
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_user u
+        WHERE u.id = public.self_t_word_summary.user_id
+          AND u.client_id = public.get_jwt_client_id()
+    )
+);
