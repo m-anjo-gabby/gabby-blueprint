@@ -165,7 +165,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       return { success: false, user_id: null, errorType: 'unexpected_error', message: "データの作成に失敗しました。" };
     }
 
-    const userId = inviteData.id; // 💡 既存機能（一括インポートなど）との互換性のため、発行された招待ID(UUID)を仮のuserIdとして引き継ぐ
+    const userId = inviteData.id; // 既存機能（一括インポートなど）との互換性のため、発行された招待ID(UUID)を仮のuserIdとして引き継ぐ
 
     // 2. DB側のロール紐付け -> 【変更】本登録時(メールリンク承認時)に移行するため、この時点での com_t_user_role への直接挿入はスキップ（上記で配列として保存済み）
     /*
