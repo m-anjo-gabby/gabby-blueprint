@@ -12,7 +12,8 @@ import { useRouter } from 'next/navigation';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { showConfirm } = useConfirm();
   const router = useRouter();
@@ -51,6 +52,7 @@ export default function LoginPage() {
     // エラーハンドリング（サインイン処理内の成功時はリダイレクト）
     if (result && result.error) {
       setError(result.error);
+      setPassword(''); // 認証失敗時はパスワードのみを空にする
     }
   };
 
@@ -84,6 +86,8 @@ export default function LoginPage() {
                   <input
                     name="email"
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="account@example.com"
                     required
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-base"
@@ -96,6 +100,8 @@ export default function LoginPage() {
                 <PasswordInput 
                   label="パスワード"
                   name="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
                 />
