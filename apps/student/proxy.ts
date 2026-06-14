@@ -84,8 +84,10 @@ export async function proxy(req: NextRequest) {
   }
 
   // --- D. アクセスログの記録 ---
-  // 公開ルートや静的ファイルを除外した、有効な画面アクセスのみを記録
-  if (!isPublicRoute && user) {
+  // Server Action (POSTリクエスト) は proxy:page_view ログから完全に除外する
+  // これにより、通信頻度の高い学習中の実績同期ログが画面アクセスログと混ざるのを防ぐ
+  const isPageAccess = req.method === 'GET';
+  if (isPageAccess && !isPublicRoute && user) {
     logger.info('page_view', `Access: ${pathname}`, {
       userId: user.id,
       email: user.email,

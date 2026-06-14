@@ -216,7 +216,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
  */
 export async function reportWordProgress(contentId: string, wordCount: number, phraseCount: number) {
   const ctx = await getLogContext();
-  if (wordCount === 0 && phraseCount === 0) return;
+  if (!contentId || (wordCount === 0 && phraseCount === 0)) return;
 
   try {
     const supabase = await createServerClient();

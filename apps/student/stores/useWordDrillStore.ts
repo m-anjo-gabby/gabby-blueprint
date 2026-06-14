@@ -4,19 +4,26 @@ import { create } from 'zustand';
 import { TrainingWord } from '@gabby/types/word';
 import { AnalysisResult, FeedbackConfig } from '@gabby/types/wordDrill';
 
+// 表示状態（フリップ、フィードバック等）をリセットするための共通オブジェクト
+const UI_RESET_STATE = {
+  isFlipped: false,
+  feedback: null,
+  analysis: null,
+};
+
 interface WordDrillState {
   // --- Data States ---
   words: TrainingWord[];
   contentName: string;
-  cefr: { id: string; label: string } | undefined; // CEFR情報を保持するステートを追加
+  cefr: { id: string; label: string } | undefined;
   loading: boolean;
   
   // --- Progress States ---
   wordIdx: number;
   phraseIdx: number;
   sortOrder: 'default' | 'alpha';
-  pendingWordCount: number;   // 未送信の単語消化数
-  pendingPhraseCount: number; // 未送信のフレーズ消化数
+  pendingWordCount: number;   // このセッション内で消化した（Nextを押した）単語数
+  pendingPhraseCount: number; // このセッション内で消化した（Nextを押した）フレーズ数
   
   // --- UI States ---
   isFlipped: boolean;
@@ -26,13 +33,12 @@ interface WordDrillState {
   analysis: AnalysisResult | null;
 
   // --- Actions ---
-  // cefr をオプション引数として追加
   initDrill: (words: TrainingWord[], name: string, cefr?: { id: string; label: string }, startW?: number, startP?: number) => void;
   setLoading: (loading: boolean) => void;
   
   // Navigation
   nextStep: () => { isLast: boolean };
-  prevStep: () => void; // 追加
+  prevStep: () => void;
   jumpTo: (wIdx: number, pIdx: number) => void;
   clearPendingCounts: () => { wordCount: number, phraseCount: number }; // カウントを取得してリセット
   
@@ -71,20 +77,21 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
   feedback: null,
   analysis: null,
 
-  initDrill: (words, name, cefr = undefined, startW = 0, startP = 0) => set({
-    words,
-    contentName: name,
-    cefr, // CEFR情報をセット
-    wordIdx: startW,
-    phraseIdx: startP,
-    sortOrder: 'default',
-    pendingWordCount: 1, // 初期表示分
-    pendingPhraseCount: 1, // 初期表示分
-    isFlipped: false,
-    feedback: null,
-    analysis: null,
-    loading: false
-  }),
+  initDrill: (words, name, cefr = undefined, startW = 0, startP = 0) => {
+    set({
+      words,
+      contentName: name,
+      cefr,
+      wordIdx: startW,
+      phraseIdx: startP,
+      sortOrder: 'default',
+      // 開いた瞬間もカウントする先行カウント方式
+      pendingWordCount: 1,
+      pendingPhraseCount: 1,
+      ...UI_RESET_STATE,
+      loading: false
+    });
+  },
 
   setLoading: (loading) => set({ loading }),
 
@@ -93,69 +100,82 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
     const { words, wordIdx, phraseIdx, pendingWordCount, pendingPhraseCount } = get();
     const currentWord = words[wordIdx];
     
-    const resetDisplay = {
-      isFlipped: false,
-      feedback: null,
-      analysis: null
-    };
-
     if (phraseIdx < (currentWord?.phrases.length || 0) - 1) {
-      set({ ...resetDisplay, phraseIdx: phraseIdx + 1, pendingPhraseCount: pendingPhraseCount + 1 });
+      // 同じ単語内の次のフレーズへ
+      set({ 
+        ...UI_RESET_STATE, 
+        phraseIdx: phraseIdx + 1, 
+        pendingPhraseCount: pendingPhraseCount + 1 
+      });
       return { isLast: false };
     } else if (wordIdx < words.length - 1) {
-      set({ ...resetDisplay, wordIdx: wordIdx + 1, phraseIdx: 0, pendingWordCount: pendingWordCount + 1, pendingPhraseCount: pendingPhraseCount + 1 });
+      // 次の単語へ
+      set({ 
+        ...UI_RESET_STATE, 
+        wordIdx: wordIdx + 1, 
+        phraseIdx: 0, 
+        pendingWordCount: pendingWordCount + 1, 
+        pendingPhraseCount: pendingPhraseCount + 1 
+      });
       return { isLast: false };
     } else {
-      set({ ...resetDisplay, isAutoPlaying: false });
+      // 全ての学習が終了
+      set({ 
+        ...UI_RESET_STATE, 
+        isAutoPlaying: false,
+        pendingWordCount: pendingWordCount + 1,
+        pendingPhraseCount: pendingPhraseCount + 1
+      });
       return { isLast: true };
     }
   },
 
-  // 【新規】前へ戻る
+  // 前へ戻る
   prevStep: () => {
     const { words, wordIdx, phraseIdx } = get();
 
-    const resetDisplay = {
-      isFlipped: false,
-      feedback: null,
-      analysis: null
-    };
-
-    // 1. 最初の単語の最初のフレーズなら何もしない
     if (wordIdx === 0 && phraseIdx === 0) return;
 
     if (phraseIdx > 0) {
-      // 2. 同じ単語内の前のフレーズへ
-      set({ ...resetDisplay, phraseIdx: phraseIdx - 1 });
+      set({ ...UI_RESET_STATE, phraseIdx: phraseIdx - 1 });
     } else {
-      // 3. 前の単語の最後のフレーズへ移動
       const prevWordIdx = wordIdx - 1;
       const prevWord = words[prevWordIdx];
       set({ 
-        ...resetDisplay, 
+        ...UI_RESET_STATE, 
         wordIdx: prevWordIdx, 
         phraseIdx: (prevWord?.phrases.length || 1) - 1 
       });
     }
   },
 
+  // 💡 修正点：モジュール空間の変数を排除し、Zustand内のステートから安全に抽出・初期化
   clearPendingCounts: () => {
     const { pendingWordCount, pendingPhraseCount } = get();
+
     set({ pendingWordCount: 0, pendingPhraseCount: 0 });
-    return { wordCount: pendingWordCount, phraseCount: pendingPhraseCount };
+    
+    return { 
+      wordCount: pendingWordCount, 
+      phraseCount: pendingPhraseCount 
+    };
   },
 
-  jumpTo: (wIdx, pIdx) => set((state) => ({
-    wordIdx: wIdx,
-    phraseIdx: pIdx,
-    pendingWordCount: state.pendingWordCount + 1,
-    pendingPhraseCount: state.pendingPhraseCount + 1,
-    isFlipped: false,
-    isAutoPlaying: false,
-    feedback: null,
-    analysis: null,
-    showIndex: false
-  })),
+  // インデックスからジャンプ
+  jumpTo: (wIdx, pIdx) => {
+    const { pendingWordCount, pendingPhraseCount } = get();
+    
+    set({
+      wordIdx: wIdx,
+      phraseIdx: pIdx,
+      // インデックスによるジャンプも「1ステップ学習を消化した」とみなす挙動を維持
+      pendingWordCount: pendingWordCount + 1,
+      pendingPhraseCount: pendingPhraseCount + 1,
+      ...UI_RESET_STATE,
+      isAutoPlaying: false,
+      showIndex: false
+    });
+  },
 
   setIsFlipped: (val) => set({ isFlipped: val }),
   toggleFlip: () => set((state) => ({ isFlipped: !state.isFlipped })),
@@ -186,9 +206,9 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
   reset: () => set({
     wordIdx: 0,
     phraseIdx: 0,
-    isFlipped: false,
+    pendingWordCount: 0,
+    pendingPhraseCount: 0,
+    ...UI_RESET_STATE,
     isAutoPlaying: false,
-    feedback: null,
-    analysis: null
   })
 }));
