@@ -2,13 +2,15 @@
 
 import React from 'react';
 import { ChevronLeft, ChevronDown } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { getCefrStyle } from '@gabby/lib/content/ui';
 import { cn } from '@/lib/utils';
 
-export const WordHeader: React.FC = () => {
-  const router = useRouter();
+interface WordHeaderProps {
+  onBack: () => void;
+}
+
+export const WordHeader: React.FC<WordHeaderProps> = ({ onBack }) => {
   const { contentName, cefr, words, wordIdx, setShowIndex } = useWordDrillStore();
   
   const currentWord = words[wordIdx];
@@ -24,7 +26,7 @@ export const WordHeader: React.FC = () => {
       {/* 1. ナビゲーション・タイトルエリア */}
       <div className="flex items-center justify-between gap-2 h-12 px-2">
         <button 
-          onClick={() => router.back()} 
+          onClick={onBack} 
           className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
         >
           <ChevronLeft size={20} strokeWidth={2.5} />

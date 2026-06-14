@@ -26,12 +26,14 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
         )
       `)
       .eq('content_id', contentId)
-      .neq('com_m_contents.content_scope', 9)
       .eq('status', 'live')
       .eq('com_m_phrase.status', 'live')
       .eq('com_m_phrase.com_t_favorite_phrase.user_id', user?.id)
       .order('frequency_rank', { ascending: true })
       .order('seq_no', { referencedTable: 'com_m_phrase', ascending: true });
+
+    // 注: RLSにより、権限がない場合は com_m_contents が inner join で空になるため、
+    // 結果として data 自体が空配列になります。
 
     if (error) {
       logger.error("word:get_training_data_failed", error.message, { ...ctx, payload: { contentId } });
@@ -39,8 +41,15 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
     }
 
     const rawData = data as any[];
+
+    // データが1件も取得できなかった場合
     if (!rawData || rawData.length === 0) {
-      return { words: [], contentName: 'Training' };
+      // 教材の存在自体を別途確認（RLSの影響を受けないようにするか、あるいは単に「利用不可」とする）
+      // ここではセキュリティを優先し、詳細な理由は伏せて「利用不可」のステータスを返します
+      return { 
+        words: [], 
+        contentName: 'Unavailable Content' 
+      };
     }
 
     const firstItem = rawData[0];
@@ -199,5 +208,32 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
   } catch (err) {
     logger.error("word:get_favorite_phrases_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
     return [];
+  }
+}
+
+/**
+ * 学習進捗（単語・フレーズの消化数）をサマリーテーブルに同期
+ */
+export async function reportWordProgress(contentId: string, wordCount: number, phraseCount: number, assessmentCount: number) {
+  const ctx = await getLogContext();
+  if (!contentId || (wordCount === 0 && phraseCount === 0 && assessmentCount === 0)) return;
+
+  try {
+    const supabase = await createServerClient();
+    
+    // p_user_id は渡さず、DB側の auth.uid() に委ねる。
+    // これによりクライアント側からのID偽装を物理的に防ぎ、Server Actionの負荷も軽減。
+    const { error } = await supabase.rpc('increment_word_summary', {
+      p_content_id: contentId,
+      p_word_count: wordCount,
+      p_phrase_count: phraseCount,
+      p_assessment_count: assessmentCount
+    });
+
+    if (error) throw error;
+    logger.info("word:report_progress_success", `Reported progress: ${wordCount} words, ${phraseCount} phrases, ${assessmentCount} assessments`, { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } });
+  } catch (err) {
+    // 記録処理の失敗が学習体験を阻害しないよう、エラーは捕捉してログに留める（学習継続を優先）
+    logger.error("word:report_progress_failed", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } });
   }
 }

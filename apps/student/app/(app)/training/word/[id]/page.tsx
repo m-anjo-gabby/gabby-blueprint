@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getWordData, toggleFavorite } from '@/actions/wordAction';
+import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
 import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
 import { useResumeStore } from '@/stores/useResumeStore';
 import { usePhraseStore } from '@/stores/usePhraseStore';
@@ -25,7 +25,7 @@ import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { PhraseItem } from '@gabby/types/word';
 
 /**
- * 発話スコアに基づいたフィードバックUIの設定を返す
+ * 发話スコアに基づいたフィードバックUIの設定を返す
  */
 const getFeedbackConfig = (score: number): FeedbackConfig => {
   if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
@@ -52,12 +52,18 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     words, wordIdx, phraseIdx, isAutoPlaying, showIndex, 
     feedback, analysis, loading,
     initDrill, setFeedback, setAnalysis, setLoading, nextStep, prevStep,
-    toggleAutoPlay, jumpTo, updatePhraseFavorite, reset 
+    toggleAutoPlay, jumpTo, updatePhraseFavorite, reset,
   } = useWordDrillStore();
 
   // 初期化管理と二重遷移防止用Ref
   const isInitialized = useRef<string | null>(null);
   const isNavigating = useRef(false);
+
+  // sectionIdの最新値を保持するRef。同期処理（useEffect内）で最新のIDを参照するために使用。
+  const sectionIdRef = useRef(sectionId);
+  useEffect(() => {
+    sectionIdRef.current = sectionId;
+  }, [sectionId]);
 
   const currentWord = words[wordIdx];
   const currentPhrase = currentWord?.phrases[phraseIdx];
@@ -98,6 +104,10 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         }
 
         initDrill(fetchedWords, name, cefr, startW, startP);
+        
+        // 教材を開いた瞬間の先行カウント（1件分）を即座に同期して、不意の離脱に備える
+        await syncProgressNow();
+
         if (isResumed) showToast("続きから再開しました", "success");
       } catch (e) {
         showToast("データの読み込みに失敗しました", "error");
@@ -107,6 +117,51 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     }
     init();
   }, [sectionId, searchParams, showToast, initDrill, setLoading, reset]);
+
+  /**
+   * 手動同期関数
+   * 溜まっている進捗があればサーバーへ報告し、ストアをクリアする
+   */
+  const syncProgressNow = useCallback(async () => {
+    const { wordCount, phraseCount, assessmentCount } = useWordDrillStore.getState().clearPendingCounts();
+    if (wordCount > 0 || phraseCount > 0 || assessmentCount > 0) {
+      await reportWordProgress(sectionIdRef.current, wordCount, phraseCount, assessmentCount);
+    }
+  }, []);
+
+  /**
+   * 5分ごとの定期自動保存
+   * 画面を開いている限り、5分ごとにプールされた進捗をバックグラウンドで安全に同期します。
+   */
+  useEffect(() => {
+    const FIVE_MINUTES = 5 * 60 * 1000; // 5分（ミリ秒）
+    
+    const intervalId = setInterval(() => {
+      syncProgressNow();
+    }, FIVE_MINUTES);
+
+    return () => clearInterval(intervalId);
+  }, [syncProgressNow]);
+
+  /**
+   * 前の画面に戻るボタン用のハンドラ
+   */
+  const handleBackToPrevious = async () => {
+    const ok = await showConfirm("トレーニングを終了しますか？", "前の画面に戻ります。", { 
+      variant: 'info', 
+      isModal: false 
+    });
+    if (!ok) return;
+
+    setLoading(true);
+    try {
+      // 戻る前に溜まっている進捗を確実にフラッシュ
+      await syncProgressNow();
+    } catch (e) {
+      console.error(e);
+    }
+    router.back();
+  };
 
   /**
    * 再生速度の同期
@@ -135,9 +190,12 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
     isNavigating.current = true;
     const { isLast } = nextStep();
-    if (isLast) showToast("全ての学習が完了しました！", "success");
+    if (isLast) {
+      showToast("全ての学習が完了しました！", "success");
+    }
     
-    setTimeout(() => { isNavigating.current = false; }, 400);
+    // ナビゲーションガードを長めに確保し、再レンダリングに伴うアンマウントの嵐をやり過ごす
+    setTimeout(() => { isNavigating.current = false; }, 1000);
   }, [nextStep, showToast]);
 
   /**
@@ -166,6 +224,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     startAssessment(currentPhrase.phrase_en, [currentWord.word_en], (result) => {
       setAnalysis(result);
       setFeedback(getFeedbackConfig(result.score));
+      useWordDrillStore.getState().incrementAssessmentCount();
     });
   };
 
@@ -187,7 +246,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   };
 
   /**
-   * 学習進捗を保存してダッシュボードへ戻る
+   * 💡 確実な離脱アクション2：学習進捗を保存してダッシュボードへ戻る
    */
   const handleSaveAndExit = async () => {
     if (!currentWord || !currentPhrase) return;
@@ -208,6 +267,10 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
     try {
       await saveResumeContent(sectionId, currentPhrase.phrase_id, metadata);
+      
+      // 💡 ブックマークして終了時は、即座に進捗の溜まりを同期
+      await syncProgressNow();
+
       await useResumeStore.getState().fetchResume(true);
       showToast("ブックマークしました", "success");
       router.push('/dashboard');
@@ -324,10 +387,10 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
           <AlertCircle size={40} className="text-amber-500" />
         </div>
-        <h2 className="text-xl font-black text-slate-900 mb-2">No Content Yet</h2>
-        <p className="text-slate-500 text-[13px] font-medium leading-relaxed mb-8 px-2">
-          この教材にはまだ単語が登録されていません。<br/>
-          別の教材を選択してください。
+        <h2 className="text-xl font-black text-slate-900 mb-2">Unavailable</h2>
+        <p className="text-slate-500 text-[13px] font-medium leading-relaxed mb-8 px-4">
+          この教材は現在ご利用いただけないか、<br/>
+          アクセスする権限がありません。
         </p>
         
         <div className="space-y-3">
@@ -338,9 +401,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
             Go to Dashboard
           </button>
           
-          {/* ヘッダーの戻るボタンと同じ挙動を期待するユーザー向けのサブボタン */}
           <button
-            onClick={() => router.back()}
+            onClick={handleBackToPrevious}
             className="w-full h-12 bg-transparent text-slate-400 rounded-2xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:opacity-60"
           >
             <ArrowLeft size={14} strokeWidth={3} />
@@ -361,7 +423,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
         
         <div className="flex-1 flex flex-col overflow-hidden p-4 pb-0">
-          <WordHeader />
+          <WordHeader onBack={handleBackToPrevious} />
           
           <div className="flex-1 flex flex-col justify-center overflow-hidden">
             <WordCard onToggleFavorite={handleToggleFavorite} />
