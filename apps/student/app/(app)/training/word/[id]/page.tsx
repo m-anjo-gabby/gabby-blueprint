@@ -128,17 +128,28 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     }
   }, [pendingWordCount, pendingPhraseCount, performSync]);
 
-  // コンポーネント離脱時に未送信分があれば即時同期
+  // ブラウザのタブ閉じ・アプリのバックグラウンド化対策
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // ユーザーが画面から離れた（タブ切り替え、アプリ終了、スリープ等）瞬間に同期
+      if (document.visibilityState === 'hidden') {
+        performSync();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [performSync]);
+
+  // コンポーネントのアンマウント（通常のページ遷移）時のクリーンアップ
   useEffect(() => {
     return () => {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-      // アンマウント時は非同期で実行（awaitしない）
-      const { wordCount, phraseCount } = useWordDrillStore.getState().clearPendingCounts();
-      if (wordCount > 0 || phraseCount > 0) {
-        reportWordProgress(sectionId, wordCount, phraseCount);
-      }
+      performSync();
     };
-  }, [sectionId]);
+  }, [performSync]);
 
   /**
    * 再生速度の同期

@@ -278,21 +278,29 @@ GRANT EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) TO serv
 ---------------------------------------------
 -- 単語ドリル日次サマリーカウントアップ
 ---------------------------------------------
+-- 以前のシグネチャ (UUID, UUID, INT, INT) を削除
+DROP FUNCTION IF EXISTS public.increment_word_summary(UUID, UUID, INT, INT);
+
 CREATE OR REPLACE FUNCTION public.increment_word_summary(
-  p_user_id UUID,
   p_content_id UUID,
   p_word_count INT,
   p_phrase_count INT
 )
 RETURNS VOID AS $$
 DECLARE
+  v_user_id UUID := auth.uid(); -- JWTから直接ユーザーIDを取得（セキュリティ向上）
   v_user_timezone TEXT;
   v_local_today DATE;
 BEGIN
+  -- 認証されていない場合は何もせず終了（安全策）
+  IF v_user_id IS NULL THEN
+    RETURN;
+  END IF;
+
   -- 1. ユーザーマスタからタイムゾーンを取得（デフォルトは 'Asia/Tokyo'）
   SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_user_timezone
   FROM public.com_m_user
-  WHERE id = p_user_id AND delete_flg = '0';
+  WHERE id = v_user_id AND delete_flg = '0';
 
   -- 2. ユーザーのタイムゾーン基準で現在日付を切り出す
   v_local_today := (CURRENT_TIMESTAMP AT TIME ZONE v_user_timezone)::date;
@@ -302,7 +310,7 @@ BEGIN
     user_id, content_id, training_date, word_count, phrase_count
   )
   VALUES (
-    p_user_id, 
+    v_user_id, 
     p_content_id, 
     v_local_today, 
     p_word_count, 
@@ -316,6 +324,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 一般公開を剥奪し、ログイン済みユーザーのみに実行を許可
-REVOKE EXECUTE ON FUNCTION public.increment_word_summary(UUID, UUID, INT, INT) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.increment_word_summary(UUID, UUID, INT, INT) TO authenticated;
+-- 新しいシグネチャに対して権限を再設定
+REVOKE EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT) TO authenticated;

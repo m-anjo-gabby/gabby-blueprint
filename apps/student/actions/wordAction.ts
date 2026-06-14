@@ -220,11 +220,10 @@ export async function reportWordProgress(contentId: string, wordCount: number, p
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
+    
+    // p_user_id は渡さず、DB側の auth.uid() に委ねる。
+    // これによりクライアント側からのID偽装を物理的に防ぎ、Server Actionの負荷も軽減。
     const { error } = await supabase.rpc('increment_word_summary', {
-      p_user_id: user.id,
       p_content_id: contentId,
       p_word_count: wordCount,
       p_phrase_count: phraseCount
@@ -233,6 +232,7 @@ export async function reportWordProgress(contentId: string, wordCount: number, p
     if (error) throw error;
     logger.info("word:report_progress_success", `Reported progress: ${wordCount} words, ${phraseCount} phrases`, { ...ctx, payload: { contentId, wordCount, phraseCount } });
   } catch (err) {
+    // 記録処理の失敗が学習体験を阻害しないよう、エラーは捕捉してログに留める（学習継続を優先）
     logger.error("word:report_progress_failed", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId, wordCount, phraseCount } });
   }
 }
