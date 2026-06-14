@@ -22,6 +22,8 @@ export default function PasswordChangePage() {
   
   // 現在のパスワード検証エラーを管理
   const [currentPasswordError, setCurrentPasswordError] = useState<string | null>(null);
+  // 新しいパスワード関連の一般的なエラーを管理
+  const [newPasswordGeneralError, setNewPasswordGeneralError] = useState<string | null>(null);
   
   const { showToast } = useToast();
   const router = useRouter();
@@ -45,27 +47,28 @@ export default function PasswordChangePage() {
    * 送信時のバリデーションと、サーバーからのレスポンスに応じた状態更新を担当
    */
   const handleSubmit = async (formData: FormData) => {
+    // エラーメッセージのリセット
+    setCurrentPasswordError(null);
+    setNewPasswordGeneralError(null);
+
     // 💡 1. サーバー送信前の強度チェック（文字数と英数混在）
     if (newPassword.length < 8) {
-      showToast('新しいパスワードは8文字以上で入力してください。', 'error');
+      setNewPasswordGeneralError('新しいパスワードは8文字以上で入力してください。');
       return;
     }
 
     if (strengthStatus === false) {
-      showToast('パスワードには英字と数字を両方含めてください。', 'error');
+      setNewPasswordGeneralError('パスワードには英字と数字を両方含めてください。');
       return;
     }
 
     // 2. パスワード一致チェック
     if (matchStatus === false) {
-      showToast('新しいパスワードが一致していません', 'error');
+      setNewPasswordGeneralError('新しいパスワードが一致していません。');
       return;
     }
 
-    // 3. エラーメッセージのリセット
-    setCurrentPasswordError(null);
-
-    // 4. サーバーアクションの実行
+    // 3. サーバーアクションの実行
     const result = await updatePassword(formData);
 
     if (result?.error) {
@@ -73,9 +76,11 @@ export default function PasswordChangePage() {
       if (result.error.includes('現在のパスワード') || result.error.includes('正しくありません')) {
         setCurrentPasswordError(result.error);
         setCurrentPassword(''); // 問題箇所のみクリア
+        showToast('パスワードの更新に失敗しました。', 'error'); // 現在のパスワードエラー時もトーストは出す
       } else {
         // 💡 共通コアで翻訳された「漏洩パスワード警告」や「過去と同じパスワードエラー」はトーストで綺麗に通知されます
-        showToast(result.error, 'error');
+        setNewPasswordGeneralError(result.error); // その他のエラーは新しいパスワードのインラインエラーとして表示
+        showToast('パスワードの更新に失敗しました。', 'error'); // 一般的な失敗トーストも出す
       }
     } else {
       // 成功時の処理
@@ -113,8 +118,11 @@ export default function PasswordChangePage() {
               name="newPassword" 
               value={newPassword}
               required 
-              minLength={8} /* 💡 8文字以上に引き上げ */
-              onChange={(e) => setNewPassword(e.target.value)}
+              minLength={8}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                setNewPasswordGeneralError(null); // 入力開始でエラーをクリア
+              }}
             />
             {/* 💡 英数混在のインラインフィードバックを追加 */}
             {strengthStatus !== null && !strengthStatus && (
@@ -131,8 +139,11 @@ export default function PasswordChangePage() {
               name="confirmPassword" 
               value={confirmPassword}
               required 
-              minLength={8} /* 💡 8文字以上に引き上げ */
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              minLength={8}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setNewPasswordGeneralError(null); // 入力開始でエラーをクリア
+              }}
             />
             
             {matchStatus !== null && (
@@ -147,6 +158,13 @@ export default function PasswordChangePage() {
               </p>
             )}
           </div>
+
+          {/* 💡 新しいパスワード関連の一般的なエラー表示 */}
+          {newPasswordGeneralError && (
+            <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in slide-in-from-top-1">
+              {newPasswordGeneralError}
+            </p>
+          )}
 
           {/* 送信ボタン：useFormStatusによる自動ローディング管理 */}
           <SubmitButton label="パスワードを更新" loadingLabel="更新中..." />
