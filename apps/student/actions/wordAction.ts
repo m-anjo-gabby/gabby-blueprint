@@ -214,9 +214,9 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
 /**
  * 学習進捗（単語・フレーズの消化数）をサマリーテーブルに同期
  */
-export async function reportWordProgress(contentId: string, wordCount: number, phraseCount: number) {
+export async function reportWordProgress(contentId: string, wordCount: number, phraseCount: number, assessmentCount: number) {
   const ctx = await getLogContext();
-  if (!contentId || (wordCount === 0 && phraseCount === 0)) return;
+  if (!contentId || (wordCount === 0 && phraseCount === 0 && assessmentCount === 0)) return;
 
   try {
     const supabase = await createServerClient();
@@ -226,13 +226,14 @@ export async function reportWordProgress(contentId: string, wordCount: number, p
     const { error } = await supabase.rpc('increment_word_summary', {
       p_content_id: contentId,
       p_word_count: wordCount,
-      p_phrase_count: phraseCount
+      p_phrase_count: phraseCount,
+      p_assessment_count: assessmentCount
     });
 
     if (error) throw error;
-    logger.info("word:report_progress_success", `Reported progress: ${wordCount} words, ${phraseCount} phrases`, { ...ctx, payload: { contentId, wordCount, phraseCount } });
+    logger.info("word:report_progress_success", `Reported progress: ${wordCount} words, ${phraseCount} phrases, ${assessmentCount} assessments`, { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } });
   } catch (err) {
     // 記録処理の失敗が学習体験を阻害しないよう、エラーは捕捉してログに留める（学習継続を優先）
-    logger.error("word:report_progress_failed", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId, wordCount, phraseCount } });
+    logger.error("word:report_progress_failed", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } });
   }
 }

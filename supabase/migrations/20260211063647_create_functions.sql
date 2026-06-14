@@ -284,7 +284,8 @@ DROP FUNCTION IF EXISTS public.increment_word_summary(UUID, UUID, INT, INT);
 CREATE OR REPLACE FUNCTION public.increment_word_summary(
   p_content_id UUID,
   p_word_count INT,
-  p_phrase_count INT
+  p_phrase_count INT,
+  p_assessment_count INT
 )
 RETURNS VOID AS $$
 DECLARE
@@ -307,19 +308,21 @@ BEGIN
 
   -- 3. サマリーテーブルへUpsert
   INSERT INTO public.self_t_word_summary (
-    user_id, content_id, training_date, word_count, phrase_count
+    user_id, content_id, training_date, word_count, phrase_count, assessment_count
   )
   VALUES (
     v_user_id, 
     p_content_id, 
     v_local_today, 
     p_word_count, 
-    p_phrase_count
+    p_phrase_count,
+    p_assessment_count
   )
   ON CONFLICT (user_id, content_id, training_date)
   DO UPDATE SET 
     word_count = self_t_word_summary.word_count + p_word_count,
     phrase_count = self_t_word_summary.phrase_count + p_phrase_count,
+    assessment_count = self_t_word_summary.assessment_count + p_assessment_count,
     update_date = NOW();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

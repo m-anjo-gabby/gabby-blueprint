@@ -749,6 +749,7 @@ CREATE TABLE public.self_t_word_summary (
   
   word_count INT NOT NULL DEFAULT 1,             -- その日に学習した「延べ」単語数
   phrase_count INT NOT NULL DEFAULT 0,           -- その日に学習した「延べ」フレーズ数
+  assessment_count INT NOT NULL DEFAULT 0,       -- その日に発話評価した回数
   
   insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),

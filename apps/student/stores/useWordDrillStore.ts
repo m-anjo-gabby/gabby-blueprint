@@ -24,6 +24,7 @@ interface WordDrillState {
   sortOrder: 'default' | 'alpha';
   pendingWordCount: number;   // このセッション内で消化した（Nextを押した）単語数
   pendingPhraseCount: number; // このセッション内で消化した（Nextを押した）フレーズ数
+  pendingAssessmentCount: number; // このセッション内で発話評価した回数
   
   // --- UI States ---
   isFlipped: boolean;
@@ -40,9 +41,10 @@ interface WordDrillState {
   nextStep: () => { isLast: boolean };
   prevStep: () => void;
   jumpTo: (wIdx: number, pIdx: number) => void;
-  clearPendingCounts: () => { wordCount: number, phraseCount: number }; // カウントを取得してリセット
+  clearPendingCounts: () => { wordCount: number, phraseCount: number, assessmentCount: number }; // カウントを取得してリセット
   
   // UI Controls
+  incrementAssessmentCount: () => void;
   setIsFlipped: (val: boolean) => void;
   toggleFlip: () => void;
   setShowIndex: (show: boolean) => void;
@@ -71,6 +73,7 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
   sortOrder: 'default',
   pendingWordCount: 0,
   pendingPhraseCount: 0,
+  pendingAssessmentCount: 0,
   isFlipped: false,
   isAutoPlaying: false,
   showIndex: false,
@@ -88,6 +91,7 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
       // 開いた瞬間もカウントする先行カウント方式
       pendingWordCount: 1,
       pendingPhraseCount: 1,
+      pendingAssessmentCount: 0,
       ...UI_RESET_STATE,
       loading: false
     });
@@ -151,13 +155,14 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
 
   // 💡 修正点：モジュール空間の変数を排除し、Zustand内のステートから安全に抽出・初期化
   clearPendingCounts: () => {
-    const { pendingWordCount, pendingPhraseCount } = get();
+    const { pendingWordCount, pendingPhraseCount, pendingAssessmentCount } = get();
 
-    set({ pendingWordCount: 0, pendingPhraseCount: 0 });
+    set({ pendingWordCount: 0, pendingPhraseCount: 0, pendingAssessmentCount: 0 });
     
     return { 
       wordCount: pendingWordCount, 
-      phraseCount: pendingPhraseCount 
+      phraseCount: pendingPhraseCount,
+      assessmentCount: pendingAssessmentCount
     };
   },
 
@@ -177,6 +182,9 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
     });
   },
 
+  incrementAssessmentCount: () => set((state) => ({ 
+    pendingAssessmentCount: state.pendingAssessmentCount + 1 
+  })),
   setIsFlipped: (val) => set({ isFlipped: val }),
   toggleFlip: () => set((state) => ({ isFlipped: !state.isFlipped })),
   setShowIndex: (show) => set({ showIndex: show }),

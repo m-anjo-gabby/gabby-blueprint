@@ -119,9 +119,9 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 溜まっている進捗があればサーバーへ報告し、ストアをクリアする
    */
   const syncProgressNow = useCallback(async () => {
-    const { wordCount, phraseCount } = useWordDrillStore.getState().clearPendingCounts();
-    if (wordCount > 0 || phraseCount > 0) {
-      await reportWordProgress(sectionIdRef.current, wordCount, phraseCount);
+    const { wordCount, phraseCount, assessmentCount } = useWordDrillStore.getState().clearPendingCounts();
+    if (wordCount > 0 || phraseCount > 0 || assessmentCount > 0) {
+      await reportWordProgress(sectionIdRef.current, wordCount, phraseCount, assessmentCount);
     }
   }, []);
 
@@ -220,6 +220,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     startAssessment(currentPhrase.phrase_en, [currentWord.word_en], (result) => {
       setAnalysis(result);
       setFeedback(getFeedbackConfig(result.score));
+      useWordDrillStore.getState().incrementAssessmentCount();
     });
   };
 
