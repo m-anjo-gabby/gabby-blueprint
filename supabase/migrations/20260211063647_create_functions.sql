@@ -278,7 +278,6 @@ GRANT EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) TO serv
 ---------------------------------------------
 -- 単語ドリル日次サマリーカウントアップ
 ---------------------------------------------
--- 以前のシグネチャ (UUID, UUID, INT, INT) を削除
 DROP FUNCTION IF EXISTS public.increment_word_summary(UUID, UUID, INT, INT);
 
 CREATE OR REPLACE FUNCTION public.increment_word_summary(
@@ -327,6 +326,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 新しいシグネチャに対して権限を再設定
-REVOKE EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT) TO authenticated;
+-- 作成直後のデフォルト権限（PUBLIC = 誰でも実行可能）を完全に剥奪
+REVOKE EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT, INT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT, INT) FROM anon;
+
+-- ログイン済みのユーザー（authenticated）にのみ、実行権限を限定して付与
+GRANT EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT, INT) TO authenticated;

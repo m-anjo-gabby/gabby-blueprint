@@ -37,15 +37,21 @@ export async function proxy(req: NextRequest) {
   const isAdmin = userType === '0';
 
   // B. 認可チェック
-  // 1. 管理者が生徒用パスにアクセスした場合（エラー画面かログインへ）
+  // 1. 管理者が生徒用パスにアクセスした場合
+  // アドミンアプリと同様、セッションが混在してループするのを防ぐためクッキーをクリアします
   if (isAdmin && !isPublicRoute) {
-    logger.warn('proxy:admin_access_denied', `Admin access denied: ${user.email} -> ${pathname}`, {
+    logger.warn('proxy:admin_access_denied', `Admin session detected in student app: ${user.email}`, {
       userId: user.id,
       email: user.email,
       path: pathname,
       payload: { userType }
     });
-    return NextResponse.redirect(new URL(loginPath, req.url));
+
+    const response = NextResponse.redirect(new URL(loginPath, req.url));
+    req.cookies.getAll().forEach((c) => {
+      if (c.name.startsWith('sb-')) response.cookies.delete(c.name);
+    });
+    return response;
   }
 
   // 2. ライセンス未保有の生徒
