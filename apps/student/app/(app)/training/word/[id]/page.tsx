@@ -104,6 +104,10 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         }
 
         initDrill(fetchedWords, name, cefr, startW, startP);
+        
+        // 教材を開いた瞬間の先行カウント（1件分）を即座に同期して、不意の離脱に備える
+        await syncProgressNow();
+
         if (isResumed) showToast("続きから再開しました", "success");
       } catch (e) {
         showToast("データの読み込みに失敗しました", "error");
