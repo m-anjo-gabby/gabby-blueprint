@@ -4,14 +4,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
-import { Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { createBrowserClient } from '@gabby/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resetPassword } from '@/actions/authAction';
+import { useToast } from '@gabby/lib/hooks/useToast';
 
-
-type PageViewStatus = 'initializing' | 'form' | 'success';
+type PageViewStatus = 'initializing' | 'form' | 'success' | 'error';
 
 export default function UpdatePasswordPage() {
   const [viewStatus, setViewStatus] = useState<PageViewStatus>('initializing');
@@ -20,6 +20,7 @@ export default function UpdatePasswordPage() {
   const router = useRouter();
   const supabase = createBrowserClient();
   
+  const { showToast } = useToast();
   // アンマウント後のタイマー実行を防ぐための参照
   const redirectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -35,13 +36,17 @@ export default function UpdatePasswordPage() {
     });
 
     // 既にCookie等でセッションがある場合も考慮して即時チェック
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (session) setViewStatus('form');
+      else if (error) setViewStatus('error');
     });
 
-    // 5秒経ってもセッションが来ない場合は、リンク切れか無効なアクセスとして扱う
+    // 5秒経ってもセッションが来ない場合は、セッションエラーとして扱う
+    // 無理にフォームを出さず、エラー画面を表示して再操作を促します
     const initTimer = setTimeout(() => {
-      setViewStatus('form');
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) setViewStatus('error');
+      });
     }, 5000);
 
     return () => {
@@ -81,6 +86,7 @@ export default function UpdatePasswordPage() {
       if (result.error) {
         // 💡 コア側で翻訳された綺麗な日本語エラー（漏洩検知や同一パスワード制限など）がそのまま設定されます
         setError(result.error);
+        showToast('パスワードの更新に失敗しました。', 'error');
         setLoading(false);
       } else {
         // 成功時
@@ -147,11 +153,13 @@ export default function UpdatePasswordPage() {
                   placeholder="••••••••"
                 />
 
+                {/* 💡 フィールド直下のエラー表示 */}
                 {error && (
-                  <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-xs font-medium">
+                  <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in slide-in-from-top-1">
                     {error}
-                  </div>
+                  </p>
                 )}
+                <div className="pt-2" />
 
                 <button
                   type="submit"
@@ -203,6 +211,30 @@ export default function UpdatePasswordPage() {
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
               >
                 ログイン画面へ移動 <ArrowLeft size={16} className="rotate-180" />
+              </Link>
+            </motion.div>
+          )}
+
+          {/* 4. セッションエラー時（リンク切れ等） */}
+          {viewStatus === 'error' && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center text-center py-4"
+            >
+              <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-6 h-6 text-amber-500" />
+              </div>
+              <h1 className="text-xl font-bold text-slate-800">セッションが無効です</h1>
+              <p className="text-sm text-slate-500 mt-3 mb-8 leading-relaxed max-w-xs">
+                パスワード設定リンクの有効期限が切れているか、正しく認証できませんでした。もう一度リセットメールの送信からやり直してください。
+              </p>
+              <Link
+                href="/forgot-password"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
+              >
+                再設定メールをリクエストする
               </Link>
             </motion.div>
           )}

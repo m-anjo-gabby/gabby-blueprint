@@ -49,12 +49,27 @@ function translateAuthError(message: string): string {
     return '新しいパスワードは現在と同じものは使用できません。';
   }
   
-  // Proプラン機能「Prevent use of leaked passwords」の検知ハンドル
+  // 1. 漏洩検知（HIBP: Have I Been Pwned 等）
   if (lowerMsg.includes('leaked') || lowerMsg.includes('pwned') || lowerMsg.includes('compromised')) {
     return 'このパスワードは過去にデータ漏洩の被害に遭った可能性があるため使用できません。他のパスワードを指定してください。';
   }
+
+  // 2. 脆弱性・推測のしやすさ（Weak / Common / Guessable）
+  if (
+    lowerMsg.includes('common') || 
+    lowerMsg.includes('weak') || 
+    lowerMsg.includes('easy to guess')
+  ) {
+    return 'このパスワードは単純すぎるか推測されやすいため使用できません。より複雑なパスワードを設定してください。';
+  }
+
+  // セッション欠落（本番環境でのCookie不整合や期限切れなど）
+  if (lowerMsg.includes('session missing')) {
+    return '認証セッションが無効、または期限が切れています。一度ログアウトして再度ログインしてからお試しください。';
+  }
   
-  return 'パスワードの更新に失敗しました。';
+  // 想定外のエラー時は、原因究明のために生のメッセージを付与して返却
+  return `パスワードの更新に失敗しました。(${message})`;
 }
 
 /**
