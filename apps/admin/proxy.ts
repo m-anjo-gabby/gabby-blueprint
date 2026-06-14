@@ -27,14 +27,21 @@ export async function proxy(req: NextRequest) {
   const roles = (user.app_metadata?.roles as string[] | undefined) || [];
   const isAdmin = userType === '0';
 
-  // 1. 生徒がアドミンアプリにアクセスした場合
-  if (!isAdmin && !isPublicRoute) {
-    logger.warn('proxy:admin_access_blocked', `Non-admin access blocked: ${user.email}`, {
+  // 1. 生徒（非管理者）がアドミンアプリにアクセスした場合
+  // リダイレクトループ（!isAdmin -> /login -> isLogged -> /dashboard）を防ぐため、
+  // セッションを物理的に破棄してからログイン画面へ戻します。
+  if (!isAdmin) {
+    logger.warn('proxy:admin_access_blocked', `Non-admin session detected in admin app: ${user.email}`, {
       userId: user.id,
       path: pathname,
       payload: { userType }
     });
-    return NextResponse.redirect(new URL(loginPath, req.url));
+
+    const response = NextResponse.redirect(new URL(loginPath, req.url));
+    req.cookies.getAll().forEach((c) => {
+      if (c.name.startsWith('sb-')) response.cookies.delete(c.name);
+    });
+    return response;
   }
 
   // 2. ルート/ログインページアクセス
@@ -55,19 +62,18 @@ export async function proxy(req: NextRequest) {
   }
 
   // --- C. アクセスログ（PageView）の記録 ---
-  if (!isPublicRoute) {
-    // prefetchを除外判定
-    const isPrefetch = req.headers.get('purpose') === 'prefetch' || !!req.headers.get('x-nextjs-data');
-    
-    // Pino版ロガーでの出力
-    // userId は明示的に user.id を渡す（Middleware内では headers() がまだ未確定な場合があるため）
+  const isPageAccess = req.method === 'GET';
+  const isPrefetch = req.headers.get('purpose') === 'prefetch' || !!req.headers.get('x-nextjs-data');
+
+  if (isPageAccess && !isPrefetch && !isPublicRoute && user) {
     logger.info('page_view', `Admin Access: ${pathname}`, {
       userId: user.id,
+      email: user.email,
       path: pathname,
       payload: {
         roles,
-        isPrefetch,
         method: req.method,
+        userAgent: req.headers.get('user-agent'),
         referer: req.headers.get('referer'),
       }
     });

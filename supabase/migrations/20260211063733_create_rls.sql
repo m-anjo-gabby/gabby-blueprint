@@ -107,12 +107,16 @@ ALTER TABLE public.com_m_contents ENABLE ROW LEVEL SECURITY;
 -- [参照] 共通コンテンツ(scope=0)、または自社に対してアクセス権(com_m_contents_access)が許可されているもののみ閲覧可能
 CREATE POLICY "Users can view common or assigned corpora" ON public.com_m_contents
 FOR SELECT TO authenticated USING (
-    content_scope = 0
-    OR EXISTS (
-        SELECT 1 FROM public.com_m_contents_access a
-        WHERE a.content_id = public.com_m_contents.content_id
-          AND a.client_id = public.get_jwt_client_id()
-          AND a.delete_flg = '0'
+    delete_flg = '0'
+    AND content_scope <> 9 -- 非公開(9)は常に除外
+    AND (
+        content_scope = 0
+        OR EXISTS (
+            SELECT 1 FROM public.com_m_contents_access a
+            WHERE a.content_id = public.com_m_contents.content_id
+              AND a.client_id = public.get_jwt_client_id()
+              AND a.delete_flg = '0'
+        )
     )
 );
 
@@ -174,7 +178,8 @@ ALTER TABLE public.com_m_word ENABLE ROW LEVEL SECURITY;
 -- [参照] 親となるコンテンツ(com_m_contents)のRLS参照をパスできる単語のみ安全に閲覧可能
 CREATE POLICY "Users can view words of accessible corpora" ON public.com_m_word
 FOR SELECT TO authenticated USING (
-    EXISTS (
+    status = 'live' -- 公開中の単語のみ
+    AND EXISTS (
         SELECT 1 FROM public.com_m_contents c
         WHERE c.content_id = public.com_m_word.content_id
     )
@@ -190,7 +195,8 @@ ALTER TABLE public.com_m_phrase ENABLE ROW LEVEL SECURITY;
 -- [参照] アクセス権のある単語マスタに紐づくフレーズのみ閲覧可能
 CREATE POLICY "Users can view phrases of accessible words" ON public.com_m_phrase
 FOR SELECT TO authenticated USING (
-    EXISTS (
+    status = 'live' -- 公開中のフレーズのみ
+    AND EXISTS (
         SELECT 1 FROM public.com_m_word w
         WHERE w.word_id = public.com_m_phrase.word_id
     )
@@ -364,4 +370,27 @@ USING (
 )
 WITH CHECK (
     public.get_jwt_user_type() = '0'
+);
+
+-- =========================================================================
+-- 23. 単語ドリル日次サマリー (public.self_t_word_summary)
+-- =========================================================================
+DROP POLICY IF EXISTS "Users can manage their own word summaries" ON public.self_t_word_summary;
+DROP POLICY IF EXISTS "Managers can view client's word summaries" ON public.self_t_word_summary;
+ALTER TABLE public.self_t_word_summary ENABLE ROW LEVEL SECURITY;
+
+-- [全操作] 受講生本人のみが自身の学習ログ（日次サマリー）を管理可能
+CREATE POLICY "Users can manage their own word summaries" ON public.self_t_word_summary
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- [参照] 組織管理者が自社受講生の進捗状況を分析・監査するための参照許可
+CREATE POLICY "Managers can view client's word summaries" ON public.self_t_word_summary
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_user u
+        WHERE u.id = public.self_t_word_summary.user_id
+          AND u.client_id = public.get_jwt_client_id()
+    )
 );
