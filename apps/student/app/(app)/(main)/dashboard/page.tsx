@@ -94,7 +94,7 @@ export default function StudentDashboard() {
       {/* 学習ログ導線 */}
       <section className="px-2">
         <button 
-          onClick={() => router.push('/training')}
+          onClick={() => router.push('/training/performance')}
           className="w-full p-4 bg-white border border-slate-100 rounded-[28px] shadow-sm flex items-center justify-between hover:bg-slate-50/80 hover:border-slate-200 transition-all group active:scale-[0.99] cursor-pointer"
         >
           <div className="flex items-center gap-3 text-left">
@@ -103,8 +103,8 @@ export default function StudentDashboard() {
               <BarChart3 size={18} />
             </div>
             <div>
-              <p className="text-[9px] font-black tracking-wider text-indigo-600 uppercase">Training Logs</p>
-              <p className="text-xs font-black text-slate-700 mt-0.5">現在の到達度とパフォーマンスを確認</p>
+              <p className="text-[9px] font-black tracking-wider text-indigo-600 uppercase">Training performance</p>
+              <p className="text-xs font-black text-slate-700 mt-0.5">現在のパフォーマンスを確認</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
