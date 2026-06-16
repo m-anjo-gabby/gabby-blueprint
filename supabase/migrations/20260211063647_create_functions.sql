@@ -332,3 +332,39 @@ REVOKE EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT, INT) FR
 
 -- ログイン済みのユーザー（authenticated）にのみ、実行権限を限定して付与
 GRANT EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT, INT) TO authenticated;
+
+---------------------------------------------
+-- FUNCTION: public.get_client_user_list
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_client_user_list()
+RETURNS SETOF private.vw_user_list
+LANGUAGE plpgsql
+SECURITY DEFINER -- Runs with the privileges of the function creator (e.g., postgres)
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    -- Get the client_id from the current user's JWT
+    -- This function (public.get_jwt_client_id()) is assumed to exist and correctly extract client_id from the JWT.
+    _client_id := public.get_jwt_client_id();
+
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    SELECT *
+    FROM private.vw_user_list
+    WHERE client_id = _client_id
+    ORDER BY insert_date DESC;
+END;
+$$;
+
+COMMENT ON FUNCTION public.get_client_user_list() IS '現在のユーザーのクライアントに所属する全ユーザー（本登録済みおよび招待中）のリストを返します。';
+
+-- 作成直後のデフォルト権限（PUBLIC = 誰でも実行可能）を完全に剥奪
+REVOKE EXECUTE ON FUNCTION public.get_client_user_list() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_client_user_list() FROM anon;
+-- Grant execution to authenticated users
+GRANT EXECUTE ON FUNCTION public.get_client_user_list() TO authenticated;

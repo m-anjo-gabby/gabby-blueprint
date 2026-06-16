@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-// 💡 アイコンを BarChart3 に変更し、ArrowRight を追加
-import { BookOpen, CheckCircle2, BarChart3, ArrowRight } from 'lucide-react';
+// 💡 アイコンを BarChart3 に変更し、ArrowRight, Eye を追加
+import { BookOpen, CheckCircle2, BarChart3, ArrowRight, Eye } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Stores & Utils
@@ -21,6 +21,7 @@ import { NavigationGrid } from './_components/NavigationGrid';
 import { ResumeCard } from './_components/ResumeCard';
 import { DashboardEmptyState } from './_components/DashboardEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 
 // 未確定機能の表示フラグ（採用時に true に変更）
 const SHOW_EXPERIMENTAL_FEATURES = false;
@@ -33,6 +34,8 @@ export default function StudentDashboard() {
   // Stores
   const { allContents, isLoading, fetchAllContents, updateFavoriteStatus } = useContentStore();
   const { resumeData, isResumeLoading, fetchResume, clearResume } = useResumeStore();
+  const user = useUserStore((state) => state.user);
+  const isMonitor = user?.app_metadata?.roles?.includes('monitor');
 
   // 1. 初期データの取得
   useEffect(() => {
@@ -111,6 +114,34 @@ export default function StudentDashboard() {
             <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
           </div>
         </button>
+        {/* モニター専用画面への導線 */}
+        {isMonitor && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-4"
+          >
+            <button
+              onClick={() => router.push('/monitor')}
+              className="w-full p-4 bg-white border border-slate-100 rounded-[28px] shadow-sm flex items-center justify-between hover:bg-slate-50/80 hover:border-slate-200 transition-all group active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-center gap-3 text-left">
+                {/* アイコン背景を異なる色にして区別 */}
+                <div className="w-10 h-10 bg-linear-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs">
+                  <Eye size={18} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black tracking-wider text-purple-600 uppercase">Monitor Dashboard</p>
+                  <p className="text-xs font-black text-slate-700 mt-0.5">受講生の学習状況をモニタリング</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <ArrowRight size={14} className="text-slate-300 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </button>
+          </motion.div>
+        )}
       </section>
 
       {/* 再開セクション：学習リズムを維持するための重要エリア */}

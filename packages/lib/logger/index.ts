@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 /**
  * ログレベルの定義
  */
-export type LogService = 'admin' | 'student' | 'api' | 'worker' | 'common' | 'mail';
+export type LogService = 'admin' | 'student' | 'api' | 'worker' | 'common' | 'mail' | 'monitor';
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
 /**
