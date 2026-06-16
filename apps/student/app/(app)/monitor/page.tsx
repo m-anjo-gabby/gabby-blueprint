@@ -5,12 +5,10 @@ import {
   LayoutDashboard, 
   BookOpen, 
   Zap, 
-  ChevronLeft
+  ArrowLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// actions/Actionやコンポーネントのインポート（既存パスを維持）
 import { 
   getMonitorUserList, 
   getMonitorWordHistory, 
@@ -85,28 +83,27 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
       {/* ────────────── 🚀 フラット＆ミニマル・グランドヘッダー（リファイン） ────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         
-        {/* 左側：戻るボタン ＋ タイトル（アイコン併記） ＋ サブテキスト説明文 */}
-        <div className="flex items-start gap-4">
+        {/* 左側：パンくず一体型の戻る導線 ＋ タイトル ＋ サブテキスト説明文 */}
+        <div className="space-y-1">
+          {/* ✨ 改善案：四角い浮いたボタンを廃止し、パンくずナビゲーション風に美しく統合 */}
           <Link
             href="/dashboard"
-            className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-200/60 shadow-2xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all mt-0.5"
-            title="ダッシュボードに戻る"
+            className="inline-flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-[0.12em] font-mono select-none group transition-colors"
           >
-            <ChevronLeft size={18} strokeWidth={2.5} />
+            <ArrowLeft size={10} className="transform group-hover:-translate-x-0.5 transition-transform" strokeWidth={3} />
+            <span>Dashboard</span>
+            <span className="text-slate-300 mx-0.5">/</span>
+            <span className="text-indigo-500/90">Client Monitor</span>
           </Link>
 
-          <div className="space-y-1">
-            <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.15em] font-mono block">
-              Client Monitor / Management
-            </span>
-            
+          <div className="pt-0.5">
             <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
               <Users size={22} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
               モニタリングダッシュボード
             </h1>
 
             {/* 💡 復活：親切で分かりやすいサブテキスト */}
-            <p className="text-xs font-bold text-slate-400 max-w-2xl leading-relaxed">
+            <p className="text-xs font-bold text-slate-400 max-w-2xl leading-relaxed mt-1">
               所属受講生の学習成果のトラッキング、および詳細ログのアナリティクス
             </p>
           </div>
@@ -156,6 +153,7 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
       <div className="min-h-[400px]">
         {view === 'overview' && (
           <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-[24px] border border-slate-200/60 bg-slate-50/40" />}>
+            {/* 🛠️ シンタックスエラー箇所を正常に修復 */}
             <MonitorUserList 
               users={users} 
               wordHistory={wordHistory} 
