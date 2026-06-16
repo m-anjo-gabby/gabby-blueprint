@@ -108,10 +108,10 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
           <div className="relative flex items-center justify-between">
             <button
               onClick={() => router.push('/training/performance')}
-              className="p-2 -ml-2 hover:bg-indigo-100/50 rounded-2xl transition-all active:scale-90 text-slate-500 flex items-center gap-1 text-sm font-bold"
+              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+              title="パフォーマンスに戻る"
             >
-              <ChevronLeft size={20} className="text-slate-700" />
-              <span className="text-xs font-black text-slate-500 tracking-tight pr-1">PERFORMANCE</span>
+              <ChevronLeft size={20} strokeWidth={2.5} />
             </button>
             
             <div className="text-right">
