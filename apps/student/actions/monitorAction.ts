@@ -30,6 +30,7 @@ export interface MonitorUser {
 }
 
 export interface MonitorWordSummaryHistoryItem extends WordSummaryHistoryItem {
+  user_id: string;
   com_m_user: {
     user_name: string | null;
     email: string;
@@ -83,30 +84,29 @@ export async function getMonitorUserList(): Promise<{ success: boolean; data: Mo
 
 /**
  * 特定のユーザーまたは全ユーザーの単語ドリル履歴を取得する (モニター用)
- * @param yearMonth 'YYYY-MM' 形式の文字列
+ * @param startDate 開始日 (ISO string)
+ * @param endDate 終了日 (ISO string)
  * @param userIds フィルタリングするユーザーIDの配列 (オプション)
  */
 export async function getMonitorWordHistory(
-  yearMonth: string,
+  startDate: string,
+  endDate: string,
   userIds?: string[]
 ): Promise<{ success: boolean; data: MonitorWordSummaryHistoryItem[]; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("monitor:get_word_history_start", "Fetching monitor word history", { ...ctx, yearMonth, userIds });
+  logger.info("monitor:get_word_history_start", "Fetching monitor word history", { ...ctx, startDate, endDate, userIds });
 
   try {
     const supabase = await createServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    // 月の開始日と終了日を計算 (UTCベースでクエリ)
-    const [year, month] = yearMonth.split('-').map(Number);
-    const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
-    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
-
     let query = supabase
       .from("self_t_word_summary")
       .select(`
+        summary_id,
         content_id,
+        user_id,
         training_date,
         word_count,
         phrase_count,
@@ -160,25 +160,22 @@ export async function getMonitorWordHistory(
 
 /**
  * 特定のユーザーまたは全ユーザーのスプリント履歴を取得する (モニター用)
- * @param yearMonth 'YYYY-MM' 形式の文字列
+ * @param startDate 開始日 (ISO string)
+ * @param endDate 終了日 (ISO string)
  * @param userIds フィルタリングするユーザーIDの配列 (オプション)
  */
 export async function getMonitorSprintHistory(
-  yearMonth: string,
+  startDate: string,
+  endDate: string,
   userIds?: string[]
 ): Promise<{ success: boolean; data: MonitorSprintHistoryItem[]; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("monitor:get_sprint_history_start", "Fetching monitor sprint history", { ...ctx, yearMonth, userIds });
+  logger.info("monitor:get_sprint_history_start", "Fetching monitor sprint history", { ...ctx, startDate, endDate, userIds });
 
   try {
     const supabase = await createServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
-
-    // 月の開始日と終了日を計算 (UTCベースでクエリ)
-    const [year, month] = yearMonth.split('-').map(Number);
-    const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
-    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
 
     let query = supabase
       .from("self_t_sprint")
