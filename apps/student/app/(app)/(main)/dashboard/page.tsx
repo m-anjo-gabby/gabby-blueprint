@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-// 💡 アイコンを BarChart3 に変更し、ArrowRight, Eye を追加
 import { BookOpen, CheckCircle2, BarChart3, ArrowRight, Eye } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -23,7 +22,6 @@ import { DashboardEmptyState } from './_components/DashboardEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 
-// 未確定機能の表示フラグ（採用時に true に変更）
 const SHOW_EXPERIMENTAL_FEATURES = false;
 
 export default function StudentDashboard() {
@@ -94,59 +92,67 @@ export default function StudentDashboard() {
       {/* クイックナビゲーション */}
       <NavigationGrid />
 
-      {/* 学習ログ導線 */}
-      <section className="px-2">
-        <button 
-          onClick={() => router.push('/training/performance')}
-          className="w-full p-4 bg-white border border-slate-100 rounded-[28px] shadow-sm flex items-center justify-between hover:bg-slate-50/80 hover:border-slate-200 transition-all group active:scale-[0.99] cursor-pointer"
-        >
-          <div className="flex items-center gap-3 text-left">
-            {/* アイコン背景をインディゴのグラデーションにしてアクセントに */}
-            <div className="w-10 h-10 bg-linear-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs">
-              <BarChart3 size={18} />
-            </div>
-            <div>
-              <p className="text-[9px] font-black tracking-wider text-indigo-600 uppercase">Training performance</p>
-              <p className="text-xs font-black text-slate-700 mt-0.5">現在のパフォーマンスを確認</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
-          </div>
-        </button>
-        {/* モニター専用画面への導線 */}
-        {isMonitor && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mt-4"
+      {/* ────────────── 📊 データ・アナリティクスセクション ────────────── */}
+      {/* 💡 改善点: セクション見出しを設けることで、上のナビゲーショングリッドとの境界を明確に分離 */}
+      <section className="space-y-4 px-2">
+        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 px-2 select-none">
+          {/* 下の見出し（Continue Learning）と同じインディゴ基調のグラデーションピン */}
+          <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
+          Analytics & Insights
+        </h2>
+
+        <div className="space-y-3">
+          {/* 1. トレーニングパフォーマンス導線 */}
+          <button 
+            onClick={() => router.push('/training/performance')}
+            className="w-full p-4 bg-white border border-slate-100 rounded-[28px] shadow-sm flex items-center justify-between hover:bg-slate-50/80 hover:border-slate-200 transition-all group active:scale-[0.99] cursor-pointer"
           >
-            <button
-              onClick={() => router.push('/monitor')}
-              className="w-full p-4 bg-white border border-slate-100 rounded-[28px] shadow-sm flex items-center justify-between hover:bg-slate-50/80 hover:border-slate-200 transition-all group active:scale-[0.99] cursor-pointer"
+            <div className="flex items-center gap-3 text-left">
+              <div className="w-10 h-10 bg-linear-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs">
+                <BarChart3 size={18} />
+              </div>
+              <div>
+                <p className="text-[9px] font-black tracking-wider text-indigo-600 uppercase">Training performance</p>
+                <p className="text-xs font-black text-slate-700 mt-0.5">現在のパフォーマンスを確認</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+            </div>
+          </button>
+
+          {/* 2. モニター専用画面への導線（ロール制限） */}
+          {isMonitor && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, ease: "easeOut" }}
             >
-              <div className="flex items-center gap-3 text-left">
-                {/* アイコン背景を異なる色にして区別 */}
-                <div className="w-10 h-10 bg-linear-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs">
-                  <Eye size={18} />
+              <button
+                onClick={() => router.push('/monitor')}
+                className="w-full p-4 bg-white border border-slate-100 rounded-[28px] shadow-sm flex items-center justify-between hover:bg-slate-50/80 hover:border-slate-200 transition-all group active:scale-[0.99] cursor-pointer"
+              >
+                <div className="flex items-center gap-3 text-left">
+                  <div className="w-10 h-10 bg-linear-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs">
+                    <Eye size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black tracking-wider text-purple-600 uppercase">Monitor Dashboard</p>
+                    <p className="text-xs font-black text-slate-700 mt-0.5">受講生の状況をモニタリング</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[9px] font-black tracking-wider text-purple-600 uppercase">Monitor Dashboard</p>
-                  <p className="text-xs font-black text-slate-700 mt-0.5">受講生の学習状況をモニタリング</p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <ArrowRight size={14} className="text-slate-300 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all" />
                 </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <ArrowRight size={14} className="text-slate-300 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all" />
-              </div>
-            </button>
-          </motion.div>
-        )}
+              </button>
+            </motion.div>
+          )}
+        </div>
       </section>
 
       {/* 再開セクション：学習リズムを維持するための重要エリア */}
       <section className="space-y-6 px-2">
-        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 px-2">
+        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 px-2 select-none">
           <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
           Continue Learning
         </h2>
@@ -170,7 +176,7 @@ export default function StudentDashboard() {
       {SHOW_EXPERIMENTAL_FEATURES && (
         /* おすすめセクション */
         <section className="space-y-6 px-2">
-          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 px-2">
+          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 px-2 select-none">
             <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" /> 
             Picked for You
           </h2>

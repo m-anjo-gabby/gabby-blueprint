@@ -18,6 +18,7 @@ import {
 import { MonitorUserList } from './_components/MonitorUserList';
 import { MonitorWordHistoryView } from './_components/MonitorWordHistoryView';
 import { MonitorSprintHistoryView } from './_components/MonitorSprintHistoryView';
+import { MonitorToggle } from './_components/MonitorToggle'; // 💡 追加
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,7 @@ interface MonitorPageProps {
     userIds?: string;
     startDate?: string;
     endDate?: string;
+    includeMonitor?: string;
   }>;
 }
 
@@ -39,8 +41,11 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
     view = 'overview', 
     userIds, 
     startDate: qStart, 
-    endDate: qEnd 
+    endDate: qEnd,
+    includeMonitor: qIncludeMonitor
   } = resolvedParams;
+
+  const includeMonitor = qIncludeMonitor === 'true';
 
   // デフォルトの期間計算（当月月初〜月末）
   const now = new Date();
@@ -55,9 +60,9 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
   const selectedUserIds = userIds ? userIds.split(',') : [];
 
   // 並列データフェッチ
-  const fetchUserList = getMonitorUserList();
-  const fetchWordHistory = getMonitorWordHistory(start, end, selectedUserIds.length > 0 ? selectedUserIds : undefined);
-  const fetchSprintHistory = getMonitorSprintHistory(start, end, selectedUserIds.length > 0 ? selectedUserIds : undefined);
+  const fetchUserList = getMonitorUserList(includeMonitor);
+  const fetchWordHistory = getMonitorWordHistory(start, end, selectedUserIds.length > 0 ? selectedUserIds : undefined, includeMonitor);
+  const fetchSprintHistory = getMonitorSprintHistory(start, end, selectedUserIds.length > 0 ? selectedUserIds : undefined, includeMonitor);
 
   const [userListResult, wordHistoryResult, sprintHistoryResult] = await Promise.all([
     fetchUserList,
@@ -80,12 +85,10 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
   return (
     <div className="w-full max-w-7xl mx-auto py-5 sm:py-8 px-4 sm:px-6 md:px-8 space-y-6 text-slate-900 selection:bg-indigo-100">
       
-      {/* ────────────── 🚀 フラット＆ミニマル・グランドヘッダー（リファイン） ────────────── */}
+      {/* ────────────── 🚀 フラット＆ミニマル・グランドヘッダー ────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         
-        {/* 左側：パンくず一体型の戻る導線 ＋ タイトル ＋ サブテキスト説明文 */}
         <div className="space-y-1">
-          {/* ✨ 改善案：四角い浮いたボタンを廃止し、パンくずナビゲーション風に美しく統合 */}
           <Link
             href="/dashboard"
             className="inline-flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-[0.12em] font-mono select-none group transition-colors"
@@ -102,14 +105,12 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
               モニタリングダッシュボード
             </h1>
 
-            {/* 💡 復活：親切で分かりやすいサブテキスト */}
             <p className="text-xs font-bold text-slate-400 max-w-2xl leading-relaxed mt-1">
-              所属受講生の学習成果のトラッキング、および詳細ログのアナリティクス
+              所属受講生のトレーニング成果のトラッキング、および詳細ログのアナリティクス
             </p>
           </div>
         </div>
 
-        {/* 右側：現在のビューのステータス表示 */}
         <div className="hidden sm:block text-right">
           <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest font-mono block">
             Current Module
@@ -120,8 +121,10 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
         </div>
       </div>
 
-      {/* ────────────── メーターナビゲーション（タブ形式） ────────────── */}
+      {/* ────────────── メーターナビゲーション（タブ形式） & グローバルトグル ────────────── */}
       <div className="border-b border-slate-200/60 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        
+        {/* 左側：タブメニュー */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-100/70 border border-slate-200/40 rounded-xl overflow-x-auto w-full sm:w-auto scrollbar-none">
           {navItems.map((item) => {
             const isActive = view === item.id;
@@ -129,7 +132,7 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
             return (
               <Link
                 key={item.id}
-                href={`/monitor?view=${item.id}${userIds ? `&userIds=${userIds}` : ''}${qStart ? `&startDate=${qStart}` : ''}${qEnd ? `&endDate=${qEnd}` : ''}`}
+                href={`/monitor?view=${item.id}${userIds ? `&userIds=${userIds}` : ''}${qStart ? `&startDate=${qStart}` : ''}${qEnd ? `&endDate=${qEnd}` : ''}${includeMonitor ? '&includeMonitor=true' : ''}`}
                 className={cn(
                   "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black transition-all whitespace-nowrap group select-none",
                   isActive 
@@ -147,13 +150,20 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
             );
           })}
         </div>
+
+        {/* 💡 右側：グローバルモニター切り替えトグル */}
+        <div className="self-start sm:self-auto shrink-0">
+          <Suspense fallback={<div className="h-[38px] w-36 bg-slate-100 animate-pulse rounded-xl" />}>
+            <MonitorToggle />
+          </Suspense>
+        </div>
+
       </div>
 
-      {/* ────────────── メイン：ダイナミックコンテンツビュー ────────────── */}
+      {/* ────────────── メメイン：ダイナミックコンテンツビュー ────────────── */}
       <div className="min-h-[400px]">
         {view === 'overview' && (
           <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-[24px] border border-slate-200/60 bg-slate-50/40" />}>
-            {/* 🛠️ シンタックスエラー箇所を正常に修復 */}
             <MonitorUserList 
               users={users} 
               wordHistory={wordHistory} 

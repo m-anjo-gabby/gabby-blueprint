@@ -46,6 +46,9 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
   const [localEnd, setLocalEnd] = useState<string>(endDate);
   const [page, setPage] = useState<number>(1);
 
+  // 💡 URLから includeMonitor の現在地を検知 (文字列の 'true' かどうか)
+  const isIncludeMonitorActive = searchParams.get('includeMonitor') === 'true';
+
   // 期間のインテリジェントバリデーション
   const dateRangeValidationError = useMemo<'reverse' | 'exceeded' | null>(() => {
     const start = new Date(localStart);
@@ -81,6 +84,14 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
     } else {
       params.delete('userIds');
     }
+
+    // 💡 既存の includeMonitor フラグを確実にURLクエリへマージして維持する
+    if (isIncludeMonitorActive) {
+      params.set('includeMonitor', 'true');
+    } else {
+      params.delete('includeMonitor');
+    }
+
     setPage(1);
     router.push(`/monitor?${params.toString()}`);
   };
@@ -174,7 +185,8 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `blueprint_word_drill_history_${startDate}_to_${endDate}.csv`);
+    const fileSuffix = isIncludeMonitorActive ? '_with_monitor' : '';
+    link.setAttribute('download', `blueprint_word_drill_history_${startDate}_to_${endDate}${fileSuffix}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -431,8 +443,8 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                   <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-2 border-b border-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-wider font-mono bg-slate-50/30">
                     <div className="col-span-2">受講生</div>
                     <div className="col-span-3">トレーニング教材</div>
-                    <div className="col-span-3 text-left pl-1">トレーニング実績</div>
-                    <div className="col-span-4" />
+                    <div className="col-span-5 text-left pl-1">トレーニング実績</div>
+                    <div className="col-span-2" />
                   </div>
                   <div className="divide-y divide-slate-50">
                     {sessions.map((session, idx) => (
@@ -461,26 +473,33 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                           </span>
                         </div>
 
-                        {/* 3. どれくらい (3マス) */}
-                        <div className="col-span-1 md:col-span-3 flex items-center justify-start gap-3 text-[10px]">
-                          <div className="flex items-center gap-3 text-slate-500 font-bold font-mono">
-                            <span className="flex items-center gap-0.5" title="単語数">
-                              <BookOpen size={11} className="text-blue-500/80 mr-1" /> 
+                        {/* 3. どれくらい (5マス) */}
+                        <div className="col-span-1 md:col-span-5 flex items-center justify-start gap-3 text-[10px]">
+                          <div className="flex items-center gap-2 text-slate-500 font-bold font-mono">
+                            
+                            {/* 単語数ブロック */}
+                            <span className="inline-flex items-center min-w-[56px]" title="単語数">
+                              <BookOpen size={11} className="text-blue-500/80 mr-1 shrink-0" /> 
                               <span className="font-mono text-slate-700 font-extrabold">{session.word_count}</span>
                             </span>
-                            <span className="flex items-center gap-0.5" title="フレーズ数">
-                              <MessageSquareText size={11} className="text-emerald-500/80 mr-1" /> 
+                            
+                            {/* フレーズ数ブロック */}
+                            <span className="inline-flex items-center min-w-[56px]" title="フレーズ数">
+                              <MessageSquareText size={11} className="text-emerald-500/80 mr-1 shrink-0" /> 
                               <span className="font-mono text-slate-700 font-extrabold">{session.phrase_count}</span>
                             </span>
-                            <span className="flex items-center gap-0.5" title="発話評価数">
-                              <ShieldCheck size={11} className="text-amber-500/80 mr-1" /> 
+                            
+                            {/* 発話評価数ブロック */}
+                            <span className="inline-flex items-center min-w-[56px]" title="発話評価数">
+                              <ShieldCheck size={11} className="text-amber-500/80 mr-1 shrink-0" /> 
                               <span className="font-mono text-slate-700 font-extrabold">{session.assessment_count}</span>
                             </span>
+
                           </div>
                         </div>
 
-                        {/* 4. 残りスペース (4マス) */}
-                        <div className="hidden md:block col-span-4" />
+                        {/* 4. 残りスペース (2マス) */}
+                        <div className="hidden md:block col-span-2" />
                       </div>
                     ))}
                   </div>

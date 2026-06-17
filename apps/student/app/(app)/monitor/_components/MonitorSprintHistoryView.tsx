@@ -47,6 +47,9 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
   const [localEnd, setLocalEnd] = useState<string>(endDate);
   const [page, setPage] = useState<number>(1);
 
+  // 💡 URLから includeMonitor の現在地を検知 (文字列の 'true' かどうか)
+  const isIncludeMonitorActive = searchParams.get('includeMonitor') === 'true';
+
   // 期間のインテリジェントバリデーション
   const dateRangeValidationError = useMemo<'reverse' | 'exceeded' | null>(() => {
     const start = new Date(localStart);
@@ -70,6 +73,12 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
   const [userSearchQuery, setUserSearchQuery] = useState<string>('');
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState<boolean>(false);
 
+  // 💡 モニターユーザーであるかを判定するヘルパー関数
+  const isMonitorUser = (u: any): boolean => {
+    if (!u) return false;
+    return u.is_monitor === true || !!u.email?.toLowerCase().includes('monitor');
+  };
+
   // フィルター共通更新処理
   const applyFilters = (newStart: string, newEnd: string, newUserIds: string[]): void => {
     if (isInvalidRange) return;
@@ -83,6 +92,14 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
     } else {
       params.delete('userIds');
     }
+
+    // 💡 既存の includeMonitor フラグを確実にURLクエリへマージして維持する
+    if (isIncludeMonitorActive) {
+      params.set('includeMonitor', 'true');
+    } else {
+      params.delete('includeMonitor');
+    }
+
     setPage(1);
     router.push(`/monitor?${params.toString()}`);
   };
@@ -104,19 +121,33 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
 
   // 検索クエリで受講生リストをフィルタリング
   const filteredUsers = useMemo<MonitorUser[]>(() => {
-    if (!userSearchQuery) return users;
+    let result = users;
+
+    // 💡 モニター非表示（includeMonitor=false）なら、ドロップダウンからもモニターを除外
+    if (!isIncludeMonitorActive) {
+      result = result.filter(u => !isMonitorUser(u));
+    }
+
+    if (!userSearchQuery) return result;
     const q = userSearchQuery.toLowerCase();
-    return users.filter(u => 
+    return result.filter(u => 
       (u.user_name?.toLowerCase().includes(q)) || 
       (u.email?.toLowerCase().includes(q))
     );
-  }, [users, userSearchQuery]);
+  }, [users, userSearchQuery, isIncludeMonitorActive]);
 
-  // 日付ごとにグループ化
+  // 💡 上位の設定（URLパラメータ）を適用した表示用ベースデータを作成
+  const displayFilteredData = useMemo<MonitorSprintHistoryItem[]>(() => {
+    if (isIncludeMonitorActive) return initialData;
+    // 💡 includeMonitorがfalseの場合は、モニターユーザーの履歴を除外する
+    return initialData.filter(session => !isMonitorUser(session.com_m_user));
+  }, [initialData, isIncludeMonitorActive]);
+
+  // 日付ごとにグループ化（displayFilteredDataをベースにする）
   const groupedData = useMemo<GroupedSprintHistory>(() => {
     const groups: GroupedSprintHistory = {};
     
-    initialData.forEach(session => {
+    displayFilteredData.forEach(session => {
       const date = new Date(session.insert_date).toLocaleDateString('ja-JP', {
         year: 'numeric',
         month: '2-digit',
@@ -137,7 +168,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
     });
 
     return groups;
-  }, [initialData]);
+  }, [displayFilteredData]);
 
   const sortedDates = useMemo<string[]>(() => {
     return Object.keys(groupedData).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
@@ -147,13 +178,13 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
   const totalPages = Math.ceil(sortedDates.length / daysPerPage);
   const pagedDates = sortedDates.slice((page - 1) * daysPerPage, page * daysPerPage);
 
-  // CSVエクスポート処理
+  // CSVエクスポート処理 (エクスポート対象も表示フィルターと連動)
   const handleExportCSV = (): void => {
-    if (initialData.length === 0) return;
+    if (displayFilteredData.length === 0) return;
 
     const headers = ['日付', '受講生名', 'スプリント種別', '難易度レベル', '回答モード', '制限時間(秒)', '回答数'];
     
-    const rows = initialData.map(session => {
+    const rows = displayFilteredData.map(session => {
       const date = new Date(session.insert_date).toLocaleDateString('ja-JP', {
         year: 'numeric', month: '2-digit', day: '2-digit'
       });
@@ -180,7 +211,8 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `blueprint_sprint_history_${startDate}_to_${endDate}.csv`);
+    const fileSuffix = isIncludeMonitorActive ? '_with_monitor' : '';
+    link.setAttribute('download', `blueprint_sprint_history_${startDate}_to_${endDate}${fileSuffix}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -291,6 +323,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                       ) : (
                         filteredUsers.map(u => {
                           const isSelected = selectedUserIds.includes(u.id);
+                          const isMonitor = isMonitorUser(u);
                           return (
                             <button
                               key={u.id}
@@ -301,7 +334,10 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                               )}
                             >
                               <div className="flex flex-col">
-                                <span className="font-extrabold">{u.user_name || '名前未設定'}</span>
+                                <span className="font-extrabold">
+                                  {u.user_name || '名前未設定'}
+                                  {isMonitor && <span className="ml-1 text-[9px] bg-amber-100 text-amber-700 px-1 rounded font-normal">Monitor</span>}
+                                </span>
                                 <span className="text-[10px] text-slate-400 font-mono font-medium">{u.email}</span>
                               </div>
                               {isSelected && <Check size={14} className="text-indigo-600 shrink-0" strokeWidth={2.5} />}
@@ -322,17 +358,17 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
           {/* CSVボタン */}
           <button
             onClick={handleExportCSV}
-            disabled={initialData.length === 0}
+            disabled={displayFilteredData.length === 0}
             className={cn(
               "inline-flex items-center gap-2 justify-center text-xs font-bold h-9 px-4 rounded-xl shadow-2xs border transition-all bg-white hover:bg-slate-50 text-slate-700 border-slate-200",
-              initialData.length === 0 && "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+              displayFilteredData.length === 0 && "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
             )}
           >
             <Download size={14} strokeWidth={2.5} className="text-slate-500" />
             <span className="hidden sm:inline">CSVエクスポート</span>
           </button>
 
-          {/* 💡 右上コンパクトページングコントロール */}
+          {/* 右上コンパクトページングコントロール */}
           {totalPages > 1 && (
             <div className="flex items-center gap-3 bg-white border border-slate-200/80 rounded-xl p-1 shadow-2xs">
               <button 
@@ -377,7 +413,6 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
       )}
 
       {/* ────────────── 📄 独立スクロール一覧表示エリア ────────────── */}
-      {/* max-h-[calc(100vh-290px)] によってブラウザの高さに追従した内側スクロールを実現 */}
       <div className="max-h-[calc(100vh-290px)] overflow-y-auto pr-1.5 space-y-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
         {pagedDates.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-200">
@@ -428,6 +463,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                     {sessions.map((session, idx) => {
                       const typeInfo = SPRINT_TYPES[session.question_type as keyof typeof SPRINT_TYPES];
                       const isSpeedMode = session.question_type === '0';
+                      const isMonitor = isMonitorUser(session.com_m_user);
 
                       return (
                         <div 
@@ -442,8 +478,13 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                                 <div className="w-5 h-5 rounded-md bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0 border border-indigo-100/50">
                                   <User size={11} strokeWidth={2.5} />
                                 </div>
-                                <span className="text-xs font-black text-slate-700 truncate">
+                                <span className="text-xs font-black text-slate-700 truncate flex items-center gap-1">
                                   {session.com_m_user.user_name || '未設定'}
+                                  {isMonitor && (
+                                    <span className="text-[8px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-black font-mono scale-90 origin-left shrink-0">
+                                      MONITOR
+                                    </span>
+                                  )}
                                 </span>
                               </div>
                             )}
@@ -467,17 +508,22 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                             </div>
                           </div>
 
-                          {/* どれくらい */}
-                          <div className="col-span-1 md:col-span-4 flex items-center justify-start gap-4 text-[10px]">
-                            <div className="flex items-center gap-4 text-slate-500 font-bold font-mono">
-                              <span className="flex items-center gap-0.5" title="制限時間">
-                                <Timer size={11} className="text-slate-400 mr-1" /> 
+                          {/* 実績 */}
+                          <div className="col-span-1 md:col-span-4 flex items-center justify-start gap-3 text-[10px]">
+                            <div className="flex items-center gap-2 text-slate-500 font-bold font-mono">
+                              
+                              {/* 制限時間ブロック */}
+                              <span className="inline-flex items-center min-w-[56px]" title="制限時間">
+                                <Timer size={11} className="text-slate-400 mr-1 shrink-0" /> 
                                 <span className="font-mono text-slate-700 font-extrabold">{session.time_limit_sec}</span>
                               </span>
-                              <span className="flex items-center gap-0.5" title="回答数">
-                                <Zap size={11} className="text-amber-500/80 fill-amber-500/10 mr-1" /> 
+                              
+                              {/* 回答数ブロック */}
+                              <span className="inline-flex items-center min-w-[56px]" title="回答数">
+                                <Zap size={11} className="text-amber-500/80 fill-amber-500/10 mr-1 shrink-0" /> 
                                 <span className="font-mono text-slate-700 font-extrabold">{session.total_answered}</span>
                               </span>
+
                             </div>
                           </div>
                         </div>
