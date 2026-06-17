@@ -294,15 +294,15 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600 flex-wrap">
                         <span className="flex items-center gap-1 bg-blue-50/50 px-1.5 py-0.5 rounded-md border border-blue-100/40">
                           <BookOpen size={11} className="text-blue-500 shrink-0" />
-                          <span className="font-mono text-slate-800 font-black">{totalWordsDay}</span>
+                          <span className="font-mono text-slate-800 font-black">{totalWordsDay}単語</span>
                         </span>
                         <span className="flex items-center gap-1 bg-emerald-50/50 px-1.5 py-0.5 rounded-md border border-emerald-100/40">
                           <MessageSquareText size={11} className="text-emerald-500 shrink-0" />
-                          <span className="font-mono text-slate-800 font-black">{totalPhrasesDay}</span>
+                          <span className="font-mono text-slate-800 font-black">{totalPhrasesDay}フレーズ</span>
                         </span>
                         <span className="flex items-center gap-1 bg-amber-50/50 px-1.5 py-0.5 rounded-md border border-amber-100/40">
                           <ShieldCheck size={11} className="text-amber-500 shrink-0" />
-                          <span className="font-mono text-slate-800 font-black">{totalAssessmentsDay}</span>
+                          <span className="font-mono text-slate-800 font-black">{totalAssessmentsDay}発話評価</span>
                         </span>
                       </div>
                     </div>
@@ -343,15 +343,15 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                                 <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
                                   <span className="flex items-center gap-1">
                                     <BookOpen size={11} className="text-blue-500/80" /> 
-                                    <span className="font-mono text-slate-700 font-extrabold">{session.word_count} words</span>
+                                    <span className="font-mono text-slate-700 font-extrabold">{session.word_count}</span>
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <MessageSquareText size={11} className="text-emerald-500/80" /> 
-                                    <span className="font-mono text-slate-700 font-extrabold">{session.phrase_count} phrases</span>
+                                    <span className="font-mono text-slate-700 font-extrabold">{session.phrase_count}</span>
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <ShieldCheck size={11} className="text-amber-500/80" /> 
-                                    <span className="font-mono text-slate-700 font-extrabold">{session.assessment_count} check</span>
+                                    <span className="font-mono text-slate-700 font-extrabold">{session.assessment_count}</span>
                                   </span>
                                 </div>
                               </div>

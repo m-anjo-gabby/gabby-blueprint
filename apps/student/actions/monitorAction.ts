@@ -33,7 +33,7 @@ export interface MonitorWordSummaryHistoryItem extends WordSummaryHistoryItem {
   user_id: string;
   com_m_user: {
     user_name: string | null;
-    email: string;
+    email?: string;
   };
 }
 
@@ -48,7 +48,7 @@ export interface MonitorSprintHistoryItem {
   insert_date: string;
   com_m_user: {
     user_name: string | null;
-    email: string;
+    email?: string;
   };
 }
 
@@ -116,8 +116,7 @@ export async function getMonitorWordHistory(
           content_name
         ),
         com_m_user (
-          user_name,
-          email
+          user_name
         )
       `)
       .gte("training_date", startDate)
@@ -188,12 +187,11 @@ export async function getMonitorSprintHistory(
         total_answered,
         insert_date,
         com_m_user (
-          user_name,
-          email
+          user_name
         )
       `)
       .gte("insert_date", startDate)
-      .lte("insert_date", endDate)
+      .lte("insert_date", `${endDate}T23:59:59.999Z`)
       .order("insert_date", { ascending: false });
 
     // Filter by user IDs if provided

@@ -357,6 +357,15 @@ BEGIN
     SELECT *
     FROM private.vw_user_list
     WHERE client_id = _client_id
+      -- 生徒を対象
+      AND user_type ~ '1'
+      AND (
+        -- 招待中（まだ com_m_user が作成されていない）ユーザーはそのまま含める
+        user_id IS NULL
+        OR
+        -- 本登録済みユーザーは、ライセンス状態が 'active'（有効）なもののみに絞り込む
+        license_state = 'active'
+      )
     ORDER BY insert_date DESC;
 END;
 $$;
