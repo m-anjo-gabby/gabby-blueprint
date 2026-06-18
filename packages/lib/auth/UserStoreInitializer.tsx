@@ -40,6 +40,8 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
         user_id: 0,           // 詳細取得までの仮値
         user_name: '...',    // ローディング表示用
         email: user.email,
+        locale_id: 'ja',      // DBデフォルト値
+        timezone: 'Asia/Tokyo', // DBデフォルト値
         app_metadata: (user.app_metadata as UserAppMetadata) || { user_type: '1', roles: [] },
       });
 
@@ -47,7 +49,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
       // Supabase DB からニックネーム等の詳細情報を取得します。
       const { data: profile, error } = await supabase
         .from('com_m_user')
-        .select('user_id, user_name')
+        .select('user_id, user_name, locale_id, timezone')
         .eq('id', user.id)
         .single();
 
@@ -60,8 +62,10 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
         setUser({
           id: user.id,
           user_id: profile.user_id,
-          user_name: profile.user_name,
+          user_name: profile.user_name ?? '',
           email: user.email,
+          locale_id: profile.locale_id,
+          timezone: profile.timezone,
           app_metadata: (user.app_metadata as UserAppMetadata) || { user_type: '1', roles: [] },
         });
       }

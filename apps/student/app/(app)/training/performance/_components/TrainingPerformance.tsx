@@ -1,20 +1,32 @@
-// apps/student/app/(app)/training/review/_components/TrainingPerformance.tsx
 'use client';
 
 import React, { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, BarChart3, BookOpen, Zap, ArrowRight, Library, CalendarDays, ArrowLeft } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, Library, CalendarDays, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { WordSummaryHistoryItem } from '@/actions/wordAction';
 
 interface TrainingPerformanceProps {
   initialData: WordSummaryHistoryItem[];
-  targetMonth: string;
+  targetMonth: string; // 形式: "YYYY-MM"
 }
 
 export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initialData, targetMonth }) => {
   const router = useRouter();
 
+  // 当月の文字列（"YYYY-MM"）を生成
+  const currentMonthStr = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+
+  // 日付文字列の標準化関数（タイムゾーン依存を排除し、パフォーマンスを担保）
+  const formatDateKey = (dateInput: string | Date): string => {
+    const d = new Date(dateInput);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  // 1. 統計データの算出（一回のループで集計し、データ量増加に対応）
   const stats = useMemo(() => {
     const uniqueDays = new Set<string>();
     let totalWords = 0;
@@ -22,7 +34,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     let totalAssessments = 0;
 
     initialData.forEach(item => {
-      const dateStr = new Date(item.training_date).toDateString();
+      const dateStr = formatDateKey(item.training_date);
       uniqueDays.add(dateStr);
       totalWords += item.word_count;
       totalPhrases += Math.floor(item.word_count * 0.4);
@@ -31,9 +43,9 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
 
     return {
       activeDays: uniqueDays.size,
-      totalWords: totalWords,
-      totalPhrases: totalPhrases,
-      totalAssessments: totalAssessments
+      totalWords,
+      totalPhrases,
+      totalAssessments
     };
   }, [initialData]);
 
@@ -54,24 +66,18 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     router.push(`/training/performance?month=${targetMonthStr}`);
   };
 
+  // 2. カレンダーデータの生成（データ量増加に伴うケア：探索計算量を O(N) から O(1) へ最適化）
   const calendarDays = useMemo(() => {
     const [year, month] = targetMonth.split('-').map(Number);
     const date = new Date(year, month - 1, 1);
     const days = [];
+
+    // あらかじめ履歴のある日付文字列をSet化（ハッシュマップ化により検索を高速化）
+    const historySet = new Set(initialData.map(item => formatDateKey(item.training_date)));
     
     while (date.getMonth() === month - 1) {
-      const dateStr = date.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      const hasHistory = initialData.some(item => 
-        new Date(item.training_date).toLocaleDateString('ja-JP', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }) === dateStr
-      );
+      const dateStr = formatDateKey(date);
+      const hasHistory = historySet.has(dateStr); // O(1) で瞬時に判定
 
       days.push({
         dayNum: date.getDate(),
@@ -83,6 +89,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
   }, [initialData, targetMonth]);
 
   const [displayYear, displayMonth] = targetMonth.split('-');
+  const isNotCurrentMonth = targetMonth !== currentMonthStr;
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
@@ -95,7 +102,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
           </div>
 
           <div className="relative flex items-center justify-between">
-            {/* 左上のTOPボタンまわりがスッキリし、誤操作が完全に防げます */}
             <button
               onClick={() => router.push('/dashboard')}
               className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
@@ -114,28 +120,54 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
             </div>
           </div>
 
-          {/* 月移動を中央インラインに集約 */}
-          <div className="relative flex items-center justify-center gap-5 pt-1">
-            <button 
-              onClick={() => handleMonthChange('prev')} // ※WordHistoryViewの場合は handleMonthChange(-1)
-              className="p-2 text-slate-400 hover:text-slate-800 hover:bg-indigo-100/60 rounded-xl transition-all active:scale-90 border border-transparent flex items-center justify-center"
-              title="前月"
-            >
-              {/* ChevronからArrowへと形状自体をガラリと変え、別機能であることを脳に伝えます */}
-              <ArrowLeft size={16} strokeWidth={2.5} />
-            </button>
+          {/* 月移動：カプセル型UI ＆ 「今月」ボタン配置エリア */}
+          <div className="relative flex items-center justify-center pt-1">
             
-            <h1 className="text-lg font-black tracking-tight leading-none text-slate-800 font-mono select-none min-w-[110px] text-center">
-              {displayYear}年 {parseInt(displayMonth)}月
-            </h1>
+            {/* カプセルを包含するインラインコンテナ */}
+            <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
+              <button 
+                onClick={() => handleMonthChange('prev')}
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                title="前月"
+              >
+                <ArrowLeft size={14} strokeWidth={2.5} />
+              </button>
+              
+              <div className="px-5 text-center min-w-[120px] select-none border-x border-slate-100">
+                <span className="text-[9px] font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
+                  {displayYear}
+                </span>
+                <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
+                  {parseInt(displayMonth)}月
+                </span>
+              </div>
 
-            <button 
-              onClick={() => handleMonthChange('next')} // ※WordHistoryViewの場合は handleMonthChange(1)
-              className="p-2 text-slate-400 hover:text-slate-800 hover:bg-indigo-100/60 rounded-xl transition-all active:scale-90 border border-transparent flex items-center justify-center"
-              title="来月"
-            >
-              <ArrowRight size={16} strokeWidth={2.5} />
-            </button>
+              <button 
+                onClick={() => handleMonthChange('next')}
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                title="来月"
+              >
+                <ArrowRight size={14} strokeWidth={2.5} />
+              </button>
+
+              {/* カプセルの右端（left-full）から ml-3 離した安全な位置に「今月」ボタンを絶対配置 */}
+              <AnimatePresence>
+                {isNotCurrentMonth && (
+                  <motion.button
+                    initial={{ opacity: 0, x: -6, scale: 0.95 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -6, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    onClick={() => router.push(`/training/performance?month=${currentMonthStr}`)}
+                    className="absolute left-full ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap"
+                    title="現在の月に戻る"
+                  >
+                    今月
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
+
           </div>
         </div>
 
@@ -165,7 +197,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
               </div>
             </motion.div>
 
-            {/* 統計データエリア：色の強調をリセットし等価に */}
+            {/* 統計データエリア */}
             <div className="space-y-2">
               <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest block px-1">
                 Training Details
@@ -183,7 +215,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 <div className="p-4 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between">
                   <span className="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider block mb-2">Phrases</span>
                   <div className="space-y-0.5">
-                    {/* text-indigo-600 から text-slate-900 へ統一 */}
                     <div className="text-xl font-mono font-black text-slate-900 tracking-tight">{stats.totalPhrases}</div>
                     <span className="text-[10px] font-bold text-slate-500 block">フレーズ数</span>
                   </div>
@@ -231,7 +262,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 Logs Menu
               </span>
 
-              {/* 1. 単語ドリル履歴（文言を親しみやすく、実際の表示内容に最適化） */}
+              {/* 1. 単語ドリル履歴 */}
               <button
                 onClick={() => router.push('/training/word/history')}
                 className="w-full text-left p-4 bg-white border border-slate-200/80 rounded-xl shadow-xs flex items-center justify-between hover:border-indigo-200 hover:bg-slate-50/20 transition-all group active:scale-[0.995] cursor-pointer"
@@ -257,7 +288,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 </div>
               </button>
 
-              {/* 2. スプリント履歴（導線を有効化 ＆ カラーを活発なアンバーへ変更して親しみやすい文言に） */}
+              {/* 2. スプリント履歴 */}
               <button
                 onClick={() => router.push('/training/sprint/history')}
                 className="w-full text-left p-4 bg-white border border-slate-200/80 rounded-xl shadow-xs flex items-center justify-between hover:border-amber-200 hover:bg-slate-50/20 transition-all group active:scale-[0.995] cursor-pointer"

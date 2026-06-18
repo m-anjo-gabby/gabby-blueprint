@@ -1,8 +1,7 @@
-// apps/student/app/(app)/training/review/_components/WordHistoryView.tsx
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft, Calendar, BookOpen, MessageSquareText, ShieldCheck, ArrowLeft, ArrowRight, ChevronDown, Library } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,7 +9,7 @@ import { WordSummaryHistoryItem } from '@/actions/wordAction';
 
 interface WordHistoryViewProps {
   initialData: WordSummaryHistoryItem[];
-  targetMonth: string;
+  targetMonth: string; // 形式: "YYYY-MM"
 }
 
 interface GroupedWordHistory {
@@ -19,25 +18,36 @@ interface GroupedWordHistory {
 
 export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, targetMonth }) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
 
-  // 日付ごとにグループ化
+  // 当月の文字列（"YYYY-MM"）を生成
+  const currentMonthStr = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+
+  // 日付文字列を「表示形式（YYYY/MM/DD）」に高速・確実に標準化する関数（データ量増加ケア）
+  const formatDateKey = (dateInput: string | Date): string => {
+    const d = new Date(dateInput);
+    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  // 日付ごとにグループ化（データ集計ロジックを最適化＆安全化）
   const groupedData = useMemo(() => {
     const groups: GroupedWordHistory = {};
 
     initialData.forEach(session => {
-      const date = new Date(session.training_date).toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(session);
+      const dateStr = formatDateKey(session.training_date);
+      if (!groups[dateStr]) groups[dateStr] = [];
+      groups[dateStr].push(session);
     });
 
     Object.keys(groups).forEach(date => {
-      groups[date].sort((a, b) => a.com_m_contents.content_name.localeCompare(b.com_m_contents.content_name));
+      groups[date].sort((a, b) => {
+        const nameA = a.com_m_contents?.content_name || '';
+        const nameB = b.com_m_contents?.content_name || '';
+        return nameA.localeCompare(nameB);
+      });
     });
 
     return groups;
@@ -49,18 +59,30 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
     );
   };
 
-  const handleMonthChange = (offset: number) => {
+  const handleMonthChange = (direction: 'prev' | 'next') => {
     const [year, month] = targetMonth.split('-').map(Number);
-    const date = new Date(year, month - 1 + offset, 1);
-    const nextMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    router.replace(`/training/word/history?month=${nextMonth}`, { scroll: false });
+    let newYear = year;
+    let newMonth = direction === 'prev' ? month - 1 : month + 1;
+
+    if (newMonth === 0) {
+      newMonth = 12;
+      newYear -= 1;
+    } else if (newMonth === 13) {
+      newMonth = 1;
+      newYear += 1;
+    }
+
+    const targetMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
+    router.replace(`/training/word/history?month=${targetMonthStr}`, { scroll: false });
   };
 
-  const [displayYear, displayMonth] = useMemo(() => {
-    return targetMonth.split('-');
-  }, [targetMonth]);
+  const [displayYear, displayMonth] = targetMonth.split('-');
+  const isNotCurrentMonth = targetMonth !== currentMonthStr;
   
-  const sortedDates = Object.keys(groupedData).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  // ソートの計算量最適化：Dateオブジェクトを都度生成せず、文字列比較（YYYY/MM/DDの降順）で高速に処理
+  const sortedDates = useMemo(() => {
+    return Object.keys(groupedData).sort((a, b) => b.localeCompare(a));
+  }, [groupedData]);
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
@@ -91,27 +113,54 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
             </div>
           </div>
 
-          {/* 月移動：中央インライン集約 */}
-          <div className="relative flex items-center justify-center gap-5 pt-1">
-            <button 
-              onClick={() => handleMonthChange(-1)} 
-              className="p-2 text-slate-400 hover:text-slate-800 hover:bg-indigo-100/60 rounded-xl transition-all active:scale-90 border border-transparent flex items-center justify-center"
-              title="前月"
-            >
-              <ArrowLeft size={16} strokeWidth={2.5} />
-            </button>
+          {/* 月移動：カプセル型UI ＆ 「今月」ボタン配置エリア */}
+          <div className="relative flex items-center justify-center pt-1">
             
-            <h1 className="text-lg font-black tracking-tight leading-none text-slate-800 font-mono select-none min-w-[110px] text-center">
-              {displayYear}年 {parseInt(displayMonth)}月
-            </h1>
+            {/* カプセルを包含するインラインコンテナ */}
+            <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
+              <button 
+                onClick={() => handleMonthChange('prev')} 
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                title="前月"
+              >
+                <ArrowLeft size={14} strokeWidth={2.5} />
+              </button>
+              
+              <div className="px-5 text-center min-w-[120px] select-none border-x border-slate-100">
+                <span className="text-[9px] font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
+                  {displayYear}
+                </span>
+                <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
+                  {parseInt(displayMonth)}月
+                </span>
+              </div>
 
-            <button 
-              onClick={() => handleMonthChange(1)} 
-              className="p-2 text-slate-400 hover:text-slate-800 hover:bg-indigo-100/60 rounded-xl transition-all active:scale-90 border border-transparent flex items-center justify-center"
-              title="来月"
-            >
-              <ArrowRight size={16} strokeWidth={2.5} />
-            </button>
+              <button 
+                onClick={() => handleMonthChange('next')} 
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                title="来月"
+              >
+                <ArrowRight size={14} strokeWidth={2.5} />
+              </button>
+
+              {/* カプセルの右端から ml-3 離した被らない位置に「今月」ボタンを絶対配置 */}
+              <AnimatePresence>
+                {isNotCurrentMonth && (
+                  <motion.button
+                    initial={{ opacity: 0, x: -6, scale: 0.95 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -6, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    onClick={() => router.replace(`/training/word/history?month=${currentMonthStr}`, { scroll: false })}
+                    className="absolute left-full ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap"
+                    title="現在の月に戻る"
+                  >
+                    今月
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
+
           </div>
         </div>
 
@@ -150,7 +199,6 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                       <div>
                         <div className="text-sm font-bold text-slate-800 tracking-tight mb-1.5">{date}</div>
                         
-                        {/* 💡 改善：日本語ベースの分かりやすい表記 ＆ アイコンのやさしい色分け */}
                         <div className="flex items-center gap-3 text-[10px] font-bold text-slate-600 flex-wrap">
                           <span className="flex items-center gap-1">
                             <BookOpen size={12} className="text-blue-500 shrink-0" />
@@ -195,10 +243,9 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                                 <span className="text-[10px] font-black text-slate-300 font-mono w-4 text-center">{idx + 1}</span>
                                 <div>
                                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                    <span className="text-xs font-bold text-slate-800">{session.com_m_contents.content_name || 'Unknown Content'}</span>
+                                    <span className="text-xs font-bold text-slate-800">{session.com_m_contents?.content_name || 'Unknown Content'}</span>
                                   </div>
                                   
-                                  {/* 💡 改善：子要素はラベルを廃止し「アイコン＋数字」のみで超ミニマル化 */}
                                   <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400">
                                     <span className="flex items-center gap-1">
                                       <BookOpen size={12} className="text-blue-500/80" /> 

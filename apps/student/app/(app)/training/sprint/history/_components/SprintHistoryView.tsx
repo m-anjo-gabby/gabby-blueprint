@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { SPRINT_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,7 +19,7 @@ interface HistorySession {
 
 interface SprintHistoryViewProps {
   initialData: HistorySession[];
-  targetMonth: string;
+  targetMonth: string; // 形式: "YYYY-MM"
 }
 
 export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialData, targetMonth }) => {
@@ -27,23 +27,29 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   const searchParams = useSearchParams();
   const focusId = searchParams.get('focus');
 
-  // 🎯 初期レンダリング時に URL パラメータから展開すべき日付を特定する
+  // 当月の文字列（"YYYY-MM"）を生成
+  const currentMonthStr = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+
+  // 日付文字列を「表示形式（YYYY/MM/DD）」に高速・確実に標準化する関数（データ量増加・タイムゾーン安全ケア）
+  const formatDateKey = (dateInput: string | Date): string => {
+    const d = new Date(dateInput);
+    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  // 🎯 初期レンダリング時に URL パラメータから展開すべき日付を特定する（標準化関数に統合）
   const [expandedDates, setExpandedDates] = useState<string[]>(() => {
     if (!focusId || !initialData.length) return [];
     const targetSession = initialData.find(s => s.self_sprint_id === focusId);
     if (targetSession) {
-      return [
-        new Date(targetSession.insert_date).toLocaleDateString('ja-JP', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        })
-      ];
+      return [formatDateKey(targetSession.insert_date)];
     }
     return [];
   });
 
-  // 🎯 スクロール処理のみを Effect で行う（setStateは含まない）
+  // 🎯 スクロール処理のみを Effect で行う
   useEffect(() => {
     if (!focusId || initialData.length === 0) return;
 
@@ -52,7 +58,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
       if (element) {
         element.scrollIntoView({ behavior: 'auto', block: 'center' });
       }
-    }, 50); // レンダリング確定後、瞬時にジャンプさせる
+    }, 50);
 
     return () => clearTimeout(timer);
   }, [focusId, initialData.length]);
@@ -62,13 +68,9 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     const groups: Record<string, HistorySession[]> = {};
     
     initialData.forEach(session => {
-      const date = new Date(session.insert_date).toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(session);
+      const dateStr = formatDateKey(session.insert_date);
+      if (!groups[dateStr]) groups[dateStr] = [];
+      groups[dateStr].push(session);
     });
 
     // 各日のセッションを「実施順（昇順）」にソート
@@ -85,21 +87,36 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     );
   };
 
-  const handleMonthChange = (offset: number) => {
+  const handleMonthChange = (direction: 'prev' | 'next') => {
     const [year, month] = targetMonth.split('-').map(Number);
-    const date = new Date(year, month - 1 + offset, 1);
-    const nextMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    router.push(`/training/sprint/history?month=${nextMonth}`);
+    let newYear = year;
+    let newMonth = direction === 'prev' ? month - 1 : month + 1;
+
+    if (newMonth === 0) {
+      newMonth = 12;
+      newYear -= 1;
+    } else if (newMonth === 13) {
+      newMonth = 1;
+      newYear += 1;
+    }
+
+    const targetMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
+    router.push(`/training/sprint/history?month=${targetMonthStr}`);
   };
 
   const [displayYear, displayMonth] = targetMonth.split('-');
-  const sortedDates = Object.keys(groupedData);
+  const isNotCurrentMonth = targetMonth !== currentMonthStr;
+
+  // ソートの計算量最適化：Dateオブジェクトを生成せず文字列（YYYY/MM/DD）で高速に降順ソート
+  const sortedDates = useMemo(() => {
+    return Object.keys(groupedData).sort((a, b) => b.localeCompare(a));
+  }, [groupedData]);
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
       <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
         
-        {/* ────────────── ヘッダー：ドリル履歴と100%完全同期 ────────────── */}
+        {/* ────────────── ヘッダー：他の履歴画面と100%完全同期 ────────────── */}
         <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
           <div className="absolute top-0 right-0 p-3 opacity-[0.08] pointer-events-none">
             <History size={115} strokeWidth={1.2} className="text-indigo-600" />
@@ -124,27 +141,54 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             </div>
           </div>
 
-          {/* 月移動：中央インライン集約ナビゲーション */}
-          <div className="relative flex items-center justify-center gap-5 pt-1">
-            <button 
-              onClick={() => handleMonthChange(-1)} 
-              className="p-2 text-slate-400 hover:text-slate-800 hover:bg-indigo-100/60 rounded-xl transition-all active:scale-90 border border-transparent flex items-center justify-center"
-              title="前月"
-            >
-              <ArrowLeft size={16} strokeWidth={2.5} />
-            </button>
+          {/* 月移動：カプセル型UI ＆ 「今月」ボタン配置エリア */}
+          <div className="relative flex items-center justify-center pt-1">
             
-            <h1 className="text-lg font-black tracking-tight leading-none text-slate-800 font-mono select-none min-w-[110px] text-center">
-              {displayYear}年 {parseInt(displayMonth)}月
-            </h1>
+            {/* カプセルを包含するインラインコンテナ */}
+            <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
+              <button 
+                onClick={() => handleMonthChange('prev')} 
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                title="前月"
+              >
+                <ArrowLeft size={14} strokeWidth={2.5} />
+              </button>
+              
+              <div className="px-5 text-center min-w-[120px] select-none border-x border-slate-100">
+                <span className="text-[9px] font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
+                  {displayYear}
+                </span>
+                <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
+                  {parseInt(displayMonth)}月
+                </span>
+              </div>
 
-            <button 
-              onClick={() => handleMonthChange(1)} 
-              className="p-2 text-slate-400 hover:text-slate-800 hover:bg-indigo-100/60 rounded-xl transition-all active:scale-90 border border-transparent flex items-center justify-center"
-              title="来月"
-            >
-              <ArrowRight size={16} strokeWidth={2.5} />
-            </button>
+              <button 
+                onClick={() => handleMonthChange('next')} 
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                title="来月"
+              >
+                <ArrowRight size={14} strokeWidth={2.5} />
+              </button>
+
+              {/* カプセルの右端から ml-3 離した被らない位置に「今月」ボタンを絶対配置 */}
+              <AnimatePresence>
+                {isNotCurrentMonth && (
+                  <motion.button
+                    initial={{ opacity: 0, x: -6, scale: 0.95 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -6, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    onClick={() => router.push(`/training/sprint/history?month=${currentMonthStr}`)}
+                    className="absolute left-full ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap"
+                    title="現在の月に戻る"
+                  >
+                    今月
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
+
           </div>
         </div>
 
@@ -175,7 +219,6 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                     className="w-full p-5 sm:p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
                   >
                     <div className="flex items-center gap-4 text-left">
-                      {/* 💡 装飾同期: 当月Noのバッジ背景とテキストカラーをドリル履歴と統一 */}
                       <div className="w-12 h-12 bg-indigo-50/40 border border-indigo-100/50 rounded-2xl flex items-center justify-center text-indigo-500/90 font-black text-base font-mono shrink-0 select-none">
                         {dayNo}
                       </div>
@@ -223,7 +266,6 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                 )}
                               >
                                 <div className="flex items-center gap-4">
-                                  {/* 💡 装飾同期: 内部リストの項番カラーもインディゴ系にして統一感を強調 */}
                                   <span className="text-[11px] font-black text-indigo-400/80 font-mono w-4">{idx + 1}</span>
                                   <div>
                                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
