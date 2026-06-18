@@ -4,6 +4,8 @@ import React, { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, Library, CalendarDays, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { toIsoDateInZone, toIsoMonthInZone } from '@gabby/lib/date/date';
 import { WordSummaryHistoryItem } from '@/actions/wordAction';
 
 interface TrainingPerformanceProps {
@@ -13,20 +15,14 @@ interface TrainingPerformanceProps {
 
 export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initialData, targetMonth }) => {
   const router = useRouter();
+  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
   // 当月の文字列（"YYYY-MM"）を生成
   const currentMonthStr = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  }, []);
+    return toIsoMonthInZone(new Date(), timezone);
+  }, [timezone]);
 
-  // 日付文字列の標準化関数（タイムゾーン依存を排除し、パフォーマンスを担保）
-  const formatDateKey = (dateInput: string | Date): string => {
-    const d = new Date(dateInput);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  };
-
-  // 1. 統計データの算出（一回のループで集計し、データ量増加に対応）
+  // 1. 統計データの算出（インラインで直接タイムゾーン計算を実行し、Compilerに追随させる）
   const stats = useMemo(() => {
     const uniqueDays = new Set<string>();
     let totalWords = 0;
@@ -34,7 +30,8 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     let totalAssessments = 0;
 
     initialData.forEach(item => {
-      const dateStr = formatDateKey(item.training_date);
+      // 💡 内部関数を介さず、直接ユーティリティを実行
+      const dateStr = toIsoDateInZone(item.training_date, timezone);
       uniqueDays.add(dateStr);
       totalWords += item.word_count;
       totalPhrases += Math.floor(item.word_count * 0.4);
@@ -47,7 +44,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
       totalPhrases,
       totalAssessments
     };
-  }, [initialData]);
+  }, [initialData, timezone]); // 💡 timezone を正確に依存配列へ追加
 
   const handleMonthChange = (direction: 'prev' | 'next') => {
     const [year, month] = targetMonth.split('-').map(Number);
@@ -63,30 +60,34 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     }
 
     const targetMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-    router.push(`/training/performance?month=${targetMonthStr}`);
+    // 💡 クエリパラメータの変更のみであるため、スクロール維持かつ replace で履歴スタックを最適化
+    router.replace(`/training/performance?month=${targetMonthStr}`, { scroll: false });
   };
 
-  // 2. カレンダーデータの生成（データ量増加に伴うケア：探索計算量を O(N) から O(1) へ最適化）
+  // 2. カレンダーデータの生成
   const calendarDays = useMemo(() => {
     const [year, month] = targetMonth.split('-').map(Number);
-    const date = new Date(year, month - 1, 1);
     const days = [];
 
-    // あらかじめ履歴のある日付文字列をSet化（ハッシュマップ化により検索を高速化）
-    const historySet = new Set(initialData.map(item => formatDateKey(item.training_date)));
+    // 💡 O(1) 探索用のSet生成時も、インラインでタイムゾーンを考慮して直接ラップ
+    const historySet = new Set(
+      initialData.map(item => toIsoDateInZone(item.training_date, timezone))
+    );
     
-    while (date.getMonth() === month - 1) {
-      const dateStr = formatDateKey(date);
-      const hasHistory = historySet.has(dateStr); // O(1) で瞬時に判定
+    // 月の末日を取得
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const hasHistory = historySet.has(dateStr);
 
       days.push({
-        dayNum: date.getDate(),
+        dayNum: d,
         hasHistory
       });
-      date.setDate(date.getDate() + 1);
     }
     return days;
-  }, [initialData, targetMonth]);
+  }, [initialData, targetMonth, timezone]); // 💡 timezone を過不足なく検知
 
   const [displayYear, displayMonth] = targetMonth.split('-');
   const isNotCurrentMonth = targetMonth !== currentMonthStr;
@@ -122,8 +123,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
 
           {/* 月移動：カプセル型UI ＆ 「今月」ボタン配置エリア */}
           <div className="relative flex items-center justify-center pt-1">
-            
-            {/* カプセルを包含するインラインコンテナ */}
             <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
               <button 
                 onClick={() => handleMonthChange('prev')}
@@ -150,7 +149,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 <ArrowRight size={14} strokeWidth={2.5} />
               </button>
 
-              {/* カプセルの右端（left-full）から ml-3 離した安全な位置に「今月」ボタンを絶対配置 */}
               <AnimatePresence>
                 {isNotCurrentMonth && (
                   <motion.button
@@ -158,7 +156,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: -6, scale: 0.95 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
-                    onClick={() => router.push(`/training/performance?month=${currentMonthStr}`)}
+                    onClick={() => router.replace(`/training/performance?month=${currentMonthStr}`, { scroll: false })}
                     className="absolute left-full ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap"
                     title="現在の月に戻る"
                   >
@@ -167,7 +165,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 )}
               </AnimatePresence>
             </div>
-
           </div>
         </div>
 
@@ -305,7 +302,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                       </h2>
                     </div>
                     <p className="text-[11px] font-medium text-slate-400 mt-1 leading-normal">
-                      自主トレーニングした記録を一覧でチェックします。
+                      自らの発話・瞬発力を鍛えたログを一覧でチェックします。
                     </p>
                   </div>
                 </div>
@@ -318,7 +315,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
           </div>
         </div>
 
-        {/* ────────────── フッター：共通ブランドカラー ────────────── */}
+        {/* ────────────── フッター ────────────── */}
         <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex flex-col items-center">
           <button
             onClick={() => router.push('/library')}

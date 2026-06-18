@@ -4,6 +4,8 @@ import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Calendar, BookOpen, MessageSquareText, ShieldCheck, ArrowLeft, ArrowRight, ChevronDown, Library } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WordSummaryHistoryItem } from '@/actions/wordAction';
 
@@ -19,25 +21,20 @@ interface GroupedWordHistory {
 export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, targetMonth }) => {
   const router = useRouter();
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
+  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
   // 当月の文字列（"YYYY-MM"）を生成
   const currentMonthStr = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  }, []);
+    return toIsoMonthInZone(new Date(), timezone);
+  }, [timezone]);
 
-  // 日付文字列を「表示形式（YYYY/MM/DD）」に高速・確実に標準化する関数（データ量増加ケア）
-  const formatDateKey = (dateInput: string | Date): string => {
-    const d = new Date(dateInput);
-    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-  };
-
-  // 日付ごとにグループ化（データ集計ロジックを最適化＆安全化）
+  // 🎯 日付ごとにグループ化（React Compiler が確実に追随できるよう外部関数参照を排除し、依存配列を修正）
   const groupedData = useMemo(() => {
     const groups: GroupedWordHistory = {};
 
     initialData.forEach(session => {
-      const dateStr = formatDateKey(session.training_date);
+      // 💡 外部関数を通さず、直接インラインでタイムゾーン付きフォーマットを実行
+      const dateStr = formatZonedDate(session.training_date, timezone);
       if (!groups[dateStr]) groups[dateStr] = [];
       groups[dateStr].push(session);
     });
@@ -51,7 +48,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
     });
 
     return groups;
-  }, [initialData]);
+  }, [initialData, timezone]); // 💡 静的解析が一致するよう `timezone` を依存配列にしっかり追加
 
   const toggleDate = (date: string) => {
     setExpandedDates(prev =>
@@ -79,7 +76,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
   const [displayYear, displayMonth] = targetMonth.split('-');
   const isNotCurrentMonth = targetMonth !== currentMonthStr;
   
-  // ソートの計算量最適化：Dateオブジェクトを都度生成せず、文字列比較（YYYY/MM/DDの降順）で高速に処理
+  // ソートの計算量最適化
   const sortedDates = useMemo(() => {
     return Object.keys(groupedData).sort((a, b) => b.localeCompare(a));
   }, [groupedData]);
@@ -88,7 +85,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
     <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
       <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
 
-        {/* ────────────── ヘッダー：Performance画面と100%完全同期したライトインディゴ ────────────── */}
+        {/* ────────────── ヘッダー ────────────── */}
         <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
           <div className="absolute top-0 right-0 p-3 opacity-[0.08] pointer-events-none">
             <BookOpen size={115} strokeWidth={1.2} className="text-indigo-600" />
@@ -113,10 +110,8 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
             </div>
           </div>
 
-          {/* 月移動：カプセル型UI ＆ 「今月」ボタン配置エリア */}
+          {/* 月移動：カプセル型UI */}
           <div className="relative flex items-center justify-center pt-1">
-            
-            {/* カプセルを包含するインラインコンテナ */}
             <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
               <button 
                 onClick={() => handleMonthChange('prev')} 
@@ -143,7 +138,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                 <ArrowRight size={14} strokeWidth={2.5} />
               </button>
 
-              {/* カプセルの右端から ml-3 離した被らない位置に「今月」ボタンを絶対配置 */}
+              {/* 「今月」ボタン */}
               <AnimatePresence>
                 {isNotCurrentMonth && (
                   <motion.button
@@ -160,11 +155,10 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                 )}
               </AnimatePresence>
             </div>
-
           </div>
         </div>
 
-        {/* ────────────── メイン：リストエリア（白・ライトグレーベース） ────────────── */}
+        {/* ────────────── メイン：リストエリア ────────────── */}
         <div className="flex-1 overflow-y-auto bg-slate-50/40 p-5 sm:p-6">
           <div className="max-w-xl mx-auto space-y-3">
           {sortedDates.length === 0 ? (
@@ -187,7 +181,6 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                   layout="position"
                   className="bg-white rounded-2xl border border-slate-200/60 overflow-hidden shadow-xs"
                 >
-                  {/* 親アコーディオンヘッダー */}
                   <button
                     onClick={() => toggleDate(date)}
                     className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50/40 transition-colors"
@@ -223,7 +216,6 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                     </div>
                   </button>
 
-                  {/* 詳細リスト (アコーディオン) */}
                   <AnimatePresence initial={false}>
                     {isExpanded && (
                       <motion.div
@@ -275,7 +267,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
           </div>
         </div>
 
-        {/* ────────────── フッター：PerformanceのLibraryボタンとデザイン・カラーを100%統一 ────────────── */}
+        {/* ────────────── フッター ────────────── */}
         <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex flex-col items-center">
           <button
             onClick={() => router.push('/library')}

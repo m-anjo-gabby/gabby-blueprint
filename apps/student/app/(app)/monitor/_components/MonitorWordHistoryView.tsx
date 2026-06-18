@@ -20,6 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { formatZonedDate } from '@gabby/lib/date/date';
 
 interface MonitorWordHistoryViewProps {
   initialData: MonitorWordSummaryHistoryItem[];
@@ -42,22 +44,26 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // 💡 管理者の設定タイムゾーンを取得（デフォルトは Asia/Tokyo）
+  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+
   const [localStart, setLocalStart] = useState<string>(startDate);
   const [localEnd, setLocalEnd] = useState<string>(endDate);
   const [page, setPage] = useState<number>(1);
 
-  // 💡 URLから includeMonitor の現在地を検知 (文字列の 'true' かどうか)
+  // URLから includeMonitor の現在地を検知
   const isIncludeMonitorActive = searchParams.get('includeMonitor') === 'true';
 
   // 期間のインテリジェントバリデーション
   const dateRangeValidationError = useMemo<'reverse' | 'exceeded' | null>(() => {
-    const start = new Date(localStart);
-    const end = new Date(localEnd);
-    
-    if (start > end) {
+    // 💡 localStart/End は "YYYY-MM-DD" 形式のため、文字列比較と単純なタイムスタンプ差分で安全に検証可能
+    if (localStart > localEnd) {
       return 'reverse';
     }
     
+    const start = new Date(localStart);
+    const end = new Date(localEnd);
     const diffDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
     if (diffDays > 186) {
       return 'exceeded';
@@ -85,7 +91,6 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
       params.delete('userIds');
     }
 
-    // 💡 既存の includeMonitor フラグを確実にURLクエリへマージして維持する
     if (isIncludeMonitorActive) {
       params.set('includeMonitor', 'true');
     } else {
@@ -93,7 +98,8 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
     }
 
     setPage(1);
-    router.push(`/monitor?${params.toString()}`);
+    // 💡 router.push から router.replace に変更し、履歴の多重登録とスクロール位置のブレを防止
+    router.replace(`/monitor?${params.toString()}`, { scroll: false });
   };
 
   const handleDateSearch = (): void => {
@@ -126,11 +132,10 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
     const groups: GroupedWordHistory = {};
 
     initialData.forEach(session => {
-      const date = new Date(session.training_date).toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
+      // 💡 システム依存を廃止し、date.ts の formatZonedDate を使用して管理者の指定タイムゾーンで安全にグループ化
+      const date = formatZonedDate(session.training_date, timezone);
+      if (!date) return; // 万が一の不正値ガード
+
       if (!groups[date]) groups[date] = [];
       groups[date].push(session);
     });
@@ -146,10 +151,14 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
     });
 
     return groups;
-  }, [initialData]);
+  }, [initialData, timezone]);
 
+  // グループ化した日付のソート（最新順）
   const sortedDates = useMemo<string[]>(() => {
-    return Object.keys(groupedData).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    return Object.keys(groupedData).sort((a, b) => {
+      // 💡 日付文字列(YYYY/MM/DD)をタイムスタンプにして降順ソート
+      return new Date(b).getTime() - new Date(a).getTime();
+    });
   }, [groupedData]);
 
   // ページネーション設定
@@ -164,9 +173,8 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
     const headers = ['日付', '受講生名', 'トレーニング教材', '単語数', 'フレーズ数', '発話評価数'];
     
     const rows = initialData.map(session => {
-      const date = new Date(session.training_date).toLocaleDateString('ja-JP', {
-        year: 'numeric', month: '2-digit', day: '2-digit'
-      });
+      // 💡 画面表示と完全に一致するタイムゾーン基準の日付を出力
+      const date = formatZonedDate(session.training_date, timezone);
       return [
         `"${date}"`,
         `"${session.com_m_user?.user_name || '未設定'}"`,
@@ -178,7 +186,6 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
     });
 
     const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
     const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
     
@@ -195,7 +202,7 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
   return (
     <div className="space-y-4">
       
-      {/* ────────────── 🛠️ コントロールバー（固定レイアウトエリア） ────────────── */}
+      {/* ────────────── 🛠️ コントロールバー ────────────── */}
       <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4 sm:p-5 flex flex-col xl:flex-row gap-5 items-start xl:items-center justify-between">
         
         <div className="flex flex-col md:flex-row gap-5 items-start md:items-center w-full xl:w-auto flex-1">
@@ -400,7 +407,7 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
           </div>
         ) : (
           pagedDates.map((date, index) => {
-            const sessions = groupedData[date];
+            const sessions = groupedData[date] || [];
             const totalWordsDay = sessions.reduce((acc, s) => acc + s.word_count, 0);
             const totalPhrasesDay = sessions.reduce((acc, s) => acc + s.phrase_count, 0);
             const totalAssessmentsDay = sessions.reduce((acc, s) => acc + s.assessment_count, 0);
@@ -452,7 +459,7 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                         key={`${session.content_id}-${session.com_m_user?.email || idx}`}
                         className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 px-5 py-3 hover:bg-indigo-50/20 transition-colors items-center group"
                       >
-                        {/* 1. だれが (2マス) */}
+                        {/* 1. だれが */}
                         <div className="col-span-1 md:col-span-2 flex items-center gap-2">
                           {session.com_m_user && (
                             <div className="flex items-center gap-2 min-w-0">
@@ -466,30 +473,30 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                           )}
                         </div>
 
-                        {/* 2. 何を (3マス) */}
+                        {/* 2. 何を */}
                         <div className="col-span-1 md:col-span-3">
                           <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">
-                            {session.com_m_contents.content_name || 'Unknown Content'}
+                            {session.com_m_contents?.content_name || 'Unknown Content'}
                           </span>
                         </div>
 
-                        {/* 3. どれくらい (5マス) */}
+                        {/* 3. どれくらい */}
                         <div className="col-span-1 md:col-span-5 flex items-center justify-start gap-3 text-[10px]">
                           <div className="flex items-center gap-2 text-slate-500 font-bold font-mono">
                             
-                            {/* 単語数ブロック */}
+                            {/* 単語数 */}
                             <span className="inline-flex items-center min-w-[56px]" title="単語数">
                               <BookOpen size={11} className="text-blue-500/80 mr-1 shrink-0" /> 
                               <span className="font-mono text-slate-700 font-extrabold">{session.word_count}</span>
                             </span>
                             
-                            {/* フレーズ数ブロック */}
+                            {/* フレーズ数 */}
                             <span className="inline-flex items-center min-w-[56px]" title="フレーズ数">
                               <MessageSquareText size={11} className="text-emerald-500/80 mr-1 shrink-0" /> 
                               <span className="font-mono text-slate-700 font-extrabold">{session.phrase_count}</span>
                             </span>
                             
-                            {/* 発話評価数ブロック */}
+                            {/* 発話評価数 */}
                             <span className="inline-flex items-center min-w-[56px]" title="発話評価数">
                               <ShieldCheck size={11} className="text-amber-500/80 mr-1 shrink-0" /> 
                               <span className="font-mono text-slate-700 font-extrabold">{session.assessment_count}</span>
@@ -498,7 +505,6 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                           </div>
                         </div>
 
-                        {/* 4. 残りスペース (2マス) */}
                         <div className="hidden md:block col-span-2" />
                       </div>
                     ))}

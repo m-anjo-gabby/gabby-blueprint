@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
 import { cn } from '@/lib/utils';
 import { 
@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
 
 interface MonitorUserListProps {
   users: MonitorUser[];
@@ -30,23 +32,23 @@ interface MonitorUserListProps {
 export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHistory }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   
   const currentView = searchParams.get('view') || 'overview';
   const userIds = searchParams.get('userIds');
   const qStart = searchParams.get('startDate');
   
-  // 💡 URLのクエリパラメータからincludeMonitorの状態を取得（内部のフォールバック判定用に残します）
+  // 💡 URLのクエリパラメータからincludeMonitorの状態を取得
   const includeMonitor = searchParams.get('includeMonitor') === 'true';
   
-  const currentMonthStr = React.useMemo(() => {
+  const currentMonthStr = useMemo(() => {
     if (qStart && qStart.length >= 7) {
       return qStart.substring(0, 7);
     }
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  }, [qStart]);
+    return toIsoMonthInZone(new Date(), timezone);
+  }, [qStart, timezone]);
 
-  // 💡 パラメータ変更の共通処理（トグル制御を削除し、月移動のみに最適化）
+  // 💡 パラメータ変更の共通処理（replace & scroll: false による遷移最適化）
   const updateQueryParams = (newMonthOffset: number) => {
     const params = new URLSearchParams(searchParams.toString());
     
@@ -68,7 +70,8 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
     params.set('view', currentView);
     if (userIds) params.set('userIds', userIds);
     
-    router.push(`/monitor?${params.toString()}`);
+    // 💡 pushではなくreplaceにすることで、ブラウザバックの履歴スタック詰まりを防止
+    router.replace(`/monitor?${params.toString()}`, { scroll: false });
   };
 
   const handleMonthChange = (offset: number) => {
@@ -77,7 +80,8 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
 
   const [displayYear, displayMonth] = currentMonthStr.split('-');
 
-  const userStats = React.useMemo(() => {
+  // 💡 ループによる統計マップ生成のメモ化（タイムゾーンを依存配列に追加して安全性を担保）
+  const userStats = useMemo(() => {
     const statsMap: Record<string, { days: Set<string>, words: number, phrases: number, assessments: number }> = {};
     
     wordHistory.forEach(h => {
@@ -91,20 +95,7 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
       statsMap[uid].assessments += h.assessment_count;
     });
     return statsMap;
-  }, [wordHistory]);
-
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return '—';
-    try {
-      return new Date(dateStr).toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-    } catch {
-      return '—';
-    }
-  };
+  }, [wordHistory, timezone]); // 💡 静的解析エラーを避けるため timezone を明示
 
   const handleExportCSV = () => {
     if (users.length === 0) return;
@@ -134,14 +125,14 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
       }) as Record<string, string>)[user.license_state] || '不明';
       
       const lastSignIn = user.last_sign_in_at 
-        ? new Date(user.last_sign_in_at).toLocaleDateString('ja-JP') 
+        ? formatZonedDate(user.last_sign_in_at, timezone)
         : 'なし';
 
       return [
         user.user_name || '未設定',
         statusLabel,
-        user.license_start_date ? new Date(user.license_start_date).toLocaleDateString('ja-JP') : '—',
-        user.license_end_date ? new Date(user.license_end_date).toLocaleDateString('ja-JP') : '—',
+        user.license_start_date ? formatZonedDate(user.license_start_date, timezone) : '—',
+        user.license_end_date ? formatZonedDate(user.license_end_date, timezone) : '—',
         `${stats.days.size}日`,
         stats.words,
         stats.phrases,
@@ -185,7 +176,6 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
     }
   };
 
-  // 受講生リストが0名の場合の表示（初期状態、または親側でトグルがOFFであり誰も居ない時）
   if (users.length === 0 && !includeMonitor) {
     return (
       <div className="bg-white rounded-[28px] border border-dashed border-slate-200/80 p-16 text-center max-w-xl mx-auto">
@@ -200,9 +190,7 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
       
       {/* コントロールバー */}
       <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center w-full sm:w-auto">
-          {/* 左側：対象年月ナビゲーション */}
           <div className="space-y-1.5 w-full sm:w-auto">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-0.5 flex items-center gap-1.5 font-mono">
               <CalendarDays size={12} className="text-indigo-500" />
@@ -232,7 +220,6 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
           </div>
         </div>
 
-        {/* 右側：CSVダウンロードボタン */}
         <div className="self-end sm:self-auto shrink-0">
           <button
             onClick={handleExportCSV}
@@ -246,31 +233,26 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
             <span>CSVエクスポート</span>
           </button>
         </div>
-
       </div>
 
-      {/* 受講生が空（親のトグル切り替えの結果、誰もいなくなった場合など）のフォールバック */}
       {users.length === 0 ? (
         <div className="bg-white rounded-[28px] border border-dashed border-slate-200/80 p-16 text-center">
           <User size={36} className="mx-auto text-slate-300 mb-3" />
           <p className="text-sm font-bold text-slate-400">該当するユーザーが見つかりません（モニターのみ登録されている可能性があります）</p>
         </div>
       ) : (
-        /* ─── 受講生テーブルコンテナ ─── */
         <div className="bg-white border border-slate-200/60 rounded-[28px] shadow-sm overflow-hidden">
           
-          {/* PC用：一覧テーブルヘッダー */}
+          {/* PC用ヘッダー */}
           <div className="hidden md:flex items-center px-6 py-4 bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono">
             <div className="w-full grid grid-cols-12 gap-4 items-center">
               <div className="col-span-3 pl-12">受講生</div>
               <div className="col-span-2 text-center">ステータス</div>
               <div className="col-span-2 text-center">ライセンス期間</div>
-              
               <div className="col-span-1 flex flex-col items-center justify-center text-center leading-tight">
                 <span>トレーニング</span>
                 <span>日数</span>
               </div>
-
               <div className="col-span-2 text-left pl-1">主要実績 (単語/フレーズ/発話)</div>
               <div className="col-span-2 text-right pr-4">最終接続</div>
             </div>
@@ -316,7 +298,7 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                       </div>
                     </div>
 
-                    {/* 3. ライセンス期間の上下段表示 */}
+                    {/* 3. ライセンス期間（💡 formatDate を廃止し、インライン化してCompiler準拠に） */}
                     <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-center border-t border-dashed border-slate-100 md:border-none pt-2.5 md:pt-0">
                       <span className="md:hidden text-[10px] font-black text-slate-400 uppercase font-mono tracking-wider">ライセンス期間</span>
                       <div className="flex flex-col md:items-center font-mono text-[11px] text-slate-500 font-bold leading-relaxed">
@@ -324,11 +306,15 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                           <>
                             <div className="flex items-center gap-1">
                               <span className="text-[9px] font-black px-1 py-0.5 rounded-sm bg-slate-100 text-slate-400 scale-90 origin-right md:origin-center">自</span>
-                              <span className="text-slate-700 tracking-tight">{formatDate(user.license_start_date)}</span>
+                              <span className="text-slate-700 tracking-tight">
+                                {formatZonedDate(user.license_start_date, timezone) || '—'}
+                              </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <span className="text-[9px] font-black px-1 py-0.5 rounded-sm bg-slate-100 text-slate-400 scale-90 origin-right md:origin-center">至</span>
-                              <span className="text-slate-600 tracking-tight">{formatDate(user.license_end_date)}</span>
+                              <span className="text-slate-600 tracking-tight">
+                                {formatZonedDate(user.license_end_date, timezone) || '—'}
+                              </span>
                             </div>
                           </>
                         ) : (
@@ -350,22 +336,18 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                     <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-start border-t border-dashed border-slate-100 md:border-none pt-2.5 md:pt-0 md:pl-1">
                       <span className="md:hidden text-[10px] font-black text-slate-400 uppercase font-mono tracking-wider">主要実績</span>
                       <div className="flex items-center gap-2.5 text-slate-500 font-bold font-mono text-[10px] md:w-full md:justify-start">
-                        
                         <span className="inline-flex items-center min-w-[48px]" title="単語数">
                           <BookOpen size={11} className="text-blue-500/80 mr-1 shrink-0" /> 
                           <span className="text-slate-700 font-extrabold font-mono">{stats.words}</span>
                         </span>
-                        
                         <span className="inline-flex items-center min-w-[48px]" title="フレーズ数">
                           <MessageSquareText size={11} className="text-emerald-500/80 mr-1 shrink-0" /> 
                           <span className="text-slate-700 font-extrabold font-mono">{stats.phrases}</span>
                         </span>
-                        
                         <span className="inline-flex items-center min-w-[48px]" title="発話評価数">
                           <ShieldCheck size={11} className="text-amber-500/80 mr-1 shrink-0" /> 
                           <span className="text-slate-700 font-extrabold font-mono">{stats.assessments}</span>
                         </span>
-
                       </div>
                     </div>
 
@@ -375,7 +357,9 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                       {user.last_sign_in_at ? (
                         <div className="text-[11px] text-slate-600 font-black flex items-center gap-1.5 font-mono">
                           <Clock size={12} className="text-slate-400" />
-                          <span>{new Date(user.last_sign_in_at).toLocaleDateString('ja-JP')}</span>
+                          <span>
+                            {formatZonedDate(user.last_sign_in_at, timezone) || '—'}
+                          </span>
                         </div>
                       ) : (
                         <span className="text-xs font-bold text-slate-300 font-sans">未接続</span>

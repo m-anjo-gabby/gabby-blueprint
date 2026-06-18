@@ -6,6 +6,8 @@ import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, Chev
 import { cn } from "@/lib/utils";
 import { SPRINT_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
 
 interface HistorySession {
   self_sprint_id: string;
@@ -27,24 +29,21 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   const searchParams = useSearchParams();
   const focusId = searchParams.get('focus');
 
-  // 当月の文字列（"YYYY-MM"）を生成
+  // 🌍 ユーザーマスタからタイムゾーンを取得（未設定時は Asia/Tokyo にフォールバック）
+  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+
+  // 🌍 ユーザーのタイムゾーンに基づいた「今月（YYYY-MM）」文字列を生成
   const currentMonthStr = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  }, []);
+    return toIsoMonthInZone(new Date(), timezone);
+  }, [timezone]);
 
-  // 日付文字列を「表示形式（YYYY/MM/DD）」に高速・確実に標準化する関数（データ量増加・タイムゾーン安全ケア）
-  const formatDateKey = (dateInput: string | Date): string => {
-    const d = new Date(dateInput);
-    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-  };
-
-  // 🎯 初期レンダリング時に URL パラメータから展開すべき日付を特定する（標準化関数に統合）
+  // 🎯 初期レンダリング時に URL パラメータから展開すべき日付を特定する
   const [expandedDates, setExpandedDates] = useState<string[]>(() => {
     if (!focusId || !initialData.length) return [];
     const targetSession = initialData.find(s => s.self_sprint_id === focusId);
     if (targetSession) {
-      return [formatDateKey(targetSession.insert_date)];
+      // 💡 外部関数を呼ばず、直接タイムゾーン関数を使用
+      return [formatZonedDate(targetSession.insert_date, timezone)];
     }
     return [];
   });
@@ -63,12 +62,13 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     return () => clearTimeout(timer);
   }, [focusId, initialData.length]);
 
-  // 日付ごとにグループ化
+  // 💡 日付ごとにグループ化（React Compiler が確実に自動追随できるよう最適化）
   const groupedData = useMemo(() => {
     const groups: Record<string, HistorySession[]> = {};
     
     initialData.forEach(session => {
-      const dateStr = formatDateKey(session.insert_date);
+      // 💡 `formatDateKey` の代わりに直接インライン展開することで、不整合を根本排除
+      const dateStr = formatZonedDate(session.insert_date, timezone);
       if (!groups[dateStr]) groups[dateStr] = [];
       groups[dateStr].push(session);
     });
@@ -79,7 +79,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     });
 
     return groups;
-  }, [initialData]);
+  }, [initialData, timezone]);
 
   const toggleDate = (date: string) => {
     setExpandedDates(prev => 
@@ -107,7 +107,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   const [displayYear, displayMonth] = targetMonth.split('-');
   const isNotCurrentMonth = targetMonth !== currentMonthStr;
 
-  // ソートの計算量最適化：Dateオブジェクトを生成せず文字列（YYYY/MM/DD）で高速に降順ソート
+  // ソートの最適化：標準化した文字列（YYYY/MM/DD）で高速に降順ソート
   const sortedDates = useMemo(() => {
     return Object.keys(groupedData).sort((a, b) => b.localeCompare(a));
   }, [groupedData]);
@@ -116,7 +116,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
       <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
         
-        {/* ────────────── ヘッダー：他の履歴画面と100%完全同期 ────────────── */}
+        {/* ────────────── ヘッダー ────────────── */}
         <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
           <div className="absolute top-0 right-0 p-3 opacity-[0.08] pointer-events-none">
             <History size={115} strokeWidth={1.2} className="text-indigo-600" />
@@ -141,10 +141,8 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             </div>
           </div>
 
-          {/* 月移動：カプセル型UI ＆ 「今月」ボタン配置エリア */}
+          {/* 月移動：カプセル型UI */}
           <div className="relative flex items-center justify-center pt-1">
-            
-            {/* カプセルを包含するインラインコンテナ */}
             <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
               <button 
                 onClick={() => handleMonthChange('prev')} 
@@ -171,7 +169,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                 <ArrowRight size={14} strokeWidth={2.5} />
               </button>
 
-              {/* カプセルの右端から ml-3 離した被らない位置に「今月」ボタンを絶対配置 */}
+              {/* 「今月」ボタン */}
               <AnimatePresence>
                 {isNotCurrentMonth && (
                   <motion.button
@@ -188,7 +186,6 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                 )}
               </AnimatePresence>
             </div>
-
           </div>
         </div>
 
@@ -204,16 +201,11 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             sortedDates.map((date, index) => {
               const sessions = groupedData[date];
               const isExpanded = expandedDates.includes(date);
-              
-              // 当月の通算実施日数インデックス
               const dayNo = sortedDates.length - index;
-
-              // その日の総回答数を計算
               const totalAnswersDay = sessions.reduce((acc, s) => acc + s.total_answered, 0);
 
               return (
                 <div key={date} className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm">
-                  {/* 1段目: 親アコーディオンヘッダー */}
                   <button 
                     onClick={() => toggleDate(date)}
                     className="w-full p-5 sm:p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
@@ -240,7 +232,6 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                     </div>
                   </button>
 
-                  {/* 2段目: 詳細リスト (アコーディオン) */}
                   <AnimatePresence>
                     {isExpanded && (
                       <motion.div
@@ -270,13 +261,10 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                   <div>
                                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                                       <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
-                                      
-                                      {/* ① レベル表示 */}
                                       <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
                                         {session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`}
                                       </span>
 
-                                      {/* YES/NOバッジ */}
                                       {isSpeedMode && (
                                         <span className={cn(
                                           "text-[9px] font-black px-1.5 py-0.5 rounded-md border tracking-wider",
@@ -311,7 +299,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
           </div>
         </div>
 
-        {/* ────────────── フッター：ドリル履歴と100%完全同期 ────────────── */}
+        {/* ────────────── フッター ────────────── */}
         <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex flex-col items-center">
           <button
             onClick={() => router.push('/training/sprint/play?mode=sprint')}
