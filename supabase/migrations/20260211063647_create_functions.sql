@@ -334,58 +334,7 @@ REVOKE EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT, INT) FR
 GRANT EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT, INT) TO authenticated;
 
 ---------------------------------------------
--- FUNCTION: public.get_client_user_list (汎用除外ビュー連動版)
----------------------------------------------
-CREATE OR REPLACE FUNCTION public.get_client_user_list()
-RETURNS SETOF private.vw_user_list
-LANGUAGE plpgsql
-SECURITY DEFINER -- Runs with the privileges of the function creator (e.g., postgres)
-SET search_path = public
-AS $$
-DECLARE
-    _client_id UUID;
-BEGIN
-    -- Get the client_id from the current user's JWT
-    _client_id := public.get_jwt_client_id();
-
-    IF _client_id IS NULL THEN
-        RAISE EXCEPTION 'Client ID not found in JWT.';
-    END IF;
-
-    RETURN QUERY
-    SELECT v.*
-    FROM private.vw_user_list v
-    WHERE v.client_id = _client_id
-      -- 生徒を対象
-      AND v.user_type ~ '1'
-      AND (
-        -- 1. 招待中（まだ com_m_user が作成されていない）ユーザーはそのまま含める
-        v.user_id IS NULL
-        OR
-        (
-          -- 2. 本登録済みユーザーは、ライセンス状態が 'active'（有効）なものに絞り込む
-          v.license_state = 'active'
-          -- 💡 修正: 汎用ビュー（vw_com_m_user_monitored）に存在する（除外対象ではない）ユーザーのみに絞り込む
-          AND EXISTS (
-            SELECT 1 
-            FROM public.vw_com_m_user_monitored m 
-            WHERE m.id = v.id
-          )
-        )
-      )
-    ORDER BY v.insert_date DESC;
-END;
-$$;
-
-COMMENT ON FUNCTION public.get_client_user_list() IS '現在のユーザーのクライアントに所属するモニター対象ユーザー（本登録済みおよび招待中）のリストを返します。除外ロールは vw_com_m_user_monitored に準拠します。';
-
--- 権限の再設定
-REVOKE EXECUTE ON FUNCTION public.get_client_user_list() FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.get_client_user_list() FROM anon;
-GRANT EXECUTE ON FUNCTION public.get_client_user_list() TO authenticated;
-
----------------------------------------------
--- 1. ユーザーリスト関数（修正：デモは常に除外、モニターのみ切り替え）
+-- 1. ユーザーリスト関数（セキュリティ修正版）
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_monitor_user_list(
     _include_monitor BOOLEAN DEFAULT FALSE
@@ -413,7 +362,7 @@ BEGIN
         OR
         (
           v.license_state = 'active'
-          -- 💡 修正：デモユーザーはどんな時でも絶対に含めない（常に遮断）
+          -- 💡 デモユーザーはどんな時でも絶対に含めない
           AND NOT EXISTS (
             SELECT 1 FROM public.com_t_user_role r 
             WHERE r.user_id = v.id AND r.role_id = 'demo_user'
@@ -433,9 +382,14 @@ BEGIN
 END;
 $$;
 
+-- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+ALTER FUNCTION public.get_monitor_user_list(BOOLEAN) OWNER TO postgres;
+REVOKE EXECUTE ON FUNCTION public.get_monitor_user_list(BOOLEAN) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_monitor_user_list(BOOLEAN) TO authenticated;
+
 
 ---------------------------------------------
--- 2. ドリル履歴関数（修正：デモは常に除外、モニターのみ切り替え）
+-- 2. ドリル履歴関数（セキュリティ修正版）
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_monitor_word_history(
     _start_date DATE,
@@ -475,7 +429,7 @@ BEGIN
     WHERE u.client_id = _client_id
       AND w.training_date BETWEEN _start_date AND _end_date
       AND (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR w.user_id = ANY(_user_ids))
-      -- 💡 修正：デモユーザーの履歴は常に100%遮断
+      -- 💡 デモユーザーの履歴は常に100%遮断
       AND NOT EXISTS (
         SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'demo_user'
       )
@@ -491,9 +445,14 @@ BEGIN
 END;
 $$;
 
+-- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+ALTER FUNCTION public.get_monitor_word_history(DATE, DATE, UUID[], BOOLEAN) OWNER TO postgres;
+REVOKE EXECUTE ON FUNCTION public.get_monitor_word_history(DATE, DATE, UUID[], BOOLEAN) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_monitor_word_history(DATE, DATE, UUID[], BOOLEAN) TO authenticated;
+
 
 ---------------------------------------------
--- 3. スプリント履歴関数（修正：デモは常に除外、モニターのみ切り替え）
+-- 3. スプリント履歴関数（セキュリティ修正版）
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_monitor_sprint_history(
     _start_date TIMESTAMP WITH TIME ZONE,
@@ -530,7 +489,7 @@ BEGIN
     WHERE u.client_id = _client_id
       AND s.insert_date BETWEEN _start_date AND _end_date
       AND (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR s.user_id = ANY(_user_ids))
-      -- 💡 修正：デモユーザーの履歴は常に100%遮断
+      -- 💡 デモユーザーの履歴は常に100%遮断
       AND NOT EXISTS (
         SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'demo_user'
       )
@@ -545,3 +504,8 @@ BEGIN
     ORDER BY s.insert_date DESC;
 END;
 $$;
+
+-- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+ALTER FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) OWNER TO postgres;
+REVOKE EXECUTE ON FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) TO authenticated;

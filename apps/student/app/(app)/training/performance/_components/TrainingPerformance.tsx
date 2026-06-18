@@ -34,7 +34,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
       const dateStr = toIsoDateInZone(item.training_date, timezone);
       uniqueDays.add(dateStr);
       totalWords += item.word_count;
-      totalPhrases += Math.floor(item.word_count * 0.4);
+      totalPhrases += item.phrase_count;
       totalAssessments += item.assessment_count;
     });
 
