@@ -2,10 +2,12 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Calendar, Zap, ArrowRight, History, Timer } from 'lucide-react';
+import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { SPRINT_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
 
 interface HistorySession {
   self_sprint_id: string;
@@ -19,7 +21,7 @@ interface HistorySession {
 
 interface SprintHistoryViewProps {
   initialData: HistorySession[];
-  targetMonth: string;
+  targetMonth: string; // 形式: "YYYY-MM"
 }
 
 export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialData, targetMonth }) => {
@@ -27,23 +29,26 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   const searchParams = useSearchParams();
   const focusId = searchParams.get('focus');
 
+  // 🌍 ユーザーマスタからタイムゾーンを取得（未設定時は Asia/Tokyo にフォールバック）
+  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+
+  // 🌍 ユーザーのタイムゾーンに基づいた「今月（YYYY-MM）」文字列を生成
+  const currentMonthStr = useMemo(() => {
+    return toIsoMonthInZone(new Date(), timezone);
+  }, [timezone]);
+
   // 🎯 初期レンダリング時に URL パラメータから展開すべき日付を特定する
   const [expandedDates, setExpandedDates] = useState<string[]>(() => {
     if (!focusId || !initialData.length) return [];
     const targetSession = initialData.find(s => s.self_sprint_id === focusId);
     if (targetSession) {
-      return [
-        new Date(targetSession.insert_date).toLocaleDateString('ja-JP', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        })
-      ];
+      // 💡 外部関数を呼ばず、直接タイムゾーン関数を使用
+      return [formatZonedDate(targetSession.insert_date, timezone)];
     }
     return [];
   });
 
-  // 🎯 スクロール処理のみを Effect で行う（setStateは含まない）
+  // 🎯 スクロール処理のみを Effect で行う
   useEffect(() => {
     if (!focusId || initialData.length === 0) return;
 
@@ -52,23 +57,20 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
       if (element) {
         element.scrollIntoView({ behavior: 'auto', block: 'center' });
       }
-    }, 50); // レンダリング確定後、瞬時にジャンプさせる
+    }, 50);
 
     return () => clearTimeout(timer);
   }, [focusId, initialData.length]);
 
-  // 日付ごとにグループ化
+  // 💡 日付ごとにグループ化（React Compiler が確実に自動追随できるよう最適化）
   const groupedData = useMemo(() => {
     const groups: Record<string, HistorySession[]> = {};
     
     initialData.forEach(session => {
-      const date = new Date(session.insert_date).toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(session);
+      // 💡 `formatDateKey` の代わりに直接インライン展開することで、不整合を根本排除
+      const dateStr = formatZonedDate(session.insert_date, timezone);
+      if (!groups[dateStr]) groups[dateStr] = [];
+      groups[dateStr].push(session);
     });
 
     // 各日のセッションを「実施順（昇順）」にソート
@@ -77,7 +79,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     });
 
     return groups;
-  }, [initialData]);
+  }, [initialData, timezone]);
 
   const toggleDate = (date: string) => {
     setExpandedDates(prev => 
@@ -85,51 +87,104 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     );
   };
 
-  const handleMonthChange = (offset: number) => {
+  const handleMonthChange = (direction: 'prev' | 'next') => {
     const [year, month] = targetMonth.split('-').map(Number);
-    const date = new Date(year, month - 1 + offset, 1);
-    const nextMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    router.push(`/training/sprint/history?month=${nextMonth}`);
+    let newYear = year;
+    let newMonth = direction === 'prev' ? month - 1 : month + 1;
+
+    if (newMonth === 0) {
+      newMonth = 12;
+      newYear -= 1;
+    } else if (newMonth === 13) {
+      newMonth = 1;
+      newYear += 1;
+    }
+
+    const targetMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
+    router.push(`/training/sprint/history?month=${targetMonthStr}`);
   };
 
   const [displayYear, displayMonth] = targetMonth.split('-');
-  const sortedDates = Object.keys(groupedData);
+  const isNotCurrentMonth = targetMonth !== currentMonthStr;
+
+  // ソートの最適化：標準化した文字列（YYYY/MM/DD）で高速に降順ソート
+  const sortedDates = useMemo(() => {
+    return Object.keys(groupedData).sort((a, b) => b.localeCompare(a));
+  }, [groupedData]);
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-blue-100">
-      <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-100 rounded-[40px] shadow-2xl flex flex-col overflow-hidden animate-fade-in">
+    <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
+      <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
         
         {/* ────────────── ヘッダー ────────────── */}
-        <div className="shrink-0 bg-blue-600 p-5 sm:p-6 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-            <History size={120} strokeWidth={1} />
+        <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
+          <div className="absolute top-0 right-0 p-3 opacity-[0.08] pointer-events-none">
+            <History size={115} strokeWidth={1.2} className="text-indigo-600" />
           </div>
-          
-          <div className="relative space-y-5">
-            <div className="flex items-center justify-between">
-              <button 
-                onClick={() => router.push('/dashboard')}
-                className="h-8 px-2.5 flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all text-[10px] font-black uppercase tracking-wider backdrop-blur-md border border-white/10"
-              >
-                <ChevronLeft size={12} strokeWidth={3} />
-                <span>ダッシュボードへ</span>
-              </button>
-              <div className="text-right">
-                <span className="text-[10px] font-black text-blue-200 uppercase tracking-[0.2em]">Learning History</span>
-                <p className="text-[9px] font-bold text-blue-100 opacity-80">学習履歴</p>
-              </div>
-            </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-white/10">
-              <button onClick={() => handleMonthChange(-1)} className="p-2 text-white/60 hover:text-white transition-colors">
-                <ChevronLeft size={24} strokeWidth={3} />
+          <div className="relative flex items-center justify-between">
+            <button
+              onClick={() => router.push('/training/performance')}
+              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+              title="パフォーマンスに戻る"
+            >
+              <ChevronLeft size={20} strokeWidth={2.5} />
+            </button>
+            
+            <div className="text-right">
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
+                Sprint History
+              </span>
+              <p className="text-[9px] font-bold text-slate-400 opacity-90 mt-0.5">
+                スプリント履歴の詳細ログ
+              </p>
+            </div>
+          </div>
+
+          {/* 月移動：カプセル型UI */}
+          <div className="relative flex items-center justify-center pt-1">
+            <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
+              <button 
+                onClick={() => handleMonthChange('prev')} 
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                title="前月"
+              >
+                <ArrowLeft size={14} strokeWidth={2.5} />
               </button>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">
-                {displayYear}年 {parseInt(displayMonth)}月
-              </h1>
-              <button onClick={() => handleMonthChange(1)} className="p-2 text-white/60 hover:text-white transition-colors">
-                <ChevronRight size={24} strokeWidth={3} />
+              
+              <div className="px-5 text-center min-w-[120px] select-none border-x border-slate-100">
+                <span className="text-[9px] font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
+                  {displayYear}
+                </span>
+                <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
+                  {parseInt(displayMonth)}月
+                </span>
+              </div>
+
+              <button 
+                onClick={() => handleMonthChange('next')} 
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                title="来月"
+              >
+                <ArrowRight size={14} strokeWidth={2.5} />
               </button>
+
+              {/* 「今月」ボタン */}
+              <AnimatePresence>
+                {isNotCurrentMonth && (
+                  <motion.button
+                    initial={{ opacity: 0, x: -6, scale: 0.95 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -6, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    onClick={() => router.push(`/training/sprint/history?month=${currentMonthStr}`)}
+                    className="absolute left-full ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap"
+                    title="現在の月に戻る"
+                  >
+                    今月
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -146,28 +201,21 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             sortedDates.map((date, index) => {
               const sessions = groupedData[date];
               const isExpanded = expandedDates.includes(date);
-              
-              // 当月の通算実施日数インデックス（新しい日付が上のため、全数から引いて算出）
               const dayNo = sortedDates.length - index;
-
-              // その日の総回答数を計算
               const totalAnswersDay = sessions.reduce((acc, s) => acc + s.total_answered, 0);
 
               return (
                 <div key={date} className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm">
-                  {/* 1段目: 親アコーディオンヘッダー */}
                   <button 
                     onClick={() => toggleDate(date)}
                     className="w-full p-5 sm:p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
                   >
                     <div className="flex items-center gap-4 text-left">
-                      {/* 💡 改善点1: 日付の左側に当月Noを表示 */}
-                      <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-black text-base font-mono shrink-0 select-none">
+                      <div className="w-12 h-12 bg-indigo-50/40 border border-indigo-100/50 rounded-2xl flex items-center justify-center text-indigo-500/90 font-black text-base font-mono shrink-0 select-none">
                         {dayNo}
                       </div>
                       <div>
-                        <div className="text-sm font-black text-slate-800 tracking-tight">{date}</div>
-                        {/* 💡 改善点2: 日付下に Sprints と Answers を並列表示。単数・複数形にも完全対応 */}
+                        <div className="text-sm font-bold text-slate-800 tracking-tight mb-1.5">{date}</div>
                         <div className="flex items-center gap-2 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono">
                           <span>
                             {sessions.length} {sessions.length === 1 ? 'Sprint' : 'Sprints'}
@@ -184,7 +232,6 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                     </div>
                   </button>
 
-                  {/* 2段目: 詳細リスト (アコーディオン) */}
                   <AnimatePresence>
                     {isExpanded && (
                       <motion.div
@@ -210,17 +257,14 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                 )}
                               >
                                 <div className="flex items-center gap-4">
-                                  <span className="text-xs font-black text-slate-300 font-mono w-4">{idx + 1}</span>
+                                  <span className="text-[11px] font-black text-indigo-400/80 font-mono w-4">{idx + 1}</span>
                                   <div>
                                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                                       <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
-                                      
-                                      {/* ① レベル表示 */}
                                       <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
                                         {session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`}
                                       </span>
 
-                                      {/* 💡 改善点3: YES/NOバッジはUXルールに基づきレベルの「右側」へ配置 */}
                                       {isSpeedMode && (
                                         <span className={cn(
                                           "text-[9px] font-black px-1.5 py-0.5 rounded-md border tracking-wider",
@@ -256,15 +300,16 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
         </div>
 
         {/* ────────────── フッター ────────────── */}
-        <div className="shrink-0 p-5 sm:p-6 bg-white border-t border-slate-100 flex items-center justify-center">
+        <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex flex-col items-center">
           <button
             onClick={() => router.push('/training/sprint/play?mode=sprint')}
-            className="w-full max-w-sm h-12 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+            className="w-full max-w-sm h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>Next Sprint</span>
-            <ArrowRight size={14} strokeWidth={3} />
+            <span>教材を選択する</span>
+            <ArrowRight size={14} strokeWidth={2.5} />
           </button>
         </div>
+
       </div>
     </div>
   );

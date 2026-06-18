@@ -41,7 +41,7 @@ export default async function StudentAppLayout({
       {/* Zustandへのデータ流し込みとAuth監視 
           クライアント側で常にユーザー情報を参照可能にします。
       */}
-      <UserStoreInitializer user={{ id: user.id, email: user.email }} />
+      <UserStoreInitializer user={user} />
       
       {/* デザイン基盤: 全体共通の背景色やフォントを適用 */}
       <div className="min-h-screen bg-[#f5f5f7] text-slate-900">

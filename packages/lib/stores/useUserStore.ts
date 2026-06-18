@@ -12,6 +12,8 @@ export type User = {
   user_id: number;    // com_m_user の BIGINT ID (表示・管理用)
   user_name: string;  // 表示名
   email: string | undefined;
+  locale_id: string;  // ロケールID (ja, en等)
+  timezone: string;   // IANAタイムゾーン名
   // 拡張: app_metadata の内容を保持
   app_metadata: UserAppMetadata;
 } | null;

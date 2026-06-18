@@ -237,3 +237,78 @@ export async function reportWordProgress(contentId: string, wordCount: number, p
     logger.error("word:report_progress_failed", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } });
   }
 }
+
+/**
+ * 日次単語サマリー履歴アイテムの型
+ */
+export interface WordSummaryHistoryItem {
+  content_id: string;
+  training_date: string; // ISO string or Date string
+  word_count: number;
+  phrase_count: number;
+  assessment_count: number;
+  update_date: string;
+  com_m_contents: {
+    content_name: string;
+  };
+}
+
+/**
+ * ユーザーの特定月の単語ドリル履歴一覧を取得する
+ * @param yearMonth 'YYYY-MM' 形式の文字列
+ */
+export async function getUserWordHistoryAction(yearMonth: string): Promise<{ success: boolean; data: WordSummaryHistoryItem[]; error?: string }> {
+  const ctx = await getLogContext();
+  logger.info("word:get_history_start", "getUserWordHistoryAction start", { ...ctx, yearMonth });
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
+
+    // 月の開始日と終了日を計算 (UTCベースでクエリ)
+    const [year, month] = yearMonth.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
+    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
+
+    const { data, error } = await supabase
+      .from("self_t_word_summary")
+      .select(`
+        content_id,
+        training_date,
+        word_count,
+        phrase_count,
+        assessment_count,
+        update_date,
+        com_m_contents (
+          content_name
+        )
+      `)
+      .eq("user_id", user.id)
+      .gte("training_date", startDate)
+      .lte("training_date", endDate)
+      .order("training_date", { ascending: false }); // 最新の日付が上に来るようにソート
+
+    if (error) throw error;
+
+    // Supabaseの結合結果が配列で返るため、インターフェースに合わせて平坦化する
+    const formattedData = (data as any[])?.map(item => ({
+      ...item,
+      com_m_contents: Array.isArray(item.com_m_contents) ? item.com_m_contents[0] : item.com_m_contents
+    })) || [];
+
+    logger.info("word:get_history_success", "Successfully fetched word summary history", {
+      ...ctx,
+      count: formattedData.length
+    });
+
+    return { success: true, data: formattedData as WordSummaryHistoryItem[] };
+
+  } catch (error: any) {
+    logger.error("word:get_history_error", "Failed to fetch word summary history", {
+      ...ctx,
+      payload: { error: error.message }
+    });
+    return { success: false, data: [], error: error.message };
+  }
+}

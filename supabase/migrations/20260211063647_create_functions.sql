@@ -332,3 +332,216 @@ REVOKE EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT, INT) FR
 
 -- ログイン済みのユーザー（authenticated）にのみ、実行権限を限定して付与
 GRANT EXECUTE ON FUNCTION public.increment_word_summary(UUID, INT, INT, INT) TO authenticated;
+
+---------------------------------------------
+-- FUNCTION: public.get_client_user_list (汎用除外ビュー連動版)
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_client_user_list()
+RETURNS SETOF private.vw_user_list
+LANGUAGE plpgsql
+SECURITY DEFINER -- Runs with the privileges of the function creator (e.g., postgres)
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    -- Get the client_id from the current user's JWT
+    _client_id := public.get_jwt_client_id();
+
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    SELECT v.*
+    FROM private.vw_user_list v
+    WHERE v.client_id = _client_id
+      -- 生徒を対象
+      AND v.user_type ~ '1'
+      AND (
+        -- 1. 招待中（まだ com_m_user が作成されていない）ユーザーはそのまま含める
+        v.user_id IS NULL
+        OR
+        (
+          -- 2. 本登録済みユーザーは、ライセンス状態が 'active'（有効）なものに絞り込む
+          v.license_state = 'active'
+          -- 💡 修正: 汎用ビュー（vw_com_m_user_monitored）に存在する（除外対象ではない）ユーザーのみに絞り込む
+          AND EXISTS (
+            SELECT 1 
+            FROM public.vw_com_m_user_monitored m 
+            WHERE m.id = v.id
+          )
+        )
+      )
+    ORDER BY v.insert_date DESC;
+END;
+$$;
+
+COMMENT ON FUNCTION public.get_client_user_list() IS '現在のユーザーのクライアントに所属するモニター対象ユーザー（本登録済みおよび招待中）のリストを返します。除外ロールは vw_com_m_user_monitored に準拠します。';
+
+-- 権限の再設定
+REVOKE EXECUTE ON FUNCTION public.get_client_user_list() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_client_user_list() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_client_user_list() TO authenticated;
+
+---------------------------------------------
+-- 1. ユーザーリスト関数（修正：デモは常に除外、モニターのみ切り替え）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_monitor_user_list(
+    _include_monitor BOOLEAN DEFAULT FALSE
+)
+RETURNS SETOF private.vw_user_list
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    _client_id := public.get_jwt_client_id();
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    SELECT v.*
+    FROM private.vw_user_list v
+    WHERE v.client_id = _client_id
+      AND v.user_type ~ '1'
+      AND (
+        v.user_id IS NULL -- 招待中
+        OR
+        (
+          v.license_state = 'active'
+          -- 💡 修正：デモユーザーはどんな時でも絶対に含めない（常に遮断）
+          AND NOT EXISTS (
+            SELECT 1 FROM public.com_t_user_role r 
+            WHERE r.user_id = v.id AND r.role_id = 'demo_user'
+          )
+          -- 💡 モニターロールの切り替えロジック
+          AND (
+            _include_monitor = TRUE -- ONならモニターロールの人も通過させる
+            OR
+            NOT EXISTS ( -- OFFならモニターロールの人も弾く（通常表示）
+              SELECT 1 FROM public.com_t_user_role r 
+              WHERE r.user_id = v.id AND r.role_id = 'monitor'
+            )
+          )
+        )
+      )
+    ORDER BY v.insert_date DESC;
+END;
+$$;
+
+
+---------------------------------------------
+-- 2. ドリル履歴関数（修正：デモは常に除外、モニターのみ切り替え）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_monitor_word_history(
+    _start_date DATE,
+    _end_date DATE,
+    _user_ids UUID[] DEFAULT NULL,
+    _include_monitor BOOLEAN DEFAULT FALSE
+)
+RETURNS SETOF JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    _client_id := public.get_jwt_client_id();
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    SELECT jsonb_build_object(
+        'summary_id', w.summary_id,
+        'content_id', w.content_id,
+        'user_id', w.user_id,
+        'training_date', w.training_date,
+        'word_count', w.word_count,
+        'phrase_count', w.phrase_count,
+        'assessment_count', w.assessment_count,
+        'update_date', w.update_date,
+        'content_name', c.content_name,
+        'user_name', u.user_name
+    )
+    FROM public.self_t_word_summary w
+    INNER JOIN public.com_m_user u ON u.id = w.user_id
+    LEFT JOIN public.com_m_contents c ON c.content_id = w.content_id
+    WHERE u.client_id = _client_id
+      AND w.training_date BETWEEN _start_date AND _end_date
+      AND (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR w.user_id = ANY(_user_ids))
+      -- 💡 修正：デモユーザーの履歴は常に100%遮断
+      AND NOT EXISTS (
+        SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'demo_user'
+      )
+      -- 💡 モニターの履歴切り替え
+      AND (
+        _include_monitor = TRUE
+        OR
+        NOT EXISTS (
+          SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'monitor'
+        )
+      )
+    ORDER BY w.training_date DESC;
+END;
+$$;
+
+
+---------------------------------------------
+-- 3. スプリント履歴関数（修正：デモは常に除外、モニターのみ切り替え）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_monitor_sprint_history(
+    _start_date TIMESTAMP WITH TIME ZONE,
+    _end_date TIMESTAMP WITH TIME ZONE,
+    _user_ids UUID[] DEFAULT NULL,
+    _include_monitor BOOLEAN DEFAULT FALSE
+)
+RETURNS SETOF JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    _client_id := public.get_jwt_client_id();
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    SELECT jsonb_build_object(
+        'self_sprint_id', s.self_sprint_id,
+        'question_type', s.question_type,
+        'answer_type', s.answer_type,
+        'difficulty_level', s.difficulty_level,
+        'time_limit_sec', s.time_limit_sec,
+        'total_answered', s.total_answered,
+        'insert_date', s.insert_date,
+        'user_name', u.user_name
+    )
+    FROM public.self_t_sprint s
+    INNER JOIN public.com_m_user u ON u.id = s.user_id
+    WHERE u.client_id = _client_id
+      AND s.insert_date BETWEEN _start_date AND _end_date
+      AND (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR s.user_id = ANY(_user_ids))
+      -- 💡 修正：デモユーザーの履歴は常に100%遮断
+      AND NOT EXISTS (
+        SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'demo_user'
+      )
+      -- 💡 モニターの履歴切り替え
+      AND (
+        _include_monitor = TRUE
+        OR
+        NOT EXISTS (
+          SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'monitor'
+        )
+      )
+    ORDER BY s.insert_date DESC;
+END;
+$$;
