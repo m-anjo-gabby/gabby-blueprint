@@ -71,3 +71,35 @@ export const formatDateTimeByZone = (
 // 特定フォーマットのエイリアス
 export const formatToJstDate = (d?: string | null) => formatDateByZone(d, 'Asia/Tokyo');
 export const formatToJstDateTime = (d?: string | null) => formatDateTimeByZone(d, 'Asia/Tokyo');
+
+/**
+ * 指定されたタイムゾーンに基づき、日付を ISO 形式 (YYYY-MM-DD) で取得します。
+ */
+export const toIsoDateInZone = (date: Date | string | number, timeZone: string): string => {
+  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+};
+
+/**
+ * 指定されたタイムゾーンに基づき、年月を (YYYY-MM) 形式で取得します。
+ */
+export const toIsoMonthInZone = (date: Date | string | number, timeZone: string): string => {
+  return toIsoDateInZone(date, timeZone).slice(0, 7);
+};
+
+/**
+ * 表示用の日付フォーマッター (YYYY/MM/DD)
+ */
+export const formatZonedDate = (date: Date | string | number | null | undefined, timeZone: string): string => {
+  if (!date) return '';
+  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone,
+  }).format(d);
+};

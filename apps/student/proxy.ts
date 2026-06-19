@@ -9,6 +9,7 @@ const VALID_STUDENT_ROUTES = [
   '/library',
   '/profile',
   '/training',
+  '/monitor',
 ];
 
 export async function proxy(req: NextRequest) {
@@ -73,6 +74,19 @@ export async function proxy(req: NextRequest) {
 
   // C. ログイン済みでのルート/ログインページアクセス
   if (pathname === '/' || pathname === loginPath) {
+    return NextResponse.redirect(new URL(dashboardPath, req.url));
+  }
+
+  // --- C-1. モニター画面の認可チェック ---
+  const isMonitorRoute = pathname === '/monitor' || pathname.startsWith('/monitor/');
+  const hasMonitorRole = user.app_metadata?.roles?.includes('monitor');
+
+  if (isMonitorRoute && !hasMonitorRole) {
+    logger.warn('proxy:monitor_access_denied', `Unauthorized monitor access attempt: ${user.email}`, {
+      userId: user.id,
+      email: user.email,
+      path: pathname,
+    });
     return NextResponse.redirect(new URL(dashboardPath, req.url));
   }
 

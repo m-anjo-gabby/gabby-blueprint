@@ -32,8 +32,9 @@ CREATE TABLE public.com_m_user (
   user_type text DEFAULT '1', -- デフォルトを '1' (生徒) 
   user_name text DEFAULT NULL,
   locale_id text DEFAULT 'ja',
-  timezone text NOT NULL DEFAULT 'Asia/Tokyo'
-  agree_date timestamp with time zone NULL, 
+  timezone text NOT NULL DEFAULT 'Asia/Tokyo',
+  login_failed_count integer not null default 0,
+  locked_until timestamp with time zone null,
   delete_flg text NOT NULL DEFAULT '0',
   insert_date timestamp with time zone not null default now(),
   update_date timestamp with time zone not null default now()

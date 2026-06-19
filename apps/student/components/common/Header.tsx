@@ -69,8 +69,12 @@ export default function Header() {
   return (
     <>
       <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-5 flex items-center justify-between sticky top-0 z-50 shrink-0">
-        {/* ロゴエリア */}
-        <div className="flex items-center">
+        
+        {/* 👑 ロゴエリア（クリックでダッシュボードへ遷移） */}
+        <Link 
+          href="/dashboard" 
+          className="flex items-center hover:opacity-80 transition-opacity cursor-pointer select-none"
+        >
           <Image 
             src="/logo-01.png" 
             alt="Gabby Logo" 
@@ -79,7 +83,7 @@ export default function Header() {
             className="h-8 w-auto object-contain"
             priority 
           />
-        </div>
+        </Link>
         
         {/* ユーザー操作エリア */}
         <div className="flex items-center gap-3">
@@ -149,11 +153,10 @@ export default function Header() {
                 onOpenAutoFocus={(e) => e.preventDefault()}
               >
                 <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }} // yアニメーションを削除
-                  animate={{ opacity: 1, scale: 1 }} // yアニメーションを削除
-                  exit={{ opacity: 0, scale: 0.9 }} // yアニメーションを削除
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ type: "spring", damping: 25, stiffness: 400 }}
-                  // 画面端の余白を確保しつつ、中央に固定。デザインを以前の p-6 に戻します。
                   className="fixed left-[50%] top-[50%] z-[111] w-[calc(100%-2rem)] max-w-[280px] translate-x-[-50%] translate-y-[-50%] outline-none bg-white rounded-[32px] shadow-2xl p-6 text-center"
                 >
                   <div className="flex justify-center mb-4">
