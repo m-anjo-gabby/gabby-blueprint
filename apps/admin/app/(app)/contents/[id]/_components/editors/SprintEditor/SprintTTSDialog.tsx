@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, XCircle, PencilLine, Check, Copy } from 'lucide-react';
-import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { SprintQuestion } from '@gabby/types/sprint';
 import { TTSAdjustmentData, WordAdjustment } from '@gabby/types/word';
 import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -42,17 +42,16 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
   const [isProcessing, setIsProcessing] = useState(false);
   const [showModeAlert, setShowModeAlert] = useState(false);
   const [showSaveAlert, setShowSaveAlert] = useState(false);
-  const [copied, setCopied] = useState(false);
 
-  const { speak, generateSSML, isSpeaking, error, setError } = usePlayAzureSpeech();
+  const { speak, generateSSML, isSpeaking, error } = usePlayAzureSpeech();
   const { showToast } = useToast();
 
-  // セクションに応じたテキストとメタデータの取得
+  // 💡 修正: セクションに応じたテキストとメタデータの取得を _en スキーマに対応
   const getSectionData = useCallback(() => {
     switch (section) {
       case 'statement':
         return {
-          text: question.statement || '',
+          text: question.statement_en || '',
           ssml: question.statement_tts_ssml,
           mode: question.statement_tts_ssml_mode,
           adjust: question.statement_tts_adjustments,
@@ -60,7 +59,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
         };
       case 'question':
         return {
-          text: question.question,
+          text: question.question_en || '',
           ssml: question.question_tts_ssml,
           mode: question.question_tts_ssml_mode,
           adjust: question.question_tts_adjustments,
@@ -68,7 +67,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
         };
       case 'answer_yes':
         return {
-          text: question.answer_sentence_yes,
+          text: question.answer_sentence_yes_en || '',
           ssml: question.answer_sentence_yes_tts_ssml,
           mode: question.answer_sentence_yes_tts_ssml_mode,
           adjust: question.answer_sentence_yes_tts_adjustments,
@@ -76,7 +75,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
         };
       case 'answer_no':
         return {
-          text: question.answer_sentence_no || '',
+          text: question.answer_sentence_no_en || '',
           ssml: question.answer_sentence_no_tts_ssml,
           mode: question.answer_sentence_no_tts_ssml_mode,
           adjust: question.answer_sentence_no_tts_adjustments,
@@ -220,7 +219,21 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                           <RotateCcw size={12} />
                         </Button>
                       </div>
+
+                      {/* 💡 改善: ロジック上存在していた IPA (発音記号) 調整用の UI 入力欄を追加 */}
                       <div className="space-y-2">
+                        <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                          <Mic2 size={12} className={adj.ipa ? "text-indigo-500" : ""} /> IPA Pronunciation
+                        </Label>
+                        <Input 
+                          placeholder="e.g. dædi" 
+                          value={adj.ipa} 
+                          onChange={(e) => updateAdjustment(adj.id, { ipa: e.target.value })}
+                          className="h-8 font-mono text-xs rounded-lg"
+                        />
+                      </div>
+
+                      <div className="space-y-2 border-t pt-3">
                         <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
                           <Sparkles size={12} className={adj.emphasis ? "text-amber-500" : ""} /> Emphasis
                         </Label>
@@ -296,7 +309,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">SSML Code <Sparkles size={10} className="text-indigo-500" /></Label>
               </div>
               <div className="flex-grow flex flex-col border border-slate-200 rounded-xl overflow-hidden shadow-inner bg-slate-900">
-                <Textarea value={ssml} readOnly={ssmlMode === 'auto'} onChange={(e) => setSsml(e.target.value)} className="flex-grow font-mono text-[11px] leading-relaxed text-emerald-400 border-none rounded-none p-5 focus-visible:ring-0 resize-none bg-transparent" />
+                <Textarea value={ssml} readOnly={ssmlMode === 'auto'} onChange={(e) => setSsml(e.target.value)} className="flex-grow font-mono text-[11px] leading-relaxed text-emerald-400 border-none rounded-none p-5 focus-visible:ring-0 resize-none bg-transparent min-h-[200px]" />
                 <div className={`flex items-center justify-between px-3 py-2 border-t ${ssmlMode === 'manual' ? 'bg-rose-950/30 border-rose-900/30' : 'bg-slate-800 border-slate-700'}`}>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 bg-black/20 p-1 rounded-md">

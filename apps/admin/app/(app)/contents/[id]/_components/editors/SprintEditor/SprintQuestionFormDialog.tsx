@@ -16,15 +16,16 @@ import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+// 💡 修正: 新しい _en カラム拡張の型定義・スキーマに合わせてバリデーションパスを改修
 const questionItemSchema = z.object({
   question_id: z.string().optional(),
-  statement: z.string().optional(),
+  statement_en: z.string().optional(),
   statement_ja: z.string().optional(),
-  question: z.string().min(1, '必須です'),
+  question_en: z.string().min(1, '必須です'),
   question_ja: z.string().optional(),
-  answer_sentence_yes: z.string().min(1, '必須です'),
+  answer_sentence_yes_en: z.string().min(1, '必須です'),
   answer_sentence_yes_ja: z.string().optional(),
-  answer_sentence_no: z.string().optional(),
+  answer_sentence_no_en: z.string().optional(),
   answer_sentence_no_ja: z.string().optional(),
   seq_no: z.string().min(1, '必須'),
 });
@@ -64,17 +65,17 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
           {
             question_id: initialData.question_id,
             seq_no: String(initialData.seq_no),
-            statement: initialData.statement || '',
+            statement_en: initialData.statement_en || '',
             statement_ja: initialData.statement_ja || '',
-            question: initialData.question,
+            question_en: initialData.question_en,
             question_ja: initialData.question_ja || '',
-            answer_sentence_yes: initialData.answer_sentence_yes,
+            answer_sentence_yes_en: initialData.answer_sentence_yes_en,
             answer_sentence_yes_ja: initialData.answer_sentence_yes_ja || '',
-            answer_sentence_no: initialData.answer_sentence_no || '',
+            answer_sentence_no_en: initialData.answer_sentence_no_en || '',
             answer_sentence_no_ja: initialData.answer_sentence_no_ja || '',
           }
         ] : [
-          { seq_no: '1', statement: initialStatement || '', statement_ja: initialStatementJa || '', question: '', question_ja: '', answer_sentence_yes: '', answer_sentence_yes_ja: '', answer_sentence_no: '', answer_sentence_no_ja: '' }
+          { seq_no: '1', statement_en: initialStatement || '', statement_ja: initialStatementJa || '', question_en: '', question_ja: '', answer_sentence_yes_en: '', answer_sentence_yes_ja: '', answer_sentence_no_en: '', answer_sentence_no_ja: '' }
         ],
       });
     }
@@ -89,17 +90,17 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
         {
           question_id: initialData.question_id,
           seq_no: String(initialData.seq_no),
-          statement: initialData.statement || '',
+          statement_en: initialData.statement_en || '',
           statement_ja: initialData.statement_ja || '',
-          question: initialData.question,
+          question_en: initialData.question_en,
           question_ja: initialData.question_ja || '',
-          answer_sentence_yes: initialData.answer_sentence_yes,
+          answer_sentence_yes_en: initialData.answer_sentence_yes_en,
           answer_sentence_yes_ja: initialData.answer_sentence_yes_ja || '',
-          answer_sentence_no: initialData.answer_sentence_no || '',
+          answer_sentence_no_en: initialData.answer_sentence_no_en || '',
           answer_sentence_no_ja: initialData.answer_sentence_no_ja || '',
         }
       ] : [
-        { seq_no: '1', statement: initialStatement || '', statement_ja: initialStatementJa || '', question: '', question_ja: '', answer_sentence_yes: '', answer_sentence_yes_ja: '', answer_sentence_no: '', answer_sentence_no_ja: '' }
+        { seq_no: '1', statement_en: initialStatement || '', statement_ja: initialStatementJa || '', question_en: '', question_ja: '', answer_sentence_yes_en: '', answer_sentence_yes_ja: '', answer_sentence_no_en: '', answer_sentence_no_ja: '' }
       ],
     }
   });
@@ -110,7 +111,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
   });
 
   const onSubmit = async (values: FormValues) => {
-    const sharedStatement = values.items[0].statement;
+    const sharedStatement = values.items[0].statement_en;
     const sharedStatementJa = values.items[0].statement_ja;
 
     const payload = values.items.map(item => ({
@@ -121,7 +122,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
       difficulty_level: level,
       seq_no: Number(item.seq_no),
       // Masteryの場合は1件目の内容を全件にコピー（DB上は全件保持のため）
-      statement: isMastery ? sharedStatement : item.statement,
+      statement_en: isMastery ? sharedStatement : item.statement_en,
       statement_ja: isMastery ? sharedStatementJa : item.statement_ja,
     }));
 
@@ -204,7 +205,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                         {isMastery && index === 0 && <Badge variant="outline" className="text-[9px] h-4">Group Shared</Badge>}
                     </div>
                     <div className="space-y-3">
-                      <FormField control={form.control} name={`items.${index}.statement`} render={({ field }) => (
+                      <FormField control={form.control} name={`items.${index}.statement_en`} render={({ field }) => (
                         <FormItem>
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-[9px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-100 uppercase">English</span>
@@ -226,7 +227,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
 
                 {/* 質問／指示セクション */}
                 <div className={cn("space-y-4", isCueType && "p-5 bg-indigo-50/30 rounded-[24px] border border-indigo-100")}>
-                  <FormField control={form.control} name={`items.${index}.question`} render={({ field }) => (
+                  <FormField control={form.control} name={`items.${index}.question_en`} render={({ field }) => (
                     <FormItem className="space-y-2">
                       <div className="flex items-center justify-between">
                         <FormLabel className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{questionLabel}</FormLabel>
@@ -249,7 +250,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                 {/* 解答セクション */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4 p-4 bg-emerald-50/30 rounded-2xl border border-emerald-50">
-                    <FormField control={form.control} name={`items.${index}.answer_sentence_yes`} render={({ field }) => (
+                    <FormField control={form.control} name={`items.${index}.answer_sentence_yes_en`} render={({ field }) => (
                       <FormItem className="space-y-2">
                         <div className="flex items-center justify-between">
                           <FormLabel className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Answer (Positive)</FormLabel>
@@ -268,7 +269,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
 
                   {isSpeed && (
                     <div className="space-y-4 p-4 bg-amber-50/30 rounded-2xl border border-amber-50">
-                      <FormField control={form.control} name={`items.${index}.answer_sentence_no`} render={({ field }) => (
+                      <FormField control={form.control} name={`items.${index}.answer_sentence_no_en`} render={({ field }) => (
                         <FormItem className="space-y-2">
                           <div className="flex items-center justify-between">
                             <FormLabel className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Answer (Negative)</FormLabel>
@@ -290,7 +291,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
 
             {mode === 'create' && (
               <Button type="button" variant="outline" className="w-full border-dashed border-2 rounded-2xl h-12 gap-2 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all"
-                onClick={() => append({ seq_no: String(fields.length + 1), statement: isMastery ? form.getValues('items.0.statement') : '', statement_ja: isMastery ? form.getValues('items.0.statement_ja') : '', question: '', question_ja: '', answer_sentence_yes: '', answer_sentence_yes_ja: '', answer_sentence_no: '', answer_sentence_no_ja: '' })}
+                onClick={() => append({ seq_no: String(fields.length + 1), statement_en: isMastery ? form.getValues('items.0.statement_en') : '', statement_ja: isMastery ? form.getValues('items.0.statement_ja') : '', question_en: '', question_ja: '', answer_sentence_yes_en: '', answer_sentence_yes_ja: '', answer_sentence_no_en: '', answer_sentence_no_ja: '' })}
               >
                 <Plus size={16} /> 追加する
               </Button>

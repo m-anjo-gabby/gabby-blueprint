@@ -20,7 +20,7 @@ import { FeedbackConfig } from '@gabby/types/wordDrill';
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
   initialQuestionId?: string;
-  initialStarted?: boolean; // ➕ 追加：親からの開始状態の上書き
+  initialStarted?: boolean;
   onExit?: () => void;
 }
 
@@ -49,16 +49,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
 
-  // ────────────────────────────────────────────────────────────
-  // 🛡️ 修正ポイント：開始ステートの初期値を「栞からの再開か否か」で決定
-  // ────────────────────────────────────────────────────────────
-  // initialStarted が true の場合（SPA遷移など親でアクション済み）は即開始
-  // initialQuestionId が無い(通常遷移) ＝ 選択画面でタップ済みなの、即時 true
-  // initialQuestionId が有る(栞再開) ＝ 物理タップがないため、ウェルカム表示のために false に倒す
   const [isStarted, setIsStarted] = useState<boolean>(!!initialStarted || !initialQuestionId);
-
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
-  // 🔌 Zustand ストア
+
+  // Zustand ストア
   const {
     currentIndex,
     contentId,
@@ -84,7 +78,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     resetStore
   } = useSprintStore();
 
-  // 🔌 音声フック
+  // 音声フック
   const { speak: ttsSpeak, setSpeechRate: ttsSetRate, startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
@@ -158,16 +152,19 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     });
   }, [playbackRate, ttsSpeak]);
 
+  // ⚡ 新スキーマ対応 (_en へのマッピングを適用)
   const playQuestionSequence = useCallback(async (question: SprintQuestion) => {
     if (!question) return;
     setPlayingQuestionSequence(true);
-    if (question.statement) {
+    if (question.statement_en) {
       setAudioPhase('statement');
-      await playSingleTrack(question.statement, question.statement_voice);
+      await playSingleTrack(question.statement_en, question.statement_voice);
       await new Promise(r => setTimeout(r, DRILL_TIMING.audioGap));
     }
     setAudioPhase('question');
-    await playSingleTrack(question.question, question.question_voice);
+    if (question.question_en) {
+      await playSingleTrack(question.question_en, question.question_voice);
+    }
     setAudioPhase('answer');
     setPlayingQuestionSequence(false);
   }, [playSingleTrack, setPlayingQuestionSequence]);
@@ -176,10 +173,12 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     if (!question) return;
     setPlayingAnswerSequence(true);
     setAudioPhase('answer');
-    await playSingleTrack(question.answer_sentence_yes, question.answer_sentence_yes_voice);
-    if (question.answer_sentence_no) {
+    if (question.answer_sentence_yes_en) {
+      await playSingleTrack(question.answer_sentence_yes_en, question.answer_sentence_yes_voice);
+    }
+    if (question.answer_sentence_no_en) {
       await new Promise(r => setTimeout(r, 500));
-      await playSingleTrack(question.answer_sentence_no, question.answer_sentence_no_voice);
+      await playSingleTrack(question.answer_sentence_no_en, question.answer_sentence_no_voice);
     }
     setAudioPhase('idle');
     setPlayingAnswerSequence(false);
@@ -237,11 +236,14 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setAnalysis(null);
     setIsRecording(true);
     
-    // 💡 評価対象テキストの決定：Speedモードの場合は常に drillEvalType（スイッチ）を優先する
-    // これにより、解答表示後でもスイッチを切り替えて再評価が可能になる
     const targetText = (questionType === '0')
-      ? (drillEvalType === 'no' ? (currentQuestion.answer_sentence_no ?? "") : currentQuestion.answer_sentence_yes)
-      : currentQuestion.answer_sentence_yes;
+      ? (drillEvalType === 'no' ? (currentQuestion.answer_sentence_no_en ?? "") : currentQuestion.answer_sentence_yes_en)
+      : currentQuestion.answer_sentence_yes_en;
+
+    if (!targetText) {
+      setIsRecording(false);
+      return;
+    }
 
     const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
 
@@ -249,7 +251,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       setAnalysis(result);
       setFeedback(getFeedbackConfig(result.score));
       setIsRecording(false);
-      setIsRevealed(true); // 💡 発話評価完了後、自動的に解答を表示する
+      setIsRevealed(true);
     });
   }, [currentQuestion, questionType, drillEvalType, stopAllAudio, setIsRecording, startAssessment, setFeedback, setAnalysis, setIsRevealed]);
 
@@ -289,9 +291,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     }
   }, [isAutoPlaying, showConfirm, toggleAutoPlay, forceRestartQuestionFlow]);
 
-  // ⚙️ 5. リアクティブ・ライフサイクル
-  
-  // 🔌 初期注入
+  // 初期注入
   useEffect(() => {
     let startIdx = 0;
     if (initialQuestionId && questions.length > 0) {
@@ -305,11 +305,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       }
     }
     initSprint(questions, 'drill', startIdx);
-    // プレイヤー終了時はセッションデータのみクリアし、設定（種別等）はストアに残す
     return () => clearSession();
   }, [questions, initialQuestionId, initSprint, clearSession, showToast]);
 
-  // 🔄 タイムライン1：問題カード変更検知
+  // タイムライン1：問題カード変更検知
   useEffect(() => {
     if (!currentQuestion || !isStarted) return;
 
@@ -331,7 +330,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     };
   }, [currentIndex, currentQuestion, playQuestionSequence, setIsRevealed, stopAllAudio, isStarted]);
 
-  // 🔄 タイムライン2：解答オープン検知
+  // タイムライン2：解答オープン検知
   useEffect(() => {
     if (!isRevealed || !currentQuestion) return;
 
@@ -359,7 +358,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => { document.body.style.overflow = originalOverflow; stopAllAudio(); };
   }, [stopAllAudio]);
 
-  // 🛡️ View 層：読み込みスケルトン
   if (!questions || totalQuestions === 0 || !currentQuestion) {
     return (
       <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
@@ -439,7 +437,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
           )}
         </div>
 
-        {/* 🎙️ 録音中オーバーレイ（単語ドリル準拠） */}
+        {/* 🎙️ 録音中オーバーレイ */}
         <AnimatePresence>
           {isRecording && (
             <motion.div 
@@ -486,9 +484,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
           onClose={() => setFeedback(null)} 
         />
 
-        {/* ──────────────────────────────────────────────────────────── */}
-        {/* 🚀 🛡️ iOS/全OS共通：自動再生アンロック用ウェルカムオーバーレイ */}
-        {/* ──────────────────────────────────────────────────────────── */}
+        {/* ウェルカムオーバーレイ */}
         {!isStarted && (
           <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-4 z-[100] transition-all duration-300">
             <div className="bg-white p-8 rounded-[36px] shadow-2xl border border-slate-100 w-full max-w-sm text-center space-y-6 transform scale-100 transition-all duration-300">

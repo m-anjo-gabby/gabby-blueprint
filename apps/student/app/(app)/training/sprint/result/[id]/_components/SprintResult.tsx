@@ -113,15 +113,15 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
     try {
       // 1. 基本文（Speedモード以外の場合）
-      if (!isSpeedMode && q.statement) {
-        await handlePlayAudio(q.question_id + '-st', q.statement, q.statement_voice);
+      if (!isSpeedMode && q.statement_en) {
+        await handlePlayAudio(q.question_id + '-st', q.statement_en, q.statement_voice);
         await new Promise(r => setTimeout(r, 400));
       }
       // 2. 質問 / 指示
-      await handlePlayAudio(q.question_id + '-q', q.question, q.question_voice);
+      await handlePlayAudio(q.question_id + '-q', q.question_en, q.question_voice);
       await new Promise(r => setTimeout(r, 400));
       // 3. 解答
-      const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no : q.answer_sentence_yes;
+      const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no_en : q.answer_sentence_yes_en;
       const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
       await handlePlayAudio(q.question_id + '-ans', ansText ?? "", ansVoice);
     } catch (e) {
@@ -151,22 +151,22 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
         setFocusedCardId(q.question_id); // カード全体のフォーカスを開始
 
-        // 💡 改善点1: Speedモード以外、かつ基本文(statement)が存在する場合は最初に再生
-        if (!isSpeedMode && q.statement) {
-          await handlePlayAudio(q.question_id + '-st', q.statement, q.statement_voice);
+        // 💡 改善点1: Speedモード以外、かつ基本文(statement_en)が存在する場合は最初に再生
+        if (!isSpeedMode && q.statement_en) {
+          await handlePlayAudio(q.question_id + '-st', q.statement_en, q.statement_voice);
           if (!isBatchPlayingRef.current) break;
           await new Promise(r => setTimeout(r, 400));
         }
 
         if (!isBatchPlayingRef.current) break;
         // 2. 質問を再生
-        await handlePlayAudio(q.question_id + '-q', q.question, q.question_voice);
+        await handlePlayAudio(q.question_id + '-q', q.question_en, q.question_voice);
         if (!isBatchPlayingRef.current) break;
         await new Promise(r => setTimeout(r, 400));
         
         if (!isBatchPlayingRef.current) break;
         // 3. 解答を再生
-        const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no : q.answer_sentence_yes;
+        const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no_en : q.answer_sentence_yes_en;
         const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
         await handlePlayAudio(q.question_id + '-ans', ansText ?? "", ansVoice);
         if (!isBatchPlayingRef.current) break;
@@ -188,7 +188,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
         ? "bg-amber-50 border-amber-200 text-amber-600"
         : "bg-emerald-50 border-emerald-200 text-emerald-600"
     )}>
-      {scoreData.answer_type === '1' ? 'NOで回答' : 'YESで回答'}
+      {scoreData.answer_type === '1' ? 'Answer with NO' : 'Answer with YES'}
     </div>
   );
 
@@ -213,12 +213,12 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                 className="h-8 px-2.5 flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all text-[10px] font-black uppercase tracking-wider backdrop-blur-md border border-white/10"
               >
                 <ChevronLeft size={12} strokeWidth={3} />
-                <span>戻る</span>
+                <span>Back</span>
               </button>
               <div className="text-right">
-                <span className="text-[10px] font-black text-blue-200 uppercase tracking-[0.2em]">セッション記録</span>
+                <span className="text-[10px] font-black text-blue-200 uppercase tracking-[0.2em]">Session Record</span>
                 <p className="text-[9px] font-bold text-blue-100 opacity-80">
-                  {new Date(scoreData.created_at).toLocaleDateString('ja-JP')}
+                  {new Date(scoreData.created_at).toLocaleDateString('en-US')}
                 </p>
               </div>
             </div>
@@ -237,7 +237,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                     <Zap size={16} className="text-blue-200" fill="currentColor" />
                   </div>
                   <div>
-                    <span className="block text-[10px] font-black text-blue-200 uppercase tracking-widest">回答数</span>
+                    <span className="block text-[10px] font-black text-blue-200 uppercase tracking-widest">Total Answered</span>
                     <span className="text-lg font-black font-mono leading-none">{scoreData.total_answered}</span>
                   </div>
                 </div>
@@ -246,7 +246,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                     <Timer size={16} className="text-blue-200" />
                   </div>
                   <div>
-                    <span className="block text-[10px] font-black text-blue-200 uppercase tracking-widest">制限時間</span>
+                    <span className="block text-[10px] font-black text-blue-200 uppercase tracking-widest">Time Limit</span>
                     <span className="text-lg font-black font-mono leading-none">{scoreData.time_limit_sec}s</span>
                   </div>
                 </div>
@@ -260,12 +260,12 @@ export const SprintResult: React.FC<SprintResultProps> = ({
           <div className="max-w-xl mx-auto space-y-3">
             <h3 className="text-xs font-black text-slate-400 tracking-[0.2em] uppercase pl-1 flex items-center gap-2">
               <CheckCircle2 size={14} strokeWidth={3} className="text-blue-500" />
-              回答履歴 ({questions.length})
+              Answer History ({questions.length})
             </h3>
 
             <div className="space-y-3">
               {questions.map((q, index) => {
-                const isSpeedModePayload = scoreData.question_type === '0' && q.answer_sentence_no;
+                const isSpeedModePayload = scoreData.question_type === '0' && q.answer_sentence_no_en;
                 const isFocused = focusedCardId === q.question_id; // playingId ではなく focusedCardId で判定
 
                 return (
@@ -285,7 +285,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           "w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95",
                           isFocused && playingId ? "bg-blue-600 text-white shadow-md" : "bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
                         )}
-                        title="この問題を一括再生"
+                        title="Play this question sequence"
                       >
                         <PlayCircle size={18} fill={isFocused && playingId ? "currentColor" : "none"} className={cn(isFocused && playingId && "animate-pulse")} />
                       </button>
@@ -296,14 +296,14 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                     </div>
 
                     {/* 基本文 */}
-                    {q.statement && (
+                    {q.statement_en && (
                       <div className="w-full text-left border-l-4 border-slate-200 pl-3 py-0.5 flex flex-col gap-1">
                         <div className="flex items-center w-full mb-1">
                           <div className="flex items-center gap-x-1.5 text-slate-400">
                             <MessageSquare size={14} />
-                            <span className="text-xs font-bold tracking-wider">基本文</span>
+                            <span className="text-xs font-bold tracking-wider">Statement</span>
                             <button 
-                              onClick={() => handlePlayAudio(q.question_id + '-st', q.statement!, q.statement_voice, true)}
+                              onClick={() => handlePlayAudio(q.question_id + '-st', q.statement_en!, q.statement_voice, true)}
                               className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-st' ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-blue-500 hover:bg-slate-100')}
                             >
                               <Volume2 size={16} />
@@ -318,7 +318,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             )}
                           </div>
                         </div>
-                        <p className="text-sm font-bold text-slate-600 leading-relaxed">{jaVisibleMap[q.question_id + '-st'] ? q.statement_ja : q.statement}</p>
+                        <p className="text-sm font-bold text-slate-600 leading-relaxed">{jaVisibleMap[q.question_id + '-st'] ? q.statement_ja : q.statement_en}</p>
                       </div>
                     )}
 
@@ -327,9 +327,9 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                       <div className="flex items-center w-full mb-1">
                         <div className="flex items-center gap-x-1.5 text-blue-500">
                           <HelpCircle size={14} strokeWidth={2.5} />
-                          <span className="text-xs font-bold tracking-wider">{isQuestionBased ? "質問" : "指示"}</span>
+                          <span className="text-xs font-bold tracking-wider">{isQuestionBased ? "Question" : "Instruction"}</span>
                           <button 
-                            onClick={() => handlePlayAudio(q.question_id + '-q', q.question, q.question_voice, true)}
+                            onClick={() => handlePlayAudio(q.question_id + '-q', q.question_en, q.question_voice, true)}
                             className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-q' ? 'text-blue-600 bg-blue-50' : 'text-blue-400 hover:text-blue-600 hover:bg-blue-50')}
                           >
                             <Volume2 size={16} strokeWidth={2.5} />
@@ -344,7 +344,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           )}
                         </div>
                       </div>
-                      <p className="text-lg sm:text-xl font-black text-slate-800 leading-snug tracking-tight">{jaVisibleMap[q.question_id + '-q'] ? q.question_ja : q.question}</p>
+                      <p className="text-lg sm:text-xl font-black text-slate-800 leading-snug tracking-tight">{jaVisibleMap[q.question_id + '-q'] ? q.question_ja : q.question_en}</p>
                     </div>
 
                     {/* 解答 */}
@@ -355,8 +355,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
                               <div className="flex items-center w-full mb-1">
                                 <div className="flex items-center gap-x-1.5 text-emerald-600">
-                                  <span className="text-xs font-black tracking-widest uppercase">解答</span>
-                                  <button onClick={() => handlePlayAudio(q.question_id + '-yes', q.answer_sentence_yes, q.answer_sentence_yes_voice, true)} className="w-6 h-6 flex items-center justify-center text-emerald-500"><Volume2 size={16} /></button>
+                                  <span className="text-xs font-black tracking-widest uppercase">Answer</span>
+                                  <button onClick={() => handlePlayAudio(q.question_id + '-yes', q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)} className="w-6 h-6 flex items-center justify-center text-emerald-500"><Volume2 size={16} /></button>
                                   {q.answer_sentence_yes_ja && (
                                     <button
                                       onClick={() => toggleJa(q.question_id + '-yes')}
@@ -367,15 +367,15 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                                   )}
                                 </div>
                               </div>
-                              <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{jaVisibleMap[q.question_id + '-yes'] ? q.answer_sentence_yes_ja : q.answer_sentence_yes}</p>
+                              <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{jaVisibleMap[q.question_id + '-yes'] ? q.answer_sentence_yes_ja : q.answer_sentence_yes_en}</p>
                             </div>
                           )}
                           {scoreData.answer_type === '1' && ( // NO主軸の場合のみNOを表示
                             <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-3 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
                               <div className="flex items-center w-full mb-1">
                                 <div className="flex items-center gap-x-1.5 text-amber-600">
-                                  <span className="text-xs font-black tracking-widest uppercase">解答</span>
-                                  <button onClick={() => handlePlayAudio(q.question_id + '-no', q.answer_sentence_no!, q.answer_sentence_no_voice, true)} className="w-6 h-6 flex items-center justify-center text-amber-500"><Volume2 size={16} /></button>
+                                  <span className="text-xs font-black tracking-widest uppercase">Answer</span>
+                                  <button onClick={() => handlePlayAudio(q.question_id + '-no', q.answer_sentence_no_en!, q.answer_sentence_no_voice, true)} className="w-6 h-6 flex items-center justify-center text-amber-500"><Volume2 size={16} /></button>
                                   {q.answer_sentence_no_ja && (
                                     <button
                                       onClick={() => toggleJa(q.question_id + '-no')}
@@ -386,7 +386,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                                   )}
                                 </div>
                               </div>
-                              <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{jaVisibleMap[q.question_id + '-no'] ? q.answer_sentence_no_ja : q.answer_sentence_no}</p>
+                              <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{jaVisibleMap[q.question_id + '-no'] ? q.answer_sentence_no_ja : q.answer_sentence_no_en}</p>
                             </div>
                           )}
                         </div>
@@ -394,8 +394,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                         <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-3 py-2.5 rounded-r-xl flex flex-col gap-0.5">
                           <div className="flex items-center w-full mb-1">
                             <div className="flex items-center gap-x-1.5 text-emerald-600">
-                              <span className="text-xs font-black tracking-widest uppercase">解答</span>
-                              <button onClick={() => handlePlayAudio(q.question_id + '-ans', q.answer_sentence_yes, q.answer_sentence_yes_voice, true)} className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-ans' ? 'text-blue-600' : 'text-emerald-500')}><Volume2 size={16} strokeWidth={2.5} /></button>
+                              <span className="text-xs font-black tracking-widest uppercase">Answer</span>
+                              <button onClick={() => handlePlayAudio(q.question_id + '-ans', q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)} className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-ans' ? 'text-blue-600' : 'text-emerald-500')}><Volume2 size={16} strokeWidth={2.5} /></button>
                               {q.answer_sentence_yes_ja && (
                                 <button
                                   onClick={() => toggleJa(q.question_id + '-ans')}
@@ -406,7 +406,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                               )}
                             </div>
                           </div>
-                          <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">{jaVisibleMap[q.question_id + '-ans'] ? q.answer_sentence_yes_ja : q.answer_sentence_yes}</p>
+                          <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">{jaVisibleMap[q.question_id + '-ans'] ? q.answer_sentence_yes_ja : q.answer_sentence_yes_en}</p>
                         </div>
                       )}
                     </div>
@@ -427,7 +427,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             )}
           >
             <PlayCircle size={16} strokeWidth={3} className={isBatchPlaying ? "animate-pulse" : "text-slate-400"} />
-            <span>{isBatchPlaying ? "停止" : "一括再生"}</span>
+            <span>{isBatchPlaying ? "Stop" : "Play All"}</span>
           </button>
           <button
             onClick={() => router.push('/training/sprint/play?mode=sprint')}

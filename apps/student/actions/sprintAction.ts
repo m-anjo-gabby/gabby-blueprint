@@ -79,6 +79,7 @@ function shuffleArray<T>(array: T[]): T[] {
  * スプリント教材データをフェッチ・サンプリングするServer Action
  */
 export async function getSprintQuestionsAction(
+  content_id: string,
   question_type: '0' | '4' | '5' | '6',
   difficulty_level: number,
   mode: 'sprint' | 'drill' = 'sprint'
@@ -87,18 +88,20 @@ export async function getSprintQuestionsAction(
   
   logger.info("sprint:fetch_start", "getSprintQuestionsAction start", {
     ...ctx,
-    payload: { question_type, difficulty_level, mode }
+    payload: { content_id, question_type, difficulty_level, mode }
   });
 
   try {
     const supabase = await createServerClient();
 
+    const safeContentId = String(content_id).trim();
     const safeType = String(question_type).trim();
     const safeLevel = Number(difficulty_level);
 
     const { data: fetchedData, error } = await supabase
       .from("com_m_sprint_questions")
       .select("*")
+      .eq("content_id", safeContentId)
       .eq("question_type", safeType)
       .eq("difficulty_level", safeLevel)
       .eq("delete_flg", "0");
@@ -108,7 +111,7 @@ export async function getSprintQuestionsAction(
     const rawRows = (fetchedData as SprintQuestion[]) ?? [];
 
     if (rawRows.length === 0) {
-      logger.info("sprint:fetch_empty", "No questions found at all for this type/level", ctx);
+      logger.info("sprint:fetch_empty", "No questions found at all for this content/type/level", ctx);
       return { success: true, data: [] };
     }
 
@@ -239,7 +242,20 @@ export async function getSprintResultAction(
     if (scoreError) throw scoreError;
     if (!scoreRecord) throw new Error("Sprint record not found");
 
-    const history = (scoreRecord.answered_history as SprintHistoryItem[]) ?? [];
+    // 💡 answered_historyが文字列として取得された場合に備えてJSON.parseを安全に行う
+    let history: SprintHistoryItem[] = [];
+    if (scoreRecord.answered_history) {
+      if (typeof scoreRecord.answered_history === 'string') {
+        try {
+          history = JSON.parse(scoreRecord.answered_history);
+        } catch (e) {
+          logger.error("sprint:parse_history_error", "Failed to parse answered_history string", { ...ctx, error: e });
+          history = [];
+        }
+      } else {
+        history = scoreRecord.answered_history as SprintHistoryItem[];
+      }
+    }
 
     // 履歴が空の場合は空配列で早期リターン
     if (history.length === 0) {

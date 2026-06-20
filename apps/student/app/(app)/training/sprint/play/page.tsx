@@ -77,6 +77,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     const difficultyLevel = isNaN(parsedLevel) ? SPRINT_TYPES[questionType].minLevel : parsedLevel;
 
     const response = await getSprintQuestionsAction(
+      resolvedParams.content_id || '',
       questionType,
       difficultyLevel,
       config.mode

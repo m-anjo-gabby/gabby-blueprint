@@ -220,11 +220,11 @@ export async function saveSprintAudio(
 /**
  * 同一グループの基本文を一括更新
  */
-export async function updateGroupStatement(groupId: string, statement: string, statementJa: string | null) {
+export async function updateGroupStatement(groupId: string, statementEn: string, statementJa: string | null) {
   const supabase = await createAdminClient();
   const { error } = await supabase
     .from('com_m_sprint_questions')
-    .update({ statement, statement_ja: statementJa, update_date: new Date().toISOString() })
+    .update({ statement_en: statementEn, statement_ja: statementJa, update_date: new Date().toISOString() })
     .eq('group_id', groupId);
   
   if (error) return { success: false, message: error.message };

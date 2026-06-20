@@ -221,16 +221,16 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     isFlowRunningRef.current = true;
 
     try {
-      if (question.statement) {
+      if (question.statement_en) {
         setAudioPhase('statement');
-        await playTrack(question.statement, question.statement_voice);
+        await playTrack(question.statement_en, question.statement_voice);
         await new Promise(r => setTimeout(r, 400));
       }
 
       if (!isFlowRunningRef.current) return;
 
       setAudioPhase('question');
-      await playTrack(question.question, question.question_voice);
+      await playTrack(question.question_en, question.question_voice);
 
       if (!isFlowRunningRef.current) return;
 
@@ -249,12 +249,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     isFlowRunningRef.current = true;
 
     try {
-      if (type === 'statement' && currentQuestion.statement) {
+      if (type === 'statement' && currentQuestion.statement_en) {
         setAudioPhase('statement');
-        await playTrack(currentQuestion.statement, currentQuestion.statement_voice);
+        await playTrack(currentQuestion.statement_en, currentQuestion.statement_voice);
       } else if (type === 'question') {
         setAudioPhase('question');
-        await playTrack(currentQuestion.question, currentQuestion.question_voice);
+        await playTrack(currentQuestion.question_en, currentQuestion.question_voice);
       }
       setAudioPhase('thinking');
     } catch (e) {
@@ -521,7 +521,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             <div className="flex items-center justify-center gap-3 w-full max-w-xs pt-2">
               <button
                 onClick={() => handlePlayIndividualPart('statement')}
-                disabled={!currentQuestion.statement}
+                disabled={!currentQuestion.statement_en}
                 className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 shadow-sm disabled:opacity-20 disabled:pointer-events-none"
               >
                 <Volume2 size={12} className="text-indigo-500" />

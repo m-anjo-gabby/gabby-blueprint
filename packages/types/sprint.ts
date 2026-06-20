@@ -23,7 +23,7 @@ export interface SprintTypeMetadata {
   label: string;
   value: SprintQuestionType;
   seq_no: number;
-  dbKey: string;          // ユーザー進捗レコードのDBカラム名
+  dbKey: string;      // ユーザー進捗レコードのDBカラム名
   hasBasic: boolean;      // レベル0(Basic)が存在するかどうか
   minLevel: number;       // 最小レベル (0 または 1)
   maxLevel: number;       // 上限レベル (5 または 10)
@@ -81,13 +81,15 @@ export const DRILL_TIMING = {
  */
 export interface SprintQuestion {
   question_id: string; // UUID
+  content_id: string;  // UUID
+  content_type: number; // 0:汎用スプリント, 1:コーパススプリント
   question_type: SprintQuestionType;
   difficulty_level: number;
   group_id: string | null; // UUID (Speedの場合はnull)
   seq_no: number;
 
   // ① ステートメント（親文）セクション
-  statement: string | null;
+  statement_en: string | null;
   statement_ja: string | null;
   statement_voice: string | null;
   statement_tts_ssml: string | null;
@@ -96,7 +98,7 @@ export interface SprintQuestion {
   statement_tts_status: number;
 
   // ② クエスチョン（問い・指示）セクション
-  question: string;
+  question_en: string;
   question_ja: string | null;
   question_voice: string | null;
   question_tts_ssml: string | null;
@@ -105,7 +107,7 @@ export interface SprintQuestion {
   question_tts_status: number;
 
   // ③ 解答（YES・通常正解文）セクション
-  answer_sentence_yes: string;
+  answer_sentence_yes_en: string;
   answer_sentence_yes_ja: string | null;
   answer_sentence_yes_voice: string | null;
   answer_sentence_yes_tts_ssml: string | null;
@@ -114,7 +116,7 @@ export interface SprintQuestion {
   answer_sentence_yes_tts_status: number;
 
   // ④ 解答（NO・否定文 ※Speed専用）セクション
-  answer_sentence_no: string | null;
+  answer_sentence_no_en: string | null;
   answer_sentence_no_ja: string | null;
   answer_sentence_no_voice: string | null;
   answer_sentence_no_tts_ssml: string | null;
