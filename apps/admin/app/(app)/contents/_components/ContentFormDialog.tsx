@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType, CEFR_CONFIG } from '@gabby/types/content';
-import { QUESTION_TYPES } from '@gabby/types/sprint';
+import { QUESTION_TYPES, SPRINT_TYPES } from '@gabby/types/sprint';
 import { upsertContent } from '@/actions/adminContentAction';
 import { useRouter } from 'next/navigation';
 
@@ -29,15 +29,15 @@ const contentSchema = z.object({
   difficulty_level: z.string().min(1, '難易度を入力してください'),
   description: z.string().optional(),
   cefr_id: z.string().optional(),
-  sprint_question_type: z.string().optional(),
+  sprint_type: z.string().optional(),
 }).superRefine((data, ctx) => {
   // 教材種別が「スプリント (2)」の場合のバリデーション
   if (data.content_type === '2') {
-    if (!data.sprint_question_type || data.sprint_question_type === 'none') {
+    if (!data.sprint_type || data.sprint_type === 'none') {
       ctx.addIssue({
         code: 'custom',
         message: 'スプリント種別を選択してください',
-        path: ['sprint_question_type'],
+        path: ['sprint_type'],
       });
     }
   }
@@ -59,7 +59,7 @@ const DEFAULT_VALUES: ContentFormValues = {
   difficulty_level: '1', // デフォルト値は1固定
   description: '',
   cefr_id: 'none',
-  sprint_question_type: 'none',
+  sprint_type: 'none',
 };
 
 export function ContentFormDialog({ mode = 'create', initialData }: ContentFormDialogProps) {
@@ -80,7 +80,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       difficulty_level: String(data.difficulty_level || 1),
       description: data.description || '',
       cefr_id: data.metadata?.cefr?.id || 'none',
-      sprint_question_type: data.metadata?.sprint?.question_type || 'none',
+      sprint_type: data.metadata?.sprint?.sprint_type || 'none',
     };
   };
 
@@ -100,10 +100,9 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       const selectedCefr = cefrKey ? CEFR_CONFIG[cefrKey] : undefined;
 
       const isSprint = values.content_type === '2';
-      const sprintMetadata = isSprint && values.sprint_question_type !== 'none'
+      const sprintMetadata = isSprint && values.sprint_type !== 'none'
         ? {
-            question_type: values.sprint_question_type!,
-            // level はここに含めない
+            sprint_type: values.sprint_type!,
           }
         : undefined;
 
@@ -247,12 +246,12 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
               {currentContentType === '2' && (
                 <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80">
                   {/* スプリント種別 */}
-                  <FormField control={form.control} name="sprint_question_type" render={({ field }) => (
+                  <FormField control={form.control} name="sprint_type" render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">スプリント種別</FormLabel>
                       {isConfirming ? (
                         <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-medium">
-                          {field.value && field.value !== 'none' ? QUESTION_TYPES[field.value as keyof typeof QUESTION_TYPES]?.label : '未選択'}
+                          {field.value && field.value !== 'none' ? SPRINT_TYPES[field.value as keyof typeof SPRINT_TYPES]?.label : '未選択'}
                         </div>
                       ) : (
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -263,8 +262,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">選択してください</SelectItem>
-                            {Object.values(QUESTION_TYPES)
-                              .sort((a, b) => a.seq_no - b.seq_no)
+                            {Object.values(SPRINT_TYPES)
                               .map((sprint) => (
                                 <SelectItem key={sprint.value} value={sprint.value}>{sprint.label}</SelectItem>
                               ))}

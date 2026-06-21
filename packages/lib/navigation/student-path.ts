@@ -10,8 +10,7 @@ import { ResumeContentResponse } from '@gabby/types/training';
 export const getTrainingPath = (content: ContentItem): string => {
   // スプリント(content_type === 2) の場合
   if (content.content_type === 2) {
-    const sprintMeta = content.metadata?.sprint;
-    const type = sprintMeta?.question_type ?? '0'; // '0', '4', '5', '6'
+    const type = '0'; // 初期表示の質問タイプは '0' (Speed) 固定とする
     const contentId = content.content_id;
 
     // 🏎️ levelはReady画面側で動的に選ばせるため、URLからは除外
@@ -37,8 +36,7 @@ export const getResumePath = (resume: ResumeContentResponse): string => {
 
   // スプリントの栞再開の場合
   if (contentType === 2) {
-    const sprintMeta = resume.com_m_contents.metadata?.sprint;
-    const type = sprintMeta?.question_type ?? '0';
+    const type = '0';
     const contentId = resume.content_id;
     const itemIdParam = resume.item_id ? `&resume_id=${resume.item_id}` : '';
 

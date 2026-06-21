@@ -550,7 +550,7 @@ CREATE TABLE public.com_m_sprint_questions (
   -- 【基本情報・教材区分】
   question_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   content_id UUID NOT NULL,                     -- 紐づくコンテンツ（教材）ID (UUID)
-  sprint_type SMALLINT NOT NULL DEFAULT 0,      -- 教材種別 (0:汎用スプリント, 1:コーパススプリント)
+  sprint_type TEXT NOT NULL DEFAULT '0',        -- スプリント種別 (0:汎用スプリント, 1:コーパススプリント)
   question_type TEXT NOT NULL,                  -- '0':Speed, '4':Structure, '5':Builders, '6':Mastery
   difficulty_level SMALLINT NOT NULL DEFAULT 1, -- 難易度レベル
   group_id UUID DEFAULT NULL,                   -- 共通グループID (汎用問題の塊)
