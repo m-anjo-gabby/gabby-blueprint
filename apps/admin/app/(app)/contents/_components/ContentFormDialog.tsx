@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType, CEFR_CONFIG } from '@gabby/types/content';
-import { SPRINT_TYPES } from '@gabby/types/sprint';
+import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { upsertContent } from '@/actions/adminContentAction';
 import { useRouter } from 'next/navigation';
 
@@ -252,7 +252,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                       <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">スプリント種別</FormLabel>
                       {isConfirming ? (
                         <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-medium">
-                          {field.value && field.value !== 'none' ? SPRINT_TYPES[field.value as keyof typeof SPRINT_TYPES]?.label : '未選択'}
+                          {field.value && field.value !== 'none' ? QUESTION_TYPES[field.value as keyof typeof QUESTION_TYPES]?.label : '未選択'}
                         </div>
                       ) : (
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -263,7 +263,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">選択してください</SelectItem>
-                            {Object.values(SPRINT_TYPES)
+                            {Object.values(QUESTION_TYPES)
                               .sort((a, b) => a.seq_no - b.seq_no)
                               .map((sprint) => (
                                 <SelectItem key={sprint.value} value={sprint.value}>{sprint.label}</SelectItem>

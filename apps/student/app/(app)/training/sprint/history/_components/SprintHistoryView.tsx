@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { SPRINT_TYPES } from '@gabby/types/sprint';
+import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
@@ -243,7 +243,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                       >
                         <div className="p-4 sm:p-5 space-y-2">
                           {sessions.map((session, idx) => {
-                            const typeInfo = SPRINT_TYPES[session.question_type as keyof typeof SPRINT_TYPES];
+                            const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];
                             const isSpeedMode = session.question_type === '0';
 
                             return (
@@ -305,7 +305,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             onClick={() => router.push('/training/sprint/play?mode=sprint')}
             className="w-full max-w-sm h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>教材を選択する</span>
+            <span>スプリントを開始する</span>
             <ArrowRight size={14} strokeWidth={2.5} />
           </button>
         </div>

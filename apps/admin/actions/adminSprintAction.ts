@@ -11,7 +11,7 @@ const logger = createLogger('admin');
 /**
  * 種別とレベルを指定してスプリント問題一覧を取得
  */
-export async function getSprintQuestionsByFilter(type: SprintQuestionType, level: number) {
+export async function getSprintQuestionsByFilter(contentId: string, type: SprintQuestionType, level: number) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -19,6 +19,7 @@ export async function getSprintQuestionsByFilter(type: SprintQuestionType, level
     const { data, error } = await supabase
       .from('com_m_sprint_questions')
       .select('*')
+      .eq('content_id', contentId)
       .eq('question_type', type)
       .eq('difficulty_level', level)
       .eq('delete_flg', '0')
@@ -28,7 +29,7 @@ export async function getSprintQuestionsByFilter(type: SprintQuestionType, level
     if (error) throw error;
     return data as SprintQuestion[];
   } catch (err: any) {
-    logger.error('sprint:get_questions_failed', err.message, { ...ctx, payload: { type, level } });
+    logger.error('sprint:get_questions_failed', err.message, { ...ctx, payload: { contentId, type, level } });
     return [];
   }
 }

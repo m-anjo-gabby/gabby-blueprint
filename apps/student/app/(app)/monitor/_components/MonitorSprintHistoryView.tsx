@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
-import { SPRINT_TYPES } from '@gabby/types/sprint';
+import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MonitorUser, MonitorSprintHistoryItem } from '@/actions/monitorAction';
 
@@ -188,7 +188,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
       const date = new Date(session.insert_date).toLocaleDateString('ja-JP', {
         year: 'numeric', month: '2-digit', day: '2-digit'
       });
-      const typeInfo = SPRINT_TYPES[session.question_type as keyof typeof SPRINT_TYPES];
+      const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];
       const levelStr = session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`;
       const modeStr = session.question_type === '0' ? (session.answer_type === '1' ? 'NO' : 'YES') : '-';
       
@@ -461,7 +461,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                   </div>
                   <div className="divide-y divide-slate-50">
                     {sessions.map((session, idx) => {
-                      const typeInfo = SPRINT_TYPES[session.question_type as keyof typeof SPRINT_TYPES];
+                      const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];
                       const isSpeedMode = session.question_type === '0';
                       const isMonitor = isMonitorUser(session.com_m_user);
 

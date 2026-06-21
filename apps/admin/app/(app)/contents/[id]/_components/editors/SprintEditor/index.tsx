@@ -1,8 +1,9 @@
+// apps\admin\app\(app)\contents\[id]\_components\editors\SprintEditor\index.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SPRINT_TYPES, SprintQuestionType, SprintQuestion } from '@gabby/types/sprint';
+import { QUESTION_TYPES, SprintQuestionType, SprintQuestion } from '@gabby/types/sprint';
 import { getSprintQuestionsByFilter } from '@/actions/adminSprintAction';
 import { SprintQuestionList } from './SprintQuestionList';
 import { SprintQuestionFormDialog } from './SprintQuestionFormDialog';
@@ -27,12 +28,12 @@ export function SprintEditor({ contentId, initialType }: SprintEditorProps) {
       setIsLoading(true);
       // 💡 修正: DDLの変更に伴い、将来的な拡張も見据えて contentId も含めてアクションに渡せるように口を確保します。
       // 現状の汎用フィルタ用アクションのシグネチャに合わせて取得
-      const data = await getSprintQuestionsByFilter(selectedType, Number(selectedLevel));
+      const data = await getSprintQuestionsByFilter(contentId, selectedType, Number(selectedLevel));
       setQuestions(data);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedType, selectedLevel]);
+  }, [contentId, selectedType, selectedLevel]);
 
   useEffect(() => {
     // 💡 修正: 不要なマイクロタスクを排除し、useEffect の標準パターンに則って
@@ -40,7 +41,7 @@ export function SprintEditor({ contentId, initialType }: SprintEditorProps) {
     fetchQuestions();
   }, [fetchQuestions]);
 
-  const typeMeta = SPRINT_TYPES[selectedType];
+  const typeMeta = QUESTION_TYPES[selectedType];
   const levels = Array.from(
     { length: typeMeta.maxLevel - typeMeta.minLevel + 1 },
     (_, i) => String(typeMeta.minLevel + i)
@@ -61,13 +62,13 @@ export function SprintEditor({ contentId, initialType }: SprintEditorProps) {
                 setIsLoading(true);
                 setSelectedType(v as SprintQuestionType);
                 // 種別が変わったら最小レベルにリセット
-                setSelectedLevel(String(SPRINT_TYPES[v as SprintQuestionType].minLevel));
+                setSelectedLevel(String(QUESTION_TYPES[v as SprintQuestionType].minLevel));
               }}>
                 <SelectTrigger className="w-[180px] h-10 bg-slate-50 border-slate-200 font-bold rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {Object.values(SPRINT_TYPES).map(t => (
+                  {Object.values(QUESTION_TYPES).map(t => (
                     <SelectItem key={t.value} value={t.value} className="font-medium">{t.label}</SelectItem>
                   ))}
                 </SelectContent>

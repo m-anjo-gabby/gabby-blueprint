@@ -550,7 +550,7 @@ CREATE TABLE public.com_m_sprint_questions (
   -- 【基本情報・教材区分】
   question_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   content_id UUID NOT NULL,                     -- 紐づくコンテンツ（教材）ID (UUID)
-  content_type SMALLINT NOT NULL DEFAULT 0,     -- 教材種別 (0:汎用スプリント, 1:コーパススプリント)
+  sprint_type SMALLINT NOT NULL DEFAULT 0,      -- 教材種別 (0:汎用スプリント, 1:コーパススプリント)
   question_type TEXT NOT NULL,                  -- '0':Speed, '4':Structure, '5':Builders, '6':Mastery
   difficulty_level SMALLINT NOT NULL DEFAULT 1, -- 難易度レベル
   group_id UUID DEFAULT NULL,                   -- 共通グループID (汎用問題の塊)
@@ -607,7 +607,7 @@ COMMENT ON TABLE public.com_m_sprint_questions IS 'スプリント問題（汎�
 -- 【基本情報・教材区分】
 COMMENT ON COLUMN public.com_m_sprint_questions.question_id IS '問題ユニークID (UUID)';
 COMMENT ON COLUMN public.com_m_sprint_questions.content_id IS '紐づくコンテンツ（教材）ID (UUID)';
-COMMENT ON COLUMN public.com_m_sprint_questions.content_type IS '教材種別 (0:汎用スプリント, 1:コーパススプリント)';
+COMMENT ON COLUMN public.com_m_sprint_questions.sprint_type IS '教材種別 (0:汎用スプリント, 1:コーパススプリント)';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_type IS '問題種別 (''0'':Speed, ''4'':Structure, ''5'':Builders, ''6'':Mastery)';
 COMMENT ON COLUMN public.com_m_sprint_questions.difficulty_level IS '難易度レベル (0:Basic 〜)';
 COMMENT ON COLUMN public.com_m_sprint_questions.group_id IS '共通グループID (問題群をグルーピングするUUID)';
@@ -660,13 +660,13 @@ COMMENT ON COLUMN public.com_m_sprint_questions.update_date IS '更新日時';
 -- パフォーマンス最適化インデックス（生徒・アドミン双方対応）
 -- 【インデックスA: 汎用スプリント用 (生徒自主トレサンプリング & アドミン横断フィルタ)】
 CREATE INDEX idx_sprint_questions_general_lookup
-ON public.com_m_sprint_questions (content_type, question_type, difficulty_level, group_id, seq_no)
+ON public.com_m_sprint_questions (sprint_type, question_type, difficulty_level, group_id, seq_no)
 WHERE delete_flg = '0';
 
 -- 【インデックスB: コーパススプリント用 (生徒教材ロード & アドミン個別教材エディタ)】
 CREATE INDEX idx_sprint_questions_corpus_lookup
 ON public.com_m_sprint_questions (content_id, seq_no)
-WHERE delete_flg = '0' AND content_type = 1;
+WHERE delete_flg = '0' AND sprint_type = 1;
 
 ---------------------------------------------
 -- DDL: self_t_sprint テーブル（自主トレスプリント結果・履歴）

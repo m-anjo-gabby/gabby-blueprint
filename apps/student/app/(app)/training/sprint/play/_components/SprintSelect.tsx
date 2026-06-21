@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { 
-  SPRINT_TYPES, 
+  QUESTION_TYPES, 
   SPRINT_TIME_OPTIONS, 
   type SprintQuestionType,
   type SprintAnswerType,
@@ -59,7 +59,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   );
   const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType);
   const [selectedLevel, setSelectedLevel] = useState<string>(
-    isReturningFromSession ? store.level : (searchParams.get('level') || String(SPRINT_TYPES[initialType].minLevel))
+    isReturningFromSession ? store.level : (searchParams.get('level') || String(QUESTION_TYPES[initialType].minLevel))
   );
   const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(
     isReturningFromSession ? store.timeLimitSec : DEFAULT_TIME
@@ -99,7 +99,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     fetchLastSession();
   }, [isReturningFromSession, searchParams]);
 
-  const sortedTypes = useMemo(() => Object.values(SPRINT_TYPES).sort((a, b) => a.seq_no - b.seq_no), []);
+  const sortedTypes = useMemo(() => Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no), []);
   const sortedTimes = useMemo(() => Object.values(SPRINT_TIME_OPTIONS).sort((a, b) => a.seq_no - b.seq_no), []);
 
   const currentTheme = useMemo(() => {
@@ -108,7 +108,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   }, [selectedType, selectedLevel]);
 
   const levelItems = useMemo(() => {
-    const meta = SPRINT_TYPES[selectedType];
+    const meta = QUESTION_TYPES[selectedType];
     // DBから取得した到達レベル（クリア済みレベル）。データがない場合は0とみなす
     const clearedLevel = userProgress?.[meta.dbKey] ?? 0;
 
@@ -130,7 +130,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   const handleTypeChange = (typeId: SprintQuestionType) => {
     setSelectedType(typeId);
-    setSelectedLevel(String(SPRINT_TYPES[typeId].minLevel));
+    setSelectedLevel(String(QUESTION_TYPES[typeId].minLevel));
   };
 
   const handleStartSubmit = (answerType: SprintAnswerType = '0') => {
@@ -198,7 +198,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-lg font-black tracking-tight text-indigo-900 truncate">
-                      {SPRINT_TYPES[selectedType]?.label || '---'}
+                      {QUESTION_TYPES[selectedType]?.label || '---'}
                     </h3>
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-600 text-white shrink-0">
                       {selectedLevel === '0' ? 'Basic' : `Lvl ${selectedLevel}`}
@@ -347,7 +347,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     {mode === 'sprint' ? 'スプリント' : 'ドリル'}
                   </span>
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
-                    {SPRINT_TYPES[selectedType]?.label}
+                    {QUESTION_TYPES[selectedType]?.label}
                   </span>
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
                     {selectedLevel === '0' ? 'Basic' : `Lvl ${selectedLevel}`}

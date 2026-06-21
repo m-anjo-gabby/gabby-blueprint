@@ -5,7 +5,7 @@ import { getSprintQuestionsAction } from "@/actions/sprintAction";
 import { SprintSelect } from "./_components/SprintSelect";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
-import { SprintQuestion, SprintQuestionType, SprintAnswerType, SprintConfig, SPRINT_TYPES } from "@gabby/types/sprint";
+import { SprintQuestion, SprintQuestionType, SprintAnswerType, SprintConfig, QUESTION_TYPES } from "@gabby/types/sprint";
 import { useSprintStore } from "@/stores/useSprintStore";
 import { AlertCircle, ArrowLeft, Loader2, Volume2 } from "lucide-react";
 import Link from "next/link";
@@ -74,7 +74,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       : '0';
 
     const parsedLevel = parseInt(config.level || '', 10);
-    const difficultyLevel = isNaN(parsedLevel) ? SPRINT_TYPES[questionType].minLevel : parsedLevel;
+    const difficultyLevel = isNaN(parsedLevel) ? QUESTION_TYPES[questionType].minLevel : parsedLevel;
 
     const response = await getSprintQuestionsAction(
       resolvedParams.content_id || '',
@@ -146,7 +146,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
               handleStartSession({
                 mode: resolvedParams.mode === 'sprint' ? 'sprint' : 'drill',
                 questionType: qType,
-                level: resolvedParams.level || String(SPRINT_TYPES[qType].minLevel),
+                level: resolvedParams.level || String(QUESTION_TYPES[qType].minLevel),
                 timeLimitSec: parseInt(resolvedParams.time_limit_sec || '60', 10),
                 answerType: (resolvedParams.answer_type as SprintAnswerType) || '0'
               });

@@ -32,7 +32,7 @@ export interface SprintTypeMetadata {
 /**
  * スプリント問題種別の画面表示用マスタ
  */
-export const SPRINT_TYPES: Record<SprintQuestionType, SprintTypeMetadata> = {
+export const QUESTION_TYPES: Record<SprintQuestionType, SprintTypeMetadata> = {
   '0': { label: 'UG Speed', value: '0', seq_no: 1, dbKey: 'level_speed', hasBasic: true, minLevel: 0, maxLevel: 10 },
   '5': { label: 'UG Builders', value: '5', seq_no: 2, dbKey: 'level_builders', hasBasic: false, minLevel: 1, maxLevel: 5 },
   '4': { label: 'UG Structure', value: '4', seq_no: 3, dbKey: 'level_structure', hasBasic: true, minLevel: 0, maxLevel: 10 },
@@ -82,7 +82,7 @@ export const DRILL_TIMING = {
 export interface SprintQuestion {
   question_id: string; // UUID
   content_id: string;  // UUID
-  content_type: number; // 0:汎用スプリント, 1:コーパススプリント
+  sprint_type: number; // 0:汎用スプリント, 1:コーパススプリント
   question_type: SprintQuestionType;
   difficulty_level: number;
   group_id: string | null; // UUID (Speedの場合はnull)
