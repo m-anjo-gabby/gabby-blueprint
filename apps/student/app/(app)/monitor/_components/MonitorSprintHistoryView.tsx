@@ -182,7 +182,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
   const handleExportCSV = (): void => {
     if (displayFilteredData.length === 0) return;
 
-    const headers = ['日付', '受講生名', 'スプリント種別', '難易度レベル', '回答モード', '制限時間(秒)', '回答数'];
+    const headers = ['日付', '受講生名', '区分', 'スプリント種別', '難易度レベル', '回答モード', '制限時間(秒)', '回答数'];
     
     const rows = displayFilteredData.map(session => {
       const date = new Date(session.insert_date).toLocaleDateString('ja-JP', {
@@ -191,10 +191,12 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
       const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];
       const levelStr = session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`;
       const modeStr = session.question_type === '0' ? (session.answer_type === '1' ? 'NO' : 'YES') : '-';
+      const sprintTypeStr = session.sprint_type === '1' ? 'コーパス' : '汎用';
       
       return [
         `"${date}"`,
         `"${session.com_m_user?.user_name || '未設定'}"`,
+        `"${sprintTypeStr}"`,
         `"${typeInfo?.label || 'Sprint'}"`,
         `"${levelStr}"`,
         `"${modeStr}"`,
@@ -493,6 +495,14 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                           {/* 何を */}
                           <div className="col-span-1 md:col-span-5">
                             <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={cn(
+                                "text-[9px] font-black px-1.5 py-0.5 rounded-md border",
+                                session.sprint_type === '1'
+                                  ? "bg-purple-50 border-purple-100 text-purple-600"
+                                  : "bg-slate-100 border-slate-200 text-slate-600"
+                              )}>
+                                {session.sprint_type === '1' ? 'コーパス' : '汎用'}
+                              </span>
                               <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">{typeInfo?.label || 'Sprint'}</span>
                               <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100/40">
                                 {session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`}

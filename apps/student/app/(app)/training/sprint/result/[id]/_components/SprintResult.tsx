@@ -10,6 +10,8 @@ import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 interface SprintResultProps {
   scoreData: {
     self_sprint_id: string;
+    sprint_type: string;
+    content_id: string;
     question_type: string;
     answer_type: string;
     difficulty_level: number;
@@ -430,7 +432,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             <span>{isBatchPlaying ? "Stop" : "Play All"}</span>
           </button>
           <button
-            onClick={() => router.push('/training/sprint/play?mode=sprint')}
+            onClick={() => router.push(`/training/sprint/play?mode=sprint&sprint_type=${scoreData.sprint_type}&content_id=${scoreData.content_id}`)}
             className="flex-[2] max-w-sm h-12 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
             <span>Next Sprint</span>

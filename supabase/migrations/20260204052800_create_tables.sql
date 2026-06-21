@@ -676,8 +676,10 @@ CREATE TABLE public.self_t_sprint (
   user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
   
   -- 設定情報 (sprint.ts マスタと完全同期)
-  question_type VARCHAR(2) NOT NULL,    -- '0': Speed, '4': Structure, '5': Builders, '6': Mastery
-  answer_type VARCHAR(2) NOT NULL,      -- '0': YES回答, '1': NO回答
+  sprint_type TEXT NOT NULL,            -- '0': 汎用スプリント, '1': コーパススプリント
+  content_id UUID NOT NULL,             -- コンテンツID
+  question_type TEXT NOT NULL,          -- '0': Speed, '4': Structure, '5': Builders, '6': Mastery
+  answer_type TEXT NOT NULL,            -- '0': YES回答, '1': NO回答
   difficulty_level SMALLINT NOT NULL,   -- 0 (Basic) 〜 10
   time_limit_sec SMALLINT NOT NULL,     -- 60, 90, 120, 150
   
@@ -696,6 +698,8 @@ CREATE TABLE public.self_t_sprint (
 COMMENT ON TABLE public.self_t_sprint IS '自主トレスプリント結果・履歴管理テーブル';
 COMMENT ON COLUMN public.self_t_sprint.self_sprint_id IS 'スプリント結果ユニークID (UUID)';
 COMMENT ON COLUMN public.self_t_sprint.user_id IS 'ユーザーID (com_m_user.id)';
+COMMENT ON COLUMN public.self_t_sprint.sprint_type IS 'スプリント種別';
+COMMENT ON COLUMN public.self_t_sprint.content_id IS 'コンテンツID';
 COMMENT ON COLUMN public.self_t_sprint.question_type IS 'スプリント問題種別 (''0'': Speed, ''4'': Structure, ''5'': Builders, ''6'': Mastery)';
 COMMENT ON COLUMN public.self_t_sprint.answer_type IS '解答種別（''0'': YES回答, ''1'': NO回答）';
 COMMENT ON COLUMN public.self_t_sprint.difficulty_level IS '難易度レベル (0: Basic 〜 10)';

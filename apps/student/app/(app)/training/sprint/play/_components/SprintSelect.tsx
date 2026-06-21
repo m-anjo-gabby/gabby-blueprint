@@ -72,7 +72,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     if (isReturningFromSession) return;
 
     const fetchLastSession = async () => {
-      const res = await getLastSprintSessionAction();
+      const res = await getLastSprintSessionAction(contentId);
       if (res.success && res.data) {
         const last = res.data;
         

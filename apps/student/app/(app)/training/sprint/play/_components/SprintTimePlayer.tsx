@@ -141,7 +141,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     toggleAutoPlay(false);
     setIsSaving(true); 
 
-    const { level, timeLimitSec: storeTimeLimit } = useSprintStore.getState();
+    const { level, timeLimitSec: storeTimeLimit, sprintType, contentId } = useSprintStore.getState();
     if (!questionType) {
       setIsSaving(false);
       onExit?.();
@@ -159,6 +159,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     try {
       const res = await createSprintScoreAction({
+        sprint_type: sprintType,
+        content_id: contentId,
         question_type: questionType,
         answer_type: answerType,
         difficulty_level: Number(level),

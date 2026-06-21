@@ -19,6 +19,7 @@ interface PageProps {
     resume_id?: string;
     resume?: string; // 🔖 栞判定用のクエリ
     time_limit_sec?: string; // ⏱️ スプリント制限時間
+    sprint_type?: string;
   }>;
 }
 
@@ -87,9 +88,12 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       setQuestions(response.data);
       setResumeId(resolvedParams.resume_id);
       
+      const sprintType = resolvedParams.sprint_type || response.data[0]?.sprint_type || '0';
+
       // Zustandストアに設定を保存
       setSprintConfig({
         contentId: resolvedParams.content_id || '',
+        sprintType,
         questionType,
         level: String(difficultyLevel),
         answerType: config.answerType,

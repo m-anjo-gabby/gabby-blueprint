@@ -40,6 +40,8 @@ export interface MonitorWordSummaryHistoryItem extends WordSummaryHistoryItem {
 // Define the structure for Sprint History items returned by the monitor action
 export interface MonitorSprintHistoryItem {
   self_sprint_id: string;
+  sprint_type: string;
+  content_id: string;
   question_type: string;
   answer_type: string;
   difficulty_level: number;
@@ -161,6 +163,8 @@ export async function getMonitorSprintHistory(
 
     const formattedData = (data as any[])?.map(item => ({
       self_sprint_id: item.self_sprint_id,
+      sprint_type: item.sprint_type || '0',
+      content_id: item.content_id || '',
       question_type: item.question_type,
       answer_type: item.answer_type,
       difficulty_level: item.difficulty_level,

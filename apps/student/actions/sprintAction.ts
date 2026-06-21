@@ -24,6 +24,8 @@ export interface SprintHistoryItem {
  * 自主トレスプリント結果登録用の入力ペイロード型
  */
 export interface CreateSprintScoreInput {
+  sprint_type: string;
+  content_id: string;
   question_type: '0' | '4' | '5' | '6';
   answer_type: string;
   difficulty_level: number;
@@ -41,6 +43,8 @@ export interface SprintResultResponse {
     scoreRecord: {
       self_sprint_id: string;
       user_id: string;
+      sprint_type: string;
+      content_id: string;
       question_type: string;
       answer_type: string;
       difficulty_level: number;
@@ -191,6 +195,8 @@ export async function createSprintScoreAction(
       .insert([
         {
           user_id: user.id,
+          sprint_type: input.sprint_type,
+          content_id: input.content_id,
           question_type: input.question_type,
           answer_type: input.answer_type,
           difficulty_level: Number(input.difficulty_level),
@@ -324,6 +330,8 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
       .from("self_t_sprint")
       .select(`
         self_sprint_id,
+        sprint_type,
+        content_id,
         question_type,
         answer_type,
         difficulty_level,
@@ -358,7 +366,7 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
  * ユーザーの最後のスプリントセッション設定（種別・レベル・制限時間）を取得する
  * 目的: セッション開始前の設定画面での初期値復元
  */
-export async function getLastSprintSessionAction() {
+export async function getLastSprintSessionAction(contentId?: string) {
   const ctx = await getLogContext();
 
   try {
@@ -367,10 +375,16 @@ export async function getLastSprintSessionAction() {
     if (authError || !user) throw new Error("Unauthorized");
 
     // 最新の1件を取得
-    const { data, error } = await supabase
+    let query = supabase
       .from("self_t_sprint")
-      .select("question_type, difficulty_level, time_limit_sec")
-      .eq("user_id", user.id)
+      .select("sprint_type, content_id, question_type, difficulty_level, time_limit_sec")
+      .eq("user_id", user.id);
+
+    if (contentId) {
+      query = query.eq("content_id", contentId);
+    }
+
+    const { data, error } = await query
       .order("insert_date", { ascending: false })
       .limit(1)
       .maybeSingle();

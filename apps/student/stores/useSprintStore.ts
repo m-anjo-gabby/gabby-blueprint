@@ -10,6 +10,7 @@ interface SprintState {
   currentIndex: number;
   mode: 'drill' | 'sprint';
   contentId: string;
+  sprintType: string;
   questionType: SprintQuestionType | null;
   level: string;
   answerType: SprintAnswerType;
@@ -25,7 +26,7 @@ interface SprintState {
   analysis: AnalysisResult | null;
 
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
-  setSprintConfig: (config: { contentId: string, questionType: SprintQuestionType, level: string, answerType: SprintAnswerType, timeLimitSec: number }) => void;
+  setSprintConfig: (config: { contentId: string, sprintType: string, questionType: SprintQuestionType, level: string, answerType: SprintAnswerType, timeLimitSec: number }) => void;
   setLoading: (loading: boolean) => void;
   nextStep: () => { isLast: boolean };
   prevStep: () => void;
@@ -36,6 +37,7 @@ interface SprintState {
   setPlayingAnswerSequence: (val: boolean) => void;
   setFeedback: (val: FeedbackConfig | null) => void;
   setAnalysis: (val: AnalysisResult | null) => void;
+  setPlayingAudio?: (val: HTMLAudioElement | null) => void;
   setDrillEvalType: (val: 'yes' | 'no') => void;
   clearSession: () => void;
   resetStore: () => void;
@@ -46,6 +48,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   currentIndex: 0,
   mode: 'drill',
   contentId: '',
+  sprintType: '0',
   questionType: null,
   level: '0',
   answerType: '0',
@@ -161,6 +164,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     currentIndex: 0,
     mode: 'drill',
     contentId: '',
+    sprintType: '0',
     questionType: null,
     level: '0',
     answerType: '0',

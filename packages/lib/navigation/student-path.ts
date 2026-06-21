@@ -12,10 +12,12 @@ export const getTrainingPath = (content: ContentItem): string => {
   if (content.content_type === 2) {
     const type = '0'; // 初期表示の質問タイプは '0' (Speed) 固定とする
     const contentId = content.content_id;
+    const sprintMeta = content.metadata?.sprint;
+    const sprintType = sprintMeta?.sprint_type ?? '0';
 
     // 🏎️ levelはReady画面側で動的に選ばせるため、URLからは除外
     // mode=drill と type を指定して、Ready画面の初期状態を制御する
-    return `/training/sprint/play?mode=drill&type=${type}&content_id=${contentId}`;
+    return `/training/sprint/play?mode=drill&type=${type}&content_id=${contentId}&sprint_type=${sprintType}`;
   }
 
   // 0: 単語帳, 1: ビデオ などの従来コンテンツはそのままのセグメントを使用
@@ -38,10 +40,12 @@ export const getResumePath = (resume: ResumeContentResponse): string => {
   if (contentType === 2) {
     const type = '0';
     const contentId = resume.content_id;
+    const sprintMeta = resume.com_m_contents.metadata?.sprint;
+    const sprintType = sprintMeta?.sprint_type ?? '0';
     const itemIdParam = resume.item_id ? `&resume_id=${resume.item_id}` : '';
 
     // 再開時も同様にReady画面を経由し、安全に物理タップ(Start)を挟んでiOS無音問題を回避
-    return `/training/sprint/play?mode=drill&type=${type}&content_id=${contentId}&resume=true${itemIdParam}`;
+    return `/training/sprint/play?mode=drill&type=${type}&content_id=${contentId}&resume=true&sprint_type=${sprintType}${itemIdParam}`;
   }
 
   // 従来コンテンツの再開用URL生成

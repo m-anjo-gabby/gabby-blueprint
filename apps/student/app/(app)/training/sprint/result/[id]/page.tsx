@@ -32,6 +32,8 @@ export default async function SprintResultPage({ params }: PageProps) {
     <SprintResult
       scoreData={{
         self_sprint_id: scoreRecord.self_sprint_id,
+        sprint_type: scoreRecord.sprint_type,
+        content_id: scoreRecord.content_id,
         question_type: scoreRecord.question_type,
         answer_type: scoreRecord.answer_type, // 🆕 セッション共通のYes/No縛り
         difficulty_level: scoreRecord.difficulty_level,

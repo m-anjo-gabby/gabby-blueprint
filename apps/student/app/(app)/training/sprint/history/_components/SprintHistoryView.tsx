@@ -11,6 +11,8 @@ import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
 
 interface HistorySession {
   self_sprint_id: string;
+  sprint_type: string;
+  content_id: string;
   question_type: string;
   answer_type: string;
   difficulty_level: number;
@@ -260,6 +262,14 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                   <span className="text-[11px] font-black text-indigo-400/80 font-mono w-4">{idx + 1}</span>
                                   <div>
                                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                      <span className={cn(
+                                        "text-[9px] font-black px-1.5 py-0.5 rounded-md border",
+                                        session.sprint_type === '1'
+                                          ? "bg-purple-50 border-purple-100 text-purple-600"
+                                          : "bg-slate-100 border-slate-200 text-slate-600"
+                                      )}>
+                                        {session.sprint_type === '1' ? 'コーパス' : '汎用'}
+                                      </span>
                                       <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
                                       <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
                                         {session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`}
