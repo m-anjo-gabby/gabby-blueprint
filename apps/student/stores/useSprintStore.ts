@@ -24,6 +24,12 @@ interface SprintState {
   isPlayingAnswerSequence: boolean;
   feedback: FeedbackConfig | null;
   analysis: AnalysisResult | null;
+  /**
+   * プレイヤー画面からSprintSelect（設定画面）に戻ってきたことを示すフラグ。
+   * true の場合のみストア値を初期値として使用し、DBフェッチをスキップする。
+   * SprintSelect のマウント後に clearIsActiveSession() で必ずリセットされる。
+   */
+  isActiveSession: boolean;
 
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
   setSprintConfig: (config: { contentId: string, sprintType: string, questionType: SprintQuestionType, level: string, answerType: SprintAnswerType, timeLimitSec: number }) => void;
@@ -39,6 +45,10 @@ interface SprintState {
   setAnalysis: (val: AnalysisResult | null) => void;
   setPlayingAudio?: (val: HTMLAudioElement | null) => void;
   setDrillEvalType: (val: 'yes' | 'no') => void;
+  /** プレイヤーへ遷移する直前に呼び出し、「セッション継続中」フラグを立てる */
+  setIsActiveSession: () => void;
+  /** SprintSelect マウント後に呼び出し、フラグをリセットする */
+  clearIsActiveSession: () => void;
   clearSession: () => void;
   resetStore: () => void;
 }
@@ -62,6 +72,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   isPlayingAnswerSequence: false,
   feedback: null,
   analysis: null,
+  isActiveSession: false,
 
   initSprint: (questions, mode, startIndex = 0) => set({
     questions,
@@ -145,6 +156,10 @@ export const useSprintStore = create<SprintState>((set, get) => ({
 
   setDrillEvalType: (drillEvalType) => set({ drillEvalType }),
 
+  setIsActiveSession: () => set({ isActiveSession: true }),
+
+  clearIsActiveSession: () => set({ isActiveSession: false }),
+
   clearSession: () => set({
     questions: [],
     currentIndex: 0,
@@ -177,5 +192,6 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     feedback: null,
     analysis: null,
     loading: true,
+    isActiveSession: false,
   })
 }));

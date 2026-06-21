@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSprintStore } from '@/stores/useSprintStore';
-import { getLastSprintSessionAction, getSprintProgressAction } from '@/actions/sprintAction';
+import { getSprintProgressAction } from '@/actions/sprintAction';
 
 interface SprintSelectProps {
   initialConfig?: {
@@ -38,15 +38,16 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const searchParams = useSearchParams();
   const contentId = searchParams.get('content_id') || '';
   const store = useSprintStore();
+  const clearIsActiveSession = useSprintStore((state) => state.clearIsActiveSession);
   
   const [userProgress, setUserProgress] = useState<any>(null);
   // デフォルト値の定義 (履歴がない場合のフォールバック)
   const DEFAULT_TYPE: SprintQuestionType = '0';
   const DEFAULT_TIME = 60;
 
-  // ストアに一度でも設定が保存されたか（＝プレイして戻ってきたか）を確認
-  // かつ、現在の URL の content_id とストアの contentId が一致している場合のみ「戻り」とみなす
-  const isReturningFromSession = store.questionType !== null && store.contentId === contentId;
+  // ストアの isActiveSession フラグが true の場合のみ「プレイヤーから戻ってきた」とみなす。
+  // 教材一覧などの外部から遷移してきた場合は false のため、必ずDBフェッチが走る。
+  const isReturningFromSession = store.isActiveSession && store.contentId === contentId;
 
   // 1. 状態の初期化
   // initialConfig.questionType は page.tsx で '0' がフォールバックされているため、初期値として安全に使用可能
@@ -68,36 +69,23 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   // 2. 履歴・進捗からの初期値復元
   useEffect(() => {
-    // セッションから戻ってきた場合は現在のストア状態を維持するため、DBからの取得は行わない
+    // フラグをリセット（次回マウント時には必ず再評価される）
+    clearIsActiveSession();
+
+    // プレイヤーから戻ってきた場合は現在のストア状態を維持するため、DBからの取得は行わない
     if (isReturningFromSession) return;
 
-    const fetchLastSession = async () => {
-      const res = await getLastSprintSessionAction(contentId);
-      if (res.success && res.data) {
-        const last = res.data;
-        
-        // URLに明示的な指定がない項目を、最新の学習履歴に基づき復元する
-        const urlType = searchParams.get('type');
-        const urlLevel = searchParams.get('level');
-
-        if (!urlType) {
-          setSelectedType(last.question_type as SprintQuestionType);
-          if (!urlLevel) setSelectedLevel(String(last.difficulty_level));
-        } else if (!urlLevel && last.question_type === urlType) {
-          setSelectedLevel(String(last.difficulty_level));
-        }
-
-        setSelectedTimeLimitSec(last.time_limit_sec);
-      }
-
-      // 到達レベル進捗の取得
+    // 設定値（questionType, level, timeLimitSec）の復元は page.tsx の initialConfig に集約済み。
+    // ここでは到達レベル進捗のみを取得する。
+    const fetchProgress = async () => {
       const progRes = await getSprintProgressAction();
       if (progRes.success) {
         setUserProgress(progRes.data);
       }
     };
-    fetchLastSession();
-  }, [isReturningFromSession, searchParams]);
+    fetchProgress();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sortedTypes = useMemo(() => Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no), []);
   const sortedTimes = useMemo(() => Object.values(SPRINT_TIME_OPTIONS).sort((a, b) => a.seq_no - b.seq_no), []);
@@ -128,6 +116,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     return items;
   }, [selectedType, userProgress]);
 
+  // 種別変更時にレベルが選択可能外にならないように自動的に現在のタイプの最小値へ補正
   const handleTypeChange = (typeId: SprintQuestionType) => {
     setSelectedType(typeId);
     setSelectedLevel(String(QUESTION_TYPES[typeId].minLevel));
