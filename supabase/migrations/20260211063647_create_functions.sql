@@ -278,8 +278,6 @@ GRANT EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) TO serv
 ---------------------------------------------
 -- 単語ドリル日次サマリーカウントアップ
 ---------------------------------------------
-DROP FUNCTION IF EXISTS public.increment_word_summary(UUID, UUID, INT, INT);
-
 CREATE OR REPLACE FUNCTION public.increment_word_summary(
   p_content_id UUID,
   p_word_count INT,
@@ -509,3 +507,60 @@ $$;
 ALTER FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) OWNER TO postgres;
 REVOKE EXECUTE ON FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) TO authenticated;
+
+---------------------------------------------
+-- スプリントドリル日次サマリーカウントアップ
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.increment_sprint_summary(
+  p_content_id UUID,
+  p_question_count INT,
+  p_assessment_count INT
+)
+RETURNS VOID AS $$
+DECLARE
+  v_user_id UUID := auth.uid(); -- JWTから直接ユーザーIDを取得（セキュリティ向上）
+  v_user_timezone TEXT;
+  v_local_today DATE;
+BEGIN
+  -- 認証されていない場合は何もせず終了（安全策）
+  IF v_user_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- 1. ユーザーマスタからタイムゾーンを取得（デフォルトは 'Asia/Tokyo'）
+  SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_user_timezone
+  FROM public.com_m_user
+  WHERE id = v_user_id AND delete_flg = '0';
+
+  -- 2. ユーザーのタイムゾーン基準で現在日付を切り出す
+  v_local_today := (CURRENT_TIMESTAMP AT TIME ZONE v_user_timezone)::date;
+
+  -- 3. スプリントサマリーテーブルへUpsert
+  INSERT INTO public.self_t_sprint_summary (
+    user_id, 
+    content_id, 
+    training_date, 
+    question_count, 
+    assessment_count
+  )
+  VALUES (
+    v_user_id, 
+    p_content_id, 
+    v_local_today, 
+    p_question_count, 
+    p_assessment_count
+  )
+  ON CONFLICT (user_id, content_id, training_date)
+  DO UPDATE SET 
+    question_count = self_t_sprint_summary.question_count + p_question_count,
+    assessment_count = self_t_sprint_summary.assessment_count + p_assessment_count,
+    update_date = NOW();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 作成直後のデフォルト権限（PUBLIC / anon）を完全に剥奪
+REVOKE EXECUTE ON FUNCTION public.increment_sprint_summary(UUID, INT, INT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.increment_sprint_summary(UUID, INT, INT) FROM anon;
+
+-- ログイン済みのユーザー（authenticated）にのみ、実行権限を限定して付与
+GRANT EXECUTE ON FUNCTION public.increment_sprint_summary(UUID, INT, INT) TO authenticated;

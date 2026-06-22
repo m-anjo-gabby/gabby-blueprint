@@ -16,6 +16,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getSprintTitle } from '@gabby/lib';
 import { FeedbackConfig } from '@gabby/types/wordDrill';
+import { reportSprintProgress } from '@/actions/sprintAction';
 
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
@@ -96,6 +97,32 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   useEffect(() => { isAutoPlayingRef.current = isAutoPlaying; }, [isAutoPlaying]);
   useEffect(() => { isRevealedRef.current = isRevealed; }, [isRevealed]);
 
+  const contentIdRef = useRef(contentId);
+  useEffect(() => {
+    contentIdRef.current = contentId;
+  }, [contentId]);
+
+  /**
+   * 手動同期関数
+   */
+  const syncProgressNow = useCallback(async () => {
+    const { questionCount, assessmentCount } = useSprintStore.getState().clearPendingCounts();
+    if (questionCount > 0 || assessmentCount > 0) {
+      await reportSprintProgress(contentIdRef.current, questionCount, assessmentCount);
+    }
+  }, []);
+
+  /**
+   * 5分ごとの定期自動保存
+   */
+  useEffect(() => {
+    const FIVE_MINUTES = 5 * 60 * 1000;
+    const intervalId = setInterval(() => {
+      syncProgressNow();
+    }, FIVE_MINUTES);
+    return () => clearInterval(intervalId);
+  }, [syncProgressNow]);
+
   const courseTitle = useMemo(() => {
     return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
   }, [questionType]);
@@ -152,7 +179,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     });
   }, [playbackRate, ttsSpeak]);
 
-  // ⚡ 新スキーマ対応 (_en へのマッピングを適用)
   const playQuestionSequence = useCallback(async (question: SprintQuestion) => {
     if (!question) return;
     setPlayingQuestionSequence(true);
@@ -191,17 +217,28 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setIsRevealed(true);
   }, [isStarted, currentQuestion, isRevealed, setIsRevealed, stopAllAudio]);
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     if (isNavigating.current) return;
     isNavigating.current = true;
     stopAllAudio();
     const { isLast } = nextStep();
     if (isLast) {
       showToast("すべてのドリルが完了しました！お疲れ様でした。", "success");
+      try {
+        await syncProgressNow();
+      } catch (e) {
+        console.error(e);
+      }
       onExit?.();
     }
     setTimeout(() => { isNavigating.current = false; }, 400);
-  }, [stopAllAudio, nextStep, showToast, onExit]);
+  }, [stopAllAudio, nextStep, showToast, onExit, syncProgressNow]);
+
+  // handleNext を useEffect から安全に呼ぶための Ref
+  const handleNextRef = useRef(handleNext);
+  useEffect(() => {
+    handleNextRef.current = handleNext;
+  }, [handleNext]);
 
   const handlePrev = useCallback(() => {
     if (isNavigating.current) return;
@@ -252,6 +289,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       setFeedback(getFeedbackConfig(result.score));
       setIsRecording(false);
       setIsRevealed(true);
+      useSprintStore.getState().incrementAssessmentCount();
     });
   }, [currentQuestion, questionType, drillEvalType, stopAllAudio, setIsRecording, startAssessment, setFeedback, setAnalysis, setIsRevealed]);
 
@@ -291,22 +329,55 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     }
   }, [isAutoPlaying, showConfirm, toggleAutoPlay, forceRestartQuestionFlow]);
 
-  // 初期注入
+  // 初期注入と先行同期
   useEffect(() => {
     let startIdx = 0;
+    let shouldSync = false;
+
+    // 初回マウント時のみ同期処理を行うフラグ制御
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      shouldSync = true;
+    }
+
     if (initialQuestionId && questions.length > 0) {
       const idx = questions.findIndex(q => q.question_id === initialQuestionId);
       if (idx >= 0) { 
         startIdx = idx; 
-        if (!isInitialized.current) { 
-          isInitialized.current = true; 
+        // 最初の1回目マウント時のみトーストを表示
+        if (shouldSync) { 
           showToast("続きから再開しました", "success"); 
         } 
       }
     }
+
     initSprint(questions, 'drill', startIdx);
+
+    // 💡 初回マウント時のみ同期を実行し、StrictModeによる二重実行を抑止
+    if (shouldSync) {
+      syncProgressNow();
+    }
+
     return () => clearSession();
-  }, [questions, initialQuestionId, initSprint, clearSession, showToast]);
+  }, [questions, initialQuestionId, initSprint, clearSession, showToast, syncProgressNow]);
+
+  // 💡 前の画面に戻る（離脱）ボタン用確認・同期ラップハンドラ
+  const handleExitWithSync = async () => {
+    if (isAutoPlaying) return;
+
+    const ok = await showConfirm("トレーニングを終了しますか？", "前の画面に戻ります。", { 
+      variant: 'info', 
+      isModal: false 
+    });
+    if (!ok) return;
+
+    try {
+      await syncProgressNow();
+    } catch (e) {
+      console.error(e);
+    }
+    onExit?.();
+  };
 
   // タイムライン1：問題カード変更検知
   useEffect(() => {
@@ -339,7 +410,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
       if (isAutoPlayingRef.current) {
         autoPlayTimerRef.current = setTimeout(() => {
-          handleNext();
+          handleNextRef.current();
         }, DRILL_TIMING.nextCardDelay);
       }
     };
@@ -349,7 +420,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
-  }, [isRevealed, currentQuestion, playAnswerSequence, handleNext]);
+  }, [isRevealed, currentQuestion, playAnswerSequence]);
 
   // フルスクリーン固定
   useEffect(() => {
@@ -378,7 +449,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         <div className="shrink-0 pt-4 w-full px-4 border-b border-slate-50 pb-2">
           <div className="grid grid-cols-5 items-center min-h-[3rem] px-2">
             <div className="col-span-1 flex justify-start">
-              <button onClick={() => onExit?.()} disabled={isAutoPlaying} className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
+              <button onClick={handleExitWithSync} disabled={isAutoPlaying} className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
                 <ChevronLeft size={20} strokeWidth={2.5} />
               </button>
             </div>

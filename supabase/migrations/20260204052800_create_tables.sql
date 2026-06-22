@@ -765,3 +765,29 @@ CREATE INDEX idx_daily_summary_perf
 ON public.self_t_word_summary (user_id, training_date DESC);
 
 COMMENT ON TABLE public.self_t_word_summary IS '単語ドリル日次サマリー';
+
+---------------------------------------------
+-- DDL: self_t_sprint_summary（スプリントドリル日次サマリー）
+-- キャパシティ上限： ユーザー数 × 実際の学習日数 × 教材数
+---------------------------------------------
+CREATE TABLE public.self_t_sprint_summary (
+  summary_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  content_id UUID NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+  training_date DATE NOT NULL DEFAULT CURRENT_DATE, -- タイムゾーンを考慮した「日付」
+  
+  question_count INT NOT NULL DEFAULT 1,             -- その日に学習した「延べ」問題数
+  assessment_count INT NOT NULL DEFAULT 0,       -- その日に発話評価した回数
+  
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+  -- 1ユーザー・1教材・1日あたり「1レコード」に絶対制限する一意制約（最重要）
+  CONSTRAINT unique_sprint_user_content_date UNIQUE (user_id, content_id, training_date)
+);
+
+-- インデックスはこれだけでOK。直近の学習グラフ描画や、今日の進捗取得がミリ秒で終わります。
+CREATE INDEX idx_sprint_daily_summary_perf 
+ON public.self_t_sprint_summary (user_id, training_date DESC);
+
+COMMENT ON TABLE public.self_t_sprint_summary IS 'スプリントドリル日次サマリー';

@@ -1,4 +1,3 @@
-// @/stores/useSprintStore
 'use client';
 
 import { create } from 'zustand';
@@ -24,6 +23,11 @@ interface SprintState {
   isPlayingAnswerSequence: boolean;
   feedback: FeedbackConfig | null;
   analysis: AnalysisResult | null;
+  
+  // --- Progress States ---
+  pendingQuestionCount: number;   // このセッション内で消化した（開いた、またはNextを押した）延べ問題数
+  pendingAssessmentCount: number; // このセッション内で発話評価した回数
+
   /**
    * プレイヤー画面からSprintSelect（設定画面）に戻ってきたことを示すフラグ。
    * true の場合のみストア値を初期値として使用し、DBフェッチをスキップする。
@@ -36,6 +40,8 @@ interface SprintState {
   setLoading: (loading: boolean) => void;
   nextStep: () => { isLast: boolean };
   prevStep: () => void;
+  clearPendingCounts: () => { questionCount: number, assessmentCount: number }; // カウントを取得してリセット
+  incrementAssessmentCount: () => void;
   setIsRevealed: (val: boolean) => void;
   setIsRecording: (val: boolean) => void;
   toggleAutoPlay: (val?: boolean) => void;
@@ -72,6 +78,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   isPlayingAnswerSequence: false,
   feedback: null,
   analysis: null,
+  pendingQuestionCount: 0,
+  pendingAssessmentCount: 0,
   isActiveSession: false,
 
   initSprint: (questions, mode, startIndex = 0) => set({
@@ -86,6 +94,9 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     isPlayingAnswerSequence: false,
     feedback: null,
     analysis: null,
+    // 教材を開いた瞬間の最初の1件分を先行カウントする方式を踏襲
+    pendingQuestionCount: 1,
+    pendingAssessmentCount: 0,
     loading: false
   }),
 
@@ -94,7 +105,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   setSprintConfig: (config) => set({ ...config }),
 
   nextStep: () => {
-    const { questions, currentIndex } = get();
+    const { questions, currentIndex, pendingQuestionCount } = get();
     const resetDisplay = {
       isRevealed: false,
       isRecording: false,
@@ -105,10 +116,18 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     };
 
     if (currentIndex < questions.length - 1) {
-      set({ ...resetDisplay, currentIndex: currentIndex + 1 });
+      set({ 
+        ...resetDisplay, 
+        currentIndex: currentIndex + 1,
+        pendingQuestionCount: pendingQuestionCount + 1
+      });
       return { isLast: false };
     } else {
-      set({ ...resetDisplay, isAutoPlaying: false });
+      set({ 
+        ...resetDisplay, 
+        isAutoPlaying: false,
+        pendingQuestionCount: pendingQuestionCount + 1
+      });
       return { isLast: true }; // 最後の問題に到達
     }
   },
@@ -127,6 +146,22 @@ export const useSprintStore = create<SprintState>((set, get) => ({
       currentIndex: currentIndex - 1
     });
   },
+
+  // カウントを取得してリセット（単語ドリルの clearPendingCounts と同一のセキュアな構造）
+  clearPendingCounts: () => {
+    const { pendingQuestionCount, pendingAssessmentCount } = get();
+
+    set({ pendingQuestionCount: 0, pendingAssessmentCount: 0 });
+    
+    return { 
+      questionCount: pendingQuestionCount, 
+      assessmentCount: pendingAssessmentCount
+    };
+  },
+
+  incrementAssessmentCount: () => set((state) => ({
+    pendingAssessmentCount: state.pendingAssessmentCount + 1
+  })),
 
   setIsRevealed: (isRevealed) => set({ isRevealed }),
   setIsRecording: (isRecording) => set({ isRecording }),
@@ -192,6 +227,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     feedback: null,
     analysis: null,
     loading: true,
+    pendingQuestionCount: 0,
+    pendingAssessmentCount: 0,
     isActiveSession: false,
   })
 }));
