@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SprintQuestionType } from "@gabby/types/sprint";
-import { HelpCircle, MessageSquare, CheckCircle2, Volume2, Eye, CircleDot, Headphones, ArrowRight, Languages, Mic } from 'lucide-react';
+import { HelpCircle, MessageSquare, CheckCircle2, Volume2, Eye, CircleDot, Headphones, Languages, Mic } from 'lucide-react';
 
 // 🔌 Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
@@ -46,7 +46,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const handleReveal = useSprintStore((state) => state.setIsRevealed);
   const drillEvalType = useSprintStore((state) => state.drillEvalType);
   const setDrillEvalType = useSprintStore((state) => state.setDrillEvalType);
-  const isRecording = useSprintStore((state) => state.isRecording);
 
   // 📝 問題文を表示するかどうかのローカルステート（ドリルモード用）
   const [isProblemVisible, setIsProblemVisible] = useState(false);
@@ -55,7 +54,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const [showJaAnswer, setShowJaAnswer] = useState(false);
   const [prevIndex, setPrevIndex] = useState(currentIndex);
 
-  // 🔄 修正：useEffectを使わずにレンダー中にステートを調整（Cascading Renders 警告の回避）
+  // 🔄 useEffectを使わずにレンダー中にステートを調整
   if (currentIndex !== prevIndex) {
     setPrevIndex(currentIndex);
     setIsProblemVisible(false);
@@ -69,10 +68,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const isSprintMode = mode === 'sprint';
   const isDrillMode = mode === 'drill';
 
-  // 問題番号のラベル生成 (ヘッダー用配置)
+  // 問題番号のラベル生成
   const questionNumberLabel = useMemo(() => {
     if (!question) return '';
-    // Speedモードなら全体の通し番号、それ以外はグループの通し番号を表示
     if (questionType === '0') return String(currentIndex + 1);
     
     const uniqueGroupIds = Array.from(new Set(questions.map(q => q.group_id)));
@@ -83,37 +81,34 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
    * 🗺️ 利用者が何をするかの「タスク進行ステップ」の配列定義
    */
   const userActionSteps = useMemo(() => {
-    // シンプルな名詞のみの表記に統一
     if (questionType === '0') {
-      return ["質問文", "回答"]; // Speed
+      return ["質問文", "回答"];
     } else if (questionType === '6') {
-      return ["基本文", "質問文", "回答"]; // Mastery
+      return ["基本文", "質問文", "回答"];
     } else {
-      return ["基本文", "指示文", "回答"]; // Builders, Structure
+      return ["基本文", "指示文", "回答"];
     }
   }, [questionType]);
 
   /**
-   * 🎯 修正：指示・質問文の再生が終わったら（＝audioPhase が answer になったら）回答状態に進む
+   * 🎯 指示・質問文の再生終了後のフェーズ追従
    */
   const currentActionIndex = useMemo(() => {
-    if (isRevealed) return userActionSteps.length; // 解答表示後はすべて完了
+    if (isRevealed) return userActionSteps.length;
     
     if (questionType === '0') {
-      // UG Speed
-      if (audioPhase === 'question') return 0; // まだ再生中
-      if (audioPhase === 'answer') return 1;   // 再生終了 ➔ 回答状態
+      if (audioPhase === 'question') return 0;
+      if (audioPhase === 'answer') return 1;
       return 0;
     } else {
-      // Builders, Structure, Mastery
       if (audioPhase === 'statement') return 0;
-      if (audioPhase === 'question') return 1;  // 指示・質問文を再生中
-      if (audioPhase === 'answer') return 2;    // 再生終了 ➔ 回答状態へ進む
+      if (audioPhase === 'question') return 1;
+      if (audioPhase === 'answer') return 2;
       return 0;
     }
   }, [audioPhase, isRevealed, questionType, userActionSteps.length]);
 
-  // 再生状態の日本語テキスト中央 HUD 用
+  // 再生状態メッセージ
   const statusMessage = useMemo(() => {
     if (isRevealed) return { text: "解答をCheck", color: "text-slate-400" };
     switch (audioPhase) {
@@ -128,7 +123,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
   }, [audioPhase, isRevealed, config.phaseLabel]);
 
-  // 🛡️ 全てのHook呼び出しの後に配置（エラー回避）
   if (!question) {
     return <div className="flex-1 w-full animate-pulse bg-slate-50/50 rounded-[40px]" />;
   }
@@ -139,20 +133,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     if (onPlayAudio) onPlayAudio(voiceUrl, text);
   };
 
-  // ドリルモードかつ、問題表示ボタンを押していない隠蔽状態フラグ
   const isHidingProblemText = isDrillMode && !isProblemVisible;
 
   return (
-    <div className="w-full flex flex-col items-stretch text-left select-none gap-y-3">
+    // 📱 モバイル対応：親コンテナの垂直ギャップをモバイル時は小さく(gap-y-2), PC時はゆったり(sm:gap-y-4)
+    <div className="w-full flex flex-col items-stretch text-left select-none gap-y-2 sm:gap-y-4">
       
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 【ヘッダー領域】位置を確実に固定するために absolute を廃止 */}
+      {/* 【ヘッダー領域】 */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <div className="w-full flex items-center pb-1 px-0.5">
+      <div className="w-full flex items-center pb-0.5 px-0.5">
         <div className="flex items-center gap-3">
-          {/* 🏆 コンパウンド・バッジ：Question と Step を1つのユニットに統合 */}
           <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600">
-            {/* Question 部分 */}
             <div className="flex items-center gap-2.5 px-3 py-1.5">
               <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
               <span className="text-sm font-black text-white font-mono leading-none">
@@ -160,7 +152,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               </span>
             </div>
 
-            {/* Step 部分（Speed以外のみ表示：白抜きデザイン） */}
             {questionType !== '0' && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
@@ -171,7 +162,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             )}
           </div>
 
-          {/* 🆕 Speed用のYES/NO切り替え：バッジの横に独立して配置 */}
           {questionType === '0' && (
             <div className="flex items-center gap-2 px-1">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">
@@ -195,12 +185,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       {/* ──────────────────────────────────────────────────────────── */}
       {/* 【メインエリア】タスク進行状況 ＆ 再生アイコン HUD */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <div className="w-full flex flex-col items-stretch bg-slate-50/40 rounded-[24px] border border-slate-100 p-4 sm:p-5">
-        {/* タスク進行バー：問題テキスト表示時も隠さず常時表示 */}
+      {/* 📱 モバイル対応：パディングをモバイルでは小さく(p-3.5), PCで通常(sm:p-5) */}
+      <div className="w-full flex flex-col items-stretch bg-slate-50/40 rounded-[24px] border border-slate-100 p-3.5 sm:p-5">
         <AnimatePresence initial={false}>
           <motion.div 
             initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-            animate={{ opacity: 1, height: "auto", marginBottom: "1rem" }}
+            // 📱 モバイル対応：バーの下部余白もレスポンシブに (mb-2 から sm:mb-4)
+            animate={{ opacity: 1, height: "auto", marginBottom: "0.5rem" }}
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
             className="w-full overflow-hidden"
@@ -211,7 +202,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 const isCompleted = index < currentActionIndex;
                 return (
                   <div key={stepName} className="flex-1 flex flex-col gap-1 text-center relative">
-                    {/* ステップバーのライン */}
                     <div className="h-[3px] w-full rounded-full bg-slate-200 overflow-hidden relative">
                       <motion.div
                         initial={false}
@@ -223,7 +213,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         )}
                       />
                     </div>
-                    {/* ステップ文言 */}
                     <span className={cn(
                       "text-[9px] font-black tracking-tight transition-colors duration-200",
                       isCurrent ? "text-indigo-600 font-extrabold" : 
@@ -238,20 +227,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </motion.div>
         </AnimatePresence>
 
-        {/* 再生状態メッセージ ＆ 丸型アイコン：常時表示 */}
         <div className="flex items-center justify-between w-full gap-2">
-          <div className="flex items-center gap-x-4">
+          <div className="flex items-center gap-x-3 sm:gap-x-4">
             <div className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center shadow-xs border shrink-0 transition-all duration-300",
+              "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-xs border shrink-0 transition-all duration-300",
               isRevealed ? "bg-slate-100 border-slate-200 text-slate-400" :
               audioPhase === 'statement' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
               audioPhase === 'question' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
               audioPhase === 'answer' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
             )}>
               {audioPhase === 'answer' && !isRevealed ? (
-                <CircleDot size={20} />
+                <CircleDot size={18} />
               ) : (
-                <Headphones size={20} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />
+                <Headphones size={18} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />
               )}
             </div>
             
@@ -259,7 +247,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <h3 className={cn("text-[11px] font-black uppercase tracking-wider leading-none", statusMessage.color)}>
                 {statusMessage.text}
               </h3>
-              {/* 🎯 回答待ち状態でのみ表示されるサブテキスト */}
               {audioPhase === 'answer' && !isRevealed && (
                 <div className="flex items-center gap-1 mt-1 text-slate-400">
                   <Mic size={10} className="text-rose-400" fill="currentColor" />
@@ -269,7 +256,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </div>
           </div>
 
-          {/* 👁️ 問題をテキスト表示するためのトリガー（解答開示後、かつ未表示の場合のみ出現） */}
           {isDrillMode && isRevealed && !isProblemVisible && (
             <button
               onClick={(e) => { e.stopPropagation(); setIsProblemVisible(true); }}
@@ -283,11 +269,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       </div>
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 【コンテンツエリア】元の洗練されたデザインベース */}
+      {/* 【コンテンツエリア】 */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-y-4 sm:gap-y-5 w-full mt-2 relative">
+      {/* 📱 モバイル対応：セクション間の縦ギャップを縮小 (gap-y-2.5 sm:gap-y-5, mt-1 sm:mt-2) */}
+      <div className="flex flex-col gap-y-2.5 sm:gap-y-5 w-full mt-1 sm:mt-2 relative">
         
-        {/* 🎯 修正：【A】基本文セクション（問題テキスト表示アクション前は丸ごと非表示） */}
+        {/* 【A】基本文セクション */}
         <AnimatePresence>
           {!isSprintMode && question.statement_en && !isHidingProblemText && (
             <motion.div 
@@ -326,7 +313,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           )}
         </AnimatePresence>
 
-        {/* 🎯 修正：【B】質問 / 指示セクション（問題テキスト表示アクション前は丸ごと非表示） */}
+        {/* 【B】質問 / 指示セクション */}
         <AnimatePresence>
           {!isHidingProblemText && (
             <motion.div 
@@ -358,7 +345,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   )}
                 </div>
               </div>
-              <p className="text-2xl sm:text-[32px] font-black text-slate-800 leading-[1.25] tracking-tighter antialiased">
+              {/* 📱 モバイル対応：テキストサイズをモバイル時(text-xl)とPC時(sm:text-[32px])でレスポンシブ化 */}
+              <p className="text-xl sm:text-[32px] font-black text-slate-800 leading-[1.25] tracking-tighter antialiased">
                 {showJaQuestion ? question.question_ja : question.question_en}
               </p>
             </motion.div>
@@ -366,34 +354,34 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </AnimatePresence>
 
         {/* 【C】解答表示エリア ＆ 各種アクションコントロールボタン */}
-        <div className="w-full min-h-[90px] flex flex-col items-stretch justify-center mt-1">
+        <div className="w-full min-h-[60px] sm:min-h-[90px] flex flex-col items-stretch justify-center mt-0.5">
           <AnimatePresence mode="wait">
             {!isRevealed ? (
-              /* 未回答状態：「タップして解答を表示」ボタンを大きく配置 */
+              /* 未回答状態：新デザインの「Tap to Reveal」プレースホルダー */
               <motion.div
-                key="reveal-action-container"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                className="w-full flex flex-col gap-3"
+                key="reveal-placeholder"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                // 📱 モバイル対応：高さをモバイル時は控えめにし(min-h-[160px])、PCで広く取る(sm:min-h-[280px])。さらに上のマージンを縮小(mt-2 sm:mt-6)
+                className="w-full flex-1 flex flex-col items-center justify-center min-h-[160px] sm:min-h-[280px] mt-2 sm:mt-6 relative group"
               >
-                <button
-                  onClick={() => { if (!isAutoPlaying) handleReveal(true); }}
-                  disabled={isAutoPlaying}
-                  className={cn(
-                    "w-full min-h-[80px] sm:min-h-[92px] flex flex-col items-center justify-center border border-dashed rounded-[20px] px-4 py-3 outline-none focus:ring-2 transition-all cursor-pointer",
-                    isAutoPlaying 
-                      ? "border-slate-200 bg-slate-50/40 text-slate-400 cursor-not-allowed" 
-                      : "border-indigo-300 bg-indigo-50/20 hover:bg-indigo-50/40 text-indigo-600 shadow-2xs focus:ring-indigo-500/20"
-                  )}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <span className={cn("text-xs font-black tracking-[0.15em]", isAutoPlaying ? "text-slate-400" : "text-indigo-700")}>
-                      {isAutoPlaying ? "自動再生中..." : "タップして解答を表示"}
-                    </span>
-                    {!isAutoPlaying && <ArrowRight size={13} strokeWidth={2.5} className="text-indigo-500" />}
+                {/* 背景デザイン */}
+                <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] border-2 border-dashed border-slate-100 bg-gradient-to-b from-slate-50/50 to-white/30 group-hover:border-indigo-100 group-hover:from-indigo-50/10 transition-colors duration-300" />
+
+                {/* 中央のインタラクティブなインジケーター */}
+                <div className="relative z-10 flex flex-col items-center text-center space-y-3 sm:space-y-4">
+
+
+                  <div className="space-y-0.5 sm:space-y-1">
+                    <p className="text-[12px] sm:text-[11px] font-black tracking-[0.15em] sm:tracking-[0.2em] text-slate-400 uppercase group-hover:text-indigo-500 transition-colors">
+                      タップして解答を表示
+                    </p>
+                    <p className="text-[10px] sm:text-[10px] font-bold text-slate-300 group-hover:text-slate-400 transition-colors">
+                      Tap anywhere to reveal
+                    </p>
                   </div>
-                </button>
+                </div>
               </motion.div>
             ) : (
               /* 解答テキスト開示後フェーズ */
@@ -401,7 +389,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 key="answer-content-container"
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full flex flex-col gap-4"
+                // 📱 モバイル対応：解答展開後の縦の詰まり具合を gap-2.5 sm:gap-4 に微調整
+                className="w-full flex flex-col gap-2.5 sm:gap-4"
               >
                 {/* 解答文（Speed専用 2カラム or 通常 1カラムモデル） */}
                 {question.answer_sentence_no_en ? (
