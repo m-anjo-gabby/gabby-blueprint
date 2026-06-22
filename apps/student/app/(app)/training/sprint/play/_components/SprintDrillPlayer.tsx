@@ -14,7 +14,7 @@ import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getSprintTitle } from '@gabby/lib';
-import { FeedbackConfig } from '@gabby/types/wordDrill';
+import { FeedbackConfig } from '@gabby/types/speechAssessment';
 import { reportSprintProgress } from '@/actions/sprintAction';
 
 interface SprintDrillPlayerProps {

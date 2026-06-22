@@ -11,7 +11,7 @@ import { useResumeStore } from '@/stores/useResumeStore';
 import { usePhraseStore } from '@/stores/usePhraseStore';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { WordResumeMetadata } from '@gabby/types/training';
-import { FeedbackConfig } from '@gabby/types/wordDrill';
+import { FeedbackConfig } from '@gabby/types/speechAssessment';
 
 // Components
 import { WordHeader } from './_components/WordHeader';

@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AnalysisResult, FeedbackConfig } from '@gabby/types/wordDrill';
+import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
 import { cn } from "@/lib/utils";
 
 interface SprintFeedbackProps {

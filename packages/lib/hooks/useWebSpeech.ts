@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { analyzePhrase } from '../assessment/native-speech';
-import { AnalysisResult } from '../../types/wordDrill';
+import { AnalysisResult } from '../../types/speechAssessment';
 
 /**
  * ブラウザ標準の Web Speech API (Synthesis & Recognition) を利用した

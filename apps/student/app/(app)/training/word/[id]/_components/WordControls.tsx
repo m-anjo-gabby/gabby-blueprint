@@ -1,11 +1,10 @@
-// apps\student\app\(app)\training\word\[id]\_components\WordControls.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft, Bookmark, RotateCw, Volume2, Mic, Check } from 'lucide-react';
+import React, { useMemo, useCallback, useState } from 'react';
+import { Bookmark, ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface WordControlsProps {
   isListening: boolean;
@@ -21,9 +20,15 @@ interface WordControlsProps {
   onVoiceCheck: () => void;
 }
 
+/**
+ * 学習画面のメイン操作パネル
+ * 上下2段の「スプリットボタン構造」により、高い機能性と誤操作防止を両立
+ * 再生速度変更は、ポップオーバーメニューから選択可能
+ */
 export const WordControls: React.FC<WordControlsProps> = ({
   isListening,
   isPlaying,
+  timeLeft,
   playbackRate,
   onChangePlaybackRate,
   onNext,
@@ -33,39 +38,37 @@ export const WordControls: React.FC<WordControlsProps> = ({
   onSpeak,
   onVoiceCheck,
 }) => {
-  // 🔌 Zustand ストアからインデックス情報を直接マッピング
-  const wordIdx = useWordDrillStore((state) => state.wordIdx);
-  const phraseIdx = useWordDrillStore((state) => state.phraseIdx);
-  const words = useWordDrillStore((state) => state.words);
-  const isAutoPlaying = useWordDrillStore((state) => state.isAutoPlaying);
+  const { isAutoPlaying, words, wordIdx, phraseIdx } = useWordDrillStore();
 
   // 📝 再生速度ポップオーバーの開閉ローカルステート
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
 
-  // 🤖 内部ナビゲーション用合成フラグ
-  const isFirstStep = wordIdx === 0 && phraseIdx === 0;
-  const isLastWord = wordIdx === words.length - 1;
-  const currentWordPhrasesCount = words[wordIdx]?.phrases?.length || 0;
-  const isLastPhraseInWord = phraseIdx === currentWordPhrasesCount - 1;
-  const isLastStep = isLastWord && isLastPhraseInWord;
+  // --- 状態判定ロジック ---
+  const currentWord = words[wordIdx];
+  const isLastStep = useMemo(() => 
+    wordIdx === words.length - 1 && 
+    phraseIdx === (currentWord?.phrases.length || 0) - 1
+  , [wordIdx, words.length, phraseIdx, currentWord]);
 
-  // ガード条件の定義（録音中、自動再生中、音声再生中は一部の操作を無効化）
+  const isFirstStep = wordIdx === 0 && phraseIdx === 0;
   const isInteractionDisabled = isListening || isAutoPlaying || isPlaying;
+
+  // 手動再生中のみくるくる表示を出すための判定（自動再生中はステータス表示を優先するため）
   const isManualPlaying = isPlaying && !isAutoPlaying;
 
   // 選択可能な再生速度の選択肢
   const AVAILABLE_RATES = [0.8, 1.0, 1.2, 1.5];
 
-  // 共通のスタイリングクラス
-  const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50 text-slate-400";
-  // 💡 罠回避: ポップオーバーが枠外に突き出るため overflow-hidden を排除し、overflow-visible に変更
+  // --- 共通スタイル定義 ---
+  const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50";
+  // 💡 ポップオーバーが枠外に突き出るため overflow-hidden から overflow-visible に調整
   const unitBase = "flex items-center rounded-2xl border shadow-sm transition-all overflow-visible";
   const splitLeftBase = "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-2xl";
 
   return (
-    <div className="w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2 relative">
+    <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2 relative">
       
-      {/* 1. 外側タップでポップオーバーを閉じるための全画面透過バックドロップ */}
+      {/* 外側タップでポップオーバーを閉じるための全画面透過バックドロップ */}
       {isRateMenuOpen && (
         <div 
           className="fixed inset-0 z-30 cursor-default" 
@@ -73,28 +76,58 @@ export const WordControls: React.FC<WordControlsProps> = ({
         />
       )}
 
-      {/* 2. 上段：ナビゲーション・レイヤー */}
+      {/* 1. ステータス・インジケーター（録音中や再生中の状態表示） */}
+      <div className="h-6 flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          {isListening ? (
+            <motion.div key="rec" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+              <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em]">Recording {timeLeft}s</span>
+            </motion.div>
+          ) : isAutoPlaying ? (
+            <motion.div key="auto" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
+              <RotateCw size={10} className="animate-spin text-indigo-600" />
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Auto Playing</span>
+            </motion.div>
+          ) : isPlaying ? (
+            <motion.div key="play" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
+              <RotateCw size={10} className="animate-spin text-indigo-600" />
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Playing</span>
+            </motion.div>
+          ) : (
+            <motion.span key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+              Tap Card to Flip
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* 2. 上段：ナビゲーション・レイヤー（戻る・進む・保存） */}
       <div className="flex items-center justify-between w-full gap-2 h-14 z-10">
-        <button 
+        {/* ブックマーク・保存ボタン */}
+        <button
           onClick={onSaveResume}
-          disabled={isListening || isPlaying}
-          className={cn(sideBtnBase, "hover:bg-amber-50 hover:text-amber-500")}
+          disabled={isAutoPlaying || isPlaying}
+          className={cn(sideBtnBase, "hover:bg-indigo-50 hover:text-indigo-600 text-slate-400")}
         >
           <Bookmark size={18} strokeWidth={2.5} />
         </button>
 
+        {/* スプリット・ナビゲーションユニット */}
         <div className={cn("flex-1 h-full bg-white border-indigo-100", unitBase)}>
+          {/* 戻るボタン */}
           <button 
             onClick={onPrev} 
-            disabled={isInteractionDisabled || isFirstStep}
-            className="w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r text-slate-400 hover:bg-slate-50 border-indigo-50 disabled:opacity-20"
+            disabled={isInteractionDisabled || isFirstStep} 
+            className={cn(splitLeftBase, "text-slate-400 hover:bg-slate-50 border-indigo-50")}
           >
             <ArrowLeft size={18} strokeWidth={3} />
           </button>
           
+          {/* 次へ/完了ボタン */}
           <button 
-            onClick={onNext}
-            disabled={isListening}
+            onClick={onNext} 
+            disabled={isInteractionDisabled} 
             className={cn(
               "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40 rounded-r-2xl",
               isLastStep 
@@ -102,32 +135,33 @@ export const WordControls: React.FC<WordControlsProps> = ({
                 : "bg-indigo-600 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
             )}
           >
-            <span className="text-[10px] font-black uppercase tracking-[0.15em]">
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] tabular-nums">
               {isLastStep ? 'Finish' : 'Next'}
             </span>
             {isLastStep ? <Check size={18} strokeWidth={3} /> : <ArrowRight size={18} strokeWidth={3} />}
           </button>
         </div>
 
-        <button 
+        {/* 自動再生トグル */}
+        <button
           onClick={onToggleAutoPlay}
           disabled={isManualPlaying}
           className={cn(
-            sideBtnBase, 
-            isAutoPlaying ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" : "hover:bg-indigo-50 hover:text-indigo-600"
+            sideBtnBase,
+            isAutoPlaying ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" : "hover:bg-indigo-50 hover:text-indigo-600 text-slate-400"
           )}
         >
           <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-slate-400")} />
         </button>
       </div>
 
-      {/* 3. 下段：アクション・レイヤー（再生速度 ＋ オーディオ・マイク制御） */}
+      {/* 3. 下段：アクション・レイヤー（再生速度・聴く・練習する） */}
       <div className={cn(
-        "grid grid-cols-2 gap-3 w-full max-w-sm px-2 mt-1 h-14 transition-all",
+        "grid grid-cols-2 gap-3 w-full max-w-sm px-2 mt-1 h-14",
         isRateMenuOpen ? "z-40 relative" : "z-20 relative"
       )}>
         
-        {/* 左側ユニット：再生速度 ＋ リスニング音声再生 */}
+        {/* スプリット・オーディオユニット（速度設定 + 再生） */}
         <div className={cn("h-full bg-slate-50 border-slate-200", unitBase)}>
           
           {/* ⏱️ 再生速度セクション（ポップオーバー開閉ボタン） */}
@@ -137,20 +171,19 @@ export const WordControls: React.FC<WordControlsProps> = ({
               disabled={isInteractionDisabled}
               className={cn(
                 splitLeftBase,
-                "border-r border-slate-200 hover:bg-slate-100 active:bg-slate-200 cursor-pointer h-full z-10",
                 playbackRate !== 1.0 
                   ? "bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700 active:bg-indigo-800" 
-                  : "text-slate-600"
+                  : "text-slate-400 border-slate-200 hover:bg-slate-100 active:bg-slate-200"
               )}
             >
-              <span className="text-[11px] font-black leading-none">{playbackRate.toFixed(1)}</span>
+              <span className="text-[10px] font-black leading-none">{playbackRate.toFixed(1)}</span>
               <span className={cn(
-                "text-[9px] font-black uppercase tracking-tight mt-0.5",
-                playbackRate !== 1.0 ? "text-indigo-100" : "text-slate-400"
+                "text-[10px] font-bold uppercase tracking-tighter",
+                playbackRate !== 1.0 ? "opacity-90" : "opacity-70"
               )}>Rate</span>
             </button>
 
-            {/* ✨ Framer Motion ポップオーバーメニュー（スプリントドリルと同一デザイン） */}
+            {/* ✨ Framer Motion ポップオーバーメニュー（スプリントドリルと同一の共通UIデザイン） */}
             <AnimatePresence>
               {isRateMenuOpen && (
                 <motion.div
@@ -189,38 +222,51 @@ export const WordControls: React.FC<WordControlsProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* 音声再生ボタン（Listen） */}
+          {/* 音声再生セクション */}
           <button
             onClick={onSpeak}
             disabled={isInteractionDisabled}
-            className={cn("flex-1 h-full flex items-center justify-center transition-all cursor-pointer rounded-r-2xl",
+            className={cn(
+              "flex-1 h-full flex items-center justify-center gap-2 transition-all rounded-r-2xl",
               isManualPlaying ? "bg-indigo-50 text-indigo-600" : "text-slate-600 hover:text-indigo-600"
             )}
           >
             {isManualPlaying ? (
-              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}>
-                <RotateCw size={20} strokeWidth={2.5} className="text-indigo-600" />
-              </motion.div>
+              <RotateCw size={20} strokeWidth={2.5} className="animate-spin" />
             ) : (
               <Volume2 size={20} strokeWidth={2.5} />
             )}
+            <span className="text-[10px] font-black uppercase tracking-widest hidden xs:block">
+              {isManualPlaying ? 'Playing' : 'Listen'}
+            </span>
           </button>
         </div>
 
-        {/* 右側ユニット：音声認識マイクボタン（Speak） */}
+        {/* 音声認識・練習ボタン */}
         <button
           onClick={onVoiceCheck}
-          disabled={(isInteractionDisabled && !isListening) || isManualPlaying}
-          className={cn("h-full rounded-2xl flex items-center justify-center font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative cursor-pointer border border-transparent",
+          disabled={isAutoPlaying || isPlaying}
+          className={cn(
+            "h-full rounded-2xl flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative",
             isListening ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
-            ((isInteractionDisabled && !isListening) || isManualPlaying) && "opacity-20 disabled:pointer-events-none"
+            (isAutoPlaying || isPlaying) && "opacity-20 disabled:pointer-events-none"
           )}
         >
           {isListening && <span className="absolute inset-0 bg-white/20 animate-pulse" />}
           
-          <div className="flex items-center justify-center relative z-10">
-            <Mic size={20} strokeWidth={2.5} className={cn(isListening && "animate-bounce")} />
-          </div>
+          <AnimatePresence mode="wait">
+            {isListening ? (
+              <motion.div key="stop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 relative z-10">
+                <Square size={14} fill="currentColor" strokeWidth={0} />
+                <span className="tracking-[0.1em]">Stop</span>
+              </motion.div>
+            ) : (
+              <motion.div key="mic" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 relative z-10">
+                <Mic size={20} strokeWidth={2.5} />
+                <span className="hidden xs:block tracking-[0.1em]">Practice</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </button>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { SprintQuestion, SprintQuestionType, SprintAnswerType } from "@gabby/types/sprint";
-import { AnalysisResult, FeedbackConfig } from '@gabby/types/wordDrill';
+import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
 
 interface SprintState {
   questions: SprintQuestion[];
