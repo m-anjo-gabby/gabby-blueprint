@@ -2,8 +2,8 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { DRILL_TIMING, SprintQuestion } from "@gabby/types/sprint";
-import { QuestionCard } from "./shared/QuestionCard";
-import { SprintPlayControls } from "./shared/SprintPlayControls";
+import { QuestionCard } from "./QuestionCard";
+import { SprintDrillPlayerControls } from "./SprintDrillPlayerControls";
 import { SprintFeedback } from "./SprintFeedback";
 import { ChevronLeft, Loader2, Square, Volume2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -244,13 +244,12 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     playSingleTrack(text, voiceUrl);
   }, [playSingleTrack, isRecording, isAutoPlayingRef]);
 
-  const handleCycleRate = useCallback(() => {
-    const rates = [1.0, 1.2, 1.5, 0.8];
-    const targetIndex = (rates.indexOf(playbackRate) + 1) % rates.length;
-    const targetRate = rates[targetIndex];
+  // 🛠️ 修正点：トグルではなく指定された倍率を受け取って設定する形式に変更
+  const handleSelectRate = useCallback((targetRate: number) => {
     changePlaybackRate(targetRate);
     ttsSetRate(targetRate);
-  }, [playbackRate, changePlaybackRate, ttsSetRate]);
+    // 💡 ここで stopAllAudio() や再再生フローを呼ばないことで、設定が変わるだけに留めます
+  }, [changePlaybackRate, ttsSetRate]);
 
   const handleStartRecord = useCallback(() => {
     if (!currentQuestion) return;
@@ -320,7 +319,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     let startIdx = 0;
     let shouldSync = false;
 
-    // 初回マウント時のみ同期処理を行うフラグ制御
     if (!isInitialized.current) {
       isInitialized.current = true;
       shouldSync = true;
@@ -330,7 +328,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       const idx = questions.findIndex(q => q.question_id === initialQuestionId);
       if (idx >= 0) { 
         startIdx = idx; 
-        // 最初の1回目マウント時のみトーストを表示
         if (shouldSync) { 
           showToast("続きから再開しました", "success"); 
         } 
@@ -339,7 +336,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
     initSprint(questions, 'drill', startIdx);
 
-    // 💡 初回マウント時のみ同期を実行し、StrictModeによる二重実行を抑止
     if (shouldSync) {
       syncProgressNow();
     }
@@ -347,7 +343,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => clearSession();
   }, [questions, initialQuestionId, initSprint, clearSession, showToast, syncProgressNow]);
 
-  // 💡 前の画面に戻る（離脱）ボタン用確認・同期ラップハンドラ
   const handleExitWithSync = async () => {
     if (isAutoPlaying) return;
 
@@ -468,7 +463,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         {/* 🎮 下部：操作パネル */}
         <div className="px-6 pb-8 shrink-0 relative">
           <div className="w-full max-w-md mx-auto">
-            <SprintPlayControls 
+            <SprintDrillPlayerControls 
               onNext={handleNext}
               onPrev={handlePrev}
               onPlayAudio={handleManualPlayAudio}
@@ -476,7 +471,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               onStopRecord={handleStopRecord}              
               onToggleAutoPlay={handleToggleAutoPlay}
               playbackRate={playbackRate}
-              onChangePlaybackRate={handleCycleRate}
+              // 🛠️ 修正点：新しい関数に差し替え
+              onChangePlaybackRate={handleSelectRate}
               timeLeft={timeLeft}
               isStarted={isStarted}
             />

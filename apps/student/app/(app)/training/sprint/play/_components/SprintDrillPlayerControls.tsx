@@ -1,71 +1,73 @@
-// apps\student\app\(app)\training\word\[id]\_components\WordControls.tsx
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft, Bookmark, RotateCw, Volume2, Mic, Check } from 'lucide-react';
-import { useWordDrillStore } from '@/stores/useWordDrillStore';
-import { cn } from "@/lib/utils";
+import { ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from "@/lib/utils";
 
-interface WordControlsProps {
-  isListening: boolean;
-  isPlaying: boolean;
-  timeLeft: number;
-  playbackRate: number;
-  onChangePlaybackRate: (rate: number) => void;
+// 🔌 Zustand ストアのインポート
+import { useSprintStore } from '@/stores/useSprintStore';
+
+interface SprintDrillPlayerControlsProps {
   onNext: () => void;
   onPrev: () => void;
-  onSaveResume: () => void;
-  onToggleAutoPlay: () => void;
-  onSpeak: () => void;
-  onVoiceCheck: () => void;
+  onPlayAudio: () => void; // 💡 Listen 押下（プレイヤー側で制御）
+  onStartRecord: () => void;
+  onStopRecord: () => void;
+  onToggleAutoPlay?: () => void;
+  playbackRate: number;
+  // 🛠️ 修正点：引数で選択された rate（数値）を取るシグネチャに統一
+  onChangePlaybackRate: (rate: number) => void;
+  timeLeft: number;
+  isStarted?: boolean;
 }
 
-export const WordControls: React.FC<WordControlsProps> = ({
-  isListening,
-  isPlaying,
-  playbackRate,
-  onChangePlaybackRate,
+/**
+ * スプリントドリル用のメイン操作パネル（ポップオーバー・ダイレクト選択版）
+ */
+export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps> = ({
   onNext,
   onPrev,
-  onSaveResume,
+  onPlayAudio,
+  onStartRecord,
+  onStopRecord,
   onToggleAutoPlay,
-  onSpeak,
-  onVoiceCheck,
+  playbackRate,
+  onChangePlaybackRate,
+  timeLeft,
+  isStarted = true
 }) => {
-  // 🔌 Zustand ストアからインデックス情報を直接マッピング
-  const wordIdx = useWordDrillStore((state) => state.wordIdx);
-  const phraseIdx = useWordDrillStore((state) => state.phraseIdx);
-  const words = useWordDrillStore((state) => state.words);
-  const isAutoPlaying = useWordDrillStore((state) => state.isAutoPlaying);
+  // 🔌 Zustand ストアから状態を直接マッピング
+  const currentIndex = useSprintStore((state) => state.currentIndex);
+  const totalQuestions = useSprintStore((state) => state.questions.length);
+  const isRecording = useSprintStore((state) => state.isRecording);
+  const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying);
+  const isPlayingQuestionSequence = useSprintStore((state) => state.isPlayingQuestionSequence);
+  const isPlayingAnswerSequence = useSprintStore((state) => state.isPlayingAnswerSequence);
 
-  // 📝 再生速度ポップオーバーの開閉ローカルステート
+  // 📝 速度ポップオーバーの開閉ステート
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
 
-  // 🤖 内部ナビゲーション用合成フラグ
-  const isFirstStep = wordIdx === 0 && phraseIdx === 0;
-  const isLastWord = wordIdx === words.length - 1;
-  const currentWordPhrasesCount = words[wordIdx]?.phrases?.length || 0;
-  const isLastPhraseInWord = phraseIdx === currentWordPhrasesCount - 1;
-  const isLastStep = isLastWord && isLastPhraseInWord;
+  // 🤖 内部合成フラグ
+  const isFirstStep = currentIndex === 0;
+  const isLastStep = currentIndex === totalQuestions - 1;
+  const isPlaying = isPlayingQuestionSequence || isPlayingAnswerSequence;
 
-  // ガード条件の定義（録音中、自動再生中、音声再生中は一部の操作を無効化）
-  const isInteractionDisabled = isListening || isAutoPlaying || isPlaying;
+  const isInteractionDisabled = !isStarted || isRecording || isAutoPlaying || isPlaying;
   const isManualPlaying = isPlaying && !isAutoPlaying;
 
-  // 選択可能な再生速度の選択肢
-  const AVAILABLE_RATES = [0.8, 1.0, 1.2, 1.5];
-
-  // 共通のスタイリングクラス
+  // --- 共通スタイル定義 ---
   const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50 text-slate-400";
-  // 💡 罠回避: ポップオーバーが枠外に突き出るため overflow-hidden を排除し、overflow-visible に変更
-  const unitBase = "flex items-center rounded-2xl border shadow-sm transition-all overflow-visible";
+  const unitBase = "flex items-center rounded-2xl border shadow-sm transition-all";
   const splitLeftBase = "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-2xl";
 
+  // 選択可能な速度リスト（見やすい順）
+  const AVAILABLE_RATES = [0.8, 1.0, 1.2, 1.5];
+
   return (
-    <div className="w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2 relative">
-      
-      {/* 1. 外側タップでポップオーバーを閉じるための全画面透過バックドロップ */}
+    <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2 relative">
+
+      {/* 外側タップでポップオーバーを閉じるためのバックドロップ */}
       {isRateMenuOpen && (
         <div 
           className="fixed inset-0 z-30 cursor-default" 
@@ -73,30 +75,22 @@ export const WordControls: React.FC<WordControlsProps> = ({
         />
       )}
 
-      {/* 2. 上段：ナビゲーション・レイヤー */}
-      <div className="flex items-center justify-between w-full gap-2 h-14 z-10">
-        <button 
-          onClick={onSaveResume}
-          disabled={isListening || isPlaying}
-          className={cn(sideBtnBase, "hover:bg-amber-50 hover:text-amber-500")}
-        >
-          <Bookmark size={18} strokeWidth={2.5} />
-        </button>
-
-        <div className={cn("flex-1 h-full bg-white border-indigo-100", unitBase)}>
+      {/* 1. 上段：ナビゲーション・レイヤー（戻る・進む） */}
+      <div className="flex items-center justify-between w-full gap-2 h-14 z-10">        
+        <div className={cn("flex-1 h-full bg-white border-indigo-100 overflow-hidden", unitBase)}>
           <button 
             onClick={onPrev} 
-            disabled={isInteractionDisabled || isFirstStep}
-            className="w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r text-slate-400 hover:bg-slate-50 border-indigo-50 disabled:opacity-20"
+            disabled={isInteractionDisabled || isFirstStep} 
+            className={cn("w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r text-slate-400 hover:bg-slate-50 border-indigo-50 disabled:opacity-20")}
           >
             <ArrowLeft size={18} strokeWidth={3} />
           </button>
           
           <button 
-            onClick={onNext}
-            disabled={isListening}
+            onClick={onNext} 
+            disabled={isInteractionDisabled} 
             className={cn(
-              "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40 rounded-r-2xl",
+              "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40",
               isLastStep 
                 ? "bg-emerald-500 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]" 
                 : "bg-indigo-600 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
@@ -109,9 +103,9 @@ export const WordControls: React.FC<WordControlsProps> = ({
           </button>
         </div>
 
-        <button 
+        <button
           onClick={onToggleAutoPlay}
-          disabled={isManualPlaying}
+          disabled={!isStarted || isManualPlaying}
           className={cn(
             sideBtnBase, 
             isAutoPlaying ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" : "hover:bg-indigo-50 hover:text-indigo-600"
@@ -121,16 +115,15 @@ export const WordControls: React.FC<WordControlsProps> = ({
         </button>
       </div>
 
-      {/* 3. 下段：アクション・レイヤー（再生速度 ＋ オーディオ・マイク制御） */}
+      {/* 2. 下段：アクション・レイヤー（再生速度 ＋ マイク録音） */}
       <div className={cn(
         "grid grid-cols-2 gap-3 w-full max-w-sm px-2 mt-1 h-14 transition-all",
         isRateMenuOpen ? "z-40 relative" : "z-20 relative"
       )}>
         
-        {/* 左側ユニット：再生速度 ＋ リスニング音声再生 */}
-        <div className={cn("h-full bg-slate-50 border-slate-200", unitBase)}>
+        <div className={cn("h-full bg-slate-50 border-slate-200 overflow-visible", unitBase)}>
           
-          {/* ⏱️ 再生速度セクション（ポップオーバー開閉ボタン） */}
+          {/* ⏱️ 再生速度セクション */}
           <div className="h-full relative shrink-0 overflow-visible">
             <button
               onClick={() => !isInteractionDisabled && setIsRateMenuOpen(!isRateMenuOpen)}
@@ -150,7 +143,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
               )}>Rate</span>
             </button>
 
-            {/* ✨ Framer Motion ポップオーバーメニュー（スプリントドリルと同一デザイン） */}
+            {/* ✨ Framer Motion ツールチップメニュー */}
             <AnimatePresence>
               {isRateMenuOpen && (
                 <motion.div
@@ -160,7 +153,6 @@ export const WordControls: React.FC<WordControlsProps> = ({
                   transition={{ duration: 0.12, ease: "easeOut" }}
                   className="absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-slate-200/90 shadow-2xl rounded-2xl p-1.5 min-w-[80px] flex flex-col gap-1 z-50 mb-1"
                 >
-                  {/* ツールチップのトゲ（矢印） */}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2.5 h-2.5 bg-white border-b border-r border-slate-200 rotate-45" />
 
                   {AVAILABLE_RATES.map((rate) => {
@@ -169,6 +161,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
                       <button
                         key={rate}
                         onClick={() => {
+                          // 🛠️ 修正点：親の関数に選択したレートの数値をそのまま伝える
                           onChangePlaybackRate(rate);
                           setIsRateMenuOpen(false);
                         }}
@@ -189,38 +182,42 @@ export const WordControls: React.FC<WordControlsProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* 音声再生ボタン（Listen） */}
           <button
-            onClick={onSpeak}
+            onClick={onPlayAudio}
             disabled={isInteractionDisabled}
             className={cn("flex-1 h-full flex items-center justify-center transition-all cursor-pointer rounded-r-2xl",
               isManualPlaying ? "bg-indigo-50 text-indigo-600" : "text-slate-600 hover:text-indigo-600"
             )}
           >
             {isManualPlaying ? (
-              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}>
-                <RotateCw size={20} strokeWidth={2.5} className="text-indigo-600" />
-              </motion.div>
+              <RotateCw size={20} strokeWidth={2.5} className="animate-spin" />
             ) : (
               <Volume2 size={20} strokeWidth={2.5} />
             )}
           </button>
         </div>
 
-        {/* 右側ユニット：音声認識マイクボタン（Speak） */}
         <button
-          onClick={onVoiceCheck}
-          disabled={(isInteractionDisabled && !isListening) || isManualPlaying}
-          className={cn("h-full rounded-2xl flex items-center justify-center font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative cursor-pointer border border-transparent",
-            isListening ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
-            ((isInteractionDisabled && !isListening) || isManualPlaying) && "opacity-20 disabled:pointer-events-none"
+          onClick={isRecording ? onStopRecord : onStartRecord}
+          disabled={(isInteractionDisabled && !isRecording) || isManualPlaying}
+          className={cn("h-full rounded-2xl flex items-center justify-center font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative cursor-pointer",
+            isRecording ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
+            ((isInteractionDisabled && !isRecording) || isManualPlaying) && "opacity-20 disabled:pointer-events-none"
           )}
         >
-          {isListening && <span className="absolute inset-0 bg-white/20 animate-pulse" />}
+          {isRecording && <span className="absolute inset-0 bg-white/20 animate-pulse" />}
           
-          <div className="flex items-center justify-center relative z-10">
-            <Mic size={20} strokeWidth={2.5} className={cn(isListening && "animate-bounce")} />
-          </div>
+          <AnimatePresence mode="wait">
+            {isRecording ? (
+              <motion.div key="stop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center justify-center relative z-10">
+                <Square size={14} fill="currentColor" strokeWidth={0} />
+              </motion.div>
+            ) : (
+              <motion.div key="mic" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center justify-center relative z-10">
+                <Mic size={20} strokeWidth={2.5} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </button>
       </div>
 
