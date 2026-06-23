@@ -35,10 +35,10 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   const [view, setView] = useState<PlayerView>('loading'); // 初期状態を一時的に 'loading' に設定し、DB整合性を担保
   const [serverInitialConfig, setServerInitialConfig] = useState<{
-    mode?: 'drill' | 'sprint';
-    questionType?: SprintQuestionType;
-    level?: string;
-    timeLimitSec?: number;
+    mode: 'drill' | 'sprint';
+    questionType: SprintQuestionType;
+    level: string;
+    timeLimitSec: number;
   } | null>(null);
 
   const [questions, setQuestions] = useState<SprintQuestion[]>([]);
@@ -65,15 +65,31 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       }
 
       // 優先順位: 1. DB履歴(dbConfig) > 2. URLパラメータ > 3. システムデフォルト
-      // ※ URLの type パラメータは student-path.ts で '0' にハードコードされた「表示ヒント」に過ぎないため、
+      // ※ URLの type パメータは student-path.ts で '0' にハードコードされた「表示ヒント」に過ぎないため、
       //    実際の学習履歴（dbConfig）を優先する。
       const fallbackType = (dbConfig?.question_type || resolvedParams.type || '0') as SprintQuestionType;
       const fallbackLevel = resolvedParams.level || String(dbConfig?.difficulty_level ?? QUESTION_TYPES[fallbackType]?.minLevel ?? 0);
       const fallbackTime = parseInt(resolvedParams.time_limit_sec || '', 10) || dbConfig?.time_limit_sec || 60;
-      const fallbackMode = (resolvedParams.mode === 'sprint' || dbConfig?.sprint_type === '1') ? 'sprint' : 'drill';
+
+      // 💡 モードのデフォルトを 'sprint' に変更
+      // URLパラメータが明示的に 'drill' であるか、またはDBのsprint_typeがドリル（例: '0' や特定のドリル値）の場合以外は、すべて 'sprint' をデフォルトとする
+      
+      // ⚡【最重要・不具合修正】URLパラメータの mode が明示的に指定されている場合は最優先で評価します。
+      // これにより、URLに `mode=sprint` が指定されている場合に `sprint_type=0` の条件によってドリルへと誤判定されるのを完全に防ぎます。
+      let fallbackMode: 'drill' | 'sprint' = 'sprint';
+      
+      if (resolvedParams.mode === 'sprint') {
+        fallbackMode = 'sprint';
+      } else if (resolvedParams.mode === 'drill') {
+        fallbackMode = 'drill';
+      } else {
+        // URLパラメータに mode の明示指定がない場合のみ、DBの履歴や既存ロジックによるフォールバックを適用
+        const isExplicitDrill = (dbConfig && dbConfig.sprint_type === '0'); 
+        fallbackMode = isExplicitDrill ? 'drill' : 'sprint';
+      }
 
       const config = {
-        mode: fallbackMode as 'drill' | 'sprint',
+        mode: fallbackMode, 
         questionType: fallbackType,
         level: fallbackLevel,
         timeLimitSec: fallbackTime,
@@ -148,7 +164,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
 
   // 🌟 DB整合性データの取得が完了するまでは、不正な初期値での描画を防ぐためローディングで待機
-  if (view === 'selecting' && !serverInitialConfig) {
+  if (view === 'loading' || !serverInitialConfig) {
     return (
       <div className="fixed inset-0 bg-slate-50 flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -163,10 +179,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   if (view === 'selecting') {
     return (
       <SprintSelect 
-        initialConfig={serverInitialConfig || {
-          mode: resolvedParams.mode === 'sprint' ? 'sprint' : 'drill',
-          questionType: (resolvedParams.type || '0') as SprintQuestionType,
-        }}
+        initialConfig={serverInitialConfig}
         onStart={handleStartSession}
       />
     );
@@ -194,13 +207,11 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
               audio.play().catch(() => {});
               window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
               
-              const qType = (serverInitialConfig?.questionType || resolvedParams.type || '0') as SprintQuestionType;
-
               handleStartSession({
-                mode: serverInitialConfig?.mode || (resolvedParams.mode === 'sprint' ? 'sprint' : 'drill'),
-                questionType: qType,
-                level: serverInitialConfig?.level || resolvedParams.level || String(QUESTION_TYPES[qType].minLevel),
-                timeLimitSec: serverInitialConfig?.timeLimitSec || parseInt(resolvedParams.time_limit_sec || '60', 10),
+                mode: serverInitialConfig.mode,
+                questionType: serverInitialConfig.questionType,
+                level: serverInitialConfig.level,
+                timeLimitSec: serverInitialConfig.timeLimitSec,
                 answerType: (resolvedParams.answer_type as SprintAnswerType) || '0'
               });
             }}
@@ -208,18 +219,6 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
           >
             Start Training 🎯
           </button>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. ローディング
-  if (view === 'loading') {
-    return (
-      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
-          <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Preparing Session...</p>
         </div>
       </div>
     );

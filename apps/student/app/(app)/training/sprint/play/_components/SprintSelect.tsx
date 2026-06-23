@@ -103,7 +103,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     const items = [];
 
     for (let i = meta.minLevel; i <= meta.maxLevel; i++) {
-      const label = i === 0 ? 'Basic' : `Lvl ${i}`;
+      const label = i === 0 ? 'Basic' : `Lv ${i}`;
       const isLocked = i > meta.minLevel && i > maxAllowed; 
       items.push({ value: String(i), label, isLocked });
     }
@@ -172,7 +172,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   "text-[10px] font-black px-2 py-0.5 rounded-md text-white leading-none tracking-wide", 
                   mode === 'sprint' ? "bg-indigo-600" : "bg-slate-800"
                 )}>
-                  {selectedLevel === '0' ? 'Basic' : `Lvl ${selectedLevel}`}
+                  {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
                 </span>
                 {mode === 'sprint' && (
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono leading-none">
@@ -471,7 +471,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     {QUESTION_TYPES[selectedType]?.label}
                   </span>
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
-                    {selectedLevel === '0' ? 'Basic' : `Lvl ${selectedLevel}`}
+                    {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
                   </span>
                   {mode === 'sprint' && (
                     <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 font-mono">

@@ -16,8 +16,8 @@ export const getTrainingPath = (content: ContentItem): string => {
     const sprintType = sprintMeta?.sprint_type ?? '0';
 
     // 🏎️ levelはReady画面側で動的に選ばせるため、URLからは除外
-    // mode=drill と type を指定して、Ready画面の初期状態を制御する
-    return `/training/sprint/play?mode=drill&type=${type}&content_id=${contentId}&sprint_type=${sprintType}`;
+    // mode=sprint と type を指定して、Ready画面の初期状態を制御する
+    return `/training/sprint/play?mode=sprint&type=${type}&content_id=${contentId}&sprint_type=${sprintType}`;
   }
 
   // 0: 単語帳, 1: ビデオ などの従来コンテンツはそのままのセグメントを使用
