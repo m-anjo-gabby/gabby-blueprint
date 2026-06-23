@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight } from 'lucide-react';
+import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight, VolumeX, ChevronDown, Settings2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { 
   QUESTION_TYPES, 
@@ -25,9 +25,17 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSprintStore } from '@/stores/useSprintStore';
 import { getSprintProgressAction } from '@/actions/sprintAction';
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
 interface SprintSelectProps {
   initialConfig?: {
-    mode?: 'drill' | 'sprint';
+    mode?: 'sprint' | 'drill';
     questionType?: SprintQuestionType;
   };
   onStart: (config: SprintConfig & { answerType: SprintAnswerType }) => void;
@@ -41,22 +49,17 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const clearIsActiveSession = useSprintStore((state) => state.clearIsActiveSession);
   
   const [userProgress, setUserProgress] = useState<any>(null);
-  // デフォルト値の定義 (履歴がない場合のフォールバック)
   const DEFAULT_TYPE: SprintQuestionType = '0';
   const DEFAULT_TIME = 60;
 
-  // ストアの isActiveSession フラグが true の場合のみ「プレイヤーから戻ってきた」とみなす。
-  // 教材一覧などの外部から遷移してきた場合は false のため、必ずDBフェッチが走る。
   const isReturningFromSession = store.isActiveSession && store.contentId === contentId;
 
-  // 1. 状態の初期化
-  // initialConfig.questionType は page.tsx で '0' がフォールバックされているため、初期値として安全に使用可能
   const initialType = isReturningFromSession
     ? (store.questionType as SprintQuestionType)
     : (initialConfig?.questionType || DEFAULT_TYPE);
 
-  const [mode, setMode] = useState<'drill' | 'sprint'>(
-    isReturningFromSession ? store.mode : (initialConfig?.mode || 'drill')
+  const [mode, setMode] = useState<'sprint' | 'drill'>(
+    isReturningFromSession ? store.mode : (initialConfig?.mode || 'sprint')
   );
   const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType);
   const [selectedLevel, setSelectedLevel] = useState<string>(
@@ -65,18 +68,16 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(
     isReturningFromSession ? store.timeLimitSec : DEFAULT_TIME
   );
+  
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
+  const [isHintOpen, setIsHintOpen] = useState(false);
 
-  // 2. 履歴・進捗からの初期値復元
   useEffect(() => {
-    // フラグをリセット（次回マウント時には必ず再評価される）
     clearIsActiveSession();
-
-    // プレイヤーから戻ってきた場合は現在のストア状態を維持するため、DBからの取得は行わない
     if (isReturningFromSession) return;
 
-    // 設定値（questionType, level, timeLimitSec）の復元は page.tsx の initialConfig に集約済み。
-    // ここでは到達レベル進捗のみを取得する。
     const fetchProgress = async () => {
       const progRes = await getSprintProgressAction();
       if (progRes.success) {
@@ -97,34 +98,24 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   const levelItems = useMemo(() => {
     const meta = QUESTION_TYPES[selectedType];
-    // DBから取得した到達レベル（クリア済みレベル）。データがない場合は0とみなす
     const clearedLevel = userProgress?.[meta.dbKey] ?? 0;
-
-    // 許可される最大レベルは「クリア済みレベル + 1」
     const maxAllowed = clearedLevel + 1;
-
     const items = [];
 
     for (let i = meta.minLevel; i <= meta.maxLevel; i++) {
       const label = i === 0 ? 'Basic' : `Lvl ${i}`;
-      
-      // 最小レベル(minLevel)は常にプレイ可能。それ以外は maxAllowed を超えたらロック。
       const isLocked = i > meta.minLevel && i > maxAllowed; 
-      
       items.push({ value: String(i), label, isLocked });
     }
     return items;
   }, [selectedType, userProgress]);
 
-  // 種別変更時にレベルが選択可能外にならないように自動的に現在のタイプの最小値へ補正
   const handleTypeChange = (typeId: SprintQuestionType) => {
     setSelectedType(typeId);
     setSelectedLevel(String(QUESTION_TYPES[typeId].minLevel));
   };
 
   const handleStartSubmit = (answerType: SprintAnswerType = '0') => {
-    // 🔊 iOSジェスチャー要件への対応
-    // クリックイベントのコールバック内で一度音声を再生し、以後の自動再生を許可させる
     if (typeof window !== 'undefined') {
       const audio = new Audio();
       audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
@@ -132,7 +123,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
     }
 
-    // 親コンポーネント（page.tsx）へ選択内容を通知し、表示を切り替える
     onStart({
       mode,
       questionType: selectedType,
@@ -146,151 +136,294 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const currentHint = SPRINT_NOTES[selectedType] || '';
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] bg-slate-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden overscroll-none touch-none select-none">
-      <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full flex flex-col relative overflow-hidden rounded-[40px]">
+    <div className="fixed inset-0 w-full h-[100dvh] bg-slate-100 flex items-center justify-center p-2 sm:p-4 overflow-hidden overscroll-none touch-none select-none">
+      <main className="bg-white text-slate-900 shadow-2xl w-full max-w-2xl h-full flex flex-col relative overflow-hidden rounded-[40px]">
         
-        {/* ヘッダー */}
-        <div className="shrink-0 pt-4 w-full overflow-hidden px-4">
-          <div className="grid grid-cols-5 items-center h-12 px-2">
-            <div className="col-span-1 flex justify-start">
-              <button 
-                onClick={() => router.back()} 
-                className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
-              >
-                <ChevronLeft size={20} strokeWidth={2.5} />
-              </button>
-            </div>
-            <div className="col-span-3 flex flex-col items-center min-w-0">
-              <div className="mb-1 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100/80">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">Training Room</span>
+        {/* ヘッダーセクション */}
+        <div className="shrink-0 pt-5 pb-3 w-full overflow-hidden bg-white z-20 border-b border-slate-50 shadow-xs">
+          <div className="flex items-start justify-between px-6 gap-3">
+            
+            <button 
+              onClick={() => router.back()} 
+              className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-slate-600 active:scale-95 transition-all mt-0.5"
+            >
+              <ChevronLeft size={20} strokeWidth={2.5} />
+            </button>
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex-1 min-w-0 flex flex-col items-center py-1 px-2 rounded-2xl hover:bg-slate-50/80 active:scale-[0.99] transition-all group relative border border-transparent hover:border-slate-100/80"
+            >
+              <div className="mb-1 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">
+                  Current Target
+                </span>
               </div>
-              <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none truncate w-full text-center">
-                Sprint Session
-              </h1>
-            </div>
-            <div className="col-span-1" />
+              
+              <div className="flex items-center justify-center gap-1.5 w-full max-w-[80%]">
+                <h1 className="text-base font-black text-slate-800 tracking-tight leading-tight truncate text-center">
+                  {QUESTION_TYPES[selectedType]?.label || '---'}
+                </h1>
+                <Settings2 size={13} className="text-slate-300 group-hover:text-indigo-500 group-hover:rotate-45 transition-all shrink-0" strokeWidth={2.5} />
+              </div>
+
+              <div className="flex items-center gap-1.5 mt-1.5 shrink-0">
+                <span className={cn(
+                  "text-[10px] font-black px-2 py-0.5 rounded-md text-white leading-none tracking-wide", 
+                  mode === 'sprint' ? "bg-indigo-600" : "bg-slate-800"
+                )}>
+                  {selectedLevel === '0' ? 'Basic' : `Lvl ${selectedLevel}`}
+                </span>
+                {mode === 'sprint' && (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono leading-none">
+                    {selectedTimeLimitSec}s
+                  </span>
+                )}
+              </div>
+            </button>
+
+            <div className="w-10 h-10 shrink-0 opacity-0 pointer-events-none" />
           </div>
         </div>
 
-        {/* 中央：コンテンツエリア */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 overscroll-contain">
-          <div className="w-full max-w-xl mx-auto space-y-7 pt-2 pb-6">
-
-            {/* 🌟 1. 現在の設定要約 */}
-            <div 
-              onClick={() => setIsSettingsOpen(true)}
-              className="bg-indigo-50/75 border border-indigo-100/80 text-indigo-950 p-5 rounded-[28px] relative overflow-hidden group cursor-pointer active:scale-[0.99] transition-all shadow-md shadow-indigo-600/[0.03]"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="space-y-1.5 min-w-0 flex-1 pr-2">
-                  <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block">Selected Config</span>
+        {/* メイン空間コンテナ */}
+        <div className={cn(
+          "flex-1 min-h-0 flex flex-col transition-colors duration-300",
+          mode === 'sprint' ? "bg-indigo-50/30" : "bg-slate-50/50"
+        )}>
+          
+          {/* モード選択セクション */}
+          <div className="shrink-0 w-full pt-5 pb-1">
+            <div className="max-w-xl mx-auto px-6 flex flex-col gap-2">
+              
+              <div className="flex items-center gap-1.5 pl-0.5">
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-widest transition-colors",
+                  mode === 'sprint' ? "text-indigo-400/90" : "text-slate-400"
+                )}>
+                  Select Mode / モード選択
+                </span>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <button className={cn(
+                      "h-4.5 w-4.5 flex items-center justify-center rounded-full text-xs transition-colors",
+                      mode === 'sprint' ? "bg-indigo-100 text-indigo-500 hover:bg-indigo-200" : "bg-slate-200/80 text-slate-500 hover:bg-slate-300"
+                    )}>
+                      <HelpCircle size={11} strokeWidth={2.5} />
+                    </button>
+                  </DialogTrigger>
                   
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-lg font-black tracking-tight text-indigo-900 truncate">
-                      {QUESTION_TYPES[selectedType]?.label || '---'}
-                    </h3>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-600 text-white shrink-0">
-                      {selectedLevel === '0' ? 'Basic' : `Lvl ${selectedLevel}`}
-                    </span>
-                    {mode === 'sprint' && (
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 border border-indigo-200 text-indigo-700 font-mono shrink-0">
-                        {selectedTimeLimitSec}s
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 text-[10px] font-black bg-white/90 border border-indigo-100 px-3 py-1.5 rounded-xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xs shrink-0">
-                  <Edit3 size={11} strokeWidth={2.5} />
-                  <span>変更する</span>
-                </div>
+                  {/* 💡 修正箇所：アニメーションの軸を中心（sm:zoom-in-95 等）にし、かつ自動フォーカスを制御することで右上のXボタンが最初から選択されるのを防ぐ */}
+                  <DialogContent 
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border-none bg-white p-6 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-2xl text-slate-900 outline-none"
+                  >
+                    <DialogHeader>
+                      <DialogTitle className="text-sm font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        Mode Guide / モード解説
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-3">
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-black text-indigo-600 flex items-center gap-1.5">
+                          <Zap size={14} className="fill-current text-indigo-500" /> スプリントモード
+                        </h4>
+                        <p className="text-xs text-slate-600 leading-relaxed font-bold">
+                          制限時間内に一問一答でテンポよく回答を重ねる、瞬発力強化モードです。音声評価を原則としますが、声が出せない場合はスキップも可能です。
+                        </p>
+                      </div>
+                      <hr className="border-slate-100" />
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                          <Sliders size={14} className="text-slate-500" /> ドリルモード
+                        </h4>
+                        <p className="text-xs text-slate-600 leading-relaxed font-bold">
+                          自分のペースで英文を聞き、発話を繰り返す練習モードです。声を出せない環境でのフレーズ確認にも適しています。
+                        </p>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
 
-              <div className="pt-3 border-t border-indigo-200/40 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-black text-indigo-900">
-                  {mode === 'sprint' ? (
-                    <>
-                      <Zap size={13} className="text-indigo-600 fill-indigo-600" />
-                      <span>スプリントモード / 制限時間: {selectedTimeLimitSec}秒</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sliders size={13} strokeWidth={2.5} className="text-indigo-600" />
-                      <span>ドリルモード</span>
-                    </>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMode('sprint')}
+                  className={cn(
+                    "flex-1 py-3.5 px-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-xs font-black shadow-2xs",
+                    mode === 'sprint'
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/10 scale-[1.01]"
+                      : "bg-white text-slate-400 hover:text-slate-600 border border-slate-200/40"
                   )}
-                </div>
-                
-                <p className="text-[11px] font-medium text-indigo-700/80 leading-relaxed pl-4.5">
-                  {mode === 'sprint' ? (
-                    "制限時間内に一問一答でテンポよく回答を重ねる、瞬発力強化モードです。"
-                  ) : (
-                    "自分のペースで英文を聞き、発話を繰り返す練習モードです。"
+                >
+                  <Zap size={14} className={mode === 'sprint' ? "fill-current text-amber-300" : "text-slate-400"} />
+                  <span>スプリント</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMode('drill')}
+                  className={cn(
+                    "flex-1 py-3.5 px-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-xs font-black shadow-2xs",
+                    mode === 'drill'
+                      ? "bg-slate-900 text-white shadow-lg shadow-slate-900/10 scale-[1.01]"
+                      : "bg-white text-slate-400 hover:text-slate-600 border border-slate-200/40"
                   )}
-                </p>
+                >
+                  <Sliders size={14} strokeWidth={3} className={mode === 'drill' ? "text-teal-400" : "text-slate-400"} />
+                  <span>ドリル</span>
+                </button>
               </div>
             </div>
+          </div>
 
-            {/* 📘 2. 出題テーマセクション */}
-            <div className="px-1 space-y-2.5">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-5 h-5 rounded-md bg-amber-50 text-amber-500 shrink-0">
-                  <BookOpen size={12} strokeWidth={2.5} />
-                </div>
-                <span className="text-[10px] font-black text-amber-600/80 uppercase tracking-[0.1em]">Focus Theme / 出題テーマ</span>
-              </div>
-              <div className="pl-7 border-l-2 border-amber-100">
-                <p className="text-base font-black text-slate-800 tracking-tight leading-relaxed">
-                  {currentTheme}
-                </p>
-              </div>
-            </div>
+          {/* メインスクロールコンテンツ */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-2 overscroll-contain">
+            <div className="w-full max-w-xl mx-auto space-y-4 pt-2 pb-6">
 
-            {/* 💡 3. 回答のヒント */}
-            {currentHint && (
-              <div className="px-1 space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center w-5 h-5 rounded-md bg-amber-50/60 text-amber-500/90 shrink-0">
-                    <HelpCircle size={12} strokeWidth={2.5} />
-                  </div>
-                  <span className="text-[10px] font-black text-amber-600/70 uppercase tracking-[0.1em]">Tips / 回答のヒント</span>
-                </div>
-                <div className="pl-7 border-l-2 border-amber-100/60">
-                  <p className="text-xs font-bold text-slate-600 leading-relaxed">
-                    {currentHint}
+              {/* 注意文言 */}
+              {mode === 'sprint' && (
+                <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-amber-50/70 border border-amber-100/40 text-amber-900 shadow-3xs animate-in fade-in slide-in-from-top-2 duration-200">
+                  <VolumeX size={13} className="mt-0.5 shrink-0 text-amber-600" />
+                  <p className="text-[11px] font-bold leading-normal">
+                    移動中など声が出せない環境ですか？スプリント中も<span className="underline decoration-amber-400 decoration-2 font-black">スキップボタン</span>で発話評価をパスして次に進めます。
                   </p>
                 </div>
-              </div>
-            )}
+              )}
 
+              {/* 詳細設定リンク */}
+              <button 
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                className={cn(
+                  "w-full text-left p-4 rounded-2xl relative overflow-hidden active:scale-[0.99] transition-all bg-white block z-10 border shadow-2xs group",
+                  mode === 'sprint' ? "border-indigo-100/80 hover:border-indigo-200" : "border-slate-200/80 hover:border-slate-300"
+                )}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <span className={cn("text-[9px] font-black uppercase tracking-widest block", mode === 'sprint' ? "text-indigo-500" : "text-slate-500")}>
+                      Configuration / トレーニング設定
+                    </span>
+                    <div className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                      <span>問題種別・レベル・制限時間をカスタマイズする</span>
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    "flex items-center gap-1 text-[10px] font-black bg-slate-50 border px-3 py-1.5 rounded-xl transition-all shrink-0 shadow-3xs group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-200",
+                    mode === 'sprint' ? "border-indigo-100/60 text-indigo-600" : "border-slate-200 text-slate-600"
+                  )}>
+                    <Edit3 size={11} strokeWidth={2.5} />
+                    <span>設定変更</span>
+                  </div>
+                </div>
+              </button>
+
+              {/* テーマ・ヒントのアコーディオンセクション */}
+              <div className="space-y-2">
+                
+                {/* テーマ・アコーディオン */}
+                <div className="bg-white border border-slate-100 rounded-2xl shadow-3xs overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setIsThemeOpen(!isThemeOpen)}
+                    className="w-full px-4 py-3.5 flex items-center justify-between text-left select-none active:bg-slate-50/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-6 w-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <BookOpen size={12} strokeWidth={2.5} />
+                      </div>
+                      <span className="text-xs font-black text-slate-700 truncate">出題テーマを確認</span>
+                    </div>
+                    <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-200", isThemeOpen && "rotate-180")} strokeWidth={2.5} />
+                  </button>
+                  
+                  <div className={cn(
+                    "grid transition-all duration-200 ease-in-out",
+                    isThemeOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                  )}>
+                    <div className="overflow-hidden">
+                      <div className="px-4 pb-4 pt-1 border-t border-slate-50/60">
+                        <p className="text-xs font-bold text-slate-600 leading-relaxed bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                          {currentTheme}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ヒント (TIPS) ・アコーディオン */}
+                <div className={cn(
+                  "bg-white border rounded-2xl shadow-3xs overflow-hidden transition-all",
+                  currentHint ? "border-slate-100 opacity-100" : "border-slate-100 opacity-50 pointer-events-none"
+                )}>
+                  <button
+                    type="button"
+                    disabled={!currentHint}
+                    onClick={() => setIsHintOpen(!isHintOpen)}
+                    className="w-full px-4 py-3.5 flex items-center justify-between text-left select-none active:bg-slate-50/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={cn(
+                        "h-6 w-6 rounded-md flex items-center justify-center shrink-0",
+                        currentHint ? "bg-indigo-50 text-indigo-600" : "bg-slate-100 text-slate-400"
+                      )}>
+                        <HelpCircle size={12} strokeWidth={2.5} />
+                      </div>
+                      <span className="text-xs font-black text-slate-700 truncate">回答のヒント (Tips)</span>
+                    </div>
+                    <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-200", isHintOpen && "rotate-180")} strokeWidth={2.5} />
+                  </button>
+                  
+                  <div className={cn(
+                    "grid transition-all duration-200 ease-in-out",
+                    isHintOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                  )}>
+                    <div className="overflow-hidden">
+                      <div className="px-4 pb-4 pt-1 border-t border-slate-50/60">
+                        <p className="text-xs font-medium text-slate-600 leading-relaxed bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                          {currentHint}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
           </div>
         </div>
 
-        {/* 🎮 下部確定エリア */}
-        <div className="px-6 pt-4 shrink-0 border-t border-slate-50 bg-white pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        {/* 下部確定エリア */}
+        <div className="px-6 pt-4 shrink-0 bg-white pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.015)] z-20">
           <div className="w-full max-w-xl mx-auto">
-            {/* 💡 改善点: スプリントかつYES/NO選択時でも、基本的には「スプリントを開始」の1つのエントリーにする方がセッション初期化としては安全です */}
             {mode === 'sprint' && isSpeedSelected ? (
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => handleStartSubmit('0')}
                   className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                 >
-                  <Zap size={14} className="fill-current" />
+                  <Zap size={14} className="fill-current text-amber-300" />
                   YESで回答する
                 </button>
                 <button
                   onClick={() => handleStartSubmit('1')}
                   className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-slate-900/10 bg-slate-900 hover:bg-slate-800 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                 >
-                  <Zap size={14} className="fill-current" />
+                  <Zap size={14} className="fill-current text-indigo-300" />
                   NOで回答する
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => handleStartSubmit('0')}
-                className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-700 text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className={cn(
+                  "w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-white",
+                  mode === 'sprint' ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/10" : "bg-slate-900 hover:bg-slate-800 shadow-slate-900/10"
+                )}
               >
                 <span>{mode === 'sprint' ? 'スプリント' : 'ドリル'}を開始</span>
                 <ArrowRight size={14} strokeWidth={3} />
@@ -299,10 +432,10 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
           </div>
         </div>
 
-        {/* 詳細設定ボトムシート */}
+        {/* 詳細設定ボトムシート (Drawer) */}
         <Drawer open={isSettingsOpen} onOpenChange={setIsSettingsOpen} dismissible={true}>
           <DrawerContent 
-            className="max-w-2xl mx-auto h-[85vh] bg-white border-none rounded-t-[40px] shadow-2xl outline-none flex flex-col overflow-hidden text-slate-900"
+            className="max-w-2xl mx-auto h-[80vh] bg-white border-none rounded-t-[40px] shadow-2xl outline-none flex flex-col overflow-hidden text-slate-900"
             onPointerDownOutside={(e) => {
               const target = e.target as HTMLElement;
               if (target?.closest('[data-radix-scroll-area-viewport]')) {
@@ -327,13 +460,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   </DrawerClose>
                 </div>
 
-                {/* 現在の設定情報をバッジで表示（スクロールで見失わないように） */}
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className={cn(
-                    "text-[9px] font-black px-2 py-0.5 rounded-lg border",
-                    mode === 'sprint' ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-100 border-slate-200 text-slate-600"
+                    "text-[9px] font-black px-2 py-0.5 rounded-lg border text-white",
+                    mode === 'sprint' ? "bg-indigo-600 border-indigo-600" : "bg-slate-900 border-slate-900"
                   )}>
-                    {mode === 'sprint' ? 'スプリント' : 'ドリル'}
+                    {mode === 'sprint' ? 'sprint' : 'drill'}
                   </span>
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
                     {QUESTION_TYPES[selectedType]?.label}
@@ -354,28 +486,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
               <ScrollArea className="h-full w-full pr-2">
                 <div className="px-8 py-4 space-y-6 pb-32">
                   
-                  {/* モード選択 */}
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Training Mode / モード設定</span>
-                    <div className="bg-slate-100 p-1 rounded-2xl grid grid-cols-2 text-center font-black text-xs border border-slate-200/40">
-                      <button
-                        type="button"
-                        onClick={() => setMode('drill')}
-                        className={cn("py-3 rounded-xl transition-all flex items-center justify-center gap-2", mode === 'drill' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500")}
-                      >
-                        <Sliders size={14} strokeWidth={2.5} /> ドリル
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMode('sprint')}
-                        className={cn("py-3 rounded-xl transition-all flex items-center justify-center gap-2", mode === 'sprint' ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500")}
-                      >
-                        <Zap size={14} className={mode === 'sprint' ? "text-white fill-current" : ""} /> スプリント
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* スプリント種別 */}
+                  {/* 01. 種別 */}
                   <div className="space-y-2">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">01. Type / 種別の選択</span>
                     <div className="grid grid-cols-2 gap-2">
@@ -386,7 +497,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                             type="button"
                             key={type.value}
                             onClick={() => handleTypeChange(type.value)}
-                            className={cn("h-12 rounded-xl border text-xs font-black transition-all", isSelected ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10" : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50")}
+                            className={cn(
+                              "h-12 rounded-xl border text-xs font-black transition-all", 
+                              isSelected 
+                                ? (mode === 'sprint' ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-900 border-slate-900 text-white") 
+                                : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50"
+                            )}
                           >
                             {type.label}
                           </button>
@@ -395,7 +511,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     </div>
                   </div>
 
-                  {/* レベルマップ */}
+                  {/* 02. レベル */}
                   <div className="space-y-2">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">02. Target Level / ターゲットレベル</span>
                     <div className="grid grid-cols-4 gap-2">
@@ -408,7 +524,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                             key={item.value}
                             disabled={isLocked}
                             onClick={() => setSelectedLevel(item.value)}
-                            className={cn("h-10 rounded-xl border text-xs font-black relative transition-all disabled:opacity-40", isSelected ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10" : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50")}
+                            className={cn(
+                              "h-10 rounded-xl border text-xs font-black relative transition-all disabled:opacity-40", 
+                              isSelected 
+                                ? (mode === 'sprint' ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-900 border-slate-900 text-white") 
+                                : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50"
+                            )}
                           >
                             {item.label}
                             {isLocked && <Lock size={11} strokeWidth={2.5} className="absolute top-1.5 left-1.5 text-slate-500" />}
@@ -418,7 +539,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     </div>
                   </div>
 
-                  {/* 制限時間 */}
+                  {/* 03. 制限時間 */}
                   {mode === 'sprint' && (
                     <div className="space-y-2">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">03. Duration / 制限時間</span>
@@ -455,7 +576,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                 onClick={() => setIsSettingsOpen(false)}
                 className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
               >
-                設定を保存して戻る
+                確定して戻る
               </button>
             </div>
 

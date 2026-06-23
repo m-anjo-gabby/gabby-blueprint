@@ -272,7 +272,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                       </span>
                                       <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
                                       <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
-                                        {session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`}
+                                        {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
                                       </span>
 
                                       {isSpeedMode && (

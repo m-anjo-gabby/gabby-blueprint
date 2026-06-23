@@ -189,7 +189,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
         year: 'numeric', month: '2-digit', day: '2-digit'
       });
       const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];
-      const levelStr = session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`;
+      const levelStr = session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`;
       const modeStr = session.question_type === '0' ? (session.answer_type === '1' ? 'NO' : 'YES') : '-';
       const sprintTypeStr = session.sprint_type === '1' ? 'コーパス' : '汎用';
       
@@ -505,7 +505,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                               </span>
                               <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">{typeInfo?.label || 'Sprint'}</span>
                               <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100/40">
-                                {session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`}
+                                {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
                               </span>
                               {isSpeedMode && (
                                 <span className={cn(
