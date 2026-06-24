@@ -14,6 +14,7 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
 import { FeedbackConfig } from '@gabby/types/speechAssessment';
+import { SprintTimePlayerControls } from './SprintTimePlayerControls';
 
 const getFeedbackConfig = (score: number): FeedbackConfig => {
   if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
@@ -22,9 +23,6 @@ const getFeedbackConfig = (score: number): FeedbackConfig => {
   if (score >= 0.30) return { fill: '#F97316', tagText: 'Fair' };
   return { fill: '#EF4444', tagText: 'Poor' };
 };
-
-// コントロールコンポーネントをインポート
-import { SprintTimePlayerControls } from './SprintTimePlayerControls';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
@@ -49,7 +47,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     isRecording,
     sessionResults,
     initSprint,
-    nextStep,
     toggleAutoPlay,
     clearSession,
     resetStore,
@@ -74,12 +71,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const totalQuestions = questions?.length || 0;
 
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
-  const isFlowRunningRef = useRef<boolean>(false);
+  
+  // 💡 【修正の肝】フローごとの一意のIDを管理するカウンター
+  const flowIdRef = useRef<number>(0);
 
-  // ブランドカラーボタンの共通スタイル定義
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
-  // コースタイトルの算出
   const courseTitle = useMemo(() => {
     return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
   }, [questionType]);
@@ -106,7 +103,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     if (!currentQuestion || !questions.length || questionType === '0') {
       return { uniqueGroupIndex: 1, currentInGroup: 0, totalInGroup: 0 };
     }
-
     const currentGroupId = currentQuestion.group_id;
     const uniqueGroupIds = Array.from(new Set(questions.map(q => q.group_id)));
     const uniqueGroupIndex = uniqueGroupIds.indexOf(currentGroupId) + 1;
@@ -129,8 +125,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     return (secondsLeft / timeLimitSec) * 100;
   }, [secondsLeft, timeLimitSec]);
 
+  // 💡 古いフローのIDマッチを防ぐため、カウンターを進めて全体をリセットする
   const stopAllAudio = useCallback(() => {
-    isFlowRunningRef.current = false;
+    flowIdRef.current += 1; 
     if (nativeAudioRef.current) {
       nativeAudioRef.current.pause();
       nativeAudioRef.current = null;
@@ -217,7 +214,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       if (audioPath) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
         const audio = new Audio(bucketUrl);
-        
         audio.playbackRate = playbackRate; 
         nativeAudioRef.current = audio;
         
@@ -238,37 +234,38 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     });
   }, [playbackRate, ttsSpeak]);
 
-  const runSprintFlow = useCallback(async (question: SprintQuestion) => {
-    if (!question || isFlowRunningRef.current) return;
-    isFlowRunningRef.current = true;
+  // 💡 【大改造】一意の flowId を受け取り、各 await の直後に自分が最新のフローか厳密にチェックする
+  const runSprintFlow = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
+    if (!question) return;
 
     try {
       if (question.statement_en) {
         setAudioPhase('statement');
         await playTrack(question.statement_en, question.statement_voice);
+        if (flowIdRef.current !== currentFlowId) return; // 他のフローが開始されていたら即座に辞退
         await new Promise(r => setTimeout(r, 400));
+        if (flowIdRef.current !== currentFlowId) return;
       }
-
-      if (!isFlowRunningRef.current) return;
 
       setAudioPhase('question');
       await playTrack(question.question_en, question.question_voice);
-
-      if (!isFlowRunningRef.current) return;
+      if (flowIdRef.current !== currentFlowId) return; // 1問目の多重発火時はここで綺麗に弾かれます
 
       setAudioPhase('thinking');
     } catch (e) {
       console.error("Sprint flow error:", e);
-      setAudioPhase('thinking');
-    } finally {
-      isFlowRunningRef.current = false;
+      if (flowIdRef.current === currentFlowId) {
+        setAudioPhase('thinking');
+      }
     }
   }, [playTrack]);
 
   const handlePlayIndividualPart = useCallback(async (type: 'statement' | 'question') => {
     if (!currentQuestion) return;
     stopAllAudio();
-    isFlowRunningRef.current = true;
+    
+    // 手動の個別再生でも最新のIDを発行して追従
+    const currentFlowId = flowIdRef.current;
 
     try {
       if (type === 'statement' && currentQuestion.statement_en) {
@@ -278,19 +275,20 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         setAudioPhase('question');
         await playTrack(currentQuestion.question_en, currentQuestion.question_voice);
       }
+      if (flowIdRef.current !== currentFlowId) return;
       setAudioPhase('thinking');
     } catch (e) {
       console.error("Individual play error:", e);
-      setAudioPhase('thinking');
-    } finally {
-      isFlowRunningRef.current = false;
+      if (flowIdRef.current === currentFlowId) {
+        setAudioPhase('thinking');
+      }
     }
   }, [currentQuestion, playTrack, stopAllAudio]);
 
   const handleReplayFromStart = useCallback(() => {
     if (!currentQuestion) return;
     stopAllAudio();
-    runSprintFlow(currentQuestion);
+    runSprintFlow(currentQuestion, flowIdRef.current);
   }, [currentQuestion, stopAllAudio, runSprintFlow]);
 
   const handleStartRecord = useCallback(() => {
@@ -369,7 +367,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   useEffect(() => {
     if (isAutoPlaying && secondsLeft <= 0) {
-      isFlowRunningRef.current = false;
       handlePersistAndRedirect(0);
     }
   }, [isAutoPlaying, secondsLeft, handlePersistAndRedirect]);
@@ -392,11 +389,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     };
   }, [questions, initSprint, clearSession, toggleAutoPlay, timeLimitSec]);
 
+  // 💡 毎回の問題切り替え・発火時に、新しく進めた一意の「そのフロー専用ID」を渡す
   useEffect(() => {
     if (currentQuestion && secondsLeft > 0 && !showTimeUpOverlay && !isSaving) {
       stopAllAudio();
+      const currentFlowId = flowIdRef.current;
       (async () => {
-        await runSprintFlow(currentQuestion);
+        await runSprintFlow(currentQuestion, currentFlowId);
       })();
     }
   }, [currentIndex, currentQuestion, runSprintFlow, stopAllAudio, showTimeUpOverlay, isSaving]);
@@ -422,7 +421,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     if (!ok) {
       toggleAutoPlay(true);
-      if (currentQuestion) runSprintFlow(currentQuestion);
+      if (currentQuestion) runSprintFlow(currentQuestion, flowIdRef.current);
       return;
     }
     onExit?.();
