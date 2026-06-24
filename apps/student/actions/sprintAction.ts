@@ -70,6 +70,8 @@ export interface SprintResultResponse {
       update_date: string;
     };
     questions: SprintQuestion[];
+    totalAssessmentCount: number;
+    averageAssessmentScore: number;
   } | null;
   error?: string;
 }
@@ -259,7 +261,7 @@ export async function getSprintResultAction(
     if (scoreError) throw scoreError;
     if (!scoreRecord) throw new Error("Sprint record not found");
 
-    let history: SprintHistoryItem[] = [];
+    let history: any[] = [];
     if (scoreRecord.answered_history) {
       if (typeof scoreRecord.answered_history === 'string') {
         try {
@@ -269,12 +271,44 @@ export async function getSprintResultAction(
           history = [];
         }
       } else {
-        history = scoreRecord.answered_history as SprintHistoryItem[];
+        history = scoreRecord.answered_history as any[];
       }
     }
 
+    // 🆕 【追加ロジック】ここで発話数と平均スコアを事前に集計・計算する
+    let totalAssessmentCount = 0;
+    let totalScoreSum = 0;
+    let scoredQuestionsCount = 0;
+
+    history.forEach((h) => {
+      // is_skipped が false、または未定義/nullのものを「発話した」と判定
+      if (h.is_skipped === false) {
+        totalAssessmentCount++;
+        
+        // assessment 内の total_score を加算
+        if (h.assessment && typeof h.assessment.total_score === 'number') {
+          totalScoreSum += h.assessment.total_score;
+          scoredQuestionsCount++;
+        }
+      }
+    });
+
+    // 平均スコアの算出（0割りを防ぐ）
+    const averageAssessmentScore = scoredQuestionsCount > 0 
+      ? Math.round((totalScoreSum / scoredQuestionsCount) * 10) / 10 // 小数点第1位まで
+      : 0;
+
+
     if (history.length === 0) {
-      return { success: true, data: { scoreRecord: scoreRecord as any, questions: [] } };
+      return { 
+        success: true, 
+        data: { 
+          scoreRecord: scoreRecord as any, 
+          questions: [],
+          totalAssessmentCount: 0,
+          averageAssessmentScore: 0
+        } 
+      };
     }
 
     // ② 履歴に記録されている全ての question_id を抽出
@@ -288,23 +322,26 @@ export async function getSprintResultAction(
 
     if (qError) throw qError;
 
-    const rawQuestions = (questionsData as SprintQuestion[]) ?? [];
+    const rawQuestions = (questionsData as any[]) ?? [];
 
     // ④ 問題マスタから取得したデータを、保存されていた history 配列のインデックス順に完全に再ソート
     const sortedQuestions = history
       .map(hist => rawQuestions.find(q => q.question_id === hist.question_id))
-      .filter((q): q is SprintQuestion => !!q);
+      .filter((q): q is any => !!q);
 
     logger.info("sprint:get_result_success", "Successfully recovered sprint session playlist order", {
       ...ctx,
       total_recovered: sortedQuestions.length
     });
 
+    // 🆕 戻り値の data オブジェクトに計算済みの値を載せる
     return {
       success: true,
       data: {
-        scoreRecord: scoreRecord as any, // ここに含まれる answered_history にスキップやスコアが反映されたまま結果画面に渡ります
-        questions: sortedQuestions
+        scoreRecord: scoreRecord as any,
+        questions: sortedQuestions,
+        totalAssessmentCount, 
+        averageAssessmentScore 
       }
     };
 

@@ -220,11 +220,11 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                         <div className="text-sm font-bold text-slate-800 tracking-tight mb-1.5">{date}</div>
                         <div className="flex items-center gap-2 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono">
                           <span>
-                            {sessions.length} {sessions.length === 1 ? 'Sprint' : 'Sprints'}
+                            スプリント {sessions.length}
                           </span>
                           <span className="w-1 h-1 bg-slate-300 rounded-full" />
                           <span className="text-amber-500 flex items-center gap-0.5">
-                            {totalAnswersDay} {totalAnswersDay === 1 ? 'Answer' : 'Answers'}
+                            回答 {totalAnswersDay}
                           </span>
                         </div>
                       </div>
