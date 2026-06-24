@@ -2,7 +2,8 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Loader2, Volume2, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic } from 'lucide-react';
+// 💡 RotateCcw を追加インポート
+import { ChevronLeft, Loader2, Volume2, RotateCcw, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -58,7 +59,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // ────────────── 📦 ローカル管理ステート ──────────────
   const [secondsLeft, setSecondsLeft] = useState<number>(60);
-  const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'thinking'>('idle');
+  const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [resultId, setResultId] = useState<string | null>(null);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
@@ -72,7 +73,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
   
-  // 💡 【修正の肝】フローごとの一意のIDを管理するカウンター
   const flowIdRef = useRef<number>(0);
 
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
@@ -81,26 +81,28 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
   }, [questionType]);
 
+  // 💡 questionType === '0' が Speed (Speed判定の修正)
+  const isSpeedMode = questionType === '0';
   const isQuestionBased = questionType === '0' || questionType === '6';
 
   const userActionSteps = useMemo(() => {
-    if (questionType === '0') return ["質問文", "回答"];
+    if (isSpeedMode) return ["質問文", "回答"];
     return ["基本文", isQuestionBased ? "質問文" : "指示文", "回答"];
-  }, [questionType, isQuestionBased]);
+  }, [isSpeedMode, isQuestionBased]);
 
   const currentActionIndex = useMemo(() => {
-    if (questionType === '0') {
+    if (isSpeedMode) {
       if (audioPhase === 'question') return 0;
-      if (audioPhase === 'thinking') return 1;
+      if (audioPhase === 'answer') return 1;
       return 0;
     }
     if (audioPhase === 'statement') return 0;
     if (audioPhase === 'question') return 1;
     return 2;
-  }, [audioPhase, questionType]);
+  }, [audioPhase, isSpeedMode]);
 
   const groupData = useMemo(() => {
-    if (!currentQuestion || !questions.length || questionType === '0') {
+    if (!currentQuestion || !questions.length || isSpeedMode) {
       return { uniqueGroupIndex: 1, currentInGroup: 0, totalInGroup: 0 };
     }
     const currentGroupId = currentQuestion.group_id;
@@ -114,7 +116,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       currentInGroup,
       totalInGroup: groupQuestions.length
     };
-  }, [currentQuestion, questions, questionType]);
+  }, [currentQuestion, questions, isSpeedMode]);
 
   const timeRatio = useMemo(() => secondsLeft / timeLimitSec, [secondsLeft, timeLimitSec]);
   const isWarning = timeRatio <= 0.5 && timeRatio > 0.2;
@@ -125,7 +127,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     return (secondsLeft / timeLimitSec) * 100;
   }, [secondsLeft, timeLimitSec]);
 
-  // 💡 古いフローのIDマッチを防ぐため、カウンターを進めて全体をリセットする
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1; 
     if (nativeAudioRef.current) {
@@ -234,7 +235,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     });
   }, [playbackRate, ttsSpeak]);
 
-  // 💡 【大改造】一意の flowId を受け取り、各 await の直後に自分が最新のフローか厳密にチェックする
   const runSprintFlow = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
     if (!question) return;
 
@@ -242,20 +242,20 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       if (question.statement_en) {
         setAudioPhase('statement');
         await playTrack(question.statement_en, question.statement_voice);
-        if (flowIdRef.current !== currentFlowId) return; // 他のフローが開始されていたら即座に辞退
+        if (flowIdRef.current !== currentFlowId) return; 
         await new Promise(r => setTimeout(r, 400));
         if (flowIdRef.current !== currentFlowId) return;
       }
 
       setAudioPhase('question');
       await playTrack(question.question_en, question.question_voice);
-      if (flowIdRef.current !== currentFlowId) return; // 1問目の多重発火時はここで綺麗に弾かれます
+      if (flowIdRef.current !== currentFlowId) return; 
 
-      setAudioPhase('thinking');
+      setAudioPhase('answer'); 
     } catch (e) {
       console.error("Sprint flow error:", e);
       if (flowIdRef.current === currentFlowId) {
-        setAudioPhase('thinking');
+        setAudioPhase('answer'); 
       }
     }
   }, [playTrack]);
@@ -264,7 +264,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     if (!currentQuestion) return;
     stopAllAudio();
     
-    // 手動の個別再生でも最新のIDを発行して追従
     const currentFlowId = flowIdRef.current;
 
     try {
@@ -276,11 +275,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         await playTrack(currentQuestion.question_en, currentQuestion.question_voice);
       }
       if (flowIdRef.current !== currentFlowId) return;
-      setAudioPhase('thinking');
+      setAudioPhase('answer'); 
     } catch (e) {
       console.error("Individual play error:", e);
       if (flowIdRef.current === currentFlowId) {
-        setAudioPhase('thinking');
+        setAudioPhase('answer'); 
       }
     }
   }, [currentQuestion, playTrack, stopAllAudio]);
@@ -294,9 +293,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const handleStartRecord = useCallback(() => {
     if (!currentQuestion) return;
     stopAllAudio();
+    setAudioPhase('answer');
     setIsRecording(true);
     
-    const targetText = (questionType === '0')
+    // 💡 Speed モード判定に isSpeedMode を適用
+    const targetText = isSpeedMode
       ? (answerType === '1' ? (currentQuestion.answer_sentence_no_en ?? "") : currentQuestion.answer_sentence_yes_en)
       : currentQuestion.answer_sentence_yes_en;
 
@@ -322,7 +323,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         handlePersistAndRedirect(secondsLeft);
       }
     });
-  }, [currentQuestion, questionType, answerType, stopAllAudio, setIsRecording, startAssessment, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect, secondsLeft]);
+  }, [currentQuestion, isSpeedMode, answerType, stopAllAudio, setIsRecording, startAssessment, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect, secondsLeft]);
 
   const handleStopRecord = useCallback(() => {
     setIsRecording(false);
@@ -389,7 +390,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     };
   }, [questions, initSprint, clearSession, toggleAutoPlay, timeLimitSec]);
 
-  // 💡 毎回の問題切り替え・発火時に、新しく進めた一意の「そのフロー専用ID」を渡す
   useEffect(() => {
     if (currentQuestion && secondsLeft > 0 && !showTimeUpOverlay && !isSaving) {
       stopAllAudio();
@@ -495,11 +495,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               <div className="flex items-center gap-2.5 px-3 py-1.5">
                 <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
                 <span className="text-sm font-black text-white font-mono leading-none">
-                  {questionType === '0' ? currentIndex + 1 : groupData.uniqueGroupIndex}
+                  {isSpeedMode ? currentIndex + 1 : groupData.uniqueGroupIndex}
                 </span>
               </div>
 
-              {questionType === '0' ? (
+              {isSpeedMode ? (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
                   <span className="text-[10px] font-black tracking-tight text-slate-700">
                     {answerType === '1' ? 'NOで回答' : 'YESで回答'}
@@ -608,10 +608,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 >
                   <div className={cn(
                     "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
-                    audioPhase === 'thinking' ? "text-amber-500" :
+                    audioPhase === 'answer' ? "text-amber-500" : 
                     audioPhase === 'idle' ? "text-slate-300" : "text-indigo-600"
                   )}>
-                    {audioPhase === 'thinking' || audioPhase === 'idle' ? (
+                    {audioPhase === 'answer' || audioPhase === 'idle' ? ( 
                       <CircleDot className="w-full h-full" strokeWidth={2.5} />
                     ) : (
                       <Headphones className="w-full h-full" strokeWidth={2.5} />
@@ -620,36 +620,49 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
                   <h2 className={cn(
                     "text-lg sm:text-2xl font-black tracking-tight whitespace-nowrap select-none transition-colors duration-200",
-                    audioPhase === 'thinking' ? "text-amber-500" : "text-slate-800"
+                    audioPhase === 'answer' ? "text-amber-500" : "text-slate-800" 
                   )}>
                     {audioPhase === 'statement' && "基本文を再生中"}
                     {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
-                    {audioPhase === 'thinking' && "発話して回答しましょう"}
+                    {audioPhase === 'answer' && "発話して回答しましょう"} 
                     {audioPhase === 'idle' && "Ready"}
                   </h2>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* 部分再生スイッチ群 (発話中は非表示) */}
+            {/* ⏱️ 部分再生スイッチ群 (発話中は非表示) */}
             {!isRecording && (
               <div className="flex items-center justify-center gap-3 w-full max-w-xs">
-                <button
-                  onClick={() => handlePlayIndividualPart('statement')}
-                  disabled={!currentQuestion.statement_en}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm disabled:opacity-20 disabled:pointer-events-none"
-                >
-                  <Volume2 size={12} className="text-indigo-500" />
-                  <span>基本文のみ</span>
-                </button>
-                
-                <button
-                  onClick={() => handlePlayIndividualPart('question')}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-                >
-                  <Volume2 size={12} className="text-indigo-500" />
-                  <span>{isQuestionBased ? "質問のみ" : "指示のみ"}</span>
-                </button>
+                {isSpeedMode ? (
+                  // 🌟 Speed モード：質問文のみのため「最初から再生」の 1 ボタンのみ
+                  <button
+                    onClick={handleReplayFromStart}
+                    className="w-[55%] py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                  >
+                    <RotateCcw size={12} className="text-indigo-500" />
+                    <span>最初から再生</span>
+                  </button>
+                ) : (
+                  // 🌟 それ以外（Fluencyなど）：2ケースのスイッチを表示
+                  <>
+                    <button
+                      onClick={handleReplayFromStart}
+                      className="flex-1 py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                    >
+                      <RotateCcw size={12} className="text-indigo-500" />
+                      <span>最初から再生</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handlePlayIndividualPart('question')}
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                    >
+                      <Volume2 size={12} className="text-indigo-500" />
+                      <span>{isQuestionBased ? "質問を再生" : "指示を再生"}</span>
+                    </button>
+                  </>
+                )}
               </div>
             )}
 

@@ -11,7 +11,7 @@ const AVAILABLE_RATES = [0.8, 1.0, 1.2, 1.5];
 interface SprintTimePlayerControlsProps {
   onNext: () => void;      // 発話完了 / 次へ（結果をコミットして進む）
   onSkip: () => void;      // スキップして次へ（スキップフラグを立てて進む）
-  audioPhase: 'idle' | 'statement' | 'question' | 'thinking';
+  audioPhase: 'idle' | 'statement' | 'question' | 'answer'; // 💡 thinking から answer へ変更
   playbackRate: number;
   onChangePlaybackRate: (rate: number) => void;
   isSaving?: boolean;

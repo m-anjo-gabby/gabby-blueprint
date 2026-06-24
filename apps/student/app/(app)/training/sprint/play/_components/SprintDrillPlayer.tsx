@@ -81,6 +81,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
   const isInitialized = useRef<boolean>(false);
 
+  // 💡 【追加】フローごとの一意のIDを管理するカウンター
+  const flowIdRef = useRef<number>(0);
+
   const isAutoPlayingRef = useRef(isAutoPlaying);
   const isRevealedRef = useRef(isRevealed);
   
@@ -126,7 +129,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   }, [currentQuestion, questions]);
 
   // 🔊 音声再生コアロジック
+  // 💡 古いフローのIDマッチを防ぐため、カウンターを進めて全体をリセットする
   const stopAllAudio = useCallback(() => {
+    flowIdRef.current += 1; 
     if (autoPlayTimerRef.current) {
       clearTimeout(autoPlayTimerRef.current);
       autoPlayTimerRef.current = null;
@@ -165,35 +170,62 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     });
   }, [playbackRate, ttsSpeak]);
 
-  const playQuestionSequence = useCallback(async (question: SprintQuestion) => {
+  // 💡 一意の currentFlowId を受け取り、非同期 await の直後に厳密にチェックを行う
+  const playQuestionSequence = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
     if (!question) return;
     setPlayingQuestionSequence(true);
-    if (question.statement_en) {
-      setAudioPhase('statement');
-      await playSingleTrack(question.statement_en, question.statement_voice);
-      await new Promise(r => setTimeout(r, DRILL_TIMING.audioGap));
+    
+    try {
+      if (question.statement_en) {
+        setAudioPhase('statement');
+        await playSingleTrack(question.statement_en, question.statement_voice);
+        if (flowIdRef.current !== currentFlowId) return; // 割り込み時は即座に処理を中断
+        await new Promise(r => setTimeout(r, DRILL_TIMING.audioGap));
+        if (flowIdRef.current !== currentFlowId) return;
+      }
+      
+      setAudioPhase('question');
+      if (question.question_en) {
+        await playSingleTrack(question.question_en, question.question_voice);
+        if (flowIdRef.current !== currentFlowId) return;
+      }
+      
+      setAudioPhase('answer');
+    } catch (e) {
+      console.error("Question sequence error:", e);
+    } finally {
+      if (flowIdRef.current === currentFlowId) {
+        setPlayingQuestionSequence(false);
+      }
     }
-    setAudioPhase('question');
-    if (question.question_en) {
-      await playSingleTrack(question.question_en, question.question_voice);
-    }
-    setAudioPhase('answer');
-    setPlayingQuestionSequence(false);
   }, [playSingleTrack, setPlayingQuestionSequence]);
 
-  const playAnswerSequence = useCallback(async (question: SprintQuestion) => {
+  // 💡 解答フェーズ用にも一意の currentFlowId 追従ロジックを同様に実装
+  const playAnswerSequence = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
     if (!question) return;
     setPlayingAnswerSequence(true);
     setAudioPhase('answer');
-    if (question.answer_sentence_yes_en) {
-      await playSingleTrack(question.answer_sentence_yes_en, question.answer_sentence_yes_voice);
+    
+    try {
+      if (question.answer_sentence_yes_en) {
+        await playSingleTrack(question.answer_sentence_yes_en, question.answer_sentence_yes_voice);
+        if (flowIdRef.current !== currentFlowId) return;
+      }
+      if (question.answer_sentence_no_en) {
+        await new Promise(r => setTimeout(r, 500));
+        if (flowIdRef.current !== currentFlowId) return;
+        await playSingleTrack(question.answer_sentence_no_en, question.answer_sentence_no_voice);
+        if (flowIdRef.current !== currentFlowId) return;
+      }
+      
+      setAudioPhase('idle');
+    } catch (e) {
+      console.error("Answer sequence error:", e);
+    } finally {
+      if (flowIdRef.current === currentFlowId) {
+        setPlayingAnswerSequence(false);
+      }
     }
-    if (question.answer_sentence_no_en) {
-      await new Promise(r => setTimeout(r, 500));
-      await playSingleTrack(question.answer_sentence_no_en, question.answer_sentence_no_voice);
-    }
-    setAudioPhase('idle');
-    setPlayingAnswerSequence(false);
   }, [playSingleTrack, setPlayingAnswerSequence]);
 
   // 🎮 操作ハンドラー
@@ -236,8 +268,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const handleManualPlayAudio = useCallback(() => {
     if (isRecording || !currentQuestion) return;
-    playQuestionSequence(currentQuestion);
-  }, [currentQuestion, isRecording, playQuestionSequence]);
+    stopAllAudio();
+    playQuestionSequence(currentQuestion, flowIdRef.current);
+  }, [currentQuestion, isRecording, playQuestionSequence, stopAllAudio]);
 
   const handleIndividualPlayAudio = useCallback((voiceUrl: string | null, text: string) => {
     if (isRecording || isAutoPlayingRef.current) return; 
@@ -248,7 +281,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const handleSelectRate = useCallback((targetRate: number) => {
     changePlaybackRate(targetRate);
     ttsSetRate(targetRate);
-    // 💡 ここで stopAllAudio() や再再生フローを呼ばないことで、設定が変わるだけに留めます
   }, [changePlaybackRate, ttsSetRate]);
 
   const handleStartRecord = useCallback(() => {
@@ -287,8 +319,11 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     if (!currentQuestion) return;
     stopAllAudio();
     
+    const currentFlowId = flowIdRef.current;
     const runRestart = async () => {
-      await playQuestionSequence(currentQuestion);
+      await playQuestionSequence(currentQuestion, currentFlowId);
+      if (flowIdRef.current !== currentFlowId) return;
+
       if (isAutoPlayingRef.current && !isRevealedRef.current) {
         autoPlayTimerRef.current = setTimeout(() => {
           setIsRevealed(true);
@@ -364,9 +399,12 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   useEffect(() => {
     if (!currentQuestion || !isStarted) return;
 
+    stopAllAudio();
+    const currentFlowId = flowIdRef.current;
+
     const runQuestionFlow = async () => {
-      stopAllAudio();
-      await playQuestionSequence(currentQuestion);
+      await playQuestionSequence(currentQuestion, currentFlowId);
+      if (flowIdRef.current !== currentFlowId) return;
       
       if (isAutoPlayingRef.current && !isRevealedRef.current) {
         autoPlayTimerRef.current = setTimeout(() => {
@@ -386,8 +424,13 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   useEffect(() => {
     if (!isRevealed || !currentQuestion) return;
 
+    // 解答再生時は、現在の問題再生フローから追従するため stopAllAudio() は呼ばず、
+    // 現在の最新のflowIdをキャプチャして継続管理する
+    const currentFlowId = flowIdRef.current;
+
     const runAnswerFlow = async () => {
-      await playAnswerSequence(currentQuestion);
+      await playAnswerSequence(currentQuestion, currentFlowId);
+      if (flowIdRef.current !== currentFlowId) return;
 
       if (isAutoPlayingRef.current) {
         autoPlayTimerRef.current = setTimeout(() => {
@@ -471,7 +514,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               onStopRecord={handleStopRecord}              
               onToggleAutoPlay={handleToggleAutoPlay}
               playbackRate={playbackRate}
-              // 🛠️ 修正点：新しい関数に差し替え
               onChangePlaybackRate={handleSelectRate}
               timeLeft={timeLeft}
               isStarted={isStarted}
