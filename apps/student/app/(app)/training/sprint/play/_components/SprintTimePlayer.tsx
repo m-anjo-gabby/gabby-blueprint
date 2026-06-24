@@ -13,7 +13,7 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
 
-// 🛠️ 新しいコントロールコンポーネントをインポート
+// コントロールコンポーネントをインポート
 import { SprintTimePlayerControls } from './SprintTimePlayerControls';
 
 interface SprintTimePlayerProps {
@@ -40,7 +40,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     nextStep,
     toggleAutoPlay,
     clearSession,
-    resetStore
+    resetStore,
+    commitAssessmentResult, 
+    commitSkipResult,       
   } = useSprintStore();
 
   // ────────────── 📦 ローカル管理ステート ──────────────
@@ -60,7 +62,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
   const isFlowRunningRef = useRef<boolean>(false);
 
-  // 💡 ブランドカラーボタンの共通スタイル定義
+  // ブランドカラーボタンの共通スタイル定義
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
   // コースタイトルの算出
@@ -127,7 +129,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     toggleAutoPlay(false);
     setIsSaving(true); 
 
-    const { level, timeLimitSec: storeTimeLimit, sprintType, contentId } = useSprintStore.getState();
+    const storeState = useSprintStore.getState();
+    const { level, timeLimitSec: storeTimeLimit, sprintType, contentId, sessionResults } = storeState;
     if (!questionType) {
       setIsSaving(false);
       onExit?.();
@@ -137,11 +140,22 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     const answeredCount = currentSecondsLeft <= 0 ? currentIndex : Math.min(currentIndex + 1, questions.length);
     const slicedQuestions = questions.slice(0, answeredCount);
 
-    const history: SprintHistoryItem[] = slicedQuestions.map((q) => ({
-      question_id: q.question_id,
-      group_id: q.group_id || null,
-      seq_no: q.seq_no || 0,
-    }));
+    // 🌟 【解決2】 sessionProgress を sessionResults からのFindに修正
+    const history: SprintHistoryItem[] = slicedQuestions.map((q) => {
+      const resultRecord = sessionResults.find(r => r.questionId === q.question_id);
+      return {
+        question_id: q.question_id,
+        group_id: q.group_id || null,
+        seq_no: q.seq_no || 0,
+        is_skipped: resultRecord?.isSkipped || false,
+        assessment: resultRecord?.feedback ? {
+          pronunciation_score: 100, // スプリント用のデフォルト値
+          fluency_score: 100,
+          total_score: 100,
+          evaluated_at: new Date(resultRecord.timestamp).toISOString()
+        } : null,
+      };
+    });
 
     try {
       const res = await createSprintScoreAction({
@@ -180,7 +194,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const handleGoToResult = useCallback(() => {
     if (resultId) {
       stopAllAudio();
-      resetStore(); // 確実なストアの初期化のために追加
+      resetStore(); 
       router.push(`/training/sprint/result/${resultId}`);
     }
   }, [resultId, router, stopAllAudio, resetStore]);
@@ -269,13 +283,33 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     runSprintFlow(currentQuestion);
   }, [currentQuestion, stopAllAudio, runSprintFlow]);
 
+  // 🎯 発話ボタン（Tap to Next / Next）タップ時
   const handleNextQuestion = useCallback(() => {
-    const { isLast } = nextStep();
+    if (!currentQuestion) return;
+    
+    // 🌟 【解決1】 第3引数に analysis 結果として null を明示的に追加
+    const { isLast } = commitAssessmentResult(
+      currentQuestion.question_id, 
+      { fill: 'bg-indigo-600', tagText: 'Done' }, 
+      null
+    );
+
     if (isLast) {
       showToast("すべての問題を消化しました！スプリント完了です。", "success");
       handlePersistAndRedirect(secondsLeft);
     }
-  }, [nextStep, showToast, handlePersistAndRedirect, secondsLeft]);
+  }, [commitAssessmentResult, showToast, handlePersistAndRedirect, secondsLeft, currentQuestion]);
+
+  // ⏭️ スキップボタンタップ時
+  const handleSkipQuestion = useCallback(() => {
+    if (!currentQuestion) return;
+
+    const { isLast } = commitSkipResult(currentQuestion.question_id);
+    if (isLast) {
+      showToast("スプリントを終了します。", "success");
+      handlePersistAndRedirect(secondsLeft);
+    }
+  }, [commitSkipResult, showToast, handlePersistAndRedirect, secondsLeft, currentQuestion]);
 
   const handleSelectRate = useCallback((targetRate: number) => {
     changePlaybackRate(targetRate);
@@ -370,7 +404,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
       <main className="bg-white border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden shadow-2xl">
         
-        {/* ① 上部ヘッダー（固定高） */}
+        {/* ① 上部ヘッダー */}
         <div className="shrink-0 pt-6 w-full px-6">
           <div className="flex items-center justify-between h-12">
             <button 
@@ -417,7 +451,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         {/* ② メイン垂直フレックスコンテナ */}
         <div className="flex-1 flex flex-col p-6 overflow-y-auto overscroll-contain">
           
-          {/* ②-A: 問題番号・ステップ表示（常に上に配置） */}
+          {/* ②-A: 問題番号・ステップ表示 */}
           <div className="w-full max-w-xl mx-auto flex flex-col gap-6 sm:gap-10 shrink-0 pb-4">
             <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600 self-start">
               <div className="flex items-center gap-2.5 px-3 py-1.5">
@@ -472,10 +506,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             </div>
           </div>
 
-          {/* ②-B: 🌟 メッセージ ＋ 部分再生ボタンエリア（残りの高さをすべて使って上下中央配置） */}
+          {/* ②-B: メッセージ ＋ 部分再生ボタンエリア */}
           <div className="flex-1 flex flex-col items-center justify-center space-y-10 py-4">
             
-            {/* アイコン ＋ メッセージ (横並び1行) */}
+            {/* アイコン ＋ メッセージ */}
             <div className="flex items-center justify-center gap-4 w-full max-w-xl mx-auto px-4">
               <div className={cn(
                 "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
@@ -527,13 +561,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         <div className="px-6 pb-6 sm:pb-10 shrink-0 border-t border-slate-100 bg-white z-10">
           <SprintTimePlayerControls
             onNext={handleNextQuestion}
-            onReplay={handleReplayFromStart}
+            onSkip={handleSkipQuestion} 
+            audioPhase={audioPhase}     
             playbackRate={playbackRate}
             onChangePlaybackRate={handleSelectRate}
+            isSaving={isSaving}
           />
         </div>
 
-        {/* ────────────── 🌟 統合されたスマートなセッション完了レイヤー ────────────── */}
+        {/* 統合された完了レイヤー */}
         {(isSaving || showTimeUpOverlay) && (
           <div 
             className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300 cursor-pointer"
@@ -541,7 +577,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           >
             <div className="w-full max-w-xs text-center space-y-6 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
               
-              {/* ステータスに応じたシンプルかつ洗練されたアイコン表示 */}
               <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 shadow-sm text-indigo-600">
                 {isSaving ? (
                   <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
@@ -550,7 +585,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 )}
               </div>
 
-              {/* メッセージ領域 */}
               <div className="space-y-1.5">
                 <h3 className="text-lg font-black text-slate-800 tracking-tight">
                   {isSaving ? "スプリントの記録を保存中" : "スプリント完了"}
@@ -562,7 +596,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 </p>
               </div>
 
-              {/* ブランドカラーに完全統一された遷移ボタン（タイムアップ完了時にインタラクティブに活性化） */}
               <div className={cn(
                 "transition-all duration-500 transform",
                 showTimeUpOverlay ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"

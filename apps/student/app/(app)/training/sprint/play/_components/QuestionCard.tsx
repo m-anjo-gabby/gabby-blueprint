@@ -1,3 +1,4 @@
+// apps\student\app\(app)\training\sprint\play\_components\QuestionCard.tsx
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -14,10 +15,10 @@ interface QuestionCardProps {
   groupTotalCount?: number;
   onPlayAudio?: (voiceUrl: string | null, text: string) => void;
   onStartRecord?: () => void;
-  audioPhase?: 'idle' | 'statement' | 'question' | 'answer';
+  audioPhase?: 'idle' | 'statement' | 'question' | 'thinking' | 'answer'; // 🛠️ 親の 'thinking' フェーズに追従
   isRecording?: boolean; // 🎙️ 親から渡される録音中フラグ
-  timeLeft?: number;     // ⏱️ 親から渡される残り時間（秒）
-  maxTime?: number;      // ⏱️ 円形プログレス計算用の最大制限時間（デフォルト: 10）
+  timeLeft?: number;      // ⏱️ 親から渡される残り時間（秒）
+  maxTime?: number;       // ⏱️ 円形プログレス計算用の最大制限時間（デフォルト: 10）
 }
 
 const SPRINT_LABELS: Record<SprintQuestionType, { sectionTitle: string; instruction: string; phaseLabel: string }> = {
@@ -38,8 +39,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   maxTime = 10,
 }) => {
   
-  const question = useSprintStore((state) => state.questions[state.currentIndex]);
-  const questions = useSprintStore((state) => state.questions);
+  // 📦 1. まず必要なストアの値をすべて取得
+  const questions = useSprintStore((state) => state.questions) || [];
   const currentIndex = useSprintStore((state) => state.currentIndex);
   const mode = useSprintStore((state) => state.mode);
   const questionType = useSprintStore((state) => state.questionType);
@@ -48,6 +49,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const setDrillEvalType = useSprintStore((state) => state.setDrillEvalType);
   const drillEvalType = useSprintStore((state) => state.drillEvalType);
 
+  // 🎯 安全に現在の問題データを特定 (Zustand内部の同期ラグ対策)
+  const question = questions[currentIndex] || null;
+
+  // 📦 2. すべての useState フックを「無条件」で最上部に配置
   const [isProblemVisible, setIsProblemVisible] = useState(false);
   const [showJaStatement, setShowJaStatement] = useState(false);
   const [showJaQuestion, setShowJaQuestion] = useState(false);
@@ -55,6 +60,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const [prevIndex, setPrevIndex] = useState(currentIndex);
   const [prevIsRecording, setPrevIsRecording] = useState(isRecording);
 
+  // 🔄 インデックスや録音状態変化時のステートリセット
   if (currentIndex !== prevIndex) {
     setPrevIndex(currentIndex);
     setIsProblemVisible(false);
@@ -73,6 +79,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
   }
 
+  // 📦 3. useMemo などのフックもすべて無条件で実行される位置にまとめる
   const config = SPRINT_LABELS[questionType || '0'] || { sectionTitle: "問題", instruction: "", phaseLabel: "問題文" };
   const isSprintMode = mode === 'sprint';
   const isDrillMode = mode === 'drill';
@@ -81,8 +88,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     if (!question) return '';
     if (questionType === '0') return String(currentIndex + 1);
     
-    const uniqueGroupIds = Array.from(new Set(questions.map(q => q.group_id)));
-    return String(uniqueGroupIds.indexOf(question.group_id) + 1);
+    const uniqueGroupIds = Array.from(new Set(questions.map(q => q.group_id).filter(Boolean)));
+    const currentGroupId = question.group_id;
+    return String(uniqueGroupIds.indexOf(currentGroupId) + 1);
   }, [questions, currentIndex, question, questionType]);
 
   const userActionSteps = useMemo(() => {
@@ -95,11 +103,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     if (isRevealed) return userActionSteps.length;
     
     if (questionType === '0') {
-      return audioPhase === 'answer' ? 1 : 0;
+      return (audioPhase === 'answer' || audioPhase === 'thinking') ? 1 : 0;
     } else {
       if (audioPhase === 'statement') return 0;
       if (audioPhase === 'question') return 1;
-      return audioPhase === 'answer' ? 2 : 0;
+      return (audioPhase === 'answer' || audioPhase === 'thinking') ? 2 : 0;
     }
   }, [audioPhase, isRevealed, isRecording, questionType, userActionSteps.length]);
 
@@ -109,10 +117,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     switch (audioPhase) {
       case 'statement': return { text: "基本文を再生中...", color: "text-indigo-600" };
       case 'question': return { text: `${config.phaseLabel}を再生中...`, color: "text-indigo-600" };
+      case 'thinking':
       case 'answer': return { text: "回答しましょう", color: "text-amber-500" };
       default: return { text: "待機中", color: "text-slate-400" };
     }
-  }, [audioPhase, isRevealed, isRecording, config.phaseLabel, timeLeft]);
+  }, [audioPhase, isRevealed, isRecording, config.phaseLabel]);
 
   const displayPhase = useMemo(() => {
     if (isRecording) return 'recording';
@@ -125,16 +134,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const CIRCUMFERENCE = useMemo(() => 2 * Math.PI * RADIUS, []);
 
   const strokeDashoffset = useMemo(() => {
-    // タイムアップ時は確実に 0 (プログレスが0 = オフセットを円周最大) に倒す
     if (timeLeft <= 0) return CIRCUMFERENCE;
     const progress = Math.max(0, Math.min(timeLeft, maxTime)) / maxTime;
     return CIRCUMFERENCE * (1 - progress);
   }, [timeLeft, maxTime, CIRCUMFERENCE]);
 
-  if (!question) {
-    return <div className="flex-1 w-full animate-pulse bg-slate-50/50 rounded-[40px]" />;
-  }
-
+  // 🔊 オーディオトリガー
   const triggerAudio = (e: React.MouseEvent, voiceUrl: string | null, text: string) => {
     e.stopPropagation();
     if (isAutoPlaying || isRecording) return;
@@ -143,6 +148,21 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   const isHidingProblemText = isDrillMode && !isProblemVisible;
 
+  // 🚧 4. すべてのフック定義が完了した「一番最後」で、データ不在時の早期リターンを行う
+  if (!question) {
+    return (
+      <div className="flex-1 w-full min-h-[300px] flex items-center justify-center bg-slate-50/50 rounded-[40px] border border-dashed border-slate-200">
+        <div className="text-center space-y-2">
+          <div className="w-8 h-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin mx-auto" />
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Card...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 🌟 ここから下が本番のレンダリング
+  // ────────────────────────────────────────────────────────────
   return (
     <div className="w-full flex flex-col items-stretch text-left select-none gap-y-2 sm:gap-y-4">
       
@@ -183,7 +203,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       </div>
 
       {/* 【メインエリア】 */}
-      <div className="w-full flex flex-col items-stretch bg-slate-50/40 rounded-[24px] border border-slate-100 p-3.5 sm:p-5">
+      <div className="w-full flex flex-col items-stretch bg-white rounded-[24px] border border-slate-100 p-3.5 sm:p-5 shadow-xs">
         <AnimatePresence initial={false}>
           <motion.div 
             initial={{ opacity: 0, height: 0, marginBottom: 0 }}
@@ -231,19 +251,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               isRecording ? "bg-rose-50 border-rose-200 text-rose-500" :
               isRevealed ? "bg-slate-100 border-slate-200 text-slate-400" :
               audioPhase === 'statement' || audioPhase === 'question' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
-              audioPhase === 'answer' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
+              audioPhase === 'answer' || audioPhase === 'thinking' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
             )}>
-              {isRecording ? <Mic size={18} /> : audioPhase === 'answer' && !isRevealed ? <CircleDot size={18} /> : <Headphones size={18} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />}
+              {isRecording ? <Mic size={18} /> : (audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed ? <CircleDot size={18} /> : <Headphones size={18} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />}
             </div>
             
             <div className="flex flex-col text-left">
               <h3 className={cn("text-[11px] font-black uppercase tracking-wider leading-none", statusMessage.color)}>
                 {statusMessage.text}
               </h3>
-              {audioPhase === 'answer' && !isRevealed && !isRecording && (
+              {(audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed && !isRecording && (
                 <div className="flex items-center gap-1 mt-1 text-slate-400">
                   <Mic size={10} className="text-rose-400" fill="currentColor" />
-                  <span className="text-[9px] font-bold leading-none">マイクボタンで発話評価</span>
+                  <span className="text-[9px] font-bold leading-none">マイク起動中...</span>
                 </div>
               )}
             </div>
@@ -349,11 +369,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 transition={{ duration: 0.2 }}
                 className="absolute inset-0 w-full h-full flex flex-col items-center justify-center group"
               >
-                <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] border-2 border-dashed border-slate-100 bg-gradient-to-b from-slate-50/50 to-white/30 group-hover:border-indigo-100 group-hover:from-indigo-50/10 transition-colors duration-300" />
+                <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] border-2 border-dashed border-slate-200 bg-gradient-to-b from-slate-50/50 to-white/30 group-hover:border-indigo-100 group-hover:from-indigo-50/10 transition-colors duration-300" />
                 <div className="relative z-10 flex flex-col items-center text-center space-y-3 sm:space-y-4">
                   <div className="space-y-0.5 sm:space-y-1">
-                    <p className="text-[12px] sm:text-[11px] font-black tracking-[0.15em] sm:tracking-[0.2em] text-slate-400 uppercase group-hover:text-indigo-500 transition-colors">タップして解答を表示</p>
-                    <p className="text-[10px] sm:text-[10px] font-bold text-slate-300 group-hover:text-slate-400 transition-colors">Tap anywhere to reveal</p>
+                    <p className="text-[12px] sm:text-[11px] font-black tracking-[0.15em] sm:tracking-[0.2em] text-slate-400 uppercase group-hover:text-indigo-500 transition-colors">自動で発話評価がスタートします</p>
+                    <p className="text-[10px] sm:text-[10px] font-bold text-slate-300 group-hover:text-slate-400 transition-colors">Listen & Answer</p>
                   </div>
                 </div>
               </motion.div>
@@ -385,8 +405,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         fill="transparent"
                         strokeDasharray={CIRCUMFERENCE}
                         animate={{ strokeDashoffset }}
-                        // ✨ ポイント：duration を 1秒にし、ease を linear にすることで1秒ごとの更新を綺麗に補間
-                        // 開始直後やリセット時 (timeLeft === maxTime) のみ 0秒で瞬時に満タンにする
                         transition={{ 
                           duration: timeLeft === maxTime ? 0 : 1, 
                           ease: "linear" 

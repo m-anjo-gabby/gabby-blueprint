@@ -1,30 +1,40 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, RotateCcw, Check } from 'lucide-react';
+import { ArrowRight, Check, Mic, FastForward, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
+import { useSprintStore } from '@/stores/useSprintStore';
 
 const AVAILABLE_RATES = [0.8, 1.0, 1.2, 1.5];
 
 interface SprintTimePlayerControlsProps {
-  onNext: () => void;
-  onReplay: () => void;
+  onNext: () => void;      // 発話完了 / 次へ（結果をコミットして進む）
+  onSkip: () => void;      // スキップして次へ（スキップフラグを立てて進む）
+  audioPhase: 'idle' | 'statement' | 'question' | 'thinking';
   playbackRate: number;
   onChangePlaybackRate: (rate: number) => void;
+  isSaving?: boolean;
 }
 
 export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> = ({
   onNext,
-  onReplay,
+  onSkip,
+  audioPhase,
   playbackRate,
   onChangePlaybackRate,
+  isSaving = false,
 }) => {
   const [isRateMenuOpen, setIsRateMenuOpen] = useState<boolean>(false);
+  const currentIndex = useSprintStore((state) => state.currentIndex);
+  const totalQuestions = useSprintStore((state) => state.questions.length);
+
+  const isLastStep = currentIndex === totalQuestions - 1;
+  const isAudioPlaying = audioPhase === 'statement' || audioPhase === 'question';
 
   return (
-    <div className="w-full max-w-md mx-auto pt-4 sm:pt-6 flex items-center gap-3 relative">
-      {/* バックドロップ (メニューが開いている時のみ背面に配置して閉じられるようにする) */}
+    <div className="w-full max-w-md mx-auto pt-4 sm:pt-6 flex items-center gap-3 relative select-none">
+      {/* バックドロップ */}
       {isRateMenuOpen && (
         <div 
           className="fixed inset-0 z-30 cursor-default" 
@@ -32,20 +42,21 @@ export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> =
         />
       )}
 
-      {/* ⏱️ 再生速度調整セクション */}
+      {/* ⏱️ ① 再生速度調整（左固定） */}
       <div className={cn(
         "h-14 w-16 shrink-0 flex items-center rounded-2xl border shadow-sm transition-all overflow-visible relative bg-slate-50 border-slate-200",
         isRateMenuOpen ? "z-40" : "z-20"
       )}>
         <button
           type="button"
+          disabled={isSaving}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             setIsRateMenuOpen(!isRateMenuOpen);
           }}
           className={cn(
-            "w-full h-full flex flex-col items-center justify-center transition-all rounded-2xl cursor-pointer hover:bg-slate-100 active:bg-slate-200",
+            "w-full h-full flex flex-col items-center justify-center transition-all rounded-2xl cursor-pointer hover:bg-slate-100 active:bg-slate-200 disabled:opacity-30",
             playbackRate !== 1.0 
               ? "bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700 active:bg-indigo-800" 
               : "text-slate-600"
@@ -63,7 +74,7 @@ export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> =
           </span>
         </button>
 
-        {/* ✨ Framer Motion ポップオーバーメニュー */}
+        {/* Framer Motion ポップオーバー */}
         <AnimatePresence>
           {isRateMenuOpen && (
             <motion.div
@@ -74,7 +85,6 @@ export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> =
               className="absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-1.5 min-w-[110px] flex flex-col gap-1 z-50 mb-1"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* 吹き出しの矢印 */}
               <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2.5 h-2.5 bg-white border-b border-r border-slate-200 rotate-45" />
 
               {AVAILABLE_RATES.map((rate) => {
@@ -106,24 +116,44 @@ export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> =
         </AnimatePresence>
       </div>
 
-      {/* 🎯 Nextボタン */}
+      {/* 🎯 ② メインアクション：発話ボタン（ブランドカラー固定・静的アイコン） */}
       <button
         type="button"
         onClick={onNext}
-        className="flex-1 h-14 rounded-2xl bg-indigo-600 text-white font-black text-sm uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer"
+        disabled={isAudioPlaying || isSaving}
+        className="flex-1 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-widest shadow-md shadow-indigo-600/10 transition-all active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
       >
-        <span>Next</span>
-        <ArrowRight size={16} strokeWidth={3} />
+        <AnimatePresence mode="wait">
+          {isSaving ? (
+            <motion.div key="saving" className="flex items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <Loader2 size={16} className="animate-spin" />
+              <span>Saving</span>
+            </motion.div>
+          ) : isLastStep ? (
+            <motion.div key="finish" className="flex items-center gap-2" initial={{ opacity: 0, y: 2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -2 }}>
+              <span>Finish</span>
+              <Check size={16} strokeWidth={3} />
+            </motion.div>
+          ) : (
+            <motion.div key="speak" className="flex items-center gap-2" initial={{ opacity: 0, y: 2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -2 }}>
+              {/* アイコンの動きを止めて静的に固定 */}
+              <Mic size={16} strokeWidth={3} />
+              <span>発話</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </button>
 
-      {/* 🔄 最初から再生ボタン */}
+      {/* ⏭️ ③ Skip ボタン（右固定） */}
       <button
         type="button"
-        onClick={onReplay}
-        className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
-        title="最初から再生"
+        onClick={onSkip}
+        disabled={isSaving}
+        className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all active:scale-95 flex flex-col items-center justify-center gap-0.5 cursor-pointer disabled:opacity-20 disabled:pointer-events-none"
+        title="この問題をスキップして次へ"
       >
-        <RotateCcw size={16} strokeWidth={2.5} className="text-slate-500" />
+        <FastForward size={16} strokeWidth={2.5} />
+        <span className="text-[8px] font-black uppercase tracking-tight text-slate-400">Skip</span>
       </button>
     </div>
   );

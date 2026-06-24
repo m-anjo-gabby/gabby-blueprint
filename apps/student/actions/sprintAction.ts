@@ -12,12 +12,27 @@ const SPRINT_LIMIT_COUNT = 10;
 // ========================================================================
 
 /**
- * 出題順序やグループ構造を完全再現するための履歴オブジェクト型
+ * 発話評価の詳細レコード型（拡張用）
+ */
+export interface SprintAssessmentResult {
+  pronunciation_score?: number; // 発音スコア (0-100)
+  fluency_score?: number;       // 流暢さスコア (0-100)
+  total_score?: number;         // 総合スコア
+  evaluated_at?: string;        // 評価日時 (ISOString)
+  // 必要に応じて解析テキスト、エラー詳細などを追加可能
+}
+
+/**
+ * 出題順序やグループ構造に加え、評価結果・スキップ情報を完全再現するための履歴オブジェクト型
  */
 export interface SprintHistoryItem {
   question_id: string;
   group_id: string | null;
   seq_no: number;
+  
+  // 🌟 追加拡張フィールド
+  is_skipped: boolean;                        // スキップされたかどうか
+  assessment?: SprintAssessmentResult | null; // 発話評価が含まれる場合のリレーションオブジェクト
 }
 
 /**
@@ -31,7 +46,7 @@ export interface CreateSprintScoreInput {
   difficulty_level: number;
   time_limit_sec: number;
   total_answered: number;
-  history: SprintHistoryItem[]; // answered_historyに入る配列オブジェクト
+  history: SprintHistoryItem[]; // 🌟 拡張された answered_history 配列が入る
 }
 
 /**
@@ -50,11 +65,11 @@ export interface SprintResultResponse {
       difficulty_level: number;
       time_limit_sec: number;
       total_answered: number;
-      answered_history: SprintHistoryItem[];
+      answered_history: SprintHistoryItem[]; // 🌟 拡張された履歴
       insert_date: string;
       update_date: string;
     };
-    questions: SprintQuestion[]; // 当時の出題順に完璧にソートされた問題エンティティ配列
+    questions: SprintQuestion[];
   } | null;
   error?: string;
 }
@@ -62,10 +77,6 @@ export interface SprintResultResponse {
 // ========================================================================
 // 🛠️ ユーティリティ・ヘルパー
 // ========================================================================
-
-/**
- * Fisher-Yatesシャッフル（メモリ上での軽量高速サンプリング）
- */
 function shuffleArray<T>(array: T[]): T[] {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
@@ -185,11 +196,11 @@ export async function createSprintScoreAction(
   try {
     const supabase = await createServerClient();
 
-    // サーバー側でセッションから安全に本人のユーザーIDを検証・取得（偽装防止）
+    // サーバー側でセッションから安全に本人のユーザーIDを検証・取得
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    // self_t_sprint へのインサート
+    // self_t_sprint へのインサート (JSONBなので拡張されたオブジェクト配列をそのまま渡せる)
     const { data, error } = await supabase
       .from("self_t_sprint")
       .insert([
@@ -202,7 +213,7 @@ export async function createSprintScoreAction(
           difficulty_level: Number(input.difficulty_level),
           time_limit_sec: Number(input.time_limit_sec),
           total_answered: Number(input.total_answered),
-          answered_history: input.history, // JSONBに履歴配列を丸ごと格納
+          answered_history: input.history, // 🌟 評価やスキップ情報がそのままJSONBとして保存されます
         }
       ])
       .select("self_sprint_id")
@@ -248,7 +259,6 @@ export async function getSprintResultAction(
     if (scoreError) throw scoreError;
     if (!scoreRecord) throw new Error("Sprint record not found");
 
-    // 💡 answered_historyが文字列として取得された場合に備えてJSON.parseを安全に行う
     let history: SprintHistoryItem[] = [];
     if (scoreRecord.answered_history) {
       if (typeof scoreRecord.answered_history === 'string') {
@@ -263,7 +273,6 @@ export async function getSprintResultAction(
       }
     }
 
-    // 履歴が空の場合は空配列で早期リターン
     if (history.length === 0) {
       return { success: true, data: { scoreRecord: scoreRecord as any, questions: [] } };
     }
@@ -284,7 +293,7 @@ export async function getSprintResultAction(
     // ④ 問題マスタから取得したデータを、保存されていた history 配列のインデックス順に完全に再ソート
     const sortedQuestions = history
       .map(hist => rawQuestions.find(q => q.question_id === hist.question_id))
-      .filter((q): q is SprintQuestion => !!q); // 存在しない場合（万が一のデータ削除など）の型ガード除外
+      .filter((q): q is SprintQuestion => !!q);
 
     logger.info("sprint:get_result_success", "Successfully recovered sprint session playlist order", {
       ...ctx,
@@ -294,8 +303,8 @@ export async function getSprintResultAction(
     return {
       success: true,
       data: {
-        scoreRecord: scoreRecord as any,
-        questions: sortedQuestions // 結果画面へ当時の順序のまま受け渡される
+        scoreRecord: scoreRecord as any, // ここに含まれる answered_history にスキップやスコアが反映されたまま結果画面に渡ります
+        questions: sortedQuestions
       }
     };
 

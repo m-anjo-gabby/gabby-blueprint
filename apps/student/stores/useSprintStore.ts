@@ -1,8 +1,19 @@
+// stores/useSprintStore.ts
 'use client';
 
 import { create } from 'zustand';
 import { SprintQuestion, SprintQuestionType, SprintAnswerType } from "@gabby/types/sprint";
 import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
+
+// 📝 追加：1問題ごとの回答結果・スキップ結果を保持するデータ型
+export interface SprintQuestionResult {
+  questionId: string;
+  currentIndex: number;
+  isSkipped: boolean;
+  feedback: FeedbackConfig | null;
+  analysis: AnalysisResult | null;
+  timestamp: number;
+}
 
 interface SprintState {
   questions: SprintQuestion[];
@@ -24,23 +35,26 @@ interface SprintState {
   feedback: FeedbackConfig | null;
   analysis: AnalysisResult | null;
   
-  // --- Progress States ---
-  pendingQuestionCount: number;   // このセッション内で消化した（開いた、またはNextを押した）延べ問題数
-  pendingAssessmentCount: number; // このセッション内で発話評価した回数
+  // --- 🌟 追加：このセッションの回答結果の履歴配列 ---
+  sessionResults: SprintQuestionResult[];
 
-  /**
-   * プレイヤー画面からSprintSelect（設定画面）に戻ってきたことを示すフラグ。
-   * true の場合のみストア値を初期値として使用し、DBフェッチをスキップする。
-   * SprintSelect のマウント後に clearIsActiveSession() で必ずリセットされる。
-   */
+  // --- Progress States ---
+  pendingQuestionCount: number;
+  pendingAssessmentCount: number;
   isActiveSession: boolean;
 
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
   setSprintConfig: (config: { contentId: string, sprintType: string, questionType: SprintQuestionType, level: string, answerType: SprintAnswerType, timeLimitSec: number }) => void;
   setLoading: (loading: boolean) => void;
+  
+  // --- 🌟 追加：回答結果（発話）を履歴にコミットして次へ進むアクション ---
+  commitAssessmentResult: (questionId: string, feedback: FeedbackConfig | null, analysis: AnalysisResult | null) => { isLast: boolean };
+  // --- 🌟 追加：スキップした情報を履歴にコミットして次へ進むアクション ---
+  commitSkipResult: (questionId: string) => { isLast: boolean };
+
   nextStep: () => { isLast: boolean };
   prevStep: () => void;
-  clearPendingCounts: () => { questionCount: number, assessmentCount: number }; // カウントを取得してリセット
+  clearPendingCounts: () => { questionCount: number, assessmentCount: number, results: SprintQuestionResult[] }; // 🌟 履歴も一緒に返すよう拡張
   incrementAssessmentCount: () => void;
   setIsRevealed: (val: boolean) => void;
   setIsRecording: (val: boolean) => void;
@@ -51,9 +65,7 @@ interface SprintState {
   setAnalysis: (val: AnalysisResult | null) => void;
   setPlayingAudio?: (val: HTMLAudioElement | null) => void;
   setDrillEvalType: (val: 'yes' | 'no') => void;
-  /** プレイヤーへ遷移する直前に呼び出し、「セッション継続中」フラグを立てる */
   setIsActiveSession: () => void;
-  /** SprintSelect マウント後に呼び出し、フラグをリセットする */
   clearIsActiveSession: () => void;
   clearSession: () => void;
   resetStore: () => void;
@@ -78,6 +90,10 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   isPlayingAnswerSequence: false,
   feedback: null,
   analysis: null,
+  
+  // 🌟 初期値
+  sessionResults: [],
+
   pendingQuestionCount: 0,
   pendingAssessmentCount: 0,
   isActiveSession: false,
@@ -87,22 +103,53 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     mode,
     currentIndex: startIndex,
     isRevealed: false,
-    isAutoPlaying: mode === 'sprint', // スプリント時は最初から自動再生フラグを有効化
+    isAutoPlaying: mode === 'sprint',
     drillEvalType: get().answerType === '1' ? 'no' : 'yes',
     isRecording: false,
     isPlayingQuestionSequence: false,
     isPlayingAnswerSequence: false,
     feedback: null,
     analysis: null,
-    // 教材を開いた瞬間の最初の1件分を先行カウントする方式を踏襲
+    sessionResults: [], // 🌟 セッション開始時にクリア
     pendingQuestionCount: 1,
     pendingAssessmentCount: 0,
     loading: false
   }),
 
   setLoading: (loading) => set({ loading }),
-
   setSprintConfig: (config) => set({ ...config }),
+
+  // 🌟 追加：発話結果を保存して進む
+  commitAssessmentResult: (questionId, feedback, analysis) => {
+    const { sessionResults, currentIndex } = get();
+    const newResult: SprintQuestionResult = {
+      questionId,
+      currentIndex,
+      isSkipped: false,
+      feedback,
+      analysis,
+      timestamp: Date.now()
+    };
+    
+    set({ sessionResults: [...sessionResults, newResult] });
+    return get().nextStep(); // nextStep を呼び出して進める
+  },
+
+  // 🌟 追加：スキップ情報を保存して進む
+  commitSkipResult: (questionId) => {
+    const { sessionResults, currentIndex } = get();
+    const newResult: SprintQuestionResult = {
+      questionId,
+      currentIndex,
+      isSkipped: true, // 👈 スキップフラグをオン
+      feedback: null,
+      analysis: null,
+      timestamp: Date.now()
+    };
+
+    set({ sessionResults: [...sessionResults, newResult] });
+    return get().nextStep(); // nextStep を呼び出して進める
+  },
 
   nextStep: () => {
     const { questions, currentIndex, pendingQuestionCount } = get();
@@ -128,7 +175,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
         isAutoPlaying: false,
         pendingQuestionCount: pendingQuestionCount + 1
       });
-      return { isLast: true }; // 最後の問題に到達
+      return { isLast: true };
     }
   },
 
@@ -147,15 +194,16 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     });
   },
 
-  // カウントを取得してリセット（単語ドリルの clearPendingCounts と同一のセキュアな構造）
+  // 🌟 保存フェーズに向けてリセット時に履歴配列も一緒に返す
   clearPendingCounts: () => {
-    const { pendingQuestionCount, pendingAssessmentCount } = get();
+    const { pendingQuestionCount, pendingAssessmentCount, sessionResults } = get();
 
-    set({ pendingQuestionCount: 0, pendingAssessmentCount: 0 });
+    set({ pendingQuestionCount: 0, pendingAssessmentCount: 0, sessionResults: [] });
     
     return { 
       questionCount: pendingQuestionCount, 
-      assessmentCount: pendingAssessmentCount
+      assessmentCount: pendingAssessmentCount,
+      results: sessionResults // 👈 コールバック側でDB保存に使用できるようにする
     };
   },
 
@@ -185,14 +233,10 @@ export const useSprintStore = create<SprintState>((set, get) => ({
 
   setPlayingQuestionSequence: (isPlayingQuestionSequence) => set({ isPlayingQuestionSequence }),
   setPlayingAnswerSequence: (isPlayingAnswerSequence) => set({ isPlayingAnswerSequence }),
-
   setFeedback: (feedback) => set({ feedback }),
   setAnalysis: (analysis) => set({ analysis }),
-
   setDrillEvalType: (drillEvalType) => set({ drillEvalType }),
-
   setIsActiveSession: () => set({ isActiveSession: true }),
-
   clearIsActiveSession: () => set({ isActiveSession: false }),
 
   clearSession: () => set({
@@ -206,6 +250,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     drillEvalType: 'yes',
     feedback: null,
     analysis: null,
+    sessionResults: [], // 🌟 クリア
     loading: true,
   }),
 
@@ -226,6 +271,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     isPlayingAnswerSequence: false,
     feedback: null,
     analysis: null,
+    sessionResults: [], // 🌟 クリア
     loading: true,
     pendingQuestionCount: 0,
     pendingAssessmentCount: 0,
