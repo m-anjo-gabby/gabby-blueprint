@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, Check, Mic, FastForward, Loader2 } from 'lucide-react';
+import { ArrowRight, Check, Mic, FastForward, Loader2, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useSprintStore } from '@/stores/useSprintStore';
@@ -15,6 +15,7 @@ interface SprintTimePlayerControlsProps {
   playbackRate: number;
   onChangePlaybackRate: (rate: number) => void;
   isSaving?: boolean;
+  isRecording?: boolean;   // 🌟 追加
 }
 
 export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> = ({
@@ -24,6 +25,7 @@ export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> =
   playbackRate,
   onChangePlaybackRate,
   isSaving = false,
+  isRecording = false,     // 🌟 追加
 }) => {
   const [isRateMenuOpen, setIsRateMenuOpen] = useState<boolean>(false);
   const currentIndex = useSprintStore((state) => state.currentIndex);
@@ -121,13 +123,23 @@ export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> =
         type="button"
         onClick={onNext}
         disabled={isAudioPlaying || isSaving}
-        className="flex-1 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-widest shadow-md shadow-indigo-600/10 transition-all active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+        className={cn(
+          "flex-1 h-14 rounded-2xl text-white font-black text-sm uppercase tracking-widest transition-all active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:pointer-events-none",
+          isRecording 
+            ? "bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/10" 
+            : "bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/10"
+        )}
       >
         <AnimatePresence mode="wait">
           {isSaving ? (
             <motion.div key="saving" className="flex items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Loader2 size={16} className="animate-spin" />
               <span>Saving</span>
+            </motion.div>
+          ) : isRecording ? (
+            <motion.div key="recording" className="flex items-center gap-2" initial={{ opacity: 0, y: 2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -2 }}>
+              <Square size={16} fill="currentColor" strokeWidth={0} className="animate-pulse" />
+              <span>停止して次へ</span>
             </motion.div>
           ) : isLastStep ? (
             <motion.div key="finish" className="flex items-center gap-2" initial={{ opacity: 0, y: 2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -2 }}>

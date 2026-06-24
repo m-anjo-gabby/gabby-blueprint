@@ -2,7 +2,8 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Loader2, Volume2, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones } from 'lucide-react';
+import { ChevronLeft, Loader2, Volume2, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
@@ -12,6 +13,15 @@ import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
+import { FeedbackConfig } from '@gabby/types/speechAssessment';
+
+const getFeedbackConfig = (score: number): FeedbackConfig => {
+  if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
+  if (score >= 0.80) return { fill: '#3B82F6', tagText: 'Great' };
+  if (score >= 0.60) return { fill: '#F59E0B', tagText: 'Good' };
+  if (score >= 0.30) return { fill: '#F97316', tagText: 'Fair' };
+  return { fill: '#EF4444', tagText: 'Poor' };
+};
 
 // コントロールコンポーネントをインポート
 import { SprintTimePlayerControls } from './SprintTimePlayerControls';
@@ -36,13 +46,17 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     answerType,
     timeLimitSec,
     isAutoPlaying,
+    isRecording,
+    sessionResults,
     initSprint,
     nextStep,
     toggleAutoPlay,
     clearSession,
     resetStore,
     commitAssessmentResult, 
-    commitSkipResult,       
+    commitSkipResult,        
+    setIsRecording,
+    incrementAssessmentCount,
   } = useSprintStore();
 
   // ────────────── 📦 ローカル管理ステート ──────────────
@@ -53,7 +67,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
 
   // ────────────── 🔊 音声カスタムフック ──────────────
-  const { speak: ttsSpeak, setSpeechRate: ttsSetRate } = useWebSpeech();
+  const { speak: ttsSpeak, setSpeechRate: ttsSetRate, startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech(); 
 
   const currentQuestion = questions?.[currentIndex];
@@ -140,19 +154,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     const answeredCount = currentSecondsLeft <= 0 ? currentIndex : Math.min(currentIndex + 1, questions.length);
     const slicedQuestions = questions.slice(0, answeredCount);
 
-    // 🌟 【解決2】 sessionProgress を sessionResults からのFindに修正
-    const history: SprintHistoryItem[] = slicedQuestions.map((q) => {
+    const history: SprintHistoryItem[] = slicedQuestions.map((q, idx) => {
       const resultRecord = sessionResults.find(r => r.questionId === q.question_id);
       return {
         question_id: q.question_id,
         group_id: q.group_id || null,
-        seq_no: q.seq_no || 0,
+        seq_no: idx + 1, 
         is_skipped: resultRecord?.isSkipped || false,
         assessment: resultRecord?.feedback ? {
-          pronunciation_score: 100, // スプリント用のデフォルト値
-          fluency_score: 100,
-          total_score: 100,
-          evaluated_at: new Date(resultRecord.timestamp).toISOString()
+          total_score: resultRecord?.analysis ? Math.round(resultRecord.analysis.score * 100) : 100
         } : null,
       };
     });
@@ -283,24 +293,53 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     runSprintFlow(currentQuestion);
   }, [currentQuestion, stopAllAudio, runSprintFlow]);
 
-  // 🎯 発話ボタン（Tap to Next / Next）タップ時
+  const handleStartRecord = useCallback(() => {
+    if (!currentQuestion) return;
+    stopAllAudio();
+    setIsRecording(true);
+    
+    const targetText = (questionType === '0')
+      ? (answerType === '1' ? (currentQuestion.answer_sentence_no_en ?? "") : currentQuestion.answer_sentence_yes_en)
+      : currentQuestion.answer_sentence_yes_en;
+
+    if (!targetText) {
+      setIsRecording(false);
+      return;
+    }
+
+    const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
+
+    startAssessment(targetText, cleanWords, (result) => {
+      setIsRecording(false);
+      incrementAssessmentCount();
+
+      const { isLast } = commitAssessmentResult(
+        currentQuestion.question_id,
+        getFeedbackConfig(result.score),
+        result
+      );
+
+      if (isLast) {
+        showToast("すべての問題を消化しました！スプリント完了です。", "success");
+        handlePersistAndRedirect(secondsLeft);
+      }
+    });
+  }, [currentQuestion, questionType, answerType, stopAllAudio, setIsRecording, startAssessment, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect, secondsLeft]);
+
+  const handleStopRecord = useCallback(() => {
+    setIsRecording(false);
+    stopListening();
+  }, [setIsRecording, stopListening]);
+
   const handleNextQuestion = useCallback(() => {
     if (!currentQuestion) return;
-    
-    // 🌟 【解決1】 第3引数に analysis 結果として null を明示的に追加
-    const { isLast } = commitAssessmentResult(
-      currentQuestion.question_id, 
-      { fill: 'bg-indigo-600', tagText: 'Done' }, 
-      null
-    );
-
-    if (isLast) {
-      showToast("すべての問題を消化しました！スプリント完了です。", "success");
-      handlePersistAndRedirect(secondsLeft);
+    if (isRecording) {
+      handleStopRecord();
+    } else {
+      handleStartRecord();
     }
-  }, [commitAssessmentResult, showToast, handlePersistAndRedirect, secondsLeft, currentQuestion]);
+  }, [currentQuestion, isRecording, handleStartRecord, handleStopRecord]);
 
-  // ⏭️ スキップボタンタップ時
   const handleSkipQuestion = useCallback(() => {
     if (!currentQuestion) return;
 
@@ -509,50 +548,111 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           {/* ②-B: メッセージ ＋ 部分再生ボタンエリア */}
           <div className="flex-1 flex flex-col items-center justify-center space-y-10 py-4">
             
-            {/* アイコン ＋ メッセージ */}
-            <div className="flex items-center justify-center gap-4 w-full max-w-xl mx-auto px-4">
-              <div className={cn(
-                "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
-                audioPhase === 'thinking' ? "text-amber-500" :
-                audioPhase === 'idle' ? "text-slate-300" : "text-indigo-600"
-              )}>
-                {audioPhase === 'thinking' || audioPhase === 'idle' ? (
-                  <CircleDot className="w-full h-full" strokeWidth={2.5} />
-                ) : (
-                  <Headphones className="w-full h-full" strokeWidth={2.5} />
-                )}
+            {/* アイコン ＋ メッセージ or 録音HUD */}
+            <AnimatePresence mode="wait">
+              {isRecording ? (
+                <motion.div
+                  key="recording-hud"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col items-center gap-4"
+                >
+                  {/* 円形プログレス */}
+                  {(() => {
+                    const RADIUS = 36;
+                    const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+                    const MAX_TIME = 10;
+                    const progress = Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME;
+                    const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+                    return (
+                      <div className="relative flex items-center justify-center w-24 h-24">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 92 92">
+                          <circle cx="46" cy="46" r={RADIUS} className="stroke-rose-100" strokeWidth="5" fill="transparent" />
+                          <motion.circle
+                            cx="46"
+                            cy="46"
+                            r={RADIUS}
+                            className="stroke-rose-500"
+                            strokeWidth="5"
+                            fill="transparent"
+                            strokeDasharray={CIRCUMFERENCE}
+                            animate={{ strokeDashoffset }}
+                            transition={{
+                              duration: timeLeft === MAX_TIME ? 0 : 1,
+                              ease: "linear"
+                            }}
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-2xl font-black font-mono text-rose-600 leading-none">{timeLeft}</span>
+                          <span className="text-[9px] font-black uppercase text-rose-400 tracking-wider leading-none mt-0.5">sec</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="flex items-center gap-2 text-rose-600">
+                    <Mic size={14} fill="currentColor" className="animate-pulse" />
+                    <span className="text-sm font-black tracking-wider uppercase">Recording...</span>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="status-message"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-center justify-center gap-4 w-full max-w-xl mx-auto px-4"
+                >
+                  <div className={cn(
+                    "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
+                    audioPhase === 'thinking' ? "text-amber-500" :
+                    audioPhase === 'idle' ? "text-slate-300" : "text-indigo-600"
+                  )}>
+                    {audioPhase === 'thinking' || audioPhase === 'idle' ? (
+                      <CircleDot className="w-full h-full" strokeWidth={2.5} />
+                    ) : (
+                      <Headphones className="w-full h-full" strokeWidth={2.5} />
+                    )}
+                  </div>
+
+                  <h2 className={cn(
+                    "text-lg sm:text-2xl font-black tracking-tight whitespace-nowrap select-none transition-colors duration-200",
+                    audioPhase === 'thinking' ? "text-amber-500" : "text-slate-800"
+                  )}>
+                    {audioPhase === 'statement' && "基本文を再生中"}
+                    {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
+                    {audioPhase === 'thinking' && "発話して回答しましょう"}
+                    {audioPhase === 'idle' && "Ready"}
+                  </h2>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* 部分再生スイッチ群 (発話中は非表示) */}
+            {!isRecording && (
+              <div className="flex items-center justify-center gap-3 w-full max-w-xs">
+                <button
+                  onClick={() => handlePlayIndividualPart('statement')}
+                  disabled={!currentQuestion.statement_en}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm disabled:opacity-20 disabled:pointer-events-none"
+                >
+                  <Volume2 size={12} className="text-indigo-500" />
+                  <span>基本文のみ</span>
+                </button>
+                
+                <button
+                  onClick={() => handlePlayIndividualPart('question')}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                >
+                  <Volume2 size={12} className="text-indigo-500" />
+                  <span>{isQuestionBased ? "質問のみ" : "指示のみ"}</span>
+                </button>
               </div>
-
-              <h2 className={cn(
-                "text-lg sm:text-2xl font-black tracking-tight whitespace-nowrap select-none transition-colors duration-200",
-                audioPhase === 'thinking' ? "text-amber-500" : "text-slate-800"
-              )}>
-                {audioPhase === 'statement' && "基本文を再生中"}
-                {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
-                {audioPhase === 'thinking' && "発話して回答しましょう"}
-                {audioPhase === 'idle' && "Ready"}
-              </h2>
-            </div>
-
-            {/* 部分再生スイッチ群 */}
-            <div className="flex items-center justify-center gap-3 w-full max-w-xs">
-              <button
-                onClick={() => handlePlayIndividualPart('statement')}
-                disabled={!currentQuestion.statement_en}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm disabled:opacity-20 disabled:pointer-events-none"
-              >
-                <Volume2 size={12} className="text-indigo-500" />
-                <span>基本文のみ</span>
-              </button>
-              
-              <button
-                onClick={() => handlePlayIndividualPart('question')}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-              >
-                <Volume2 size={12} className="text-indigo-500" />
-                <span>{isQuestionBased ? "質問のみ" : "指示のみ"}</span>
-              </button>
-            </div>
+            )}
 
           </div>
         </div>
@@ -566,6 +666,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             playbackRate={playbackRate}
             onChangePlaybackRate={handleSelectRate}
             isSaving={isSaving}
+            isRecording={isRecording}
           />
         </div>
 
