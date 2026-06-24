@@ -193,13 +193,13 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
       <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
         
-        {/* ────────────── ヘッダー：リデザイン（カプセル廃止 ＆ アイコン付3連インジケーター） ────────────── */}
-        <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-4 sm:p-5 relative overflow-hidden space-y-3">
-          <div className="absolute -top-1 -right-1 opacity-[0.06] pointer-events-none z-0">
-            <Trophy size={100} strokeWidth={1.2} className="text-indigo-600" />
+{/* ────────────── ヘッダー：シンプル中央寄せ・余白調整モデル ────────────── */}
+        <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
+          <div className="absolute top-0 right-0 p-3 opacity-[0.08] pointer-events-none">
+            <Trophy size={115} strokeWidth={1.2} className="text-indigo-600" />
           </div>
           
-          {/* 上段：ナビゲーション・コンテキスト */}
+          {/* 上段：ナビゲーション */}
           <div className="relative flex items-center justify-between z-10">
             <button 
               onClick={() => {
@@ -212,8 +212,9 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             >
               <ChevronLeft size={18} strokeWidth={2.5} />
             </button>
+            
             <div className="text-right">
-              <span className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.15em] font-mono block">
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
                 Sprint Result
               </span>
               <p className="text-[9px] font-bold text-slate-400 opacity-90">
@@ -222,9 +223,9 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             </div>
           </div>
 
-          {/* 中段：コースタイトル ＆ 属性バッジ */}
-          <div className="relative flex items-center flex-wrap gap-2 px-1 z-10">
-            <h2 className="text-base sm:text-lg font-black text-slate-800 tracking-tight leading-tight truncate max-w-[65%]">
+          {/* 中段：コースタイトル ＆ 属性バッジ（中央寄せにしつつ、横並び一列に統合） */}
+          <div className="relative flex items-center justify-center gap-2.5 px-1 z-10">
+            <h2 className="text-base sm:text-xl font-black text-slate-800 tracking-tight leading-tight truncate max-w-[65%] text-center">
               {courseTitle}
             </h2>
             
@@ -246,33 +247,29 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             </div>
           </div>
 
-          {/* 🆕 下段：実績スコアボード（カプセルを廃止し、3連のアイコン付きシンプル横並び表示に変更） */}
-          <div className="relative z-10 pt-0.5 px-1">
+          {/* 下段：実績スコアボード（中央寄せ） */}
+          <div className="relative z-10 pt-0.5 flex justify-center">
             <div className="flex items-center gap-x-5 text-slate-700 font-mono">
               {/* 回答数 */}
               <div className="flex items-center gap-1">
-                {/* fill="none" にして strokeWidth で線を強調することで、潰れずキレイな白抜きチェックマークになります */}
-                <CheckCircle2 size={13} fill="none" strokeWidth={2.5} className="text-emerald-500 shrink-0" />
+                <CheckCircle2 size={13} fill="none" strokeWidth={2.5} className="text-indigo-500 shrink-0" />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">回答</span>
                 <span className="text-sm font-black text-slate-800">{displayTotalAnswered}</span>
               </div>
               {/* 発話数 */}
               <div className="flex items-center gap-1">
-                {/* マイクアイコンへ変更。塗りつぶし(fill)を外すか、微調整して音声入力感を強調 */}
                 <Mic size={13} className="text-rose-500 shrink-0 stroke-[2.5]" />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">発話</span>
                 <span className="text-sm font-black text-slate-800">{displayTotalAssessment}</span>
               </div>
               {/* 平均スコア */}
               <div className="flex items-center gap-1">
-                {/* アイコンをChartSplineに変更し、アンバーカラーで視認性を確保 */}
                 <ChartSpline size={13} strokeWidth={2.5} className="text-amber-500 shrink-0" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">平均:</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">平均スコア</span>
                 <span className="text-sm font-black text-indigo-600 inline-flex items-baseline">
                   {displayTotalAssessment > 0 ? (
                     <>
                       {displayAverageScore}
-                      {/* /100を小さく薄く(text-[9px] text-slate-400)表示。スラッシュの前に極小の余白を付与 */}
                       <span className="text-[9px] font-medium text-slate-400 ml-0.5 font-sans">/100</span>
                     </>
                   ) : (

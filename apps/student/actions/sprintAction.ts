@@ -293,9 +293,9 @@ export async function getSprintResultAction(
       }
     });
 
-    // 平均スコアの算出（0割りを防ぐ）
+    // 平均スコアの算出（0割りを防ぐ・四捨五入で整数に丸める）
     const averageAssessmentScore = scoredQuestionsCount > 0 
-      ? Math.round((totalScoreSum / scoredQuestionsCount) * 10) / 10 // 小数点第1位まで
+      ? Math.round(totalScoreSum / scoredQuestionsCount) 
       : 0;
 
 

@@ -1,3 +1,4 @@
+// apps\student\app\(app)\training\sprint\play\page.tsx
 'use client';
 
 import { useState, use, useMemo, useEffect } from "react";
@@ -39,6 +40,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     questionType: SprintQuestionType;
     level: string;
     timeLimitSec: number;
+    contentId: string; // 💡 確定したcontentIdを保持させて引き継ぐ
   } | null>(null);
 
   const [questions, setQuestions] = useState<SprintQuestion[]>([]);
@@ -56,13 +58,16 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       const isReturningFromSession = store.isActiveSession && store.contentId === contentId;
       
       let dbConfig = null;
-      // プレイヤーからの戻りでなく、かつ content_id がある場合に最新のDB学習履歴を取得
-      if (!isReturningFromSession && contentId) {
-        const res = await getLastSprintSessionAction(contentId);
+      // プレイヤーからの戻りでない場合に最新のDB学習履歴を取得
+      if (!isReturningFromSession) {
+        const res = await getLastSprintSessionAction();
         if (res && res.success && res.data) {
           dbConfig = res.data;
         }
       }
+
+      // ⚡【バグ修正】URLパラメータに content_id が無い場合は、最新のDB履歴(dbConfig.content_id)からフォールバック
+      const fallbackContentId = contentId || dbConfig?.content_id || '';
 
       // 優先順位: 1. DB履歴(dbConfig) > 2. URLパラメータ > 3. システムデフォルト
       // ※ URLの type パメータは student-path.ts で '0' にハードコードされた「表示ヒント」に過ぎないため、
@@ -93,6 +98,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         questionType: fallbackType,
         level: fallbackLevel,
         timeLimitSec: fallbackTime,
+        contentId: fallbackContentId, // 💡 configオブジェクト内に確定したIDを格納
       };
 
       setServerInitialConfig(config);
@@ -127,8 +133,17 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     const parsedLevel = parseInt(config.level || '', 10);
     const difficultyLevel = isNaN(parsedLevel) ? QUESTION_TYPES[questionType].minLevel : parsedLevel;
 
+    // ⚡確定した正確な contentId を serverInitialConfig から取得
+    const targetContentId = serverInitialConfig?.contentId || contentId;
+
+    // もしフォールバックしても UUID が空の場合は、例外エラーを回避するためにアーリーリターンでエラー画面へ
+    if (!targetContentId) {
+      setView('error');
+      return;
+    }
+
     const response = await getSprintQuestionsAction(
-      contentId,
+      targetContentId,
       questionType,
       difficultyLevel,
       config.mode
@@ -142,7 +157,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
 
       // Zustandストアに設定を保存
       setSprintConfig({
-        contentId: contentId,
+        contentId: targetContentId,
         sprintType,
         questionType,
         level: String(difficultyLevel),
