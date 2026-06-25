@@ -30,9 +30,6 @@ repomix-output.xml
 .env.test.local
 .env.production.local
 
-# Github
-.github
-
 # Vercel
 .vercel
 
