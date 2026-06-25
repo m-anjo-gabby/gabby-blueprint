@@ -2,7 +2,7 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Loader2, Volume2, RotateCcw, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, Square } from 'lucide-react';
+import { ChevronLeft, Loader2, Volume2, RotateCcw, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, Square, FastForward } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -14,7 +14,7 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
 import { FeedbackConfig } from '@gabby/types/speechAssessment';
-import { SprintTimePlayerControls } from './SprintTimePlayerControls';
+
 
 const getFeedbackConfig = (score: number): FeedbackConfig => {
   if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
@@ -257,31 +257,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       }
     }
   }, [playTrack]);
-
-  const handlePlayIndividualPart = useCallback(async (type: 'statement' | 'question') => {
-    if (!currentQuestion) return;
-    stopAllAudio();
-    hasAutoStartedRef.current = false;
-    
-    const currentFlowId = flowIdRef.current;
-
-    try {
-      if (type === 'statement' && currentQuestion.statement_en) {
-        setAudioPhase('statement');
-        await playTrack(currentQuestion.statement_en, currentQuestion.statement_voice);
-      } else if (type === 'question') {
-        setAudioPhase('question');
-        await playTrack(currentQuestion.question_en, currentQuestion.question_voice);
-      }
-      if (flowIdRef.current !== currentFlowId) return;
-      setAudioPhase('answer'); 
-    } catch (e) {
-      console.error("Individual play error:", e);
-      if (flowIdRef.current === currentFlowId) {
-        setAudioPhase('answer'); 
-      }
-    }
-  }, [currentQuestion, playTrack, stopAllAudio]);
 
   // ────────────── 🎤 録音・発話制御コア ──────────────
   const handleStartRecord = useCallback(() => {
@@ -634,9 +609,22 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                         </div>
                       );
                     })()}
-                    <div className="flex items-center gap-2 text-rose-600">
-                      <Mic size={14} fill="currentColor" className="animate-pulse" />
-                      <span className="text-sm font-black tracking-wider uppercase">Recording...</span>
+                    <div className="flex flex-col items-center gap-6 mt-2">
+                      <div className="flex items-center gap-2 text-rose-600">
+                        <Mic size={14} fill="currentColor" className="animate-pulse" />
+                        <span className="text-sm font-black tracking-wider uppercase">Recording...</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSkipQuestion}
+                        disabled={isSaving}
+                        className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-20 disabled:pointer-events-none shadow-sm w-48"
+                        title="この問題をスキップして次へ"
+                      >
+                        <FastForward size={14} strokeWidth={2.5} />
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Skip Question</span>
+                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -649,25 +637,24 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   transition={{ duration: 0.15 }}
                   className="flex items-center justify-center gap-4 w-full max-w-xl mx-auto px-4"
                 >
-                  <div className={cn(
-                    "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
-                    audioPhase === 'answer' ? "text-amber-500" : 
-                    audioPhase === 'idle' ? "text-slate-300" : "text-indigo-600"
-                  )}>
-                    {audioPhase === 'answer' || audioPhase === 'idle' ? ( 
-                      <CircleDot className="w-full h-full" strokeWidth={2.5} />
-                    ) : (
-                      <Headphones className="w-full h-full" strokeWidth={2.5} />
-                    )}
-                  </div>
+                  {audioPhase !== 'answer' && (
+                    <div
+                      className={cn(
+                        "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
+                        audioPhase === 'idle' ? "text-slate-300" : "text-indigo-600"
+                      )}
+                    >
+                      {audioPhase === 'idle' ? (
+                        <CircleDot className="w-full h-full" strokeWidth={2.5} />
+                      ) : (
+                        <Headphones className="w-full h-full" strokeWidth={2.5} />
+                      )}
+                    </div>
+                  )}
 
-                  <h2 className={cn(
-                    "text-lg sm:text-2xl font-black tracking-tight whitespace-nowrap select-none transition-colors duration-200",
-                    audioPhase === 'answer' ? "text-amber-500" : "text-slate-800" 
-                  )}>
+                  <h2 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight whitespace-nowrap select-none transition-colors duration-200">
                     {audioPhase === 'statement' && "基本文を再生中"}
                     {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
-                    {audioPhase === 'answer' && "発話して回答しましょう"} 
                     {audioPhase === 'idle' && "Ready"}
                   </h2>
                 </motion.div>
@@ -677,18 +664,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           </div>
         </div>
 
-        {/* ③ コントロールエリア（下部固定） */}
-        <div className="px-6 pb-6 sm:pb-10 shrink-0 border-t border-slate-100 bg-white z-10">
-          <SprintTimePlayerControls
-            onNext={handleNextQuestion}
-            onSkip={handleSkipQuestion} 
-            audioPhase={audioPhase}     
-            playbackRate={playbackRate}
-            onChangePlaybackRate={handleSelectRate}
-            isSaving={isSaving}
-            isRecording={isRecording}
-          />
-        </div>
+
 
         {/* 統合された完了レイヤー */}
         {(isSaving || showTimeUpOverlay) && (
