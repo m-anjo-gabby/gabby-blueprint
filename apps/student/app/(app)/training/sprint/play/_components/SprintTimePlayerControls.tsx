@@ -1,3 +1,4 @@
+// apps\student\app\(app)\training\sprint\play\_components\SprintTimePlayerControls.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -35,7 +36,7 @@ export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> =
   const isAudioPlaying = audioPhase === 'statement' || audioPhase === 'question';
 
   return (
-    <div className="w-full max-w-md mx-auto pt-4 sm:pt-6 flex items-center gap-3 relative select-none">
+    <div className="w-full max-w-md mx-auto pt-4 sm:pt-6 flex items-center justify-between gap-4 relative select-none">
       {/* バックドロップ */}
       {isRateMenuOpen && (
         <div 
@@ -118,54 +119,18 @@ export const SprintTimePlayerControls: React.FC<SprintTimePlayerControlsProps> =
         </AnimatePresence>
       </div>
 
-      {/* 🎯 ② メインアクション：発話ボタン（ブランドカラー固定・静的アイコン） */}
-      <button
-        type="button"
-        onClick={onNext}
-        disabled={isAudioPlaying || isSaving}
-        className={cn(
-          "flex-1 h-14 rounded-2xl text-white font-black text-sm uppercase tracking-widest transition-all active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:pointer-events-none",
-          isRecording 
-            ? "bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/10" 
-            : "bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/10"
-        )}
-      >
-        <AnimatePresence mode="wait">
-          {isSaving ? (
-            <motion.div key="saving" className="flex items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Loader2 size={16} className="animate-spin" />
-              <span>Saving</span>
-            </motion.div>
-          ) : isRecording ? (
-            <motion.div key="recording" className="flex items-center gap-2" initial={{ opacity: 0, y: 2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -2 }}>
-              <Square size={16} fill="currentColor" strokeWidth={0} className="animate-pulse" />
-              <span>停止して次へ</span>
-            </motion.div>
-          ) : isLastStep ? (
-            <motion.div key="finish" className="flex items-center gap-2" initial={{ opacity: 0, y: 2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -2 }}>
-              <span>Finish</span>
-              <Check size={16} strokeWidth={3} />
-            </motion.div>
-          ) : (
-            <motion.div key="speak" className="flex items-center gap-2" initial={{ opacity: 0, y: 2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -2 }}>
-              {/* アイコンの動きを止めて静的に固定 */}
-              <Mic size={16} strokeWidth={3} />
-              <span>発話</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </button>
+      {/* 🎯 ② 中央メインアクション：不要になったため削除し、左右の余白は justify-between で担保 */}
 
-      {/* ⏭️ ③ Skip ボタン（右固定） */}
+      {/* ⏭️ ③ Skip ボタン（右配置・発話ボタンの代わりとして大きく押しやすく最適化） */}
       <button
         type="button"
         onClick={onSkip}
         disabled={isSaving}
-        className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all active:scale-95 flex flex-col items-center justify-center gap-0.5 cursor-pointer disabled:opacity-20 disabled:pointer-events-none"
+        className="flex-1 h-14 rounded-2xl bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-20 disabled:pointer-events-none shadow-sm"
         title="この問題をスキップして次へ"
       >
         <FastForward size={16} strokeWidth={2.5} />
-        <span className="text-[8px] font-black uppercase tracking-tight text-slate-400">Skip</span>
+        <span className="text-xs font-black uppercase tracking-wider text-slate-500">Skip Question</span>
       </button>
     </div>
   );

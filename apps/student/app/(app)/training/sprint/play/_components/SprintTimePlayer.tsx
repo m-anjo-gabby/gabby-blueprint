@@ -2,8 +2,7 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-// 💡 RotateCcw を追加インポート
-import { ChevronLeft, Loader2, Volume2, RotateCcw, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic } from 'lucide-react';
+import { ChevronLeft, Loader2, Volume2, RotateCcw, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -72,8 +71,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const totalQuestions = questions?.length || 0;
 
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
-  
   const flowIdRef = useRef<number>(0);
+  const hasAutoStartedRef = useRef<boolean>(false);
 
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
@@ -81,7 +80,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
   }, [questionType]);
 
-  // 💡 questionType === '0' が Speed (Speed判定の修正)
   const isSpeedMode = questionType === '0';
   const isQuestionBased = questionType === '0' || questionType === '6';
 
@@ -127,6 +125,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     return (secondsLeft / timeLimitSec) * 100;
   }, [secondsLeft, timeLimitSec]);
 
+  // 全てのオーディオ・発話を安全に即時ストップする
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1; 
     if (nativeAudioRef.current) {
@@ -134,7 +133,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       nativeAudioRef.current = null;
     }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    setAudioPhase('idle');
   }, []);
 
   const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
@@ -238,6 +236,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const runSprintFlow = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
     if (!question) return;
 
+    hasAutoStartedRef.current = false;
     try {
       if (question.statement_en) {
         setAudioPhase('statement');
@@ -263,6 +262,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const handlePlayIndividualPart = useCallback(async (type: 'statement' | 'question') => {
     if (!currentQuestion) return;
     stopAllAudio();
+    hasAutoStartedRef.current = false;
     
     const currentFlowId = flowIdRef.current;
 
@@ -290,13 +290,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     runSprintFlow(currentQuestion, flowIdRef.current);
   }, [currentQuestion, stopAllAudio, runSprintFlow]);
 
+  // ────────────── 🎤 録音・発話制御コア ──────────────
   const handleStartRecord = useCallback(() => {
     if (!currentQuestion) return;
     stopAllAudio();
     setAudioPhase('answer');
     setIsRecording(true);
     
-    // 💡 Speed モード判定に isSpeedMode を適用
     const targetText = isSpeedMode
       ? (answerType === '1' ? (currentQuestion.answer_sentence_no_en ?? "") : currentQuestion.answer_sentence_yes_en)
       : currentQuestion.answer_sentence_yes_en;
@@ -330,24 +330,30 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     stopListening();
   }, [setIsRecording, stopListening]);
 
+  // コントロールエリアからの「次のアクション / 発話開始」トリガー
   const handleNextQuestion = useCallback(() => {
     if (!currentQuestion) return;
-    if (isRecording) {
-      handleStopRecord();
-    } else {
+    // フェーズが回答フェーズで、かつ現在録音していない場合は録音を開始する
+    if (audioPhase === 'answer' && !isRecording) {
       handleStartRecord();
+    } else if (isRecording) {
+      // すでに録音中の場合は安全に確定・停止させる
+      handleStopRecord();
     }
-  }, [currentQuestion, isRecording, handleStartRecord, handleStopRecord]);
+  }, [currentQuestion, audioPhase, isRecording, handleStartRecord, handleStopRecord]);
 
   const handleSkipQuestion = useCallback(() => {
     if (!currentQuestion) return;
+    // スキップされた場合は録音とオーディオをすべて止めてからスキップ
+    handleStopRecord();
+    stopAllAudio();
 
     const { isLast } = commitSkipResult(currentQuestion.question_id);
     if (isLast) {
       showToast("スプリントを終了します。", "success");
       handlePersistAndRedirect(secondsLeft);
     }
-  }, [commitSkipResult, showToast, handlePersistAndRedirect, secondsLeft, currentQuestion]);
+  }, [commitSkipResult, showToast, handlePersistAndRedirect, secondsLeft, currentQuestion, handleStopRecord, stopAllAudio]);
 
   const handleSelectRate = useCallback((targetRate: number) => {
     changePlaybackRate(targetRate);
@@ -355,6 +361,21 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       ttsSetRate(targetRate);
     } catch (e) {}
   }, [changePlaybackRate, ttsSetRate]);
+
+  // ────────────── 🔄 副作用 (Effects) ──────────────
+  // 回答フェーズ（answer）に遷移した際に自動で発話開始（録音）を行う
+  useEffect(() => {
+    if (
+      audioPhase === 'answer' &&
+      !isRecording &&
+      !isSaving &&
+      !showTimeUpOverlay &&
+      !hasAutoStartedRef.current
+    ) {
+      hasAutoStartedRef.current = true;
+      handleStartRecord();
+    }
+  }, [audioPhase, isRecording, isSaving, showTimeUpOverlay, handleStartRecord]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -390,9 +411,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     };
   }, [questions, initSprint, clearSession, toggleAutoPlay, timeLimitSec]);
 
+  // インデックス変更時にフローを最初から走らせる
   useEffect(() => {
     if (currentQuestion && secondsLeft > 0 && !showTimeUpOverlay && !isSaving) {
       stopAllAudio();
+      setAudioPhase('idle'); // フェーズを一旦初期化
+      hasAutoStartedRef.current = false;
       const currentFlowId = flowIdRef.current;
       (async () => {
         await runSprintFlow(currentQuestion, currentFlowId);
@@ -406,12 +430,16 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     return () => {
       document.body.style.overflow = originalOverflow;
       stopAllAudio();
+      // アンマウント時にも録音を確実にクリーンアップ
+      setIsRecording(false);
+      stopListening();
     };
-  }, [stopAllAudio]);
+  }, [stopAllAudio, setIsRecording, stopListening]);
 
   const handleExit = async () => {
     toggleAutoPlay(false);
     stopAllAudio();
+    handleStopRecord();
 
     const ok = await showConfirm(
       "Quit Sprint?", 
@@ -421,7 +449,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     if (!ok) {
       toggleAutoPlay(true);
-      if (currentQuestion) runSprintFlow(currentQuestion, flowIdRef.current);
+      if (currentQuestion) {
+        hasAutoStartedRef.current = false;
+        runSprintFlow(currentQuestion, flowIdRef.current);
+      }
       return;
     }
     onExit?.();
@@ -547,7 +578,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           {/* ②-B: メッセージ ＋ 部分再生ボタンエリア */}
           <div className="flex-1 flex flex-col items-center justify-center space-y-10 py-4">
             
-            {/* アイコン ＋ メッセージ or 録音HUD */}
             <AnimatePresence mode="wait">
               {isRecording ? (
                 <motion.div
@@ -558,7 +588,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   transition={{ duration: 0.2 }}
                   className="flex flex-col items-center gap-4"
                 >
-                  {/* 円形プログレス */}
                   {(() => {
                     const RADIUS = 36;
                     const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -585,10 +614,21 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                             strokeLinecap="round"
                           />
                         </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-2xl font-black font-mono text-rose-600 leading-none">{timeLeft}</span>
-                          <span className="text-[9px] font-black uppercase text-rose-400 tracking-wider leading-none mt-0.5">sec</span>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={handleStopRecord}
+                          className="absolute inset-2 flex flex-col items-center justify-center rounded-full hover:bg-rose-50/50 active:scale-95 transition-all group cursor-pointer"
+                          title="録音を停止して結果を確定"
+                        >
+                          <span className="text-2xl font-black font-mono text-rose-600 leading-none group-hover:scale-90 transition-transform">
+                            {timeLeft}
+                          </span>
+                          <div className="flex items-center gap-1 mt-0.5 text-rose-400 group-hover:text-rose-600 transition-colors">
+                            <Square size={8} fill="currentColor" className="shrink-0 animate-pulse" />
+                            <span className="text-[9px] font-black uppercase tracking-wider leading-none">STOP</span>
+                          </div>
+                        </button>
+
                       </div>
                     );
                   })()}
@@ -631,11 +671,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               )}
             </AnimatePresence>
 
-            {/* ⏱️ 部分再生スイッチ群 (発話中は非表示) */}
             {!isRecording && (
               <div className="flex items-center justify-center gap-3 w-full max-w-xs">
                 {isSpeedMode ? (
-                  // 🌟 Speed モード：質問文のみのため「最初から再生」の 1 ボタンのみ
                   <button
                     onClick={handleReplayFromStart}
                     className="w-[55%] py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
@@ -644,7 +682,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                     <span>最初から再生</span>
                   </button>
                 ) : (
-                  // 🌟 それ以外（Fluencyなど）：2ケースのスイッチを表示
                   <>
                     <button
                       onClick={handleReplayFromStart}
