@@ -43,10 +43,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     questionType,
     answerType,
     timeLimitSec,
-    isAutoPlaying,
     isRecording,
     initSprint,
-    toggleAutoPlay,
     clearSession,
     resetStore,
     commitAssessmentResult, 
@@ -135,7 +133,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, []);
 
   const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
-    toggleAutoPlay(false);
     setIsSaving(true); 
 
     const storeState = useSprintStore.getState();
@@ -194,7 +191,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [stopAllAudio, toggleAutoPlay, resetStore, router, showToast, onExit, currentIndex, questions, questionType, answerType]);
+  }, [stopAllAudio, resetStore, router, showToast, onExit, currentIndex, questions, questionType, answerType]);
 
   const handleGoToResult = useCallback(() => {
     if (resultId) {
@@ -298,18 +295,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     stopListening();
   }, [setIsRecording, stopListening]);
 
-  // コントロールエリアからの「次のアクション / 発話開始」トリガー
-  const handleNextQuestion = useCallback(() => {
-    if (!currentQuestion) return;
-    // フェーズが回答フェーズで、かつ現在録音していない場合は録音を開始する
-    if (audioPhase === 'answer' && !isRecording) {
-      handleStartRecord();
-    } else if (isRecording) {
-      // すでに録音中の場合は安全に確定・停止させる
-      handleStopRecord();
-    }
-  }, [currentQuestion, audioPhase, isRecording, handleStartRecord, handleStopRecord]);
-
   const handleSkipQuestion = useCallback(() => {
     if (!currentQuestion) return;
     // スキップされた場合は録音とオーディオをすべて止めてからスキップ
@@ -322,13 +307,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       handlePersistAndRedirect(secondsLeft);
     }
   }, [commitSkipResult, showToast, handlePersistAndRedirect, secondsLeft, currentQuestion, handleStopRecord, stopAllAudio]);
-
-  const handleSelectRate = useCallback((targetRate: number) => {
-    changePlaybackRate(targetRate);
-    try {
-      ttsSetRate(targetRate);
-    } catch (e) {}
-  }, [changePlaybackRate, ttsSetRate]);
 
   // ────────────── 🔄 副作用 (Effects) ──────────────
   // 回答フェーズ（answer）に遷移した際に自動で発話開始（録音）を行う
@@ -347,19 +325,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (isAutoPlaying && secondsLeft > 0) {
+    if (secondsLeft > 0) {
       interval = setInterval(() => {
         setSecondsLeft((prev) => prev - 1);
       }, 1000);
     }
     return () => { if (interval) clearInterval(interval); };
-  }, [isAutoPlaying, secondsLeft]);
+  }, [secondsLeft]);
 
   useEffect(() => {
-    if (isAutoPlaying && secondsLeft <= 0) {
+    if (secondsLeft <= 0) {
       handlePersistAndRedirect(0);
     }
-  }, [isAutoPlaying, secondsLeft, handlePersistAndRedirect]);
+  }, [secondsLeft, handlePersistAndRedirect]);
 
   useEffect(() => {
     if (showTimeUpOverlay && resultId) {
@@ -373,11 +351,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   useEffect(() => {
     initSprint(questions, 'sprint', 0);
     setSecondsLeft(timeLimitSec);
-    toggleAutoPlay(true);
     return () => {
       clearSession();
     };
-  }, [questions, initSprint, clearSession, toggleAutoPlay, timeLimitSec]);
+  }, [questions, initSprint, clearSession, timeLimitSec]);
 
   // インデックス変更時にフローを最初から走らせる
   useEffect(() => {
@@ -405,9 +382,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [stopAllAudio, setIsRecording, stopListening]);
 
   const handleExit = async () => {
-    toggleAutoPlay(false);
-    stopAllAudio();
-    handleStopRecord();
 
     const ok = await showConfirm(
       "Quit Sprint?", 
@@ -416,11 +390,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     );
 
     if (!ok) {
-      toggleAutoPlay(true);
-      if (currentQuestion) {
-        hasAutoStartedRef.current = false;
-        runSprintFlow(currentQuestion, flowIdRef.current);
-      }
       return;
     }
     onExit?.();
@@ -525,14 +494,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                         <div 
                           className={cn(
                             "absolute inset-0 transition-transform duration-300",
-                            isCompleted ? "bg-emerald-500" : isCurrent ? "bg-indigo-500" : "bg-transparent"
+                            isCompleted ? "bg-indigo-500" : isCurrent ? "bg-indigo-500" : "bg-transparent"
                           )}
                           style={{ transform: isCompleted || isCurrent ? 'translateX(0)' : 'translateX(-100%)' }}
                         />
                       </div>
                       <span className={cn(
                         "text-[10px] font-black tracking-tight",
-                        isCurrent ? "text-indigo-600" : isCompleted ? "text-emerald-600" : "text-slate-300"
+                        isCurrent ? "text-indigo-600" : isCompleted ? "text-indigo-600" : "text-slate-300"
                       )}>
                         {step}
                       </span>
@@ -545,7 +514,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
           {/* ②-B: メッセージ ＋ 部分再生ボタンエリア */}
           <div className="flex-1 flex flex-col items-center justify-center space-y-10 py-4">
-            
             <AnimatePresence mode="wait">
               {isRecording ? (
                 <motion.div
@@ -557,15 +525,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   className="flex flex-col items-center gap-10 w-full"
                 >
                   <div className="flex items-center justify-center gap-4 w-full max-w-xl mx-auto px-4">
-                    <div className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 text-amber-500">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 text-indigo-500">
                       <CircleDot className="w-full h-full" strokeWidth={2.5} />
                     </div>
-                    <h2 className="text-lg sm:text-2xl font-black tracking-tight whitespace-nowrap select-none text-amber-500">
+                    <h2 className="text-lg sm:text-2xl font-black tracking-tight whitespace-nowrap select-none text-slate-800">
                       発話して回答しましょう
                     </h2>
                   </div>
 
-                  <div className="flex flex-col items-center gap-4">
+                  <div className="flex flex-col items-center gap-6">
                     {(() => {
                       const RADIUS = 36;
                       const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -573,7 +541,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                       const progress = Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME;
                       const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
                       return (
-                        <div className="relative flex items-center justify-center w-24 h-24">
+                        /* タイマー表示エリア（誤タップを防ぐため、クリック不可の純粋なインジケーターに変更） */
+                        <div className="relative flex items-center justify-center w-24 h-24 select-none">
                           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 92 92">
                             <circle cx="46" cy="46" r={RADIUS} className="stroke-rose-100" strokeWidth="5" fill="transparent" />
                             <motion.circle
@@ -592,39 +561,46 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                               strokeLinecap="round"
                             />
                           </svg>
-                          <button
-                            type="button"
-                            onClick={handleStopRecord}
-                            className="absolute inset-2 flex flex-col items-center justify-center rounded-full hover:bg-rose-50/50 active:scale-95 transition-all group cursor-pointer"
-                            title="録音を停止して結果を確定"
-                          >
-                            <span className="text-2xl font-black font-mono text-rose-600 leading-none group-hover:scale-90 transition-transform">
+                          {/* 中央はシンプルに残りの秒数とREC状態のみをクリアに表示 */}
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-3xl font-black font-mono text-rose-600 leading-none">
                               {timeLeft}
                             </span>
-                            <div className="flex items-center gap-1 mt-0.5 text-rose-400 group-hover:text-rose-600 transition-colors">
-                              <Square size={8} fill="currentColor" className="shrink-0 animate-pulse" />
-                              <span className="text-[9px] font-black uppercase tracking-wider leading-none">STOP</span>
+                            <div className="flex items-center gap-1 mt-0.5 text-rose-400">
+                              <Mic size={10} fill="currentColor" className="animate-pulse" />
+                              <span className="text-[9px] font-black uppercase tracking-wider leading-none">REC</span>
                             </div>
-                          </button>
+                          </div>
                         </div>
                       );
                     })()}
-                    <div className="flex flex-col items-center gap-6 mt-2">
-                      <div className="flex items-center gap-2 text-rose-600">
-                        <Mic size={14} fill="currentColor" className="animate-pulse" />
-                        <span className="text-sm font-black tracking-wider uppercase">Recording...</span>
-                      </div>
 
+                    {/* ボタンエリア：役割（プライマリ・セカンダリ）を縦に並べて明確化 */}
+                    <div className="flex flex-col items-center gap-3 mt-2">
+                      
+                      {/* ① メインアクション：発話を終了して次へ進むボタン */}
+                      <button
+                        type="button"
+                        onClick={handleStopRecord}
+                        className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-rose-500 text-white hover:bg-rose-600 transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group"
+                        title="発話を完了して次へ"
+                      >
+                        <CheckCircle2 size={16} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
+                        <span className="text-sm font-black tracking-wider">発話を完了</span>
+                      </button>
+
+                      {/* ② サブアクション：スキップボタン（現在のトンマナを維持しつつスッキリ配置） */}
                       <button
                         type="button"
                         onClick={handleSkipQuestion}
                         disabled={isSaving}
-                        className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-20 disabled:pointer-events-none shadow-sm w-48"
+                        className="flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-transparent border border-transparent text-slate-400 hover:text-slate-600 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-20 disabled:pointer-events-none w-48"
                         title="この問題をスキップして次へ"
                       >
                         <FastForward size={14} strokeWidth={2.5} />
-                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Skip Question</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider">スキップする</span>
                       </button>
+
                     </div>
                   </div>
                 </motion.div>
@@ -660,11 +636,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 </motion.div>
               )}
             </AnimatePresence>
-
           </div>
         </div>
-
-
 
         {/* 統合された完了レイヤー */}
         {(isSaving || showTimeUpOverlay) && (
@@ -673,7 +646,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             onClick={showTimeUpOverlay ? handleGoToResult : undefined}
           >
             <div className="w-full max-w-xs text-center space-y-6 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
-              
               <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 shadow-sm text-indigo-600">
                 {isSaving ? (
                   <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
