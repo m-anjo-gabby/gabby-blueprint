@@ -1,4 +1,3 @@
-// apps/student/app/(public)/auth/callback/route.ts
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@gabby/lib/supabase/server'
 
@@ -20,8 +19,7 @@ export async function GET(request: Request) {
      * - password reset (標準フロー時)
      * - magic link
      * - email confirmation
-     * 
-     */
+     * */
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
 
@@ -37,24 +35,20 @@ export async function GET(request: Request) {
      * 独自パスワードリセットフロー (recovery)
      * generateLink({ type: 'recovery' }) で発行されたトークンを検証し、
      * 認証セッションを確立してパスワード更新画面へリダイレクトします。
+     * * 【プリフェッチ対策の変更】
+     * メーラーの事前読み込みによるトークン消費を防ぐため、このGETルートでは verifyOtp を行いません。
+     * パラメータを保持したまま直接 /update-password 画面へリダイレクトし、クライアント側のボタンアクションで検証します。
      */
-    // generateLink から直接 callback へ届く場合、パラメータ名は token_hash または token
-    // の可能性があるため、両方をフォールバックとして受け入れます。
     const recoveryToken = tokenHash || token;
     if (recoveryToken && type === 'recovery') {
-      const { error } = await supabase.auth.verifyOtp({ // verifyOtp expects token_hash
-        token_hash: recoveryToken,
-        type: 'recovery',
-      })
-
-      if (error) {
-        console.error('Password reset verify error:', error.message)
-        return NextResponse.redirect(`${origin}/login?error=reset_expired`)
+      // クエリパラメータを組み立ててUI画面へスルーパス
+      const updatePasswordUrl = new URL(`${origin}/update-password`)
+      updatePasswordUrl.searchParams.set('token_hash', recoveryToken)
+      updatePasswordUrl.searchParams.set('type', 'recovery')
+      if (searchParams.has('next')) {
+        updatePasswordUrl.searchParams.set('next', next)
       }
-
-      // トークン検証が成功すると、裏で一時的なログインセッションが張られます。
-      // そのままパスワード入力画面（/update-password）へ安全にリダイレクトします。
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(updatePasswordUrl.toString())
     }
 
     /**
