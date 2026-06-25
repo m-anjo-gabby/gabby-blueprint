@@ -45,7 +45,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     timeLimitSec,
     isAutoPlaying,
     isRecording,
-    sessionResults,
     initSprint,
     toggleAutoPlay,
     clearSession,
@@ -283,12 +282,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       }
     }
   }, [currentQuestion, playTrack, stopAllAudio]);
-
-  const handleReplayFromStart = useCallback(() => {
-    if (!currentQuestion) return;
-    stopAllAudio();
-    runSprintFlow(currentQuestion, flowIdRef.current);
-  }, [currentQuestion, stopAllAudio, runSprintFlow]);
 
   // ────────────── 🎤 録音・発話制御コア ──────────────
   const handleStartRecord = useCallback(() => {
@@ -586,55 +579,65 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.2 }}
-                  className="flex flex-col items-center gap-4"
+                  className="flex flex-col items-center gap-10 w-full"
                 >
-                  {(() => {
-                    const RADIUS = 36;
-                    const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-                    const MAX_TIME = 10;
-                    const progress = Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME;
-                    const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
-                    return (
-                      <div className="relative flex items-center justify-center w-24 h-24">
-                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 92 92">
-                          <circle cx="46" cy="46" r={RADIUS} className="stroke-rose-100" strokeWidth="5" fill="transparent" />
-                          <motion.circle
-                            cx="46"
-                            cy="46"
-                            r={RADIUS}
-                            className="stroke-rose-500"
-                            strokeWidth="5"
-                            fill="transparent"
-                            strokeDasharray={CIRCUMFERENCE}
-                            animate={{ strokeDashoffset }}
-                            transition={{
-                              duration: timeLeft === MAX_TIME ? 0 : 1,
-                              ease: "linear"
-                            }}
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <button
-                          type="button"
-                          onClick={handleStopRecord}
-                          className="absolute inset-2 flex flex-col items-center justify-center rounded-full hover:bg-rose-50/50 active:scale-95 transition-all group cursor-pointer"
-                          title="録音を停止して結果を確定"
-                        >
-                          <span className="text-2xl font-black font-mono text-rose-600 leading-none group-hover:scale-90 transition-transform">
-                            {timeLeft}
-                          </span>
-                          <div className="flex items-center gap-1 mt-0.5 text-rose-400 group-hover:text-rose-600 transition-colors">
-                            <Square size={8} fill="currentColor" className="shrink-0 animate-pulse" />
-                            <span className="text-[9px] font-black uppercase tracking-wider leading-none">STOP</span>
-                          </div>
-                        </button>
+                  <div className="flex items-center justify-center gap-4 w-full max-w-xl mx-auto px-4">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 text-amber-500">
+                      <CircleDot className="w-full h-full" strokeWidth={2.5} />
+                    </div>
+                    <h2 className="text-lg sm:text-2xl font-black tracking-tight whitespace-nowrap select-none text-amber-500">
+                      発話して回答しましょう
+                    </h2>
+                  </div>
 
-                      </div>
-                    );
-                  })()}
-                  <div className="flex items-center gap-2 text-rose-600">
-                    <Mic size={14} fill="currentColor" className="animate-pulse" />
-                    <span className="text-sm font-black tracking-wider uppercase">Recording...</span>
+                  <div className="flex flex-col items-center gap-4">
+                    {(() => {
+                      const RADIUS = 36;
+                      const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+                      const MAX_TIME = 10;
+                      const progress = Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME;
+                      const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+                      return (
+                        <div className="relative flex items-center justify-center w-24 h-24">
+                          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 92 92">
+                            <circle cx="46" cy="46" r={RADIUS} className="stroke-rose-100" strokeWidth="5" fill="transparent" />
+                            <motion.circle
+                              cx="46"
+                              cy="46"
+                              r={RADIUS}
+                              className="stroke-rose-500"
+                              strokeWidth="5"
+                              fill="transparent"
+                              strokeDasharray={CIRCUMFERENCE}
+                              animate={{ strokeDashoffset }}
+                              transition={{
+                                duration: timeLeft === MAX_TIME ? 0 : 1,
+                                ease: "linear"
+                              }}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <button
+                            type="button"
+                            onClick={handleStopRecord}
+                            className="absolute inset-2 flex flex-col items-center justify-center rounded-full hover:bg-rose-50/50 active:scale-95 transition-all group cursor-pointer"
+                            title="録音を停止して結果を確定"
+                          >
+                            <span className="text-2xl font-black font-mono text-rose-600 leading-none group-hover:scale-90 transition-transform">
+                              {timeLeft}
+                            </span>
+                            <div className="flex items-center gap-1 mt-0.5 text-rose-400 group-hover:text-rose-600 transition-colors">
+                              <Square size={8} fill="currentColor" className="shrink-0 animate-pulse" />
+                              <span className="text-[9px] font-black uppercase tracking-wider leading-none">STOP</span>
+                            </div>
+                          </button>
+                        </div>
+                      );
+                    })()}
+                    <div className="flex items-center gap-2 text-rose-600">
+                      <Mic size={14} fill="currentColor" className="animate-pulse" />
+                      <span className="text-sm font-black tracking-wider uppercase">Recording...</span>
+                    </div>
                   </div>
                 </motion.div>
               ) : (
@@ -670,38 +673,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {!isRecording && (
-              <div className="flex items-center justify-center gap-3 w-full max-w-xs">
-                {isSpeedMode ? (
-                  <button
-                    onClick={handleReplayFromStart}
-                    className="w-[55%] py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-                  >
-                    <RotateCcw size={12} className="text-indigo-500" />
-                    <span>最初から再生</span>
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleReplayFromStart}
-                      className="flex-1 py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-                    >
-                      <RotateCcw size={12} className="text-indigo-500" />
-                      <span>最初から再生</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => handlePlayIndividualPart('question')}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-                    >
-                      <Volume2 size={12} className="text-indigo-500" />
-                      <span>{isQuestionBased ? "質問を再生" : "指示を再生"}</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
 
           </div>
         </div>
