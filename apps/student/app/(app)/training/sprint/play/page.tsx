@@ -1,4 +1,3 @@
-// apps\student\app\(app)\training\sprint\play\page.tsx
 'use client';
 
 import { useState, use, useMemo, useEffect } from "react";
@@ -34,13 +33,13 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   // 📦 状態管理（SPA的な画面切り替え用）
   // ────────────────────────────────────────────────────────────
-  const [view, setView] = useState<PlayerView>('loading'); // 初期状態を一時的に 'loading' に設定し、DB整合性を担保
+  const [view, setView] = useState<PlayerView>('loading'); 
   const [serverInitialConfig, setServerInitialConfig] = useState<{
     mode: 'drill' | 'sprint';
     questionType: SprintQuestionType;
     level: string;
     timeLimitSec: number;
-    contentId: string; // 💡 確定したcontentIdを保持させて引き継ぐ
+    contentId: string;
   } | null>(null);
 
   const [questions, setQuestions] = useState<SprintQuestion[]>([]);
@@ -57,49 +56,54 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       // プレイヤーから「戻ってきた」場合はストアのセッション状態が最優先
       const isReturningFromSession = store.isActiveSession && store.contentId === contentId;
       
-      let dbConfig = null;
-      // プレイヤーからの戻りでない場合に最新のDB学習履歴を取得
-      if (!isReturningFromSession) {
+      let config;
+
+      if (isReturningFromSession) {
+        // =========================================================================
+        // 🌟 修正のコア箇：プレイヤーからの戻り時はストアの実施設定を100%完全復元する
+        // =========================================================================
+        config = {
+          mode: store.mode,
+          questionType: (store.questionType || '0') as SprintQuestionType,
+          level: store.level || '0',
+          timeLimitSec: store.timeLimitSec,
+          contentId: store.contentId,
+        };
+      } else {
+        // プレイヤーからの戻りでない（完全な初回アクセス時）は、従来通りDB履歴やURLから取得
+        let dbConfig = null;
         const res = await getLastSprintSessionAction();
         if (res && res.success && res.data) {
           dbConfig = res.data;
         }
+
+        // ⚡ URLパラメータに content_id が無い場合は、最新のDB履歴からフォールバック
+        const fallbackContentId = contentId || dbConfig?.content_id || '';
+
+        // 優先順位: 1. DB履歴(dbConfig) > 2. URLパラメータ > 3. システムデフォルト
+        const fallbackType = (dbConfig?.question_type || resolvedParams.type || '0') as SprintQuestionType;
+        const fallbackLevel = resolvedParams.level || String(dbConfig?.difficulty_level ?? QUESTION_TYPES[fallbackType]?.minLevel ?? 0);
+        const fallbackTime = parseInt(resolvedParams.time_limit_sec || '', 10) || dbConfig?.time_limit_sec || 60;
+
+        // モード判定の解決
+        let fallbackMode: 'drill' | 'sprint' = 'sprint';
+        if (resolvedParams.mode === 'sprint') {
+          fallbackMode = 'sprint';
+        } else if (resolvedParams.mode === 'drill') {
+          fallbackMode = 'drill';
+        } else {
+          const isExplicitDrill = (dbConfig && dbConfig.sprint_type === '0'); 
+          fallbackMode = isExplicitDrill ? 'drill' : 'sprint';
+        }
+
+        config = {
+          mode: fallbackMode, 
+          questionType: fallbackType,
+          level: fallbackLevel,
+          timeLimitSec: fallbackTime,
+          contentId: fallbackContentId,
+        };
       }
-
-      // ⚡【バグ修正】URLパラメータに content_id が無い場合は、最新のDB履歴(dbConfig.content_id)からフォールバック
-      const fallbackContentId = contentId || dbConfig?.content_id || '';
-
-      // 優先順位: 1. DB履歴(dbConfig) > 2. URLパラメータ > 3. システムデフォルト
-      // ※ URLの type パメータは student-path.ts で '0' にハードコードされた「表示ヒント」に過ぎないため、
-      //    実際の学習履歴（dbConfig）を優先する。
-      const fallbackType = (dbConfig?.question_type || resolvedParams.type || '0') as SprintQuestionType;
-      const fallbackLevel = resolvedParams.level || String(dbConfig?.difficulty_level ?? QUESTION_TYPES[fallbackType]?.minLevel ?? 0);
-      const fallbackTime = parseInt(resolvedParams.time_limit_sec || '', 10) || dbConfig?.time_limit_sec || 60;
-
-      // 💡 モードのデフォルトを 'sprint' に変更
-      // URLパラメータが明示的に 'drill' であるか、またはDBのsprint_typeがドリル（例: '0' や特定のドリル値）の場合以外は、すべて 'sprint' をデフォルトとする
-      
-      // ⚡【最重要・不具合修正】URLパラメータの mode が明示的に指定されている場合は最優先で評価します。
-      // これにより、URLに `mode=sprint` が指定されている場合に `sprint_type=0` の条件によってドリルへと誤判定されるのを完全に防ぎます。
-      let fallbackMode: 'drill' | 'sprint' = 'sprint';
-      
-      if (resolvedParams.mode === 'sprint') {
-        fallbackMode = 'sprint';
-      } else if (resolvedParams.mode === 'drill') {
-        fallbackMode = 'drill';
-      } else {
-        // URLパラメータに mode の明示指定がない場合のみ、DBの履歴や既存ロジックによるフォールバックを適用
-        const isExplicitDrill = (dbConfig && dbConfig.sprint_type === '0'); 
-        fallbackMode = isExplicitDrill ? 'drill' : 'sprint';
-      }
-
-      const config = {
-        mode: fallbackMode, 
-        questionType: fallbackType,
-        level: fallbackLevel,
-        timeLimitSec: fallbackTime,
-        contentId: fallbackContentId, // 💡 configオブジェクト内に確定したIDを格納
-      };
 
       setServerInitialConfig(config);
 
@@ -107,7 +111,10 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       const isResume = resolvedParams.resume === 'true';
       const hasLevel = !!resolvedParams.level;
       
-      if (isResume || hasLevel) {
+      // 💡 セッション戻りの時は常に 'selecting' (選択画面) にする
+      if (isReturningFromSession) {
+        setView('selecting');
+      } else if (isResume || hasLevel) {
         setView('gesture_needed');
       } else {
         setView('selecting');
@@ -124,7 +131,6 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   const handleStartSession = async (config: SprintConfig & { answerType: SprintAnswerType }) => {
     setView('loading');
     
-    // パラメータのバリデーションチェック
     const validTypes: SprintQuestionType[] = ['0', '4', '5', '6'];
     const questionType = validTypes.includes(config.questionType as SprintQuestionType)
       ? (config.questionType as SprintQuestionType)
@@ -133,10 +139,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     const parsedLevel = parseInt(config.level || '', 10);
     const difficultyLevel = isNaN(parsedLevel) ? QUESTION_TYPES[questionType].minLevel : parsedLevel;
 
-    // ⚡確定した正確な contentId を serverInitialConfig から取得
     const targetContentId = serverInitialConfig?.contentId || contentId;
 
-    // もしフォールバックしても UUID が空の場合は、例外エラーを回避するためにアーリーリターンでエラー画面へ
     if (!targetContentId) {
       setView('error');
       return;
@@ -178,7 +182,6 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // 🏎️ ビューレンダリング
   // ────────────────────────────────────────────────────────────
 
-  // 🌟 DB整合性データの取得が完了するまでは、不正な初期値での描画を防ぐためローディングで待機
   if (view === 'loading' || !serverInitialConfig) {
     return (
       <div className="fixed inset-0 bg-slate-50 flex items-center justify-center">
@@ -216,7 +219,6 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
           </div>
           <button
             onClick={() => {
-              // ジェスチャー内でのオーディオアンロック
               const audio = new Audio();
               audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
               audio.play().catch(() => {});
@@ -263,7 +265,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       <SprintDrillPlayer 
         questions={questions} 
         initialQuestionId={resumeId} 
-        initialStarted={true} // SelectまたはReady画面でタップ済みであることを子に伝える
+        initialStarted={true} 
         onExit={() => setView('selecting')}
       />
     );

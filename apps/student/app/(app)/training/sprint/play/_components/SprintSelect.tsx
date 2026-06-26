@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { 
   QUESTION_TYPES, 
   SPRINT_TIME_OPTIONS, 
+  DEFAULT_SPRINT_TIME_KEY,
   type SprintQuestionType,
   type SprintAnswerType,
   SPRINT_THEMES,
@@ -49,33 +50,52 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const clearIsActiveSession = useSprintStore((state) => state.clearIsActiveSession);
   
   const [userProgress, setUserProgress] = useState<any>(null);
+  
+  // 💡 マスタからデフォルトキーに対応する制限秒数を動的に参照（フォールバック付き）
+  const DEFAULT_TIME = SPRINT_TIME_OPTIONS[DEFAULT_SPRINT_TIME_KEY]?.value ?? 90;
   const DEFAULT_TYPE: SprintQuestionType = '0';
-  const DEFAULT_TIME = 60;
 
+  // 💡 セッション（実施）から戻ってきたかどうかの判定フラグ
   const isReturningFromSession = store.isActiveSession && store.contentId === contentId;
 
-  const initialType = isReturningFromSession
-    ? (store.questionType as SprintQuestionType)
-    : (initialConfig?.questionType || DEFAULT_TYPE);
-
+  // =========================================================================
+  // 🌟 修正箇所: 戻ってきた場合は「ストアの最終実施設定」を完全に正として同期する
+  // =========================================================================
+  
+  // 1. モードの設定
   const [mode, setMode] = useState<'sprint' | 'drill'>(
     isReturningFromSession ? store.mode : (initialConfig?.mode || 'sprint')
   );
-  const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType);
-  const [selectedLevel, setSelectedLevel] = useState<string>(
-    isReturningFromSession ? store.level : (searchParams.get('level') || String(QUESTION_TYPES[initialType].minLevel))
+
+  // 2. 問題種別 (Type) の設定
+  const [selectedType, setSelectedType] = useState<SprintQuestionType>(
+    isReturningFromSession && store.questionType
+      ? (store.questionType as SprintQuestionType)
+      : (initialConfig?.questionType || DEFAULT_TYPE)
   );
+
+  // 3. レベルの設定 (直前のストア値を最優先。無ければURL、最終フォールバックとしてマスタの最小値)
+  const [selectedLevel, setSelectedLevel] = useState<string>(
+    isReturningFromSession 
+      ? store.level 
+      : (searchParams.get('level') || String(QUESTION_TYPES[selectedType]?.minLevel ?? '0'))
+  );
+
+  // 4. 制限時間の設定 (直前のストア値を最優先。無ければ動的デフォルト値)
   const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(
     isReturningFromSession ? store.timeLimitSec : DEFAULT_TIME
   );
   
+  // =========================================================================
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [isHintOpen, setIsHintOpen] = useState(false);
 
   useEffect(() => {
+    // コンポーネントがマウントされたらアクティブセッションのフラグを下ろす（戻り判定完了のため）
     clearIsActiveSession();
+    
     if (isReturningFromSession) return;
 
     const fetchProgress = async () => {
@@ -98,6 +118,8 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   const levelItems = useMemo(() => {
     const meta = QUESTION_TYPES[selectedType];
+    if (!meta) return [];
+    
     const clearedLevel = userProgress?.[meta.dbKey] ?? 0;
     const maxAllowed = clearedLevel + 1;
     const items = [];
@@ -112,7 +134,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   const handleTypeChange = (typeId: SprintQuestionType) => {
     setSelectedType(typeId);
-    setSelectedLevel(String(QUESTION_TYPES[typeId].minLevel));
+    setSelectedLevel(String(QUESTION_TYPES[typeId]?.minLevel ?? '0'));
   };
 
   const handleStartSubmit = (answerType: SprintAnswerType = '0') => {
@@ -213,7 +235,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     </button>
                   </DialogTrigger>
                   
-                  {/* 💡 修正箇所：アニメーションの軸を中心（sm:zoom-in-95 等）にし、かつ自動フォーカスを制御することで右上のXボタンが最初から選択されるのを防ぐ */}
                   <DialogContent 
                     onOpenAutoFocus={(e) => e.preventDefault()}
                     className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border-none bg-white p-6 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-2xl text-slate-900 outline-none"
@@ -549,7 +570,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                           return (
                             <button
                               type="button"
-                              key={opt.value}
+                              key={opt.seq_no}
                               onClick={() => setSelectedTimeLimitSec(opt.value)}
                               className={cn("p-3 rounded-xl border text-left transition-all flex items-center justify-between", isSelected ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10" : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50")}
                             >

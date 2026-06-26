@@ -1,11 +1,17 @@
-// stores/useSprintStore.ts
 'use client';
 
 import { create } from 'zustand';
-import { SprintQuestion, SprintQuestionType, SprintAnswerType } from "@gabby/types/sprint";
+import { 
+  SprintQuestion, 
+  SprintQuestionType, 
+  SprintAnswerType,
+  // 💡 追加：マスタデータとデフォルトキーをインポート
+  SPRINT_TIME_OPTIONS,
+  DEFAULT_SPRINT_TIME_KEY 
+} from "@gabby/types/sprint";
 import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
 
-// 📝 追加：1問題ごとの回答結果・スキップ結果を保持するデータ型
+// 📝 1問題ごとの回答結果・スキップ結果を保持するデータ型
 export interface SprintQuestionResult {
   questionId: string;
   currentIndex: number;
@@ -35,7 +41,7 @@ interface SprintState {
   feedback: FeedbackConfig | null;
   analysis: AnalysisResult | null;
   
-  // --- 🌟 追加：このセッションの回答結果の履歴配列 ---
+  // --- 🌟 このセッションの回答結果の履歴配列 ---
   sessionResults: SprintQuestionResult[];
 
   // --- Progress States ---
@@ -47,14 +53,14 @@ interface SprintState {
   setSprintConfig: (config: { contentId: string, sprintType: string, questionType: SprintQuestionType, level: string, answerType: SprintAnswerType, timeLimitSec: number }) => void;
   setLoading: (loading: boolean) => void;
   
-  // --- 🌟 追加：回答結果（発話）を履歴にコミットして次へ進むアクション ---
+  // --- 🌟 回答結果（発話）を履歴にコミットして次へ進むアクション ---
   commitAssessmentResult: (questionId: string, feedback: FeedbackConfig | null, analysis: AnalysisResult | null) => { isLast: boolean };
-  // --- 🌟 追加：スキップした情報を履歴にコミットして次へ進むアクション ---
+  // --- 🌟 スキップした情報を履歴にコミットして次へ進むアクション ---
   commitSkipResult: (questionId: string) => { isLast: boolean };
 
   nextStep: () => { isLast: boolean };
   prevStep: () => void;
-  clearPendingCounts: () => { questionCount: number, assessmentCount: number, results: SprintQuestionResult[] }; // 🌟 履歴も一緒に返すよう拡張
+  clearPendingCounts: () => { questionCount: number, assessmentCount: number, results: SprintQuestionResult[] };
   incrementAssessmentCount: () => void;
   setIsRevealed: (val: boolean) => void;
   setIsRecording: (val: boolean) => void;
@@ -71,6 +77,9 @@ interface SprintState {
   resetStore: () => void;
 }
 
+// 💡 ストア全体で共有するデフォルト秒数をマスタから安全に評価 (フォールバック付き)
+const STORE_DEFAULT_TIME = SPRINT_TIME_OPTIONS[DEFAULT_SPRINT_TIME_KEY]?.value ?? 90;
+
 export const useSprintStore = create<SprintState>((set, get) => ({
   questions: [],
   currentIndex: 0,
@@ -80,7 +89,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   questionType: null,
   level: '0',
   answerType: '0',
-  timeLimitSec: 60,
+  timeLimitSec: STORE_DEFAULT_TIME, // 💡 修正：動的デフォルト値へ変更
   loading: true,
   drillEvalType: 'yes',
   isRevealed: false,
@@ -132,7 +141,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     };
     
     set({ sessionResults: [...sessionResults, newResult] });
-    return get().nextStep(); // nextStep を呼び出して進める
+    return get().nextStep();
   },
 
   // 🌟 追加：スキップ情報を保存して進む
@@ -141,14 +150,14 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     const newResult: SprintQuestionResult = {
       questionId,
       currentIndex,
-      isSkipped: true, // 👈 スキップフラグをオン
+      isSkipped: true,
       feedback: null,
       analysis: null,
       timestamp: Date.now()
     };
 
     set({ sessionResults: [...sessionResults, newResult] });
-    return get().nextStep(); // nextStep を呼び出して進める
+    return get().nextStep();
   },
 
   nextStep: () => {
@@ -203,7 +212,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     return { 
       questionCount: pendingQuestionCount, 
       assessmentCount: pendingAssessmentCount,
-      results: sessionResults // 👈 コールバック側でDB保存に使用できるようにする
+      results: sessionResults
     };
   },
 
@@ -250,7 +259,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     drillEvalType: 'yes',
     feedback: null,
     analysis: null,
-    sessionResults: [], // 🌟 クリア
+    sessionResults: [],
     loading: true,
   }),
 
@@ -263,7 +272,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     questionType: null,
     level: '0',
     answerType: '0',
-    timeLimitSec: 60,
+    timeLimitSec: STORE_DEFAULT_TIME, // 💡 修正：リセット時も動的デフォルト値へ変更
     isRevealed: false,
     isAutoPlaying: false,
     isRecording: false,
@@ -271,7 +280,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     isPlayingAnswerSequence: false,
     feedback: null,
     analysis: null,
-    sessionResults: [], // 🌟 クリア
+    sessionResults: [],
     loading: true,
     pendingQuestionCount: 0,
     pendingAssessmentCount: 0,
