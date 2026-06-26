@@ -47,6 +47,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   const store = useSprintStore();
   const setSprintConfig = useSprintStore((state) => state.setSprintConfig);
   const setIsActiveSession = useSprintStore((state) => state.setIsActiveSession);
+  const clearIsActiveSession = useSprintStore((state) => state.clearIsActiveSession);
 
   // ────────────────────────────────────────────────────────────
   // 🧭 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）
@@ -111,9 +112,12 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       const isResume = resolvedParams.resume === 'true';
       const hasLevel = !!resolvedParams.level;
       
-      // 💡 セッション戻りの時は常に 'selecting' (選択画面) にする
+      // セッション戻りの時は常に 'selecting' (選択画面) にする
       if (isReturningFromSession) {
         setView('selecting');
+        // 💡 configをセットしてからフラグをクリアする。
+        // SprintSelect は props 経由で完全に初期化されるため、フラグをクリアしても安全
+        clearIsActiveSession();
       } else if (isResume || hasLevel) {
         setView('gesture_needed');
       } else {
@@ -167,6 +171,16 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         level: String(difficultyLevel),
         answerType: config.answerType,
         timeLimitSec: config.timeLimitSec,
+      });
+
+      // 💡 serverInitialConfig をユーザー選択値で更新する
+      // プレイヤーから setView('selecting') で戻った際に SprintSelect へ正しい設定を渡すため
+      setServerInitialConfig({
+        mode: config.mode,
+        questionType,
+        level: String(difficultyLevel),
+        timeLimitSec: config.timeLimitSec,
+        contentId: targetContentId,
       });
 
       // プレイヤーへ遷移する前にフラグを立てる（SprintSelectへ戻った際に状態復元に使用）

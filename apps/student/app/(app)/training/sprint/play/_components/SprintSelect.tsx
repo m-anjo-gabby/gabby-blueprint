@@ -36,8 +36,11 @@ import {
 
 interface SprintSelectProps {
   initialConfig?: {
-    mode?: 'sprint' | 'drill';
+    mode?: 'drill' | 'sprint';
     questionType?: SprintQuestionType;
+    level?: string;
+    timeLimitSec?: number;
+    contentId?: string;
   };
   onStart: (config: SprintConfig & { answerType: SprintAnswerType }) => void;
 }
@@ -45,59 +48,38 @@ interface SprintSelectProps {
 export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onStart }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const contentId = searchParams.get('content_id') || '';
-  const store = useSprintStore();
-  const clearIsActiveSession = useSprintStore((state) => state.clearIsActiveSession);
-  
+
   const [userProgress, setUserProgress] = useState<any>(null);
-  
+
   // 💡 マスタからデフォルトキーに対応する制限秒数を動的に参照（フォールバック付き）
   const DEFAULT_TIME = SPRINT_TIME_OPTIONS[DEFAULT_SPRINT_TIME_KEY]?.value ?? 90;
   const DEFAULT_TYPE: SprintQuestionType = '0';
 
-  // 💡 セッション（実施）から戻ってきたかどうかの判定フラグ
-  const isReturningFromSession = store.isActiveSession && store.contentId === contentId;
-
-  // =========================================================================
-  // 🌟 修正箇所: 戻ってきた場合は「ストアの最終実施設定」を完全に正として同期する
-  // =========================================================================
-  
-  // 1. モードの設定
+  // initialConfig を唯一の真実の源として使用する
+  // page.tsx 側で「戻り時はストア値」「初回時はDB/URL値」と判定済みの設定が渡ってくる
   const [mode, setMode] = useState<'sprint' | 'drill'>(
-    isReturningFromSession ? store.mode : (initialConfig?.mode || 'sprint')
+    initialConfig?.mode || 'sprint'
   );
 
-  // 2. 問題種別 (Type) の設定
   const [selectedType, setSelectedType] = useState<SprintQuestionType>(
-    isReturningFromSession && store.questionType
-      ? (store.questionType as SprintQuestionType)
-      : (initialConfig?.questionType || DEFAULT_TYPE)
+    initialConfig?.questionType || DEFAULT_TYPE
   );
 
-  // 3. レベルの設定 (直前のストア値を最優先。無ければURL、最終フォールバックとしてマスタの最小値)
   const [selectedLevel, setSelectedLevel] = useState<string>(
-    isReturningFromSession 
-      ? store.level 
-      : (searchParams.get('level') || String(QUESTION_TYPES[selectedType]?.minLevel ?? '0'))
+    initialConfig?.level ||
+    searchParams.get('level') ||
+    String(QUESTION_TYPES[initialConfig?.questionType || DEFAULT_TYPE]?.minLevel ?? '0')
   );
 
-  // 4. 制限時間の設定 (直前のストア値を最優先。無ければ動的デフォルト値)
   const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(
-    isReturningFromSession ? store.timeLimitSec : DEFAULT_TIME
+    initialConfig?.timeLimitSec || DEFAULT_TIME
   );
-  
-  // =========================================================================
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [isHintOpen, setIsHintOpen] = useState(false);
 
   useEffect(() => {
-    // コンポーネントがマウントされたらアクティブセッションのフラグを下ろす（戻り判定完了のため）
-    clearIsActiveSession();
-    
-    if (isReturningFromSession) return;
-
     const fetchProgress = async () => {
       const progRes = await getSprintProgressAction();
       if (progRes.success) {
