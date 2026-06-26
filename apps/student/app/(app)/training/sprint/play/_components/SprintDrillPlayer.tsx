@@ -36,7 +36,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const [isStarted, setIsStarted] = useState<boolean>(!!initialStarted || !initialQuestionId);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
 
-  // Zustand ストア
+  // ────────────── 🔌 Zustand ストア ──────────────
   const {
     currentIndex,
     contentId,
@@ -56,11 +56,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setFeedback,
     setAnalysis,
     drillEvalType,
-    toggleAutoPlay,
-    clearSession
+    toggleAutoPlay
   } = useSprintStore();
 
-  // 音声フック
+  // ────────────── 🔊 音声・発話カスタムフック ──────────────
   const { speak: ttsSpeak, setSpeechRate: ttsSetRate, startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
@@ -72,7 +71,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
   const isInitialized = useRef<boolean>(false);
 
-  // 💡 【追加】フローごとの一意のIDを管理するカウンター
+  // 💡 フロー管理用の一意のカウンターID
   const flowIdRef = useRef<number>(0);
 
   const isAutoPlayingRef = useRef(isAutoPlaying);
@@ -90,6 +89,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
    * 手動同期関数
    */
   const syncProgressNow = useCallback(async () => {
+    if (!contentIdRef.current) return;
     const { questionCount, assessmentCount } = useSprintStore.getState().clearPendingCounts();
     if (questionCount > 0 || assessmentCount > 0) {
       await reportSprintProgress(contentIdRef.current, questionCount, assessmentCount);
@@ -120,7 +120,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   }, [currentQuestion, questions]);
 
   // 🔊 音声再生コアロジック
-  // 💡 古いフローのIDマッチを防ぐため、カウンターを進めて全体をリセットする
+  // 💡 古い非同期 Promise の完了割り込みを防ぐため、常にカウンターを進めて全体をリセットする
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1; 
     if (autoPlayTimerRef.current) {
@@ -191,7 +191,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     }
   }, [playSingleTrack, setPlayingQuestionSequence]);
 
-  // 💡 解答フェーズ用にも一意の currentFlowId 追従ロジックを同様に実装
+  // 💡 解答フェーズ用の一意の currentFlowId 追従ロジック
   const playAnswerSequence = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
     if (!question) return;
     setPlayingAnswerSequence(true);
@@ -230,8 +230,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     if (isNavigating.current) return;
     isNavigating.current = true;
     stopAllAudio();
+    
     const { isLast } = nextStep();
     if (isLast) {
+      toggleAutoPlay(false); // 安全のため自動再生をオフに
       showToast("すべてのドリルが完了しました！お疲れ様でした。", "success");
       try {
         await syncProgressNow();
@@ -241,9 +243,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       onExit?.();
     }
     setTimeout(() => { isNavigating.current = false; }, 400);
-  }, [stopAllAudio, nextStep, showToast, onExit, syncProgressNow]);
+  }, [stopAllAudio, nextStep, toggleAutoPlay, showToast, onExit, syncProgressNow]);
 
-  // handleNext を useEffect から安全に呼ぶための Ref
   const handleNextRef = useRef(handleNext);
   useEffect(() => {
     handleNextRef.current = handleNext;
@@ -268,7 +269,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     playSingleTrack(text, voiceUrl);
   }, [playSingleTrack, isRecording, isAutoPlayingRef]);
 
-  // 🛠️ 修正点：トグルではなく指定された倍率を受け取って設定する形式に変更
   const handleSelectRate = useCallback((targetRate: number) => {
     changePlaybackRate(targetRate);
     ttsSetRate(targetRate);
@@ -366,9 +366,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     if (shouldSync) {
       syncProgressNow();
     }
-
-    return () => clearSession();
-  }, [questions, initialQuestionId, initSprint, clearSession, showToast, syncProgressNow]);
+  }, [questions, initialQuestionId, initSprint, showToast, syncProgressNow]);
 
   const handleExitWithSync = async () => {
     if (isAutoPlaying) return;
@@ -410,14 +408,15 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
-  }, [currentIndex, currentQuestion, playQuestionSequence, setIsRevealed, stopAllAudio, isStarted]);
+    // ✨ 依存関係を厳密に制限。毎秒変わる state などによる再トリガーを防ぐ。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, currentQuestion?.question_id, isStarted]);
 
   // タイムライン2：解答オープン検知
   useEffect(() => {
     if (!isRevealed || !currentQuestion) return;
 
-    // 解答再生時は、現在の問題再生フローから追従するため stopAllAudio() は呼ばず、
-    // 現在の最新のflowIdをキャプチャして継続管理する
+    // 解答再生時は、現在の再生フローIDを引き継ぎ、二重再生にならないように管理
     const currentFlowId = flowIdRef.current;
 
     const runAnswerFlow = async () => {
@@ -436,13 +435,18 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
-  }, [isRevealed, currentQuestion, playAnswerSequence]);
+    // ✨ 依存をインデックスとオープン状態に絞り、タイマー副作用から切り離し
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRevealed, currentIndex]);
 
   // フルスクリーン固定
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = originalOverflow; stopAllAudio(); };
+    return () => { 
+      document.body.style.overflow = originalOverflow; 
+      stopAllAudio(); 
+    };
   }, [stopAllAudio]);
 
   if (!questions || totalQuestions === 0 || !currentQuestion) {
@@ -532,46 +536,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
           analysis={analysis} 
           onClose={() => setFeedback(null)} 
         />
-
-        {/* ウェルカムオーバーレイ */}
-        {!isStarted && (
-          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-4 z-[100] transition-all duration-300">
-            <div className="bg-white p-8 rounded-[36px] shadow-2xl border border-slate-100 w-full max-w-sm text-center space-y-6 transform scale-100 transition-all duration-300">
-              
-              <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 text-indigo-600 animate-pulse">
-                <Volume2 size={26} strokeWidth={2.5} />
-              </div>
-
-              <div className="space-y-2">
-                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-                  Ready for Drill
-                </span>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight">
-                  {courseTitle}
-                </h3>
-                <p className="text-xs font-bold text-slate-500 leading-relaxed max-w-[250px] mx-auto">
-                  このモードでは音声が自動再生されます。<br />
-                  静かな環境、またはイヤホンを推奨します。
-                </p>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    const audio = new Audio();
-                    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
-                    audio.play().catch(() => {});
-                    window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-                  }
-                  setIsStarted(true);
-                }}
-                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
-              >
-                Start Drill Mode 🎯
-              </button>
-            </div>
-          </div>
-        )}
 
       </main>
     </div>

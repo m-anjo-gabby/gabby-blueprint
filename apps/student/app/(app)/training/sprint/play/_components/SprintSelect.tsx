@@ -40,7 +40,7 @@ interface SprintSelectProps {
     questionType?: SprintQuestionType;
     level?: string;
     timeLimitSec?: number;
-    contentId?: string;
+    contentId?: string | null;
   };
   onStart: (config: SprintConfig & { answerType: SprintAnswerType }) => void;
 }
@@ -49,14 +49,16 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // ストアから設定更新アクションと現在のconfigを取得
+  const { setConfig } = useSprintStore();
+
   const [userProgress, setUserProgress] = useState<any>(null);
 
-  // 💡 マスタからデフォルトキーに対応する制限秒数を動的に参照（フォールバック付き）
+  // マスタからデフォルトキーに対応する制限秒数を動的に参照
   const DEFAULT_TIME = SPRINT_TIME_OPTIONS[DEFAULT_SPRINT_TIME_KEY]?.value ?? 90;
   const DEFAULT_TYPE: SprintQuestionType = '0';
 
-  // initialConfig を唯一の真実の源として使用する
-  // page.tsx 側で「戻り時はストア値」「初回時はDB/URL値」と判定済みの設定が渡ってくる
+  // ─── 📦 ローカルUI状態の初期化 ───
   const [mode, setMode] = useState<'sprint' | 'drill'>(
     initialConfig?.mode || 'sprint'
   );
@@ -79,6 +81,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [isHintOpen, setIsHintOpen] = useState(false);
 
+  // ユーザー進捗の取得
   useEffect(() => {
     const fetchProgress = async () => {
       const progRes = await getSprintProgressAction();
@@ -87,8 +90,18 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       }
     };
     fetchProgress();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ─── 🔄 Zustandストアへのリアルタイム同期 ───
+  // ユーザーが選択を変更するたびに、裏側のストアへ自動保存（プレイヤーから戻ったときの設定復元を担保）
+  useEffect(() => {
+    setConfig({
+      mode,
+      questionType: selectedType,
+      level: selectedLevel,
+      timeLimitSec: selectedTimeLimitSec,
+    });
+  }, [mode, selectedType, selectedLevel, selectedTimeLimitSec, setConfig]);
 
   const sortedTypes = useMemo(() => Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no), []);
   const sortedTimes = useMemo(() => Object.values(SPRINT_TIME_OPTIONS).sort((a, b) => a.seq_no - b.seq_no), []);
@@ -126,6 +139,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       audio.play().catch(() => {});
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
     }
+
+    // ストア側のanswerTypeも確定タイミングで同期
+    setConfig({ answerType });
 
     onStart({
       mode,
@@ -172,10 +188,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
               </div>
 
               <div className="flex items-center gap-1.5 mt-1.5 shrink-0">
-                <span className={cn(
-                  "text-[10px] font-black px-2 py-0.5 rounded-md text-white leading-none tracking-wide", 
-                  mode === 'sprint' ? "bg-indigo-600" : "bg-slate-800"
-                )}>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-md text-white leading-none tracking-wide bg-indigo-600">
                   {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
                 </span>
                 {mode === 'sprint' && (
@@ -290,7 +303,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                 <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-amber-50/70 border border-amber-100/40 text-amber-900 shadow-3xs animate-in fade-in slide-in-from-top-2 duration-200">
                   <VolumeX size={13} className="mt-0.5 shrink-0 text-amber-600" />
                   <p className="text-[11px] font-bold leading-normal">
-                    移動中など声が出せない環境ですか？スプリント中も<span className="underline decoration-amber-400 decoration-2 font-black">スキップボタン</span>で発話評価をパスして次に進めます。
+                    発話できない環境の場合、<span className="underline decoration-amber-400 decoration-2 font-black">スキップボタン</span>で発話評価をパスして次に進めます。
                   </p>
                 </div>
               )}
@@ -310,7 +323,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                       Configuration / トレーニング設定
                     </span>
                     <div className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                      <span>問題種別・レベル・制限時間をカスタマイズする</span>
+                      <span>問題の種類・レベル・制限時間をカスタマイズする</span>
                     </div>
                   </div>
 
@@ -464,12 +477,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className={cn(
-                    "text-[9px] font-black px-2 py-0.5 rounded-lg border text-white",
-                    mode === 'sprint' ? "bg-indigo-600 border-indigo-600" : "bg-slate-900 border-slate-900"
-                  )}>
-                    {mode === 'sprint' ? 'sprint' : 'drill'}
-                  </span>
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
                     {QUESTION_TYPES[selectedType]?.label}
                   </span>
@@ -572,17 +579,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                 <ScrollBar orientation="vertical" className="w-2.5 bg-slate-50/30" data-vaul-no-drag />
               </ScrollArea>
             </div>
-
-            <div className="shrink-0 px-8 pt-2 bg-white pb-[max(2rem,env(safe-area-inset-bottom))] border-t border-slate-50">
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(false)}
-                className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
-              >
-                確定して戻る
-              </button>
-            </div>
-
           </DrawerContent>
         </Drawer>
 

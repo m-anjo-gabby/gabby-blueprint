@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, use, useMemo, useEffect } from "react";
+import { use, useEffect } from "react";
 import { getSprintQuestionsAction, getLastSprintSessionAction } from "@/actions/sprintAction";
 import { SprintSelect } from "./_components/SprintSelect";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
-import { SprintQuestion, SprintQuestionType, SprintAnswerType, SprintConfig, QUESTION_TYPES } from "@gabby/types/sprint";
+import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
 import { useSprintStore } from "@/stores/useSprintStore";
 import { AlertCircle, Loader2, Volume2 } from "lucide-react";
 import Link from "next/link";
@@ -24,30 +24,14 @@ interface PageProps {
   }>;
 }
 
-type PlayerView = 'selecting' | 'loading' | 'drill' | 'sprint' | 'error' | 'gesture_needed';
-
 export default function SprintPlayPage({ searchParams }: PageProps) {
   const resolvedParams = use(searchParams);
   const contentId = resolvedParams.content_id || '';
 
   // ────────────────────────────────────────────────────────────
-  // 📦 状態管理（SPA的な画面切り替え用）
+  // 📦 状態管理（Zustandストアへ一元化、ローカルuseStateは排除）
   // ────────────────────────────────────────────────────────────
-  const [view, setView] = useState<PlayerView>('loading'); 
-  const [serverInitialConfig, setServerInitialConfig] = useState<{
-    mode: 'drill' | 'sprint';
-    questionType: SprintQuestionType;
-    level: string;
-    timeLimitSec: number;
-    contentId: string;
-  } | null>(null);
-
-  const [questions, setQuestions] = useState<SprintQuestion[]>([]);
-  const [resumeId, setResumeId] = useState<string | undefined>();
-  const store = useSprintStore();
-  const setSprintConfig = useSprintStore((state) => state.setSprintConfig);
-  const setIsActiveSession = useSprintStore((state) => state.setIsActiveSession);
-  const clearIsActiveSession = useSprintStore((state) => state.clearIsActiveSession);
+  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress } = useSprintStore();
 
   // ────────────────────────────────────────────────────────────
   // 🧭 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）
@@ -55,20 +39,23 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   useEffect(() => {
     const initializeConfigAndView = async () => {
       // プレイヤーから「戻ってきた」場合はストアのセッション状態が最優先
-      const isReturningFromSession = store.isActiveSession && store.contentId === contentId;
+      // 💡 体系化された session オブジェクトの有無でクリーンに判定
+      const isReturningFromSession = session?.isActive && config.contentId === contentId;
       
-      let config;
+      let targetConfig;
 
       if (isReturningFromSession) {
         // =========================================================================
-        // 🌟 修正のコア箇：プレイヤーからの戻り時はストアの実施設定を100%完全復元する
+        // 🌟 修正のコア箇所：プレイヤーからの戻り時はストアの実施設定を100%完全復元する
         // =========================================================================
-        config = {
-          mode: store.mode,
-          questionType: (store.questionType || '0') as SprintQuestionType,
-          level: store.level || '0',
-          timeLimitSec: store.timeLimitSec,
-          contentId: store.contentId,
+        targetConfig = {
+          mode: config.mode,
+          questionType: (config.questionType || '0') as SprintQuestionType,
+          level: config.level || '0',
+          timeLimitSec: config.timeLimitSec,
+          contentId: config.contentId,
+          answerType: config.answerType,
+          sprintType: config.sprintType,
         };
       } else {
         // プレイヤーからの戻りでない（完全な初回アクセス時）は、従来通りDB履歴やURLから取得
@@ -97,16 +84,19 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
           fallbackMode = isExplicitDrill ? 'drill' : 'sprint';
         }
 
-        config = {
+        targetConfig = {
           mode: fallbackMode, 
           questionType: fallbackType,
           level: fallbackLevel,
           timeLimitSec: fallbackTime,
           contentId: fallbackContentId,
+          answerType: (resolvedParams.answer_type as SprintAnswerType) || '0',
+          sprintType: resolvedParams.sprint_type || '0',
         };
       }
 
-      setServerInitialConfig(config);
+      // ストアのグローバル設定を一括更新
+      setConfig(targetConfig);
 
       // 初期表示Viewの決定
       const isResume = resolvedParams.resume === 'true';
@@ -114,14 +104,14 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       
       // セッション戻りの時は常に 'selecting' (選択画面) にする
       if (isReturningFromSession) {
-        setView('selecting');
+        setUiView('selecting');
         // 💡 configをセットしてからフラグをクリアする。
         // SprintSelect は props 経由で完全に初期化されるため、フラグをクリアしても安全
-        clearIsActiveSession();
+        clearSessionProgress();
       } else if (isResume || hasLevel) {
-        setView('gesture_needed');
+        setUiView('gesture_needed');
       } else {
-        setView('selecting');
+        setUiView('selecting');
       }
     };
 
@@ -132,21 +122,21 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   // ⚙️ セッション開始ハンドラー
   // ────────────────────────────────────────────────────────────
-  const handleStartSession = async (config: SprintConfig & { answerType: SprintAnswerType }) => {
-    setView('loading');
+  const handleStartSession = async (selectedConfig: { mode: 'drill' | 'sprint'; questionType: SprintQuestionType; level: string; timeLimitSec: number; answerType: SprintAnswerType }) => {
+    setUiView('loading');
     
     const validTypes: SprintQuestionType[] = ['0', '4', '5', '6'];
-    const questionType = validTypes.includes(config.questionType as SprintQuestionType)
-      ? (config.questionType as SprintQuestionType)
+    const questionType = validTypes.includes(selectedConfig.questionType)
+      ? selectedConfig.questionType
       : '0';
 
-    const parsedLevel = parseInt(config.level || '', 10);
+    const parsedLevel = parseInt(selectedConfig.level || '', 10);
     const difficultyLevel = isNaN(parsedLevel) ? QUESTION_TYPES[questionType].minLevel : parsedLevel;
 
-    const targetContentId = serverInitialConfig?.contentId || contentId;
+    const targetContentId = config.contentId || contentId;
 
     if (!targetContentId) {
-      setView('error');
+      setUiView('error');
       return;
     }
 
@@ -154,41 +144,31 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       targetContentId,
       questionType,
       difficultyLevel,
-      config.mode
+      selectedConfig.mode
     );
 
     if (response.success && response.data && response.data.length > 0) {
-      setQuestions(response.data);
-      setResumeId(resolvedParams.resume_id);
-      
       const sprintType = resolvedParams.sprint_type || response.data[0]?.sprint_type || '0';
 
-      // Zustandストアに設定を保存
-      setSprintConfig({
-        contentId: targetContentId,
-        sprintType,
-        questionType,
-        level: String(difficultyLevel),
-        answerType: config.answerType,
-        timeLimitSec: config.timeLimitSec,
+      // 💡 ストア側のアクションに集約してセッション情報・初期化を一撃で適用
+      startSession({
+        questions: response.data,
+        mode: selectedConfig.mode,
+        config: {
+          contentId: targetContentId,
+          sprintType,
+          questionType,
+          level: String(difficultyLevel),
+          answerType: selectedConfig.answerType,
+          timeLimitSec: selectedConfig.timeLimitSec,
+          mode: selectedConfig.mode
+        },
+        resumeId: resolvedParams.resume_id
       });
 
-      // 💡 serverInitialConfig をユーザー選択値で更新する
-      // プレイヤーから setView('selecting') で戻った際に SprintSelect へ正しい設定を渡すため
-      setServerInitialConfig({
-        mode: config.mode,
-        questionType,
-        level: String(difficultyLevel),
-        timeLimitSec: config.timeLimitSec,
-        contentId: targetContentId,
-      });
-
-      // プレイヤーへ遷移する前にフラグを立てる（SprintSelectへ戻った際に状態復元に使用）
-      setIsActiveSession();
-
-      setView(config.mode);
+      setUiView(selectedConfig.mode);
     } else {
-      setView('error');
+      setUiView('error');
     }
   };
 
@@ -196,7 +176,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // 🏎️ ビューレンダリング
   // ────────────────────────────────────────────────────────────
 
-  if (view === 'loading' || !serverInitialConfig) {
+  if (ui.view === 'loading' || !config.contentId) {
     return (
       <div className="fixed inset-0 bg-slate-50 flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -208,17 +188,23 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   }
 
   // 1. 選択画面
-  if (view === 'selecting') {
+  if (ui.view === 'selecting') {
     return (
       <SprintSelect 
-        initialConfig={serverInitialConfig}
+        initialConfig={{
+          mode: config.mode,
+          questionType: config.questionType || '0',
+          level: String(config.level),
+          timeLimitSec: config.timeLimitSec,
+          contentId: config.contentId
+        }}
         onStart={handleStartSession}
       />
     );
   }
 
   // 2. ジェスチャー待ち画面（直接アクセス時のみ）
-  if (view === 'gesture_needed') {
+  if (ui.view === 'gesture_needed') {
     return (
       <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
         <div className="bg-white p-8 rounded-[36px] shadow-2xl border border-slate-100 w-full max-w-sm text-center space-y-6">
@@ -239,10 +225,10 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
               window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
               
               handleStartSession({
-                mode: serverInitialConfig.mode,
-                questionType: serverInitialConfig.questionType,
-                level: serverInitialConfig.level,
-                timeLimitSec: serverInitialConfig.timeLimitSec,
+                mode: config.mode,
+                questionType: config.questionType || '0',
+                level: String(config.level),
+                timeLimitSec: config.timeLimitSec,
                 answerType: (resolvedParams.answer_type as SprintAnswerType) || '0'
               });
             }}
@@ -256,7 +242,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   }
 
   // 4. エラー画面
-  if (view === 'error') {
+  if (ui.view === 'error') {
     return (
       <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-6">
@@ -274,22 +260,22 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   }
 
   // 5. プレイヤー（SPA切り替え）
-  if (view === 'drill') {
+  if (ui.view === 'drill') {
     return (
       <SprintDrillPlayer 
-        questions={questions} 
-        initialQuestionId={resumeId} 
+        questions={session?.questions || []} 
+        initialQuestionId={session?.resumeId} 
         initialStarted={true} 
-        onExit={() => setView('selecting')}
+        onExit={() => setUiView('selecting')}
       />
     );
   }
 
-  if (view === 'sprint') {
+  if (ui.view === 'sprint') {
     return (
       <SprintTimePlayer 
-        questions={questions} 
-        onExit={() => setView('selecting')}
+        questions={session?.questions || []} 
+        onExit={() => setUiView('selecting')}
       />
     );
   }
