@@ -112,7 +112,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   }, [audioPhase, isRevealed, isRecording, questionType, userActionSteps.length]);
 
   const statusMessage = useMemo(() => {
-    if (isRecording) return { text: `音声録音中...`, color: "text-rose-500 font-extrabold" };
+    if (isRecording) return { text: `発話中...`, color: "text-rose-500 font-extrabold" };
     if (isRevealed) return { text: "解答をCheck", color: "text-slate-400" };
     switch (audioPhase) {
       case 'statement': return { text: "基本文を再生中...", color: "text-indigo-600" };
@@ -263,7 +263,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               {(audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed && !isRecording && (
                 <div className="flex items-center gap-1 mt-1 text-slate-400">
                   <Mic size={10} className="text-rose-400" fill="currentColor" />
-                  <span className="text-[9px] font-bold leading-none">マイク起動中...</span>
+                  <span className="text-[9px] font-bold leading-none">マイクボタンから発話できます</span>
                 </div>
               )}
             </div>
@@ -369,10 +369,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 transition={{ duration: 0.2 }}
                 className="absolute inset-0 w-full h-full flex flex-col items-center justify-center group"
               >
-                <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] border-2 border-dashed border-slate-200 bg-gradient-to-b from-slate-50/50 to-white/30 group-hover:border-indigo-100 group-hover:from-indigo-50/10 transition-colors duration-300" />
+                <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] border-2 border-dashed border-slate-200 bg-gradient-to-b cursor-pointer from-slate-50/50 to-white/30 group-hover:border-indigo-100 group-hover:from-indigo-50/10 transition-colors duration-300" />
                 <div className="relative z-10 flex flex-col items-center text-center space-y-3 sm:space-y-4">
                   <div className="space-y-0.5 sm:space-y-1">
-                    <p className="text-[12px] sm:text-[11px] font-black tracking-[0.15em] sm:tracking-[0.2em] text-slate-400 uppercase group-hover:text-indigo-500 transition-colors">自動で発話評価がスタートします</p>
+                    <p className="text-[12px] sm:text-[11px] font-black tracking-[0.15em] sm:tracking-[0.2em] text-slate-400 uppercase group-hover:text-indigo-500 transition-colors">タップで解答文を表示します</p>
                     <p className="text-[10px] sm:text-[10px] font-bold text-slate-300 group-hover:text-slate-400 transition-colors">Listen & Answer</p>
                   </div>
                 </div>

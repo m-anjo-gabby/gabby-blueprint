@@ -13,8 +13,7 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getSprintTitle } from '@gabby/lib';
-import { FeedbackConfig } from '@gabby/types/speechAssessment';
+import { getFeedbackConfig, getSprintTitle, playStartSound } from '@gabby/lib';
 import { reportSprintProgress } from '@/actions/sprintAction';
 
 interface SprintDrillPlayerProps {
@@ -23,14 +22,6 @@ interface SprintDrillPlayerProps {
   initialStarted?: boolean;
   onExit?: () => void;
 }
-
-const getFeedbackConfig = (score: number): FeedbackConfig => {
-  if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
-  if (score >= 0.80) return { fill: '#3B82F6', tagText: 'Great' };
-  if (score >= 0.60) return { fill: '#F59E0B', tagText: 'Good' };
-  if (score >= 0.30) return { fill: '#F97316', tagText: 'Fair' };
-  return { fill: '#EF4444', tagText: 'Poor' };
-};
 
 export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({ 
   questions = [],
@@ -285,6 +276,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const handleStartRecord = useCallback(() => {
     if (!currentQuestion) return;
+    playStartSound();
     stopAllAudio();
     setFeedback(null);
     setAnalysis(null);
