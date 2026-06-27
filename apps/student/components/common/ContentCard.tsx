@@ -70,7 +70,7 @@ export const ContentCard = ({
             <div className="flex items-center gap-2">
               <TypeIcon size={18} strokeWidth={2.5} className={cn("shrink-0", theme.text)} />
               <span className={cn(
-                "text-[12px] font-black uppercase tracking-widest whitespace-nowrap hidden sm:inline", 
+                "text-[12px] font-black uppercase tracking-widest whitespace-nowrap inline", 
                 theme.text
               )}>
                 {typeLabel}

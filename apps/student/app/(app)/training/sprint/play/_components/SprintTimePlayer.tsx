@@ -41,6 +41,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     commitSkipResult,        
     setIsRecording,
     incrementAssessmentCount,
+    contentName,
   } = useSprintStore();
 
   // ────────────── 📦 ローカル管理ステート ──────────────
@@ -427,7 +428,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             </button>
 
             <div className="flex flex-col items-center">
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">Sprint Mode</span>
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">{contentName || 'Sprint Mode'}</span>
               <h1 className="text-sm font-black text-slate-800 tracking-tight text-center max-w-[200px] truncate">{courseTitle}</h1>
             </div>
 

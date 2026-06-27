@@ -32,7 +32,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   // 📦 状態管理（Zustandストアへ一元化、ローカルuseStateは排除）
   // ────────────────────────────────────────────────────────────
-  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress, setContentMetadata } = useSprintStore();
+  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress, setContentMetadata, setContentName } = useSprintStore();
 
   // ────────────────────────────────────────────────────────────
   // 🧭 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）
@@ -66,7 +66,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
           dbConfig = res.data;
         }
 
-        // ⚡ URLパラメータに content_id が無い場合は、最新のDB履歴からフォールバック
+        // ⚡ URLパラメータに content_id が無い場合は、最新 of DB履歴からフォールバック
         const fallbackContentId = contentId || dbConfig?.content_id || '';
 
         // 優先順位: 1. DB履歴(dbConfig) > 2. URLパラメータ > 3. システムデフォルト
@@ -105,11 +105,14 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         const contentRes = await getContentAction(fallbackContentId);
         if (contentRes && contentRes.success && contentRes.data) {
           setContentMetadata(contentRes.data.metadata?.sprint || null);
+          setContentName(contentRes.data.content_name || null);
         } else {
           setContentMetadata(null);
+          setContentName(null);
         }
       } else {
         setContentMetadata(null);
+        setContentName(null);
       }
 
       // 初期表示Viewの決定

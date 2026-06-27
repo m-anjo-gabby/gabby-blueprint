@@ -31,6 +31,7 @@ interface SprintState {
     sprintType: string | null;
   };
   contentMetadata: MetadataSprint | null;
+  contentName: string | null;
   session: {
     isActive: boolean;
     questions: SprintQuestion[];
@@ -77,6 +78,7 @@ interface SprintState {
   startSession: (params: { questions: SprintQuestion[]; mode: 'drill' | 'sprint'; config: SprintConfigInput; resumeId?: string }) => void;
   clearSessionProgress: () => void;
   setContentMetadata: (metadata: MetadataSprint | null) => void;
+  setContentName: (name: string | null) => void;
   
   // プレイヤーコア用アクション
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
@@ -118,6 +120,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     sprintType: '0',
   },
   contentMetadata: null,
+  contentName: null,
   session: {
     isActive: false,
     questions: [],
@@ -196,6 +199,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
       }
     };
   }),
+  setContentName: (name) => set({ contentName: name }),
   
   setConfig: (inputConfig) => set((state) => ({
     config: {

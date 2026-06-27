@@ -49,7 +49,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const searchParams = useSearchParams();
 
   // ストアから設定更新アクションと現在のconfigを取得
-  const { config, contentMetadata, setConfig } = useSprintStore();
+  const { config, contentMetadata, contentName, setConfig } = useSprintStore();
 
   const [userProgress, setUserProgress] = useState<any>(null);
 
@@ -182,7 +182,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
             >
               <div className="mb-1 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100">
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">
-                  Current Target
+                  {contentName || 'Current Target'}
                 </span>
               </div>
               
