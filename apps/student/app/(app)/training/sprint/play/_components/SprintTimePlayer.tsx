@@ -60,6 +60,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
   const flowIdRef = useRef<number>(0);
   const hasAutoStartedRef = useRef<boolean>(false);
+  const skippedQuestionIdsRef = useRef<Set<string>>(new Set());
 
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
@@ -269,12 +270,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
 
+    const currentQuestionId = currentQuestion.question_id;
+
     startAssessment(targetText, cleanWords, (result) => {
+      // スキップされた問題の場合は、非同期の評価コミットを行わない
+      if (skippedQuestionIdsRef.current.has(currentQuestionId)) {
+        return;
+      }
+
       setIsRecording(false);
       incrementAssessmentCount();
 
       const { isLast } = commitAssessmentResult(
-        currentQuestion.question_id,
+        currentQuestionId,
         getFeedbackConfig(result.score),
         result
       );
@@ -293,6 +301,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const handleSkipQuestion = useCallback(() => {
     if (!currentQuestion) return;
+
+    skippedQuestionIdsRef.current.add(currentQuestion.question_id);
+
     handleStopRecord();
     stopAllAudio();
 
