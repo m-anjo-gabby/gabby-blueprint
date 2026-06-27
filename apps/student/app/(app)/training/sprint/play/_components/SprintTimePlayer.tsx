@@ -61,6 +61,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const flowIdRef = useRef<number>(0);
   const hasAutoStartedRef = useRef<boolean>(false);
   const skippedQuestionIdsRef = useRef<Set<string>>(new Set());
+  const isPersistedRef = useRef<boolean>(false);
 
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
@@ -124,6 +125,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, []);
 
   const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
+    if (isPersistedRef.current) return;
+    isPersistedRef.current = true;
     setIsSaving(true); 
 
     const storeState = useSprintStore.getState();
