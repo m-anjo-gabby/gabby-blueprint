@@ -1,7 +1,7 @@
 'use server';
 
 import { createServerClient } from "@gabby/lib/supabase/server";
-import { SprintQuestion, SprintQuestionResponse } from "@gabby/types/sprint";
+import { SprintQuestion, SprintQuestionResponse, SprintQuestionType } from "@gabby/types/sprint";
 import { createLogger, getLogContext } from "@gabby/lib/logger";
 
 const logger = createLogger("student");
@@ -484,11 +484,13 @@ export async function getSprintProgressAction() {
  * * @param contentId 教材ID (UUID)
  * @param questionCount 今回同期する延べ問題数（差分値）
  * @param assessmentCount 今回同期する発話評価回数（差分値）
+ * @param questionType 問題種別 ('0': Speed, '4': Structure, '5': Builders, '6': Mastery)
  */
 export async function reportSprintProgress(
   contentId: string,
   questionCount: number,
-  assessmentCount: number
+  assessmentCount: number,
+  questionType: SprintQuestionType // 型安全な問題種別パラメータ
 ): Promise<void> {
   const ctx = await getLogContext();
 
@@ -500,28 +502,29 @@ export async function reportSprintProgress(
   try {
     const supabase = await createServerClient();
 
-    // 先ほど作成した RPC (increment_sprint_summary) を呼び出し
+    // 修正した4引数版の RPC (increment_sprint_summary) を呼び出し
     // p_user_id はセキュリティ担保のためDB側の auth.uid() に委ねる
-    const { error } = await supabase.rpc('increment_sprint_summary', {
+    const { error } = await supabase.rpc("increment_sprint_summary", {
       p_content_id: contentId,
       p_question_count: questionCount,
-      p_assessment_count: assessmentCount
+      p_assessment_count: assessmentCount,
+      p_question_type: questionType, // 【新規追加】
     });
 
     if (error) throw error;
 
     logger.info(
       "sprint:report_progress_success",
-      `Reported sprint progress: ${questionCount} questions, ${assessmentCount} assessments`,
-      { ...ctx, payload: { contentId, questionCount, assessmentCount } }
+      `Reported sprint progress: ${questionCount} questions (${questionType}), ${assessmentCount} assessments`,
+      { ...ctx, payload: { contentId, questionCount, assessmentCount, questionType } }
     );
   } catch (err) {
     // 記録処理の失敗（ネットワーク一時不通など）が、ユーザーのドリル学習継続を阻害しないよう、
     // エラーは捕捉してログに留めるソフトランディング構造を維持
     logger.error(
       "sprint:report_progress_failed",
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, payload: { contentId, questionCount, assessmentCount } }
+      err instanceof Error ? err.message : "Unknown error",
+      { ...ctx, payload: { contentId, questionCount, assessmentCount, questionType } }
     );
   }
 }

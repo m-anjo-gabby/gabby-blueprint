@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
-import { DRILL_TIMING, SprintQuestion } from "@gabby/types/sprint";
+import { DRILL_TIMING, SprintQuestion, SprintQuestionType } from "@gabby/types/sprint";
 import { QuestionCard } from "./QuestionCard";
 import { SprintDrillPlayerControls } from "./SprintDrillPlayerControls";
 import { SprintFeedback } from "./SprintFeedback";
@@ -85,6 +85,11 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     contentIdRef.current = contentId;
   }, [contentId]);
 
+  const questionTypeRef = useRef(questionType);
+  useEffect(() => {
+    questionTypeRef.current = questionType;
+  }, [questionType]);
+
   /**
    * 手動同期関数
    */
@@ -92,7 +97,12 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     if (!contentIdRef.current) return;
     const { questionCount, assessmentCount } = useSprintStore.getState().clearPendingCounts();
     if (questionCount > 0 || assessmentCount > 0) {
-      await reportSprintProgress(contentIdRef.current, questionCount, assessmentCount);
+      await reportSprintProgress(
+        contentIdRef.current,
+        questionCount,
+        assessmentCount,
+        (questionTypeRef.current || '0') as SprintQuestionType
+      );
     }
   }, []);
 
@@ -364,6 +374,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     initSprint(questions, 'drill', startIdx);
 
     if (shouldSync) {
+      useSprintStore.setState((state) => ({
+        pendingQuestionCount: state.pendingQuestionCount + 1
+      }));
       syncProgressNow();
     }
   }, [questions, initialQuestionId, initSprint, showToast, syncProgressNow]);
