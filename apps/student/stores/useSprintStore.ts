@@ -285,13 +285,15 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     currentIndex: 0, 
     sessionResults: [], 
     mode: null,
-    session: { isActive: false, questions: [], resumeId: undefined }
+    session: { isActive: false, questions: [], resumeId: undefined },
+    ui: { view: 'loading' }
   }),
   resetStore: () => set({ 
     mode: null, 
     questions: [], 
     currentIndex: 0, 
     sessionResults: [],
-    session: { isActive: false, questions: [], resumeId: undefined }
+    session: { isActive: false, questions: [], resumeId: undefined },
+    ui: { view: 'loading' }
   })
 }));
