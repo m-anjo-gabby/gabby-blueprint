@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight, VolumeX, ChevronDown, Settings2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -49,7 +49,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const searchParams = useSearchParams();
 
   // ストアから設定更新アクションと現在のconfigを取得
-  const { setConfig } = useSprintStore();
+  const { config, contentMetadata, setConfig } = useSprintStore();
 
   const [userProgress, setUserProgress] = useState<any>(null);
 
@@ -57,24 +57,11 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const DEFAULT_TIME = SPRINT_TIME_OPTIONS[DEFAULT_SPRINT_TIME_KEY]?.value ?? 90;
   const DEFAULT_TYPE: SprintQuestionType = '0';
 
-  // ─── 📦 ローカルUI状態の初期化 ───
-  const [mode, setMode] = useState<'sprint' | 'drill'>(
-    initialConfig?.mode || 'sprint'
-  );
-
-  const [selectedType, setSelectedType] = useState<SprintQuestionType>(
-    initialConfig?.questionType || DEFAULT_TYPE
-  );
-
-  const [selectedLevel, setSelectedLevel] = useState<string>(
-    initialConfig?.level ||
-    searchParams.get('level') ||
-    String(QUESTION_TYPES[initialConfig?.questionType || DEFAULT_TYPE]?.minLevel ?? '0')
-  );
-
-  const [selectedTimeLimitSec, setSelectedTimeLimitSec] = useState<number>(
-    initialConfig?.timeLimitSec || DEFAULT_TIME
-  );
+  // ─── 📦 Zustandストアから取得した値をそのまま表示（ローカルuseStateは排除） ───
+  const mode = config.mode || 'sprint';
+  const selectedType = config.questionType || DEFAULT_TYPE;
+  const selectedLevel = String(config.level);
+  const selectedTimeLimitSec = config.timeLimitSec || DEFAULT_TIME;
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isThemeOpen, setIsThemeOpen] = useState(false);
@@ -91,24 +78,48 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     fetchProgress();
   }, []);
 
-  // ─── 🔄 Zustandストアへのリアルタイム同期 ───
-  // ユーザーが選択を変更するたびに、裏側のストアへ自動保存（プレイヤーから戻ったときの設定復元を担保）
-  useEffect(() => {
+  const isCorpus = contentMetadata?.sprint_type === '1';
+  const hasLevel = isCorpus ? contentMetadata?.has_level ?? true : true;
+
+  const isTypeSupported = useCallback((typeId: SprintQuestionType) => {
+    if (!isCorpus || !contentMetadata?.supported_types) return true;
+    const support = contentMetadata.supported_types;
+    if (typeId === '0') return support.speed;
+    if (typeId === '4') return support.structure;
+    if (typeId === '5') return support.builders;
+    if (typeId === '6') return support.mastery;
+    return false;
+  }, [isCorpus, contentMetadata]);
+
+  const handleTypeChange = (typeId: SprintQuestionType) => {
     setConfig({
-      mode,
-      questionType: selectedType,
-      level: selectedLevel,
-      timeLimitSec: selectedTimeLimitSec,
+      questionType: typeId,
+      level: hasLevel ? String(QUESTION_TYPES[typeId]?.minLevel ?? '0') : '1'
     });
-  }, [mode, selectedType, selectedLevel, selectedTimeLimitSec, setConfig]);
+  };
+
+  const handleLevelChange = (level: string) => {
+    setConfig({ level });
+  };
+
+  const handleTimeLimitChange = (time: number) => {
+    setConfig({ timeLimitSec: time });
+  };
+
+  const handleModeChange = (nextMode: 'drill' | 'sprint') => {
+    setConfig({ mode: nextMode });
+  };
 
   const sortedTypes = useMemo(() => Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no), []);
   const sortedTimes = useMemo(() => Object.values(SPRINT_TIME_OPTIONS).sort((a, b) => a.seq_no - b.seq_no), []);
 
   const currentTheme = useMemo(() => {
+    if (isCorpus && contentMetadata?.theme) {
+      return contentMetadata.theme;
+    }
     const key = `${selectedType}_${selectedLevel}`;
     return SPRINT_THEMES[key] || '標準テーマ設定';
-  }, [selectedType, selectedLevel]);
+  }, [isCorpus, contentMetadata, selectedType, selectedLevel]);
 
   const levelItems = useMemo(() => {
     const meta = QUESTION_TYPES[selectedType];
@@ -126,10 +137,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     return items;
   }, [selectedType, userProgress]);
 
-  const handleTypeChange = (typeId: SprintQuestionType) => {
-    setSelectedType(typeId);
-    setSelectedLevel(String(QUESTION_TYPES[typeId]?.minLevel ?? '0'));
-  };
 
   const handleStartSubmit = (answerType: SprintAnswerType = '0') => {
     if (typeof window !== 'undefined') {
@@ -187,9 +194,11 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
               </div>
 
               <div className="flex items-center gap-1.5 mt-1.5 shrink-0">
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-md text-white leading-none tracking-wide bg-indigo-600">
-                  {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
-                </span>
+                {hasLevel && (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md text-white leading-none tracking-wide bg-indigo-600">
+                    {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
+                  </span>
+                )}
                 {mode === 'sprint' && (
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono leading-none">
                     {selectedTimeLimitSec}s
@@ -264,7 +273,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setMode('sprint')}
+                  onClick={() => handleModeChange('sprint')}
                   className={cn(
                     "flex-1 py-3.5 px-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-xs font-black shadow-2xs",
                     mode === 'sprint'
@@ -278,7 +287,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
                 <button
                   type="button"
-                  onClick={() => setMode('drill')}
+                  onClick={() => handleModeChange('drill')}
                   className={cn(
                     "flex-1 py-3.5 px-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-xs font-black shadow-2xs",
                     mode === 'drill'
@@ -479,9 +488,11 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
                     {QUESTION_TYPES[selectedType]?.label}
                   </span>
-                  <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
-                    {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
-                  </span>
+                  {hasLevel && (
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
+                      {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
+                    </span>
+                  )}
                   {mode === 'sprint' && (
                     <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 font-mono">
                       {selectedTimeLimitSec}s
@@ -501,19 +512,24 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     <div className="grid grid-cols-2 gap-2">
                       {sortedTypes.map((type) => {
                         const isSelected = selectedType === type.value;
+                        const isSupported = isTypeSupported(type.value);
                         return (
                           <button
                             type="button"
                             key={type.value}
+                            disabled={!isSupported}
                             onClick={() => handleTypeChange(type.value)}
                             className={cn(
-                              "h-12 rounded-xl border text-xs font-black transition-all", 
+                              "h-12 rounded-xl border text-xs font-black relative transition-all disabled:opacity-40", 
                               isSelected 
                                 ? (mode === 'sprint' ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-900 border-slate-900 text-white") 
                                 : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50"
                             )}
                           >
-                            {type.label}
+                            <span>{type.label}</span>
+                            {!isSupported && (
+                              <Lock size={11} strokeWidth={2.5} className="absolute top-1.5 left-1.5 text-slate-400" />
+                            )}
                           </button>
                         );
                       })}
@@ -523,29 +539,35 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   {/* 02. レベル */}
                   <div className="space-y-2">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">02. Target Level / ターゲットレベル</span>
-                    <div className="grid grid-cols-4 gap-2">
-                      {levelItems.map((item) => {
-                        const isSelected = selectedLevel === item.value;
-                        const isLocked = item.isLocked;
-                        return (
-                          <button
-                            type="button"
-                            key={item.value}
-                            disabled={isLocked}
-                            onClick={() => setSelectedLevel(item.value)}
-                            className={cn(
-                              "h-10 rounded-xl border text-xs font-black relative transition-all disabled:opacity-40", 
-                              isSelected 
-                                ? (mode === 'sprint' ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-900 border-slate-900 text-white") 
-                                : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50"
-                            )}
-                          >
-                            {item.label}
-                            {isLocked && <Lock size={11} strokeWidth={2.5} className="absolute top-1.5 left-1.5 text-slate-500" />}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {hasLevel ? (
+                      <div className="grid grid-cols-4 gap-2">
+                        {levelItems.map((item) => {
+                          const isSelected = selectedLevel === item.value;
+                          const isLocked = item.isLocked;
+                          return (
+                            <button
+                              type="button"
+                              key={item.value}
+                              disabled={isLocked}
+                              onClick={() => handleLevelChange(item.value)}
+                              className={cn(
+                                "h-10 rounded-xl border text-xs font-black relative transition-all disabled:opacity-40", 
+                                isSelected 
+                                  ? (mode === 'sprint' ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-900 border-slate-900 text-white") 
+                                  : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50"
+                              )}
+                            >
+                              {item.label}
+                              {isLocked && <Lock size={11} strokeWidth={2.5} className="absolute top-1.5 left-1.5 text-slate-500" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 text-center">
+                        <p className="text-xs font-bold text-slate-400 leading-none">この教材にレベルの設定はありません</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* 03. 制限時間 */}
@@ -559,7 +581,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                             <button
                               type="button"
                               key={opt.seq_no}
-                              onClick={() => setSelectedTimeLimitSec(opt.value)}
+                              onClick={() => handleTimeLimitChange(opt.value)}
                               className={cn("p-3 rounded-xl border text-left transition-all flex items-center justify-between", isSelected ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10" : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50")}
                             >
                               <div>

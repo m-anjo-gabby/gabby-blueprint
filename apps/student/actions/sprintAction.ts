@@ -528,3 +528,25 @@ export async function reportSprintProgress(
     );
   }
 }
+
+/**
+ * 教材情報を取得するServer Action
+ */
+export async function getContentAction(contentId: string) {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createServerClient();
+    const { data, error } = await supabase
+      .from("com_m_contents")
+      .select("*")
+      .eq("content_id", contentId)
+      .eq("delete_flg", "0")
+      .single();
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error: any) {
+    logger.error("sprint:get_content_failed", error.message, ctx);
+    return { success: false, error: error.message };
+  }
+}

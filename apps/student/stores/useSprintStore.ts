@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { SprintQuestion, SprintQuestionType, SprintAnswerType } from "@gabby/types/sprint";
+import { SprintQuestion, SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
+import { MetadataSprint } from "@gabby/types/content";
 
 // ─── 追加：UIビューの型定義 ───
 export type SprintUiView = 'loading' | 'selecting' | 'gesture_needed' | 'error' | 'drill' | 'sprint';
@@ -29,6 +30,7 @@ interface SprintState {
     answerType: SprintAnswerType | null;
     sprintType: string | null;
   };
+  contentMetadata: MetadataSprint | null;
   session: {
     isActive: boolean;
     questions: SprintQuestion[];
@@ -74,7 +76,8 @@ interface SprintState {
   setConfig: (config: Partial<SprintConfigInput>) => void;
   startSession: (params: { questions: SprintQuestion[]; mode: 'drill' | 'sprint'; config: SprintConfigInput; resumeId?: string }) => void;
   clearSessionProgress: () => void;
-
+  setContentMetadata: (metadata: MetadataSprint | null) => void;
+  
   // プレイヤーコア用アクション
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
   clearSession: () => void;
@@ -114,6 +117,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     answerType: '0',
     sprintType: '0',
   },
+  contentMetadata: null,
   session: {
     isActive: false,
     questions: [],
@@ -147,6 +151,51 @@ export const useSprintStore = create<SprintState>((set, get) => ({
 
   // ─── ⚙️ 新規追加アクション（page.tsx 連動用） ───
   setUiView: (view) => set((state) => ({ ui: { ...state.ui, view } })),
+  setContentMetadata: (metadata) => set((state) => {
+    let nextType = state.config.questionType;
+    let nextLevel = state.config.level;
+
+    const isCorpus = metadata?.sprint_type === '1';
+    const hasLevel = isCorpus ? metadata?.has_level ?? true : true;
+
+    if (isCorpus && metadata?.supported_types) {
+      const support = metadata.supported_types;
+      // 現在のタイプが許可されているかチェック
+      const isSupported = (
+        (nextType === '0' && support.speed) ||
+        (nextType === '4' && support.structure) ||
+        (nextType === '5' && support.builders) ||
+        (nextType === '6' && support.mastery)
+      );
+
+      if (!isSupported) {
+        const availableTypes = Object.values(QUESTION_TYPES).filter(t => {
+          if (t.value === '0') return support.speed;
+          if (t.value === '4') return support.structure;
+          if (t.value === '5') return support.builders;
+          if (t.value === '6') return support.mastery;
+          return false;
+        });
+        if (availableTypes.length > 0) {
+          nextType = availableTypes[0].value;
+          nextLevel = hasLevel ? String(QUESTION_TYPES[nextType]?.minLevel ?? '0') : '1';
+        }
+      }
+    }
+
+    if (!hasLevel) {
+      nextLevel = '1';
+    }
+
+    return { 
+      contentMetadata: metadata,
+      config: {
+        ...state.config,
+        questionType: nextType,
+        level: nextLevel
+      }
+    };
+  }),
   
   setConfig: (inputConfig) => set((state) => ({
     config: {

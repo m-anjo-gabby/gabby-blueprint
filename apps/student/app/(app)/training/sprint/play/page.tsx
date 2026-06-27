@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useEffect } from "react";
-import { getSprintQuestionsAction, getLastSprintSessionAction } from "@/actions/sprintAction";
+import { getSprintQuestionsAction, getLastSprintSessionAction, getContentAction } from "@/actions/sprintAction";
 import { SprintSelect } from "./_components/SprintSelect";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
@@ -32,7 +32,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   // 📦 状態管理（Zustandストアへ一元化、ローカルuseStateは排除）
   // ────────────────────────────────────────────────────────────
-  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress } = useSprintStore();
+  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress, setContentMetadata } = useSprintStore();
 
   // ────────────────────────────────────────────────────────────
   // 🧭 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）
@@ -98,6 +98,19 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
 
       // ストアのグローバル設定を一括更新
       setConfig(targetConfig);
+
+      // コンテンツのメタデータを取得してストアに格納
+      const fallbackContentId = targetConfig.contentId;
+      if (fallbackContentId) {
+        const contentRes = await getContentAction(fallbackContentId);
+        if (contentRes && contentRes.success && contentRes.data) {
+          setContentMetadata(contentRes.data.metadata?.sprint || null);
+        } else {
+          setContentMetadata(null);
+        }
+      } else {
+        setContentMetadata(null);
+      }
 
       // 初期表示Viewの決定
       const isResume = resolvedParams.resume === 'true';
