@@ -19,6 +19,9 @@ interface HistorySession {
   time_limit_sec: number;
   total_answered: number;
   insert_date: string;
+  com_m_contents?: {
+    content_name: string;
+  } | { content_name: string }[] | null;
 }
 
 interface SprintHistoryViewProps {
@@ -260,16 +263,18 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                               >
                                 <div className="flex items-center gap-4">
                                   <span className="text-[11px] font-black text-indigo-400/80 font-mono w-4">{idx + 1}</span>
-                                  <div>
-                                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                      <span className={cn(
-                                        "text-[9px] font-black px-1.5 py-0.5 rounded-md border",
-                                        session.sprint_type === '1'
-                                          ? "bg-purple-50 border-purple-100 text-purple-600"
-                                          : "bg-slate-100 border-slate-200 text-slate-600"
-                                      )}>
-                                        {session.sprint_type === '1' ? 'コーパス' : '汎用'}
-                                      </span>
+                                  <div className="space-y-1">
+                                    {/* 1段目: 教材名 */}
+                                    <div className="text-[10px] font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
+                                      {(() => {
+                                        const raw = session.com_m_contents;
+                                        const name = Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name;
+                                        return name || '教材データなし';
+                                      })()}
+                                    </div>
+                                    
+                                    {/* 2段目: メタ情報 (種別, レベル, 形式など) */}
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
                                       <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
                                         {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
@@ -286,6 +291,8 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                         </span>
                                       )}
                                     </div>
+                                    
+                                    {/* 3段目: 実施結果数値 (時間, 解答数など) */}
                                     <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
                                       <span className="flex items-center gap-1"><Timer size={11} /> {session.time_limit_sec}秒</span>
                                       <span className="flex items-center gap-1"><Zap size={11} fill="currentColor" className="text-amber-400" /> {session.total_answered} {session.total_answered === 1 ? 'Answer' : 'Answers'}</span>

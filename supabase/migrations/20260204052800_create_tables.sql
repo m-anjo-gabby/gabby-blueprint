@@ -677,7 +677,7 @@ CREATE TABLE public.self_t_sprint (
   
   -- 設定情報 (sprint.ts マスタと完全同期)
   sprint_type TEXT NOT NULL,            -- '0': 汎用スプリント, '1': コーパススプリント
-  content_id UUID NOT NULL,             -- コンテンツID
+  content_id UUID NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,  -- コンテンツID
   question_type TEXT NOT NULL,          -- '0': Speed, '4': Structure, '5': Builders, '6': Mastery
   answer_type TEXT NOT NULL,            -- '0': YES回答, '1': NO回答
   difficulty_level SMALLINT NOT NULL,   -- 0 (Basic) 〜 10
@@ -710,8 +710,17 @@ COMMENT ON COLUMN public.self_t_sprint.insert_date IS '登録日時';
 COMMENT ON COLUMN public.self_t_sprint.update_date IS '更新日時';
 
 -- 高速集計のためのインデックス（ユーザーごと、または種別ごとのランキングや履歴用）
-CREATE INDEX idx_self_t_sprint_user_type 
-ON public.self_t_sprint (user_id, question_type, difficulty_level);
+-- 1. ユーザーごと、または種別ごとのランキングやダッシュボード集計用
+CREATE INDEX IF NOT EXISTS idx_self_t_sprint_user_type 
+  ON public.self_t_sprint (user_id, question_type, difficulty_level);
+
+-- 2. getUserSprintHistoryAction (月別履歴一覧・降順ソート) の最適化
+CREATE INDEX IF NOT EXISTS idx_self_t_sprint_user_insert_date 
+  ON public.self_t_sprint (user_id, insert_date DESC);
+
+-- 3. com_m_contents との結合（JOIN）パフォーマンス最適化
+CREATE INDEX IF NOT EXISTS idx_self_t_sprint_content_id 
+  ON public.self_t_sprint (content_id);
 
 ---------------------------------------------
 -- DDL: student_m_sprint_progress (ユーザースプリント進捗マスタ)
@@ -777,8 +786,12 @@ CREATE TABLE public.self_t_sprint_summary (
   training_date DATE NOT NULL DEFAULT CURRENT_DATE, -- タイムゾーンを考慮した「日付」
   
   question_count INT NOT NULL DEFAULT 1,             -- その日に学習した「延べ」問題数
-  assessment_count INT NOT NULL DEFAULT 0,       -- その日に発話評価した回数
-  
+  assessment_count INT NOT NULL DEFAULT 0,           -- その日に発話評価した回数
+  speed_count INT NOT NULL DEFAULT 0,                -- その日に学習した「延べ」Speed問題数
+  structure_count INT NOT NULL DEFAULT 0,            -- その日に学習した「延べ」Structure問題数
+  builders_count INT NOT NULL DEFAULT 0,             -- その日に学習した「延べ」Builders問題数
+  mastery_count INT NOT NULL DEFAULT 0,              -- その日に学習した「延べ」Mastery問題数
+
   insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 
@@ -786,8 +799,13 @@ CREATE TABLE public.self_t_sprint_summary (
   CONSTRAINT unique_sprint_user_content_date UNIQUE (user_id, content_id, training_date)
 );
 
--- インデックスはこれだけでOK。直近の学習グラフ描画や、今日の進捗取得がミリ秒で終わります。
-CREATE INDEX idx_sprint_daily_summary_perf 
-ON public.self_t_sprint_summary (user_id, training_date DESC);
+-- パフォーマンス最適化のためのインデックス定義
+-- 1. 直近の学習グラフ描画や、今日の進捗取得を高速化する複合インデックス（既存）
+CREATE INDEX IF NOT EXISTS idx_sprint_daily_summary_perf 
+  ON public.self_t_sprint_summary (user_id, training_date DESC);
+
+-- 2. com_m_contents との JOIN（インナージョイン）を劇的に高速化するインデックス（追加推奨）
+CREATE INDEX IF NOT EXISTS idx_self_t_sprint_summary_content_id
+  ON public.self_t_sprint_summary (content_id);
 
 COMMENT ON TABLE public.self_t_sprint_summary IS 'スプリントドリル日次サマリー';

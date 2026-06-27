@@ -383,7 +383,10 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
         difficulty_level,
         time_limit_sec,
         total_answered,
-        insert_date
+        insert_date,
+        com_m_contents (
+          content_name
+        )
       `)
       .eq("user_id", user.id)
       .gte("insert_date", startDate)
