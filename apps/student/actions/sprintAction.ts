@@ -372,7 +372,8 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
     const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
     const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
 
-    const { data, error } = await supabase
+    // 1. スプリントセッション履歴の取得
+    const { data: sessionsData, error: sessionsError } = await supabase
       .from("self_t_sprint")
       .select(`
         self_sprint_id,
@@ -393,21 +394,61 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
       .lte("insert_date", endDate)
       .order("insert_date", { ascending: false });
 
-    if (error) throw error;
+    if (sessionsError) throw sessionsError;
 
-    logger.info("sprint:get_history_success", "Successfully fetched sprint history", {
+    // 2. ドリル日次サマリー履歴の取得
+    const startDayStr = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDayStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    const { data: drillsData, error: drillsError } = await supabase
+      .from("self_t_sprint_summary")
+      .select(`
+        summary_id,
+        user_id,
+        content_id,
+        training_date,
+        question_count,
+        assessment_count,
+        speed_count,
+        structure_count,
+        builders_count,
+        mastery_count,
+        com_m_contents (
+          content_name
+        )
+      `)
+      .eq("user_id", user.id)
+      .gte("training_date", startDayStr)
+      .lte("training_date", endDayStr)
+      .order("training_date", { ascending: false });
+
+    if (drillsError) throw drillsError;
+
+    logger.info("sprint:get_history_success", "Successfully fetched sprint and drill history", {
       ...ctx,
-      count: data?.length || 0
+      sessionsCount: sessionsData?.length || 0,
+      drillsCount: drillsData?.length || 0
     });
 
-    return { success: true, data: data || [] };
+    return { 
+      success: true, 
+      data: {
+        sessions: sessionsData || [],
+        drills: drillsData || []
+      } 
+    };
 
   } catch (error: any) {
     logger.error("sprint:get_history_error", "Failed to fetch sprint history", {
       ...ctx,
       payload: { error: error.message }
     });
-    return { success: false, data: [], error: error.message };
+    return { 
+      success: false, 
+      data: { sessions: [], drills: [] }, 
+      error: error.message 
+    };
   }
 }
 
