@@ -5,8 +5,7 @@ import { DRILL_TIMING, SprintQuestion, SprintQuestionType } from "@gabby/types/s
 import { QuestionCard } from "./QuestionCard";
 import { SprintDrillPlayerControls } from "./SprintDrillPlayerControls";
 import { SprintFeedback } from "./SprintFeedback";
-import { ChevronLeft, Loader2, Square, Volume2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { ChevronLeft, Square } from 'lucide-react';
 
 import { useSprintStore } from '@/stores/useSprintStore';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
@@ -29,7 +28,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   initialStarted,
   onExit
 }) => {
-  const router = useRouter();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
 
@@ -462,17 +460,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     };
   }, [stopAllAudio]);
 
-  if (!questions || totalQuestions === 0 || !currentQuestion) {
-    return (
-      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-4">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">Preparing Questions</h2>
-          <button onClick={() => router.back()} className="w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest">Go Back</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none select-none">

@@ -7,8 +7,9 @@ import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
 import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
 import { useSprintStore } from "@/stores/useSprintStore";
-import { AlertCircle, Loader2, Volume2 } from "lucide-react";
+import { AlertCircle, Volume2 } from "lucide-react";
 import Link from "next/link";
+import { ContentLoading } from "@/components/common/ContentLoading";
 
 interface PageProps {
   searchParams: Promise<{
@@ -178,12 +179,10 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
 
   if (ui.view === 'loading' || !config.contentId) {
     return (
-      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
-          <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Preparing Preferences...</p>
-        </div>
-      </div>
+      <ContentLoading
+        title="Preparing your session"
+        subtitle="トレーニングを準備しています..."
+      />
     );
   }
 
