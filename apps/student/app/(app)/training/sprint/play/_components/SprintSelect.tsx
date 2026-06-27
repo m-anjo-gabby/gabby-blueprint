@@ -10,10 +10,9 @@ import {
   DEFAULT_SPRINT_TIME_KEY,
   type SprintQuestionType,
   type SprintAnswerType,
-  SPRINT_THEMES,
-  SPRINT_NOTES,
   type SprintConfig,
 } from '@gabby/types/sprint';
+import { SPRINT_THEMES, SPRINT_NOTES } from '@gabby/lib';
 
 import {
   Drawer,

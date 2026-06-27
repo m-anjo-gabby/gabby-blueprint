@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPES, SprintQuestionType, SprintQuestion } from '@gabby/types/sprint';
+import { Content } from '@gabby/types/content';
+import { useMemo } from 'react';
 import { getSprintQuestionsByFilter } from '@/actions/adminSprintAction';
 import { SprintQuestionList } from './SprintQuestionList';
 import { SprintQuestionFormDialog } from './SprintQuestionFormDialog';
@@ -15,9 +17,10 @@ import { Button } from '@/components/ui/button';
 interface SprintEditorProps {
   contentId: string;
   initialType?: SprintQuestionType;
+  content: Content;
 }
 
-export function SprintEditor({ contentId, initialType }: SprintEditorProps) {
+export function SprintEditor({ contentId, initialType, content }: SprintEditorProps) {
   const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType || '0');
   const [selectedLevel, setSelectedLevel] = useState<string>('1');
   const [questions, setQuestions] = useState<SprintQuestion[]>([]);
@@ -41,11 +44,54 @@ export function SprintEditor({ contentId, initialType }: SprintEditorProps) {
     fetchQuestions();
   }, [fetchQuestions]);
 
+  const sprintMeta = useMemo(() => content.metadata?.sprint, [content]);
+
+  const hasLevel = useMemo(() => {
+    if (sprintMeta && sprintMeta.sprint_type === '1') {
+      return sprintMeta.has_level;
+    }
+    return true;
+  }, [sprintMeta]);
+
+  const availableTypes = useMemo(() => {
+    if (!sprintMeta || sprintMeta.sprint_type !== '1') {
+      return Object.values(QUESTION_TYPES);
+    }
+    const supportedTypes = sprintMeta.supported_types;
+    if (!supportedTypes) {
+      return Object.values(QUESTION_TYPES);
+    }
+    return Object.values(QUESTION_TYPES).filter(t => {
+      if (t.value === '0') return supportedTypes.speed;
+      if (t.value === '4') return supportedTypes.structure;
+      if (t.value === '5') return supportedTypes.builders;
+      if (t.value === '6') return supportedTypes.mastery;
+      return false;
+    });
+  }, [sprintMeta]);
+
+  // 選択可能な種別やレベル概念の変更による状態の整合性確保
+  useEffect(() => {
+    if (availableTypes.length > 0) {
+      const isCurrentAvailable = availableTypes.some(t => t.value === selectedType);
+      if (!isCurrentAvailable) {
+        const fallbackType = availableTypes[0].value;
+        setSelectedType(fallbackType);
+        setSelectedLevel(hasLevel ? String(QUESTION_TYPES[fallbackType].minLevel) : '1');
+      } else if (!hasLevel && selectedLevel !== '1') {
+        setSelectedLevel('1');
+      }
+    }
+  }, [availableTypes, selectedType, hasLevel, selectedLevel]);
+
   const typeMeta = QUESTION_TYPES[selectedType];
-  const levels = Array.from(
-    { length: typeMeta.maxLevel - typeMeta.minLevel + 1 },
-    (_, i) => String(typeMeta.minLevel + i)
-  );
+  const levels = useMemo(() => {
+    if (!hasLevel) return ['1'];
+    return Array.from(
+      { length: typeMeta.maxLevel - typeMeta.minLevel + 1 },
+      (_, i) => String(typeMeta.minLevel + i)
+    );
+  }, [typeMeta, hasLevel]);
 
   return (
     <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden">
@@ -60,26 +106,30 @@ export function SprintEditor({ contentId, initialType }: SprintEditorProps) {
               {/* 種別選択 */}
               <Select value={selectedType} onValueChange={(v) => {
                 setIsLoading(true);
-                setSelectedType(v as SprintQuestionType);
-                // 種別が変わったら最小レベルにリセット
-                setSelectedLevel(String(QUESTION_TYPES[v as SprintQuestionType].minLevel));
+                const nextType = v as SprintQuestionType;
+                setSelectedType(nextType);
+                setSelectedLevel(hasLevel ? String(QUESTION_TYPES[nextType].minLevel) : '1');
               }}>
                 <SelectTrigger className="w-[180px] h-10 bg-slate-50 border-slate-200 font-bold rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {Object.values(QUESTION_TYPES).map(t => (
+                  {availableTypes.map(t => (
                     <SelectItem key={t.value} value={t.value} className="font-medium">{t.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               {/* レベル選択 */}
-              <Select value={selectedLevel} onValueChange={(v) => {
-                setIsLoading(true);
-                setSelectedLevel(v);
-              }}>
-                <SelectTrigger className="w-[120px] h-10 bg-slate-50 border-slate-200 font-bold rounded-xl">
+              <Select 
+                value={selectedLevel} 
+                onValueChange={(v) => {
+                  setIsLoading(true);
+                  setSelectedLevel(v);
+                }}
+                disabled={!hasLevel}
+              >
+                <SelectTrigger className="w-[120px] h-10 bg-slate-50 border-slate-200 font-bold rounded-xl disabled:opacity-50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -129,6 +179,7 @@ export function SprintEditor({ contentId, initialType }: SprintEditorProps) {
             type={selectedType} 
             level={Number(selectedLevel)} 
             onSuccess={fetchQuestions} 
+            contentId={contentId}
           />
         </div>
       </div>
@@ -141,7 +192,7 @@ export function SprintEditor({ contentId, initialType }: SprintEditorProps) {
             <span className="text-sm font-medium italic">Loading questions...</span>
           </div>
         ) : (
-          <SprintQuestionList questions={questions} type={selectedType} onUpdate={fetchQuestions} />
+          <SprintQuestionList questions={questions} type={selectedType} onUpdate={fetchQuestions} contentId={contentId} />
         )}
       </div>
     </div>

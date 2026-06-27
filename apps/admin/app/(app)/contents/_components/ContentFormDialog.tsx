@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType, CEFR_CONFIG } from '@gabby/types/content';
@@ -30,7 +32,17 @@ const contentSchema = z.object({
   description: z.string().optional(),
   cefr_id: z.string().optional(),
   sprint_type: z.string().optional(),
-}).superRefine((data, ctx) => {
+  
+  // コーパススプリント用の拡張メタデータ用フィールド
+  sprint_theme: z.string().optional(),
+  sprint_has_level: z.boolean(),
+  sprint_support_speed: z.boolean(),
+  sprint_support_builders: z.boolean(),
+  sprint_support_structure: z.boolean(),
+  sprint_support_mastery: z.boolean(),
+});
+
+const refinedContentSchema = contentSchema.superRefine((data, ctx) => {
   // 教材種別が「スプリント (2)」の場合のバリデーション
   if (data.content_type === '2') {
     if (!data.sprint_type || data.sprint_type === 'none') {
@@ -39,6 +51,27 @@ const contentSchema = z.object({
         message: 'スプリント種別を選択してください',
         path: ['sprint_type'],
       });
+      return;
+    }
+
+    // コーパススプリント ('1') の場合のみテーマを必須にする等のバリデーション
+    if (data.sprint_type === '1') {
+      if (!data.sprint_theme || data.sprint_theme.trim() === '') {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'コーパススプリントの場合はテーマを入力してください',
+          path: ['sprint_theme'],
+        });
+      }
+      
+      // 少なくとも一つの問題種別が選択されているかチェック
+      if (!data.sprint_support_speed && !data.sprint_support_builders && !data.sprint_support_structure && !data.sprint_support_mastery) {
+        ctx.addIssue({
+          code: 'custom',
+          message: '少なくとも1つの問題種別を有効にしてください',
+          path: ['sprint_support_speed'], // 代表してspeedの箇所にエラーを出す
+        });
+      }
     }
   }
 });
@@ -56,10 +89,16 @@ const DEFAULT_VALUES: ContentFormValues = {
   content_scope: '9',
   content_label: '',
   seq_no: '1',
-  difficulty_level: '1', // デフォルト値は1固定
+  difficulty_level: '1',
   description: '',
   cefr_id: 'none',
   sprint_type: 'none',
+  sprint_theme: '',
+  sprint_has_level: false, // コーパスは基本レベル1固定なのでデフォルトfalse
+  sprint_support_speed: true,
+  sprint_support_builders: false,
+  sprint_support_structure: false,
+  sprint_support_mastery: false,
 };
 
 export function ContentFormDialog({ mode = 'create', initialData }: ContentFormDialogProps) {
@@ -71,6 +110,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
   const getInitialValues = (data?: Content): ContentFormValues => {
     if (!data || mode === 'create') return DEFAULT_VALUES;
+    
+    const sprintMeta = data.metadata?.sprint;
     return {
       content_name: data.content_name,
       content_type: String(data.content_type),
@@ -80,17 +121,32 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       difficulty_level: String(data.difficulty_level || 1),
       description: data.description || '',
       cefr_id: data.metadata?.cefr?.id || 'none',
-      sprint_type: data.metadata?.sprint?.sprint_type || 'none',
+      sprint_type: sprintMeta?.sprint_type || 'none',
+      // メタデータから値を復元
+      sprint_theme: sprintMeta?.theme || '',
+      sprint_has_level: sprintMeta?.has_level ?? false,
+      sprint_support_speed: sprintMeta?.supported_types?.speed ?? true,
+      sprint_support_builders: sprintMeta?.supported_types?.builders ?? false,
+      sprint_support_structure: sprintMeta?.supported_types?.structure ?? false,
+      sprint_support_mastery: sprintMeta?.supported_types?.mastery ?? false,
     };
   };
 
   const form = useForm<ContentFormValues>({
-    resolver: zodResolver(contentSchema),
+    resolver: zodResolver(refinedContentSchema),
     defaultValues: getInitialValues(initialData),
   });
 
   const { isSubmitting } = form.formState;
   const currentContentType = form.watch('content_type');
+  const currentSprintType = form.watch('sprint_type');
+
+  // 種別が変わったときにスプリント用の値をリセット・制御するためのEffect
+  useEffect(() => {
+    if (currentContentType !== '2') {
+      form.setValue('sprint_type', 'none');
+    }
+  }, [currentContentType, form]);
 
   const onSubmit = async (values: ContentFormValues) => {
     setServerError(null);
@@ -100,11 +156,38 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       const selectedCefr = cefrKey ? CEFR_CONFIG[cefrKey] : undefined;
 
       const isSprint = values.content_type === '2';
-      const sprintMetadata = isSprint && values.sprint_type !== 'none'
-        ? {
-            sprint_type: values.sprint_type!,
-          }
-        : undefined;
+      
+      // スプリントメタデータの構築
+      let sprintMetadata = undefined;
+      if (isSprint && values.sprint_type !== 'none') {
+        if (values.sprint_type === '1') {
+          // コーパススプリントの場合は、画面からの入力値を反映
+          sprintMetadata = {
+            sprint_type: '1' as const,
+            theme: values.sprint_theme || '',
+            has_level: values.sprint_has_level,
+            supported_types: {
+              speed: values.sprint_support_speed,
+              builders: values.sprint_support_builders,
+              structure: values.sprint_support_structure,
+              mastery: values.sprint_support_mastery,
+            }
+          };
+        } else {
+          // 汎用スプリント ('0') の場合は固定値をセット
+          sprintMetadata = {
+            sprint_type: '0' as const,
+            theme: '汎用スプリント固定定義',
+            has_level: true, // 汎用は既存マスタ通りレベル概念を持つ
+            supported_types: {
+              speed: true,
+              builders: true,
+              structure: true,
+              mastery: true,
+            }
+          };
+        }
+      }
 
       const payload: Partial<Content> = {
         content_name: values.content_name,
@@ -112,7 +195,6 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         content_scope: Number(values.content_scope) as ContentScope,
         content_label: values.content_label,
         seq_no: Number(values.seq_no),
-        // スプリントかどうかに関わらず、難易度は1固定（または既存の値を踏襲）
         difficulty_level: Number(values.difficulty_level || 1),
         description: values.description,
         metadata: {
@@ -242,9 +324,9 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                 )} />
               </div>
 
-              {/* --- スプリント選択時のみ表示する特化セクション（レベル削除に伴い、横幅全体表示に修正） --- */}
+              {/* --- スプリント選択時のみ表示する特化セクション --- */}
               {currentContentType === '2' && (
-                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80">
+                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80 space-y-4">
                   {/* スプリント種別 */}
                   <FormField control={form.control} name="sprint_type" render={({ field }) => (
                     <FormItem className="w-full">
@@ -262,16 +344,103 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">選択してください</SelectItem>
-                            {Object.values(SPRINT_TYPES)
-                              .map((sprint) => (
-                                <SelectItem key={sprint.value} value={sprint.value}>{sprint.label}</SelectItem>
-                              ))}
+                            {Object.values(SPRINT_TYPES).map((sprint) => (
+                              <SelectItem key={sprint.value} value={sprint.value}>{sprint.label}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       )}
                       <FormMessage />
                     </FormItem>
                   )} />
+
+                  {/* コーパススプリント ('1') 選択時のみ、追加の管理項目群を動的に展開 */}
+                  {currentSprintType === '1' && (
+                    <div className="pt-2 border-t border-indigo-100/50 space-y-4 animate-in fade-in duration-200">
+                      
+                      {/* テーマ入力 */}
+                      <FormField control={form.control} name="sprint_theme" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">教材テーマ（コーパス限定）</FormLabel>
+                          {isConfirming ? (
+                            <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-bold whitespace-pre-wrap">{field.value || '-'}</div>
+                          ) : (
+                            <FormControl>
+                              <Textarea {...field} placeholder="例: 現在形で5〜8単語で構成されたフレーズ" className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]" />
+                            </FormControl>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
+                      {/* レベル有無の制御 (Switch) */}
+                      <FormField control={form.control} name="sprint_has_level" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-xl border border-indigo-100 bg-white p-3 shadow-sm">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">問題種別ごとのレベル管理</FormLabel>
+                            <FormDescription className="text-[11px] text-slate-400">
+                              有効にすると問題種別ごとのレベル設定を保持します
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            {isConfirming ? (
+                              <div className="text-sm font-bold text-slate-700">{field.value ? 'あり' : 'なし (レベル1固定)'}</div>
+                            ) : (
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            )}
+                          </FormControl>
+                        </FormItem>
+                      )} />
+
+                      {/* 対応問題種別 (Checkboxグループ) */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-indigo-600 uppercase tracking-wider block">有効にする問題種別</label>
+                        <div className="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border border-indigo-100 shadow-sm">
+                          
+                          {/* Speed */}
+                          <FormField control={form.control} name="sprint_support_speed" render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
+                              <FormControl>
+                                <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isConfirming} />
+                              </FormControl>
+                              <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">UG Speed</FormLabel>
+                            </FormItem>
+                          )} />
+
+                          {/* Builders */}
+                          <FormField control={form.control} name="sprint_support_builders" render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
+                              <FormControl>
+                                <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isConfirming} />
+                              </FormControl>
+                              <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">UG Builders</FormLabel>
+                            </FormItem>
+                          )} />
+
+                          {/* Structure */}
+                          <FormField control={form.control} name="sprint_support_structure" render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
+                              <FormControl>
+                                <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isConfirming} />
+                              </FormControl>
+                              <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">UG Structure</FormLabel>
+                            </FormItem>
+                          )} />
+
+                          {/* Mastery */}
+                          <FormField control={form.control} name="sprint_support_mastery" render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
+                              <FormControl>
+                                <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isConfirming} />
+                              </FormControl>
+                              <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">UG Mastery</FormLabel>
+                            </FormItem>
+                          )} />
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -312,7 +481,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                 )} />
               </div>
 
-              {/* 管理ラベル（単一1行で幅いっぱいに表示） */}
+              {/* 管理ラベル */}
               <FormField control={form.control} name="content_label" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">管理ラベル</FormLabel>

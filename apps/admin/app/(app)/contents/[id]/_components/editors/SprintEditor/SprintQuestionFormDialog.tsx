@@ -46,9 +46,10 @@ interface Props {
   initialStatement?: string;
   initialStatementJa?: string;
   onSuccess: () => void;
+  contentId: string;
 }
 
-export function SprintQuestionFormDialog({ mode, initialData, type, level, initialGroupId, initialStatement, initialStatementJa, onSuccess }: Props) {
+export function SprintQuestionFormDialog({ mode, initialData, type, level, initialGroupId, initialStatement, initialStatementJa, onSuccess, contentId }: Props) {
   const [open, setOpen] = useState(false);
   const { showToast } = useToast();
   const isSpeed = type === '0';
@@ -116,6 +117,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
 
     const payload = values.items.map(item => ({
       ...item,
+      content_id: contentId,
       // 空文字をnullに変換してUUID型エラーを回避
       group_id: (isSpeed || !values.group_id) ? null : values.group_id,
       question_type: type,

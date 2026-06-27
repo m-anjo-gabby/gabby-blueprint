@@ -32,9 +32,10 @@ interface SprintQuestionListProps {
   questions: SprintQuestion[];
   type: SprintQuestionType;
   onUpdate: () => void;
+  contentId: string;
 }
 
-export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestionListProps) {
+export function SprintQuestionList({ questions, type, onUpdate, contentId }: SprintQuestionListProps) {
   const { showToast } = useToast();
   const { play, isPlaying } = usePlayAudioSpeech();
   const isSpeed = type === '0';
@@ -140,6 +141,7 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                         initialStatement={group.items[0].statement_en || ''}
                         initialStatementJa={group.items[0].statement_ja || ''}
                         onSuccess={onUpdate} 
+                        contentId={contentId}
                       />
                     </div>
                     {isMastery && group.items[0]?.statement_en && (
@@ -192,7 +194,7 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
 
                         {/* 右：アクション */}
                         <div className="flex flex-col gap-2 shrink-0">
-                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} />
+                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} contentId={contentId} />
                         </div>
                       </div>
                     ))}
@@ -248,7 +250,7 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                           </div>
                         </div>
                         <div className="flex flex-col gap-2 shrink-0">
-                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} />
+                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} contentId={contentId} />
                         </div>
                       </div>
                     </div>
@@ -264,7 +266,7 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
 }
 
 /* アクションボタン部分を共通化 */
-function SprintQuestionActionButtons({ q, type, onUpdate, handleDelete }: { q: SprintQuestion, type: SprintQuestionType, onUpdate: () => void, handleDelete: (id: string) => void }) {
+function SprintQuestionActionButtons({ q, type, onUpdate, handleDelete, contentId }: { q: SprintQuestion, type: SprintQuestionType, onUpdate: () => void, handleDelete: (id: string) => void, contentId: string }) {
   return (
     <>
       <SprintQuestionFormDialog 
@@ -273,6 +275,7 @@ function SprintQuestionActionButtons({ q, type, onUpdate, handleDelete }: { q: S
         type={type} 
         level={q.difficulty_level} 
         onSuccess={onUpdate} 
+        contentId={contentId}
       />
       
       <AlertDialog>
