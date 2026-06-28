@@ -322,7 +322,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
             className="w-full max-w-sm h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
             <span>教材を選択する</span>
-            <Library size={14} />
+            <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
       </div>

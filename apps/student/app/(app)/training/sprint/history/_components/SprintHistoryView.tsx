@@ -452,7 +452,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             onClick={() => router.push('/training/sprint/play?mode=sprint')}
             className="w-full max-w-sm h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>スプリントを開始する</span>
+            <span>スプリントを選択</span>
             <ArrowRight size={14} strokeWidth={2.5} />
           </button>
         </div>

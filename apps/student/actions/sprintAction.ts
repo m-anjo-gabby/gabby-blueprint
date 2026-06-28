@@ -142,24 +142,32 @@ export async function getSprintQuestionsAction(
       }
     } 
     else {
+      // 1. ユニークな group_id を抽出
+      const allUniqueGroupIds = Array.from(new Set(rawRows.map(item => item.group_id).filter(Boolean))) as string[];
+      
+      // 2. group_id リストをシャッフルし、モードに応じてスライス
+      let targetGroupIds = shuffleArray(allUniqueGroupIds);
       if (mode === 'sprint') {
-        const allUniqueGroupIds = Array.from(new Set(rawRows.map(item => item.group_id).filter(Boolean)));
-        const sampledGroupIds = shuffleArray(allUniqueGroupIds).slice(0, SPRINT_LIMIT_COUNT);
-
-        finalData = rawRows
-          .filter(item => sampledGroupIds.includes(item.group_id))
-          .sort((a, b) => {
-            if (a.group_id! < b.group_id!) return -1;
-            if (a.group_id! > b.group_id!) return 1;
-            return (a.seq_no || 0) - (b.seq_no || 0);
-          });
-      } else {
-        finalData = [...rawRows].sort((a, b) => {
-          if (a.group_id! < b.group_id!) return -1;
-          if (a.group_id! > b.group_id!) return 1;
-          return (a.seq_no || 0) - (b.seq_no || 0);
-        });
+        targetGroupIds = targetGroupIds.slice(0, SPRINT_LIMIT_COUNT);
       }
+
+      // 3. group_id ごとに問題をマップに格納
+      const groupMap = new Map<string, SprintQuestion[]>();
+      rawRows.forEach(item => {
+        if (!item.group_id) return;
+        if (!groupMap.has(item.group_id)) {
+          groupMap.set(item.group_id, []);
+        }
+        groupMap.get(item.group_id)!.push(item);
+      });
+
+      // 4. 各グループの問題を seq_no 順にソート
+      groupMap.forEach((questions) => {
+        questions.sort((a, b) => (a.seq_no || 0) - (b.seq_no || 0));
+      });
+
+      // 5. シャッフルされた targetGroupIds の順番で問題をフラットに結合
+      finalData = targetGroupIds.flatMap(groupId => groupMap.get(groupId) || []);
     }
 
     logger.info("sprint:fetch_success", "getSprintQuestionsAction success", {

@@ -6,7 +6,7 @@ import {
   Calendar, 
   BookOpen, 
   MessageSquareText, 
-  ShieldCheck, 
+  Mic, 
   ChevronDown, 
   User, 
   Search, 
@@ -437,7 +437,7 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                           <span>フレーズ数 <span className="font-mono font-black text-slate-900 text-xs">{totalPhrasesDay}</span></span>
                         </span>
                         <span className="flex items-center gap-1 bg-amber-50/50 px-1.5 py-0.5 rounded-md border border-amber-100/40 text-slate-700">
-                          <ShieldCheck size={11} className="text-amber-500 shrink-0" />
+                          <Mic size={11} className="text-rose-500 shrink-0" />
                           <span>発話評価数 <span className="font-mono font-black text-slate-900 text-xs">{totalAssessmentsDay}</span></span>
                         </span>
                       </div>
@@ -498,7 +498,7 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                             
                             {/* 発話評価数 */}
                             <span className="inline-flex items-center min-w-[56px]" title="発話評価数">
-                              <ShieldCheck size={11} className="text-amber-500/80 mr-1 shrink-0" /> 
+                              <Mic size={11} className="text-rose-500 shrink-0" />
                               <span className="font-mono text-slate-700 font-extrabold">{session.assessment_count}</span>
                             </span>
 

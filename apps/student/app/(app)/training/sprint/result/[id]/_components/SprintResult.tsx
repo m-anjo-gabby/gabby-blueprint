@@ -3,7 +3,7 @@
 
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Trophy, CheckCircle2, Volume2, MessageSquare, ArrowRight, PlayCircle, Languages, FileCheck2, Award, SkipForward, Mic, ChartSpline, Play } from 'lucide-react';
+import { ChevronLeft, Trophy, CheckCircle2, Volume2, MessageSquare, ArrowRight, PlayCircle, Languages, FileCheck2, Award, SkipForward, Mic, ChartSpline, Play, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
@@ -201,17 +201,26 @@ export const SprintResult: React.FC<SprintResultProps> = ({
           
           {/* 上段：ナビゲーション */}
           <div className="relative flex items-center justify-between z-10">
-            <button 
-              onClick={() => {
-                const date = new Date(scoreData.created_at);
-                const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                router.push(`/training/sprint/history?month=${monthStr}&focus=${scoreData.self_sprint_id}`);
-              }}
-              className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
-              title="履歴に戻る"
-            >
-              <ChevronLeft size={18} strokeWidth={2.5} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  const date = new Date(scoreData.created_at);
+                  const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                  router.push(`/training/sprint/history?month=${monthStr}&focus=${scoreData.self_sprint_id}`);
+                }}
+                className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+                title="履歴に戻る"
+              >
+                <ChevronLeft size={18} strokeWidth={2.5} />
+              </button>
+              <button 
+                onClick={() => router.push('/dashboard')}
+                className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+                title="ダッシュボードに戻る"
+              >
+                <Home size={16} strokeWidth={2.5} />
+              </button>
+            </div>
             
             <div className="text-right">
               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
@@ -285,8 +294,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
         <div className="flex-1 overflow-y-auto bg-slate-50/50 p-5 sm:p-6">
           <div className="max-w-xl mx-auto space-y-3">
             <h3 className="text-xs font-black text-slate-400 tracking-[0.2em] uppercase pl-1 flex items-center gap-2">
-              <CheckCircle2 size={14} strokeWidth={3} className="text-indigo-500" />
-              Answer History ({questions.length})
+              Answer History
             </h3>
 
             <div className="space-y-3">
@@ -345,7 +353,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             "text-[9px] font-black tracking-wider uppercase font-sans mt-[-0.5px]",
                             isFocused && playingId ? "text-indigo-100" : "text-slate-400 group-hover:text-indigo-500"
                           )}>
-                            {isFocused && playingId ? "Playing" : "Play All"}
+                            {isFocused && playingId ? "Playing" : "Play"}
                           </span>
                         </button>
                       </div>
@@ -504,13 +512,13 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             )}
           >
             <PlayCircle size={16} strokeWidth={3} className={isBatchPlaying ? "animate-pulse" : "text-slate-400"} />
-            <span>{isBatchPlaying ? "停止" : "一括再生"}</span>
+            <span>{isBatchPlaying ? "停止" : "全て再生"}</span>
           </button>
           <button
             onClick={() => router.push(`/training/sprint/play?mode=sprint&sprint_type=${scoreData.sprint_type}&content_id=${scoreData.content_id}`)}
             className="flex-[2] max-w-sm h-12 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/10 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>スプリントをする</span>
+            <span>スプリントを選択</span>
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>

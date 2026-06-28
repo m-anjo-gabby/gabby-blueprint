@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Calendar, BookOpen, MessageSquareText, ShieldCheck, ArrowLeft, ArrowRight, ChevronDown, Library } from 'lucide-react';
+import { ChevronLeft, Calendar, BookOpen, MessageSquareText, ShieldCheck, ArrowLeft, ArrowRight, ChevronDown, Library, Mic } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
@@ -204,7 +204,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                             <span className="font-mono text-slate-800 font-black">{totalPhrasesDay}</span>
                           </span>
                           <span className="flex items-center gap-1">
-                            <ShieldCheck size={12} className="text-amber-500 shrink-0" />
+                            <Mic size={12} className="text-rose-500 shrink-0" />
                             <span>発話評価</span>
                             <span className="font-mono text-slate-800 font-black">{totalAssessmentsDay}</span>
                           </span>
@@ -248,7 +248,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                                       <span className="font-mono text-slate-700 font-extrabold">{session.phrase_count}</span>
                                     </span>
                                     <span className="flex items-center gap-1">
-                                      <ShieldCheck size={12} className="text-amber-500/80" /> 
+                                      <Mic size={12} className="text-rose-500" /> 
                                       <span className="font-mono text-slate-700 font-extrabold">{session.assessment_count}</span>
                                     </span>
                                   </div>

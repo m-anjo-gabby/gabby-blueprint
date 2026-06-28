@@ -80,7 +80,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   }
 
   // 📦 3. useMemo などのフックもすべて無条件で実行される位置にまとめる
-  const config = SPRINT_LABELS[questionType || '0'] || { sectionTitle: "問題", instruction: "", phaseLabel: "問題文" };
+  const config = SPRINT_LABELS[(questionType || '0') as SprintQuestionType] || { sectionTitle: "問題", instruction: "", phaseLabel: "問題文" };
   const isSprintMode = mode === 'sprint';
   const isDrillMode = mode === 'drill';
 
@@ -185,17 +185,44 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
 
           {questionType === '0' && (
-            <div className="flex items-center gap-2 px-1">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">発話評価</span>
-              <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200 h-8">
+            <div className="flex items-center gap-1.5 bg-indigo-50/50 border border-indigo-100/30 rounded-full p-0.5 shadow-2xs select-none">
+              <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest pl-2 pr-1 flex items-center gap-1">
+                <Mic size={10} className="text-rose-500" />
+                発話評価
+              </span>
+              <div className="flex bg-slate-200/50 p-0.5 rounded-full relative">
                 <button 
                   onClick={(e) => { e.stopPropagation(); setDrillEvalType('yes'); }}
-                  className={cn("px-2.5 py-1 text-[9px] font-black rounded-md transition-all cursor-pointer", drillEvalType === 'yes' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
-                >YES</button>
+                  className={cn(
+                    "relative z-10 px-3 py-1 text-[10px] font-black rounded-full transition-colors duration-200 cursor-pointer flex items-center justify-center",
+                    drillEvalType === 'yes' ? "text-emerald-600 font-extrabold" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  {drillEvalType === 'yes' && (
+                    <motion.div
+                      layoutId="activeTargetSlide"
+                      className="absolute inset-0 bg-white rounded-full shadow-xs -z-10"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  YES
+                </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); setDrillEvalType('no'); }}
-                  className={cn("px-2.5 py-1 text-[9px] font-black rounded-md transition-all cursor-pointer", drillEvalType === 'no' ? "bg-white text-amber-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
-                >NO</button>
+                  className={cn(
+                    "relative z-10 px-3 py-1 text-[10px] font-black rounded-full transition-colors duration-200 cursor-pointer flex items-center justify-center",
+                    drillEvalType === 'no' ? "text-amber-600 font-extrabold" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  {drillEvalType === 'no' && (
+                    <motion.div
+                      layoutId="activeTargetSlide"
+                      className="absolute inset-0 bg-white rounded-full shadow-xs -z-10"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  NO
+                </button>
               </div>
             </div>
           )}

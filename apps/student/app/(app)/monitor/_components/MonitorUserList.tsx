@@ -13,7 +13,7 @@ import {
   Mail, 
   BookOpen, 
   MessageSquareText, 
-  ShieldCheck, 
+  Mic, 
   CalendarDays,
   ArrowLeft,
   ArrowRight,
@@ -345,7 +345,7 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                           <span className="text-slate-700 font-extrabold font-mono">{stats.phrases}</span>
                         </span>
                         <span className="inline-flex items-center min-w-[48px]" title="発話評価数">
-                          <ShieldCheck size={11} className="text-amber-500/80 mr-1 shrink-0" /> 
+                          <Mic size={11} className="text-rose-500 mr-1 shrink-0" /> 
                           <span className="text-slate-700 font-extrabold font-mono">{stats.assessments}</span>
                         </span>
                       </div>
