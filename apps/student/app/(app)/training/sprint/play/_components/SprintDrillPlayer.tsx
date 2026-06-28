@@ -475,8 +475,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               </button>
             </div>
             <div className="col-span-3 flex flex-col items-center min-w-0">
-              <div className="mb-1 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100/80">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">{contentName || 'Drill Mode'}</span>
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">{contentName || 'Drill Mode'}</span>
               </div>
               <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none truncate w-full text-center">{courseTitle}</h1>
             </div>

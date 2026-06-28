@@ -180,8 +180,8 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
               onClick={() => setIsSettingsOpen(true)}
               className="flex-1 min-w-0 flex flex-col items-center py-1 px-2 rounded-2xl hover:bg-slate-50/80 active:scale-[0.99] transition-all group relative border border-transparent hover:border-slate-100/80"
             >
-              <div className="mb-1 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">
                   {contentName || 'Current Target'}
                 </span>
               </div>
