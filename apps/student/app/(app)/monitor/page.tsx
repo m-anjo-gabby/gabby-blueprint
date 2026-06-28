@@ -72,7 +72,7 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
 
   const users: MonitorUser[] = userListResult.success ? userListResult.data : [];
   const wordHistory = wordHistoryResult.success ? wordHistoryResult.data : [];
-  const sprintHistory = sprintHistoryResult.success ? sprintHistoryResult.data : [];
+  const sprintHistory = sprintHistoryResult.success ? sprintHistoryResult.data : { sessions: [], drills: [] };
 
   const navItems = [
     { id: 'overview' as const, label: '受講生サマリー', icon: LayoutDashboard, description: '全体の稼働・進捗状況' },
