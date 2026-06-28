@@ -69,6 +69,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const isNavigating = useRef<boolean>(false);
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
   const isInitialized = useRef<boolean>(false);
+  const prevAnalysisRef = useRef<any>(null);
+  const prevIndexRef = useRef<number>(currentIndex);
 
   // 💡 フロー管理用の一意のカウンターID
   const flowIdRef = useRef<number>(0);
@@ -206,16 +208,29 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setPlayingAnswerSequence(true);
     setAudioPhase('answer');
     
+    const currentStore = useSprintStore.getState();
+    const isSpeedMode = questionTypeRef.current === '0';
+    const hasEvaluated = currentStore.analysis !== null;
+
     try {
-      if (question.answer_sentence_yes_en) {
-        await playSingleTrack(question.answer_sentence_yes_en, question.answer_sentence_yes_voice);
-        if (flowIdRef.current !== currentFlowId) return;
-      }
-      if (question.answer_sentence_no_en) {
-        await new Promise(r => setTimeout(r, 500));
-        if (flowIdRef.current !== currentFlowId) return;
-        await playSingleTrack(question.answer_sentence_no_en, question.answer_sentence_no_voice);
-        if (flowIdRef.current !== currentFlowId) return;
+      if (isSpeedMode && hasEvaluated) {
+        // Speedの発話評価を行った場合は、スイッチで選択されている解答だけを再生する
+        if (currentStore.drillEvalType === 'yes' && question.answer_sentence_yes_en) {
+          await playSingleTrack(question.answer_sentence_yes_en, question.answer_sentence_yes_voice);
+        } else if (currentStore.drillEvalType === 'no' && question.answer_sentence_no_en) {
+          await playSingleTrack(question.answer_sentence_no_en, question.answer_sentence_no_voice);
+        }
+      } else {
+        if (question.answer_sentence_yes_en) {
+          await playSingleTrack(question.answer_sentence_yes_en, question.answer_sentence_yes_voice);
+          if (flowIdRef.current !== currentFlowId) return;
+        }
+        if (question.answer_sentence_no_en) {
+          await new Promise(r => setTimeout(r, 500));
+          if (flowIdRef.current !== currentFlowId) return;
+          await playSingleTrack(question.answer_sentence_no_en, question.answer_sentence_no_voice);
+          if (flowIdRef.current !== currentFlowId) return;
+        }
       }
       
       setAudioPhase('idle');
@@ -426,7 +441,22 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   // タイムライン2：解答オープン検知
   useEffect(() => {
-    if (!isRevealed || !currentQuestion) return;
+    // カードが切り替わった場合は、直前の評価結果の記録をクリア
+    if (currentIndex !== prevIndexRef.current) {
+      prevIndexRef.current = currentIndex;
+      prevAnalysisRef.current = null;
+    }
+
+    const prev = prevAnalysisRef.current;
+    prevAnalysisRef.current = analysis;
+
+    // 録音中（発話評価中）の場合は再生しない
+    if (!isRevealed || !currentQuestion || isRecording) return;
+
+    // 評価結果が存在していた状態から null にリセットされた場合（再録音開始時）は再生しない
+    if (prev !== null && analysis === null) {
+      return;
+    }
 
     // 解答再生時は、現在の再生フローIDを引き継ぎ、二重再生にならないように管理
     const currentFlowId = flowIdRef.current;
@@ -447,9 +477,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
-    // ✨ 依存をインデックスとオープン状態に絞り、タイマー副作用から切り離し
+    // ✨ 依存をインデックス、オープン状態、評価結果、および録音状態に絞り、タイマー副作用から切り離し
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRevealed, currentIndex]);
+  }, [isRevealed, currentIndex, analysis, isRecording]);
 
   // フルスクリーン固定
   useEffect(() => {

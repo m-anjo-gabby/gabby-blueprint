@@ -103,6 +103,7 @@ interface SprintState {
   setFeedback: (feedback: any) => void;
   setAnalysis: (analysis: any) => void;
   toggleAutoPlay: (force?: boolean) => void;
+  setDrillEvalType: (type: 'yes' | 'no') => void;
 }
 
 export const useSprintStore = create<SprintState>((set, get) => ({
@@ -332,6 +333,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   setFeedback: (feedback) => set({ feedback }),
   setAnalysis: (analysis) => set({ analysis }),
   toggleAutoPlay: (force) => set((state) => ({ isAutoPlaying: force !== undefined ? force : !state.isAutoPlaying })),
+  setDrillEvalType: (drillEvalType) => set({ drillEvalType }),
   
   clearSession: () => set({ 
     questions: [], 
