@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight, VolumeX, ChevronDown, Settings2 } from 'lucide-react';
+import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight, VolumeX, ChevronDown, Settings2, Mic, MicOff } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { 
   QUESTION_TYPES, 
@@ -12,7 +12,7 @@ import {
   type SprintAnswerType,
   type SprintConfig,
 } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle } from '@gabby/lib';
 
 import {
   Drawer,
@@ -24,6 +24,8 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSprintStore } from '@/stores/useSprintStore';
 import { getSprintProgressAction } from '@/actions/sprintAction';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 
 import {
   Dialog,
@@ -47,6 +49,7 @@ interface SprintSelectProps {
 export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onStart }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showConfirm } = useConfirm();
 
   // ストアから設定更新アクションと現在のconfigを取得
   const { config, contentMetadata, contentName, setConfig } = useSprintStore();
@@ -66,6 +69,53 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [isHintOpen, setIsHintOpen] = useState(false);
+  const [micStatus, setMicStatus] = useState<'checking' | 'granted' | 'denied' | 'prompt'>('checking');
+
+  const checkMicPermission = useCallback(async () => {
+    try {
+      if (typeof window === 'undefined') return;
+      if (navigator.permissions && navigator.permissions.query) {
+        const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        setMicStatus(permissionStatus.state as any);
+        permissionStatus.onchange = () => {
+          setMicStatus(permissionStatus.state as any);
+        };
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        setMicStatus('granted');
+      }
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setMicStatus('denied');
+      } else {
+        setMicStatus('prompt');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        checkMicPermission();
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [checkMicPermission]);
+
+  const requestMicPermission = async () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      setMicStatus('granted');
+    } catch (err: any) {
+      setMicStatus('denied');
+    }
+  };
 
   // ユーザー進捗の取得
   useEffect(() => {
@@ -138,7 +188,18 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   }, [selectedType, userProgress]);
 
 
-  const handleStartSubmit = (answerType: SprintAnswerType = '0') => {
+  const handleStartSubmit = async (answerType: SprintAnswerType = '0') => {
+    if (mode === 'sprint' && micStatus !== 'granted') {
+      const confirmed = await showConfirm(
+        'マイクが許可されていません',
+        '発話の評価を行わずにスプリントを開始しますか？（スキップボタンで発話をパスしながら進めることになります）',
+        { variant: 'info' }
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     if (typeof window !== 'undefined') {
       const audio = new Audio();
       audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
@@ -166,19 +227,19 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       <main className="bg-white text-slate-900 shadow-2xl w-full max-w-2xl h-full flex flex-col relative overflow-hidden rounded-[40px]">
         
         {/* ヘッダーセクション */}
-        <div className="shrink-0 pt-5 pb-3 w-full overflow-hidden bg-white z-20 border-b border-slate-50 shadow-xs">
-          <div className="flex items-start justify-between px-6 gap-3">
-            
-            <button 
-              onClick={() => router.back()} 
-              className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-slate-600 active:scale-95 transition-all mt-0.5"
-            >
-              <ChevronLeft size={20} strokeWidth={2.5} />
-            </button>
+        <div className="shrink-0 pt-5 pb-3 w-full overflow-hidden bg-white z-20 border-b border-slate-50 shadow-xs relative flex items-center min-h-[72px]">
+          
+          <button 
+            onClick={() => router.back()} 
+            className="absolute left-6 top-1/2 -translate-y-1/2 h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-slate-600 active:scale-95 transition-all z-30"
+          >
+            <ChevronLeft size={20} strokeWidth={2.5} />
+          </button>
 
+          <div className="w-full pl-18 pr-6 flex flex-col items-center">
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="flex-1 min-w-0 flex flex-col items-center py-1 px-2 rounded-2xl hover:bg-slate-50/80 active:scale-[0.99] transition-all group relative border border-transparent hover:border-slate-100/80"
+              className="w-full flex flex-col items-center py-1 px-2 rounded-2xl hover:bg-slate-50/80 active:scale-[0.99] transition-all group border border-transparent hover:border-slate-100/80"
             >
               <div className="flex flex-col items-center">
                 <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">
@@ -186,28 +247,18 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                 </span>
               </div>
               
-              <div className="flex items-center justify-center gap-1.5 w-full max-w-[80%]">
+              <div className="flex items-center justify-center gap-1.5 w-full">
                 <h1 className="text-base font-black text-slate-800 tracking-tight leading-tight truncate text-center">
-                  {QUESTION_TYPES[selectedType]?.label || '---'}
+                  {getSprintTitle(selectedType, Number(selectedLevel))}
                 </h1>
-                <Settings2 size={13} className="text-slate-300 group-hover:text-indigo-500 group-hover:rotate-45 transition-all shrink-0" strokeWidth={2.5} />
-              </div>
-
-              <div className="flex items-center gap-1.5 mt-1.5 shrink-0">
-                {hasLevel && (
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md text-white leading-none tracking-wide bg-indigo-600">
-                    {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
-                  </span>
-                )}
                 {mode === 'sprint' && (
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono leading-none">
+                  <span className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-100/50 text-indigo-700 leading-none shrink-0">
                     {selectedTimeLimitSec}s
                   </span>
                 )}
+                <Settings2 size={13} className="text-slate-300 group-hover:text-indigo-500 group-hover:rotate-45 transition-all shrink-0" strokeWidth={2.5} />
               </div>
             </button>
-
-            <div className="w-10 h-10 shrink-0 opacity-0 pointer-events-none" />
           </div>
         </div>
 
@@ -306,16 +357,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-2 overscroll-contain">
             <div className="w-full max-w-xl mx-auto space-y-4 pt-2 pb-6">
 
-              {/* 注意文言 */}
-              {mode === 'sprint' && (
-                <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-amber-50/70 border border-amber-100/40 text-amber-900 shadow-3xs animate-in fade-in slide-in-from-top-2 duration-200">
-                  <VolumeX size={13} className="mt-0.5 shrink-0 text-amber-600" />
-                  <p className="text-[11px] font-bold leading-normal">
-                    発話できない環境の場合、<span className="underline decoration-amber-400 decoration-2 font-black">スキップボタン</span>で発話評価をパスして次に進めます。
-                  </p>
-                </div>
-              )}
-
               {/* 詳細設定リンク */}
               <button 
                 type="button"
@@ -344,6 +385,54 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   </div>
                 </div>
               </button>
+
+              {/* 注意文言 & マイク許可確認（一体化） */}
+              {mode === 'sprint' && (
+                <div 
+                  onClick={micStatus !== 'granted' && micStatus !== 'checking' ? requestMicPermission : undefined}
+                  className={cn(
+                    "p-3.5 rounded-2xl border text-amber-900 shadow-3xs animate-in fade-in slide-in-from-top-2 duration-200 flex flex-col gap-2.5 select-none",
+                    micStatus !== 'granted' && micStatus !== 'checking'
+                      ? "bg-rose-50/40 border-rose-100/70 hover:bg-rose-50/60 active:scale-[0.99] cursor-pointer transition-all"
+                      : "bg-amber-50/70 border-amber-100/40"
+                  )}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <VolumeX size={13} className={cn("mt-0.5 shrink-0", micStatus !== 'granted' && micStatus !== 'checking' ? "text-rose-500" : "text-amber-600")} />
+                    <p className="text-[11px] font-bold leading-normal">
+                      発話できない環境の場合、<span className="underline decoration-amber-400 decoration-2 font-black">スキップボタン</span>で発話評価をパスして次に進めます。
+                    </p>
+                  </div>
+                  
+                  {/* マイクステータスの一体化表示 */}
+                  <div className="flex items-center justify-between border-t border-dashed border-slate-200/60 pt-2 text-[10px] font-bold">
+                    <div className="flex items-center gap-2.5">
+                      {micStatus === 'granted' ? (
+                        <>
+                          <Mic size={13} className="shrink-0 text-emerald-600" />
+                          <span className="text-emerald-600">マイクが許可されています</span>
+                        </>
+                      ) : micStatus === 'checking' ? (
+                        <>
+                          <Mic size={13} className="shrink-0 text-slate-400 animate-pulse" />
+                          <span className="text-slate-400">マイクの確認中...</span>
+                        </>
+                      ) : (
+                        <>
+                          <MicOff size={13} className="shrink-0 text-rose-500 animate-pulse" />
+                          <span className="text-rose-500">マイクが許可されていません</span>
+                        </>
+                      )}
+                    </div>
+
+                    {micStatus !== 'granted' && micStatus !== 'checking' && (
+                      <span className="text-[9px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded shadow-xs">
+                        タップして許可
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* テーマ・ヒントのアコーディオンセクション */}
               <div className="space-y-2">
@@ -478,8 +567,8 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     トレーニング設定
                   </DrawerTitle>
                   <DrawerClose asChild>
-                    <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                      <X size={20} strokeWidth={2.5} />
+                    <button className="h-8 px-4 flex items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100/50 text-indigo-600 hover:bg-indigo-100/80 text-[10px] font-black tracking-wider transition-all active:scale-95 cursor-pointer">
+                      設定完了
                     </button>
                   </DrawerClose>
                 </div>
@@ -520,7 +609,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                             disabled={!isSupported}
                             onClick={() => handleTypeChange(type.value)}
                             className={cn(
-                              "h-12 rounded-xl border text-xs font-black relative transition-all disabled:opacity-40", 
+                              "h-12 rounded-xl border text-xs font-black relative transition-all disabled:opacity-65 flex flex-col items-center justify-center gap-0.5", 
                               isSelected 
                                 ? (mode === 'sprint' ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-900 border-slate-900 text-white") 
                                 : "bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -528,7 +617,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                           >
                             <span>{type.label}</span>
                             {!isSupported && (
-                              <Lock size={11} strokeWidth={2.5} className="absolute top-1.5 left-1.5 text-slate-400" />
+                              <div className="flex items-center gap-0.5 text-rose-500">
+                                <Lock size={9} strokeWidth={2.5} />
+                                <span className="text-[8px] font-bold tracking-normal leading-none">
+                                  提供されていません
+                                </span>
+                              </div>
                             )}
                           </button>
                         );
@@ -602,7 +696,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
             </div>
           </DrawerContent>
         </Drawer>
-
+        <ConfirmContainer />
       </main>
     </div>
   );
