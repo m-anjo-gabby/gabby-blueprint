@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
+import { MonitorUser, MonitorWordSummaryHistoryItem, MonitorSprintHistoryResponse } from '@/actions/monitorAction';
 import { cn } from '@/lib/utils';
 import { 
   User, 
@@ -17,7 +17,8 @@ import {
   CalendarDays,
   ArrowLeft,
   ArrowRight,
-  Download
+  Download,
+  Zap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -27,9 +28,10 @@ import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
 interface MonitorUserListProps {
   users: MonitorUser[];
   wordHistory: MonitorWordSummaryHistoryItem[];
+  sprintHistory: MonitorSprintHistoryResponse;
 }
 
-export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHistory }) => {
+export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHistory, sprintHistory }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
@@ -82,20 +84,68 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
 
   // 💡 ループによる統計マップ生成のメモ化（タイムゾーンを依存配列に追加して安全性を担保）
   const userStats = useMemo(() => {
-    const statsMap: Record<string, { days: Set<string>, words: number, phrases: number, assessments: number }> = {};
+    const statsMap: Record<
+      string, 
+      { 
+        days: Set<string>; 
+        phrases: number; 
+        sprintSessions: number; 
+        sprintAnswers: number; 
+        assessments: number; 
+        latestDate: string | null;
+      }
+    > = {};
     
+    // 1. 単語ドリル履歴の集計
     wordHistory.forEach(h => {
       const uid = h.user_id;
       if (!statsMap[uid]) {
-        statsMap[uid] = { days: new Set(), words: 0, phrases: 0, assessments: 0 };
+        statsMap[uid] = { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null };
       }
       statsMap[uid].days.add(h.training_date);
-      statsMap[uid].words += h.word_count;
       statsMap[uid].phrases += h.phrase_count;
-      statsMap[uid].assessments += h.assessment_count;
+      statsMap[uid].assessments += h.assessment_count; // 単語ドリルの発話数
+
+      const dateStr = h.training_date;
+      if (!statsMap[uid].latestDate || dateStr > statsMap[uid].latestDate) {
+        statsMap[uid].latestDate = dateStr;
+      }
     });
+
+    // 2. スプリントセッション履歴の集計 (本数と回答数)
+    (sprintHistory?.sessions || []).forEach(s => {
+      const uid = s.user_id;
+      if (!statsMap[uid]) {
+        statsMap[uid] = { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null };
+      }
+      if (s.insert_date) {
+        const dateStr = s.insert_date.split('T')[0];
+        statsMap[uid].days.add(dateStr);
+        if (!statsMap[uid].latestDate || dateStr > statsMap[uid].latestDate) {
+          statsMap[uid].latestDate = dateStr;
+        }
+      }
+      statsMap[uid].sprintSessions += 1; // スプリント本数
+      statsMap[uid].sprintAnswers += s.total_answered; // スプリント回答数
+    });
+
+    // 3. スプリントドリルサマリー履歴の集計 (発話数)
+    (sprintHistory?.drills || []).forEach(d => {
+      const uid = d.user_id;
+      if (!statsMap[uid]) {
+        statsMap[uid] = { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null };
+      }
+      statsMap[uid].days.add(d.training_date);
+      statsMap[uid].assessments += d.assessment_count; // スプリントドリルサマリーの発話数
+
+      const dateStr = d.training_date;
+      if (!statsMap[uid].latestDate || dateStr > statsMap[uid].latestDate) {
+        statsMap[uid].latestDate = dateStr;
+      }
+    });
+
     return statsMap;
-  }, [wordHistory, timezone]); // 💡 静的解析エラーを避けるため timezone を明示
+  }, [wordHistory, sprintHistory, timezone]);
 
   const handleExportCSV = () => {
     if (users.length === 0) return;
@@ -106,14 +156,15 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
       'ライセンス開始日', 
       'ライセンス終了日', 
       'トレーニング日数', 
-      '学習単語数', 
       '学習フレーズ数', 
-      '発話評価数', 
-      '最終接続日'
+      'スプリント本数',
+      'スプリント回答数',
+      '発話数', 
+      'アクティビティ'
     ];
     
     const rows = users.map(user => {
-      const stats = userStats[user.id] || { days: new Set(), words: 0, phrases: 0, assessments: 0 };
+      const stats = userStats[user.id] || { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null };
       
       const statusLabel = (Object({
         active: '利用中', 
@@ -124,20 +175,17 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
         mail_failed: '送信失敗'
       }) as Record<string, string>)[user.license_state] || '不明';
       
-      const lastSignIn = user.last_sign_in_at 
-        ? formatZonedDate(user.last_sign_in_at, timezone)
-        : 'なし';
-
       return [
         user.user_name || '未設定',
         statusLabel,
         user.license_start_date ? formatZonedDate(user.license_start_date, timezone) : '—',
         user.license_end_date ? formatZonedDate(user.license_end_date, timezone) : '—',
         `${stats.days.size}日`,
-        stats.words,
         stats.phrases,
+        stats.sprintSessions,
+        stats.sprintAnswers,
         stats.assessments,
-        lastSignIn
+        stats.latestDate || 'なし'
       ];
     });
 
@@ -253,15 +301,15 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                 <span>トレーニング</span>
                 <span>日数</span>
               </div>
-              <div className="col-span-2 text-left pl-1">主要実績 (単語/フレーズ/発話)</div>
-              <div className="col-span-2 text-right pr-4">最終接続</div>
+              <div className="col-span-2 text-left pl-1">主要実績 (フレーズ/本数/回答/発話)</div>
+              <div className="col-span-2 text-right pr-4">アクティビティ</div>
             </div>
           </div>
 
           {/* 受講生リスト本体 */}
           <div className="divide-y divide-slate-100/70">
             {users.map((user, idx) => {
-              const stats = userStats[user.id] || { days: new Set(), words: 0, phrases: 0, assessments: 0 };
+              const stats = userStats[user.id] || { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0 };
 
               return (
                 <motion.div
@@ -336,33 +384,37 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                     <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-start border-t border-dashed border-slate-100 md:border-none pt-2.5 md:pt-0 md:pl-1">
                       <span className="md:hidden text-[10px] font-black text-slate-400 uppercase font-mono tracking-wider">主要実績</span>
                       <div className="flex items-center gap-2.5 text-slate-500 font-bold font-mono text-[10px] md:w-full md:justify-start">
-                        <span className="inline-flex items-center min-w-[48px]" title="単語数">
-                          <BookOpen size={11} className="text-blue-500/80 mr-1 shrink-0" /> 
-                          <span className="text-slate-700 font-extrabold font-mono">{stats.words}</span>
-                        </span>
                         <span className="inline-flex items-center min-w-[48px]" title="フレーズ数">
                           <MessageSquareText size={11} className="text-emerald-500/80 mr-1 shrink-0" /> 
                           <span className="text-slate-700 font-extrabold font-mono">{stats.phrases}</span>
                         </span>
-                        <span className="inline-flex items-center min-w-[48px]" title="発話評価数">
+                        <span className="inline-flex items-center min-w-[48px]" title="スプリント本数">
+                          <Zap size={11} className="text-amber-500/80 fill-amber-500/10 mr-1 shrink-0" /> 
+                          <span className="text-slate-700 font-extrabold font-mono">{stats.sprintSessions}</span>
+                        </span>
+                        <span className="inline-flex items-center min-w-[48px]" title="回答数">
+                          <CheckCircle2 size={11} className="text-emerald-500 mr-1 shrink-0" /> 
+                          <span className="text-slate-700 font-extrabold font-mono">{stats.sprintAnswers}</span>
+                        </span>
+                        <span className="inline-flex items-center min-w-[48px]" title="発話数">
                           <Mic size={11} className="text-rose-500 mr-1 shrink-0" /> 
                           <span className="text-slate-700 font-extrabold font-mono">{stats.assessments}</span>
                         </span>
                       </div>
                     </div>
 
-                    {/* 6. 最終接続 */}
+                    {/* 6. アクティビティ */}
                     <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-end border-t border-dashed border-slate-100 md:border-none pt-2.5 md:pt-0 pr-0 md:pr-4">
-                      <span className="md:hidden text-[10px] font-black text-slate-400 uppercase tracking-wider">最終接続</span>
-                      {user.last_sign_in_at ? (
+                      <span className="md:hidden text-[10px] font-black text-slate-400 uppercase tracking-wider">アクティビティ</span>
+                      {stats.latestDate ? (
                         <div className="text-[11px] text-slate-600 font-black flex items-center gap-1.5 font-mono">
                           <Clock size={12} className="text-slate-400" />
                           <span>
-                            {formatZonedDate(user.last_sign_in_at, timezone) || '—'}
+                            {stats.latestDate}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs font-bold text-slate-300 font-sans">未接続</span>
+                        <span className="text-xs font-bold text-slate-300 font-sans">活動なし</span>
                       )}
                     </div>
 

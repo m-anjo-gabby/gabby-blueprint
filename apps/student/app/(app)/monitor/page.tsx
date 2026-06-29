@@ -167,6 +167,7 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
             <MonitorUserList 
               users={users} 
               wordHistory={wordHistory} 
+              sprintHistory={sprintHistory}
             />
           </Suspense>
         )}

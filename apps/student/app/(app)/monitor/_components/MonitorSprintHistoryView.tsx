@@ -559,7 +559,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                           <span>回答数 <span className="font-mono text-slate-900 font-black text-xs">{totalAnswersDay}</span></span>
                         </span>
                         {totalAssessmentsDay > 0 && (
-                          <span className="flex items-center gap-1 bg-rose-50 border border-rose-100/30 px-1.5 py-0.5 rounded-md text-slate-700 font-extrabold">
+                          <span className="flex items-center gap-1 bg-rose-50/50 px-1.5 py-0.5 rounded-md border border-rose-100/40 text-slate-700">
                             <Mic size={11} className="text-rose-500 shrink-0" />
                             <span>発話評価数 <span className="font-mono text-xs">{totalAssessmentsDay}</span></span>
                           </span>
