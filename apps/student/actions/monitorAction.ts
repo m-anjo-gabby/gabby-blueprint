@@ -174,64 +174,41 @@ export async function getMonitorSprintHistory(
   includeMonitor: boolean = false
 ): Promise<{ success: boolean; data: MonitorSprintHistoryResponse; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("monitor:get_sprint_history_start", "Fetching monitor sprint and drill history", { ...ctx, startDate, endDate, userIds, includeMonitor });
+  logger.info("monitor:get_sprint_history_start", "Fetching monitor sprint and drill history via RPC", { ...ctx, startDate, endDate, userIds, includeMonitor });
 
   try {
     const supabase = await createServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    // 2. ドリルサマリー履歴およびスプリント履歴に必要な有効な受講生リストの取得
-    const userListRes = await getMonitorUserList(includeMonitor);
-    if (!userListRes.success) throw new Error(userListRes.error || "Failed to fetch user list");
-    
-    let validUserIds = userListRes.data.map(u => u.id);
-    if (userIds && userIds.length > 0) {
-      validUserIds = validUserIds.filter(id => userIds.includes(id));
-    }
+    // 💡 _user_ids パラメータに渡すために、空配列なら null にする
+    const queryUserIds = userIds && userIds.length > 0 ? userIds : null;
 
-    // 1. スプリントセッション履歴の直接取得
-    let sessionsData: any[] = [];
-    if (validUserIds.length > 0) {
-      const { data: sessions, error: sessionsError } = await supabase
-        .from("self_t_sprint")
-        .select(`
-          self_sprint_id,
-          sprint_type,
-          content_id,
-          question_type,
-          answer_type,
-          difficulty_level,
-          time_limit_sec,
-          total_answered,
-          insert_date,
-          user_id,
-          com_m_contents (
-            content_name
-          ),
-          com_m_user (
-            user_name
-          )
-        `)
-        .in("user_id", validUserIds)
-        .gte("insert_date", startDate)
-        .lte("insert_date", `${endDate}T23:59:59.999Z`)
-        .order("insert_date", { ascending: false });
+    // sessions (TIMESTAMP WITH TIME ZONE) に合わせるため、endDate の末尾に 23:59:59.999Z を付与
+    const endTimestamp = `${endDate}T23:59:59.999Z`;
 
-      if (sessionsError) throw sessionsError;
-      sessionsData = sessions || [];
-    }
+    // 💡 sessions と drills の RPC を並行で呼び出し
+    const [sessionsRes, drillsRes] = await Promise.all([
+      supabase.rpc('get_monitor_sprint_history', {
+        _start_date: startDate,
+        _end_date: endTimestamp,
+        _user_ids: queryUserIds,
+        _include_monitor: includeMonitor
+      }),
+      supabase.rpc('get_monitor_sprint_drill_history', {
+        _start_date: startDate,
+        _end_date: endDate,
+        _user_ids: queryUserIds,
+        _include_monitor: includeMonitor
+      })
+    ]);
 
-    // ユーザーID -> メールアドレスのマッピングマップを作成
-    const userEmailMap = new Map<string, string>();
-    userListRes.data.forEach(u => {
-      if (u.id && u.email) {
-        userEmailMap.set(u.id, u.email);
-      }
-    });
+    if (sessionsRes.error) throw sessionsRes.error;
+    if (drillsRes.error) throw drillsRes.error;
 
-    const formattedSessions = sessionsData.map(item => ({
+    const formattedSessions = (sessionsRes.data as any[] || []).map(item => ({
       self_sprint_id: item.self_sprint_id,
+      user_id: item.user_id,
       sprint_type: item.sprint_type || '0',
       content_id: item.content_id || '',
       question_type: item.question_type,
@@ -240,49 +217,16 @@ export async function getMonitorSprintHistory(
       time_limit_sec: item.time_limit_sec,
       total_answered: item.total_answered,
       insert_date: item.insert_date,
-      com_m_contents: item.com_m_contents ? {
-        content_name: item.com_m_contents.content_name
+      com_m_contents: item.content_name ? {
+        content_name: item.content_name
       } : null,
       com_m_user: {
-        user_name: item.com_m_user?.user_name || null,
-        email: userEmailMap.get(item.user_id) || ''
+        user_name: item.user_name,
+        email: item.email || ''
       }
     }));
-    logger.info("monitor:get_sprint_sessions_success", `Fetched ${formattedSessions?.length || 0} sessions`, ctx);
 
-    let drillsData: any[] = [];
-    if (validUserIds.length > 0) {
-      const { data: drills, error: drillsError } = await supabase
-        .from("self_t_sprint_summary")
-        .select(`
-          summary_id,
-          user_id,
-          content_id,
-          training_date,
-          question_count,
-          assessment_count,
-          speed_count,
-          structure_count,
-          builders_count,
-          mastery_count,
-          com_m_contents (
-            content_name
-          ),
-          com_m_user (
-            user_name
-          )
-        `)
-        .in("user_id", validUserIds)
-        .gte("training_date", startDate)
-        .lte("training_date", endDate)
-        .order("training_date", { ascending: false });
-
-      if (drillsError) throw drillsError;
-      drillsData = drills || [];
-    }
-    logger.info("monitor:get_sprint_drills_success", `Fetched ${drillsData?.length || 0} drills`, ctx);
-
-    const formattedDrills = drillsData.map(item => ({
+    const formattedDrills = (drillsRes.data as any[] || []).map(item => ({
       summary_id: item.summary_id,
       user_id: item.user_id,
       content_id: item.content_id,
@@ -293,14 +237,16 @@ export async function getMonitorSprintHistory(
       structure_count: item.structure_count,
       builders_count: item.builders_count,
       mastery_count: item.mastery_count,
-      com_m_contents: item.com_m_contents ? {
-        content_name: item.com_m_contents.content_name
+      com_m_contents: item.content_name ? {
+        content_name: item.content_name
       } : null,
       com_m_user: {
-        user_name: item.com_m_user?.user_name || null,
-        email: userEmailMap.get(item.user_id) || ''
+        user_name: item.user_name,
+        email: item.email || ''
       }
     }));
+
+    logger.info("monitor:get_sprint_history_success", `Fetched ${formattedSessions.length} sessions, ${formattedDrills.length} drills`, ctx);
 
     return { 
       success: true, 
@@ -310,7 +256,7 @@ export async function getMonitorSprintHistory(
       }
     };
   } catch (error: any) {
-    logger.error("monitor:get_sprint_history_error", "Error in getMonitorSprintHistory", {
+    logger.error("monitor:get_sprint_history_error", "Error in getMonitorSprintHistory via RPC", {
       ...ctx,
       payload: { error: error.message, stack: error.stack }
     });
