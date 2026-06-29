@@ -37,8 +37,7 @@ export async function signIn(formData: FormData) {
   if (userType === '0') {
     logger.warn('auth:invalid_portal', 'Admin user tried to login to student portal', {
       userId: user.id,
-      email: user.email,
-      payload: { email: user.email, userType }
+      payload: { userType }
     });
     // セッションをクリアするためにログアウト処理を実行
     await signOutCore();
@@ -46,9 +45,8 @@ export async function signIn(formData: FormData) {
   }
   
   // 通常の生徒は自身のダッシュボードへ
-  logger.info('auth:login_success', `User logged in: ${user.email}`, { 
+  logger.info('auth:login_success', `User logged in (User ID: ${user.id})`, { 
     userId: user.id,
-    email: user.email,
     payload: { isLicensed: user.app_metadata?.is_licensed }
   });
   redirect('/dashboard');

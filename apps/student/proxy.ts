@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createSupabaseProxy } from '@gabby/lib/proxy-base';
-import { createLogger } from '@gabby/lib/logger';
+import { createRequestLogger } from '@gabby/lib/logger';
 
 // ディレクトリ構成に基づいた、生徒がアクセス可能な有効な画面ルートのホワイトリスト
 const VALID_STUDENT_ROUTES = [
@@ -18,7 +18,7 @@ export async function proxy(req: NextRequest) {
   const loginPath = '/login';
   const dashboardPath = '/dashboard';
 
-  const logger = createLogger('student');
+  const logger = createRequestLogger('student', req);
 
   // 公開ルートの判定
   const isPublicRoute = pathname === loginPath || pathname.startsWith('/auth') || 
@@ -41,9 +41,8 @@ export async function proxy(req: NextRequest) {
   // 1. 管理者が生徒用パスにアクセスした場合
   // アドミンアプリと同様、セッションが混在してループするのを防ぐためクッキーをクリアします
   if (isAdmin && !isPublicRoute) {
-    logger.warn('proxy:admin_access_denied', `Admin session detected in student app: ${user.email}`, {
+    logger.warn('proxy:admin_access_denied', `Admin session detected in student app (User ID: ${user.id})`, {
       userId: user.id,
-      email: user.email,
       path: pathname,
       payload: { userType }
     });
@@ -57,9 +56,8 @@ export async function proxy(req: NextRequest) {
 
   // 2. ライセンス未保有の生徒
   if (!isAdmin && !isLicensed && !isPublicRoute) {
-    logger.error('proxy:license_check_failed', `License check failed: ${user.email}`, {
+    logger.error('proxy:license_check_failed', `License check failed (User ID: ${user.id})`, {
       userId: user.id,
-      email: user.email,
       path: pathname,
       payload: { appMetadata: user.app_metadata }
     });
@@ -82,9 +80,8 @@ export async function proxy(req: NextRequest) {
   const hasMonitorRole = user.app_metadata?.roles?.includes('monitor');
 
   if (isMonitorRoute && !hasMonitorRole) {
-    logger.warn('proxy:monitor_access_denied', `Unauthorized monitor access attempt: ${user.email}`, {
+    logger.warn('proxy:monitor_access_denied', `Unauthorized monitor access attempt (User ID: ${user.id})`, {
       userId: user.id,
-      email: user.email,
       path: pathname,
     });
     return NextResponse.redirect(new URL(dashboardPath, req.url));
@@ -97,7 +94,6 @@ export async function proxy(req: NextRequest) {
   if (!isPublicRoute && !isValidStudentRoute) {
     logger.info('proxy:invalid_route_redirect', `Invalid path direct access redirected to dashboard: ${pathname}`, {
       userId: user.id,
-      email: user.email,
       path: pathname,
     });
     return NextResponse.redirect(new URL(dashboardPath, req.url));
@@ -110,7 +106,6 @@ export async function proxy(req: NextRequest) {
   if (isPageAccess && !isPublicRoute && user) {
     logger.info('page_view', `Access: ${pathname}`, {
       userId: user.id,
-      email: user.email,
       path: pathname,
       payload: {
         method: req.method,
