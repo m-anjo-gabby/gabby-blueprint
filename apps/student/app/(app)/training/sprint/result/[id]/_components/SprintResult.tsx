@@ -292,7 +292,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
         {/* ────────────── メイン：出題リスト ────────────── */}
         <div className="flex-1 overflow-y-auto bg-slate-50/50 p-5 sm:p-6">
-          <div className="max-w-xl mx-auto space-y-3">
+          <div className="max-w-2xl mx-auto space-y-3">
             <h3 className="text-xs font-black text-slate-400 tracking-[0.2em] uppercase pl-1 flex items-center gap-2">
               Answer History
             </h3>
@@ -435,9 +435,9 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                     {/* Answer表示セクション */}
                     <div className="w-full pt-1">
                       {isSpeedModePayload ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                        <div className="w-full">
                           {scoreData.answer_type === '0' && (
-                            <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
+                            <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-3 py-2.5 rounded-r-xl flex flex-col gap-0.5 w-full">
                               <div className="flex items-center w-full mb-1">
                                 <div className="flex items-center gap-x-1.5 text-emerald-600">
                                   <span className="text-xs font-black tracking-widest uppercase">解答文</span>
@@ -456,7 +456,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             </div>
                           )}
                           {scoreData.answer_type === '1' && (
-                            <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-3 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
+                            <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-3 pr-3 py-2.5 rounded-r-xl flex flex-col gap-0.5 w-full">
                               <div className="flex items-center w-full mb-1">
                                 <div className="flex items-center gap-x-1.5 text-amber-600">
                                   <span className="text-xs font-black tracking-widest uppercase">解答文</span>

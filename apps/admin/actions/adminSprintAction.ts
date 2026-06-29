@@ -231,3 +231,55 @@ export async function updateGroupStatement(groupId: string, statementEn: string,
   if (error) return { success: false, message: error.message };
   return { success: true };
 }
+
+/**
+ * 特定の教材・種別・レベルのスプリント問題を全削除し、TSVデータから一括新規登録する (トランザクション代替)
+ */
+export async function bulkImportSprintQuestions(
+  contentId: string,
+  type: SprintQuestionType,
+  level: number,
+  questions: Partial<SprintQuestion>[]
+) {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createAdminClient();
+    const now = new Date().toISOString();
+
+    // 1. 既存の該当する問題種別・レベルの問題を削除 (洗い替え)
+    const { error: deleteError } = await supabase
+      .from('com_m_sprint_questions')
+      .delete()
+      .eq('content_id', contentId)
+      .eq('question_type', type)
+      .eq('difficulty_level', level);
+
+    if (deleteError) throw deleteError;
+
+    // 2. 新しいデータを挿入
+    const dataToInsert = questions.map((q, idx) => ({
+      ...q,
+      content_id: contentId,
+      question_type: type,
+      difficulty_level: level,
+      insert_date: now,
+      update_date: now,
+      delete_flg: '0'
+    }));
+
+    if (dataToInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from('com_m_sprint_questions')
+        .insert(dataToInsert);
+
+      if (insertError) throw insertError;
+    }
+
+    logger.info('sprint:bulk_import_success', `Imported ${questions.length} questions for content ${contentId}, type ${type}, level ${level}`, { ...ctx });
+    revalidatePath('/contents/[id]', 'layout');
+    return { success: true };
+  } catch (err: any) {
+    logger.error('sprint:bulk_import_failed', err.message, { ...ctx, payload: { contentId, type, level, count: questions.length } });
+    return { success: false, message: err.message };
+  }
+}

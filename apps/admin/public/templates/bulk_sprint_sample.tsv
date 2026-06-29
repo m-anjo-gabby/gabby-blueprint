@@ -1,0 +1,8 @@
+﻿seq_no	tsv_group_id	statement_en	statement_ja	question_en	question_ja	answer_sentence_yes_en	answer_sentence_yes_ja	answer_sentence_no_en	answer_sentence_no_ja
+1					Is he a doctor?	彼は医者ですか？	Yes, he is.	はい、そうです。	No, he isn't.	いいえ、違います。
+2					Do you like apples?	リンゴは好きですか？	Yes, I do.	はい、好きです。	No, I don't.	いいえ、好きではありません。
+1	10	He plays tennis every Sunday.	彼は毎週日曜日にテニスをします。	Change to Past Tense	過去形に変えてください。	He played tennis last Sunday.	彼はこの前の日曜日テニスをしました。		
+2	10	She writes a letter.	彼女は手紙を書きます。	Change to Continuous Tense	進行形に変えてください。	She is writing a letter.	彼女は手紙を書いているところです。		
+1	20	I went to the park yesterday.	私は昨日公園に行きました。			Where did you go yesterday?	昨日どこに行きましたか？	I went to the park.	公園に行きました。		
+2	20				Who went to the park yesterday?	昨日誰が公園に行きましたか？	I did.	私です。		
+3	20				When did you go to the park?	いつ公園に行きましたか？	I went there yesterday.	昨日行きました。

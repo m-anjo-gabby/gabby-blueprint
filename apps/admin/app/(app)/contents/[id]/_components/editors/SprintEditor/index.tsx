@@ -13,6 +13,7 @@ import { Loader2, Filter, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SprintTTSBulkDialog } from './SprintTTSBulkDialog';
 import { Button } from '@/components/ui/button';
+import { SprintBulkImportDialog } from './SprintBulkImportDialog';
 
 interface SprintEditorProps {
   contentId: string;
@@ -173,7 +174,15 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
             </Button>
           </SprintTTSBulkDialog>
 
-          {/* 💡 補足: 新規追加フォーム側にもProps経由で contentId を引き渡せるように拡張可能領域となります */}
+          {/* CSV問題一括登録ダイアログ */}
+          <SprintBulkImportDialog
+            contentId={contentId}
+            type={selectedType}
+            level={Number(selectedLevel)}
+            onSuccess={fetchQuestions}
+          />
+
+          {/* 新規追加フォーム */}
           <SprintQuestionFormDialog 
             mode="create" 
             type={selectedType} 
