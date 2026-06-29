@@ -1,20 +1,22 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, Library, CalendarDays, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, Library, CalendarDays, ArrowLeft, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoDateInZone, toIsoMonthInZone } from '@gabby/lib/date/date';
-import { WordSummaryHistoryItem } from '@/actions/wordAction';
+import { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
 
 interface TrainingPerformanceProps {
-  initialData: WordSummaryHistoryItem[];
+  initialData: UserTrainingPerformanceResponse;
   targetMonth: string; // 形式: "YYYY-MM"
 }
 
 export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initialData, targetMonth }) => {
   const router = useRouter();
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [showSprintTooltip, setShowSprintTooltip] = useState(false);
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
   // 当月の文字列（"YYYY-MM"）を生成
@@ -22,15 +24,17 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     return toIsoMonthInZone(new Date(), timezone);
   }, [timezone]);
 
-  // 1. 統計データの算出（インラインで直接タイムゾーン計算を実行し、Compilerに追随させる）
+  // 1. 統計データの算出
   const stats = useMemo(() => {
     const uniqueDays = new Set<string>();
     let totalWords = 0;
     let totalPhrases = 0;
+    let sprintSessions = 0;
+    let sprintAnswers = 0;
     let totalAssessments = 0;
 
-    initialData.forEach(item => {
-      // 💡 内部関数を介さず、直接ユーティリティを実行
+    // 単語ドリル履歴の集計
+    (initialData?.words || []).forEach(item => {
       const dateStr = toIsoDateInZone(item.training_date, timezone);
       uniqueDays.add(dateStr);
       totalWords += item.word_count;
@@ -38,13 +42,32 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
       totalAssessments += item.assessment_count;
     });
 
+    // スプリントセッション履歴の集計
+    (initialData?.sprint_sessions || []).forEach(item => {
+      if (item.insert_date) {
+        const dateStr = toIsoDateInZone(item.insert_date, timezone);
+        uniqueDays.add(dateStr);
+      }
+      sprintSessions += 1;
+      sprintAnswers += item.total_answered;
+    });
+
+    // スプリントドリルサマリー履歴の集計
+    (initialData?.sprint_drills || []).forEach(item => {
+      const dateStr = toIsoDateInZone(item.training_date, timezone);
+      uniqueDays.add(dateStr);
+      totalAssessments += item.assessment_count;
+    });
+
     return {
       activeDays: uniqueDays.size,
       totalWords,
       totalPhrases,
+      sprintSessions,
+      sprintAnswers,
       totalAssessments
     };
-  }, [initialData, timezone]); // 💡 timezone を正確に依存配列へ追加
+  }, [initialData, timezone]);
 
   const handleMonthChange = (direction: 'prev' | 'next') => {
     const [year, month] = targetMonth.split('-').map(Number);
@@ -60,7 +83,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     }
 
     const targetMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-    // 💡 クエリパラメータの変更のみであるため、スクロール維持かつ replace で履歴スタックを最適化
     router.replace(`/training/performance?month=${targetMonthStr}`, { scroll: false });
   };
 
@@ -69,12 +91,20 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     const [year, month] = targetMonth.split('-').map(Number);
     const days = [];
 
-    // 💡 O(1) 探索用のSet生成時も、インラインでタイムゾーンを考慮して直接ラップ
-    const historySet = new Set(
-      initialData.map(item => toIsoDateInZone(item.training_date, timezone))
-    );
+    const historySet = new Set<string>();
     
-    // 月の末日を取得
+    (initialData?.words || []).forEach(item => {
+      historySet.add(toIsoDateInZone(item.training_date, timezone));
+    });
+    (initialData?.sprint_sessions || []).forEach(item => {
+      if (item.insert_date) {
+        historySet.add(toIsoDateInZone(item.insert_date, timezone));
+      }
+    });
+    (initialData?.sprint_drills || []).forEach(item => {
+      historySet.add(toIsoDateInZone(item.training_date, timezone));
+    });
+    
     const daysInMonth = new Date(year, month, 0).getDate();
     
     for (let d = 1; d <= daysInMonth; d++) {
@@ -87,7 +117,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
       });
     }
     return days;
-  }, [initialData, targetMonth, timezone]); // 💡 timezone を過不足なく検知
+  }, [initialData, targetMonth, timezone]);
 
   const [displayYear, displayMonth] = targetMonth.split('-');
   const isNotCurrentMonth = targetMonth !== currentMonthStr;
@@ -199,57 +229,149 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
               <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest block px-1">
                 Training Details
               </span>
-              
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-4 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between">
-                  <span className="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider block mb-2">Words</span>
-                  <div className="space-y-0.5">
-                    <div className="text-xl font-mono font-black text-slate-900 tracking-tight">{stats.totalWords}</div>
-                    <span className="text-[10px] font-bold text-slate-500 block">単語数</span>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between">
-                  <span className="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider block mb-2">Phrases</span>
-                  <div className="space-y-0.5">
-                    <div className="text-xl font-mono font-black text-slate-900 tracking-tight">{stats.totalPhrases}</div>
-                    <span className="text-[10px] font-bold text-slate-500 block">フレーズ数</span>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between">
-                  <span className="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider block mb-2">Feedback</span>
-                  <div className="space-y-0.5">
-                    <div className="text-xl font-mono font-black text-slate-900 tracking-tight">{stats.totalAssessments}</div>
-                    <span className="text-[10px] font-bold text-slate-500 block">発話評価数</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* カレンダー */}
-            <div className="p-5 bg-white border border-slate-200/60 rounded-2xl shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-                <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-tight">
-                  トレーニング・トラッカー
-                </h3>
-                <span className="text-[9px] font-mono font-bold text-slate-400">
-                  {parseInt(displayMonth)}月の実施状況
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-7 gap-2 text-center">
-                {calendarDays.map((day, idx) => (
-                  <div key={idx} className="flex flex-col items-center justify-center">
-                    <div className={`w-8 h-8 rounded-lg text-xs font-mono font-bold flex items-center justify-center transition-all ${
-                      day.hasHistory 
-                        ? 'bg-indigo-600 text-white font-black shadow-xs ring-4 ring-indigo-50' 
-                        : 'bg-slate-50 text-slate-400'
-                    }`}>
-                      {day.dayNum}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. 単語帳 (インディゴ) */}
+                <div className="p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-indigo-50/60 text-indigo-600 rounded-md flex items-center justify-center border border-indigo-100/20">
+                        <BookOpen size={13} strokeWidth={2.5} />
+                      </div>
+                      <span className="text-xs font-black text-slate-700">単語帳</span>
                     </div>
                   </div>
-                ))}
+
+                  <div className="grid grid-cols-2 gap-4 pt-1">
+                    <div>
+                      <span className="text-[9px] font-medium text-slate-400 block mb-0.5">単語</span>
+                      <span className="text-base font-mono font-black text-slate-900 tracking-tight">{stats.totalWords}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-medium text-slate-400 block mb-0.5">フレーズ</span>
+                      <span className="text-base font-mono font-black text-slate-900 tracking-tight">{stats.totalPhrases}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. スプリント (アンバー) */}
+                <div className="p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-amber-50/60 text-amber-500 rounded-md flex items-center justify-center border border-amber-100/20">
+                        <Zap size={13} strokeWidth={2.5} />
+                      </div>
+                      <span className="text-xs font-black text-slate-700">スプリント</span>
+                      <div className="relative flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => setShowSprintTooltip(!showSprintTooltip)}
+                          onMouseEnter={() => setShowSprintTooltip(true)}
+                          onMouseLeave={() => setShowSprintTooltip(false)}
+                          className="text-slate-400 hover:text-slate-600 cursor-help transition-colors focus:outline-none flex items-center justify-center"
+                        >
+                          <HelpCircle size={13} />
+                        </button>
+                        <AnimatePresence>
+                          {showSprintTooltip && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                              transition={{ duration: 0.12, ease: "easeOut" }}
+                              className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md whitespace-nowrap z-50 pointer-events-none"
+                            >
+                              ドリルモードの回答数は含まれていません
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-1">
+                    <div>
+                      <span className="text-[9px] font-medium text-slate-400 block mb-0.5">本数</span>
+                      <span className="text-base font-mono font-black text-slate-900 tracking-tight">{stats.sprintSessions}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-medium text-slate-400 block mb-0.5">回答数</span>
+                      <span className="text-base font-mono font-black text-slate-900 tracking-tight">{stats.sprintAnswers}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. 発話数 (ローズ / Micアイコン) */}
+                <div className="p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-rose-50/60 text-rose-500 rounded-md flex items-center justify-center border border-rose-100/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                      </div>
+                      <span className="text-xs font-black text-slate-700">発話</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 pb-1 flex justify-center items-baseline gap-0.5 font-mono w-full">
+                    <span className="text-xl font-black text-slate-900 tracking-tight leading-none">
+                      {stats.totalAssessments}
+                    </span>
+                    <span className="text-[10px] font-sans font-bold text-slate-400 ml-0.5">回</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* カレンダー */}
+              <div className="p-5 bg-white border border-slate-200/60 rounded-2xl shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-50 pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-tight">
+                      トレーニング・トラッカー
+                    </h3>
+                    <div className="relative flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowTooltip(!showTooltip)}
+                        onMouseEnter={() => setShowTooltip(true)}
+                        onMouseLeave={() => setShowTooltip(false)}
+                        className="text-slate-400 hover:text-slate-600 cursor-help transition-colors focus:outline-none flex items-center"
+                      >
+                        <HelpCircle size={13} />
+                      </button>
+                      <AnimatePresence>
+                        {showTooltip && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                            transition={{ duration: 0.12, ease: "easeOut" }}
+                            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md whitespace-nowrap z-50 pointer-events-none"
+                          >
+                            トレーニングした日付がマークされます
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold text-slate-400">
+                    {parseInt(displayMonth)}月の実施状況
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-2 text-center">
+                  {calendarDays.map((day, idx) => (
+                    <div key={idx} className="flex flex-col items-center justify-center">
+                      <div className={`w-8 h-8 rounded-lg text-xs font-mono font-bold flex items-center justify-center transition-all ${
+                        day.hasHistory 
+                          ? 'bg-indigo-600 text-white font-black shadow-xs ring-4 ring-indigo-50' 
+                          : 'bg-slate-50 text-slate-400'
+                      }`}>
+                        {day.dayNum}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -270,9 +392,8 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 uppercase">Word</span>
                       <h2 className="text-xs font-black text-slate-800 group-hover:text-indigo-600 transition-colors">
-                        単語ドリルのトレーニング履歴
+                        単語帳ドリルのトレーニング履歴
                       </h2>
                     </div>
                     <p className="text-[11px] font-medium text-slate-400 mt-1 leading-normal">
@@ -296,7 +417,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 uppercase">Sprint</span>
                       <h2 className="text-xs font-black text-slate-800 group-hover:text-amber-600 transition-colors">
                         スプリントのトレーニング履歴
                       </h2>
@@ -321,7 +441,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
             onClick={() => router.push('/library')}
             className="w-full max-w-sm h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>教材を選択する</span>
+            <span>教材を選択</span>
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>

@@ -447,12 +447,19 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
         </div>
 
         {/* ────────────── フッター ────────────── */}
-        <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex flex-col items-center">
+        <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex gap-3 w-full max-w-lg mx-auto">
+          <button
+            onClick={() => router.push('/library')}
+            className="flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
+          >
+            <span>教材を選択</span>
+            <ArrowRight size={14} strokeWidth={3} />
+          </button>
           <button
             onClick={() => router.push('/training/sprint/play?mode=sprint')}
-            className="w-full max-w-sm h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
+            className="flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>スプリントを選択</span>
+            <span>スプリントをする</span>
             <ArrowRight size={14} strokeWidth={2.5} />
           </button>
         </div>

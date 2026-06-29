@@ -518,7 +518,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             onClick={() => router.push(`/training/sprint/play?mode=sprint&sprint_type=${scoreData.sprint_type}&content_id=${scoreData.content_id}`)}
             className="flex-[2] max-w-sm h-12 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/10 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>スプリントを選択</span>
+            <span>スプリントをする</span>
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
