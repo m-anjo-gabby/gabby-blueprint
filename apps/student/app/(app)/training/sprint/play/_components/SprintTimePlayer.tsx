@@ -431,7 +431,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
+<div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
       <main className="bg-white border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden shadow-2xl">
         
         {/* ① 上部ヘッダー */}
@@ -482,7 +482,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         <div className="flex-1 flex flex-col p-6 overflow-y-auto overscroll-contain">
           
           {/* ②-A: 問題番号・ステップ表示 */}
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-6 sm:gap-10 shrink-0 pb-4">
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-6 shrink-0 pb-4">
+            {/* 問題番号表示（元のバッジデザインを完全維持） */}
             <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600 self-start">
               <div className="flex items-center gap-2.5 px-3 py-1.5">
                 <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
@@ -507,57 +508,97 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               )}
             </div>
 
-            <div className="w-full flex justify-center">
-              <div className="w-full max-[280px] sm:w-72 flex items-center justify-between gap-2">
+            {/* 改修箇所：洗練されたカプセル・コネクト型のステッププログレスバー表示 */}
+            <div className="w-full flex justify-center pt-2 select-none">
+              <div className="w-full max-w-md bg-slate-50 border border-slate-100 rounded-2xl p-2 flex items-center justify-between gap-1.5 sm:gap-3">
                 {userActionSteps.map((step, idx) => {
                   const isCurrent = idx === currentActionIndex;
                   const isCompleted = idx < currentActionIndex;
+                  
                   return (
-                    <div key={idx} className="flex-1 flex flex-col gap-1.5">
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
-                        <div 
-                          className={cn(
-                            "absolute inset-0 transition-transform duration-300",
-                            isCompleted ? "bg-indigo-500" : isCurrent ? "bg-indigo-500" : "bg-transparent"
-                          )}
-                          style={{ transform: isCompleted || isCurrent ? 'translateX(0)' : 'translateX(-100%)' }}
-                        />
-                      </div>
-                      <span className={cn(
-                        "text-[10px] font-black tracking-tight",
-                        isCurrent ? "text-indigo-600" : isCompleted ? "text-indigo-600" : "text-slate-300"
+                    <React.Fragment key={idx}>
+                      {/* 各ステップのカプセル */}
+                      <div className={cn(
+                        "flex-1 flex items-center justify-center py-2 px-2 rounded-xl border text-center transition-all duration-300",
+                        isCurrent 
+                          ? "bg-indigo-600 border-indigo-600 text-white font-black shadow-md shadow-indigo-600/10 scale-[1.02]" 
+                          : isCompleted 
+                            ? "bg-indigo-50 border-indigo-100 text-indigo-600 font-bold" 
+                            : "bg-white border-slate-200 text-slate-400 font-medium"
                       )}>
-                        {step}
-                      </span>
-                    </div>
+                        <span className="text-[11px] sm:text-xs tracking-tight whitespace-nowrap">
+                          {step}
+                        </span>
+                      </div>
+
+                      {/* ステップ間の矢印コネクタ（最後の要素以外） */}
+                      {idx < userActionSteps.length - 1 && (
+                        <span className={cn(
+                          "text-xs font-bold font-mono transition-colors duration-300 shrink-0 px-0.5",
+                          isCompleted ? "text-indigo-400" : "text-slate-300"
+                        )}>
+                          ➔
+                        </span>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </div>
             </div>
           </div>
 
-          {/* ②-B: メッセージ ＋ 部分再生ボタンエリア */}
-          <div className="flex-1 flex flex-col items-center justify-center space-y-10 py-4">
-            <AnimatePresence mode="wait">
-              {isRecording ? (
-                <motion.div
-                  key="recording-hud"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex flex-col items-center gap-10 w-full"
+          {/* ②-B: メッセージ ＋ ボタンエリア */}
+          <div className="flex-1 flex flex-col items-center justify-center space-y-6 py-2">
+            
+            {/* メッセージ表示部（瞬時に切り替わる） */}
+            <div className="flex flex-col items-center justify-center gap-1.5 w-full max-w-xl mx-auto px-4 select-none shrink-0 min-h-[4rem] text-center">
+              <div className="flex items-center justify-center gap-4">
+                <div
+                  className={cn(
+                    "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
+                    isRecording 
+                      ? "text-indigo-500" 
+                      : audioPhase === 'idle' 
+                        ? "text-slate-300" 
+                        : "text-indigo-600"
+                  )}
                 >
-                  <div className="flex items-center justify-center gap-4 w-full max-w-xl mx-auto px-4">
-                    <div className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 text-indigo-500">
-                      <CircleDot className="w-full h-full" strokeWidth={2.5} />
-                    </div>
-                    <h2 className="text-lg sm:text-2xl font-black tracking-tight whitespace-nowrap select-none text-slate-800">
-                      発話して回答しましょう
-                    </h2>
-                  </div>
+                  {isRecording ? (
+                    <CircleDot className="w-full h-full" strokeWidth={2.5} />
+                  ) : audioPhase === 'idle' ? (
+                    <CircleDot className="w-full h-full" strokeWidth={2.5} />
+                  ) : (
+                    <Headphones className="w-full h-full" strokeWidth={2.5} />
+                  )}
+                </div>
+                <h2 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight whitespace-nowrap select-none">
+                  {isRecording && "発話して回答しましょう"}
+                  {!isRecording && audioPhase === 'statement' && "基本文を再生中"}
+                  {!isRecording && audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
+                  {!isRecording && audioPhase === 'answer' && "発話して回答しましょう"}
+                  {!isRecording && audioPhase === 'idle' && "Ready"}
+                </h2>
+              </div>
+              {/* サブテキスト表示 */}
+              {(isRecording || audioPhase === 'answer') && (
+                <p className="text-xs sm:text-sm font-semibold text-slate-400">
+                  ※開始音の後に発話してください
+                </p>
+              )}
+            </div>
 
-                  <div className="flex flex-col items-center gap-6">
+            {/* 録音インジケータ ＋ ボタン（ふわっと表示する） */}
+            <div className="min-h-[13rem] flex items-center justify-center w-full">
+              <AnimatePresence mode="wait">
+                {isRecording ? (
+                  <motion.div
+                    key="recording-hud"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col items-center gap-4 w-full"
+                  >
                     {(() => {
                       const RADIUS = 36;
                       const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -619,42 +660,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                         <span className="text-[11px] font-bold uppercase tracking-wider">スキップする</span>
                       </button>
                     </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="status-message"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="flex items-center justify-center gap-4 w-full max-w-xl mx-auto px-4"
-                >
-                  {audioPhase !== 'answer' && (
-                    <div
-                      className={cn(
-                        "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
-                        audioPhase === 'idle' ? "text-slate-300" : "text-indigo-600"
-                      )}
-                    >
-                      {audioPhase === 'idle' ? (
-                        <CircleDot className="w-full h-full" strokeWidth={2.5} />
-                      ) : (
-                        <Headphones className="w-full h-full" strokeWidth={2.5} />
-                      )}
-                    </div>
-                  )}
-
-                  <h2 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight whitespace-nowrap select-none transition-colors duration-200">
-                    {audioPhase === 'statement' && "基本文を再生中"}
-                    {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
-                    {audioPhase === 'idle' && "Ready"}
-                  </h2>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </div>
         </div>
+      </div>
 
         {/* 統合された完了レイヤー */}
         {(isSaving || showTimeUpOverlay) && (
