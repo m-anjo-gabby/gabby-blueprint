@@ -2,7 +2,7 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Volume2, RotateCcw, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, Square, FastForward, Loader2 } from 'lucide-react';
+import { ChevronLeft, Volume2, RotateCcw, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, MicOff, Square, FastForward, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -52,6 +52,34 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'good'>('idle');
+  const [micStatus, setMicStatus] = useState<'checking' | 'granted' | 'denied' | 'prompt'>('checking');
+
+  const checkMicPermission = useCallback(async () => {
+    try {
+      if (typeof window === 'undefined') return;
+      if (navigator.permissions && navigator.permissions.query) {
+        const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        setMicStatus(permissionStatus.state as any);
+        permissionStatus.onchange = () => {
+          setMicStatus(permissionStatus.state as any);
+        };
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        setMicStatus('granted');
+      }
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setMicStatus('denied');
+      } else {
+        setMicStatus('prompt');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    checkMicPermission();
+  }, [checkMicPermission]);
 
   // ────────────── 🔊 音声カスタムフック ──────────────
   const { speak: ttsSpeak, setSpeechRate: ttsSetRate, startAssessment, stopListening, timeLeft } = useWebSpeech();
@@ -349,12 +377,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       !isRecording &&
       !isSaving &&
       !showTimeUpOverlay &&
-      !hasAutoStartedRef.current
+      !hasAutoStartedRef.current &&
+      micStatus !== 'denied'
     ) {
       hasAutoStartedRef.current = true;
       handleStartRecord();
     }
-  }, [audioPhase, isRecording, isSaving, showTimeUpOverlay, handleStartRecord]);
+  }, [audioPhase, isRecording, isSaving, showTimeUpOverlay, handleStartRecord, micStatus]);
 
   // 全体の残り制限時間カウント
   useEffect(() => {
@@ -451,6 +480,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     onExit?.();
   };
 
+  const showRecordingHud = isRecording || assessmentVisualState !== 'idle' || (audioPhase === 'answer' && micStatus === 'denied');
 
   return (
 <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
@@ -603,13 +633,17 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                       ? "text-indigo-500" 
                       : audioPhase === 'idle' 
                         ? "text-slate-300" 
-                        : "text-indigo-600"
+                        : micStatus === 'denied' && audioPhase === 'answer'
+                          ? "text-rose-500"
+                          : "text-indigo-600"
                   )}
                 >
                   {isRecording ? (
                     <CircleDot className="w-full h-full" strokeWidth={2.5} />
                   ) : audioPhase === 'idle' ? (
                     <CircleDot className="w-full h-full" strokeWidth={2.5} />
+                  ) : micStatus === 'denied' && audioPhase === 'answer' ? (
+                    <MicOff className="w-full h-full" strokeWidth={2.5} />
                   ) : (
                     <Headphones className="w-full h-full" strokeWidth={2.5} />
                   )}
@@ -618,7 +652,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   {isRecording && "発話して回答しましょう"}
                   {!isRecording && audioPhase === 'statement' && "基本文を再生中"}
                   {!isRecording && audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
-                  {!isRecording && audioPhase === 'answer' && "発話して回答しましょう"}
+                  {!isRecording && audioPhase === 'answer' && (
+                    micStatus === 'denied' ? "脳内で瞬時に回答しましょう" : "発話して回答しましょう"
+                  )}
                   {!isRecording && audioPhase === 'idle' && "Ready"}
                 </h2>
               </div>
@@ -627,172 +663,195 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 "text-xs sm:text-sm font-semibold text-slate-400 transition-opacity duration-150",
                 (isRecording || audioPhase === 'answer') ? "opacity-100" : "opacity-0 select-none pointer-events-none"
               )}>
-                ※開始音の後に発話してください
+                {micStatus === 'denied' && audioPhase === 'answer' 
+                  ? "※マイク権限が拒否されています" 
+                  : "※開始音の後に発話してください"}
               </p>
             </div>
 
             {/* 録音インジケータ ＋ ボタン（ふわっと表示する） */}
             <div className="min-h-[13rem] flex items-center justify-center w-full">
               <AnimatePresence mode="wait">
-                {(isRecording || assessmentVisualState !== 'idle') ? (
+                {showRecordingHud ? (
                   <motion.div
-                    key="recording-hud"
+                    key={micStatus === 'denied' && audioPhase === 'answer' ? "no-mic-hud" : "recording-hud"}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
                     className="flex flex-col items-center gap-4 w-full"
                   >
-                    {(() => {
-                      const RADIUS = 36;
-                      const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-                      
-                      const isExcellent = assessmentVisualState === 'excellent';
-                      const isGood = assessmentVisualState === 'good';
-                      const isVisualizing = isExcellent || isGood;
-
-                      const strokeColor = isExcellent ? "stroke-emerald-500" : isGood ? "stroke-sky-500" : "stroke-rose-500";
-                      const trackColor = isExcellent ? "stroke-emerald-100" : isGood ? "stroke-sky-100" : "stroke-rose-100";
-                      const fillColor = isExcellent ? "rgba(16, 185, 129, 0.05)" : isGood ? "rgba(14, 165, 233, 0.05)" : "transparent";
-
-                      const MAX_TIME = 10;
-                      const progress = isVisualizing ? 1 : (Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME);
-                      const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
-                      return (
-                        <div className="relative flex items-center justify-center w-24 h-24 select-none">
-                          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 92 92">
-                            <circle cx="46" cy="46" r={RADIUS} className={cn(trackColor, "transition-colors duration-300")} strokeWidth="5" fill={fillColor} />
-                            <motion.circle
-                              cx="46"
-                              cy="46"
-                              r={RADIUS}
-                              className={strokeColor}
-                              strokeWidth="5"
-                              fill="transparent"
-                              strokeDasharray={CIRCUMFERENCE}
-                              animate={{ strokeDashoffset }}
-                              transition={{
-                                duration: isVisualizing ? 0.3 : (timeLeft === MAX_TIME ? 0 : 1),
-                                ease: isVisualizing ? "easeOut" : "linear"
-                              }}
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            {isVisualizing ? (
-                              <motion.div
-                                initial={{ scale: 0.5, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="flex flex-col items-center justify-center"
-                              >
-                                <span className={cn(
-                                  "text-[10px] font-black tracking-normal uppercase leading-none",
-                                  isExcellent ? "text-emerald-600" : "text-sky-600"
-                                )}>
-                                  {isExcellent ? "Excellent" : "Good!"}
-                                </span>
-                              </motion.div>
-                            ) : (
-                              <>
-                                <span className="text-3xl font-black font-mono text-rose-600 leading-none">
-                                  {timeLeft}
-                                </span>
-                                <div className="flex items-center gap-1 mt-0.5 text-rose-400">
-                                  <Mic size={10} fill="currentColor" className="animate-pulse" />
-                                  <span className="text-[9px] font-black uppercase tracking-wider leading-none">REC</span>
-                                </div>
-                              </>
-                            )}
-                          </div>
+                    {micStatus === 'denied' && audioPhase === 'answer' ? (
+                      // マイク権限がない場合：スキップ用の大きなボタンのみ表示
+                      <div className="flex flex-col items-center gap-4 py-4 w-full">
+                        <div className="flex items-center gap-2 text-rose-500">
+                          <MicOff size={16} strokeWidth={2.5} />
+                          <span className="text-xs font-bold">マイクが使用できません</span>
                         </div>
-                      );
-                    })()}
-
-                    {assessmentVisualState === 'idle' ? (
-                      <div className="flex flex-col items-center gap-3 mt-2">
-                        <button
-                          type="button"
-                          onClick={handleStopRecord}
-                          className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-rose-500 text-white hover:bg-rose-600 transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group"
-                          title="発話を完了して次へ"
-                        >
-                          <CheckCircle2 size={16} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-black tracking-wider">発話を完了</span>
-                        </button>
-
                         <button
                           type="button"
                           onClick={handleSkipQuestion}
                           disabled={isSaving}
-                          className="flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-transparent border border-transparent text-slate-400 hover:text-slate-600 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-20 disabled:pointer-events-none w-48"
+                          className="flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm tracking-wider shadow-md shadow-indigo-600/10 active:scale-[0.98] cursor-pointer transition-all w-60 group border-none"
                           title="この問題をスキップして次へ"
                         >
-                          <FastForward size={14} strokeWidth={2.5} />
-                          <span className="text-[11px] font-bold uppercase tracking-wider">スキップする</span>
+                          <FastForward size={16} strokeWidth={3} className="group-hover:translate-x-0.5 transition-transform" />
+                          <span>スキップして次へ</span>
                         </button>
                       </div>
                     ) : (
-                      <div className="h-[5.5rem]" />
+                      // 通常の録音中／演出中のHUD（従来のものをそのまま配置）
+                      <>
+                        {(() => {
+                          const RADIUS = 36;
+                          const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+                          
+                          const isExcellent = assessmentVisualState === 'excellent';
+                          const isGood = assessmentVisualState === 'good';
+                          const isVisualizing = isExcellent || isGood;
+
+                          const strokeColor = isExcellent ? "stroke-emerald-500" : isGood ? "stroke-sky-500" : "stroke-rose-500";
+                          const trackColor = isExcellent ? "stroke-emerald-100" : isGood ? "stroke-sky-100" : "stroke-rose-100";
+                          const fillColor = isExcellent ? "rgba(16, 185, 129, 0.05)" : isGood ? "rgba(14, 165, 233, 0.05)" : "transparent";
+
+                          const MAX_TIME = 10;
+                          const progress = isVisualizing ? 1 : (Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME);
+                          const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+                          return (
+                            <div className="relative flex items-center justify-center w-24 h-24 select-none">
+                              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 92 92">
+                                <circle cx="46" cy="46" r={RADIUS} className={cn(trackColor, "transition-colors duration-300")} strokeWidth="5" fill={fillColor} />
+                                <motion.circle
+                                  cx="46"
+                                  cy="46"
+                                  r={RADIUS}
+                                  className={strokeColor}
+                                  strokeWidth="5"
+                                  fill="transparent"
+                                  strokeDasharray={CIRCUMFERENCE}
+                                  animate={{ strokeDashoffset }}
+                                  transition={{
+                                    duration: isVisualizing ? 0.3 : (timeLeft === MAX_TIME ? 0 : 1),
+                                    ease: isVisualizing ? "easeOut" : "linear"
+                                  }}
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                {isVisualizing ? (
+                                  <motion.div
+                                    initial={{ scale: 0.5, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="flex flex-col items-center justify-center"
+                                  >
+                                    <span className={cn(
+                                      "text-[10px] font-black tracking-normal uppercase leading-none",
+                                      isExcellent ? "text-emerald-600" : "text-sky-600"
+                                    )}>
+                                      {isExcellent ? "Excellent" : "Good!"}
+                                    </span>
+                                  </motion.div>
+                                ) : (
+                                  <>
+                                    <span className="text-3xl font-black font-mono text-rose-600 leading-none">
+                                      {timeLeft}
+                                    </span>
+                                    <div className="flex items-center gap-1 mt-0.5 text-rose-400">
+                                      <Mic size={10} fill="currentColor" className="animate-pulse" />
+                                      <span className="text-[9px] font-black uppercase tracking-wider leading-none">REC</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {assessmentVisualState === 'idle' ? (
+                          <div className="flex flex-col items-center gap-3 mt-2">
+                            <button
+                              type="button"
+                              onClick={handleStopRecord}
+                              className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-rose-500 text-white hover:bg-rose-600 transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group border-none"
+                              title="発話を完了して次へ"
+                            >
+                              <CheckCircle2 size={16} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
+                              <span className="text-sm font-black tracking-wider">発話を完了</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handleSkipQuestion}
+                              disabled={isSaving}
+                              className="flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-transparent border border-transparent text-slate-400 hover:text-slate-600 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-20 disabled:pointer-events-none w-48 border-none"
+                              title="この問題をスキップして次へ"
+                            >
+                              <FastForward size={14} strokeWidth={2.5} />
+                              <span className="text-[11px] font-bold uppercase tracking-wider">スキップする</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="h-[5.5rem]" />
+                        )}
+                      </>
                     )}
                   </motion.div>
                 ) : null}
               </AnimatePresence>
             </div>
+          </div>
         </div>
-      </div>
+      </main>
 
-        {/* 統合された完了レイヤー */}
-        {(isSaving || showTimeUpOverlay) && (
-          <div 
-            className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300 cursor-pointer"
-            onClick={showTimeUpOverlay ? handleGoToResult : undefined}
-          >
-            <div className="w-full max-w-xs text-center space-y-6 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
-              <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 shadow-sm text-indigo-600">
-                {isSaving ? (
-                  <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
-                ) : (
-                  <CheckCircle2 className="w-7 h-7 text-indigo-600" strokeWidth={2.2} />
+      {/* 統合された完了レイヤー */}
+      {(isSaving || showTimeUpOverlay) && (
+        <div 
+          className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300 cursor-pointer"
+          onClick={showTimeUpOverlay ? handleGoToResult : undefined}
+        >
+          <div className="w-full max-w-xs text-center space-y-6 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
+            <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 shadow-sm text-indigo-600">
+              {isSaving ? (
+                <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
+              ) : (
+                <CheckCircle2 className="w-7 h-7 text-indigo-600" strokeWidth={2.2} />
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-black text-slate-800 tracking-tight">
+                {isSaving ? "スプリントの記録を保存中" : "スプリント完了"}
+              </h3>
+              <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[220px] mx-auto">
+                {isSaving 
+                  ? "データを登録しています..." 
+                  : redirectCountdown !== null
+                    ? `${redirectCountdown}秒後に自動で結果画面へ遷移します`
+                    : "今回の成果を結果画面で確認しましょう。"}
+              </p>
+            </div>
+
+            <div className={cn(
+              "transition-all duration-500 transform",
+              showTimeUpOverlay ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+            )}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleGoToResult();
+                }}
+                className={cn(
+                  "w-full h-12 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 group cursor-pointer",
+                  SHARED_BRAND_BUTTON
                 )}
-              </div>
-
-              <div className="space-y-1.5">
-                <h3 className="text-lg font-black text-slate-800 tracking-tight">
-                  {isSaving ? "スプリントの記録を保存中" : "スプリント完了"}
-                </h3>
-                <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[220px] mx-auto">
-                  {isSaving 
-                    ? "データを登録しています..." 
-                    : redirectCountdown !== null
-                      ? `${redirectCountdown}秒後に自動で結果画面へ遷移します`
-                      : "今回の成果を結果画面で確認しましょう。"}
-                </p>
-              </div>
-
-              <div className={cn(
-                "transition-all duration-500 transform",
-                showTimeUpOverlay ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
-              )}>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleGoToResult();
-                  }}
-                  className={cn(
-                    "w-full h-12 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 group cursor-pointer",
-                    SHARED_BRAND_BUTTON
-                  )}
-                >
-                  <span>結果を確認する</span>
-                  <ArrowRight size={14} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
-                </button>
-              </div>
-
+              >
+                <span>結果を確認する</span>
+                <ArrowRight size={14} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
+              </button>
             </div>
           </div>
-        )}
-
-      </main>
+        </div>
+      )}
     </div>
   );
 };
