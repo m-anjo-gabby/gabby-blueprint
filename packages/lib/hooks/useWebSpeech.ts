@@ -168,7 +168,7 @@ export function useWebSpeech() {
       latestResultRef.current = result;
 
       // エクセレント達成時は即座に確定
-      if (result.score >= 0.95) {
+      if (result.score >= 0.90) {
         finalize(result);
       }
     });

@@ -51,6 +51,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const [resultId, setResultId] = useState<string | null>(null);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
+  const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'good'>('idle');
 
   // ────────────── 🔊 音声カスタムフック ──────────────
   const { speak: ttsSpeak, setSpeechRate: ttsSetRate, startAssessment, stopListening, timeLeft } = useWebSpeech();
@@ -284,17 +285,38 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       }
 
       setIsRecording(false);
-      incrementAssessmentCount();
 
-      const { isLast } = commitAssessmentResult(
-        currentQuestionId,
-        getFeedbackConfig(result.score),
-        result
-      );
+      const score = result.score;
+      let visualState: 'idle' | 'excellent' | 'good' = 'idle';
+      if (score >= 0.90) {
+        visualState = 'excellent';
+      } else if (score >= 0.70) {
+        visualState = 'good';
+      }
 
-      if (isLast) {
-        showToast("すべての問題を消化しました！スプリント完了です。", "success");
-        handlePersistAndRedirect(secondsLeft);
+      const commitAndNext = () => {
+        setAssessmentVisualState('idle');
+        incrementAssessmentCount();
+
+        const { isLast } = commitAssessmentResult(
+          currentQuestionId,
+          getFeedbackConfig(result.score),
+          result
+        );
+
+        if (isLast) {
+          showToast("すべての問題を消化しました！スプリント完了です。", "success");
+          handlePersistAndRedirect(secondsLeft);
+        }
+      };
+
+      if (visualState !== 'idle') {
+        setAssessmentVisualState(visualState);
+        setTimeout(() => {
+          commitAndNext();
+        }, 1000);
+      } else {
+        commitAndNext();
       }
     });
   }, [currentQuestion, isSpeedMode, answerType, setIsRecording, startAssessment, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect, secondsLeft]);
@@ -434,48 +456,69 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
       <main className="bg-white border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden shadow-2xl">
         
-        {/* ① 上部ヘッダー */}
-        <div className="shrink-0 pt-6 w-full px-6">
-          <div className="flex items-center justify-between h-12">
+        {/* ① 上部ヘッダー（プログレスバー一体型・タイトル領域最大化） */}
+        <div className="shrink-0 w-full px-6 pt-5 pb-3 border-b border-slate-100/60 bg-white relative z-10">
+          
+          {/* 上段：ナビゲーション ＆ 拡大されたタイトル領域 */}
+          <div className="flex items-center justify-between h-10">
+            {/* 左：戻るボタン */}
             <button 
               onClick={handleExit}
-              className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200/80 active:scale-95 cursor-pointer transition-all"
+              className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200/80 active:scale-95 cursor-pointer transition-all shrink-0"
             >
               <ChevronLeft size={16} strokeWidth={2.5} />
             </button>
 
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">{contentName || 'Sprint Mode'}</span>
-              <h1 className="text-sm font-black text-slate-800 tracking-tight text-center max-w-[200px] truncate">{courseTitle}</h1>
-            </div>
-
-            <div className={cn(
-              "h-10 min-w-[85px] border rounded-xl flex items-center justify-center gap-2 px-3 transition-all duration-700",
-              (isCritical && secondsLeft > 0) ? "bg-rose-50 border-rose-200 text-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.1)]" :
-              (isWarning && secondsLeft > 0) ? "bg-amber-50 border-amber-200 text-amber-600" :
-              "bg-slate-50 border-slate-200 text-slate-700"
-            )}>
-              <Timer size={14} className={cn("transition-colors", isCritical ? "text-rose-500" : isWarning ? "text-amber-500" : "text-slate-400")} />
-              <span className="text-sm font-black font-mono tracking-tight tabular-nums">
-                {secondsLeft}s
+            {/* 中央：タイマー排除により、圧倒的に広がったタイトル表示エリア */}
+            <div className="flex-1 flex flex-col items-center px-4 min-w-0">
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5 select-none shrink-0">
+                {contentName || 'Sprint Mode'}
               </span>
+              <h1 className="text-sm font-black text-slate-800 tracking-tight text-center w-full max-w-[280px] sm:max-w-[360px] truncate">
+                {courseTitle}
+              </h1>
+            </div>
+
+            {/* 右：左右のビジュアルバランス（対称性）を保つためのクリアスペース（または将来のメニュー用等） */}
+            <div className="w-10 h-10 shrink-0 pointer-events-none" aria-hidden="true" />
+          </div>
+
+          {/* 下段：改修箇所：数値秒数が美しく融合した、カプセル型インサイド・プログレスバー */}
+          <div className="mt-4 w-full select-none">
+            <div className="h-6 w-full bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/30">
+              {/* 動的プログレスバー本体 */}
+              <div 
+                className={cn(
+                  "absolute top-0 left-0 h-full rounded-full transition-all flex items-center justify-end pr-3 shadow-[inset_-3px_0_8px_rgba(0,0,0,0.05)]",
+                  isCritical ? "bg-gradient-to-r from-rose-500 to-rose-600 shadow-[0_0_15px_rgba(225,29,72,0.2)]" :
+                  isWarning ? "bg-gradient-to-r from-amber-400 to-amber-500" :
+                  "bg-gradient-to-r from-indigo-500 to-indigo-600"
+                )}
+                style={{ 
+                  width: `${progressPercent}%`,
+                  transition: secondsLeft <= 0 ? 'width 0.2s ease-out' : 'width 1s linear'
+                }}
+              />
+
+              {/* 右端に完全固定された秒数表示レイヤー（バーの重なり度合いで文字色を動的に変化） */}
+              <div className="absolute inset-y-0 right-3 flex items-center select-none pointer-events-none z-20">
+                <div className={cn(
+                  "flex items-center gap-1 font-mono text-[11px] font-black tracking-tight tabular-nums transition-colors duration-300",
+                  progressPercent >= 90
+                    ? "text-white"
+                    : isCritical
+                      ? "text-rose-600"
+                      : isWarning
+                        ? "text-amber-600"
+                        : "text-slate-600"
+                )}>
+                  <Timer size={11} className={cn(isCritical && "animate-pulse")} strokeWidth={3} />
+                  <span>{secondsLeft}s</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
-            <div 
-              className={cn(
-                "absolute top-0 left-0 h-full rounded-full transition-colors duration-700",
-                isCritical ? "bg-rose-500" :
-                isWarning ? "bg-amber-400" :
-                "bg-indigo-600"
-              )}
-              style={{ 
-                width: `${progressPercent}%`,
-                transition: secondsLeft <= 0 ? 'width 0.2s ease-out' : 'width 1s linear'
-              }}
-            />
-          </div>
         </div>
 
         {/* ② メイン垂直フレックスコンテナ */}
@@ -579,18 +622,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   {!isRecording && audioPhase === 'idle' && "Ready"}
                 </h2>
               </div>
-              {/* サブテキスト表示 */}
-              {(isRecording || audioPhase === 'answer') && (
-                <p className="text-xs sm:text-sm font-semibold text-slate-400">
-                  ※開始音の後に発話してください
-                </p>
-              )}
+              {/* サブテキスト表示（縦位置のガタつきを抑えるために領域を常時維持） */}
+              <p className={cn(
+                "text-xs sm:text-sm font-semibold text-slate-400 transition-opacity duration-150",
+                (isRecording || audioPhase === 'answer') ? "opacity-100" : "opacity-0 select-none pointer-events-none"
+              )}>
+                ※開始音の後に発話してください
+              </p>
             </div>
 
             {/* 録音インジケータ ＋ ボタン（ふわっと表示する） */}
             <div className="min-h-[13rem] flex items-center justify-center w-full">
               <AnimatePresence mode="wait">
-                {isRecording ? (
+                {(isRecording || assessmentVisualState !== 'idle') ? (
                   <motion.div
                     key="recording-hud"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -602,64 +646,94 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                     {(() => {
                       const RADIUS = 36;
                       const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+                      
+                      const isExcellent = assessmentVisualState === 'excellent';
+                      const isGood = assessmentVisualState === 'good';
+                      const isVisualizing = isExcellent || isGood;
+
+                      const strokeColor = isExcellent ? "stroke-emerald-500" : isGood ? "stroke-sky-500" : "stroke-rose-500";
+                      const trackColor = isExcellent ? "stroke-emerald-100" : isGood ? "stroke-sky-100" : "stroke-rose-100";
+                      const fillColor = isExcellent ? "rgba(16, 185, 129, 0.05)" : isGood ? "rgba(14, 165, 233, 0.05)" : "transparent";
+
                       const MAX_TIME = 10;
-                      const progress = Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME;
+                      const progress = isVisualizing ? 1 : (Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME);
                       const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
                       return (
                         <div className="relative flex items-center justify-center w-24 h-24 select-none">
                           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 92 92">
-                            <circle cx="46" cy="46" r={RADIUS} className="stroke-rose-100" strokeWidth="5" fill="transparent" />
+                            <circle cx="46" cy="46" r={RADIUS} className={cn(trackColor, "transition-colors duration-300")} strokeWidth="5" fill={fillColor} />
                             <motion.circle
                               cx="46"
                               cy="46"
                               r={RADIUS}
-                              className="stroke-rose-500"
+                              className={strokeColor}
                               strokeWidth="5"
                               fill="transparent"
                               strokeDasharray={CIRCUMFERENCE}
                               animate={{ strokeDashoffset }}
                               transition={{
-                                duration: timeLeft === MAX_TIME ? 0 : 1,
-                                ease: "linear"
+                                duration: isVisualizing ? 0.3 : (timeLeft === MAX_TIME ? 0 : 1),
+                                ease: isVisualizing ? "easeOut" : "linear"
                               }}
                               strokeLinecap="round"
                             />
                           </svg>
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-3xl font-black font-mono text-rose-600 leading-none">
-                              {timeLeft}
-                            </span>
-                            <div className="flex items-center gap-1 mt-0.5 text-rose-400">
-                              <Mic size={10} fill="currentColor" className="animate-pulse" />
-                              <span className="text-[9px] font-black uppercase tracking-wider leading-none">REC</span>
-                            </div>
+                            {isVisualizing ? (
+                              <motion.div
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="flex flex-col items-center justify-center"
+                              >
+                                <span className={cn(
+                                  "text-[10px] font-black tracking-normal uppercase leading-none",
+                                  isExcellent ? "text-emerald-600" : "text-sky-600"
+                                )}>
+                                  {isExcellent ? "Excellent" : "Good!"}
+                                </span>
+                              </motion.div>
+                            ) : (
+                              <>
+                                <span className="text-3xl font-black font-mono text-rose-600 leading-none">
+                                  {timeLeft}
+                                </span>
+                                <div className="flex items-center gap-1 mt-0.5 text-rose-400">
+                                  <Mic size={10} fill="currentColor" className="animate-pulse" />
+                                  <span className="text-[9px] font-black uppercase tracking-wider leading-none">REC</span>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
                     })()}
 
-                    <div className="flex flex-col items-center gap-3 mt-2">
-                      <button
-                        type="button"
-                        onClick={handleStopRecord}
-                        className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-rose-500 text-white hover:bg-rose-600 transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group"
-                        title="発話を完了して次へ"
-                      >
-                        <CheckCircle2 size={16} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
-                        <span className="text-sm font-black tracking-wider">発話を完了</span>
-                      </button>
+                    {assessmentVisualState === 'idle' ? (
+                      <div className="flex flex-col items-center gap-3 mt-2">
+                        <button
+                          type="button"
+                          onClick={handleStopRecord}
+                          className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-rose-500 text-white hover:bg-rose-600 transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group"
+                          title="発話を完了して次へ"
+                        >
+                          <CheckCircle2 size={16} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-black tracking-wider">発話を完了</span>
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={handleSkipQuestion}
-                        disabled={isSaving}
-                        className="flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-transparent border border-transparent text-slate-400 hover:text-slate-600 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-20 disabled:pointer-events-none w-48"
-                        title="この問題をスキップして次へ"
-                      >
-                        <FastForward size={14} strokeWidth={2.5} />
-                        <span className="text-[11px] font-bold uppercase tracking-wider">スキップする</span>
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          onClick={handleSkipQuestion}
+                          disabled={isSaving}
+                          className="flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-transparent border border-transparent text-slate-400 hover:text-slate-600 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-20 disabled:pointer-events-none w-48"
+                          title="この問題をスキップして次へ"
+                        >
+                          <FastForward size={14} strokeWidth={2.5} />
+                          <span className="text-[11px] font-bold uppercase tracking-wider">スキップする</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-[5.5rem]" />
+                    )}
                   </motion.div>
                 ) : null}
               </AnimatePresence>

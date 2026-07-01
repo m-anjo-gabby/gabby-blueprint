@@ -295,7 +295,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   >
                     <DialogHeader>
                       <DialogTitle className="text-sm font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                        Mode Guide / モード解説
+                        モード解説
                       </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 mt-3">
@@ -406,7 +406,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   
                   {/* マイクステータスの一体化表示 */}
                   <div className="flex items-center justify-between border-t border-dashed border-slate-200/60 pt-2 text-[10px] font-bold">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2">
                       {micStatus === 'granted' ? (
                         <>
                           <Mic size={13} className="shrink-0 text-emerald-600" />
@@ -421,12 +421,63 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                         <>
                           <MicOff size={13} className="shrink-0 text-rose-500 animate-pulse" />
                           <span className="text-rose-500">マイクが許可されていません</span>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <button 
+                                type="button"
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-4.5 w-4.5 flex items-center justify-center rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors cursor-pointer shrink-0"
+                              >
+                                <HelpCircle size={11} strokeWidth={2.5} />
+                              </button>
+                            </DialogTrigger>
+                            <DialogContent
+                              onOpenAutoFocus={(e) => e.preventDefault()}
+                              className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border-none bg-white p-6 shadow-2xl duration-200 rounded-2xl text-slate-900 outline-none"
+                            >
+                              <DialogHeader>
+                                <DialogTitle className="text-sm font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                  マイク設定ガイド
+                                </DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 mt-3 text-xs leading-relaxed text-slate-600">
+                                <div className="space-y-1">
+                                  <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                                    1. ブラウザでの権限設定
+                                  </h4>
+                                  <p className="font-bold">
+                                    アドレスバーの左端にある鍵マークや設定アイコンをタップし、<strong>「マイク」の権限が「許可」</strong>になっているかご確認ください。
+                                  </p>
+                                </div>
+                                <hr className="border-slate-100" />
+                                <div className="space-y-1">
+                                  <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                                    2. 拒否された状態を解除する方法
+                                  </h4>
+                                  <ul className="list-disc pl-4 space-y-1 font-bold">
+                                    <li><strong>iOS (Safari):</strong> 設定アプリ ➔ Safari ➔ マイク を開き、「確認」または「許可」を選択します。</li>
+                                    <li><strong>iOS/Android (Chrome):</strong> アドレスバーの鍵アイコン ➔ 「サイトの設定」または「権限」から「許可」に変更します。</li>
+                                    <li><strong>PC:</strong> アドレスバーの鍵マークをクリックし、マイクを「許可」にしてページを再読み込みします。</li>
+                                  </ul>
+                                </div>
+                                <hr className="border-slate-100" />
+                                <div className="space-y-1">
+                                  <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                                    3. 音声なしで学習する場合
+                                  </h4>
+                                  <p className="font-bold">
+                                    発話できない環境では、スプリント中に<strong>「スキップ」</strong>ボタンを使用することで、音声判定を行わずに学習を進めることができます。
+                                  </p>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                         </>
                       )}
                     </div>
 
                     {micStatus !== 'granted' && micStatus !== 'checking' && (
-                      <span className="text-[9px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded shadow-xs">
+                      <span className="text-[9px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded shadow-xs shrink-0">
                         タップして許可
                       </span>
                     )}

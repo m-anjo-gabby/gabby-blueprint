@@ -257,32 +257,32 @@ export const SprintResult: React.FC<SprintResultProps> = ({
           </div>
 
           {/* 下段：実績スコアボード（中央寄せ） */}
-          <div className="relative z-10 pt-0.5 flex justify-center">
-            <div className="flex items-center gap-x-5 text-slate-700 font-mono">
+          <div className="relative z-10 pt-0.5 flex justify-center select-none">
+            <div className="flex items-center gap-x-5 text-slate-700 font-sans">
               {/* 回答数 */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 h-5">
                 <CheckCircle2 size={13} fill="none" strokeWidth={2.5} className="text-indigo-500 shrink-0" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">回答</span>
-                <span className="text-sm font-black text-slate-800">{displayTotalAnswered}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">回答</span>
+                <span className="text-sm font-black text-slate-800 font-mono leading-none">{displayTotalAnswered}</span>
               </div>
               {/* 発話数 */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 h-5">
                 <Mic size={13} className="text-rose-500 shrink-0 stroke-[2.5]" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">発話</span>
-                <span className="text-sm font-black text-slate-800">{displayTotalAssessment}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">発話</span>
+                <span className="text-sm font-black text-slate-800 font-mono leading-none">{displayTotalAssessment}</span>
               </div>
               {/* 平均スコア */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 h-5">
                 <ChartSpline size={13} strokeWidth={2.5} className="text-amber-500 shrink-0" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">平均スコア</span>
-                <span className="text-sm font-black text-indigo-600 inline-flex items-baseline">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">平均スコア</span>
+                <span className="text-sm font-black text-indigo-600 font-mono leading-none inline-flex items-baseline">
                   {displayTotalAssessment > 0 ? (
                     <>
                       {displayAverageScore}
-                      <span className="text-[9px] font-medium text-slate-400 ml-0.5 font-sans">/100</span>
+                      <span className="text-[9px] font-medium text-slate-400 ml-0.5 font-sans leading-none">/100</span>
                     </>
                   ) : (
-                    <span className="text-slate-400 font-normal">-</span>
+                    <span className="text-slate-400 font-normal leading-none">-</span>
                   )}
                 </span>
               </div>
@@ -518,7 +518,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             onClick={() => router.push(`/training/sprint/play?mode=sprint&sprint_type=${scoreData.sprint_type}&content_id=${scoreData.content_id}`)}
             className="flex-[2] max-w-sm h-12 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/10 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>スプリントをする</span>
+            <span>スプリントをリトライ</span>
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
