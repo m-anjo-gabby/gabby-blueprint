@@ -50,6 +50,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [resultId, setResultId] = useState<string | null>(null);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
 
   // ────────────── 🔊 音声カスタムフック ──────────────
   const { speak: ttsSpeak, setSpeechRate: ttsSetRate, startAssessment, stopListening, timeLeft } = useWebSpeech();
@@ -351,13 +352,29 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [secondsLeft, handlePersistAndRedirect]);
 
-  // タイムアップ完了時の自動遷移
+  // タイムアップ完了時の自動遷移とカウントダウン
   useEffect(() => {
     if (showTimeUpOverlay && resultId) {
+      setRedirectCountdown(3);
+      
+      const interval = setInterval(() => {
+        setRedirectCountdown((prev) => {
+          if (prev === null || prev <= 0) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
       const timer = setTimeout(() => {
         handleGoToResult();
       }, 3500);
-      return () => clearTimeout(timer);
+
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timer);
+      };
     }
   }, [showTimeUpOverlay, resultId, handleGoToResult]);
 
@@ -661,7 +678,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[220px] mx-auto">
                   {isSaving 
                     ? "データを登録しています..." 
-                    : "今回の成果を結果画面で確認しましょう。"}
+                    : redirectCountdown !== null
+                      ? `${redirectCountdown}秒後に自動で結果画面へ遷移します`
+                      : "今回の成果を結果画面で確認しましょう。"}
                 </p>
               </div>
 
