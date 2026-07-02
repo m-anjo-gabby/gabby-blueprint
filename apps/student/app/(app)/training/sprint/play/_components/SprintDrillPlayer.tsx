@@ -12,7 +12,7 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, playStartSound } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, audioBufferToWav } from '@gabby/lib';
 import { reportSprintProgress } from '@/actions/sprintAction';
 
 interface SprintDrillPlayerProps {
@@ -20,6 +20,10 @@ interface SprintDrillPlayerProps {
   initialQuestionId?: string;
   initialStarted?: boolean;
   onExit?: () => void;
+}
+
+interface NavigatorWithAudioSession extends Navigator {
+  audioSession?: { type: string };
 }
 
 export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({ 
@@ -68,19 +72,70 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isNavigating = useRef<boolean>(false);
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const chimeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const chimeBlobUrlRef = useRef<string | null>(null);
 
-  // iOS Safari の自動再生ポリシー回避のため、単一のAudioインスタンスをマウント時に作成して使い回す
+  // iOSの自動再生ポリシー回避のため、単一のAudioインスタンスをマウント時に作成して使い回す
   useEffect(() => {
     if (typeof window !== 'undefined') {
       nativeAudioRef.current = new Audio();
+      nativeAudioRef.current.volume = 1.0;
+
+      // チャイム音を OfflineAudioContext で事前レンダリングし、Blob URL として chimeAudioRef にセット
+      const OfflineCtxClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
+      if (OfflineCtxClass) {
+        const sampleRate = 44100;
+        const duration = 0.32;
+        const offlineCtx = new OfflineCtxClass(1, Math.ceil(sampleRate * duration), sampleRate);
+
+        const osc1 = offlineCtx.createOscillator();
+        const gain1 = offlineCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.value = 659.25;
+        gain1.gain.setValueAtTime(0, 0);
+        gain1.gain.linearRampToValueAtTime(0.6, 0.02);
+        gain1.gain.exponentialRampToValueAtTime(0.00001, 0.22);
+        osc1.connect(gain1);
+        gain1.connect(offlineCtx.destination);
+        osc1.start(0);
+        osc1.stop(0.22);
+
+        const osc2 = offlineCtx.createOscillator();
+        const gain2 = offlineCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.value = 987.77;
+        gain2.gain.setValueAtTime(0, 0.05);
+        gain2.gain.linearRampToValueAtTime(0.5, 0.07);
+        gain2.gain.exponentialRampToValueAtTime(0.00001, 0.32);
+        osc2.connect(gain2);
+        gain2.connect(offlineCtx.destination);
+        osc2.start(0.05);
+        osc2.stop(0.32);
+
+        offlineCtx.startRendering().then((renderedBuffer: AudioBuffer) => {
+          const wav = audioBufferToWav(renderedBuffer);
+          const blob = new Blob([wav], { type: 'audio/wav' });
+          const url = URL.createObjectURL(blob);
+          chimeBlobUrlRef.current = url;
+          chimeAudioRef.current = new Audio(url);
+          chimeAudioRef.current.volume = 1.0;
+        }).catch((e: unknown) => {
+          console.warn('Chime pre-render failed:', e);
+        });
+      }
     }
     return () => {
       if (nativeAudioRef.current) {
         nativeAudioRef.current.pause();
         nativeAudioRef.current = null;
       }
+      if (chimeBlobUrlRef.current) {
+        URL.revokeObjectURL(chimeBlobUrlRef.current);
+        chimeBlobUrlRef.current = null;
+      }
     };
   }, []);
+
   const isInitialized = useRef<boolean>(false);
   const prevAnalysisRef = useRef<any>(null);
   const prevIndexRef = useRef<number>(currentIndex);
@@ -143,20 +198,27 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return { groupCurrentIndex: groupCurrentIndex >= 0 ? groupCurrentIndex : 0, groupTotalCount: groupQuestions.length };
   }, [currentQuestion, questions]);
 
+
   // 🔊 音声再生コアロジック
   // 💡 古い非同期 Promise の完了割り込みを防ぐため、常にカウンターを進めて全体をリセットする
   const stopAllAudio = useCallback(() => {
-    flowIdRef.current += 1; 
+    flowIdRef.current += 1;
     if (autoPlayTimerRef.current) {
       clearTimeout(autoPlayTimerRef.current);
       autoPlayTimerRef.current = null;
     }
     if (nativeAudioRef.current) { nativeAudioRef.current.pause(); }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    // iOS: マイク解放後は必ず 'playback' に戻し、次の問題音声を最大音量で再生する
+    const nav = navigator as NavigatorWithAudioSession;
+    if (nav.audioSession) {
+      try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+    }
     setPlayingQuestionSequence(false);
     setPlayingAnswerSequence(false);
     setAudioPhase('idle');
   }, [setPlayingQuestionSequence, setPlayingAnswerSequence]);
+
 
   const playSingleTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
     return new Promise((resolve) => {
@@ -321,13 +383,38 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     ttsSetRate(targetRate);
   }, [changePlaybackRate, ttsSetRate]);
 
-  const handleStartRecord = useCallback(() => {
+  // チャイム音を HTMLAudioElement で再生し、完了まで待機する
+  const playChime = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
+      const chime = chimeAudioRef.current;
+      if (!chime) { resolve(); return; }
+      chime.currentTime = 0;
+      chime.volume = 1.0;
+      const cleanup = () => {
+        chime.removeEventListener('ended', cleanup);
+        chime.removeEventListener('error', cleanup);
+        resolve();
+      };
+      chime.addEventListener('ended', cleanup, { once: true });
+      chime.addEventListener('error', cleanup, { once: true });
+      chime.play().catch(() => resolve()); // 失敗してもブロックしない
+    });
+  }, []);
+
+  const handleStartRecord = useCallback(async () => {
     if (!currentQuestion) return;
-    playStartSound();
+
+    // 1. チャイム音を再生して完了を待つ
+    await playChime();
+
+    // 2. 150ms 待機（iOSのオーディオセッションがマイク入力モードに安定するのを待つ）
+    await new Promise(r => setTimeout(r, 150));
+
+    // 3. 状態をリセット（チャイム完了・セッション安定後）
     stopAllAudio();
     setFeedback(null);
     setAnalysis(null);
-    setIsRevealed(false); // 発話開始時に Revealed を false にリセット
+    setIsRevealed(false);
     setIsRecording(true);
     
     const targetText = (questionType === '0')
@@ -351,7 +438,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       });
       useSprintStore.getState().incrementAssessmentCount();
     });
-  }, [currentQuestion, questionType, drillEvalType, stopAllAudio, setIsRecording, startAssessment, setFeedback, setAnalysis, setIsRevealed]);
+  }, [currentQuestion, questionType, drillEvalType, stopAllAudio, playChime, setIsRecording, startAssessment, setFeedback, setAnalysis, setIsRevealed]);
+
 
   const handleStopRecord = useCallback(() => {
     stopListening();

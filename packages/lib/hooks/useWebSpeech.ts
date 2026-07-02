@@ -108,16 +108,6 @@ export function useWebSpeech() {
       recognitionRef.current.abort();
     }
 
-    // iOS WebKit用のオーディオセッション制御 (マイク入力時のスピーカー・音声入力を安定化)
-    const nav = navigator as NavigatorWithAudioSession;
-    if (nav.audioSession) {
-      try {
-        nav.audioSession.type = 'play-and-record';
-      } catch (err) {
-        console.warn("Failed to set audioSession type to play-and-record:", err);
-      }
-    }
-
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = true;
@@ -173,6 +163,18 @@ export function useWebSpeech() {
     clearAllTimers();
     onCompleteRef.current = onComplete;
     latestResultRef.current = analyzePhrase("", targetPhrase, mainWords);
+
+    // iOS WebKit用のオーディオセッション制御:
+    // recognition.start() より前に 'play-and-record' に切り替え、
+    // iOSがマイク入力モードに入るタイミングを制御する
+    const nav = navigator as NavigatorWithAudioSession;
+    if (nav.audioSession) {
+      try {
+        nav.audioSession.type = 'play-and-record';
+      } catch (err) {
+        console.warn("Failed to set audioSession type to play-and-record:", err);
+      }
+    }
 
     setTimeLeft(10);
     intervalRef.current = setInterval(() => {

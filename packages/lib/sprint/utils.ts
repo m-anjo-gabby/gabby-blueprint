@@ -29,64 +29,54 @@ export const getFeedbackConfig = (score: number): FeedbackConfig => {
   return { fill: '#EF4444', tagText: 'Poor' };
 };
 
+
 /**
- * 発話開始時のチャイム音を再生する関数
+ * AudioBuffer を WAV 形式の ArrayBuffer に変換するユーティリティ関数。
+ * OfflineAudioContext で事前レンダリングしたチャイム音を
+ * HTMLAudioElement で再生できる Blob URL に変換するために使用します。
  */
-export const playStartSound = () => {
-  try {
-    const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
-    if (!AudioContextClass) return;
-    
-    const audioCtx = new AudioContextClass();
-    
-    // ブラウザの自動再生ポリシー（ブラウザ制限）対策
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
+export function audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const numSamples = buffer.length;
+  const bitsPerSample = 16;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = numSamples * blockAlign;
+  const totalSize = 44 + dataSize;
+
+  const arrayBuffer = new ArrayBuffer(totalSize);
+  const view = new DataView(arrayBuffer);
+
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
     }
+  };
 
-    const now = audioCtx.currentTime;
+  // RIFF/WAVE ヘッダー
+  writeString(0, 'RIFF');
+  view.setUint32(4, totalSize - 8, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);   // fmt チャンクサイズ (PCM = 16)
+  view.setUint16(20, 1, true);    // PCM フォーマット
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
 
-    // -------------------------------------------------------------
-    // 1音目: 少し低めの心地よい音 (E5: 約659Hz / ミの音)
-    // -------------------------------------------------------------
-    const osc1 = audioCtx.createOscillator();
-    const gain1 = audioCtx.createGain();
-    
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(659.25, now);
-    
-    // 音量の設定
-    gain1.gain.setValueAtTime(0, now);
-    gain1.gain.linearRampToValueAtTime(0.15, now + 0.02); // 20msかけて最大音量0.15まで立ち上げる（クリックノイズ防止）
-    gain1.gain.exponentialRampToValueAtTime(0.00001, now + 0.20); // 200msかけてなだらかに消音
-    
-    osc1.connect(gain1);
-    gain1.connect(audioCtx.destination);
-    
-    osc1.start(now);
-    osc1.stop(now + 0.20);
-
-    // -------------------------------------------------------------
-    // 2音目: 50ms遅らせて鳴らす高い音 (B5: 約988Hz / シの音)
-    // -------------------------------------------------------------
-    const osc2 = audioCtx.createOscillator();
-    const gain2 = audioCtx.createGain();
-    
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(987.77, now + 0.05); // 1音目から50ms（0.05秒）遅らせる
-    
-    // 音量の設定
-    gain2.gain.setValueAtTime(0, now + 0.05);
-    gain2.gain.linearRampToValueAtTime(0.12, now + 0.07); // 20msかけて最大音量0.12まで立ち上げる
-    gain2.gain.exponentialRampToValueAtTime(0.00001, now + 0.25); // 1音目の終わりと揃えるように減衰
-    
-    osc2.connect(gain2);
-    gain2.connect(audioCtx.destination);
-    
-    osc2.start(now + 0.05);
-    osc2.stop(now + 0.25);
-
-  } catch (e) {
-    console.error("Failed to play start sound:", e);
+  // PCM サンプルデータ書き込み（16bit signed little-endian）
+  const channelData = buffer.getChannelData(0);
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++) {
+    const sample = Math.max(-1, Math.min(1, channelData[i]));
+    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+    offset += 2;
   }
-};
+
+  return arrayBuffer;
+}
