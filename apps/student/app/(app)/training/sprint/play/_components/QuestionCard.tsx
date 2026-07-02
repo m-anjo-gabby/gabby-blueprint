@@ -4,7 +4,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SprintQuestionType } from "@gabby/types/sprint";
-import { HelpCircle, MessageSquare, CheckCircle2, Volume2, Eye, CircleDot, Headphones, Languages, Mic } from 'lucide-react';
+import { Volume2, Eye, CircleDot, Headphones, Languages, Mic } from 'lucide-react';
 
 // 🔌 Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
@@ -321,7 +321,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             >
               <div className="flex items-center w-full mb-0.5">
                 <div className="flex items-center gap-x-1.5 text-slate-400">
-                  <MessageSquare size={12} />
                   <span className="text-[10px] font-bold tracking-wider leading-none">基本文</span>
                   <button 
                     onClick={(e) => triggerAudio(e, question.statement_voice, question.statement_en || "")}
@@ -358,7 +357,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             >
               <div className="flex items-center w-full mb-0.5">
                 <div className="flex items-center gap-x-1.5 text-indigo-500">
-                  <HelpCircle size={13} strokeWidth={2.5} />
                   <span className="text-[10px] font-bold tracking-wider leading-none">{config.sectionTitle}</span>
                   <button 
                     onClick={(e) => triggerAudio(e, question.question_voice, question.question_en || "")}
@@ -471,7 +469,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-4 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
                       <div className="flex items-center w-full mb-0.5">
                         <div className="flex items-center gap-x-1.5 text-emerald-600">
-                          <CheckCircle2 size={12} strokeWidth={2.5} />
                           <span className="text-[9px] font-bold tracking-wider">解答（YES）</span>
                           <button onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes_en)} disabled={isAutoPlaying} className="w-4 h-4 flex items-center justify-center text-emerald-500 hover:bg-emerald-100 rounded-full cursor-pointer">
                             <Volume2 size={11} strokeWidth={2.5} />
@@ -489,7 +486,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-4 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
                       <div className="flex items-center w-full mb-0.5">
                         <div className="flex items-center gap-x-1.5 text-amber-600">
-                          <CheckCircle2 size={12} strokeWidth={2.5} />
                           <span className="text-[9px] font-bold tracking-wider">解答（NO）</span>
                           <button onClick={(e) => triggerAudio(e, question.answer_sentence_no_voice, question.answer_sentence_no_en || "")} disabled={isAutoPlaying} className="w-4 h-4 flex items-center justify-center text-amber-500 hover:bg-amber-100 rounded-full cursor-pointer">
                             <Volume2 size={11} strokeWidth={2.5} />
@@ -508,7 +504,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/25 pl-4 pr-3 py-2.5 rounded-r-xl flex flex-col gap-0.5">
                     <div className="flex items-center w-full mb-0.5">
                       <div className="flex items-center gap-x-1.5 text-emerald-600">
-                        <CheckCircle2 size={13} strokeWidth={2.5} />
                         <span className="text-[10px] font-bold tracking-wider uppercase">解答</span>
                         <button onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes_en || "")} disabled={isAutoPlaying} className="w-5 h-5 flex items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-100 cursor-pointer">
                           <Volume2 size={12} strokeWidth={2.5} />

@@ -89,6 +89,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const totalQuestions = questions?.length || 0;
 
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // iOS Safari の自動再生ポリシー回避のため、単一のAudioインスタンスをマウント時に作成して使い回す
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      nativeAudioRef.current = new Audio();
+    }
+    return () => {
+      if (nativeAudioRef.current) {
+        nativeAudioRef.current.pause();
+        nativeAudioRef.current = null;
+      }
+    };
+  }, []);
   const flowIdRef = useRef<number>(0);
   const hasAutoStartedRef = useRef<boolean>(false);
   const skippedQuestionIdsRef = useRef<Set<string>>(new Set());
@@ -150,7 +163,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     flowIdRef.current += 1; 
     if (nativeAudioRef.current) {
       nativeAudioRef.current.pause();
-      nativeAudioRef.current = null;
     }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
   }, []);
@@ -232,14 +244,17 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
     return new Promise((resolve) => {
-      if (nativeAudioRef.current) { nativeAudioRef.current.pause(); nativeAudioRef.current = null; }
+      if (nativeAudioRef.current) {
+        nativeAudioRef.current.pause();
+      }
       if (typeof window !== 'undefined') window.speechSynthesis.cancel();
 
-      if (audioPath) {
+      if (audioPath && nativeAudioRef.current) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = new Audio(bucketUrl);
+        const audio = nativeAudioRef.current;
+        
+        audio.src = bucketUrl;
         audio.playbackRate = playbackRate; 
-        nativeAudioRef.current = audio;
         
         audio.onended = () => resolve();
         audio.onerror = () => {
@@ -248,7 +263,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
           }, 100);
         };
-        audio.play().catch(() => resolve());
+        audio.play().catch((err) => {
+          console.warn("Audio play failed, falling back to TTS:", err);
+          ttsSpeak(text, playbackRate);
+          const checkTtsEnd = setInterval(() => {
+            if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
+          }, 100);
+        });
       } else {
         ttsSpeak(text, playbackRate);
         const checkTtsEnd = setInterval(() => {
@@ -448,6 +469,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     
     const currentFlowId = flowIdRef.current;
     (async () => {
+      // iOS WebKit等でのマイク解放待ちディレイを挟む (450ms)
+      await new Promise(resolve => setTimeout(resolve, 450));
+      if (flowIdRef.current !== currentFlowId) return;
+
       await runSprintFlow(currentQuestion, currentFlowId);
     })();
 

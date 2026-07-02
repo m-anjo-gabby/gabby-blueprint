@@ -68,6 +68,19 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isNavigating = useRef<boolean>(false);
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // iOS Safari の自動再生ポリシー回避のため、単一のAudioインスタンスをマウント時に作成して使い回す
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      nativeAudioRef.current = new Audio();
+    }
+    return () => {
+      if (nativeAudioRef.current) {
+        nativeAudioRef.current.pause();
+        nativeAudioRef.current = null;
+      }
+    };
+  }, []);
   const isInitialized = useRef<boolean>(false);
   const prevAnalysisRef = useRef<any>(null);
   const prevIndexRef = useRef<number>(currentIndex);
@@ -138,7 +151,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       clearTimeout(autoPlayTimerRef.current);
       autoPlayTimerRef.current = null;
     }
-    if (nativeAudioRef.current) { nativeAudioRef.current.pause(); nativeAudioRef.current = null; }
+    if (nativeAudioRef.current) { nativeAudioRef.current.pause(); }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     setPlayingQuestionSequence(false);
     setPlayingAnswerSequence(false);
@@ -147,14 +160,18 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const playSingleTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
     return new Promise((resolve) => {
-      if (nativeAudioRef.current) { nativeAudioRef.current.pause(); nativeAudioRef.current = null; }
+      if (nativeAudioRef.current) {
+        nativeAudioRef.current.pause();
+      }
       if (typeof window !== 'undefined') window.speechSynthesis.cancel();
 
-      if (audioPath) {
+      if (audioPath && nativeAudioRef.current) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = new Audio(bucketUrl);
+        const audio = nativeAudioRef.current;
+        
+        audio.src = bucketUrl;
         audio.playbackRate = playbackRate;
-        nativeAudioRef.current = audio;
+        
         audio.onended = () => resolve();
         audio.onerror = () => {
           ttsSpeak(text, playbackRate);
@@ -162,7 +179,13 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
             if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
           }, 100);
         };
-        audio.play().catch(() => resolve());
+        audio.play().catch((err) => {
+          console.warn("Drill audio play failed, falling back to TTS:", err);
+          ttsSpeak(text, playbackRate);
+          const checkTtsEnd = setInterval(() => {
+            if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
+          }, 100);
+        });
       } else {
         ttsSpeak(text, playbackRate);
         const checkTtsEnd = setInterval(() => {
@@ -304,6 +327,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     stopAllAudio();
     setFeedback(null);
     setAnalysis(null);
+    setIsRevealed(false); // 発話開始時に Revealed を false にリセット
     setIsRecording(true);
     
     const targetText = (questionType === '0')
@@ -318,18 +342,20 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
 
     startAssessment(targetText, cleanWords, (result) => {
-      setAnalysis(result);
-      setFeedback(getFeedbackConfig(result.score));
-      setIsRecording(false);
-      setIsRevealed(true);
+      // 状態更新をアトミックにまとめて、中間状態で useEffect がフライング発火するのを防ぐ
+      useSprintStore.setState({
+        analysis: result,
+        feedback: getFeedbackConfig(result.score),
+        isRecording: false,
+        isRevealed: true
+      });
       useSprintStore.getState().incrementAssessmentCount();
     });
   }, [currentQuestion, questionType, drillEvalType, stopAllAudio, setIsRecording, startAssessment, setFeedback, setAnalysis, setIsRevealed]);
 
   const handleStopRecord = useCallback(() => {
-    setIsRecording(false);
     stopListening();
-  }, [setIsRecording, stopListening]);
+  }, [stopListening]);
 
   const forceRestartQuestionFlow = useCallback(() => {
     if (!currentQuestion) return;
@@ -351,9 +377,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const handleToggleAutoPlay = useCallback(async () => {
     if (!isAutoPlaying) {
-      const ok = await showConfirm("Start Auto Play?", "自動再生を開始しますか？", { variant: 'info', isModal: false });
+      const ok = await showConfirm("自動再生を開始しますか？", "Start Auto Play?", { variant: 'info', isModal: false });
       if (!ok) return;
       
+      setIsRevealed(false); // オート再生開始時に Revealed をリセット
       toggleAutoPlay(true);
       forceRestartQuestionFlow();
     } else {
@@ -420,6 +447,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     const currentFlowId = flowIdRef.current;
 
     const runQuestionFlow = async () => {
+      // iOS WebKit等のマイク解放待ちディレイを挟む (450ms)
+      await new Promise(resolve => setTimeout(resolve, 450));
+      if (flowIdRef.current !== currentFlowId) return;
+
       await playQuestionSequence(currentQuestion, currentFlowId);
       if (flowIdRef.current !== currentFlowId) return;
       
@@ -475,7 +506,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     runAnswerFlow();
 
     return () => {
-      if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
+      // タイムライン2の再トリガーによる不要なタイマー消失を防ぐため、ここでの自動クリアは行いません。
+      // タイマーのクリアは stopAllAudio や handleToggleAutoPlay で適切に管理されています。
     };
     // ✨ 依存をインデックス、オープン状態、評価結果、および録音状態に絞り、タイマー副作用から切り離し
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -555,7 +587,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
                 className="flex items-center gap-2 px-6 h-14 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl active:scale-95 transition-all border border-slate-800"
               >
                 <Square size={12} fill="currentColor" />
-                Stop Auto Play
+                自動再生を停止
               </button>
             </div>
           )}

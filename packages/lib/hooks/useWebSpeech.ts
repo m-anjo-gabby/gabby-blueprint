@@ -4,6 +4,12 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { analyzePhrase } from '../assessment/native-speech';
 import { AnalysisResult } from '../../types/speechAssessment';
 
+interface NavigatorWithAudioSession extends Navigator {
+  audioSession?: {
+    type: 'auto' | 'playback' | 'record' | 'play-and-record';
+  };
+}
+
 /**
  * ブラウザ標準の Web Speech API (Synthesis & Recognition) を利用した
  * 音声読み上げおよび簡易発音評価フック
@@ -64,6 +70,16 @@ export function useWebSpeech() {
       }
     }
 
+    // iOS WebKit用のオーディオセッション制御 (マイク解放時に再生モードに戻す)
+    const nav = navigator as NavigatorWithAudioSession;
+    if (nav.audioSession) {
+      try {
+        nav.audioSession.type = 'playback';
+      } catch (err) {
+        console.warn("Failed to set audioSession type to playback:", err);
+      }
+    }
+
     clearAllTimers();
     setIsListening(false);
     setTimeLeft(0);
@@ -90,6 +106,16 @@ export function useWebSpeech() {
     // 既存のインスタンスがあれば確実に破棄
     if (recognitionRef.current) {
       recognitionRef.current.abort();
+    }
+
+    // iOS WebKit用のオーディオセッション制御 (マイク入力時のスピーカー・音声入力を安定化)
+    const nav = navigator as NavigatorWithAudioSession;
+    if (nav.audioSession) {
+      try {
+        nav.audioSession.type = 'play-and-record';
+      } catch (err) {
+        console.warn("Failed to set audioSession type to play-and-record:", err);
+      }
     }
 
     const recognition = new SpeechRecognition();
