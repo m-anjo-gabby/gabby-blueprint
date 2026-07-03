@@ -35,14 +35,6 @@ export function usePlayAudioSpeech() {
    * @param options - 再生オプション (restart: true の場合、同じIDでも最初から再生)
    */
   const play = useCallback(async (path: string, id: string, options?: { restart?: boolean }) => {
-    // 🚀 iOSでの受話レシーバー極小音量問題を回避するため、再生開始時に強制的にスピーカー出力(playback)へ設定
-    if (typeof window !== 'undefined') {
-      const nav = navigator as NavigatorWithAudioSession;
-      if (nav.audioSession) {
-        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
-      }
-    }
-
     // 同じIDがクリックされた場合
     if (currentPlayingIdRef.current === id) {
       if (options?.restart) {
@@ -93,15 +85,15 @@ export function usePlayAudioSpeech() {
       clearState();
     };
 
-    // iOS WebKit のオーディオルーティング（受話レシーバーから外部スピーカーへ）の切り替えラグを待つ
-    setTimeout(async () => {
-      try {
-        await audio.play();
-      } catch (error) {
+    try {
+      audio.play().catch((error) => {
         console.error("Playback failed:", error);
         clearState();
-      }
-    }, 100);
+      });
+    } catch (error) {
+      console.error("Playback execution failed:", error);
+      clearState();
+    }
   }, [supabase]); // playbackRate や isPlaying に依存しないため参照が安定する
 
   /**

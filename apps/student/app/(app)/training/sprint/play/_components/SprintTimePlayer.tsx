@@ -20,7 +20,15 @@ interface SprintTimePlayerProps {
 }
 
 interface NavigatorWithAudioSession extends Navigator {
-  audioSession?: { type: string };
+  audioSession?: {
+    type: string;
+    categoryOptions?: {
+      defaultToSpeaker?: boolean;
+      allowBluetooth?: boolean;
+      allowBluetoothA2DP?: boolean;
+    };
+    mode?: string;
+  };
 }
 
 export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({ 
@@ -90,7 +98,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [checkMicPermission]);
 
   // ────────────── 🔊 音声カスタムフック ──────────────
-  const { speak: ttsSpeak, setSpeechRate: ttsSetRate, startAssessment, stopListening, timeLeft } = useWebSpeech();
+  const { startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech(); 
 
   const currentQuestion = questions?.[currentIndex];
@@ -245,6 +253,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     isPersistedRef.current = true;
     setIsSaving(true); 
 
+    // 🚀 保存/リダイレクト処理に入った瞬間に再生・録音をすべて即時停止し、マイクを確実に解放する
+    stopAllAudio();
+
     const storeState = useSprintStore.getState();
     const { sprintType, contentId, sessionResults } = storeState;
 
@@ -322,48 +333,34 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         currentAudioRef.current.pause();
         currentAudioRef.current = null;
       }
-      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-
-      // 🚀 iOSの受話レシーバー問題を防ぐため、再生前に必ずスピーカー出力に設定し、
-      // OS のルーティング切替が完了するまで 100ms 待機してから再生を開始する
-      const nav = navigator as NavigatorWithAudioSession;
-      if (nav.audioSession) {
-        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
 
-      setTimeout(() => {
-        if (audioPath) {
-          const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-          const audio = new Audio(bucketUrl);
-          audio.playbackRate = playbackRate;
-          currentAudioRef.current = audio;
+      if (audioPath) {
+        const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
+        const audio = new Audio(bucketUrl);
+        audio.playbackRate = playbackRate;
+        currentAudioRef.current = audio;
 
-          const fallbackToTts = () => {
-            currentAudioRef.current = null;
-            ttsSpeak(text, playbackRate);
-            const checkTtsEnd = setInterval(() => {
-              if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-            }, 100);
-          };
-
-          audio.onended = () => {
-            currentAudioRef.current = null;
-            resolve();
-          };
-          audio.onerror = () => fallbackToTts();
-          audio.play().catch((err) => {
-            console.warn("Audio play failed, falling back to TTS:", err);
-            fallbackToTts();
-          });
-        } else {
-          ttsSpeak(text, playbackRate);
-          const checkTtsEnd = setInterval(() => {
-            if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-          }, 100);
-        }
-      }, 100);
+        audio.onended = () => {
+          currentAudioRef.current = null;
+          resolve();
+        };
+        audio.onerror = () => {
+          currentAudioRef.current = null;
+          resolve();
+        };
+        audio.play().catch((err) => {
+          console.warn("Audio play failed:", err);
+          currentAudioRef.current = null;
+          resolve();
+        });
+      } else {
+        resolve();
+      }
     });
-  }, [playbackRate, ttsSpeak]);
+  }, [playbackRate]);
 
   // チャイム音を AudioContext 経由で再生（共通ヘルパーを利用）
   const playChime = useCallback((): Promise<void> => {
@@ -553,11 +550,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const currentFlowId = flowIdRef.current;
     (async () => {
-      // 初回（currentIndex === 0）は前画面でマイクを使っていた場合に
-      // iOS がマイクを物理的に解放するまでの OS レベルのレイテンシを考慮して長めに待機する
-      // 2問目以降は finalize() が同一コンポーネント内で処理するため短い待機で十分
-      const startupDelay = currentIndex === 0 ? 600 : 300;
-      await new Promise(resolve => setTimeout(resolve, startupDelay));
+      // 前の録音/音声が解放されるのを待つ (300ms)
+      await new Promise(resolve => setTimeout(resolve, 300));
       if (flowIdRef.current !== currentFlowId) return;
       await runSprintFlow(currentQuestion, currentFlowId);
     })();

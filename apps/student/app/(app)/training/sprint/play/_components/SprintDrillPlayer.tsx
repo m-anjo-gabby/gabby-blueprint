@@ -23,7 +23,15 @@ interface SprintDrillPlayerProps {
 }
 
 interface NavigatorWithAudioSession extends Navigator {
-  audioSession?: { type: string };
+  audioSession?: {
+    type: string;
+    categoryOptions?: {
+      defaultToSpeaker?: boolean;
+      allowBluetooth?: boolean;
+      allowBluetoothA2DP?: boolean;
+    };
+    mode?: string;
+  };
 }
 
 export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({ 
@@ -63,7 +71,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   } = useSprintStore();
 
   // ────────────── 🔊 音声・発話カスタムフック ──────────────
-  const { speak: ttsSpeak, setSpeechRate: ttsSetRate, startAssessment, stopListening, timeLeft } = useWebSpeech();
+  const { startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
   const totalQuestions = questions?.length || 0;
@@ -113,9 +121,15 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => {
       const nav = navigator as NavigatorWithAudioSession;
       
-      // 🚀 アンマウント時にも確実にスピーカー出力へ戻し、マイクを強制クリーンアップ
+      // 🚀 アンマウント時にも確実にスピーカー出力を強制・維持した状態で再生モードへ戻す
       if (nav.audioSession) {
-        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+        try {
+          if (nav.audioSession.categoryOptions) {
+            try { nav.audioSession.categoryOptions.defaultToSpeaker = true; } catch (_) {}
+            try { nav.audioSession.categoryOptions.allowBluetooth = true; } catch (_) {}
+          }
+          nav.audioSession.type = 'playback';
+        } catch (_) { /* no-op */ }
       }
       stopListening();
       if (window.speechSynthesis) {
@@ -225,46 +239,30 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       if (nativeAudioRef.current) {
         nativeAudioRef.current.pause();
       }
-      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-
-      // 🚀 iOSの受話レシーバー問題を防ぐため、再生前に必ずスピーカー出力に設定し、
-      // OS のルーティング切替が完了するまで 100ms 待機してから再生を開始する
-      const nav = navigator as NavigatorWithAudioSession;
-      if (nav.audioSession) {
-        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
 
-      setTimeout(() => {
-        if (audioPath && nativeAudioRef.current) {
-          const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-          const audio = nativeAudioRef.current;
-          
-          audio.src = bucketUrl;
-          audio.playbackRate = playbackRate;
-          
-          audio.onended = () => resolve();
-          audio.onerror = () => {
-            ttsSpeak(text, playbackRate);
-            const checkTtsEnd = setInterval(() => {
-              if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-            }, 100);
-          };
-          audio.play().catch((err) => {
-            console.warn("Drill audio play failed, falling back to TTS:", err);
-            ttsSpeak(text, playbackRate);
-            const checkTtsEnd = setInterval(() => {
-              if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-            }, 100);
-          });
-        } else {
-          ttsSpeak(text, playbackRate);
-          const checkTtsEnd = setInterval(() => {
-            if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-          }, 100);
-        }
-      }, 100);
+      if (audioPath && nativeAudioRef.current) {
+        const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
+        const audio = nativeAudioRef.current;
+        
+        audio.src = bucketUrl;
+        audio.playbackRate = playbackRate;
+        
+        audio.onended = () => resolve();
+        audio.onerror = () => {
+          resolve();
+        };
+        audio.play().catch((err) => {
+          console.warn("Drill audio play failed:", err);
+          resolve();
+        });
+      } else {
+        resolve();
+      }
     });
-  }, [playbackRate, ttsSpeak]);
+  }, [playbackRate]);
 
   // 💡 一意の currentFlowId を受け取り、非同期 await の直後に厳密にチェックを行う
   const playQuestionSequence = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
@@ -389,8 +387,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const handleSelectRate = useCallback((targetRate: number) => {
     changePlaybackRate(targetRate);
-    ttsSetRate(targetRate);
-  }, [changePlaybackRate, ttsSetRate]);
+  }, [changePlaybackRate]);
 
   // チャイム音を AudioContext 経由で再生（共通ヘルパーを利用）
   const playChime = useCallback((): Promise<void> => {
@@ -515,6 +512,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const handleExitWithSync = async () => {
     if (isAutoPlaying) return;
+
+    // 🚀 終了ボタン押下時に再生・録音をすべて即時停止し、マイクを確実に解放する
+    stopAllAudio();
 
     const ok = await showConfirm("トレーニングを終了しますか？", "前の画面に戻ります。", { 
       variant: 'info', 
