@@ -57,6 +57,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'good'>('idle');
   const [micStatus, setMicStatus] = useState<'checking' | 'granted' | 'denied' | 'prompt'>('checking');
+  
   // チャイム再生開始〜 recognition.onstart までの短い待機窓口だけ true
   // （発話評価完了後に誤って MicOff を表示しないための専用フラグ）
   const [isAwaitingRecording, setIsAwaitingRecording] = useState<boolean>(false);
@@ -333,7 +334,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
       if (audioPath) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        // 毎回新しい Audio インスタンスを生成することでデコードの途切れを防ぐ
+        // 毎回新しい Audio インスタンスを生成することでデコード of 途切れを防ぐ
         const audio = new Audio(bucketUrl);
         audio.playbackRate = playbackRate;
         currentAudioRef.current = audio;
@@ -617,13 +618,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     onExit?.();
   };
 
-  // isAwaitingRecording: チャイム開始〜 recognition.onstart までの待機窓口のみ true
-  // assessmentVisualState !== 'idle': Excellent/Good 表示中
-  // micStatus === 'denied': マイク権限なしのスキップボタン表示
-  const showRecordingHud = isRecording || isAwaitingRecording || assessmentVisualState !== 'idle' || (audioPhase === 'answer' && micStatus === 'denied');
+  // HUDはReady段階からセッション終了まで常に表示し、メッセージと活性制御だけを切り替える
+  const showRecordingHud = true;
+  const isControlDisabled = audioPhase !== 'answer' || isAwaitingRecording;
 
   return (
-<div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
+    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
       <main className="bg-white border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden shadow-2xl">
         
         {/* ① 上部ヘッダー（プログレスバー一体型・タイトル領域最大化） */}
@@ -649,11 +649,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               </h1>
             </div>
 
-            {/* 右：左右のビジュアルバランス（対称性）を保つためのクリアスペース（または将来のメニュー用等） */}
+            {/* 右：左右のビジュアルバランス（対称性）を保つためのクリアスペース */}
             <div className="w-10 h-10 shrink-0 pointer-events-none" aria-hidden="true" />
           </div>
 
-          {/* 下段：改修箇所：数値秒数が美しく融合した、カプセル型インサイド・プログレスバー */}
+          {/* 下段：数値秒数が美しく融合した、カプセル型インサイド・プログレスバー */}
           <div className="mt-4 w-full select-none">
             <div className="h-6 w-full bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/30">
               {/* 動的プログレスバー本体 */}
@@ -696,7 +696,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           
           {/* ②-A: 問題番号・ステップ表示 */}
           <div className="w-full max-w-xl mx-auto flex flex-col gap-6 shrink-0 pb-4">
-            {/* 問題番号表示（元のバッジデザインを完全維持） */}
+            {/* 問題番号表示 */}
             <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600 self-start">
               <div className="flex items-center gap-2.5 px-3 py-1.5">
                 <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
@@ -800,7 +800,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               {/* サブテキスト表示（縦位置のガタつきを抑えるために領域を常時維持） */}
               <p className={cn(
                 "text-xs sm:text-sm font-semibold text-slate-400 transition-opacity duration-150",
-                (isRecording || isAwaitingRecording) ? "opacity-100" : "opacity-0 select-none pointer-events-none"
+                audioPhase === 'answer' ? "opacity-100" : "opacity-0 select-none pointer-events-none"
               )}>
                 {micStatus === 'denied' && audioPhase === 'answer'
                   ? "※マイク権限が拒否されています"
@@ -849,12 +849,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                           const isGood = assessmentVisualState === 'good';
                           const isVisualizing = isExcellent || isGood;
 
-                          const strokeColor = isExcellent ? "stroke-emerald-500" : isGood ? "stroke-sky-500" : isAwaitingRecording ? "stroke-slate-200" : "stroke-rose-500";
-                          const trackColor = isExcellent ? "stroke-emerald-100" : isGood ? "stroke-sky-100" : isAwaitingRecording ? "stroke-slate-100" : "stroke-rose-100";
+                          const strokeColor = isExcellent ? "stroke-emerald-500" : isGood ? "stroke-sky-500" : isControlDisabled ? "stroke-slate-200" : "stroke-rose-500";
+                          const trackColor = isExcellent ? "stroke-emerald-100" : isGood ? "stroke-sky-100" : isControlDisabled ? "stroke-slate-100" : "stroke-rose-100";
                           const fillColor = isExcellent ? "rgba(16, 185, 129, 0.05)" : isGood ? "rgba(14, 165, 233, 0.05)" : "transparent";
 
                           const MAX_TIME = 10;
-                          const progress = isVisualizing ? 1 : isAwaitingRecording ? 1 : (Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME);
+                          const progress = isVisualizing ? 1 : isControlDisabled ? 1 : (Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME);
                           const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
                           return (
                             <div className="relative flex items-center justify-center w-24 h-24 select-none">
@@ -870,7 +870,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                                   strokeDasharray={CIRCUMFERENCE}
                                   animate={{ strokeDashoffset }}
                                   transition={{
-                                    duration: isVisualizing ? 0.3 : isAwaitingRecording ? 0 : (timeLeft === MAX_TIME ? 0 : 1),
+                                    duration: isVisualizing ? 0.3 : isControlDisabled ? 0 : (timeLeft === MAX_TIME ? 0 : 1),
                                     ease: isVisualizing ? "easeOut" : "linear"
                                   }}
                                   strokeLinecap="round"
@@ -890,7 +890,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                                       {isExcellent ? "Excellent" : "Good!"}
                                     </span>
                                   </motion.div>
-                                ) : isAwaitingRecording ? (
+                                ) : isControlDisabled ? (
                                   <>
                                     <span className="text-3xl font-black font-mono text-slate-300 leading-none">
                                       --
@@ -916,43 +916,44 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                           );
                         })()}
 
-                        {assessmentVisualState === 'idle' ? (
-                          <div className="flex flex-col items-center gap-3 mt-2">
-                            <button
-                              type="button"
-                              onClick={handleStopRecord}
-                              disabled={isAwaitingRecording || isSaving}
-                              className={cn(
-                                "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group border-none",
-                                isAwaitingRecording
-                                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                                  : "bg-rose-500 text-white hover:bg-rose-600"
-                              )}
-                              title="発話を完了して次へ"
-                            >
-                              <CheckCircle2 size={16} strokeWidth={2.5} className={cn(!isAwaitingRecording && "group-hover:scale-110 transition-transform")} />
-                              <span className="text-sm font-black tracking-wider">発話を完了</span>
-                            </button>
+                        {(() => {
+                          const isBtnDisabled = isControlDisabled || isSaving || assessmentVisualState !== 'idle';
+                          return (
+                            <div className="flex flex-col items-center gap-3 mt-2">
+                              <button
+                                type="button"
+                                onClick={handleStopRecord}
+                                disabled={isBtnDisabled}
+                                className={cn(
+                                  "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group border-none",
+                                  isBtnDisabled
+                                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                    : "bg-rose-500 text-white hover:bg-rose-600"
+                                )}
+                                title="発話を完了して次へ"
+                              >
+                                <CheckCircle2 size={16} strokeWidth={2.5} className={cn(!isBtnDisabled && "group-hover:scale-110 transition-transform")} />
+                                <span className="text-sm font-black tracking-wider">発話を完了</span>
+                              </button>
 
-                            <button
-                              type="button"
-                              onClick={handleSkipQuestion}
-                              disabled={isAwaitingRecording || isSaving}
-                              className={cn(
-                                "flex items-center justify-center gap-2 px-6 py-2 rounded-xl transition-all active:scale-[0.98] cursor-pointer w-48 border-none",
-                                isAwaitingRecording
-                                  ? "text-slate-200 cursor-not-allowed"
-                                  : "text-slate-400 hover:text-slate-600"
-                              )}
-                              title="この問題をスキップして次へ"
-                            >
-                              <FastForward size={14} strokeWidth={2.5} />
-                              <span className="text-[11px] font-bold uppercase tracking-wider">スキップする</span>
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="h-[5.5rem]" />
-                        )}
+                              <button
+                                type="button"
+                                onClick={handleSkipQuestion}
+                                disabled={isBtnDisabled}
+                                className={cn(
+                                  "flex items-center justify-center gap-2 px-6 py-2 rounded-xl transition-all active:scale-[0.98] cursor-pointer w-48 border-none",
+                                  isBtnDisabled
+                                    ? "text-slate-200 cursor-not-allowed"
+                                    : "text-slate-400 hover:text-slate-600"
+                                )}
+                                title="この問題をスキップして次へ"
+                              >
+                                <FastForward size={14} strokeWidth={2.5} />
+                                <span className="text-[11px] font-bold uppercase tracking-wider">スキップする</span>
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </>
                     )}
                   </motion.div>
