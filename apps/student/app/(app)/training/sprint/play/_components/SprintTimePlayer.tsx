@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, createChimeAudioBuffer, playChimeBuffer } from '@gabby/lib';
 import { SprintQuestion } from "@gabby/types/sprint";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
@@ -120,43 +120,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       const ctx = new AudioContextClass() as AudioContext;
       audioCtxRef.current = ctx;
 
-      // OfflineAudioContext でチャイムを事前レンダリングし、AudioBuffer として保持
-      const OfflineCtxClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
-      if (OfflineCtxClass) {
-        const sampleRate = 44100;
-        const duration = 0.45;
-        const offlineCtx = new OfflineCtxClass(1, Math.ceil(sampleRate * duration), sampleRate);
-
-        const osc1 = offlineCtx.createOscillator();
-        const gain1 = offlineCtx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.value = 659.25;
-        gain1.gain.setValueAtTime(0, 0);
-        gain1.gain.linearRampToValueAtTime(0.65, 0.02);
-        gain1.gain.exponentialRampToValueAtTime(0.00001, 0.25);
-        osc1.connect(gain1);
-        gain1.connect(offlineCtx.destination);
-        osc1.start(0);
-        osc1.stop(0.25);
-
-        const osc2 = offlineCtx.createOscillator();
-        const gain2 = offlineCtx.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.value = 987.77;
-        gain2.gain.setValueAtTime(0, 0.10);
-        gain2.gain.linearRampToValueAtTime(0.55, 0.12);
-        gain2.gain.exponentialRampToValueAtTime(0.00001, 0.45);
-        osc2.connect(gain2);
-        gain2.connect(offlineCtx.destination);
-        osc2.start(0.10);
-        osc2.stop(0.45);
-
-        offlineCtx.startRendering().then((renderedBuffer: AudioBuffer) => {
+      // 共通ヘルパー関数でチャイム音を事前レンダリング
+      createChimeAudioBuffer(ctx)
+        .then((renderedBuffer) => {
           chimeBufferRef.current = renderedBuffer;
-        }).catch((e: unknown) => {
+        })
+        .catch((e: unknown) => {
           console.warn('Chime pre-render failed:', e);
         });
-      }
     }
 
     return () => {
@@ -365,29 +336,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     });
   }, [playbackRate, ttsSpeak]);
 
-  // ────────────── 🎤 録音・発話制御コア ──────────────
-  // チャイム音を AudioContext 経由で再生（nativeAudio の src 切り替えと完全独立・競合なし）
+  // チャイム音を AudioContext 経由で再生（共通ヘルパーを利用）
   const playChime = useCallback((): Promise<void> => {
-    return new Promise((resolve) => {
-      const ctx = audioCtxRef.current;
-      const buffer = chimeBufferRef.current;
-      if (!ctx || !buffer) { resolve(); return; }
-
-      // iOS Safari では AudioContext が suspended 状態になることがある
-      const doPlay = () => {
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.onended = () => resolve();
-        source.start(0);
-      };
-
-      if (ctx.state === 'suspended') {
-        ctx.resume().then(doPlay).catch(() => resolve());
-      } else {
-        doPlay();
-      }
-    });
+    if (!audioCtxRef.current || !chimeBufferRef.current) return Promise.resolve();
+    return playChimeBuffer(audioCtxRef.current, chimeBufferRef.current);
   }, []);
 
   // 評価コールバックを含む純粋な録音開始関数

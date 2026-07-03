@@ -12,7 +12,7 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, audioBufferToWav } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, createChimeAudioBuffer, playChimeBuffer } from '@gabby/lib';
 import { reportSprintProgress } from '@/actions/sprintAction';
 
 interface SprintDrillPlayerProps {
@@ -72,7 +72,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isNavigating = useRef<boolean>(false);
   const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
-  const chimeBlobUrlRef = useRef<string | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const chimeBufferRef = useRef<AudioBuffer | null>(null);
 
   // iOSの自動再生ポリシー回避のため、単一のAudioインスタンスをマウント時に作成して使い回す
   useEffect(() => {
@@ -80,45 +81,19 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       nativeAudioRef.current = new Audio();
       nativeAudioRef.current.volume = 1.0;
 
-      // チャイム音を OfflineAudioContext で事前レンダリングし、Blob URL として保持する
-      // nativeAudioRef で再生するため、playbackモードのまま最大音量で対応可能
-      const OfflineCtxClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
-      if (OfflineCtxClass) {
-        const sampleRate = 44100;
-        const duration = 0.32;
-        const offlineCtx = new OfflineCtxClass(1, Math.ceil(sampleRate * duration), sampleRate);
+      // チャイム用 AudioContext を生成（共通ヘルパーを利用）
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        const ctx = new AudioContextClass() as AudioContext;
+        audioCtxRef.current = ctx;
 
-        const osc1 = offlineCtx.createOscillator();
-        const gain1 = offlineCtx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.value = 659.25;
-        gain1.gain.setValueAtTime(0, 0);
-        gain1.gain.linearRampToValueAtTime(0.6, 0.02);
-        gain1.gain.exponentialRampToValueAtTime(0.00001, 0.22);
-        osc1.connect(gain1);
-        gain1.connect(offlineCtx.destination);
-        osc1.start(0);
-        osc1.stop(0.22);
-
-        const osc2 = offlineCtx.createOscillator();
-        const gain2 = offlineCtx.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.value = 987.77;
-        gain2.gain.setValueAtTime(0, 0.05);
-        gain2.gain.linearRampToValueAtTime(0.5, 0.07);
-        gain2.gain.exponentialRampToValueAtTime(0.00001, 0.32);
-        osc2.connect(gain2);
-        gain2.connect(offlineCtx.destination);
-        osc2.start(0.05);
-        osc2.stop(0.32);
-
-        offlineCtx.startRendering().then((renderedBuffer: AudioBuffer) => {
-          const wav = audioBufferToWav(renderedBuffer);
-          const blob = new Blob([wav], { type: 'audio/wav' });
-          chimeBlobUrlRef.current = URL.createObjectURL(blob);
-        }).catch((e: unknown) => {
-          console.warn('Chime pre-render failed:', e);
-        });
+        createChimeAudioBuffer(ctx)
+          .then((buffer) => {
+            chimeBufferRef.current = buffer;
+          })
+          .catch((e: unknown) => {
+            console.warn('Chime pre-render failed:', e);
+          });
       }
     }
     return () => {
@@ -126,9 +101,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         nativeAudioRef.current.pause();
         nativeAudioRef.current = null;
       }
-      if (chimeBlobUrlRef.current) {
-        URL.revokeObjectURL(chimeBlobUrlRef.current);
-        chimeBlobUrlRef.current = null;
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close().catch(() => { /* no-op */ });
+        audioCtxRef.current = null;
       }
     };
   }, []);
@@ -380,20 +355,10 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     ttsSetRate(targetRate);
   }, [changePlaybackRate, ttsSetRate]);
 
-  // チャイム音を nativeAudioRef 経由で再生（問題音声と同じ playbackモードで最大音量）
+  // チャイム音を AudioContext 経由で再生（共通ヘルパーを利用）
   const playChime = useCallback((): Promise<void> => {
-    return new Promise((resolve) => {
-      const audio = nativeAudioRef.current;
-      const url = chimeBlobUrlRef.current;
-      if (!audio || !url) { resolve(); return; }
-      audio.src = url;
-      audio.playbackRate = 1.0;
-      audio.volume = 1.0;
-      const cleanup = () => resolve();
-      audio.addEventListener('ended', cleanup, { once: true });
-      audio.addEventListener('error', cleanup, { once: true });
-      audio.play().catch(() => resolve());
-    });
+    if (!audioCtxRef.current || !chimeBufferRef.current) return Promise.resolve();
+    return playChimeBuffer(audioCtxRef.current, chimeBufferRef.current);
   }, []);
 
   const handleStartRecord = useCallback(async () => {
