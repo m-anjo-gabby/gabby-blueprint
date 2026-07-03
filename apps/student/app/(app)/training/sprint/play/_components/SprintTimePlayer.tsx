@@ -103,16 +103,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 現在再生中の Audio インスタンスを追跡（停止用）
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // マウント時: iOS audioSession を 'play-and-record' に固定 + チャイム用バッファを事前デコード
+  // マウント時: チャイム用バッファを事前デコード
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // ★ iOS システム音防止: スプリントセッション中は常に 'play-and-record' を維持
-    // recognition.start/stop のたびに切り替えないことでシステム効果音を抑制する
     const nav = navigator as NavigatorWithAudioSession;
-    if (nav.audioSession) {
-      try { nav.audioSession.type = 'play-and-record'; } catch (_) { /* no-op */ }
-    }
 
     // チャイム用 AudioContext を生成（nativeAudio の src 切替と完全に独立）
     const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -131,10 +126,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
 
     return () => {
-      // ★ アンマウント時のみ 'playback' に戻す
-      if (nav.audioSession) {
-        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
-      }
       // 再生中の Audio インスタンスを停止
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
@@ -387,9 +378,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         }
       },
       {
-        // スプリントセッション中は audioSession を 'play-and-record' のまま維持
-        // （マウント時に設定済み。finalize で 'playback' に戻させない）
-        suppressAudioSessionSwitch: true,
+        // 録音終了時に自動で playback に戻す
+        suppressAudioSessionSwitch: false,
         // recognition.onstart 発火後（マイクが実際に開いた時点）で isRecording を true にする
         // → RECインジケータをブラウザの実際の録音開始に同期させる
         onRecognitionStart: () => {
@@ -422,16 +412,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       await new Promise(r => setTimeout(r, 80)); // nativeAudio の終了処理が完了するまでの安全マージン
       if (flowIdRef.current !== currentFlowId) return;
 
-      // チャイムの再生を開始する（awaitしない）
-      playChime();
-
-      // チャイム鳴動（約450ms）と音声認識の起動ラグ（数百ms）をオーバーラップさせるため、
-      // チャイム開始から250msのディレイを置いて startRecordingFor を呼び出す。
-      // これにより、チャイム音が消える瞬間にはマイクの準備が整っている（onstart発火）状態を作る。
-      await new Promise(r => setTimeout(r, 250));
-      if (flowIdRef.current !== currentFlowId) return;
-
-      // 録音を開始（isRecording は recognition.onstart 後に true になる）
+      // チャイム再生と録音開始（マイクアクティブ化）を完全に並行して同時に実行
+      playChime(); // awaitしない
       startRecordingFor(question);
     } catch (e) {
       console.error("Sprint flow error:", e);
@@ -447,7 +429,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     setAudioPhase('answer');
     setIsAwaitingRecording(true);
     playChime(); // awaitしない
-    await new Promise(r => setTimeout(r, 250));
     startRecordingFor(currentQuestion);
   }, [currentQuestion, playChime, startRecordingFor]);
 

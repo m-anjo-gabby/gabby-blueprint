@@ -51,7 +51,7 @@ export const createChimeAudioBuffer = (ctx: AudioContext): Promise<AudioBuffer> 
     const duration = 0.45;
     const offlineCtx = new OfflineCtxClass(1, Math.ceil(sampleRate * duration), sampleRate);
 
-    // 音 1: F5 (659.25Hz)
+    // 音 1: E5 (659.25Hz)
     const osc1 = offlineCtx.createOscillator();
     const gain1 = offlineCtx.createGain();
     osc1.type = 'sine';
@@ -95,8 +95,15 @@ export const playChimeBuffer = (ctx: AudioContext, buffer: AudioBuffer): Promise
     }
     const doPlay = () => {
       const source = ctx.createBufferSource();
+      const gainNode = ctx.createGain();
+      
+      // iOSレシーバー出力時の音量減衰をカバーするため、音量を 1.8 倍に増幅
+      gainNode.gain.value = 1.8;
+      
       source.buffer = buffer;
-      source.connect(ctx.destination);
+      source.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
       source.onended = () => resolve();
       source.start(0);
     };

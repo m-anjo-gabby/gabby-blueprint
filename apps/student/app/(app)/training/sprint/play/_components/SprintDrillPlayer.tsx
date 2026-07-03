@@ -379,28 +379,32 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     // 2. 発話フェーズ UIを先に表示（「回答しましょう」状態、インジケーターはまだ非表示）
     setAudioPhase('answer');
 
-    // 3. nativeAudioRef でチャイム再生（playbackモードのままのため最大音量）
-    await playChime();
-
-    // 4. 100ms 待機（iOSのオーディオセッションがマイク入力モードに安定するのを待つ）
-    await new Promise(r => setTimeout(r, 100));
-
-    // 5. 録音インジケーター開始（audioSession が play-and-record に切り替わる）
-    setIsRecording(true);
+    // 3. チャイム再生（非同期）と録音開始（マイクアクティブ化）を同時にパラレル起動
+    playChime(); // awaitしない
 
     const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
 
-    startAssessment(targetText, cleanWords, (result) => {
-      // 状態更新をアトミックにまとめて、中間状態で useEffect がフライング発火するのを防ぐ
-      useSprintStore.setState({
-        analysis: result,
-        feedback: getFeedbackConfig(result.score),
-        isRecording: false,
-        isRevealed: true
-      });
-      useSprintStore.getState().incrementAssessmentCount();
-    });
-  }, [currentQuestion, questionType, drillEvalType, stopAllAudio, playChime, setIsRecording, startAssessment, setFeedback, setAnalysis, setIsRevealed]);
+    startAssessment(
+      targetText,
+      cleanWords,
+      (result) => {
+        // 状態更新をアトミックにまとめて、中間状態で useEffect がフライング発火するのを防ぐ
+        useSprintStore.setState({
+          analysis: result,
+          feedback: getFeedbackConfig(result.score),
+          isRecording: false,
+          isRevealed: true
+        });
+        useSprintStore.getState().incrementAssessmentCount();
+      },
+      {
+        // 実際にマイクが開いた時点で録音インジケータをオンにする
+        onRecognitionStart: () => {
+          setIsRecording(true);
+        }
+      }
+    );
+  }, [currentQuestion, questionType, drillEvalType, stopAllAudio, playChime, setIsRecording, startAssessment]);
 
 
   const handleStopRecord = useCallback(() => {
