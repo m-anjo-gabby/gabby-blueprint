@@ -218,7 +218,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
 
   // 全てのオーディオ・発話を安全に即時ストップする
-  // ★ audioSession は変更しない（スプリント中ずっと 'play-and-record' を維持してシステム音を抑制）
+  // 🚀 stopListening も帯びに呼び、audioSession を 'playback' に戻すことで
+  // タイムアップ・スキップ・終了の全経路でマイクが確実に解放される
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1;
     // 現在再生中の Audio インスタンスがあれば停止・破棄
@@ -227,7 +228,17 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       currentAudioRef.current = null;
     }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-  }, []);
+    // マイク入力を即時停止し、オーディオセッションをスピーカー出力に戻す
+    stopListening();
+    const nav = navigator as NavigatorWithAudioSession;
+    if (nav.audioSession) {
+      try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+    }
+    // 録音 UI 状態もリセット
+    setIsAwaitingRecording(false);
+    setIsRecording(false);
+    setAudioPhase('idle');
+  }, [stopListening, setIsRecording]);
 
   const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
     if (isPersistedRef.current) return;
@@ -298,8 +309,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const handleGoToResult = useCallback(() => {
     if (resultId) {
-      stopAllAudio();
-      resetStore(); 
+      stopAllAudio(); // stopListening と audioSession リセットを含む
+      resetStore();
       router.push(`/training/sprint/result/${resultId}`);
     }
   }, [resultId, router, stopAllAudio, resetStore]);
@@ -470,15 +481,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     skippedQuestionIdsRef.current.add(currentQuestion.question_id);
 
-    handleStopRecord();
-    stopAllAudio();
+    stopAllAudio(); // stopListening + audioSession 'playback' + 録音 UI リセットをすべて含む
 
     const { isLast } = commitSkipResult(currentQuestion.question_id);
     if (isLast) {
       showToast("スプリントを終了します。", "success");
       handlePersistAndRedirect(secondsLeftRef.current);
     }
-  }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, handleStopRecord, stopAllAudio]);
+  }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, stopAllAudio]);
 
   // ────────────── 🔄 副作用 (Effects) ──────────────
 
@@ -543,8 +553,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const currentFlowId = flowIdRef.current;
     (async () => {
-      // 前の録音/音声が解放されるのを待つ（audioSession の切替が不要になったため短縮）
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // 初回（currentIndex === 0）は前画面でマイクを使っていた場合に
+      // iOS がマイクを物理的に解放するまでの OS レベルのレイテンシを考慮して長めに待機する
+      // 2問目以降は finalize() が同一コンポーネント内で処理するため短い待機で十分
+      const startupDelay = currentIndex === 0 ? 600 : 300;
+      await new Promise(resolve => setTimeout(resolve, startupDelay));
       if (flowIdRef.current !== currentFlowId) return;
       await runSprintFlow(currentQuestion, currentFlowId);
     })();

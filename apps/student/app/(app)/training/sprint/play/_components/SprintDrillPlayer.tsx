@@ -206,7 +206,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     }
     if (nativeAudioRef.current) { nativeAudioRef.current.pause(); }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    // iOS: マイク解放後は必ず 'playback' に戻し、次の問題音声を最大音量で再生する
+    // 🚀 マイクを即時停止してからオーディオセッションをスピーカー出力に戻す
+    // stopListening() → finalize() → recognition.abort() + audioSession='playback' の順で実行される
+    stopListening();
     const nav = navigator as NavigatorWithAudioSession;
     if (nav.audioSession) {
       try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
@@ -214,7 +216,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setPlayingQuestionSequence(false);
     setPlayingAnswerSequence(false);
     setAudioPhase('idle');
-  }, [setPlayingQuestionSequence, setPlayingAnswerSequence]);
+    useSprintStore.setState({ isRecording: false });
+  }, [stopListening, setPlayingQuestionSequence, setPlayingAnswerSequence]);
 
 
   const playSingleTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
