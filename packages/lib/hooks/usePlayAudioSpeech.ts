@@ -93,12 +93,15 @@ export function usePlayAudioSpeech() {
       clearState();
     };
 
-    try {
-      await audio.play();
-    } catch (error) {
-      console.error("Playback failed:", error);
-      clearState();
-    }
+    // iOS WebKit のオーディオルーティング（受話レシーバーから外部スピーカーへ）の切り替えラグを待つ
+    setTimeout(async () => {
+      try {
+        await audio.play();
+      } catch (error) {
+        console.error("Playback failed:", error);
+        clearState();
+      }
+    }, 100);
   }, [supabase]); // playbackRate や isPlaying に依存しないため参照が安定する
 
   /**

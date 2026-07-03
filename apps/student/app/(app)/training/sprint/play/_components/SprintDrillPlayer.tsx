@@ -224,33 +224,42 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       }
       if (typeof window !== 'undefined') window.speechSynthesis.cancel();
 
-      if (audioPath && nativeAudioRef.current) {
-        const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = nativeAudioRef.current;
-        
-        audio.src = bucketUrl;
-        audio.playbackRate = playbackRate;
-        
-        audio.onended = () => resolve();
-        audio.onerror = () => {
-          ttsSpeak(text, playbackRate);
-          const checkTtsEnd = setInterval(() => {
-            if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-          }, 100);
-        };
-        audio.play().catch((err) => {
-          console.warn("Drill audio play failed, falling back to TTS:", err);
-          ttsSpeak(text, playbackRate);
-          const checkTtsEnd = setInterval(() => {
-            if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-          }, 100);
-        });
-      } else {
-        ttsSpeak(text, playbackRate);
-        const checkTtsEnd = setInterval(() => {
-          if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-        }, 100);
+      // 🚀 iOSの受話レシーバー問題を防ぐため、再生前に必ずスピーカー出力に設定し、
+      // OS のルーティング切替が完了するまで 100ms 待機してから再生を開始する
+      const nav = navigator as NavigatorWithAudioSession;
+      if (nav.audioSession) {
+        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
       }
+
+      setTimeout(() => {
+        if (audioPath && nativeAudioRef.current) {
+          const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
+          const audio = nativeAudioRef.current;
+          
+          audio.src = bucketUrl;
+          audio.playbackRate = playbackRate;
+          
+          audio.onended = () => resolve();
+          audio.onerror = () => {
+            ttsSpeak(text, playbackRate);
+            const checkTtsEnd = setInterval(() => {
+              if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
+            }, 100);
+          };
+          audio.play().catch((err) => {
+            console.warn("Drill audio play failed, falling back to TTS:", err);
+            ttsSpeak(text, playbackRate);
+            const checkTtsEnd = setInterval(() => {
+              if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
+            }, 100);
+          });
+        } else {
+          ttsSpeak(text, playbackRate);
+          const checkTtsEnd = setInterval(() => {
+            if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
+          }, 100);
+        }
+      }, 100);
     });
   }, [playbackRate, ttsSpeak]);
 

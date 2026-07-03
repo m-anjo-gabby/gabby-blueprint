@@ -313,36 +313,44 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       }
       if (typeof window !== 'undefined') window.speechSynthesis.cancel();
 
-      if (audioPath) {
-        const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        // 毎回新しい Audio インスタンスを生成することでデコード of 途切れを防ぐ
-        const audio = new Audio(bucketUrl);
-        audio.playbackRate = playbackRate;
-        currentAudioRef.current = audio;
+      // 🚀 iOSの受話レシーバー問題を防ぐため、再生前に必ずスピーカー出力に設定し、
+      // OS のルーティング切替が完了するまで 100ms 待機してから再生を開始する
+      const nav = navigator as NavigatorWithAudioSession;
+      if (nav.audioSession) {
+        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+      }
 
-        const fallbackToTts = () => {
-          currentAudioRef.current = null;
+      setTimeout(() => {
+        if (audioPath) {
+          const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
+          const audio = new Audio(bucketUrl);
+          audio.playbackRate = playbackRate;
+          currentAudioRef.current = audio;
+
+          const fallbackToTts = () => {
+            currentAudioRef.current = null;
+            ttsSpeak(text, playbackRate);
+            const checkTtsEnd = setInterval(() => {
+              if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
+            }, 100);
+          };
+
+          audio.onended = () => {
+            currentAudioRef.current = null;
+            resolve();
+          };
+          audio.onerror = () => fallbackToTts();
+          audio.play().catch((err) => {
+            console.warn("Audio play failed, falling back to TTS:", err);
+            fallbackToTts();
+          });
+        } else {
           ttsSpeak(text, playbackRate);
           const checkTtsEnd = setInterval(() => {
             if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
           }, 100);
-        };
-
-        audio.onended = () => {
-          currentAudioRef.current = null;
-          resolve();
-        };
-        audio.onerror = () => fallbackToTts();
-        audio.play().catch((err) => {
-          console.warn("Audio play failed, falling back to TTS:", err);
-          fallbackToTts();
-        });
-      } else {
-        ttsSpeak(text, playbackRate);
-        const checkTtsEnd = setInterval(() => {
-          if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-        }, 100);
-      }
+        }
+      }, 100);
     });
   }, [playbackRate, ttsSpeak]);
 

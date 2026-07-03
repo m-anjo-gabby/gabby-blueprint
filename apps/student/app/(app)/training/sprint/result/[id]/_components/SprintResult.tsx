@@ -41,13 +41,19 @@ interface SprintResultProps {
   courseTitle: string;
 }
 
+interface NavigatorWithAudioSession extends Navigator {
+  audioSession?: {
+    type: 'playback' | 'play-and-record';
+  };
+}
+
 export const SprintResult: React.FC<SprintResultProps> = ({
   scoreData,
   questions,
   courseTitle,
 }) => {
   const router = useRouter();
-  const { speak: ttsSpeak } = useWebSpeech();
+  const { speak: ttsSpeak, stopListening } = useWebSpeech();
   const { playbackRate } = usePlayAudioSpeech();
   
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -64,6 +70,40 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const isBatchPlayingRef = useRef(false);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  const stopAllAudio = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    setPlayingId(null);
+  }, []);
+
+  // 🚀 結果画面マウント時およびアンマウント時に強制的にオーディオセッションをスピーカー出力(playback)へリセットする
+  useEffect(() => {
+    const resetAudio = () => {
+      if (typeof window !== 'undefined') {
+        const nav = navigator as NavigatorWithAudioSession;
+        if (nav.audioSession) {
+          try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+        }
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+        }
+      }
+      // 前画面などから残留しているマイク録音を強制遮断
+      stopListening();
+    };
+
+    resetAudio();
+
+    return () => {
+      resetAudio();
+      stopAllAudio();
+    };
+  }, [stopAllAudio, stopListening]);
+
   useEffect(() => {
     if (focusedCardId && isBatchPlaying) {
       const element = document.getElementById(`card-${focusedCardId}`);
@@ -76,16 +116,6 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     }
   }, [focusedCardId, isBatchPlaying]);
 
-  const stopAllAudio = useCallback(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
-    }
-    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    setPlayingId(null);
-  }, []);
-
   const handlePlayAudio = (
     questionId: string, 
     text: string, 
@@ -93,27 +123,38 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     isManualClick = false
   ): Promise<void> => {
     return new Promise((resolve) => {
-      if (isManualClick) {
-        isBatchPlayingRef.current = false;
-        setIsBatchPlaying(false);
-        setFocusedCardId(questionId.split('-')[0]);
+      // 🚀 再生直前に受話レシーバー極小音量を防ぐため、スピーカー出力へ強制設定
+      if (typeof window !== 'undefined') {
+        const nav = navigator as NavigatorWithAudioSession;
+        if (nav.audioSession) {
+          try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+        }
       }
-      setPlayingId(questionId);
-      stopAllAudio();
 
-      if (audioPath) {
-        const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = new Audio(bucketUrl);
-        audio.playbackRate = playbackRate;
-        currentAudioRef.current = audio;
-        audio.onended = () => { currentAudioRef.current = null; setPlayingId(null); resolve(); };
-        audio.onerror = () => { currentAudioRef.current = null; ttsSpeak(text, playbackRate); setPlayingId(null); resolve(); };
-        audio.play().catch(() => { currentAudioRef.current = null; setPlayingId(null); resolve(); });
-      } else {
-        ttsSpeak(text, playbackRate);
-        const duration = text.length * 80 + 1000;
-        setTimeout(() => { setPlayingId(null); resolve(); }, duration);
-      }
+      // iOS WebKit のオーディオルーティング（受話レシーバーから外部スピーカーへ）の切り替えラグを待つ
+      setTimeout(() => {
+        if (isManualClick) {
+          isBatchPlayingRef.current = false;
+          setIsBatchPlaying(false);
+          setFocusedCardId(questionId.split('-')[0]);
+        }
+        setPlayingId(questionId);
+        stopAllAudio();
+
+        if (audioPath) {
+          const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
+          const audio = new Audio(bucketUrl);
+          audio.playbackRate = playbackRate;
+          currentAudioRef.current = audio;
+          audio.onended = () => { currentAudioRef.current = null; setPlayingId(null); resolve(); };
+          audio.onerror = () => { currentAudioRef.current = null; ttsSpeak(text, playbackRate); setPlayingId(null); resolve(); };
+          audio.play().catch(() => { currentAudioRef.current = null; setPlayingId(null); resolve(); });
+        } else {
+          ttsSpeak(text, playbackRate);
+          const duration = text.length * 80 + 1000;
+          setTimeout(() => { setPlayingId(null); resolve(); }, duration);
+        }
+      }, 100);
     });
   };
 

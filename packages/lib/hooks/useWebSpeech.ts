@@ -88,6 +88,8 @@ export function useWebSpeech() {
       } catch (e) {
         // すでに停止している場合の型エラー回避
       }
+      // 参照を即時クリアし、次回 startListening() で必ず新インスタンスを生成させる
+      recognitionRef.current = null;
     }
 
     // iOS WebKit用のオーディオセッション制御 (マイク解放時に再生モードに戻す)
@@ -129,9 +131,10 @@ export function useWebSpeech() {
       return;
     }
 
-    // 既存のインスタンスがあれば確実に破棄
+    // 既存のインスタンスがあれば確実に破棄してからクリア
     if (recognitionRef.current) {
-      recognitionRef.current.abort();
+      try { recognitionRef.current.abort(); } catch (_) { /* no-op */ }
+      recognitionRef.current = null;
     }
 
     const recognition = new SpeechRecognition();
