@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, audioBufferToWav } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle } from '@gabby/lib';
 import { SprintQuestion } from "@gabby/types/sprint";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
@@ -57,6 +57,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'good'>('idle');
   const [micStatus, setMicStatus] = useState<'checking' | 'granted' | 'denied' | 'prompt'>('checking');
+  // チャイム再生開始〜 recognition.onstart までの短い待機窓口だけ true
+  // （発話評価完了後に誤って MicOff を表示しないための専用フラグ）
+  const [isAwaitingRecording, setIsAwaitingRecording] = useState<boolean>(false);
 
   const checkMicPermission = useCallback(async () => {
     try {
@@ -92,22 +95,35 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const currentQuestion = questions?.[currentIndex];
   const totalQuestions = questions?.length || 0;
 
-  const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
-  const chimeAudioRef = useRef<HTMLAudioElement | null>(null);
-  const chimeBlobUrlRef = useRef<string | null>(null);
+  // チャイム再生専用 AudioContext（nativeAudio と干渉しない独立チャンネル）
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  // チャイム音の事前デコード済みバッファ
+  const chimeBufferRef = useRef<AudioBuffer | null>(null);
+  // 現在再生中の Audio インスタンスを追跡（停止用）
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // iOSの自動再生ポリシー回避のため、単一のAudioインスタンスをマウント時に作成して使い回す
+  // マウント時: iOS audioSession を 'play-and-record' に固定 + チャイム用バッファを事前デコード
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      nativeAudioRef.current = new Audio();
-      nativeAudioRef.current.volume = 1.0;
+    if (typeof window === 'undefined') return;
 
-      // チャイム音を OfflineAudioContext で事前レンダリングし、Blob URL として chimeAudioRef にセット
-      // OfflineAudioContext はスピーカーに出力しないため、ユーザージェスチャー不要で作成可能
+    // ★ iOS システム音防止: スプリントセッション中は常に 'play-and-record' を維持
+    // recognition.start/stop のたびに切り替えないことでシステム効果音を抑制する
+    const nav = navigator as NavigatorWithAudioSession;
+    if (nav.audioSession) {
+      try { nav.audioSession.type = 'play-and-record'; } catch (_) { /* no-op */ }
+    }
+
+    // チャイム用 AudioContext を生成（nativeAudio の src 切替と完全に独立）
+    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      const ctx = new AudioContextClass() as AudioContext;
+      audioCtxRef.current = ctx;
+
+      // OfflineAudioContext でチャイムを事前レンダリングし、AudioBuffer として保持
       const OfflineCtxClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
       if (OfflineCtxClass) {
         const sampleRate = 44100;
-        const duration = 0.32;
+        const duration = 0.45;
         const offlineCtx = new OfflineCtxClass(1, Math.ceil(sampleRate * duration), sampleRate);
 
         const osc1 = offlineCtx.createOscillator();
@@ -115,53 +131,57 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         osc1.type = 'sine';
         osc1.frequency.value = 659.25;
         gain1.gain.setValueAtTime(0, 0);
-        gain1.gain.linearRampToValueAtTime(0.6, 0.02);
-        gain1.gain.exponentialRampToValueAtTime(0.00001, 0.22);
+        gain1.gain.linearRampToValueAtTime(0.65, 0.02);
+        gain1.gain.exponentialRampToValueAtTime(0.00001, 0.25);
         osc1.connect(gain1);
         gain1.connect(offlineCtx.destination);
         osc1.start(0);
-        osc1.stop(0.22);
+        osc1.stop(0.25);
 
         const osc2 = offlineCtx.createOscillator();
         const gain2 = offlineCtx.createGain();
         osc2.type = 'sine';
         osc2.frequency.value = 987.77;
-        gain2.gain.setValueAtTime(0, 0.05);
-        gain2.gain.linearRampToValueAtTime(0.5, 0.07);
-        gain2.gain.exponentialRampToValueAtTime(0.00001, 0.32);
+        gain2.gain.setValueAtTime(0, 0.10);
+        gain2.gain.linearRampToValueAtTime(0.55, 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.00001, 0.45);
         osc2.connect(gain2);
         gain2.connect(offlineCtx.destination);
-        osc2.start(0.05);
-        osc2.stop(0.32);
+        osc2.start(0.10);
+        osc2.stop(0.45);
 
         offlineCtx.startRendering().then((renderedBuffer: AudioBuffer) => {
-          const wav = audioBufferToWav(renderedBuffer);
-          const blob = new Blob([wav], { type: 'audio/wav' });
-          const url = URL.createObjectURL(blob);
-          chimeBlobUrlRef.current = url;
-          chimeAudioRef.current = new Audio(url);
-          chimeAudioRef.current.volume = 1.0;
+          chimeBufferRef.current = renderedBuffer;
         }).catch((e: unknown) => {
           console.warn('Chime pre-render failed:', e);
         });
       }
     }
+
     return () => {
-      if (nativeAudioRef.current) {
-        nativeAudioRef.current.pause();
-        nativeAudioRef.current = null;
+      // ★ アンマウント時のみ 'playback' に戻す
+      if (nav.audioSession) {
+        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
       }
-      if (chimeBlobUrlRef.current) {
-        URL.revokeObjectURL(chimeBlobUrlRef.current);
-        chimeBlobUrlRef.current = null;
+      // 再生中の Audio インスタンスを停止
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      // AudioContext を閉じる
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close().catch(() => { /* no-op */ });
+        audioCtxRef.current = null;
       }
     };
   }, []);
 
   const flowIdRef = useRef<number>(0);
-  const hasAutoStartedRef = useRef<boolean>(false);
   const skippedQuestionIdsRef = useRef<Set<string>>(new Set());
   const isPersistedRef = useRef<boolean>(false);
+  // secondsLeft は毎秒変化するため、ref で最新値を保持してコールバック内で参照する
+  const secondsLeftRef = useRef<number>(secondsLeft);
+  useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
 
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
@@ -215,18 +235,16 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [secondsLeft, timeLimitSec]);
 
 
-  // 全てのオーディオ・発話を安全に即時ストップし、iOSオーディオセッションを再生モードに戻す
+  // 全てのオーディオ・発話を安全に即時ストップする
+  // ★ audioSession は変更しない（スプリント中ずっと 'play-and-record' を維持してシステム音を抑制）
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1;
-    if (nativeAudioRef.current) {
-      nativeAudioRef.current.pause();
+    // 現在再生中の Audio インスタンスがあれば停止・破棄
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
     }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    // iOS: マイク解放後は必ず 'playback' に戻し、次の問題音声を最大音量で再生する
-    const nav = navigator as NavigatorWithAudioSession;
-    if (nav.audioSession) {
-      try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
-    }
   }, []);
 
   const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
@@ -306,31 +324,36 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
     return new Promise((resolve) => {
-      if (nativeAudioRef.current) {
-        nativeAudioRef.current.pause();
+      // 直前に再生中のインスタンスがあれば停止・破棄（src 切り替えを避けてプチプチノイズを防ぐ）
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
       }
       if (typeof window !== 'undefined') window.speechSynthesis.cancel();
 
-      if (audioPath && nativeAudioRef.current) {
+      if (audioPath) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = nativeAudioRef.current;
-        
-        audio.src = bucketUrl;
-        audio.playbackRate = playbackRate; 
-        
-        audio.onended = () => resolve();
-        audio.onerror = () => {
+        // 毎回新しい Audio インスタンスを生成することでデコードの途切れを防ぐ
+        const audio = new Audio(bucketUrl);
+        audio.playbackRate = playbackRate;
+        currentAudioRef.current = audio;
+
+        const fallbackToTts = () => {
+          currentAudioRef.current = null;
           ttsSpeak(text, playbackRate);
           const checkTtsEnd = setInterval(() => {
             if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
           }, 100);
         };
+
+        audio.onended = () => {
+          currentAudioRef.current = null;
+          resolve();
+        };
+        audio.onerror = () => fallbackToTts();
         audio.play().catch((err) => {
           console.warn("Audio play failed, falling back to TTS:", err);
-          ttsSpeak(text, playbackRate);
-          const checkTtsEnd = setInterval(() => {
-            if (!window.speechSynthesis.speaking) { clearInterval(checkTtsEnd); resolve(); }
-          }, 100);
+          fallbackToTts();
         });
       } else {
         ttsSpeak(text, playbackRate);
@@ -341,122 +364,142 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     });
   }, [playbackRate, ttsSpeak]);
 
+  // ────────────── 🎤 録音・発話制御コア ──────────────
+  // チャイム音を AudioContext 経由で再生（nativeAudio の src 切り替えと完全独立・競合なし）
+  const playChime = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
+      const ctx = audioCtxRef.current;
+      const buffer = chimeBufferRef.current;
+      if (!ctx || !buffer) { resolve(); return; }
+
+      // iOS Safari では AudioContext が suspended 状態になることがある
+      const doPlay = () => {
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.onended = () => resolve();
+        source.start(0);
+      };
+
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(doPlay).catch(() => resolve());
+      } else {
+        doPlay();
+      }
+    });
+  }, []);
+
+  // 評価コールバックを含む純粋な録音開始関数
+  // secondsLeft は ref 経由で参照（毎秒の再生成を防ぎ、runSprintFlow の安定性を保つ）
+  const startRecordingFor = useCallback((question: SprintQuestion) => {
+    const targetText = isSpeedMode
+      ? (answerType === '1' ? (question.answer_sentence_no_en ?? "") : question.answer_sentence_yes_en)
+      : question.answer_sentence_yes_en;
+
+    if (!targetText) return;
+
+    const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
+    const questionId = question.question_id;
+
+    startAssessment(
+      targetText,
+      cleanWords,
+      (result) => {
+        if (skippedQuestionIdsRef.current.has(questionId)) return;
+
+        // 評価完了時は必ず待機フラグをリセット（発話評価後に MicOff が表示されるのを防ぐ）
+        setIsAwaitingRecording(false);
+        setIsRecording(false);
+
+        const score = result.score;
+        let visualState: 'idle' | 'excellent' | 'good' = 'idle';
+        if (score >= 0.90) visualState = 'excellent';
+        else if (score >= 0.70) visualState = 'good';
+
+        const commitAndNext = () => {
+          setAssessmentVisualState('idle');
+          incrementAssessmentCount();
+          const { isLast } = commitAssessmentResult(questionId, getFeedbackConfig(result.score), result);
+          if (isLast) {
+            showToast("すべての問題を消化しました！スプリント完了です。", "success");
+            handlePersistAndRedirect(secondsLeftRef.current);
+          }
+        };
+
+        if (visualState !== 'idle') {
+          setAssessmentVisualState(visualState);
+          setTimeout(() => { commitAndNext(); }, 1000);
+        } else {
+          commitAndNext();
+        }
+      },
+      {
+        // スプリントセッション中は audioSession を 'play-and-record' のまま維持
+        // （マウント時に設定済み。finalize で 'playback' に戻させない）
+        suppressAudioSessionSwitch: true,
+        // recognition.onstart 発火後（マイクが実際に開いた時点）で isRecording を true にする
+        // → RECインジケータをブラウザの実際の録音開始に同期させる
+        onRecognitionStart: () => {
+          setIsAwaitingRecording(false); // MicOff 待機終了 → REC インジケータへ
+          setIsRecording(true);
+        },
+      },
+    );
+  }, [isSpeedMode, answerType, setIsRecording, startAssessment, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect]);
+
+  // ★ 音声再生→チャイム→録音を直接呼び出す直列フロー（useEffect 間接トリガーを廃止）
   const runSprintFlow = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
     if (!question) return;
-
-    hasAutoStartedRef.current = false;
     try {
       if (question.statement_en) {
         setAudioPhase('statement');
         await playTrack(question.statement_en, question.statement_voice);
-        if (flowIdRef.current !== currentFlowId) return; 
-        await new Promise(r => setTimeout(r, 400));
+        if (flowIdRef.current !== currentFlowId) return;
+        await new Promise(r => setTimeout(r, 300));
         if (flowIdRef.current !== currentFlowId) return;
       }
 
       setAudioPhase('question');
       await playTrack(question.question_en, question.question_voice);
-      if (flowIdRef.current !== currentFlowId) return; 
+      if (flowIdRef.current !== currentFlowId) return;
 
-      setAudioPhase('answer'); 
+      // answer フェーズ表示 + 待機フラグ ON（isRecording=false の間は MicOff で待機中を示す）
+      setAudioPhase('answer');
+      setIsAwaitingRecording(true);
+      await new Promise(r => setTimeout(r, 80)); // nativeAudio の終了処理が完了するまでの安全マージン
+      if (flowIdRef.current !== currentFlowId) return;
+
+      // チャイムの再生を開始する（awaitしない）
+      playChime();
+
+      // チャイム鳴動（約450ms）と音声認識の起動ラグ（数百ms）をオーバーラップさせるため、
+      // チャイム開始から250msのディレイを置いて startRecordingFor を呼び出す。
+      // これにより、チャイム音が消える瞬間にはマイクの準備が整っている（onstart発火）状態を作る。
+      await new Promise(r => setTimeout(r, 250));
+      if (flowIdRef.current !== currentFlowId) return;
+
+      // 録音を開始（isRecording は recognition.onstart 後に true になる）
+      startRecordingFor(question);
     } catch (e) {
       console.error("Sprint flow error:", e);
       if (flowIdRef.current === currentFlowId) {
-        setAudioPhase('answer'); 
+        setAudioPhase('answer');
       }
     }
-  }, [playTrack]);
+  }, [playTrack, playChime, startRecordingFor]);
 
-  // ────────────── 🎤 録音・発話制御コア ──────────────
-  // チャイム音を HTMLAudioElement で再生し、完了まで待機する
-  const playChime = useCallback((): Promise<void> => {
-    return new Promise((resolve) => {
-      const chime = chimeAudioRef.current;
-      if (!chime) { resolve(); return; }
-      chime.currentTime = 0;
-      chime.volume = 1.0;
-      const cleanup = () => {
-        chime.removeEventListener('ended', cleanup);
-        chime.removeEventListener('error', cleanup);
-        resolve();
-      };
-      chime.addEventListener('ended', cleanup, { once: true });
-      chime.addEventListener('error', cleanup, { once: true });
-      chime.play().catch(() => resolve()); // 失敗してもブロックしない
-    });
-  }, []);
-
+  // 手動録音ボタン用（マイクボタンタップ時）
   const handleStartRecord = useCallback(async () => {
     if (!currentQuestion) return;
-
-    // 1. チャイム音を再生して完了を待つ
-    await playChime();
-
-    // 2. 150ms 待機（iOSのオーディオセッションがマイク入力モードに安定するのを待つ）
-    await new Promise(r => setTimeout(r, 150));
-
-    const targetText = isSpeedMode
-      ? (answerType === '1' ? (currentQuestion.answer_sentence_no_en ?? "") : currentQuestion.answer_sentence_yes_en)
-      : currentQuestion.answer_sentence_yes_en;
-
-    if (!targetText) {
-      setIsRecording(false);
-      return;
-    }
-
-    // 3. 状態を回答フェーズ・録音中に設定（チャイム完了・セッション安定後）
     setAudioPhase('answer');
-    setIsRecording(true);
-
-    const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
-
-    const currentQuestionId = currentQuestion.question_id;
-
-    startAssessment(targetText, cleanWords, (result) => {
-      // スキップされた問題の場合は、非同期の評価コミットを行わない
-      if (skippedQuestionIdsRef.current.has(currentQuestionId)) {
-        return;
-      }
-
-      setIsRecording(false);
-
-      const score = result.score;
-      let visualState: 'idle' | 'excellent' | 'good' = 'idle';
-      if (score >= 0.90) {
-        visualState = 'excellent';
-      } else if (score >= 0.70) {
-        visualState = 'good';
-      }
-
-      const commitAndNext = () => {
-        setAssessmentVisualState('idle');
-        incrementAssessmentCount();
-
-        const { isLast } = commitAssessmentResult(
-          currentQuestionId,
-          getFeedbackConfig(result.score),
-          result
-        );
-
-        if (isLast) {
-          showToast("すべての問題を消化しました！スプリント完了です。", "success");
-          handlePersistAndRedirect(secondsLeft);
-        }
-      };
-
-      if (visualState !== 'idle') {
-        setAssessmentVisualState(visualState);
-        setTimeout(() => {
-          commitAndNext();
-        }, 1000);
-      } else {
-        commitAndNext();
-      }
-    });
-  }, [currentQuestion, isSpeedMode, answerType, playChime, setIsRecording, startAssessment, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect, secondsLeft]);
-
+    setIsAwaitingRecording(true);
+    playChime(); // awaitしない
+    await new Promise(r => setTimeout(r, 250));
+    startRecordingFor(currentQuestion);
+  }, [currentQuestion, playChime, startRecordingFor]);
 
   const handleStopRecord = useCallback(() => {
+    setIsAwaitingRecording(false);
     setIsRecording(false);
     stopListening();
   }, [setIsRecording, stopListening]);
@@ -472,25 +515,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     const { isLast } = commitSkipResult(currentQuestion.question_id);
     if (isLast) {
       showToast("スプリントを終了します。", "success");
-      handlePersistAndRedirect(secondsLeft);
+      handlePersistAndRedirect(secondsLeftRef.current);
     }
-  }, [commitSkipResult, showToast, handlePersistAndRedirect, secondsLeft, currentQuestion, handleStopRecord, stopAllAudio]);
+  }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, handleStopRecord, stopAllAudio]);
 
   // ────────────── 🔄 副作用 (Effects) ──────────────
-  // 回答フェーズ（answer）に遷移した際に自動で発話開始（録音）を行う
-  useEffect(() => {
-    if (
-      audioPhase === 'answer' &&
-      !isRecording &&
-      !isSaving &&
-      !showTimeUpOverlay &&
-      !hasAutoStartedRef.current &&
-      micStatus !== 'denied'
-    ) {
-      hasAutoStartedRef.current = true;
-      handleStartRecord();
-    }
-  }, [audioPhase, isRecording, isSaving, showTimeUpOverlay, handleStartRecord, micStatus]);
 
   // 全体の残り制限時間カウント
   useEffect(() => {
@@ -548,17 +577,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   useEffect(() => {
     if (!currentQuestion || secondsLeft <= 0 || showTimeUpOverlay || isSaving) return;
 
-    // ✨【修正】問題が変わった「その一瞬」だけ、オーディオを停止してフローIDを進めます
     stopAllAudio();
     setAudioPhase('idle');
-    hasAutoStartedRef.current = false;
-    
+
     const currentFlowId = flowIdRef.current;
     (async () => {
-      // iOS WebKit等でのマイク解放待ちディレイを挟む (450ms)
-      await new Promise(resolve => setTimeout(resolve, 450));
+      // 前の録音/音声が解放されるのを待つ（audioSession の切替が不要になったため短縮）
+      await new Promise(resolve => setTimeout(resolve, 300));
       if (flowIdRef.current !== currentFlowId) return;
-
       await runSprintFlow(currentQuestion, currentFlowId);
     })();
 
@@ -591,7 +617,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     onExit?.();
   };
 
-  const showRecordingHud = isRecording || assessmentVisualState !== 'idle' || (audioPhase === 'answer' && micStatus === 'denied');
+  // isAwaitingRecording: チャイム開始〜 recognition.onstart までの待機窓口のみ true
+  // assessmentVisualState !== 'idle': Excellent/Good 表示中
+  // micStatus === 'denied': マイク権限なしのスキップボタン表示
+  const showRecordingHud = isRecording || isAwaitingRecording || assessmentVisualState !== 'idle' || (audioPhase === 'answer' && micStatus === 'denied');
 
   return (
 <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
@@ -740,42 +769,41 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 <div
                   className={cn(
                     "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
-                    isRecording 
-                      ? "text-indigo-500" 
-                      : audioPhase === 'idle' 
-                        ? "text-slate-300" 
-                        : micStatus === 'denied' && audioPhase === 'answer'
-                          ? "text-rose-500"
-                          : "text-indigo-600"
+                    audioPhase === 'idle'
+                      ? "text-slate-300"
+                      : audioPhase === 'answer'
+                        ? (micStatus === 'denied' ? "text-rose-500" : "text-indigo-500")
+                        : "text-indigo-600"
                   )}
                 >
-                  {isRecording ? (
-                    <CircleDot className="w-full h-full" strokeWidth={2.5} />
+                  {audioPhase === 'answer' ? (
+                    micStatus === 'denied' ? (
+                      <MicOff className="w-full h-full" strokeWidth={2.5} />
+                    ) : (
+                      <CircleDot className="w-full h-full" strokeWidth={2.5} />
+                    )
                   ) : audioPhase === 'idle' ? (
                     <CircleDot className="w-full h-full" strokeWidth={2.5} />
-                  ) : micStatus === 'denied' && audioPhase === 'answer' ? (
-                    <MicOff className="w-full h-full" strokeWidth={2.5} />
                   ) : (
                     <Headphones className="w-full h-full" strokeWidth={2.5} />
                   )}
                 </div>
                 <h2 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight whitespace-nowrap select-none">
-                  {isRecording && "発話して回答しましょう"}
-                  {!isRecording && audioPhase === 'statement' && "基本文を再生中"}
-                  {!isRecording && audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
-                  {!isRecording && audioPhase === 'answer' && (
+                  {audioPhase === 'statement' && "基本文を再生中"}
+                  {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
+                  {audioPhase === 'answer' && (
                     micStatus === 'denied' ? "脳内で瞬時に回答しましょう" : "発話して回答しましょう"
                   )}
-                  {!isRecording && audioPhase === 'idle' && "Ready"}
+                  {audioPhase === 'idle' && "Ready"}
                 </h2>
               </div>
               {/* サブテキスト表示（縦位置のガタつきを抑えるために領域を常時維持） */}
               <p className={cn(
                 "text-xs sm:text-sm font-semibold text-slate-400 transition-opacity duration-150",
-                (isRecording || audioPhase === 'answer') ? "opacity-100" : "opacity-0 select-none pointer-events-none"
+                (isRecording || isAwaitingRecording) ? "opacity-100" : "opacity-0 select-none pointer-events-none"
               )}>
-                {micStatus === 'denied' && audioPhase === 'answer' 
-                  ? "※マイク権限が拒否されています" 
+                {micStatus === 'denied' && audioPhase === 'answer'
+                  ? "※マイク権限が拒否されています"
                   : "※開始音の後に発話してください"}
               </p>
             </div>
@@ -811,7 +839,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                         </button>
                       </div>
                     ) : (
-                      // 通常の録音中／演出中のHUD（従来のものをそのまま配置）
+                      // 通常の録音中／待機中／演出中のHUD
                       <>
                         {(() => {
                           const RADIUS = 36;
@@ -821,12 +849,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                           const isGood = assessmentVisualState === 'good';
                           const isVisualizing = isExcellent || isGood;
 
-                          const strokeColor = isExcellent ? "stroke-emerald-500" : isGood ? "stroke-sky-500" : "stroke-rose-500";
-                          const trackColor = isExcellent ? "stroke-emerald-100" : isGood ? "stroke-sky-100" : "stroke-rose-100";
+                          const strokeColor = isExcellent ? "stroke-emerald-500" : isGood ? "stroke-sky-500" : isAwaitingRecording ? "stroke-slate-200" : "stroke-rose-500";
+                          const trackColor = isExcellent ? "stroke-emerald-100" : isGood ? "stroke-sky-100" : isAwaitingRecording ? "stroke-slate-100" : "stroke-rose-100";
                           const fillColor = isExcellent ? "rgba(16, 185, 129, 0.05)" : isGood ? "rgba(14, 165, 233, 0.05)" : "transparent";
 
                           const MAX_TIME = 10;
-                          const progress = isVisualizing ? 1 : (Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME);
+                          const progress = isVisualizing ? 1 : isAwaitingRecording ? 1 : (Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME);
                           const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
                           return (
                             <div className="relative flex items-center justify-center w-24 h-24 select-none">
@@ -842,7 +870,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                                   strokeDasharray={CIRCUMFERENCE}
                                   animate={{ strokeDashoffset }}
                                   transition={{
-                                    duration: isVisualizing ? 0.3 : (timeLeft === MAX_TIME ? 0 : 1),
+                                    duration: isVisualizing ? 0.3 : isAwaitingRecording ? 0 : (timeLeft === MAX_TIME ? 0 : 1),
                                     ease: isVisualizing ? "easeOut" : "linear"
                                   }}
                                   strokeLinecap="round"
@@ -862,6 +890,16 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                                       {isExcellent ? "Excellent" : "Good!"}
                                     </span>
                                   </motion.div>
+                                ) : isAwaitingRecording ? (
+                                  <>
+                                    <span className="text-3xl font-black font-mono text-slate-300 leading-none">
+                                      --
+                                    </span>
+                                    <div className="flex items-center gap-1 mt-0.5 text-slate-400">
+                                      <MicOff size={10} className="text-slate-400" />
+                                      <span className="text-[9px] font-black uppercase tracking-wider leading-none">WAIT</span>
+                                    </div>
+                                  </>
                                 ) : (
                                   <>
                                     <span className="text-3xl font-black font-mono text-rose-600 leading-none">
@@ -883,18 +921,29 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                             <button
                               type="button"
                               onClick={handleStopRecord}
-                              className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-rose-500 text-white hover:bg-rose-600 transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group border-none"
+                              disabled={isAwaitingRecording || isSaving}
+                              className={cn(
+                                "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group border-none",
+                                isAwaitingRecording
+                                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                  : "bg-rose-500 text-white hover:bg-rose-600"
+                              )}
                               title="発話を完了して次へ"
                             >
-                              <CheckCircle2 size={16} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
+                              <CheckCircle2 size={16} strokeWidth={2.5} className={cn(!isAwaitingRecording && "group-hover:scale-110 transition-transform")} />
                               <span className="text-sm font-black tracking-wider">発話を完了</span>
                             </button>
 
                             <button
                               type="button"
                               onClick={handleSkipQuestion}
-                              disabled={isSaving}
-                              className="flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-transparent border border-transparent text-slate-400 hover:text-slate-600 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-20 disabled:pointer-events-none w-48 border-none"
+                              disabled={isAwaitingRecording || isSaving}
+                              className={cn(
+                                "flex items-center justify-center gap-2 px-6 py-2 rounded-xl transition-all active:scale-[0.98] cursor-pointer w-48 border-none",
+                                isAwaitingRecording
+                                  ? "text-slate-200 cursor-not-allowed"
+                                  : "text-slate-400 hover:text-slate-600"
+                              )}
                               title="この問題をスキップして次へ"
                             >
                               <FastForward size={14} strokeWidth={2.5} />

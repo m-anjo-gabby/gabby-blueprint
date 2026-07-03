@@ -11,6 +11,23 @@ interface NavigatorWithAudioSession extends Navigator {
 }
 
 /**
+ * startAssessment のオプション
+ */
+interface StartAssessmentOptions {
+  /**
+   * true の場合、startAssessment / finalize 内で audioSession.type を変更しない。
+   * SprintTimePlayer のようにセッション全体で 'play-and-record' を維持したい場合に使用する。
+   * デフォルト: false（従来通り playback に戻す）
+   */
+  suppressAudioSessionSwitch?: boolean;
+  /**
+   * SpeechRecognition の onstart イベント発火後（実際にマイクが開いた時点）に呼び出されるコールバック。
+   * RECインジケータの表示タイミングをブラウザの実際の録音開始に合わせるために使用する。
+   */
+  onRecognitionStart?: () => void;
+}
+
+/**
  * ブラウザ標準の Web Speech API (Synthesis & Recognition) を利用した
  * 音声読み上げおよび簡易発音評価フック
  */
@@ -33,6 +50,9 @@ export function useWebSpeech() {
   // 【追加】現在の評価セッションが有効かどうかを管理
   // ブラウザ側のイベント発火タイミングの差（Edge/Safari等）による不整合を防ぐガードレール
   const isAssessingRef = useRef(false);
+
+  // suppressAudioSessionSwitch オプションを保持するRef
+  const suppressAudioSessionSwitchRef = useRef(false);
 
   const clearAllTimers = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -71,12 +91,15 @@ export function useWebSpeech() {
     }
 
     // iOS WebKit用のオーディオセッション制御 (マイク解放時に再生モードに戻す)
-    const nav = navigator as NavigatorWithAudioSession;
-    if (nav.audioSession) {
-      try {
-        nav.audioSession.type = 'playback';
-      } catch (err) {
-        console.warn("Failed to set audioSession type to playback:", err);
+    // suppressAudioSessionSwitch が true の場合はスキップ（呼び出し元が audioSession を管理）
+    if (!suppressAudioSessionSwitchRef.current) {
+      const nav = navigator as NavigatorWithAudioSession;
+      if (nav.audioSession) {
+        try {
+          nav.audioSession.type = 'playback';
+        } catch (err) {
+          console.warn("Failed to set audioSession type to playback:", err);
+        }
       }
     }
 
@@ -96,7 +119,10 @@ export function useWebSpeech() {
   /**
    * 音声認識の生データを取得するための内部関数
    */
-  const startListening = useCallback((onUpdate: (heard: string) => void) => {
+  const startListening = useCallback((
+    onUpdate: (heard: string) => void,
+    onRecognitionStart?: () => void,
+  ) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.error("Web Speech API is not supported in this browser.");
@@ -113,7 +139,11 @@ export function useWebSpeech() {
     recognition.interimResults = true;
     recognition.continuous = true;
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      setIsListening(true);
+      // 実際にマイクが開いた時点でコールバックを呼び出す
+      onRecognitionStart?.();
+    };
     
     // Edge等で勝手に認識が終了した場合のハンドリング
     recognition.onend = () => {
@@ -151,12 +181,16 @@ export function useWebSpeech() {
   const startAssessment = useCallback((
     targetPhrase: string, 
     mainWords: string[], 
-    onComplete: (result: AnalysisResult) => void
+    onComplete: (result: AnalysisResult) => void,
+    options?: StartAssessmentOptions,
   ) => {
     // 前回のセッションが残っていれば強制終了
     if (isAssessingRef.current) {
       finalize();
     }
+
+    // オプションをRefに保存（finalize 内で参照するため）
+    suppressAudioSessionSwitchRef.current = options?.suppressAudioSessionSwitch ?? false;
 
     // セッション開始
     isAssessingRef.current = true;
@@ -165,14 +199,17 @@ export function useWebSpeech() {
     latestResultRef.current = analyzePhrase("", targetPhrase, mainWords);
 
     // iOS WebKit用のオーディオセッション制御:
+    // suppressAudioSessionSwitch が false（デフォルト）の場合のみ切り替える
     // recognition.start() より前に 'play-and-record' に切り替え、
     // iOSがマイク入力モードに入るタイミングを制御する
-    const nav = navigator as NavigatorWithAudioSession;
-    if (nav.audioSession) {
-      try {
-        nav.audioSession.type = 'play-and-record';
-      } catch (err) {
-        console.warn("Failed to set audioSession type to play-and-record:", err);
+    if (!suppressAudioSessionSwitchRef.current) {
+      const nav = navigator as NavigatorWithAudioSession;
+      if (nav.audioSession) {
+        try {
+          nav.audioSession.type = 'play-and-record';
+        } catch (err) {
+          console.warn("Failed to set audioSession type to play-and-record:", err);
+        }
       }
     }
 
@@ -199,7 +236,7 @@ export function useWebSpeech() {
       if (result.score >= 0.90) {
         finalize(result);
       }
-    });
+    }, options?.onRecognitionStart);
 
     // セーフティタイマー（猶予分を考慮して調整）
     timerRef.current = setTimeout(() => {
