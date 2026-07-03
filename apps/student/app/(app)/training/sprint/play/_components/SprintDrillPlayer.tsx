@@ -76,10 +76,24 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const chimeBufferRef = useRef<AudioBuffer | null>(null);
 
   // iOSの自動再生ポリシー回避のため、単一のAudioインスタンスをマウント時に作成して使い回す
+  // およびオーディオセッションの強制初期化とクリーンアップ
   useEffect(() => {
     if (typeof window !== 'undefined') {
       nativeAudioRef.current = new Audio();
       nativeAudioRef.current.volume = 1.0;
+
+      const nav = navigator as NavigatorWithAudioSession;
+      
+      // 🚀 前画面からの残留を防ぐため、マウント時に強制的にスピーカー出力へ戻す
+      if (nav.audioSession) {
+        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+      }
+
+      // 前の認識インスタンスやTTSを強制停止して初期化
+      stopListening();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
 
       // チャイム用 AudioContext を生成（共通ヘルパーを利用）
       const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -97,6 +111,17 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       }
     }
     return () => {
+      const nav = navigator as NavigatorWithAudioSession;
+      
+      // 🚀 アンマウント時にも確実にスピーカー出力へ戻し、マイクを強制クリーンアップ
+      if (nav.audioSession) {
+        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+      }
+      stopListening();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+
       if (nativeAudioRef.current) {
         nativeAudioRef.current.pause();
         nativeAudioRef.current = null;
@@ -106,7 +131,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         audioCtxRef.current = null;
       }
     };
-  }, []);
+  }, [stopListening]);
 
   const isInitialized = useRef<boolean>(false);
   const prevAnalysisRef = useRef<any>(null);

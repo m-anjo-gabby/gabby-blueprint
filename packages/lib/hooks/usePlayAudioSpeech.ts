@@ -3,6 +3,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { createBrowserClient } from '../supabase/client';
 
+interface NavigatorWithAudioSession extends Navigator {
+  audioSession?: {
+    type: 'playback' | 'play-and-record';
+  };
+}
+
 /**
  * 音声再生およびダウンロードを管理するカスタムフック
  * Supabase Storageのパス解決からブラウザのダウンロード発火までを一括で扱う
@@ -29,6 +35,14 @@ export function usePlayAudioSpeech() {
    * @param options - 再生オプション (restart: true の場合、同じIDでも最初から再生)
    */
   const play = useCallback(async (path: string, id: string, options?: { restart?: boolean }) => {
+    // 🚀 iOSでの受話レシーバー極小音量問題を回避するため、再生開始時に強制的にスピーカー出力(playback)へ設定
+    if (typeof window !== 'undefined') {
+      const nav = navigator as NavigatorWithAudioSession;
+      if (nav.audioSession) {
+        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+      }
+    }
+
     // 同じIDがクリックされた場合
     if (currentPlayingIdRef.current === id) {
       if (options?.restart) {
@@ -161,6 +175,13 @@ export function usePlayAudioSpeech() {
   // コンポーネントのアンマウント時に再生を確実に止める
   useEffect(() => {
     return () => {
+      // 🚀 アンマウント時にも確実にスピーカー出力へ戻す
+      if (typeof window !== 'undefined') {
+        const nav = navigator as NavigatorWithAudioSession;
+        if (nav.audioSession) {
+          try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+        }
+      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;

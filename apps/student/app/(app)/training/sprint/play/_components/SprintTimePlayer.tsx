@@ -103,11 +103,22 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 現在再生中の Audio インスタンスを追跡（停止用）
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // マウント時: チャイム用バッファを事前デコード
+  // マウント時: オーディオセッションの強制初期化とチャイム用バッファの事前デコード
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const nav = navigator as NavigatorWithAudioSession;
+    
+    // 🚀 前の画面からの残留を防ぐため、マウント時に強制的にスピーカー出力へ戻す
+    if (nav.audioSession) {
+      try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+    }
+    
+    // 進行中の発話認識やTTSがあれば即時強制終了する
+    stopListening();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
 
     // チャイム用 AudioContext を生成（nativeAudio の src 切替と完全に独立）
     const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -126,6 +137,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
 
     return () => {
+      // 🚀 アンマウント時にも確実にスピーカー出力へ戻し、マイクを強制クリーンアップ
+      if (nav.audioSession) {
+        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+      }
+      stopListening();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
       // 再生中の Audio インスタンスを停止
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
@@ -137,7 +156,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         audioCtxRef.current = null;
       }
     };
-  }, []);
+  }, [stopListening]);
 
   const flowIdRef = useRef<number>(0);
   const skippedQuestionIdsRef = useRef<Set<string>>(new Set());
