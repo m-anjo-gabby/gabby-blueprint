@@ -6,6 +6,7 @@ import { createLogger, getLogContext } from "@gabby/lib/logger";
 
 const logger = createLogger("student");
 const SPRINT_LIMIT_COUNT = 10;
+const SPRINT_SPEED_LIMIT_COUNT = 30;
 
 // ========================================================================
 // 📊 型定義（Types）
@@ -136,7 +137,7 @@ export async function getSprintQuestionsAction(
 
     if (safeType === "0") {
       if (mode === 'sprint') {
-        finalData = shuffleArray(rawRows).slice(0, SPRINT_LIMIT_COUNT);
+        finalData = shuffleArray(rawRows).slice(0, SPRINT_SPEED_LIMIT_COUNT);
       } else {
         finalData = shuffleArray(rawRows);
       }
