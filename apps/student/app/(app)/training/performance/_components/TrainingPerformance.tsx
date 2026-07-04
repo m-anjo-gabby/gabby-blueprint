@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, Library, CalendarDays, ArrowLeft, HelpCircle } from 'lucide-react';
+import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, CalendarDays, ArrowLeft, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoDateInZone, toIsoMonthInZone } from '@gabby/lib/date/date';
@@ -122,11 +122,12 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
   const [displayYear, displayMonth] = targetMonth.split('-');
   const isNotCurrentMonth = targetMonth !== currentMonthStr;
 
+
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
       <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
 
-        {/* ────────────── ヘッダー：中央集約レイアウト ────────────── */}
+        {/* ────────────── ヘッダー ────────────── */}
         <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
           <div className="absolute top-0 right-0 p-3 opacity-[0.08] pointer-events-none">
             <BarChart3 size={115} strokeWidth={1.2} className="text-indigo-600" />
@@ -151,7 +152,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
             </div>
           </div>
 
-          {/* 月移動：カプセル型UI ＆ 「今月」ボタン配置エリア */}
           <div className="relative flex items-center justify-center pt-1">
             <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
               <button 
@@ -198,131 +198,156 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
           </div>
         </div>
 
-        {/* ────────────── メイン：白・ライトグレーベース ────────────── */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/40 p-5 sm:p-8 space-y-5">
+        {/* ────────────── メイン ────────────── */}
+        <div className="flex-1 overflow-y-auto bg-slate-50/40 p-4 sm:p-8 space-y-5">
           <div className="max-w-xl mx-auto space-y-5">
 
-            {/* トレーニング日数サマリーカード */}
-            <motion.div 
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-5 bg-white border border-slate-200/60 rounded-2xl flex items-center justify-between shadow-xs relative overflow-hidden"
-            >
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600" />
-              <div className="flex items-center gap-3 pl-1">
-                <div className="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center border border-indigo-100/30">
-                  <CalendarDays size={18} />
-                </div>
-                <div>
-                  <span className="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider block">Monthly Engagement</span>
-                  <p className="text-xs font-bold text-slate-700">トレーニング日数</p>
-                </div>
-              </div>
-              <div className="flex items-baseline gap-0.5 font-mono">
-                <span className="text-3xl font-black text-slate-900 tracking-tight">{stats.activeDays}</span>
-                <span className="text-[10px] font-bold text-slate-400">/日</span>
-              </div>
-            </motion.div>
-
-            {/* 統計データエリア */}
-            <div className="space-y-2">
-              <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest block px-1">
-                Training Details
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* 1. 単語帳 (インディゴ) */}
-                <div className="p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-indigo-50/60 text-indigo-600 rounded-md flex items-center justify-center border border-indigo-100/20">
-                        <BookOpen size={13} strokeWidth={2.5} />
-                      </div>
-                      <span className="text-xs font-black text-slate-700">単語帳</span>
-                    </div>
+            {/* ────────────── コアKPI ツインヒーローエリア（プレミアム仕様） ────────────── */}
+            <div className="grid grid-cols-2 gap-3.5">
+              
+              {/* 1. トレーニング日数カード */}
+              <motion.div 
+                whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                whileTap={{ scale: 0.99 }}
+                className="p-4 bg-gradient-to-br from-white to-indigo-50/20 border border-slate-200/70 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[110px] sm:min-h-[120px]"
+              >
+                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-indigo-600" />
+                
+                {/* 上段 */}
+                <div className="flex items-center gap-2 pl-0.5">
+                  <div className="w-7 h-7 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center border border-indigo-100/40 shrink-0">
+                    <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4 pt-1">
-                    <div>
-                      <span className="text-[9px] font-medium text-slate-400 block mb-0.5">単語</span>
-                      <span className="text-base font-mono font-black text-slate-900 tracking-tight">{stats.totalWords}</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] font-medium text-slate-400 block mb-0.5">フレーズ</span>
-                      <span className="text-base font-mono font-black text-slate-900 tracking-tight">{stats.totalPhrases}</span>
-                    </div>
+                  <div>
+                    <span className="text-[8px] font-mono font-bold uppercase text-indigo-500/80 tracking-wider block leading-none mb-0.5">Engagement</span>
+                    <p className="text-[11px] sm:text-xs font-black text-slate-800 leading-none">トレーニング日数</p>
                   </div>
                 </div>
 
-                {/* 2. スプリント (アンバー) */}
-                <div className="p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-amber-50/60 text-amber-500 rounded-md flex items-center justify-center border border-amber-100/20">
-                        <Zap size={13} strokeWidth={2.5} />
-                      </div>
-                      <span className="text-xs font-black text-slate-700">スプリント</span>
-                      <div className="relative flex items-center">
-                        <button
-                          type="button"
-                          onClick={() => setShowSprintTooltip(!showSprintTooltip)}
-                          onMouseEnter={() => setShowSprintTooltip(true)}
-                          onMouseLeave={() => setShowSprintTooltip(false)}
-                          className="text-slate-400 hover:text-slate-600 cursor-help transition-colors focus:outline-none flex items-center justify-center"
-                        >
-                          <HelpCircle size={13} />
-                        </button>
-                        <AnimatePresence>
-                          {showSprintTooltip && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -4, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                              transition={{ duration: 0.12, ease: "easeOut" }}
-                              className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md whitespace-nowrap z-50 pointer-events-none"
-                            >
-                              ドリルモードの回答数は含まれていません
-                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </div>
+                {/* 下段：数値＆単位＋装飾オーナメント */}
+                <div className="pt-2 border-t border-slate-100/60 flex items-end justify-between">
+                  <span className="text-[9px] text-slate-400 font-medium pb-0.5 hidden sm:inline">Monthly Active Days</span>
+                  <div className="flex items-baseline justify-end font-mono w-full sm:w-auto">
+                    <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">
+                      {stats.activeDays}
+                    </span>
+                    <span className="text-[10px] font-sans font-bold text-slate-400 ml-0.5">日</span>
                   </div>
+                </div>
+              </motion.div>
 
-                  <div className="grid grid-cols-2 gap-4 pt-1">
-                    <div>
-                      <span className="text-[9px] font-medium text-slate-400 block mb-0.5">本数</span>
-                      <span className="text-base font-mono font-black text-slate-900 tracking-tight">{stats.sprintSessions}</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] font-medium text-slate-400 block mb-0.5">回答数</span>
-                      <span className="text-base font-mono font-black text-slate-900 tracking-tight">{stats.sprintAnswers}</span>
-                    </div>
+              {/* 2. 総発話回数カード */}
+              <motion.div 
+                whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                whileTap={{ scale: 0.99 }}
+                className="p-4 bg-gradient-to-br from-white to-rose-50/15 border border-slate-200/70 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[110px] sm:min-h-[120px]"
+              >
+                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-rose-500" />
+                
+                {/* 上段 */}
+                <div className="flex items-center gap-2 pl-0.5">
+                  <div className="w-7 h-7 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center border border-rose-100/40 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 sm:w-4 sm:h-4"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-mono font-bold uppercase text-rose-500/80 tracking-wider block leading-none mb-0.5">Output Intensity</span>
+                    <p className="text-[11px] sm:text-xs font-black text-slate-800 leading-none">総発話回数</p>
                   </div>
                 </div>
 
-                {/* 3. 発話数 (ローズ / Micアイコン) */}
-                <div className="p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-rose-50/60 text-rose-500 rounded-md flex items-center justify-center border border-rose-100/20">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-                      </div>
-                      <span className="text-xs font-black text-slate-700">発話</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 pb-1 flex justify-center items-baseline gap-0.5 font-mono w-full">
-                    <span className="text-xl font-black text-slate-900 tracking-tight leading-none">
+                {/* 下段：数値＆単位＋装飾オーナメント */}
+                <div className="pt-2 border-t border-slate-100/60 flex items-end justify-between">
+                  <span className="text-[9px] text-slate-400 font-medium pb-0.5 hidden sm:inline">Monthly Speech Log</span>
+                  <div className="flex items-baseline justify-end font-mono w-full sm:w-auto">
+                    <span className="text-2xl sm:text-3xl font-black text-rose-600 tracking-tight leading-none">
                       {stats.totalAssessments}
                     </span>
                     <span className="text-[10px] font-sans font-bold text-slate-400 ml-0.5">回</span>
                   </div>
                 </div>
+              </motion.div>
+
+            </div>
+
+            {/* TRAINING DETAILSセクション */}
+            <div className="space-y-2">
+              <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest block px-1">
+                Training Details
+              </span>
+              
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                {/* 1. 単語帳 */}
+                <div className="p-3 sm:p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 bg-indigo-50/60 text-indigo-600 rounded-md flex items-center justify-center border border-indigo-100/20">
+                      <BookOpen strokeWidth={2.5} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </div>
+                    <span className="text-[11px] sm:text-xs font-black text-slate-700">単語帳ドリル</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4 pt-1">
+                    <div>
+                      <span className="text-[9px] font-medium text-slate-400 block">単語</span>
+                      <span className="text-sm sm:text-base font-mono font-black text-slate-900 tracking-tight">{stats.totalWords}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-medium text-slate-400 block">フレーズ</span>
+                      <span className="text-sm sm:text-base font-mono font-black text-slate-900 tracking-tight">{stats.totalPhrases}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. スプリント */}
+                <div className="p-3 sm:p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-amber-50/60 text-amber-500 rounded-md flex items-center justify-center border border-amber-100/20">
+                        <Zap strokeWidth={2.5} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </div>
+                      <span className="text-[11px] sm:text-xs font-black text-slate-700">スプリント</span>
+                    </div>
+                    <div className="relative flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowSprintTooltip(!showSprintTooltip)}
+                        onMouseEnter={() => setShowSprintTooltip(true)}
+                        onMouseLeave={() => setShowSprintTooltip(false)}
+                        className="text-slate-400 hover:text-slate-600 cursor-help transition-colors focus:outline-none flex items-center justify-center"
+                      >
+                        <HelpCircle size={12} />
+                      </button>
+                      <AnimatePresence>
+                        {showSprintTooltip && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                            transition={{ duration: 0.12, ease: "easeOut" }}
+                            className="absolute bottom-full mb-2 right-0 bg-slate-800 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md whitespace-nowrap z-50 pointer-events-none"
+                          >
+                            ドリルモードの回答数は含まれていません
+                            <div className="absolute top-full right-[4px] border-4 border-transparent border-t-slate-800" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4 pt-1">
+                    <div>
+                      <span className="text-[9px] font-medium text-slate-400 block">本数</span>
+                      <span className="text-sm sm:text-base font-mono font-black text-slate-900 tracking-tight">{stats.sprintSessions}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-medium text-slate-400 block">回答数</span>
+                      <span className="text-sm sm:text-base font-mono font-black text-slate-900 tracking-tight">{stats.sprintAnswers}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* カレンダー */}
-              <div className="p-5 bg-white border border-slate-200/60 rounded-2xl shadow-xs space-y-4">
+              {/* カレンダー：トレーニング・トラッカー */}
+              <div className="p-4 sm:p-5 bg-white border border-slate-200/60 rounded-2xl shadow-xs space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-50 pb-2">
                   <div className="flex items-center gap-1.5">
                     <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-tight">
@@ -359,10 +384,10 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-7 gap-2 text-center">
+                <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center">
                   {calendarDays.map((day, idx) => (
                     <div key={idx} className="flex flex-col items-center justify-center">
-                      <div className={`w-8 h-8 rounded-lg text-xs font-mono font-bold flex items-center justify-center transition-all ${
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[11px] sm:text-xs font-mono font-bold flex items-center justify-center transition-all ${
                         day.hasHistory 
                           ? 'bg-indigo-600 text-white font-black shadow-xs ring-4 ring-indigo-50' 
                           : 'bg-slate-50 text-slate-400'
@@ -375,7 +400,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
               </div>
             </div>
 
-            {/* メニュー */}
+            {/* LOGS MENUセクション */}
             <div className="space-y-2">
               <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest block px-1">
                 Logs Menu
@@ -436,7 +461,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
         </div>
 
         {/* ────────────── フッター ────────────── */}
-        <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex flex-col items-center">
+        <div className="shrink-0 p-4 sm:p-5 bg-white border-t border-slate-100 flex flex-col items-center">
           <button
             onClick={() => router.push('/library')}
             className="w-full max-w-sm h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
