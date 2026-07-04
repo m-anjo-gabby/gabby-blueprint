@@ -19,6 +19,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
   const [showSprintTooltip, setShowSprintTooltip] = useState(false);
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
+
   // 当月の文字列（"YYYY-MM"）を生成
   const currentMonthStr = useMemo(() => {
     return toIsoMonthInZone(new Date(), timezone);
