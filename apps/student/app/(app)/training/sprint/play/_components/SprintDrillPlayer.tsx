@@ -12,7 +12,7 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, createChimeAudioBuffer, playChimeBuffer } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, createChimeAudioBuffer, playChimeBuffer, setAudioSessionPlayback } from '@gabby/lib';
 import { reportSprintProgress } from '@/actions/sprintAction';
 
 interface SprintDrillPlayerProps {
@@ -22,17 +22,6 @@ interface SprintDrillPlayerProps {
   onExit?: () => void;
 }
 
-interface NavigatorWithAudioSession extends Navigator {
-  audioSession?: {
-    type: string;
-    categoryOptions?: {
-      defaultToSpeaker?: boolean;
-      allowBluetooth?: boolean;
-      allowBluetoothA2DP?: boolean;
-    };
-    mode?: string;
-  };
-}
 
 export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({ 
   questions = [],
@@ -91,12 +80,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       nativeAudioRef.current = new Audio();
       nativeAudioRef.current.volume = 1.0;
 
-      const nav = navigator as NavigatorWithAudioSession;
-      
       // 🚀 前画面からの残留を防ぐため、マウント時に強制的にスピーカー出力へ戻す
-      if (nav.audioSession) {
-        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
-      }
+      setAudioSessionPlayback();
 
       // 前の認識インスタンスやTTSを強制停止して初期化
       stopListening();
@@ -120,18 +105,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       }
     }
     return () => {
-      const nav = navigator as NavigatorWithAudioSession;
-      
       // 🚀 アンマウント時にも確実にスピーカー出力を強制・維持した状態で再生モードへ戻す
-      if (nav.audioSession) {
-        try {
-          if (nav.audioSession.categoryOptions) {
-            try { nav.audioSession.categoryOptions.defaultToSpeaker = true; } catch (_) {}
-            try { nav.audioSession.categoryOptions.allowBluetooth = true; } catch (_) {}
-          }
-          nav.audioSession.type = 'playback';
-        } catch (_) { /* no-op */ }
-      }
+      setAudioSessionPlayback();
       stopListening();
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
@@ -224,10 +199,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     // 🚀 マイクを即時停止してからオーディオセッションをスピーカー出力に戻す
     // stopListening() → finalize() → recognition.abort() + audioSession='playback' の順で実行される
     stopListening();
-    const nav = navigator as NavigatorWithAudioSession;
-    if (nav.audioSession) {
-      try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
-    }
+    setAudioSessionPlayback();
     setPlayingQuestionSequence(false);
     setPlayingAnswerSequence(false);
     setAudioPhase('idle');

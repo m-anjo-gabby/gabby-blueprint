@@ -167,3 +167,54 @@ export function audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
 
   return arrayBuffer;
 }
+
+export interface NavigatorWithAudioSession extends Navigator {
+  audioSession?: {
+    type: 'auto' | 'playback' | 'record' | 'play-and-record';
+    categoryOptions?: {
+      defaultToSpeaker?: boolean;
+      allowBluetooth?: boolean;
+      allowBluetoothA2DP?: boolean;
+    };
+    mode?: 'default' | 'spokenAudio' | 'videoRecording' | 'measurement' | 'voiceChat';
+  };
+}
+
+/**
+ * iOS WebKit用のオーディオセッションを再生モード（playback、スピーカー出力）に安全に切り替える
+ */
+export const setAudioSessionPlayback = () => {
+  if (typeof window === 'undefined') return;
+  const nav = navigator as NavigatorWithAudioSession;
+  if (nav.audioSession) {
+    try {
+      if (nav.audioSession.categoryOptions) {
+        try { nav.audioSession.categoryOptions.defaultToSpeaker = true; } catch (_) {}
+        try { nav.audioSession.categoryOptions.allowBluetooth = true; } catch (_) {}
+      }
+      nav.audioSession.type = 'playback';
+    } catch (err) {
+      console.warn("Failed to set audioSession type to playback:", err);
+    }
+  }
+};
+
+/**
+ * iOS WebKit用のオーディオセッションを録音再生モード（play-and-record、スピーカー出力）に安全に切り替える
+ */
+export const setAudioSessionPlayAndRecord = () => {
+  if (typeof window === 'undefined') return;
+  const nav = navigator as NavigatorWithAudioSession;
+  if (nav.audioSession) {
+    try {
+      if (nav.audioSession.categoryOptions) {
+        try { nav.audioSession.categoryOptions.defaultToSpeaker = true; } catch (_) {}
+        try { nav.audioSession.categoryOptions.allowBluetooth = true; } catch (_) {}
+      }
+      try { nav.audioSession.mode = 'voiceChat'; } catch (_) {}
+      nav.audioSession.type = 'play-and-record';
+    } catch (err) {
+      console.warn("Failed to set audioSession type to play-and-record:", err);
+    }
+  }
+};

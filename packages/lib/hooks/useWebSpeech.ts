@@ -4,18 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { analyzePhrase } from '../assessment/native-speech';
 import { AnalysisResult } from '../../types/speechAssessment';
 
-interface NavigatorWithAudioSession extends Navigator {
-  audioSession?: {
-    type: 'auto' | 'playback' | 'record' | 'play-and-record';
-    // 【追加】iOS WebKit の詳細なオーディオ設定を制御するためのオプション定義
-    categoryOptions?: {
-      defaultToSpeaker?: boolean;
-      allowBluetooth?: boolean;
-      allowBluetoothA2DP?: boolean;
-    };
-    mode?: 'default' | 'spokenAudio' | 'videoRecording' | 'measurement' | 'voiceChat';
-  };
-}
+import { NavigatorWithAudioSession, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '../sprint/utils';
 
 /**
  * startAssessment のオプション
@@ -102,19 +91,7 @@ export function useWebSpeech() {
     // iOS WebKit用のオーディオセッション制御 (マイク解放時に再生モードに戻す)
     // suppressAudioSessionSwitch が true の場合はスキップ（呼び出し元が audioSession を管理）
     if (!suppressAudioSessionSwitchRef.current) {
-      const nav = navigator as NavigatorWithAudioSession;
-      if (nav.audioSession) {
-        try {
-          // マイク解放後（再生モード移行後）も、TTSやAudio再生が受話レシーバーに落ちないようスピーカー出力を強制・維持する
-          if (nav.audioSession.categoryOptions) {
-            try { nav.audioSession.categoryOptions.defaultToSpeaker = true; } catch (_) {}
-            try { nav.audioSession.categoryOptions.allowBluetooth = true; } catch (_) {}
-          }
-          nav.audioSession.type = 'playback';
-        } catch (err) {
-          console.warn("Failed to set audioSession type to playback:", err);
-        }
-      }
+      setAudioSessionPlayback();
     }
 
     clearAllTimers();
@@ -218,24 +195,7 @@ export function useWebSpeech() {
     // recognition.start() より前に 'play-and-record' に切り替え、
     // iOSがマイク入力モードに入るタイミングを制御する
     if (!suppressAudioSessionSwitchRef.current) {
-      const nav = navigator as NavigatorWithAudioSession;
-      if (nav.audioSession) {
-        try {
-          // 【重要改善】受話レシーバーへの意図しない切り替えを防止する詳細設定
-          // categoryOptionsオブジェクト自体が存在する場合のみ設定値を安全に書き込む
-          if (nav.audioSession.categoryOptions) {
-            try { nav.audioSession.categoryOptions.defaultToSpeaker = true; } catch (_) {}
-            try { nav.audioSession.categoryOptions.allowBluetooth = true; } catch (_) {}
-          }
-          
-          // オーディオモードをボイスチャット用に明示定義（エコーキャンセルとスピーカー出力の安定化）
-          try { nav.audioSession.mode = 'voiceChat'; } catch (_) {}
-
-          nav.audioSession.type = 'play-and-record';
-        } catch (err) {
-          console.warn("Failed to set audioSession type to play-and-record:", err);
-        }
-      }
+      setAudioSessionPlayAndRecord();
     }
 
     setTimeLeft(10);

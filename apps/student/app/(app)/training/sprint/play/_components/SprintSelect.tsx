@@ -12,7 +12,7 @@ import {
   type SprintAnswerType,
   type SprintConfig,
 } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback } from '@gabby/lib';
 
 import {
   Drawer,
@@ -35,17 +35,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-interface NavigatorWithAudioSession extends Navigator {
-  audioSession?: {
-    type: string;
-    categoryOptions?: {
-      defaultToSpeaker?: boolean;
-      allowBluetooth?: boolean;
-      allowBluetoothA2DP?: boolean;
-    };
-    mode?: string;
-  };
-}
+
 
 interface SprintSelectProps {
   initialConfig?: {
@@ -65,20 +55,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   // 🚀 開始画面マウント時に強制的にオーディオセッションをスピーカー出力(playback)へ戻し、TTSをキャンセルしてクリア状態にする
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const nav = navigator as NavigatorWithAudioSession;
-      if (nav.audioSession) {
-        try {
-          if (nav.audioSession.categoryOptions) {
-            try { nav.audioSession.categoryOptions.defaultToSpeaker = true; } catch (_) {}
-            try { nav.audioSession.categoryOptions.allowBluetooth = true; } catch (_) {}
-          }
-          nav.audioSession.type = 'playback';
-        } catch (_) { /* no-op */ }
-      }
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+    setAudioSessionPlayback();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
   }, []);
 

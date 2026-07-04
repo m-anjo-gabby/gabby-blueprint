@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, createChimeAudioBuffer, playChimeBuffer } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, createChimeAudioBuffer, playChimeBuffer, setAudioSessionPlayback } from '@gabby/lib';
 import { SprintQuestion } from "@gabby/types/sprint";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
@@ -19,17 +19,6 @@ interface SprintTimePlayerProps {
   onExit?: () => void;
 }
 
-interface NavigatorWithAudioSession extends Navigator {
-  audioSession?: {
-    type: string;
-    categoryOptions?: {
-      defaultToSpeaker?: boolean;
-      allowBluetooth?: boolean;
-      allowBluetoothA2DP?: boolean;
-    };
-    mode?: string;
-  };
-}
 
 export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({ 
   questions = [],
@@ -119,12 +108,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       nativeAudioRef.current.volume = 1.0;
     }
 
-    const nav = navigator as NavigatorWithAudioSession;
-    
     // 🚀 前の画面からの残留を防ぐため、マウント時に強制的にスピーカー出力へ戻す
-    if (nav.audioSession) {
-      try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
-    }
+    setAudioSessionPlayback();
     
     // 進行中の発話認識やTTSがあれば即時強制終了する
     stopListening();
@@ -150,9 +135,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     return () => {
       // 🚀 アンマウント時にも確実にスピーカー出力へ戻し、マイクを強制クリーンアップ
-      if (nav.audioSession) {
-        try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
-      }
+      setAudioSessionPlayback();
       stopListening();
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
@@ -241,10 +224,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     // マイク入力を即時停止し、オーディオセッションをスピーカー出力に戻す
     stopListening();
-    const nav = navigator as NavigatorWithAudioSession;
-    if (nav.audioSession) {
-      try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
-    }
+    setAudioSessionPlayback();
     // 録音 UI 状態もリセット
     setIsAwaitingRecording(false);
     setIsRecording(false);
