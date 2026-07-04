@@ -61,6 +61,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
  
   const isBatchPlayingRef = useRef(false);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isMountedRef = useRef(true);
  
   const stopAllAudio = useCallback(() => {
     if (currentAudioRef.current) {
@@ -76,7 +77,10 @@ export const SprintResult: React.FC<SprintResultProps> = ({
  
   // 🚀 結果画面アンマウント時に再生中の音声を停止するクリーンアップのみを行う
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
+      isBatchPlayingRef.current = false;
       stopAllAudio();
     };
   }, [stopAllAudio]);
@@ -100,6 +104,10 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     isManualClick = false
   ): Promise<void> => {
     return new Promise((resolve) => {
+      if (!isMountedRef.current) {
+        resolve();
+        return;
+      }
       if (isManualClick) {
         isBatchPlayingRef.current = false;
         setIsBatchPlaying(false);
@@ -115,6 +123,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
         currentAudioRef.current = audio;
         audio.onended = () => { currentAudioRef.current = null; setPlayingId(null); resolve(); };
         audio.onerror = () => { currentAudioRef.current = null; setPlayingId(null); resolve(); };
+        if (!isMountedRef.current) {
+          currentAudioRef.current = null;
+          resolve();
+          return;
+        }
         audio.play().catch(() => { currentAudioRef.current = null; setPlayingId(null); resolve(); });
       } else {
         setPlayingId(null);
@@ -127,16 +140,22 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     isBatchPlayingRef.current = false;
     setIsBatchPlaying(false);
     stopAllAudio();
+    if (!isMountedRef.current) return;
     setFocusedCardId(q.question_id);
     const isSpeedMode = scoreData.question_type === '0';
 
     try {
       if (!isSpeedMode && q.statement_en) {
         await handlePlayAudio(q.question_id + '-st', q.statement_en, q.statement_voice);
+        if (!isMountedRef.current) return;
         await new Promise(r => setTimeout(r, 400));
       }
+      if (!isMountedRef.current) return;
       await handlePlayAudio(q.question_id + '-q', q.question_en, q.question_voice);
+      if (!isMountedRef.current) return;
       await new Promise(r => setTimeout(r, 400));
+      
+      if (!isMountedRef.current) return;
       const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no_en : q.answer_sentence_yes_en;
       const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
       const ansId = isSpeedMode 
@@ -146,7 +165,9 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     } catch (e) {
       console.error("Single sequence play error:", e);
     } finally {
-      setFocusedCardId(null);
+      if (isMountedRef.current) {
+        setFocusedCardId(null);
+      }
     }
   };
 
@@ -165,34 +186,36 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
     try {
       for (const q of questions) {
-        if (!isBatchPlayingRef.current) break;
+        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
         setFocusedCardId(q.question_id);
 
         if (!isSpeedMode && q.statement_en) {
           await handlePlayAudio(q.question_id + '-st', q.statement_en, q.statement_voice);
-          if (!isBatchPlayingRef.current) break;
+          if (!isBatchPlayingRef.current || !isMountedRef.current) break;
           await new Promise(r => setTimeout(r, 400));
         }
 
-        if (!isBatchPlayingRef.current) break;
+        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
         await handlePlayAudio(q.question_id + '-q', q.question_en, q.question_voice);
-        if (!isBatchPlayingRef.current) break;
+        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
         await new Promise(r => setTimeout(r, 400));
         
-        if (!isBatchPlayingRef.current) break;
+        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
         const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no_en : q.answer_sentence_yes_en;
         const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
         const ansId = isSpeedMode 
           ? (scoreData.answer_type === '1' ? q.question_id + '-no' : q.question_id + '-yes')
           : q.question_id + '-ans';
         await handlePlayAudio(ansId, ansText ?? "", ansVoice);
-        if (!isBatchPlayingRef.current) break;
+        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
         await new Promise(r => setTimeout(r, 800));
       }
     } finally {
-      isBatchPlayingRef.current = false;
-      setIsBatchPlaying(false);
-      setFocusedCardId(null);
+      if (isMountedRef.current) {
+        isBatchPlayingRef.current = false;
+        setIsBatchPlaying(false);
+        setFocusedCardId(null);
+      }
     }
   };
 
