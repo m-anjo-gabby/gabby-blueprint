@@ -3,7 +3,7 @@
 
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Trophy, CheckCircle2, Volume2, MessageSquare, ArrowRight, PlayCircle, Languages, FileCheck2, Award, SkipForward, Mic, ChartSpline, Play, Home } from 'lucide-react';
+import { ChevronLeft, Trophy, CheckCircle2, Volume2, Loader2, MessageSquare, ArrowRight, PlayCircle, Languages, FileCheck2, Award, SkipForward, Mic, ChartSpline, Play, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { formatZonedDate } from '@gabby/lib/date/date';
@@ -105,8 +105,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
         setIsBatchPlaying(false);
         setFocusedCardId(questionId.split('-')[0]);
       }
-      setPlayingId(questionId);
       stopAllAudio();
+      setPlayingId(questionId);
  
       if (audioPath) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
@@ -139,7 +139,10 @@ export const SprintResult: React.FC<SprintResultProps> = ({
       await new Promise(r => setTimeout(r, 400));
       const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no_en : q.answer_sentence_yes_en;
       const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
-      await handlePlayAudio(q.question_id + '-ans', ansText ?? "", ansVoice);
+      const ansId = isSpeedMode 
+        ? (scoreData.answer_type === '1' ? q.question_id + '-no' : q.question_id + '-yes')
+        : q.question_id + '-ans';
+      await handlePlayAudio(ansId, ansText ?? "", ansVoice);
     } catch (e) {
       console.error("Single sequence play error:", e);
     }
@@ -177,7 +180,10 @@ export const SprintResult: React.FC<SprintResultProps> = ({
         if (!isBatchPlayingRef.current) break;
         const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no_en : q.answer_sentence_yes_en;
         const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
-        await handlePlayAudio(q.question_id + '-ans', ansText ?? "", ansVoice);
+        const ansId = isSpeedMode 
+          ? (scoreData.answer_type === '1' ? q.question_id + '-no' : q.question_id + '-yes')
+          : q.question_id + '-ans';
+        await handlePlayAudio(ansId, ansText ?? "", ansVoice);
         if (!isBatchPlayingRef.current) break;
         await new Promise(r => setTimeout(r, 800));
       }
@@ -398,7 +404,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                               onClick={() => handlePlayAudio(q.question_id + '-st', q.statement_en!, q.statement_voice, true)}
                               className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-st' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-indigo-500 hover:bg-slate-100')}
                             >
-                              <Volume2 size={16} />
+                              {playingId === q.question_id + '-st' ? (
+                                <Loader2 size={16} className="animate-spin text-indigo-600" />
+                              ) : (
+                                <Volume2 size={16} />
+                              )}
                             </button>
                             {q.statement_ja && (
                               <button
@@ -423,7 +433,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             onClick={() => handlePlayAudio(q.question_id + '-q', q.question_en, q.question_voice, true)}
                             className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-q' ? 'text-indigo-600 bg-indigo-50' : 'text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50')}
                           >
-                            <Volume2 size={16} strokeWidth={2.5} />
+                            {playingId === q.question_id + '-q' ? (
+                              <Loader2 size={16} strokeWidth={2.5} className="animate-spin text-indigo-600" />
+                            ) : (
+                              <Volume2 size={16} strokeWidth={2.5} />
+                            )}
                           </button>
                           {q.question_ja && (
                             <button
@@ -447,7 +461,16 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                               <div className="flex items-center w-full mb-1">
                                 <div className="flex items-center gap-x-1.5 text-emerald-600">
                                   <span className="text-xs font-black tracking-widest uppercase">解答文</span>
-                                  <button onClick={() => handlePlayAudio(q.question_id + '-yes', q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)} className="w-6 h-6 flex items-center justify-center text-emerald-500"><Volume2 size={16} /></button>
+                                  <button 
+                                    onClick={() => handlePlayAudio(q.question_id + '-yes', q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)} 
+                                    className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-yes' ? 'text-indigo-600 bg-indigo-50' : 'text-emerald-500 hover:bg-emerald-50')}
+                                  >
+                                    {playingId === q.question_id + '-yes' ? (
+                                      <Loader2 size={16} className="animate-spin text-indigo-600" />
+                                    ) : (
+                                      <Volume2 size={16} />
+                                    )}
+                                  </button>
                                   {q.answer_sentence_yes_ja && (
                                     <button
                                       onClick={() => toggleJa(q.question_id + '-yes')}
@@ -466,7 +489,16 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                               <div className="flex items-center w-full mb-1">
                                 <div className="flex items-center gap-x-1.5 text-amber-600">
                                   <span className="text-xs font-black tracking-widest uppercase">解答文</span>
-                                  <button onClick={() => handlePlayAudio(q.question_id + '-no', q.answer_sentence_no_en!, q.answer_sentence_no_voice, true)} className="w-6 h-6 flex items-center justify-center text-amber-500"><Volume2 size={16} /></button>
+                                  <button 
+                                    onClick={() => handlePlayAudio(q.question_id + '-no', q.answer_sentence_no_en!, q.answer_sentence_no_voice, true)} 
+                                    className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-no' ? 'text-indigo-600 bg-indigo-50' : 'text-amber-500 hover:bg-amber-50')}
+                                  >
+                                    {playingId === q.question_id + '-no' ? (
+                                      <Loader2 size={16} className="animate-spin text-indigo-600" />
+                                    ) : (
+                                      <Volume2 size={16} />
+                                    )}
+                                  </button>
                                   {q.answer_sentence_no_ja && (
                                     <button
                                       onClick={() => toggleJa(q.question_id + '-no')}
@@ -486,7 +518,16 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           <div className="flex items-center w-full mb-1">
                             <div className="flex items-center gap-x-1.5 text-emerald-600">
                               <span className="text-xs font-black tracking-widest uppercase">解答文</span>
-                              <button onClick={() => handlePlayAudio(q.question_id + '-ans', q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)} className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-ans' ? 'text-indigo-600' : 'text-emerald-500')}><Volume2 size={16} strokeWidth={2.5} /></button>
+                              <button 
+                                onClick={() => handlePlayAudio(q.question_id + '-ans', q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)} 
+                                className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", playingId === q.question_id + '-ans' ? 'text-indigo-600 bg-indigo-50' : 'text-emerald-500 hover:bg-emerald-50')}
+                              >
+                                {playingId === q.question_id + '-ans' ? (
+                                  <Loader2 size={16} strokeWidth={2.5} className="animate-spin text-indigo-600" />
+                                ) : (
+                                  <Volume2 size={16} strokeWidth={2.5} />
+                                )}
+                              </button>
                               {q.answer_sentence_yes_ja && (
                                 <button
                                   onClick={() => toggleJa(q.question_id + '-ans')}

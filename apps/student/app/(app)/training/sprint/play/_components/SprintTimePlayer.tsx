@@ -401,14 +401,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           }
         };
 
-        if (visualState !== 'idle') {
-          setAssessmentVisualState(visualState);
-          // テンポ維持のため、Excellent/Great/Goodは1000ms、Fair/Poorは800msのウェイトを置いて次へ進む
-          const displayDelay = (visualState === 'excellent' || visualState === 'great' || visualState === 'good') ? 1000 : 800;
-          setTimeout(() => { commitAndNext(); }, displayDelay);
-        } else {
-          commitAndNext();
-        }
+        setAssessmentVisualState(visualState);
+        // テンポ維持のため、Excellent/Great/Goodは1000ms、Fair/Poorは800msのウェイトを置いて次へ進む
+        const displayDelay = (visualState === 'excellent' || visualState === 'great' || visualState === 'good') ? 1000 : 800;
+        setTimeout(() => { commitAndNext(); }, displayDelay);
       },
       {
         // 録音終了時に自動で playback に戻す
