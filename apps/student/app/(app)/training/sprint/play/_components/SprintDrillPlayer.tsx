@@ -5,7 +5,7 @@ import { DRILL_TIMING, SprintQuestion, SprintQuestionType } from "@gabby/types/s
 import { QuestionCard } from "./QuestionCard";
 import { SprintDrillPlayerControls } from "./SprintDrillPlayerControls";
 import { SprintFeedback } from "./SprintFeedback";
-import { ChevronLeft, Square } from 'lucide-react';
+import { ChevronLeft, Square, Loader2 } from 'lucide-react';
 
 import { useSprintStore } from '@/stores/useSprintStore';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
@@ -44,6 +44,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const { showConfirm } = useConfirm();
 
   const [isStarted, setIsStarted] = useState<boolean>(!!initialStarted || !initialQuestionId);
+  const [exitLoading, setExitLoading] = useState<boolean>(false);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
 
   // ────────────── 🔌 Zustand ストア ──────────────
@@ -236,6 +237,12 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const playSingleTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
     return new Promise((resolve) => {
+      // 🚀 終了処理（ローディング）中の場合は、再生を一切行わずに即時終了する
+      if (exitLoading) {
+        resolve();
+        return;
+      }
+
       if (nativeAudioRef.current) {
         nativeAudioRef.current.pause();
       }
@@ -252,17 +259,17 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         
         audio.onended = () => resolve();
         audio.onerror = () => {
-          resolve();
+          resolve(); // 即時スキップ
         };
         audio.play().catch((err) => {
-          console.warn("Drill audio play failed:", err);
-          resolve();
+          console.warn("Drill audio play failed, skipping:", err);
+          resolve(); // 即時スキップ
         });
       } else {
-        resolve();
+        resolve(); // 即時スキップ
       }
     });
-  }, [playbackRate]);
+  }, [playbackRate, exitLoading]);
 
   // 💡 一意の currentFlowId を受け取り、非同期 await の直後に厳密にチェックを行う
   const playQuestionSequence = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
@@ -513,26 +520,31 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const handleExitWithSync = async () => {
     if (isAutoPlaying) return;
 
-    // 🚀 終了ボタン押下時に再生・録音をすべて即時停止し、マイクを確実に解放する
-    stopAllAudio();
-
     const ok = await showConfirm("トレーニングを終了しますか？", "前の画面に戻ります。", { 
       variant: 'info', 
       isModal: false 
     });
     if (!ok) return;
 
+    // 🚀 終了処理ローディング表示をオンにし、即時にマイク録音・再生を強制クリーンアップ
+    setExitLoading(true);
+    stopAllAudio();
+
     try {
       await syncProgressNow();
     } catch (e) {
       console.error(e);
     }
-    onExit?.();
+    
+    // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために1000ms（1秒）の安全バッファを置いてから戻る
+    setTimeout(() => {
+      onExit?.();
+    }, 1000);
   };
 
   // タイムライン1：問題カード変更検知
   useEffect(() => {
-    if (!currentQuestion || !isStarted) return;
+    if (!currentQuestion || !isStarted || exitLoading) return;
 
     stopAllAudio();
     const currentFlowId = flowIdRef.current;
@@ -559,7 +571,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     };
     // ✨ 依存関係を厳密に制限。毎秒変わる state などによる再トリガーを防ぐ。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, currentQuestion?.question_id, isStarted]);
+  }, [currentIndex, currentQuestion?.question_id, isStarted, exitLoading]);
 
   // タイムライン2：解答オープン検知
   useEffect(() => {
@@ -691,6 +703,18 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
           onClose={() => setFeedback(null)} 
         />
 
+        {/* 🚀 終了処理中のローディングオーバーレイ */}
+        {exitLoading && (
+          <div className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300">
+            <div className="text-center space-y-4 animate-in zoom-in-95 duration-200">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto" strokeWidth={2.5} />
+              <div className="space-y-1">
+                <h3 className="text-sm font-black text-slate-800 tracking-tight">終了処理を行っています</h3>
+                <p className="text-[11px] text-slate-400 font-medium">マイクの接続を解除しています。少しお待ちください...</p>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

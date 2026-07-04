@@ -58,12 +58,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // ────────────── 📦 ローカル管理ステート ──────────────
   const [secondsLeft, setSecondsLeft] = useState<number>(timeLimitSec || 60);
+  const [exitLoading, setExitLoading] = useState<boolean>(false);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [resultId, setResultId] = useState<string | null>(null);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
-  const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'good'>('idle');
+  const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'great' | 'good' | 'fair' | 'poor'>('idle');
   const [micStatus, setMicStatus] = useState<'checking' | 'granted' | 'denied' | 'prompt'>('checking');
   
   // チャイム再生開始〜 recognition.onstart までの短い待機窓口だけ true
@@ -108,12 +109,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const audioCtxRef = useRef<AudioContext | null>(null);
   // チャイム音の事前デコード済みバッファ
   const chimeBufferRef = useRef<AudioBuffer | null>(null);
-  // 現在再生中の Audio インスタンスを追跡（停止用）
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  // 現在再生中の Audio インスタンスを使い回す（iOS自動再生ポリシー制限を回避するためマウント時に生成）
+  const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // マウント時: オーディオセッションの強制初期化とチャイム用バッファの事前デコード
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window !== 'undefined') {
+      nativeAudioRef.current = new Audio();
+      nativeAudioRef.current.volume = 1.0;
+    }
 
     const nav = navigator as NavigatorWithAudioSession;
     
@@ -153,10 +157,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
-      // 再生中の Audio インスタンスを停止
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
+      // 再生中の Audio インスタンスを停止・破棄
+      if (nativeAudioRef.current) {
+        nativeAudioRef.current.pause();
+        nativeAudioRef.current = null;
       }
       // AudioContext を閉じる
       if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
@@ -230,10 +234,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // タイムアップ・スキップ・終了の全経路でマイクが確実に解放される
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1;
-    // 現在再生中の Audio インスタンスがあれば停止・破棄
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
+    // 使い回しの Audio インスタンスがあれば停止
+    if (nativeAudioRef.current) {
+      nativeAudioRef.current.pause();
     }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     // マイク入力を即時停止し、オーディオセッションをスピーカー出力に戻す
@@ -303,7 +306,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         } else {
           stopAllAudio();
           resetStore();
-          router.push(`/training/sprint/result/${res.data.self_sprint_id}`);
+          // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために250msの安全バッファを置いてから遷移する
+          const targetUrl = `/training/sprint/result/${res.data.self_sprint_id}`;
+          setTimeout(() => {
+            router.push(targetUrl);
+          }, 250);
         }
       } else {
         throw new Error(res.error || "Failed to persist score history");
@@ -322,45 +329,51 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     if (resultId) {
       stopAllAudio(); // stopListening と audioSession リセットを含む
       resetStore();
-      router.push(`/training/sprint/result/${resultId}`);
+      // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために250msの安全バッファを置いてから遷移する
+      setTimeout(() => {
+        router.push(`/training/sprint/result/${resultId}`);
+      }, 250);
     }
   }, [resultId, router, stopAllAudio, resetStore]);
 
   const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
     return new Promise((resolve) => {
-      // 直前に再生中のインスタンスがあれば停止・破棄（src 切り替えを避けてプチプチノイズを防ぐ）
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
+      // 🚀 終了処理（ローディング）中の場合は、再生を一切行わずに即時終了する
+      if (exitLoading) {
+        resolve();
+        return;
+      }
+
+      // 直前に再生中のインスタンスがあれば停止（src 切り替えを避けてプチプチノイズを防ぐ）
+      if (nativeAudioRef.current) {
+        nativeAudioRef.current.pause();
       }
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
 
-      if (audioPath) {
+      if (audioPath && nativeAudioRef.current) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = new Audio(bucketUrl);
+        const audio = nativeAudioRef.current;
+        
+        audio.src = bucketUrl;
         audio.playbackRate = playbackRate;
-        currentAudioRef.current = audio;
 
         audio.onended = () => {
-          currentAudioRef.current = null;
           resolve();
         };
         audio.onerror = () => {
-          currentAudioRef.current = null;
-          resolve();
+          resolve(); // 即時スキップ
         };
         audio.play().catch((err) => {
-          console.warn("Audio play failed:", err);
-          currentAudioRef.current = null;
-          resolve();
+          console.warn("Audio play failed, skipping:", err);
+          resolve(); // 即時スキップ
         });
       } else {
-        resolve();
+        resolve(); // 即時スキップ
       }
     });
-  }, [playbackRate]);
+  }, [playbackRate, exitLoading]);
 
   // チャイム音を AudioContext 経由で再生（共通ヘルパーを利用）
   const playChime = useCallback((): Promise<void> => {
@@ -391,9 +404,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         setIsRecording(false);
 
         const score = result.score;
-        let visualState: 'idle' | 'excellent' | 'good' = 'idle';
+        let visualState: 'idle' | 'excellent' | 'great' | 'good' | 'fair' | 'poor' = 'idle';
         if (score >= 0.90) visualState = 'excellent';
-        else if (score >= 0.70) visualState = 'good';
+        else if (score >= 0.80) visualState = 'great';
+        else if (score >= 0.60) visualState = 'good';
+        else if (score >= 0.30) visualState = 'fair';
+        else visualState = 'poor';
 
         const commitAndNext = () => {
           setAssessmentVisualState('idle');
@@ -407,7 +423,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
         if (visualState !== 'idle') {
           setAssessmentVisualState(visualState);
-          setTimeout(() => { commitAndNext(); }, 1000);
+          // テンポ維持のため、Excellent/Great/Goodは1000ms、Fair/Poorは800msのウェイトを置いて次へ進む
+          const displayDelay = (visualState === 'excellent' || visualState === 'great' || visualState === 'good') ? 1000 : 800;
+          setTimeout(() => { commitAndNext(); }, displayDelay);
         } else {
           commitAndNext();
         }
@@ -543,22 +561,22 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // インデックス（問題ID）変更時にフローを最初から走らせる
   useEffect(() => {
-    if (!currentQuestion || secondsLeft <= 0 || showTimeUpOverlay || isSaving) return;
+    if (!currentQuestion || secondsLeft <= 0 || showTimeUpOverlay || isSaving || exitLoading) return;
 
     stopAllAudio();
     setAudioPhase('idle');
 
     const currentFlowId = flowIdRef.current;
     (async () => {
-      // 前の録音/音声が解放されるのを待つ (300ms)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // 前の録音/音声が解放されるのを待つ (安定のため 500ms に拡張)
+      await new Promise(resolve => setTimeout(resolve, 500));
       if (flowIdRef.current !== currentFlowId) return;
       await runSprintFlow(currentQuestion, currentFlowId);
     })();
 
     // 毎秒変わるステートによる再トリガーを避けるため、問題IDを基準に限定
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving]);
+  }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving, exitLoading]);
 
   // DOM/オーディオの強制クリーンアップ
   useEffect(() => {
@@ -582,7 +600,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     if (!ok) {
       return;
     }
-    onExit?.();
+
+    // 🚀 終了処理ローディング表示をオンにし、即時にマイク録音・再生を強制クリーンアップ
+    setExitLoading(true);
+    stopAllAudio();
+
+    // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために1000ms（1秒）の安全バッファを置いてから戻る
+    setTimeout(() => {
+      onExit?.();
+    }, 1000);
   };
 
   // HUDはReady段階からセッション終了まで常に表示し、メッセージと活性制御だけを切り替える
@@ -813,12 +839,32 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                           const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
                           
                           const isExcellent = assessmentVisualState === 'excellent';
+                          const isGreat = assessmentVisualState === 'great';
                           const isGood = assessmentVisualState === 'good';
-                          const isVisualizing = isExcellent || isGood;
+                          const isFair = assessmentVisualState === 'fair';
+                          const isPoor = assessmentVisualState === 'poor';
+                          const isVisualizing = isExcellent || isGreat || isGood || isFair || isPoor;
 
-                          const strokeColor = isExcellent ? "stroke-emerald-500" : isGood ? "stroke-sky-500" : isControlDisabled ? "stroke-slate-200" : "stroke-rose-500";
-                          const trackColor = isExcellent ? "stroke-emerald-100" : isGood ? "stroke-sky-100" : isControlDisabled ? "stroke-slate-100" : "stroke-rose-100";
-                          const fillColor = isExcellent ? "rgba(16, 185, 129, 0.05)" : isGood ? "rgba(14, 165, 233, 0.05)" : "transparent";
+                          const strokeColor = 
+                            isExcellent ? "stroke-emerald-500" : 
+                            isGreat ? "stroke-blue-500" : 
+                            isGood ? "stroke-amber-500" : 
+                            isFair ? "stroke-orange-500" : 
+                            isPoor ? "stroke-rose-500" : 
+                            isControlDisabled ? "stroke-slate-200" : "stroke-rose-500";
+                          const trackColor = 
+                            isExcellent ? "stroke-emerald-100" : 
+                            isGreat ? "stroke-blue-100" : 
+                            isGood ? "stroke-amber-100" : 
+                            isFair ? "stroke-orange-100" : 
+                            isPoor ? "stroke-rose-100" : 
+                            isControlDisabled ? "stroke-slate-100" : "stroke-rose-100";
+                          const fillColor = 
+                            isExcellent ? "rgba(16, 185, 129, 0.05)" : 
+                            isGreat ? "rgba(59, 130, 246, 0.05)" : 
+                            isGood ? "rgba(245, 158, 11, 0.05)" : 
+                            isFair ? "rgba(249, 115, 22, 0.05)" : 
+                            isPoor ? "rgba(239, 68, 68, 0.05)" : "transparent";
 
                           const MAX_TIME = 10;
                           const progress = isVisualizing ? 1 : isControlDisabled ? 1 : (Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME);
@@ -852,9 +898,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                                   >
                                     <span className={cn(
                                       "text-[10px] font-black tracking-normal uppercase leading-none",
-                                      isExcellent ? "text-emerald-600" : "text-sky-600"
+                                      isExcellent ? "text-emerald-600" : 
+                                      isGreat ? "text-blue-600" : 
+                                      isGood ? "text-amber-600" : 
+                                      isFair ? "text-orange-600" : "text-rose-600"
                                     )}>
-                                      {isExcellent ? "Excellent" : "Good!"}
+                                      {isExcellent ? "Excellent" : 
+                                       isGreat ? "Great!" : 
+                                       isGood ? "Good!" : 
+                                       isFair ? "Fair" : "Poor"}
                                     </span>
                                   </motion.div>
                                 ) : isControlDisabled ? (
@@ -930,6 +982,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           </div>
         </div>
       </main>
+
+      {/* 🚀 終了処理中のローディングオーバーレイ */}
+      {exitLoading && (
+        <div className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300">
+          <div className="text-center space-y-4 animate-in zoom-in-95 duration-200">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto" strokeWidth={2.5} />
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-slate-800 tracking-tight">終了処理を行っています</h3>
+              <p className="text-[11px] text-slate-400 font-medium">マイクの接続を解除しています。少しお待ちください...</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 統合された完了レイヤー */}
       {(isSaving || showTimeUpOverlay) && (
