@@ -145,6 +145,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
       await handlePlayAudio(ansId, ansText ?? "", ansVoice);
     } catch (e) {
       console.error("Single sequence play error:", e);
+    } finally {
+      setFocusedCardId(null);
     }
   };
 
@@ -343,14 +345,14 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           onClick={() => handlePlaySingleQuestion(q)}
                           className={cn(
                             "h-6 pl-2 pr-2.5 rounded-full flex items-center gap-1.5 transition-all active:scale-95 border select-none group",
-                            isFocused && playingId 
+                            isFocused 
                               ? "bg-indigo-600 border-transparent text-white shadow-xs shadow-indigo-200" 
                               : "bg-slate-50 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/70 border-slate-200/50"
                           )}
                           title="一連の流れを再生"
                         >
                           {/* 再生/再生中アイコンの切り替え */}
-                          {isFocused && playingId ? (
+                          {isFocused ? (
                             <span className="flex gap-0.5 items-center justify-center h-2.5 w-2.5">
                               <span className="w-0.5 h-full.5 bg-current rounded-xs animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
                               <span className="w-0.5 h-full bg-current rounded-xs animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
@@ -362,10 +364,10 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           
                           {/* 役割を明示するコンパクトなラベル */}
                           <span className={cn(
-                            "text-[9px] font-black tracking-wider uppercase font-sans mt-[-0.5px]",
-                            isFocused && playingId ? "text-indigo-100" : "text-slate-400 group-hover:text-indigo-500"
+                            "text-[9px] font-black tracking-widest mt-[-0.5px]",
+                            isFocused ? "text-indigo-100" : "text-slate-400 group-hover:text-indigo-500"
                           )}>
-                            {isFocused && playingId ? "Playing" : "Play"}
+                            {isFocused ? "再生中" : "再生"}
                           </span>
                         </button>
                       </div>

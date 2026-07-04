@@ -108,7 +108,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     return { label: '確認中', className: 'bg-slate-50 text-slate-400 border-slate-100' };
   }, [micStatus, micTestSuccess]);
 
-  const stopMicTest = useCallback(() => {
+  const stopMicTest = useCallback((success?: boolean, error?: boolean) => {
     if (testTimeoutRef.current) {
       clearTimeout(testTimeoutRef.current);
       testTimeoutRef.current = null;
@@ -122,6 +122,8 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       recognitionRef.current = null;
     }
     setIsTestingMic(false);
+    if (success !== undefined) setMicTestSuccess(success);
+    if (error !== undefined) setMicTestError(error);
     
     // iOS WebKit用のオーディオセッション制御: 終了時に playback（スピーカー出力）に戻す
     setAudioSessionPlayback();
@@ -164,16 +166,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
       // 何か言葉が検知できたら即座に成功判定
       if (currentText.trim().length > 0) {
-        setMicTestSuccess(true);
-        setMicTestError(false); // 明示的にエラーをクリア
-        setIsTestingMic(false);
-        if (testTimeoutRef.current) {
-          clearTimeout(testTimeoutRef.current);
-          testTimeoutRef.current = null;
-        }
-        try {
-          recognition.abort();
-        } catch (_) {}
+        stopMicTest(true, false);
       }
     };
 
@@ -182,13 +175,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       // ユーザーがマイク使用をブロックした場合
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         setMicStatus('denied');
-        setMicTestSuccess(false);
-        setMicTestError(true);
-        stopMicTest();
+        stopMicTest(false, true);
       } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        setMicTestSuccess(false);
-        setMicTestError(true);
-        stopMicTest();
+        stopMicTest(false, true);
       }
     };
 
@@ -198,17 +187,13 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     } catch (e) {
       console.error(e);
       setMicStatus('denied'); // 開始できない場合はブロックされている可能性が高い
-      setMicTestSuccess(false);
-      setMicTestError(true);
-      setIsTestingMic(false);
+      stopMicTest(false, true);
       return;
     }
 
     // 8秒のタイムアウト
     testTimeoutRef.current = setTimeout(() => {
-      setMicTestSuccess(false);
-      setMicTestError(true);
-      stopMicTest();
+      stopMicTest(false, true);
     }, 8000);
   }, [stopMicTest]);
 
