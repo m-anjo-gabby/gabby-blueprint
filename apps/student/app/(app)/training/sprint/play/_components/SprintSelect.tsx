@@ -203,6 +203,19 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     // スプリント開始時に動作中のマイクテストがあれば確実に停止させる
     stopMicTest();
 
+    // 🚀 ユーザージェスチャーイベント（タップ）の同期チェーン上でマイクの先行活性化（ウォームアップ）を実行
+    // これにより iOS Safari の User Gesture Policy を完全にクリアし、本番遷移直後のマイク動作を極めて安定させる
+    if (micStatus === 'granted') {
+      try {
+        if (typeof window !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((track) => track.stop());
+        }
+      } catch (e) {
+        console.warn('Pre-sprint microphone warmup failed:', e);
+      }
+    }
+
     if (mode === 'sprint' && micStatus !== 'granted') {
       const confirmed = await showConfirm(
         'マイクが許可されていません',

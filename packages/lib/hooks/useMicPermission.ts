@@ -158,35 +158,12 @@ export function useMicPermission(): UseMicPermissionReturn {
     }
   }, []);
 
-  // マウント時に権限チェックと先行マイクデバイス確保（ウォームアップ）
+  // マウント時に権限チェック（マイクロタスクで遅延してレンダリングと分離）
   useEffect(() => {
     let active = true;
-
-    const initAndWarmup = async () => {
-      if (typeof window === 'undefined') return;
-
-      // 1. 権限状態を確認
-      await checkMicPermission();
-      if (!active) return;
-
-      // 2. permissions.query が利用可能なブラウザ（Chrome/Firefox/Edge等）で
-      // すでに許可（granted）されている場合、先行してマイクを開いてクローズし、
-      // WebKit/OSのオーディオセッションに入力チャンネルを開通（ウォームアップ）させておく
-      if (navigator.permissions && navigator.permissions.query) {
-        try {
-          const status = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          if (status.state === 'granted') {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach((track) => track.stop());
-          }
-        } catch (_) {
-          // ignore
-        }
-      }
-    };
-
-    initAndWarmup();
-
+    Promise.resolve().then(() => {
+      if (active) checkMicPermission();
+    });
     return () => {
       active = false;
     };
