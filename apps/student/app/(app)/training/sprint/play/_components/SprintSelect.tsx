@@ -558,7 +558,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                                       <div className="min-w-0 flex-1">
                                         <h4 className="text-xs font-black text-indigo-700">音声を認識中...</h4>
                                         <p className="text-[10px] font-bold text-slate-500 mt-0.5 truncate">
-                                          {testTranscript ? `「${testTranscript}」` : "マイクに向かって『Hello』などと話してください"}
+                                          {testTranscript ? `「${testTranscript}」` : "『OK』など発話してください"}
                                         </p>
                                       </div>
                                     </div>
