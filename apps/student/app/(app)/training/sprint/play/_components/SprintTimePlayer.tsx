@@ -7,10 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, createChimeAudioBuffer, playChimeBuffer, setAudioSessionPlayback } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback } from '@gabby/lib';
 import { SprintQuestion } from "@gabby/types/sprint";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
+import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
+import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
 
@@ -54,104 +56,28 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'great' | 'good' | 'fair' | 'poor'>('idle');
-  const [micStatus, setMicStatus] = useState<'checking' | 'granted' | 'denied' | 'prompt'>('checking');
   
   // チャイム再生開始〜 recognition.onstart までの短い待機窓口だけ true
   // （発話評価完了後に誤って MicOff を表示しないための専用フラグ）
   const [isAwaitingRecording, setIsAwaitingRecording] = useState<boolean>(false);
 
-  const checkMicPermission = useCallback(async () => {
-    try {
-      if (typeof window === 'undefined') return;
-      if (navigator.permissions && navigator.permissions.query) {
-        const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-        setMicStatus(permissionStatus.state as any);
-        permissionStatus.onchange = () => {
-          setMicStatus(permissionStatus.state as any);
-        };
-      } else {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop());
-        setMicStatus('granted');
-      }
-    } catch (err: any) {
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setMicStatus('denied');
-      } else {
-        setMicStatus('prompt');
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    checkMicPermission();
-  }, [checkMicPermission]);
-
   // ────────────── 🔊 音声カスタムフック ──────────────
   const { startAssessment, stopListening, timeLeft } = useWebSpeech();
-  const { playbackRate, changePlaybackRate } = usePlayAudioSpeech(); 
+  const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
+
+  // オーディオリソース（nativeAudio / AudioContext / チャイム / 再生Promise）を共通フックで管理
+  // マウント/アンマウント時の初期化・クリーンアップも内部で行う
+  const { nativeAudioRef, playTrack: playTrackBase, playChime } = useSprintAudio(stopListening);
+
+  // マイク権限の監視（SprintTimePlayer ではテスト機能は使わず、micStatus のみ参照）
+  const { micStatus } = useMicPermission();
 
   const currentQuestion = questions?.[currentIndex];
   const totalQuestions = questions?.length || 0;
 
-  // チャイム再生専用 AudioContext（nativeAudio と干渉しない独立チャンネル）
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  // チャイム音の事前デコード済みバッファ
-  const chimeBufferRef = useRef<AudioBuffer | null>(null);
-  // 現在再生中の Audio インスタンスを使い回す（iOS自動再生ポリシー制限を回避するためマウント時に生成）
-  const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  // マウント時: オーディオセッションの強制初期化とチャイム用バッファの事前デコード
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      nativeAudioRef.current = new Audio();
-      nativeAudioRef.current.volume = 1.0;
-    }
-
-    // 🚀 前の画面からの残留を防ぐため、マウント時に強制的にスピーカー出力へ戻す
-    setAudioSessionPlayback();
-    
-    // 進行中の発話認識やTTSがあれば即時強制終了する
-    stopListening();
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    // チャイム用 AudioContext を生成（nativeAudio の src 切替と完全に独立）
-    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (AudioContextClass) {
-      const ctx = new AudioContextClass() as AudioContext;
-      audioCtxRef.current = ctx;
-
-      // 共通ヘルパー関数でチャイム音を事前レンダリング
-      createChimeAudioBuffer(ctx)
-        .then((renderedBuffer) => {
-          chimeBufferRef.current = renderedBuffer;
-        })
-        .catch((e: unknown) => {
-          console.warn('Chime pre-render failed:', e);
-        });
-    }
-
-    return () => {
-      // 🚀 アンマウント時にも確実にスピーカー出力へ戻し、マイクを強制クリーンアップ
-      setAudioSessionPlayback();
-      stopListening();
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-      // 再生中の Audio インスタンスを停止・破棄
-      if (nativeAudioRef.current) {
-        nativeAudioRef.current.pause();
-        nativeAudioRef.current = null;
-      }
-      // AudioContext を閉じる
-      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-        audioCtxRef.current.close().catch(() => { /* no-op */ });
-        audioCtxRef.current = null;
-      }
-    };
-  }, [stopListening]);
+  const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
+    return playTrackBase(text, audioPath, { playbackRate, exitLoading });
+  }, [playTrackBase, playbackRate, exitLoading]);
 
   const flowIdRef = useRef<number>(0);
   const skippedQuestionIdsRef = useRef<Set<string>>(new Set());
@@ -316,50 +242,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [resultId, router, stopAllAudio, resetStore]);
 
-  const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
-    return new Promise((resolve) => {
-      // 🚀 終了処理（ローディング）中の場合は、再生を一切行わずに即時終了する
-      if (exitLoading) {
-        resolve();
-        return;
-      }
-
-      // 直前に再生中のインスタンスがあれば停止（src 切り替えを避けてプチプチノイズを防ぐ）
-      if (nativeAudioRef.current) {
-        nativeAudioRef.current.pause();
-      }
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-
-      if (audioPath && nativeAudioRef.current) {
-        const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = nativeAudioRef.current;
-        
-        audio.src = bucketUrl;
-        audio.playbackRate = playbackRate;
-
-        audio.onended = () => {
-          resolve();
-        };
-        audio.onerror = () => {
-          resolve(); // 即時スキップ
-        };
-        audio.play().catch((err) => {
-          console.warn("Audio play failed, skipping:", err);
-          resolve(); // 即時スキップ
-        });
-      } else {
-        resolve(); // 即時スキップ
-      }
-    });
-  }, [playbackRate, exitLoading]);
-
-  // チャイム音を AudioContext 経由で再生（共通ヘルパーを利用）
-  const playChime = useCallback((): Promise<void> => {
-    if (!audioCtxRef.current || !chimeBufferRef.current) return Promise.resolve();
-    return playChimeBuffer(audioCtxRef.current, chimeBufferRef.current);
-  }, []);
 
   // 評価コールバックを含む純粋な録音開始関数
   // secondsLeft は ref 経由で参照（毎秒の再生成を防ぎ、runSprintFlow の安定性を保つ）

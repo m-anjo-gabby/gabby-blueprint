@@ -12,7 +12,8 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, createChimeAudioBuffer, playChimeBuffer, setAudioSessionPlayback } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback } from '@gabby/lib';
+import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
 import { reportSprintProgress } from '@/actions/sprintAction';
 
 interface SprintDrillPlayerProps {
@@ -64,68 +65,19 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const { startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
+  // オーディオリソース（nativeAudio / AudioContext / チャイム / 再生Promise）を共通フックで管理
+  // マウント/アンマウント時の初期化・クリーンアップも内部で行う
+  const { nativeAudioRef, playTrack: playTrackBase, playChime } = useSprintAudio(stopListening);
+
   const totalQuestions = questions?.length || 0;
   const currentQuestion = questions?.[currentIndex];
-
-  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isNavigating = useRef<boolean>(false);
-  const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const chimeBufferRef = useRef<AudioBuffer | null>(null);
-
-  // iOSの自動再生ポリシー回避のため、単一のAudioインスタンスをマウント時に作成して使い回す
-  // およびオーディオセッションの強制初期化とクリーンアップ
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      nativeAudioRef.current = new Audio();
-      nativeAudioRef.current.volume = 1.0;
-
-      // 🚀 前画面からの残留を防ぐため、マウント時に強制的にスピーカー出力へ戻す
-      setAudioSessionPlayback();
-
-      // 前の認識インスタンスやTTSを強制停止して初期化
-      stopListening();
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-
-      // チャイム用 AudioContext を生成（共通ヘルパーを利用）
-      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        const ctx = new AudioContextClass() as AudioContext;
-        audioCtxRef.current = ctx;
-
-        createChimeAudioBuffer(ctx)
-          .then((buffer) => {
-            chimeBufferRef.current = buffer;
-          })
-          .catch((e: unknown) => {
-            console.warn('Chime pre-render failed:', e);
-          });
-      }
-    }
-    return () => {
-      // 🚀 アンマウント時にも確実にスピーカー出力を強制・維持した状態で再生モードへ戻す
-      setAudioSessionPlayback();
-      stopListening();
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-
-      if (nativeAudioRef.current) {
-        nativeAudioRef.current.pause();
-        nativeAudioRef.current = null;
-      }
-      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-        audioCtxRef.current.close().catch(() => { /* no-op */ });
-        audioCtxRef.current = null;
-      }
-    };
-  }, [stopListening]);
 
   const isInitialized = useRef<boolean>(false);
   const prevAnalysisRef = useRef<any>(null);
   const prevIndexRef = useRef<number>(currentIndex);
+
+  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isNavigating = useRef<boolean>(false);
 
   // 💡 フロー管理用の一意のカウンターID
   const flowIdRef = useRef<number>(0);
@@ -208,40 +160,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
 
   const playSingleTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
-    return new Promise((resolve) => {
-      // 🚀 終了処理（ローディング）中の場合は、再生を一切行わずに即時終了する
-      if (exitLoading) {
-        resolve();
-        return;
-      }
-
-      if (nativeAudioRef.current) {
-        nativeAudioRef.current.pause();
-      }
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-
-      if (audioPath && nativeAudioRef.current) {
-        const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = nativeAudioRef.current;
-        
-        audio.src = bucketUrl;
-        audio.playbackRate = playbackRate;
-        
-        audio.onended = () => resolve();
-        audio.onerror = () => {
-          resolve(); // 即時スキップ
-        };
-        audio.play().catch((err) => {
-          console.warn("Drill audio play failed, skipping:", err);
-          resolve(); // 即時スキップ
-        });
-      } else {
-        resolve(); // 即時スキップ
-      }
-    });
-  }, [playbackRate, exitLoading]);
+    return playTrackBase(text, audioPath, { playbackRate, exitLoading });
+  }, [playTrackBase, playbackRate, exitLoading]);
 
   // 💡 一意の currentFlowId を受け取り、非同期 await の直後に厳密にチェックを行う
   const playQuestionSequence = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
@@ -368,11 +288,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     changePlaybackRate(targetRate);
   }, [changePlaybackRate]);
 
-  // チャイム音を AudioContext 経由で再生（共通ヘルパーを利用）
-  const playChime = useCallback((): Promise<void> => {
-    if (!audioCtxRef.current || !chimeBufferRef.current) return Promise.resolve();
-    return playChimeBuffer(audioCtxRef.current, chimeBufferRef.current);
-  }, []);
+  // チャイム音を AudioContext 経由で再生（useSprintAudio フック内に集約）
 
   const handleStartRecord = useCallback(async () => {
     if (!currentQuestion) return;

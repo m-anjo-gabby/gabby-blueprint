@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight, VolumeX, ChevronDown, Settings2, Settings, ChevronRight, Mic, MicOff, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -13,7 +13,8 @@ import {
   type SprintAnswerType,
   type SprintConfig,
 } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback } from '@gabby/lib';
+import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 
 import {
   Drawer,
@@ -79,15 +80,17 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [isHintOpen, setIsHintOpen] = useState(false);
   const [isMicTestOpen, setIsMicTestOpen] = useState(false);
-  const [micStatus, setMicStatus] = useState<'checking' | 'granted' | 'denied' | 'prompt'>('checking');
 
-  // マイクテスト用のステート
-  const [isTestingMic, setIsTestingMic] = useState(false);
-  const [testTranscript, setTestTranscript] = useState('');
-  const [micTestSuccess, setMicTestSuccess] = useState(false);
-  const [micTestError, setMicTestError] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  const testTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // マイク制御（権限確認・テスト）を専用フックに委譲
+  const {
+    micStatus,
+    isTestingMic,
+    testTranscript,
+    micTestSuccess,
+    micTestError,
+    startMicTest,
+    stopMicTest,
+  } = useMicPermission();
 
   // マイクテスト状態の見出しバッジ表示ヘルパー
   const micHeaderBadge = useMemo(() => {
@@ -106,95 +109,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     return { label: '確認中', className: 'bg-slate-50 text-slate-400 border-slate-100' };
   }, [micStatus, micTestSuccess]);
 
-  const stopMicTest = useCallback((success?: boolean, error?: boolean) => {
-    if (testTimeoutRef.current) {
-      clearTimeout(testTimeoutRef.current);
-      testTimeoutRef.current = null;
-    }
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {
-        // すでに停止している場合のエラー回避
-      }
-      recognitionRef.current = null;
-    }
-    setIsTestingMic(false);
-    if (success !== undefined) setMicTestSuccess(success);
-    if (error !== undefined) setMicTestError(error);
-    
-    // iOS WebKit用のオーディオセッション制御: 終了時に playback（スピーカー出力）に戻す
-    setAudioSessionPlayback();
-  }, []);
-
-  const startMicTest = useCallback(() => {
-    stopMicTest();
-
-    // iOS WebKit用のオーディオセッション制御: 録音再生モードに切り替え
-    setAudioSessionPlayAndRecord();
-    
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setMicTestSuccess(false);
-      setMicTestError(true);
-      return;
-    }
-
-    setTestTranscript('');
-    setMicTestSuccess(false);
-    setMicTestError(false);
-    setIsTestingMic(true);
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = true;
-    recognition.continuous = true;
-
-    // 音声認識が開始されたら、マイクが許可されたものとしてステータスを更新
-    recognition.onstart = () => {
-      setMicStatus('granted');
-    };
-
-    recognition.onresult = (event: any) => {
-      let currentText = '';
-      for (let i = 0; i < event.results.length; i++) {
-        currentText += event.results[i][0].transcript;
-      }
-      setTestTranscript(currentText);
-
-      // 何か言葉が検知できたら即座に成功判定
-      if (currentText.trim().length > 0) {
-        stopMicTest(true, false);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      console.warn("Mic test error:", event.error);
-      // ユーザーがマイク使用をブロックした場合
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        setMicStatus('denied');
-        stopMicTest(false, true);
-      } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        stopMicTest(false, true);
-      }
-    };
-
-    recognitionRef.current = recognition;
-    try {
-      recognition.start();
-    } catch (e) {
-      console.error(e);
-      setMicStatus('denied'); // 開始できない場合はブロックされている可能性が高い
-      stopMicTest(false, true);
-      return;
-    }
-
-    // 8秒のタイムアウト
-    testTimeoutRef.current = setTimeout(() => {
-      stopMicTest(false, true);
-    }, 8000);
-  }, [stopMicTest]);
-
   // アコーディオンが閉じられたらマイクテストを自動クリーンアップ
   useEffect(() => {
     if (!isMicTestOpen && isTestingMic) {
@@ -205,76 +119,15 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     }
   }, [isMicTestOpen, isTestingMic, stopMicTest]);
 
-  // コンポーネントアンマウント時にマイクテスト関連を確実に掃除
+  // 権限が未許可・ブロック状態の場合はアコーディオンを自動展開する
   useEffect(() => {
-    return () => {
-      if (testTimeoutRef.current) clearTimeout(testTimeoutRef.current);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (_) {}
-      }
-    };
-  }, []);
-
-  const checkMicPermission = useCallback(async () => {
-    try {
-      if (typeof window === 'undefined') return;
-      if (navigator.permissions && navigator.permissions.query) {
-        try {
-          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          setMicStatus(permissionStatus.state as any);
-          if (permissionStatus.state === 'prompt' || permissionStatus.state === 'denied') {
-            setIsMicTestOpen(true);
-          }
-          permissionStatus.onchange = () => {
-            setMicStatus(permissionStatus.state as any);
-            if (permissionStatus.state === 'prompt' || permissionStatus.state === 'denied') {
-              setIsMicTestOpen(true);
-            }
-          };
-          return;
-        } catch (_) {
-          // Safari 等で query が例外を吐いた場合はフォールバックへ
-        }
-      }
-      
-      // permissions.query が使えない、または例外が発生するブラウザ（Safari等）では
-      // マウント時に勝手に getUserMedia を呼ぶとブラウザに拒否されるため、デフォルトで 'prompt' (未確認) とする。
-      setMicStatus('prompt');
-      setIsMicTestOpen(true);
-    } catch (err: any) {
-      setMicStatus('prompt');
-      setIsMicTestOpen(true);
+    if (micStatus === 'prompt' || micStatus === 'denied') {
+      const timer = setTimeout(() => {
+        setIsMicTestOpen(true);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) {
-        checkMicPermission();
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [checkMicPermission]);
-
-  const requestMicPermission = async () => {
-    try {
-      if (typeof window === 'undefined') return;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      setMicStatus('granted');
-    } catch (err: any) {
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setMicStatus('denied');
-      } else {
-        setMicStatus('prompt');
-      }
-    }
-  };
+  }, [micStatus]);
 
   // ユーザー進捗の取得
   useEffect(() => {
