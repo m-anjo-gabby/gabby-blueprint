@@ -31,16 +31,56 @@ export default function ScrollRestorer() {
     if (prevPathnameRef.current === pathname) return;
     prevPathnameRef.current = pathname;
 
-    const resetScroll = () => {
-      // scroll-behavior: smooth が設定されていると即時リセットが効かないため一時的に auto に変更
+    const resetScroll = (shouldStopMomentum = false) => {
       const htmlEl = document.documentElement;
+      const bodyEl = document.body;
       const prevScrollBehavior = htmlEl.style.scrollBehavior;
+      
+      let prevHtmlOverflow = '';
+      let prevBodyOverflow = '';
+      let prevHtmlPosition = '';
+      let prevHtmlTop = '';
+      let prevHtmlHeight = '';
+      let prevHtmlWidth = '';
+      let prevBodyPosition = '';
+      let prevBodyTop = '';
+      let prevBodyHeight = '';
+      let prevBodyWidth = '';
+
+      if (shouldStopMomentum) {
+        // 現在のスタイルを退避
+        prevHtmlOverflow = htmlEl.style.overflow;
+        prevBodyOverflow = bodyEl.style.overflow;
+        prevHtmlPosition = htmlEl.style.position;
+        prevHtmlTop = htmlEl.style.top;
+        prevHtmlHeight = htmlEl.style.height;
+        prevHtmlWidth = htmlEl.style.width;
+        prevBodyPosition = bodyEl.style.position;
+        prevBodyTop = bodyEl.style.top;
+        prevBodyHeight = bodyEl.style.height;
+        prevBodyWidth = bodyEl.style.width;
+
+        // position: fixed 等を適用してバウンス物理と慣性を強制シャットダウン
+        htmlEl.style.overflow = 'hidden';
+        htmlEl.style.position = 'fixed';
+        htmlEl.style.top = '0';
+        htmlEl.style.height = '100%';
+        htmlEl.style.width = '100%';
+
+        bodyEl.style.overflow = 'hidden';
+        bodyEl.style.position = 'fixed';
+        bodyEl.style.top = '0';
+        bodyEl.style.height = '100%';
+        bodyEl.style.width = '100%';
+      }
+
+      // scroll-behavior: smooth が設定されていると即時リセットが効かないため一時的に auto に変更
       htmlEl.style.scrollBehavior = 'auto';
 
       // window + html + body の三重リセット（iOS Safari 対応）
       window.scrollTo(0, 0);
       htmlEl.scrollTop = 0;
-      document.body.scrollTop = 0;
+      bodyEl.scrollTop = 0;
 
       // data-scroll-container を持つ子コンテナも全てリセット
       document
@@ -50,19 +90,55 @@ export default function ScrollRestorer() {
           el.scrollLeft = 0;
         });
 
-      // scroll-behavior を元に戻す
-      htmlEl.style.scrollBehavior = prevScrollBehavior;
+      const restoreScrollStyles = () => {
+        if (shouldStopMomentum) {
+          // スタイルを復元
+          htmlEl.style.overflow = prevHtmlOverflow;
+          htmlEl.style.position = prevHtmlPosition;
+          htmlEl.style.top = prevHtmlTop;
+          htmlEl.style.height = prevHtmlHeight;
+          htmlEl.style.width = prevHtmlWidth;
+
+          bodyEl.style.overflow = prevBodyOverflow;
+          bodyEl.style.position = prevBodyPosition;
+          bodyEl.style.top = prevBodyTop;
+          bodyEl.style.height = prevBodyHeight;
+          bodyEl.style.width = prevBodyWidth;
+        }
+        htmlEl.style.scrollBehavior = prevScrollBehavior;
+
+        // iOS Safari のビューポート座標ズレを解消するための微小スクロールハック
+        // 1px だけ強制的にスクロールさせて戻すことで、ブラウザに再レイアウト・座標同期を強制します。
+        const currentScrollY = window.scrollY;
+        const targetScrollY = currentScrollY === 0 ? 1 : currentScrollY - 1;
+        window.scrollTo(window.scrollX, targetScrollY);
+        window.scrollTo(window.scrollX, currentScrollY);
+      };
+
+      if (shouldStopMomentum) {
+        // 次のレンダリングフレームでスタイルを復元し、座標を再同期させる
+        requestAnimationFrame(restoreScrollStyles);
+      } else {
+        restoreScrollStyles();
+      }
     };
 
-    // 即時実行（遷移直後）
-    resetScroll();
+    // 即時実行（遷移直後・慣性停止あり）
+    resetScroll(true);
 
-    // requestAnimationFrame でペイント後にも再実行
-    // iOS Safari では最初の scrollTo が無視されるケースがあるため二重実行する
-    const rafId = requestAnimationFrame(resetScroll);
+    // requestAnimationFrame でペイント後にも再実行（慣性停止あり）
+    const rafId = requestAnimationFrame(() => resetScroll(true));
+
+    // キーボードの閉じるアニメーション（通常約300ms）や
+    // 非同期データの読み込み・レンダリング完了をカバーするための遅延実行（慣性停止は不要）
+    const delays = [100, 300, 600];
+    const timerIds = delays.map((delay) => 
+      setTimeout(() => resetScroll(false), delay)
+    );
 
     return () => {
       cancelAnimationFrame(rafId);
+      timerIds.forEach(clearTimeout);
     };
   }, [pathname, searchParams]);
 
