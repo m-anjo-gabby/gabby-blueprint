@@ -58,11 +58,18 @@
 }
 
 @layer base {
+  /* iOS Safari のタップ座標ズレを CSS レベルで防止する。
+     overscroll-behavior: none でバウンスによる座標系のズレを抑制。 */
+  html {
+    overscroll-behavior: none;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
     font-family: Arial, Helvetica, sans-serif;
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
   }
 
   /* iPhone/Safari用のリセット */
