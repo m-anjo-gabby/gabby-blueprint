@@ -61,7 +61,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // （発話評価完了後に誤って MicOff を表示しないための専用フラグ）
   const [isAwaitingRecording, setIsAwaitingRecording] = useState<boolean>(false);
 
-  // ────────────── 🔊 音声カスタムフック ──────────────
+  // ────────────── 音声カスタムフック ──────────────
   const { startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 

@@ -10,7 +10,7 @@ interface StatItem {
   color: StatColor;
 }
 
-// アドミンダッシュボードはドラフト状態
+// アドミンダッシュボードはドラフト状態（コメント修正）
 export default function Page() {
   // サーバーサイドで環境変数を取得
   const env = process.env.NEXT_PUBLIC_VERCEL_ENV || "development";
