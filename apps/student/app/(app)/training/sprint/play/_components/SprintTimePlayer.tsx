@@ -309,7 +309,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         setAudioPhase('statement');
         await playTrack(question.statement_en, question.statement_voice);
         if (flowIdRef.current !== currentFlowId) return;
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 150)); // 🚀 150ms に短縮
         if (flowIdRef.current !== currentFlowId) return;
       }
 
@@ -320,7 +320,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       // answer フェーズ表示 + 待機フラグ ON（isRecording=false の間は MicOff で待機中を示す）
       setAudioPhase('answer');
       setIsAwaitingRecording(true);
-      await new Promise(r => setTimeout(r, 300)); // nativeAudio の終了処理が完了するまでの安全マージン
+      await new Promise(r => setTimeout(r, 200)); // 🚀 200ms に短縮（物理無音時間が200msあるためiOSでも競合なし）
       if (flowIdRef.current !== currentFlowId) return;
 
       // チャイム再生と録音開始（マイクアクティブ化）を完全に並行して同時に実行
@@ -426,8 +426,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const currentFlowId = flowIdRef.current;
     (async () => {
-      // 前の録音/音声が解放されるのを待つ (安定のため 500ms に拡張)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 前の録音/音声が解放されるのを待つ (300ms に調整)
+      await new Promise(resolve => setTimeout(resolve, 300));
       if (flowIdRef.current !== currentFlowId) return;
       await runSprintFlow(currentQuestion, currentFlowId);
     })();

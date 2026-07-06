@@ -340,6 +340,10 @@ COMMENT ON COLUMN public.com_m_word.status IS '公開ステータス';
 COMMENT ON COLUMN public.com_m_word.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_word.update_date IS '更新日時';
 
+-- 1. メインとなる単語マスタの絞り込みとソートの高速化
+CREATE INDEX IF NOT EXISTS idx_com_m_word_content_status_freq
+ON public.com_m_word (content_id, status, frequency_rank);
+
 ---------------------------------------------
 -- DDL: com_m_phrase (出題例文マスタ)
 ---------------------------------------------
@@ -384,6 +388,9 @@ COMMENT ON COLUMN public.com_m_phrase.update_date IS '更新日時';
 
 -- 検索パフォーマンス向上のためのインデックス
 CREATE INDEX idx_com_m_phrase_word_id ON public.com_m_phrase(word_id);
+-- LATERAL JOIN 内のフレーズ検索とソートの高速化
+CREATE INDEX IF NOT EXISTS idx_com_m_phrase_word_status_seq
+ON public.com_m_phrase (word_id, status, seq_no ASC);
 
 ---------------------------------------------
 -- DDL: com_t_favorite_contents (お気に入りコンテンツ)
@@ -421,6 +428,10 @@ COMMENT ON COLUMN public.com_t_favorite_phrase.favorite_id IS 'お気に入りID
 COMMENT ON COLUMN public.com_t_favorite_phrase.user_id IS 'ユーザID';
 COMMENT ON COLUMN public.com_t_favorite_phrase.phrase_id IS 'フレーズID';
 COMMENT ON COLUMN public.com_t_favorite_phrase.insert_date IS '登録日時';
+
+-- お気に入りフレーズのユーザー紐付け高速化
+CREATE INDEX IF NOT EXISTS idx_com_t_favorite_phrase_user_phrase
+ON public.com_t_favorite_phrase (user_id, phrase_id);
 
 ---------------------------------------------
 -- DDL: com_t_resume_contents (コンテンツ再開管理テーブル)

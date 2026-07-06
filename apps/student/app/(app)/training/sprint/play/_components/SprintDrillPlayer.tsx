@@ -173,7 +173,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         setAudioPhase('statement');
         await playSingleTrack(question.statement_en, question.statement_voice);
         if (flowIdRef.current !== currentFlowId) return; // 割り込み時は即座に処理を中断
-        await new Promise(r => setTimeout(r, DRILL_TIMING.audioGap));
+        await new Promise(r => setTimeout(r, 150)); // 🚀 150ms に短縮
         if (flowIdRef.current !== currentFlowId) return;
       }
       
@@ -439,8 +439,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     const currentFlowId = flowIdRef.current;
 
     const runQuestionFlow = async () => {
-      // iOS WebKit等のマイク解放待ちディレイを挟む (450ms)
-      await new Promise(resolve => setTimeout(resolve, 450));
+      // iOS WebKit等のマイク解放待ちディレイを挟む (300msに調整)
+      await new Promise(resolve => setTimeout(resolve, 300));
       if (flowIdRef.current !== currentFlowId) return;
 
       await playQuestionSequence(currentQuestion, currentFlowId);
