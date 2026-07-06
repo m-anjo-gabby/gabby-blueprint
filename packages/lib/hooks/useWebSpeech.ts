@@ -129,7 +129,8 @@ export function useWebSpeech() {
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = true;
-    recognition.continuous = true;
+    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    recognition.continuous = isMobile ? false : true;
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -137,16 +138,27 @@ export function useWebSpeech() {
       onRecognitionStart?.();
     };
     
-    // Edge等で勝手に認識が終了した場合のハンドリング
+    // Edge/Safari等で認識が終了した場合のハンドリング
     recognition.onend = () => {
+      // 🚀 評価セッションがまだ有効であれば、自動的に再スタートして認識を継続する
       if (isAssessingRef.current) {
+        console.log('Speech recognition session ended unexpectedly. Auto-restarting...');
+        try {
+          recognition.start();
+        } catch (e) {
+          console.warn('Speech recognition auto-restart failed:', e);
+        }
+      } else {
         setIsListening(false);
       }
     };
 
-    // エラーハンドリング（Edge等でマイクが不安定な場合の安全策）
+    // エラーハンドリング
     recognition.onerror = (event: any) => {
       console.warn("Speech Recognition Error:", event.error);
+      
+      // 🚀 'no-speech' はモバイルで頻発する無音検知タイムアウトのため、強制終了させない。
+      // 後続の onend 経由で自動的に再起動されるのを待つ
       if (event.error !== 'no-speech' && isAssessingRef.current) {
         finalize();
       }
