@@ -438,8 +438,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const currentFlowId = flowIdRef.current;
     (async () => {
-      // 前の録音/音声が解放されるのを待つ (300ms に調整)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // 🚀 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るために 600ms、2問目以降は 300ms 待つ
+      const initialDelay = currentIndex === 0 ? 600 : 300;
+      await new Promise(resolve => setTimeout(resolve, initialDelay));
       if (flowIdRef.current !== currentFlowId) return;
       await runSprintFlow(currentQuestion, currentFlowId);
     })();

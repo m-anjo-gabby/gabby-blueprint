@@ -453,8 +453,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     const currentFlowId = flowIdRef.current;
 
     const runQuestionFlow = async () => {
-      // iOS WebKit等のマイク解放待ちディレイを挟む (300msに調整)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // 🚀 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るために 600ms、2問目以降は 300ms 待つ
+      const initialDelay = currentIndex === 0 ? 600 : 300;
+      await new Promise(resolve => setTimeout(resolve, initialDelay));
       if (flowIdRef.current !== currentFlowId) return;
 
       await playQuestionSequence(currentQuestion, currentFlowId);

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight, VolumeX, ChevronDown, Settings2, Settings, ChevronRight, Mic, MicOff, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight, VolumeX, ChevronDown, Settings2, Settings, ChevronRight, Mic, MicOff, RefreshCw, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,6 +15,7 @@ import {
 } from '@gabby/types/sprint';
 import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
+import { createBrowserClient } from '@gabby/lib/supabase/client';
 
 import {
   Drawer,
@@ -54,19 +55,33 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const searchParams = useSearchParams();
   const { showConfirm } = useConfirm();
 
+  // Supabaseクライアントの初期化
+  const supabase = useMemo(() => createBrowserClient(), []);
+
   // 🚀 開始画面マウント時に強制的にオーディオセッションをスピーカー出力(playback)へ戻し、TTSをキャンセルしてクリア状態にする
   useEffect(() => {
     setAudioSessionPlayback();
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+    if (typeof window !== 'undefined') {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      // 🚀 アナウンス音声を事前にブラウザのキャッシュにロードしてスタンバイしておく（Refには保持しない）
+      try {
+        const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
+        const audio = new Audio(data.publicUrl);
+        audio.preload = 'auto';
+        audio.load();
+      } catch (_) {}
     }
-  }, []);
+  }, [supabase]);
 
   // ストアから設定更新アクションと現在のconfigを取得
   const { config, contentMetadata, contentName, setConfig } = useSprintStore();
 
   const [userProgress, setUserProgress] = useState<any>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
+
 
   // マスタからデフォルトキーに対応する制限秒数を動的に参照
   const DEFAULT_TIME = SPRINT_TIME_OPTIONS[DEFAULT_SPRINT_TIME_KEY]?.value ?? 90;
@@ -203,18 +218,63 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   }, [selectedType, userProgress]);
 
   const handleStartSubmit = async (answerType: SprintAnswerType = '0') => {
-    // スプリント開始時に動作中のマイクテストがあれば確実に停止させる
+    // 1. スプリント開始時に動作中のマイクテストがあれば確実に停止させる
     stopMicTest();
+    setIsPreparing(true);
 
+    // 🚀 2. 最先頭（同期ジェスチャーコンテキストの最前線）で音声オブジェクトを作成し、
+    // セッションカテゴリを play-and-record (スピーカー優先) にして即時再生を開始する！
+    // これにより iOS Safari での非同期 await 後の再生ブロック制限を完全に回避します。
+    let startAudio: HTMLAudioElement | null = null;
+    let hasNavigated = false;
+    let finalConfigObj: any = null;
+
+    if (typeof window !== 'undefined') {
+      try {
+        setAudioSessionPlayAndRecord();
+        const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
+        startAudio = new Audio(data.publicUrl);
+        startAudio.preload = 'auto';
+
+        // TTS のウォームアップ空読み
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+
+        // 再生開始（ジェスチャー同期スレッド内）
+        startAudio.play().catch(err => {
+          console.warn("Chime play error:", err);
+        });
+      } catch (e) {
+        console.warn("Chime init error:", e);
+      }
+    }
+
+    // プレイヤー遷移ハンドラー
+    const navigateToPlayer = () => {
+      if (hasNavigated) return;
+      hasNavigated = true;
+      if (startAudio) {
+        startAudio.removeEventListener('ended', navigateToPlayer);
+        startAudio.removeEventListener('error', navigateToPlayer);
+      }
+      if (finalConfigObj) {
+        onStart(finalConfigObj);
+      }
+    };
+
+    if (startAudio) {
+      startAudio.addEventListener('ended', navigateToPlayer);
+      startAudio.addEventListener('error', navigateToPlayer);
+    }
+
+    // ロードラグやマイク応答待ちに対するセーフティタイマー（2.5秒）
+    const safetyTimer = setTimeout(navigateToPlayer, 2500);
+
+    // 🚀 3. マイク権限チェックに進む (非同期 await)
     let isMicGranted = micStatus === 'granted';
-
-    // 🚀 すでに granted（許可済）であれば二重呼び出しによるデバイス競合（フリーズ）を防ぐためスキップ。
-    // 未許可の場合のみ、ジェスチャー同期コンテキストでマイク権限の確保・ウォームアップを一元実行する。
     if (!isMicGranted) {
       isMicGranted = await requestMicPermission();
     } else {
-      // 🚀 すでにマイク許可済の場合：二重の getUserMedia を避けるため request はスキップするが、
-      // マイクテスト終了時にセッションが playback に戻されているため、ここで play-and-record に引き上げて本番へ遷移する
+      // すでにマイク許可済の場合でも、セッションカテゴリが playback に戻っている可能性があるため play-and-record を再設定
       setAudioSessionPlayAndRecord();
     }
 
@@ -225,27 +285,33 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
         { variant: 'info' }
       );
       if (!confirmed) {
+        // キャンセル時は再生中の音声を停止し、タイマーをクリアして終了
+        if (startAudio) {
+          try { startAudio.pause(); } catch (_) {}
+        }
+        clearTimeout(safetyTimer);
+        setIsPreparing(false);
         return;
       }
-    }
-
-    if (typeof window !== 'undefined') {
-      const audio = new Audio();
-      audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
-      audio.play().catch(() => {});
-      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
     }
 
     // ストア側のanswerTypeも確定タイミングで同期
     setConfig({ answerType });
 
-    onStart({
+    finalConfigObj = {
       mode,
       questionType: selectedType,
       level: selectedLevel,
       timeLimitSec: selectedTimeLimitSec,
       answerType: (mode === 'sprint' && selectedType === '0') ? answerType : '0'
-    });
+    };
+
+    // 🚀 4. 再生成功時のタイマー解除および即時遷移ガード
+    // マイク許可ダイアログ操作中に既に再生が完了していた場合、または音声の初期化ができなかった場合は即時に遷移
+    if (!startAudio || startAudio.ended || isMicGranted === false) {
+      clearTimeout(safetyTimer);
+      navigateToPlayer();
+    }
   };
 
   const isSpeedSelected = selectedType === '0';
@@ -779,29 +845,50 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => handleStartSubmit('0')}
-                  className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                  disabled={isPreparing}
+                  className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 disabled:opacity-85"
                 >
-                  <Zap size={14} className="fill-current text-amber-300" />
-                  YESで回答する
+                  {isPreparing ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  ) : (
+                    <>
+                      <Zap size={14} className="fill-current text-amber-300" />
+                      YESで回答する
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={() => handleStartSubmit('1')}
-                  className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-slate-900/10 bg-slate-900 hover:bg-slate-800 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                  disabled={isPreparing}
+                  className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-slate-900/10 bg-slate-900 hover:bg-slate-800 text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 disabled:opacity-85"
                 >
-                  <Zap size={14} className="fill-current text-indigo-300" />
-                  NOで回答する
+                  {isPreparing ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  ) : (
+                    <>
+                      <Zap size={14} className="fill-current text-indigo-300" />
+                      NOで回答する
+                    </>
+                  )}
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => handleStartSubmit('0')}
+                disabled={isPreparing}
                 className={cn(
-                  "w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-white",
+                  "w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-white disabled:opacity-85",
                   mode === 'sprint' ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/10" : "bg-slate-900 hover:bg-slate-800 shadow-slate-900/10"
                 )}
               >
-                <span>{mode === 'sprint' ? 'スプリント' : 'ドリル'}を開始</span>
-                <ArrowRight size={14} strokeWidth={3} />
+                {isPreparing ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                ) : (
+                  <>
+                    <span>{mode === 'sprint' ? 'スプリント' : 'ドリル'}を開始</span>
+                    <ArrowRight size={14} strokeWidth={3} />
+                  </>
+                )}
               </button>
             )}
           </div>
