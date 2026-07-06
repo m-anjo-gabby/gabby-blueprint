@@ -47,6 +47,7 @@ const warmupAudioSession = () => {
 export function useMicPermission(): UseMicPermissionReturn {
   const [micStatus, setMicStatus] = useState<MicStatus>('checking');
   const [isTestingMic, setIsTestingMic] = useState(false);
+  const isTestingMicRef = useRef(false); // 🚀 onend ハンドラー内で非同期に最新状態を参照するためのRef
   const [testTranscript, setTestTranscript] = useState('');
   const [micTestSuccess, setMicTestSuccess] = useState(false);
   const [micTestError, setMicTestError] = useState(false);
@@ -69,6 +70,7 @@ export function useMicPermission(): UseMicPermissionReturn {
       recognitionRef.current = null;
     }
     setIsTestingMic(false);
+    isTestingMicRef.current = false;
     if (success !== undefined) setMicTestSuccess(success);
     if (error !== undefined) setMicTestError(error);
 
@@ -99,15 +101,26 @@ export function useMicPermission(): UseMicPermissionReturn {
     setMicTestSuccess(false);
     setMicTestError(false);
     setIsTestingMic(true);
+    isTestingMicRef.current = true;
 
+    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const recognition = new SpeechRecognitionClass() as SpeechRecognition;
     recognition.lang = 'en-US';
     recognition.interimResults = true;
-    recognition.continuous = true;
+    recognition.continuous = isMobile ? false : true; // 🚀 モバイルでは単発認識にして安定化
 
     recognition.onstart = () => {
       // 認識開始 = マイクが許可されている
       setMicStatus('granted');
+    };
+
+    recognition.onend = () => {
+      // 🚀 テスト中（タイムアウト前）であれば、onend から自動再起動して声を拾い続ける
+      if (isTestingMicRef.current) {
+        try {
+          recognition.start();
+        } catch (_) {}
+      }
     };
 
     recognition.onresult = (event: any) => {

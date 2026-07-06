@@ -13,7 +13,7 @@ import {
   type SprintAnswerType,
   type SprintConfig,
 } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 
 import {
@@ -28,6 +28,7 @@ import { useSprintStore } from '@/stores/useSprintStore';
 import { getSprintProgressAction } from '@/actions/sprintAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
+import { AudioTroubleshootingDialog } from '@/components/common/AudioTroubleshootingDialog';
 
 import {
   Dialog,
@@ -65,6 +66,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const { config, contentMetadata, contentName, setConfig } = useSprintStore();
 
   const [userProgress, setUserProgress] = useState<any>(null);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   // マスタからデフォルトキーに対応する制限秒数を動的に参照
   const DEFAULT_TIME = SPRINT_TIME_OPTIONS[DEFAULT_SPRINT_TIME_KEY]?.value ?? 90;
@@ -210,6 +212,10 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     // 未許可の場合のみ、ジェスチャー同期コンテキストでマイク権限の確保・ウォームアップを一元実行する。
     if (!isMicGranted) {
       isMicGranted = await requestMicPermission();
+    } else {
+      // 🚀 すでにマイク許可済の場合：二重の getUserMedia を避けるため request はスキップするが、
+      // マイクテスト終了時にセッションが playback に戻されているため、ここで play-and-record に引き上げて本番へ遷移する
+      setAudioSessionPlayAndRecord();
     }
 
     if (!isMicGranted) {
@@ -620,6 +626,16 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                                       <div className="min-w-0 flex-1">
                                         <h4 className="text-xs font-black text-rose-700">聞き取りに失敗しました</h4>
                                         <p className="text-[10px] font-bold text-slate-500 mt-0.5">声が小さすぎるか、マイクが正しく接続されていない可能性があります。</p>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsHelpOpen(true);
+                                          }}
+                                          className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 underline mt-1 block select-none"
+                                        >
+                                          改善しない・音が出ない場合はこちら ➔
+                                        </button>
                                       </div>
                                     </div>
                                     <button
@@ -659,6 +675,21 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                                     </button>
                                   </div>
                                 )}
+
+                                {/* 🚀 音声・マイクの常設トラブルシューティング案内 */}
+                                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-400 select-none">
+                                  <span>音声が認識しない・音が出ない場合</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIsHelpOpen(true);
+                                    }}
+                                    className="text-indigo-600 hover:text-indigo-700 underline flex items-center gap-0.5 font-bold"
+                                  >
+                                    対処法を確認
+                                  </button>
+                                </div>
                               </motion.div>
                             )}
                           </AnimatePresence>
@@ -927,6 +958,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
             </div>
           </DrawerContent>
         </Drawer>
+        <AudioTroubleshootingDialog open={isHelpOpen} onOpenChange={setIsHelpOpen} />
         <ConfirmContainer />
       </main>
     </div>
