@@ -206,16 +206,16 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
     let isMicGranted = micStatus === 'granted';
 
-    // 🚀 ユーザージェスチャーの同期コンテキストでマイク権限の確保および先行確保（ウォームアップ）を一元実行
-    // これにより iOS Safari の User Gesture Policy をクリアし、本番遷移後のマイク動作を極めて安定させる
-    if (mode === 'sprint') {
+    // 🚀 すでに granted（許可済）であれば二重呼び出しによるデバイス競合（フリーズ）を防ぐためスキップ。
+    // 未許可の場合のみ、ジェスチャー同期コンテキストでマイク権限の確保・ウォームアップを一元実行する。
+    if (!isMicGranted) {
       isMicGranted = await requestMicPermission();
     }
 
-    if (mode === 'sprint' && !isMicGranted) {
+    if (!isMicGranted) {
       const confirmed = await showConfirm(
         'マイクが許可されていません',
-        '発話の評価を行わずにスプリントを開始しますか？（スキップボタンで発話をパスしながら進めることになります）',
+        '発話の評価を行わずにトレーニングを開始しますか？（スキップボタンで発話をパスしながら進めることになります）',
         { variant: 'info' }
       );
       if (!confirmed) {

@@ -206,6 +206,10 @@ export function useMicPermission(): UseMicPermissionReturn {
   const requestMicPermission = useCallback(async (): Promise<boolean> => {
     try {
       if (typeof window === 'undefined') return false;
+
+      // 🚀 【最重要】iOS Safariの User Gesture Policy を完全にクリアするため、
+      // ユーザータップ同期コールスタックの最先頭（あらゆる await の前）で getUserMedia を実行する。
+      const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true });
       
       // 🚀 マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
       warmupAudioSession();
@@ -213,7 +217,7 @@ export function useMicPermission(): UseMicPermissionReturn {
       // iOS WebKit: 録音再生モードに切り替え
       setAudioSessionPlayAndRecord();
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await streamPromise;
       stream.getTracks().forEach((track) => track.stop());
       setMicStatus('granted');
       // 🚀 本番への play-and-record 状態引き継ぎのため、ここでの playback への切り戻しを廃止

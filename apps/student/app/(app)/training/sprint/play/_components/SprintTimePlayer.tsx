@@ -324,7 +324,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       if (flowIdRef.current !== currentFlowId) return;
 
       // チャイム再生と録音開始（マイクアクティブ化）を完全に並行して同時に実行
-      playChime(); // awaitしない
+      // 🚀 iOS環境の場合は、オーディオ競合を防ぐためチャイム音を再生しない
+      const isMobileIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (!isMobileIOS) {
+        playChime();
+      }
       startRecordingFor(question);
     } catch (e) {
       console.error("Sprint flow error:", e);
@@ -339,7 +343,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     if (!currentQuestion) return;
     setAudioPhase('answer');
     setIsAwaitingRecording(true);
-    playChime(); // awaitしない
+    // 🚀 iOS環境の場合は、オーディオ競合を防ぐためチャイム音を再生しない
+    const isMobileIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isMobileIOS) {
+      playChime();
+    }
     startRecordingFor(currentQuestion);
   }, [currentQuestion, playChime, startRecordingFor]);
 
@@ -660,7 +668,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               )}>
                 {micStatus === 'denied' && audioPhase === 'answer'
                   ? "※マイク権限が拒否されています"
-                  : "※開始音の後に発話してください"}
+                  : (typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent))
+                    ? ""
+                    : "※開始音の後に発話してください"}
               </p>
             </div>
 
