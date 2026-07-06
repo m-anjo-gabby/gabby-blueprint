@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight, VolumeX, ChevronDown, Settings2, Settings, ChevronRight, Mic, MicOff, RefreshCw, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Check, Lock, Zap, ChevronLeft, Sliders, Edit3, BookOpen, HelpCircle, X, ArrowRight, VolumeX, ChevronDown, Settings2, Settings, ChevronRight, Mic, MicOff, RefreshCw, AlertCircle, CheckCircle2, Loader2, Volume2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -65,12 +65,17 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
-      // 🚀 アナウンス音声を事前にブラウザのキャッシュにロードしてスタンバイしておく（Refには保持しない）
+      // 🚀 アナウンス音声とスピーカーデモ音声を事前にブラウザのキャッシュにロードしてスタンバイしておく
       try {
-        const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
-        const audio = new Audio(data.publicUrl);
-        audio.preload = 'auto';
-        audio.load();
+        const { data: startData } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
+        const startAudio = new Audio(startData.publicUrl);
+        startAudio.preload = 'auto';
+        startAudio.load();
+
+        const { data: demoData } = supabase.storage.from('audio').getPublicUrl('system/asset_hello_blueprint.mp3');
+        const demoAudio = new Audio(demoData.publicUrl);
+        demoAudio.preload = 'auto';
+        demoAudio.load();
       } catch (_) {}
     }
   }, [supabase]);
@@ -81,6 +86,61 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const [userProgress, setUserProgress] = useState<any>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
+
+  // ─── スピーカーテストデモ用の状態とRef ───
+  const [isDemoPlaying, setIsDemoPlaying] = useState(false);
+  const demoAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // 🚀 スピーカーデモ音声再生メソッド
+  const handlePlayDemoAudio = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    if (isDemoPlaying) {
+      if (demoAudioRef.current) {
+        demoAudioRef.current.pause();
+        setIsDemoPlaying(false);
+      }
+      return;
+    }
+
+    try {
+      // 再生前にオーディオセッションを通常再生に再設定
+      setAudioSessionPlayback();
+
+      const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_hello_blueprint.mp3');
+      const audio = new Audio(data.publicUrl);
+      demoAudioRef.current = audio;
+
+      const onEnded = () => {
+        setIsDemoPlaying(false);
+        audio.removeEventListener('ended', onEnded);
+        audio.removeEventListener('error', onEnded);
+      };
+
+      audio.addEventListener('ended', onEnded);
+      audio.addEventListener('error', onEnded);
+
+      setIsDemoPlaying(true);
+      audio.play().catch((err) => {
+        console.warn("Demo play blocked:", err);
+        setIsDemoPlaying(false);
+      });
+    } catch (_) {
+      setIsDemoPlaying(false);
+    }
+  }, [isDemoPlaying, supabase]);
+
+  // デモ再生クリーンアップ用 Effect
+  useEffect(() => {
+    return () => {
+      if (demoAudioRef.current) {
+        try {
+          demoAudioRef.current.pause();
+          demoAudioRef.current.src = '';
+        } catch (_) {}
+      }
+    };
+  }, []);
 
 
   // マスタからデフォルトキーに対応する制限秒数を動的に参照
@@ -98,25 +158,16 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const [isHintOpen, setIsHintOpen] = useState(false);
   const [isMicTestOpen, setIsMicTestOpen] = useState(false);
 
-  // マイク制御（権限確認・テスト）を専用フックに委譲
+  // マイク制御（権限確認）を専用フックに委譲
   const {
     micStatus,
-    isTestingMic,
-    testTranscript,
-    micTestSuccess,
-    micTestError,
-    startMicTest,
-    stopMicTest,
     requestMicPermission,
   } = useMicPermission();
 
-  // マイクテスト状態の見出しバッジ表示ヘルパー
+  // マイク接続状態の見出しバッジ表示ヘルパー
   const micHeaderBadge = useMemo(() => {
     if (micStatus === 'granted') {
-      if (micTestSuccess) {
-        return { label: 'チェック完了', className: 'bg-emerald-50 text-emerald-700 border-emerald-100/50' };
-      }
-      return { label: '許可済み', className: 'bg-indigo-50 text-indigo-700 border-indigo-100/50' };
+      return { label: '接続OK', className: 'bg-emerald-50 text-emerald-700 border-emerald-100/50' };
     }
     if (micStatus === 'denied') {
       return { label: 'ブロック中', className: 'bg-rose-50 text-rose-700 border-rose-100/50' };
@@ -125,17 +176,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       return { label: '未許可', className: 'bg-amber-50 text-amber-700 border-amber-100/50' };
     }
     return { label: '確認中', className: 'bg-slate-50 text-slate-400 border-slate-100' };
-  }, [micStatus, micTestSuccess]);
-
-  // アコーディオンが閉じられたらマイクテストを自動クリーンアップ
-  useEffect(() => {
-    if (!isMicTestOpen && isTestingMic) {
-      const timer = setTimeout(() => {
-        stopMicTest();
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [isMicTestOpen, isTestingMic, stopMicTest]);
+  }, [micStatus]);
 
   // 権限が未許可・ブロック状態の場合はアコーディオンを自動展開する
   useEffect(() => {
@@ -218,8 +259,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   }, [selectedType, userProgress]);
 
   const handleStartSubmit = async (answerType: SprintAnswerType = '0') => {
-    // 1. スプリント開始時に動作中のマイクテストがあれば確実に停止させる
-    stopMicTest();
+    // 1. スプリント開始時に準備中フラグをON
     setIsPreparing(true);
 
     // 🚀 2. 最先頭（同期ジェスチャーコンテキストの最前線）で音声オブジェクトを作成し、
@@ -537,18 +577,17 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                                   </div>
                                   <div className="min-w-0 flex-1">
                                     <h4 className="text-xs font-black text-slate-800">マイクの許可が必要です</h4>
-                                    <p className="text-[10px] font-bold text-slate-500 mt-0.5">発話テストを開始してマイクを許可してください。</p>
+                                    <p className="text-[10px] font-bold text-slate-500 mt-0.5">発話機能を利用するために、マイクを許可してください。</p>
                                   </div>
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    startMicTest();
+                                  onClick={async () => {
+                                    await requestMicPermission();
                                   }}
-                                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black transition-all shrink-0 shadow-sm shadow-indigo-600/10 active:scale-95"
+                                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black transition-all shrink-0 shadow-sm shadow-indigo-600/10 active:scale-95 cursor-pointer"
                                 >
-                                  テスト開始
+                                  マイクを許可
                                 </button>
                               </motion.div>
                             )}
@@ -615,7 +654,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                               </motion.div>
                             )}
 
-                            {/* 3. 許可済み (granted) で各種テスト状態 */}
+                            {/* 3. 許可済み (granted) でスピーカーテスト機能を表示 */}
                             {micStatus === 'granted' && (
                               <motion.div 
                                 key="granted-container"
@@ -624,127 +663,49 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                                 exit={{ opacity: 0, y: -5 }}
                                 className="flex flex-col gap-3 w-full"
                               >
-                                {isTestingMic && (
-                                  <div className="flex items-center justify-between gap-3 py-1">
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                      <div className="relative h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                                        <motion.div 
-                                          className="absolute inset-0 rounded-xl bg-indigo-600"
-                                          animate={{ scale: [1, 1.4, 1] }}
-                                          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                                          style={{ opacity: 0.3 }}
-                                        />
-                                        <Mic size={18} className="relative z-10" />
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <h4 className="text-xs font-black text-indigo-700">音声を認識中...</h4>
-                                        <p className="text-[10px] font-bold text-slate-500 mt-0.5 truncate">
-                                          {testTranscript ? `「${testTranscript}」` : "『OK』など発話してください"}
-                                        </p>
-                                      </div>
+                                <div className="flex items-center justify-between gap-3 py-1">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100/50">
+                                      <Mic size={18} />
                                     </div>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        stopMicTest();
-                                      }}
-                                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black transition-all shrink-0"
-                                    >
-                                      キャンセル
-                                    </button>
-                                  </div>
-                                )}
-
-                                {!isTestingMic && micTestSuccess && (
-                                  <div className="flex items-center justify-between gap-3 py-1">
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                      <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                                        <CheckCircle2 size={18} />
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <h4 className="text-xs font-black text-emerald-700">マイクチェック完了！</h4>
-                                        <p className="text-[10px] font-bold text-emerald-600/90 mt-0.5 truncate">
-                                          発話を確認できました（「{testTranscript}」）
-                                        </p>
-                                      </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="text-xs font-black text-slate-700">マイクは許可されています</h4>
+                                      <p className="text-[10px] font-bold text-slate-500 mt-0.5">
+                                        発話判定の準備が整いました。
+                                      </p>
                                     </div>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        startMicTest();
-                                      }}
-                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-100/50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-black transition-all shrink-0"
-                                    >
-                                      <RefreshCw size={10} />
-                                      再テスト
-                                    </button>
                                   </div>
-                                )}
-
-                                {!isTestingMic && !micTestSuccess && micTestError && (
-                                  <div className="flex items-center justify-between gap-3 py-1">
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                      <div className="h-10 w-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                                        <AlertCircle size={18} />
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <h4 className="text-xs font-black text-rose-700">聞き取りに失敗しました</h4>
-                                        <p className="text-[10px] font-bold text-slate-500 mt-0.5">声が小さすぎるか、マイクが正しく接続されていない可能性があります。</p>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIsHelpOpen(true);
-                                          }}
-                                          className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 underline mt-1 block select-none"
-                                        >
-                                          改善しない・音が出ない場合はこちら ➔
-                                        </button>
-                                      </div>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        startMicTest();
-                                      }}
-                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black transition-all shrink-0 shadow-sm"
-                                    >
-                                      <RefreshCw size={10} />
-                                      再試行
-                                    </button>
-                                  </div>
-                                )}
-
-                                {!isTestingMic && !micTestSuccess && !micTestError && (
-                                  <div className="flex items-center justify-between gap-3 py-1">
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                      <div className="h-10 w-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-                                        <Mic size={18} />
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <h4 className="text-xs font-black text-slate-700">マイクは許可されています</h4>
-                                        <p className="text-[10px] font-bold text-slate-500 mt-0.5">正しく発音判定ができるか、発話テストを行いましょう。</p>
-                                      </div>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        startMicTest();
-                                      }}
-                                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black transition-all shrink-0 shadow-sm shadow-indigo-600/10 active:scale-95"
-                                    >
-                                      テスト開始
-                                    </button>
-                                  </div>
-                                )}
+                                  
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePlayDemoAudio();
+                                    }}
+                                    className={cn(
+                                      "px-4 py-2 rounded-xl text-[10px] font-black transition-all shrink-0 shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer",
+                                      isDemoPlaying 
+                                        ? "bg-amber-100 hover:bg-amber-200 text-amber-800" 
+                                        : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/10"
+                                    )}
+                                  >
+                                    {isDemoPlaying ? (
+                                      <>
+                                        <VolumeX size={11} strokeWidth={2.5} />
+                                        テスト停止
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Volume2 size={11} strokeWidth={2.5} />
+                                        スピーカーテスト
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
 
                                 {/* 🚀 音声・マイクの常設トラブルシューティング案内 */}
                                 <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-400 select-none">
-                                  <span>音声が認識しない・音が出ない場合</span>
+                                  <span>音声が聞こえない・認識しない場合</span>
                                   <button
                                     type="button"
                                     onClick={(e) => {
