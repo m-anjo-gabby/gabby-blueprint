@@ -146,12 +146,26 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       clearTimeout(autoPlayTimerRef.current);
       autoPlayTimerRef.current = null;
     }
-    if (nativeAudioRef.current) { nativeAudioRef.current.pause(); }
+    // 使い回しの Audio インスタンスがあれば停止し、完全にリソースアンロード（解放）する
+    if (nativeAudioRef.current) {
+      try {
+        nativeAudioRef.current.pause();
+        nativeAudioRef.current.onended = null;
+        nativeAudioRef.current.onerror = null;
+        nativeAudioRef.current.src = '';
+        nativeAudioRef.current.load();
+      } catch (_) {}
+    }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    // 🚀 マイクを即時停止してからオーディオセッションをスピーカー出力に戻す
-    // stopListening() → finalize() → recognition.abort() + audioSession='playback' の順で実行される
+    // マイクを強制停止 (abort)
     stopListening();
-    setAudioSessionPlayback();
+
+    // 🚀 iOS WebKitデッドロック防止:
+    // マイクの切断完了（物理解放）までの遅延を待つため、300ms のディレイの後にセッションを戻す
+    setTimeout(() => {
+      setAudioSessionPlayback();
+    }, 300);
+
     setPlayingQuestionSequence(false);
     setPlayingAnswerSequence(false);
     setAudioPhase('idle');

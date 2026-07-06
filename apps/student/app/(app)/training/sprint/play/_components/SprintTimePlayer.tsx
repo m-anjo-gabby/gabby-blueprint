@@ -143,16 +143,28 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // タイムアップ・スキップ・終了の全経路でマイクが確実に解放される
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1;
-    // 使い回しの Audio インスタンスがあれば停止
+    // 使い回しの Audio インスタンスがあれば停止し、完全にリソースアンロード（解放）する
     if (nativeAudioRef.current) {
-      nativeAudioRef.current.pause();
+      try {
+        nativeAudioRef.current.pause();
+        nativeAudioRef.current.onended = null;
+        nativeAudioRef.current.onerror = null;
+        nativeAudioRef.current.src = '';
+        nativeAudioRef.current.load();
+      } catch (_) {}
     }
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    // マイク入力を即時停止し、オーディオセッションをスピーカー出力に戻す
+    // マイク入力を即時停止 (abort)
     stopListening();
-    setAudioSessionPlayback();
+    
+    // 🚀 iOS WebKitデッドロック防止:
+    // マイクの切断完了（物理解放）までの遅延を待つため、300ms のディレイの後にセッションを戻す
+    setTimeout(() => {
+      setAudioSessionPlayback();
+    }, 300);
+
     // 録音 UI 状態もリセット
-    setIsAwaitingRecording(false);
+    setIsAwaitingRecording(true); // 遷移中のチラつき防止のため待機中にしておく
     setIsRecording(false);
     setAudioPhase('idle');
   }, [stopListening, setIsRecording]);
