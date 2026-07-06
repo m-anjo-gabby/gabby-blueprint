@@ -90,6 +90,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     micTestError,
     startMicTest,
     stopMicTest,
+    requestMicPermission,
   } = useMicPermission();
 
   // マイクテスト状態の見出しバッジ表示ヘルパー
@@ -203,20 +204,15 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     // スプリント開始時に動作中のマイクテストがあれば確実に停止させる
     stopMicTest();
 
-    // 🚀 ユーザージェスチャーイベント（タップ）の同期チェーン上でマイクの先行活性化（ウォームアップ）を実行
-    // これにより iOS Safari の User Gesture Policy を完全にクリアし、本番遷移直後のマイク動作を極めて安定させる
-    if (micStatus === 'granted') {
-      try {
-        if (typeof window !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach((track) => track.stop());
-        }
-      } catch (e) {
-        console.warn('Pre-sprint microphone warmup failed:', e);
-      }
+    let isMicGranted = micStatus === 'granted';
+
+    // 🚀 ユーザージェスチャーの同期コンテキストでマイク権限の確保および先行確保（ウォームアップ）を一元実行
+    // これにより iOS Safari の User Gesture Policy をクリアし、本番遷移後のマイク動作を極めて安定させる
+    if (mode === 'sprint') {
+      isMicGranted = await requestMicPermission();
     }
 
-    if (mode === 'sprint' && micStatus !== 'granted') {
+    if (mode === 'sprint' && !isMicGranted) {
       const confirmed = await showConfirm(
         'マイクが許可されていません',
         '発話の評価を行わずにスプリントを開始しますか？（スキップボタンで発話をパスしながら進めることになります）',

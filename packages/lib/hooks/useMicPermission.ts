@@ -13,8 +13,24 @@ export interface UseMicPermissionReturn {
   micTestError: boolean;
   startMicTest: () => void;
   stopMicTest: (success?: boolean, error?: boolean) => void;
-  requestMicPermission: () => Promise<void>;
+  requestMicPermission: () => Promise<boolean>;
 }
+
+// 無音のダミー音声再生により、iOSのオーディオセッションを強制活性化（アクティベート）させるヘルパー
+const warmupAudioSession = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    const audio = new Audio();
+    // 1ドットの無音 wav データ
+    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
+    audio.play().catch(() => {});
+    if (window.speechSynthesis) {
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+    }
+  } catch (e) {
+    console.warn('Audio session warmup failed:', e);
+  }
+};
 
 /**
  * マイク権限の確認・テスト機能を提供するフック。
@@ -63,6 +79,9 @@ export function useMicPermission(): UseMicPermissionReturn {
   // ─── マイクテスト開始 ────────────────────────────────────────────
   const startMicTest = useCallback(() => {
     stopMicTest();
+
+    // 🚀 マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
+    warmupAudioSession();
 
     // iOS WebKit: 録音再生モードに切り替え（レシーバーモード防止）
     setAudioSessionPlayAndRecord();
@@ -183,13 +202,24 @@ export function useMicPermission(): UseMicPermissionReturn {
     };
   }, []);
 
-  // ─── getUserMedia による権限リクエスト（prompt 状態でのボタン操作時） ───
-  const requestMicPermission = useCallback(async () => {
+  // ─── getUserMedia による権限要求・先行確保（ウォームアップ） ───
+  const requestMicPermission = useCallback(async (): Promise<boolean> => {
     try {
-      if (typeof window === 'undefined') return;
+      if (typeof window === 'undefined') return false;
+      
+      // 🚀 マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
+      warmupAudioSession();
+      
+      // iOS WebKit: 録音再生モードに切り替え
+      setAudioSessionPlayAndRecord();
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
       setMicStatus('granted');
+      
+      // 終了後に一度 playback（スピーカー出力）に戻す
+      setAudioSessionPlayback();
+      return true;
     } catch (err: unknown) {
       const name = err instanceof Error ? err.name : '';
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
@@ -197,6 +227,8 @@ export function useMicPermission(): UseMicPermissionReturn {
       } else {
         setMicStatus('prompt');
       }
+      setAudioSessionPlayback();
+      return false;
     }
   }, []);
 

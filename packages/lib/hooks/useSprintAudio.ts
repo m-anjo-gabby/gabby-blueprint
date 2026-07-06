@@ -126,6 +126,8 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
       // 直前に再生中のインスタンスがあれば停止（src 切り替え時のプチプチノイズを防ぐ）
       if (nativeAudioRef.current) {
         nativeAudioRef.current.pause();
+        nativeAudioRef.current.onended = null;
+        nativeAudioRef.current.onerror = null;
       }
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
@@ -135,13 +137,26 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
         const audio = nativeAudioRef.current;
 
+        const cleanupAndResolve = () => {
+          audio.onended = null;
+          audio.onerror = null;
+          audio.pause();
+          try {
+            // リソースを空にしてアンロードし、iOSのオーディオセッションロックを確実に解除する
+            audio.src = '';
+            audio.load();
+          } catch (_) {}
+          resolve();
+        };
+
         audio.src = bucketUrl;
         audio.playbackRate = opts.playbackRate ?? 1.0;
-        audio.onended = () => resolve();
-        audio.onerror = () => resolve(); // エラー時は即時スキップ
+        audio.onended = cleanupAndResolve;
+        audio.onerror = cleanupAndResolve; // エラー時は即時スキップ
+        
         audio.play().catch((err) => {
           console.warn('Audio play failed, skipping:', err);
-          resolve();
+          cleanupAndResolve();
         });
       } else {
         // audioPath が null の場合は即時スキップ
