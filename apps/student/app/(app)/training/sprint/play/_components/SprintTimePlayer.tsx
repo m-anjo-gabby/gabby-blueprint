@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { SprintQuestion } from "@gabby/types/sprint";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
@@ -290,7 +290,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       },
       {
         // 録音終了時に自動で playback に戻す
-        suppressAudioSessionSwitch: false,
+        suppressAudioSessionSwitch: true,
         // recognition.onstart 発火後（マイクが実際に開いた時点）で isRecording を true にする
         // → RECインジケータをブラウザの実際の録音開始に同期させる
         onRecognitionStart: () => {
@@ -320,7 +320,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       // answer フェーズ表示 + 待機フラグ ON（isRecording=false の間は MicOff で待機中を示す）
       setAudioPhase('answer');
       setIsAwaitingRecording(true);
-      await new Promise(r => setTimeout(r, 80)); // nativeAudio の終了処理が完了するまでの安全マージン
+      await new Promise(r => setTimeout(r, 300)); // nativeAudio の終了処理が完了するまでの安全マージン
       if (flowIdRef.current !== currentFlowId) return;
 
       // チャイム再生と録音開始（マイクアクティブ化）を完全に並行して同時に実行
@@ -436,15 +436,20 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving, exitLoading]);
 
-  // DOM/オーディオの強制クリーンアップ
+  // DOM/オーディオの強制クリーンアップおよびiOSオーディオセッション固定化
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    
+    // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
+    
     return () => {
       document.body.style.overflow = originalOverflow;
       stopAllAudio();
       setIsRecording(false);
       stopListening();
+      // 🚀 アンマウント（終了）時に 'playback' に戻してマイクを完全に解放
+      setAudioSessionPlayback();
     };
   }, [stopAllAudio, setIsRecording, stopListening]);
 

@@ -12,7 +12,7 @@ import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
 import { reportSprintProgress } from '@/actions/sprintAction';
 
@@ -327,6 +327,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         useSprintStore.getState().incrementAssessmentCount();
       },
       {
+        suppressAudioSessionSwitch: true,
         // 実際にマイクが開いた時点で録音インジケータをオンにする
         onRecognitionStart: () => {
           setIsRecording(true);
@@ -504,13 +505,18 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRevealed, currentIndex, analysis, isRecording]);
 
-  // フルスクリーン固定
+  // フルスクリーン固定およびiOSオーディオセッション固定化
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    
+    // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
+    
     return () => { 
       document.body.style.overflow = originalOverflow; 
       stopAllAudio(); 
+      // 🚀 アンマウント（終了）時に 'playback' に戻してマイクを完全に解放
+      setAudioSessionPlayback();
     };
   }, [stopAllAudio]);
 

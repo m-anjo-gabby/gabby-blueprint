@@ -216,9 +216,7 @@ export function useMicPermission(): UseMicPermissionReturn {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
       setMicStatus('granted');
-      
-      // 終了後に一度 playback（スピーカー出力）に戻す
-      setAudioSessionPlayback();
+      // 🚀 本番への play-and-record 状態引き継ぎのため、ここでの playback への切り戻しを廃止
       return true;
     } catch (err: unknown) {
       const name = err instanceof Error ? err.name : '';
