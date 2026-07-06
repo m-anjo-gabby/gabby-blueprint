@@ -167,6 +167,12 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
 
   // ─── チャイム再生 ─────────────────────────────────────────────────────────
   const playChime = useCallback((): Promise<void> => {
+    // 🚀 iOS環境の場合はオーディオ競合（ハング・エコーキャンセラー暴走）を防ぐためチャイム再生を抑止
+    const isMobileIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobileIOS) {
+      return Promise.resolve();
+    }
+
     if (!audioCtxRef.current || !chimeBufferRef.current) return Promise.resolve();
     return playChimeBuffer(audioCtxRef.current, chimeBufferRef.current);
   }, []);

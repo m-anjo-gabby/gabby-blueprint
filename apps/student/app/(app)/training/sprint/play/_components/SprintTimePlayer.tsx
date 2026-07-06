@@ -324,11 +324,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       if (flowIdRef.current !== currentFlowId) return;
 
       // チャイム再生と録音開始（マイクアクティブ化）を完全に並行して同時に実行
-      // 🚀 iOS環境の場合は、オーディオ競合を防ぐためチャイム音を再生しない
-      const isMobileIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (!isMobileIOS) {
-        playChime();
-      }
+      playChime();
       startRecordingFor(question);
     } catch (e) {
       console.error("Sprint flow error:", e);
@@ -343,11 +339,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     if (!currentQuestion) return;
     setAudioPhase('answer');
     setIsAwaitingRecording(true);
-    // 🚀 iOS環境の場合は、オーディオ競合を防ぐためチャイム音を再生しない
-    const isMobileIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (!isMobileIOS) {
-      playChime();
-    }
+    playChime();
     startRecordingFor(currentQuestion);
   }, [currentQuestion, playChime, startRecordingFor]);
 

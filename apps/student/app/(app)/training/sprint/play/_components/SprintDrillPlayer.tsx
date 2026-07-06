@@ -309,11 +309,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setAudioPhase('answer');
 
     // 3. チャイム再生（非同期）と録音開始（マイクアクティブ化）を同時にパラレル起動
-    // 🚀 iOS環境の場合は、オーディオ競合を防ぐためチャイム音を再生しない
-    const isMobileIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (!isMobileIOS) {
-      playChime();
-    }
+    playChime();
 
     const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
 
