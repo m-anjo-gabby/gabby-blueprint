@@ -92,7 +92,7 @@ export default function StudentDashboard() {
       {/* クイックナビゲーション */}
       <NavigationGrid />
 
-      {/* ────────────── 📊 データ・アナリティクスセクション ────────────── */}
+      {/* ────────────── データ・アナリティクスセクション ────────────── */}
       {/* 💡 改善点: セクション見出しを設けることで、上のナビゲーショングリッドとの境界を明確に分離 */}
       <section className="space-y-4 px-2">
         <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 px-2 select-none">
