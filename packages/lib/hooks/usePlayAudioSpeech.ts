@@ -11,7 +11,7 @@ interface NavigatorWithAudioSession extends Navigator {
 
 /**
  * 音声再生およびダウンロードを管理するカスタムフック
- * Supabase Storageのパス解決からブラウザのダウンロード発火までを一括で扱う
+ * AudioContext と AudioBufferSourceNode を利用して HTMLAudioElement の依存を完全に排除
  */
 export function usePlayAudioSpeech() {
   // 現在再生中のアイテムID（phrase_idなど）
@@ -21,10 +21,13 @@ export function usePlayAudioSpeech() {
   // 再生速度の状態（UI表示用：デフォルトは 1.0）
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
   
-  // 再生制御用の最新値を保持（依存関係のループ防止および再生中の動的変更用）
+  // 再生制御用の最新値を保持
   const currentPlayingIdRef = useRef<string | null>(null);
   const playbackRateRef = useRef<number>(1.0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const audioBufferCacheRef = useRef<Map<string, AudioBuffer>>(new Map());
   
   const supabase = createBrowserClient();
 
@@ -35,87 +38,142 @@ export function usePlayAudioSpeech() {
    * @param options - 再生オプション (restart: true の場合、同じIDでも最初から再生)
    */
   const play = useCallback(async (path: string, id: string, options?: { restart?: boolean }) => {
-    // 同じIDがクリックされた場合
+    // 1. AudioContext の初期化
+    if (!audioCtxRef.current) {
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtxRef.current = new AudioContextClass() as AudioContext;
+      }
+    }
+
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+
+    // 2. iOSの自動再生制限ロックを解除するために同期的に resume する
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+      } catch (e) {
+        console.warn("Failed to resume AudioContext in usePlayAudioSpeech:", e);
+      }
+    }
+
+    // 3. 同じIDがクリックされた場合
     if (currentPlayingIdRef.current === id) {
-      if (options?.restart) {
-        // ドリル用：最初からリスタート
-        if (audioRef.current) {
-          audioRef.current.currentTime = 0;
-          audioRef.current.play().catch(() => {});
-          return;
+      if (!options?.restart) {
+        // トグル停止
+        if (currentSourceRef.current) {
+          try {
+            currentSourceRef.current.stop();
+          } catch (_) {}
+          currentSourceRef.current = null;
         }
-      } else {
-        // アドミン用：トグル（停止）
-        audioRef.current?.pause();
+        setIsPlaying(null);
+        currentPlayingIdRef.current = null;
         return;
       }
     }
 
     // 他の再生中の音声を停止
-    if (audioRef.current) {
-      audioRef.current.pause();
+    if (currentSourceRef.current) {
+      try {
+        currentSourceRef.current.stop();
+      } catch (_) {}
+      currentSourceRef.current = null;
     }
 
     // 公開URLの取得
     const { data } = supabase.storage.from('audio').getPublicUrl(path);
-    
-    const audio = new Audio(data.publicUrl);
-    
-    // 現在の再生速度を適用（Refから取得することで依存配列への追加を回避）
-    audio.playbackRate = playbackRateRef.current;
-    
-    audioRef.current = audio;
-    currentPlayingIdRef.current = id;
-    
-    // イベントハンドラの設定
-    audio.onplay = () => setIsPlaying(id);
-    
-    // 停止・終了・エラー時に状態をクリアする共通処理
-    const clearState = () => {
-      if (currentPlayingIdRef.current === id) {
-        setIsPlaying(null);
-        currentPlayingIdRef.current = null;
+    const bucketUrl = data.publicUrl;
+
+    const startPlayback = (buffer: AudioBuffer) => {
+      const run = () => {
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.playbackRate.value = playbackRateRef.current;
+
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = 1.0;
+
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        currentSourceRef.current = source;
+        currentPlayingIdRef.current = id;
+        setIsPlaying(id);
+
+        const clearState = () => {
+          if (currentPlayingIdRef.current === id) {
+            setIsPlaying(null);
+            currentPlayingIdRef.current = null;
+          }
+          if (currentSourceRef.current === source) {
+            currentSourceRef.current = null;
+          }
+        };
+
+        source.onended = clearState;
+        source.start(0);
+      };
+
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(run).catch(() => {
+          setIsPlaying(null);
+          currentPlayingIdRef.current = null;
+        });
+      } else {
+        run();
       }
     };
 
-    audio.onended = clearState;
-    audio.onpause = clearState;
-    audio.onerror = () => {
-      console.error("Audio playback error");
-      clearState();
-    };
-
-    try {
-      audio.play().catch((error) => {
-        console.error("Playback failed:", error);
-        clearState();
-      });
-    } catch (error) {
-      console.error("Playback execution failed:", error);
-      clearState();
+    // キャッシュ確認
+    const cached = audioBufferCacheRef.current.get(bucketUrl);
+    if (cached) {
+      startPlayback(cached);
+    } else {
+      try {
+        const res = await fetch(bucketUrl);
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        const arrayBuffer = await res.arrayBuffer();
+        const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+        audioBufferCacheRef.current.set(bucketUrl, decodedBuffer);
+        startPlayback(decodedBuffer);
+      } catch (err) {
+        console.error("Audio Context decode error:", err);
+        setIsPlaying(null);
+        currentPlayingIdRef.current = null;
+      }
     }
-  }, [supabase]); // playbackRate や isPlaying に依存しないため参照が安定する
+  }, [supabase]);
 
   /**
    * 音声をプリロード（先読み）する
    * @param path - Supabase Storage内の相対パス
    */
-  const preload = useCallback((path: string) => {
+  const preload = useCallback(async (path: string) => {
     if (!path) return;
+    if (!audioCtxRef.current) {
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtxRef.current = new AudioContextClass() as AudioContext;
+      }
+    }
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+
     const { data } = supabase.storage.from('audio').getPublicUrl(path);
-    
-    const audio = new Audio(data.publicUrl);
-    audio.preload = 'auto';
-    
-    // 読み込み完了またはエラー時に参照を外してメモリを解放
-    const cleanUp = () => {
-      audio.removeEventListener('canplaythrough', cleanUp);
-      audio.removeEventListener('error', cleanUp);
-    };
-    audio.addEventListener('canplaythrough', cleanUp);
-    audio.addEventListener('error', cleanUp);
-    
-    audio.load(); 
+    const bucketUrl = data.publicUrl;
+
+    if (!audioBufferCacheRef.current.has(bucketUrl)) {
+      try {
+        const res = await fetch(bucketUrl);
+        if (res.ok) {
+          const arrayBuffer = await res.arrayBuffer();
+          const decoded = await ctx.decodeAudioData(arrayBuffer);
+          audioBufferCacheRef.current.set(bucketUrl, decoded);
+        }
+      } catch (_) {}
+    }
   }, [supabase]);
 
   /**
@@ -126,8 +184,10 @@ export function usePlayAudioSpeech() {
     setPlaybackRate(rate);
     playbackRateRef.current = rate;
     // 再生中の音声があれば即座に反映
-    if (audioRef.current) {
-      audioRef.current.playbackRate = rate;
+    if (currentSourceRef.current) {
+      try {
+        currentSourceRef.current.playbackRate.value = rate;
+      } catch (_) {}
     }
   }, []);
 
@@ -177,11 +237,17 @@ export function usePlayAudioSpeech() {
           try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
         }
       }
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-        currentPlayingIdRef.current = null;
+      if (currentSourceRef.current) {
+        try {
+          currentSourceRef.current.stop();
+        } catch (_) {}
+        currentSourceRef.current = null;
       }
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+      currentPlayingIdRef.current = null;
     };
   }, []);
 
