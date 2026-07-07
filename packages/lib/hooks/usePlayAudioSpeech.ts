@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { createBrowserClient } from '../supabase/client';
+import { audioBufferCache } from '../sprint/utils';
 
 interface NavigatorWithAudioSession extends Navigator {
   audioSession?: {
@@ -27,7 +28,7 @@ export function usePlayAudioSpeech() {
   
   const audioCtxRef = useRef<AudioContext | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const audioBufferCacheRef = useRef<Map<string, AudioBuffer>>(new Map());
+  // グローバルキャッシュを使用（画面を行き来してもバッファが維持される）
   
   const supabase = createBrowserClient();
 
@@ -127,7 +128,7 @@ export function usePlayAudioSpeech() {
     };
 
     // キャッシュ確認
-    const cached = audioBufferCacheRef.current.get(bucketUrl);
+    const cached = audioBufferCache.get(bucketUrl);
     if (cached) {
       startPlayback(cached);
     } else {
@@ -136,7 +137,7 @@ export function usePlayAudioSpeech() {
         if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
         const arrayBuffer = await res.arrayBuffer();
         const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
-        audioBufferCacheRef.current.set(bucketUrl, decodedBuffer);
+        audioBufferCache.set(bucketUrl, decodedBuffer);
         startPlayback(decodedBuffer);
       } catch (err) {
         console.error("Audio Context decode error:", err);
@@ -164,13 +165,13 @@ export function usePlayAudioSpeech() {
     const { data } = supabase.storage.from('audio').getPublicUrl(path);
     const bucketUrl = data.publicUrl;
 
-    if (!audioBufferCacheRef.current.has(bucketUrl)) {
+    if (!audioBufferCache.has(bucketUrl)) {
       try {
         const res = await fetch(bucketUrl);
         if (res.ok) {
           const arrayBuffer = await res.arrayBuffer();
           const decoded = await ctx.decodeAudioData(arrayBuffer);
-          audioBufferCacheRef.current.set(bucketUrl, decoded);
+          audioBufferCache.set(bucketUrl, decoded);
         }
       } catch (_) {}
     }

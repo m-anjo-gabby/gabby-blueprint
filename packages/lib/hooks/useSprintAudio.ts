@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useRef } from 'react';
-import { setAudioSessionPlayback } from '../sprint/utils';
-import { createChimeAudioBuffer, playChimeBuffer } from '../sprint/utils';
+import { setAudioSessionPlayback, createChimeAudioBuffer, playChimeBuffer, audioBufferCache } from '../sprint/utils';
 
 /**
  * `useSprintAudio` の戻り値
@@ -34,8 +33,6 @@ export interface UseSprintAudioReturn {
   unlockAudioContext: () => Promise<void>;
 }
 
-// デコード済みオーディオバッファのグローバルキャッシュ（画面遷移をまたいで再フェッチを防ぐ）
-const audioBufferCache = new Map<string, AudioBuffer>();
 
 /**
  * Sprint プレイヤー共通のオーディオリソースを管理するフック。

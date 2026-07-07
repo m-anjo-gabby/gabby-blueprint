@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { setAudioSessionPlayback } from '@gabby/lib';
+import { setAudioSessionPlayback, audioBufferCache } from '@gabby/lib';
 
 // 🆕 answered_history 内の個別アイテムの型定義
 interface SprintHistoryItem {
@@ -63,7 +63,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const isBatchPlayingRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const audioBufferCacheRef = useRef<Map<string, AudioBuffer>>(new Map());
+  // グローバルキャッシュを使用（画面遷移後に戻ってきてもバッファを再利用できる）
   const isMountedRef = useRef(true);
  
   const stopAllAudio = useCallback(() => {
@@ -182,7 +182,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
           }
         };
 
-        const cached = audioBufferCacheRef.current.get(bucketUrl);
+        const cached = audioBufferCache.get(bucketUrl);
         if (cached) {
           startPlayback(cached);
         } else {
@@ -193,7 +193,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             })
             .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
             .then((decodedBuffer) => {
-              audioBufferCacheRef.current.set(bucketUrl, decodedBuffer);
+              audioBufferCache.set(bucketUrl, decodedBuffer);
               startPlayback(decodedBuffer);
             })
             .catch((err) => {

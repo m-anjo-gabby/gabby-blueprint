@@ -13,7 +13,7 @@ import {
   type SprintAnswerType,
   type SprintConfig,
 } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord, audioBufferCache } from '@gabby/lib';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 import { createBrowserClient } from '@gabby/lib/supabase/client';
 
@@ -59,7 +59,8 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const supabase = useMemo(() => createBrowserClient(), []);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const startChimeBufferRef = useRef<AudioBuffer | null>(null);
+  // グローバルキャッシュのキーとして使用するチャイムURLを保持
+  const startChimeUrlRef = useRef<string | null>(null);
 
   // 🚀 開始画面マウント時に強制的にオーディオセッションをスピーカー出力(playback)へ戻し、TTSをキャンセルしてクリア状態にする
   useEffect(() => {
@@ -78,18 +79,24 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
       try {
         const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
-        fetch(data.publicUrl)
-          .then((res) => {
-            if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-            return res.arrayBuffer();
-          })
-          .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
-          .then((buffer) => {
-            startChimeBufferRef.current = buffer;
-          })
-          .catch((err) => {
-            console.warn("Failed to load/decode start chime:", err);
-          });
+        const chimeUrl = data.publicUrl;
+        startChimeUrlRef.current = chimeUrl;
+
+        // グローバルキャッシュに溈みのバッファがなければプリロード
+        if (!audioBufferCache.has(chimeUrl)) {
+          fetch(chimeUrl)
+            .then((res) => {
+              if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+              return res.arrayBuffer();
+            })
+            .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
+            .then((buffer) => {
+              audioBufferCache.set(chimeUrl, buffer);
+            })
+            .catch((err) => {
+              console.warn("Failed to load/decode start chime:", err);
+            });
+        }
       } catch (_) {}
     }
 
@@ -297,7 +304,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
           window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
         }
 
-        const buffer = startChimeBufferRef.current;
+        const buffer = startChimeUrlRef.current ? audioBufferCache.get(startChimeUrlRef.current) ?? null : null;
         if (buffer) {
           const source = ctx.createBufferSource();
           source.buffer = buffer;
