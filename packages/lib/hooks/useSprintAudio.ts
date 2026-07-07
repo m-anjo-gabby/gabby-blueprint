@@ -226,3 +226,118 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
     unlockAudioContext,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useChimePlayer
+// SprintSelect などプレイヤー画面に遷移する前の選択・準備画面向けの
+// 軽量 AudioContext フック。stopListening への依存がなく、
+// グローバルの audioBufferCache を活用して再フェッチを防ぐ。
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface UseChimePlayerReturn {
+  /** iOSの自動再生ロックを解除する（ユーザーインタラクション時に呼び出す） */
+  unlockAudioContext: () => Promise<void>;
+  /** グローバルキャッシュに存在するバッファを再生し、終了後に resolve する */
+  playFromCache: (url: string) => Promise<void>;
+  /** 音声ファイルを事前フェッチしてグローバルキャッシュへデコード保存する */
+  preloadUrl: (url: string) => void;
+}
+
+export function useChimePlayer(): UseChimePlayerReturn {
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setAudioSessionPlayback();
+
+    const AudioContextClass =
+      (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtxRef.current = new AudioContextClass() as AudioContext;
+    }
+
+    return () => {
+      setAudioSessionPlayback();
+      if (currentSourceRef.current) {
+        try { currentSourceRef.current.stop(); } catch (_) {}
+        currentSourceRef.current = null;
+      }
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+    };
+  }, []);
+
+  const unlockAudioContext = useCallback(async () => {
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      try {
+        await audioCtxRef.current.resume();
+      } catch (e) {
+        console.warn('Failed to resume AudioContext in useChimePlayer:', e);
+      }
+    }
+  }, []);
+
+  const preloadUrl = useCallback((url: string) => {
+    if (!url || audioBufferCache.has(url)) return;
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
+      .then((buffer) => {
+        audioBufferCache.set(url, buffer);
+      })
+      .catch((err) => {
+        console.warn('Failed to preload audio in useChimePlayer:', err);
+      });
+  }, []);
+
+  const playFromCache = useCallback((url: string): Promise<void> => {
+    return new Promise((resolve) => {
+      const ctx = audioCtxRef.current;
+      const buffer = audioBufferCache.get(url);
+
+      if (!ctx || !buffer) {
+        resolve();
+        return;
+      }
+
+      if (currentSourceRef.current) {
+        try { currentSourceRef.current.stop(); } catch (_) {}
+        currentSourceRef.current = null;
+      }
+
+      const run = () => {
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        currentSourceRef.current = source;
+
+        source.onended = () => {
+          if (currentSourceRef.current === source) {
+            currentSourceRef.current = null;
+          }
+          resolve();
+        };
+
+        source.start(0);
+      };
+
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(run).catch(() => resolve());
+      } else {
+        run();
+      }
+    });
+  }, []);
+
+  return { unlockAudioContext, playFromCache, preloadUrl };
+}

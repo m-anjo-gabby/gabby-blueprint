@@ -13,8 +13,9 @@ import {
   type SprintAnswerType,
   type SprintConfig,
 } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord, audioBufferCache } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
+import { useChimePlayer } from '@gabby/lib/hooks/useSprintAudio';
 import { createBrowserClient } from '@gabby/lib/supabase/client';
 
 import {
@@ -58,54 +59,21 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   // Supabaseクライアントの初期化
   const supabase = useMemo(() => createBrowserClient(), []);
 
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  // グローバルキャッシュのキーとして使用するチャイムURLを保持
-  const startChimeUrlRef = useRef<string | null>(null);
+  // 開始チャイムの AudioContext 管理（プリロード・再生・ロック解除）
+  const { unlockAudioContext: unlockChime, playFromCache, preloadUrl } = useChimePlayer();
 
-  // 🚀 開始画面マウント時に強制的にオーディオセッションをスピーカー出力(playback)へ戻し、TTSをキャンセルしてクリア状態にする
+  // 🚀 開始画面マウント時に TTSキャンセル + チャイムのプリロード
   useEffect(() => {
-    setAudioSessionPlayback();
     if (typeof window === 'undefined') return;
 
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
 
-    // 開始チャイム用の AudioContext とバッファのプリロード
-    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (AudioContextClass) {
-      const ctx = new AudioContextClass() as AudioContext;
-      audioCtxRef.current = ctx;
-
-      try {
-        const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
-        const chimeUrl = data.publicUrl;
-        startChimeUrlRef.current = chimeUrl;
-
-        // グローバルキャッシュに溈みのバッファがなければプリロード
-        if (!audioBufferCache.has(chimeUrl)) {
-          fetch(chimeUrl)
-            .then((res) => {
-              if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-              return res.arrayBuffer();
-            })
-            .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
-            .then((buffer) => {
-              audioBufferCache.set(chimeUrl, buffer);
-            })
-            .catch((err) => {
-              console.warn("Failed to load/decode start chime:", err);
-            });
-        }
-      } catch (_) {}
-    }
-
-    return () => {
-      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-        audioCtxRef.current.close().catch(() => {});
-        audioCtxRef.current = null;
-      }
-    };
+    // グローバルキャッシュを使って開始チャイムを事前ロード（キャッシュ済みならスキップ）
+    const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
+    preloadUrl(data.publicUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   // ストアから設定更新アクションと現在のconfigを取得
@@ -291,42 +259,23 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     const safetyTimer = setTimeout(navigateToPlayer, 2500);
 
     // 🚀 2. 同期ジェスチャーコンテキストの最前線で AudioContext を resume する
-    const ctx = audioCtxRef.current;
-    if (ctx) {
-      try {
-        setAudioSessionPlayAndRecord();
-        if (ctx.state === 'suspended') {
-          await ctx.resume();
-        }
+    const chimeUrl = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3').data.publicUrl;
+    try {
+      setAudioSessionPlayAndRecord();
+      await unlockChime();
 
-        // TTS のウォームアップ空読み
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
-          window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-        }
+      // TTS のウォームアップ空読み
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+      }
 
-        const buffer = startChimeUrlRef.current ? audioBufferCache.get(startChimeUrlRef.current) ?? null : null;
-        if (buffer) {
-          const source = ctx.createBufferSource();
-          source.buffer = buffer;
-          source.connect(ctx.destination);
-          
-          source.onended = () => {
-            clearTimeout(safetyTimer);
-            navigateToPlayer();
-          };
-          
-          source.start(0);
-        } else {
-          // チャイムバッファが未デコードだった場合は即時遷移
-          clearTimeout(safetyTimer);
-          navigateToPlayer();
-        }
-      } catch (err) {
-        console.warn("Chime Web Audio play failed:", err);
+      // チャイムを再生し、終了後に遷移（キャッシュになければ即時遷移）
+      playFromCache(chimeUrl).then(() => {
         clearTimeout(safetyTimer);
         navigateToPlayer();
-      }
-    } else {
+      });
+    } catch (err) {
+      console.warn("Chime Web Audio play failed:", err);
       clearTimeout(safetyTimer);
       navigateToPlayer();
     }
