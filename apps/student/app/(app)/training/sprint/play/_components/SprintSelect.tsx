@@ -198,6 +198,46 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     return items;
   }, [selectedType, userProgress]);
 
+  // 🚀 マイク未許可状態から、ウォームアップ（getUserMedia）を行い、許可プロンプトを表示する
+  const handleWarmupAndRequestMic = async () => {
+    setIsPreparing(true);
+    try {
+      // 1. 同期スレッド内でオーディオセッションを録音モードに設定
+      setAudioSessionPlayAndRecord();
+
+      // 2. マイクのウォームアップ＆プロンプト起動
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // 3. 取得した一時ストリームはクリーンアップ
+      stream.getTracks().forEach(track => track.stop());
+
+      // 4. マイクパーミッションフックを更新
+      await requestMicPermission();
+    } catch (e) {
+      console.warn("Mic permission denied or failed:", e);
+      // 許可が得られなかった（キャンセルされた）場合は確認ダイアログ
+      const confirmed = await showConfirm(
+        'マイクが許可されていません',
+        '発話の評価を行わずにトレーニングを開始しますか？（スキップボタンで発話をパスしながら進めることになります）',
+        { variant: 'info' }
+      );
+      if (confirmed) {
+        // マイク無しモードで即時に遷移
+        const resolvedAnswerType: SprintAnswerType = '0';
+        setConfig({ answerType: resolvedAnswerType });
+        onStart({
+          mode,
+          questionType: selectedType,
+          level: selectedLevel,
+          timeLimitSec: selectedTimeLimitSec,
+          answerType: resolvedAnswerType,
+        });
+      }
+    } finally {
+      setIsPreparing(false);
+    }
+  };
+
   const handleStartSubmit = async (answerType: SprintAnswerType = '0') => {
     // 1. スプリント開始時に準備中フラグをON
     setIsPreparing(true);
@@ -249,30 +289,10 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     // ロードラグやマイク応答待ちに対するセーフティタイマー（2.5秒）
     const safetyTimer = setTimeout(navigateToPlayer, 2500);
 
-    // 🚀 3. マイク権限チェックに進む (非同期 await)
-    let isMicGranted = micStatus === 'granted';
-    if (!isMicGranted) {
-      isMicGranted = await requestMicPermission();
-    } else {
-      // すでにマイク許可済の場合でも、セッションカテゴリが playback に戻っている可能性があるため play-and-record を再設定
+    // 🚀 3. マイク設定
+    const isMicGranted = micStatus === 'granted';
+    if (isMicGranted) {
       setAudioSessionPlayAndRecord();
-    }
-
-    if (!isMicGranted) {
-      const confirmed = await showConfirm(
-        'マイクが許可されていません',
-        '発話の評価を行わずにトレーニングを開始しますか？（スキップボタンで発話をパスしながら進めることになります）',
-        { variant: 'info' }
-      );
-      if (!confirmed) {
-        // キャンセル時は再生中の音声を停止し、タイマーをクリアして終了
-        if (startAudio) {
-          try { startAudio.pause(); } catch (_) {}
-        }
-        clearTimeout(safetyTimer);
-        setIsPreparing(false);
-        return;
-      }
     }
 
     // ストア側のanswerTypeも確定タイミングで同期
@@ -286,8 +306,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       answerType: (mode === 'sprint' && selectedType === '0') ? answerType : '0'
     };
 
-    // 🚀 4. 再生成功時のタイマー解除および即時遷移ガード
-    // マイク許可ダイアログ操作中に既に再生が完了していた場合、または音声の初期化ができなかった場合は即時に遷移
+    // 🚀 4. 即時遷移ガード
     if (!startAudio || startAudio.ended || isMicGranted === false) {
       clearTimeout(safetyTimer);
       navigateToPlayer();
@@ -703,7 +722,43 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
         {/* 下部確定エリア */}
         <div className="px-6 pt-4 shrink-0 bg-white pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.015)] z-20">
           <div className="w-full max-w-xl mx-auto">
-            {mode === 'sprint' && isSpeedSelected ? (
+            {micStatus === 'prompt' ? (
+              // 🚀 マイク未許可時：マイク許可を促すボタンを表示
+              <button
+                type="button"
+                onClick={handleWarmupAndRequestMic}
+                disabled={isPreparing}
+                className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.15em] shadow-lg shadow-indigo-600/15 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-2 disabled:opacity-85 cursor-pointer border-none"
+              >
+                {isPreparing ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                ) : (
+                  <>
+                    <Mic size={14} className="text-indigo-200 shrink-0" />
+                    <span>タップしてマイクを許可する</span>
+                    <ArrowRight size={14} strokeWidth={3} className="shrink-0" />
+                  </>
+                )}
+              </button>
+            ) : micStatus === 'denied' ? (
+              // 🚀 マイクブロック時：発話なしでの開始ボタンを表示
+              <button
+                type="button"
+                onClick={() => handleStartSubmit('0')}
+                disabled={isPreparing}
+                className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.15em] shadow-lg shadow-rose-600/10 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-2 disabled:opacity-85 cursor-pointer border-none"
+              >
+                {isPreparing ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                ) : (
+                  <>
+                    <AlertCircle size={14} className="text-rose-200 shrink-0" />
+                    <span>マイクをブロック中（発話なしで開始）</span>
+                    <ArrowRight size={14} strokeWidth={3} className="shrink-0" />
+                  </>
+                )}
+              </button>
+            ) : mode === 'sprint' && isSpeedSelected ? (
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => handleStartSubmit('0')}
