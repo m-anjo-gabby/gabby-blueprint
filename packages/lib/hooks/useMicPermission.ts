@@ -20,15 +20,31 @@ export interface UseMicPermissionReturn {
 const warmupAudioSession = () => {
   if (typeof window === 'undefined') return;
   try {
-    const audio = new Audio();
-    // 1ドットの無音 wav データ
-    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
-    audio.play().catch(() => {});
+    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      const ctx = new AudioContextClass() as AudioContext;
+      // 1サンプルの無音バッファを作成
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
+      // 使用後にクローズしてリソースを解放
+      setTimeout(() => {
+        ctx.close().catch(() => {});
+      }, 500);
+    }
+
     if (window.speechSynthesis) {
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
     }
   } catch (e) {
-    console.warn('Audio session warmup failed:', e);
+    console.warn('Audio session warmup failed via Web Audio API:', e);
   }
 };
 

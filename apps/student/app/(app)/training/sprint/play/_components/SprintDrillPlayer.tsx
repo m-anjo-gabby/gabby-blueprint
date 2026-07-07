@@ -65,9 +65,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const { startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
-  // オーディオリソース（nativeAudio / AudioContext / チャイム / 再生Promise）を共通フックで管理
+  // オーディオリソース（AudioContext / チャイム / 再生Promise）を共通フックで管理
   // マウント/アンマウント時の初期化・クリーンアップも内部で行う
-  const { nativeAudioRef, playTrack: playTrackBase, playChime } = useSprintAudio(stopListening);
+  const { playTrack: playTrackBase, playChime, stopTrack, unlockAudioContext } = useSprintAudio(stopListening);
 
   const totalQuestions = questions?.length || 0;
   const currentQuestion = questions?.[currentIndex];
@@ -146,16 +146,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       clearTimeout(autoPlayTimerRef.current);
       autoPlayTimerRef.current = null;
     }
-    // 使い回しの Audio インスタンスがあれば停止し、完全にリソースアンロード（解放）する
-    if (nativeAudioRef.current) {
-      try {
-        nativeAudioRef.current.pause();
-        nativeAudioRef.current.onended = null;
-        nativeAudioRef.current.onerror = null;
-        nativeAudioRef.current.src = '';
-        nativeAudioRef.current.load();
-      } catch (_) {}
-    }
+    // 音声を停止
+    stopTrack();
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     // マイクを強制停止 (abort)
     stopListening();
@@ -249,15 +241,17 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   }, [playSingleTrack, setPlayingAnswerSequence]);
 
   // 🎮 操作ハンドラー
-  const handleReveal = useCallback(() => {
+  const handleReveal = useCallback(async () => {
     if (!isStarted || !currentQuestion || isRevealed) return;
+    await unlockAudioContext();
     stopAllAudio();
     setIsRevealed(true);
-  }, [isStarted, currentQuestion, isRevealed, setIsRevealed, stopAllAudio]);
+  }, [isStarted, currentQuestion, isRevealed, setIsRevealed, stopAllAudio, unlockAudioContext]);
 
   const handleNext = useCallback(async () => {
     if (isNavigating.current) return;
     isNavigating.current = true;
+    await unlockAudioContext();
     stopAllAudio();
     
     const { isLast } = nextStep();
@@ -272,31 +266,34 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       onExit?.();
     }
     setTimeout(() => { isNavigating.current = false; }, 400);
-  }, [stopAllAudio, nextStep, toggleAutoPlay, showToast, onExit, syncProgressNow]);
+  }, [stopAllAudio, nextStep, toggleAutoPlay, showToast, onExit, syncProgressNow, unlockAudioContext]);
 
   const handleNextRef = useRef(handleNext);
   useEffect(() => {
     handleNextRef.current = handleNext;
   }, [handleNext]);
 
-  const handlePrev = useCallback(() => {
+  const handlePrev = useCallback(async () => {
     if (isNavigating.current) return;
     isNavigating.current = true;
+    await unlockAudioContext();
     stopAllAudio();
     prevStep();
     setTimeout(() => { isNavigating.current = false; }, 400);
-  }, [stopAllAudio, prevStep]);
+  }, [stopAllAudio, prevStep, unlockAudioContext]);
 
-  const handleManualPlayAudio = useCallback(() => {
+  const handleManualPlayAudio = useCallback(async () => {
     if (isRecording || !currentQuestion) return;
+    await unlockAudioContext();
     stopAllAudio();
     playQuestionSequence(currentQuestion, flowIdRef.current);
-  }, [currentQuestion, isRecording, playQuestionSequence, stopAllAudio]);
+  }, [currentQuestion, isRecording, playQuestionSequence, stopAllAudio, unlockAudioContext]);
 
-  const handleIndividualPlayAudio = useCallback((voiceUrl: string | null, text: string) => {
+  const handleIndividualPlayAudio = useCallback(async (voiceUrl: string | null, text: string) => {
     if (isRecording || isAutoPlayingRef.current) return; 
+    await unlockAudioContext();
     playSingleTrack(text, voiceUrl);
-  }, [playSingleTrack, isRecording, isAutoPlayingRef]);
+  }, [playSingleTrack, isRecording, isAutoPlayingRef, unlockAudioContext]);
 
   const handleSelectRate = useCallback((targetRate: number) => {
     changePlaybackRate(targetRate);
@@ -306,6 +303,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const handleStartRecord = useCallback(async () => {
     if (!currentQuestion) return;
+    await unlockAudioContext();
 
     const targetText = (questionType === '0')
       ? (drillEvalType === 'no' ? (currentQuestion.answer_sentence_no_en ?? "") : currentQuestion.answer_sentence_yes_en)

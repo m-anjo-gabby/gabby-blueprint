@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { setAudioSessionPlayback } from '@gabby/lib';
 
 // 🆕 answered_history 内の個別アイテムの型定義
 interface SprintHistoryItem {
@@ -60,14 +61,17 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   };
  
   const isBatchPlayingRef = useRef(false);
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const audioBufferCacheRef = useRef<Map<string, AudioBuffer>>(new Map());
   const isMountedRef = useRef(true);
  
   const stopAllAudio = useCallback(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
+    if (currentSourceRef.current) {
+      try {
+        currentSourceRef.current.stop();
+      } catch (_) {}
+      currentSourceRef.current = null;
     }
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -75,15 +79,38 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     setPlayingId(null);
   }, []);
  
-  // 🚀 結果画面アンマウント時に再生中の音声を停止するクリーンアップのみを行う
+  // 🚀 マウント時の初期化とアンマウント時のクリーンアップ
   useEffect(() => {
     isMountedRef.current = true;
+
+    // 前の画面でマイクが使われていた場合、確実にスピーカー出力へ戻す
+    setAudioSessionPlayback();
+
+    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtxRef.current = new AudioContextClass() as AudioContext;
+    }
+
     return () => {
       isMountedRef.current = false;
       isBatchPlayingRef.current = false;
       stopAllAudio();
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
     };
   }, [stopAllAudio]);
+
+  const unlockAudioContext = useCallback(async () => {
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      try {
+        await audioCtxRef.current.resume();
+      } catch (e) {
+        console.warn("Failed to resume AudioContext in SprintResult:", e);
+      }
+    }
+  }, []);
  
   useEffect(() => {
     if (focusedCardId && isBatchPlaying) {
@@ -104,7 +131,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     isManualClick = false
   ): Promise<void> => {
     return new Promise((resolve) => {
-      if (!isMountedRef.current) {
+      if (!isMountedRef.current || !audioCtxRef.current) {
         resolve();
         return;
       }
@@ -118,17 +145,63 @@ export const SprintResult: React.FC<SprintResultProps> = ({
  
       if (audioPath) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = new Audio(bucketUrl);
-        audio.playbackRate = playbackRate;
-        currentAudioRef.current = audio;
-        audio.onended = () => { currentAudioRef.current = null; setPlayingId(null); resolve(); };
-        audio.onerror = () => { currentAudioRef.current = null; setPlayingId(null); resolve(); };
-        if (!isMountedRef.current) {
-          currentAudioRef.current = null;
-          resolve();
-          return;
+        const ctx = audioCtxRef.current;
+
+        const startPlayback = (buffer: AudioBuffer) => {
+          const run = () => {
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.playbackRate.value = playbackRate;
+
+            const gainNode = ctx.createGain();
+            gainNode.gain.value = 1.0;
+
+            source.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            currentSourceRef.current = source;
+
+            source.onended = () => {
+              if (currentSourceRef.current === source) {
+                currentSourceRef.current = null;
+              }
+              setPlayingId(null);
+              resolve();
+            };
+
+            source.start(0);
+          };
+
+          if (ctx.state === 'suspended') {
+            ctx.resume().then(run).catch(() => {
+              setPlayingId(null);
+              resolve();
+            });
+          } else {
+            run();
+          }
+        };
+
+        const cached = audioBufferCacheRef.current.get(bucketUrl);
+        if (cached) {
+          startPlayback(cached);
+        } else {
+          fetch(bucketUrl)
+            .then((res) => {
+              if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+              return res.arrayBuffer();
+            })
+            .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
+            .then((decodedBuffer) => {
+              audioBufferCacheRef.current.set(bucketUrl, decodedBuffer);
+              startPlayback(decodedBuffer);
+            })
+            .catch((err) => {
+              console.warn("Decode error in SprintResult:", err);
+              setPlayingId(null);
+              resolve();
+            });
         }
-        audio.play().catch(() => { currentAudioRef.current = null; setPlayingId(null); resolve(); });
       } else {
         setPlayingId(null);
         resolve();
@@ -137,6 +210,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   };
 
   const handlePlaySingleQuestion = async (q: any) => {
+    await unlockAudioContext();
     isBatchPlayingRef.current = false;
     setIsBatchPlaying(false);
     stopAllAudio();
@@ -172,6 +246,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   };
 
   const handlePlayAll = async () => {
+    await unlockAudioContext();
     if (isBatchPlayingRef.current) {
       isBatchPlayingRef.current = false;
       setIsBatchPlaying(false);

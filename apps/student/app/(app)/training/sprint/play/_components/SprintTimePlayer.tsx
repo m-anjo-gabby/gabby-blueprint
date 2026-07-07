@@ -65,9 +65,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const { startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
-  // オーディオリソース（nativeAudio / AudioContext / チャイム / 再生Promise）を共通フックで管理
+  // オーディオリソース（AudioContext / チャイム / 再生Promise）を共通フックで管理
   // マウント/アンマウント時の初期化・クリーンアップも内部で行う
-  const { nativeAudioRef, playTrack: playTrackBase, playChime } = useSprintAudio(stopListening);
+  const { playTrack: playTrackBase, playChime, stopTrack, unlockAudioContext } = useSprintAudio(stopListening);
 
   // マイク権限の監視（SprintTimePlayer ではテスト機能は使わず、micStatus のみ参照）
   const { micStatus } = useMicPermission();
@@ -143,16 +143,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // タイムアップ・スキップ・終了の全経路でマイクが確実に解放される
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1;
-    // 使い回しの Audio インスタンスがあれば停止し、完全にリソースアンロード（解放）する
-    if (nativeAudioRef.current) {
-      try {
-        nativeAudioRef.current.pause();
-        nativeAudioRef.current.onended = null;
-        nativeAudioRef.current.onerror = null;
-        nativeAudioRef.current.src = '';
-        nativeAudioRef.current.load();
-      } catch (_) {}
-    }
+    // 音声を停止
+    stopTrack();
     if (typeof window !== 'undefined') window.speechSynthesis.cancel();
     // マイク入力を即時停止 (abort)
     stopListening();
@@ -243,8 +235,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [stopAllAudio, resetStore, router, showToast, onExit, currentIndex, questions, questionType, answerType, level, timeLimitSec]);
 
-  const handleGoToResult = useCallback(() => {
+  const handleGoToResult = useCallback(async () => {
     if (resultId) {
+      await unlockAudioContext();
       stopAllAudio(); // stopListening と audioSession リセットを含む
       resetStore();
       // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために250msの安全バッファを置いてから遷移する
@@ -252,7 +245,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         router.push(`/training/sprint/result/${resultId}`);
       }, 250);
     }
-  }, [resultId, router, stopAllAudio, resetStore]);
+  }, [resultId, router, stopAllAudio, resetStore, unlockAudioContext]);
 
 
   // 評価コールバックを含む純粋な録音開始関数
@@ -349,11 +342,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 手動録音ボタン用（マイクボタンタップ時）
   const handleStartRecord = useCallback(async () => {
     if (!currentQuestion) return;
+    await unlockAudioContext();
     setAudioPhase('answer');
     setIsAwaitingRecording(true);
     playChime();
     startRecordingFor(currentQuestion);
-  }, [currentQuestion, playChime, startRecordingFor]);
+  }, [currentQuestion, playChime, startRecordingFor, unlockAudioContext]);
 
   const handleStopRecord = useCallback(() => {
     setIsAwaitingRecording(false);
@@ -361,9 +355,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     stopListening();
   }, [setIsRecording, stopListening]);
 
-  const handleSkipQuestion = useCallback(() => {
+  const handleSkipQuestion = useCallback(async () => {
     if (!currentQuestion) return;
 
+    await unlockAudioContext();
     skippedQuestionIdsRef.current.add(currentQuestion.question_id);
 
     stopAllAudio(); // stopListening + audioSession 'playback' + 録音 UI リセットをすべて含む

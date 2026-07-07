@@ -8,9 +8,7 @@ import { createChimeAudioBuffer, playChimeBuffer } from '../sprint/utils';
  * `useSprintAudio` の戻り値
  */
 export interface UseSprintAudioReturn {
-  /** 使い回す HTMLAudioElement インスタンス（iOS 自動再生ポリシー回避） */
-  nativeAudioRef: React.RefObject<HTMLAudioElement | null>;
-  /** チャイム再生専用の AudioContext */
+  /** チャイムおよびトラック再生用の AudioContext */
   audioCtxRef: React.RefObject<AudioContext | null>;
   /** 事前デコード済みチャイム AudioBuffer */
   chimeBufferRef: React.RefObject<AudioBuffer | null>;
@@ -30,36 +28,33 @@ export interface UseSprintAudioReturn {
   ) => Promise<void>;
   /** チャイム音を AudioContext 経由で再生する */
   playChime: () => Promise<void>;
+  /** 現在再生中の音声トラックを即時停止する */
+  stopTrack: () => void;
+  /** iOSの自動再生制限ロックを解除するためにユーザーインタラクション時に呼び出す */
+  unlockAudioContext: () => Promise<void>;
 }
+
+// デコード済みオーディオバッファのグローバルキャッシュ（画面遷移をまたいで再フェッチを防ぐ）
+const audioBufferCache = new Map<string, AudioBuffer>();
 
 /**
  * Sprint プレイヤー共通のオーディオリソースを管理するフック。
  *
  * ## 役割
- * - SprintDrillPlayer / SprintTimePlayer の重複していたマウント/アンマウント処理を統合
- * - nativeAudio インスタンスの生成・停止・破棄
- * - チャイム用 AudioContext の生成・バッファ事前デコード・破棄
- * - setAudioSessionPlayback による iOS WebKit 受話器モード防止
- *
- * ## 設計上の注意
- * - このフックは `stopListening`（useWebSpeech）を引数に受け取る。
- *   マウント/アンマウント時に必ず `stopListening()` を呼ぶことで、
- *   前の画面から残留した認識インスタンスを確実に破棄する。
+ * - AudioContext と AudioBufferSourceNode を用いた高品質かつ安定した音声再生
+ * - HTMLAudioElement の完全な排除による iOS WebKit 自動再生ロック問題の解消
+ * - 再生中ソースノードの確実な追跡・停止 (stopTrack)
  *
  * @param stopListening useWebSpeech から受け取った stopListening 関数
  */
 export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn {
-  const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const chimeBufferRef = useRef<AudioBuffer | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   // ─── マウント時の初期化 / アンマウント時のクリーンアップ ────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    // iOSの自動再生ポリシー回避のため、単一の Audio インスタンスをマウント時に生成して使い回す
-    nativeAudioRef.current = new Audio();
-    nativeAudioRef.current.volume = 1.0;
 
     // 前画面からの残留を防ぐため、マウント時に強制的にスピーカー出力へ戻す
     setAudioSessionPlayback();
@@ -70,7 +65,7 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
       window.speechSynthesis.cancel();
     }
 
-    // チャイム用 AudioContext を生成（nativeAudio の src 切り替えと完全に独立したチャンネル）
+    // 再生用 AudioContext を生成
     const AudioContextClass =
       (window as any).AudioContext || (window as any).webkitAudioContext;
     if (AudioContextClass) {
@@ -95,10 +90,12 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
         window.speechSynthesis.cancel();
       }
 
-      // 再生中の Audio インスタンスを停止・破棄
-      if (nativeAudioRef.current) {
-        nativeAudioRef.current.pause();
-        nativeAudioRef.current = null;
+      // 再生中のソースノードがあれば停止
+      if (currentSourceRef.current) {
+        try {
+          currentSourceRef.current.stop();
+        } catch (_) {}
+        currentSourceRef.current = null;
       }
 
       // AudioContext を閉じる
@@ -107,8 +104,31 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
         audioCtxRef.current = null;
       }
     };
-    // stopListening は useWebSpeech の useCallback で安定しているため deps に含めて問題なし
   }, [stopListening]);
+
+  // ─── 音声再生停止 ────────────────────────────────────────────────────────
+  const stopTrack = useCallback(() => {
+    if (currentSourceRef.current) {
+      try {
+        currentSourceRef.current.stop();
+      } catch (_) {}
+      currentSourceRef.current = null;
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
+  // ─── iOS 自動再生ロック解除用 ──────────────────────────────────────────────
+  const unlockAudioContext = useCallback(async () => {
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      try {
+        await audioCtxRef.current.resume();
+      } catch (e) {
+        console.warn('Failed to resume AudioContext:', e);
+      }
+    }
+  }, []);
 
   // ─── 音声ファイル再生 ────────────────────────────────────────────────────
   const playTrack = useCallback((
@@ -123,51 +143,74 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
         return;
       }
 
-      // 直前に再生中のインスタンスがあれば停止（src 切り替え時のプチプチノイズを防ぐ）
-      if (nativeAudioRef.current) {
-        nativeAudioRef.current.pause();
-        nativeAudioRef.current.onended = null;
-        nativeAudioRef.current.onerror = null;
-      }
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      // 直前に再生中のソースがあれば停止
+      stopTrack();
 
-      if (audioPath && nativeAudioRef.current) {
+      if (audioPath && audioCtxRef.current) {
         const bucketUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/${audioPath}`;
-        const audio = nativeAudioRef.current;
+        const ctx = audioCtxRef.current;
 
-        const cleanupAndResolve = () => {
-          audio.onended = null;
-          audio.onerror = null;
-          audio.pause();
-          try {
-            // リソースを空にしてアンロードし、iOSのオーディオセッションロックを確実に解除する
-            audio.src = '';
-            audio.load();
-          } catch (_) {}
-          resolve();
+        const startPlayback = (buffer: AudioBuffer) => {
+          const run = () => {
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.playbackRate.value = opts.playbackRate ?? 1.0;
+
+            const gainNode = ctx.createGain();
+            gainNode.gain.value = 1.0;
+
+            source.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            currentSourceRef.current = source;
+
+            source.onended = () => {
+              if (currentSourceRef.current === source) {
+                currentSourceRef.current = null;
+              }
+              resolve();
+            };
+
+            source.start(0);
+          };
+
+          if (ctx.state === 'suspended') {
+            ctx.resume().then(run).catch(() => resolve());
+          } else {
+            run();
+          }
         };
 
-        audio.src = bucketUrl;
-        audio.playbackRate = opts.playbackRate ?? 1.0;
-        audio.onended = cleanupAndResolve;
-        audio.onerror = cleanupAndResolve; // エラー時は即時スキップ
-        
-        audio.play().catch((err) => {
-          console.warn('Audio play failed, skipping:', err);
-          cleanupAndResolve();
-        });
+        // キャッシュチェック、存在しなければ取得とデコード
+        const cached = audioBufferCache.get(bucketUrl);
+        if (cached) {
+          startPlayback(cached);
+        } else {
+          fetch(bucketUrl)
+            .then((res) => {
+              if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+              return res.arrayBuffer();
+            })
+            .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
+            .then((decodedBuffer) => {
+              audioBufferCache.set(bucketUrl, decodedBuffer);
+              startPlayback(decodedBuffer);
+            })
+            .catch((err) => {
+              console.warn('Audio Context decode error, fallback resolve:', err);
+              resolve(); // エラー時も停止せずに処理を進める
+            });
+        }
       } else {
         // audioPath が null の場合は即時スキップ
         resolve();
       }
     });
-  }, []);
+  }, [stopTrack]);
 
   // ─── チャイム再生 ─────────────────────────────────────────────────────────
   const playChime = useCallback((): Promise<void> => {
-    // 🚀 iOS環境の場合はオーディオ競合（ハング・エコーキャンセラー暴走）を防ぐためチャイム再生を抑止
+    // iOS環境の場合はオーディオ競合（ハング・エコーキャンセラー暴走）を防ぐためチャイム再生を抑止
     const isMobileIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (isMobileIOS) {
       return Promise.resolve();
@@ -178,10 +221,11 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
   }, []);
 
   return {
-    nativeAudioRef,
     audioCtxRef,
     chimeBufferRef,
     playTrack,
     playChime,
+    stopTrack,
+    unlockAudioContext,
   };
 }

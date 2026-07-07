@@ -58,21 +58,47 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   // Supabaseクライアントの初期化
   const supabase = useMemo(() => createBrowserClient(), []);
 
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const startChimeBufferRef = useRef<AudioBuffer | null>(null);
+
   // 🚀 開始画面マウント時に強制的にオーディオセッションをスピーカー出力(playback)へ戻し、TTSをキャンセルしてクリア状態にする
   useEffect(() => {
     setAudioSessionPlayback();
-    if (typeof window !== 'undefined') {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-      // 🚀 アナウンス音声を事前にブラウザのキャッシュにロードしてスタンバイしておく
+    if (typeof window === 'undefined') return;
+
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    // 開始チャイム用の AudioContext とバッファのプリロード
+    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      const ctx = new AudioContextClass() as AudioContext;
+      audioCtxRef.current = ctx;
+
       try {
-        const { data: startData } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
-        const startAudio = new Audio(startData.publicUrl);
-        startAudio.preload = 'auto';
-        startAudio.load();
+        const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
+        fetch(data.publicUrl)
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+            return res.arrayBuffer();
+          })
+          .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
+          .then((buffer) => {
+            startChimeBufferRef.current = buffer;
+          })
+          .catch((err) => {
+            console.warn("Failed to load/decode start chime:", err);
+          });
       } catch (_) {}
     }
+
+    return () => {
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+    };
   }, [supabase]);
 
   // ストアから設定更新アクションと現在のconfigを取得
@@ -242,52 +268,61 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     // 1. スプリント開始時に準備中フラグをON
     setIsPreparing(true);
 
-    // 🚀 2. 最先頭（同期ジェスチャーコンテキストの最前線）で音声オブジェクトを作成し、
-    // セッションカテゴリを play-and-record (スピーカー優先) にして即時再生を開始する！
-    // これにより iOS Safari での非同期 await 後の再生ブロック制限を完全に回避します。
-    let startAudio: HTMLAudioElement | null = null;
     let hasNavigated = false;
     let finalConfigObj: any = null;
-
-    if (typeof window !== 'undefined') {
-      try {
-        setAudioSessionPlayAndRecord();
-        const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
-        startAudio = new Audio(data.publicUrl);
-        startAudio.preload = 'auto';
-
-        // TTS のウォームアップ空読み
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-
-        // 再生開始（ジェスチャー同期スレッド内）
-        startAudio.play().catch(err => {
-          console.warn("Chime play error:", err);
-        });
-      } catch (e) {
-        console.warn("Chime init error:", e);
-      }
-    }
 
     // プレイヤー遷移ハンドラー
     const navigateToPlayer = () => {
       if (hasNavigated) return;
       hasNavigated = true;
-      if (startAudio) {
-        startAudio.removeEventListener('ended', navigateToPlayer);
-        startAudio.removeEventListener('error', navigateToPlayer);
-      }
       if (finalConfigObj) {
         onStart(finalConfigObj);
       }
     };
 
-    if (startAudio) {
-      startAudio.addEventListener('ended', navigateToPlayer);
-      startAudio.addEventListener('error', navigateToPlayer);
-    }
-
     // ロードラグやマイク応答待ちに対するセーフティタイマー（2.5秒）
     const safetyTimer = setTimeout(navigateToPlayer, 2500);
+
+    // 🚀 2. 同期ジェスチャーコンテキストの最前線で AudioContext を resume する
+    const ctx = audioCtxRef.current;
+    if (ctx) {
+      try {
+        setAudioSessionPlayAndRecord();
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+
+        // TTS のウォームアップ空読み
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+          window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+        }
+
+        const buffer = startChimeBufferRef.current;
+        if (buffer) {
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          
+          source.onended = () => {
+            clearTimeout(safetyTimer);
+            navigateToPlayer();
+          };
+          
+          source.start(0);
+        } else {
+          // チャイムバッファが未デコードだった場合は即時遷移
+          clearTimeout(safetyTimer);
+          navigateToPlayer();
+        }
+      } catch (err) {
+        console.warn("Chime Web Audio play failed:", err);
+        clearTimeout(safetyTimer);
+        navigateToPlayer();
+      }
+    } else {
+      clearTimeout(safetyTimer);
+      navigateToPlayer();
+    }
 
     // 🚀 3. マイク設定
     const isMicGranted = micStatus === 'granted';
@@ -305,12 +340,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       timeLimitSec: selectedTimeLimitSec,
       answerType: (mode === 'sprint' && selectedType === '0') ? answerType : '0'
     };
-
-    // 🚀 4. 即時遷移ガード
-    if (!startAudio || startAudio.ended || isMicGranted === false) {
-      clearTimeout(safetyTimer);
-      navigateToPlayer();
-    }
   };
 
   const isSpeedSelected = selectedType === '0';
