@@ -44,6 +44,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
   const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying);
   const isPlayingQuestionSequence = useSprintStore((state) => state.isPlayingQuestionSequence);
   const isPlayingAnswerSequence = useSprintStore((state) => state.isPlayingAnswerSequence);
+  const isAssessmentMode = useSprintStore((state) => state.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
 
   // 📝 速度ポップオーバーの開閉ステート
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
@@ -197,12 +198,13 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
           </button>
         </div>
 
+        {/* 🚀 改修：発話評価OFFモード（isAssessmentMode === false）の場合、マイクボタンを恒久的に disabled（非活性）化 */}
         <button
           onClick={isRecording ? onStopRecord : onStartRecord}
-          disabled={(isInteractionDisabled && !isRecording) || isManualPlaying}
+          disabled={(isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode}
           className={cn("h-full rounded-2xl flex items-center justify-center font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative cursor-pointer",
             isRecording ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
-            ((isInteractionDisabled && !isRecording) || isManualPlaying) && "opacity-20 disabled:pointer-events-none"
+            ((isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode) && "opacity-20 disabled:pointer-events-none disabled:cursor-not-allowed"
           )}
         >
           {isRecording && <span className="absolute inset-0 bg-white/20 animate-pulse" />}

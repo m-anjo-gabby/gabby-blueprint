@@ -10,7 +10,10 @@ interface AudioTroubleshootingDialogProps {
 export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProps> = ({ open, onOpenChange }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-[32px] p-6 bg-white border border-slate-100 shadow-2xl">
+      <DialogContent 
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="max-w-md rounded-[32px] p-6 bg-white border border-slate-100 shadow-2xl"
+      >
         <DialogHeader>
           <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2 select-none">
             <HelpCircle className="w-5 h-5 text-indigo-500" />

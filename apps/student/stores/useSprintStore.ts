@@ -14,6 +14,7 @@ interface SprintConfigInput {
   contentId: string | null;
   answerType: SprintAnswerType | null;
   sprintType?: string | null;
+  isAssessmentMode: boolean; // 🚀 追加：発話評価のON/OFFフラグ
 }
 
 interface SprintState {
@@ -29,6 +30,7 @@ interface SprintState {
     contentId: string | null;
     answerType: SprintAnswerType | null;
     sprintType: string | null;
+    isAssessmentMode: boolean; // 🚀 追加：発話評価のON/OFFフラグ
   };
   contentMetadata: MetadataSprint | null;
   contentName: string | null;
@@ -47,6 +49,7 @@ interface SprintState {
   questionType: string | null;
   answerType: string | null;
   level: string | number;
+  isAssessmentMode: boolean; // 🚀 追加：後方互換用ルートプロパティ
   
   // ─── ③ 同期・カウント用管理 ───
   pendingQuestionCount: number;
@@ -119,6 +122,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     contentId: null,
     answerType: '0',
     sprintType: '0',
+    isAssessmentMode: true, // 🚀 追加：デフォルトON
   },
   contentMetadata: null,
   contentName: null,
@@ -137,6 +141,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   questionType: null,
   answerType: null,
   level: 1,
+  isAssessmentMode: true, // 🚀 追加：デフォルトON
   
   pendingQuestionCount: 0,
   pendingAssessmentCount: 0,
@@ -215,6 +220,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     ...((inputConfig.answerType ? { answerType: inputConfig.answerType } : {}) as any),
     ...((inputConfig.level ? { level: inputConfig.level } : {}) as any),
     ...((inputConfig.timeLimitSec ? { timeLimitSec: inputConfig.timeLimitSec } : {}) as any),
+    ...((inputConfig.isAssessmentMode !== undefined ? { isAssessmentMode: inputConfig.isAssessmentMode } : {}) as any), // 🚀 追加：ルート同期
   })),
 
   startSession: ({ questions, mode, config: inputConfig, resumeId }) => {

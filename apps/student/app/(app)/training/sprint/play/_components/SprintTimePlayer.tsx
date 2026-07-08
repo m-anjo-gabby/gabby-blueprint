@@ -45,6 +45,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     setIsRecording,
     incrementAssessmentCount,
     contentName,
+    isAssessmentMode, // 🚀 追加：発話評価ON/OFFフラグ
   } = useSprintStore();
 
   // ────────────── 📦 ローカル管理ステート ──────────────
@@ -139,7 +140,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
 
   // 全てのオーディオ・発話を安全に即時ストップする
-  // 🚀 stopListening も帯びに呼び、audioSession を 'playback' に戻すことで
+  // 🚀 stopListening も同時に呼び、audioSession を 'playback' に戻すことで
   // タイムアップ・スキップ・終了の全経路でマイクが確実に解放される
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1;
@@ -251,6 +252,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 評価コールバックを含む純粋な録音開始関数
   // secondsLeft は ref 経由で参照（毎秒の再生成を防ぎ、runSprintFlow の安定性を保つ）
   const startRecordingFor = useCallback((question: SprintQuestion) => {
+    // 🚀 安全ガード：発話評価がOFFの場合は録音プロセスを実行しない
+    if (!isAssessmentMode) return;
+
     const targetText = isSpeedMode
       ? (answerType === '1' ? (question.answer_sentence_no_en ?? "") : question.answer_sentence_yes_en)
       : question.answer_sentence_yes_en;
@@ -304,7 +308,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         },
       },
     );
-  }, [isSpeedMode, answerType, setIsRecording, startAssessment, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect]);
+  }, [isSpeedMode, answerType, setIsRecording, startAssessment, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect, isAssessmentMode]);
 
   // ★ 音声再生→チャイム→録音を直接呼び出す直列フロー（useEffect 間接トリガーを廃止）
   const runSprintFlow = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
@@ -324,6 +328,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
       // answer フェーズ表示 + 待機フラグ ON（isRecording=false の間は MicOff で待機中を示す）
       setAudioPhase('answer');
+
+      // 🚀 発話評価OFFモードの場合はマイクアクティブ（チャイム・録音）をバイパスして、ユーザーの手動スキップ回答待機にする[cite: 1]
+      if (!isAssessmentMode) {
+        setIsAwaitingRecording(false);
+        return;
+      }
+
       setIsAwaitingRecording(true);
       await new Promise(r => setTimeout(r, 200)); // 🚀 200ms に短縮（物理無音時間が200msあるためiOSでも競合なし）
       if (flowIdRef.current !== currentFlowId) return;
@@ -337,23 +348,24 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         setAudioPhase('answer');
       }
     }
-  }, [playTrack, playChime, startRecordingFor]);
+  }, [playTrack, playChime, startRecordingFor, isAssessmentMode]);
 
   // 手動録音ボタン用（マイクボタンタップ時）
   const handleStartRecord = useCallback(async () => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || !isAssessmentMode) return;
     await unlockAudioContext();
     setAudioPhase('answer');
     setIsAwaitingRecording(true);
     playChime();
     startRecordingFor(currentQuestion);
-  }, [currentQuestion, playChime, startRecordingFor, unlockAudioContext]);
+  }, [currentQuestion, playChime, startRecordingFor, unlockAudioContext, isAssessmentMode]);
 
   const handleStopRecord = useCallback(() => {
+    if (!isAssessmentMode) return;
     setIsAwaitingRecording(false);
     setIsRecording(false);
     stopListening();
-  }, [setIsRecording, stopListening]);
+  }, [setIsRecording, stopListening, isAssessmentMode]);
 
   const handleSkipQuestion = useCallback(async () => {
     if (!currentQuestion) return;
@@ -368,7 +380,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       showToast("スプリントを終了します。", "success");
       handlePersistAndRedirect(secondsLeftRef.current);
     }
-  }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, stopAllAudio]);
+  }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, stopAllAudio, unlockAudioContext]);
 
   // ────────────── 🔄 副作用 (Effects) ──────────────
 
@@ -484,7 +496,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // HUDはReady段階からセッション終了まで常に表示し、メッセージと活性制御だけを切り替える
   const showRecordingHud = true;
-  const isControlDisabled = audioPhase !== 'answer' || isAwaitingRecording;
+  // 発話評価OFFモードの場合は、回答時間中のマイク操作ウェイト（WAIT表現）を発生させない
+  const isControlDisabled = isAssessmentMode ? (audioPhase !== 'answer' || isAwaitingRecording) : false;
+
+  // 🚀 マイク拒否、またはそもそも発話評価OFFモードの場合を共通の「脳内で回答」ステート条件としてマッピング
+  const isBrainAnswerMode = micStatus === 'denied' || !isAssessmentMode;
+
+  // 🚀 追加：回答フェーズ以外（再生中等）の時は、発話評価OFFモード時のスキップボタンを非活性（disabled）に倒す制御フラグ[cite: 1]
+  const isBrainActionDisabled = audioPhase !== 'answer';
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
@@ -636,12 +655,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                     audioPhase === 'idle'
                       ? "text-slate-300"
                       : audioPhase === 'answer'
-                        ? (micStatus === 'denied' ? "text-rose-500" : "text-indigo-500")
+                        ? (isBrainAnswerMode ? "text-rose-500" : "text-indigo-500")
                         : "text-indigo-600"
                   )}
                 >
                   {audioPhase === 'answer' ? (
-                    micStatus === 'denied' ? (
+                    isBrainAnswerMode ? (
                       <MicOff className="w-full h-full" strokeWidth={2.5} />
                     ) : (
                       <CircleDot className="w-full h-full" strokeWidth={2.5} />
@@ -656,7 +675,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   {audioPhase === 'statement' && "基本文を再生中"}
                   {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
                   {audioPhase === 'answer' && (
-                    micStatus === 'denied' ? "脳内で瞬時に回答しましょう" : "発話して回答しましょう"
+                    isBrainAnswerMode ? "脳内で瞬時に回答しましょう" : "発話して回答しましょう"
                   )}
                   {audioPhase === 'idle' && "Ready"}
                 </h2>
@@ -666,8 +685,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 "text-xs sm:text-sm font-semibold text-slate-400 transition-opacity duration-150",
                 audioPhase === 'answer' ? "opacity-100" : "opacity-0 select-none pointer-events-none"
               )}>
-                {micStatus === 'denied' && audioPhase === 'answer'
-                  ? "※マイク権限が拒否されています"
+                {isBrainAnswerMode && audioPhase === 'answer'
+                  ? (!isAssessmentMode ? "※発話評価OFFモードが適用されています" : "※マイク権限が拒否されています")
                   : (typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent))
                     ? ""
                     : "※開始音の後に発話してください"}
@@ -679,28 +698,36 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               <AnimatePresence mode="wait">
                 {showRecordingHud ? (
                   <motion.div
-                    key={micStatus === 'denied' && audioPhase === 'answer' ? "no-mic-hud" : "recording-hud"}
+                    key={isBrainAnswerMode ? "no-mic-hud" : "recording-hud"}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
                     className="flex flex-col items-center gap-4 w-full"
                   >
-                    {micStatus === 'denied' && audioPhase === 'answer' ? (
-                      // マイク権限がない場合：スキップ用の大きなボタンのみ表示
+                    {isBrainAnswerMode ? (
+                      // 🚀 改修：発話評価OFF、またはマイク拒否状態の場合：回答フェーズに関わらず常にこのボタンレイアウトへ統一[cite: 1]
+                      // 回答フェーズ（audioPhase === 'answer'）以外ではdisabled（非活性）として振る舞います[cite: 1]
                       <div className="flex flex-col items-center gap-4 py-4 w-full">
                         <div className="flex items-center gap-2 text-rose-500">
                           <MicOff size={16} strokeWidth={2.5} />
-                          <span className="text-xs font-bold">マイクが使用できません</span>
+                          <span className="text-xs font-bold">
+                            {!isAssessmentMode ? "発話なし（脳内回答モード）" : "マイクが使用できません"}
+                          </span>
                         </div>
                         <button
                           type="button"
                           onClick={handleSkipQuestion}
-                          disabled={isSaving}
-                          className="flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm tracking-wider shadow-md shadow-indigo-600/10 active:scale-[0.98] cursor-pointer transition-all w-60 group border-none"
+                          disabled={isSaving || isBrainActionDisabled}
+                          className={cn(
+                            "flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl text-white font-black text-sm tracking-wider shadow-md active:scale-[0.98] cursor-pointer transition-all w-60 group border-none",
+                            isBrainActionDisabled 
+                              ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" 
+                              : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/10"
+                          )}
                           title="この問題をスキップして次へ"
                         >
-                          <FastForward size={16} strokeWidth={3} className="group-hover:translate-x-0.5 transition-transform" />
+                          <FastForward size={16} strokeWidth={3} className={cn(!isBrainActionDisabled && "group-hover:translate-x-0.5 transition-transform")} />
                           <span>スキップして次へ</span>
                         </button>
                       </div>

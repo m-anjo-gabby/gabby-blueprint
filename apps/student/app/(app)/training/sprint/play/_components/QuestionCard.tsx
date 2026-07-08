@@ -4,7 +4,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SprintQuestionType } from "@gabby/types/sprint";
-import { Volume2, Eye, CircleDot, Headphones, Languages, Mic } from 'lucide-react';
+import { Volume2, Eye, CircleDot, Headphones, Languages, Mic, MicOff } from 'lucide-react';
 
 // 🔌 Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
@@ -48,8 +48,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying);
   const setDrillEvalType = useSprintStore((state) => state.setDrillEvalType);
   const drillEvalType = useSprintStore((state) => state.drillEvalType);
+  const isAssessmentMode = useSprintStore((state) => state.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
 
   // 🎯 安全に現在の問題データを特定 (Zustand内部の同期ラグ対策)
+  // 💡 フック群（useMemo等）よりも前に宣言することで、配下のフック内から安全に変数を参照させエラーを解決します
   const question = questions[currentIndex] || null;
 
   // 📦 2. すべての useState フックを「無条件」で最上部に配置
@@ -118,7 +120,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       case 'statement': return { text: "基本文を再生中...", color: "text-indigo-600" };
       case 'question': return { text: `${config.phaseLabel}を再生中...`, color: "text-indigo-600" };
       case 'thinking':
-      case 'answer': return { text: "回答しましょう", color: "text-amber-500" };
+      case 'answer': 
+        // 🚀 改修：ご指定に基づき、評価モードの状態に関わらずメインメッセージは「回答しましょう」で完全統一
+        return { text: "回答しましょう", color: "text-amber-500" };
       default: return { text: "待機中", color: "text-slate-400" };
     }
   }, [audioPhase, isRevealed, isRecording, config.phaseLabel]);
@@ -287,10 +291,20 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <h3 className={cn("text-[11px] font-black uppercase tracking-wider leading-none", statusMessage.color)}>
                 {statusMessage.text}
               </h3>
+              {/* 🚀 改修：回答・シンキング状態で未オープン・未録音状態の場合のサブテキストを、発話評価ON/OFFの状態に応じて動的に分岐 */}
               {(audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed && !isRecording && (
                 <div className="flex items-center gap-1 mt-1 text-slate-400">
-                  <Mic size={10} className="text-rose-400" fill="currentColor" />
-                  <span className="text-[9px] font-bold leading-none">マイクボタンから発話できます</span>
+                  {isAssessmentMode ? (
+                    <>
+                      <Mic size={10} className="text-rose-400" fill="currentColor" />
+                      <span className="text-[9px] font-bold leading-none">マイクボタンから発話できます</span>
+                    </>
+                  ) : (
+                    <>
+                      <MicOff size={10} className="text-slate-400" />
+                      <span className="text-[9px] font-bold leading-none text-slate-400">発話評価がOFFになっています</span>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -491,7 +505,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                             <Volume2 size={11} strokeWidth={2.5} />
                           </button>
                           {question.answer_sentence_no_ja && (
-                            <button onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }} className={cn("w-5 h-5 flex items-center justify-center rounded-md transition-all cursor-pointer", showJaAnswer ? "bg-amber-100 text-amber-600" : "text-amber-400/60 hover:text-amber-600 hover:bg-amber-100/50")}>
+                            <button onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }} className={cn("w-5 h-5 flex items-center justify-center rounded-md transition-all cursor-pointer", showJaAnswer ? "bg-amber-100 text-amber-600" : "text-emerald-400/60 hover:text-emerald-600 hover:bg-emerald-100/50")}>
                               <Languages size={12} />
                             </button>
                           )}
