@@ -84,6 +84,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   const isAutoPlayingRef = useRef(isAutoPlaying);
   const isRevealedRef = useRef(isRevealed);
+  const wasRecordingRef = useRef<boolean>(false);
   
   useEffect(() => { isAutoPlayingRef.current = isAutoPlaying; }, [isAutoPlaying]);
   useEffect(() => { isRevealedRef.current = isRevealed; }, [isRevealed]);
@@ -231,6 +232,13 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       }
       
       setAudioPhase('idle');
+
+      // 🚀 解答再生完了後に、自動再生中であれば次のカードに進む
+      if (isAutoPlayingRef.current) {
+        autoPlayTimerRef.current = setTimeout(() => {
+          handleNextRef.current();
+        }, DRILL_TIMING.nextCardDelay);
+      }
     } catch (e) {
       console.error("Answer sequence error:", e);
     } finally {
@@ -325,11 +333,16 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
     const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
 
+    wasRecordingRef.current = true;
+
     startAssessment(
       targetText,
       cleanWords,
       (result) => {
-        // 状態更新をアトミックにまとめて、中間状態で useEffect がフライング発火するのを防ぐ
+        // 🚀 iOSでスピーカー出力を即時回復させるため、再生モードに戻す
+        setAudioSessionPlayback();
+
+        // 状態更新をアトミックにまとめて反映
         useSprintStore.setState({
           analysis: result,
           feedback: getFeedbackConfig(result.score),
@@ -475,7 +488,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, currentQuestion?.question_id, isStarted, exitLoading]);
 
-  // タイムライン2：解答オープン検知
   useEffect(() => {
     // カードが切り替わった場合は、直前の評価結果の記録をクリア
     if (currentIndex !== prevIndexRef.current) {
@@ -498,6 +510,16 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     const currentFlowId = flowIdRef.current;
 
     const runAnswerFlow = async () => {
+      // 🚀 直前に録音していた場合（自動解答オープン）のみ、iOSセッション移行時間を考慮して1500ms待機。
+      // 手動で解答を表示した場合は待機なし（0ms）で即時に再生する。
+      const delay = wasRecordingRef.current ? 1500 : 0;
+      wasRecordingRef.current = false; // 判定したらフラグを下ろす
+
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      if (flowIdRef.current !== currentFlowId) return;
+
       await playAnswerSequence(currentQuestion, currentFlowId);
       if (flowIdRef.current !== currentFlowId) return;
 

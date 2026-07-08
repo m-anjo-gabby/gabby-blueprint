@@ -43,9 +43,9 @@ export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProp
             <div className="flex gap-3 items-start p-3.5 bg-slate-50 rounded-2xl">
               <Smartphone className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-bold text-slate-800 text-xs select-none">3. iPhone本体の再起動</h4>
+                <h4 className="font-bold text-slate-800 text-xs select-none">3. 本体（端末）の再起動</h4>
                 <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                  上記で改善しない場合、OS全体の音声システムがフリーズしています。本体の電源を一度切り、再起動すると確実に直ります。
+                  上記で改善しない場合、OS全体の音声システムがフリーズしている可能性があります。本体の電源を一度切り、再起動をお試しください。
                 </p>
               </div>
             </div>

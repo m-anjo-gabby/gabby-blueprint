@@ -15,7 +15,6 @@ import {
 } from '@gabby/types/sprint';
 import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
-import { useChimePlayer } from '@gabby/lib/hooks/useSprintAudio';
 import { createBrowserClient } from '@gabby/lib/supabase/client';
 
 import {
@@ -58,23 +57,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   // Supabaseクライアントの初期化
   const supabase = useMemo(() => createBrowserClient(), []);
-
-  // 開始チャイムの AudioContext 管理（プリロード・再生・ロック解除）
-  const { unlockAudioContext: unlockChime, playFromCache, preloadUrl } = useChimePlayer();
-
-  // 🚀 開始画面マウント時に TTSキャンセル + チャイムのプリロード
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    // グローバルキャッシュを使って開始チャイムを事前ロード（キャッシュ済みならスキップ）
-    const { data } = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3');
-    preloadUrl(data.publicUrl);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase]);
 
   // ストアから設定更新アクションと現在のconfigを取得
   const { config, contentMetadata, contentName, setConfig } = useSprintStore();
@@ -243,59 +225,19 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
     // 1. スプリント開始時に準備中フラグをON
     setIsPreparing(true);
 
-    let hasNavigated = false;
-    let finalConfigObj: any = null;
-
-    // プレイヤー遷移ハンドラー
-    const navigateToPlayer = () => {
-      if (hasNavigated) return;
-      hasNavigated = true;
-      if (finalConfigObj) {
-        onStart(finalConfigObj);
-      }
-    };
-
-    // ロードラグやマイク応答待ちに対するセーフティタイマー（2.5秒）
-    const safetyTimer = setTimeout(navigateToPlayer, 2500);
-
-    // 🚀 2. 同期ジェスチャーコンテキストの最前線で AudioContext を resume する
-    const chimeUrl = supabase.storage.from('audio').getPublicUrl('system/asset_start_training.mp3').data.publicUrl;
-    try {
-      setAudioSessionPlayAndRecord();
-      await unlockChime();
-
-      // TTS のウォームアップ空読み
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-      }
-
-      // チャイムを再生し、終了後に遷移（キャッシュになければ即時遷移）
-      playFromCache(chimeUrl).then(() => {
-        clearTimeout(safetyTimer);
-        navigateToPlayer();
-      });
-    } catch (err) {
-      console.warn("Chime Web Audio play failed:", err);
-      clearTimeout(safetyTimer);
-      navigateToPlayer();
-    }
-
-    // 🚀 3. マイク設定
-    const isMicGranted = micStatus === 'granted';
-    if (isMicGranted) {
-      setAudioSessionPlayAndRecord();
-    }
-
     // ストア側のanswerTypeも確定タイミングで同期
     setConfig({ answerType });
 
-    finalConfigObj = {
+    const finalConfigObj = {
       mode,
       questionType: selectedType,
       level: selectedLevel,
       timeLimitSec: selectedTimeLimitSec,
       answerType: (mode === 'sprint' && selectedType === '0') ? answerType : '0'
     };
+
+    onStart(finalConfigObj);
+    setIsPreparing(false);
   };
 
   const isSpeedSelected = selectedType === '0';
