@@ -287,9 +287,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     </div>
                   </div>
 
-                  {/* マイク状態表示エリア（許可状態 granted の場合は非表示、未許可 prompt および 拒否 denied の場合はメッセージを読めるように常時表示） */}
+                  {/* マイク状態表示エリア（発話評価ONかつ、許可状態 granted 以外の場合に表示） */}
                   <AnimatePresence mode="wait">
-                    {micStatus !== 'granted' && (
+                    {isAssessmentMode && micStatus !== 'granted' && (
                       <motion.div
                         initial={{ opacity: 0, height: 0, marginTop: 0 }}
                         animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
