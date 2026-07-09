@@ -22,7 +22,7 @@ export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProp
         </DialogHeader>
         <div className="space-y-4 mt-2 text-sm text-slate-600">
           <p className="text-xs text-rose-500 font-bold select-none">
-            ※ブラウザの「ページ更新（リロード）」だけでは復旧しない場合があります。
+            ブラウザの「ページ更新（リロード）」だけでは復旧しない場合があります。その場合は下記をお試しください。
           </p>
           <div className="space-y-3">
             <div className="flex gap-3 items-start p-3.5 bg-slate-50 rounded-2xl">

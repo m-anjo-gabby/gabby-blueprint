@@ -728,7 +728,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                           title="この問題をスキップして次へ"
                         >
                           <FastForward size={16} strokeWidth={3} className={cn(!isBrainActionDisabled && "group-hover:translate-x-0.5 transition-transform")} />
-                          <span>スキップして次へ</span>
+                          <span>次の問題へ</span>
                         </button>
                       </div>
                     ) : (
