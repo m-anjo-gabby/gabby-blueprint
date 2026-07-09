@@ -34,7 +34,7 @@ export function usePlayAudioSpeech() {
   const supabase = createBrowserClient();
 
   /**
-   * iOS対策: 放置されてフリーズしたAudioContextを安全に取得・復旧・再生成する内部関数
+   * iOS対策: 結果画面において放置されて完全にフリーズしたAudioContextを安全に取得・破棄・再生成する
    */
   const getOrInitializeAudioContext = useCallback(async (): Promise<AudioContext | null> => {
     if (typeof window === 'undefined') return null;
@@ -52,10 +52,10 @@ export function usePlayAudioSpeech() {
 
     let ctx = audioCtxRef.current;
 
-    // iOS Safari特有の、放置によるサスペンド状態をタップのコールスタック内で復旧
+    // 放置されてサスペンドした状態を解決
     if (ctx && ctx.state === 'suspended') {
       try {
-        // 🆕 iOS対策：resume() 自体がフリーズして戻ってこないバグを回避するためタイムアウトを導入
+        // iOS特有の、resume()自体のPromiseが戻ってこなくなるデッドロックを0.5秒でタイムアウト回避
         const resumeWithTimeout = Promise.race([
           ctx.resume(),
           new Promise((_, reject) => setTimeout(() => reject(new Error("AudioContext resume timeout")), 500))
@@ -63,9 +63,9 @@ export function usePlayAudioSpeech() {
 
         await resumeWithTimeout;
 
-        // resume()してもロックが解除されないバグ状態を検知した場合、インスタンスを強制再生成
+        // 依然ロックされている場合は強制的に別インスタンスへスクラップ＆ビルド
         if (ctx.state === 'suspended') {
-          console.warn("AudioContext stuck in suspended state on iOS. Re-creating instance...");
+          console.warn("AudioContext locked on iOS Result screen. Re-creating instance...");
           ctx.close().catch(() => {});
           audioCtxRef.current = new AudioContextClass() as AudioContext;
           ctx = audioCtxRef.current;
@@ -73,11 +73,9 @@ export function usePlayAudioSpeech() {
         }
       } catch (e) {
         console.warn("Failed or timed out resuming AudioContext. Force recreating...", e);
-        // 🆕 タイムアウト、またはエラー時は古いコンテキストを破棄して完全に新規作り直す
         try { ctx.close().catch(() => {}); } catch (_) {}
         audioCtxRef.current = new AudioContextClass() as AudioContext;
         ctx = audioCtxRef.current;
-        // 新規作成直後のコールスタック内で再度同期的にアクティベート
         try { await ctx.resume(); } catch (_) {}
       }
     }
@@ -100,20 +98,18 @@ export function usePlayAudioSpeech() {
   }, []);
 
   /**
-   * 音声を再生する
+   * 音声を再生する (結果画面のシーケンス制御に最適化したPromise仕様)
    * @param path - Supabase Storage内の相対パス
    * @param id - アイテムを一意に識別するID
    * @param options - 再生オプション (restart: true の場合、同じIDでも最初から再生)
    */
   const play = useCallback(async (path: string, id: string, options?: { restart?: boolean }): Promise<void> => {
-    // 1. 強固になった初期化ロジックを実行
     const ctx = await getOrInitializeAudioContext();
     if (!ctx) return;
 
-    // 2. 同じIDがクリックされた場合
+    // 同じIDがクリックされた場合
     if (currentPlayingIdRef.current === id) {
       if (!options?.restart) {
-        // トグル停止
         stop();
         return;
       }
@@ -127,18 +123,15 @@ export function usePlayAudioSpeech() {
       currentSourceRef.current = null;
     }
 
-    // パスがない場合は安全に終了させる
     if (!path) {
       setIsPlaying(null);
       currentPlayingIdRef.current = null;
       return;
     }
 
-    // 公開URLの取得
     const { data } = supabase.storage.from('audio').getPublicUrl(path);
     const bucketUrl = data.publicUrl;
 
-    // シーケンス再生を同期制御できるよう、Promiseを返却する形にシームレス拡張
     return new Promise<void>((resolve) => {
       const startPlayback = (buffer: AudioBuffer) => {
         const run = () => {
@@ -169,7 +162,7 @@ export function usePlayAudioSpeech() {
             if (currentSourceRef.current === source) {
               currentSourceRef.current = null;
             }
-            resolve(); // 再生完了時にPromiseを解決
+            resolve();
           };
 
           source.onended = clearState;
@@ -193,7 +186,6 @@ export function usePlayAudioSpeech() {
         }
       };
 
-      // キャッシュ確認
       const cached = audioBufferCache.get(bucketUrl);
       if (cached) {
         startPlayback(cached);
@@ -207,7 +199,7 @@ export function usePlayAudioSpeech() {
             if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
               throw new Error("AudioContext was closed during fetch");
             }
-            // 🆕 WebKitバグ対策：古いコンテキストのフリーズによるdecodeデッドロックを回避するためタイムアウト付きでデコード
+            // decode自体のフリーズバグを回避するためタイムアウト付きで安全デコード
             return Promise.race([
               audioCtxRef.current.decodeAudioData(arrayBuffer),
               new Promise<AudioBuffer>((_, reject) => setTimeout(() => reject(new Error("decodeAudioData timeout")), 1000))
@@ -221,7 +213,7 @@ export function usePlayAudioSpeech() {
             console.error("Audio Context decode error:", err);
             setIsPlaying(null);
             currentPlayingIdRef.current = null;
-            resolve(); // 🆕 フリーズしても呼び出し元のループがスタックしないよう、必ずresolveする
+            resolve(); // フリーズしても呼び出し元の連続ループがスタックしないよう確実に解決して次に流す
           });
       }
     });
@@ -258,7 +250,6 @@ export function usePlayAudioSpeech() {
   const changePlaybackRate = useCallback((rate: number) => {
     setPlaybackRate(rate);
     playbackRateRef.current = rate;
-    // 再生中の音声があれば即座に反映
     if (currentSourceRef.current) {
       try {
         currentSourceRef.current.playbackRate.value = rate;
@@ -268,7 +259,6 @@ export function usePlayAudioSpeech() {
 
   /**
    * 音声ファイルをダウンロードする
-   * 公開URLからBlobを取得することで、ブラウザの別タブ移動を防ぎ「保存」を強制する
    */
   const download = useCallback(async (path: string, id: string, fileName?: string) => {
     setIsDownloading(id);
@@ -283,7 +273,6 @@ export function usePlayAudioSpeech() {
       const link = document.createElement('a');
       link.href = blobUrl;
       
-      // 拡張子の二重付与を防止
       let finalFileName = fileName || id;
       if (!finalFileName.toLowerCase().endsWith('.mp3')) {
         finalFileName += '.mp3';
@@ -305,11 +294,10 @@ export function usePlayAudioSpeech() {
   // コンポーネントのアンマウント時に再生を確実に止める
   useEffect(() => {
     return () => {
-      // 🚀 アンマウント時にも確実にスピーカー出力へ戻す
       if (typeof window !== 'undefined') {
         const nav = navigator as NavigatorWithAudioSession;
         if (nav.audioSession) {
-          try { nav.audioSession.type = 'playback'; } catch (_) { /* no-op */ }
+          try { nav.audioSession.type = 'playback'; } catch (_) {}
         }
       }
       if (currentSourceRef.current) {
@@ -318,10 +306,9 @@ export function usePlayAudioSpeech() {
         } catch (_) {}
         currentSourceRef.current = null;
       }
-      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-        audioCtxRef.current.close().catch(() => {});
-        audioCtxRef.current = null;
-      }
+      // 🚀 iOS WebKit バグ対策：
+      // 結果画面離脱時、裏で動いているマイク評価用オーディオセッションのスピーカー出力を受話器に破壊・固着させないため、
+      // ここでの audioCtxRef.current.close() によるインスタンス強制破棄は明示的に行わず、ネイティブのガベージコレクションに安全に委ねる。
       currentPlayingIdRef.current = null;
     };
   }, []);
