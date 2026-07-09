@@ -16,7 +16,8 @@ import { useSprintStore } from '@/stores/useSprintStore';
 import { getSprintProgressAction } from '@/actions/sprintAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
-import { AudioTroubleshootingDialog } from '@/components/common/AudioTroubleshootingDialog';
+import { AudioTroubleshootingDialog } from '@/components/help/AudioTroubleshootingDialog';
+import { MicTroubleshootingDialog } from '@/components/help/MicTroubleshootingDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 // 🚀 トグルスイッチ用コンポーネント
@@ -60,6 +61,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   const [userProgress, setUserProgress] = useState<any>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isMicHelpOpen, setIsMicHelpOpen] = useState(false);
   const [isHelpAccordionOpen, setIsHelpAccordionOpen] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
 
@@ -362,7 +364,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                 </div>
 
                 {/* 🚀 改修：注意文言エリア（ヘルプアコーディオンとインライン型案内） */}
-                {/* 「ヘルプ」アコーディオン化し、展開時に「音声が聞こえない・認識しない場合」を1行で表示できるデザインにしています */}
                 <div className="bg-white border border-slate-100 rounded-2xl shadow-3xs overflow-hidden">
                   <button
                     type="button"
@@ -373,26 +374,40 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                       <div className="h-6 w-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                         <HelpCircle size={12} strokeWidth={2.5} />
                       </div>
-                      <span className="text-xs font-black text-slate-700">ヘルプ</span>
+                      <span className="text-[11px] sm:text-xs font-black text-slate-700">ヘルプ</span>
                     </div>
                     <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-200", isHelpAccordionOpen && "rotate-180")} strokeWidth={2.5} />
                   </button>
                   <div className={cn("grid transition-all duration-200 ease-in-out", isHelpAccordionOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
                     <div className="overflow-hidden">
-                      <div className="px-4 pb-3.5 pt-1 border-t border-slate-50/60 flex flex-col">
+                      <div className="px-4 pb-3 pt-1 border-t border-slate-50/60 flex flex-col">
+                        
+                        {/* オーディオリロード対処 */}
                         <button
                           type="button"
                           onClick={() => setIsHelpOpen(true)}
-                          className="w-full flex items-center justify-between text-left py-2 px-1.5 hover:bg-slate-50 active:scale-[0.99] transition-all rounded-xl group"
+                          className="w-full flex items-center justify-between text-left py-2.5 px-2 hover:bg-slate-50/80 active:scale-[0.99] transition-all rounded-xl group"
                         >
-                          <span className="text-[11px] sm:text-xs font-bold text-slate-600 truncate mr-2">
+                          <span className="text-[11px] sm:text-xs font-bold text-slate-600 truncate mr-4">
                             音声が聞こえない・認識しない場合
                           </span>
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            <span className="text-[9px] font-black text-indigo-600 group-hover:text-indigo-700">対処法を確認</span>
-                            <ChevronRight size={10} className="text-indigo-600 group-hover:text-indigo-700" strokeWidth={2.5} />
-                          </div>
+                          {/* 他のUIと完全に揃えたプレーンな矢印（ホバー時のみIndigoに変化し少し右に動く） */}
+                          <ChevronRight size={14} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all shrink-0" strokeWidth={2.5} />
                         </button>
+
+                        {/* マイク権限リセット手順 */}
+                        <button
+                          type="button"
+                          onClick={() => setIsMicHelpOpen(true)}
+                          className="w-full flex items-center justify-between text-left py-2.5 px-2 hover:bg-slate-50/80 active:scale-[0.99] transition-all rounded-xl group border-t border-slate-100/50 mt-0.5"
+                        >
+                          <span className="text-[11px] sm:text-xs font-bold text-slate-600 truncate mr-4">
+                            マイクがブロックされて開始できない場合
+                          </span>
+                          {/* 他のUIと完全に揃えたプレーンな矢印（ホバー時のみIndigoに変化し少し右に動く） */}
+                          <ChevronRight size={14} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all shrink-0" strokeWidth={2.5} />
+                        </button>
+
                       </div>
                     </div>
                   </div>
@@ -631,6 +646,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
           </DrawerContent>
         </Drawer>
         <AudioTroubleshootingDialog open={isHelpOpen} onOpenChange={setIsHelpOpen} />
+        <MicTroubleshootingDialog open={isMicHelpOpen} onOpenChange={setIsMicHelpOpen} />
         <ConfirmContainer />
       </main>
     </div>

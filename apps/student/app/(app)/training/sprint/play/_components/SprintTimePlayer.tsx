@@ -675,7 +675,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   {audioPhase === 'statement' && "基本文を再生中"}
                   {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
                   {audioPhase === 'answer' && (
-                    isBrainAnswerMode ? "脳内で瞬時に回答しましょう" : "発話して回答しましょう"
+                    isBrainAnswerMode ? "脳内で回答しましょう" : "発話して回答しましょう"
                   )}
                   {audioPhase === 'idle' && "Ready"}
                 </h2>
@@ -686,7 +686,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 audioPhase === 'answer' ? "opacity-100" : "opacity-0 select-none pointer-events-none"
               )}>
                 {isBrainAnswerMode && audioPhase === 'answer'
-                  ? (!isAssessmentMode ? "※発話評価OFFモードが適用されています" : "※マイク権限が拒否されています")
+                  ? (!isAssessmentMode ? "※発話評価をOFFにしています" : "※マイク権限が拒否されています")
                   : (typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent))
                     ? ""
                     : "※開始音の後に発話してください"}
@@ -712,7 +712,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                         <div className="flex items-center gap-2 text-rose-500">
                           <MicOff size={16} strokeWidth={2.5} />
                           <span className="text-xs font-bold">
-                            {!isAssessmentMode ? "発話なし（脳内回答モード）" : "マイクが使用できません"}
+                            {!isAssessmentMode ? "発話なし" : "マイクが使用できません"}
                           </span>
                         </div>
                         <button
