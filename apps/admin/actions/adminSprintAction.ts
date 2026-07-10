@@ -130,6 +130,7 @@ export async function deleteSprintQuestion(questionId: string) {
  * 特定のセクション（statement, question, etc）の音声を生成して保存
  */
 export async function saveSprintAudio(
+  contentId: string,
   questionId: string,
   section: 'statement' | 'question' | 'answer_yes' | 'answer_no',
   type: SprintQuestionType,
@@ -146,14 +147,14 @@ export async function saveSprintAudio(
     // 1. Azure 生成
     const audioBuffer = await generateAzureAudioBuffer(ssml);
 
-    // 2. パス生成 (sprints/[type]/level[n]/question_id-section-timestamp.mp3)
+    // 2. パス生成 (sprints/[content_id]/[type]/level[n]/question_id-section-timestamp.mp3)
     const typeMap: Record<string, string> = { '0': 'speed', '4': 'structure', '5': 'builders', '6': 'mastery' };
     const typeDir = typeMap[type] || 'unknown';
     const levelDir = `level${level}`;
     
     const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
     const fileName = `${questionId}-${section}-${timestamp}.mp3`;
-    const filePath = `sprints/${typeDir}/${levelDir}/${fileName}`;
+    const filePath = `sprints/${contentId}/${typeDir}/${levelDir}/${fileName}`;
 
     // 3. Storage アップロード
     const { error: uploadError } = await supabase.storage

@@ -111,6 +111,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
         const currentPath = task.q[voiceKey] as string | null;
 
         const res = await saveSprintAudio(
+          task.q.content_id,
           task.q.question_id,
           task.section,
           type,
