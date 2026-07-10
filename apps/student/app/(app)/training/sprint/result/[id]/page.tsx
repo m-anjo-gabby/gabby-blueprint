@@ -1,6 +1,5 @@
-// apps/student/app/(app)/training/sprint/result/[id]/page.tsx (想定パス)
 import { notFound } from 'next/navigation';
-import { getSprintResultAction } from '@/actions/sprintAction'; 
+import { getSprintResultAction, getContentAction } from '@/actions/sprintAction'; 
 import { getSprintTitle } from '@gabby/lib';
 import { SprintResult } from './_components/SprintResult';
 
@@ -22,9 +21,20 @@ export default async function SprintResultPage({ params }: PageProps) {
   // Server Action が計算してくれた追加フィールドと、パース済みの履歴(または scoreRecord 内のもの)を取り出す
   const { scoreRecord, questions, totalAssessmentCount, averageAssessmentScore } = res.data;
 
+  // 教材のメタデータから hasLevel を解決
+  let hasLevel = true;
+  if (scoreRecord.content_id) {
+    const contentRes = await getContentAction(scoreRecord.content_id);
+    if (contentRes.success && contentRes.data) {
+      const isCorpus = contentRes.data.metadata?.sprint?.sprint_type === '1';
+      hasLevel = isCorpus ? contentRes.data.metadata?.sprint?.has_level ?? true : true;
+    }
+  }
+
   const courseTitle = getSprintTitle(
     scoreRecord.question_type || '0', 
-    Number(scoreRecord.difficulty_level)
+    Number(scoreRecord.difficulty_level),
+    hasLevel
   );
 
   // DBの answered_history は文字列またはJSONオブジェクトなので、

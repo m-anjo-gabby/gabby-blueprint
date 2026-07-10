@@ -21,7 +21,11 @@ interface HistorySession {
   insert_date: string;
   com_m_contents?: {
     content_name: string;
-  } | { content_name: string }[] | null;
+    metadata?: any;
+  } | { 
+    content_name: string;
+    metadata?: any;
+  }[] | null;
 }
 
 interface HistoryDrillSummary {
@@ -400,9 +404,17 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                           {/* 2段目: メタ情報 (種別, レベル, 形式など) */}
                                           <div className="flex items-center gap-1.5 flex-wrap">
                                             <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
-                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
-                                              {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
-                                            </span>
+                                            {(() => {
+                                              const content = Array.isArray(session.com_m_contents) ? session.com_m_contents[0] : session.com_m_contents;
+                                              const isCorpus = session.sprint_type === '1';
+                                              const hasLevel = isCorpus ? content?.metadata?.sprint?.has_level ?? true : true;
+                                              if (!hasLevel) return null;
+                                              return (
+                                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
+                                                  {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
+                                                </span>
+                                              );
+                                            })()}
 
                                             {isSpeedMode && (
                                               <span className={cn(

@@ -397,7 +397,8 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
         total_answered,
         insert_date,
         com_m_contents (
-          content_name
+          content_name,
+          metadata
         )
       `)
       .eq("user_id", user.id)

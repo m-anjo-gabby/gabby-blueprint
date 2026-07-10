@@ -46,6 +46,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     incrementAssessmentCount,
     contentName,
     isAssessmentMode, // 🚀 追加：発話評価ON/OFFフラグ
+    contentMetadata,
   } = useSprintStore();
 
   // ────────────── 📦 ローカル管理ステート ──────────────
@@ -89,9 +90,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
+  const isCorpus = contentMetadata?.sprint_type === '1';
+  const hasLevel = isCorpus ? contentMetadata?.has_level ?? true : true;
+
   const courseTitle = useMemo(() => {
-    return getSprintTitle(questionType || '0', Number(level));
-  }, [questionType, level]);
+    return getSprintTitle(questionType || '0', Number(level), hasLevel);
+  }, [questionType, level, hasLevel]);
 
   const isSpeedMode = questionType === '0';
   const isQuestionBased = questionType === '0' || questionType === '6';
