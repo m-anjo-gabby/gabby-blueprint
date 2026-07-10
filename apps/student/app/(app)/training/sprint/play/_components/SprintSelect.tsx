@@ -270,7 +270,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     <Dialog>
                       <DialogTrigger asChild>
                         <button className="h-4 w-4 flex items-center justify-center rounded-full text-[9px] border bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100 hover:text-indigo-600 active:scale-95 transition-all cursor-pointer">
-                          <HelpCircle size={10} strokeWidth={2.5} />
+                          <HelpCircle size={12} strokeWidth={2.5} />
                         </button>
                       </DialogTrigger>
                       <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border-none bg-white p-6 shadow-2xl rounded-2xl text-slate-900">
