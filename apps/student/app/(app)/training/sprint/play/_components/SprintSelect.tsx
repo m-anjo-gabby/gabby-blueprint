@@ -306,13 +306,14 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
                 {/* 2段目: 発話評価モード */}
                 <div className="space-y-2">
-                  {/* 🚀 改修: マイクが許可（granted）されている場合のみ、見出しのすぐ横にスマートな「許可済み」バッジをインライン表示 */}
+                  {/* 🚀 改修①: チェックアイコン ＋ 視認性を高めたテキストメッセージ（マイク権限OK）でアプリ設定との混同を完全に防ぐ */}
                   <div className="flex items-center gap-2 pl-1 h-5">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">発話評価</span>
                     {micStatus === 'granted' && (
-                      <span className="text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/70 shadow-3xs leading-none scale-90 origin-left shrink-0">
-                        マイク許可済み
-                      </span>
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/70 shadow-3xs leading-none shrink-0 animate-fade-in">
+                        <Check size={10} strokeWidth={4} className="text-emerald-600" />
+                        <span className="text-[9px] font-bold tracking-wider">マイク許可</span>
+                      </div>
                     )}
                   </div>
 
@@ -330,8 +331,19 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                       {isAssessmentMode && micStatus !== 'denied' && (
                         <motion.div layoutId="activeAssessBg" className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-slate-200/40 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />
                       )}
-                      <Mic size={12} className={cn(isAssessmentMode && micStatus === 'granted' ? "text-indigo-500" : "text-slate-400")} />
-                      <span>発話評価 ON</span>
+                      
+                      {/* 🚀 改修②: 下部警告エリアのシグナルカラーと動的に同期。有効感・警告・ブロック状態を直感的に伝える */}
+                      <Mic 
+                        size={12} 
+                        className={cn(
+                          "transition-colors duration-200",
+                          !isAssessmentMode ? "text-slate-400" : // 非アクティブ時
+                          micStatus === 'granted' ? "text-emerald-500" : // 許可済みで有効
+                          micStatus === 'prompt' ? "text-amber-500" : // 未許可（ブラウザのポップアップ誘導待ち）
+                          "text-rose-500" // ブロック状態
+                        )} 
+                      />
+                      <span>ON</span>
                     </button>
 
                     {/* 評価OFFボタン */}
@@ -347,11 +359,11 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                         <motion.div layoutId="activeAssessBg" className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-slate-200/40 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />
                       )}
                       <MicOff size={12} className={cn(!isAssessmentMode || micStatus === 'denied' ? "text-slate-600" : "text-slate-400")} />
-                      <span>発話評価 OFF</span>
+                      <span>OFF</span>
                     </button>
                   </div>
 
-                  {/* 🚀 下部の1行案内エリア: 表示ロジックの適正化 */}
+                  {/* 下部の1行案内エリア: 既存の洗練された AnimatePresence ロジックを完全維持 */}
                   <AnimatePresence mode="wait">
                     {micStatus === 'denied' && (
                       <motion.div 
