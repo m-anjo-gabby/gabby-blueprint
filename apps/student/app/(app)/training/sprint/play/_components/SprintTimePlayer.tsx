@@ -198,6 +198,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       };
     });
 
+    const totalAssessments = history.filter(h => !h.is_skipped && h.assessment).length;
+
     try {
       const res = await createSprintScoreAction({
         sprint_type: sprintType,
@@ -207,6 +209,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         difficulty_level: Number(level),
         time_limit_sec: timeLimitSec,
         total_answered: answeredCount,
+        total_assessments: totalAssessments,
         history: history,
       });
 

@@ -695,7 +695,8 @@ CREATE TABLE public.self_t_sprint (
   time_limit_sec SMALLINT NOT NULL,     -- 60, 90, 120, 150
   
   -- スコア・実績データ
-  total_answered SMALLINT NOT NULL,     -- タイムアップまでに答えた総問題数 (スコア)
+  total_answered SMALLINT NOT NULL,     -- タイムアップまでに答えた総問題数
+  total_assessments SMALLINT NOT NULL,  -- タイムアップまでに発話評価した回数
   
   -- 問題履歴をJSONで保持
   answered_history JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -716,6 +717,7 @@ COMMENT ON COLUMN public.self_t_sprint.answer_type IS '解答種別（''0'': YES
 COMMENT ON COLUMN public.self_t_sprint.difficulty_level IS '難易度レベル (0: Basic 〜 10)';
 COMMENT ON COLUMN public.self_t_sprint.time_limit_sec IS '制限時間 (60, 90, 120, 150秒)';
 COMMENT ON COLUMN public.self_t_sprint.total_answered IS '総回答数';
+COMMENT ON COLUMN public.self_t_sprint.total_assessments IS '総発話評価数';
 COMMENT ON COLUMN public.self_t_sprint.answered_history IS '実施問題の履歴情報(JSON)';
 COMMENT ON COLUMN public.self_t_sprint.insert_date IS '登録日時';
 COMMENT ON COLUMN public.self_t_sprint.update_date IS '更新日時';

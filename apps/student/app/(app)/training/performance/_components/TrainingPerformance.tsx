@@ -51,6 +51,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
       }
       sprintSessions += 1;
       sprintAnswers += item.total_answered;
+      totalAssessments += item.assessment_count || 0;
     });
 
     // スプリントドリルサマリー履歴の集計

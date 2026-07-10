@@ -48,6 +48,7 @@ export interface MonitorSprintHistoryItem {
   difficulty_level: number;
   time_limit_sec: number;
   total_answered: number;
+  total_assessments: number;
   insert_date: string;
   com_m_contents?: {
     content_name: string;
@@ -216,6 +217,7 @@ export async function getMonitorSprintHistory(
       difficulty_level: item.difficulty_level,
       time_limit_sec: item.time_limit_sec,
       total_answered: item.total_answered,
+      total_assessments: item.total_assessments || 0,
       insert_date: item.insert_date,
       com_m_contents: item.content_name ? {
         content_name: item.content_name

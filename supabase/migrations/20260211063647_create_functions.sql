@@ -487,6 +487,7 @@ BEGIN
         'difficulty_level', s.difficulty_level,
         'time_limit_sec', s.time_limit_sec,
         'total_answered', s.total_answered,
+        'total_assessments', s.total_assessments,
         'insert_date', s.insert_date,
         'content_name', c.content_name,
         'user_name', u.user_name,
@@ -694,12 +695,13 @@ BEGIN
     WHERE w.user_id = _user_id
       AND w.training_date BETWEEN _start_date AND _end_date;
 
-    -- 2. スプリントセッション履歴の取得
+    -- 2. スプリントセッション履歴の取得 (assessment_count を total_assessments から直接取得)
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
         'self_sprint_id', s.self_sprint_id,
         'content_id', s.content_id,
         'total_answered', s.total_answered,
-        'insert_date', s.insert_date
+        'insert_date', s.insert_date,
+        'assessment_count', s.total_assessments
     )), '[]'::jsonb) INTO _sessions_json
     FROM public.self_t_sprint s
     WHERE s.user_id = _user_id

@@ -127,6 +127,7 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
       }
       statsMap[uid].sprintSessions += 1; // スプリント本数
       statsMap[uid].sprintAnswers += s.total_answered; // スプリント回答数
+      statsMap[uid].assessments += s.total_assessments || 0; // スプリント発話数
     });
 
     // 3. スプリントドリルサマリー履歴の集計 (発話数)

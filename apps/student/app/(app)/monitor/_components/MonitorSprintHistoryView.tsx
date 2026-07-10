@@ -183,6 +183,9 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
           existing.sprint_count += 1;
         }
         existing.answered_count += s.total_answered;
+        if (typeof existing.assessment_count === 'number') {
+          existing.assessment_count += s.total_assessments || 0;
+        }
       } else {
         map.set(key, {
           id: s.self_sprint_id,
@@ -196,7 +199,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
           content_name: s.com_m_contents?.content_name || 'Sprint',
           sprint_count: 1,
           answered_count: s.total_answered,
-          assessment_count: '-'
+          assessment_count: s.total_assessments || 0
         });
       }
     });
