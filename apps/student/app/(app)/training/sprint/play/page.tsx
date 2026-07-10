@@ -139,7 +139,14 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   // ⚙️ セッション開始ハンドラー
   // ────────────────────────────────────────────────────────────
-  const handleStartSession = async (selectedConfig: { mode: 'drill' | 'sprint'; questionType: SprintQuestionType; level: string; timeLimitSec: number; answerType: SprintAnswerType }) => {
+  const handleStartSession = async (selectedConfig: {
+    mode: 'drill' | 'sprint';
+    questionType: SprintQuestionType;
+    level: string;
+    timeLimitSec: number;
+    answerType: SprintAnswerType;
+    isAssessmentMode?: boolean;
+  }) => {
     setUiView('loading');
     
     const validTypes: SprintQuestionType[] = ['0', '4', '5', '6'];
@@ -166,6 +173,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
 
     if (response.success && response.data && response.data.length > 0) {
       const sprintType = resolvedParams.sprint_type || response.data[0]?.sprint_type || '0';
+      const isAssessmentMode = selectedConfig.isAssessmentMode !== undefined ? selectedConfig.isAssessmentMode : config.isAssessmentMode;
 
       // 💡 ストア側のアクションに集約してセッション情報・初期化を一撃で適用
       startSession({
@@ -178,7 +186,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
           level: String(difficultyLevel),
           answerType: selectedConfig.answerType,
           timeLimitSec: selectedConfig.timeLimitSec,
-          mode: selectedConfig.mode
+          mode: selectedConfig.mode,
+          isAssessmentMode
         },
         resumeId: resolvedParams.resume_id
       });
@@ -244,7 +253,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
                 questionType: config.questionType || '0',
                 level: String(config.level),
                 timeLimitSec: config.timeLimitSec,
-                answerType: (resolvedParams.answer_type as SprintAnswerType) || '0'
+                answerType: (resolvedParams.answer_type as SprintAnswerType) || '0',
+                isAssessmentMode: config.isAssessmentMode
               });
             }}
             className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
