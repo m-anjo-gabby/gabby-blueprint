@@ -16,6 +16,7 @@ export interface LogEvent {
   event: string;      // 例: 'auth:login', 'client:update_success'
   message: string;
   userId?: string;
+  ip?: string;        // アクセス元IPアドレス
   functionName?: string;
   timestamp?: string;
   payload?: any;      // 追加のコンテキスト情報
@@ -52,8 +53,18 @@ export async function getLogContext(): Promise<Partial<LogEvent>> {
   try {
     const h = await headers();
     const userId = h.get('x-user-id');
+    
+    // IPアドレスの抽出 (Vercel環境では x-real-ip または x-forwarded-for を優先)
+    const realIp = h.get('x-real-ip');
+    const forwardedFor = h.get('x-forwarded-for');
+    let ip = realIp || undefined;
+    if (!ip && forwardedFor) {
+      ip = forwardedFor.split(',')[0].trim();
+    }
+
     return {
       userId: userId ?? 'system',
+      ip: ip ?? undefined,
     };
   } catch {
     // Server Actions 以外（ビルド時や Edge Runtime 以外の特殊な文脈）でのフォールバック
@@ -110,5 +121,46 @@ export const createLogger = (service: LogService) => {
       log('error', event, message, context),
     debug: (event: string, message: string, context?: Partial<LogEvent>) => 
       log('debug', event, message, context),
+  };
+};
+
+/**
+ * リクエストオブジェクトからクライアントIPアドレスを抽出する。
+ * Vercel/プロキシ環境では x-real-ip または x-forwarded-for を優先し、
+ * フォールバックとして req.ip (型定義になくても実行時には存在する場合がある) を使用する。
+ */
+export function extractIpFromRequest(req: { headers: { get: (name: string) => string | null } }): string | undefined {
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) return realIp;
+  const forwardedFor = req.headers.get('x-forwarded-for');
+  if (forwardedFor) return forwardedFor.split(',')[0].trim();
+  return (req as any).ip || undefined;
+}
+
+/**
+ * Middleware (proxy) 用ロガーファクトリ。
+ * NextRequest を受け取り、IPアドレスをすべてのログ呼び出しに自動付与したロガーを返す。
+ * proxy ファイル側での clientIp 抽出は不要。
+ *
+ * @example
+ * const logger = createRequestLogger('student', req);
+ * logger.info('page_view', `Access: ${pathname}`, { userId, path });
+ */
+export const createRequestLogger = (service: LogService, req: { headers: { get: (name: string) => string | null } }) => {
+  const ip = extractIpFromRequest(req);
+  const base = createLogger(service);
+
+  const withIp = (context?: Partial<LogEvent>): Partial<LogEvent> =>
+    ip ? { ip, ...context } : { ...context };
+
+  return {
+    info: (event: string, message: string, context?: Partial<LogEvent>) =>
+      base.info(event, message, withIp(context)),
+    warn: (event: string, message: string, context?: Partial<LogEvent>) =>
+      base.warn(event, message, withIp(context)),
+    error: (event: string, message: string, context?: Partial<LogEvent>) =>
+      base.error(event, message, withIp(context)),
+    debug: (event: string, message: string, context?: Partial<LogEvent>) =>
+      base.debug(event, message, withIp(context)),
   };
 };

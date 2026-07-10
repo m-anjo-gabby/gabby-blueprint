@@ -1,4 +1,3 @@
-// apps/admin/actions/adminContentAction.ts
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
@@ -107,11 +106,39 @@ export async function upsertContent(payload: Partial<Content>) {
     const supabase = createAdminClient();
     const isEdit = !!payload.content_id;
 
+    // 更新（Edit）時の既存メタデータとの安全なマージ処理
+    let finalMetadata = payload.metadata || {};
+    if (isEdit && payload.content_id) {
+      const { data: existingRecord } = await supabase
+        .from('com_m_contents')
+        .select('metadata')
+        .eq('content_id', payload.content_id)
+        .single();
+      
+      if (existingRecord?.metadata) {
+        finalMetadata = {
+          ...(existingRecord.metadata as Record<string, unknown>),
+          ...payload.metadata,
+          // スプリントデータの階層が壊れないよう明示的にディープマージ
+          sprint: payload.metadata?.sprint ? {
+            ...((existingRecord.metadata as any).sprint || {}),
+            ...payload.metadata.sprint
+          } : (existingRecord.metadata as any).sprint
+        };
+      }
+    }
+
     // クライアント側で既存の metadata とマージされたものが送られてくる想定
     const dataToSave = {
       ...payload,
+      metadata: finalMetadata,
       update_date: new Date().toISOString(),
     };
+
+    // リレーション項目（tagsやaccess_clients）がpayloadに含まれている場合は、
+    // com_m_contentsの直接のカラムではないため、DB保存前に除外する
+    delete (dataToSave as any).tags;
+    delete (dataToSave as any).access_clients;
 
     let query;
     if (isEdit) {

@@ -5,7 +5,7 @@ import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 import { useAzureSpeechTest } from "@/hooks/useAzureSpeechTest";
 import { useWebSpeech } from "@gabby/lib/hooks/useWebSpeech";
 import { AssessmentWord } from "@gabby/types/azure";
-import { AnalysisResult } from "@gabby/types/wordDrill"; // AnalysisResultの型をインポート
+import { AnalysisResult } from "@gabby/types/speechAssessment"; // AnalysisResultの型をインポート
 
 const samplePhrases = [
   "We start fermenting the soy.",

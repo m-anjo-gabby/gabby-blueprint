@@ -16,7 +16,7 @@ export const TAG_TYPES = {
   scene: { label: 'シチュエーション', color: 'purple' },
   skill: { label: 'スキル', color: 'emerald' },
   level: { label: 'レベル', color: 'orange' },
-  other: { label: 'その他', color: 'glay' },
+  other: { label: 'その他', color: 'gray' }, // glay から gray へ修正
 } as const;
 
 // 公開範囲
@@ -93,16 +93,26 @@ export interface MetadataCefr {
   color?: string; // 後の変更に備えて色も保持可能にしておく
 }
 
-// メタデータ埋め込み用スプリント
+/**
+ * メタデータ埋め込み用スプリント詳細情報
+ */
 export interface MetadataSprint {
-  question_type: string; // '0' | '4' | '5' | '6'
+  sprint_type: '0' | '1'; // '0':汎用スプリント, '1':コーパススプリント
+  theme: string;           // 教材テーマ (例: "現在形で、5～8単語で構成されたフレーズ")
+  has_level: boolean;      // レベル概念の有無 ('0'汎用は true, '1'コーパスは false )
+  supported_types: {
+    speed: boolean;        // '0': Speed の有効フラグ
+    builders: boolean;     // '5': Builders の有効フラグ
+    structure: boolean;    // '4': Structure の有効フラグ
+    mastery: boolean;      // '6': Mastery の有効フラグ
+  };
 }
 
 // ContentRecord の metadata 型を具体化
 export interface ContentMetadata {
   tags?: MetadataTag[];
   cefr?: MetadataCefr; // CEFRを追加
-  sprint?: MetadataSprint;
+  sprint?: MetadataSprint; // スプリント用拡張メタデータ
   [key: string]: unknown;
 }
 

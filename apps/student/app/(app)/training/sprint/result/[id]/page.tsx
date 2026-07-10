@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getSprintResultAction } from '@/actions/sprintAction'; // 💡 アクションの実際のパスに合わせて調整してください
+import { getSprintResultAction, getContentAction } from '@/actions/sprintAction'; 
 import { getSprintTitle } from '@gabby/lib';
 import { SprintResult } from './_components/SprintResult';
 
@@ -12,32 +12,54 @@ interface PageProps {
 export default async function SprintResultPage({ params }: PageProps) {
   const { id } = await params;
 
-  // 🚀 定義していただいた Server Action を呼び出してセッション情報を一元復元
   const res = await getSprintResultAction(id);
 
-  // エラーまたはデータがない場合は404へ安全にフォールバック
   if (!res.success || !res.data) {
     return notFound();
   }
 
-  const { scoreRecord, questions } = res.data;
+  // Server Action が計算してくれた追加フィールドと、パース済みの履歴(または scoreRecord 内のもの)を取り出す
+  const { scoreRecord, questions, totalAssessmentCount, averageAssessmentScore } = res.data;
 
-  // コース名のマッピング
+  // 教材のメタデータから hasLevel を解決
+  let hasLevel = true;
+  if (scoreRecord.content_id) {
+    const contentRes = await getContentAction(scoreRecord.content_id);
+    if (contentRes.success && contentRes.data) {
+      const isCorpus = contentRes.data.metadata?.sprint?.sprint_type === '1';
+      hasLevel = isCorpus ? contentRes.data.metadata?.sprint?.has_level ?? true : true;
+    }
+  }
+
   const courseTitle = getSprintTitle(
     scoreRecord.question_type || '0', 
-    Number(scoreRecord.difficulty_level)
+    Number(scoreRecord.difficulty_level),
+    hasLevel
   );
+
+  // DBの answered_history は文字列またはJSONオブジェクトなので、
+  // フロントに一貫した型で渡すためにパースを考慮します
+  const parsedHistory = typeof scoreRecord.answered_history === 'string'
+    ? JSON.parse(scoreRecord.answered_history)
+    : scoreRecord.answered_history;
 
   return (
     <SprintResult
       scoreData={{
         self_sprint_id: scoreRecord.self_sprint_id,
+        sprint_type: scoreRecord.sprint_type,
+        content_id: scoreRecord.content_id,
         question_type: scoreRecord.question_type,
-        answer_type: scoreRecord.answer_type, // 🆕 セッション共通のYes/No縛り
+        answer_type: scoreRecord.answer_type,
         difficulty_level: scoreRecord.difficulty_level,
         time_limit_sec: scoreRecord.time_limit_sec,
         total_answered: scoreRecord.total_answered,
-        created_at: scoreRecord.insert_date,   // 🆕 DDLのinsert_dateにマッピング
+        created_at: scoreRecord.insert_date,
+        
+        // 💡 🆕 結果画面コンポーネントが求める拡張データをここでしっかりマッピングする
+        answered_history: parsedHistory || [],
+        totalAssessmentCount: totalAssessmentCount,
+        averageAssessmentScore: averageAssessmentScore
       }} 
       questions={questions}
       courseTitle={courseTitle}

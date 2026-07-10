@@ -1,5 +1,5 @@
 // packages/lib/assessment/native-speech.ts
-import { AnalysisResult, WordMatch } from '@gabby/types/wordDrill';
+import { AnalysisResult, WordMatch } from '@gabby/types/speechAssessment';
 
 // 重みの定義
 const WEIGHTS = {

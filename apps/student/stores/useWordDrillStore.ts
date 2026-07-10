@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { TrainingWord } from '@gabby/types/word';
-import { AnalysisResult, FeedbackConfig } from '@gabby/types/wordDrill';
+import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
 
 // 表示状態（フリップ、フィードバック等）をリセットするための共通オブジェクト
 const UI_RESET_STATE = {

@@ -1,177 +1,360 @@
-// @/stores/useSprintStore
-'use client';
-
 import { create } from 'zustand';
-import { SprintQuestion, SprintQuestionType, SprintAnswerType } from "@gabby/types/sprint";
-import { AnalysisResult, FeedbackConfig } from '@gabby/types/wordDrill';
+import { SprintQuestion, SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
+import { MetadataSprint } from "@gabby/types/content";
+
+// ─── 追加：UIビューの型定義 ───
+export type SprintUiView = 'loading' | 'selecting' | 'gesture_needed' | 'error' | 'drill' | 'sprint';
+
+// ─── 追加：一括設定用オブジェクトのインターフェース ───
+interface SprintConfigInput {
+  mode: 'drill' | 'sprint';
+  questionType: SprintQuestionType | null;
+  level: string | number;
+  timeLimitSec: number;
+  contentId: string | null;
+  answerType: SprintAnswerType | null;
+  sprintType?: string | null;
+  isAssessmentMode: boolean; // 🚀 追加：発話評価のON/OFFフラグ
+}
 
 interface SprintState {
+  // ─── ① ページ・UI制御（page.tsx管理用） ───
+  ui: {
+    view: SprintUiView;
+  };
+  config: {
+    mode: 'drill' | 'sprint';
+    questionType: SprintQuestionType | null;
+    level: string | number;
+    timeLimitSec: number;
+    contentId: string | null;
+    answerType: SprintAnswerType | null;
+    sprintType: string | null;
+    isAssessmentMode: boolean; // 🚀 追加：発話評価のON/OFFフラグ
+  };
+  contentMetadata: MetadataSprint | null;
+  contentName: string | null;
+  session: {
+    isActive: boolean;
+    questions: SprintQuestion[];
+    resumeId?: string;
+  };
+
+  // ─── ② 共通メタデータ（後方互換・既存ロジック用） ───
+  mode: 'drill' | 'sprint' | null;
   questions: SprintQuestion[];
   currentIndex: number;
-  mode: 'drill' | 'sprint';
-  contentId: string;
-  questionType: SprintQuestionType | null;
-  level: string;
-  answerType: SprintAnswerType;
-  timeLimitSec: number;
-  loading: boolean;
-  drillEvalType: 'yes' | 'no';
+  contentId: string | null;
+  sprintType: string | null;
+  questionType: string | null;
+  answerType: string | null;
+  level: string | number;
+  isAssessmentMode: boolean; // 🚀 追加：後方互換用ルートプロパティ
+  
+  // ─── ③ 同期・カウント用管理 ───
+  pendingQuestionCount: number;
+  pendingAssessmentCount: number;
+  sessionResults: Array<{
+    questionId: string;
+    isSkipped: boolean;
+    feedback: any;
+    analysis: any;
+  }>;
+
+  // ─── ④ ドリルモード専用ステート ───
   isRevealed: boolean;
   isAutoPlaying: boolean;
-  isRecording: boolean;
   isPlayingQuestionSequence: boolean;
   isPlayingAnswerSequence: boolean;
-  feedback: FeedbackConfig | null;
-  analysis: AnalysisResult | null;
+  feedback: any | null;
+  analysis: any | null;
+  drillEvalType: 'yes' | 'no';
 
+  // ─── ⑤ タイムモード（スプリント）専用ステート ───
+  timeLimitSec: number;
+  isRecording: boolean;
+
+  // ─── ⚙️ アクション ───
+  // ページ・UI制御用アクション
+  setUiView: (view: SprintUiView) => void;
+  setConfig: (config: Partial<SprintConfigInput>) => void;
+  startSession: (params: { questions: SprintQuestion[]; mode: 'drill' | 'sprint'; config: SprintConfigInput; resumeId?: string }) => void;
+  clearSessionProgress: () => void;
+  setContentMetadata: (metadata: MetadataSprint | null) => void;
+  setContentName: (name: string | null) => void;
+  
+  // プレイヤーコア用アクション
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
-  setSprintConfig: (config: { contentId: string, questionType: SprintQuestionType, level: string, answerType: SprintAnswerType, timeLimitSec: number }) => void;
-  setLoading: (loading: boolean) => void;
-  nextStep: () => { isLast: boolean };
-  prevStep: () => void;
-  setIsRevealed: (val: boolean) => void;
-  setIsRecording: (val: boolean) => void;
-  toggleAutoPlay: (val?: boolean) => void;
-  setPlayingQuestionSequence: (val: boolean) => void;
-  setPlayingAnswerSequence: (val: boolean) => void;
-  setFeedback: (val: FeedbackConfig | null) => void;
-  setAnalysis: (val: AnalysisResult | null) => void;
-  setDrillEvalType: (val: 'yes' | 'no') => void;
   clearSession: () => void;
   resetStore: () => void;
+  
+  // ステップ移動（ドリル用）
+  nextStep: () => { isLast: boolean };
+  prevStep: () => void;
+  
+  // 結果コミット
+  commitAssessmentResult: (questionId: string, feedback: any, analysis: any) => { isLast: boolean };
+  commitSkipResult: (questionId: string) => { isLast: boolean };
+  
+  // 各種カウンター・セッター
+  incrementAssessmentCount: () => void;
+  clearPendingCounts: () => { questionCount: number; assessmentCount: number };
+  setIsRevealed: (revealed: boolean) => void;
+  setIsRecording: (recording: boolean) => void;
+  setPlayingQuestionSequence: (playing: boolean) => void;
+  setPlayingAnswerSequence: (playing: boolean) => void;
+  setFeedback: (feedback: any) => void;
+  setAnalysis: (analysis: any) => void;
+  toggleAutoPlay: (force?: boolean) => void;
+  setDrillEvalType: (type: 'yes' | 'no') => void;
 }
 
 export const useSprintStore = create<SprintState>((set, get) => ({
+  // ─── ① 初期値定義（新規追加分） ───
+  ui: {
+    view: 'loading',
+  },
+  config: {
+    mode: 'sprint',
+    questionType: '0',
+    level: '1',
+    timeLimitSec: 60,
+    contentId: null,
+    answerType: '0',
+    sprintType: '0',
+    isAssessmentMode: true, // 🚀 追加：デフォルトON
+  },
+  contentMetadata: null,
+  contentName: null,
+  session: {
+    isActive: false,
+    questions: [],
+    resumeId: undefined,
+  },
+
+  // ─── ② 初期値の定義（既存分） ───
+  mode: null,
   questions: [],
   currentIndex: 0,
-  mode: 'drill',
-  contentId: '',
+  contentId: null,
+  sprintType: null,
   questionType: null,
-  level: '0',
-  answerType: '0',
-  timeLimitSec: 60,
-  loading: true,
-  drillEvalType: 'yes',
+  answerType: null,
+  level: 1,
+  isAssessmentMode: true, // 🚀 追加：デフォルトON
+  
+  pendingQuestionCount: 0,
+  pendingAssessmentCount: 0,
+  sessionResults: [],
+
   isRevealed: false,
   isAutoPlaying: false,
-  isRecording: false,
   isPlayingQuestionSequence: false,
   isPlayingAnswerSequence: false,
   feedback: null,
   analysis: null,
+  drillEvalType: 'yes',
 
-  initSprint: (questions, mode, startIndex = 0) => set({
-    questions,
+  timeLimitSec: 60,
+  isRecording: false,
+
+  // ─── ⚙️ 新規追加アクション（page.tsx 連動用） ───
+  setUiView: (view) => set((state) => ({ ui: { ...state.ui, view } })),
+  setContentMetadata: (metadata) => set((state) => {
+    let nextType = state.config.questionType;
+    let nextLevel = state.config.level;
+
+    const isCorpus = metadata?.sprint_type === '1';
+    const hasLevel = isCorpus ? metadata?.has_level ?? true : true;
+
+    if (isCorpus && metadata?.supported_types) {
+      const support = metadata.supported_types;
+      // 現在のタイプが許可されているかチェック
+      const isSupported = (
+        (nextType === '0' && support.speed) ||
+        (nextType === '4' && support.structure) ||
+        (nextType === '5' && support.builders) ||
+        (nextType === '6' && support.mastery)
+      );
+
+      if (!isSupported) {
+        const availableTypes = Object.values(QUESTION_TYPES).filter(t => {
+          if (t.value === '0') return support.speed;
+          if (t.value === '4') return support.structure;
+          if (t.value === '5') return support.builders;
+          if (t.value === '6') return support.mastery;
+          return false;
+        });
+        if (availableTypes.length > 0) {
+          nextType = availableTypes[0].value;
+          nextLevel = hasLevel ? String(QUESTION_TYPES[nextType]?.minLevel ?? '0') : '1';
+        }
+      }
+    }
+
+    if (!hasLevel) {
+      nextLevel = '1';
+    }
+
+    return { 
+      contentMetadata: metadata,
+      config: {
+        ...state.config,
+        questionType: nextType,
+        level: nextLevel
+      }
+    };
+  }),
+  setContentName: (name) => set({ contentName: name }),
+  
+  setConfig: (inputConfig) => set((state) => ({
+    config: {
+      ...state.config,
+      ...inputConfig,
+    },
+    // 後方互換のためルートのメタデータも同期
+    ...((inputConfig.mode ? { mode: inputConfig.mode } : {}) as any),
+    ...((inputConfig.contentId ? { contentId: inputConfig.contentId } : {}) as any),
+    ...((inputConfig.sprintType ? { sprintType: inputConfig.sprintType } : {}) as any),
+    ...((inputConfig.questionType ? { questionType: inputConfig.questionType } : {}) as any),
+    ...((inputConfig.answerType ? { answerType: inputConfig.answerType } : {}) as any),
+    ...((inputConfig.level ? { level: inputConfig.level } : {}) as any),
+    ...((inputConfig.timeLimitSec ? { timeLimitSec: inputConfig.timeLimitSec } : {}) as any),
+    ...((inputConfig.isAssessmentMode !== undefined ? { isAssessmentMode: inputConfig.isAssessmentMode } : {}) as any), // 🚀 追加：ルート同期
+  })),
+
+  startSession: ({ questions, mode, config: inputConfig, resumeId }) => {
+    // 1. セッション状態をアクティブに
+    set({
+      session: {
+        isActive: true,
+        questions,
+        resumeId,
+      }
+    });
+
+    // 2. configを適用
+    get().setConfig(inputConfig);
+
+    // 3. 既存のプレイヤー初期化メソッド(initSprint)を内部実行して完全同期
+    get().initSprint(questions, mode);
+  },
+
+  clearSessionProgress: () => set((state) => ({
+    session: {
+      ...state.session,
+      isActive: false // 戻り判定フラグをクリア
+    }
+  })),
+
+  // ─── 🧬 既存のコアロジック（そのまま完全維持） ───
+  initSprint: (questions, mode, startIndex = 0) => set((state) => ({
     mode,
+    questions,
     currentIndex: startIndex,
-    isRevealed: false,
-    isAutoPlaying: mode === 'sprint', // スプリント時は最初から自動再生フラグを有効化
-    drillEvalType: get().answerType === '1' ? 'no' : 'yes',
+    // 共通初期化
+    sessionResults: [],
+    pendingQuestionCount: 0,
+    pendingAssessmentCount: 0,
     isRecording: false,
+    // モード別の初期化
+    isRevealed: mode === 'sprint' ? true : false, // タイムモードは常にオープン扱い
+    isAutoPlaying: false,
     isPlayingQuestionSequence: false,
     isPlayingAnswerSequence: false,
     feedback: null,
     analysis: null,
-    loading: false
-  }),
-
-  setLoading: (loading) => set({ loading }),
-
-  setSprintConfig: (config) => set({ ...config }),
+  })),
 
   nextStep: () => {
-    const { questions, currentIndex } = get();
-    const resetDisplay = {
-      isRevealed: false,
-      isRecording: false,
-      isPlayingQuestionSequence: false,
-      isPlayingAnswerSequence: false,
-      feedback: null,
-      analysis: null,
-    };
-
-    if (currentIndex < questions.length - 1) {
-      set({ ...resetDisplay, currentIndex: currentIndex + 1 });
-      return { isLast: false };
-    } else {
-      set({ ...resetDisplay, isAutoPlaying: false });
-      return { isLast: true }; // 最後の問題に到達
+    const { currentIndex, questions } = get();
+    const isLast = currentIndex >= questions.length - 1;
+    if (!isLast) {
+      set((state) => ({ 
+        currentIndex: state.currentIndex + 1,
+        isRevealed: false,
+        feedback: null,
+        analysis: null,
+        pendingQuestionCount: state.pendingQuestionCount + 1
+      }));
     }
+    return { isLast };
   },
 
   prevStep: () => {
     const { currentIndex } = get();
-    if (currentIndex === 0) return;
+    if (currentIndex > 0) {
+      set((state) => ({
+        currentIndex: state.currentIndex - 1,
+        isRevealed: false,
+        feedback: null,
+        analysis: null
+      }));
+    }
+  },
 
-    set({
-      isRevealed: false,
-      isRecording: false,
-      isPlayingQuestionSequence: false,
-      isPlayingAnswerSequence: false,
-      feedback: null,
-      analysis: null,
-      currentIndex: currentIndex - 1
-    });
+  commitAssessmentResult: (questionId, feedback, analysis) => {
+    const { currentIndex, questions, sessionResults } = get();
+    const isLast = currentIndex >= questions.length - 1;
+    
+    const newResult = { questionId, isSkipped: false, feedback, analysis };
+    const updatedResults = [...sessionResults.filter(r => r.questionId !== questionId), newResult];
+
+    set((state) => ({
+      sessionResults: updatedResults,
+      // タイムモード（sprint）の場合は評価直後にインデックスを進める
+      currentIndex: state.mode === 'sprint' && !isLast ? state.currentIndex + 1 : state.currentIndex,
+    }));
+
+    return { isLast };
+  },
+
+  commitSkipResult: (questionId) => {
+    const { currentIndex, questions, sessionResults } = get();
+    const isLast = currentIndex >= questions.length - 1;
+
+    const newResult = { questionId, isSkipped: true, feedback: null, analysis: null };
+    const updatedResults = [...sessionResults.filter(r => r.questionId !== questionId), newResult];
+
+    set((state) => ({
+      sessionResults: updatedResults,
+      currentIndex: !isLast ? state.currentIndex + 1 : state.currentIndex,
+    }));
+
+    return { isLast };
+  },
+
+  incrementAssessmentCount: () => set((state) => ({ pendingAssessmentCount: state.pendingAssessmentCount + 1 })),
+  
+  clearPendingCounts: () => {
+    const { pendingQuestionCount, pendingAssessmentCount } = get();
+    set({ pendingQuestionCount: 0, pendingAssessmentCount: 0 });
+    return { questionCount: pendingQuestionCount, assessmentCount: pendingAssessmentCount };
   },
 
   setIsRevealed: (isRevealed) => set({ isRevealed }),
   setIsRecording: (isRecording) => set({ isRecording }),
-  
-  toggleAutoPlay: (val) => set((state) => {
-    const nextAutoPlay = val !== undefined ? val : !state.isAutoPlaying;
-    if (nextAutoPlay) {
-      return {
-        isAutoPlaying: true,
-        isRevealed: false, 
-        isRecording: false,
-        isPlayingQuestionSequence: false,
-        isPlayingAnswerSequence: false,
-        feedback: null,
-        analysis: null,
-      };
-    } else {
-      return { isAutoPlaying: false };
-    }
-  }),
-
   setPlayingQuestionSequence: (isPlayingQuestionSequence) => set({ isPlayingQuestionSequence }),
   setPlayingAnswerSequence: (isPlayingAnswerSequence) => set({ isPlayingAnswerSequence }),
-
   setFeedback: (feedback) => set({ feedback }),
   setAnalysis: (analysis) => set({ analysis }),
-
+  toggleAutoPlay: (force) => set((state) => ({ isAutoPlaying: force !== undefined ? force : !state.isAutoPlaying })),
   setDrillEvalType: (drillEvalType) => set({ drillEvalType }),
-
-  clearSession: () => set({
-    questions: [],
-    currentIndex: 0,
-    isRevealed: false,
-    isAutoPlaying: false,
-    isRecording: false,
-    isPlayingQuestionSequence: false,
-    isPlayingAnswerSequence: false,
-    drillEvalType: 'yes',
-    feedback: null,
-    analysis: null,
-    loading: true,
+  
+  clearSession: () => set({ 
+    questions: [], 
+    currentIndex: 0, 
+    sessionResults: [], 
+    mode: null,
+    session: { isActive: false, questions: [], resumeId: undefined },
+    ui: { view: 'loading' }
   }),
-
-  resetStore: () => set({
-    questions: [],
-    currentIndex: 0,
-    mode: 'drill',
-    contentId: '',
-    questionType: null,
-    level: '0',
-    answerType: '0',
-    timeLimitSec: 60,
-    isRevealed: false,
-    isAutoPlaying: false,
-    isRecording: false,
-    isPlayingQuestionSequence: false,
-    isPlayingAnswerSequence: false,
-    feedback: null,
-    analysis: null,
-    loading: true,
+  resetStore: () => set({ 
+    mode: null, 
+    questions: [], 
+    currentIndex: 0, 
+    sessionResults: [],
+    session: { isActive: false, questions: [], resumeId: undefined },
+    ui: { view: 'loading' }
   })
 }));

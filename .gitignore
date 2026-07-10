@@ -61,3 +61,6 @@ blob-report/
 temp_data/
 # バックアップやダンプのログ
 *.dump
+
+# Github
+.github

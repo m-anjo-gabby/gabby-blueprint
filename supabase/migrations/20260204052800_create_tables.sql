@@ -340,6 +340,10 @@ COMMENT ON COLUMN public.com_m_word.status IS '公開ステータス';
 COMMENT ON COLUMN public.com_m_word.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_word.update_date IS '更新日時';
 
+-- 1. メインとなる単語マスタの絞り込みとソートの高速化
+CREATE INDEX IF NOT EXISTS idx_com_m_word_content_status_freq
+ON public.com_m_word (content_id, status, frequency_rank);
+
 ---------------------------------------------
 -- DDL: com_m_phrase (出題例文マスタ)
 ---------------------------------------------
@@ -384,6 +388,9 @@ COMMENT ON COLUMN public.com_m_phrase.update_date IS '更新日時';
 
 -- 検索パフォーマンス向上のためのインデックス
 CREATE INDEX idx_com_m_phrase_word_id ON public.com_m_phrase(word_id);
+-- LATERAL JOIN 内のフレーズ検索とソートの高速化
+CREATE INDEX IF NOT EXISTS idx_com_m_phrase_word_status_seq
+ON public.com_m_phrase (word_id, status, seq_no ASC);
 
 ---------------------------------------------
 -- DDL: com_t_favorite_contents (お気に入りコンテンツ)
@@ -421,6 +428,10 @@ COMMENT ON COLUMN public.com_t_favorite_phrase.favorite_id IS 'お気に入りID
 COMMENT ON COLUMN public.com_t_favorite_phrase.user_id IS 'ユーザID';
 COMMENT ON COLUMN public.com_t_favorite_phrase.phrase_id IS 'フレーズID';
 COMMENT ON COLUMN public.com_t_favorite_phrase.insert_date IS '登録日時';
+
+-- お気に入りフレーズのユーザー紐付け高速化
+CREATE INDEX IF NOT EXISTS idx_com_t_favorite_phrase_user_phrase
+ON public.com_t_favorite_phrase (user_id, phrase_id);
 
 ---------------------------------------------
 -- DDL: com_t_resume_contents (コンテンツ再開管理テーブル)
@@ -547,115 +558,109 @@ CREATE INDEX idx_user_agreement_term_id ON public.com_t_user_terms_agreement(ter
 -- DDL: com_m_sprint_questions (スプリント問題マスタ)
 ---------------------------------------------
 CREATE TABLE public.com_m_sprint_questions (
-  -- 【基本情報】
+  -- 【基本情報・教材区分】
   question_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content_id UUID NOT NULL,                     -- 紐づくコンテンツ（教材）ID (UUID)
+  sprint_type TEXT NOT NULL DEFAULT '0',        -- スプリント種別 (0:汎用スプリント, 1:コーパススプリント)
   question_type TEXT NOT NULL,                  -- '0':Speed, '4':Structure, '5':Builders, '6':Mastery
   difficulty_level SMALLINT NOT NULL DEFAULT 1, -- 難易度レベル
-  group_id UUID DEFAULT NULL,                   -- 共通グループID
-  seq_no SMALLINT NOT NULL DEFAULT 1,           -- グループ内の出題順序
+  group_id UUID DEFAULT NULL,                   -- 共通グループID (汎用問題の塊)
+  seq_no SMALLINT NOT NULL DEFAULT 1,           -- グループ内または教材内での出題順序
 
-  ---------------------------------------------
   -- ① ステートメント（親文）セクション
-  ---------------------------------------------
-  statement TEXT DEFAULT NULL,
-  statement_ja TEXT DEFAULT NULL,
-  statement_voice TEXT DEFAULT NULL,            -- 生成された音声URL
+  statement_en TEXT DEFAULT NULL,               -- ステートメント（親文・英語）
+  statement_ja TEXT DEFAULT NULL,               -- ステートメント（親文・日本語訳）
+  statement_voice TEXT DEFAULT NULL,            -- 生成された音声Storageパス
   statement_tts_ssml TEXT DEFAULT NULL,
   statement_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
   statement_tts_adjustments JSONB DEFAULT NULL,
   statement_tts_status SMALLINT NOT NULL DEFAULT 0, -- 0:未生成, 1:生成済, 2:要再生成, 9:エラー
   
-  ---------------------------------------------
   -- ② クエスチョン（指示文・問い）セクション
-  ---------------------------------------------
-  question TEXT NOT NULL,
-  question_ja TEXT DEFAULT NULL,
-  question_voice TEXT DEFAULT NULL,              -- 生成された音声URL
+  question_en TEXT NOT NULL,                    -- クエスチョン（指示文/問い・英語）
+  question_ja TEXT DEFAULT NULL,                -- クエスチョン（指示文/問い・日本語訳）
+  question_voice TEXT DEFAULT NULL,              -- 生成された音声Storageパス
   question_tts_ssml TEXT DEFAULT NULL,
   question_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
   question_tts_adjustments JSONB DEFAULT NULL,
   question_tts_status SMALLINT NOT NULL DEFAULT 0,
   
-  ---------------------------------------------
   -- ③ 解答（YES・通常正解文）セクション
-  ---------------------------------------------
-  answer_sentence_yes TEXT NOT NULL,
-  answer_sentence_yes_ja TEXT DEFAULT NULL,
-  answer_sentence_yes_voice TEXT DEFAULT NULL,   -- 生成された音声URL
+  answer_sentence_yes_en TEXT NOT NULL,         -- 解答（YES/通常正解文・英語）
+  answer_sentence_yes_ja TEXT DEFAULT NULL,         -- 解答（YES/通常正解文・日本語訳）
+  answer_sentence_yes_voice TEXT DEFAULT NULL,   -- 生成された音声Storageパス
   answer_sentence_yes_tts_ssml TEXT DEFAULT NULL,
   answer_sentence_yes_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
   answer_sentence_yes_tts_adjustments JSONB DEFAULT NULL,
   answer_sentence_yes_tts_status SMALLINT NOT NULL DEFAULT 0,
   
-  ---------------------------------------------
   -- ④ 解答（NO・否定文 ※Speed専用）セクション
-  ---------------------------------------------
-  answer_sentence_no TEXT DEFAULT NULL,
-  answer_sentence_no_ja TEXT DEFAULT NULL,
-  answer_sentence_no_voice TEXT DEFAULT NULL,    -- 生成された音声URL
+  answer_sentence_no_en TEXT DEFAULT NULL,          -- 解答（NO/否定文・英語 ※Speed専用）
+  answer_sentence_no_ja TEXT DEFAULT NULL,          -- 解答（NO/否定文・日本語訳 ※Speed専用）
+  answer_sentence_no_voice TEXT DEFAULT NULL,    -- 生成された音声Storageパス
   answer_sentence_no_tts_ssml TEXT DEFAULT NULL,
   answer_sentence_no_tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
   answer_sentence_no_tts_adjustments JSONB DEFAULT NULL,
   answer_sentence_no_tts_status SMALLINT NOT NULL DEFAULT 0,
 
-  ---------------------------------------------
-  -- 【共通管理・移行用カラム】
-  ---------------------------------------------
+  -- 【共通管理】
   last_tts_date TIMESTAMP WITH TIME ZONE DEFAULT NULL, -- 最終TTS生成日
   legacy_question_id BIGINT DEFAULT NULL,
   legacy_group_id INTEGER DEFAULT NULL,
-  
-  delete_flg TEXT NOT NULL DEFAULT '0',
+  delete_flg TEXT NOT NULL DEFAULT '0',                 -- '0':有効, '1':削除済
   insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-COMMENT ON TABLE public.com_m_sprint_questions IS 'スプリント問題マスタテーブル';
+-- テーブルおよびカラムコメント設定
+COMMENT ON TABLE public.com_m_sprint_questions IS 'スプリント問題（汎用・コーパス統合）マスタテーブル';
 
--- 【基本情報】
+-- 【基本情報・教材区分】
 COMMENT ON COLUMN public.com_m_sprint_questions.question_id IS '問題ユニークID (UUID)';
+COMMENT ON COLUMN public.com_m_sprint_questions.content_id IS '紐づくコンテンツ（教材）ID (UUID)';
+COMMENT ON COLUMN public.com_m_sprint_questions.sprint_type IS '教材種別 (0:汎用スプリント, 1:コーパススプリント)';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_type IS '問題種別 (''0'':Speed, ''4'':Structure, ''5'':Builders, ''6'':Mastery)';
 COMMENT ON COLUMN public.com_m_sprint_questions.difficulty_level IS '難易度レベル (0:Basic 〜)';
 COMMENT ON COLUMN public.com_m_sprint_questions.group_id IS '共通グループID (問題群をグルーピングするUUID)';
-COMMENT ON COLUMN public.com_m_sprint_questions.seq_no IS 'グループ内の出題順序';
+COMMENT ON COLUMN public.com_m_sprint_questions.seq_no IS 'グループ内または教材内での出題順序';
 
 -- ① ステートメント（親文）セクション
-COMMENT ON COLUMN public.com_m_sprint_questions.statement IS 'ステートメント（親文・英語）';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_en IS 'ステートメント（親文・英語）';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_ja IS 'ステートメント（親文・日本語訳）';
-COMMENT ON COLUMN public.com_m_sprint_questions.statement_voice IS 'ステートメント生成音声URL';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_voice IS 'ステートメント生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml IS 'ステートメント用TTS SSMLテキスト';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml_mode IS 'ステートメント用TTS SSML生成モード (auto等)';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_adjustments IS 'ステートメント用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_status IS 'ステートメント用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 
 -- ② クエスチョン（指示文・問い）セクション
-COMMENT ON COLUMN public.com_m_sprint_questions.question IS 'クエスチョン（指示文/問い・英語）';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_en IS 'クエスチョン（指示文/問い・英語）';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_ja IS 'クエスチョン（指示文/問い・日本語訳）';
-COMMENT ON COLUMN public.com_m_sprint_questions.question_voice IS 'クエスチョン生成音声URL';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_voice IS 'クエスチョン生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml IS 'クエスチョン用TTS SSMLテキスト';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml_mode IS 'クエスチョン用TTS SSML生成モード (auto等)';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_adjustments IS 'クエスチョン用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_status IS 'クエスチョン用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 
 -- ③ 解答（YES・通常正解文）セクション
-COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes IS '解答（YES/通常正解文・英語）';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_en IS '解答（YES/通常正解文・英語）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_ja IS '解答（YES/通常正解文・日本語訳）';
-COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_voice IS '解答（YES）生成音声URL';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_voice IS '解答（YES）生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml IS '解答（YES）用TTS SSMLテキスト';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml_mode IS '解答（YES）用TTS SSML生成モード (auto等)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_adjustments IS '解答（YES）用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_status IS '解答（YES）用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 
 -- ④ 解答（NO・否定文 ※Speed専用）セクション
-COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no IS '解答（NO/否定文・英語 ※Speed専用）';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_en IS '解答（NO/否定文・英語 ※Speed専用）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_ja IS '解答（NO/否定文・日本語訳 ※Speed専用）';
-COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_voice IS '解答（NO）生成音声URL';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_voice IS '解答（NO）生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml IS '解答（NO）用TTS SSMLテキスト';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml_mode IS '解答（NO）用TTS SSML生成モード (auto等)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_adjustments IS '解答（NO）用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_status IS '解答（NO）用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 
--- 【共通管理・移行用カラム】
+-- 【共通管理】
 COMMENT ON COLUMN public.com_m_sprint_questions.last_tts_date IS '最終TTS音声生成日時';
 COMMENT ON COLUMN public.com_m_sprint_questions.legacy_question_id IS '移行元レガシー問題ID';
 COMMENT ON COLUMN public.com_m_sprint_questions.legacy_group_id IS '移行元レガシーグループID';
@@ -663,13 +668,16 @@ COMMENT ON COLUMN public.com_m_sprint_questions.delete_flg IS '削除フラグ (
 COMMENT ON COLUMN public.com_m_sprint_questions.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_sprint_questions.update_date IS '更新日時';
 
--- ---------------------------------------------
--- 高速検索・ソートのための複合インデックス
--- ---------------------------------------------
--- 開いた際に対象種別・レベルから問題群を一発で、かつグループ順・ステップ順に綺麗に引き出すための最適化
-CREATE INDEX idx_com_m_sprint_questions_lookup 
-ON public.com_m_sprint_questions (question_type, difficulty_level, group_id, seq_no)
+-- パフォーマンス最適化インデックス（生徒・アドミン双方対応）
+-- 【インデックスA: 汎用スプリント用 (生徒自主トレサンプリング & アドミン横断フィルタ)】
+CREATE INDEX idx_sprint_questions_general_lookup
+ON public.com_m_sprint_questions (sprint_type, question_type, difficulty_level, group_id, seq_no)
 WHERE delete_flg = '0';
+
+-- 【インデックスB: コーパススプリント用 (生徒教材ロード & アドミン個別教材エディタ)】
+CREATE INDEX idx_sprint_questions_corpus_lookup
+ON public.com_m_sprint_questions (content_id, seq_no)
+WHERE delete_flg = '0' AND sprint_type = 1;
 
 ---------------------------------------------
 -- DDL: self_t_sprint テーブル（自主トレスプリント結果・履歴）
@@ -679,13 +687,16 @@ CREATE TABLE public.self_t_sprint (
   user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
   
   -- 設定情報 (sprint.ts マスタと完全同期)
-  question_type VARCHAR(2) NOT NULL,    -- '0': Speed, '4': Structure, '5': Builders, '6': Mastery
-  answer_type VARCHAR(2) NOT NULL,      -- '0': YES回答, '1': NO回答
+  sprint_type TEXT NOT NULL,            -- '0': 汎用スプリント, '1': コーパススプリント
+  content_id UUID NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,  -- コンテンツID
+  question_type TEXT NOT NULL,          -- '0': Speed, '4': Structure, '5': Builders, '6': Mastery
+  answer_type TEXT NOT NULL,            -- '0': YES回答, '1': NO回答
   difficulty_level SMALLINT NOT NULL,   -- 0 (Basic) 〜 10
   time_limit_sec SMALLINT NOT NULL,     -- 60, 90, 120, 150
   
   -- スコア・実績データ
-  total_answered SMALLINT NOT NULL,     -- タイムアップまでに答えた総問題数 (スコア)
+  total_answered SMALLINT NOT NULL,     -- タイムアップまでに答えた総問題数
+  total_assessments SMALLINT NOT NULL,  -- タイムアップまでに発話評価した回数
   
   -- 問題履歴をJSONで保持
   answered_history JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -699,18 +710,30 @@ CREATE TABLE public.self_t_sprint (
 COMMENT ON TABLE public.self_t_sprint IS '自主トレスプリント結果・履歴管理テーブル';
 COMMENT ON COLUMN public.self_t_sprint.self_sprint_id IS 'スプリント結果ユニークID (UUID)';
 COMMENT ON COLUMN public.self_t_sprint.user_id IS 'ユーザーID (com_m_user.id)';
+COMMENT ON COLUMN public.self_t_sprint.sprint_type IS 'スプリント種別';
+COMMENT ON COLUMN public.self_t_sprint.content_id IS 'コンテンツID';
 COMMENT ON COLUMN public.self_t_sprint.question_type IS 'スプリント問題種別 (''0'': Speed, ''4'': Structure, ''5'': Builders, ''6'': Mastery)';
 COMMENT ON COLUMN public.self_t_sprint.answer_type IS '解答種別（''0'': YES回答, ''1'': NO回答）';
 COMMENT ON COLUMN public.self_t_sprint.difficulty_level IS '難易度レベル (0: Basic 〜 10)';
 COMMENT ON COLUMN public.self_t_sprint.time_limit_sec IS '制限時間 (60, 90, 120, 150秒)';
 COMMENT ON COLUMN public.self_t_sprint.total_answered IS '総回答数';
+COMMENT ON COLUMN public.self_t_sprint.total_assessments IS '総発話評価数';
 COMMENT ON COLUMN public.self_t_sprint.answered_history IS '実施問題の履歴情報(JSON)';
 COMMENT ON COLUMN public.self_t_sprint.insert_date IS '登録日時';
 COMMENT ON COLUMN public.self_t_sprint.update_date IS '更新日時';
 
 -- 高速集計のためのインデックス（ユーザーごと、または種別ごとのランキングや履歴用）
-CREATE INDEX idx_self_t_sprint_user_type 
-ON public.self_t_sprint (user_id, question_type, difficulty_level);
+-- 1. ユーザーごと、または種別ごとのランキングやダッシュボード集計用
+CREATE INDEX IF NOT EXISTS idx_self_t_sprint_user_type 
+  ON public.self_t_sprint (user_id, question_type, difficulty_level);
+
+-- 2. getUserSprintHistoryAction (月別履歴一覧・降順ソート) の最適化
+CREATE INDEX IF NOT EXISTS idx_self_t_sprint_user_insert_date 
+  ON public.self_t_sprint (user_id, insert_date DESC);
+
+-- 3. com_m_contents との結合（JOIN）パフォーマンス最適化
+CREATE INDEX IF NOT EXISTS idx_self_t_sprint_content_id 
+  ON public.self_t_sprint (content_id);
 
 ---------------------------------------------
 -- DDL: student_m_sprint_progress (ユーザースプリント進捗マスタ)
@@ -764,3 +787,38 @@ CREATE INDEX idx_daily_summary_perf
 ON public.self_t_word_summary (user_id, training_date DESC);
 
 COMMENT ON TABLE public.self_t_word_summary IS '単語ドリル日次サマリー';
+
+---------------------------------------------
+-- DDL: self_t_sprint_summary（スプリントドリル日次サマリー）
+-- キャパシティ上限： ユーザー数 × 実際の学習日数 × 教材数
+---------------------------------------------
+CREATE TABLE public.self_t_sprint_summary (
+  summary_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  content_id UUID NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+  training_date DATE NOT NULL DEFAULT CURRENT_DATE, -- タイムゾーンを考慮した「日付」
+  
+  question_count INT NOT NULL DEFAULT 1,             -- その日に学習した「延べ」問題数
+  assessment_count INT NOT NULL DEFAULT 0,           -- その日に発話評価した回数
+  speed_count INT NOT NULL DEFAULT 0,                -- その日に学習した「延べ」Speed問題数
+  structure_count INT NOT NULL DEFAULT 0,            -- その日に学習した「延べ」Structure問題数
+  builders_count INT NOT NULL DEFAULT 0,             -- その日に学習した「延べ」Builders問題数
+  mastery_count INT NOT NULL DEFAULT 0,              -- その日に学習した「延べ」Mastery問題数
+
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+  -- 1ユーザー・1教材・1日あたり「1レコード」に絶対制限する一意制約（最重要）
+  CONSTRAINT unique_sprint_user_content_date UNIQUE (user_id, content_id, training_date)
+);
+
+-- パフォーマンス最適化のためのインデックス定義
+-- 1. 直近の学習グラフ描画や、今日の進捗取得を高速化する複合インデックス（既存）
+CREATE INDEX IF NOT EXISTS idx_sprint_daily_summary_perf 
+  ON public.self_t_sprint_summary (user_id, training_date DESC);
+
+-- 2. com_m_contents との JOIN（インナージョイン）を劇的に高速化するインデックス（追加推奨）
+CREATE INDEX IF NOT EXISTS idx_self_t_sprint_summary_content_id
+  ON public.self_t_sprint_summary (content_id);
+
+COMMENT ON TABLE public.self_t_sprint_summary IS 'スプリントドリル日次サマリー';

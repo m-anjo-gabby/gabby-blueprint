@@ -6,7 +6,7 @@ import {
   Calendar, 
   BookOpen, 
   MessageSquareText, 
-  ShieldCheck, 
+  Mic, 
   ChevronDown, 
   User, 
   Search, 
@@ -436,8 +436,8 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                           <MessageSquareText size={11} className="text-emerald-500 shrink-0" />
                           <span>フレーズ数 <span className="font-mono font-black text-slate-900 text-xs">{totalPhrasesDay}</span></span>
                         </span>
-                        <span className="flex items-center gap-1 bg-amber-50/50 px-1.5 py-0.5 rounded-md border border-amber-100/40 text-slate-700">
-                          <ShieldCheck size={11} className="text-amber-500 shrink-0" />
+                        <span className="flex items-center gap-1 bg-rose-50/50 px-1.5 py-0.5 rounded-md border border-rose-100/40 text-slate-700">
+                          <Mic size={11} className="text-rose-500 shrink-0" />
                           <span>発話評価数 <span className="font-mono font-black text-slate-900 text-xs">{totalAssessmentsDay}</span></span>
                         </span>
                       </div>
@@ -450,7 +450,7 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                   <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-2 border-b border-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-wider font-mono bg-slate-50/30">
                     <div className="col-span-2">受講生</div>
                     <div className="col-span-3">トレーニング教材</div>
-                    <div className="col-span-5 text-left pl-1">トレーニング実績</div>
+                    <div className="col-span-5 text-left pl-1">トレーニング実績 (単語/フレーズ/発話)</div>
                     <div className="col-span-2" />
                   </div>
                   <div className="divide-y divide-slate-50">
@@ -498,7 +498,7 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                             
                             {/* 発話評価数 */}
                             <span className="inline-flex items-center min-w-[56px]" title="発話評価数">
-                              <ShieldCheck size={11} className="text-amber-500/80 mr-1 shrink-0" /> 
+                              <Mic size={11} className="text-rose-500 shrink-0" />
                               <span className="font-mono text-slate-700 font-extrabold">{session.assessment_count}</span>
                             </span>
 

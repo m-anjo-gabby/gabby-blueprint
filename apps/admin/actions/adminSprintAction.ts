@@ -11,7 +11,7 @@ const logger = createLogger('admin');
 /**
  * 種別とレベルを指定してスプリント問題一覧を取得
  */
-export async function getSprintQuestionsByFilter(type: SprintQuestionType, level: number) {
+export async function getSprintQuestionsByFilter(contentId: string, type: SprintQuestionType, level: number) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -19,6 +19,7 @@ export async function getSprintQuestionsByFilter(type: SprintQuestionType, level
     const { data, error } = await supabase
       .from('com_m_sprint_questions')
       .select('*')
+      .eq('content_id', contentId)
       .eq('question_type', type)
       .eq('difficulty_level', level)
       .eq('delete_flg', '0')
@@ -28,7 +29,7 @@ export async function getSprintQuestionsByFilter(type: SprintQuestionType, level
     if (error) throw error;
     return data as SprintQuestion[];
   } catch (err: any) {
-    logger.error('sprint:get_questions_failed', err.message, { ...ctx, payload: { type, level } });
+    logger.error('sprint:get_questions_failed', err.message, { ...ctx, payload: { contentId, type, level } });
     return [];
   }
 }
@@ -129,6 +130,7 @@ export async function deleteSprintQuestion(questionId: string) {
  * 特定のセクション（statement, question, etc）の音声を生成して保存
  */
 export async function saveSprintAudio(
+  contentId: string,
   questionId: string,
   section: 'statement' | 'question' | 'answer_yes' | 'answer_no',
   type: SprintQuestionType,
@@ -145,14 +147,14 @@ export async function saveSprintAudio(
     // 1. Azure 生成
     const audioBuffer = await generateAzureAudioBuffer(ssml);
 
-    // 2. パス生成 (sprints/[type]/level[n]/question_id-section-timestamp.mp3)
+    // 2. パス生成 (sprints/[content_id]/[type]/level[n]/question_id-section-timestamp.mp3)
     const typeMap: Record<string, string> = { '0': 'speed', '4': 'structure', '5': 'builders', '6': 'mastery' };
     const typeDir = typeMap[type] || 'unknown';
     const levelDir = `level${level}`;
     
     const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
     const fileName = `${questionId}-${section}-${timestamp}.mp3`;
-    const filePath = `sprints/${typeDir}/${levelDir}/${fileName}`;
+    const filePath = `sprints/${contentId}/${typeDir}/${levelDir}/${fileName}`;
 
     // 3. Storage アップロード
     const { error: uploadError } = await supabase.storage
@@ -220,13 +222,65 @@ export async function saveSprintAudio(
 /**
  * 同一グループの基本文を一括更新
  */
-export async function updateGroupStatement(groupId: string, statement: string, statementJa: string | null) {
+export async function updateGroupStatement(groupId: string, statementEn: string, statementJa: string | null) {
   const supabase = await createAdminClient();
   const { error } = await supabase
     .from('com_m_sprint_questions')
-    .update({ statement, statement_ja: statementJa, update_date: new Date().toISOString() })
+    .update({ statement_en: statementEn, statement_ja: statementJa, update_date: new Date().toISOString() })
     .eq('group_id', groupId);
   
   if (error) return { success: false, message: error.message };
   return { success: true };
+}
+
+/**
+ * 特定の教材・種別・レベルのスプリント問題を全削除し、TSVデータから一括新規登録する (トランザクション代替)
+ */
+export async function bulkImportSprintQuestions(
+  contentId: string,
+  type: SprintQuestionType,
+  level: number,
+  questions: Partial<SprintQuestion>[]
+) {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createAdminClient();
+    const now = new Date().toISOString();
+
+    // 1. 既存の該当する問題種別・レベルの問題を削除 (洗い替え)
+    const { error: deleteError } = await supabase
+      .from('com_m_sprint_questions')
+      .delete()
+      .eq('content_id', contentId)
+      .eq('question_type', type)
+      .eq('difficulty_level', level);
+
+    if (deleteError) throw deleteError;
+
+    // 2. 新しいデータを挿入
+    const dataToInsert = questions.map((q, idx) => ({
+      ...q,
+      content_id: contentId,
+      question_type: type,
+      difficulty_level: level,
+      insert_date: now,
+      update_date: now,
+      delete_flg: '0'
+    }));
+
+    if (dataToInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from('com_m_sprint_questions')
+        .insert(dataToInsert);
+
+      if (insertError) throw insertError;
+    }
+
+    logger.info('sprint:bulk_import_success', `Imported ${questions.length} questions for content ${contentId}, type ${type}, level ${level}`, { ...ctx });
+    revalidatePath('/contents/[id]', 'layout');
+    return { success: true };
+  } catch (err: any) {
+    logger.error('sprint:bulk_import_failed', err.message, { ...ctx, payload: { contentId, type, level, count: questions.length } });
+    return { success: false, message: err.message };
+  }
 }

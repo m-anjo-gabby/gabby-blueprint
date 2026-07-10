@@ -2,14 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Zap, CheckCircle2, AlertCircle, FileAudio, RefreshCw, Volume2, AlertTriangle, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Loader2, Zap, CheckCircle2, AlertCircle, FileAudio, RefreshCw, Volume2, ChevronRight, ArrowLeft } from 'lucide-react';
 import { TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
@@ -41,25 +40,25 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'error'>('idle');
-  const [resultCounts, setResultCounts] = useState({ success: 0, error: 0 });
+  const [, setResultCounts] = useState({ success: 0, error: 0 }); // 未使用の変数を名前なし、または状態保持用に残す
 
   const { speak, isSpeaking, generateSSML } = usePlayAzureSpeech();
   const { showToast } = useToast();
 
-  // 実行タスク（問題×セクション）のリストを作成
+  // 💡 修正: 実行タスク（問題×セクション）のリストを _en スキーマのカラムの存在を元に作成
   const allTasks = useMemo(() => {
     const tasks: { q: SprintQuestion; section: 'statement' | 'question' | 'answer_yes' | 'answer_no' }[] = [];
     const isSpeed = type === '0';
 
     questions.forEach(q => {
       // 基本文 (Speed以外)
-      if (!isSpeed && q.statement) tasks.push({ q, section: 'statement' });
+      if (!isSpeed && q.statement_en) tasks.push({ q, section: 'statement' });
       // 質問・指示
-      tasks.push({ q, section: 'question' });
+      if (q.question_en) tasks.push({ q, section: 'question' });
       // 解答 Yes
-      tasks.push({ q, section: 'answer_yes' });
+      if (q.answer_sentence_yes_en) tasks.push({ q, section: 'answer_yes' });
       // 解答 No (Speedのみ)
-      if (isSpeed && q.answer_sentence_no) tasks.push({ q, section: 'answer_no' });
+      if (isSpeed && q.answer_sentence_no_en) tasks.push({ q, section: 'answer_no' });
     });
 
     return tasks;
@@ -92,18 +91,19 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
     const total = filteredTasks.length;
     setProgress({ current: 0, total });
     let success = 0;
-    let error = 0;
+    let errorCount = 0;
 
     for (let i = 0; i < total; i++) {
       const task = filteredTasks[i];
       setProgress(prev => ({ ...prev, current: i + 1 }));
 
       try {
+        // 💡 修正: マッピング先を _en スキーマの英語テキストフィールドに変更
         const textMap = {
-          statement: task.q.statement,
-          question: task.q.question,
-          answer_yes: task.q.answer_sentence_yes,
-          answer_no: task.q.answer_sentence_no,
+          statement: task.q.statement_en,
+          question: task.q.question_en,
+          answer_yes: task.q.answer_sentence_yes_en,
+          answer_no: task.q.answer_sentence_no_en,
         };
         const text = textMap[task.section] || '';
         const ssml = generateSSML(text, params);
@@ -111,6 +111,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
         const currentPath = task.q[voiceKey] as string | null;
 
         const res = await saveSprintAudio(
+          task.q.content_id,
           task.q.question_id,
           task.section,
           type,
@@ -121,19 +122,21 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
           currentPath
         );
 
-        if (res.success) success++; else error++;
+        if (res.success) success++; else errorCount++;
       } catch (e) {
-        error++;
+        errorCount++;
       }
     }
 
-    setResultCounts({ success, error });
+    setResultCounts({ success, error: errorCount });
     setIsProcessing(false);
-    if (error === 0) {
+    if (errorCount === 0) {
       setStatus('completed');
+      showToast("一括音声生成が完了しました", "success");
       setTimeout(() => { setOpen(false); if (onComplete) onComplete(); }, 1500);
     } else {
       setStatus('error');
+      showToast(`${errorCount}件の生成に失敗しました`, "error");
     }
   };
 
