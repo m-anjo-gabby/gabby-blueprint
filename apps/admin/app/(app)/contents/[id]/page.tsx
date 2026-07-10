@@ -41,6 +41,7 @@ export default async function ContentDetailPage({ params, searchParams }: Props)
           <SprintEditor 
             contentId={contentId} 
             initialType={type as SprintQuestionType} 
+            content={content}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-slate-400">

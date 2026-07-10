@@ -46,6 +46,11 @@ export default function LoginPage() {
 
   // loadingステートを手動で管理する必要がなくなります
   const handleSubmit = async (formData: FormData) => {
+    // 送信開始時にフォーカスを外してキーボードを即座に閉じる
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setError(null);
     const result = await signIn(formData);
     

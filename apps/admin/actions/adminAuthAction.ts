@@ -46,7 +46,7 @@ export async function signIn(formData: FormData) {
       return { error: '権限がありません。生徒用サイトからログインしてください。' };
     }
     
-    logger.info('auth:admin_login_success', `Admin logged in: ${user.email}`, { 
+    logger.info('auth:admin_login_success', `Admin logged in (User ID: ${user.id})`, { 
       userId: user.id,
       payload: { roles: user.app_metadata?.roles }
     });

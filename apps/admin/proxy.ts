@@ -1,7 +1,7 @@
 // apps/admin/proxy.ts
 import { type NextRequest, NextResponse } from 'next/server';
 import { createSupabaseProxy } from '@gabby/lib/proxy-base';
-import { createLogger } from '@gabby/lib/logger';
+import { createRequestLogger } from '@gabby/lib/logger';
 import { canAccessPath } from './lib/navigation';
 
 export async function proxy(req: NextRequest) {
@@ -10,7 +10,7 @@ export async function proxy(req: NextRequest) {
   const loginPath = '/login';
   const dashboardPath = '/dashboard';
 
-  const logger = createLogger('admin');
+  const logger = createRequestLogger('admin', req);
 
   // 公開ルートの判定
   const isPublicRoute = pathname === loginPath || pathname.startsWith('/auth') || 
@@ -31,7 +31,7 @@ export async function proxy(req: NextRequest) {
   // リダイレクトループ（!isAdmin -> /login -> isLogged -> /dashboard）を防ぐため、
   // セッションを物理的に破棄してからログイン画面へ戻します。
   if (!isAdmin) {
-    logger.warn('proxy:admin_access_blocked', `Non-admin session detected in admin app: ${user.email}`, {
+    logger.warn('proxy:admin_access_blocked', `Non-admin session detected in admin app (User ID: ${user.id})`, {
       userId: user.id,
       path: pathname,
       payload: { userType }
@@ -52,7 +52,7 @@ export async function proxy(req: NextRequest) {
   // 3. 詳細認可ガード（パス単位の権限チェック）
   if (isAdmin && !isPublicRoute) {
     if (!canAccessPath(pathname, roles)) {
-      logger.warn('proxy:role_access_denied', `Role-based access denied: ${user.email} -> ${pathname}`, {
+      logger.warn('proxy:role_access_denied', `Role-based access denied (User ID: ${user.id})`, {
         userId: user.id,
         path: pathname,
         payload: { roles }
@@ -68,7 +68,6 @@ export async function proxy(req: NextRequest) {
   if (isPageAccess && !isPrefetch && !isPublicRoute && user) {
     logger.info('page_view', `Admin Access: ${pathname}`, {
       userId: user.id,
-      email: user.email,
       path: pathname,
       payload: {
         roles,

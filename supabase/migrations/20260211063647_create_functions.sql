@@ -278,8 +278,6 @@ GRANT EXECUTE ON FUNCTION public.increment_login_failed_count(UUID, INT) TO serv
 ---------------------------------------------
 -- 単語ドリル日次サマリーカウントアップ
 ---------------------------------------------
-DROP FUNCTION IF EXISTS public.increment_word_summary(UUID, UUID, INT, INT);
-
 CREATE OR REPLACE FUNCTION public.increment_word_summary(
   p_content_id UUID,
   p_word_count INT,
@@ -474,33 +472,30 @@ BEGIN
     END IF;
 
     RETURN QUERY
+    WITH target_users AS (
+        SELECT tu.id, tu.user_name, tu.email
+        FROM public.get_monitor_user_list(_include_monitor) tu
+        WHERE (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR tu.id = ANY(_user_ids))
+    )
     SELECT jsonb_build_object(
         'self_sprint_id', s.self_sprint_id,
+        'user_id', s.user_id,
+        'sprint_type', s.sprint_type,
+        'content_id', s.content_id,
         'question_type', s.question_type,
         'answer_type', s.answer_type,
         'difficulty_level', s.difficulty_level,
         'time_limit_sec', s.time_limit_sec,
         'total_answered', s.total_answered,
         'insert_date', s.insert_date,
-        'user_name', u.user_name
+        'content_name', c.content_name,
+        'user_name', u.user_name,
+        'email', u.email
     )
     FROM public.self_t_sprint s
-    INNER JOIN public.com_m_user u ON u.id = s.user_id
-    WHERE u.client_id = _client_id
-      AND s.insert_date BETWEEN _start_date AND _end_date
-      AND (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR s.user_id = ANY(_user_ids))
-      -- 💡 デモユーザーの履歴は常に100%遮断
-      AND NOT EXISTS (
-        SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'demo_user'
-      )
-      -- 💡 モニターの履歴切り替え
-      AND (
-        _include_monitor = TRUE
-        OR
-        NOT EXISTS (
-          SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'monitor'
-        )
-      )
+    INNER JOIN target_users u ON u.id = s.user_id
+    LEFT JOIN public.com_m_contents c ON c.content_id = s.content_id
+    WHERE s.insert_date BETWEEN _start_date AND _end_date
     ORDER BY s.insert_date DESC;
 END;
 $$;
@@ -509,3 +504,229 @@ $$;
 ALTER FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) OWNER TO postgres;
 REVOKE EXECUTE ON FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) TO authenticated;
+
+---------------------------------------------
+-- 4. スプリントドリル履歴関数（新規追加）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_monitor_sprint_drill_history(
+    _start_date DATE,
+    _end_date DATE,
+    _user_ids UUID[] DEFAULT NULL,
+    _include_monitor BOOLEAN DEFAULT FALSE
+)
+RETURNS SETOF JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    _client_id := public.get_jwt_client_id();
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    WITH target_users AS (
+        SELECT tu.id, tu.user_name, tu.email
+        FROM public.get_monitor_user_list(_include_monitor) tu
+        WHERE (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR tu.id = ANY(_user_ids))
+    )
+    SELECT jsonb_build_object(
+        'summary_id', d.summary_id,
+        'user_id', d.user_id,
+        'content_id', d.content_id,
+        'training_date', d.training_date,
+        'question_count', d.question_count,
+        'assessment_count', d.assessment_count,
+        'speed_count', d.speed_count,
+        'structure_count', d.structure_count,
+        'builders_count', d.builders_count,
+        'mastery_count', d.mastery_count,
+        'content_name', c.content_name,
+        'user_name', u.user_name,
+        'email', u.email
+    )
+    FROM public.self_t_sprint_summary d
+    INNER JOIN target_users u ON u.id = d.user_id
+    LEFT JOIN public.com_m_contents c ON c.content_id = d.content_id
+    WHERE d.training_date BETWEEN _start_date AND _end_date
+    ORDER BY d.training_date DESC;
+END;
+$$;
+
+-- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+ALTER FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) OWNER TO postgres;
+REVOKE EXECUTE ON FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) TO authenticated;
+
+---------------------------------------------
+-- スプリントドリル日次サマリーカウントアップ
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.increment_sprint_summary(
+  p_content_id UUID,
+  p_question_count INT,
+  p_assessment_count INT,
+  p_question_type TEXT  -- 追加された問題種別 ('0', '4', '5', '6')
+)
+RETURNS VOID AS $$
+DECLARE
+  v_user_id UUID := auth.uid(); -- JWTから直接ユーザーIDを取得（セキュリティ向上）
+  v_user_timezone TEXT;
+  v_local_today DATE;
+  
+  -- 各問題種別の増分値を管理する変数
+  v_speed_inc INT := 0;
+  v_structure_inc INT := 0;
+  v_builders_inc INT := 0;
+  v_mastery_inc INT := 0;
+BEGIN
+  -- 認証されていない場合は何もせず終了（安全策）
+  IF v_user_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- 1. ユーザーマスタからタイムゾーンを取得（デフォルトは 'Asia/Tokyo'）
+  SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_user_timezone
+  FROM public.com_m_user
+  WHERE id = v_user_id AND delete_flg = '0';
+
+  -- 2. ユーザーのタイムゾーン基準で現在日付を切り出す
+  v_local_today := (CURRENT_TIMESTAMP AT TIME ZONE v_user_timezone)::date;
+
+  -- 3. 問題種別（question_type）に応じてインクリメント対象を振り分け
+  IF p_question_type = '0' THEN
+    v_speed_inc := p_question_count;
+  ELSIF p_question_type = '4' THEN
+    v_structure_inc := p_question_count;
+  ELSIF p_question_type = '5' THEN
+    v_builders_inc := p_question_count;
+  ELSIF p_question_type = '6' THEN
+    v_mastery_inc := p_question_count;
+  -- 想定外の種別が渡された場合は、トータルのカウントのみ行うよう安全側に倒す
+  END IF;
+
+  -- 4. スプリントサマリーテーブルへUpsert
+  INSERT INTO public.self_t_sprint_summary (
+    user_id, 
+    content_id, 
+    training_date, 
+    question_count, 
+    assessment_count,
+    speed_count,
+    structure_count,
+    builders_count,
+    mastery_count
+  )
+  VALUES (
+    v_user_id, 
+    p_content_id, 
+    v_local_today, 
+    p_question_count, 
+    p_assessment_count,
+    v_speed_inc,
+    v_structure_inc,
+    v_builders_inc,
+    v_mastery_inc
+  )
+  ON CONFLICT (user_id, content_id, training_date)
+  DO UPDATE SET 
+    question_count = self_t_sprint_summary.question_count + p_question_count,
+    assessment_count = self_t_sprint_summary.assessment_count + p_assessment_count,
+    speed_count = self_t_sprint_summary.speed_count + v_speed_inc,
+    structure_count = self_t_sprint_summary.structure_count + v_structure_inc,
+    builders_count = self_t_sprint_summary.builders_count + v_builders_inc,
+    mastery_count = self_t_sprint_summary.mastery_count + v_mastery_inc,
+    update_date = NOW();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 旧シグネチャの関数が存在する場合はクリーンアップ（引数が異なるため別関数として共存してしまうのを防ぐ）
+-- DROP FUNCTION IF EXISTS public.increment_sprint_summary(UUID, INT, INT);
+
+-- 作成直後のデフォルト権限（PUBLIC / anon）を完全に剥奪
+REVOKE EXECUTE ON FUNCTION public.increment_sprint_summary(UUID, INT, INT, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.increment_sprint_summary(UUID, INT, INT, TEXT) FROM anon;
+
+-- ログイン済みのユーザー（authenticated）にのみ、実行権限を限定して付与
+GRANT EXECUTE ON FUNCTION public.increment_sprint_summary(UUID, INT, INT, TEXT) TO authenticated;
+
+---------------------------------------------
+-- 5. ログイン中ユーザーのトレーニング実績一括取得関数
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_user_training_performance(
+    _year_month TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _user_id UUID := auth.uid();
+    _start_date DATE;
+    _end_date DATE;
+    _words_json JSONB;
+    _sessions_json JSONB;
+    _drills_json JSONB;
+BEGIN
+    IF _user_id IS NULL THEN
+        RAISE EXCEPTION 'Unauthorized';
+    END IF;
+
+    -- 月の開始日と終了日を計算
+    _start_date := (_year_month || '-01')::DATE;
+    _end_date := (_start_date + INTERVAL '1 month' - INTERVAL '1 day')::DATE;
+
+    -- 1. 単語ドリル履歴の取得
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+        'content_id', w.content_id,
+        'training_date', w.training_date,
+        'word_count', w.word_count,
+        'phrase_count', w.phrase_count,
+        'assessment_count', w.assessment_count,
+        'update_date', w.update_date,
+        'content_name', COALESCE(c.content_name, 'Training')
+    )), '[]'::jsonb) INTO _words_json
+    FROM public.self_t_word_summary w
+    LEFT JOIN public.com_m_contents c ON c.content_id = w.content_id
+    WHERE w.user_id = _user_id
+      AND w.training_date BETWEEN _start_date AND _end_date;
+
+    -- 2. スプリントセッション履歴の取得
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+        'self_sprint_id', s.self_sprint_id,
+        'content_id', s.content_id,
+        'total_answered', s.total_answered,
+        'insert_date', s.insert_date
+    )), '[]'::jsonb) INTO _sessions_json
+    FROM public.self_t_sprint s
+    WHERE s.user_id = _user_id
+      AND s.insert_date >= _start_date::TIMESTAMP WITH TIME ZONE
+      AND s.insert_date <= (_end_date || ' 23:59:59.999')::TIMESTAMP WITH TIME ZONE;
+
+    -- 3. スプリントドリル履歴の取得
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+        'summary_id', d.summary_id,
+        'content_id', d.content_id,
+        'training_date', d.training_date,
+        'question_count', d.question_count,
+        'assessment_count', d.assessment_count
+    )), '[]'::jsonb) INTO _drills_json
+    FROM public.self_t_sprint_summary d
+    WHERE d.user_id = _user_id
+      AND d.training_date BETWEEN _start_date AND _end_date;
+
+    RETURN jsonb_build_object(
+        'words', _words_json,
+        'sprint_sessions', _sessions_json,
+        'sprint_drills', _drills_json
+    );
+END;
+$$;
+
+-- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+ALTER FUNCTION public.get_user_training_performance(TEXT) OWNER TO postgres;
+REVOKE EXECUTE ON FUNCTION public.get_user_training_performance(TEXT) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_user_training_performance(TEXT) TO authenticated;

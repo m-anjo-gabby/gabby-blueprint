@@ -32,9 +32,10 @@ interface SprintQuestionListProps {
   questions: SprintQuestion[];
   type: SprintQuestionType;
   onUpdate: () => void;
+  contentId: string;
 }
 
-export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestionListProps) {
+export function SprintQuestionList({ questions, type, onUpdate, contentId }: SprintQuestionListProps) {
   const { showToast } = useToast();
   const { play, isPlaying } = usePlayAudioSpeech();
   const isSpeed = type === '0';
@@ -68,7 +69,11 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
 
   // 音声ステータスと管理ボタンのレンダリング
   const renderAudioControls = (q: SprintQuestion, section: 'statement' | 'question' | 'answer_yes' | 'answer_no') => {
-    const prefix = section.startsWith('answer') ? `answer_sentence_${section.split('_')[1]}` : section;
+    // 💡 修正: _en 拡張スキーマに合わせて、対応する音声パスとステータスのキーを正しく判定します
+    const prefix = section === 'statement' ? 'statement' :
+                   section === 'question' ? 'question' :
+                   section === 'answer_yes' ? 'answer_sentence_yes' : 'answer_sentence_no';
+                   
     const statusKey = `${prefix}_tts_status` as keyof SprintQuestion;
     const voiceKey = `${prefix}_voice` as keyof SprintQuestion;
     
@@ -133,15 +138,16 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                         type={type} 
                         level={group.items[0].difficulty_level}
                         initialGroupId={group.groupId}
-                        initialStatement={group.items[0].statement || ''}
+                        initialStatement={group.items[0].statement_en || ''}
                         initialStatementJa={group.items[0].statement_ja || ''}
                         onSuccess={onUpdate} 
+                        contentId={contentId}
                       />
                     </div>
-                    {isMastery && group.items[0]?.statement && (
+                    {isMastery && group.items[0]?.statement_en && (
                       <div className="border-l-4 border-slate-300 pl-4 py-1">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Shared Statement</span>
-                        <p className="text-sm font-bold text-slate-600">{group.items[0].statement}</p>
+                        <p className="text-sm font-bold text-slate-600">{group.items[0].statement_en}</p>
                       </div>
                     )}
                   </div>
@@ -158,13 +164,13 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                         {/* 中央：コンテンツ */}
                         <div className="flex-1 min-w-0 space-y-4">
                           {/* Structure/Buildersの場合は各行にStatementを表示 */}
-                          {isCueType && q.statement && (
+                          {isCueType && q.statement_en && (
                             <div className="border-l-4 border-slate-200 pl-4 py-0.5">
                               <div className="flex justify-between items-center mb-1">
                                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Statement</span>
                                 {renderAudioControls(q, 'statement')}
                               </div>
-                              <p className="text-xs font-bold text-slate-500">{q.statement}</p>
+                              <p className="text-xs font-bold text-slate-500">{q.statement_en}</p>
                             </div>
                           )}
 
@@ -175,20 +181,20 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                               </div>
                               {renderAudioControls(q, 'question')}
                             </div>
-                            <p className="text-lg font-black text-slate-800 leading-tight">{q.question}</p>
+                            <p className="text-lg font-black text-slate-800 leading-tight">{q.question_en}</p>
                           </div>
                           <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3 space-y-2">
                             <div className="flex justify-between items-center">
                               <span className="text-[9px] font-black text-emerald-500 uppercase block">Answer (Yes)</span>
                               {renderAudioControls(q, 'answer_yes')}
                             </div>
-                            <p className="text-sm font-bold text-emerald-700">{q.answer_sentence_yes}</p>
+                            <p className="text-sm font-bold text-emerald-700">{q.answer_sentence_yes_en}</p>
                           </div>
                         </div>
 
                         {/* 右：アクション */}
                         <div className="flex flex-col gap-2 shrink-0">
-                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} />
+                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} contentId={contentId} />
                         </div>
                       </div>
                     ))}
@@ -206,13 +212,13 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                           </div>
                         </div>
                         <div className="flex-1 min-w-0 space-y-4">
-                          {q.statement && (
+                          {q.statement_en && (
                             <div className="border-l-4 border-slate-100 pl-4 py-1 group/item">
                               <div className="flex justify-between items-center mb-1">
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Statement</span>
                                 {renderAudioControls(q, 'statement')}
                               </div>
-                              <p className="text-sm font-bold text-slate-600">{q.statement}</p>
+                              <p className="text-sm font-bold text-slate-600">{q.statement_en}</p>
                             </div>
                           )}
                           <div className="border-l-4 border-indigo-500 pl-4 py-1">
@@ -222,7 +228,7 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                               </div>
                               {renderAudioControls(q, 'question')}
                             </div>
-                            <p className="text-lg font-black text-slate-800 leading-tight">{q.question}</p>
+                            <p className="text-lg font-black text-slate-800 leading-tight">{q.question_en}</p>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3 space-y-2">
@@ -230,21 +236,21 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
                                 <span className="text-[9px] font-black text-emerald-500 uppercase block">Answer (Yes)</span>
                                 {renderAudioControls(q, 'answer_yes')}
                               </div>
-                              <p className="text-sm font-bold text-emerald-700">{q.answer_sentence_yes}</p>
+                              <p className="text-sm font-bold text-emerald-700">{q.answer_sentence_yes_en}</p>
                             </div>
-                            {q.answer_sentence_no && (
+                            {q.answer_sentence_no_en && (
                               <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-3 space-y-2">
                                 <div className="flex justify-between items-center">
                                   <span className="text-[9px] font-black text-amber-500 uppercase block">Answer (No)</span>
                                   {renderAudioControls(q, 'answer_no')}
                                 </div>
-                                <p className="text-sm font-bold text-amber-700">{q.answer_sentence_no}</p>
+                                <p className="text-sm font-bold text-amber-700">{q.answer_sentence_no_en}</p>
                               </div>
                             )}
                           </div>
                         </div>
                         <div className="flex flex-col gap-2 shrink-0">
-                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} />
+                          <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} contentId={contentId} />
                         </div>
                       </div>
                     </div>
@@ -260,7 +266,7 @@ export function SprintQuestionList({ questions, type, onUpdate }: SprintQuestion
 }
 
 /* アクションボタン部分を共通化 */
-function SprintQuestionActionButtons({ q, type, onUpdate, handleDelete }: { q: SprintQuestion, type: SprintQuestionType, onUpdate: () => void, handleDelete: (id: string) => void }) {
+function SprintQuestionActionButtons({ q, type, onUpdate, handleDelete, contentId }: { q: SprintQuestion, type: SprintQuestionType, onUpdate: () => void, handleDelete: (id: string) => void, contentId: string }) {
   return (
     <>
       <SprintQuestionFormDialog 
@@ -269,6 +275,7 @@ function SprintQuestionActionButtons({ q, type, onUpdate, handleDelete }: { q: S
         type={type} 
         level={q.difficulty_level} 
         onSuccess={onUpdate} 
+        contentId={contentId}
       />
       
       <AlertDialog>

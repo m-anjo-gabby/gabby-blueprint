@@ -2,25 +2,49 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight, Sliders, CheckCircle2, Mic } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { SPRINT_TYPES } from '@gabby/types/sprint';
+import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
 
 interface HistorySession {
   self_sprint_id: string;
+  sprint_type: string;
+  content_id: string;
   question_type: string;
   answer_type: string;
   difficulty_level: number;
   time_limit_sec: number;
   total_answered: number;
   insert_date: string;
+  com_m_contents?: {
+    content_name: string;
+  } | { content_name: string }[] | null;
+}
+
+interface HistoryDrillSummary {
+  summary_id: string;
+  user_id: string;
+  content_id: string;
+  training_date: string;
+  question_count: number;
+  assessment_count: number;
+  speed_count: number;
+  structure_count: number;
+  builders_count: number;
+  mastery_count: number;
+  com_m_contents?: {
+    content_name: string;
+  } | { content_name: string }[] | null;
 }
 
 interface SprintHistoryViewProps {
-  initialData: HistorySession[];
+  initialData: {
+    sessions: HistorySession[];
+    drills: HistoryDrillSummary[];
+  };
   targetMonth: string; // 形式: "YYYY-MM"
 }
 
@@ -39,8 +63,9 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
 
   // 🎯 初期レンダリング時に URL パラメータから展開すべき日付を特定する
   const [expandedDates, setExpandedDates] = useState<string[]>(() => {
-    if (!focusId || !initialData.length) return [];
-    const targetSession = initialData.find(s => s.self_sprint_id === focusId);
+    const sessions = initialData?.sessions || [];
+    if (!focusId || !sessions.length) return [];
+    const targetSession = sessions.find(s => s.self_sprint_id === focusId);
     if (targetSession) {
       // 💡 外部関数を呼ばず、直接タイムゾーン関数を使用
       return [formatZonedDate(targetSession.insert_date, timezone)];
@@ -48,34 +73,59 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     return [];
   });
 
-  // 🎯 スクロール処理のみを Effect で行う
+  // 🎯 スクロール処理のみを Effect で行う（リトライ探索によりタイミングラグを解消）
   useEffect(() => {
-    if (!focusId || initialData.length === 0) return;
+    if (!focusId) return;
 
-    const timer = setTimeout(() => {
+    let attempts = 0;
+    const interval = setInterval(() => {
       const element = document.getElementById(`session-${focusId}`);
       if (element) {
         element.scrollIntoView({ behavior: 'auto', block: 'center' });
+        clearInterval(interval);
+      } else {
+        attempts++;
+        if (attempts > 10) { // 最大1秒間（100ms * 10回）探索を試みる
+          clearInterval(interval);
+        }
       }
-    }, 50);
+    }, 100);
 
-    return () => clearTimeout(timer);
-  }, [focusId, initialData.length]);
+    return () => clearInterval(interval);
+  }, [focusId]);
 
   // 💡 日付ごとにグループ化（React Compiler が確実に自動追随できるよう最適化）
   const groupedData = useMemo(() => {
-    const groups: Record<string, HistorySession[]> = {};
+    const groups: Record<string, { sessions: HistorySession[]; drills: HistoryDrillSummary[] }> = {};
     
-    initialData.forEach(session => {
-      // 💡 `formatDateKey` の代わりに直接インライン展開することで、不整合を根本排除
+    const sessions = initialData?.sessions || [];
+    const drills = initialData?.drills || [];
+
+    sessions.forEach(session => {
       const dateStr = formatZonedDate(session.insert_date, timezone);
-      if (!groups[dateStr]) groups[dateStr] = [];
-      groups[dateStr].push(session);
+      if (!groups[dateStr]) {
+        groups[dateStr] = { sessions: [], drills: [] };
+      }
+      groups[dateStr].sessions.push(session);
+    });
+
+    drills.forEach(drill => {
+      const dateStr = formatZonedDate(drill.training_date, timezone);
+      if (!groups[dateStr]) {
+        groups[dateStr] = { sessions: [], drills: [] };
+      }
+      groups[dateStr].drills.push(drill);
     });
 
     // 各日のセッションを「実施順（昇順）」にソート
     Object.keys(groups).forEach(date => {
-      groups[date].sort((a, b) => new Date(a.insert_date).getTime() - new Date(b.insert_date).getTime());
+      groups[date].sessions.sort((a, b) => new Date(a.insert_date).getTime() - new Date(b.insert_date).getTime());
+      
+      groups[date].drills.sort((a, b) => {
+        const nameA = (Array.isArray(a.com_m_contents) ? a.com_m_contents[0]?.content_name : a.com_m_contents?.content_name) || '';
+        const nameB = (Array.isArray(b.com_m_contents) ? b.com_m_contents[0]?.content_name : b.com_m_contents?.content_name) || '';
+        return nameA.localeCompare(nameB);
+      });
     });
 
     return groups;
@@ -199,10 +249,9 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             </div>
           ) : (
             sortedDates.map((date, index) => {
-              const sessions = groupedData[date];
+              const { sessions, drills } = groupedData[date] || { sessions: [], drills: [] };
               const isExpanded = expandedDates.includes(date);
               const dayNo = sortedDates.length - index;
-              const totalAnswersDay = sessions.reduce((acc, s) => acc + s.total_answered, 0);
 
               return (
                 <div key={date} className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm">
@@ -217,12 +266,14 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                       <div>
                         <div className="text-sm font-bold text-slate-800 tracking-tight mb-1.5">{date}</div>
                         <div className="flex items-center gap-2 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono">
-                          <span>
-                            {sessions.length} {sessions.length === 1 ? 'Sprint' : 'Sprints'}
+                          <span className="flex items-center gap-0.5">
+                            <Zap size={11} fill="currentColor" className="text-slate-400" />
+                            スプリント {sessions.length}
                           </span>
                           <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                          <span className="text-amber-500 flex items-center gap-0.5">
-                            {totalAnswersDay} {totalAnswersDay === 1 ? 'Answer' : 'Answers'}
+                          <span className="text-indigo-500 flex items-center gap-0.5">
+                            <Sliders size={11} className="text-indigo-500" />
+                            ドリル {drills.length}
                           </span>
                         </div>
                       </div>
@@ -232,7 +283,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                     </div>
                   </button>
 
-                  <AnimatePresence>
+                  <AnimatePresence initial={false}>
                     {isExpanded && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
@@ -241,53 +292,149 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                         transition={{ duration: 0.25, ease: 'easeInOut' }}
                         className="border-t border-slate-50 bg-slate-50/30"
                       >
-                        <div className="p-4 sm:p-5 space-y-2">
-                          {sessions.map((session, idx) => {
-                            const typeInfo = SPRINT_TYPES[session.question_type as keyof typeof SPRINT_TYPES];
-                            const isSpeedMode = session.question_type === '0';
-
-                            return (
-                              <div 
-                                key={session.self_sprint_id}
-                                id={`session-${session.self_sprint_id}`}
-                                onClick={() => router.push(`/training/sprint/result/${session.self_sprint_id}`)}
-                                className={cn(
-                                  "flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer",
-                                  focusId === session.self_sprint_id && "ring-2 ring-blue-500 border-transparent bg-blue-50/30 shadow-sm"
-                                )}
-                              >
-                                <div className="flex items-center gap-4">
-                                  <span className="text-[11px] font-black text-indigo-400/80 font-mono w-4">{idx + 1}</span>
-                                  <div>
-                                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                      <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
-                                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
-                                        {session.difficulty_level === 0 ? 'Basic' : `Lvl.${session.difficulty_level}`}
-                                      </span>
-
-                                      {isSpeedMode && (
-                                        <span className={cn(
-                                          "text-[9px] font-black px-1.5 py-0.5 rounded-md border tracking-wider",
-                                          session.answer_type === '1'
-                                            ? "bg-amber-50 border-amber-100 text-amber-600"
-                                            : "bg-emerald-50 border-emerald-100 text-emerald-600"
-                                        )}>
-                                          {session.answer_type === '1' ? 'NO' : 'YES'}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
-                                      <span className="flex items-center gap-1"><Timer size={11} /> {session.time_limit_sec}秒</span>
-                                      <span className="flex items-center gap-1"><Zap size={11} fill="currentColor" className="text-amber-400" /> {session.total_answered} {session.total_answered === 1 ? 'Answer' : 'Answers'}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-200 bg-slate-50 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                  <ArrowRight size={14} strokeWidth={3} className="group-hover:translate-x-0.5 transition-transform duration-200" />
-                                </div>
+                        <div className="p-4 sm:p-5 space-y-4">
+                          {/* 1. ドリル履歴一覧 */}
+                          {drills.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">
+                                ドリル
                               </div>
-                            );
-                          })}
+                              <div className="space-y-2">
+                                {drills.map((drill, idx) => {
+                                  return (
+                                    <div 
+                                      key={drill.summary_id}
+                                      className="flex items-center justify-between p-3.5 bg-white border border-dashed border-slate-200 rounded-2xl transition-all"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-[10px] font-black text-indigo-400/80 font-mono w-4 text-center">{idx + 1}</span>
+                                        <div className="space-y-1">
+                                          {/* 1段目: 教材名 */}
+                                          <div className="text-[10px] font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
+                                            {(() => {
+                                              const raw = drill.com_m_contents;
+                                              const name = Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name;
+                                              return name || '教材データなし';
+                                            })()}
+                                          </div>
+                                          {/* 2段目: 回答数と発話数 */}
+                                          <div className="text-xs font-black text-slate-800 flex items-center gap-3 flex-wrap">
+                                            <span className="flex items-center gap-1">
+                                              <CheckCircle2 size={13} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
+                                              回答 <span className="font-mono font-extrabold text-indigo-600">{drill.question_count}</span>
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                              <Mic size={13} className="text-rose-500 shrink-0 stroke-[2.5]" />
+                                              発話 <span className="font-mono font-extrabold text-rose-600">{drill.assessment_count}</span>
+                                            </span>
+                                          </div>
+                                          {/* 3段目: 各種別の内訳 */}
+                                          <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 flex-wrap">
+                                            {drill.speed_count > 0 && (
+                                              <span className="flex items-center gap-1">
+                                                <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-1 rounded leading-none py-0.5">SPEED</span>
+                                                <span className="font-mono text-slate-700 font-extrabold">{drill.speed_count}</span>
+                                              </span>
+                                            )}
+                                            {drill.structure_count > 0 && (
+                                              <span className="flex items-center gap-1">
+                                                <span className="text-[8px] font-black text-emerald-500 bg-emerald-50 px-1 rounded leading-none py-0.5">STR</span>
+                                                <span className="font-mono text-slate-700 font-extrabold">{drill.structure_count}</span>
+                                              </span>
+                                            )}
+                                            {drill.builders_count > 0 && (
+                                              <span className="flex items-center gap-1">
+                                                <span className="text-[8px] font-black text-sky-500 bg-sky-50 px-1 rounded leading-none py-0.5">BLD</span>
+                                                <span className="font-mono text-slate-700 font-extrabold">{drill.builders_count}</span>
+                                              </span>
+                                            )}
+                                            {drill.mastery_count > 0 && (
+                                              <span className="flex items-center gap-1">
+                                                <span className="text-[8px] font-black text-purple-500 bg-purple-50 px-1 rounded leading-none py-0.5">MST</span>
+                                                <span className="font-mono text-slate-700 font-extrabold">{drill.mastery_count}</span>
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 2. スプリントセッション履歴一覧 */}
+                          {sessions.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">
+                                スプリント
+                              </div>
+                              <div className="space-y-2">
+                                {sessions.map((session, idx) => {
+                                  const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];
+                                  const isSpeedMode = session.question_type === '0';
+
+                                  return (
+                                    <div 
+                                      key={session.self_sprint_id}
+                                      id={`session-${session.self_sprint_id}`}
+                                      onClick={() => router.push(`/training/sprint/result/${session.self_sprint_id}`)}
+                                      className={cn(
+                                        "flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer",
+                                        focusId === session.self_sprint_id && "ring-2 ring-blue-500 border-transparent bg-blue-50/30 shadow-sm"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-4">
+                                        <span className="text-[11px] font-black text-indigo-400/80 font-mono w-4 text-center">{idx + 1}</span>
+                                        <div className="space-y-1">
+                                          {/* 1段目: 教材名 */}
+                                          <div className="text-[10px] font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
+                                            {(() => {
+                                              const raw = session.com_m_contents;
+                                              const name = Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name;
+                                              return name || '教材データなし';
+                                            })()}
+                                          </div>
+                                          
+                                          {/* 2段目: メタ情報 (種別, レベル, 形式など) */}
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
+                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
+                                              {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
+                                            </span>
+
+                                            {isSpeedMode && (
+                                              <span className={cn(
+                                                "text-[9px] font-black px-1.5 py-0.5 rounded-md border tracking-wider",
+                                                session.answer_type === '1'
+                                                  ? "bg-amber-50 border-amber-100 text-amber-600"
+                                                  : "bg-emerald-50 border-emerald-100 text-emerald-600"
+                                              )}>
+                                                {session.answer_type === '1' ? 'NO' : 'YES'}
+                                              </span>
+                                            )}
+                                          </div>
+                                          
+                                          {/* 3段目: 実施結果数値 (時間, 回答数など) */}
+                                          <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
+                                            <span className="flex items-center gap-1"><Timer size={11} /> {session.time_limit_sec}秒</span>
+                                            <span className="flex items-center gap-1">
+                                              <CheckCircle2 size={11} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
+                                              回答 <span className="font-mono font-extrabold text-slate-800">{session.total_answered}</span>
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-200 bg-slate-50 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                        <ArrowRight size={14} strokeWidth={3} className="group-hover:translate-x-0.5 transition-transform duration-200" />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -300,12 +447,19 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
         </div>
 
         {/* ────────────── フッター ────────────── */}
-        <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex flex-col items-center">
+        <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex gap-3 w-full max-w-lg mx-auto">
+          <button
+            onClick={() => router.push('/library')}
+            className="flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
+          >
+            <span>教材を選択</span>
+            <ArrowRight size={14} strokeWidth={3} />
+          </button>
           <button
             onClick={() => router.push('/training/sprint/play?mode=sprint')}
-            className="w-full max-w-sm h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
+            className="flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>教材を選択する</span>
+            <span>スプリントをする</span>
             <ArrowRight size={14} strokeWidth={2.5} />
           </button>
         </div>

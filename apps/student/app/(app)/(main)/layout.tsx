@@ -13,7 +13,7 @@ export default function MainLayout({
       {/* py-4 sm:py-8: 
           上下の余白を明示的に作ることで、ヘッダー直下にコンテンツが張り付き抑止
       */}
-      <main className="flex-1 flex justify-center px-4 sm:px-6 py-4 sm:py-8 relative">
+      <main className="flex-1 flex justify-center px-4 sm:px-6 py-4 sm:py-8 relative" data-scroll-container>
         {/* オプション：左上にうっすらとした「光の溜まり」を置く（デザインの遊び） */}
         <div className="absolute top-0 left-0 w-full h-96 bg-[radial-gradient(circle_at_20%_0%,rgba(99,102,241,0.03)_0%,transparent_50%)] pointer-events-none" />
         

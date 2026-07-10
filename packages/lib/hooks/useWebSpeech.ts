@@ -2,7 +2,26 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { analyzePhrase } from '../assessment/native-speech';
-import { AnalysisResult } from '../../types/wordDrill';
+import { AnalysisResult } from '../../types/speechAssessment';
+
+import { NavigatorWithAudioSession, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '../sprint/utils';
+
+/**
+ * startAssessment のオプション
+ */
+interface StartAssessmentOptions {
+  /**
+   * true の場合、startAssessment / finalize 内で audioSession.type を変更しない。
+   * SprintTimePlayer のようにセッション全体で 'play-and-record' を維持したい場合に使用する。
+   * デフォルト: false（従来通り playback に戻す）
+   */
+  suppressAudioSessionSwitch?: boolean;
+  /**
+   * SpeechRecognition の onstart イベント発火後（実際にマイクが開いた時点）に呼び出されるコールバック。
+   * RECインジケータの表示タイミングをブラウザの実際の録音開始に合わせるために使用する。
+   */
+  onRecognitionStart?: () => void;
+}
 
 /**
  * ブラウザ標準の Web Speech API (Synthesis & Recognition) を利用した
@@ -27,6 +46,9 @@ export function useWebSpeech() {
   // 【追加】現在の評価セッションが有効かどうかを管理
   // ブラウザ側のイベント発火タイミングの差（Edge/Safari等）による不整合を防ぐガードレール
   const isAssessingRef = useRef(false);
+
+  // suppressAudioSessionSwitch オプションを保持するRef
+  const suppressAudioSessionSwitchRef = useRef(false);
 
   const clearAllTimers = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -62,6 +84,14 @@ export function useWebSpeech() {
       } catch (e) {
         // すでに停止している場合の型エラー回避
       }
+      // 参照を即時クリアし、次回 startListening() で必ず新インスタンスを生成させる
+      recognitionRef.current = null;
+    }
+
+    // iOS WebKit用のオーディオセッション制御 (マイク解放時に再生モードに戻す)
+    // suppressAudioSessionSwitch が true の場合はスキップ（呼び出し元が audioSession を管理）
+    if (!suppressAudioSessionSwitchRef.current) {
+      setAudioSessionPlayback();
     }
 
     clearAllTimers();
@@ -80,35 +110,55 @@ export function useWebSpeech() {
   /**
    * 音声認識の生データを取得するための内部関数
    */
-  const startListening = useCallback((onUpdate: (heard: string) => void) => {
+  const startListening = useCallback((
+    onUpdate: (heard: string) => void,
+    onRecognitionStart?: () => void,
+  ) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.error("Web Speech API is not supported in this browser.");
       return;
     }
 
-    // 既存のインスタンスがあれば確実に破棄
+    // 既存のインスタンスがあれば確実に破棄してからクリア
     if (recognitionRef.current) {
-      recognitionRef.current.abort();
+      try { recognitionRef.current.abort(); } catch (_) { /* no-op */ }
+      recognitionRef.current = null;
     }
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = true;
-    recognition.continuous = true;
+    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    recognition.continuous = isMobile ? false : true;
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      setIsListening(true);
+      // 実際にマイクが開いた時点でコールバックを呼び出す
+      onRecognitionStart?.();
+    };
     
-    // Edge等で勝手に認識が終了した場合のハンドリング
+    // Edge/Safari等で認識が終了した場合のハンドリング
     recognition.onend = () => {
+      // 🚀 評価セッションがまだ有効であれば、自動的に再スタートして認識を継続する
       if (isAssessingRef.current) {
+        console.log('Speech recognition session ended unexpectedly. Auto-restarting...');
+        try {
+          recognition.start();
+        } catch (e) {
+          console.warn('Speech recognition auto-restart failed:', e);
+        }
+      } else {
         setIsListening(false);
       }
     };
 
-    // エラーハンドリング（Edge等でマイクが不安定な場合の安全策）
+    // エラーハンドリング
     recognition.onerror = (event: any) => {
       console.warn("Speech Recognition Error:", event.error);
+      
+      // 🚀 'no-speech' はモバイルで頻発する無音検知タイムアウトのため、強制終了させない。
+      // 後続の onend 経由で自動的に再起動されるのを待つ
       if (event.error !== 'no-speech' && isAssessingRef.current) {
         finalize();
       }
@@ -135,18 +185,30 @@ export function useWebSpeech() {
   const startAssessment = useCallback((
     targetPhrase: string, 
     mainWords: string[], 
-    onComplete: (result: AnalysisResult) => void
+    onComplete: (result: AnalysisResult) => void,
+    options?: StartAssessmentOptions,
   ) => {
     // 前回のセッションが残っていれば強制終了
     if (isAssessingRef.current) {
       finalize();
     }
 
+    // オプションをRefに保存（finalize 内で参照するため）
+    suppressAudioSessionSwitchRef.current = options?.suppressAudioSessionSwitch ?? false;
+
     // セッション開始
     isAssessingRef.current = true;
     clearAllTimers();
     onCompleteRef.current = onComplete;
     latestResultRef.current = analyzePhrase("", targetPhrase, mainWords);
+
+    // iOS WebKit用のオーディオセッション制御:
+    // suppressAudioSessionSwitch が false（デフォルト）の場合のみ切り替える
+    // recognition.start() より前に 'play-and-record' に切り替え、
+    // iOSがマイク入力モードに入るタイミングを制御する
+    if (!suppressAudioSessionSwitchRef.current) {
+      setAudioSessionPlayAndRecord();
+    }
 
     setTimeLeft(10);
     intervalRef.current = setInterval(() => {
@@ -168,10 +230,10 @@ export function useWebSpeech() {
       latestResultRef.current = result;
 
       // エクセレント達成時は即座に確定
-      if (result.score >= 0.95) {
+      if (result.score >= 0.90) {
         finalize(result);
       }
-    });
+    }, options?.onRecognitionStart);
 
     // セーフティタイマー（猶予分を考慮して調整）
     timerRef.current = setTimeout(() => {

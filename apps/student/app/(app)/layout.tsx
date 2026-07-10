@@ -6,6 +6,7 @@ import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { TermsAgreementModal } from "@/components/common/TermsAgreementModal";
 import { checkPendingAgreements } from '@/actions/termAction';
+import ScrollRestorer from '@/components/common/ScrollRestorer';
 
 /**
  * 生徒用 統合アプリケーションレイアウト
@@ -42,6 +43,7 @@ export default async function StudentAppLayout({
           クライアント側で常にユーザー情報を参照可能にします。
       */}
       <UserStoreInitializer user={user} />
+      <ScrollRestorer />
       
       {/* デザイン基盤: 全体共通の背景色やフォントを適用 */}
       <div className="min-h-screen bg-[#f5f5f7] text-slate-900">
