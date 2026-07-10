@@ -163,6 +163,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
       };
 
       const result = await saveSprintAudio(
+        question.content_id,
         question.question_id,
         section,
         question.question_type,
