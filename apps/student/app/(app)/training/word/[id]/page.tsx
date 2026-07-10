@@ -26,7 +26,7 @@ import { PhraseItem } from '@gabby/types/word';
 import { ContentLoading } from '@/components/common/ContentLoading';
 
 /**
- * 发話スコアに基づいたフィードバックUIの設定を返す
+ * 発話スコアに基づいたフィードバックUIの設定を返す
  */
 const getFeedbackConfig = (score: number): FeedbackConfig => {
   if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
@@ -45,8 +45,17 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   
   // 音声エンジン・録音・評価ロジック
   const { speak, setSpeechRate, startAssessment, stopListening, isListening, isSpeaking, timeLeft } = useWebSpeech();
-  // 音声再生フック
-  const { play, preload, isPlaying: isAudioPlaying, playbackRate, changePlaybackRate } = usePlayAudioSpeech();
+  
+  // 統合された音声再生フック（playChime, unlockAudioContextを追加抽出）
+  const { 
+    play, 
+    preload, 
+    playChime, 
+    unlockAudioContext, 
+    isPlaying: isAudioPlaying, 
+    playbackRate, 
+    changePlaybackRate 
+  } = usePlayAudioSpeech();
 
   // ドリル状態管理（Zustand）
   const { 
@@ -215,18 +224,33 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   /**
    * 音声認識の開始/停止
    */
-  const handleVoiceCheck = () => {
+  const handleVoiceCheck = async () => {
     if (isListening) { stopListening(); return; }
     if (!currentWord || !currentPhrase) return;
+
+    // iOS WebKit 自動再生ロックの明示的な解除
+    await unlockAudioContext();
 
     setFeedback(null);
     setAnalysis(null);
 
-    startAssessment(currentPhrase.phrase_en, [currentWord.word_en], (result) => {
-      setAnalysis(result);
-      setFeedback(getFeedbackConfig(result.score));
-      useWordDrillStore.getState().incrementAssessmentCount();
-    });
+    // suppressAudioSessionSwitch: true を渡してフック間のオーディオ奪い合いを防ぐ
+    startAssessment(
+      currentPhrase.phrase_en, 
+      [currentWord.word_en], 
+      (result) => {
+        setAnalysis(result);
+        setFeedback(getFeedbackConfig(result.score));
+        useWordDrillStore.getState().incrementAssessmentCount();
+      },
+      {
+        suppressAudioSessionSwitch: true,
+        // 🚀 実際にブラウザのマイクが開いた（録音準備完了）タイミングでチャイムを鳴らす
+        onRecognitionStart: () => {
+          playChime();
+        }
+      }
+    );
   };
 
   /**
@@ -320,6 +344,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     if (!isAutoPlaying) {
       const ok = await showConfirm("Start Auto Play?", "自動再生を開始しますか？", { variant: 'info', isModal: false });
       if (!ok) return;
+      // ユーザーインタラクション時にAudioContextのロックを強制解除
+      await unlockAudioContext();
     }
     toggleAutoPlay();
   };

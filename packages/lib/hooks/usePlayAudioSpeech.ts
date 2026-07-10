@@ -1,9 +1,9 @@
-// packages\lib\hooks\usePlayAudioSpeech.ts
+// packages/lib/hooks/usePlayAudioSpeech.ts
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { createBrowserClient } from '../supabase/client';
-import { audioBufferCache } from '../sprint/utils';
+import { audioBufferCache, createChimeAudioBuffer, playChimeBuffer } from '../sprint/utils';
 
 interface NavigatorWithAudioSession extends Navigator {
   audioSession?: {
@@ -16,7 +16,7 @@ interface NavigatorWithAudioSession extends Navigator {
  * AudioContext と AudioBufferSourceNode を利用して HTMLAudioElement の依存を完全に排除
  */
 export function usePlayAudioSpeech() {
-  // 現在再生中のアイテムID（phrase_idなど）
+  // 現在再生中のアイテムID（phrase_idなど、チャイムは '__chime__' を使用可能）
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
   // 現在ダウンロード処理中のアイテムID
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
@@ -29,6 +29,8 @@ export function usePlayAudioSpeech() {
   
   const audioCtxRef = useRef<AudioContext | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  // 【追加】事前デコード済みチャイム AudioBuffer の保持用
+  const chimeBufferRef = useRef<AudioBuffer | null>(null);
   // グローバルキャッシュを使用（画面を行き来してもバッファが維持される）
   
   const supabase = createBrowserClient();
@@ -83,6 +85,21 @@ export function usePlayAudioSpeech() {
     return audioCtxRef.current;
   }, []);
 
+  // 【追加】初期化時にチャイム音をバックグラウンドで事前デコード
+  useEffect(() => {
+    async function initChime() {
+      const ctx = await getOrInitializeAudioContext();
+      if (!ctx) return;
+      try {
+        const buffer = await createChimeAudioBuffer(ctx);
+        chimeBufferRef.current = buffer;
+      } catch (e) {
+        console.warn('Word Chime pre-render failed:', e);
+      }
+    }
+    initChime();
+  }, [getOrInitializeAudioContext]);
+
   /**
    * 現在の再生音声を強制停止する内部共通メソッド
    */
@@ -96,6 +113,44 @@ export function usePlayAudioSpeech() {
     setIsPlaying(null);
     currentPlayingIdRef.current = null;
   }, []);
+
+  /**
+   * 【追加】チャイム音を AudioContext 経由で再生する
+   */
+  const playChime = useCallback(async (): Promise<void> => {
+    const ctx = await getOrInitializeAudioContext();
+    const buffer = chimeBufferRef.current;
+
+    if (!ctx || !buffer) return;
+
+    try {
+      // 再生直前に状態を同期
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      // 既存のトラック再生があれば停止
+      stop();
+
+      // 共通ヘルパーを利用してチャイムを再生
+      await playChimeBuffer(ctx, buffer);
+    } catch (e) {
+      console.warn('iOS AudioContext chime playback failed or interrupted:', e);
+    }
+  }, [getOrInitializeAudioContext, stop]);
+
+  /**
+   * 【追加】iOSの自動再生制限ロックを解除するためにユーザーインタラクション時に明示的に呼び出せるようにする
+   */
+  const unlockAudioContext = useCallback(async () => {
+    const ctx = await getOrInitializeAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+      } catch (e) {
+        console.warn('Failed to resume AudioContext from interaction:', e);
+      }
+    }
+  }, [getOrInitializeAudioContext]);
 
   /**
    * 音声を再生する (結果画面のシーケンス制御に最適化したPromise仕様)
@@ -316,6 +371,8 @@ export function usePlayAudioSpeech() {
   return { 
     play, 
     stop,
+    playChime,            // 【追加】
+    unlockAudioContext,   // 【追加】
     preload,
     download, 
     isPlaying, 

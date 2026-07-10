@@ -1,4 +1,3 @@
-// packages\lib\hooks\useSprintAudio.ts
 'use client';
 
 import { useEffect, useCallback, useRef } from 'react';
@@ -34,9 +33,8 @@ export interface UseSprintAudioReturn {
   unlockAudioContext: () => Promise<void>;
 }
 
-
 /**
- * Sprint プレイヤー共通のオーディオリソースを管理するフック。
+ * Sprint プレイヤー共通のオーディリソースを管理するフック。
  *
  * ## 役割
  * - AudioContext と AudioBufferSourceNode を用いた高品質かつ安定した音声再生
@@ -63,11 +61,13 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
       window.speechSynthesis.cancel();
     }
 
-    // 再生用 AudioContext を生成
+    // 再生用 AudioContext を生成 (TypeScript用の型安全なプロパティアクセス)
     const AudioContextClass =
-      (window as any).AudioContext || (window as any).webkitAudioContext;
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
     if (AudioContextClass) {
-      const ctx = new AudioContextClass() as AudioContext;
+      const ctx = new AudioContextClass();
       audioCtxRef.current = ctx;
 
       // チャイム音を事前デコード（共通ヘルパーを利用）
@@ -169,7 +169,14 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
               resolve();
             };
 
-            source.start(0);
+            // ─── ディレイ対応 ──────────────────────────────────────────
+            // iOSが音声認識停止のシステム音から復帰し、オーディオ出力を安定させるための無音時間（秒）
+            const delaySeconds = 0.15; 
+            
+            // ctx.currentTime（現在時刻）から delaySeconds 秒後に再生を開始する
+            // この間、Web Audio APIは「無音」を出力するため、iOS側のフェードインをここで消化させます
+            source.start(ctx.currentTime + delaySeconds);
+            // ───────────────────────────────────────────────────────────
           };
 
           if (ctx.state === 'suspended') {
@@ -207,15 +214,24 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
   }, [stopTrack]);
 
   // ─── チャイム再生 ─────────────────────────────────────────────────────────
-  const playChime = useCallback((): Promise<void> => {
-    // iOS環境の場合はオーディオ競合（ハング・エコーキャンセラー暴走）を防ぐためチャイム再生を抑止
-    const isMobileIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobileIOS) {
-      return Promise.resolve();
-    }
+  const playChime = useCallback(async (): Promise<void> => {
+    const ctx = audioCtxRef.current;
+    const buffer = chimeBufferRef.current;
 
-    if (!audioCtxRef.current || !chimeBufferRef.current) return Promise.resolve();
-    return playChimeBuffer(audioCtxRef.current, chimeBufferRef.current);
+    if (!ctx || !buffer) return;
+
+    try {
+      // iOS環境におけるマイク起動時のハードウェア競合（サンプリングレート変更等）に備え、
+      // 再生直前に必ず AudioContext の状態をアクティブに復帰・同期させる
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+
+      // 共通ヘルパーを利用してチャイムを再生
+      await playChimeBuffer(ctx, buffer);
+    } catch (e) {
+      console.warn('iOS AudioContext chime playback failed or interrupted:', e);
+    }
   }, []);
 
   return {

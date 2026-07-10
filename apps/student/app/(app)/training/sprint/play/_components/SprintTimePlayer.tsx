@@ -680,16 +680,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   {audioPhase === 'idle' && "Ready"}
                 </h2>
               </div>
-              {/* サブテキスト表示（縦位置のガタつきを抑えるために領域を常時維持） */}
+              {/* サブテキスト表示（iOSでもメッセージを表示するように条件をシンプル化） */}
               <p className={cn(
                 "text-xs sm:text-sm font-semibold text-slate-400 transition-opacity duration-150",
                 audioPhase === 'answer' ? "opacity-100" : "opacity-0 select-none pointer-events-none"
               )}>
                 {isBrainAnswerMode && audioPhase === 'answer'
                   ? (!isAssessmentMode ? "※発話評価をOFFにしています" : "※マイク権限が拒否されています")
-                  : (typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent))
-                    ? ""
-                    : "※開始音の後に発話してください"}
+                  : "※開始音の後に発話してください"} 
+                  {/* 🚀 iOS判定を削除し、どのデバイスでも開始音のアナウンスが流れるように統一 */}
               </p>
             </div>
 
