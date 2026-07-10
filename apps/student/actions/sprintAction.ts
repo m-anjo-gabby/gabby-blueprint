@@ -47,6 +47,7 @@ export interface CreateSprintScoreInput {
   difficulty_level: number;
   time_limit_sec: number;
   total_answered: number;
+  total_assessments: number;
   history: SprintHistoryItem[]; // 🌟 拡張された answered_history 配列が入る
 }
 
@@ -224,6 +225,7 @@ export async function createSprintScoreAction(
           difficulty_level: Number(input.difficulty_level),
           time_limit_sec: Number(input.time_limit_sec),
           total_answered: Number(input.total_answered),
+          total_assessments: Number(input.total_assessments),
           answered_history: input.history, // 🌟 評価やスキップ情報がそのままJSONBとして保存されます
         }
       ])
@@ -395,7 +397,8 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
         total_answered,
         insert_date,
         com_m_contents (
-          content_name
+          content_name,
+          metadata
         )
       `)
       .eq("user_id", user.id)

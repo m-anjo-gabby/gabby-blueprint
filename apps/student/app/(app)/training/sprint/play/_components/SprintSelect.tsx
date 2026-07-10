@@ -225,7 +225,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
           <motion.div layout className="w-max max-w-full flex items-center justify-center gap-2 text-center pointer-events-none px-2">
             
             <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-tight truncate group-hover:text-indigo-600 transition-colors">
-              {getSprintTitle(selectedType, Number(selectedLevel))}
+              {getSprintTitle(selectedType, Number(selectedLevel), hasLevel)}
             </h2>
 
             {/* 🚀 改修: ドリルモード切り替え時にフェード＆横スライドしながら消滅するインタラクション */}

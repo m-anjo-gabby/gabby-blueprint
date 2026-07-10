@@ -59,6 +59,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     drillEvalType,
     toggleAutoPlay,
     contentName,
+    contentMetadata,
   } = useSprintStore();
 
   // ────────────── 🔊 音声・発話カスタムフック ──────────────
@@ -126,9 +127,12 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => clearInterval(intervalId);
   }, [syncProgressNow]);
 
+  const isCorpus = contentMetadata?.sprint_type === '1';
+  const hasLevel = isCorpus ? contentMetadata?.has_level ?? true : true;
+
   const courseTitle = useMemo(() => {
-    return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level));
-  }, [questionType]);
+    return getSprintTitle(questionType || '0', Number(useSprintStore.getState().level), hasLevel);
+  }, [questionType, hasLevel]);
 
   const groupProgress = useMemo(() => {
     if (!currentQuestion || !questions.length) return { groupCurrentIndex: 0, groupTotalCount: 1 };

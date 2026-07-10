@@ -20,6 +20,7 @@ export interface PerformanceSprintSession {
   content_id: string;
   total_answered: number;
   insert_date: string;
+  assessment_count: number;
 }
 
 export interface PerformanceSprintDrill {
