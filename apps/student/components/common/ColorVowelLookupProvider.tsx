@@ -323,8 +323,15 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       {/* ── 辞書結果ダイアログ ── */}
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="sm:max-w-[420px] overflow-hidden rounded-2xl border-2 shadow-2xl
-            [--slide-in-from-left:0] [--slide-in-from-top:0] [--slide-out-to-left:0] [--slide-out-to-top:0]"
+          className="sm:max-w-[420px] overflow-hidden rounded-2xl border-2 shadow-2xl"
+          style={{
+            // slide-in-from-* が設定する translate オフセットを 0 に上書きし
+            // zoom-in-95 + fade-in のみのアニメーション（中央スケールイン）にする
+            '--tw-enter-translate-x': '0',
+            '--tw-enter-translate-y': '0',
+            '--tw-exit-translate-x': '0',
+            '--tw-exit-translate-y': '0',
+          } as React.CSSProperties}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <DialogHeader className="border-b pb-3">
