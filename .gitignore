@@ -64,3 +64,6 @@ temp_data/
 
 # Github
 .github
+
+# Agents
+.agents

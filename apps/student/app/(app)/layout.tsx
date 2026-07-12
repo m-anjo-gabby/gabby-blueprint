@@ -7,6 +7,7 @@ import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { TermsAgreementModal } from "@/components/common/TermsAgreementModal";
 import { checkPendingAgreements } from '@/actions/termAction';
 import ScrollRestorer from '@/components/common/ScrollRestorer';
+import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
 
 /**
  * 生徒用 統合アプリケーションレイアウト
@@ -64,6 +65,8 @@ export default async function StudentAppLayout({
       {/* 通知・ダイアログ系 UI: 全てのコンテンツの上にオーバーレイされるように配置 */}
       <ToastContainer />
       <ConfirmContainer />
+      {/* Color Vowel辞書: テキスト選択時に辞書検索ダイアログをグローバル表示 */}
+      <ColorVowelLookupProvider />
     </>
   );
 }

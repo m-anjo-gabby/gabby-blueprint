@@ -417,3 +417,27 @@ FOR SELECT TO authenticated USING (
           AND u.client_id = public.get_jwt_client_id()
     )
 );
+
+-- =========================================================================
+-- 25. com_m_color_vowel (Color Vowelマスタ)
+-- =========================================================================
+ALTER TABLE public.com_m_color_vowel ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view active color vowels" ON public.com_m_color_vowel;
+
+-- [参照] 認証済みユーザーであれば、削除されていないColor Vowelマスタを全員閲覧可能
+CREATE POLICY "Users can view active color vowels" ON public.com_m_color_vowel
+FOR SELECT TO authenticated 
+USING (delete_flg = 0);
+
+-- =========================================================================
+-- 26. com_m_color_vowel_dictionary (Color Vowel辞書マスタ) - RLS定義
+-- =========================================================================
+ALTER TABLE public.com_m_color_vowel_dictionary ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view active dictionary records" ON public.com_m_color_vowel_dictionary;
+
+-- [参照] 認証済みユーザーであれば、ステータスが'live'かつ削除されていない辞書レコードを全員閲覧可能
+CREATE POLICY "Users can view active dictionary records" ON public.com_m_color_vowel_dictionary
+FOR SELECT TO authenticated 
+USING (status = 'live' AND delete_flg = 0);
