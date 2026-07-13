@@ -7,7 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Volume2, BookOpen, Loader2, Search, SearchX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { lookupColorVowelDictionary, type ColorVowelDicResult } from '@/actions/colorVowelAction';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { lookupColorVowelDictionary } from '@/actions/colorVowelAction';
+import { type ColorVowelDicResult, getPartOfSpeechLabel } from '@gabby/types/colorVowel';
 import { cn } from '@/lib/utils';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 
@@ -22,7 +25,7 @@ interface ColorVowelLookupProviderProps {
 interface TooltipState {
   /** 選択されたテキスト（辞書検索キー） */
   text: string;
-  /** ツールチップ水平中心の viewport X 座標 */
+  /** ツールチップ水平中心 of viewport X 座標 */
   x: number;
   /** 配置基準点の viewport Y 座標 */
   y: number;
@@ -72,33 +75,100 @@ function resolveTooltipPosition(): Omit<TooltipState, 'text'> | null {
   }
 }
 
+/**
+ * 音節データ (syllables) をデリミタ(-)で分割し、第一アクセントの音節内の特定母音スペルに下線を引いて描画する。
+ * 下線の直下にColor Vowelの小さなアイコンを絶対配置する。
+ */
+function renderWordWithStress(
+  syllables: string | null | undefined,
+  primaryStressSyllable: number,
+  stressVowelSpelling: string | null | undefined,
+  wordEn: string,
+  vowelImageUrl: string
+) {
+  if (!syllables) {
+    return <span className="lowercase">{wordEn}</span>;
+  }
+
+  const parts = syllables.split('-');
+  return (
+    <span className="lowercase tracking-wide">
+      {parts.map((part, index) => {
+        // primaryStressSyllable は 1 始まり
+        const isStressed = index + 1 === primaryStressSyllable;
+        if (isStressed && stressVowelSpelling) {
+          const partLower = part.toLowerCase();
+          const targetLower = stressVowelSpelling.toLowerCase();
+          const targetIndex = partLower.indexOf(targetLower);
+
+          if (targetIndex !== -1) {
+            const before = part.slice(0, targetIndex);
+            const target = part.slice(targetIndex, targetIndex + targetLower.length);
+            const after = part.slice(targetIndex + targetLower.length);
+
+            return (
+              <span key={index}>
+                {before}
+                <span className="relative inline-block">
+                  <span className="underline decoration-3 decoration-primary underline-offset-4 font-black">
+                    {target}
+                  </span>
+                  <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[42px] h-[42px] flex items-center justify-center pointer-events-none overflow-hidden">
+                    <Image
+                      src={vowelImageUrl}
+                      alt="vowel icon"
+                      width={42}
+                      height={42}
+                      className="object-contain p-0"
+                    />
+                  </span>
+                </span>
+                {after}
+              </span>
+            );
+          }
+        }
+
+        // ストレス音節だが母音綴りが見つからない、またはストレス音節ではない場合
+        if (isStressed) {
+          return (
+            <span key={index} className="relative inline-block">
+              <span className="underline decoration-3 decoration-primary underline-offset-4 font-black">
+                {part}
+              </span>
+              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[42px] h-[42px] flex items-center justify-center pointer-events-none overflow-hidden">
+                <Image
+                  src={vowelImageUrl}
+                  alt="vowel icon"
+                  width={42}
+                  height={42}
+                  className="object-contain p-0"
+                />
+              </span>
+            </span>
+          );
+        }
+
+        return <span key={index}>{part}</span>;
+      })}
+    </span>
+  );
+}
+
 // -----------------------------------------------------------------------
 // メインコンポーネント
 // -----------------------------------------------------------------------
 
-/**
- * Color Vowel 辞書ルックアッププロバイダー
- *
- * レイアウトに単独配置（children 不要）で動作するグローバル辞書ツールチップ。
- *
- * ### フロー
- * 1. PC: mouseup / Mobile: touchend → 選択テキストを評価
- * 2. 有効な選択があれば選択範囲付近にツールチップを表示
- * 3. ツールチップボタンをクリック → 辞書 API 検索 → ダイアログ表示
- * 4. selectionchange で選択が解除されるとツールチップが自動的に消える
- */
 export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderProps) {
-  // SSR ハイドレーション安全のためマウント後のみ portal を描画
   const [mounted, setMounted] = React.useState(false);
   const [tooltip, setTooltip] = React.useState<TooltipState | null>(null);
-  const [result, setResult] = React.useState<ColorVowelDicResult | null>(null);
-  /** 検索を実行した単語（未登録エンプティステート表示に使用） */
+  const [results, setResults] = React.useState<ColorVowelDicResult[]>([]);
+  const [activeTab, setActiveTab] = React.useState<string>('');
   const [searchedWord, setSearchedWord] = React.useState<string>('');
   const [isOpen, setIsOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
   const { play: playAudio, stop: stopAudio } = usePlayAudioSpeech();
-  // イベントハンドラのクロージャから参照するために ref でも管理
   const isOpenRef = React.useRef(false);
   const isLoadingRef = React.useRef(false);
 
@@ -106,16 +176,14 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
   React.useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
   React.useEffect(() => { isLoadingRef.current = isLoading; }, [isLoading]);
 
-  // -----------------------------------------------------------------------
-  // イベントハンドラ
-  // -----------------------------------------------------------------------
+  const activeResult = React.useMemo(() => {
+    if (results.length === 0) return null;
+    return results.find((r) => r.partOfSpeech === activeTab) || results[0];
+  }, [results, activeTab]);
 
-  /** mouseup / touchend: 選択確定後にツールチップ表示 */
   const handlePointerUp = React.useCallback(() => {
-    // ダイアログ中・ロード中は無視
     if (isOpenRef.current || isLoadingRef.current) return;
 
-    // 選択が確定するまで少し待つ（特にモバイル対応）
     setTimeout(() => {
       const selection = window.getSelection();
       const text = selection?.toString().trim() ?? '';
@@ -140,7 +208,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     }, 120);
   }, []);
 
-  /** selectionchange: 選択解除時にツールチップを隠す */
   const handleSelectionChange = React.useCallback(() => {
     const text = window.getSelection()?.toString().trim() ?? '';
     if (text.length <= 1) {
@@ -159,16 +226,11 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     };
   }, [handlePointerUp, handleSelectionChange]);
 
-  // -----------------------------------------------------------------------
-  // 辞書検索（ツールチップクリック時）
-  // -----------------------------------------------------------------------
-
   const handleLookup = React.useCallback(async () => {
     if (!tooltip || isLoadingRef.current) return;
 
     const word = tooltip.text;
 
-    // ツールチップを即座に消去し、選択も解除
     setTooltip(null);
     window.getSelection()?.removeAllRanges();
 
@@ -176,8 +238,12 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     setSearchedWord(word);
     try {
       const res = await lookupColorVowelDictionary(word);
-      // 未登録語の場合も result = null のままダイアログを開く（エンプティステート表示）
-      setResult(res);
+      setResults(res);
+      if (res.length > 0) {
+        setActiveTab(res[0].partOfSpeech);
+      } else {
+        setActiveTab('');
+      }
       setIsOpen(true);
     } catch (error) {
       console.error('Color Vowel dictionary lookup unexpected:', error);
@@ -186,40 +252,29 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     }
   }, [tooltip]);
 
-  // -----------------------------------------------------------------------
-  // 音声再生
-  // -----------------------------------------------------------------------
-
   const handlePlayAudio = React.useCallback((url: string | null, type: 'word' | 'vowel') => {
     if (!url) return;
-    const id = result ? `${result.wordEn}-${type}` : type;
+    const id = activeResult ? `${activeResult.wordEn}-${activeResult.partOfSpeech}-${type}` : type;
     playAudio(url, id).catch((err) => console.error('Failed to play audio:', err));
-  }, [playAudio, result]);
-
-  // -----------------------------------------------------------------------
-  // ダイアログ開閉
-  // -----------------------------------------------------------------------
+  }, [playAudio, activeResult]);
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
       stopAudio();
       setTimeout(() => {
-        setResult(null);
+        setResults([]);
+        setActiveTab('');
         setSearchedWord('');
       }, 200);
     }
   };
 
-  // -----------------------------------------------------------------------
-  // レンダリング
-  // -----------------------------------------------------------------------
-
   return (
     <>
       {children}
 
-      {/* ── ツールチップ（createPortal で body 直下に描画） ── */}
+      {/* ── ツールチップ ── */}
       {mounted &&
         createPortal(
           <AnimatePresence>
@@ -234,7 +289,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                   position: 'fixed',
                   left: tooltip.x,
                   top: tooltip.y,
-                  // top 配置のときは自身の高さ分だけ上にずらす
                   transform:
                     tooltip.placement === 'top'
                       ? 'translateX(-50%) translateY(-100%)'
@@ -243,9 +297,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                   pointerEvents: 'auto',
                 }}
               >
-                {/* ─── ツールチップ本体 ─── */}
                 <button
-                  // onMouseDown で preventDefault → クリック時に選択が解除されない
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={handleLookup}
                   className={cn(
@@ -261,7 +313,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                   <span>Color Vowelを検索</span>
                 </button>
 
-                {/* ─── キャレット（三角形の矢印） ─── */}
                 {tooltip.placement === 'top' && (
                   <div
                     aria-hidden
@@ -271,7 +322,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                       height: 0,
                       borderLeft: '6px solid transparent',
                       borderRight: '6px solid transparent',
-                      borderTop: '6px solid rgb(15 23 42)', // slate-900
+                      borderTop: '6px solid rgb(15 23 42)',
                     }}
                   />
                 )}
@@ -294,7 +345,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
           document.body
         )}
 
-      {/* ── ローディングインジケータ ── */}
+      {/* ── ローディング ── */}
       <AnimatePresence>
         {isLoading && (
           <motion.div
@@ -318,8 +369,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
         <DialogContent
           className="sm:max-w-[420px] overflow-hidden rounded-2xl border-2 shadow-2xl"
           style={{
-            // slide-in-from-* が設定する translate オフセットを 0 に上書きし
-            // zoom-in-95 + fade-in のみのアニメーション（中央スケールイン）にする
             '--tw-enter-translate-x': '0',
             '--tw-enter-translate-y': '0',
             '--tw-exit-translate-x': '0',
@@ -335,24 +384,54 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
           </DialogHeader>
 
           <AnimatePresence mode="wait">
-            {result ? (
-              // ── ヒット時: 辞書データを表示 ──
+            {activeResult ? (
               <motion.div
-                key={result.wordEn}
+                key={activeResult.dicId}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
                 className="flex flex-col gap-5 py-2"
               >
-                {/* 単語表記 */}
-                <div className="text-center mt-2">
-                  <h2 className="text-3xl font-black tracking-tight text-foreground uppercase">
-                    {result.wordEn}
-                  </h2>
-                  {result.phoneticSpelling && (
-                    <p className="text-base font-mono text-muted-foreground mt-1 tracking-wider">
-                      {result.phoneticSpelling}
+                {/* 複数品詞切り替えタブ */}
+                {results.length > 1 && (
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-1">
+                    <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${results.length}, minmax(0, 1fr))` }}>
+                      {results.map((r) => (
+                        <TabsTrigger key={r.dicId} value={r.partOfSpeech} className="text-xs">
+                          {getPartOfSpeechLabel(r.partOfSpeech)}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                )}
+
+                {/* 単語表記（下線下にアイコンが出るため下マージンmb-14を確保） */}
+                <div className="text-center mt-2 space-y-2">
+                  <div className="flex items-center justify-center gap-2 flex-wrap mb-14">
+                    <h2 className="text-3xl font-black tracking-tight text-foreground select-none">
+                      {renderWordWithStress(
+                        activeResult.syllables,
+                        activeResult.primaryStressSyllable,
+                        activeResult.stressVowelSpelling,
+                        activeResult.wordEn,
+                        activeResult.vowel.vowelImageUrl
+                      )}
+                    </h2>
+                    {results.length === 1 && (
+                      <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5 self-center">
+                        {getPartOfSpeechLabel(activeResult.partOfSpeech)}
+                      </Badge>
+                    )}
+                  </div>
+                  {activeResult.wordJa && (
+                    <p className="text-base font-semibold text-foreground pt-2">
+                      {activeResult.wordJa}
+                    </p>
+                  )}
+                  {activeResult.phoneticSpelling && (
+                    <p className="text-base font-mono text-muted-foreground tracking-wider">
+                      {activeResult.phoneticSpelling}
                     </p>
                   )}
                 </div>
@@ -363,10 +442,10 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                     variant="outline"
                     className={cn(
                       'h-12 border-2 hover:bg-secondary/50 gap-2 font-semibold',
-                      !result.wordAudioUrl && 'opacity-40 cursor-not-allowed'
+                      !activeResult.wordAudioUrl && 'opacity-40 cursor-not-allowed'
                     )}
-                    disabled={!result.wordAudioUrl}
-                    onClick={() => handlePlayAudio(result.wordAudioUrl, 'word')}
+                    disabled={!activeResult.wordAudioUrl}
+                    onClick={() => handlePlayAudio(activeResult.wordAudioUrl, 'word')}
                   >
                     <Volume2 className="h-4 w-4 text-primary" />
                     Word Sound
@@ -375,44 +454,24 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                     variant="outline"
                     className={cn(
                       'h-12 border-2 hover:bg-secondary/50 gap-2 font-semibold',
-                      !result.vowel.vowelAudioUrl && 'opacity-40 cursor-not-allowed'
+                      !activeResult.vowel.vowelAudioUrl && 'opacity-40 cursor-not-allowed'
                     )}
-                    disabled={!result.vowel.vowelAudioUrl}
-                    onClick={() => handlePlayAudio(result.vowel.vowelAudioUrl, 'vowel')}
+                    disabled={!activeResult.vowel.vowelAudioUrl}
+                    onClick={() => handlePlayAudio(activeResult.vowel.vowelAudioUrl, 'vowel')}
                   >
                     <Volume2 className="h-4 w-4 text-emerald-500" />
                     Vowel Target
                   </Button>
                 </div>
 
-                {/* Visual Chart */}
-                <div className="relative flex flex-col items-center justify-center p-5 rounded-2xl border bg-gradient-to-b from-secondary/40 to-secondary/10 shadow-inner">
-                  <div className="relative w-28 h-28 bg-background rounded-full shadow-md flex items-center justify-center border-4 border-background transition-transform hover:scale-105 duration-300">
-                    <Image
-                      src={result.vowel.vowelImageUrl}
-                      alt={result.vowel.cvName}
-                      fill
-                      sizes="112px"
-                      className="object-contain p-4"
-                      priority
-                    />
-                  </div>
-                  <div className="mt-4 text-center">
-                    <span className="font-extrabold text-xl text-primary tracking-wide">
-                      {result.vowel.cvName}
-                    </span>
-                  </div>
-                </div>
-
                 {/* 発音の解説 */}
                 <div className="rounded-xl bg-muted/50 p-4 border border-dashed">
                   <p className="text-sm font-medium leading-relaxed text-foreground text-justify whitespace-pre-line">
-                    {result.vowel.description}
+                    {activeResult.vowel.description}
                   </p>
                 </div>
               </motion.div>
             ) : (
-              // ── 未登録語エンプティステート ──
               <motion.div
                 key="cv-empty"
                 initial={{ opacity: 0, y: 15 }}
