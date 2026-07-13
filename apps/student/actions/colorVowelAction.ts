@@ -120,25 +120,29 @@ export async function lookupColorVowelDictionary(
     }
 
     // 4. Storage Public URL 解決
+    //    DBのパスにバケット名が含まれている場合（例: "color-vowels/images/..."）は
+    //    getPublicUrl に渡す前にプレフィックスを除去する
     const bucketName = "color-vowels";
+    const stripBucket = (path: string) =>
+      path.startsWith(`${bucketName}/`) ? path.slice(bucketName.length + 1) : path;
 
     let wordAudioUrl: string | null = null;
     if (record.audio_path) {
       const { data: wAudio } = supabase.storage
         .from(bucketName)
-        .getPublicUrl(record.audio_path);
+        .getPublicUrl(stripBucket(record.audio_path));
       wordAudioUrl = wAudio.publicUrl;
     }
 
     const { data: vImage } = supabase.storage
       .from(bucketName)
-      .getPublicUrl(vowelRaw.icon_path);
+      .getPublicUrl(stripBucket(vowelRaw.icon_path));
 
     let vowelAudioUrl: string | null = null;
     if (vowelRaw.audio_path) {
       const { data: vAudio } = supabase.storage
         .from(bucketName)
-        .getPublicUrl(vowelRaw.audio_path);
+        .getPublicUrl(stripBucket(vowelRaw.audio_path));
       vowelAudioUrl = vAudio.publicUrl;
     }
 
