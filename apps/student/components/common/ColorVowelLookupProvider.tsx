@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { lookupColorVowelDictionary, type ColorVowelDicResult } from '@/actions/colorVowelAction';
 import { cn } from '@/lib/utils';
+import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 
 // -----------------------------------------------------------------------
 // 型定義
@@ -96,7 +97,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
   const [isOpen, setIsOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const activeAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const { play: playAudio, stop: stopAudio } = usePlayAudioSpeech();
   // イベントハンドラのクロージャから参照するために ref でも管理
   const isOpenRef = React.useRef(false);
   const isLoadingRef = React.useRef(false);
@@ -189,16 +190,11 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
   // 音声再生
   // -----------------------------------------------------------------------
 
-  const handlePlayAudio = React.useCallback((url: string | null) => {
+  const handlePlayAudio = React.useCallback((url: string | null, type: 'word' | 'vowel') => {
     if (!url) return;
-    if (activeAudioRef.current) {
-      activeAudioRef.current.pause();
-      activeAudioRef.current.currentTime = 0;
-    }
-    const audio = new Audio(url);
-    activeAudioRef.current = audio;
-    audio.play().catch((err) => console.error('Failed to play audio:', err));
-  }, []);
+    const id = result ? `${result.wordEn}-${type}` : type;
+    playAudio(url, id).catch((err) => console.error('Failed to play audio:', err));
+  }, [playAudio, result]);
 
   // -----------------------------------------------------------------------
   // ダイアログ開閉
@@ -207,10 +203,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
-      if (activeAudioRef.current) {
-        activeAudioRef.current.pause();
-        activeAudioRef.current.currentTime = 0;
-      }
+      stopAudio();
       setTimeout(() => {
         setResult(null);
         setSearchedWord('');
@@ -373,7 +366,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                       !result.wordAudioUrl && 'opacity-40 cursor-not-allowed'
                     )}
                     disabled={!result.wordAudioUrl}
-                    onClick={() => handlePlayAudio(result.wordAudioUrl)}
+                    onClick={() => handlePlayAudio(result.wordAudioUrl, 'word')}
                   >
                     <Volume2 className="h-4 w-4 text-primary" />
                     Word Sound
@@ -385,7 +378,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                       !result.vowel.vowelAudioUrl && 'opacity-40 cursor-not-allowed'
                     )}
                     disabled={!result.vowel.vowelAudioUrl}
-                    onClick={() => handlePlayAudio(result.vowel.vowelAudioUrl)}
+                    onClick={() => handlePlayAudio(result.vowel.vowelAudioUrl, 'vowel')}
                   >
                     <Volume2 className="h-4 w-4 text-emerald-500" />
                     Vowel Target

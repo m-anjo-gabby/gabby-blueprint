@@ -158,7 +158,7 @@ export function usePlayAudioSpeech() {
    * @param id - アイテムを一意に識別するID
    * @param options - 再生オプション (restart: true の場合、同じIDでも最初から再生)
    */
-  const play = useCallback(async (path: string, id: string, options?: { restart?: boolean }): Promise<void> => {
+  const play = useCallback(async (path: string, id: string, options?: { restart?: boolean; bucketName?: string }): Promise<void> => {
     const ctx = await getOrInitializeAudioContext();
     if (!ctx) return;
 
@@ -184,8 +184,12 @@ export function usePlayAudioSpeech() {
       return;
     }
 
-    const { data } = supabase.storage.from('audio').getPublicUrl(path);
-    const bucketUrl = data.publicUrl;
+    let bucketUrl = path;
+    if (!path.startsWith('http://') && !path.startsWith('https://')) {
+      const bucketName = options?.bucketName || 'audio';
+      const { data } = supabase.storage.from(bucketName).getPublicUrl(path);
+      bucketUrl = data.publicUrl;
+    }
 
     return new Promise<void>((resolve) => {
       const startPlayback = (buffer: AudioBuffer) => {
@@ -278,13 +282,17 @@ export function usePlayAudioSpeech() {
    * 音声をプリロード（先読み）する
    * @param path - Supabase Storage内の相対パス
    */
-  const preload = useCallback(async (path: string) => {
+  const preload = useCallback(async (path: string, options?: { bucketName?: string }) => {
     if (!path) return;
     const ctx = await getOrInitializeAudioContext();
     if (!ctx) return;
 
-    const { data } = supabase.storage.from('audio').getPublicUrl(path);
-    const bucketUrl = data.publicUrl;
+    let bucketUrl = path;
+    if (!path.startsWith('http://') && !path.startsWith('https://')) {
+      const bucketName = options?.bucketName || 'audio';
+      const { data } = supabase.storage.from(bucketName).getPublicUrl(path);
+      bucketUrl = data.publicUrl;
+    }
 
     if (!audioBufferCache.has(bucketUrl)) {
       try {
@@ -315,11 +323,16 @@ export function usePlayAudioSpeech() {
   /**
    * 音声ファイルをダウンロードする
    */
-  const download = useCallback(async (path: string, id: string, fileName?: string) => {
+  const download = useCallback(async (path: string, id: string, fileName?: string, options?: { bucketName?: string }) => {
     setIsDownloading(id);
     try {
-      const { data } = supabase.storage.from('audio').getPublicUrl(path);
-      const response = await fetch(data.publicUrl);
+      let bucketUrl = path;
+      if (!path.startsWith('http://') && !path.startsWith('https://')) {
+        const bucketName = options?.bucketName || 'audio';
+        const { data } = supabase.storage.from(bucketName).getPublicUrl(path);
+        bucketUrl = data.publicUrl;
+      }
+      const response = await fetch(bucketUrl);
       if (!response.ok) throw new Error('Failed to fetch audio file');
       
       const blob = await response.blob();
