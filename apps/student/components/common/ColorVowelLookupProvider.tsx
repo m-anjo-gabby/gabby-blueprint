@@ -367,7 +367,10 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
           /* ── 改善点: gap-0 をインジェクションして、shadcnが背後で強制指定しているレイアウトgap-4を完全無効化 ── */
-          className="sm:max-w-[420px] max-h-[80vh] flex flex-col overflow-hidden rounded-2xl border border-indigo-600/20 dark:border-indigo-950/50 shadow-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 p-0 gap-0 [&>button]:text-indigo-100 hover:[&>button]:text-white [&>button]:focus:ring-indigo-500 [&>button]:focus:ring-offset-indigo-600"
+          className={cn(
+            "sm:max-w-[420px] flex flex-col overflow-hidden rounded-2xl border border-indigo-600/20 dark:border-indigo-950/50 shadow-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 p-0 gap-0 [&>button]:text-indigo-100 hover:[&>button]:text-white [&>button]:focus:ring-indigo-500 [&>button]:focus:ring-offset-indigo-600",
+            activeResult ? "h-[520px] sm:h-[70vh] max-h-[90vh]" : "h-auto"
+          )}
           style={{
             '--tw-enter-translate-x': '0',
             '--tw-enter-translate-y': '0',
@@ -439,6 +442,36 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
               </div>
             )}
 
+            {/* 固定コンポーネントエリア(音声コントロール) */}
+            {activeResult && (
+              <div className="grid grid-cols-2 gap-3 px-6 pb-4 shrink-0 bg-background">
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
+                    !activeResult.wordAudioUrl && 'opacity-40 cursor-not-allowed'
+                  )}
+                  disabled={!activeResult.wordAudioUrl}
+                  onClick={() => handlePlayAudio(activeResult.wordAudioUrl, 'word')}
+                >
+                  <Volume2 className="h-4.5 w-4.5 text-primary" />
+                  単語を再生
+                </Button>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
+                    !activeResult.vowel.vowelAudioUrl && 'opacity-40 cursor-not-allowed'
+                  )}
+                  disabled={!activeResult.vowel.vowelAudioUrl}
+                  onClick={() => handlePlayAudio(activeResult.vowel.vowelAudioUrl, 'vowel')}
+                >
+                  <Volume2 className="h-4.5 w-4.5 text-emerald-500" />
+                  母音を再生
+                </Button>
+              </div>
+            )}
+
             {/* スクロール領域: 可変長テキスト（日本語訳・解説）のみをここに隔離し、スクロールを内包化 */}
             <div className="flex-1 overflow-y-auto px-6 pb-6 pt-1 scrollbar-thin">
               <AnimatePresence mode="wait">
@@ -452,33 +485,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                     transition={{ duration: 0.18, ease: [0.215, 0.610, 0.355, 1.000] }}
                     className="flex flex-col gap-5 w-full"
                   >
-                    {/* 音声コントロール */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
-                          !activeResult.wordAudioUrl && 'opacity-40 cursor-not-allowed'
-                        )}
-                        disabled={!activeResult.wordAudioUrl}
-                        onClick={() => handlePlayAudio(activeResult.wordAudioUrl, 'word')}
-                      >
-                        <Volume2 className="h-4.5 w-4.5 text-primary" />
-                        単語を再生
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
-                          !activeResult.vowel.vowelAudioUrl && 'opacity-40 cursor-not-allowed'
-                        )}
-                        disabled={!activeResult.vowel.vowelAudioUrl}
-                        onClick={() => handlePlayAudio(activeResult.vowel.vowelAudioUrl, 'vowel')}
-                      >
-                        <Volume2 className="h-4.5 w-4.5 text-emerald-500" />
-                        母音を再生
-                      </Button>
-                    </div>
 
                     {/* 文字情報 ＆ 解説ストリームエリア */}
                     <div className="space-y-4">
@@ -551,7 +557,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -15 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="flex flex-col items-center gap-4 py-8 px-2"
+                    className="flex flex-col items-center gap-4 py-8 px-6"
                   >
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                       <SearchX className="h-8 w-8 text-muted-foreground" />
