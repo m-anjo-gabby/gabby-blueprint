@@ -9,7 +9,7 @@ import { Volume2, BookOpen, Loader2, Search, SearchX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { lookupColorVowelDictionary } from '@/actions/colorVowelAction';
-import { type ColorVowelDicResult, getPartOfSpeechLabel } from '@gabby/types/colorVowel';
+import { type ColorVowelDicResult, getPartOfSpeechLabel, COLOR_VOWEL_COLORS } from '@gabby/types/colorVowel';
 import { cn } from '@/lib/utils';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 
@@ -506,8 +506,20 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                           className="object-contain"
                         />
                       </div>
-                      <span className="text-[11px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 pt-0.5">
-                        {activeResult.vowel.cvName} Target
+                      <span
+                        className={cn(
+                          "text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-sm border shrink-0 select-none pt-0.5",
+                          activeResult.vowel.cvId === 'white_tie' || activeResult.vowel.cvId === 'silver_pin'
+                            ? "bg-slate-900 border-slate-900"
+                            : activeResult.vowel.cvId === 'black_cat'
+                              ? "bg-slate-100 border-slate-200"
+                              : "bg-muted dark:bg-muted/60 border-border"
+                        )}
+                        style={{
+                          color: COLOR_VOWEL_COLORS[activeResult.vowel.cvId] ?? 'currentColor',
+                        }}
+                      >
+                        {activeResult.vowel.cvName}
                       </span>
                     </div>
 

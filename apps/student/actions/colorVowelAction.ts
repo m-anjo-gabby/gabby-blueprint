@@ -3,7 +3,7 @@
 
 import { createServerClient } from "@gabby/lib/supabase/server";
 import { createLogger, getLogContext } from "@gabby/lib/logger";
-import type { ColorVowelDicResult } from "@gabby/types/colorVowel";
+import { type ColorVowelDicResult, getPartOfSpeechSeqNo } from "@gabby/types/colorVowel";
 
 const logger = createLogger('student');
 
@@ -161,6 +161,9 @@ export async function lookupColorVowelDictionary(
       `Successfully looked up Color Vowel for '${cleanWord}' (found ${results.length} record(s))`,
       { ...ctx, payload: { cleanWord, count: results.length } }
     );
+
+    // 品詞の表示順序（seq_no）に従って昇順ソート
+    results.sort((a, b) => getPartOfSpeechSeqNo(a.partOfSpeech) - getPartOfSpeechSeqNo(b.partOfSpeech));
 
     return results;
   } catch (err) {

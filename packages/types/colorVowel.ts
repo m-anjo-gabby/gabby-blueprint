@@ -17,20 +17,29 @@ export const PART_OF_SPEECH_TYPES = {
 
 export type PartOfSpeechType = typeof PART_OF_SPEECH_TYPES[keyof typeof PART_OF_SPEECH_TYPES];
 
-export const PART_OF_SPEECH_MAP: Record<PartOfSpeechType, string> = {
-  [PART_OF_SPEECH_TYPES.NOUN]: '名詞',
-  [PART_OF_SPEECH_TYPES.VERB]: '動詞',
-  [PART_OF_SPEECH_TYPES.ADJECTIVE]: '形容詞',
-  [PART_OF_SPEECH_TYPES.ADVERB]: '副詞',
-  [PART_OF_SPEECH_TYPES.PRONOUN]: '代名詞',
-  [PART_OF_SPEECH_TYPES.PREPOSITION]: '前置詞',
-  [PART_OF_SPEECH_TYPES.CONJUNCTION]: '接続詞',
-  [PART_OF_SPEECH_TYPES.INTERJECTION]: '感嘆詞',
-  [PART_OF_SPEECH_TYPES.UNKNOWN]: 'その他',
+export interface PartOfSpeechDetail {
+  label: string;
+  seqNo: number;
+}
+
+export const PART_OF_SPEECH_MAP: Record<PartOfSpeechType, PartOfSpeechDetail> = {
+  [PART_OF_SPEECH_TYPES.NOUN]: { label: '名詞', seqNo: 1 },
+  [PART_OF_SPEECH_TYPES.VERB]: { label: '動詞', seqNo: 2 },
+  [PART_OF_SPEECH_TYPES.ADJECTIVE]: { label: '形容詞', seqNo: 3 },
+  [PART_OF_SPEECH_TYPES.ADVERB]: { label: '副詞', seqNo: 4 },
+  [PART_OF_SPEECH_TYPES.PRONOUN]: { label: '代名詞', seqNo: 5 },
+  [PART_OF_SPEECH_TYPES.PREPOSITION]: { label: '前置詞', seqNo: 6 },
+  [PART_OF_SPEECH_TYPES.CONJUNCTION]: { label: '接続詞', seqNo: 7 },
+  [PART_OF_SPEECH_TYPES.INTERJECTION]: { label: '感嘆詞', seqNo: 8 },
+  [PART_OF_SPEECH_TYPES.UNKNOWN]: { label: 'その他', seqNo: 99 },
 };
 
 export const getPartOfSpeechLabel = (type: string | null | undefined): string => {
-  return PART_OF_SPEECH_MAP[type as PartOfSpeechType] ?? 'その他';
+  return PART_OF_SPEECH_MAP[type as PartOfSpeechType]?.label ?? 'その他';
+};
+
+export const getPartOfSpeechSeqNo = (type: string | null | undefined): number => {
+  return PART_OF_SPEECH_MAP[type as PartOfSpeechType]?.seqNo ?? 99;
 };
 
 // -----------------------------------------------------------------------
