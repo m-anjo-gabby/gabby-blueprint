@@ -5,7 +5,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, BookOpen, Loader2, Search, SearchX } from 'lucide-react';
+import { Volume2, BookA, Loader2, Search, SearchX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { lookupColorVowelDictionary } from '@/actions/colorVowelAction';
@@ -366,7 +366,8 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       {/* ── 辞書結果ダイアログ ── */}
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="sm:max-w-[420px] overflow-hidden rounded-2xl border-2 shadow-2xl bg-background"
+          /* ── 改善点: gap-0 をインジェクションして、shadcnが背後で強制指定しているレイアウトgap-4を完全無効化 ── */
+          className="sm:max-w-[420px] max-h-[80vh] flex flex-col overflow-hidden rounded-2xl border border-indigo-600/20 dark:border-indigo-950/50 shadow-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 p-0 gap-0 [&>button]:text-indigo-100 hover:[&>button]:text-white [&>button]:focus:ring-indigo-500 [&>button]:focus:ring-offset-indigo-600"
           style={{
             '--tw-enter-translate-x': '0',
             '--tw-enter-translate-y': '0',
@@ -375,81 +376,84 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
           } as React.CSSProperties}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <DialogHeader className="border-b pb-3">
-            <DialogTitle className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-              <BookOpen className="h-4 w-4 text-primary" />
-              Color Vowel Dictionary
+          {/* ── 改善点: pt-5 pb-4 に固定。space-y-0を付与し、shadcnデフォルトの隠れたspace-y-1.5マージンによる下振れを完全相殺 ── */}
+          <DialogHeader className="bg-transparent px-6 pt-5 pb-4 text-white border-none shrink-0 space-y-0">
+            <DialogTitle className="flex items-center gap-2 text-sm font-bold tracking-wider text-indigo-50/90 uppercase">
+              <BookA className="h-5 w-5 text-indigo-100 opacity-95 shrink-0" />
+              <span className="tracking-widest font-black text-white">Color Vowel Dictionary</span>
             </DialogTitle>
           </DialogHeader>
 
-          <AnimatePresence mode="wait">
-            {activeResult ? (
-              <motion.div
-                key={activeResult.wordEn}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="flex flex-col gap-6 py-2"
-              >
-                {/* ── 複数品詞時のみピルコントローラーを表示（1個の場合は完全非表示） ── */}
-                {results.length > 1 && (
-                  <div className="w-full pt-1">
-                    <div 
-                      className={cn(
-                        "flex items-center gap-1.5 w-full pb-0.5 select-none",
-                        results.length >= 4 
-                          ? "overflow-x-auto scrollbar-none snap-x justify-start" 
-                          : "justify-center"
-                      )}
-                    >
-                      <div className={cn("flex gap-1.5", results.length >= 4 ? "mx-0" : "mx-auto")}>
-                        {results.map((r) => {
-                          const isActive = r.partOfSpeech === activeTab;
-                          return (
-                            <button
-                              key={r.dicId}
-                              onClick={() => setActiveTab(r.partOfSpeech)}
-                              className={cn(
-                                "px-4 py-1.5 text-xs font-bold rounded-full transition-all duration-150 shrink-0 snap-center border",
-                                isActive
-                                  ? "bg-primary text-primary-foreground border-primary shadow-sm scale-102"
-                                  : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
-                              )}
-                            >
-                              {getPartOfSpeechLabel(r.partOfSpeech)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+          {/* ── 改善点: pt-5 から開始し、上部のインディゴヘッダー領域と全く同じ均等なビジュアルディスタンス（1:1）を確保 ── */}
+          <div className="flex flex-col flex-1 overflow-hidden bg-background rounded-b-[15px]">
+            
+            {/* 固定コンポーネントエリア(タブコントローラー): 品詞を何回切り替えてもこの領域は1pxも不動 */}
+            {results.length > 1 && (
+              <div className="w-full px-6 pt-5 shrink-0 z-10 bg-background">
+                <div 
+                  className={cn(
+                    "flex items-center gap-1.5 w-full pb-0.5 select-none",
+                    results.length >= 4 
+                      ? "overflow-x-auto scrollbar-none snap-x justify-start" 
+                      : "justify-center"
+                  )}
+                >
+                  <div className={cn("flex gap-1.5", results.length >= 4 ? "mx-0" : "mx-auto")}>
+                    {results.map((r) => {
+                      const isActive = r.partOfSpeech === activeTab;
+                      return (
+                        <button
+                          key={r.dicId}
+                          onClick={() => setActiveTab(r.partOfSpeech)}
+                          className={cn(
+                            "px-4 py-1.5 text-xs font-bold rounded-full transition-all duration-150 shrink-0 snap-center border",
+                            isActive
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm scale-102"
+                              : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
+                          )}
+                        >
+                          {getPartOfSpeechLabel(r.partOfSpeech)}
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
+                </div>
+              </div>
+            )}
 
-                <AnimatePresence mode="wait">
+            {/* 固定コンポーネントエリア(メイン単語表記層): 高さをh-32に完全固定化。絶対配置アイコンがどれだけ移動しても下部を絶対にガタつかせない */}
+            {activeResult && (
+              <div className={cn(
+                "text-center w-full h-32 pb-14 flex flex-col items-center justify-center shrink-0 bg-background px-6",
+                results.length > 1 ? "pt-2" : "pt-6" /* コントローラー有無に応じた微細なバランサー */
+              )}>
+                <h2 className="text-4xl font-black tracking-tight text-foreground select-none">
+                  {renderWordWithStress(
+                    activeResult.syllables,
+                    activeResult.primaryStressSyllable,
+                    activeResult.stressVowelSpelling,
+                    activeResult.wordEn,
+                    activeResult.vowel.vowelImageUrl
+                  )}
+                </h2>
+              </div>
+            )}
+
+            {/* スクロール領域: 可変長テキスト（日本語訳・解説）のみをここに隔離し、スクロールを内包化 */}
+            <div className="flex-1 overflow-y-auto px-6 pb-6 pt-1 scrollbar-thin">
+              <AnimatePresence mode="wait">
+                {activeResult ? (
+                  /* ── 案A: 控えめで極めて高速なスライドフェード ── */
                   <motion.div
                     key={activeResult.dicId}
-                    initial={{ opacity: 0, x: 6 }}
+                    initial={{ opacity: 0, x: 12 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -6 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                    className="flex flex-col gap-6 w-full"
+                    exit={{ opacity: 0, x: -12 }}
+                    transition={{ duration: 0.18, ease: [0.215, 0.610, 0.355, 1.000] }}
+                    className="flex flex-col gap-5 w-full"
                   >
-                    {/* 単語表記（下線下にアイコンが出るため下マージンmb-14を確保） */}
-                    <div className="text-center pt-2 pb-12 flex flex-col items-center justify-center min-h-[90px]">
-                      <h2 className="text-4xl font-black tracking-tight text-foreground select-none">
-                        {renderWordWithStress(
-                          activeResult.syllables,
-                          activeResult.primaryStressSyllable,
-                          activeResult.stressVowelSpelling,
-                          activeResult.wordEn,
-                          activeResult.vowel.vowelImageUrl
-                        )}
-                      </h2>
-                    </div>
-
                     {/* 音声コントロール */}
-                    <div className="grid grid-cols-2 gap-3 px-1">
+                    <div className="grid grid-cols-2 gap-3">
                       <Button
                         variant="outline"
                         className={cn(
@@ -460,7 +464,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                         onClick={() => handlePlayAudio(activeResult.wordAudioUrl, 'word')}
                       >
                         <Volume2 className="h-4.5 w-4.5 text-primary" />
-                        Word Sound
+                        単語を再生
                       </Button>
                       <Button
                         variant="outline"
@@ -472,14 +476,14 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                         onClick={() => handlePlayAudio(activeResult.vowel.vowelAudioUrl, 'vowel')}
                       >
                         <Volume2 className="h-4.5 w-4.5 text-emerald-500" />
-                        Vowel Target
+                        母音を再生
                       </Button>
                     </div>
 
                     {/* 文字情報 ＆ 解説ストリームエリア */}
-                    <div className="space-y-4 px-1 mt-1">
+                    <div className="space-y-4">
                       
-                      {/* ── 改善: 領域を究極に節約した「左集約型」文字情報エリア ── */}
+                      {/* 左集約型・文字情報エリア */}
                       <div className="flex flex-col bg-secondary/30 rounded-xl p-4 border border-border/60 text-left">
                         {/* 上段: [品詞バッジ] ＋ 発音記号を左側にクリーンに集約（領域の超節約） */}
                         <div className="flex items-center gap-3 select-none border-b border-border/30 pb-2.5">
@@ -501,12 +505,12 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                         )}
                       </div>
 
-                      {/* ── 改善: 解説エリアのヘッダーにミニCV画像 ＋ CV名を集約配置（コンテキストの完全一致） ── */}
+                      {/* 解説エリアのヘッダーにミニCV画像 ＋ CV名を集約配置（コンテキストの完全一致） */}
                       <div className="rounded-xl bg-muted/40 p-4 border border-dashed border-border/80 flex flex-col gap-3">
                         
                         {/* 解説エリア内ヘッダー: CV thumbnail & Name */}
                         <div className="flex items-center gap-2 select-none border-b border-border/20 pb-2">
-                          <div className="relative w-5 h-5 bg-background rounded-full border border-border flex items-center justify-center p-0.5 shadow-sm overflow-hidden shrink-0">
+                          <div className="relative w-6 h-6 bg-background rounded-full border border-border flex items-center justify-center shadow-sm overflow-hidden shrink-0">
                             <Image
                               src={activeResult.vowel.vowelImageUrl}
                               alt="vowel icon thumbnail"
@@ -540,40 +544,40 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
 
                     </div>
                   </motion.div>
-                </AnimatePresence>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="cv-empty"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="flex flex-col items-center gap-4 py-8 px-2"
-              >
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                  <SearchX className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div className="text-center space-y-1.5">
-                  <p className="text-base font-bold text-foreground">
-                    Not in dictionary
-                  </p>
-                  {searchedWord && (
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-mono font-semibold text-foreground">
-                        &ldquo;{searchedWord}&rdquo;
-                      </span>{' '}
-                      はColor Vowel辞書に登録されていません。
+                ) : (
+                  <motion.div
+                    key="cv-empty"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="flex flex-col items-center gap-4 py-8 px-2"
+                  >
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                      <SearchX className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div className="text-center space-y-1.5">
+                      <p className="text-base font-bold text-foreground">
+                        Not in dictionary
+                      </p>
+                      {searchedWord && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-mono font-semibold text-foreground">
+                            &ldquo;{searchedWord}&rdquo;
+                          </span>{' '}
+                          はColor Vowel辞書に登録されていません。
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground/70 text-center leading-relaxed max-w-[260px]">
+                      辞書には主要な英単語の母音パターンが収録されています。<br />
+                      固有名詞・略語は対象外の場合があります。
                     </p>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground/70 text-center leading-relaxed max-w-[260px]">
-                  辞書には主要な英単語の母音パターンが収録されています。<br />
-                  固有名詞・略語は対象外の場合があります。
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
