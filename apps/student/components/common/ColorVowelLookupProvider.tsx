@@ -167,7 +167,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
   const [isOpen, setIsOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const { play: playAudio, stop: stopAudio } = usePlayAudioSpeech();
+  const { play: playAudio, stop: stopAudio, isPlaying } = usePlayAudioSpeech();
   const isOpenRef = React.useRef(false);
   const isLoadingRef = React.useRef(false);
 
@@ -443,34 +443,46 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
             )}
 
             {/* 固定コンポーネントエリア(音声コントロール) */}
-            {activeResult && (
-              <div className="grid grid-cols-2 gap-3 px-6 pb-4 shrink-0 bg-background">
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
-                    !activeResult.wordAudioUrl && 'opacity-40 cursor-not-allowed'
-                  )}
-                  disabled={!activeResult.wordAudioUrl}
-                  onClick={() => handlePlayAudio(activeResult.wordAudioUrl, 'word')}
-                >
-                  <Volume2 className="h-4.5 w-4.5 text-primary" />
-                  単語を再生
-                </Button>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
-                    !activeResult.vowel.vowelAudioUrl && 'opacity-40 cursor-not-allowed'
-                  )}
-                  disabled={!activeResult.vowel.vowelAudioUrl}
-                  onClick={() => handlePlayAudio(activeResult.vowel.vowelAudioUrl, 'vowel')}
-                >
-                  <Volume2 className="h-4.5 w-4.5 text-emerald-500" />
-                  母音を再生
-                </Button>
-              </div>
-            )}
+            {activeResult && (() => {
+              const isWordPlaying = isPlaying === `${activeResult.wordEn}-${activeResult.partOfSpeech}-word`;
+              const isVowelPlaying = isPlaying === `${activeResult.wordEn}-${activeResult.partOfSpeech}-vowel`;
+              return (
+                <div className="grid grid-cols-2 gap-3 px-6 pb-4 shrink-0 bg-background">
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
+                      !activeResult.wordAudioUrl && 'opacity-40 cursor-not-allowed'
+                    )}
+                    disabled={!activeResult.wordAudioUrl}
+                    onClick={() => handlePlayAudio(activeResult.wordAudioUrl, 'word')}
+                  >
+                    {isWordPlaying ? (
+                      <Loader2 className="h-4.5 w-4.5 animate-spin text-primary" />
+                    ) : (
+                      <Volume2 className="h-4.5 w-4.5 text-primary" />
+                    )}
+                    単語を再生
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
+                      !activeResult.vowel.vowelAudioUrl && 'opacity-40 cursor-not-allowed'
+                    )}
+                    disabled={!activeResult.vowel.vowelAudioUrl}
+                    onClick={() => handlePlayAudio(activeResult.vowel.vowelAudioUrl, 'vowel')}
+                  >
+                    {isVowelPlaying ? (
+                      <Loader2 className="h-4.5 w-4.5 animate-spin text-emerald-500" />
+                    ) : (
+                      <Volume2 className="h-4.5 w-4.5 text-emerald-500" />
+                    )}
+                    母音を再生
+                  </Button>
+                </div>
+              );
+            })()}
 
             {/* スクロール領域: 可変長テキスト（日本語訳・解説）のみをここに隔離し、スクロールを内包化 */}
             <div className="flex-1 overflow-y-auto px-6 pb-6 pt-1 scrollbar-thin">
