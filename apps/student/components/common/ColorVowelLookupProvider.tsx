@@ -385,7 +385,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
           <AnimatePresence mode="wait">
             {activeResult ? (
               <motion.div
-                key={activeResult.dicId}
+                key={activeResult.wordEn}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
@@ -426,110 +426,121 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                   </div>
                 )}
 
-                {/* 単語表記（下線下にアイコンが出るため下マージンmb-14を確保） */}
-                <div className="text-center pt-2 pb-12 flex flex-col items-center justify-center min-h-[90px]">
-                  <h2 className="text-4xl font-black tracking-tight text-foreground select-none">
-                    {renderWordWithStress(
-                      activeResult.syllables,
-                      activeResult.primaryStressSyllable,
-                      activeResult.stressVowelSpelling,
-                      activeResult.wordEn,
-                      activeResult.vowel.vowelImageUrl
-                    )}
-                  </h2>
-                </div>
-
-                {/* 音声コントロール */}
-                <div className="grid grid-cols-2 gap-3 px-1">
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
-                      !activeResult.wordAudioUrl && 'opacity-40 cursor-not-allowed'
-                    )}
-                    disabled={!activeResult.wordAudioUrl}
-                    onClick={() => handlePlayAudio(activeResult.wordAudioUrl, 'word')}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeResult.dicId}
+                    initial={{ opacity: 0, x: 6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -6 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="flex flex-col gap-6 w-full"
                   >
-                    <Volume2 className="h-4.5 w-4.5 text-primary" />
-                    Word Sound
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
-                      !activeResult.vowel.vowelAudioUrl && 'opacity-40 cursor-not-allowed'
-                    )}
-                    disabled={!activeResult.vowel.vowelAudioUrl}
-                    onClick={() => handlePlayAudio(activeResult.vowel.vowelAudioUrl, 'vowel')}
-                  >
-                    <Volume2 className="h-4.5 w-4.5 text-emerald-500" />
-                    Vowel Target
-                  </Button>
-                </div>
-
-                {/* 文字情報 ＆ 解説ストリームエリア */}
-                <div className="space-y-4 px-1 mt-1">
-                  
-                  {/* ── 改善: 領域を究極に節約した「左集約型」文字情報エリア ── */}
-                  <div className="flex flex-col bg-secondary/30 rounded-xl p-4 border border-border/60 text-left">
-                    {/* 上段: [品詞バッジ] ＋ 発音記号を左側にクリーンに集約（領域の超節約） */}
-                    <div className="flex items-center gap-3 select-none border-b border-border/30 pb-2.5">
-                      <span className="text-[11px] font-black tracking-wider text-primary bg-background dark:bg-muted border border-primary/20 rounded px-2.5 py-0.5 shadow-sm uppercase shrink-0">
-                        {getPartOfSpeechLabel(activeResult.partOfSpeech)}
-                      </span>
-                      {activeResult.phoneticSpelling && (
-                        <p className="text-sm font-mono text-muted-foreground/80 tracking-widest pt-0.5">
-                          {activeResult.phoneticSpelling}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* 下段: 日本語訳（100%幅で広々と配置。折り返しによる他要素への影響ゼロ） */}
-                    {activeResult.wordJa && (
-                      <p className="text-lg font-bold text-foreground tracking-wide leading-snug pt-3 pl-0.5">
-                        {activeResult.wordJa}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* ── 改善: 解説エリアのヘッダーにミニCV画像 ＋ CV名を集約配置（コンテキストの完全一致） ── */}
-                  <div className="rounded-xl bg-muted/40 p-4 border border-dashed border-border/80 flex flex-col gap-3">
-                    
-                    {/* 解説エリア内ヘッダー: CV thumbnail & Name */}
-                    <div className="flex items-center gap-2 select-none border-b border-border/20 pb-2">
-                      <div className="relative w-5 h-5 bg-background rounded-full border border-border flex items-center justify-center p-0.5 shadow-sm overflow-hidden shrink-0">
-                        <Image
-                          src={activeResult.vowel.vowelImageUrl}
-                          alt="vowel icon thumbnail"
-                          width={16}
-                          height={16}
-                          className="object-contain"
-                        />
-                      </div>
-                      <span
-                        className={cn(
-                          "text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-sm border shrink-0 select-none pt-0.5",
-                          activeResult.vowel.cvId === 'white_tie' || activeResult.vowel.cvId === 'silver_pin'
-                            ? "bg-slate-900 border-slate-900"
-                            : activeResult.vowel.cvId === 'black_cat'
-                              ? "bg-slate-100 border-slate-200"
-                              : "bg-muted dark:bg-muted/60 border-border"
+                    {/* 単語表記（下線下にアイコンが出るため下マージンmb-14を確保） */}
+                    <div className="text-center pt-2 pb-12 flex flex-col items-center justify-center min-h-[90px]">
+                      <h2 className="text-4xl font-black tracking-tight text-foreground select-none">
+                        {renderWordWithStress(
+                          activeResult.syllables,
+                          activeResult.primaryStressSyllable,
+                          activeResult.stressVowelSpelling,
+                          activeResult.wordEn,
+                          activeResult.vowel.vowelImageUrl
                         )}
-                        style={{
-                          color: COLOR_VOWEL_COLORS[activeResult.vowel.cvId] ?? 'currentColor',
-                        }}
-                      >
-                        {activeResult.vowel.cvName}
-                      </span>
+                      </h2>
                     </div>
 
-                    {/* 発音の明快なテキスト解説文 */}
-                    <p className="text-sm font-medium leading-relaxed text-muted-foreground text-justify whitespace-pre-line pl-0.5">
-                      {activeResult.vowel.description}
-                    </p>
-                  </div>
+                    {/* 音声コントロール */}
+                    <div className="grid grid-cols-2 gap-3 px-1">
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
+                          !activeResult.wordAudioUrl && 'opacity-40 cursor-not-allowed'
+                        )}
+                        disabled={!activeResult.wordAudioUrl}
+                        onClick={() => handlePlayAudio(activeResult.wordAudioUrl, 'word')}
+                      >
+                        <Volume2 className="h-4.5 w-4.5 text-primary" />
+                        Word Sound
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'h-12 border-2 hover:bg-secondary/50 gap-2 font-bold transition-all',
+                          !activeResult.vowel.vowelAudioUrl && 'opacity-40 cursor-not-allowed'
+                        )}
+                        disabled={!activeResult.vowel.vowelAudioUrl}
+                        onClick={() => handlePlayAudio(activeResult.vowel.vowelAudioUrl, 'vowel')}
+                      >
+                        <Volume2 className="h-4.5 w-4.5 text-emerald-500" />
+                        Vowel Target
+                      </Button>
+                    </div>
 
-                </div>
+                    {/* 文字情報 ＆ 解説ストリームエリア */}
+                    <div className="space-y-4 px-1 mt-1">
+                      
+                      {/* ── 改善: 領域を究極に節約した「左集約型」文字情報エリア ── */}
+                      <div className="flex flex-col bg-secondary/30 rounded-xl p-4 border border-border/60 text-left">
+                        {/* 上段: [品詞バッジ] ＋ 発音記号を左側にクリーンに集約（領域の超節約） */}
+                        <div className="flex items-center gap-3 select-none border-b border-border/30 pb-2.5">
+                          <span className="text-[11px] font-black tracking-wider text-primary bg-background dark:bg-muted border border-primary/20 rounded px-2.5 py-0.5 shadow-sm uppercase shrink-0">
+                            {getPartOfSpeechLabel(activeResult.partOfSpeech)}
+                          </span>
+                          {activeResult.phoneticSpelling && (
+                            <p className="text-sm font-mono text-muted-foreground/80 tracking-widest pt-0.5">
+                              {activeResult.phoneticSpelling}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* 下段: 日本語訳（100%幅で広々と配置。折り返しによる他要素への影響ゼロ） */}
+                        {activeResult.wordJa && (
+                          <p className="text-lg font-bold text-foreground tracking-wide leading-snug pt-3 pl-0.5">
+                            {activeResult.wordJa}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* ── 改善: 解説エリアのヘッダーにミニCV画像 ＋ CV名を集約配置（コンテキストの完全一致） ── */}
+                      <div className="rounded-xl bg-muted/40 p-4 border border-dashed border-border/80 flex flex-col gap-3">
+                        
+                        {/* 解説エリア内ヘッダー: CV thumbnail & Name */}
+                        <div className="flex items-center gap-2 select-none border-b border-border/20 pb-2">
+                          <div className="relative w-5 h-5 bg-background rounded-full border border-border flex items-center justify-center p-0.5 shadow-sm overflow-hidden shrink-0">
+                            <Image
+                              src={activeResult.vowel.vowelImageUrl}
+                              alt="vowel icon thumbnail"
+                              width={16}
+                              height={16}
+                              className="object-contain"
+                            />
+                          </div>
+                          <span
+                            className={cn(
+                              "text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-sm border shrink-0 select-none pt-0.5",
+                              activeResult.vowel.cvId === 'white_tie' || activeResult.vowel.cvId === 'silver_pin'
+                                ? "bg-slate-900 border-slate-900"
+                                : activeResult.vowel.cvId === 'black_cat'
+                                  ? "bg-slate-100 border-slate-200"
+                                  : "bg-muted dark:bg-muted/60 border-border"
+                            )}
+                            style={{
+                              color: COLOR_VOWEL_COLORS[activeResult.vowel.cvId] ?? 'currentColor',
+                            }}
+                          >
+                            {activeResult.vowel.cvName}
+                          </span>
+                        </div>
+
+                        {/* 発音の明快なテキスト解説文 */}
+                        <p className="text-sm font-medium leading-relaxed text-muted-foreground text-justify whitespace-pre-line pl-0.5">
+                          {activeResult.vowel.description}
+                        </p>
+                      </div>
+
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
               </motion.div>
             ) : (
               <motion.div
