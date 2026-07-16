@@ -43,6 +43,13 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<any[]>([]); 
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      handleReset();
+    }
+    setOpen(nextOpen);
+  }; 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
@@ -58,6 +65,8 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     Papa.parse(file, {
       header: true,
       delimiter: "\t", // 💡 タブ区切り (TSV) を明示
+      quoteChar: "",   // 💡 ダブルクォーテーションをフィールド囲み文字として処理しない
+      escapeChar: "",  // 💡 エスケープ文字の処理を無効化
       skipEmptyLines: true,
       error: (error) => {
         setLayoutError(`TSVパースエラー: ${error.message}`);
@@ -202,7 +211,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
   const errorItems = data.filter(d => !d.isValid);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if(!o) handleReset(); setOpen(o); }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2 border-dashed border-slate-300 hover:bg-slate-50 transition-all font-bold h-8 text-xs">
           <FileUp size={14} /> 一括登録

@@ -43,8 +43,9 @@ export async function upsertSprintQuestion(payload: Partial<SprintQuestion>) {
     const supabase = await createAdminClient();
     const isEdit = !!payload.question_id;
 
+    const { insert_date, ...cleanPayload } = payload;
     const dataToSave = {
-      ...payload,
+      ...cleanPayload,
       update_date: new Date().toISOString(),
     };
 
@@ -81,12 +82,15 @@ export async function bulkUpsertSprintQuestions(questions: Partial<SprintQuestio
     const supabase = await createAdminClient();
     const now = new Date().toISOString();
 
-    const dataToSave = questions.map(q => ({
-      ...q,
-      update_date: now,
-      insert_date: q.question_id ? undefined : now,
-      delete_flg: '0'
-    }));
+    const dataToSave = questions.map(q => {
+      const { insert_date, ...rest } = q;
+      return {
+        ...rest,
+        update_date: now,
+        ...(q.question_id ? {} : { insert_date: now }),
+        delete_flg: '0'
+      };
+    });
 
     // Supabaseのupsertを使用（question_idが既にあれば更新、なければ挿入）
     const { error } = await supabase

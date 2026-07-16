@@ -146,7 +146,10 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                     </div>
                     {isMastery && group.items[0]?.statement_en && (
                       <div className="border-l-4 border-slate-300 pl-4 py-1">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Shared Statement</span>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Shared Statement</span>
+                          {renderAudioControls(group.items[0], 'statement')}
+                        </div>
                         <p className="text-sm font-bold text-slate-600">{group.items[0].statement_en}</p>
                       </div>
                     )}

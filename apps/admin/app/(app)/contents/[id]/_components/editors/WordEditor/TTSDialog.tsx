@@ -17,6 +17,7 @@ import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzure
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
 import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
+import { buildSSML } from '@gabby/lib/azure/ssml';
 
 interface TTSDialogProps {
   phrase: PhraseRecord;
@@ -72,23 +73,11 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
 
   // SSML再構築ロジック
   const rebuildSSML = useCallback((currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
-    const processedText = currentAdjs.map(adj => {
-      let segment = adj.fullText;
-      if (adj.ipa.trim()) {
-        const punctuation = adj.fullText.slice(adj.text.length);
-        segment = `<phoneme alphabet="ipa" ph="${adj.ipa.trim()}">${adj.text}</phoneme>${punctuation}`;
-      }
-      if (adj.emphasis) {
-        segment = `<emphasis level="${adj.emphasisLevel}">${segment}</emphasis>`;
-      }
-      if (adj.breakAfter) {
-        segment = `${segment}<break time="${adj.breakDuration}ms"/>`;
-      }
-      return segment;
-    }).join(' ');
-
-    return generateSSML(processedText, currentParams);
-  }, [generateSSML]);
+    return buildSSML(phrase.phrase_en, {
+      settings: currentParams,
+      words: currentAdjs
+    });
+  }, [phrase.phrase_en]);
 
   // Autoモード時のみ、設定変更をSSMLに反映
   useEffect(() => {
