@@ -18,6 +18,7 @@ import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzure
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
 import { saveSprintAudio } from '@/actions/adminSprintAction';
+import { buildSSML } from '@gabby/lib/azure/ssml';
 
 interface SprintTTSDialogProps {
   question: SprintQuestion;
@@ -130,18 +131,11 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
   }, [open, getSectionData]);
 
   const rebuildSSML = useCallback((currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
-    const processedText = currentAdjs.map(adj => {
-      let segment = adj.fullText;
-      if (adj.ipa.trim()) {
-        const punctuation = adj.fullText.slice(adj.text.length);
-        segment = `<phoneme alphabet="ipa" ph="${adj.ipa.trim()}">${adj.text}</phoneme>${punctuation}`;
-      }
-      if (adj.emphasis) segment = `<emphasis level="${adj.emphasisLevel}">${segment}</emphasis>`;
-      if (adj.breakAfter) segment = `${segment}<break time="${adj.breakDuration}ms"/>`;
-      return segment;
-    }).join(' ');
-    return generateSSML(processedText, currentParams);
-  }, [generateSSML]);
+    return buildSSML(currentData.text, {
+      settings: currentParams,
+      words: currentAdjs
+    });
+  }, [currentData.text]);
 
   useEffect(() => {
     if (ssmlMode === 'auto' && open) {
