@@ -20,6 +20,7 @@ import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzure
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_GENERAL_VOICES, AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
 import { saveTTSAssetAction } from '@/actions/adminTTSAction';
+import { buildSSML } from '@gabby/lib/azure/ssml';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_PARAMS: TTSParameters = {
@@ -82,23 +83,11 @@ export default function TTSAssetGenerator() {
 
   const rebuildSSML = useCallback((currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
     if (!phraseEn) return '';
-    const processedText = currentAdjs.map(adj => {
-      let segment = adj.fullText;
-      if (adj.ipa.trim()) {
-        const punctuation = adj.fullText.slice(adj.text.length);
-        segment = `<phoneme alphabet="ipa" ph="${adj.ipa.trim()}">${adj.text}</phoneme>${punctuation}`;
-      }
-      if (adj.emphasis) {
-        segment = `<emphasis level="${adj.emphasisLevel}">${segment}</emphasis>`;
-      }
-      if (adj.breakAfter) {
-        segment = `${segment}<break time="${adj.breakDuration}ms"/>`;
-      }
-      return segment;
-    }).join(' ');
-
-    return generateSSML(processedText, currentParams);
-  }, [phraseEn, generateSSML]);
+    return buildSSML(phraseEn, {
+      settings: currentParams,
+      words: currentAdjs
+    });
+  }, [phraseEn]);
 
   useEffect(() => {
     if (ssmlMode === 'auto' && phraseEn) {
