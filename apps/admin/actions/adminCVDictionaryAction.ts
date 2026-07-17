@@ -168,7 +168,7 @@ export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: stri
       return { success: false, message: error.message };
     }
 
-    // Storage上の音声ファイルを削除
+    // Storage上の音声ファイルを削除（audioバケット）
     if (existing?.audio_path) {
       await supabase.storage.from('audio').remove([existing.audio_path]);
     }
@@ -246,10 +246,12 @@ export async function saveCVDictionaryAudio(
     const audioBuffer = await generateAzureAudioBuffer(ssml);
 
     // 2. ファイルパス生成
+    // audioバケット配下: dictionary/{word_en}/{pos}-{timestamp}.mp3
+    // words/  sprints/ と並ぶ統一構造
     const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
     const safePOS = partOfSpeech.toLowerCase().replace(/[^a-z]/g, '_');
     const safeWord = wordEn.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const newFilePath = `cv-dictionary/${safeWord}/${safePOS}-${timestamp}.mp3`;
+    const newFilePath = `dictionary/${safeWord}/${safePOS}-${timestamp}.mp3`;
 
     // 3. Storage アップロード
     const { error: uploadError } = await supabase.storage
