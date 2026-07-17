@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
+import { getPartOfSpeechTailwindColor } from '@gabby/types/colorVowel';
 
 // ============================================================
 // 定数
@@ -38,17 +39,7 @@ const TTS_STATUS_CONFIG: Record<number, { label: string; className: string; icon
   9: { label: 'エラー', className: 'bg-rose-50 text-rose-600 border-rose-100', icon: AlertCircle },
 };
 
-const POS_COLOR: Record<string, string> = {
-  NOUN:        'bg-blue-50 text-blue-700 border-blue-100',
-  VERB:        'bg-emerald-50 text-emerald-700 border-emerald-100',
-  ADJECTIVE:   'bg-violet-50 text-violet-700 border-violet-100',
-  ADVERB:      'bg-amber-50 text-amber-700 border-amber-100',
-  PREPOSITION: 'bg-rose-50 text-rose-700 border-rose-100',
-  CONJUNCTION: 'bg-cyan-50 text-cyan-700 border-cyan-100',
-  PRONOUN:     'bg-orange-50 text-orange-700 border-orange-100',
-  ARTICLE:     'bg-pink-50 text-pink-700 border-pink-100',
-  OTHER:       'bg-slate-100 text-slate-600 border-slate-200',
-};
+
 
 // ============================================================
 // Props
@@ -186,7 +177,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                         variant="outline"
                         className={cn(
                           'text-[10px] font-black px-2 py-1 rounded-lg border',
-                          POS_COLOR[entry.part_of_speech] ?? POS_COLOR.OTHER
+                          getPartOfSpeechTailwindColor(entry.part_of_speech)
                         )}
                       >
                         {entry.part_of_speech}

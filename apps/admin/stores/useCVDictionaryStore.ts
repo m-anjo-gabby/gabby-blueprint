@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CVWordSummary } from '@/actions/adminCVDictionaryAction';
+import { type CVWordSummary } from '@/actions/adminCVDictionaryAction';
 
 interface CVDictionaryState {
   lastUpdated: number;

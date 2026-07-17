@@ -4,6 +4,7 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
 import { revalidatePath } from 'next/cache';
 import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { type ColorVowelDictionaryRow } from '@gabby/types/colorVowel';
 
 const logger = createLogger('admin');
 
@@ -11,20 +12,12 @@ const logger = createLogger('admin');
 // 型定義
 // ============================================================
 
-export interface CVDictionaryEntry {
-  word_en: string;
-  part_of_speech: string;
-  word_ja: string;
-  syllables: string | null;
-  primary_stress_syllable: number | null;
-  stress_vowel_spelling: string | null;
-  cv_id: string | null;
-  phonetic_spelling: string | null;
-  audio_path: string | null;
-  tts_status: number;
-  insert_date: string | null;
-  update_date: string | null;
-}
+/**
+ * com_m_color_vowel_dictionary の行型
+ * @gabby/types/colorVowel の ColorVowelDictionaryRow を共通型として使用
+ * 導入元の変更なしに予備として re-export
+ */
+export type CVDictionaryEntry = ColorVowelDictionaryRow;
 
 export interface CVWordSummary {
   word_en: string;

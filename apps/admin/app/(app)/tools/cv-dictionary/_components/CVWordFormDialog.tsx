@@ -13,22 +13,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertCVDictionaryEntry, CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
 import { PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-
-// ============================================================
-// 定数
-// ============================================================
-
-export const PARTS_OF_SPEECH = [
-  { value: 'NOUN',        label: 'Noun（名詞）' },
-  { value: 'VERB',        label: 'Verb（動詞）' },
-  { value: 'ADJECTIVE',   label: 'Adjective（形容詞）' },
-  { value: 'ADVERB',      label: 'Adverb（副詞）' },
-  { value: 'PREPOSITION', label: 'Preposition（前置詞）' },
-  { value: 'CONJUNCTION', label: 'Conjunction（接続詞）' },
-  { value: 'PRONOUN',     label: 'Pronoun（代名詞）' },
-  { value: 'ARTICLE',     label: 'Article（冠詞）' },
-  { value: 'OTHER',       label: 'Other（その他）' },
-] as const;
+import { PART_OF_SPEECH_OPTIONS, PART_OF_SPEECH_MAP, type PartOfSpeechType } from '@gabby/types/colorVowel';
 
 // ============================================================
 // バリデーションスキーマ
@@ -90,7 +75,7 @@ export function CVWordFormDialog({
     return {
       word_en: data.word_en,
       part_of_speech: data.part_of_speech,
-      word_ja: data.word_ja,
+      word_ja: data.word_ja ?? '',
       syllables: data.syllables ?? '',
       primary_stress_syllable: data.primary_stress_syllable != null ? String(data.primary_stress_syllable) : '',
       stress_vowel_spelling: data.stress_vowel_spelling ?? '',
@@ -193,7 +178,7 @@ export function CVWordFormDialog({
                   <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Part of Speech</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm font-bold border border-slate-100">
-                      {PARTS_OF_SPEECH.find(p => p.value === field.value)?.label ?? field.value}
+                      {PART_OF_SPEECH_MAP[field.value as PartOfSpeechType]?.adminLabel ?? field.value}
                     </div>
                   ) : (
                     <Select onValueChange={field.onChange} value={field.value} disabled={mode === 'edit'}>
@@ -203,7 +188,7 @@ export function CVWordFormDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {PARTS_OF_SPEECH.map((p) => (
+                        {PART_OF_SPEECH_OPTIONS.map((p) => (
                           <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                         ))}
                       </SelectContent>
