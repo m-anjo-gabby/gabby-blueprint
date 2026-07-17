@@ -1,67 +1,115 @@
 // apps/admin/lib/navigation.ts
-import { 
-  LayoutDashboard, Building2, FileSignature, Users, BookOpen, Speech, 
-  ShieldCheck
+import {
+  LayoutDashboard, Building2, FileSignature, Users, BookOpen,
+  Speech, ShieldCheck, Wrench, BookOpenText, LucideIcon,
 } from 'lucide-react';
 
-export const ADMIN_NAV_CONFIG = [
-  { 
-    label: 'ダッシュボード', 
-    href: '/dashboard', 
-    icon: LayoutDashboard, 
-    requiredRoles: [] // 全員OK
+// ============================================================
+// 型定義
+// ============================================================
+
+export interface NavLeaf {
+  type?: 'leaf';
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  requiredRoles: readonly string[];
+}
+
+export interface NavGroup {
+  type: 'group';
+  label: string;
+  icon: LucideIcon;
+  requiredRoles: readonly string[]; // グループ自体を表示する最低権限（子の union）
+  children: readonly NavLeaf[];
+}
+
+export type NavItem = NavLeaf | NavGroup;
+
+// ============================================================
+// ナビゲーション定義
+// ============================================================
+
+export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
+  {
+    label: 'ダッシュボード',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    requiredRoles: [],
   },
-  { 
-    label: '顧客管理', 
-    href: '/clients', 
-    icon: Building2, 
-    requiredRoles: ['admin'] 
+  {
+    label: '顧客管理',
+    href: '/clients',
+    icon: Building2,
+    requiredRoles: ['admin'],
   },
-  { 
-    label: '契約管理', 
-    href: '/contracts', 
-    icon: FileSignature, 
-    requiredRoles: ['admin'] 
+  {
+    label: '契約管理',
+    href: '/contracts',
+    icon: FileSignature,
+    requiredRoles: ['admin'],
   },
-  { 
-    label: 'ユーザー管理', 
-    href: '/users', 
-    icon: Users, 
-    requiredRoles: ['admin'] 
+  {
+    label: 'ユーザー管理',
+    href: '/users',
+    icon: Users,
+    requiredRoles: ['admin'],
   },
-  { 
-    label: '規約管理', 
-    href: '/terms', 
-    icon: ShieldCheck, 
-    requiredRoles: ['admin'] 
+  {
+    label: '規約管理',
+    href: '/terms',
+    icon: ShieldCheck,
+    requiredRoles: ['admin'],
   },
-  { 
-    label: '教材管理', 
-    href: '/contents', 
-    icon: BookOpen, 
-    requiredRoles: ['admin', 'content_manager'] 
+  {
+    label: '教材管理',
+    href: '/contents',
+    icon: BookOpen,
+    requiredRoles: ['admin', 'content_manager'],
   },
-  { 
-    label: 'TTS Designer', 
-    href: '/tools/tts-designer', 
-    icon: Speech, 
-    requiredRoles: ['admin', 'content_manager'] 
+  {
+    type: 'group',
+    label: 'Tools',
+    icon: Wrench,
+    requiredRoles: ['admin', 'content_manager'],
+    children: [
+      {
+        label: 'TTS Designer',
+        href: '/tools/tts-designer',
+        icon: Speech,
+        requiredRoles: ['admin', 'content_manager'],
+      },
+      {
+        label: 'CV Dictionary',
+        href: '/tools/cv-dictionary',
+        icon: BookOpenText,
+        requiredRoles: ['admin', 'content_manager'],
+      },
+    ],
   },
 ] as const;
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+
+/** 全リーフアイテムをフラットに取得 */
+export function getAllLeafItems(config: readonly NavItem[]): NavLeaf[] {
+  return config.flatMap((item) =>
+    item.type === 'group' ? [...item.children] : [item]
+  );
+}
 
 /**
  * 特定のパスに対して権限があるか判定する共通ロジック
  */
 export function canAccessPath(pathname: string, userRoles: string[]): boolean {
-  // adminロールは常に全パスOK
   if (userRoles.includes('admin')) return true;
 
-  // 設定から該当するパスを探す
-  const config = ADMIN_NAV_CONFIG.find(item => pathname.startsWith(item.href));
-  
-  // 設定がないパスは「制限なし」とするか、セキュリティ重視なら「拒否」にする
+  const leaves = getAllLeafItems(ADMIN_NAV_CONFIG);
+  const config = leaves.find((item) => pathname.startsWith(item.href));
+
   if (!config || config.requiredRoles.length === 0) return true;
 
-  // ユーザーのロールがいずれか一つでも一致すればOK
-  return config.requiredRoles.some(role => userRoles.includes(role));
+  return config.requiredRoles.some((role) => userRoles.includes(role));
 }
