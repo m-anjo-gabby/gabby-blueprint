@@ -14,8 +14,24 @@ import { cn } from '@/lib/utils';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 
 // -----------------------------------------------------------------------
-// 型定義
+// Context & 型定義
 // -----------------------------------------------------------------------
+
+export interface ColorVowelLookupContextType {
+  openTooltip: (word: string, rect: DOMRect) => void;
+  closeTooltip: () => void;
+  activeWord: string | null;
+}
+
+const ColorVowelLookupContext = React.createContext<ColorVowelLookupContextType | null>(null);
+
+export function useColorVowelLookup() {
+  const context = React.useContext(ColorVowelLookupContext);
+  if (!context) {
+    throw new Error('useColorVowelLookup must be used within a ColorVowelLookupProvider');
+  }
+  return context;
+}
 
 interface ColorVowelLookupProviderProps {
   children?: React.ReactNode;
@@ -28,7 +44,7 @@ interface TooltipState {
   x: number;
   /** 配置基準点の viewport Y 座標 */
   y: number;
-  /** 選択範囲の上に出すか下に出すか */
+  /** 単語の上に出すか下に出すか */
   placement: 'top' | 'bottom';
 }
 
@@ -36,40 +52,24 @@ interface TooltipState {
 // ユーティリティ
 // -----------------------------------------------------------------------
 
-/** 選択 Node が入力系・ダイアログ内にあるか判定 */
-function isSelectionInForbiddenZone(selection: Selection): boolean {
-  const node = selection.anchorNode;
-  if (!node) return false;
-  const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
-  return !!el?.closest('input, textarea, [contenteditable="true"], [role="dialog"]');
-}
-
 /**
- * 現在の Selection 範囲から表示位置を計算する。
- * - 選択範囲が画面上部にある場合は下側に表示（bottom）
- * - それ以外は上側に表示（top）
- * - 水平位置は viewport 端からはみ出さないようにクランプ
+ * 単語要素の DOMRect からツールチップ表示位置を計算する。
  */
-function resolveTooltipPosition(): Omit<TooltipState, 'text'> | null {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return null;
-
-  const rect = selection.getRangeAt(0).getBoundingClientRect();
-  if (!rect || rect.width === 0) return null;
-
-  const GAP = 10;
-  const HORIZONTAL_PADDING = 80; // ツールチップが端に近すぎないよう余白
+function resolveTooltipPositionFromRect(rect: DOMRect): Omit<TooltipState, 'text'> {
+  const GAP = 8; // 単語とツールチップの間隔
+  const HORIZONTAL_PADDING = 70;
 
   const x = Math.max(
     HORIZONTAL_PADDING,
     Math.min(window.innerWidth - HORIZONTAL_PADDING, rect.left + rect.width / 2)
   );
 
-  if (rect.top > 60) {
-    // 上に十分スペースがある → 選択範囲の上に表示
+  if (rect.top > 70) {
+    // 上側表示: y = 単語上端 - GAP → translateY(-100%) でツールチップ本体を上に退避
+    // 突起 (top-full) がちょうど単語上端の GAP 上に来る
     return { x, y: rect.top - GAP, placement: 'top' };
   } else {
-    // 画面上部に近い → 選択範囲の下に表示
+    // 下側表示: y = 単語下端 + GAP → ツールチップ上端から突起が単語下端の GAP 下に来る
     return { x, y: rect.bottom + GAP, placement: 'bottom' };
   }
 }
@@ -93,7 +93,6 @@ function renderWordWithStress(
   return (
     <span className="lowercase tracking-wide">
       {parts.map((part, index) => {
-        // primaryStressSyllable は 1 始まり
         const isStressed = index + 1 === primaryStressSyllable;
         if (isStressed && stressVowelSpelling) {
           const partLower = part.toLowerCase();
@@ -128,7 +127,6 @@ function renderWordWithStress(
           }
         }
 
-        // ストレス音節だが母音綴りが見つからない、またはストレス音節ではない場合
         if (isStressed) {
           return (
             <span key={index} className="relative inline-block">
@@ -168,11 +166,9 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
   const [isLoading, setIsLoading] = React.useState(false);
 
   const { play: playAudio, stop: stopAudio, isPlaying } = usePlayAudioSpeech();
-  const isOpenRef = React.useRef(false);
   const isLoadingRef = React.useRef(false);
 
   React.useEffect(() => setMounted(true), []);
-  React.useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
   React.useEffect(() => { isLoadingRef.current = isLoading; }, [isLoading]);
 
   const activeResult = React.useMemo(() => {
@@ -180,58 +176,50 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     return results.find((r) => r.partOfSpeech === activeTab) || results[0];
   }, [results, activeTab]);
 
-  const handlePointerUp = React.useCallback(() => {
-    if (isOpenRef.current || isLoadingRef.current) return;
-
-    setTimeout(() => {
-      const selection = window.getSelection();
-      const text = selection?.toString().trim() ?? '';
-
-      if (text.length <= 1 || text.length > 30) {
-        setTooltip(null);
-        return;
-      }
-
-      if (!selection || isSelectionInForbiddenZone(selection)) {
-        setTooltip(null);
-        return;
-      }
-
-      const pos = resolveTooltipPosition();
-      if (!pos) {
-        setTooltip(null);
-        return;
-      }
-
-      setTooltip({ text, ...pos });
-    }, 120);
-  }, []);
-
-  const handleSelectionChange = React.useCallback(() => {
-    const text = window.getSelection()?.toString().trim() ?? '';
-    if (text.length <= 1) {
+  const openTooltip = React.useCallback((word: string, rect: DOMRect) => {
+    const cleaned = word.replace(/^[.,!?;:"'()]+|[.,!?;:"'()]+$/g, '').trim();
+    if (!cleaned || cleaned.length <= 1) {
       setTooltip(null);
+      return;
     }
+
+    const pos = resolveTooltipPositionFromRect(rect);
+    setTooltip({ text: cleaned, ...pos });
   }, []);
 
+  const closeTooltip = React.useCallback(() => {
+    setTooltip(null);
+  }, []);
+
+  // ツールチップ外タップやスクロールでツールチップを閉じる
   React.useEffect(() => {
-    document.addEventListener('mouseup', handlePointerUp);
-    document.addEventListener('touchend', handlePointerUp);
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => {
-      document.removeEventListener('mouseup', handlePointerUp);
-      document.removeEventListener('touchend', handlePointerUp);
-      document.removeEventListener('selectionchange', handleSelectionChange);
+    if (!tooltip) return;
+
+    const handlePointerDownOutside = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('#cv-tooltip') || target?.closest('[data-lookup-word]')) {
+        return;
+      }
+      setTooltip(null);
     };
-  }, [handlePointerUp, handleSelectionChange]);
+
+    const handleScroll = () => {
+      setTooltip(null);
+    };
+
+    window.addEventListener('pointerdown', handlePointerDownOutside);
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDownOutside);
+      window.removeEventListener('scroll', handleScroll, { capture: true });
+    };
+  }, [tooltip]);
 
   const handleLookup = React.useCallback(async () => {
     if (!tooltip || isLoadingRef.current) return;
 
     const word = tooltip.text;
-
     setTooltip(null);
-    window.getSelection()?.removeAllRanges();
 
     setIsLoading(true);
     setSearchedWord(word);
@@ -269,8 +257,17 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     }
   };
 
+  const contextValue = React.useMemo<ColorVowelLookupContextType>(
+    () => ({
+      openTooltip,
+      closeTooltip,
+      activeWord: tooltip?.text ?? null,
+    }),
+    [openTooltip, closeTooltip, tooltip]
+  );
+
   return (
-    <>
+    <ColorVowelLookupContext.Provider value={contextValue}>
       {children}
 
       {/* ── ツールチップ ── */}
@@ -278,67 +275,77 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
         createPortal(
           <AnimatePresence>
             {tooltip && (
-              <motion.div
-                key="cv-tooltip"
-                initial={{ opacity: 0, scale: 0.88, y: tooltip.placement === 'top' ? 6 : -6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.88, y: tooltip.placement === 'top' ? 6 : -6 }}
-                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              <div
+                key="cv-tooltip-positioner"
                 style={{
                   position: 'fixed',
                   left: tooltip.x,
                   top: tooltip.y,
-                  transform:
-                    tooltip.placement === 'top'
-                      ? 'translateX(-50%) translateY(-100%)'
-                      : 'translateX(-50%)',
+                  // top 時: translateY(-100%) でボックス全体を y 座標より上に押し上げ
+                  // bottom 時: translateX(-50%) のみで上端が y になる
+                  transform: tooltip.placement === 'top'
+                    ? 'translateX(-50%) translateY(-100%)'
+                    : 'translateX(-50%)',
                   zIndex: 9999,
                   pointerEvents: 'auto',
                 }}
               >
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={handleLookup}
-                  className={cn(
-                    'group flex items-center gap-2 whitespace-nowrap',
-                    'rounded-full bg-slate-900 px-4 py-2.5',
-                    'text-xs font-semibold text-white shadow-2xl',
-                    'ring-1 ring-black/10',
-                    'hover:bg-slate-700 active:scale-[0.95]',
-                    'transition-all duration-150 select-none'
-                  )}
+                <motion.div
+                  id="cv-tooltip"
+                  initial={{ opacity: 0, scale: 0.88, y: tooltip.placement === 'top' ? 6 : -6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.88, y: tooltip.placement === 'top' ? 6 : -6 }}
+                  transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                  style={{
+                    transformOrigin: tooltip.placement === 'top' ? 'bottom center' : 'top center',
+                  }}
                 >
-                  <Search className="h-3.5 w-3.5 shrink-0 opacity-75" />
-                  <span>Color Vowelを検索</span>
-                </button>
+                  <button
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={handleLookup}
+                    className={cn(
+                      'group flex items-center gap-2 whitespace-nowrap',
+                      'rounded-full bg-slate-900 px-4 py-2.5',
+                      'text-xs font-semibold text-white shadow-2xl',
+                      'ring-1 ring-black/10',
+                      'hover:bg-slate-700 active:scale-[0.95]',
+                      'transition-all duration-150 select-none'
+                    )}
+                  >
+                    <Search className="h-3.5 w-3.5 shrink-0 opacity-75" />
+                    <span>Color Vowelを検索</span>
+                  </button>
 
-                {tooltip.placement === 'top' && (
-                  <div
-                    aria-hidden
-                    className="absolute left-1/2 -translate-x-1/2 top-full"
-                    style={{
-                      width: 0,
-                      height: 0,
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderTop: '6px solid rgb(15 23 42)',
-                    }}
-                  />
-                )}
-                {tooltip.placement === 'bottom' && (
-                  <div
-                    aria-hidden
-                    className="absolute left-1/2 -translate-x-1/2 bottom-full"
-                    style={{
-                      width: 0,
-                      height: 0,
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderBottom: '6px solid rgb(15 23 42)',
-                    }}
-                  />
-                )}
-              </motion.div>
+                  {/* 突起: top 時はボックス下端（単語方向）に下向き三角 */}
+                  {tooltip.placement === 'top' && (
+                    <div
+                      aria-hidden
+                      className="absolute left-1/2 -translate-x-1/2 top-full"
+                      style={{
+                        width: 0,
+                        height: 0,
+                        borderLeft: '6px solid transparent',
+                        borderRight: '6px solid transparent',
+                        borderTop: '6px solid rgb(15 23 42)',
+                      }}
+                    />
+                  )}
+                  {/* 突起: bottom 時はボックス上端（単語方向）に上向き三角 */}
+                  {tooltip.placement === 'bottom' && (
+                    <div
+                      aria-hidden
+                      className="absolute left-1/2 -translate-x-1/2 bottom-full"
+                      style={{
+                        width: 0,
+                        height: 0,
+                        borderLeft: '6px solid transparent',
+                        borderRight: '6px solid transparent',
+                        borderBottom: '6px solid rgb(15 23 42)',
+                      }}
+                    />
+                  )}
+                </motion.div>
+              </div>
             )}
           </AnimatePresence>,
           document.body
@@ -366,7 +373,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       {/* ── 辞書結果ダイアログ ── */}
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
-          /* ── 改善点: gap-0 をインジェクションして、shadcnが背後で強制指定しているレイアウトgap-4を完全無効化 ── */
           className={cn(
             "sm:max-w-[420px] flex flex-col overflow-hidden rounded-2xl border border-indigo-600/20 dark:border-indigo-950/50 shadow-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 p-0 gap-0 [&>button]:text-indigo-100 hover:[&>button]:text-white [&>button]:focus:ring-indigo-500 [&>button]:focus:ring-offset-indigo-600",
             activeResult ? "h-[520px] sm:h-[70vh] max-h-[90vh]" : "h-auto"
@@ -379,7 +385,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
           } as React.CSSProperties}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {/* ── 改善点: pt-5 pb-4 に固定。space-y-0を付与し、shadcnデフォルトの隠れたspace-y-1.5マージンによる下振れを完全相殺 ── */}
           <DialogHeader className="bg-transparent px-6 pt-5 pb-4 text-white border-none shrink-0 space-y-0">
             <DialogTitle className="flex items-center gap-2 text-sm font-bold tracking-wider text-indigo-50/90 uppercase">
               <BookA className="h-5 w-5 text-indigo-100 opacity-95 shrink-0" />
@@ -387,10 +392,8 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
             </DialogTitle>
           </DialogHeader>
 
-          {/* ── 改善点: pt-5 から開始し、上部のインディゴヘッダー領域と全く同じ均等なビジュアルディスタンス（1:1）を確保 ── */}
           <div className="flex flex-col flex-1 overflow-hidden bg-background rounded-b-[15px]">
-            
-            {/* 固定コンポーネントエリア(タブコントローラー): 品詞を何回切り替えてもこの領域は1pxも不動 */}
+            {/* 品詞タブ */}
             {results.length > 1 && (
               <div className="w-full px-6 pt-5 shrink-0 z-10 bg-background">
                 <div 
@@ -424,11 +427,11 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
               </div>
             )}
 
-            {/* 固定コンポーネントエリア(メイン単語表記層): 高さをh-32に完全固定化。絶対配置アイコンがどれだけ移動しても下部を絶対にガタつかせない */}
+            {/* メイン単語表記 */}
             {activeResult && (
               <div className={cn(
                 "text-center w-full h-32 pb-14 flex flex-col items-center justify-center shrink-0 bg-background px-6",
-                results.length > 1 ? "pt-2" : "pt-6" /* コントローラー有無に応じた微細なバランサー */
+                results.length > 1 ? "pt-2" : "pt-6"
               )}>
                 <h2 className="text-4xl font-black tracking-tight text-foreground select-none">
                   {renderWordWithStress(
@@ -442,7 +445,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
               </div>
             )}
 
-            {/* 固定コンポーネントエリア(音声コントロール) */}
+            {/* 音声コントロール */}
             {activeResult && (() => {
               const isWordPlaying = isPlaying === `${activeResult.wordEn}-${activeResult.partOfSpeech}-word`;
               const isVowelPlaying = isPlaying === `${activeResult.wordEn}-${activeResult.partOfSpeech}-vowel`;
@@ -484,11 +487,10 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
               );
             })()}
 
-            {/* スクロール領域: 可変長テキスト（日本語訳・解説）のみをここに隔離し、スクロールを内包化 */}
+            {/* スクロール領域（訳・解説） */}
             <div className="flex-1 overflow-y-auto px-6 pb-6 pt-1 scrollbar-thin">
               <AnimatePresence mode="wait">
                 {activeResult ? (
-                  /* ── 案A: 控えめで極めて高速なスライドフェード ── */
                   <motion.div
                     key={activeResult.dicId}
                     initial={{ opacity: 0, x: 12 }}
@@ -497,13 +499,8 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                     transition={{ duration: 0.18, ease: [0.215, 0.610, 0.355, 1.000] }}
                     className="flex flex-col gap-5 w-full"
                   >
-
-                    {/* 文字情報 ＆ 解説ストリームエリア */}
                     <div className="space-y-4">
-                      
-                      {/* 左集約型・文字情報エリア */}
                       <div className="flex flex-col bg-secondary/30 rounded-xl p-4 border border-border/60 text-left">
-                        {/* 上段: [品詞バッジ] ＋ 発音記号を左側にクリーンに集約（領域の超節約） */}
                         <div className="flex items-center gap-3 select-none border-b border-border/30 pb-2.5">
                           <span className="text-[11px] font-black tracking-wider text-primary bg-background dark:bg-muted border border-primary/20 rounded px-2.5 py-0.5 shadow-sm uppercase shrink-0">
                             {getPartOfSpeechLabel(activeResult.partOfSpeech)}
@@ -515,7 +512,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                           )}
                         </div>
 
-                        {/* 下段: 日本語訳（100%幅で広々と配置。折り返しによる他要素への影響ゼロ） */}
                         {activeResult.wordJa && (
                           <p className="text-lg font-bold text-foreground tracking-wide leading-snug pt-3 pl-0.5">
                             {activeResult.wordJa}
@@ -523,10 +519,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                         )}
                       </div>
 
-                      {/* 解説エリアのヘッダーにミニCV画像 ＋ CV名を集約配置（コンテキストの完全一致） */}
                       <div className="rounded-xl bg-muted/40 p-4 border border-dashed border-border/80 flex flex-col gap-3">
-                        
-                        {/* 解説エリア内ヘッダー: CV thumbnail & Name */}
                         <div className="flex items-center gap-2 select-none border-b border-border/20 pb-2">
                           <div className="relative w-6 h-6 bg-background rounded-full border border-border flex items-center justify-center shadow-sm overflow-hidden shrink-0">
                             <Image
@@ -554,12 +547,10 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                           </span>
                         </div>
 
-                        {/* 発音の明快なテキスト解説文 */}
                         <p className="text-sm font-medium leading-relaxed text-muted-foreground text-justify whitespace-pre-line pl-0.5">
                           {activeResult.vowel.description}
                         </p>
                       </div>
-
                     </div>
                   </motion.div>
                 ) : (
@@ -598,6 +589,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </ColorVowelLookupContext.Provider>
   );
 }
