@@ -377,12 +377,6 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
             "sm:max-w-[420px] flex flex-col overflow-hidden rounded-2xl border border-indigo-600/20 dark:border-indigo-950/50 shadow-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 p-0 gap-0 [&>button]:text-indigo-100 hover:[&>button]:text-white [&>button]:focus:ring-indigo-500 [&>button]:focus:ring-offset-indigo-600",
             activeResult ? "h-[520px] sm:h-[70vh] max-h-[90vh]" : "h-auto"
           )}
-          style={{
-            '--tw-enter-translate-x': '0',
-            '--tw-enter-translate-y': '0',
-            '--tw-exit-translate-x': '0',
-            '--tw-exit-translate-y': '0',
-          } as React.CSSProperties}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <DialogHeader className="bg-transparent px-6 pt-5 pb-4 text-white border-none shrink-0 space-y-0">
