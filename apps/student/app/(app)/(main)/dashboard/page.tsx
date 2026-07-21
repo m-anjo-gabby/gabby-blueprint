@@ -22,7 +22,6 @@ import { DashboardEmptyState } from './_components/DashboardEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useNoticeStore } from '@/stores/useNoticeStore';
-import { NoticePopupDialog } from '@/components/common/NoticePopupDialog';
 
 const SHOW_EXPERIMENTAL_FEATURES = false;
 
@@ -37,9 +36,8 @@ export default function StudentDashboard() {
   const user = useUserStore((state) => state.user);
   const isMonitor = user?.app_metadata?.roles?.includes('monitor');
 
-  // お知らせストア
-  const { dialogNotices, isDialogDismissed, fetchNotices, dismissDialog } = useNoticeStore();
-  const showNoticePopup = dialogNotices.length > 0 && !isDialogDismissed;
+  // お知らせストア（取得のみ）
+  const { fetchNotices } = useNoticeStore();
 
   // 1. 初期データの取得
   useEffect(() => {
@@ -217,14 +215,6 @@ export default function StudentDashboard() {
         </section>
       )}
     </div>
-
-      {/* お知らせポップアップダイアログ（show_dialog=TRUE かつ未読） */}
-      {showNoticePopup && (
-        <NoticePopupDialog
-          notices={dialogNotices}
-          onClose={dismissDialog}
-        />
-      )}
     </>
   );
 }

@@ -10,6 +10,7 @@ const VALID_STUDENT_ROUTES = [
   '/profile',
   '/training',
   '/monitor',
+  '/notice',
 ];
 
 export async function proxy(req: NextRequest) {

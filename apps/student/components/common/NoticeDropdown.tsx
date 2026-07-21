@@ -1,10 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { Bell, ChevronRight, BellOff, X } from 'lucide-react';
+import { useEffect } from 'react';
+import Link from 'next/link';
+import { Bell, ChevronRight, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import * as Popover from '@radix-ui/react-popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -25,50 +30,19 @@ const UnreadDot = () => (
 );
 
 export function NoticeDropdown() {
-  const router = useRouter();
-  const { notices, unreadCount, isLoading, fetchNotices, markAsRead } = useNoticeStore();
-  // open を明示的に管理することで、close 後に確実に navigate できるようにする
-  const [open, setOpen] = useState(false);
+  const { notices, unreadCount, isLoading, fetchNotices, markAsRead, setSelectedNoticeId } = useNoticeStore();
 
   // マウント時に取得（キャッシュがあればスキップ）
   useEffect(() => {
     fetchNotices();
   }, [fetchNotices]);
 
-  /**
-   * ポップオーバーを閉じてからページ遷移する。
-   * Radix Popover.Close asChild と router.push を同時に使うと、
-   * Close の onPointerDown がフォーカスを奪い push が無効化されるケースがある。
-   * 明示的に close → navigate の順で実行する。
-   */
-  const closeAndNavigate = useCallback(
-    (href: string) => {
-      setOpen(false);
-      // close アニメーション完了を待ってから push（1フレーム待つだけで十分）
-      requestAnimationFrame(() => {
-        router.push(href);
-      });
-    },
-    [router]
-  );
-
-  const handleNoticeClick = useCallback(
-    async (noticeId: string, isRead: boolean) => {
-      if (!isRead) {
-        // 既読化は非同期で行い、ナビゲーションをブロックしない
-        markAsRead(noticeId);
-      }
-      closeAndNavigate(`/notice?focus=${noticeId}`);
-    },
-    [markAsRead, closeAndNavigate]
-  );
-
   // 最新5件をプレビュー
   const previewNotices = notices.slice(0, 5);
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         {/* ベルアイコンボタン */}
         <button
           id="notice-bell-button"
@@ -91,80 +65,76 @@ export function NoticeDropdown() {
             )}
           </AnimatePresence>
         </button>
-      </Popover.Trigger>
+      </DropdownMenuTrigger>
 
-      <Popover.Portal>
-        <Popover.Content
-          align="end"
-          sideOffset={8}
-          className="z-[200] w-80 sm:w-96 bg-white rounded-[24px] shadow-2xl border border-slate-100 overflow-hidden outline-none"
-          onOpenAutoFocus={(e) => e.preventDefault()}
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        // Radixのデフォルトスタイルを上書きして既存のポップオーバーの見た目を維持する
+        className="z-[200] w-80 sm:w-96 p-0 bg-white rounded-[24px] shadow-2xl border-slate-100 overflow-hidden outline-none"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: -8, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
         >
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-          >
-            {/* ─── ヘッダー ──────────────────────────────────── */}
-            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-50">
-              <div className="flex items-center gap-2">
-                <Bell size={14} className="text-slate-500" />
-                <span className="text-xs font-black text-slate-800 tracking-tight">
-                  お知らせ
+          {/* ─── ヘッダー ──────────────────────────────────── */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-50">
+            <div className="flex items-center gap-2">
+              <Bell size={14} className="text-slate-500" />
+              <span className="text-xs font-black text-slate-800 tracking-tight">
+                お知らせ
+              </span>
+              {unreadCount > 0 && (
+                <span className="text-[9px] font-black text-rose-500 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-full">
+                  {unreadCount} 未読
                 </span>
-                {unreadCount > 0 && (
-                  <span className="text-[9px] font-black text-rose-500 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-full">
-                    {unreadCount} 未読
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => closeAndNavigate('/notice')}
-                  className="flex items-center gap-0.5 text-[10px] font-black text-indigo-600 hover:text-indigo-700 transition-colors"
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <DropdownMenuItem asChild className="p-0 focus:bg-transparent">
+                <Link
+                  href="/notice"
+                  className="flex items-center gap-0.5 text-[10px] font-black text-indigo-600 hover:text-indigo-700 transition-colors outline-none cursor-pointer"
                 >
                   すべて見る <ChevronRight size={11} />
-                </button>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="w-6 h-6 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all"
-                  aria-label="閉じる"
-                >
-                  <X size={12} className="text-slate-400" />
-                </button>
-              </div>
+                </Link>
+              </DropdownMenuItem>
             </div>
+          </div>
 
-            {/* ─── リスト ──────────────────────────────────────── */}
-            <div className="max-h-[340px] overflow-y-auto">
-              {isLoading ? (
-                // スケルトン
-                <div className="p-3 space-y-2">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-14 bg-slate-50 rounded-2xl animate-pulse" />
-                  ))}
+          {/* ─── リスト ──────────────────────────────────────── */}
+          <div className="max-h-[340px] overflow-y-auto">
+            {isLoading ? (
+              // スケルトン
+              <div className="p-3 space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-14 bg-slate-50 rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            ) : previewNotices.length === 0 ? (
+              // エンプティステート
+              <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+                <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-3">
+                  <BellOff size={18} />
                 </div>
-              ) : previewNotices.length === 0 ? (
-                // エンプティステート
-                <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                  <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-3">
-                    <BellOff size={18} />
-                  </div>
-                  <p className="text-xs font-bold text-slate-400">お知らせはありません</p>
-                  <p className="text-[10px] text-slate-300 mt-1 font-black uppercase tracking-wider">
-                    No notifications
-                  </p>
-                </div>
-              ) : (
-                <div className="p-2 space-y-1">
-                  {previewNotices.map(notice => (
+                <p className="text-xs font-bold text-slate-400">お知らせはありません</p>
+                <p className="text-[10px] text-slate-300 mt-1 font-black uppercase tracking-wider">
+                  No notifications
+                </p>
+              </div>
+            ) : (
+              <div className="p-2 space-y-1">
+                {previewNotices.map(notice => (
+                  <DropdownMenuItem asChild key={notice.notice_id} className="p-0 focus:bg-transparent">
                     <button
-                      key={notice.notice_id}
                       id={`notice-item-${notice.notice_id}`}
-                      onClick={() => handleNoticeClick(notice.notice_id, notice.is_read)}
+                      onClick={() => {
+                        if (!notice.is_read) markAsRead(notice.notice_id);
+                        setSelectedNoticeId(notice.notice_id);
+                      }}
                       className={cn(
-                        'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 active:scale-[0.98]',
+                        'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
                         !notice.is_read && 'bg-indigo-50/50'
                       )}
                     >
@@ -211,25 +181,27 @@ export function NoticeDropdown() {
                         </p>
                       </div>
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ─── フッター（お知らせが存在する場合のみ） ────── */}
-            {previewNotices.length > 0 && (
-              <div className="px-4 pb-4 pt-2 border-t border-slate-50">
-                <button
-                  onClick={() => closeAndNavigate('/notice')}
-                  className="w-full h-9 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
-                >
-                  View All Notices
-                </button>
+                  </DropdownMenuItem>
+                ))}
               </div>
             )}
-          </motion.div>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+          </div>
+
+          {/* ─── フッター（お知らせが存在する場合のみ） ────── */}
+          {previewNotices.length > 0 && (
+            <div className="px-4 pb-4 pt-2 border-t border-slate-50">
+              <DropdownMenuItem asChild className="p-0 focus:bg-transparent">
+                <Link
+                  href="/notice"
+                  className="flex items-center justify-center w-full h-9 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all outline-none cursor-pointer"
+                >
+                  View All Notices
+                </Link>
+              </DropdownMenuItem>
+            </div>
+          )}
+        </motion.div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

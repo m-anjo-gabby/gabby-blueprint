@@ -18,6 +18,10 @@ interface NoticeState {
   dialogNotices: NoticeItem[];   // show_dialog=TRUE かつ未読
   isDialogDismissed: boolean;    // セッション中に一度閉じたか
 
+  // グローバルダイアログ用（ユーザーが個別にクリックして開く用）
+  selectedNoticeId: string | null;
+  setSelectedNoticeId: (id: string | null) => void;
+
   // Actions
   fetchNotices: (force?: boolean) => Promise<void>;
   markAsRead: (noticeId: string) => Promise<void>;
@@ -32,6 +36,9 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
   unreadCount: 0,
   dialogNotices: [],
   isDialogDismissed: false,
+  selectedNoticeId: null,
+
+  setSelectedNoticeId: (id) => set({ selectedNoticeId: id }),
 
   fetchNotices: async (force = false) => {
     const { lastFetched, isLoading } = get();
