@@ -7,7 +7,7 @@ import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
 import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
 import { useSprintStore } from "@/stores/useSprintStore";
-import { AlertCircle, Volume2 } from "lucide-react";
+import { AlertCircle, Volume2, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { ContentLoading } from "@/components/common/ContentLoading";
 
@@ -119,8 +119,9 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       const isResume = resolvedParams.resume === 'true';
       const hasLevel = !!resolvedParams.level;
       
-      // セッション戻りの時は常に 'selecting' (選択画面) にする
-      if (isReturningFromSession) {
+      if (!targetConfig.contentId) {
+        setUiView('no_content');
+      } else if (isReturningFromSession) {
         setUiView('selecting');
         // 💡 configをセットしてからフラグをクリアする。
         // SprintSelect は props 経由で完全に初期化されるため、フラグをクリアしても安全
@@ -202,12 +203,37 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // 🏎️ ビューレンダリング
   // ────────────────────────────────────────────────────────────
 
-  if (ui.view === 'loading' || !config.contentId) {
+  if (ui.view === 'loading') {
     return (
       <ContentLoading
         title="Preparing your session"
         subtitle="トレーニングを準備しています..."
       />
+    );
+  }
+
+  // 0. 教材未割り当て・取得不可時のエンプティステート
+  if (ui.view === 'no_content' || !config.contentId) {
+    return (
+      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6 z-[100]">
+        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-6">
+          <div className="w-16 h-16 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto text-indigo-600 border border-indigo-100">
+            <BookOpen size={32} strokeWidth={2} />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">No Content Assigned</h2>
+            <p className="text-sm text-slate-500 leading-relaxed px-2">
+              教材データを取得できません。<br />教材一覧からトレーニングする教材を選択してください。
+            </p>
+          </div>
+          <Link 
+            href="/library" 
+            className="inline-flex items-center justify-center gap-2 w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+          >
+            Go to Library
+          </Link>
+        </div>
+      </div>
     );
   }
 

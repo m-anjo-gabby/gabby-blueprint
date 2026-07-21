@@ -3,7 +3,7 @@ import { SprintQuestion, SprintQuestionType, SprintAnswerType, QUESTION_TYPES } 
 import { MetadataSprint } from "@gabby/types/content";
 
 // ─── 追加：UIビューの型定義 ───
-export type SprintUiView = 'loading' | 'selecting' | 'gesture_needed' | 'error' | 'drill' | 'sprint';
+export type SprintUiView = 'loading' | 'selecting' | 'gesture_needed' | 'error' | 'drill' | 'sprint' | 'no_content';
 
 // ─── 追加：一括設定用オブジェクトのインターフェース ───
 interface SprintConfigInput {
