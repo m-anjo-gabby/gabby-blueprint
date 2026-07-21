@@ -21,6 +21,8 @@ import { ResumeCard } from './_components/ResumeCard';
 import { DashboardEmptyState } from './_components/DashboardEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useNoticeStore } from '@/stores/useNoticeStore';
+import { NoticePopupDialog } from '@/components/common/NoticePopupDialog';
 
 const SHOW_EXPERIMENTAL_FEATURES = false;
 
@@ -35,10 +37,14 @@ export default function StudentDashboard() {
   const user = useUserStore((state) => state.user);
   const isMonitor = user?.app_metadata?.roles?.includes('monitor');
 
+  // お知らせストア
+  const { dialogNotices, isDialogDismissed, fetchNotices, dismissDialog } = useNoticeStore();
+  const showNoticePopup = dialogNotices.length > 0 && !isDialogDismissed;
+
   // 1. 初期データの取得
   useEffect(() => {
-    Promise.all([fetchAllContents(), fetchResume()]);
-  }, [fetchAllContents, fetchResume]);
+    Promise.all([fetchAllContents(), fetchResume(), fetchNotices()]);
+  }, [fetchAllContents, fetchResume, fetchNotices]);
 
   // 2. おすすめ教材の算出
   const recommendations = useMemo(() => {
@@ -85,7 +91,8 @@ export default function StudentDashboard() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-10 py-10 px-4 mb-20">
+    <>
+      <div className="max-w-2xl mx-auto space-y-10 py-10 px-4 mb-20">
       {/* ヒーローセクション（挨拶など） */}
       <DashboardHero />
 
@@ -210,5 +217,14 @@ export default function StudentDashboard() {
         </section>
       )}
     </div>
+
+      {/* お知らせポップアップダイアログ（show_dialog=TRUE かつ未読） */}
+      {showNoticePopup && (
+        <NoticePopupDialog
+          notices={dialogNotices}
+          onClose={dismissDialog}
+        />
+      )}
+    </>
   );
 }
