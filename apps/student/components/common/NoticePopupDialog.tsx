@@ -46,12 +46,17 @@ function SingleNoticeView({ notice, onClose }: { notice: NoticeItem; onClose: ()
       </div>
 
       {/* タイトル */}
-      <h2 className="text-base font-black text-slate-900 tracking-tight leading-snug">
-        {notice.title}
-      </h2>
+      <Dialog.Title asChild>
+        <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-snug">
+          {notice.title}
+        </h2>
+      </Dialog.Title>
+      <Dialog.Description className="sr-only">
+        お知らせの詳細内容
+      </Dialog.Description>
 
       {/* 本文（Markdown） */}
-      <div className="prose prose-sm prose-slate max-w-none text-slate-600 text-sm leading-relaxed max-h-48 overflow-y-auto pr-1">
+      <div className="prose prose-sm prose-slate max-w-none text-slate-600 text-sm leading-relaxed max-h-[50vh] sm:max-h-[65vh] overflow-y-auto pr-2">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {notice.content}
         </ReactMarkdown>
@@ -78,15 +83,6 @@ function SingleNoticeView({ notice, onClose }: { notice: NoticeItem; onClose: ()
           ))}
         </div>
       )}
-
-      {/* 詳細リンク */}
-      <Link
-        href={`/notice?focus=${notice.notice_id}`}
-        onClick={onClose}
-        className="flex items-center justify-center gap-1 w-full h-9 text-indigo-600 hover:text-indigo-700 text-[11px] font-black uppercase tracking-widest transition-colors"
-      >
-        詳細を見る <ChevronRight size={11} />
-      </Link>
     </div>
   );
 }
@@ -138,7 +134,7 @@ export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 12 }}
             transition={{ type: 'spring', damping: 28, stiffness: 400 }}
-            className="fixed left-[50%] top-[50%] z-[111] w-[calc(100%-2rem)] max-w-[380px] translate-x-[-50%] translate-y-[-50%] outline-none bg-white rounded-[32px] shadow-2xl p-6"
+            className="fixed left-[50%] top-[50%] z-[111] w-[calc(100%-2rem)] sm:w-[90vw] max-w-[640px] max-h-[90vh] flex flex-col translate-x-[-50%] translate-y-[-50%] outline-none bg-white rounded-[32px] shadow-2xl p-5 sm:p-8"
           >
             {/* ─── ヘッダー ──────────────────────────────────── */}
             <div className="flex items-center justify-between mb-4">
