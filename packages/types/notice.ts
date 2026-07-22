@@ -6,13 +6,36 @@
 
 // お知らせ種別
 export const NOTICE_TYPES = {
-  INFO:        { label: 'Info',        color: 'blue'   },
-  CAMPAIGN:    { label: 'Campaign',    color: 'orange' },
-  MAINTENANCE: { label: 'Maintenance', color: 'red'    },
-  UPDATE:      { label: 'Update',      color: 'violet' },
+  INFO: {
+    label: 'お知らせ',
+    color: 'blue',
+    badgeClass: 'bg-blue-50 text-blue-600 border-blue-100',
+  },
+  CAMPAIGN: {
+    label: 'キャンペーン',
+    color: 'amber',
+    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  MAINTENANCE: {
+    label: 'メンテナンス',
+    color: 'slate',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+  },
+  UPDATE: {
+    label: 'アップデート',
+    color: 'violet',
+    badgeClass: 'bg-violet-50 text-violet-600 border-violet-100',
+  },
 } as const;
 
 export type NoticeType = keyof typeof NOTICE_TYPES;
+
+// 重要お知らせバッジ定義
+export const NOTICE_IMPORTANT_BADGE = {
+  label: '重要',
+  badgeClass: 'bg-rose-50 text-rose-600 border-rose-100',
+} as const;
+
 
 // 配信対象タイプ
 export type NoticeTargetType = 'ALL' | 'CLIENT';

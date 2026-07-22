@@ -3,21 +3,14 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Paperclip, Download, ExternalLink } from 'lucide-react';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
+
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
-import { NoticeItem, NOTICE_TYPES, NoticeType } from '@gabby/types/notice';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { formatZonedDateJapanese } from '@gabby/lib/date/date';
+import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 import { getNoticeAttachmentUrlAction } from '@/actions/noticeAction';
-
-// ─── 種別バッジカラーマップ ───────────────────────────────
-const TYPE_BADGE_CLASS: Record<string, string> = {
-  INFO:        'bg-blue-50  text-blue-600  border-blue-100',
-  CAMPAIGN:    'bg-orange-50 text-orange-600 border-orange-100',
-  MAINTENANCE: 'bg-red-50   text-red-600   border-red-100',
-  UPDATE:      'bg-violet-50 text-violet-600 border-violet-100',
-};
 
 // ─── ファイルサイズ表示ユーティリティ ──────────────────────
 function formatFileSize(bytes: number): string {
@@ -28,24 +21,33 @@ function formatFileSize(bytes: number): string {
 
 interface NoticeCardProps {
   notice: NoticeItem;
+  isOpen?: boolean;
+  onToggle?: (noticeId: string, currentIsRead: boolean) => void;
   defaultOpen?: boolean;
   onRead?: (noticeId: string) => void;
 }
 
-export function NoticeCard({ notice, defaultOpen = false, onRead }: NoticeCardProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen = false, onRead }: NoticeCardProps) {
+  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const [localIsOpen, setLocalIsOpen] = useState(defaultOpen);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
+  const isControlled = propsIsOpen !== undefined;
+  const isOpen = isControlled ? propsIsOpen : localIsOpen;
+
   const handleToggle = useCallback(() => {
-    setIsOpen(prev => {
-      const next = !prev;
-      // 展開時に既読化
-      if (next && !notice.is_read) {
-        onRead?.(notice.notice_id);
-      }
-      return next;
-    });
-  }, [notice.is_read, notice.notice_id, onRead]);
+    if (onToggle) {
+      onToggle(notice.notice_id, notice.is_read);
+    } else {
+      setLocalIsOpen(prev => {
+        const next = !prev;
+        if (next && !notice.is_read) {
+          onRead?.(notice.notice_id);
+        }
+        return next;
+      });
+    }
+  }, [notice.is_read, notice.notice_id, onToggle, onRead]);
 
   const handleDownload = useCallback(async (
     attId: string,
@@ -101,14 +103,19 @@ export function NoticeCard({ notice, defaultOpen = false, onRead }: NoticeCardPr
             <span
               className={cn(
                 'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
-                TYPE_BADGE_CLASS[notice.notice_type] ?? TYPE_BADGE_CLASS['INFO']
+                NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
               )}
             >
               {NOTICE_TYPES[notice.notice_type as NoticeType]?.label ?? notice.notice_type}
             </span>
             {notice.is_important && (
-              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-600 border border-rose-100">
-                ⚠ Important
+              <span
+                className={cn(
+                  'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
+                  NOTICE_IMPORTANT_BADGE.badgeClass
+                )}
+              >
+                {NOTICE_IMPORTANT_BADGE.label}
               </span>
             )}
             {notice.attachments.length > 0 && (
@@ -131,7 +138,7 @@ export function NoticeCard({ notice, defaultOpen = false, onRead }: NoticeCardPr
 
           {/* 公開日 */}
           <p className="text-[10px] text-slate-400 mt-1 font-bold">
-            {format(new Date(notice.published_at), 'yyyy年MM月dd日', { locale: ja })}
+            {formatZonedDateJapanese(notice.published_at, timezone)}
           </p>
         </div>
 

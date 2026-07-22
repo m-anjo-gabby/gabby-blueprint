@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { Bell, ChevronRight, BellOff } from 'lucide-react';
+import { Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
@@ -10,19 +10,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useNoticeStore } from '@/stores/useNoticeStore';
-import { NOTICE_TYPES, NoticeType } from '@gabby/types/notice';
-
-// ─── 種別バッジカラーマップ ───────────────────────────────
-const TYPE_BADGE_CLASS: Record<string, string> = {
-  INFO:        'bg-blue-50  text-blue-600  border-blue-100',
-  CAMPAIGN:    'bg-orange-50 text-orange-600 border-orange-100',
-  MAINTENANCE: 'bg-red-50   text-red-600   border-red-100',
-  UPDATE:      'bg-violet-50 text-violet-600 border-violet-100',
-};
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { formatZonedDate } from '@gabby/lib/date/date';
+import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 
 // ─── 未読ドット ───────────────────────────────────────────
 const UnreadDot = () => (
@@ -31,6 +23,7 @@ const UnreadDot = () => (
 
 export function NoticeDropdown() {
   const { notices, unreadCount, isLoading, fetchNotices, markAsRead, setSelectedNoticeId } = useNoticeStore();
+  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
   // マウント時に取得（キャッシュがあればスキップ）
   useEffect(() => {
@@ -91,16 +84,6 @@ export function NoticeDropdown() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <DropdownMenuItem asChild className="p-0 focus:bg-transparent">
-                <Link
-                  href="/notice"
-                  className="flex items-center gap-0.5 text-[10px] font-black text-indigo-600 hover:text-indigo-700 transition-colors outline-none cursor-pointer"
-                >
-                  すべて見る <ChevronRight size={11} />
-                </Link>
-              </DropdownMenuItem>
-            </div>
           </div>
 
           {/* ─── リスト ──────────────────────────────────────── */}
@@ -148,19 +131,24 @@ export function NoticeDropdown() {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        {/* バッジ行 */}
-                        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                        {/* バッジ行 (mb-0.5 から mb-1.5 へ拡大して視認性を向上) */}
+                        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                           <span
                             className={cn(
                               'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
-                              TYPE_BADGE_CLASS[notice.notice_type] ?? TYPE_BADGE_CLASS['INFO']
+                              NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
                             )}
                           >
                             {NOTICE_TYPES[notice.notice_type as NoticeType]?.label ?? notice.notice_type}
                           </span>
                           {notice.is_important && (
-                            <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-600 border border-rose-100">
-                              ⚠ Important
+                            <span
+                              className={cn(
+                                'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
+                                NOTICE_IMPORTANT_BADGE.badgeClass
+                              )}
+                            >
+                              {NOTICE_IMPORTANT_BADGE.label}
                             </span>
                           )}
                         </div>
@@ -176,8 +164,8 @@ export function NoticeDropdown() {
                         </p>
 
                         {/* 日時 */}
-                        <p className="text-[10px] text-slate-400 mt-0.5 font-bold">
-                          {format(new Date(notice.published_at), 'yyyy/MM/dd', { locale: ja })}
+                        <p className="text-[10px] text-slate-400 mt-1 font-bold">
+                          {formatZonedDate(notice.published_at, timezone)}
                         </p>
                       </div>
                     </button>
@@ -187,19 +175,17 @@ export function NoticeDropdown() {
             )}
           </div>
 
-          {/* ─── フッター（お知らせが存在する場合のみ） ────── */}
-          {previewNotices.length > 0 && (
-            <div className="px-4 pb-4 pt-2 border-t border-slate-50">
-              <DropdownMenuItem asChild className="p-0 focus:bg-transparent">
-                <Link
-                  href="/notice"
-                  className="flex items-center justify-center w-full h-9 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all outline-none cursor-pointer"
-                >
-                  View All Notices
-                </Link>
-              </DropdownMenuItem>
-            </div>
-          )}
+          {/* ─── フッター ────────────────────────────────── */}
+          <div className="px-4 pb-4 pt-2 border-t border-slate-50">
+            <DropdownMenuItem asChild className="p-0 border-none outline-none">
+              <Link
+                href="/notice"
+                className="flex items-center justify-center w-full h-10 !bg-indigo-600 hover:!bg-indigo-700 !text-white focus:!text-white focus:!bg-indigo-700 data-[highlighted]:!bg-indigo-700 data-[highlighted]:!text-white rounded-xl text-[11px] font-black uppercase tracking-wider shadow-sm transition-all outline-none cursor-pointer"
+              >
+                すべて見る →
+              </Link>
+            </DropdownMenuItem>
+          </div>
         </motion.div>
       </DropdownMenuContent>
     </DropdownMenu>

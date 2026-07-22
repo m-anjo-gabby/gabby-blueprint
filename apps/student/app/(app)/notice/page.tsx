@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Bell, ChevronLeft, BellOff } from 'lucide-react';
@@ -14,11 +14,31 @@ export default function NoticePage() {
   const focusId = searchParams.get('focus');
 
   const { notices, isLoading, fetchNotices, markAsRead } = useNoticeStore();
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
+    focusId ? new Set([focusId]) : new Set()
+  );
 
   // マウント時に最新データを強制取得（このページは常に最新を見せる）
   useEffect(() => {
     fetchNotices(true);
   }, [fetchNotices]);
+
+  // トグルハンドラー（開閉トグル＋未読時既読化）
+  const handleToggleNotice = useCallback((noticeId: string, isRead: boolean) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(noticeId)) {
+        next.delete(noticeId);
+      } else {
+        next.add(noticeId);
+      }
+      return next;
+    });
+
+    if (!isRead) {
+      markAsRead(noticeId);
+    }
+  }, [markAsRead]);
 
   // focus パラメータがある場合は対象カードまでスクロール
   const scrolledRef = useRef(false);
@@ -94,45 +114,14 @@ export default function NoticePage() {
               animate={{ opacity: 1 }}
               className="space-y-3 pb-6"
             >
-              {/* 未読セクション */}
-              {notices.some(n => !n.is_read) && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest px-1 flex items-center gap-1.5">
-                    <span className="inline-block w-1.5 h-3 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" />
-                    Unread
-                  </p>
-                  {notices
-                    .filter(n => !n.is_read)
-                    .map(notice => (
-                      <NoticeCard
-                        key={notice.notice_id}
-                        notice={notice}
-                        defaultOpen={notice.notice_id === focusId}
-                        onRead={markAsRead}
-                      />
-                    ))}
-                </div>
-              )}
-
-              {/* 既読セクション */}
-              {notices.some(n => n.is_read) && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1.5">
-                    <span className="inline-block w-1.5 h-3 bg-slate-200 rounded-full" />
-                    Read
-                  </p>
-                  {notices
-                    .filter(n => n.is_read)
-                    .map(notice => (
-                      <NoticeCard
-                        key={notice.notice_id}
-                        notice={notice}
-                        defaultOpen={notice.notice_id === focusId}
-                        onRead={markAsRead}
-                      />
-                    ))}
-                </div>
-              )}
+              {notices.map(notice => (
+                <NoticeCard
+                  key={notice.notice_id}
+                  notice={notice}
+                  isOpen={expandedIds.has(notice.notice_id)}
+                  onToggle={handleToggleNotice}
+                />
+              ))}
             </motion.div>
           )}
         </AnimatePresence>
