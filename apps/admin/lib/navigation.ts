@@ -1,7 +1,7 @@
 // apps/admin/lib/navigation.ts
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, LucideIcon,
+  Speech, ShieldCheck, Wrench, BookOpenText, Bell, LucideIcon,
 } from 'lucide-react';
 
 // ============================================================
@@ -66,6 +66,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     href: '/contents',
     icon: BookOpen,
     requiredRoles: ['admin', 'content_manager'],
+  },
+  {
+    label: 'お知らせ管理',
+    href: '/notice',
+    icon: Bell,
+    requiredRoles: ['admin'],
   },
   {
     type: 'group',
