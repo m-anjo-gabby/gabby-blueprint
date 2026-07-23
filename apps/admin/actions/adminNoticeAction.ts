@@ -16,6 +16,7 @@ export interface AdminNoticeFilterParams {
 }
 
 export interface NoticeFormData {
+  notice_id?: string;
   target_type: NoticeTargetType;
   client_id?: string | null;
   notice_type: NoticeType;
@@ -30,13 +31,18 @@ export interface NoticeFormData {
 }
 
 /**
- * JSTの日時文字列（YYYY-MM-DDTHH:mm）を UTC の ISO文字列に変換
+ * JSTの日付または日時文字列（YYYY-MM-DD または YYYY-MM-DDTHH:mm）を UTC の ISO文字列に変換
  */
 function jstToUtcIso(jstStr: string | null | undefined): string | null {
   if (!jstStr || jstStr.trim() === '') return null;
   // すでにタイムゾーン情報が含まれている場合はそのままDate解析
   if (jstStr.includes('+') || jstStr.endsWith('Z')) {
     const d = new Date(jstStr);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  // YYYY-MM-DD (日付のみ) の場合は 00:00:00+09:00 を補う
+  if (jstStr.length === 10) {
+    const d = new Date(`${jstStr}T00:00:00+09:00`);
     return isNaN(d.getTime()) ? null : d.toISOString();
   }
   // 秒が含まれていなければ付与して+09:00(JST)指定
@@ -46,7 +52,7 @@ function jstToUtcIso(jstStr: string | null | undefined): string | null {
 }
 
 /**
- * UTCの日時文字列を JST の <input type="datetime-local"> 用文字列 (YYYY-MM-DDTHH:mm) に変換
+ * UTCの日時文字列を JST の <input type="date"> 用文字列 (YYYY-MM-DD) に変換
  */
 export async function utcToJstInputStr(utcStr: string | null | undefined): Promise<string> {
   if (!utcStr) return '';
@@ -54,7 +60,7 @@ export async function utcToJstInputStr(utcStr: string | null | undefined): Promi
   if (isNaN(d.getTime())) return '';
   // JST (+9時間)
   const jstDate = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return jstDate.toISOString().slice(0, 16);
+  return jstDate.toISOString().slice(0, 10);
 }
 
 /**
@@ -164,6 +170,7 @@ export async function createNotice(formData: NoticeFormData) {
     const expiredUtc = formData.expired_at ? jstToUtcIso(formData.expired_at) : null;
 
     const insertPayload = {
+      ...(formData.notice_id ? { notice_id: formData.notice_id } : {}),
       target_type: formData.target_type,
       client_id: formData.target_type === 'CLIENT' ? formData.client_id : null,
       notice_type: formData.notice_type,

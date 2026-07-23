@@ -17,7 +17,9 @@ import {
   Clock, 
   Globe, 
   Building2,
-  FileText
+  FileText,
+  X,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,6 +38,15 @@ import {
   NoticeFormData 
 } from '@/actions/adminNoticeAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
+
+interface PendingAttachment {
+  id: string;
+  name: string;
+  size: number;
+  mime_type: string;
+  path?: string;
+  file?: File;
+}
 
 interface NoticeEditorProps {
   initialData?: {
@@ -77,28 +88,37 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
   const [showDialog, setShowDialog] = React.useState(initialData?.show_dialog || false);
   const [isPublished, setIsPublished] = React.useState(initialData?.is_published ?? true);
 
-  // JST日時入力用文字列 (YYYY-MM-DDTHH:mm)
+  // JST日付入力用文字列 (YYYY-MM-DD)
   const [publishedAtJst, setPublishedAtJst] = React.useState<string>('');
   const [expiredAtJst, setExpiredAtJst] = React.useState<string>('');
 
   const [content, setContent] = React.useState(initialData?.content || '');
-  const [attachments, setAttachments] = React.useState<NoticeAttachment[]>(initialData?.attachments || []);
+  const [attachments, setAttachments] = React.useState<PendingAttachment[]>(() => {
+    return (initialData?.attachments || []).map(a => ({
+      id: a.id,
+      name: a.name,
+      size: a.size,
+      mime_type: a.mime_type,
+      path: a.path,
+    }));
+  });
+  const [deletedPaths, setDeletedPaths] = React.useState<string[]>([]);
 
   const [clientOptions, setClientOptions] = React.useState<ClientOption[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<'edit' | 'preview'>('edit');
 
-  // 初期日時のセット (UTC → JST <input type="datetime-local"> 形式へ変換)
+  // 初期日時のセット (UTC → JST <input type="date"> 形式へ変換)
   React.useEffect(() => {
     const initDates = async () => {
       if (initialData?.published_at) {
         const jst = await utcToJstInputStr(initialData.published_at);
         setPublishedAtJst(jst);
       } else {
-        // 新規作成時は現在時刻の JST
-        const nowJst = new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 16);
-        setPublishedAtJst(nowJst);
+        // 新規作成時は当日の JST 日付 (YYYY-MM-DD)
+        const nowJstDate = new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        setPublishedAtJst(nowJstDate);
       }
 
       if (initialData?.expired_at) {
@@ -118,47 +138,33 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
     fetchClients();
   }, []);
 
-  // 添付ファイルの追加
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 添付ファイルのローカル追加 (まだStorageへはアップロードしない)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    try {
-      setIsUploading(true);
-      const newAttachments = [...attachments];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const res = await uploadNoticeFile(noticeId, formData);
-        if (res.success && res.attachment) {
-          newAttachments.push(res.attachment);
-        } else {
-          showToast(res.message || `${file.name} のアップロードに失敗しました`, 'error');
-        }
-      }
-
-      setAttachments(newAttachments);
-      showToast('ファイルをアップロードしました', 'success');
-    } catch (error) {
-      showToast('ファイルアップロード中にエラーが発生しました', 'error');
-    } finally {
-      setIsUploading(false);
-      e.target.value = '';
+    const newItems: PendingAttachment[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      newItems.push({
+        id: crypto.randomUUID(),
+        name: file.name,
+        size: file.size,
+        mime_type: file.type || 'application/octet-stream',
+        file,
+      });
     }
+
+    setAttachments(prev => [...prev, ...newItems]);
+    e.target.value = '';
   };
 
-  // 添付ファイルの削除
-  const handleRemoveAttachment = async (att: NoticeAttachment) => {
-    try {
-      await deleteNoticeFile(att.path);
-      setAttachments(prev => prev.filter(a => a.id !== att.id));
-      showToast('添付ファイルを削除しました', 'info');
-    } catch (error) {
-      showToast('ファイル削除に失敗しました', 'error');
+  // 添付ファイルのローカル削除 (既存ファイルの場合は削除予約)
+  const handleRemoveAttachment = (att: PendingAttachment) => {
+    if (att.path) {
+      setDeletedPaths(prev => [...prev, att.path!]);
     }
+    setAttachments(prev => prev.filter(a => a.id !== att.id));
   };
 
   // 保存処理
@@ -178,22 +184,54 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
       return;
     }
 
-    const formData: NoticeFormData = {
-      target_type: targetType,
-      client_id: targetType === 'CLIENT' ? clientId : null,
-      notice_type: noticeType,
-      is_important: isImportant,
-      show_dialog: showDialog,
-      title,
-      content,
-      published_at: publishedAtJst,
-      expired_at: expiredAtJst || null,
-      is_published: isPublished,
-      attachments,
-    };
-
     try {
       setIsSaving(true);
+
+      // 1. 新規追加添付ファイルの Storage アップロード
+      const finalAttachments: NoticeAttachment[] = [];
+      for (const att of attachments) {
+        if (att.file) {
+          const fileFormData = new FormData();
+          fileFormData.append('file', att.file);
+          const res = await uploadNoticeFile(noticeId, fileFormData);
+          if (!res.success || !res.attachment) {
+            showToast(res.message || `${att.name} のアップロードに失敗しました`, 'error');
+            setIsSaving(false);
+            return;
+          }
+          finalAttachments.push(res.attachment);
+        } else if (att.path) {
+          finalAttachments.push({
+            id: att.id,
+            name: att.name,
+            size: att.size,
+            mime_type: att.mime_type,
+            path: att.path,
+          });
+        }
+      }
+
+      // 2. 削除マークされた既存ファイルの Storage からの削除
+      for (const path of deletedPaths) {
+        await deleteNoticeFile(path);
+      }
+
+      // 3. DBへ送信
+      const formData: NoticeFormData = {
+        notice_id: noticeId,
+        target_type: targetType,
+        client_id: targetType === 'CLIENT' ? clientId : null,
+        notice_type: noticeType,
+        is_important: isImportant,
+        show_dialog: showDialog,
+        title,
+        content,
+        published_at: publishedAtJst,
+        expired_at: expiredAtJst || null,
+        is_published: isPublished,
+        attachments: finalAttachments,
+      };
+
       let res;
       if (isEdit && initialData?.notice_id) {
         res = await updateNotice(initialData.notice_id, formData);
@@ -318,9 +356,9 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">公開期間設定 (JST)</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold text-slate-600">公開開始日時 (JST) <span className="text-rose-500">*</span></Label>
+                <Label className="text-[11px] font-bold text-slate-600">公開開始日 (JST) <span className="text-rose-500">*</span></Label>
                 <input
-                  type="datetime-local"
+                  type="date"
                   value={publishedAtJst}
                   onChange={(e) => setPublishedAtJst(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
@@ -328,13 +366,38 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold text-slate-600">公開終了日時 (JST)</Label>
-                <input
-                  type="datetime-local"
-                  value={expiredAtJst}
-                  onChange={(e) => setExpiredAtJst(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
-                />
+                <div className="flex items-center justify-between">
+                  <Label className="text-[11px] font-bold text-slate-600">公開終了日 (JST)</Label>
+                  {expiredAtJst && (
+                    <button
+                      type="button"
+                      onClick={() => setExpiredAtJst('')}
+                      className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5"
+                    >
+                      <RotateCcw size={10} /> クリア (無期限)
+                    </button>
+                  )}
+                </div>
+                <div className="relative flex items-center">
+                  <input
+                    type="date"
+                    value={expiredAtJst}
+                    onChange={(e) => setExpiredAtJst(e.target.value)}
+                    className={`w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all ${
+                      expiredAtJst ? 'pr-8' : ''
+                    }`}
+                  />
+                  {expiredAtJst && (
+                    <button
+                      type="button"
+                      onClick={() => setExpiredAtJst('')}
+                      className="absolute right-2 p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/60 transition-colors"
+                      title="無期限にする (クリア)"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
                 <p className="text-[10px] text-slate-400">※未入力で無期限表示</p>
               </div>
             </div>
@@ -415,7 +478,14 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Paperclip size={14} className="text-slate-400 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-bold text-slate-700 truncate">{att.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-bold text-slate-700 truncate">{att.name}</p>
+                          {att.file && (
+                            <span className="text-[9px] bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold px-1.5 py-0.2 rounded-md shrink-0">
+                              新規
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-slate-400 font-mono">{formatBytes(att.size)}</p>
                       </div>
                     </div>

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Paperclip, Download, ExternalLink } from 'lucide-react';
+import { ChevronDown, Paperclip, Download, ExternalLink, Eye, Loader2 } from 'lucide-react';
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -11,6 +11,7 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 import { getNoticeAttachmentUrlAction } from '@/actions/noticeAction';
+import { isPreviewableFile, forceDownloadFile } from '@/lib/download';
 
 // ─── ファイルサイズ表示ユーティリティ ──────────────────────
 function formatFileSize(bytes: number): string {
@@ -30,7 +31,7 @@ interface NoticeCardProps {
 export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen = false, onRead }: NoticeCardProps) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const [localIsOpen, setLocalIsOpen] = useState(defaultOpen);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
 
   const isControlled = propsIsOpen !== undefined;
   const isOpen = isControlled ? propsIsOpen : localIsOpen;
@@ -49,24 +50,38 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
     }
   }, [notice.is_read, notice.notice_id, onToggle, onRead]);
 
+  const handlePreview = useCallback(async (
+    attId: string,
+    path: string
+  ) => {
+    const actionKey = `preview-${attId}`;
+    setLoadingActionId(actionKey);
+    try {
+      const { url } = await getNoticeAttachmentUrlAction(path);
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } finally {
+      setLoadingActionId(null);
+    }
+  }, []);
+
   const handleDownload = useCallback(async (
     attId: string,
     path: string,
     name: string
   ) => {
-    setDownloadingId(attId);
+    const actionKey = `dl-${attId}`;
+    setLoadingActionId(actionKey);
     try {
       const { url } = await getNoticeAttachmentUrlAction(path);
       if (url) {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = name;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.click();
+        await forceDownloadFile(url, name);
       }
+    } catch (err) {
+      console.error(err);
     } finally {
-      setDownloadingId(null);
+      setLoadingActionId(null);
     }
   }, []);
 
@@ -177,34 +192,69 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Paperclip size={10} /> Attachments
                   </p>
-                  <div className="space-y-1.5">
-                    {notice.attachments.map(att => (
-                      <button
-                        key={att.id}
-                        onClick={() => handleDownload(att.id, att.path, att.name)}
-                        disabled={downloadingId === att.id}
-                        className="w-full flex items-center gap-3 p-3 bg-slate-50 hover:bg-indigo-50 rounded-2xl transition-colors group text-left"
-                      >
-                        <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
-                          <Paperclip size={13} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                  <div className="space-y-2">
+                    {notice.attachments.map(att => {
+                      const canPreview = isPreviewableFile(att.name, att.mime_type);
+                      const isPreviewLoading = loadingActionId === `preview-${att.id}`;
+                      const isDlLoading = loadingActionId === `dl-${att.id}`;
+
+                      return (
+                        <div
+                          key={att.id}
+                          className="w-full flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100/80 hover:border-slate-200 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                              <Paperclip size={13} className="text-slate-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-slate-700 truncate">
+                                {att.name}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-mono">
+                                {formatFileSize(att.size)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {/* プレビューボタン (ホワイトリスト対象ファイルのみ) */}
+                            {canPreview && (
+                              <button
+                                type="button"
+                                disabled={!!loadingActionId}
+                                onClick={() => handlePreview(att.id, att.path)}
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 text-slate-600 hover:text-indigo-600 rounded-xl text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                                title="別タブで表示"
+                              >
+                                {isPreviewLoading ? (
+                                  <Loader2 size={12} className="animate-spin text-indigo-600" />
+                                ) : (
+                                  <Eye size={12} />
+                                )}
+                                プレビュー
+                              </button>
+                            )}
+
+                            {/* 強制ダウンロードボタン */}
+                            <button
+                              type="button"
+                              disabled={!!loadingActionId}
+                              onClick={() => handleDownload(att.id, att.path, att.name)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                              title="ダウンロード保存"
+                            >
+                              {isDlLoading ? (
+                                <Loader2 size={12} className="animate-spin text-white" />
+                              ) : (
+                                <Download size={12} />
+                              )}
+                              保存
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-700 truncate group-hover:text-indigo-700">
-                            {att.name}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            {formatFileSize(att.size)}
-                          </p>
-                        </div>
-                        <div className="shrink-0 text-slate-300 group-hover:text-indigo-500 transition-colors">
-                          {downloadingId === att.id ? (
-                            <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Download size={14} />
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

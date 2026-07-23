@@ -167,29 +167,35 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
 }
 
 /**
- * Supabase Storage (notice バケット) から署名付きURLを取得
- * @param path  Storageパス (例: notices/202607/e3a1f4b2.pdf)
- * @param expiresIn  有効秒数（デフォルト: 3600秒 = 1時間）
+ * Supabase Storage (notices バケット) から添付ファイルの公開URLを取得
+ * @param path Storageパス (例: notices/c7aaeab6.../file.pdf)
  */
 export async function getNoticeAttachmentUrlAction(
-  path: string,
-  expiresIn = 3600
+  path: string
 ): Promise<{ url: string | null; error?: string }> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data, error } = await supabase.storage
-      .from('notice')
-      .createSignedUrl(path, expiresIn);
 
-    if (error) {
-      logger.error("notice:get_attachment_url_failed", error.message, ctx);
-      return { url: null, error: error.message };
+    // Public バケット 'notices' から公開URLを取得
+    const { data } = supabase.storage
+      .from('notices')
+      .getPublicUrl(path);
+
+    if (data?.publicUrl) {
+      return { url: data.publicUrl };
     }
 
-    return { url: data.signedUrl };
+    logger.error("notice:get_attachment_url_failed", 'Failed to generate public URL', {
+      ...ctx,
+      payload: { path }
+    });
+    return { url: null, error: 'Failed to generate public URL' };
   } catch (err) {
-    logger.error("notice:get_attachment_url_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("notice:get_attachment_url_unexpected", err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      payload: { path }
+    });
     return { url: null, error: 'Unexpected error' };
   }
 }

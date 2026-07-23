@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Bell, X, Paperclip } from 'lucide-react';
+import { Bell, X, Paperclip, Download, Loader2, Eye } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { useNoticeStore } from '@/stores/useNoticeStore';
 import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeItem, NoticeType } from '@gabby/types/notice';
+import { getNoticeAttachmentUrlAction } from '@/actions/noticeAction';
+import { isPreviewableFile, forceDownloadFile } from '@/lib/download';
 
 interface NoticePopupDialogProps {
   /** ポップアップ対象のお知らせ一覧 (show_dialog=TRUE かつ未読) */
@@ -19,10 +21,39 @@ interface NoticePopupDialogProps {
 
 export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
   const { markBatchAsRead } = useNoticeStore();
 
   const current = notices[currentIndex];
   const total = notices.length;
+
+  const handlePreview = async (attId: string, path: string) => {
+    const actionKey = `preview-${attId}`;
+    setLoadingActionId(actionKey);
+    try {
+      const { url } = await getNoticeAttachmentUrlAction(path);
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } finally {
+      setLoadingActionId(null);
+    }
+  };
+
+  const handleDownload = async (attId: string, path: string, name: string) => {
+    const actionKey = `dl-${attId}`;
+    setLoadingActionId(actionKey);
+    try {
+      const { url } = await getNoticeAttachmentUrlAction(path);
+      if (url) {
+        await forceDownloadFile(url, name);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingActionId(null);
+    }
+  };
 
   const handleClose = async () => {
     // すべてのポップアップお知らせを既読化
@@ -167,19 +198,59 @@ export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) 
                         <Paperclip size={12} /> Attachments
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {current.attachments.map(att => (
-                          <Link
-                            key={att.id}
-                            href={`/notice?focus=${current.notice_id}&dl=${att.id}`}
-                            onClick={handleClose}
-                            className="flex items-center gap-2.5 p-3 bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-indigo-200 hover:bg-indigo-50/50 transition-all group"
-                          >
-                            <Paperclip size={14} className="text-slate-400 group-hover:text-indigo-600 flex-shrink-0" />
-                            <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-700 truncate flex-1">
-                              {att.name}
-                            </span>
-                          </Link>
-                        ))}
+                        {current.attachments.map(att => {
+                          const canPreview = isPreviewableFile(att.name, att.mime_type);
+                          const isPreviewLoading = loadingActionId === `preview-${att.id}`;
+                          const isDlLoading = loadingActionId === `dl-${att.id}`;
+
+                          return (
+                            <div
+                              key={att.id}
+                              className="flex items-center justify-between gap-2 p-3 bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-slate-200 transition-all"
+                            >
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <Paperclip size={14} className="text-slate-400 shrink-0" />
+                                <span className="text-xs font-bold text-slate-700 truncate">
+                                  {att.name}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                {canPreview && (
+                                  <button
+                                    type="button"
+                                    disabled={!!loadingActionId}
+                                    onClick={() => handlePreview(att.id, att.path)}
+                                    className="flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-indigo-50 border border-slate-200/60 text-slate-600 hover:text-indigo-600 rounded-lg text-[10px] font-bold transition-all disabled:opacity-50 cursor-pointer"
+                                    title="別タブで表示"
+                                  >
+                                    {isPreviewLoading ? (
+                                      <Loader2 size={11} className="animate-spin text-indigo-600" />
+                                    ) : (
+                                      <Eye size={11} />
+                                    )}
+                                    表示
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  disabled={!!loadingActionId}
+                                  onClick={() => handleDownload(att.id, att.path, att.name)}
+                                  className="flex items-center gap-1 px-2 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[10px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                                  title="保存"
+                                >
+                                  {isDlLoading ? (
+                                    <Loader2 size={11} className="animate-spin text-white" />
+                                  ) : (
+                                    <Download size={11} />
+                                  )}
+                                  保存
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
