@@ -112,27 +112,31 @@ export async function lookupColorVowelDictionary(
       }
 
       // Storage Public URL 解決
-      const bucketName = "color-vowels";
-      const stripBucket = (path: string) =>
-        path.startsWith(`${bucketName}/`) ? path.slice(bucketName.length + 1) : path;
+      const cvBucketName = "color-vowels";
+      const audioBucketName = "audio";
+
+      const stripBucketPrefix = (path: string, bucket: string) =>
+        path.startsWith(`${bucket}/`) ? path.slice(bucket.length + 1) : path;
 
       let wordAudioUrl: string | null = null;
       if (record.audio_path) {
+        const cleanPath = stripBucketPrefix(record.audio_path, audioBucketName);
         const { data: wAudio } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(stripBucket(record.audio_path));
+          .from(audioBucketName)
+          .getPublicUrl(cleanPath);
         wordAudioUrl = wAudio.publicUrl;
       }
 
       const { data: vImage } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(stripBucket(vowelRaw.icon_path));
+        .from(cvBucketName)
+        .getPublicUrl(stripBucketPrefix(vowelRaw.icon_path, cvBucketName));
 
       let vowelAudioUrl: string | null = null;
       if (vowelRaw.audio_path) {
+        const cleanPath = stripBucketPrefix(vowelRaw.audio_path, cvBucketName);
         const { data: vAudio } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(stripBucket(vowelRaw.audio_path));
+          .from(cvBucketName)
+          .getPublicUrl(cleanPath);
         vowelAudioUrl = vAudio.publicUrl;
       }
 
