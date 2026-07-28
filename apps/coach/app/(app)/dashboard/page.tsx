@@ -1,5 +1,4 @@
 import { Info } from 'lucide-react';
-import { DASHBOARD_STATS } from './_components/statsConfig';
 import DashboardHeader from './_components/DashboardHeader';
 import StatGrid from './_components/StatGrid';
 
@@ -15,7 +14,7 @@ export default function Page() {
         </p>
       </div>
 
-      <StatGrid stats={DASHBOARD_STATS} />
+      <StatGrid />
     </div>
   );
 }

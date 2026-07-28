@@ -14,7 +14,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { createUser, updateUser, resendInvite, getRoles } from '@/actions/adminUserAction';
 import { getActiveContractsByClient, assignLicenseToUser } from '@/actions/adminContractAction';
 import { Mail, AlertCircle, PlusCircle, CheckCircle2, Loader2, Edit, ShieldCheck, Save, Shield } from 'lucide-react';
-import { CreateUserResponse, UserRecord, RoleDefinition } from '@gabby/types/user';
+import { CreateUserResponse, UserRecord, RoleDefinition, USER_TYPES, getUserTypeLabel } from '@gabby/types/user';
 import { ClientOption } from '@gabby/types/client';
 import { ContractDetail } from '@gabby/types/contract';
 import { getClientsFilter } from '@/actions/adminClientAction';
@@ -335,10 +335,10 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
 
                     <FormField control={form.control} name="user_type" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">権限タイプ</FormLabel>
+                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ユーザー種別</FormLabel>
                         {isConfirming ? (
                           <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-center font-bold">
-                            {field.value === '0' ? '管理者' : field.value === '2' ? 'モニター' : '生徒'}
+                            {getUserTypeLabel(field.value)}
                           </div>
                         ) : (
                           <Select 
@@ -359,9 +359,9 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                           >
                             <FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>
-                              <SelectItem value="1">生徒</SelectItem>
-                              <SelectItem value="0">管理者</SelectItem>
-                              <SelectItem value="2">モニター</SelectItem>
+                              <SelectItem value={USER_TYPES.STUDENT}>{getUserTypeLabel(USER_TYPES.STUDENT)}</SelectItem>
+                              <SelectItem value={USER_TYPES.ADMIN}>{getUserTypeLabel(USER_TYPES.ADMIN)}</SelectItem>
+                              <SelectItem value={USER_TYPES.COACH}>{getUserTypeLabel(USER_TYPES.COACH)}</SelectItem>
                             </SelectContent>
                           </Select>
                         )}
