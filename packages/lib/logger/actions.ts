@@ -6,7 +6,7 @@ import { createLogger, getLogContext } from './index';
 const logger = createLogger('common');
 
 interface LogClientErrorParams {
-  service?: 'admin' | 'student' | 'common';
+  service?: 'admin' | 'student' | 'coach' | 'common';
   digest?: string;
   message: string;
   stack?: string;
