@@ -13,7 +13,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'ndgbknqkgbgguzbbqgwu.supabase.co', // SupabaseのプロジェクトIDに書き換え
+        hostname: 'ndgbknqkgbgguzbbqgwu.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'vihincuxiizavuxoctul.supabase.co',
       },
     ],
   },

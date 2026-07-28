@@ -28,6 +28,7 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { signOut } from '@/actions/authAction';
 import { getLatestTerms } from '@/actions/termAction';
 import { TermsAgreementModal } from './TermsAgreementModal';
+import { NoticeDropdown } from './NoticeDropdown';
 
 interface TermItem {
   term_id: string;
@@ -86,7 +87,9 @@ export default function Header() {
         </Link>
         
         {/* ユーザー操作エリア */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">          
+          {/* お知らせベルアイコン */}
+          <NoticeDropdown />
           <DropdownMenu>
             {/* ドロップダウンのトリガーボタン */}
             <DropdownMenuTrigger asChild>
@@ -95,7 +98,7 @@ export default function Header() {
                   <UserIcon size={14} />
                 </div>
                 <span className="text-xs font-bold text-slate-600 hidden sm:inline">
-                  {user?.email?.split('@')[0]}
+                  {user?.user_name || user?.email?.split('@')[0]}
                 </span>
                 <ChevronDown size={12} className="text-slate-400" />
               </button>

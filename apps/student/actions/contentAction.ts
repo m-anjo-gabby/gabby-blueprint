@@ -215,13 +215,14 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
         )
       `)
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') return null; // レコードなしは正常系
       logger.error("training:get_resume_failed", error.message, ctx);
       return null;
     }
+
+    if (!data) return null; // レコードなしは正常系
 
     return data as unknown as ResumeContentResponse;
   } catch (err) {

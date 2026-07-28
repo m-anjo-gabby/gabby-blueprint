@@ -64,3 +64,8 @@ temp_data/
 
 # Github
 .github
+
+# Agents
+.agents
+CLAUDE.md
+

@@ -100,6 +100,17 @@ export const formatZonedDate = (date: Date | string | number | null | undefined,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-    timeZone,
+    timeZone: timeZone || 'Asia/Tokyo',
   }).format(d);
+};
+
+/**
+ * 表示用の日本語日付フォーマッター (YYYY年MM月DD日)
+ */
+export const formatZonedDateJapanese = (date: Date | string | number | null | undefined, timeZone: string): string => {
+  const zonedStr = formatZonedDate(date, timeZone || 'Asia/Tokyo');
+  if (!zonedStr) return '';
+  const parts = zonedStr.split('/');
+  if (parts.length !== 3) return zonedStr;
+  return `${parts[0]}年${parts[1]}月${parts[2]}日`;
 };

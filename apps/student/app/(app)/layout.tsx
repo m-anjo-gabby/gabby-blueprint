@@ -7,6 +7,8 @@ import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { TermsAgreementModal } from "@/components/common/TermsAgreementModal";
 import { checkPendingAgreements } from '@/actions/termAction';
 import ScrollRestorer from '@/components/common/ScrollRestorer';
+import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
+import { GlobalNoticePopup } from '@/components/common/GlobalNoticePopup';
 
 /**
  * 生徒用 統合アプリケーションレイアウト
@@ -45,10 +47,13 @@ export default async function StudentAppLayout({
       <UserStoreInitializer user={user} />
       <ScrollRestorer />
       
-      {/* デザイン基盤: 全体共通の背景色やフォントを適用 */}
-      <div className="min-h-screen bg-[#f5f5f7] text-slate-900">
-        {children}
-      </div>
+      {/* Color Vowel辞書 Provider: 単語タップで辞書検索ツールチップおよびダイアログをグローバル表示 */}
+      <ColorVowelLookupProvider>
+        {/* デザイン基盤: 全体共通の背景色やフォントを適用 */}
+        <div className="min-h-screen bg-[#f5f5f7] text-slate-900">
+          {children}
+        </div>
+      </ColorVowelLookupProvider>
 
       {/* 法的ガード: 未同意規約がある場合のみモーダルを表示 
           agreeToTerms アクションで同意すると、サーバー側で再検証(revalidatePath)
@@ -64,6 +69,7 @@ export default async function StudentAppLayout({
       {/* 通知・ダイアログ系 UI: 全てのコンテンツの上にオーバーレイされるように配置 */}
       <ToastContainer />
       <ConfirmContainer />
+      <GlobalNoticePopup />
     </>
   );
 }

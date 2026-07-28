@@ -1,36 +1,26 @@
-import AdminDashboardClient from "./_components/AdminDashboardClient";
+import { createServerClient } from "@gabby/lib/supabase/server";
+import { canAccessPath } from "@/lib/navigation";
+import { getDashboardSummary, type DashboardModuleKey } from "@/actions/adminDashboardAction";
+import { DASHBOARD_MODULE_CONFIG, DASHBOARD_MODULE_ORDER } from "./_components/moduleConfig";
+import DashboardHeader from "./_components/DashboardHeader";
+import ModuleSummaryGrid from "./_components/ModuleSummaryGrid";
 
-// コンポーネント側で定義した型と合わせるための定義
-type StatColor = "blue" | "emerald" | "orange" | "purple";
+export default async function Page() {
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const roles = (user?.app_metadata?.roles as string[] | undefined) || [];
 
-interface StatItem {
-  title: string;
-  count: string;
-  desc: string;
-  color: StatColor;
-}
+  // サイドバー（lib/navigation.ts）と同じ権限定義を使い、閲覧権限のあるモジュールのみ表示・取得する
+  const visibleKeys: DashboardModuleKey[] = DASHBOARD_MODULE_ORDER.filter((key) =>
+    canAccessPath(DASHBOARD_MODULE_CONFIG[key].href, roles)
+  );
 
-// アドミンダッシュボードはドラフト状態（コメント修正）
-export default function Page() {
-  // サーバーサイドで環境変数を取得
-  const env = process.env.NEXT_PUBLIC_VERCEL_ENV || "development";
-  const commitSha = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.substring(0, 7) || "local";
-  const apiUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "not set";
-
-  // colorに 'as const' をつけるか、型を明示することでエラーを解消します
-  const statsData: StatItem[] = [
-    { title: "顧客管理", count: "17", desc: "法人・団体アカウントの管理", color: "blue" },
-    { title: "契約管理", count: "52", desc: "ライセンス発行・有効期限確認", color: "emerald" },
-    { title: "ユーザ管理", count: "1,204", desc: "受講生・講師の権限管理", color: "orange" },
-    { title: "教材管理", count: "92", desc: "カリキュラム・コンテンツ更新", color: "purple" },
-  ];
+  const modules = await getDashboardSummary(visibleKeys);
 
   return (
-    <AdminDashboardClient 
-      env={env}
-      commitSha={commitSha}
-      apiUrl={apiUrl}
-      statsData={statsData}
-    />
+    <div className="space-y-8">
+      <DashboardHeader />
+      <ModuleSummaryGrid modules={modules} />
+    </div>
   );
 }
