@@ -98,7 +98,7 @@ export default function Header() {
                   <UserIcon size={14} />
                 </div>
                 <span className="text-xs font-bold text-slate-600 hidden sm:inline">
-                  {user?.email?.split('@')[0]}
+                  {user?.user_name || user?.email?.split('@')[0]}
                 </span>
                 <ChevronDown size={12} className="text-slate-400" />
               </button>

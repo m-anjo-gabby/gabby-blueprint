@@ -465,7 +465,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
             )}
           >
             <Download size={14} strokeWidth={2.5} className="text-slate-500" />
-            <span className="hidden sm:inline">CSVエクスポート</span>
+            <span>CSVエクスポート</span>
           </button>
 
           {/* 右上コンパクトページングコントロール */}
