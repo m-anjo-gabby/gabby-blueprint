@@ -921,7 +921,7 @@ CREATE TABLE public.com_t_chat_room (
 
 COMMENT ON TABLE public.com_t_chat_room IS 'チャットルーム管理';
 COMMENT ON COLUMN public.com_t_chat_room.room_id IS 'ルームID';
-COMMENT ON COLUMN public.com_t_chat_room.room_type IS 'ルーム種別 (ADMIN, COACH, AI)';
+COMMENT ON COLUMN public.com_t_chat_room.room_type IS 'ルーム種別。参加者にAdminを含む場合 ADMIN、Coach+Studentの組み合わせの場合 COACH、AI対応時は AI（作成時にサーバー側で自動判定）';
 COMMENT ON COLUMN public.com_t_chat_room.created_at IS '作成日時';
 COMMENT ON COLUMN public.com_t_chat_room.closed_at IS 'クローズ日時 (NULL: 有効なルーム)';
 

@@ -29,6 +29,8 @@ ALTER TABLE public.com_t_chat ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Members can view messages in their rooms" ON public.com_t_chat;
 DROP POLICY IF EXISTS "Members can send messages as themselves" ON public.com_t_chat;
+DROP POLICY IF EXISTS "Admins can view all messages" ON public.com_t_chat;
+DROP POLICY IF EXISTS "Admins can moderate messages" ON public.com_t_chat;
 
 CREATE POLICY "Members can view messages in their rooms" ON public.com_t_chat
 FOR SELECT TO authenticated USING (
@@ -36,11 +38,24 @@ FOR SELECT TO authenticated USING (
 );
 
 -- なりすまし防止: sender_user_id は auth.uid() と一致する必要がある
+-- 非参加ルームでの発言は禁止（Adminであっても不可）
 CREATE POLICY "Members can send messages as themselves" ON public.com_t_chat
 FOR INSERT TO authenticated WITH CHECK (
     sender_user_id = auth.uid()
     AND public.is_chat_room_member(room_id)
 );
+
+-- [査閲] Adminは非参加ルームも含め全メッセージを閲覧可能
+CREATE POLICY "Admins can view all messages" ON public.com_t_chat
+FOR SELECT TO authenticated USING (
+    public.get_jwt_user_type() = '0'
+);
+
+-- [モデレーション] Adminはポリシー違反等の理由でメッセージを論理削除可能
+CREATE POLICY "Admins can moderate messages" ON public.com_t_chat
+FOR UPDATE TO authenticated
+USING (public.get_jwt_user_type() = '0')
+WITH CHECK (public.get_jwt_user_type() = '0');
 
 ---------------------------------------------
 -- Realtime購読対象への追加

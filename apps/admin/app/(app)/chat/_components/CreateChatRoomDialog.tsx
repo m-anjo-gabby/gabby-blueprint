@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { getUserTypeLabel } from '@gabby/types/user';
-import { CHAT_ROOM_TYPES, ChatTargetUser } from '@gabby/types/chat';
+import { ChatTargetUser } from '@gabby/types/chat';
 import { getChatRoomTargetUsers, createChatRoom } from '@gabby/lib/chat/actions/roomActions';
 
 interface CreateChatRoomDialogProps {
@@ -33,13 +33,15 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [targetUsers, setTargetUsers] = useState<ChatTargetUser[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [candidateUsers, setCandidateUsers] = useState<ChatTargetUser[]>([]);
+  const [memberIdA, setMemberIdA] = useState<string>('');
+  const [memberIdB, setMemberIdB] = useState<string>('');
 
   const handleOpenChange = async (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (!nextOpen) {
-      setSelectedUserId('');
+      setMemberIdA('');
+      setMemberIdB('');
       return;
     }
 
@@ -47,21 +49,23 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
     try {
       const res = await getChatRoomTargetUsers();
       if (res.success) {
-        setTargetUsers(res.data);
+        setCandidateUsers(res.data);
       } else {
-        showToast(res.error || '宛先ユーザーの取得に失敗しました', 'error');
+        showToast(res.error || 'ユーザー一覧の取得に失敗しました', 'error');
       }
     } finally {
       setIsLoadingUsers(false);
     }
   };
 
+  const isSameUser = memberIdA !== '' && memberIdA === memberIdB;
+
   const handleCreate = async () => {
-    if (!selectedUserId) return;
+    if (!memberIdA || !memberIdB || isSameUser) return;
 
     setIsCreating(true);
     try {
-      const res = await createChatRoom({ targetUserId: selectedUserId, roomType: CHAT_ROOM_TYPES.ADMIN });
+      const res = await createChatRoom({ memberIds: [memberIdA, memberIdB] });
       if (!res.success || !res.roomId) {
         showToast(res.error || 'チャットルームの作成に失敗しました', 'error');
         return;
@@ -87,27 +91,51 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
           <DialogTitle>新規チャット作成</DialogTitle>
         </DialogHeader>
 
-        <div className="py-2">
-          <label className="text-xs font-bold text-slate-600 mb-1.5 block">宛先ユーザー</label>
-          <Select value={selectedUserId} onValueChange={setSelectedUserId} disabled={isLoadingUsers}>
-            <SelectTrigger>
-              <SelectValue placeholder={isLoadingUsers ? '読み込み中...' : '宛先を選択してください'} />
-            </SelectTrigger>
-            <SelectContent>
-              {targetUsers.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.user_name || '（名称未設定）'}（{getUserTypeLabel(u.user_type)}）
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <p className="text-xs text-slate-500 -mt-2">
+          Admin・コーチ・生徒の中から異なる種別の2名を選択してください（例: Admin×コーチ、Admin×生徒、コーチ×生徒）。
+        </p>
+
+        <div className="py-2 space-y-4">
+          <div>
+            <label className="text-xs font-bold text-slate-600 mb-1.5 block">参加者 1</label>
+            <Select value={memberIdA} onValueChange={setMemberIdA} disabled={isLoadingUsers}>
+              <SelectTrigger>
+                <SelectValue placeholder={isLoadingUsers ? '読み込み中...' : '参加者を選択してください'} />
+              </SelectTrigger>
+              <SelectContent>
+                {candidateUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.user_name || '（名称未設定）'}（{getUserTypeLabel(u.user_type)}）
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-600 mb-1.5 block">参加者 2</label>
+            <Select value={memberIdB} onValueChange={setMemberIdB} disabled={isLoadingUsers}>
+              <SelectTrigger>
+                <SelectValue placeholder={isLoadingUsers ? '読み込み中...' : '参加者を選択してください'} />
+              </SelectTrigger>
+              <SelectContent>
+                {candidateUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.user_name || '（名称未設定）'}（{getUserTypeLabel(u.user_type)}）
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isSameUser && <p className="text-xs text-rose-500">異なる2名を選択してください</p>}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             キャンセル
           </Button>
-          <Button onClick={handleCreate} disabled={!selectedUserId || isCreating} className="gap-1.5">
+          <Button onClick={handleCreate} disabled={!memberIdA || !memberIdB || isSameUser || isCreating} className="gap-1.5">
             {isCreating && <Loader2 size={16} className="animate-spin" />}
             作成する
           </Button>

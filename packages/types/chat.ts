@@ -101,14 +101,17 @@ export interface ChatRoomListItem extends ChatRoom {
     user_name: string | null;
     user_type: UserType;
   }[];
+  /** ログイン中のユーザーがこのルームの参加者かどうか（Adminの全ルーム査閲時に使用） */
+  is_member: boolean;
 }
 
 /**
- * CreateChatRoomPayload: ルーム作成（Adminのみ）
+ * CreateChatRoomPayload: ルーム作成（Adminのみ実行可能）
+ * Admin-Coach, Admin-Student, Coach-Student の3パターンの組み合わせに対応する。
+ * room_type は memberIds のuser_typeからサーバー側で自動判定するため含めない。
  */
 export interface CreateChatRoomPayload {
-  targetUserId: string;
-  roomType: ChatRoomType;
+  memberIds: [string, string];
 }
 
 /**

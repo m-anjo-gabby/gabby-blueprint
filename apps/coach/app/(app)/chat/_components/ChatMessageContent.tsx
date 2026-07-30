@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileText, Loader2 } from 'lucide-react';
+import { FileText, Loader2, Ban } from 'lucide-react';
 import { getChatAttachmentUrl } from '@gabby/lib/chat/actions/attachmentActions';
 import { ChatMessage, ChatMessageAttachment } from '@gabby/types/chat';
 
@@ -10,6 +10,15 @@ interface ChatMessageContentProps {
 }
 
 export function ChatMessageContent({ message }: ChatMessageContentProps) {
+  if (message.deleted_at) {
+    return (
+      <p className="flex items-center gap-1.5 italic opacity-70">
+        <Ban size={13} />
+        This message was deleted
+      </p>
+    );
+  }
+
   if (message.message_type !== 'IMAGE' && message.message_type !== 'FILE') {
     return <p className="whitespace-pre-wrap wrap-break-word">{message.message}</p>;
   }

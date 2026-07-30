@@ -2,9 +2,18 @@
 
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { USER_TYPES } from '@gabby/types/user';
 import { CHAT_MESSAGE_TYPES, ChatMessage, SendChatMessagePayload } from '@gabby/types/chat';
+import { getCurrentUserWithType } from './roomActions';
 
 const logger = createLogger('common');
+
+/**
+ * 論理削除済みメッセージの本文をマスクする（roomActions.ts の同名関数と同じ実装）
+ */
+function maskIfDeleted(msg: ChatMessage): ChatMessage {
+  return msg.deleted_at ? { ...msg, message: '' } : msg;
+}
 
 /**
  * メッセージ送信
@@ -65,11 +74,11 @@ export async function getChatMessages(params: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, data: [], hasMore: false, error: 'Unauthorized' };
 
+    // 論理削除済みメッセージも「削除されたことが分かる」形で表示するため除外しない（本文はマスクして返す）
     let query = supabase
       .from('com_t_chat')
       .select('*')
       .eq('room_id', params.roomId)
-      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(limit + 1);
 
@@ -87,7 +96,7 @@ export async function getChatMessages(params: {
     const rows = data || [];
     const hasMore = rows.length > limit;
 
-    return { success: true, data: rows.slice(0, limit) as ChatMessage[], hasMore };
+    return { success: true, data: rows.slice(0, limit).map((m) => maskIfDeleted(m as ChatMessage)), hasMore };
   } catch (err) {
     logger.error('chat:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
@@ -124,6 +133,48 @@ export async function markAsRead(params: {
     return { success: true };
   } catch (err) {
     logger.error('chat:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      payload: params,
+    });
+    return { success: false, error: 'Unexpected error' };
+  }
+}
+
+/**
+ * メッセージの論理削除（Adminのみ、ポリシー違反等のモデレーション用途）
+ * 削除後、本文はマスクされ「削除されたメッセージです」として表示される。
+ */
+export async function deleteChatMessage(params: {
+  chatId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const ctx = await getLogContext();
+  try {
+    const currentUser = await getCurrentUserWithType();
+    if (!currentUser) return { success: false, error: 'Unauthorized' };
+
+    if (currentUser.user_type !== USER_TYPES.ADMIN) {
+      logger.warn('chat:delete_message_forbidden', 'Non-admin user attempted to delete a chat message', {
+        ...ctx,
+        payload: params,
+      });
+      return { success: false, error: 'Only admins can delete messages' };
+    }
+
+    const supabase = await createServerClient();
+    const { error } = await supabase
+      .from('com_t_chat')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('chat_id', params.chatId);
+
+    if (error) {
+      logger.error('chat:delete_message_failed', error.message, { ...ctx, payload: params });
+      return { success: false, error: error.message };
+    }
+
+    logger.info('chat:delete_message_success', `Chat message deleted: ${params.chatId}`, { ...ctx, payload: params });
+    return { success: true };
+  } catch (err) {
+    logger.error('chat:delete_message_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
       payload: params,
     });

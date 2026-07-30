@@ -14,13 +14,15 @@ interface ChatTimelineProps {
   roomId: string;
   initialMessages: ChatMessage[];
   initialHasMore: boolean;
+  /** Whether the current user is a participant of this room (sending is disabled otherwise) */
+  isMember: boolean;
 }
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
-export function ChatTimeline({ roomId, initialMessages, initialHasMore }: ChatTimelineProps) {
+export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember }: ChatTimelineProps) {
   const currentUserId = useUserStore((state) => state.user?.id);
   const markRoomAsRead = useChatStore((state) => state.markRoomAsRead);
   const applyIncomingMessage = useChatStore((state) => state.applyIncomingMessage);
@@ -32,6 +34,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore }: ChatTi
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const markLatestAsRead = (latest: ChatMessage) => {
+    if (!isMember) return;
     markRoomAsRead(roomId, latest.chat_id);
   };
 
@@ -46,7 +49,9 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore }: ChatTi
 
   useChatRealtimeMessages(roomId, (message) => {
     setMessages((prev) => [...prev, message]);
-    applyIncomingMessage(roomId, message.sender_user_id === currentUserId);
+    if (isMember) {
+      applyIncomingMessage(roomId, message.sender_user_id === currentUserId);
+    }
     if (message.sender_user_id !== currentUserId) {
       markLatestAsRead(message);
     }
@@ -109,7 +114,13 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore }: ChatTi
         <div ref={bottomRef} />
       </div>
 
-      <ChatMessageInput roomId={roomId} onSent={handleSent} />
+      {isMember ? (
+        <ChatMessageInput roomId={roomId} onSent={handleSent} />
+      ) : (
+        <div className="border-t border-slate-100 p-4 text-center text-xs font-bold text-slate-400">
+          You are not a participant of this room, so you cannot send messages here.
+        </div>
+      )}
     </div>
   );
 }
