@@ -30,7 +30,7 @@ export type NavItem = NavLeaf | NavGroup;
 
 export const COACH_NAV_CONFIG: readonly NavItem[] = [
   {
-    label: 'ダッシュボード',
+    label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
     requiredRoles: [],

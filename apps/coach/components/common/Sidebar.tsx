@@ -177,8 +177,8 @@ export default function Sidebar() {
 
   const handleSignOut = async () => {
     const ok = await showConfirm(
-      'ログアウトの確認',
-      'セッションを終了してログアウトします。よろしいですか？',
+      'Confirm Logout',
+      'This will end your session and log you out. Are you sure?',
       { variant: 'danger', isModal: true }
     );
     if (ok) await signOut();
@@ -285,14 +285,14 @@ export default function Sidebar() {
               flex items-center transition-all duration-300 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 text-sm font-black w-full
               ${isCollapsed ? 'justify-center py-3 gap-0' : 'px-4 py-3 gap-3'}
             `}
-            title={isCollapsed ? 'ログアウト' : ''}
+            title={isCollapsed ? 'Logout' : ''}
           >
             <LogOut size={18} className="shrink-0" />
             <span className={`
               transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden
               ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}
             `}>
-              ログアウト
+              Logout
             </span>
           </button>
         </div>

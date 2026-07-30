@@ -42,7 +42,7 @@ export default function LoginPage() {
             </div>
             <div className="space-y-1">
               <p className="text-xs font-black text-indigo-600 uppercase tracking-widest">Coach Portal</p>
-              <p className="text-xs text-slate-500">コーチ用アカウントでログインしてください</p>
+              <p className="text-xs text-slate-500">Sign in with your coach account</p>
             </div>
           </div>
 
@@ -50,7 +50,7 @@ export default function LoginPage() {
             <div className="space-y-4">
               {/* メールアドレス */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 ml-1 uppercase tracking-wider">メールアドレス</label>
+                <label className="text-xs font-bold text-slate-700 ml-1 uppercase tracking-wider">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
@@ -68,7 +68,7 @@ export default function LoginPage() {
               {/* パスワード */}
               <div className="space-y-2">
                 <PasswordInput
-                  label="パスワード"
+                  label="Password"
                   name="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

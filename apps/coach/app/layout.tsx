@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: {
     template: "%s | Gabby Blueprint English",
-    default: "Gabby Blueprint English コーチポータル",
+    default: "Gabby Blueprint English Coach Portal",
   },
-  description: "Gabby Blueprint English コーチポータルサイト",
+  description: "Gabby Blueprint English Coach Portal",
 };
 
 export default function RootLayout({
@@ -26,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

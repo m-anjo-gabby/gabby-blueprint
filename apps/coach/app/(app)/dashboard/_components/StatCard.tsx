@@ -38,11 +38,11 @@ export default function StatCard({ stat }: Props) {
 
           {hasAlert ? (
             <Badge variant="outline" className="shrink-0 text-amber-700 bg-amber-50 border-amber-200 font-bold whitespace-nowrap">
-              {stat.alertLabel} {stat.alertCount}件
+              {stat.alertLabel} {stat.alertCount}
             </Badge>
           ) : (
             <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold whitespace-nowrap">
-              <CheckCircle2 size={13} /> 問題なし
+              <CheckCircle2 size={13} /> All good
             </span>
           )}
         </div>

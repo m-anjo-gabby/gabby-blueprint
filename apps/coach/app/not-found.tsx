@@ -49,10 +49,10 @@ export default function NotFound() {
               </span>
             </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              指定されたページが見つかりません
+              Page Not Found
             </h1>
             <p className="text-sm text-slate-500 mt-2.5 leading-relaxed max-w-sm font-medium">
-              アクセスしようとしたページ、または対象データへのパスが存在しないか、変更されています。
+              The page you tried to access, or the path to the requested data, does not exist or has been changed.
             </p>
           </div>
 
@@ -62,7 +62,7 @@ export default function NotFound() {
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 min-h-[52px] shadow-lg shadow-slate-900/10 hover:shadow-xl hover:shadow-slate-900/20"
             >
               <LayoutDashboard size={18} className="text-amber-400" />
-              ダッシュボードへ戻る
+              Back to Dashboard
             </Link>
 
             <p className="text-[11px] font-medium text-slate-400 leading-normal bg-slate-50 p-3 rounded-xl border border-slate-100 font-mono">

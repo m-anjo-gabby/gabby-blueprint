@@ -25,10 +25,10 @@ export function LoginButton() {
             <Loader2 className="w-4 h-4 animate-spin stroke-[3px]" />
             <div className="absolute inset-0 w-4 h-4 border-2 border-indigo-600/20 rounded-full animate-ping" />
           </div>
-          <span className="animate-pulse">認証中...</span>
+          <span className="animate-pulse">Signing in...</span>
         </>
       ) : (
-        'ログイン'
+        'Sign In'
       )}
     </button>
   );

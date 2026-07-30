@@ -54,10 +54,10 @@ export default function Error({ error }: ErrorProps) {
               </span>
             </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              例外エラーが検出されました
+              An Exception Was Detected
             </h1>
             <p className="text-sm text-slate-500 mt-2.5 leading-relaxed max-w-md font-medium">
-              画面の表示、またはデータ通信中に予期せぬハンドリング例外が発生しました。この事象はコアシステムログに構造化データとして保存されました。
+              An unexpected handling exception occurred while rendering the page or communicating data. This event has been logged as structured data in the core system log.
             </p>
           </div>
 
@@ -79,7 +79,7 @@ export default function Error({ error }: ErrorProps) {
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 min-h-[52px] shadow-lg shadow-slate-900/10 hover:shadow-xl hover:shadow-slate-900/20"
             >
               <LayoutDashboard size={18} className="text-indigo-400" />
-              ダッシュボードへ戻る
+              Back to Dashboard
             </button>
           </div>
 

@@ -35,7 +35,7 @@ export async function signIn(formData: FormData) {
         payload: { userType }
       });
       await signOutCore();
-      return { error: '権限がありません。コーチ用アカウントでログインしてください。' };
+      return { error: 'You do not have permission. Please sign in with a coach account.' };
     }
 
     logger.info('auth:coach_login_success', `Coach logged in (User ID: ${user.id})`, {
@@ -51,7 +51,7 @@ export async function signIn(formData: FormData) {
       ...ctx,
       payload: { email }
     });
-    return { error: '予期せぬエラーが発生しました' };
+    return { error: 'An unexpected error occurred' };
   }
 }
 

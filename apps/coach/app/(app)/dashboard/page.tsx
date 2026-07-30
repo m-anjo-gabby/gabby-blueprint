@@ -10,7 +10,7 @@ export default function Page() {
       <div className="flex items-start gap-2.5 p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700">
         <Info size={16} className="shrink-0 mt-0.5" />
         <p className="text-xs leading-relaxed">
-          初期構築のドラフト画面です。表示されている数値はサンプルデータであり、担当生徒・レッスン管理機能の実装に合わせて実データへ置き換えます。
+          This is an initial draft screen. The figures shown are sample data and will be replaced with real data once the student assignment and lesson management features are implemented.
         </p>
       </div>
 
