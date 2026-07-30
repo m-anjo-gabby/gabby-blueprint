@@ -439,5 +439,68 @@ DROP POLICY IF EXISTS "Users can view active dictionary records" ON public.com_m
 
 -- [参照] 認証済みユーザーであれば、ステータスが'live'かつ削除されていない辞書レコードを全員閲覧可能
 CREATE POLICY "Users can view active dictionary records" ON public.com_m_color_vowel_dictionary
-FOR SELECT TO authenticated 
+FOR SELECT TO authenticated
 USING (status = 'live' AND delete_flg = 0);
+
+-- =========================================================================
+-- 27. com_t_chat_room (チャットルーム管理)
+-- =========================================================================
+ALTER TABLE public.com_t_chat_room ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Members can view their chat rooms" ON public.com_t_chat_room;
+DROP POLICY IF EXISTS "Admins can manage chat rooms" ON public.com_t_chat_room;
+
+CREATE POLICY "Members can view their chat rooms" ON public.com_t_chat_room
+FOR SELECT TO authenticated USING (
+    public.is_chat_room_member(room_id)
+);
+
+CREATE POLICY "Admins can manage chat rooms" ON public.com_t_chat_room
+FOR ALL TO authenticated
+USING (public.get_jwt_user_type() = '0')
+WITH CHECK (public.get_jwt_user_type() = '0');
+
+-- =========================================================================
+-- 28. com_t_chat_room_user (チャット参加者 & 未読管理)
+-- =========================================================================
+ALTER TABLE public.com_t_chat_room_user ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Members can view their room participants" ON public.com_t_chat_room_user;
+DROP POLICY IF EXISTS "Admins can manage room participants" ON public.com_t_chat_room_user;
+DROP POLICY IF EXISTS "Users can update their own participation row" ON public.com_t_chat_room_user;
+
+CREATE POLICY "Members can view their room participants" ON public.com_t_chat_room_user
+FOR SELECT TO authenticated USING (
+    public.is_chat_room_member(room_id)
+);
+
+CREATE POLICY "Admins can manage room participants" ON public.com_t_chat_room_user
+FOR ALL TO authenticated
+USING (public.get_jwt_user_type() = '0')
+WITH CHECK (public.get_jwt_user_type() = '0');
+
+-- 未読管理 (last_read_chat_id) を自身の行に限り更新可能にする
+CREATE POLICY "Users can update their own participation row" ON public.com_t_chat_room_user
+FOR UPDATE TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- =========================================================================
+-- 29. com_t_chat (チャットメッセージ)
+-- =========================================================================
+ALTER TABLE public.com_t_chat ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Members can view messages in their rooms" ON public.com_t_chat;
+DROP POLICY IF EXISTS "Members can send messages as themselves" ON public.com_t_chat;
+
+CREATE POLICY "Members can view messages in their rooms" ON public.com_t_chat
+FOR SELECT TO authenticated USING (
+    public.is_chat_room_member(room_id)
+);
+
+-- なりすまし防止: sender_user_id は auth.uid() と一致する必要がある
+CREATE POLICY "Members can send messages as themselves" ON public.com_t_chat
+FOR INSERT TO authenticated WITH CHECK (
+    sender_user_id = auth.uid()
+    AND public.is_chat_room_member(room_id)
+);

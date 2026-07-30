@@ -908,3 +908,73 @@ COMMENT ON COLUMN public.com_m_color_vowel_dictionary.update_date IS '更新日�
 CREATE INDEX IF NOT EXISTS idx_com_m_cv_dictionary_lookup
 ON public.com_m_color_vowel_dictionary (LOWER(word_en), part_of_speech, status)
 WHERE delete_flg = 0;
+
+---------------------------------------------
+-- DDL: com_t_chat_room (チャットルーム管理)
+---------------------------------------------
+CREATE TABLE public.com_t_chat_room (
+  room_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_type VARCHAR(10) NOT NULL DEFAULT 'ADMIN', -- 'ADMIN', 'COACH', 'AI'
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  closed_at TIMESTAMP WITH TIME ZONE
+);
+
+COMMENT ON TABLE public.com_t_chat_room IS 'チャットルーム管理';
+COMMENT ON COLUMN public.com_t_chat_room.room_id IS 'ルームID';
+COMMENT ON COLUMN public.com_t_chat_room.room_type IS 'ルーム種別 (ADMIN, COACH, AI)';
+COMMENT ON COLUMN public.com_t_chat_room.created_at IS '作成日時';
+COMMENT ON COLUMN public.com_t_chat_room.closed_at IS 'クローズ日時 (NULL: 有効なルーム)';
+
+---------------------------------------------
+-- DDL: com_t_chat_room_user (チャット参加者 & 未読管理)
+---------------------------------------------
+CREATE TABLE public.com_t_chat_room_user (
+  room_id UUID NOT NULL REFERENCES public.com_t_chat_room(room_id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  user_type TEXT NOT NULL, -- 'ADMIN', 'STUDENT', 'COACH', 'AI'
+  last_read_chat_id UUID, -- 未読管理用 (com_t_chat.chat_id)
+  joined_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  left_at TIMESTAMP WITH TIME ZONE,
+
+  PRIMARY KEY (room_id, user_id)
+);
+
+COMMENT ON TABLE public.com_t_chat_room_user IS 'チャット参加者 & 未読管理';
+COMMENT ON COLUMN public.com_t_chat_room_user.room_id IS 'ルームID';
+COMMENT ON COLUMN public.com_t_chat_room_user.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_chat_room_user.user_type IS '参加者種別 (ADMIN, STUDENT, COACH, AI)';
+COMMENT ON COLUMN public.com_t_chat_room_user.last_read_chat_id IS '最終既読メッセージID (未読件数算出用)';
+COMMENT ON COLUMN public.com_t_chat_room_user.joined_at IS '参加日時';
+COMMENT ON COLUMN public.com_t_chat_room_user.left_at IS '退出日時 (NULL: 参加中)';
+
+CREATE INDEX idx_com_t_chat_room_user_user_id ON public.com_t_chat_room_user (user_id);
+CREATE INDEX idx_com_t_chat_room_user_room_id ON public.com_t_chat_room_user (room_id);
+
+---------------------------------------------
+-- DDL: com_t_chat (チャットメッセージ)
+---------------------------------------------
+CREATE TABLE public.com_t_chat (
+  chat_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES public.com_t_chat_room(room_id) ON DELETE CASCADE,
+  sender_user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  message_type VARCHAR(10) NOT NULL DEFAULT 'TEXT', -- 'TEXT', 'IMAGE', 'FILE', 'SYSTEM'
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+COMMENT ON TABLE public.com_t_chat IS 'チャットメッセージ';
+COMMENT ON COLUMN public.com_t_chat.chat_id IS 'メッセージID';
+COMMENT ON COLUMN public.com_t_chat.room_id IS 'ルームID';
+COMMENT ON COLUMN public.com_t_chat.sender_user_id IS '送信者ユーザID';
+COMMENT ON COLUMN public.com_t_chat.message IS 'メッセージ本文 (FILE/IMAGEの場合はStorageパスまたはファイル名を含むJSON文字列)';
+COMMENT ON COLUMN public.com_t_chat.message_type IS 'メッセージ種別 (TEXT, IMAGE, FILE, SYSTEM)';
+COMMENT ON COLUMN public.com_t_chat.created_at IS '送信日時';
+COMMENT ON COLUMN public.com_t_chat.deleted_at IS '論理削除日時 (NULL: 未削除)';
+
+CREATE INDEX idx_com_t_chat_room_id ON public.com_t_chat (room_id, created_at DESC);
+
+---------------------------------------------
+-- Realtime購読対象への追加
+---------------------------------------------
+ALTER PUBLICATION supabase_realtime ADD TABLE public.com_t_chat;

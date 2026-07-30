@@ -1,7 +1,7 @@
 // apps/admin/lib/navigation.ts
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, Bell, LucideIcon,
+  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, LucideIcon,
 } from 'lucide-react';
 
 // ============================================================
@@ -72,6 +72,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     href: '/notice',
     icon: Bell,
     requiredRoles: ['admin'],
+  },
+  {
+    label: 'チャット',
+    href: '/chat',
+    icon: MessageCircle,
+    requiredRoles: [],
   },
   {
     type: 'group',

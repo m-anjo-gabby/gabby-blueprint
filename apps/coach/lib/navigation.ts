@@ -1,5 +1,5 @@
 // apps/coach/lib/navigation.ts
-import { LayoutDashboard, LucideIcon } from 'lucide-react';
+import { LayoutDashboard, MessageCircle, LucideIcon } from 'lucide-react';
 
 // ============================================================
 // 型定義（admin アプリと同一構造。今後の画面追加に備えて group にも対応）
@@ -33,6 +33,12 @@ export const COACH_NAV_CONFIG: readonly NavItem[] = [
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
+    requiredRoles: [],
+  },
+  {
+    label: 'Chat',
+    href: '/chat',
+    icon: MessageCircle,
     requiredRoles: [],
   },
 ] as const;

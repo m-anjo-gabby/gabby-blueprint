@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -8,6 +8,7 @@ import {
   PanelLeftClose, PanelLeftOpen, ChevronDown,
 } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { signOut } from '@/actions/coachAuthAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { COACH_NAV_CONFIG, type NavItem, type NavLeaf, type NavGroup } from '@/lib/navigation';
@@ -23,10 +24,13 @@ interface LeafItemProps {
   onClick: () => void;
   /** グループ子メニューとして表示する場合は true */
   isChild?: boolean;
+  /** 未読件数などのバッジ表示（チャット等） */
+  badge?: number;
 }
 
-function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false }: LeafItemProps) {
+function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge }: LeafItemProps) {
   const Icon = item.icon;
+  const hasBadge = Boolean(badge && badge > 0);
   return (
     <li className="list-none group relative">
       <Link
@@ -44,10 +48,15 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false }: Lea
         `}
       >
         <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center gap-0' : 'justify-start gap-3'}`}>
-          <Icon
-            size={isChild ? 15 : 18}
-            className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}`}
-          />
+          <span className="relative shrink-0">
+            <Icon
+              size={isChild ? 15 : 18}
+              className={isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}
+            />
+            {hasBadge && isCollapsed && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500" />
+            )}
+          </span>
           <span className={`
             text-sm font-bold transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden
             ${isCollapsed ? 'w-0 opacity-0 ml-0' : isChild ? 'w-36 opacity-100 ml-0 text-[13px]' : 'w-40 opacity-100 ml-3'}
@@ -55,7 +64,12 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false }: Lea
             {item.label}
           </span>
         </div>
-        {isActive && !isCollapsed && <ChevronRight size={14} className="text-indigo-200" />}
+        {!isCollapsed && hasBadge && (
+          <span className="min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">
+            {badge && badge > 99 ? '99+' : badge}
+          </span>
+        )}
+        {isActive && !isCollapsed && !hasBadge && <ChevronRight size={14} className="text-indigo-200" />}
       </Link>
 
       {/* 折りたたみ時のツールチップ */}
@@ -171,6 +185,12 @@ export default function Sidebar() {
   const user = useUserStore((state) => state.user);
   const userRoles: string[] = user?.app_metadata?.roles || [];
   const { showConfirm } = useConfirm();
+  const totalUnreadCount = useChatStore((state) => state.totalUnreadCount);
+  const fetchChatRooms = useChatStore((state) => state.fetchRooms);
+
+  useEffect(() => {
+    fetchChatRooms();
+  }, [fetchChatRooms]);
 
   const toggleMobileSidebar = () => setIsOpen(!isOpen);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
@@ -253,6 +273,7 @@ export default function Sidebar() {
                 isCollapsed={isCollapsed}
                 isActive={pathname.startsWith(item.href)}
                 onClick={() => setIsOpen(false)}
+                badge={item.href === '/chat' ? totalUnreadCount : undefined}
               />
             );
           })}
