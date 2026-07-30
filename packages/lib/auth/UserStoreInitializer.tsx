@@ -55,7 +55,16 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
 
       if (error) {
         console.error('[UserStore] Failed to fetch profile:', error.message);
-        // エラー時も最低限の情報を維持、または必要に応じて clearUser()
+        // DB取得に失敗した場合は、仮値 '...' のまま残留しないようメールアドレスにフォールバック
+        setUser({
+          id: user.id,
+          user_id: 0,
+          user_name: user.email?.split('@')[0] ?? '',
+          email: user.email,
+          locale_id: 'ja',
+          timezone: 'Asia/Tokyo',
+          app_metadata: (user.app_metadata as UserAppMetadata) || { user_type: '1', roles: [] },
+        });
       }
 
       if (profile) {
@@ -79,8 +88,11 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
 
     // --- Step 3: 認証イベントの監視 ---
     // 別タブでのログアウトやセッション切れを検知し、ストアをクリアします。
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // 'INITIAL_SESSION' 等、SIGNED_OUT以外のイベントでの session 一時null化により
+      // 取得済みのユーザー情報（user_name等）が誤って消去されるのを防ぐため、
+      // 明示的なサインアウトのみをクリア条件とする。
+      if (event === 'SIGNED_OUT') {
         setUser(null);
       }
     });

@@ -273,7 +273,10 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                           <HelpCircle size={12} strokeWidth={2.5} />
                         </button>
                       </DialogTrigger>
-                      <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border-none bg-white p-6 shadow-2xl rounded-2xl text-slate-900">
+                      <DialogContent 
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                        className="sm:max-w-sm border-none bg-white p-6 shadow-2xl rounded-2xl text-slate-900"
+                      >
                         <DialogHeader><DialogTitle className="text-sm font-black text-slate-400 tracking-wider">モード解説</DialogTitle></DialogHeader>
                         <div className="space-y-4 mt-3">
                           <div className="space-y-1">

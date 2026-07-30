@@ -208,9 +208,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
             <div className="grid grid-cols-2 gap-3.5">
               
               {/* 1. トレーニング日数カード */}
-              <motion.div 
-                whileHover={{ y: -2, transition: { duration: 0.2 } }}
-                whileTap={{ scale: 0.99 }}
+              <div 
                 className="p-4 bg-gradient-to-br from-white to-indigo-50/20 border border-slate-200/70 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[110px] sm:min-h-[120px]"
               >
                 <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-indigo-600" />
@@ -236,12 +234,10 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                     <span className="text-[10px] font-sans font-bold text-slate-400 ml-0.5">日</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
               {/* 2. 総発話回数カード */}
-              <motion.div 
-                whileHover={{ y: -2, transition: { duration: 0.2 } }}
-                whileTap={{ scale: 0.99 }}
+              <div 
                 className="p-4 bg-gradient-to-br from-white to-rose-50/15 border border-slate-200/70 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[110px] sm:min-h-[120px]"
               >
                 <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-rose-500" />
@@ -267,7 +263,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                     <span className="text-[10px] font-sans font-bold text-slate-400 ml-0.5">回</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
             </div>
 

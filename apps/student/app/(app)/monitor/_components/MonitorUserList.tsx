@@ -269,7 +269,7 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
           </div>
         </div>
 
-        <div className="self-end sm:self-auto shrink-0">
+        <div className="shrink-0">
           <button
             onClick={handleExportCSV}
             disabled={users.length === 0}

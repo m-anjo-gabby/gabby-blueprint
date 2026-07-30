@@ -10,6 +10,8 @@ import { formatZonedDate } from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { setAudioSessionPlayback } from '@gabby/lib';
 
+import { LookupText } from '@/components/common/LookupText';
+
 // 🆕 answered_history 内の個別アイテムの型定義
 interface SprintHistoryItem {
   seq_no: number;
@@ -435,7 +437,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             )}
                           </div>
                         </div>
-                        <p className="text-sm font-bold text-slate-600 leading-relaxed">{jaVisibleMap[stAudioId] ? q.statement_ja : q.statement_en}</p>
+                        {jaVisibleMap[stAudioId] ? (
+                          <p className="text-sm font-bold text-slate-600 leading-relaxed">{q.statement_ja}</p>
+                        ) : (
+                          <LookupText text={q.statement_en} className="text-sm font-bold text-slate-600 leading-relaxed" />
+                        )}
                       </div>
                     )}
 
@@ -464,7 +470,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           )}
                         </div>
                       </div>
-                      <p className="text-lg sm:text-xl font-black text-slate-800 leading-snug tracking-tight">{jaVisibleMap[qAudioId] ? q.question_ja : q.question_en}</p>
+                      {jaVisibleMap[qAudioId] ? (
+                        <p className="text-lg sm:text-xl font-black text-slate-800 leading-snug tracking-tight">{q.question_ja}</p>
+                      ) : (
+                        <LookupText text={q.question_en} className="text-lg sm:text-xl font-black text-slate-800 leading-snug tracking-tight" />
+                      )}
                     </div>
 
                     {/* Answer表示セクション */}
@@ -496,7 +506,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                                   )}
                                 </div>
                               </div>
-                              <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{jaVisibleMap[yesAudioId] ? q.answer_sentence_yes_ja : q.answer_sentence_yes_en}</p>
+                              {jaVisibleMap[yesAudioId] ? (
+                                <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{q.answer_sentence_yes_ja}</p>
+                              ) : (
+                                <LookupText text={q.answer_sentence_yes_en} className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight" />
+                              )}
                             </div>
                           )}
                           {scoreData.answer_type === '1' && (
@@ -524,7 +538,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                                   )}
                                 </div>
                               </div>
-                              <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{jaVisibleMap[noAudioId] ? q.answer_sentence_no_ja : q.answer_sentence_no_en}</p>
+                              {jaVisibleMap[noAudioId] ? (
+                                <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{q.answer_sentence_no_ja}</p>
+                              ) : (
+                                <LookupText text={q.answer_sentence_no_en!} className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight" />
+                              )}
                             </div>
                           )}
                         </div>
@@ -553,7 +571,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                               )}
                             </div>
                           </div>
-                          <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">{jaVisibleMap[ansAudioId] ? q.answer_sentence_yes_ja : q.answer_sentence_yes_en}</p>
+                          {jaVisibleMap[ansAudioId] ? (
+                            <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">{q.answer_sentence_yes_ja}</p>
+                          ) : (
+                            <LookupText text={q.answer_sentence_yes_en} className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight" />
+                          )}
                         </div>
                       )}
                     </div>

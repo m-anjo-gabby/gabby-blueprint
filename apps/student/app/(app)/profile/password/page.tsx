@@ -90,7 +90,7 @@ export default function PasswordChangePage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
+    <div className="flex flex-col items-center justify-center h-full px-4">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-100 border border-slate-100">
         <h1 className="text-xl font-bold text-slate-800 mb-6">パスワード変更</h1>
         
