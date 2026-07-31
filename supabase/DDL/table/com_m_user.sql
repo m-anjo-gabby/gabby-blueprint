@@ -48,6 +48,16 @@ FOR SELECT TO authenticated USING (
 );
 
 CREATE POLICY "Users can update their own data" ON public.com_m_user
-FOR UPDATE TO authenticated 
-USING (id = auth.uid()) 
+FOR UPDATE TO authenticated
+USING (id = auth.uid())
 WITH CHECK (id = auth.uid());
+
+---------------------------------------------
+-- 追加パッチ: プロフィールアイコン対応 (2026-07-31)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+-- 保存先: Storage "profile" バケット / パス例: profile/{user_id}/icon/{uuid}.png
+---------------------------------------------
+ALTER TABLE public.com_m_user
+  ADD COLUMN IF NOT EXISTS icon_path text DEFAULT NULL;
+
+COMMENT ON COLUMN public.com_m_user.icon_path IS 'プロフィールアイコン画像のStorageパス（profileバケット内、例: profile/{user_id}/icon/xxxx.png）';

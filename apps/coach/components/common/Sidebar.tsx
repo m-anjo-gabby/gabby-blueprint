@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { signOut } from '@/actions/coachAuthAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { COACH_NAV_CONFIG, type NavItem, type NavLeaf, type NavGroup } from '@/lib/navigation';
@@ -184,6 +185,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const user = useUserStore((state) => state.user);
   const userRoles: string[] = user?.app_metadata?.roles || [];
+  const profileIconUrl = getProfileIconUrl(user?.icon_path);
   const { showConfirm } = useConfirm();
   const totalUnreadCount = useChatStore((state) => state.totalUnreadCount);
   const fetchChatRooms = useChatStore((state) => state.fetchRooms);
@@ -282,13 +284,22 @@ export default function Sidebar() {
         {/* アカウント・ログアウトエリア */}
         <div className="p-4 bg-slate-950/50 border-t border-slate-800 shrink-0">
 
-          {/* ユーザー情報 */}
-          <div className={`
-            flex items-center transition-all duration-300 mb-2 rounded-xl bg-slate-800/40 border border-slate-800/50 overflow-hidden
-            ${isCollapsed ? 'justify-center p-2' : 'px-3 py-3 gap-3'}
-          `}>
-            <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center shrink-0">
-              <User size={16} className={isCollapsed ? 'text-slate-500' : 'text-slate-300'} />
+          {/* ユーザー情報（クリックでプロフィール画面へ） */}
+          <Link
+            href="/profile"
+            onClick={() => setIsOpen(false)}
+            className={`
+              flex items-center transition-all duration-300 mb-2 rounded-xl bg-slate-800/40 border border-slate-800/50 overflow-hidden hover:bg-slate-800/70 hover:border-slate-700
+              ${isCollapsed ? 'justify-center p-2' : 'px-3 py-3 gap-3'}
+            `}
+          >
+            <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
+              {profileIconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <User size={16} className={isCollapsed ? 'text-slate-500' : 'text-slate-300'} />
+              )}
             </div>
             <div className={`
               min-w-0 flex-1 transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden
@@ -297,7 +308,7 @@ export default function Sidebar() {
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Account</p>
               <p className="text-xs font-bold text-slate-200 truncate">{user?.email?.split('@')[0] || 'Guest'}</p>
             </div>
-          </div>
+          </Link>
 
           {/* ログアウト */}
           <button

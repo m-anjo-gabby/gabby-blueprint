@@ -40,6 +40,7 @@ export interface UserBase {
   client_id: string | null;
   user_type: string;        // '1': student, '0': admin 等
   user_name: string | null;
+  icon_path: string | null; // プロフィールアイコン画像のStorageパス（profileバケット内）
   timezone: string;         // IANAタイムゾーン名 (例: 'Asia/Tokyo')
   locale_id: string;
   
