@@ -52,6 +52,7 @@ export default async function ChatRoomPage({
         initialMessages={initialMessages.success ? initialMessages.data : []}
         initialHasMore={initialMessages.success ? initialMessages.hasMore : false}
         isMember={isMember}
+        members={members}
       />
     </div>
   );

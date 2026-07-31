@@ -8,22 +8,22 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { getUserTypeLabel, USER_TYPES } from '@gabby/types/user';
 import { getAllChatRoomsForAdmin } from '@gabby/lib/chat/actions/roomActions';
 import { ChatRoomListItem } from '@gabby/types/chat';
+import { getChatMessagePreviewText } from '@gabby/lib/chat/formatChatPreview';
+import { formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { CreateChatRoomDialog } from './CreateChatRoomDialog';
 
 function formatTime(iso: string): string {
-  const date = new Date(iso);
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
-  if (isToday) {
-    return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-  }
-  return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
+  return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日' });
 }
 
 function getPreviewText(room: ChatRoomListItem): string {
-  if (!room.last_message) return 'メッセージはまだありません';
-  if (room.last_message.deleted_at) return '（このメッセージは削除されました）';
-  return room.last_message.message;
+  return getChatMessagePreviewText(room.last_message, {
+    deleted: '（このメッセージは削除されました）',
+    photo: '📷 画像',
+    file: '📎 ファイル',
+    noMessages: 'メッセージはまだありません',
+  });
 }
 
 function getRoomTitle(room: ChatRoomListItem, currentUserId: string | undefined): string {
@@ -105,15 +105,26 @@ export function ChatRoomList() {
         {rooms.map((room) => {
           const other = room.members.find((m) => m.user_id !== currentUser?.id);
 
+          const iconUrl = room.is_member ? getProfileIconUrl(other?.icon_path) : null;
+
           return (
             <Link
               key={room.room_id}
               href={`/chat/${room.room_id}`}
               className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors"
             >
-              <div className="w-11 h-11 shrink-0 rounded-full bg-indigo-50 flex items-center justify-center">
-                <UserIcon size={20} className="text-indigo-500" />
-              </div>
+              {iconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={iconUrl}
+                  alt={getRoomTitle(room, currentUser?.id)}
+                  className="w-11 h-11 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-11 h-11 shrink-0 rounded-full bg-indigo-50 flex items-center justify-center">
+                  <UserIcon size={20} className="text-indigo-500" />
+                </div>
+              )}
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

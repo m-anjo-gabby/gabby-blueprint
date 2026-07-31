@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { FileText, Loader2, Ban } from 'lucide-react';
 import { getChatAttachmentUrl } from '@gabby/lib/chat/actions/attachmentActions';
-import { ChatMessage, ChatMessageAttachment } from '@gabby/types/chat';
+import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
+import { ChatAttachmentRecord, ChatMessage } from '@gabby/types/chat';
 
 interface ChatMessageContentProps {
   message: ChatMessage;
@@ -19,31 +20,28 @@ export function ChatMessageContent({ message }: ChatMessageContentProps) {
     );
   }
 
-  if (message.message_type !== 'IMAGE' && message.message_type !== 'FILE') {
-    return <p className="whitespace-pre-wrap wrap-break-word">{message.message}</p>;
-  }
-
-  let attachment: ChatMessageAttachment | null = null;
-  try {
-    attachment = JSON.parse(message.message);
-  } catch {
-    attachment = null;
-  }
-
-  if (!attachment) {
-    return <p className="whitespace-pre-wrap wrap-break-word">{message.message}</p>;
-  }
-
-  return <ChatAttachmentView attachment={attachment} isImage={message.message_type === 'IMAGE'} />;
+  return (
+    <div className="space-y-2">
+      {message.message && <p className="whitespace-pre-wrap wrap-break-word">{message.message}</p>}
+      {message.attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {message.attachments.map((attachment) => (
+            <ChatAttachmentView key={attachment.attachment_id} attachment={attachment} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
-function ChatAttachmentView({ attachment, isImage }: { attachment: ChatMessageAttachment; isImage: boolean }) {
+function ChatAttachmentView({ attachment }: { attachment: ChatAttachmentRecord }) {
+  const isImage = attachment.file_type.startsWith('image/');
   const [url, setUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    getChatAttachmentUrl(attachment.path).then((res) => {
+    getChatAttachmentUrl(attachment.file_path).then((res) => {
       if (!cancelled) {
         setUrl(res.url);
         setIsLoading(false);
@@ -52,7 +50,7 @@ function ChatAttachmentView({ attachment, isImage }: { attachment: ChatMessageAt
     return () => {
       cancelled = true;
     };
-  }, [attachment.path]);
+  }, [attachment.file_path]);
 
   if (isLoading) {
     return <Loader2 size={16} className="animate-spin" />;
@@ -66,7 +64,7 @@ function ChatAttachmentView({ attachment, isImage }: { attachment: ChatMessageAt
     return (
       <a href={url} target="_blank" rel="noopener noreferrer">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={attachment.name} className="max-w-60 max-h-60 rounded-lg object-cover" />
+        <img src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
       </a>
     );
   }
@@ -79,7 +77,8 @@ function ChatAttachmentView({ attachment, isImage }: { attachment: ChatMessageAt
       className="flex items-center gap-2 underline underline-offset-2"
     >
       <FileText size={16} className="shrink-0" />
-      <span className="truncate">{attachment.name}</span>
+      <span className="truncate">{attachment.file_name}</span>
+      <span className="text-[10px] opacity-70 shrink-0">{formatFileSize(attachment.file_size)}</span>
     </a>
   );
 }

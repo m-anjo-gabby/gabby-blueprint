@@ -68,17 +68,32 @@ export interface ChatRoomUser {
 }
 
 /**
- * ChatMessageAttachment: FILE/IMAGE メッセージの添付情報（message列にJSON文字列として格納）
+ * ChatAttachmentRecord: com_t_chat_attachment のデータ型
+ * 1メッセージに複数の添付ファイルを紐付けられる（画像+コメントの同時投稿にも対応）。
  */
-export interface ChatMessageAttachment {
-  name: string;
-  path: string; // Storage上のパス (chatバケット)
-  size: number;
-  mime_type: string;
+export interface ChatAttachmentRecord {
+  attachment_id: string;
+  chat_id: string;
+  file_path: string; // Storage上のパス (chatバケット)
+  file_name: string;
+  file_type: string; // MIMEタイプ
+  file_size: number;
+  created_at: string;
 }
 
 /**
- * ChatMessage: com_t_chat のデータ型
+ * PendingChatAttachment: Storageへのアップロード直後・メッセージ未紐付けの添付ファイル
+ * （送信前にコンポーザー側で一時保持する状態）
+ */
+export interface PendingChatAttachment {
+  file_path: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+}
+
+/**
+ * ChatMessage: com_t_chat のデータ型（com_t_chat_attachment を結合した添付ファイル一覧を含む）
  */
 export interface ChatMessage {
   chat_id: string;
@@ -88,6 +103,7 @@ export interface ChatMessage {
   message_type: ChatMessageType;
   created_at: string;
   deleted_at: string | null;
+  attachments: ChatAttachmentRecord[];
 }
 
 /**
@@ -100,6 +116,7 @@ export interface ChatRoomListItem extends ChatRoom {
     user_id: string;
     user_name: string | null;
     user_type: UserType;
+    icon_path: string | null;
   }[];
   /** ログイン中のユーザーがこのルームの参加者かどうか（Adminの全ルーム査閲時に使用） */
   is_member: boolean;
@@ -116,11 +133,13 @@ export interface CreateChatRoomPayload {
 
 /**
  * SendChatMessagePayload: メッセージ送信
+ * attachments を渡すと com_t_chat_attachment に紐付けて保存される（複数可）。
+ * message は添付ファイルのみの送信（コメントなし）の場合、空文字を許容する。
  */
 export interface SendChatMessagePayload {
   roomId: string;
   message: string;
-  messageType?: ChatMessageType;
+  attachments?: PendingChatAttachment[];
 }
 
 /**

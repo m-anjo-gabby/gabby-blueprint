@@ -21,7 +21,7 @@ export default async function ChatRoomPage({
     notFound();
   }
 
-  const { isMember } = roomDetail.data;
+  const { members, isMember } = roomDetail.data;
 
   return (
     <div className="space-y-4 h-full flex flex-col">
@@ -40,6 +40,7 @@ export default async function ChatRoomPage({
         initialMessages={initialMessages.success ? initialMessages.data : []}
         initialHasMore={initialMessages.success ? initialMessages.hasMore : false}
         isMember={isMember}
+        members={members}
       />
     </div>
   );

@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User as UserIcon } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useChatRealtimeMessages } from '@gabby/lib/chat/realtime/useChatRealtimeMessages';
 import { getChatMessages } from '@gabby/lib/chat/actions/messageActions';
-import { ChatMessage } from '@gabby/types/chat';
+import { isContinuationMessage, formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { ChatMessage, ChatRoomListItem } from '@gabby/types/chat';
 import { ChatMessageInput } from './ChatMessageInput';
 import { ChatMessageContent } from './ChatMessageContent';
 
@@ -16,13 +18,37 @@ interface ChatTimelineProps {
   initialHasMore: boolean;
   /** Whether the current user is a participant of this room (sending is disabled otherwise) */
   isMember: boolean;
+  members: ChatRoomListItem['members'];
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+function formatHeaderTime(iso: string): string {
+  return formatMessageHeaderTime(iso, { locale: 'en-US', yesterdayLabel: 'Yesterday' });
 }
 
-export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember }: ChatTimelineProps) {
+function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null; name?: string | null; size?: number }) {
+  const url = getProfileIconUrl(iconPath);
+  if (url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt={name ?? ''}
+        style={{ width: size, height: size }}
+        className="rounded-full object-cover shrink-0"
+      />
+    );
+  }
+  return (
+    <div
+      style={{ width: size, height: size }}
+      className="rounded-full bg-indigo-50 flex items-center justify-center shrink-0"
+    >
+      <UserIcon size={Math.round(size * 0.55)} className="text-indigo-400" />
+    </div>
+  );
+}
+
+export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember, members }: ChatTimelineProps) {
   const currentUserId = useUserStore((state) => state.user?.id);
   const markRoomAsRead = useChatStore((state) => state.markRoomAsRead);
   const applyIncomingMessage = useChatStore((state) => state.applyIncomingMessage);
@@ -32,6 +58,8 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
 
   const markLatestAsRead = (latest: ChatMessage) => {
     if (!isMember) return;
@@ -82,7 +110,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-0.5">
         {hasMore && (
           <div className="flex justify-center pb-2">
             <button
@@ -96,19 +124,29 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
           </div>
         )}
 
-        {messages.map((msg) => {
+        {messages.map((msg, idx) => {
           const isMine = msg.sender_user_id === currentUserId;
+          const showHeader = !isContinuationMessage(msg, messages[idx - 1]);
+          const sender = memberByUserId.get(msg.sender_user_id);
+
           return (
-            <div key={msg.chat_id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+            <div
+              key={msg.chat_id}
+              className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} ${showHeader ? 'pt-3' : ''}`}
+            >
+              {showHeader && (
+                <div className={`flex items-center gap-2 mb-1 ${isMine ? 'flex-row-reverse' : ''}`}>
+                  <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} />
+                  <span className="text-xs font-bold text-slate-700">{sender?.user_name || 'Unknown'}</span>
+                  <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                </div>
+              )}
               <div
                 className={`max-w-[70%] rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
                   isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
-                }`}
+                } ${showHeader ? '' : isMine ? 'mr-9' : 'ml-9'}`}
               >
                 <ChatMessageContent message={msg} />
-                <p className={`text-[10px] mt-1 ${isMine ? 'text-indigo-200' : 'text-slate-400'}`}>
-                  {formatTime(msg.created_at)}
-                </p>
               </div>
             </div>
           );

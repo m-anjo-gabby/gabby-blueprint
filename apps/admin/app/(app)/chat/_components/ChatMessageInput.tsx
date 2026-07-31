@@ -1,13 +1,14 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Loader2, Paperclip, Send } from 'lucide-react';
+import { FileText, Loader2, Paperclip, Send, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { sendChatMessage } from '@gabby/lib/chat/actions/messageActions';
 import { uploadChatAttachment } from '@gabby/lib/chat/actions/attachmentActions';
-import { CHAT_ATTACHMENT_MAX_SIZE, ChatMessage } from '@gabby/types/chat';
+import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
+import { CHAT_ATTACHMENT_MAX_SIZE, ChatMessage, PendingChatAttachment } from '@gabby/types/chat';
 
 interface ChatMessageInputProps {
   roomId: string;
@@ -17,21 +18,26 @@ interface ChatMessageInputProps {
 export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
   const { showToast } = useToast();
   const [text, setText] = useState('');
+  const [pendingAttachments, setPendingAttachments] = useState<PendingChatAttachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSendText = async () => {
+  const busy = isUploading || isSending;
+
+  const handleSend = async () => {
     const trimmed = text.trim();
-    if (!trimmed || isSending) return;
+    if ((!trimmed && pendingAttachments.length === 0) || busy) return;
 
     setIsSending(true);
     try {
-      const res = await sendChatMessage({ roomId, message: trimmed });
+      const res = await sendChatMessage({ roomId, message: trimmed, attachments: pendingAttachments });
       if (!res.success || !res.data) {
         showToast(res.error || 'メッセージの送信に失敗しました', 'error');
         return;
       }
       setText('');
+      setPendingAttachments([]);
       onSent(res.data);
     } finally {
       setIsSending(false);
@@ -39,73 +45,96 @@ export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (!file) return;
+    if (files.length === 0) return;
 
-    if (file.size > CHAT_ATTACHMENT_MAX_SIZE) {
-      showToast('ファイルサイズは10MBまでです', 'error');
-      return;
-    }
-
-    setIsSending(true);
+    setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      for (const file of files) {
+        if (file.size > CHAT_ATTACHMENT_MAX_SIZE) {
+          showToast(`${file.name}: ファイルサイズは10MBまでです`, 'error');
+          continue;
+        }
 
-      const uploadRes = await uploadChatAttachment(roomId, formData);
-      if (!uploadRes.success || !uploadRes.attachment) {
-        showToast(uploadRes.message || 'ファイルのアップロードに失敗しました', 'error');
-        return;
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadRes = await uploadChatAttachment(roomId, formData);
+        if (!uploadRes.success || !uploadRes.attachment) {
+          showToast(uploadRes.message || `${file.name} のアップロードに失敗しました`, 'error');
+          continue;
+        }
+        setPendingAttachments((prev) => [...prev, uploadRes.attachment!]);
       }
-
-      const messageType = uploadRes.attachment.mime_type.startsWith('image/') ? 'IMAGE' : 'FILE';
-      const res = await sendChatMessage({
-        roomId,
-        message: JSON.stringify(uploadRes.attachment),
-        messageType,
-      });
-
-      if (!res.success || !res.data) {
-        showToast(res.error || 'メッセージの送信に失敗しました', 'error');
-        return;
-      }
-      onSent(res.data);
     } finally {
-      setIsSending(false);
+      setIsUploading(false);
     }
   };
 
+  const handleRemovePending = (filePath: string) => {
+    setPendingAttachments((prev) => prev.filter((a) => a.file_path !== filePath));
+  };
+
   return (
-    <div className="border-t border-slate-100 p-4 flex items-end gap-2">
-      <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        disabled={isSending}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <Paperclip size={16} />
-      </Button>
+    <div className="border-t border-slate-100 p-4 space-y-2">
+      {pendingAttachments.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {pendingAttachments.map((a) => (
+            <div
+              key={a.file_path}
+              className="flex items-center gap-1.5 bg-slate-100 rounded-lg pl-2 pr-1 py-1 text-xs text-slate-600"
+            >
+              <FileText size={13} className="shrink-0" />
+              <span className="max-w-40 truncate">{a.file_name}</span>
+              <span className="text-slate-400 shrink-0">{formatFileSize(a.file_size)}</span>
+              <button
+                type="button"
+                onClick={() => handleRemovePending(a.file_path)}
+                className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5"
+                title="削除"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <Textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSendText();
-          }
-        }}
-        placeholder="メッセージを入力（Shift+Enterで改行）"
-        className="min-h-10 max-h-32 resize-none"
-        disabled={isSending}
-      />
+      <div className="flex items-end gap-2">
+        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={busy}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
+        </Button>
 
-      <Button type="button" size="icon" disabled={!text.trim() || isSending} onClick={handleSendText}>
-        {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-      </Button>
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          placeholder="メッセージを入力（Shift+Enterで改行）"
+          className="min-h-10 max-h-32 resize-none"
+          disabled={busy}
+        />
+
+        <Button
+          type="button"
+          size="icon"
+          disabled={(!text.trim() && pendingAttachments.length === 0) || busy}
+          onClick={handleSend}
+        >
+          {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+        </Button>
+      </div>
     </div>
   );
 }

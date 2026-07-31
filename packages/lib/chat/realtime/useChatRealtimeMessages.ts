@@ -3,10 +3,13 @@
 import { useEffect, useRef } from 'react';
 import { createBrowserClient } from '@gabby/lib/supabase/client';
 import { ChatMessage } from '@gabby/types/chat';
+import { getChatMessageById } from '@gabby/lib/chat/actions/messageActions';
 
 /**
  * 指定ルームの新着メッセージ（INSERT）をRealtime購読する。
  * 全件購読を避けるため、必ず room_id によるfilterを付与する。
+ * postgres_changes の payload には com_t_chat のカラムしか含まれず添付ファイル
+ * (com_t_chat_attachment) が乗らないため、受信時に添付ファイル込みで取得し直す。
  */
 export function useChatRealtimeMessages(roomId: string | null, onInsert: (message: ChatMessage) => void) {
   const onInsertRef = useRef(onInsert);
@@ -29,7 +32,12 @@ export function useChatRealtimeMessages(roomId: string | null, onInsert: (messag
           filter: `room_id=eq.${roomId}`,
         },
         (payload) => {
-          onInsertRef.current(payload.new as ChatMessage);
+          const chatId = (payload.new as ChatMessage).chat_id;
+          getChatMessageById(chatId).then((res) => {
+            if (res.success && res.data) {
+              onInsertRef.current(res.data);
+            }
+          });
         }
       )
       .subscribe();

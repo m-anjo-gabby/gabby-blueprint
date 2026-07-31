@@ -223,10 +223,13 @@ async function findExistingTwoPersonRoom(
 }
 
 /**
- * 論理削除済みメッセージの本文をマスクする（一覧プレビュー・履歴取得の両方で共通利用）
+ * ルーム一覧の最新メッセージ取得結果を ChatMessage 形式に正規化する。
+ * 一覧プレビューには添付ファイルの明細までは不要なため attachments は空配列とする
+ * （プレビュー文言は message_type から組み立てる。詳細は getChatMessagePreviewText 参照）。
+ * 論理削除済みメッセージは本文もマスクする。
  */
-function maskIfDeleted(msg: ChatMessage): ChatMessage {
-  return msg.deleted_at ? { ...msg, message: '' } : msg;
+function normalizeAndMaskIfDeleted(raw: ChatMessage): ChatMessage {
+  return raw.deleted_at ? { ...raw, message: '', attachments: [] } : { ...raw, attachments: [] };
 }
 
 interface RoomBase {
@@ -258,7 +261,7 @@ async function buildChatRoomListItems(
   const [{ data: allMembers }, { data: recentMessages }, { data: lastReadMessages }] = await Promise.all([
     supabase
       .from('com_t_chat_room_user')
-      .select('room_id, user_id, user_type, com_m_user(user_name)')
+      .select('room_id, user_id, user_type, com_m_user(user_name, icon_path)')
       .in('room_id', roomIds)
       .is('left_at', null),
     // 直近メッセージのみを対象に「最新メッセージ」「未読件数」を算出する（大量履歴を毎回全走査しないための現実的な上限）
@@ -281,7 +284,7 @@ async function buildChatRoomListItems(
   const unreadCountByRoom = new Map<string, number>();
 
   for (const raw of (recentMessages || []) as ChatMessage[]) {
-    const msg = maskIfDeleted(raw);
+    const msg = normalizeAndMaskIfDeleted(raw);
     if (!lastMessageByRoom.has(msg.room_id)) {
       lastMessageByRoom.set(msg.room_id, msg);
     }
@@ -303,7 +306,12 @@ async function buildChatRoomListItems(
   for (const m of (allMembers || []) as any[]) {
     const list = membersByRoom.get(m.room_id) || [];
     const userInfo = Array.isArray(m.com_m_user) ? m.com_m_user[0] : m.com_m_user;
-    list.push({ user_id: m.user_id, user_name: userInfo?.user_name ?? null, user_type: m.user_type });
+    list.push({
+      user_id: m.user_id,
+      user_name: userInfo?.user_name ?? null,
+      user_type: m.user_type,
+      icon_path: userInfo?.icon_path ?? null,
+    });
     membersByRoom.set(m.room_id, list);
   }
 
@@ -449,13 +457,18 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     const { data: members } = await supabase
       .from('com_t_chat_room_user')
-      .select('user_id, user_type, com_m_user(user_name)')
+      .select('user_id, user_type, com_m_user(user_name, icon_path)')
       .eq('room_id', roomId)
       .is('left_at', null);
 
     const memberList = ((members || []) as any[]).map((m) => {
       const userInfo = Array.isArray(m.com_m_user) ? m.com_m_user[0] : m.com_m_user;
-      return { user_id: m.user_id as string, user_name: (userInfo?.user_name ?? null) as string | null, user_type: m.user_type };
+      return {
+        user_id: m.user_id as string,
+        user_name: (userInfo?.user_name ?? null) as string | null,
+        user_type: m.user_type,
+        icon_path: (userInfo?.icon_path ?? null) as string | null,
+      };
     });
 
     const isMember = memberList.some((m) => m.user_id === user.id);

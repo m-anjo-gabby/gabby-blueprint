@@ -6,7 +6,7 @@ import { createLogger, getLogContext } from '@gabby/lib/logger';
 import {
   CHAT_ATTACHMENT_ALLOWED_MIME_TYPES,
   CHAT_ATTACHMENT_MAX_SIZE,
-  ChatMessageAttachment,
+  PendingChatAttachment,
 } from '@gabby/types/chat';
 
 const logger = createLogger('common');
@@ -19,7 +19,7 @@ const logger = createLogger('common');
 export async function uploadChatAttachment(
   roomId: string,
   formData: FormData
-): Promise<{ success: boolean; attachment?: ChatMessageAttachment; message?: string }> {
+): Promise<{ success: boolean; attachment?: PendingChatAttachment; message?: string }> {
   const ctx = await getLogContext();
   try {
     const file = formData.get('file') as File | null;
@@ -70,11 +70,11 @@ export async function uploadChatAttachment(
       return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
     }
 
-    const attachment: ChatMessageAttachment = {
-      name: file.name,
-      path: storagePath,
-      size: file.size,
-      mime_type: mimeType,
+    const attachment: PendingChatAttachment = {
+      file_name: file.name,
+      file_path: storagePath,
+      file_size: file.size,
+      file_type: mimeType,
     };
 
     logger.info('chat:upload_attachment_success', `Attachment uploaded: ${storagePath}`, {
