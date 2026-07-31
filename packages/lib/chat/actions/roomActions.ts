@@ -68,7 +68,7 @@ export async function getChatRoomTargetUsers(): Promise<{
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('com_m_user')
-      .select('id, user_name, user_type')
+      .select('id, user_name, user_type, client_id')
       .in('user_type', HUMAN_USER_TYPES)
       .eq('delete_flg', '0')
       .order('user_name', { ascending: true });

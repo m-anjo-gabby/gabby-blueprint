@@ -130,4 +130,5 @@ export interface ChatTargetUser {
   id: string;
   user_name: string | null;
   user_type: UserType;
+  client_id: string | null;
 }
