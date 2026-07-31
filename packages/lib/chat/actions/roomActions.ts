@@ -341,7 +341,7 @@ export async function getChatRooms(): Promise<{
 
     const { data: myMemberships, error: memberError } = await supabase
       .from('com_t_chat_room_user')
-      .select('room_id, last_read_chat_id, com_t_chat_room(room_id, room_type, created_at, closed_at)')
+      .select('room_id, last_read_chat_id')
       .eq('user_id', user.id)
       .is('left_at', null);
 
@@ -350,13 +350,24 @@ export async function getChatRooms(): Promise<{
       return { success: false, data: [], error: memberError.message };
     }
 
-    const rooms: RoomBase[] = (myMemberships || [])
-      .map((m) => (Array.isArray(m.com_t_chat_room) ? m.com_t_chat_room[0] : (m.com_t_chat_room as any)))
-      .filter((r): r is RoomBase => Boolean(r));
-
     const myMembershipByRoom = new Map(
       (myMemberships || []).map((m) => [m.room_id, { last_read_chat_id: m.last_read_chat_id as string | null }])
     );
+
+    const roomIds = Array.from(myMembershipByRoom.keys());
+    let rooms: RoomBase[] = [];
+    if (roomIds.length > 0) {
+      const { data: roomRows, error: roomsError } = await supabase
+        .from('com_t_chat_room')
+        .select('room_id, room_type, created_at, closed_at')
+        .in('room_id', roomIds);
+
+      if (roomsError) {
+        logger.error('chat:get_rooms_failed', roomsError.message, ctx);
+        return { success: false, data: [], error: roomsError.message };
+      }
+      rooms = (roomRows || []) as RoomBase[];
+    }
 
     const data = await buildChatRoomListItems(supabase, rooms, user.id, myMembershipByRoom);
     return { success: true, data };
