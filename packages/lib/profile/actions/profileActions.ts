@@ -24,7 +24,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
 
     const { data, error } = await supabase
       .from('com_m_user')
-      .select('id, user_id, user_name, user_type, icon_path, client_id, com_m_client(client_name)')
+      .select('id, user_id, user_name, user_type, icon_path, client_id, timezone, com_m_client(client_name)')
       .eq('id', user.id)
       .single();
 
@@ -48,6 +48,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
         icon_path: data.icon_path,
         client_id: data.client_id,
         client_name: client?.client_name ?? null,
+        timezone: data.timezone,
       },
     };
   } catch (err) {

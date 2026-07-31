@@ -1,5 +1,5 @@
 // apps/coach/app/(app)/profile/page.tsx
-import { getMyProfile } from '@/actions/coachProfileAction';
+import { getMyProfile, getTimezoneList } from '@/actions/coachProfileAction';
 import { USER_TYPES } from '@gabby/types/user';
 import { ProfileView } from './_components/ProfileView';
 
@@ -10,7 +10,7 @@ const USER_TYPE_LABELS_EN: Record<string, string> = {
 };
 
 export default async function ProfilePage() {
-  const profile = await getMyProfile();
+  const [profile, timezones] = await Promise.all([getMyProfile(), getTimezoneList()]);
 
   if (!profile) {
     return (
@@ -35,6 +35,8 @@ export default async function ProfilePage() {
         clientName={profile.client_name}
         userTypeLabel={USER_TYPE_LABELS_EN[profile.user_type] ?? 'Unknown'}
         initialIconPath={profile.icon_path}
+        initialTimezone={profile.timezone}
+        timezones={timezones}
       />
     </div>
   );

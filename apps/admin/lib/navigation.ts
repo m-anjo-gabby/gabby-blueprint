@@ -1,7 +1,7 @@
 // apps/admin/lib/navigation.ts
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, LucideIcon,
+  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, LucideIcon,
 } from 'lucide-react';
 
 // ============================================================
@@ -59,6 +59,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     label: '規約管理',
     href: '/terms',
     icon: ShieldCheck,
+    requiredRoles: ['admin'],
+  },
+  {
+    label: 'タイムゾーン管理',
+    href: '/timezones',
+    icon: Globe,
     requiredRoles: ['admin'],
   },
   {

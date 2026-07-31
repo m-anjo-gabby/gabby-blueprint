@@ -61,3 +61,21 @@ ALTER TABLE public.com_m_user
   ADD COLUMN IF NOT EXISTS icon_path text DEFAULT NULL;
 
 COMMENT ON COLUMN public.com_m_user.icon_path IS 'プロフィールアイコン画像のStorageパス（profileバケット内、例: profile/{user_id}/icon/xxxx.png）';
+
+---------------------------------------------
+-- 追加パッチ: タイムゾーンマスタ整合性対応 (2026-07-31)
+-- 前提: table/com_m_timezone.sql の作成 および DML/com_m_timezone.sql の登録が完了していること。
+-- （既存の timezone 値が全てマスタに存在しないと、このALTER文はエラーになります）
+---------------------------------------------
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_com_m_user_timezone'
+  ) THEN
+    ALTER TABLE public.com_m_user
+      ADD CONSTRAINT fk_com_m_user_timezone FOREIGN KEY (timezone)
+      REFERENCES public.com_m_timezone(timezone);
+  END IF;
+END $$;
+
+COMMENT ON CONSTRAINT fk_com_m_user_timezone ON public.com_m_user IS 'ユーザーのタイムゾーンはcom_m_timezoneマスタに存在する値のみ許容する';

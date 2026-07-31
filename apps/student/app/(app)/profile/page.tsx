@@ -1,9 +1,9 @@
 // apps/student/app/(app)/profile/page.tsx
-import { getMyProfile } from '@/actions/studentProfileAction';
+import { getMyProfile, getTimezoneList } from '@/actions/studentProfileAction';
 import { ProfileView } from './_components/ProfileView';
 
 export default async function ProfilePage() {
-  const profile = await getMyProfile();
+  const [profile, timezones] = await Promise.all([getMyProfile(), getTimezoneList()]);
 
   if (!profile) {
     return (
@@ -27,6 +27,8 @@ export default async function ProfilePage() {
         userName={profile.user_name ?? '(未設定)'}
         clientName={profile.client_name}
         initialIconPath={profile.icon_path}
+        initialTimezone={profile.timezone}
+        timezones={timezones}
       />
     </div>
   );

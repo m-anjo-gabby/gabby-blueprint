@@ -3,15 +3,19 @@
 import { useState } from 'react';
 import { User as UserIcon, IdCard } from 'lucide-react';
 import { AvatarCropUploader } from '@gabby/lib/components/common/AvatarCropUploader';
+import { TimezoneSelector } from '@gabby/lib/components/common/TimezoneSelector';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { uploadProfileIcon, removeProfileIcon } from '@/actions/studentProfileAction';
+import { uploadProfileIcon, removeProfileIcon, updateMyTimezone } from '@/actions/studentProfileAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { TimezoneMaster } from '@gabby/types/timezone';
 
 interface ProfileViewProps {
   userName: string;
   clientName: string | null;
   initialIconPath: string | null;
+  initialTimezone: string;
+  timezones: TimezoneMaster[];
 }
 
 /**
@@ -19,8 +23,9 @@ interface ProfileViewProps {
  * アイコン画像・アカウント情報をセクションカードで表示する構成とし、
  * 今後の設定項目追加（通知設定・言語設定 等）はセクションを追加するだけで拡張できるようにしている。
  */
-export function ProfileView({ userName, clientName, initialIconPath }: ProfileViewProps) {
+export function ProfileView({ userName, clientName, initialIconPath, initialTimezone, timezones }: ProfileViewProps) {
   const [iconPath, setIconPath] = useState(initialIconPath);
+  const [timezone, setTimezone] = useState(initialTimezone);
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
   const { showToast } = useToast();
@@ -47,6 +52,17 @@ export function ProfileView({ userName, clientName, initialIconPath }: ProfileVi
     setIconPath(null);
     if (user) setUser({ ...user, icon_path: null });
     showToast('プロフィールアイコンを削除しました', 'success');
+  };
+
+  const handleTimezoneChange = async (next: string) => {
+    const result = await updateMyTimezone(next);
+    if (!result.success) {
+      showToast(result.message, 'error');
+      return;
+    }
+    setTimezone(result.timezone);
+    if (user) setUser({ ...user, timezone: result.timezone });
+    showToast('タイムゾーンを更新しました', 'success');
   };
 
   return (
@@ -87,13 +103,23 @@ export function ProfileView({ userName, clientName, initialIconPath }: ProfileVi
             </dt>
             <dd className="text-sm font-bold text-slate-700 text-right truncate">{userName}</dd>
           </div>
-          <div className="flex items-center justify-between gap-4 py-3">
+          <div className="flex items-center justify-between gap-4 py-3 border-b border-slate-50">
             <dt className="text-xs font-bold text-slate-400 flex items-center gap-1.5 shrink-0">
               <IdCard size={13} /> 所属
             </dt>
             <dd className="text-sm font-bold text-slate-700 text-right truncate">{clientName ?? '-'}</dd>
           </div>
         </dl>
+
+        <div className="pt-4 max-w-xs">
+          <TimezoneSelector
+            value={timezone}
+            timezones={timezones}
+            onChange={handleTimezoneChange}
+            displayField="display_name_ja"
+            labels={{ label: 'タイムゾーン', currentTimeLabel: '現在の日時' }}
+          />
+        </div>
       </section>
     </div>
   );

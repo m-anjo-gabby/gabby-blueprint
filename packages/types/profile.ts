@@ -1,3 +1,5 @@
+import { TimezoneMaster } from './timezone';
+
 /**
  * ----------------------------------------------
  * 定数・区分値
@@ -36,6 +38,7 @@ export interface MyProfile {
   icon_path: string | null;
   client_id: string | null;
   client_name: string | null; // 所属（顧客名）
+  timezone: string; // IANAタイムゾーン名（com_m_timezoneマスタ準拠）
 }
 
 /**
@@ -62,3 +65,20 @@ export type RemoveProfileIconResult =
 export type GetMyProfileResult =
   | { success: true; profile: MyProfile }
   | { success: false; errorCode: 'unauthorized' | 'not_found' | 'unexpected_error' };
+
+/**
+ * タイムゾーン設定関連
+ */
+export type UpdateTimezoneErrorCode =
+  | 'unauthorized'
+  | 'invalid_timezone'
+  | 'db_update_failed'
+  | 'unexpected_error';
+
+export type UpdateTimezoneResult =
+  | { success: true; timezone: string }
+  | { success: false; errorCode: UpdateTimezoneErrorCode };
+
+export type GetTimezoneListResult =
+  | { success: true; timezones: TimezoneMaster[] }
+  | { success: false; errorCode: 'unexpected_error' };

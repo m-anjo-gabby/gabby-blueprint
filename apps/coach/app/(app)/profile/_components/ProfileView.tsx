@@ -5,20 +5,25 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { AvatarCropUploader } from '@gabby/lib/components/common/AvatarCropUploader';
+import { TimezoneSelector } from '@gabby/lib/components/common/TimezoneSelector';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { uploadProfileIcon, removeProfileIcon } from '@/actions/coachProfileAction';
+import { uploadProfileIcon, removeProfileIcon, updateMyTimezone } from '@/actions/coachProfileAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { TimezoneMaster } from '@gabby/types/timezone';
 
 interface ProfileViewProps {
   userName: string;
   clientName: string | null;
   userTypeLabel: string;
   initialIconPath: string | null;
+  initialTimezone: string;
+  timezones: TimezoneMaster[];
 }
 
-export function ProfileView({ userName, clientName, userTypeLabel, initialIconPath }: ProfileViewProps) {
+export function ProfileView({ userName, clientName, userTypeLabel, initialIconPath, initialTimezone, timezones }: ProfileViewProps) {
   const [iconPath, setIconPath] = useState(initialIconPath);
+  const [timezone, setTimezone] = useState(initialTimezone);
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
   const { showToast } = useToast();
@@ -45,6 +50,17 @@ export function ProfileView({ userName, clientName, userTypeLabel, initialIconPa
     setIconPath(null);
     if (user) setUser({ ...user, icon_path: null });
     showToast('Profile icon removed', 'success');
+  };
+
+  const handleTimezoneChange = async (next: string) => {
+    const result = await updateMyTimezone(next);
+    if (!result.success) {
+      showToast(result.message, 'error');
+      return;
+    }
+    setTimezone(result.timezone);
+    if (user) setUser({ ...user, timezone: result.timezone });
+    showToast('Timezone updated successfully', 'success');
   };
 
   return (
@@ -80,6 +96,15 @@ export function ProfileView({ userName, clientName, userTypeLabel, initialIconPa
           <div className="space-y-1.5">
             <Label>Role</Label>
             <Input value={userTypeLabel} disabled />
+          </div>
+          <div className="space-y-1.5">
+            <TimezoneSelector
+              value={timezone}
+              timezones={timezones}
+              onChange={handleTimezoneChange}
+              displayField="display_name_en"
+              labels={{ label: 'Timezone', currentTimeLabel: 'Current time' }}
+            />
           </div>
         </div>
       </CardContent>
