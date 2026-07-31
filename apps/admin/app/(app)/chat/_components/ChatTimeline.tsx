@@ -55,7 +55,8 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   }, []);
 
   useChatRealtimeMessages(roomId, (message) => {
-    setMessages((prev) => [...prev, message]);
+    // 自分の送信メッセージは handleSent の楽観的追加と Realtime のエコーが両方届くため重複排除する
+    setMessages((prev) => (prev.some((m) => m.chat_id === message.chat_id) ? prev : [...prev, message]));
     if (isMember) {
       applyIncomingMessage(roomId, message.sender_user_id === currentUserId);
     }
@@ -81,7 +82,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   };
 
   const handleSent = (message: ChatMessage) => {
-    setMessages((prev) => [...prev, message]);
+    setMessages((prev) => (prev.some((m) => m.chat_id === message.chat_id) ? prev : [...prev, message]));
     requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }));
   };
 

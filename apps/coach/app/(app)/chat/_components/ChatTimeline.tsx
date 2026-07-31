@@ -48,7 +48,9 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   }, []);
 
   useChatRealtimeMessages(roomId, (message) => {
-    setMessages((prev) => [...prev, message]);
+    // The optimistic append in handleSent and the Realtime echo both deliver our own
+    // message, so de-dupe by chat_id to avoid rendering it twice.
+    setMessages((prev) => (prev.some((m) => m.chat_id === message.chat_id) ? prev : [...prev, message]));
     if (isMember) {
       applyIncomingMessage(roomId, message.sender_user_id === currentUserId);
     }
@@ -74,7 +76,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   };
 
   const handleSent = (message: ChatMessage) => {
-    setMessages((prev) => [...prev, message]);
+    setMessages((prev) => (prev.some((m) => m.chat_id === message.chat_id) ? prev : [...prev, message]));
     requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }));
   };
 
