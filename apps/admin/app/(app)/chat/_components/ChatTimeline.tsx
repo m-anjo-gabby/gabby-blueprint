@@ -26,6 +26,8 @@ interface ChatTimelineProps {
 }
 
 const AVATAR_SIZE = 32;
+const AVATAR_GAP = 10; // gap-2.5
+const BUBBLE_PADDING_X = 16; // 吹き出しの px-4 分、本文の開始位置に揃える
 
 function formatHeaderTime(iso: string): string {
   return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日' });
@@ -211,28 +213,29 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
             return (
               <div
                 key={msg.chat_id}
-                className={`group flex ${showHeader ? 'pt-3' : ''} ${
-                  isMine ? 'flex-col items-end' : 'items-start gap-2.5'
-                }`}
+                className={`group flex flex-col ${showHeader ? 'pt-3' : ''} ${isMine ? 'items-end' : 'items-start'}`}
               >
-                {!isMine && (
-                  showHeader ? (
-                    <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} size={AVATAR_SIZE} />
+                {showHeader && (
+                  isMine ? (
+                    <div className="mb-1">
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                    </div>
                   ) : (
-                    <div style={{ width: AVATAR_SIZE }} className="shrink-0" />
+                    <div
+                      className="flex items-center gap-2 mb-1"
+                      style={{ paddingLeft: AVATAR_SIZE + AVATAR_GAP + BUBBLE_PADDING_X }}
+                    >
+                      <span className="text-xs font-bold text-slate-700">{sender?.user_name || '（名称未設定）'}</span>
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                    </div>
                   )
                 )}
-                <div className={`flex flex-col min-w-0 ${isMine ? 'items-end' : 'items-start'}`}>
-                  {showHeader && (
-                    isMine ? (
-                      <div className="mb-1">
-                        <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
-                      </div>
+                <div className={`flex min-w-0 ${isMine ? '' : 'items-start gap-2.5'}`}>
+                  {!isMine && (
+                    showHeader ? (
+                      <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} size={AVATAR_SIZE} />
                     ) : (
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-slate-700">{sender?.user_name || '（名称未設定）'}</span>
-                        <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
-                      </div>
+                      <div style={{ width: AVATAR_SIZE }} className="shrink-0" />
                     )
                   )}
                   <div className={`relative flex items-end gap-1.5 ${isMine ? 'justify-end' : 'justify-start'}`}>
