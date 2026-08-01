@@ -180,7 +180,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
                     </div>
                   )
                 )}
-                <div className={`flex min-w-0 ${isMine ? '' : 'items-start gap-2.5'}`}>
+                <div className={`flex min-w-0 max-w-full ${isMine ? '' : 'items-start gap-2.5'}`}>
                   {!isMine && (
                     showHeader ? (
                       <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} size={AVATAR_SIZE} />
@@ -188,7 +188,9 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
                       <div style={{ width: AVATAR_SIZE }} className="shrink-0" />
                     )
                   )}
-                  <div className={`relative flex items-end ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`relative flex min-w-0 max-w-full items-end ${isMine ? 'justify-end' : 'justify-start'}`}
+                  >
                     {!showHeader && (
                       <span
                         className={`absolute bottom-1 whitespace-nowrap text-[10px] text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 ${
@@ -199,7 +201,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
                       </span>
                     )}
                     <div
-                      className={`max-w-160 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
+                      className={`max-w-160 min-w-0 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
                         isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
                       }`}
                     >
