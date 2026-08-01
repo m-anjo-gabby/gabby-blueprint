@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, User as UserIcon } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronLeft, Loader2, User as UserIcon } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useChatRealtimeMessages } from '@gabby/lib/chat/realtime/useChatRealtimeMessages';
@@ -9,6 +10,7 @@ import { getChatMessages } from '@gabby/lib/chat/actions/messageActions';
 import { isContinuationMessage, formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { ChatMessage, ChatRoomListItem } from '@gabby/types/chat';
+import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { ChatMessageInput } from './ChatMessageInput';
 import { ChatMessageContent } from './ChatMessageContent';
 
@@ -20,6 +22,14 @@ interface ChatTimelineProps {
   isMember: boolean;
   members: ChatRoomListItem['members'];
 }
+
+const AVATAR_SIZE = 32;
+
+const USER_TYPE_LABEL_EN: Record<UserType, string> = {
+  [USER_TYPES.ADMIN]: 'Admin',
+  [USER_TYPES.STUDENT]: 'Student',
+  [USER_TYPES.COACH]: 'Coach',
+};
 
 function formatHeaderTime(iso: string): string {
   return formatMessageHeaderTime(iso, { locale: 'en-US', yesterdayLabel: 'Yesterday' });
@@ -60,6 +70,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
+  const otherMember = members.find((m) => m.user_id !== currentUserId);
 
   const markLatestAsRead = (latest: ChatMessage) => {
     if (!isMember) return;
@@ -110,6 +121,23 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="flex items-center gap-3 px-3 py-3 border-b border-slate-100 shrink-0">
+        <Link
+          href="/chat"
+          aria-label="Back to chat list"
+          className="flex items-center justify-center w-9 h-9 rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shrink-0"
+        >
+          <ChevronLeft size={24} />
+        </Link>
+        <MessageAvatar iconPath={otherMember?.icon_path} name={otherMember?.user_name} size={AVATAR_SIZE} />
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-slate-800 truncate">{otherMember?.user_name || 'Unknown'}</p>
+          {otherMember && (
+            <p className="text-[11px] text-slate-400">{USER_TYPE_LABEL_EN[otherMember.user_type] ?? 'Unknown'}</p>
+          )}
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto px-5 py-4">
         <div className="max-w-200 mx-auto space-y-0.5">
           {hasMore && (
@@ -133,37 +161,47 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
             return (
               <div
                 key={msg.chat_id}
-                className={`group flex flex-col ${isMine ? 'items-end' : 'items-start'} ${showHeader ? 'pt-3' : ''}`}
+                className={`group flex ${showHeader ? 'pt-3' : ''} ${
+                  isMine ? 'flex-col items-end' : 'items-start gap-2.5'
+                }`}
               >
-                {showHeader && (
-                  isMine ? (
-                    <div className="mb-1">
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
-                    </div>
+                {!isMine && (
+                  showHeader ? (
+                    <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} size={AVATAR_SIZE} />
                   ) : (
-                    <div className="flex items-center gap-2 mb-1">
-                      <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} />
-                      <span className="text-xs font-bold text-slate-700">{sender?.user_name || 'Unknown'}</span>
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
-                    </div>
+                    <div style={{ width: AVATAR_SIZE }} className="shrink-0" />
                   )
                 )}
-                <div className={`relative flex items-end ${isMine ? 'justify-end' : 'justify-start'}`}>
-                  {!showHeader && (
-                    <span
-                      className={`absolute bottom-1 whitespace-nowrap text-[10px] text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 ${
-                        isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
+                <div className={`flex flex-col min-w-0 ${isMine ? 'items-end' : 'items-start'}`}>
+                  {showHeader && (
+                    isMine ? (
+                      <div className="mb-1">
+                        <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold text-slate-700">{sender?.user_name || 'Unknown'}</span>
+                        <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                      </div>
+                    )
+                  )}
+                  <div className={`relative flex items-end ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    {!showHeader && (
+                      <span
+                        className={`absolute bottom-1 whitespace-nowrap text-[10px] text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 ${
+                          isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
+                        }`}
+                      >
+                        {formatHeaderTime(msg.created_at)}
+                      </span>
+                    )}
+                    <div
+                      className={`max-w-160 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
+                        isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
                       }`}
                     >
-                      {formatHeaderTime(msg.created_at)}
-                    </span>
-                  )}
-                  <div
-                    className={`max-w-160 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
-                      isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
-                    }`}
-                  >
-                    <ChatMessageContent message={msg} />
+                      <ChatMessageContent message={msg} />
+                    </div>
                   </div>
                 </div>
               </div>

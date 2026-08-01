@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Trash2, User as UserIcon } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronLeft, Loader2, ShieldCheck, Trash2, User as UserIcon } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
@@ -11,7 +12,7 @@ import { getChatMessages, deleteChatMessage } from '@gabby/lib/chat/actions/mess
 import { isContinuationMessage, formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { ChatMessage, ChatRoomListItem } from '@gabby/types/chat';
-import { USER_TYPES } from '@gabby/types/user';
+import { getUserTypeLabel, USER_TYPES } from '@gabby/types/user';
 import { ChatMessageInput } from './ChatMessageInput';
 import { ChatMessageContent } from './ChatMessageContent';
 
@@ -23,6 +24,8 @@ interface ChatTimelineProps {
   isMember: boolean;
   members: ChatRoomListItem['members'];
 }
+
+const AVATAR_SIZE = 32;
 
 function formatHeaderTime(iso: string): string {
   return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日' });
@@ -67,6 +70,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
+  const otherMember = members.find((m) => m.user_id !== currentUserId);
 
   const markLatestAsRead = (latest: ChatMessage) => {
     if (!isMember) return;
@@ -137,6 +141,52 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="flex items-center gap-3 px-3 py-3 border-b border-slate-100 shrink-0">
+        <Link
+          href="/chat"
+          aria-label="チャット一覧へ戻る"
+          className="flex items-center justify-center w-9 h-9 rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shrink-0"
+        >
+          <ChevronLeft size={24} />
+        </Link>
+
+        {isMember ? (
+          <>
+            <MessageAvatar iconPath={otherMember?.icon_path} name={otherMember?.user_name} size={AVATAR_SIZE} />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-800 truncate">
+                {otherMember?.user_name || '（名称未設定）'}
+              </p>
+              {otherMember && (
+                <p className="text-[11px] text-slate-400">{getUserTypeLabel(otherMember.user_type)}</p>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div
+              style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
+              className="rounded-full bg-amber-50 flex items-center justify-center shrink-0"
+            >
+              <ShieldCheck size={16} className="text-amber-500" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-slate-800 truncate">
+                  {members.map((m) => m.user_name || '（名称未設定）').join(' ⇔ ')}
+                </p>
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shrink-0">
+                  査閲モード
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 truncate">
+                {members.map((m) => `${m.user_name || '（名称未設定）'}（${getUserTypeLabel(m.user_type)}）`).join(' / ')}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="flex-1 overflow-y-auto px-5 py-4">
         <div className="max-w-200 mx-auto space-y-0.5">
           {hasMore && (
@@ -161,56 +211,66 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
             return (
               <div
                 key={msg.chat_id}
-                className={`group flex flex-col ${isMine ? 'items-end' : 'items-start'} ${showHeader ? 'pt-3' : ''}`}
+                className={`group flex ${showHeader ? 'pt-3' : ''} ${
+                  isMine ? 'flex-col items-end' : 'items-start gap-2.5'
+                }`}
               >
-                {showHeader && (
-                  isMine ? (
-                    <div className="mb-1">
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
-                    </div>
+                {!isMine && (
+                  showHeader ? (
+                    <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} size={AVATAR_SIZE} />
                   ) : (
-                    <div className="flex items-center gap-2 mb-1">
-                      <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} />
-                      <span className="text-xs font-bold text-slate-700">{sender?.user_name || '（名称未設定）'}</span>
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
-                    </div>
+                    <div style={{ width: AVATAR_SIZE }} className="shrink-0" />
                   )
                 )}
-                <div className={`relative flex items-end gap-1.5 ${isMine ? 'justify-end' : 'justify-start'}`}>
-                  {!showHeader && (
-                    <span
-                      className={`absolute bottom-1 whitespace-nowrap text-[10px] text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 ${
-                        isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
+                <div className={`flex flex-col min-w-0 ${isMine ? 'items-end' : 'items-start'}`}>
+                  {showHeader && (
+                    isMine ? (
+                      <div className="mb-1">
+                        <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold text-slate-700">{sender?.user_name || '（名称未設定）'}</span>
+                        <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                      </div>
+                    )
+                  )}
+                  <div className={`relative flex items-end gap-1.5 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    {!showHeader && (
+                      <span
+                        className={`absolute bottom-1 whitespace-nowrap text-[10px] text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 ${
+                          isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
+                        }`}
+                      >
+                        {formatHeaderTime(msg.created_at)}
+                      </span>
+                    )}
+                    {canDelete && isMine && (
+                      <button
+                        onClick={() => handleDelete(msg.chat_id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-rose-500 shrink-0 mb-1"
+                        title="削除する"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                    <div
+                      className={`max-w-160 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
+                        isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
                       }`}
                     >
-                      {formatHeaderTime(msg.created_at)}
-                    </span>
-                  )}
-                  {canDelete && isMine && (
-                    <button
-                      onClick={() => handleDelete(msg.chat_id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-rose-500 shrink-0 mb-1"
-                      title="削除する"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                  <div
-                    className={`max-w-160 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
-                      isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
-                    }`}
-                  >
-                    <ChatMessageContent message={msg} />
+                      <ChatMessageContent message={msg} />
+                    </div>
+                    {canDelete && !isMine && (
+                      <button
+                        onClick={() => handleDelete(msg.chat_id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-rose-500 shrink-0 mb-1"
+                        title="削除する"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
-                  {canDelete && !isMine && (
-                    <button
-                      onClick={() => handleDelete(msg.chat_id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-rose-500 shrink-0 mb-1"
-                      title="削除する"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
                 </div>
               </div>
             );
