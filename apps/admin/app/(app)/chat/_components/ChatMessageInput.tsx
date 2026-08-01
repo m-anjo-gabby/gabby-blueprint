@@ -76,64 +76,66 @@ export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
   };
 
   return (
-    <div className="border-t border-slate-100 p-4 space-y-2">
-      {pendingAttachments.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {pendingAttachments.map((a) => (
-            <div
-              key={a.file_path}
-              className="flex items-center gap-1.5 bg-slate-100 rounded-lg pl-2 pr-1 py-1 text-xs text-slate-600"
-            >
-              <FileText size={13} className="shrink-0" />
-              <span className="max-w-40 truncate">{a.file_name}</span>
-              <span className="text-slate-400 shrink-0">{formatFileSize(a.file_size)}</span>
-              <button
-                type="button"
-                onClick={() => handleRemovePending(a.file_path)}
-                className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5"
-                title="削除"
+    <div className="border-t border-slate-100 p-4">
+      <div className="max-w-200 mx-auto space-y-2">
+        {pendingAttachments.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {pendingAttachments.map((a) => (
+              <div
+                key={a.file_path}
+                className="flex items-center gap-1.5 bg-slate-100 rounded-lg pl-2 pr-1 py-1 text-xs text-slate-600"
               >
-                <X size={13} />
-              </button>
-            </div>
-          ))}
+                <FileText size={13} className="shrink-0" />
+                <span className="max-w-40 truncate">{a.file_name}</span>
+                <span className="text-slate-400 shrink-0">{formatFileSize(a.file_size)}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemovePending(a.file_path)}
+                  className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5"
+                  title="削除"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-end gap-2">
+          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            disabled={busy}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
+          </Button>
+
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="メッセージを入力（Shift+Enterで改行）"
+            className="min-h-10 max-h-32 resize-none"
+            disabled={busy}
+          />
+
+          <Button
+            type="button"
+            size="icon"
+            disabled={(!text.trim() && pendingAttachments.length === 0) || busy}
+            onClick={handleSend}
+          >
+            {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+          </Button>
         </div>
-      )}
-
-      <div className="flex items-end gap-2">
-        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          disabled={busy}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
-        </Button>
-
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          placeholder="メッセージを入力（Shift+Enterで改行）"
-          className="min-h-10 max-h-32 resize-none"
-          disabled={busy}
-        />
-
-        <Button
-          type="button"
-          size="icon"
-          disabled={(!text.trim() && pendingAttachments.length === 0) || busy}
-          onClick={handleSend}
-        >
-          {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-        </Button>
       </div>
     </div>
   );

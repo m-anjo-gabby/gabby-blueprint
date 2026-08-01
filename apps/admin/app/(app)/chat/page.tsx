@@ -13,7 +13,9 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <ChatRoomList />
+      <div className="flex-1 min-h-0 flex flex-col max-w-xl">
+        <ChatRoomList />
+      </div>
     </div>
   );
 }

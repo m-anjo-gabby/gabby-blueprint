@@ -110,48 +110,67 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-0.5">
-        {hasMore && (
-          <div className="flex justify-center pb-2">
-            <button
-              onClick={handleLoadMore}
-              disabled={isLoadingMore}
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 disabled:opacity-50 flex items-center gap-1.5"
-            >
-              {isLoadingMore && <Loader2 size={14} className="animate-spin" />}
-              Load earlier messages
-            </button>
-          </div>
-        )}
-
-        {messages.map((msg, idx) => {
-          const isMine = msg.sender_user_id === currentUserId;
-          const showHeader = !isContinuationMessage(msg, messages[idx - 1]);
-          const sender = memberByUserId.get(msg.sender_user_id);
-
-          return (
-            <div
-              key={msg.chat_id}
-              className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} ${showHeader ? 'pt-3' : ''}`}
-            >
-              {showHeader && (
-                <div className={`flex items-center gap-2 mb-1 ${isMine ? 'flex-row-reverse' : ''}`}>
-                  <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} />
-                  <span className="text-xs font-bold text-slate-700">{sender?.user_name || 'Unknown'}</span>
-                  <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
-                </div>
-              )}
-              <div
-                className={`max-w-[70%] rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
-                  isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
-                } ${showHeader ? '' : isMine ? 'mr-9' : 'ml-9'}`}
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="max-w-200 mx-auto space-y-0.5">
+          {hasMore && (
+            <div className="flex justify-center pb-2">
+              <button
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 disabled:opacity-50 flex items-center gap-1.5"
               >
-                <ChatMessageContent message={msg} />
-              </div>
+                {isLoadingMore && <Loader2 size={14} className="animate-spin" />}
+                Load earlier messages
+              </button>
             </div>
-          );
-        })}
-        <div ref={bottomRef} />
+          )}
+
+          {messages.map((msg, idx) => {
+            const isMine = msg.sender_user_id === currentUserId;
+            const showHeader = !isContinuationMessage(msg, messages[idx - 1]);
+            const sender = memberByUserId.get(msg.sender_user_id);
+
+            return (
+              <div
+                key={msg.chat_id}
+                className={`group flex flex-col ${isMine ? 'items-end' : 'items-start'} ${showHeader ? 'pt-3' : ''}`}
+              >
+                {showHeader && (
+                  isMine ? (
+                    <div className="mb-1">
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mb-1">
+                      <MessageAvatar iconPath={sender?.icon_path} name={sender?.user_name} />
+                      <span className="text-xs font-bold text-slate-700">{sender?.user_name || 'Unknown'}</span>
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                    </div>
+                  )
+                )}
+                <div className={`relative flex items-end ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  {!showHeader && (
+                    <span
+                      className={`absolute bottom-1 whitespace-nowrap text-[10px] text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 ${
+                        isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
+                      }`}
+                    >
+                      {formatHeaderTime(msg.created_at)}
+                    </span>
+                  )}
+                  <div
+                    className={`max-w-160 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
+                      isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
+                    }`}
+                  >
+                    <ChatMessageContent message={msg} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
       {isMember ? (
