@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Loader2, ShieldCheck, Trash2, User as UserIcon } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -28,6 +28,9 @@ interface ChatTimelineProps {
 const AVATAR_SIZE = 32;
 const AVATAR_GAP = 10; // gap-2.5
 const BUBBLE_PADDING_X = 16; // 吹き出しの px-4 分、本文の開始位置に揃える
+// この距離（px）以内なら「下端に張り付いている」とみなし、後からのコンテンツ増加
+// （添付画像の非同期ロード完了など）でも下端へ再追従させる
+const STICK_TO_BOTTOM_THRESHOLD_PX = 80;
 
 function formatHeaderTime(iso: string): string {
   return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日' });
@@ -70,6 +73,16 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  // 過去メッセージを先頭に追加する直前に退避し、下のlayout effectで復元する
+  // （追加後も表示位置が飛ばずLINE/Meetのように自然にスクロールが繋がる）
+  const pendingScrollRestoreRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
+  // 最新メッセージに追従すべきかどうか。添付画像などは非同期に読み込まれ初回マウント後も
+  // 高さが変化し続けるため、単発の scrollIntoView だけでは下端まで届かないことがある
+  // （下のResizeObserverで補正する）
+  const stickToBottomRef = useRef(true);
 
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
   const otherMember = members.find((m) => m.user_id !== currentUserId);
@@ -88,6 +101,59 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // コンテンツが増え続ける間（添付画像の解決・読み込みは初回マウント後に完了するため）下端へ
+  // 追従させる。stickToBottomRef が true の間だけ動作するため、過去ログを読んでいる
+  // ユーザーのスクロールを妨げることはない
+  useEffect(() => {
+    const content = contentRef.current;
+    const container = containerRef.current;
+    if (!content || !container) return;
+
+    const observer = new ResizeObserver(() => {
+      if (stickToBottomRef.current) {
+        container.scrollTop = container.scrollHeight;
+      }
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleScroll = () => {
+    const container = containerRef.current;
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    stickToBottomRef.current = distanceFromBottom < STICK_TO_BOTTOM_THRESHOLD_PX;
+  };
+
+  // 過去メッセージ追加後にスクロール位置を復元し、コンテンツが上に増えても表示が飛ばないようにする
+  useLayoutEffect(() => {
+    const restore = pendingScrollRestoreRef.current;
+    const container = containerRef.current;
+    if (!restore || !container) return;
+    container.scrollTop = container.scrollHeight - restore.scrollHeight + restore.scrollTop;
+    pendingScrollRestoreRef.current = null;
+  }, [messages]);
+
+  const loadMoreRef = useRef<() => void>(() => {});
+
+  // タイムライン上部までスクロールした際に過去メッセージを自動取得する（LINE/Meetのような無限スクロール）
+  useEffect(() => {
+    const container = containerRef.current;
+    const sentinel = sentinelRef.current;
+    if (!container || !sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMoreRef.current();
+        }
+      },
+      { root: container, threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
   useChatRealtimeMessages(roomId, (message) => {
     // 自分の送信メッセージは handleSent の楽観的追加と Realtime のエコーが両方届くため重複排除する
     setMessages((prev) => (prev.some((m) => m.chat_id === message.chat_id) ? prev : [...prev, message]));
@@ -101,12 +167,16 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   });
 
   const handleLoadMore = async () => {
-    if (messages.length === 0) return;
+    if (messages.length === 0 || isLoadingMore || !hasMore) return;
+    const container = containerRef.current;
     setIsLoadingMore(true);
     try {
       const oldest = messages[0];
       const res = await getChatMessages({ roomId, cursor: oldest.created_at });
       if (res.success) {
+        if (container) {
+          pendingScrollRestoreRef.current = { scrollHeight: container.scrollHeight, scrollTop: container.scrollTop };
+        }
         setMessages((prev) => [...[...res.data].reverse(), ...prev]);
         setHasMore(res.hasMore);
       }
@@ -114,6 +184,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
       setIsLoadingMore(false);
     }
   };
+  loadMoreRef.current = handleLoadMore;
 
   const handleSent = (message: ChatMessage) => {
     setMessages((prev) => (prev.some((m) => m.chat_id === message.chat_id) ? prev : [...prev, message]));
@@ -189,18 +260,12 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-4">
-        <div className="max-w-200 mx-auto space-y-0.5">
-          {hasMore && (
+      <div ref={containerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-5 py-4">
+        <div ref={contentRef} className="max-w-200 mx-auto space-y-0.5">
+          <div ref={sentinelRef} />
+          {isLoadingMore && (
             <div className="flex justify-center pb-2">
-              <button
-                onClick={handleLoadMore}
-                disabled={isLoadingMore}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {isLoadingMore && <Loader2 size={14} className="animate-spin" />}
-                過去のメッセージを読み込む
-              </button>
+              <Loader2 size={14} className="animate-spin text-slate-400" />
             </div>
           )}
 

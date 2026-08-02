@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Loader2, User as UserIcon } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -26,6 +26,9 @@ interface ChatTimelineProps {
 const AVATAR_SIZE = 32;
 const AVATAR_GAP = 10; // gap-2.5
 const BUBBLE_PADDING_X = 16; // bubble's px-4, aligns header with the message text start
+// Below this distance (px) from the bottom, we consider the user "stuck" to the bottom, so
+// later content growth (e.g. attachment images finishing their async load) re-pins the view.
+const STICK_TO_BOTTOM_THRESHOLD_PX = 80;
 
 const USER_TYPE_LABEL_EN: Record<UserType, string> = {
   [USER_TYPES.ADMIN]: 'Admin',
@@ -70,6 +73,16 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  // Set before prepending older messages; consumed by the layout effect below to keep the
+  // viewport anchored on the same message instead of jumping to the top (LINE/Meet-style).
+  const pendingScrollRestoreRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
+  // Whether the view should stay pinned to the latest message. Content (e.g. attachment images)
+  // can keep growing asynchronously after the initial mount, so a one-off scrollIntoView isn't
+  // enough to land exactly at the bottom — this flag drives the ResizeObserver correction below.
+  const stickToBottomRef = useRef(true);
 
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
   const otherMember = members.find((m) => m.user_id !== currentUserId);
@@ -88,6 +101,61 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Keeps the view pinned to the bottom while content keeps growing (attachment images resolve
+  // and load asynchronously, so height changes after the initial mount scroll above). Only acts
+  // while stickToBottomRef is true, so it never fights a user who has scrolled up to read history.
+  useEffect(() => {
+    const content = contentRef.current;
+    const container = containerRef.current;
+    if (!content || !container) return;
+
+    const observer = new ResizeObserver(() => {
+      if (stickToBottomRef.current) {
+        container.scrollTop = container.scrollHeight;
+      }
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleScroll = () => {
+    const container = containerRef.current;
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    stickToBottomRef.current = distanceFromBottom < STICK_TO_BOTTOM_THRESHOLD_PX;
+  };
+
+  // Restores the scroll position after older messages are prepended, so the viewport stays
+  // anchored on what the user was looking at instead of jumping when the content grows above it.
+  useLayoutEffect(() => {
+    const restore = pendingScrollRestoreRef.current;
+    const container = containerRef.current;
+    if (!restore || !container) return;
+    container.scrollTop = container.scrollHeight - restore.scrollHeight + restore.scrollTop;
+    pendingScrollRestoreRef.current = null;
+  }, [messages]);
+
+  const loadMoreRef = useRef<() => void>(() => {});
+
+  // Auto-loads older messages when the user scrolls near the top of the timeline, mirroring
+  // LINE/Meet's infinite-scroll behavior instead of requiring an explicit button click.
+  useEffect(() => {
+    const container = containerRef.current;
+    const sentinel = sentinelRef.current;
+    if (!container || !sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMoreRef.current();
+        }
+      },
+      { root: container, threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
   useChatRealtimeMessages(roomId, (message) => {
     // The optimistic append in handleSent and the Realtime echo both deliver our own
     // message, so de-dupe by chat_id to avoid rendering it twice.
@@ -102,12 +170,16 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   });
 
   const handleLoadMore = async () => {
-    if (messages.length === 0) return;
+    if (messages.length === 0 || isLoadingMore || !hasMore) return;
+    const container = containerRef.current;
     setIsLoadingMore(true);
     try {
       const oldest = messages[0];
       const res = await getChatMessages({ roomId, cursor: oldest.created_at });
       if (res.success) {
+        if (container) {
+          pendingScrollRestoreRef.current = { scrollHeight: container.scrollHeight, scrollTop: container.scrollTop };
+        }
         setMessages((prev) => [...[...res.data].reverse(), ...prev]);
         setHasMore(res.hasMore);
       }
@@ -115,6 +187,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
       setIsLoadingMore(false);
     }
   };
+  loadMoreRef.current = handleLoadMore;
 
   const handleSent = (message: ChatMessage) => {
     setMessages((prev) => (prev.some((m) => m.chat_id === message.chat_id) ? prev : [...prev, message]));
@@ -140,18 +213,12 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-4">
-        <div className="max-w-200 mx-auto space-y-0.5">
-          {hasMore && (
+      <div ref={containerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-5 py-4">
+        <div ref={contentRef} className="max-w-200 mx-auto space-y-0.5">
+          <div ref={sentinelRef} />
+          {isLoadingMore && (
             <div className="flex justify-center pb-2">
-              <button
-                onClick={handleLoadMore}
-                disabled={isLoadingMore}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {isLoadingMore && <Loader2 size={14} className="animate-spin" />}
-                Load earlier messages
-              </button>
+              <Loader2 size={14} className="animate-spin text-slate-400" />
             </div>
           )}
 

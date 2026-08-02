@@ -115,7 +115,7 @@ export async function getChatMessages(params: {
   cursor?: string;
 }): Promise<{ success: boolean; data: ChatMessage[]; hasMore: boolean; error?: string }> {
   const ctx = await getLogContext();
-  const limit = params.limit ?? 30;
+  const limit = params.limit ?? 20;
 
   try {
     const supabase = await createServerClient();
