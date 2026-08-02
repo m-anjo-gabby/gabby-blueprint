@@ -13,7 +13,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col max-w-xl">
+      <div className="flex-1 min-h-0 flex flex-col">
         <ChatRoomList />
       </div>
     </div>

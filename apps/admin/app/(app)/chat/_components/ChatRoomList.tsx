@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { MessageCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
@@ -11,7 +11,26 @@ import { ChatRoomListItem } from '@gabby/types/chat';
 import { getChatMessagePreviewText } from '@gabby/lib/chat/formatChatPreview';
 import { formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { CreateChatRoomDialog } from './CreateChatRoomDialog';
+
+// 顧客フィルターをリセットするための「すべての顧客」選択肢
+const ALL_CLIENTS_OPTION = { value: '', label: 'すべての顧客（絞り込みなし）' };
+
+/** ルーム一覧の参加者から、参照可能な顧客の選択肢を重複なく抽出する */
+function getRoomClientOptions(rooms: ChatRoomListItem[]): { value: string; label: string }[] {
+  const clientNameById = new Map<string, string>();
+  for (const room of rooms) {
+    for (const member of room.members) {
+      if (member.client_id) {
+        clientNameById.set(member.client_id, member.client_name || '（顧客名未設定）');
+      }
+    }
+  }
+  return Array.from(clientNameById.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'ja'));
+}
 
 function formatTime(iso: string, timeZone: string): string {
   return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日', timeZone });
@@ -46,6 +65,7 @@ export function ChatRoomList() {
   const [mode, setMode] = useState<'mine' | 'all'>('mine');
   // null: 未取得（読み込み中）
   const [allRooms, setAllRooms] = useState<ChatRoomListItem[] | null>(null);
+  const [clientFilter, setClientFilter] = useState('');
 
   useEffect(() => {
     fetchMyRooms();
@@ -62,12 +82,21 @@ export function ChatRoomList() {
     };
   }, [mode]);
 
-  const rooms = mode === 'mine' ? myRooms : allRooms ?? [];
+  const sourceRooms = mode === 'mine' ? myRooms : allRooms ?? [];
   const isLoading = mode === 'mine' ? isLoadingMyRooms : allRooms === null;
+
+  const clientOptions = useMemo(() => getRoomClientOptions(sourceRooms), [sourceRooms]);
+  const rooms = useMemo(
+    () =>
+      clientFilter
+        ? sourceRooms.filter((room) => room.members.some((m) => m.client_id === clientFilter))
+        : sourceRooms,
+    [sourceRooms, clientFilter]
+  );
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="flex justify-between items-center p-4 border-b border-slate-100 gap-3">
+      <div className="flex flex-wrap justify-between items-center p-4 border-b border-slate-100 gap-3">
         {isAdmin ? (
           <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
             <button
@@ -91,14 +120,27 @@ export function ChatRoomList() {
         ) : (
           <span />
         )}
-        <CreateChatRoomDialog onCreated={() => fetchMyRooms(true)} />
+
+        <div className="flex items-center gap-3">
+          <SearchableSelect
+            options={[ALL_CLIENTS_OPTION, ...clientOptions]}
+            value={clientFilter}
+            onChange={setClientFilter}
+            placeholder="顧客で絞り込み"
+            searchPlaceholder="顧客名で検索..."
+            className="w-56"
+          />
+          <CreateChatRoomDialog onCreated={() => fetchMyRooms(true)} />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
         {!isLoading && rooms.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-400">
             <MessageCircle size={32} strokeWidth={1.5} />
-            <p className="text-[13px] font-bold">チャットルームがありません</p>
+            <p className="text-[13px] font-bold">
+              {clientFilter ? '該当する顧客のチャットルームがありません' : 'チャットルームがありません'}
+            </p>
             <p className="text-xs">「新規チャット作成」からコーチ・生徒とのチャットを開始できます</p>
           </div>
         )}

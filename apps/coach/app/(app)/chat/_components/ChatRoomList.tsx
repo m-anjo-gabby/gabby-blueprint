@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { MessageCircle, User as UserIcon } from 'lucide-react';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
@@ -9,7 +9,7 @@ import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { getChatMessagePreviewText } from '@gabby/lib/chat/formatChatPreview';
 import { formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import type { ChatMessage } from '@gabby/types/chat';
+import type { ChatMessage, ChatRoomListItem } from '@gabby/types/chat';
 
 const USER_TYPE_LABEL_EN: Record<UserType, string> = {
   [USER_TYPES.ADMIN]: 'Admin',
@@ -30,24 +30,69 @@ function getPreviewText(message: ChatMessage | null): string {
   });
 }
 
+/** Derive the distinct customers referenced by the members of the visible rooms. */
+function getRoomClientOptions(rooms: ChatRoomListItem[]): { value: string; label: string }[] {
+  const clientNameById = new Map<string, string>();
+  for (const room of rooms) {
+    for (const member of room.members) {
+      if (member.client_id) {
+        clientNameById.set(member.client_id, member.client_name || 'Unnamed customer');
+      }
+    }
+  }
+  return Array.from(clientNameById.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export function ChatRoomList() {
-  const rooms = useChatStore((state) => state.rooms);
+  const allRooms = useChatStore((state) => state.rooms);
   const isLoading = useChatStore((state) => state.isLoading);
   const fetchRooms = useChatStore((state) => state.fetchRooms);
   const currentUserId = useUserStore((state) => state.user?.id);
   const timeZone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
+  const [clientFilter, setClientFilter] = useState('');
+
   useEffect(() => {
     fetchRooms();
   }, [fetchRooms]);
 
+  const clientOptions = useMemo(() => getRoomClientOptions(allRooms), [allRooms]);
+  const rooms = useMemo(
+    () =>
+      clientFilter
+        ? allRooms.filter((room) => room.members.some((m) => m.client_id === clientFilter))
+        : allRooms,
+    [allRooms, clientFilter]
+  );
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {clientOptions.length > 0 && (
+        <div className="flex justify-end items-center p-4 border-b border-slate-100">
+          <select
+            value={clientFilter}
+            onChange={(e) => setClientFilter(e.target.value)}
+            className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
+          >
+            <option value="">All customers</option>
+            {clientOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
         {!isLoading && rooms.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-400">
             <MessageCircle size={32} strokeWidth={1.5} />
-            <p className="text-[13px] font-bold">No chat rooms yet</p>
+            <p className="text-[13px] font-bold">
+              {clientFilter ? 'No chat rooms for this customer' : 'No chat rooms yet'}
+            </p>
             <p className="text-xs">An admin will create a chat room for you to start a conversation.</p>
           </div>
         )}

@@ -117,6 +117,8 @@ export interface ChatRoomListItem extends ChatRoom {
     user_name: string | null;
     user_type: UserType;
     icon_path: string | null;
+    client_id: string | null;
+    client_name: string | null;
   }[];
   /** ログイン中のユーザーがこのルームの参加者かどうか（Adminの全ルーム査閲時に使用） */
   is_member: boolean;

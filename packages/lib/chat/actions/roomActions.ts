@@ -261,7 +261,7 @@ async function buildChatRoomListItems(
   const [{ data: allMembers }, { data: recentMessages }, { data: lastReadMessages }] = await Promise.all([
     supabase
       .from('com_t_chat_room_user')
-      .select('room_id, user_id, user_type, com_m_user(user_name, icon_path)')
+      .select('room_id, user_id, user_type, com_m_user(user_name, icon_path, client_id, com_m_client(client_name))')
       .in('room_id', roomIds)
       .is('left_at', null),
     // 直近メッセージのみを対象に「最新メッセージ」「未読件数」を算出する（大量履歴を毎回全走査しないための現実的な上限）
@@ -306,11 +306,14 @@ async function buildChatRoomListItems(
   for (const m of (allMembers || []) as any[]) {
     const list = membersByRoom.get(m.room_id) || [];
     const userInfo = Array.isArray(m.com_m_user) ? m.com_m_user[0] : m.com_m_user;
+    const clientInfo = Array.isArray(userInfo?.com_m_client) ? userInfo.com_m_client[0] : userInfo?.com_m_client;
     list.push({
       user_id: m.user_id,
       user_name: userInfo?.user_name ?? null,
       user_type: m.user_type,
       icon_path: userInfo?.icon_path ?? null,
+      client_id: userInfo?.client_id ?? null,
+      client_name: clientInfo?.client_name ?? null,
     });
     membersByRoom.set(m.room_id, list);
   }
@@ -457,17 +460,20 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     const { data: members } = await supabase
       .from('com_t_chat_room_user')
-      .select('user_id, user_type, com_m_user(user_name, icon_path)')
+      .select('user_id, user_type, com_m_user(user_name, icon_path, client_id, com_m_client(client_name))')
       .eq('room_id', roomId)
       .is('left_at', null);
 
     const memberList = ((members || []) as any[]).map((m) => {
       const userInfo = Array.isArray(m.com_m_user) ? m.com_m_user[0] : m.com_m_user;
+      const clientInfo = Array.isArray(userInfo?.com_m_client) ? userInfo.com_m_client[0] : userInfo?.com_m_client;
       return {
         user_id: m.user_id as string,
         user_name: (userInfo?.user_name ?? null) as string | null,
         user_type: m.user_type,
         icon_path: (userInfo?.icon_path ?? null) as string | null,
+        client_id: (userInfo?.client_id ?? null) as string | null,
+        client_name: (clientInfo?.client_name ?? null) as string | null,
       };
     });
 
