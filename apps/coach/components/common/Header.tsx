@@ -15,7 +15,7 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { signOut } from '@/actions/adminAuthAction';
+import { signOut } from '@/actions/coachAuthAction';
 
 export default function Header() {
   const user = useUserStore((state) => state.user);
@@ -26,8 +26,8 @@ export default function Header() {
 
   const handleSignOut = async () => {
     const ok = await showConfirm(
-      'ログアウトの確認',
-      'セッションを終了してログアウトします。よろしいですか？',
+      'Confirm Logout',
+      'This will end your session and log you out. Are you sure?',
       { variant: 'danger', isModal: true }
     );
     if (ok) await signOut();
@@ -35,23 +35,26 @@ export default function Header() {
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
-      {/* 左側：ハンバーガー（モバイルのみ）＋ ロゴ */}
+      {/* Left: hamburger (mobile only) + logo */}
       <div className="flex items-center gap-3">
         <button
           onClick={toggleMobileSidebar}
           className="lg:hidden p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
-          aria-label="メニューを開く"
+          aria-label="Open menu"
         >
           {isMobileSidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
         <Link href="/dashboard" className="flex items-center gap-2.5 select-none hover:opacity-80 transition-opacity">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black italic shadow-lg shadow-indigo-500/20 shrink-0">B</div>
-          <span className="hidden sm:block text-slate-800 font-black tracking-tighter text-lg leading-none">Blueprint</span>
+          <div className="hidden sm:flex flex-col leading-none">
+            <span className="text-slate-800 font-black tracking-tighter text-lg leading-none">Blueprint</span>
+            <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Coach</span>
+          </div>
         </Link>
       </div>
 
-      {/* 右側：アカウントドロップダウン */}
+      {/* Right: account dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 hover:bg-slate-100 transition-all outline-none active:scale-95">
@@ -71,7 +74,7 @@ export default function Header() {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-slate-100" align="end">
-          {/* プロフィール概要 */}
+          {/* Profile summary */}
           <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 overflow-hidden shrink-0">
               {profileIconUrl ? (
@@ -95,7 +98,7 @@ export default function Header() {
 
           <DropdownMenuItem asChild>
             <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
-              <UserIcon size={14} /> プロフィール
+              <UserIcon size={14} /> Profile
             </Link>
           </DropdownMenuItem>
 
@@ -105,7 +108,7 @@ export default function Header() {
             onClick={handleSignOut}
             className="flex items-center gap-2 text-xs font-bold text-rose-500 cursor-pointer hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-600"
           >
-            <LogOut size={14} /> ログアウト
+            <LogOut size={14} /> Logout
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

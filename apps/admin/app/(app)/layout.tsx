@@ -1,6 +1,7 @@
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
+import Header from '@/components/common/Header';
 import Sidebar from '@/components/common/Sidebar';
 import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
@@ -33,16 +34,22 @@ export default async function AdminAppLayout({
       <UserStoreInitializer user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }} />
       
       {/* --- 旧 AdminLayout のデザイン構造 --- */}
-      <div className="flex h-screen overflow-hidden bg-slate-50">
-        {/* 左側: サイドバー (Desktopでは固定表示) */}
-        <Sidebar />
+      {/* ヘッダーエリア / サイドメニュー / メインエリアの3ペイン構成 */}
+      <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
+        {/* 上部: ヘッダー（ハンバーガー・ロゴ・アカウント） */}
+        <Header />
 
-        {/* 右側: メインコンテンツ */}
-        <div className="flex flex-col flex-1 min-w-0 h-screen relative">
-          {/* スクロール可能なコンテンツエリア */}
-          <main className="flex-1 flex flex-col overflow-y-auto min-h-0 p-4 md:p-6 relative">
-            {children}
-          </main>
+        <div className="flex flex-1 min-h-0">
+          {/* 左側: サイドバー (Desktopでは固定表示、モバイルはハンバーガーで開閉) */}
+          <Sidebar />
+
+          {/* 右側: メインコンテンツ */}
+          <div className="flex flex-col flex-1 min-w-0 relative">
+            {/* スクロール可能なコンテンツエリア */}
+            <main className="flex-1 flex flex-col overflow-y-auto min-h-0 p-4 md:p-6 relative">
+              {children}
+            </main>
+          </div>
         </div>
       </div>
 
