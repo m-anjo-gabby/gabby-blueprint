@@ -36,8 +36,8 @@ const USER_TYPE_LABEL_EN: Record<UserType, string> = {
   [USER_TYPES.COACH]: 'Coach',
 };
 
-function formatHeaderTime(iso: string): string {
-  return formatMessageHeaderTime(iso, { locale: 'en-US', yesterdayLabel: 'Yesterday' });
+function formatHeaderTime(iso: string, timeZone: string): string {
+  return formatMessageHeaderTime(iso, { locale: 'en-US', yesterdayLabel: 'Yesterday', timeZone });
 }
 
 function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null; name?: string | null; size?: number }) {
@@ -65,6 +65,7 @@ function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null
 
 export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember, members }: ChatTimelineProps) {
   const currentUserId = useUserStore((state) => state.user?.id);
+  const timeZone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const markRoomAsRead = useChatStore((state) => state.markRoomAsRead);
   const applyIncomingMessage = useChatStore((state) => state.applyIncomingMessage);
 
@@ -224,7 +225,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
 
           {messages.map((msg, idx) => {
             const isMine = msg.sender_user_id === currentUserId;
-            const showHeader = !isContinuationMessage(msg, messages[idx - 1]);
+            const showHeader = !isContinuationMessage(msg, messages[idx - 1], timeZone);
             const sender = memberByUserId.get(msg.sender_user_id);
 
             return (
@@ -235,7 +236,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
                 {showHeader && (
                   isMine ? (
                     <div className="mb-1">
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone)}</span>
                     </div>
                   ) : (
                     <div
@@ -243,7 +244,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
                       style={{ paddingLeft: AVATAR_SIZE + AVATAR_GAP + BUBBLE_PADDING_X }}
                     >
                       <span className="text-xs font-bold text-slate-700">{sender?.user_name || 'Unknown'}</span>
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone)}</span>
                     </div>
                   )
                 )}
@@ -264,7 +265,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
                           isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
                         }`}
                       >
-                        {formatHeaderTime(msg.created_at)}
+                        {formatHeaderTime(msg.created_at, timeZone)}
                       </span>
                     )}
                     <div

@@ -13,8 +13,8 @@ import { formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { CreateChatRoomDialog } from './CreateChatRoomDialog';
 
-function formatTime(iso: string): string {
-  return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日' });
+function formatTime(iso: string, timeZone: string): string {
+  return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日', timeZone });
 }
 
 function getPreviewText(room: ChatRoomListItem): string {
@@ -41,6 +41,7 @@ export function ChatRoomList() {
   const fetchMyRooms = useChatStore((state) => state.fetchRooms);
   const currentUser = useUserStore((state) => state.user);
   const isAdmin = currentUser?.app_metadata?.user_type === USER_TYPES.ADMIN;
+  const timeZone = currentUser?.timezone || 'Asia/Tokyo';
 
   const [mode, setMode] = useState<'mine' | 'all'>('mine');
   // null: 未取得（読み込み中）
@@ -145,7 +146,7 @@ export function ChatRoomList() {
 
               <div className="flex flex-col items-end gap-1.5 shrink-0">
                 <span className="text-[11px] text-slate-400">
-                  {room.last_message ? formatTime(room.last_message.created_at) : ''}
+                  {room.last_message ? formatTime(room.last_message.created_at, timeZone) : ''}
                 </span>
                 {room.unread_count > 0 && (
                   <span className="min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">

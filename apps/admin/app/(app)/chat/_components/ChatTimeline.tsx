@@ -32,8 +32,8 @@ const BUBBLE_PADDING_X = 16; // 吹き出しの px-4 分、本文の開始位置
 // （添付画像の非同期ロード完了など）でも下端へ再追従させる
 const STICK_TO_BOTTOM_THRESHOLD_PX = 80;
 
-function formatHeaderTime(iso: string): string {
-  return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日' });
+function formatHeaderTime(iso: string, timeZone: string): string {
+  return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日', timeZone });
 }
 
 function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null; name?: string | null; size?: number }) {
@@ -63,6 +63,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
   const currentUser = useUserStore((state) => state.user);
   const currentUserId = currentUser?.id;
   const isAdmin = currentUser?.app_metadata?.user_type === USER_TYPES.ADMIN;
+  const timeZone = currentUser?.timezone || 'Asia/Tokyo';
   const markRoomAsRead = useChatStore((state) => state.markRoomAsRead);
   const applyIncomingMessage = useChatStore((state) => state.applyIncomingMessage);
   const { showConfirm } = useConfirm();
@@ -272,7 +273,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
           {messages.map((msg, idx) => {
             const isMine = msg.sender_user_id === currentUserId;
             const canDelete = isAdmin && !msg.deleted_at;
-            const showHeader = !isContinuationMessage(msg, messages[idx - 1]);
+            const showHeader = !isContinuationMessage(msg, messages[idx - 1], timeZone);
             const sender = memberByUserId.get(msg.sender_user_id);
 
             return (
@@ -283,7 +284,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
                 {showHeader && (
                   isMine ? (
                     <div className="mb-1">
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone)}</span>
                     </div>
                   ) : (
                     <div
@@ -291,7 +292,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
                       style={{ paddingLeft: AVATAR_SIZE + AVATAR_GAP + BUBBLE_PADDING_X }}
                     >
                       <span className="text-xs font-bold text-slate-700">{sender?.user_name || '（名称未設定）'}</span>
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at)}</span>
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone)}</span>
                     </div>
                   )
                 )}
@@ -312,7 +313,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
                           isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
                         }`}
                       >
-                        {formatHeaderTime(msg.created_at)}
+                        {formatHeaderTime(msg.created_at, timeZone)}
                       </span>
                     )}
                     {canDelete && isMine && (

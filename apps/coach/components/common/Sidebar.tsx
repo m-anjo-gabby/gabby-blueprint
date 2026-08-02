@@ -57,17 +57,19 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
             )}
           </span>
           <span className={`
-            text-sm font-bold transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden
-            ${isCollapsed ? 'w-0 opacity-0 ml-0' : isChild ? 'w-36 opacity-100 ml-0 text-[13px]' : 'w-40 opacity-100 ml-3'}
+            flex items-center gap-2 transition-all duration-300 ease-in-out overflow-hidden
+            ${isCollapsed ? 'max-w-0 opacity-0 ml-0' : isChild ? 'max-w-36 opacity-100 ml-0' : 'max-w-40 opacity-100 ml-3'}
           `}>
-            {item.label}
+            <span className={`text-sm font-bold whitespace-nowrap ${isChild ? 'text-[13px]' : ''}`}>
+              {item.label}
+            </span>
+            {!isCollapsed && hasBadge && (
+              <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">
+                {badge && badge > 99 ? '99+' : badge}
+              </span>
+            )}
           </span>
         </div>
-        {!isCollapsed && hasBadge && (
-          <span className="min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">
-            {badge && badge > 99 ? '99+' : badge}
-          </span>
-        )}
         {isActive && !isCollapsed && !hasBadge && <ChevronRight size={14} className="text-indigo-200" />}
       </Link>
 

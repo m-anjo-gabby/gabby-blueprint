@@ -17,8 +17,8 @@ const USER_TYPE_LABEL_EN: Record<UserType, string> = {
   [USER_TYPES.COACH]: 'Coach',
 };
 
-function formatTime(iso: string): string {
-  return formatMessageHeaderTime(iso, { locale: 'en-US', yesterdayLabel: 'Yesterday' });
+function formatTime(iso: string, timeZone: string): string {
+  return formatMessageHeaderTime(iso, { locale: 'en-US', yesterdayLabel: 'Yesterday', timeZone });
 }
 
 function getPreviewText(message: ChatMessage | null): string {
@@ -35,6 +35,7 @@ export function ChatRoomList() {
   const isLoading = useChatStore((state) => state.isLoading);
   const fetchRooms = useChatStore((state) => state.fetchRooms);
   const currentUserId = useUserStore((state) => state.user?.id);
+  const timeZone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
   useEffect(() => {
     fetchRooms();
@@ -85,7 +86,7 @@ export function ChatRoomList() {
 
               <div className="flex flex-col items-end gap-1.5 shrink-0">
                 <span className="text-[11px] text-slate-400">
-                  {room.last_message ? formatTime(room.last_message.created_at) : ''}
+                  {room.last_message ? formatTime(room.last_message.created_at, timeZone) : ''}
                 </span>
                 {room.unread_count > 0 && (
                   <span className="min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">
