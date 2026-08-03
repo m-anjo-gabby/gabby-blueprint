@@ -52,8 +52,16 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
               size={isChild ? 15 : 18}
               className={isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}
             />
-            {hasBadge && isCollapsed && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500" />
+            {hasBadge && (
+              <span
+                className={`
+                  absolute -top-1.5 -right-2 flex items-center justify-center rounded-full
+                  bg-rose-500 text-white font-black leading-none ring-2 ring-slate-900
+                  ${badge && badge > 9 ? 'min-w-3 h-3.5 px-1 text-[7px]' : 'w-3.5 h-3.5 text-[8px]'}
+                `}
+              >
+                {badge && badge > 99 ? '99+' : badge}
+              </span>
             )}
           </span>
           <span className={`
@@ -63,14 +71,9 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
             <span className={`text-sm font-bold whitespace-nowrap ${isChild ? 'text-[13px]' : ''}`}>
               {item.label}
             </span>
-            {!isCollapsed && hasBadge && (
-              <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">
-                {badge && badge > 99 ? '99+' : badge}
-              </span>
-            )}
           </span>
         </div>
-        {isActive && !isCollapsed && !hasBadge && <ChevronRight size={14} className="text-indigo-200" />}
+        {isActive && !isCollapsed && <ChevronRight size={14} className="text-indigo-200" />}
       </Link>
 
       {/* 折りたたみ時のツールチップ */}
