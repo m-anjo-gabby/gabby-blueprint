@@ -9,12 +9,23 @@ export const metadata = {
 
 export const revalidate = 0;
 
+interface AIKnowledgeBasePageProps {
+  searchParams: Promise<{ page?: string; q?: string; type?: string }>;
+}
+
 /**
  * AI Knowledge Base 管理ページ
  * ヘルプ記事等を登録すると、AIチャットのRAG検索対象になる（packages/lib/ai/retrieval）
  */
-export default async function AIKnowledgeBasePage() {
-  const entries = await getKnowledgeEntries();
+export default async function AIKnowledgeBasePage({ searchParams }: AIKnowledgeBasePageProps) {
+  const params = await searchParams;
+  const currentPage = Number(params.page) || 1;
+  const searchQuery = params.q || '';
+  const sourceType = params.type || '';
+  const pageSize = 10;
+
+  const { entries, totalCount } = await getKnowledgeEntries(currentPage, pageSize, sourceType, searchQuery);
+  const pageCount = Math.ceil(totalCount / pageSize);
 
   return (
     <div className="space-y-8 pb-16">
@@ -34,7 +45,7 @@ export default async function AIKnowledgeBasePage() {
         </div>
       </header>
 
-      <KnowledgeEntryList entries={entries} />
+      <KnowledgeEntryList entries={entries} pageCount={pageCount} totalCount={totalCount} />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Search, Trash2, AlertCircle, Library } from 'lucide-react';
+import { useState } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { Search, Trash2, AlertCircle, Library, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,23 +31,47 @@ import { KnowledgeEntryFormDialog } from './KnowledgeEntryFormDialog';
 
 interface KnowledgeEntryListProps {
   entries: KnowledgeEntry[];
+  pageCount: number;
+  totalCount: number;
 }
 
-export function KnowledgeEntryList({ entries }: KnowledgeEntryListProps) {
+export function KnowledgeEntryList({ entries, pageCount, totalCount }: KnowledgeEntryListProps) {
   const { showToast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sourceTypeFilter, setSourceTypeFilter] = useState<string>('all');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const filteredEntries = useMemo(() => {
-    return entries.filter((entry) => {
-      const matchesType = sourceTypeFilter === 'all' || entry.source_type === sourceTypeFilter;
-      const matchesQuery =
-        !searchQuery ||
-        entry.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        entry.body.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesType && matchesQuery;
-    });
-  }, [entries, searchQuery, sourceTypeFilter]);
+  const currentPage = Number(searchParams.get('page')) || 1;
+  const sourceTypeFilter = searchParams.get('type') || 'all';
+  const [searchValue, setSearchValue] = useState(searchParams.get('q') || '');
+
+  const handleSearchTrigger = (term: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (term) {
+      params.set('q', term);
+    } else {
+      params.delete('q');
+    }
+    params.set('page', '1');
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleSourceTypeChange = (type: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (type === 'all') {
+      params.delete('type');
+    } else {
+      params.set('type', type);
+    }
+    params.set('page', '1');
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', newPage.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   const handleDelete = async (knowledgeId: string) => {
     const result = await deleteKnowledgeEntryAction(knowledgeId);
@@ -61,17 +86,26 @@ export function KnowledgeEntryList({ entries }: KnowledgeEntryListProps) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+          <div className="relative flex-1 max-w-sm group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={14} />
             <Input
               placeholder="タイトル・本文で検索..."
-              className="pl-9 h-9 bg-white border-slate-200 text-sm rounded-xl focus-visible:ring-indigo-500"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 h-9 bg-white border-slate-200 text-sm rounded-xl focus-visible:ring-indigo-500"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearchTrigger(searchValue)}
             />
+            {searchValue && (
+              <button
+                onClick={() => { setSearchValue(''); handleSearchTrigger(''); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          <Select value={sourceTypeFilter} onValueChange={setSourceTypeFilter}>
+          <Select value={sourceTypeFilter} onValueChange={handleSourceTypeChange}>
             <SelectTrigger className="h-9 w-44 rounded-xl border-slate-200 text-sm">
               <SelectValue placeholder="区分で絞り込み" />
             </SelectTrigger>
@@ -87,16 +121,16 @@ export function KnowledgeEntryList({ entries }: KnowledgeEntryListProps) {
         <KnowledgeEntryFormDialog mode="create" />
       </div>
 
-      {filteredEntries.length === 0 ? (
+      {entries.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-slate-300 gap-3 bg-white rounded-2xl border border-slate-200">
           <Library size={32} />
           <p className="text-sm font-bold text-slate-400">
-            {entries.length === 0 ? 'ナレッジがまだ登録されていません' : '該当するナレッジが見つかりません'}
+            {totalCount === 0 ? 'ナレッジがまだ登録されていません' : '該当するナレッジが見つかりません'}
           </p>
         </div>
       ) : (
         <div className="grid gap-3">
-          {filteredEntries.map((entry) => {
+          {entries.map((entry) => {
             const typeOption = getKnowledgeSourceTypeOption(entry.source_type);
             const Icon = typeOption?.icon ?? Library;
 
@@ -163,6 +197,37 @@ export function KnowledgeEntryList({ entries }: KnowledgeEntryListProps) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {totalCount > 0 && (
+        <div className="flex items-center justify-between px-1 pt-2">
+          <div className="text-[13px] text-slate-500 font-medium">
+            全 <span className="text-slate-900 font-bold">{totalCount}</span> 件
+          </div>
+          <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="h-8 w-8 p-0 rounded-lg"
+            >
+              <ChevronLeft size={16} />
+            </Button>
+            <div className="flex items-center px-3 text-[13px] font-bold border-x border-slate-100 min-w-[4rem] justify-center text-slate-600 font-mono">
+              {currentPage} / {pageCount || 1}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= pageCount}
+              className="h-8 w-8 p-0 rounded-lg"
+            >
+              <ChevronRight size={16} />
+            </Button>
+          </div>
         </div>
       )}
     </div>
