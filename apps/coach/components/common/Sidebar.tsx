@@ -57,7 +57,7 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
                 className={`
                   absolute -top-1.5 -right-2 flex items-center justify-center rounded-full
                   bg-rose-500 text-white font-black leading-none ring-2 ring-slate-900
-                  ${badge && badge > 9 ? 'min-w-3 h-3.5 px-1 text-[7px]' : 'w-3.5 h-3.5 text-[8px]'}
+                  ${badge && badge > 9 ? 'min-w-3.25 h-3.25 px-1 text-[8px]' : 'w-3.25 h-3.25 text-[8px]'}
                 `}
               >
                 {badge && badge > 99 ? '99+' : badge}
