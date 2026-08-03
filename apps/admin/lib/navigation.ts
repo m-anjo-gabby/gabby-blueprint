@@ -1,7 +1,7 @@
 // apps/admin/lib/navigation.ts
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, LucideIcon,
+  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon,
 } from 'lucide-react';
 
 // ============================================================
@@ -107,6 +107,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
         label: 'AI Playground',
         href: '/tools/ai-playground',
         icon: Bot,
+        requiredRoles: ['admin', 'content_manager'],
+      },
+      {
+        label: 'AI Knowledge Base',
+        href: '/tools/ai-knowledge-base',
+        icon: Library,
         requiredRoles: ['admin', 'content_manager'],
       },
     ],

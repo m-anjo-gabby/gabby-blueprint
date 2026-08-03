@@ -32,3 +32,11 @@ function getGoogleProvider() {
 export function google(modelId: string) {
   return getGoogleProvider()(modelId);
 }
+
+/**
+ * Geminiの埋め込み（Embedding）モデルを取得する共通関数。
+ * RAG用のEmbedding生成・検索（packages/lib/ai/embeddings, retrieval）で使用する。
+ */
+export function googleEmbeddingModel(modelId: string) {
+  return getGoogleProvider().textEmbeddingModel(modelId);
+}
