@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   Menu, X, LogOut, User as UserIcon, ChevronDown,
@@ -45,9 +46,15 @@ export default function Header() {
           {isMobileSidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        <Link href="/dashboard" className="flex items-center gap-2.5 select-none hover:opacity-80 transition-opacity">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black italic shadow-lg shadow-indigo-500/20 shrink-0">B</div>
-          <span className="hidden sm:block text-slate-800 font-black tracking-tighter text-lg leading-none">Blueprint</span>
+        <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity select-none">
+          <Image
+            src="/logo-01.png"
+            alt="Gabby Blueprint Logo"
+            width={120}
+            height={32}
+            className="h-8 w-auto object-contain"
+            priority
+          />
         </Link>
       </div>
 
