@@ -385,7 +385,7 @@ export async function checkLicense(userId: string): Promise<boolean> {
     .select('license_id')
     .eq('user_id', userId)
     .eq('status', 1)
-    .gte('end_date', 'now()')
+    .gte('end_date', new Date().toISOString()) // 💡 'now()'文字列ではなく実際のISO日時を渡す（他箇所の実装と統一）
     .limit(1) // 現在有効なものと未来のものが複数ある場合を考慮し、1件でもあればOKとする
     .maybeSingle();
 

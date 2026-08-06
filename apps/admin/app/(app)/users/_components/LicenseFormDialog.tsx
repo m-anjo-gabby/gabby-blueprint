@@ -53,11 +53,23 @@ export function LicenseFormDialog({ user, children }: Props) {
     }
   }, [selectedContractId, availableContracts, editingLicense]);
 
-  // バリデーション：全項目必須かつ期間の妥当性
+  // 新規割当時に選択中の契約（期間の上下限として利用）
+  const selectedContract = useMemo(
+    () => availableContracts.find(c => c.contract_id === selectedContractId),
+    [availableContracts, selectedContractId]
+  );
+
+  // バリデーション：全項目必須・期間の前後関係・契約期間内かどうか
+  const isDateInvalid = !!(startDate && endDate && new Date(startDate) > new Date(endDate));
+  // 💡 「ライセンスの有効期間は契約期間に準じます」という運用と実制御を一致させるためのチェック
+  // （編集時は既存ライセンスの契約が availableContracts に含まれないため対象外。サーバー側では常に検証される）
+  const isOutOfContractRange = !!(
+    !editingLicense && selectedContract && startDate && endDate &&
+    (new Date(startDate) < new Date(selectedContract.start_date) || new Date(endDate) > new Date(selectedContract.end_date))
+  );
   const isFormInvalid = useMemo(() => {
-    const isDateInvalid = startDate && endDate && new Date(startDate) > new Date(endDate);
-    return !!(!selectedContractId || !startDate || !endDate || isDateInvalid);
-  }, [selectedContractId, startDate, endDate]);
+    return !!(!selectedContractId || !startDate || !endDate || isDateInvalid || isOutOfContractRange);
+  }, [selectedContractId, startDate, endDate, isDateInvalid, isOutOfContractRange]);
 
   const loadData = async () => {
     setLoading(true);
@@ -160,16 +172,21 @@ export function LicenseFormDialog({ user, children }: Props) {
                 <TabsContent value="list" className="mt-0 space-y-3">
                   {licenses.map(l => {
                     const isPast = new Date(l.end_date) < new Date(new Date().setHours(0,0,0,0));
+                    const isInactive = isPast || l.is_removed;
                     return (
-                      <div key={l.license_id} className={`p-4 border border-slate-100 rounded-xl flex justify-between items-center ${isPast ? 'bg-slate-50 opacity-60' : 'bg-white shadow-sm'}`}>
+                      <div key={l.license_id} className={`p-4 border border-slate-100 rounded-xl flex justify-between items-center ${isInactive ? 'bg-slate-50 opacity-60' : 'bg-white shadow-sm'}`}>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-xs font-black">{l.com_m_contract?.plan_name}</p>
-                            {isPast && <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">終了</span>}
+                            <p className="text-xs font-black">{l.plan_name}</p>
+                            {l.is_removed ? (
+                              <span className="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">解除済み</span>
+                            ) : isPast && (
+                              <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">終了</span>
+                            )}
                           </div>
-                          <p className={`text-[10px] font-bold mt-0.5 ${isPast ? 'text-slate-400' : 'text-slate-500'}`}>{l.start_date} ～ {l.end_date}</p>
+                          <p className={`text-[10px] font-bold mt-0.5 ${isInactive ? 'text-slate-400' : 'text-slate-500'}`}>{l.start_date} ～ {l.end_date}</p>
                         </div>
-                        {!isPast && (
+                        {!isInactive && (
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(l)}><Edit2 size={14} /></Button>
                             <AlertDialog>
@@ -227,15 +244,37 @@ export function LicenseFormDialog({ user, children }: Props) {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="rounded-xl" />
-                    <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="rounded-xl" />
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      min={selectedContract?.start_date}
+                      max={selectedContract?.end_date}
+                      className="rounded-xl"
+                    />
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={selectedContract?.start_date}
+                      max={selectedContract?.end_date}
+                      className="rounded-xl"
+                    />
                   </div>
+                  {selectedContract && !editingLicense && (
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      契約期間: {selectedContract.start_date} ～ {selectedContract.end_date}
+                    </p>
+                  )}
 
                   <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="備考（変更理由など）" className="rounded-xl" />
 
                   {isFormInvalid && (
                     <p className="text-[10px] text-rose-500 font-bold flex items-center gap-1 bg-rose-50 p-2 rounded-lg">
-                      <AlertCircle size={12} /> 契約プラン・日付は必須です（終了日は開始日以降）
+                      <AlertCircle size={12} />
+                      {isOutOfContractRange
+                        ? 'ライセンス期間は契約期間内で指定してください'
+                        : '契約プラン・日付は必須です（終了日は開始日以降）'}
                     </p>
                   )}
 
