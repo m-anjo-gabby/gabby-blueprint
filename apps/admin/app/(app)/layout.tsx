@@ -25,8 +25,8 @@ export default async function AdminAppLayout({
     redirect('/login');
   }
 
-  // モノレポ分離に伴い、ここでロールチェックを行うのが安全です
-  // if (user.user_metadata.role !== 'admin') { redirect('/unauthorized'); }
+  // 💡 user_type/roles に基づく詳細なアクセス制御は apps/admin/proxy.ts (Middleware) で
+  // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
 
   return (
     <>

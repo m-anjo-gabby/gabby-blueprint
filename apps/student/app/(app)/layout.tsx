@@ -36,8 +36,8 @@ export default async function StudentAppLayout({
   // 未同意がある場合は TermsAgreementModal が表示され、操作をロックします。
   const pendingTerms = await checkPendingAgreements(user.id);
 
-  // 必要に応じて生徒ロールのチェックを追加
-  // if (user.user_metadata.role !== 'student') { redirect('/unauthorized'); }
+  // 💡 user_type/ライセンスに基づく詳細なアクセス制御は apps/student/proxy.ts (Middleware) で
+  // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
 
   return (
     <>

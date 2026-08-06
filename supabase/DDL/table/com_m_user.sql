@@ -20,7 +20,7 @@ COMMENT ON TABLE public.com_m_user IS 'ユーザ情報マスタ';
 COMMENT ON COLUMN public.com_m_user.id IS '認証システムID (UUID)';
 COMMENT ON COLUMN public.com_m_user.user_id IS 'ユーザID';
 COMMENT ON COLUMN public.com_m_user.client_id IS '顧客ID';
-COMMENT ON COLUMN public.com_m_user.user_type IS 'ユーザタイプ 0：管理者 1:生徒 2:モニター';
+COMMENT ON COLUMN public.com_m_user.user_type IS 'ユーザタイプ 0：管理者 1:生徒 2:コーチ';
 COMMENT ON COLUMN public.com_m_user.user_name IS 'ユーザ名称';
 COMMENT ON COLUMN public.com_m_user.locale_id IS 'ロケールID';
 COMMENT ON COLUMN public.com_m_user.timezone IS 'IANAタイムゾーン名（例: Asia/Tokyo）';
@@ -79,3 +79,28 @@ BEGIN
 END $$;
 
 COMMENT ON CONSTRAINT fk_com_m_user_timezone ON public.com_m_user IS 'ユーザーのタイムゾーンはcom_m_timezoneマスタに存在する値のみ許容する';
+
+---------------------------------------------
+-- 追加パッチ: 権限昇格防止 - 列単位UPDATE権限の制限 (2026-08-06)
+-- 既存環境に対しては、このSQLをSupabase SQL Editor等で実行してください。
+--
+-- 【背景】
+-- 上記の "Users can update their own data" ポリシーは「自分の行であること」
+-- (id = auth.uid()) しか検証しておらず、「どの列を変更してよいか」を制限していない。
+-- そのため authenticated ロールの誰でも、Supabase Clientから直接
+--   supabase.from('com_m_user').update({ user_type: '0' }).eq('id', myId)
+-- のようなリクエストを送ることで、自分自身を管理者(user_type='0')に昇格させたり、
+-- client_id(テナント)を書き換えたり、login_failed_count/locked_untilを操作して
+-- 自身のロックアウトを解除したりできてしまう状態だった
+-- （user_type/client_id の変更は sync_user_app_metadata トリガー経由で
+--   即座に auth.users.raw_app_meta_data に反映され、権限が有効化される）。
+--
+-- 【対応】
+-- 自己サービスで実際に更新されているのは timezone / icon_path / update_date のみ
+-- （@gabby/lib/profile 配下の各Coreアクションを参照）。それ以外の列
+-- (user_type, client_id, user_name, delete_flg, login_failed_count, locked_until 等)は
+-- 常に service_role(RLSをバイパスする管理者操作)経由でのみ更新されているため、
+-- authenticated ロールのUPDATE権限をこの3列に列単位で制限する。
+---------------------------------------------
+REVOKE UPDATE ON public.com_m_user FROM authenticated, anon;
+GRANT UPDATE (timezone, icon_path, update_date) ON public.com_m_user TO authenticated;

@@ -178,8 +178,11 @@ export async function signInCore(
   // 🔒 4. ログイン成功時のハンドル（失敗カウント・ロックのリセット）
   // -------------------------------------------------------------
   // 過去に失敗履歴がある、またはロック日時が残っている場合はクリーンにクリアする
+  // 💡 login_failed_count / locked_until は権限昇格防止のため authenticated ロールの
+  // 列単位UPDATE権限から除外している（com_m_user.sql参照）。セッションクライアント(supabase)
+  // では更新できないため、ここは supabaseAdmin(service_role) 経由で実行する。
   if (userMaster && (userMaster.login_failed_count > 0 || userMaster.locked_until)) {
-    const { error: resetError } = await supabase
+    const { error: resetError } = await supabaseAdmin
       .from('com_m_user')
       .update({
         login_failed_count: 0,

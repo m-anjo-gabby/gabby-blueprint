@@ -76,6 +76,16 @@ export default function LoginPage() {
                   required
                 />
               </div>
+
+              {/* パスワード忘れ */}
+              <div className="flex justify-end mt-2">
+                <a
+                  href="/forgot-password"
+                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium hover:underline transition-all"
+                >
+                  Forgot your password?
+                </a>
+              </div>
             </div>
 
             {error && (

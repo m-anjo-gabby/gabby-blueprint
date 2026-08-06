@@ -19,8 +19,11 @@ export async function proxy(req: NextRequest) {
 
   const logger = createRequestLogger('coach', req, requestId);
 
-  // 公開ルートの判定（現時点ではログイン画面のみ。パスワード再設定等は今後追加）
-  const isPublicRoute = isDefaultPublicRoute(pathname);
+  // 公開ルートの判定
+  const isPublicRoute = isDefaultPublicRoute(pathname, {
+    extraExactPaths: ['/forgot-password', '/update-password'],
+    extraPrefixes: ['/auth'],
+  });
 
   // --- A. 未ログインの場合 ---
   if (!user) {
