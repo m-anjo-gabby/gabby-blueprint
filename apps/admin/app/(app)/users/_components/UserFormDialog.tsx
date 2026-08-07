@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { createUser, updateUser, resendInvite, getRoles } from '@/actions/adminUserAction';
+import { createUser, createUserDirect, updateUser, resendInvite, getRoles } from '@/actions/adminUserAction';
 import { getActiveContractsByClient, assignLicenseToUser } from '@/actions/adminContractAction';
 import { Mail, AlertCircle, PlusCircle, CheckCircle2, Loader2, Edit, ShieldCheck, Save, Shield } from 'lucide-react';
 import { CreateUserResponse, UserRecord, RoleDefinition, USER_TYPES, getUserTypeLabel } from '@gabby/types/user';
@@ -30,6 +30,10 @@ const userSchema = z.object({
   user_type: z.string().min(1, 'タイプは必須です'),
   roles: z.array(z.string()), // 必須配列として定義（初期値で[]をセット）
   contract_id: z.string().optional(), // 一旦optionalにしておき、superRefineで条件付き必須にする
+  // 新規作成時の作成方法（招待メール送信 / 即時作成=Auto Confirm）。編集時は未使用。
+  creation_mode: z.enum(['invite', 'direct']),
+  password: z.string().optional(),
+  confirm_password: z.string().optional(),
 }).superRefine((data, ctx) => {
   // 生徒(user_type === '1')の場合、contract_idが'none'であってはならない
   if (data.user_type === '1' && data.contract_id === 'none') {
@@ -38,6 +42,31 @@ const userSchema = z.object({
       message: '生徒には初期ライセンスの割当が必須です。',
       path: ['contract_id'],
     });
+  }
+
+  // 即時作成モードの場合のみ、パスワードの入力・強度・一致を検証する
+  if (data.creation_mode === 'direct') {
+    if (!data.password || data.password.length < 8) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'パスワードは8文字以上で入力してください。',
+        path: ['password'],
+      });
+    } else if (!/[a-zA-Z]/.test(data.password) || !/[0-9]/.test(data.password)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'パスワードには英字と数字を両方含めてください。',
+        path: ['password'],
+      });
+    }
+
+    if (data.password !== data.confirm_password) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'パスワードが一致しません。',
+        path: ['confirm_password'],
+      });
+    }
   }
 });
 
@@ -50,13 +79,16 @@ interface UserFormDialogProps {
 }
 
 // 初期値の定数
-const DEFAULT_VALUES: UserFormValues = { 
-  email: '', 
-  user_name: '', 
-  client_id: '', 
+const DEFAULT_VALUES: UserFormValues = {
+  email: '',
+  user_name: '',
+  client_id: '',
   user_type: '1', // デフォルトは生徒
   roles: [],
-  contract_id: 'none'
+  contract_id: 'none',
+  creation_mode: 'invite',
+  password: '',
+  confirm_password: '',
 };
 
 export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogProps) {
@@ -82,12 +114,15 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
   const getInitialValues = (data?: UserRecord): UserFormValues => {
     if (!data || mode === 'create') return DEFAULT_VALUES;
     return {
-      email: data.email || '', 
+      email: data.email || '',
       user_name: data.user_name || '',
       client_id: data.client_id || '',
       user_type: data.user_type || '1',
-      roles: data.roles || [], 
-      contract_id: undefined
+      roles: data.roles || [],
+      contract_id: undefined,
+      creation_mode: 'invite',
+      password: '',
+      confirm_password: '',
     };
   };
 
@@ -106,6 +141,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
   // 権限タイプによるロール表示切り替えのための監視
   const watchUserType = form.watch("user_type");
   const watchClientId = form.watch("client_id");
+  const watchCreationMode = form.watch("creation_mode");
 
   // 所属顧客が変更されたらライセンスリストを更新
   useEffect(() => {
@@ -152,8 +188,22 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
         } else {
           setServerError(result.message || "更新に失敗しました");
         }
+      } else if (values.creation_mode === 'direct') {
+        // --- 新規登録モード（即時作成 / Auto Confirm） ---
+        const result: CreateUserResponse = await createUserDirect({ ...values, password: values.password || '' });
+        if (result.success) {
+          showToast("ユーザーを作成しました（確認メールは送信されません）", "success");
+          handleClose();
+        } else {
+          if (result.errorType === 'email_exists') {
+            form.setError('email', { type: 'manual', message: result.message ?? "" });
+          } else if (result.errorType === 'weak_password') {
+            form.setError('password', { type: 'manual', message: result.message ?? "" });
+          }
+          setServerError(result.message || "作成に失敗しました");
+        }
       } else {
-        // --- 新規登録モード ---
+        // --- 新規登録モード（招待メール送信） ---
         const result: CreateUserResponse = await createUser(values);
         if (result.success) {
           showToast("ユーザーを招待しました", "success");
@@ -285,6 +335,34 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                         </div>
                       </div>
                     )}
+
+                    {/* --- ★ 新規作成時のみ：作成方法の選択（招待メール送信 / 即時作成=Auto Confirm） --- */}
+                    {mode === 'create' && !isConfirming && (
+                      <FormField control={form.control} name="creation_mode" render={({ field }) => (
+                        <FormItem className="space-y-1.5">
+                          <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">作成方法</FormLabel>
+                          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                            <button
+                              type="button"
+                              onClick={() => field.onChange('invite')}
+                              className={`flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg text-left transition-all ${field.value === 'invite' ? 'bg-white shadow-sm border border-slate-200' : 'text-slate-500 hover:bg-white/60 border border-transparent'}`}
+                            >
+                              <span className="text-xs font-bold flex items-center gap-1.5 text-slate-700"><Mail size={12} className="text-indigo-500" /> 招待メールを送信</span>
+                              <span className="text-[10px] text-slate-400 leading-snug">本登録リンクをメールで送付します</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => field.onChange('direct')}
+                              className={`flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg text-left transition-all ${field.value === 'direct' ? 'bg-white shadow-sm border border-slate-200' : 'text-slate-500 hover:bg-white/60 border border-transparent'}`}
+                            >
+                              <span className="text-xs font-bold flex items-center gap-1.5 text-slate-700"><ShieldCheck size={12} className="text-emerald-500" /> 即時作成</span>
+                              <span className="text-[10px] text-slate-400 leading-snug">確認メール無しでその場で有効化します</span>
+                            </button>
+                          </div>
+                        </FormItem>
+                      )} />
+                    )}
+
                     <FormField control={form.control} name="email" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">メールアドレス</FormLabel>
@@ -369,7 +447,35 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       </FormItem>
                     )} />
                   </div>
-                    
+
+                    {/* --- ★ 新規作成時、即時作成(Auto Confirm)モードの場合のみパスワード入力欄を表示 --- */}
+                    {mode === 'create' && watchCreationMode === 'direct' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField control={form.control} name="password" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">パスワード</FormLabel>
+                            {isConfirming ? (
+                              <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700 tracking-widest">●●●●●●●●</div>
+                            ) : (
+                              <FormControl><Input {...field} type="password" autoComplete="new-password" className="rounded-xl border-slate-200 h-11" placeholder="8文字以上、英数混在" /></FormControl>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="confirm_password" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">パスワード（確認用）</FormLabel>
+                            {isConfirming ? (
+                              <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700 tracking-widest">●●●●●●●●</div>
+                            ) : (
+                              <FormControl><Input {...field} type="password" autoComplete="new-password" className="rounded-xl border-slate-200 h-11" placeholder="もう一度入力してください" /></FormControl>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                    )}
+
                     {/* --- 新規作成時のみライセンス選択を表示 --- */}
                     {mode === 'create' && watchUserType === '1' && (
                       <FormField control={form.control} name="contract_id" render={({ field, fieldState }) => (
@@ -478,7 +584,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       <div className="flex gap-3">
                         <Button type="button" variant="ghost" className="flex-1 text-slate-400 h-12 rounded-xl" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>戻る</Button>
                         <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white shadow-lg h-12 rounded-xl font-bold" disabled={isSubmitting}>
-                          {isSubmitting ? <Loader2 className="animate-spin" /> : "確定して保存"}
+                          {isSubmitting ? <Loader2 className="animate-spin" /> : (mode === 'create' && watchCreationMode === 'direct' ? "アカウントを作成する" : "確定して保存")}
                         </Button>
                       </div>
                     </div>

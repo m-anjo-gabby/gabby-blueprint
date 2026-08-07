@@ -6,6 +6,7 @@ import { User } from '@supabase/supabase-js';
 import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger, getLogContext } from '../logger';
 import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
+import { validatePasswordStrength } from './validation';
 
 // 💡 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');
@@ -18,25 +19,6 @@ export type AuthResponse = {
   success?: boolean;
   user?: User;
 };
-
-/**
- * 🔒 パスワードの強度を検証する共通関数
- */
-function validatePasswordStrength(password: string): string | null {
-  // 最小文字数を8文字以上に強化
-  if (!password || password.length < 8) {
-    return 'パスワードは8文字以上で入力してください。';
-  }
-
-  // 英字と数字の混在を必須化
-  const hasAlpha = /[a-zA-Z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  if (!hasAlpha || !hasNumber) {
-    return 'パスワードには英字と数字を両方含めてください。';
-  }
-
-  return null;
-}
 
 /**
  * 🔒 Supabaseからのエラーメッセージをユーザー向けの日本語に翻訳する共通関数
