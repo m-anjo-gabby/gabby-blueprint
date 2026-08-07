@@ -6,9 +6,8 @@ import type { UserType } from './user';
  * ----------------------------------------------
  */
 export const CHAT_ROOM_TYPES = {
-  ADMIN: 'ADMIN',
-  COACH: 'COACH',
-  AI: 'AI',
+  ONE_ON_ONE: '1ON1',
+  GROUP: 'GROUP',
 } as const;
 
 export type ChatRoomType = typeof CHAT_ROOM_TYPES[keyof typeof CHAT_ROOM_TYPES];
@@ -51,6 +50,7 @@ export const CHAT_ATTACHMENT_ALLOWED_MIME_TYPES = [
 export interface ChatRoom {
   room_id: string;
   room_type: ChatRoomType;
+  room_name: string | null;
   created_at: string;
   closed_at: string | null;
 }
@@ -107,30 +107,50 @@ export interface ChatMessage {
 }
 
 /**
+ * ChatRoomMemberSummary: ルームの参加者1名分の表示用情報
+ */
+export interface ChatRoomMemberSummary {
+  user_id: string;
+  user_name: string | null;
+  user_type: UserType;
+  icon_path: string | null;
+  client_id: string | null;
+  client_name: string | null;
+}
+
+/**
  * ChatRoomListItem: ルーム一覧表示用（最新メッセージ・未読件数・相手情報を結合）
  */
 export interface ChatRoomListItem extends ChatRoom {
   last_message: ChatMessage | null;
   unread_count: number;
-  members: {
-    user_id: string;
-    user_name: string | null;
-    user_type: UserType;
-    icon_path: string | null;
-    client_id: string | null;
-    client_name: string | null;
-  }[];
+  members: ChatRoomMemberSummary[];
   /** ログイン中のユーザーがこのルームの参加者かどうか（Adminの全ルーム査閲時に使用） */
   is_member: boolean;
 }
 
 /**
  * CreateChatRoomPayload: ルーム作成（Adminのみ実行可能）
- * Admin-Coach, Admin-Student, Coach-Student の3パターンの組み合わせに対応する。
- * room_type は memberIds のuser_typeからサーバー側で自動判定するため含めない。
+ * roomType: '1ON1'（Admin-Coach, Admin-Student, Coach-Studentの2名。同一種別同士は不可）
+ *         または 'GROUP'（2名以上、種別の組み合わせ制限なし。roomNameが必須）
  */
 export interface CreateChatRoomPayload {
-  memberIds: [string, string];
+  roomType: ChatRoomType;
+  memberIds: string[];
+  roomName?: string;
+}
+
+/**
+ * AddChatRoomMemberPayload / RemoveChatRoomMemberPayload: GROUPルームの参加者管理（Adminのみ実行可能）
+ */
+export interface AddChatRoomMemberPayload {
+  roomId: string;
+  userId: string;
+}
+
+export interface RemoveChatRoomMemberPayload {
+  roomId: string;
+  userId: string;
 }
 
 /**

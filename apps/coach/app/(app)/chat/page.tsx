@@ -7,7 +7,7 @@ export default function ChatPage() {
       <div>
         <h1 className="text-xl font-bold text-slate-800 tracking-tight">Chat</h1>
         <p className="text-[13px] text-slate-500 mt-1">
-          1-on-1 conversations with students. New rooms are created by admins only.
+          1-on-1 or group conversations with students. New rooms are created by admins only.
         </p>
       </div>
 

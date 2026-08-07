@@ -2,20 +2,21 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Loader2, User as UserIcon } from 'lucide-react';
+import { ChevronLeft, Loader2, User as UserIcon, Users as UsersIcon } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useChatRealtimeMessages } from '@gabby/lib/chat/realtime/useChatRealtimeMessages';
 import { getChatMessages } from '@gabby/lib/chat/actions/messageActions';
 import { isContinuationMessage, formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { ChatMessage, ChatRoomListItem } from '@gabby/types/chat';
+import { CHAT_ROOM_TYPES, ChatMessage, ChatRoom, ChatRoomListItem } from '@gabby/types/chat';
 import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { ChatMessageInput } from './ChatMessageInput';
 import { ChatMessageContent } from './ChatMessageContent';
 
 interface ChatTimelineProps {
   roomId: string;
+  room: ChatRoom;
   initialMessages: ChatMessage[];
   initialHasMore: boolean;
   /** Whether the current user is a participant of this room (sending is disabled otherwise) */
@@ -63,7 +64,8 @@ function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null
   );
 }
 
-export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember, members }: ChatTimelineProps) {
+export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, isMember, members }: ChatTimelineProps) {
+  const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
   const currentUserId = useUserStore((state) => state.user?.id);
   const timeZone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const markRoomAsRead = useChatStore((state) => state.markRoomAsRead);
@@ -205,13 +207,32 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
         >
           <ChevronLeft size={24} />
         </Link>
-        <MessageAvatar iconPath={otherMember?.icon_path} name={otherMember?.user_name} size={AVATAR_SIZE} />
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-800 truncate">{otherMember?.user_name || 'Unknown'}</p>
-          {otherMember && (
-            <p className="text-[11px] text-slate-400">{USER_TYPE_LABEL_EN[otherMember.user_type] ?? 'Unknown'}</p>
-          )}
-        </div>
+        {isGroup ? (
+          <>
+            <div
+              style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
+              className="rounded-full bg-emerald-50 flex items-center justify-center shrink-0"
+            >
+              <UsersIcon size={16} className="text-emerald-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-800 truncate">{room.room_name || 'Unnamed group'}</p>
+              <p className="text-[11px] text-slate-400 truncate">
+                {members.map((m) => m.user_name || 'Unnamed User').join(' / ')}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <MessageAvatar iconPath={otherMember?.icon_path} name={otherMember?.user_name} size={AVATAR_SIZE} />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-800 truncate">{otherMember?.user_name || 'Unknown'}</p>
+              {otherMember && (
+                <p className="text-[11px] text-slate-400">{USER_TYPE_LABEL_EN[otherMember.user_type] ?? 'Unknown'}</p>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <div ref={containerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-5 py-4">

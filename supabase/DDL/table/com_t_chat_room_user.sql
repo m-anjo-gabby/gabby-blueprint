@@ -4,7 +4,7 @@
 CREATE TABLE public.com_t_chat_room_user (
   room_id UUID NOT NULL REFERENCES public.com_t_chat_room(room_id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-  user_type TEXT NOT NULL, -- 'ADMIN', 'STUDENT', 'COACH', 'AI'
+  user_type TEXT NOT NULL, -- 'ADMIN', 'STUDENT', 'COACH'
   last_read_chat_id UUID, -- 未読管理用 (com_t_chat.chat_id)
   joined_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   left_at TIMESTAMP WITH TIME ZONE,
@@ -15,7 +15,7 @@ CREATE TABLE public.com_t_chat_room_user (
 COMMENT ON TABLE public.com_t_chat_room_user IS 'チャット参加者 & 未読管理';
 COMMENT ON COLUMN public.com_t_chat_room_user.room_id IS 'ルームID';
 COMMENT ON COLUMN public.com_t_chat_room_user.user_id IS 'ユーザID';
-COMMENT ON COLUMN public.com_t_chat_room_user.user_type IS '参加者種別 (ADMIN, STUDENT, COACH, AI)';
+COMMENT ON COLUMN public.com_t_chat_room_user.user_type IS '参加者種別 (ADMIN, STUDENT, COACH)';
 COMMENT ON COLUMN public.com_t_chat_room_user.last_read_chat_id IS '最終既読メッセージID (未読件数算出用)';
 COMMENT ON COLUMN public.com_t_chat_room_user.joined_at IS '参加日時';
 COMMENT ON COLUMN public.com_t_chat_room_user.left_at IS '退出日時 (NULL: 参加中)';

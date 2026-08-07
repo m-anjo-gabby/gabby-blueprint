@@ -3,14 +3,16 @@
 ---------------------------------------------
 CREATE TABLE public.com_t_chat_room (
   room_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  room_type VARCHAR(10) NOT NULL DEFAULT 'ADMIN', -- 'ADMIN', 'COACH', 'AI'
+  room_type VARCHAR(10) NOT NULL DEFAULT '1ON1', -- '1ON1', 'GROUP'
+  room_name VARCHAR(100), -- GROUPルームの表示名（1ON1はNULL、参加者名から表示名を導出）
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   closed_at TIMESTAMP WITH TIME ZONE
 );
 
 COMMENT ON TABLE public.com_t_chat_room IS 'チャットルーム管理';
 COMMENT ON COLUMN public.com_t_chat_room.room_id IS 'ルームID';
-COMMENT ON COLUMN public.com_t_chat_room.room_type IS 'ルーム種別。参加者にAdminを含む場合 ADMIN、Coach+Studentの組み合わせの場合 COACH、AI対応時は AI（作成時にサーバー側で自動判定）';
+COMMENT ON COLUMN public.com_t_chat_room.room_type IS 'ルーム種別（1ON1: 1対1、GROUP: グループ）。作成時にクライアントから指定';
+COMMENT ON COLUMN public.com_t_chat_room.room_name IS 'ルーム名（GROUPルームのみ設定。1ON1は相手ユーザー名を画面側で表示するためNULL）';
 COMMENT ON COLUMN public.com_t_chat_room.created_at IS '作成日時';
 COMMENT ON COLUMN public.com_t_chat_room.closed_at IS 'クローズ日時 (NULL: 有効なルーム)';
 

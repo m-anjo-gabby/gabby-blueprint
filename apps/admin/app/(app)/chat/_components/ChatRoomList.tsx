@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { MessageCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { MessageCircle, ShieldCheck, User as UserIcon, Users as UsersIcon } from 'lucide-react';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { getUserTypeLabel, USER_TYPES } from '@gabby/types/user';
 import { getAllChatRoomsForAdmin } from '@gabby/lib/chat/actions/roomActions';
-import { ChatRoomListItem } from '@gabby/types/chat';
+import { CHAT_ROOM_TYPES, ChatRoomListItem } from '@gabby/types/chat';
 import { getChatMessagePreviewText } from '@gabby/lib/chat/formatChatPreview';
 import { formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
@@ -46,6 +46,9 @@ function getPreviewText(room: ChatRoomListItem): string {
 }
 
 function getRoomTitle(room: ChatRoomListItem, currentUserId: string | undefined): string {
+  if (room.room_type === CHAT_ROOM_TYPES.GROUP) {
+    return room.room_name || '（名称未設定）';
+  }
   if (room.is_member) {
     const other = room.members.find((m) => m.user_id !== currentUserId);
     return other?.user_name || '（名称未設定）';
@@ -146,9 +149,10 @@ export function ChatRoomList() {
         )}
 
         {rooms.map((room) => {
+          const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
           const other = room.members.find((m) => m.user_id !== currentUser?.id);
 
-          const iconUrl = room.is_member ? getProfileIconUrl(other?.icon_path) : null;
+          const iconUrl = room.is_member && !isGroup ? getProfileIconUrl(other?.icon_path) : null;
 
           return (
             <Link
@@ -163,6 +167,10 @@ export function ChatRoomList() {
                   alt={getRoomTitle(room, currentUser?.id)}
                   className="w-11 h-11 shrink-0 rounded-full object-cover"
                 />
+              ) : isGroup ? (
+                <div className="w-11 h-11 shrink-0 rounded-full bg-emerald-50 flex items-center justify-center">
+                  <UsersIcon size={20} className="text-emerald-500" />
+                </div>
               ) : (
                 <div className="w-11 h-11 shrink-0 rounded-full bg-indigo-50 flex items-center justify-center">
                   <UserIcon size={20} className="text-indigo-500" />
@@ -174,7 +182,10 @@ export function ChatRoomList() {
                   <p className="text-sm font-bold text-slate-800 truncate">
                     {getRoomTitle(room, currentUser?.id)}
                   </p>
-                  {room.is_member && other && (
+                  {isGroup && (
+                    <span className="text-[10px] font-bold text-emerald-500 shrink-0">グループ</span>
+                  )}
+                  {!isGroup && room.is_member && other && (
                     <span className="text-[10px] font-bold text-slate-400 shrink-0">
                       {getUserTypeLabel(other.user_type)}
                     </span>

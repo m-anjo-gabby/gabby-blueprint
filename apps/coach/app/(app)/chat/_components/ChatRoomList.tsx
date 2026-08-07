@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { MessageCircle, User as UserIcon } from 'lucide-react';
+import { MessageCircle, User as UserIcon, Users as UsersIcon } from 'lucide-react';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { getChatMessagePreviewText } from '@gabby/lib/chat/formatChatPreview';
 import { formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import type { ChatMessage, ChatRoomListItem } from '@gabby/types/chat';
+import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoomListItem } from '@gabby/types/chat';
 
 const USER_TYPE_LABEL_EN: Record<UserType, string> = {
   [USER_TYPES.ADMIN]: 'Admin',
@@ -98,9 +98,10 @@ export function ChatRoomList() {
         )}
 
         {rooms.map((room) => {
+          const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
           const other = room.members.find((m) => m.user_id !== currentUserId);
-          const displayName = other?.user_name || 'Unnamed User';
-          const iconUrl = getProfileIconUrl(other?.icon_path);
+          const displayName = isGroup ? room.room_name || 'Unnamed group' : other?.user_name || 'Unnamed User';
+          const iconUrl = isGroup ? null : getProfileIconUrl(other?.icon_path);
 
           return (
             <Link
@@ -111,6 +112,10 @@ export function ChatRoomList() {
               {iconUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={iconUrl} alt={displayName} className="w-11 h-11 shrink-0 rounded-full object-cover" />
+              ) : isGroup ? (
+                <div className="w-11 h-11 shrink-0 rounded-full bg-emerald-50 flex items-center justify-center">
+                  <UsersIcon size={20} className="text-emerald-500" />
+                </div>
               ) : (
                 <div className="w-11 h-11 shrink-0 rounded-full bg-indigo-50 flex items-center justify-center">
                   <UserIcon size={20} className="text-indigo-500" />
@@ -120,7 +125,10 @@ export function ChatRoomList() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-slate-800 truncate">{displayName}</p>
-                  {other && (
+                  {isGroup && (
+                    <span className="text-[10px] font-bold text-emerald-500 shrink-0">Group</span>
+                  )}
+                  {!isGroup && other && (
                     <span className="text-[10px] font-bold text-slate-400 shrink-0">
                       {USER_TYPE_LABEL_EN[other.user_type] ?? 'Unknown'}
                     </span>

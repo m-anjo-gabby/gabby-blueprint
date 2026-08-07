@@ -2,7 +2,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Loader2, ShieldCheck, Trash2, User as UserIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft, Loader2, ShieldCheck, Trash2, User as UserIcon, Users as UsersIcon } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
@@ -11,13 +12,15 @@ import { useChatRealtimeMessages } from '@gabby/lib/chat/realtime/useChatRealtim
 import { getChatMessages, deleteChatMessage } from '@gabby/lib/chat/actions/messageActions';
 import { isContinuationMessage, formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { ChatMessage, ChatRoomListItem } from '@gabby/types/chat';
+import { CHAT_ROOM_TYPES, ChatMessage, ChatRoom, ChatRoomListItem } from '@gabby/types/chat';
 import { getUserTypeLabel, USER_TYPES } from '@gabby/types/user';
 import { ChatMessageInput } from './ChatMessageInput';
 import { ChatMessageContent } from './ChatMessageContent';
+import { ManageGroupParticipantsDialog } from './ManageGroupParticipantsDialog';
 
 interface ChatTimelineProps {
   roomId: string;
+  room: ChatRoom;
   initialMessages: ChatMessage[];
   initialHasMore: boolean;
   /** ログインユーザーがこのルームの参加者かどうか（falseの場合はAdminの査閲のみ、送信不可） */
@@ -59,7 +62,9 @@ function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null
   );
 }
 
-export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember, members }: ChatTimelineProps) {
+export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, isMember, members }: ChatTimelineProps) {
+  const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
+  const router = useRouter();
   const currentUser = useUserStore((state) => state.user);
   const currentUserId = currentUser?.id;
   const isAdmin = currentUser?.app_metadata?.user_type === USER_TYPES.ADMIN;
@@ -224,7 +229,22 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
           <ChevronLeft size={24} />
         </Link>
 
-        {isMember ? (
+        {isMember && isGroup ? (
+          <>
+            <div
+              style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
+              className="rounded-full bg-emerald-50 flex items-center justify-center shrink-0"
+            >
+              <UsersIcon size={16} className="text-emerald-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-800 truncate">{room.room_name || '（名称未設定）'}</p>
+              <p className="text-[11px] text-slate-400 truncate">
+                {members.map((m) => m.user_name || '（名称未設定）').join(' / ')}
+              </p>
+            </div>
+          </>
+        ) : isMember ? (
           <>
             <MessageAvatar iconPath={otherMember?.icon_path} name={otherMember?.user_name} size={AVATAR_SIZE} />
             <div className="min-w-0">
@@ -247,7 +267,7 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-slate-800 truncate">
-                  {members.map((m) => m.user_name || '（名称未設定）').join(' ⇔ ')}
+                  {isGroup ? room.room_name || '（名称未設定）' : members.map((m) => m.user_name || '（名称未設定）').join(' ⇔ ')}
                 </p>
                 <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shrink-0">
                   査閲モード
@@ -258,6 +278,10 @@ export function ChatTimeline({ roomId, initialMessages, initialHasMore, isMember
               </p>
             </div>
           </>
+        )}
+
+        {isAdmin && isGroup && (
+          <ManageGroupParticipantsDialog roomId={roomId} members={members} onChanged={() => router.refresh()} />
         )}
       </div>
 

@@ -19,12 +19,13 @@ export default async function ChatRoomPage({
     notFound();
   }
 
-  const { members, isMember } = roomDetail.data;
+  const { room, members, isMember } = roomDetail.data;
 
   return (
     <div className="h-full flex flex-col">
       <ChatTimeline
         roomId={roomId}
+        room={room}
         initialMessages={initialMessages.success ? initialMessages.data : []}
         initialHasMore={initialMessages.success ? initialMessages.hasMore : false}
         isMember={isMember}

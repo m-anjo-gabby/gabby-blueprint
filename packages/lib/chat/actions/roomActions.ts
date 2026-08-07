@@ -5,27 +5,22 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger, getLogContext } from '@gabby/lib/logger';
 import { USER_TYPES, UserType } from '@gabby/types/user';
 import {
+  AddChatRoomMemberPayload,
   CHAT_ROOM_TYPES,
   ChatMessage,
   ChatRoom,
   ChatRoomListItem,
-  ChatRoomType,
+  ChatRoomMemberSummary,
   ChatTargetUser,
   CreateChatRoomPayload,
+  RemoveChatRoomMemberPayload,
 } from '@gabby/types/chat';
 
-// ルーム作成で選択可能な「人間」のuser_type（AIルームは別経路で作成する想定）
+// ルーム作成で選択可能なuser_type
 const HUMAN_USER_TYPES: readonly UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 
-/**
- * 2名の参加者のuser_typeから room_type を自動判定する。
- * Adminを含む場合は ADMIN、それ以外（Coach+Student）の場合は COACH。
- */
-function resolveRoomType(userTypeA: string, userTypeB: string): ChatRoomType {
-  return userTypeA === USER_TYPES.ADMIN || userTypeB === USER_TYPES.ADMIN
-    ? CHAT_ROOM_TYPES.ADMIN
-    : CHAT_ROOM_TYPES.COACH;
-}
+// GROUPルームが維持すべき最低参加人数（これを下回る削除は拒否する）
+const MIN_GROUP_ROOM_MEMBERS = 2;
 
 const logger = createLogger('common');
 
@@ -87,9 +82,11 @@ export async function getChatRoomTargetUsers(): Promise<{
 
 /**
  * チャットルーム作成（Adminのみ実行可能）
- * memberIds に指定した2名でルームを作成する。Admin自身が参加者である必要はなく、
- * Admin-Coach / Admin-Student / Coach-Student のいずれの組み合わせも作成できる。
- * 同一メンバー構成のアクティブなルームが既にあれば、それを返す（重複作成防止）。
+ * roomType: '1ON1' の場合、memberIds に指定した異なる種別の2名でルームを作成する
+ * （Admin-Coach / Admin-Student / Coach-Student）。同一メンバー構成のアクティブなルームが
+ * 既にあれば、それを返す（重複作成防止）。
+ * roomType: 'GROUP' の場合、memberIds に指定した2名以上でルームを作成する（種別の組み合わせ
+ * 制限なし、roomName必須）。重複作成防止は行わない（作成のたびに新規ルームとなる）。
  */
 export async function createChatRoom(
   payload: CreateChatRoomPayload
@@ -107,76 +104,145 @@ export async function createChatRoom(
       return { success: false, error: 'Only admins can create chat rooms' };
     }
 
-    const [memberIdA, memberIdB] = payload.memberIds;
-    if (!memberIdA || !memberIdB || memberIdA === memberIdB) {
-      return { success: false, error: 'Please select two different users' };
+    if (payload.roomType === CHAT_ROOM_TYPES.GROUP) {
+      return createGroupChatRoom(payload, ctx);
     }
-
-    // Admin操作のためRLSをバイパスして相手ユーザー行のINSERT等を確実に行う
-    const supabase = createAdminClient();
-
-    const { data: profiles, error: profileError } = await supabase
-      .from('com_m_user')
-      .select('id, user_type')
-      .in('id', [memberIdA, memberIdB]);
-
-    const profileA = profiles?.find((p) => p.id === memberIdA);
-    const profileB = profiles?.find((p) => p.id === memberIdB);
-
-    if (profileError || !profileA || !profileB) {
-      return { success: false, error: 'Target user not found' };
-    }
-
-    if (
-      profileA.user_type === profileB.user_type ||
-      !HUMAN_USER_TYPES.includes(profileA.user_type as UserType) ||
-      !HUMAN_USER_TYPES.includes(profileB.user_type as UserType)
-    ) {
-      // 許可される組み合わせ: Admin-Coach / Admin-Student / Coach-Student（同一種別同士は不可）
-      return { success: false, error: 'Invalid member combination' };
-    }
-
-    const existingRoomId = await findExistingTwoPersonRoom(supabase, memberIdA, memberIdB);
-    if (existingRoomId) {
-      return { success: true, roomId: existingRoomId };
-    }
-
-    const roomType = resolveRoomType(profileA.user_type, profileB.user_type);
-
-    const { data: newRoom, error: roomError } = await supabase
-      .from('com_t_chat_room')
-      .insert({ room_type: roomType })
-      .select('room_id')
-      .single();
-
-    if (roomError || !newRoom) {
-      logger.error('chat:create_room_failed', roomError?.message || 'Unknown error', { ...ctx, payload });
-      return { success: false, error: roomError?.message || 'Failed to create chat room' };
-    }
-
-    const { error: memberError } = await supabase.from('com_t_chat_room_user').insert([
-      { room_id: newRoom.room_id, user_id: profileA.id, user_type: profileA.user_type },
-      { room_id: newRoom.room_id, user_id: profileB.id, user_type: profileB.user_type },
-    ]);
-
-    if (memberError) {
-      logger.error('chat:create_room_members_failed', memberError.message, {
-        ...ctx,
-        payload: { roomId: newRoom.room_id },
-      });
-      return { success: false, error: memberError.message };
-    }
-
-    logger.info('chat:create_room_success', `Chat room created: ${newRoom.room_id}`, {
-      ...ctx,
-      payload: { roomId: newRoom.room_id },
-    });
-
-    return { success: true, roomId: newRoom.room_id };
+    return createOneOnOneChatRoom(payload, ctx);
   } catch (err) {
     logger.error('chat:create_room_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, error: 'Unexpected error' };
   }
+}
+
+async function createOneOnOneChatRoom(
+  payload: CreateChatRoomPayload,
+  ctx: Awaited<ReturnType<typeof getLogContext>>
+): Promise<{ success: boolean; roomId?: string; error?: string }> {
+  const [memberIdA, memberIdB] = payload.memberIds;
+  if (!memberIdA || !memberIdB || payload.memberIds.length !== 2 || memberIdA === memberIdB) {
+    return { success: false, error: 'Please select two different users' };
+  }
+
+  // Admin操作のためRLSをバイパスして相手ユーザー行のINSERT等を確実に行う
+  const supabase = createAdminClient();
+
+  const { data: profiles, error: profileError } = await supabase
+    .from('com_m_user')
+    .select('id, user_type')
+    .in('id', [memberIdA, memberIdB]);
+
+  const profileA = profiles?.find((p) => p.id === memberIdA);
+  const profileB = profiles?.find((p) => p.id === memberIdB);
+
+  if (profileError || !profileA || !profileB) {
+    return { success: false, error: 'Target user not found' };
+  }
+
+  if (
+    profileA.user_type === profileB.user_type ||
+    !HUMAN_USER_TYPES.includes(profileA.user_type as UserType) ||
+    !HUMAN_USER_TYPES.includes(profileB.user_type as UserType)
+  ) {
+    // 許可される組み合わせ: Admin-Coach / Admin-Student / Coach-Student（同一種別同士は不可）
+    return { success: false, error: 'Invalid member combination' };
+  }
+
+  const existingRoomId = await findExistingTwoPersonRoom(supabase, memberIdA, memberIdB);
+  if (existingRoomId) {
+    return { success: true, roomId: existingRoomId };
+  }
+
+  const { data: newRoom, error: roomError } = await supabase
+    .from('com_t_chat_room')
+    .insert({ room_type: CHAT_ROOM_TYPES.ONE_ON_ONE })
+    .select('room_id')
+    .single();
+
+  if (roomError || !newRoom) {
+    logger.error('chat:create_room_failed', roomError?.message || 'Unknown error', { ...ctx, payload });
+    return { success: false, error: roomError?.message || 'Failed to create chat room' };
+  }
+
+  const { error: memberError } = await supabase.from('com_t_chat_room_user').insert([
+    { room_id: newRoom.room_id, user_id: profileA.id, user_type: profileA.user_type },
+    { room_id: newRoom.room_id, user_id: profileB.id, user_type: profileB.user_type },
+  ]);
+
+  if (memberError) {
+    logger.error('chat:create_room_members_failed', memberError.message, {
+      ...ctx,
+      payload: { roomId: newRoom.room_id },
+    });
+    return { success: false, error: memberError.message };
+  }
+
+  logger.info('chat:create_room_success', `Chat room created: ${newRoom.room_id}`, {
+    ...ctx,
+    payload: { roomId: newRoom.room_id },
+  });
+
+  return { success: true, roomId: newRoom.room_id };
+}
+
+async function createGroupChatRoom(
+  payload: CreateChatRoomPayload,
+  ctx: Awaited<ReturnType<typeof getLogContext>>
+): Promise<{ success: boolean; roomId?: string; error?: string }> {
+  const roomName = payload.roomName?.trim();
+  if (!roomName) {
+    return { success: false, error: 'Please enter a room name' };
+  }
+
+  const memberIds = Array.from(new Set(payload.memberIds));
+  if (memberIds.length < 2) {
+    return { success: false, error: 'Please select at least two participants' };
+  }
+
+  // Admin操作のためRLSをバイパスして参加者行のINSERT等を確実に行う
+  const supabase = createAdminClient();
+
+  const { data: profiles, error: profileError } = await supabase
+    .from('com_m_user')
+    .select('id, user_type')
+    .in('id', memberIds);
+
+  if (profileError || !profiles || profiles.length !== memberIds.length) {
+    return { success: false, error: 'Target user not found' };
+  }
+
+  if (profiles.some((p) => !HUMAN_USER_TYPES.includes(p.user_type as UserType))) {
+    return { success: false, error: 'Invalid member combination' };
+  }
+
+  const { data: newRoom, error: roomError } = await supabase
+    .from('com_t_chat_room')
+    .insert({ room_type: CHAT_ROOM_TYPES.GROUP, room_name: roomName })
+    .select('room_id')
+    .single();
+
+  if (roomError || !newRoom) {
+    logger.error('chat:create_room_failed', roomError?.message || 'Unknown error', { ...ctx, payload });
+    return { success: false, error: roomError?.message || 'Failed to create chat room' };
+  }
+
+  const { error: memberError } = await supabase.from('com_t_chat_room_user').insert(
+    profiles.map((p) => ({ room_id: newRoom.room_id, user_id: p.id, user_type: p.user_type }))
+  );
+
+  if (memberError) {
+    logger.error('chat:create_room_members_failed', memberError.message, {
+      ...ctx,
+      payload: { roomId: newRoom.room_id },
+    });
+    return { success: false, error: memberError.message };
+  }
+
+  logger.info('chat:create_room_success', `Chat room created: ${newRoom.room_id}`, {
+    ...ctx,
+    payload: { roomId: newRoom.room_id },
+  });
+
+  return { success: true, roomId: newRoom.room_id };
 }
 
 /**
@@ -223,6 +289,167 @@ async function findExistingTwoPersonRoom(
 }
 
 /**
+ * 【Admin専用・GROUPルームのみ】参加者を追加する。
+ * 過去に退出済み（left_at設定済み）のユーザーを指定した場合は再参加として扱う。
+ */
+export async function addChatRoomMember(
+  payload: AddChatRoomMemberPayload
+): Promise<{ success: boolean; member?: ChatRoomMemberSummary; error?: string }> {
+  const ctx = await getLogContext();
+  try {
+    const currentUser = await getCurrentUserWithType();
+    if (!currentUser) return { success: false, error: 'Unauthorized' };
+
+    if (currentUser.user_type !== USER_TYPES.ADMIN) {
+      logger.warn('chat:add_member_forbidden', 'Non-admin user attempted to add a chat room member', {
+        ...ctx,
+        payload,
+      });
+      return { success: false, error: 'Only admins can manage chat room participants' };
+    }
+
+    // Admin操作のためRLSをバイパスして参加者行のINSERT/UPDATEを確実に行う
+    const supabase = createAdminClient();
+
+    const { data: room } = await supabase
+      .from('com_t_chat_room')
+      .select('room_id, room_type')
+      .eq('room_id', payload.roomId)
+      .maybeSingle();
+
+    if (!room) return { success: false, error: 'Room not found' };
+    if (room.room_type !== CHAT_ROOM_TYPES.GROUP) {
+      return { success: false, error: 'Participants can only be managed for group rooms' };
+    }
+
+    const { data: profile } = await supabase
+      .from('com_m_user')
+      .select('id, user_name, user_type, icon_path, client_id, delete_flg, com_m_client(client_name)')
+      .eq('id', payload.userId)
+      .maybeSingle();
+
+    if (!profile || profile.delete_flg !== '0' || !HUMAN_USER_TYPES.includes(profile.user_type as UserType)) {
+      return { success: false, error: 'Target user not found' };
+    }
+
+    const { data: existingRow } = await supabase
+      .from('com_t_chat_room_user')
+      .select('room_id, user_id, left_at')
+      .eq('room_id', payload.roomId)
+      .eq('user_id', payload.userId)
+      .maybeSingle();
+
+    if (existingRow && existingRow.left_at === null) {
+      return { success: false, error: 'User is already a member of this room' };
+    }
+
+    const { error: memberError } = existingRow
+      ? await supabase
+          .from('com_t_chat_room_user')
+          .update({ left_at: null, joined_at: new Date().toISOString(), user_type: profile.user_type })
+          .eq('room_id', payload.roomId)
+          .eq('user_id', payload.userId)
+      : await supabase
+          .from('com_t_chat_room_user')
+          .insert({ room_id: payload.roomId, user_id: profile.id, user_type: profile.user_type });
+
+    if (memberError) {
+      logger.error('chat:add_member_failed', memberError.message, { ...ctx, payload });
+      return { success: false, error: memberError.message };
+    }
+
+    logger.info('chat:add_member_success', `Member added to room: ${payload.roomId}`, { ...ctx, payload });
+
+    const clientInfo = Array.isArray(profile.com_m_client) ? profile.com_m_client[0] : profile.com_m_client;
+
+    return {
+      success: true,
+      member: {
+        user_id: profile.id,
+        user_name: profile.user_name,
+        user_type: profile.user_type,
+        icon_path: profile.icon_path,
+        client_id: profile.client_id,
+        client_name: clientInfo?.client_name ?? null,
+      },
+    };
+  } catch (err) {
+    logger.error('chat:add_member_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, error: 'Unexpected error' };
+  }
+}
+
+/**
+ * 【Admin専用・GROUPルームのみ】参加者を削除する（退出処理。left_atを設定する論理削除）。
+ * 残り人数が MIN_GROUP_ROOM_MEMBERS を下回る削除は拒否する。
+ */
+export async function removeChatRoomMember(
+  payload: RemoveChatRoomMemberPayload
+): Promise<{ success: boolean; error?: string }> {
+  const ctx = await getLogContext();
+  try {
+    const currentUser = await getCurrentUserWithType();
+    if (!currentUser) return { success: false, error: 'Unauthorized' };
+
+    if (currentUser.user_type !== USER_TYPES.ADMIN) {
+      logger.warn('chat:remove_member_forbidden', 'Non-admin user attempted to remove a chat room member', {
+        ...ctx,
+        payload,
+      });
+      return { success: false, error: 'Only admins can manage chat room participants' };
+    }
+
+    // Admin操作のためRLSをバイパスして参加者行のUPDATEを確実に行う
+    const supabase = createAdminClient();
+
+    const { data: room } = await supabase
+      .from('com_t_chat_room')
+      .select('room_id, room_type')
+      .eq('room_id', payload.roomId)
+      .maybeSingle();
+
+    if (!room) return { success: false, error: 'Room not found' };
+    if (room.room_type !== CHAT_ROOM_TYPES.GROUP) {
+      return { success: false, error: 'Participants can only be managed for group rooms' };
+    }
+
+    const { count: activeCount } = await supabase
+      .from('com_t_chat_room_user')
+      .select('room_id', { count: 'exact', head: true })
+      .eq('room_id', payload.roomId)
+      .is('left_at', null);
+
+    if ((activeCount ?? 0) <= MIN_GROUP_ROOM_MEMBERS) {
+      return { success: false, error: `Group rooms need at least ${MIN_GROUP_ROOM_MEMBERS} participants` };
+    }
+
+    const { data: updatedRows, error: updateError } = await supabase
+      .from('com_t_chat_room_user')
+      .update({ left_at: new Date().toISOString() })
+      .eq('room_id', payload.roomId)
+      .eq('user_id', payload.userId)
+      .is('left_at', null)
+      .select('user_id');
+
+    if (updateError) {
+      logger.error('chat:remove_member_failed', updateError.message, { ...ctx, payload });
+      return { success: false, error: updateError.message };
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      return { success: false, error: 'User is not an active member of this room' };
+    }
+
+    logger.info('chat:remove_member_success', `Member removed from room: ${payload.roomId}`, { ...ctx, payload });
+
+    return { success: true };
+  } catch (err) {
+    logger.error('chat:remove_member_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, error: 'Unexpected error' };
+  }
+}
+
+/**
  * ルーム一覧の最新メッセージ取得結果を ChatMessage 形式に正規化する。
  * 一覧プレビューには添付ファイルの明細までは不要なため attachments は空配列とする
  * （プレビュー文言は message_type から組み立てる。詳細は getChatMessagePreviewText 参照）。
@@ -235,6 +462,7 @@ function normalizeAndMaskIfDeleted(raw: ChatMessage): ChatMessage {
 interface RoomBase {
   room_id: string;
   room_type: string;
+  room_name: string | null;
   created_at: string;
   closed_at: string | null;
 }
@@ -370,7 +598,7 @@ export async function getChatRooms(): Promise<{
     if (roomIds.length > 0) {
       const { data: roomRows, error: roomsError } = await supabase
         .from('com_t_chat_room')
-        .select('room_id, room_type, created_at, closed_at')
+        .select('room_id, room_type, room_name, created_at, closed_at')
         .in('room_id', roomIds);
 
       if (roomsError) {
@@ -408,7 +636,7 @@ export async function getAllChatRoomsForAdmin(): Promise<{
 
     const { data: allRooms, error: roomsError } = await supabase
       .from('com_t_chat_room')
-      .select('room_id, room_type, created_at, closed_at');
+      .select('room_id, room_type, room_name, created_at, closed_at');
 
     if (roomsError) {
       logger.error('chat:get_all_rooms_failed', roomsError.message, ctx);
@@ -450,7 +678,7 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     const { data: room, error: roomError } = await supabase
       .from('com_t_chat_room')
-      .select('room_id, room_type, created_at, closed_at')
+      .select('room_id, room_type, room_name, created_at, closed_at')
       .eq('room_id', roomId)
       .maybeSingle();
 
