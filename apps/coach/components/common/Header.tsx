@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  Menu, X, LogOut, User as UserIcon, ChevronDown,
+  Menu, X, LogOut, User as UserIcon, Lock, ChevronDown,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -103,6 +103,12 @@ export default function Header() {
           <DropdownMenuItem asChild>
             <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
               <UserIcon size={14} /> Profile
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
+              <Lock size={14} /> Change Password
             </Link>
           </DropdownMenuItem>
 
