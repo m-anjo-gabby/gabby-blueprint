@@ -220,20 +220,14 @@ export default function Sidebar() {
         ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
       `}>
 
-        {/* Top bar: close button on mobile, collapse toggle on desktop */}
-        <div className="h-16 px-4 border-b border-slate-800 shrink-0 flex items-center">
+        {/* Top bar: close button on mobile only */}
+        <div className="h-16 px-4 border-b border-slate-800 shrink-0 flex items-center lg:hidden">
           <button
             onClick={closeMobileSidebar}
-            className="lg:hidden p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 transition-colors"
+            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 transition-colors"
             aria-label="Close menu"
           >
             <X size={20} />
-          </button>
-          <button
-            onClick={toggleCollapse}
-            className="hidden lg:flex p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 transition-colors ml-auto"
-          >
-            {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
           </button>
         </div>
 
@@ -263,6 +257,17 @@ export default function Sidebar() {
             );
           })}
         </nav>
+
+        {/* Footer: persistent desktop collapse toggle */}
+        <div className="hidden lg:flex items-center justify-center h-12 border-t border-slate-800 shrink-0">
+          <button
+            onClick={toggleCollapse}
+            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors"
+            aria-label={isCollapsed ? 'Expand menu' : 'Collapse menu'}
+          >
+            {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+          </button>
+        </div>
       </aside>
     </>
   );
