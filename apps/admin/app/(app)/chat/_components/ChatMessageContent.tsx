@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { FileText, Loader2, Ban } from 'lucide-react';
 import { getChatAttachmentUrl } from '@gabby/lib/chat/actions/attachmentActions';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
+import { linkifyText } from '@gabby/lib/chat/linkifyText';
 import { ChatAttachmentRecord, ChatMessage } from '@gabby/types/chat';
 
 interface ChatMessageContentProps {
@@ -22,7 +23,9 @@ export function ChatMessageContent({ message }: ChatMessageContentProps) {
 
   return (
     <div className="space-y-2">
-      {message.message && <p className="whitespace-pre-wrap wrap-break-word">{message.message}</p>}
+      {message.message && (
+        <p className="whitespace-pre-wrap wrap-break-word">{linkifyText(message.message)}</p>
+      )}
       {message.attachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {message.attachments.map((attachment) => (
