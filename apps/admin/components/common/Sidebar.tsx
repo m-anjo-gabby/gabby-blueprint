@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Menu, X, LogOut, User, ChevronRight,
+  X, ChevronRight,
   PanelLeftClose, PanelLeftOpen, ChevronDown,
 } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { signOut } from '@/actions/adminAuthAction';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useChatStore } from '@gabby/lib/stores/useChatStore';
+import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
 import { ADMIN_NAV_CONFIG, type NavItem, type NavLeaf, type NavGroup } from '@/lib/navigation';
 
 // ============================================================
@@ -23,10 +23,13 @@ interface LeafItemProps {
   onClick: () => void;
   /** グループ子メニューとして表示する場合は true */
   isChild?: boolean;
+  /** 未読件数などのバッジ表示（チャット等） */
+  badge?: number;
 }
 
-function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false }: LeafItemProps) {
+function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge }: LeafItemProps) {
   const Icon = item.icon;
+  const hasBadge = Boolean(badge && badge > 0);
   return (
     <li className="list-none group relative">
       <Link
@@ -44,15 +47,30 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false }: Lea
         `}
       >
         <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center gap-0' : 'justify-start gap-3'}`}>
-          <Icon
-            size={isChild ? 15 : 18}
-            className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}`}
-          />
+          <span className="relative shrink-0">
+            <Icon
+              size={isChild ? 15 : 18}
+              className={isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}
+            />
+            {hasBadge && (
+              <span
+                className={`
+                  absolute -top-1.5 -right-2 flex items-center justify-center rounded-full
+                  bg-rose-500 text-white font-black leading-none ring-2 ring-slate-900
+                  ${badge && badge > 9 ? 'min-w-3.25 h-3.25 px-1 text-[8px]' : 'w-3.25 h-3.25 text-[8px]'}
+                `}
+              >
+                {badge && badge > 99 ? '99+' : badge}
+              </span>
+            )}
+          </span>
           <span className={`
-            text-sm font-bold transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden
-            ${isCollapsed ? 'w-0 opacity-0 ml-0' : isChild ? 'w-36 opacity-100 ml-0 text-[13px]' : 'w-40 opacity-100 ml-3'}
+            flex items-center gap-2 transition-all duration-300 ease-in-out overflow-hidden
+            ${isCollapsed ? 'max-w-0 opacity-0 ml-0' : isChild ? 'max-w-36 opacity-100 ml-0' : 'max-w-40 opacity-100 ml-3'}
           `}>
-            {item.label}
+            <span className={`text-sm font-bold whitespace-nowrap ${isChild ? 'text-[13px]' : ''}`}>
+              {item.label}
+            </span>
           </span>
         </div>
         {isActive && !isCollapsed && <ChevronRight size={14} className="text-indigo-200" />}
@@ -169,24 +187,20 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
 // ============================================================
 
 export default function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const user = useUserStore((state) => state.user);
   const userRoles: string[] = user?.app_metadata?.roles || [];
-  const { showConfirm } = useConfirm();
+  const isOpen = useSidebarStore((state) => state.isOpen);
+  const closeMobileSidebar = useSidebarStore((state) => state.close);
+  const totalUnreadCount = useChatStore((state) => state.totalUnreadCount);
+  const fetchChatRooms = useChatStore((state) => state.fetchRooms);
 
-  const toggleMobileSidebar = () => setIsOpen(!isOpen);
+  useEffect(() => {
+    fetchChatRooms();
+  }, [fetchChatRooms]);
+
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
-
-  const handleSignOut = async () => {
-    const ok = await showConfirm(
-      'ログアウトの確認',
-      'セッションを終了してログアウトします。よろしいですか？',
-      { variant: 'danger', isModal: true }
-    );
-    if (ok) await signOut();
-  };
 
   // 権限に基づいて表示するメニューを決定
   const filteredNavItems = ADMIN_NAV_CONFIG.filter((item: NavItem) => {
@@ -197,16 +211,9 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* モバイル用ハンバーガー */}
-      <button
-        onClick={toggleMobileSidebar}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700/50"
-      >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
+      {/* モバイル用オーバーレイ（ヘッダーのハンバーガーで開閉） */}
       {isOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={toggleMobileSidebar} />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={closeMobileSidebar} />
       )}
 
       {/* サイドバー本体 */}
@@ -217,21 +224,14 @@ export default function Sidebar() {
         ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
       `}>
 
-        {/* ロゴエリア & 折りたたみボタン */}
-        <div className={`p-6 border-b border-slate-800 shrink-0 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-          {!isCollapsed && (
-            <div className="flex items-center gap-3 animate-in fade-in duration-500">
-              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black italic shadow-lg shadow-indigo-500/20">B</div>
-              <div className="flex flex-col">
-                <span className="text-white font-black tracking-tighter text-xl leading-none">Blueprint</span>
-              </div>
-            </div>
-          )}
+        {/* 上部バー：モバイルの閉じるボタンのみ */}
+        <div className="h-16 px-4 border-b border-slate-800 shrink-0 flex items-center lg:hidden">
           <button
-            onClick={toggleCollapse}
-            className="hidden lg:flex p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 transition-colors"
+            onClick={closeMobileSidebar}
+            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 transition-colors"
+            aria-label="メニューを閉じる"
           >
-            {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+            <X size={20} />
           </button>
         </div>
 
@@ -245,7 +245,7 @@ export default function Sidebar() {
                   item={item}
                   isCollapsed={isCollapsed}
                   currentPathname={pathname}
-                  onLinkClick={() => setIsOpen(false)}
+                  onLinkClick={closeMobileSidebar}
                 />
               );
             }
@@ -255,48 +255,21 @@ export default function Sidebar() {
                 item={item}
                 isCollapsed={isCollapsed}
                 isActive={pathname.startsWith(item.href)}
-                onClick={() => setIsOpen(false)}
+                onClick={closeMobileSidebar}
+                badge={item.href === '/chat' ? totalUnreadCount : undefined}
               />
             );
           })}
         </nav>
 
-        {/* アカウント・ログアウトエリア */}
-        <div className="p-4 bg-slate-950/50 border-t border-slate-800 shrink-0">
-
-          {/* ユーザー情報 */}
-          <div className={`
-            flex items-center transition-all duration-300 mb-2 rounded-xl bg-slate-800/40 border border-slate-800/50 overflow-hidden
-            ${isCollapsed ? 'justify-center p-2' : 'px-3 py-3 gap-3'}
-          `}>
-            <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center shrink-0">
-              <User size={16} className={isCollapsed ? 'text-slate-500' : 'text-slate-300'} />
-            </div>
-            <div className={`
-              min-w-0 flex-1 transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden
-              ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}
-            `}>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Account</p>
-              <p className="text-xs font-bold text-slate-200 truncate">{user?.email?.split('@')[0] || 'Guest'}</p>
-            </div>
-          </div>
-
-          {/* ログアウト */}
+        {/* フッター：デスクトップの折りたたみボタンを常設表示 */}
+        <div className="hidden lg:flex items-center justify-center h-12 border-t border-slate-800 shrink-0">
           <button
-            onClick={handleSignOut}
-            className={`
-              flex items-center transition-all duration-300 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 text-sm font-black w-full
-              ${isCollapsed ? 'justify-center py-3 gap-0' : 'px-4 py-3 gap-3'}
-            `}
-            title={isCollapsed ? 'ログアウト' : ''}
+            onClick={toggleCollapse}
+            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors"
+            aria-label={isCollapsed ? 'メニューを開く' : 'メニューを閉じる'}
           >
-            <LogOut size={18} className="shrink-0" />
-            <span className={`
-              transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden
-              ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}
-            `}>
-              ログアウト
-            </span>
+            {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
           </button>
         </div>
       </aside>

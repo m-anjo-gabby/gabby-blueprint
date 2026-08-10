@@ -39,6 +39,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
         id: user.id,
         user_id: 0,           // 詳細取得までの仮値
         user_name: '...',    // ローディング表示用
+        icon_path: null,
         email: user.email,
         locale_id: 'ja',      // DBデフォルト値
         timezone: 'Asia/Tokyo', // DBデフォルト値
@@ -49,7 +50,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
       // Supabase DB からニックネーム等の詳細情報を取得します。
       const { data: profile, error } = await supabase
         .from('com_m_user')
-        .select('user_id, user_name, locale_id, timezone')
+        .select('user_id, user_name, icon_path, locale_id, timezone')
         .eq('id', user.id)
         .single();
 
@@ -60,6 +61,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
           id: user.id,
           user_id: 0,
           user_name: user.email?.split('@')[0] ?? '',
+          icon_path: null,
           email: user.email,
           locale_id: 'ja',
           timezone: 'Asia/Tokyo',
@@ -72,6 +74,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
           id: user.id,
           user_id: profile.user_id,
           user_name: profile.user_name ?? '',
+          icon_path: profile.icon_path,
           email: user.email,
           locale_id: profile.locale_id,
           timezone: profile.timezone,

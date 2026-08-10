@@ -1,6 +1,13 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { createSupabaseProxy } from '@gabby/lib/proxy-base';
+import { type NextRequest } from 'next/server';
+import {
+  createSupabaseProxy,
+  redirectAndClearSession,
+  redirectTo,
+  isDefaultPublicRoute,
+  logPageView,
+} from '@gabby/lib/proxy-base';
 import { createRequestLogger } from '@gabby/lib/logger';
+import { USER_TYPES } from '@gabby/types/user';
 
 // ディレクトリ構成に基づいた、生徒がアクセス可能な有効な画面ルートのホワイトリスト
 const VALID_STUDENT_ROUTES = [
@@ -14,29 +21,30 @@ const VALID_STUDENT_ROUTES = [
 ];
 
 export async function proxy(req: NextRequest) {
-  const { res, user } = await createSupabaseProxy(req);
+  const { res, user, userType, roles, requestId } = await createSupabaseProxy(req);
   const { pathname } = req.nextUrl;
   const loginPath = '/login';
   const dashboardPath = '/dashboard';
 
-  const logger = createRequestLogger('student', req);
+  const logger = createRequestLogger('student', req, requestId);
 
   // 公開ルートの判定
-  const isPublicRoute = pathname === loginPath || pathname.startsWith('/auth') || 
-    ['/forgot-password', '/update-password', '/favicon.ico'].includes(pathname);
+  const isPublicRoute = isDefaultPublicRoute(pathname, {
+    extraExactPaths: ['/forgot-password', '/update-password'],
+    extraPrefixes: ['/auth'],
+  });
 
   // A. 未ログイン
   if (!user) {
     if (!isPublicRoute) {
       // 認可が必要なページへの未ログインアクセスは記録に値する（必要に応じてinfoログを追加可能）
-      return NextResponse.redirect(new URL(loginPath, req.url));
+      return redirectTo(req, loginPath);
     }
     return res;
   }
 
-  const userType = user.app_metadata?.user_type as string | undefined;
   const isLicensed = user.app_metadata?.is_licensed === true;
-  const isAdmin = userType === '0';
+  const isAdmin = userType === USER_TYPES.ADMIN;
 
   // B. 認可チェック
   // 1. 管理者が生徒用パスにアクセスした場合
@@ -48,11 +56,7 @@ export async function proxy(req: NextRequest) {
       payload: { userType }
     });
 
-    const response = NextResponse.redirect(new URL(loginPath, req.url));
-    req.cookies.getAll().forEach((c) => {
-      if (c.name.startsWith('sb-')) response.cookies.delete(c.name);
-    });
-    return response;
+    return redirectAndClearSession(req, loginPath);
   }
 
   // 2. ライセンス未保有の生徒
@@ -62,30 +66,25 @@ export async function proxy(req: NextRequest) {
       path: pathname,
       payload: { appMetadata: user.app_metadata }
     });
-    
-    const response = NextResponse.redirect(new URL(loginPath, req.url));
-    // Supabaseに関連するすべてのクッキーを削除
-    req.cookies.getAll().forEach((c) => {
-      if (c.name.startsWith('sb-')) response.cookies.delete(c.name);
-    });
-    return response;
+
+    return redirectAndClearSession(req, loginPath);
   }
 
   // C. ログイン済みでのルート/ログインページアクセス
   if (pathname === '/' || pathname === loginPath) {
-    return NextResponse.redirect(new URL(dashboardPath, req.url));
+    return redirectTo(req, dashboardPath);
   }
 
   // --- C-1. モニター画面の認可チェック ---
   const isMonitorRoute = pathname === '/monitor' || pathname.startsWith('/monitor/');
-  const hasMonitorRole = user.app_metadata?.roles?.includes('monitor');
+  const hasMonitorRole = roles.includes('monitor');
 
   if (isMonitorRoute && !hasMonitorRole) {
     logger.warn('proxy:monitor_access_denied', `Unauthorized monitor access attempt (User ID: ${user.id})`, {
       userId: user.id,
       path: pathname,
     });
-    return NextResponse.redirect(new URL(dashboardPath, req.url));
+    return redirectTo(req, dashboardPath);
   }
 
   // --- C-2. 直接入力および無効なアドレスへのアクセス制御 ---
@@ -97,28 +96,19 @@ export async function proxy(req: NextRequest) {
       userId: user.id,
       path: pathname,
     });
-    return NextResponse.redirect(new URL(dashboardPath, req.url));
+    return redirectTo(req, dashboardPath);
   }
 
   // --- D. アクセスログの記録 ---
   // Server Action (POSTリクエスト) は proxy:page_view ログから完全に除外する
   // これにより、通信頻度の高い学習中の実績同期ログが画面アクセスログと混ざるのを防ぐ
-  const isPageAccess = req.method === 'GET';
-  if (isPageAccess && !isPublicRoute && user) {
-    logger.info('page_view', `Access: ${pathname}`, {
-      userId: user.id,
-      path: pathname,
-      payload: {
-        method: req.method,
-        userAgent: req.headers.get('user-agent'),
-        referer: req.headers.get('referer'),
-      }
-    });
-  }
+  logPageView(logger, req, user, pathname, isPublicRoute);
 
   return res;
 }
 
+// Next.js が config を静的解析するため、matcher はリテラルで記述する必要がある
+// （import した変数を参照すると解析エラーになりビルドが壊れる）
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

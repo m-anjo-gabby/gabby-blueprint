@@ -1,12 +1,13 @@
 'use server';
 
-import { createLogger, getLogContext } from './index';
+import { createLogger } from './index';
+import { getLogContext } from './context';
 
 // ロガー自体のインスタンスを生成
 const logger = createLogger('common');
 
 interface LogClientErrorParams {
-  service?: 'admin' | 'student' | 'common';
+  service?: 'admin' | 'student' | 'coach' | 'common';
   digest?: string;
   message: string;
   stack?: string;

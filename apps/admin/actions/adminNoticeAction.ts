@@ -3,7 +3,8 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 import { NoticeItem, NoticeAttachment, NoticeType, NoticeTargetType } from '@gabby/types/notice';
 
 const logger = createLogger('admin');

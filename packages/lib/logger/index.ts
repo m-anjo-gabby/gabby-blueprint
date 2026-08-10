@@ -1,10 +1,9 @@
 import pino from 'pino';
-import { headers } from "next/headers";
 
 /**
  * ログレベルの定義
  */
-export type LogService = 'admin' | 'student' | 'api' | 'worker' | 'common' | 'mail' | 'monitor';
+export type LogService = 'admin' | 'student' | 'coach' | 'api' | 'worker' | 'common' | 'mail' | 'monitor';
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
 /**
@@ -17,6 +16,7 @@ export interface LogEvent {
   message: string;
   userId?: string;
   ip?: string;        // アクセス元IPアドレス
+  requestId?: string; // Middleware (proxy) が発行するリクエスト単位のトレースID
   functionName?: string;
   timestamp?: string;
   payload?: any;      // 追加のコンテキスト情報
@@ -43,34 +43,6 @@ const p = pino({
       }
     : undefined,
 });
-
-/**
- * Middleware (proxy-base) でセットされたカスタムヘッダーから
- * 認証ユーザーID等のコンテキストを抽出する。
- * * @returns {Promise<Partial<LogEvent>>} ログに付与するコンテキスト
- */
-export async function getLogContext(): Promise<Partial<LogEvent>> {
-  try {
-    const h = await headers();
-    const userId = h.get('x-user-id');
-    
-    // IPアドレスの抽出 (Vercel環境では x-real-ip または x-forwarded-for を優先)
-    const realIp = h.get('x-real-ip');
-    const forwardedFor = h.get('x-forwarded-for');
-    let ip = realIp || undefined;
-    if (!ip && forwardedFor) {
-      ip = forwardedFor.split(',')[0].trim();
-    }
-
-    return {
-      userId: userId ?? 'system',
-      ip: ip ?? undefined,
-    };
-  } catch {
-    // Server Actions 以外（ビルド時や Edge Runtime 以外の特殊な文脈）でのフォールバック
-    return { userId: 'system' };
-  }
-}
 
 /**
  * スタックトレースから呼び出し元の関数名を取得する。
@@ -143,24 +115,31 @@ export function extractIpFromRequest(req: { headers: { get: (name: string) => st
  * proxy ファイル側での clientIp 抽出は不要。
  *
  * @example
- * const logger = createRequestLogger('student', req);
+ * const logger = createRequestLogger('student', req, requestId);
  * logger.info('page_view', `Access: ${pathname}`, { userId, path });
  */
-export const createRequestLogger = (service: LogService, req: { headers: { get: (name: string) => string | null } }) => {
+export const createRequestLogger = (
+  service: LogService,
+  req: { headers: { get: (name: string) => string | null } },
+  requestId?: string
+) => {
   const ip = extractIpFromRequest(req);
   const base = createLogger(service);
 
-  const withIp = (context?: Partial<LogEvent>): Partial<LogEvent> =>
-    ip ? { ip, ...context } : { ...context };
+  const withRequestContext = (context?: Partial<LogEvent>): Partial<LogEvent> => ({
+    ...(ip ? { ip } : {}),
+    ...(requestId ? { requestId } : {}),
+    ...context,
+  });
 
   return {
     info: (event: string, message: string, context?: Partial<LogEvent>) =>
-      base.info(event, message, withIp(context)),
+      base.info(event, message, withRequestContext(context)),
     warn: (event: string, message: string, context?: Partial<LogEvent>) =>
-      base.warn(event, message, withIp(context)),
+      base.warn(event, message, withRequestContext(context)),
     error: (event: string, message: string, context?: Partial<LogEvent>) =>
-      base.error(event, message, withIp(context)),
+      base.error(event, message, withRequestContext(context)),
     debug: (event: string, message: string, context?: Partial<LogEvent>) =>
-      base.debug(event, message, withIp(context)),
+      base.debug(event, message, withRequestContext(context)),
   };
 };

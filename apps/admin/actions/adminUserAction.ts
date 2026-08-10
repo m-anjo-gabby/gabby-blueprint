@@ -13,25 +13,46 @@ import {
 } from "@gabby/types/user";
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
-import { createLogger, getLogContext } from '@gabby/lib/logger';
-import { sendInvitationEmail } from "@gabby/lib/mail/actions/sendInvitation"; // 独自メール配信用ユーティリティ
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
+import { sendInvitationEmail } from "@gabby/lib/mail/actions/sendInvitation"; // 独自メール配信用ユーティリティ（生徒向け）
+import { sendAdminInvitationEmail } from "@gabby/lib/mail/actions/sendAdminInvitation"; // 管理者向け招待メール
+import { sendCoachInvitationEmail } from "@gabby/lib/mail/actions/sendCoachInvitation"; // コーチ向け招待メール（英文）
+import { validatePasswordStrength } from "@gabby/lib/auth/validation"; // パスワード強度の共通バリデーション
 import { randomBytes } from "crypto"; // 暗号トークン生成用
 
 const logger = createLogger('admin');
 
 /**
  * ユーザ種別に応じたリダイレクト先（招待画面のベースURL）を解決する共通ヘルパー
- * 今後、コーチ用サイト(COACH)などが追加された場合も、この switch 文に定義を追加するだけで安全に拡張可能です。
  */
 function getRedirectBase(userType?: string): string {
   switch (userType) {
     case USER_TYPES.ADMIN:
       return process.env.NEXT_PUBLIC_SITE_URL || '';
-    // 将来的な拡張例:
-    // case USER_TYPES.COACH:
-    //   return process.env.NEXT_PUBLIC_COACH_URL || '';
+    case USER_TYPES.COACH:
+      return process.env.NEXT_PUBLIC_COACH_URL || '';
     default:
       return process.env.NEXT_PUBLIC_STUDENT_URL || '';
+  }
+}
+
+/**
+ * ユーザ種別に応じて、適切なテンプレート・文言の招待メールを送り分ける共通ヘルパー
+ */
+function dispatchInvitationEmail(userType: string | undefined, params: {
+  to: string;
+  userName: string;
+  inviteUrl: string;
+  expiresDays?: number;
+}): Promise<{ success: boolean; error?: string }> {
+  switch (userType) {
+    case USER_TYPES.ADMIN:
+      return sendAdminInvitationEmail(params);
+    case USER_TYPES.COACH:
+      return sendCoachInvitationEmail(params);
+    default:
+      return sendInvitationEmail(params);
   }
 }
 
@@ -180,9 +201,9 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     }
     */
 
-    // 独自メール送信処理を実行 (Resend) -> 共通ヘルパーを利用してURLを解決
+    // 独自メール送信処理を実行 (Resend) -> 共通ヘルパーを利用してURLを解決・種別ごとのテンプレートを送り分け
     const inviteUrl = getInvitationUrl(user_type, inviteData.token);
-    const mailResult = await sendInvitationEmail({
+    const mailResult = await dispatchInvitationEmail(user_type, {
       to: email,
       userName: user_name || '会員',
       inviteUrl: inviteUrl
@@ -212,6 +233,124 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
 
   } catch (err) {
     logger.error("user:create_user_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload });
+    return { success: false, user_id: null, errorType: 'unexpected_error', message: "予期せぬエラーが発生しました" };
+  }
+}
+
+/**
+ * ユーザー即時作成アクション（Auto Confirm）
+ * Supabaseダッシュボードの「Auto Confirm」相当。招待メールを送信せず、
+ * 管理者がその場で指定したメールアドレス・パスワードで確認済みアカウントを作成します。
+ */
+export async function createUserDirect(
+  payload: CreateUserPayload & { roles?: string[]; contract_id?: string; password: string }
+): Promise<CreateUserResponse> {
+  const ctx = await getLogContext();
+  const { email, user_name, client_id, user_type, roles = [], contract_id, password } = payload;
+
+  try {
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return { success: false, user_id: null, errorType: 'weak_password', message: passwordError };
+    }
+
+    const supabase = await createAdminClient();
+
+    // 本登録用マスタ(com_m_user)にすでに存在していないか先に確認します
+    const { data: existingUser } = await supabase
+      .from('com_m_user')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingUser) {
+      return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
+    }
+
+    // Supabase Auth側へ確認済み(email_confirm: true)のユーザーとして即時作成
+    // ※ 既存のDBトリガーにより、public.com_m_user への基本レコードの自動同期が行われます
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        user_name,
+        user_type,
+        client_id: client_id || null,
+        roles
+      }
+    });
+
+    if (authError || !authData.user) {
+      if (authError?.code === 'email_exists') {
+        return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
+      }
+      logger.error('user:create_user_direct_auth_failed', authError?.message || 'User object null', { ...ctx, payload: { email } });
+      return { success: false, user_id: null, errorType: 'unexpected_error', message: authError?.message || "アカウントの作成に失敗しました。" };
+    }
+
+    const userId = authData.user.id;
+
+    // トリガーで自動作成されたマスタレコード(com_m_user)を確定情報でアップデート
+    const { error: dbUserError } = await supabase
+      .from('com_m_user')
+      .update({
+        client_id: client_id || null,
+        user_name,
+        user_type,
+        update_date: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (dbUserError) {
+      logger.error('user:create_user_direct_sync_failed', dbUserError.message, { ...ctx, payload: { userId } });
+    }
+
+    // ロールの紐付け
+    if (roles.length > 0) {
+      const { error: roleError } = await supabase
+        .from('com_t_user_role')
+        .insert(roles.map(roleId => ({ user_id: userId, role_id: roleId })));
+
+      if (roleError) {
+        logger.error('user:create_user_direct_role_insert_failed', roleError.message, { ...ctx, payload: { userId, roles } });
+      }
+    }
+
+    // 初期ライセンスの割当（生徒など、契約が指定された場合のみ）
+    if (contract_id && contract_id !== 'none') {
+      const { data: contract } = await supabase
+        .from('com_m_contract')
+        .select('start_date, end_date')
+        .eq('contract_id', contract_id)
+        .single();
+
+      if (contract) {
+        const { error: licenseError } = await supabase
+          .from('com_t_user_license')
+          .insert({
+            user_id: userId,
+            contract_id,
+            start_date: contract.start_date,
+            end_date: contract.end_date,
+            status: 1
+          });
+        if (licenseError) {
+          logger.error('user:create_user_direct_license_insert_failed', licenseError.message, { ...ctx, payload: { userId, contract_id } });
+        }
+      }
+    }
+
+    logger.info('user:create_user_direct_success', `User created directly (auto-confirmed): ${email}`, {
+      ...ctx,
+      payload: { userId, email, clientId: client_id }
+    });
+
+    revalidatePath('/users');
+    return { success: true, user_id: userId, errorType: null, message: null };
+
+  } catch (err) {
+    logger.error("user:create_user_direct_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload });
     return { success: false, user_id: null, errorType: 'unexpected_error', message: "予期せぬエラーが発生しました" };
   }
 }
@@ -258,10 +397,11 @@ export async function resendInvite(email: string, userType?: string) {
       throw updateError;
     }
 
-    // 💡 改善: 再生成したトークンで Resend 経由でメールを再送 -> 💡 共通ヘルパーを利用してURLを解決
+    // 💡 改善: 再生成したトークンで Resend 経由でメールを再送 -> 💡 共通ヘルパーを利用してURLを解決・種別ごとのテンプレートを送り分け
     // 💡 考慮点: 引数の userType が省略されて渡された場合でも、DBから取得した一貫性のある currentInvite.user_type をフォールバックとして優先適用
-    const inviteUrl = getInvitationUrl(userType || currentInvite.user_type, newWeightToken);
-    const mailResult = await sendInvitationEmail({
+    const resolvedUserType = userType || currentInvite.user_type;
+    const inviteUrl = getInvitationUrl(resolvedUserType, newWeightToken);
+    const mailResult = await dispatchInvitationEmail(resolvedUserType, {
       to: email,
       userName: currentInvite.user_name || '会員',
       inviteUrl: inviteUrl

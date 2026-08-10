@@ -1,7 +1,8 @@
 "use server";
 
 import { createServerClient } from "@gabby/lib/supabase/server";
-import { createLogger, getLogContext } from "@gabby/lib/logger";
+import { createLogger } from "@gabby/lib/logger";
+import { getLogContext } from "@gabby/lib/logger/context";
 import { WordSummaryHistoryItem } from "./wordAction"; // Re-use type
 
 const logger = createLogger('monitor');

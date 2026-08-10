@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@gabby/lib/hooks/useToast'
 import { createContract, updateContract } from '@/actions/adminContractAction'
 import { getClientsFilter } from '@/actions/adminClientAction'
@@ -18,6 +19,17 @@ import { Alert } from '@/components/ui/alert'
 import { ContractDetail } from '@gabby/types/contract'
 import { SearchableSelect } from '@/components/common/SearchableSelect'
 
+// --- 契約ステータスの選択肢 ---
+const CONTRACT_STATUS_OPTIONS = [
+  { value: 1, label: '有効', className: 'text-emerald-600' },
+  { value: 0, label: '無効', className: 'text-slate-500' },
+  { value: 9, label: '解約', className: 'text-rose-600' },
+] as const;
+
+function getContractStatusLabel(status: number): string {
+  return CONTRACT_STATUS_OPTIONS.find((s) => s.value === status)?.label ?? '不明';
+}
+
 // --- スキーマ定義 ---
 const contractSchema = z.object({
   client_id: z.string().min(1, '顧客を選択してください'),
@@ -25,6 +37,7 @@ const contractSchema = z.object({
   max_licenses: z.coerce.number().min(1, '1以上の数値を入力してください'),
   start_date: z.string().min(1, '開始日は必須です'),
   end_date: z.string().min(1, '終了日は必須です'),
+  status: z.coerce.number(),
   note: z.string().nullable().optional(),
 }).refine((data) => {
   // 開始日と終了日が両方存在する場合のみチェック
@@ -46,6 +59,7 @@ const DEFAULT_VALUES: ContractFormInput = {
   max_licenses: 10,
   start_date: '',
   end_date: '',
+  status: 1,
   note: '',
 }
 
@@ -77,6 +91,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
       max_licenses: data.max_licenses ?? 0,
       start_date: data.start_date ?? '',
       end_date: data.end_date ?? '',
+      status: data.status ?? 1,
       note: data.note ?? '',
     }
   }, [mode])
@@ -259,6 +274,37 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                 </FormItem>
               )} />
             </div>
+
+            {/* --- ステータス（編集時のみ変更可。新規登録は常に「有効」で作成） --- */}
+            {mode === 'edit' && (
+              <FormField control={form.control} name="status" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">ステータス</FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                      {getContractStatusLabel(field.value as number)}
+                    </div>
+                  ) : (
+                    <Select
+                      onValueChange={(val) => field.onChange(Number(val))}
+                      value={String(field.value ?? 1)}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="rounded-xl border-slate-200"><SelectValue /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CONTRACT_STATUS_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={String(opt.value)}>
+                            <span className={opt.className}>{opt.label}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
 
             {/* --- 備考 --- */}
             <FormField control={form.control} name="note" render={({ field }) => (

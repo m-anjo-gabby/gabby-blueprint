@@ -31,13 +31,17 @@ export default async function StudentAppLayout({
     redirect('/login');
   }
 
+  // 💡 ライセンス期限切れの補正は、都度リクエストではなく日次cron
+  // (touch_expired_user_licenses / supabase/DDL/function/touch_expired_user_licenses.sql)
+  // で行う。通信量を増やさないため、ここでの都度チェックは行わない。
+
   // --- 2. 規約同意チェック ---
   // ログイン後の全ページで共通して、最新規約への同意状況を確認します。
   // 未同意がある場合は TermsAgreementModal が表示され、操作をロックします。
   const pendingTerms = await checkPendingAgreements(user.id);
 
-  // 必要に応じて生徒ロールのチェックを追加
-  // if (user.user_metadata.role !== 'student') { redirect('/unauthorized'); }
+  // 💡 user_type/ライセンスに基づく詳細なアクセス制御は apps/student/proxy.ts (Middleware) で
+  // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
 
   return (
     <>

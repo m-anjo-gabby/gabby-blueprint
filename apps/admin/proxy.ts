@@ -1,31 +1,38 @@
 // apps/admin/proxy.ts
-import { type NextRequest, NextResponse } from 'next/server';
-import { createSupabaseProxy } from '@gabby/lib/proxy-base';
+import { type NextRequest } from 'next/server';
+import {
+  createSupabaseProxy,
+  redirectAndClearSession,
+  redirectTo,
+  isDefaultPublicRoute,
+  logPageView,
+} from '@gabby/lib/proxy-base';
 import { createRequestLogger } from '@gabby/lib/logger';
+import { USER_TYPES } from '@gabby/types/user';
 import { canAccessPath } from './lib/navigation';
 
 export async function proxy(req: NextRequest) {
-  const { res, user } = await createSupabaseProxy(req);
+  const { res, user, userType, roles, requestId } = await createSupabaseProxy(req);
   const { pathname } = req.nextUrl;
   const loginPath = '/login';
   const dashboardPath = '/dashboard';
 
-  const logger = createRequestLogger('admin', req);
+  const logger = createRequestLogger('admin', req, requestId);
 
   // 公開ルートの判定
-  const isPublicRoute = pathname === loginPath || pathname.startsWith('/auth') || 
-    ['/forgot-password', '/update-password', '/favicon.ico'].includes(pathname);
+  const isPublicRoute = isDefaultPublicRoute(pathname, {
+    extraExactPaths: ['/forgot-password', '/update-password'],
+    extraPrefixes: ['/auth'],
+  });
 
   // --- A. 未ログインの場合 ---
   if (!user) {
-    if (!isPublicRoute) return NextResponse.redirect(new URL(loginPath, req.url));
+    if (!isPublicRoute) return redirectTo(req, loginPath);
     return res;
   }
 
   // --- B. ログイン済みの場合 ---
-  const userType = user.app_metadata?.user_type as string | undefined;
-  const roles = (user.app_metadata?.roles as string[] | undefined) || [];
-  const isAdmin = userType === '0';
+  const isAdmin = userType === USER_TYPES.ADMIN;
 
   // 1. 生徒（非管理者）がアドミンアプリにアクセスした場合
   // リダイレクトループ（!isAdmin -> /login -> isLogged -> /dashboard）を防ぐため、
@@ -37,16 +44,12 @@ export async function proxy(req: NextRequest) {
       payload: { userType }
     });
 
-    const response = NextResponse.redirect(new URL(loginPath, req.url));
-    req.cookies.getAll().forEach((c) => {
-      if (c.name.startsWith('sb-')) response.cookies.delete(c.name);
-    });
-    return response;
+    return redirectAndClearSession(req, loginPath);
   }
 
   // 2. ルート/ログインページアクセス
   if (pathname === '/' || pathname === loginPath) {
-    return NextResponse.redirect(new URL(dashboardPath, req.url));
+    return redirectTo(req, dashboardPath);
   }
 
   // 3. 詳細認可ガード（パス単位の権限チェック）
@@ -57,30 +60,21 @@ export async function proxy(req: NextRequest) {
         path: pathname,
         payload: { roles }
       });
-      return NextResponse.redirect(new URL(dashboardPath, req.url));
+      return redirectTo(req, dashboardPath);
     }
   }
 
   // --- C. アクセスログ（PageView）の記録 ---
-  const isPageAccess = req.method === 'GET';
-  const isPrefetch = req.headers.get('purpose') === 'prefetch' || !!req.headers.get('x-nextjs-data');
-
-  if (isPageAccess && !isPrefetch && !isPublicRoute && user) {
-    logger.info('page_view', `Admin Access: ${pathname}`, {
-      userId: user.id,
-      path: pathname,
-      payload: {
-        roles,
-        method: req.method,
-        userAgent: req.headers.get('user-agent'),
-        referer: req.headers.get('referer'),
-      }
-    });
-  }
+  logPageView(logger, req, user, pathname, isPublicRoute, {
+    appLabel: 'Admin Access',
+    payload: { roles },
+  });
 
   return res;
 }
 
+// Next.js が config を静的解析するため、matcher はリテラルで記述する必要がある
+// （import した変数を参照すると解析エラーになりビルドが壊れる）
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

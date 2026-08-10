@@ -11,6 +11,7 @@ export type User = {
   id: string;         // Supabase Auth の UUID
   user_id: number;    // com_m_user の BIGINT ID (表示・管理用)
   user_name: string;  // 表示名
+  icon_path: string | null; // プロフィールアイコン画像のStorageパス（profileバケット内）
   email: string | undefined;
   locale_id: string;  // ロケールID (ja, en等)
   timezone: string;   // IANAタイムゾーン名
