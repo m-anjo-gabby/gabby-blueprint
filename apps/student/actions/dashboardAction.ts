@@ -2,7 +2,8 @@
 
 import { createServerClient } from "@gabby/lib/supabase/server";
 import { ContentItem } from "@gabby/types/content";
-import { createLogger, getLogContext } from "@gabby/lib/logger";
+import { createLogger } from "@gabby/lib/logger";
+import { getLogContext } from "@gabby/lib/logger/context";
 
 const logger = createLogger('student');
 

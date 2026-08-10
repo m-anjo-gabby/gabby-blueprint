@@ -4,7 +4,8 @@ import { createServerClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { User } from '@supabase/supabase-js';
 import { UserBase, USER_TYPES } from '@gabby/types/user';
-import { createLogger, getLogContext } from '../logger';
+import { createLogger } from '../logger';
+import { getLogContext } from '../logger/context';
 import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
 import { validatePasswordStrength } from './validation';
 

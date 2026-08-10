@@ -9,7 +9,8 @@ import {
   ClientRecord 
 } from '@gabby/types/client';
 import { revalidatePath } from 'next/cache';
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 
 const logger = createLogger('admin');
 

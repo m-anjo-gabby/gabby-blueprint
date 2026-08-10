@@ -2,7 +2,8 @@
 
 import { createServerClient } from '../../supabase/server';
 import { createAdminClient } from '../../supabase/admin';
-import { createLogger, getLogContext } from '../../logger';
+import { createLogger } from '../../logger';
+import { getLogContext } from '../../logger/context';
 import {
   PROFILE_ICON_BUCKET,
   PROFILE_ICON_MAX_SIZE,

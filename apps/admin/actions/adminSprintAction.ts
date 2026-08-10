@@ -3,7 +3,8 @@
 import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { SprintQuestion, SprintQuestionType } from "@gabby/types/sprint";
 import { revalidatePath } from 'next/cache';
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
 
 const logger = createLogger('admin');

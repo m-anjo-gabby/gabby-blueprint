@@ -5,7 +5,8 @@ import { uploadProfileIconCore, removeProfileIconCore } from '@gabby/lib/profile
 import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
 import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
 import { getMyCoachProfileCore, updateMyCoachProfileCore } from '@gabby/lib/coachProfile/actions/coachProfileActions';
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 import { ProfileIconErrorCode, MyProfile, UpdateTimezoneErrorCode } from '@gabby/types/profile';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { CountryMaster } from '@gabby/types/country';

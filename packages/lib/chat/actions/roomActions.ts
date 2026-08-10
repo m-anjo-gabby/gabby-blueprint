@@ -2,7 +2,8 @@
 
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 import { USER_TYPES, UserType } from '@gabby/types/user';
 import {
   AddChatRoomMemberPayload,
