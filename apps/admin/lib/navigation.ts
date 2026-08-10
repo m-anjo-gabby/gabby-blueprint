@@ -1,7 +1,7 @@
 // apps/admin/lib/navigation.ts
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, Bell, LucideIcon,
+  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon,
 } from 'lucide-react';
 
 // ============================================================
@@ -62,6 +62,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     requiredRoles: ['admin'],
   },
   {
+    label: 'タイムゾーン管理',
+    href: '/timezones',
+    icon: Globe,
+    requiredRoles: ['admin'],
+  },
+  {
     label: '教材管理',
     href: '/contents',
     icon: BookOpen,
@@ -72,6 +78,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     href: '/notice',
     icon: Bell,
     requiredRoles: ['admin'],
+  },
+  {
+    label: 'チャット',
+    href: '/chat',
+    icon: MessageCircle,
+    requiredRoles: [],
   },
   {
     type: 'group',
@@ -89,6 +101,18 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
         label: 'CV Dictionary',
         href: '/tools/cv-dictionary',
         icon: BookOpenText,
+        requiredRoles: ['admin', 'content_manager'],
+      },
+      {
+        label: 'AI Playground',
+        href: '/tools/ai-playground',
+        icon: Bot,
+        requiredRoles: ['admin', 'content_manager'],
+      },
+      {
+        label: 'AI Knowledge Base',
+        href: '/tools/ai-knowledge-base',
+        icon: Library,
         requiredRoles: ['admin', 'content_manager'],
       },
     ],

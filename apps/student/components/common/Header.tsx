@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { signOut } from '@/actions/authAction';
 import { getLatestTerms } from '@/actions/termAction';
 import { TermsAgreementModal } from './TermsAgreementModal';
@@ -39,6 +40,7 @@ interface TermItem {
 
 export default function Header() {
   const user = useUserStore((state) => state.user);
+  const profileIconUrl = getProfileIconUrl(user?.icon_path);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -94,8 +96,13 @@ export default function Header() {
             {/* ドロップダウンのトリガーボタン */}
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 hover:bg-slate-100 transition-all outline-none active:scale-95">
-                <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-indigo-500">
-                  <UserIcon size={14} />
+                <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-indigo-500 overflow-hidden shrink-0">
+                  {profileIconUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon size={14} />
+                  )}
                 </div>
                 <span className="text-xs font-bold text-slate-600 hidden sm:inline">
                   {user?.user_name || user?.email?.split('@')[0]}
@@ -103,16 +110,44 @@ export default function Header() {
                 <ChevronDown size={12} className="text-slate-400" />
               </button>
             </DropdownMenuTrigger>
-            
+
             {/* ドロップダウンメニュー内容 */}
-            <DropdownMenuContent className="w-48 p-2 rounded-2xl shadow-xl border-slate-100" align="end">
+            <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-slate-100" align="end">
+              {/* プロフィール概要（アイコン画像・名前） */}
+              <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 overflow-hidden shrink-0">
+                  {profileIconUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon size={18} />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-slate-800 truncate">
+                    {user?.user_name || user?.email?.split('@')[0]}
+                  </p>
+                  {user?.email && (
+                    <p className="text-[10px] font-medium text-slate-400 truncate">{user.email}</p>
+                  )}
+                </div>
+              </div>
+
+              <DropdownMenuSeparator className="mb-1 border-slate-100" />
+
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
+                  <UserIcon size={14} /> プロフィール
+                </Link>
+              </DropdownMenuItem>
+
               <DropdownMenuItem asChild>
                 <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
                   <Lock size={14} /> パスワード変更
                 </Link>
               </DropdownMenuItem>
-              
-              <DropdownMenuItem 
+
+              <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault();
                   setShowTermsModal(true);

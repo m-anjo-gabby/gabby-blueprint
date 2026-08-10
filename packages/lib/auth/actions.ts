@@ -6,6 +6,7 @@ import { User } from '@supabase/supabase-js';
 import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger, getLogContext } from '../logger';
 import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
+import { validatePasswordStrength } from './validation';
 
 // 💡 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');
@@ -18,25 +19,6 @@ export type AuthResponse = {
   success?: boolean;
   user?: User;
 };
-
-/**
- * 🔒 パスワードの強度を検証する共通関数
- */
-function validatePasswordStrength(password: string): string | null {
-  // 最小文字数を8文字以上に強化
-  if (!password || password.length < 8) {
-    return 'パスワードは8文字以上で入力してください。';
-  }
-
-  // 英字と数字の混在を必須化
-  const hasAlpha = /[a-zA-Z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  if (!hasAlpha || !hasNumber) {
-    return 'パスワードには英字と数字を両方含めてください。';
-  }
-
-  return null;
-}
 
 /**
  * 🔒 Supabaseからのエラーメッセージをユーザー向けの日本語に翻訳する共通関数
@@ -178,8 +160,11 @@ export async function signInCore(
   // 🔒 4. ログイン成功時のハンドル（失敗カウント・ロックのリセット）
   // -------------------------------------------------------------
   // 過去に失敗履歴がある、またはロック日時が残っている場合はクリーンにクリアする
+  // 💡 login_failed_count / locked_until は権限昇格防止のため authenticated ロールの
+  // 列単位UPDATE権限から除外している（com_m_user.sql参照）。セッションクライアント(supabase)
+  // では更新できないため、ここは supabaseAdmin(service_role) 経由で実行する。
   if (userMaster && (userMaster.login_failed_count > 0 || userMaster.locked_until)) {
-    const { error: resetError } = await supabase
+    const { error: resetError } = await supabaseAdmin
       .from('com_m_user')
       .update({
         login_failed_count: 0,
@@ -382,7 +367,7 @@ export async function checkLicense(userId: string): Promise<boolean> {
     .select('license_id')
     .eq('user_id', userId)
     .eq('status', 1)
-    .gte('end_date', 'now()')
+    .gte('end_date', new Date().toISOString()) // 💡 'now()'文字列ではなく実際のISO日時を渡す（他箇所の実装と統一）
     .limit(1) // 現在有効なものと未来のものが複数ある場合を考慮し、1件でもあればOKとする
     .maybeSingle();
 

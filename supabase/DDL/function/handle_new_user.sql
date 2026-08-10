@@ -42,6 +42,13 @@ BEGIN
         VALUES (new.id);
     END IF;
 
+    -- 4. コーチ公開プロフィールマスタの初期レコード作成
+    -- ユーザタイプが '2' (コーチ) の場合のみ実行
+    IF param_user_type = '2' THEN
+        INSERT INTO public.com_m_coach_profile (user_id)
+        VALUES (new.id);
+    END IF;
+
     RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
