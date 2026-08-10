@@ -1,7 +1,8 @@
 'use server';
 
 import { createServerClient } from '../../supabase/server';
-import { createLogger, getLogContext } from '../../logger';
+import { createLogger } from '../../logger';
+import { getLogContext } from '../../logger/context';
 import { GetTimezoneListResult, UpdateTimezoneResult } from '@gabby/types/profile';
 
 const logger = createLogger('common');

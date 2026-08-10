@@ -2,7 +2,8 @@
 
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 import {
   CHAT_ATTACHMENT_ALLOWED_MIME_TYPES,
   CHAT_ATTACHMENT_MAX_SIZE,

@@ -2,7 +2,8 @@
 
 import { createServerClient } from "@gabby/lib/supabase/server";
 import { FavoritePhraseItem, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@gabby/types/word";
-import { createLogger, getLogContext } from "@gabby/lib/logger";
+import { createLogger } from "@gabby/lib/logger";
+import { getLogContext } from "@gabby/lib/logger/context";
 
 const logger = createLogger('student');
 

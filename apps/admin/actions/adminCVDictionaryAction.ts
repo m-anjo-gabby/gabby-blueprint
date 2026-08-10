@@ -3,7 +3,8 @@
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
 import { revalidatePath } from 'next/cache';
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 import { type ColorVowelDictionaryRow } from '@gabby/types/colorVowel';
 
 const logger = createLogger('admin');

@@ -13,7 +13,8 @@ import {
 } from "@gabby/types/user";
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 import { sendInvitationEmail } from "@gabby/lib/mail/actions/sendInvitation"; // 独自メール配信用ユーティリティ（生徒向け）
 import { sendAdminInvitationEmail } from "@gabby/lib/mail/actions/sendAdminInvitation"; // 管理者向け招待メール
 import { sendCoachInvitationEmail } from "@gabby/lib/mail/actions/sendCoachInvitation"; // コーチ向け招待メール（英文）

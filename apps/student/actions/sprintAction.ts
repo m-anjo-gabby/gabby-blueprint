@@ -2,7 +2,8 @@
 
 import { createServerClient } from "@gabby/lib/supabase/server";
 import { SprintQuestion, SprintQuestionResponse, SprintQuestionType } from "@gabby/types/sprint";
-import { createLogger, getLogContext } from "@gabby/lib/logger";
+import { createLogger } from "@gabby/lib/logger";
+import { getLogContext } from "@gabby/lib/logger/context";
 
 const logger = createLogger("student");
 const SPRINT_LIMIT_COUNT = 10;

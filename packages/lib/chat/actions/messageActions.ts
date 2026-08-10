@@ -1,7 +1,8 @@
 'use server';
 
 import { createServerClient } from '@gabby/lib/supabase/server';
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 import { USER_TYPES } from '@gabby/types/user';
 import { CHAT_MESSAGE_TYPES, ChatAttachmentRecord, ChatMessage, SendChatMessagePayload } from '@gabby/types/chat';
 import { getCurrentUserWithType } from './roomActions';

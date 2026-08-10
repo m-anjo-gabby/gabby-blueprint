@@ -1,7 +1,8 @@
 import type { User } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { createLogger, getLogContext } from '../logger';
+import { createLogger } from '../logger';
+import { getLogContext } from '../logger/context';
 import {
   signInCore,
   signOutCore,

@@ -4,7 +4,8 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { Content, ContentRecord, ContentTagSummary } from '@gabby/types/content';
 // パスを index.ts 参照へ修正し、getLogContext を追加
-import { createLogger, getLogContext } from '@gabby/lib/logger';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 
 const logger = createLogger('admin');
 
