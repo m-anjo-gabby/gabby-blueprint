@@ -8,6 +8,13 @@ import {
 } from '@gabby/lib/proxy-base';
 import { createRequestLogger } from '@gabby/lib/logger';
 import { USER_TYPES } from '@gabby/types/user';
+import {
+  IMPERSONATION_COOKIE_NAME,
+  IMPERSONATION_REQUEST_HEADER_ID,
+  IMPERSONATION_REQUEST_HEADER_ADMIN_ID,
+  decodeImpersonationCookie,
+  isImpersonationExpired,
+} from '@gabby/lib/impersonation';
 
 // ディレクトリ構成に基づいた、生徒がアクセス可能な有効な画面ルートのホワイトリスト
 const VALID_STUDENT_ROUTES = [
@@ -21,12 +28,35 @@ const VALID_STUDENT_ROUTES = [
 ];
 
 export async function proxy(req: NextRequest) {
-  const { res, user, userType, roles, requestId } = await createSupabaseProxy(req);
+  const { res, user, userType, roles, requestId, supabase } = await createSupabaseProxy(req);
   const { pathname } = req.nextUrl;
   const loginPath = '/login';
   const dashboardPath = '/dashboard';
 
   const logger = createRequestLogger('student', req, requestId);
+
+  // --- 代理ログインセッションのTTLチェック ---
+  // Cookieは非表示(httpOnly)のため生徒UIには一切影響しない。ログのタグ付けと、
+  // 一定時間経過後の自動サインアウトのためだけに使用する。
+  const impersonation = decodeImpersonationCookie(req.cookies.get(IMPERSONATION_COOKIE_NAME)?.value);
+
+  if (user && impersonation && isImpersonationExpired(impersonation)) {
+    logger.warn('proxy:impersonation_expired', `Impersonation session expired (User ID: ${user.id})`, {
+      userId: user.id,
+      payload: { impersonationId: impersonation.id, adminId: impersonation.adminId },
+    });
+
+    await supabase.auth.signOut();
+    const expiredResponse = redirectAndClearSession(req, loginPath);
+    expiredResponse.cookies.delete(IMPERSONATION_COOKIE_NAME);
+    return expiredResponse;
+  }
+
+  if (user && impersonation) {
+    // Server Action / Server Component側で headers() 経由で取得し、ログに相関情報として付与する
+    res.headers.set(IMPERSONATION_REQUEST_HEADER_ID, impersonation.id);
+    res.headers.set(IMPERSONATION_REQUEST_HEADER_ADMIN_ID, impersonation.adminId);
+  }
 
   // 公開ルートの判定
   const isPublicRoute = isDefaultPublicRoute(pathname, {
@@ -102,7 +132,9 @@ export async function proxy(req: NextRequest) {
   // --- D. アクセスログの記録 ---
   // Server Action (POSTリクエスト) は proxy:page_view ログから完全に除外する
   // これにより、通信頻度の高い学習中の実績同期ログが画面アクセスログと混ざるのを防ぐ
-  logPageView(logger, req, user, pathname, isPublicRoute);
+  logPageView(logger, req, user, pathname, isPublicRoute, impersonation ? {
+    payload: { impersonationId: impersonation.id, adminId: impersonation.adminId },
+  } : undefined);
 
   return res;
 }
