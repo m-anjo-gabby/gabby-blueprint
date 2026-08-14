@@ -5,9 +5,9 @@ import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NoticePopupDialog } from '@/components/common/NoticePopupDialog';
 
 /**
- * アプリケーション全体で使い回せるお知らせポップアップのラッパーコンポーネント
- * 1. ユーザーが特定のお知らせをクリックして開いた場合 (selectedNotice)
- * 2. ダッシュボードアクセス時に自動表示される場合 (dialogNotices)
+ * App-wide notice popup wrapper.
+ * 1. Shown when the coach clicks a specific notice (selectedNotice)
+ * 2. Auto-shown on dashboard access for unread show_dialog notices (dialogNotices)
  */
 export function GlobalNoticePopup() {
   const {
@@ -20,7 +20,7 @@ export function GlobalNoticePopup() {
   } = useNoticeStore();
   const pathname = usePathname();
 
-  // 1. 手動で開かれたダイアログの表示判定
+  // 1. Manually opened dialog
   const selectedNotice = selectedNoticeId
     ? notices.find((n) => n.notice_id === selectedNoticeId)
     : null;
@@ -34,7 +34,7 @@ export function GlobalNoticePopup() {
     );
   }
 
-  // 2. ダッシュボードの自動ポップアップの表示判定
+  // 2. Auto popup on dashboard access
   const isDashboard = pathname === '/dashboard';
   const showAutoPopup = isDashboard && dialogNotices.length > 0 && !isDialogDismissed;
 

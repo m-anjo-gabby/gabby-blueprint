@@ -21,7 +21,7 @@ import { ResumeCard } from './_components/ResumeCard';
 import { DashboardEmptyState } from './_components/DashboardEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useNoticeStore } from '@/stores/useNoticeStore';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 
 const SHOW_EXPERIMENTAL_FEATURES = false;
 

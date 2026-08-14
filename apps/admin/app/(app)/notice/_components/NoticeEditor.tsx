@@ -326,8 +326,9 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                 onChange={(e) => setTargetType(e.target.value as NoticeTargetType)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
               >
-                <option value="ALL">全体配信 (ALL)</option>
+                <option value="ALL">生徒全体配信 (ALL)</option>
                 <option value="CLIENT">顧客指定 (CLIENT)</option>
+                <option value="COACH">コーチ一括配信 (COACH)</option>
               </select>
             </div>
           </div>

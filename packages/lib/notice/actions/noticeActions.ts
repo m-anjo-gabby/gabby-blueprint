@@ -5,13 +5,13 @@ import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { NoticeItem } from "@gabby/types/notice";
 
-const logger = createLogger('student');
+const logger = createLogger('common');
 
 /**
  * 公開中のお知らせ一覧を取得
  * - is_published = TRUE かつ公開期間内
  * - 既読状態 (is_read) を LEFT JOIN で付与
- * - RLS により target_type = 'ALL' または 自身の所属クライアントのみ返る
+ * - RLS により target_type / user_type に応じた対象のみ返る（生徒/コーチ共通で利用可能）
  */
 export async function getNoticesAction(): Promise<{
   success: boolean;

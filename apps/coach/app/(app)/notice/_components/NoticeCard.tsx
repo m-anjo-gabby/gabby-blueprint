@@ -2,18 +2,19 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Paperclip, Download, ExternalLink, Eye, Loader2 } from 'lucide-react';
+import { ChevronDown, Paperclip, Download, Eye, Loader2 } from 'lucide-react';
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { formatZonedDateJapanese } from '@gabby/lib/date/date';
+import { formatZonedDate } from '@gabby/lib/date/date';
 import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
 import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
+import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
 
-// ─── ファイルサイズ表示ユーティリティ ──────────────────────
+// ─── File size formatting ──────────────────────
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -50,10 +51,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
     }
   }, [notice.is_read, notice.notice_id, onToggle, onRead]);
 
-  const handlePreview = useCallback(async (
-    attId: string,
-    path: string
-  ) => {
+  const handlePreview = useCallback(async (attId: string, path: string) => {
     const actionKey = `preview-${attId}`;
     setLoadingActionId(actionKey);
     try {
@@ -66,11 +64,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
     }
   }, []);
 
-  const handleDownload = useCallback(async (
-    attId: string,
-    path: string,
-    name: string
-  ) => {
+  const handleDownload = useCallback(async (attId: string, path: string, name: string) => {
     const actionKey = `dl-${attId}`;
     setLoadingActionId(actionKey);
     try {
@@ -86,24 +80,20 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
   }, []);
 
   return (
-    <motion.article
+    <article
       id={`notice-${notice.notice_id}`}
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'bg-white rounded-[24px] border shadow-sm overflow-hidden transition-all',
-        !notice.is_read
-          ? 'border-indigo-200 shadow-indigo-100/60'
-          : 'border-slate-100'
+        'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all',
+        !notice.is_read ? 'border-indigo-200' : 'border-slate-200'
       )}
     >
-      {/* ─── カードヘッダー（クリックでアコーディオン） ──── */}
+      {/* ─── Card header (click to expand) ──── */}
       <button
         onClick={handleToggle}
-        className="w-full text-left flex items-start gap-3 p-5 hover:bg-slate-50/60 transition-colors"
+        className="w-full text-left flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors"
         aria-expanded={isOpen}
       >
-        {/* 未読インジケーター */}
+        {/* Unread indicator */}
         <div className="mt-1 shrink-0">
           {!notice.is_read ? (
             <span className="inline-block w-2 h-2 rounded-full bg-indigo-500" />
@@ -113,7 +103,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         </div>
 
         <div className="flex-1 min-w-0">
-          {/* バッジ行 */}
+          {/* Badges */}
           <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
             <span
               className={cn(
@@ -121,7 +111,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                 NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
               )}
             >
-              {NOTICE_TYPES[notice.notice_type as NoticeType]?.label ?? notice.notice_type}
+              {NOTICE_TYPE_LABEL_EN[notice.notice_type as NoticeType] ?? notice.notice_type}
             </span>
             {notice.is_important && (
               <span
@@ -130,7 +120,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                   NOTICE_IMPORTANT_BADGE.badgeClass
                 )}
               >
-                {NOTICE_IMPORTANT_BADGE.label}
+                {NOTICE_IMPORTANT_LABEL_EN}
               </span>
             )}
             {notice.attachments.length > 0 && (
@@ -141,23 +131,21 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             )}
           </div>
 
-          {/* タイトル */}
+          {/* Title */}
           <p className={cn(
             'text-sm leading-snug truncate',
-            notice.is_read
-              ? 'font-bold text-slate-600'
-              : 'font-black text-slate-900'
+            notice.is_read ? 'font-bold text-slate-600' : 'font-black text-slate-900'
           )}>
             {notice.title}
           </p>
 
-          {/* 公開日 */}
-          <p className="text-[10px] text-slate-400 mt-1 font-bold">
-            {formatZonedDateJapanese(notice.published_at, timezone)}
+          {/* Published date */}
+          <p className="text-[11px] text-slate-400 mt-1 font-bold">
+            {formatZonedDate(notice.published_at, timezone)}
           </p>
         </div>
 
-        {/* 展開アイコン */}
+        {/* Expand icon */}
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -167,7 +155,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         </motion.div>
       </button>
 
-      {/* ─── アコーディオン本文 ──────────────────────────── */}
+      {/* ─── Accordion body ──────────────────────────── */}
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
@@ -178,15 +166,15 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             transition={{ duration: 0.22, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 border-t border-slate-50 pt-4 space-y-4">
-              {/* Markdown 本文 */}
+            <div className="px-4 pb-4 border-t border-slate-100 pt-4 space-y-4">
+              {/* Markdown body */}
               <div className="prose prose-sm prose-slate max-w-none text-slate-600 text-sm leading-relaxed">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {notice.content}
                 </ReactMarkdown>
               </div>
 
-              {/* 添付ファイル */}
+              {/* Attachments */}
               {notice.attachments.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -201,10 +189,10 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                       return (
                         <div
                           key={att.id}
-                          className="w-full flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100/80 hover:border-slate-200 transition-colors"
+                          className="w-full flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm shrink-0">
                               <Paperclip size={13} className="text-slate-400" />
                             </div>
                             <div className="min-w-0 flex-1">
@@ -218,38 +206,36 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {/* プレビューボタン (ホワイトリスト対象ファイルのみ) */}
                             {canPreview && (
                               <button
                                 type="button"
                                 disabled={!!loadingActionId}
                                 onClick={() => handlePreview(att.id, att.path)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 text-slate-600 hover:text-indigo-600 rounded-xl text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
-                                title="別タブで表示"
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-slate-600 hover:text-indigo-600 rounded-lg text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                                title="Open in a new tab"
                               >
                                 {isPreviewLoading ? (
                                   <Loader2 size={12} className="animate-spin text-indigo-600" />
                                 ) : (
                                   <Eye size={12} />
                                 )}
-                                プレビュー
+                                Preview
                               </button>
                             )}
 
-                            {/* 強制ダウンロードボタン */}
                             <button
                               type="button"
                               disabled={!!loadingActionId}
                               onClick={() => handleDownload(att.id, att.path, att.name)}
-                              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
-                              title="ダウンロード保存"
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                              title="Download"
                             >
                               {isDlLoading ? (
                                 <Loader2 size={12} className="animate-spin text-white" />
                               ) : (
                                 <Download size={12} />
                               )}
-                              保存
+                              Save
                             </button>
                           </div>
                         </div>
@@ -262,6 +248,6 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.article>
+    </article>
   );
 }

@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Bell, ChevronLeft, BellOff } from 'lucide-react';
+import { Bell, BellOff } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NoticeCard } from './_components/NoticeCard';
 
@@ -18,12 +16,11 @@ export default function NoticePage() {
     focusId ? new Set([focusId]) : new Set()
   );
 
-  // マウント時に最新データを強制取得（このページは常に最新を見せる）
+  // Always fetch the latest data on mount
   useEffect(() => {
     fetchNotices(true);
   }, [fetchNotices]);
 
-  // トグルハンドラー（開閉トグル＋未読時既読化）
   const handleToggleNotice = useCallback((noticeId: string, isRead: boolean) => {
     setExpandedIds(prev => {
       const next = new Set(prev);
@@ -40,7 +37,7 @@ export default function NoticePage() {
     }
   }, [markAsRead]);
 
-  // focus パラメータがある場合は対象カードまでスクロール
+  // Scroll to the focused card if a `focus` query param is present
   const scrolledRef = useRef(false);
   useEffect(() => {
     if (!focusId || isLoading || scrolledRef.current) return;
@@ -52,32 +49,21 @@ export default function NoticePage() {
   }, [focusId, isLoading, notices]);
 
   return (
-    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
-      {/* ─── ヘッダー ──────────────────────────────────────── */}
-      <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="p-2 -ml-2 hover:bg-slate-100 rounded-2xl transition-all active:scale-90 text-slate-400"
-            >
-              <ChevronLeft size={24} />
-            </Link>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Notices</h1>
-            </div>
-          </div>
-
-          {/* 件数バッジ */}
-          <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 shadow-sm flex items-center gap-1.5">
-            <Bell size={10} />
-            {notices.length} <span className="opacity-60 ml-0.5">Items</span>
-          </div>
+    <div className="space-y-6 h-full flex flex-col">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">Notices</h1>
+          <p className="text-[13px] text-slate-500 mt-1">
+            Announcements and updates from the Gabby Blueprint team.
+          </p>
         </div>
-      </header>
+        <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 flex items-center gap-1.5 shrink-0">
+          <Bell size={10} />
+          {notices.length} <span className="opacity-60 ml-0.5">Items</span>
+        </div>
+      </div>
 
-      {/* ─── リスト ─────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 max-w-2xl">
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
@@ -88,23 +74,22 @@ export default function NoticePage() {
               className="space-y-3"
             >
               {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-[72px] w-full rounded-[24px] opacity-60" />
+                <div key={i} className="h-16 w-full rounded-2xl bg-slate-100 animate-pulse" />
               ))}
             </motion.div>
           ) : notices.length === 0 ? (
-            // エンプティステート
             <motion.div
               key="empty"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center py-20 text-center"
+              className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-slate-200"
             >
-              <div className="w-14 h-14 rounded-[20px] bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
+              <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
                 <BellOff size={22} />
               </div>
-              <p className="text-sm font-bold text-slate-500">現在お知らせはありません</p>
-              <p className="text-[10px] text-slate-400 mt-1.5 font-black uppercase tracking-wider">
-                No notifications yet
+              <p className="text-sm font-bold text-slate-500">No notices yet</p>
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                You&apos;ll see announcements from the team here.
               </p>
             </motion.div>
           ) : (
