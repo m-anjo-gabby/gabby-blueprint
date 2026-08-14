@@ -19,7 +19,8 @@ import {
   Users,
   CheckCircle2,
   Clock,
-  EyeOff
+  EyeOff,
+  CheckCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { deleteNotice } from '@/actions/adminNoticeAction';
@@ -290,6 +291,13 @@ export function NoticeDataTable({ data, pageCount, totalCount }: NoticeDataTable
                           title="編集"
                         >
                           <Edit3 size={15} />
+                        </Link>
+                        <Link
+                          href={`/notice/${notice.notice_id}/reads`}
+                          className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all active:scale-95"
+                          title="既読状況を確認"
+                        >
+                          <CheckCheck size={15} />
                         </Link>
                         <button
                           onClick={() => setDeleteId(notice.notice_id)}
