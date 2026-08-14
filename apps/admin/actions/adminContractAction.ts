@@ -43,6 +43,77 @@ async function recordLicenseHistory(
   }
 }
 
+interface TicketHistoryEntry {
+  ticket_id: string;
+  contract_id: string;
+  user_id: string;
+  action: 'granted' | 'consumed' | 'restored' | 'removed';
+  sessions_delta: number;
+  used_sessions_after: number;
+  total_sessions: number;
+  note?: string | null;
+  performed_by: string | null;
+}
+
+/**
+ * ライブセッションチケットの発行/消化/復元/解除の履歴を記録する（追記専用・失敗しても主処理は継続させる）
+ */
+async function recordTicketHistory(
+  supabase: ReturnType<typeof createAdminClient>,
+  entry: TicketHistoryEntry,
+  ctx: Awaited<ReturnType<typeof getLogContext>>
+) {
+  const { error } = await supabase.from('com_t_user_session_ticket_history').insert(entry);
+  if (error) {
+    logger.error('contract:ticket_history_record_failed', error.message, { ...ctx, payload: entry });
+  }
+}
+
+/**
+ * ライブセッションチケットを1件発行する（ライセンス割当に付随して呼び出す）。
+ * チケット発行自体の失敗はライセンス割当を失敗させない（ログにのみ残す）。
+ */
+async function grantSessionTicket(
+  supabase: ReturnType<typeof createAdminClient>,
+  params: {
+    license_id: string;
+    contract_id: string;
+    user_id: string;
+    weekly_frequency: number;
+    total_sessions: number;
+    performed_by: string | null;
+  },
+  ctx: Awaited<ReturnType<typeof getLogContext>>
+) {
+  const { data: ticket, error } = await supabase
+    .from('com_t_user_session_ticket')
+    .insert({
+      license_id: params.license_id,
+      contract_id: params.contract_id,
+      user_id: params.user_id,
+      weekly_frequency: params.weekly_frequency,
+      total_sessions: params.total_sessions,
+    })
+    .select('ticket_id, used_sessions, total_sessions')
+    .single();
+
+  if (error || !ticket) {
+    logger.error('contract:grant_session_ticket_failed', error?.message || 'Ticket insert failed', { ...ctx, payload: params });
+    return;
+  }
+
+  await recordTicketHistory(supabase, {
+    ticket_id: ticket.ticket_id,
+    contract_id: params.contract_id,
+    user_id: params.user_id,
+    action: 'granted',
+    sessions_delta: ticket.total_sessions,
+    used_sessions_after: ticket.used_sessions,
+    total_sessions: ticket.total_sessions,
+    performed_by: params.performed_by,
+  }, ctx);
+}
+
 /**
  * ライセンス期間が契約期間内に収まっているかを検証する
  * （UI側の「ライセンスの有効期間は契約期間に準じます」という案内と実制御を一致させるため）
@@ -57,6 +128,31 @@ function isWithinContractPeriod(
     new Date(licenseStartUtc) >= new Date(contractStartUtc) &&
     new Date(licenseEndUtc) <= new Date(contractEndUtc)
   );
+}
+
+/**
+ * 契約プランマスタの一覧取得（契約登録フォームの選択肢用）
+ */
+export async function getContractPlans() {
+  const ctx = await getLogContext();
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('com_m_contract_plan')
+      .select('plan_id, plan_code, plan_name, contract_type, weekly_frequency, period_months, total_sessions')
+      .eq('delete_flg', '0')
+      .order('sort_no', { ascending: true });
+
+    if (error) {
+      logger.error('contract:get_contract_plans_failed', error.message, ctx);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    logger.error('contract:get_contract_plans_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    return [];
+  }
 }
 
 /**
@@ -160,11 +256,16 @@ export async function createContract(params: {
   start_date: string;
   end_date: string;
   note?: string | null;
+  contract_type: number;
+  plan_id?: string | null;
+  weekly_frequency?: number | null;
+  total_sessions?: number | null;
 }) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
     const { startUtc, endUtc } = getUtcRangeFromJstDate(params.start_date, params.end_date);
+    const isLive = params.contract_type === 2;
 
     const { data, error } = await supabase
       .from('com_m_contract')
@@ -177,6 +278,10 @@ export async function createContract(params: {
           end_date: endUtc,
           note: params.note || null,
           status: 1,
+          contract_type: params.contract_type,
+          plan_id: params.plan_id || null,
+          weekly_frequency: isLive ? params.weekly_frequency : null,
+          total_sessions: isLive ? params.total_sessions : null,
         }
       ])
       .select();
@@ -213,12 +318,17 @@ export async function updateContract(
     end_date: string;
     status: number;
     note?: string | null;
+    contract_type: number;
+    plan_id?: string | null;
+    weekly_frequency?: number | null;
+    total_sessions?: number | null;
   }
 ) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
     const { startUtc, endUtc } = getUtcRangeFromJstDate(params.start_date, params.end_date);
+    const isLive = params.contract_type === 2;
 
     const { data, error } = await supabase
       .from('com_m_contract')
@@ -230,6 +340,10 @@ export async function updateContract(
         end_date: endUtc,
         status: params.status,
         note: params.note || null,
+        contract_type: params.contract_type,
+        plan_id: params.plan_id || null,
+        weekly_frequency: isLive ? params.weekly_frequency : null,
+        total_sessions: isLive ? params.total_sessions : null,
         update_date: new Date().toISOString(),
       })
       .eq('contract_id', contractId)
@@ -285,8 +399,18 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
 
     const assignedUserIds = new Set((currentAssignments || []).map(a => a.user_id));
 
+    // ライブセッション付き契約の場合、割当済みユーザーのチケット消化状況を合わせて取得する
+    const { data: tickets } = await supabase
+      .from('com_t_user_session_ticket')
+      .select('user_id, used_sessions, total_sessions')
+      .eq('contract_id', contractId);
+
+    const ticketByUserId = new Map((tickets || []).map(t => [t.user_id, { used_sessions: t.used_sessions, total_sessions: t.total_sessions }]));
+
     return {
-      assignedUsers: (allUsers || []).filter(u => assignedUserIds.has(u.id)),
+      assignedUsers: (allUsers || [])
+        .filter(u => assignedUserIds.has(u.id))
+        .map(u => ({ ...u, ticket: ticketByUserId.get(u.id) ?? null })),
       unassignedUsers: (allUsers || []).filter(u => !assignedUserIds.has(u.id)),
     };
   } catch (error) {
@@ -312,7 +436,7 @@ export async function assignLicenseToUser(
     // 契約期間内に収まっているかを検証（UI表記「ライセンスの有効期間は契約期間に準じます」との整合）
     const { data: contract, error: contractError } = await supabase
       .from('com_m_contract')
-      .select('start_date, end_date')
+      .select('start_date, end_date, contract_type, weekly_frequency, total_sessions')
       .eq('contract_id', contractId)
       .single();
 
@@ -354,6 +478,18 @@ export async function assignLicenseToUser(
       performed_by: resolvePerformedBy(ctx.userId),
     }, ctx);
 
+    // ライブセッション付き契約の場合、ライセンスに1:1で紐づくチケットを発行する
+    if (contract.contract_type === 2 && contract.weekly_frequency && contract.total_sessions) {
+      await grantSessionTicket(supabase, {
+        license_id: inserted.license_id,
+        contract_id: contractId,
+        user_id: userId,
+        weekly_frequency: contract.weekly_frequency,
+        total_sessions: contract.total_sessions,
+        performed_by: resolvePerformedBy(ctx.userId),
+      }, ctx);
+    }
+
     logger.info('contract:assign_license_success', `License assigned to user`, {
       ...ctx,
       payload: { contractId, userId }
@@ -384,6 +520,16 @@ export async function removeLicenseFromUser(contractId: string, userId: string) 
       .eq('user_id', userId)
       .maybeSingle();
 
+    // ライブセッション付き契約の場合、紐づくチケットも同様にスナップショットを残す
+    // （ライセンス削除時にFK ON DELETE CASCADEでチケット本体は自動的に削除される）
+    const { data: existingTicket } = existing
+      ? await supabase
+          .from('com_t_user_session_ticket')
+          .select('ticket_id, used_sessions, total_sessions')
+          .eq('license_id', existing.license_id)
+          .maybeSingle()
+      : { data: null };
+
     const { error } = await supabase
       .from('com_t_user_license')
       .delete()
@@ -405,6 +551,19 @@ export async function removeLicenseFromUser(contractId: string, userId: string) 
         start_date: existing.start_date,
         end_date: existing.end_date,
         note: existing.note,
+        performed_by: resolvePerformedBy(ctx.userId),
+      }, ctx);
+    }
+
+    if (existingTicket) {
+      await recordTicketHistory(supabase, {
+        ticket_id: existingTicket.ticket_id,
+        contract_id: contractId,
+        user_id: userId,
+        action: 'removed',
+        sessions_delta: 0,
+        used_sessions_after: existingTicket.used_sessions,
+        total_sessions: existingTicket.total_sessions,
         performed_by: resolvePerformedBy(ctx.userId),
       }, ctx);
     }
@@ -537,7 +696,7 @@ export async function bulkAssignLicenses(
     // 契約期間内に収まっているかを検証（個別割当と同じ制御を一括割当にも適用）
     const { data: contract, error: contractError } = await supabase
       .from('com_m_contract')
-      .select('start_date, end_date')
+      .select('start_date, end_date, contract_type, weekly_frequency, total_sessions')
       .eq('contract_id', contractId)
       .single();
 
@@ -580,6 +739,18 @@ export async function bulkAssignLicenses(
       note: row.note,
       performed_by: performedBy,
     }, ctx)));
+
+    // ライブセッション付き契約の場合、割当済みの各ライセンスにチケットを発行する
+    if (contract.contract_type === 2 && contract.weekly_frequency && contract.total_sessions) {
+      await Promise.all((data || []).map(row => grantSessionTicket(supabase, {
+        license_id: row.license_id,
+        contract_id: contractId,
+        user_id: row.user_id,
+        weekly_frequency: contract.weekly_frequency,
+        total_sessions: contract.total_sessions,
+        performed_by: performedBy,
+      }, ctx)));
+    }
 
     logger.info('contract:bulk_assign_licenses_success', `Bulk licenses assigned`, {
       ...ctx,

@@ -27,20 +27,32 @@ export const columns: ColumnDef<ContractDetail>[] = [
   {
     accessorKey: 'plan_name',
     header: 'プラン',
-    cell: ({ row }) => (
-      <span className="font-medium text-slate-700">
-        {row.getValue('plan_name')}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const contract = row.original;
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="font-medium text-slate-700">
+            {row.getValue('plan_name')}
+          </span>
+          {contract.contract_type === 2 && (
+            <Badge className="w-fit bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-[10px] font-bold">
+              ライブ週{contract.weekly_frequency}回・全{contract.total_sessions}回
+            </Badge>
+          )}
+        </div>
+      );
+    },
   },
   {
     id: 'license_usage',
     header: 'ライセンス利用状況',
     cell: ({ row }) => {
       const contract = row.original;
-      const end = new Date(contract.end_date);
+      // "YYYY-MM-DD"（JSTの日付文字列）をそのままnew Date()に渡すとUTC 00:00として解釈され、
+      // 日本時間との9時間のズレにより日付判定が1日早くズレるため startOfDay で正規化する
+      const end = startOfDay(new Date(contract.end_date));
       const now = startOfDay(new Date());
-      
+
       // 契約終了フラグ（終了日を過ぎている場合は操作不可）
       const isExpired = isBefore(end, now);
       
@@ -119,8 +131,11 @@ export const columns: ColumnDef<ContractDetail>[] = [
     header: 'ステータス',
     cell: ({ row }) => {
       const status = row.getValue('status') as number;
-      const start = new Date(row.original.start_date);
-      const end = new Date(row.original.end_date);
+      // "YYYY-MM-DD"（JSTの日付文字列）をそのままnew Date()に渡すとUTC 00:00として解釈され、
+      // 日本時間との9時間のズレにより「本日が開始日」でも開始待ち判定になってしまうため
+      // startOfDay で正規化してから比較する
+      const start = startOfDay(new Date(row.original.start_date));
+      const end = startOfDay(new Date(row.original.end_date));
       const now = startOfDay(new Date()); // 時刻を除外して日付のみで比較
 
       /**
