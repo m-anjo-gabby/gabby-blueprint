@@ -76,11 +76,9 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
   const memberIdA = participantA.userId;
   const memberIdB = participantB.userId;
   const isSameUser = memberIdA !== '' && memberIdA === memberIdB;
-  const isSameUserType =
-    participantA.userType !== '' && participantA.userType === participantB.userType;
 
   const isOneOnOne = roomType === CHAT_ROOM_TYPES.ONE_ON_ONE;
-  const isOneOnOneValid = Boolean(memberIdA && memberIdB) && !isSameUser && !isSameUserType;
+  const isOneOnOneValid = Boolean(memberIdA && memberIdB) && !isSameUser;
   const isGroupValid = roomName.trim() !== '' && groupMemberIds.length >= 2;
   const canCreate = (isOneOnOne ? isOneOnOneValid : isGroupValid) && !isCreating;
 
@@ -132,7 +130,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
           {isOneOnOne ? (
             <div className="space-y-5">
               <p className="text-xs text-slate-500">
-                Admin・コーチ・生徒の中から異なる種別の2名を選択してください（例: Admin×コーチ、Admin×生徒、コーチ×生徒）。生徒を選択する場合は顧客で絞り込めます。
+                Admin・コーチ・生徒の中から異なる2名を選択してください（種別の組み合わせは自由です）。生徒を選択する場合は顧客で絞り込めます。
               </p>
 
               <ParticipantPicker
@@ -154,9 +152,6 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
               />
 
               {isSameUser && <p className="text-xs text-rose-500">異なる2名を選択してください</p>}
-              {!isSameUser && isSameUserType && (
-                <p className="text-xs text-rose-500">同一のユーザー種別同士は選択できません（異なる種別を選択してください）</p>
-              )}
             </div>
           ) : (
             <div className="space-y-5">

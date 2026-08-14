@@ -82,10 +82,9 @@ export async function getChatRoomTargetUsers(): Promise<{
 }
 
 /**
- * チャットルーム作成（Adminのみ実行可能）
- * roomType: '1ON1' の場合、memberIds に指定した異なる種別の2名でルームを作成する
- * （Admin-Coach / Admin-Student / Coach-Student）。同一メンバー構成のアクティブなルームが
- * 既にあれば、それを返す（重複作成防止）。
+ * チャットルーム作成(Adminのみ実行可能)
+ * roomType: '1ON1' の場合、memberIds に指定した異なる2名でルームを作成する（種別の組み合わせ
+ * 制限なし）。同一メンバー構成のアクティブなルームが既にあれば、それを返す（重複作成防止）。
  * roomType: 'GROUP' の場合、memberIds に指定した2名以上でルームを作成する（種別の組み合わせ
  * 制限なし、roomName必須）。重複作成防止は行わない（作成のたびに新規ルームとなる）。
  */
@@ -140,11 +139,9 @@ async function createOneOnOneChatRoom(
   }
 
   if (
-    profileA.user_type === profileB.user_type ||
     !HUMAN_USER_TYPES.includes(profileA.user_type as UserType) ||
     !HUMAN_USER_TYPES.includes(profileB.user_type as UserType)
   ) {
-    // 許可される組み合わせ: Admin-Coach / Admin-Student / Coach-Student（同一種別同士は不可）
     return { success: false, error: 'Invalid member combination' };
   }
 
