@@ -5,12 +5,18 @@ import { uploadProfileIconCore, removeProfileIconCore } from '@gabby/lib/profile
 import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
 import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
 import { getMyCoachProfileCore, updateMyCoachProfileCore } from '@gabby/lib/coachProfile/actions/coachProfileActions';
+import { uploadCoachIntroVideoCore, removeCoachIntroVideoCore } from '@gabby/lib/coachProfile/actions/coachIntroVideoActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ProfileIconErrorCode, MyProfile, UpdateTimezoneErrorCode } from '@gabby/types/profile';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { CountryMaster } from '@gabby/types/country';
-import { CoachProfileErrorCode, CoachProfileFormValues, CoachProfileRecord } from '@gabby/types/coachProfile';
+import {
+  CoachProfileErrorCode,
+  CoachProfileFormValues,
+  CoachProfileRecord,
+  CoachIntroVideoErrorCode,
+} from '@gabby/types/coachProfile';
 
 const logger = createLogger('coach');
 
@@ -27,6 +33,16 @@ const ERROR_MESSAGES_EN: Record<ProfileIconErrorCode, string> = {
   file_too_large: 'The file size must be 5MB or less.',
   invalid_mime_type: 'Only PNG, JPEG, or WebP images are supported.',
   upload_failed: 'Failed to upload the image.',
+  db_update_failed: 'Failed to update your profile.',
+  unexpected_error: 'An unexpected error occurred.',
+};
+
+const COACH_INTRO_VIDEO_ERROR_MESSAGES_EN: Record<CoachIntroVideoErrorCode, string> = {
+  unauthorized: 'Your session has expired. Please sign in again.',
+  no_file: 'No file was selected.',
+  file_too_large: 'The file size must be 100MB or less.',
+  invalid_mime_type: 'Only MP4, WebM, or MOV videos are supported.',
+  upload_failed: 'Failed to upload the video.',
   db_update_failed: 'Failed to update your profile.',
   unexpected_error: 'An unexpected error occurred.',
 };
@@ -158,4 +174,38 @@ export async function updateMyCoachProfile(
 
   logger.info('coach:update_coach_profile_success', 'Coach public profile updated', ctx);
   return { success: true, profile: result.profile };
+}
+
+/**
+ * Uploads a new coach introduction video
+ */
+export async function uploadCoachIntroVideo(
+  formData: FormData
+): Promise<{ success: true; introVideoPath: string } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await uploadCoachIntroVideoCore(formData);
+
+  if (!result.success) {
+    logger.error('coach:upload_intro_video_failed', result.errorCode, ctx);
+    return { success: false, message: COACH_INTRO_VIDEO_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+
+  logger.info('coach:upload_intro_video_success', 'Coach intro video updated', ctx);
+  return { success: true, introVideoPath: result.introVideoPath };
+}
+
+/**
+ * Removes the current coach introduction video
+ */
+export async function removeCoachIntroVideo(): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await removeCoachIntroVideoCore();
+
+  if (!result.success) {
+    logger.error('coach:remove_intro_video_failed', result.errorCode, ctx);
+    return { success: false, message: COACH_INTRO_VIDEO_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+
+  logger.info('coach:remove_intro_video_success', 'Coach intro video removed', ctx);
+  return { success: true };
 }

@@ -1,5 +1,22 @@
 /**
  * ----------------------------------------------
+ * 定数・区分値
+ * ----------------------------------------------
+ */
+// コーチ紹介ビデオの上限サイズ (100MB)
+export const COACH_INTRO_VIDEO_MAX_SIZE = 100 * 1024 * 1024;
+
+// コーチ紹介ビデオとして許可するMIMEタイプ
+export const COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES = [
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+] as const;
+
+export type CoachIntroVideoMimeType = typeof COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES[number];
+
+/**
+ * ----------------------------------------------
  * 型定義
  * ----------------------------------------------
  */
@@ -13,12 +30,13 @@
 export interface CoachProfileRecord {
   user_id: string;
   country_code: string | null;
-  coach_since: string | null; // 月初日（YYYY-MM-01）で保持
+  coach_since: string | null; // 月初日（YYYY-MM-01）で保持。アカウント作成日から自動設定（手入力不可）
   education: string | null;
   qualifications: string | null;
   teaching_years: number | null;
   job_experience: string | null;
   introduction: string | null;
+  intro_video_path: string | null; // 紹介ビデオのStorageパス（profileバケット内）
   delete_flg: string;
   insert_date: string;
   update_date: string;
@@ -26,10 +44,10 @@ export interface CoachProfileRecord {
 
 /**
  * CoachProfileFormValues: コーチ本人による編集フォームの入力値
+ * coach_since はアカウント作成日から自動設定されるため編集対象に含まない。
  */
 export interface CoachProfileFormValues {
   country_code: string | null;
-  coach_since: string | null;
   education: string | null;
   qualifications: string | null;
   teaching_years: number | null;
@@ -52,6 +70,27 @@ export type UpdateMyCoachProfileResult =
   | { success: false; errorCode: CoachProfileErrorCode };
 
 /**
+ * CoachIntroVideoErrorCode: 紹介ビデオ操作失敗時のエラー種別
+ * 画面表示文言はポータル側（coach: 英語）でこのコードから組み立てる
+ */
+export type CoachIntroVideoErrorCode =
+  | 'unauthorized'
+  | 'no_file'
+  | 'file_too_large'
+  | 'invalid_mime_type'
+  | 'upload_failed'
+  | 'db_update_failed'
+  | 'unexpected_error';
+
+export type UploadCoachIntroVideoResult =
+  | { success: true; introVideoPath: string }
+  | { success: false; errorCode: CoachIntroVideoErrorCode };
+
+export type RemoveCoachIntroVideoResult =
+  | { success: true }
+  | { success: false; errorCode: CoachIntroVideoErrorCode };
+
+/**
  * ----------------------------------------------
  * 共有プレビューダイアログ (CoachProfileDialog) 用の型
  * ----------------------------------------------
@@ -69,6 +108,7 @@ export interface CoachProfileDialogLabels {
   englishTeaching: string;
   jobExperience: string;
   personalIntroduction: string;
+  introVideo: string;
 }
 
 /**
@@ -86,4 +126,5 @@ export interface CoachProfileDialogData {
   teachingYearsLabel: string | null;
   jobExperience: string | null;
   introduction: string | null;
+  introVideoUrl: string | null;
 }

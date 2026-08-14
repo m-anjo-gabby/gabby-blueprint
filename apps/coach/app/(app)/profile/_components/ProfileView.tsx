@@ -8,15 +8,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Eye, Loader2 } from 'lucide-react';
 import { AvatarCropUploader } from '@gabby/lib/components/common/AvatarCropUploader';
+import { VideoUploader } from '@gabby/lib/components/common/VideoUploader';
 import { TimezoneSelector } from '@gabby/lib/components/common/TimezoneSelector';
 import { CoachProfileDialog } from '@gabby/lib/components/common/CoachProfileDialog';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVideoUrl';
 import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
 import {
   uploadProfileIcon,
   removeProfileIcon,
   updateMyTimezone,
   updateMyCoachProfile,
+  uploadCoachIntroVideo,
+  removeCoachIntroVideo,
 } from '@/actions/coachProfileAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -37,7 +41,6 @@ interface ProfileViewProps {
 
 const EMPTY_COACH_PROFILE_FORM: CoachProfileFormValues = {
   country_code: null,
-  coach_since: null,
   education: null,
   qualifications: null,
   teaching_years: null,
@@ -49,23 +52,12 @@ function toCoachProfileFormValues(profile: CoachProfileRecord | null): CoachProf
   if (!profile) return EMPTY_COACH_PROFILE_FORM;
   return {
     country_code: profile.country_code,
-    coach_since: profile.coach_since,
     education: profile.education,
     qualifications: profile.qualifications,
     teaching_years: profile.teaching_years,
     job_experience: profile.job_experience,
     introduction: profile.introduction,
   };
-}
-
-/** "2024-11-01" -> "2024-11" (month input用) */
-function toMonthInputValue(dateStr: string | null): string {
-  return dateStr ? dateStr.slice(0, 7) : '';
-}
-
-/** "2024-11" -> "2024-11-01" (DB保存用、月初日固定) */
-function fromMonthInputValue(monthStr: string): string | null {
-  return monthStr ? `${monthStr}-01` : null;
 }
 
 /** "2024-11-01" -> "Nov, 2024" */
@@ -96,6 +88,9 @@ export function ProfileView({
   const [coachProfileForm, setCoachProfileForm] = useState<CoachProfileFormValues>(
     toCoachProfileFormValues(initialCoachProfile)
   );
+  // Gabby Coach Since はアカウント作成日から自動設定される読み取り専用項目のため、フォームとは別に保持する
+  const [coachSince, setCoachSince] = useState(initialCoachProfile?.coach_since ?? null);
+  const [introVideoPath, setIntroVideoPath] = useState(initialCoachProfile?.intro_video_path ?? null);
   const [isSavingCoachProfile, setIsSavingCoachProfile] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const user = useUserStore((state) => state.user);
@@ -131,6 +126,28 @@ export function ProfileView({
     showToast('Profile icon removed', 'success');
   };
 
+  const handleUploadIntroVideo = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const result = await uploadCoachIntroVideo(formData);
+    if (!result.success) {
+      showToast(result.message, 'error');
+      return;
+    }
+    setIntroVideoPath(result.introVideoPath);
+    showToast('Introduction video updated successfully', 'success');
+  };
+
+  const handleRemoveIntroVideo = async () => {
+    const result = await removeCoachIntroVideo();
+    if (!result.success) {
+      showToast(result.message, 'error');
+      return;
+    }
+    setIntroVideoPath(null);
+    showToast('Introduction video removed', 'success');
+  };
+
   const handleTimezoneChange = async (next: string) => {
     const result = await updateMyTimezone(next);
     if (!result.success) {
@@ -158,6 +175,7 @@ export function ProfileView({
         return;
       }
       setCoachProfileForm(toCoachProfileFormValues(result.profile));
+      setCoachSince(result.profile.coach_since);
       showToast('Public profile updated successfully', 'success');
     } finally {
       setIsSavingCoachProfile(false);
@@ -169,12 +187,13 @@ export function ProfileView({
     iconUrl: getProfileIconUrl(iconPath),
     countryName: selectedCountry?.name_en ?? null,
     countryFlagUrl: getCountryFlagUrl(selectedCountry?.icon_path),
-    coachSinceLabel: formatCoachSinceLabel(coachProfileForm.coach_since),
+    coachSinceLabel: formatCoachSinceLabel(coachSince),
     education: coachProfileForm.education,
     qualifications: coachProfileForm.qualifications,
     teachingYearsLabel: formatTeachingYearsLabel(coachProfileForm.teaching_years),
     jobExperience: coachProfileForm.job_experience,
     introduction: coachProfileForm.introduction,
+    introVideoUrl: getCoachIntroVideoUrl(introVideoPath),
   };
 
   return (
@@ -256,11 +275,7 @@ export function ProfileView({
             </div>
             <div className="space-y-1.5">
               <Label>Gabby Coach Since</Label>
-              <Input
-                type="month"
-                value={toMonthInputValue(coachProfileForm.coach_since)}
-                onChange={(e) => handleCoachProfileFieldChange('coach_since', fromMonthInputValue(e.target.value))}
-              />
+              <Input value={formatCoachSinceLabel(coachSince) ?? '-'} disabled />
             </div>
             <div className="space-y-1.5">
               <Label>English Teaching (years)</Label>
@@ -316,6 +331,22 @@ export function ProfileView({
             />
           </div>
 
+          <div className="space-y-1.5">
+            <Label>Introduction Video</Label>
+            <VideoUploader
+              currentVideoUrl={getCoachIntroVideoUrl(introVideoPath)}
+              onUpload={handleUploadIntroVideo}
+              onRemove={handleRemoveIntroVideo}
+              labels={{
+                emptyLabel: 'No video uploaded',
+                uploadLabel: introVideoPath ? 'Replace Video' : 'Upload Video',
+                uploadingLabel: 'Uploading...',
+                removeLabel: 'Remove Video',
+                invalidFileLabel: 'Please select an MP4, WebM, or MOV video up to 100MB.',
+              }}
+            />
+          </div>
+
           <div className="flex justify-end">
             <Button type="button" onClick={handleSaveCoachProfile} disabled={isSavingCoachProfile}>
               {isSavingCoachProfile && <Loader2 size={14} className="animate-spin" />}
@@ -336,6 +367,7 @@ export function ProfileView({
             englishTeaching: 'English Teaching',
             jobExperience: 'Job Experience',
             personalIntroduction: 'Personal Introduction',
+            introVideo: 'Introduction Video',
           }}
           onClose={() => setShowPreview(false)}
         />

@@ -114,7 +114,6 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
       .from('com_m_coach_profile')
       .update({
         country_code: values.country_code,
-        coach_since: values.coach_since,
         education: values.education,
         qualifications: values.qualifications,
         teaching_years: values.teaching_years,
