@@ -5,8 +5,10 @@ import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import {
   CoachProfileFormValues,
+  CoachZoomSettingsFormValues,
   GetMyCoachProfileResult,
   UpdateMyCoachProfileResult,
+  UpdateMyCoachZoomSettingsResult,
 } from '@gabby/types/coachProfile';
 
 const logger = createLogger('common');
@@ -134,6 +136,48 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
     return { success: true, profile: data };
   } catch (err) {
     logger.error('coach_profile:update_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中コーチ自身のライブセッション用ビデオ通話URL(Zoom)を更新する（ポータル共通）
+ * 「生徒に公開する自己紹介プロフィール」(updateMyCoachProfileCore)とは別カード・別アクションとして扱う。
+ */
+export async function updateMyCoachZoomSettingsCore(
+  values: CoachZoomSettingsFormValues
+): Promise<UpdateMyCoachZoomSettingsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const trimmedUrl = values.zoom_meeting_url?.trim() || null;
+    if (trimmedUrl && !/^https:\/\/.+/i.test(trimmedUrl)) {
+      return { success: false, errorCode: 'invalid_input' };
+    }
+
+    const { data, error: updateError } = await supabase
+      .from('com_m_coach_profile')
+      .update({
+        zoom_meeting_url: trimmedUrl,
+        update_date: new Date().toISOString(),
+      })
+      .eq('user_id', user.id)
+      .select('*')
+      .single();
+
+    if (updateError || !data) {
+      logger.error('coach_profile:update_my_zoom_settings_failed', updateError?.message ?? 'No row updated', { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'db_update_failed' };
+    }
+
+    logger.info('coach_profile:update_my_zoom_settings_success', 'Coach zoom meeting URL updated', { ...ctx, userId: user.id });
+    return { success: true, profile: data };
+  } catch (err) {
+    logger.error('coach_profile:update_my_zoom_settings_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

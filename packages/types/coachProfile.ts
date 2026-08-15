@@ -37,6 +37,7 @@ export interface CoachProfileRecord {
   job_experience: string | null;
   introduction: string | null;
   intro_video_path: string | null; // 紹介ビデオのStorageパス（profileバケット内）
+  zoom_meeting_url: string | null; // ライブセッション用の固定ビデオ通話URL（生徒への公開範囲はUI側で制御。公開プロフィールの一部としては扱わない）
   delete_flg: string;
   insert_date: string;
   update_date: string;
@@ -66,6 +67,19 @@ export type GetMyCoachProfileResult =
   | { success: false; errorCode: 'unauthorized' | 'not_found' | 'unexpected_error' };
 
 export type UpdateMyCoachProfileResult =
+  | { success: true; profile: CoachProfileRecord }
+  | { success: false; errorCode: CoachProfileErrorCode };
+
+/**
+ * CoachZoomSettingsFormValues: ライブセッション用ビデオ通話URL(Zoom)の編集フォーム値
+ * 「生徒に公開する自己紹介プロフィール」とは関心を分けて別カード・別アクションで扱う
+ * （プレビュー(CoachProfileDialog)には含めない。表示範囲は確定レッスンの参加者のみに限定するUI側の責務）。
+ */
+export interface CoachZoomSettingsFormValues {
+  zoom_meeting_url: string | null;
+}
+
+export type UpdateMyCoachZoomSettingsResult =
   | { success: true; profile: CoachProfileRecord }
   | { success: false; errorCode: CoachProfileErrorCode };
 

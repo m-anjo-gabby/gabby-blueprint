@@ -1,8 +1,13 @@
 import { useRouter } from 'next/navigation';
-import { BookOpen, Star, ArrowRight } from 'lucide-react';
+import { BookOpen, Star, Users, CalendarClock, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export const NavigationGrid = () => {
+interface NavigationGridProps {
+  /** ライブセッション付き契約の有効なチケットを保持している場合のみ true（専属コーチマッチング導線の表示可否） */
+  showCoachMatching?: boolean;
+}
+
+export const NavigationGrid = ({ showCoachMatching = false }: NavigationGridProps) => {
   const router = useRouter();
 
   const navItems = [
@@ -11,7 +16,7 @@ export const NavigationGrid = () => {
       title: '教材を選択する',
       path: '/library',
       icon: BookOpen,
-      color: 'indigo',
+      labelClass: 'text-indigo-600',
       bgClass: 'bg-indigo-300 hover:bg-linear-to-br hover:from-blue-600 hover:via-slate-100 hover:to-indigo-700',
       iconClass: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white',
       shadow: 'shadow-indigo-100/50'
@@ -21,11 +26,35 @@ export const NavigationGrid = () => {
       title: 'お気に入りを復習する',
       path: '/favorites',
       icon: Star,
-      color: 'amber',
+      labelClass: 'text-amber-600',
       bgClass: 'bg-amber-300 hover:bg-linear-to-br hover:from-amber-400 hover:via-slate-100 hover:to-orange-500',
       iconClass: 'bg-amber-50 text-amber-500 group-hover:bg-amber-500 group-hover:text-white',
       shadow: 'shadow-amber-100/50'
-    }
+    },
+    ...(showCoachMatching
+      ? [
+          {
+            label: 'My Lessons',
+            title: 'マイレッスン',
+            path: '/calendar',
+            icon: CalendarClock,
+            labelClass: 'text-sky-600',
+            bgClass: 'bg-sky-300 hover:bg-linear-to-br hover:from-sky-400 hover:via-slate-100 hover:to-blue-600',
+            iconClass: 'bg-sky-50 text-sky-600 group-hover:bg-sky-600 group-hover:text-white',
+            shadow: 'shadow-sky-100/50'
+          },
+          {
+            label: 'Coaching',
+            title: '専属コーチを探す',
+            path: '/coach-matching',
+            icon: Users,
+            labelClass: 'text-emerald-600',
+            bgClass: 'bg-emerald-300 hover:bg-linear-to-br hover:from-emerald-400 hover:via-slate-100 hover:to-teal-600',
+            iconClass: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white',
+            shadow: 'shadow-emerald-100/50'
+          }
+        ]
+      : [])
   ];
 
   return (
@@ -45,7 +74,7 @@ export const NavigationGrid = () => {
             </div>
 
             <div className="flex-1 text-left">
-              <p className={cn("text-[9px] font-black uppercase tracking-[0.2em] mb-0.5 transition-colors", `text-${item.color}-600`)}>{item.label}</p>
+              <p className={cn("text-[9px] font-black uppercase tracking-[0.2em] mb-0.5 transition-colors", item.labelClass)}>{item.label}</p>
               <p className="text-sm font-black text-slate-700 tracking-tight group-hover:text-slate-900">{item.title}</p>
             </div>
 

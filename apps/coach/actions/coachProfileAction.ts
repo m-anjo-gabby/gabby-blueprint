@@ -4,7 +4,7 @@ import { getMyProfileCore } from '@gabby/lib/profile/actions/profileActions';
 import { uploadProfileIconCore, removeProfileIconCore } from '@gabby/lib/profile/actions/profileIconActions';
 import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
 import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
-import { getMyCoachProfileCore, updateMyCoachProfileCore } from '@gabby/lib/coachProfile/actions/coachProfileActions';
+import { getMyCoachProfileCore, updateMyCoachProfileCore, updateMyCoachZoomSettingsCore } from '@gabby/lib/coachProfile/actions/coachProfileActions';
 import { uploadCoachIntroVideoCore, removeCoachIntroVideoCore } from '@gabby/lib/coachProfile/actions/coachIntroVideoActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -16,6 +16,7 @@ import {
   CoachProfileFormValues,
   CoachProfileRecord,
   CoachIntroVideoErrorCode,
+  CoachZoomSettingsFormValues,
 } from '@gabby/types/coachProfile';
 
 const logger = createLogger('coach');
@@ -173,6 +174,24 @@ export async function updateMyCoachProfile(
   }
 
   logger.info('coach:update_coach_profile_success', 'Coach public profile updated', ctx);
+  return { success: true, profile: result.profile };
+}
+
+/**
+ * Updates the current coach's live session video call URL (Zoom)
+ */
+export async function updateMyCoachZoomSettings(
+  values: CoachZoomSettingsFormValues
+): Promise<{ success: true; profile: CoachProfileRecord } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await updateMyCoachZoomSettingsCore(values);
+
+  if (!result.success) {
+    logger.error('coach:update_zoom_settings_failed', result.errorCode, ctx);
+    return { success: false, message: COACH_PROFILE_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+
+  logger.info('coach:update_zoom_settings_success', 'Coach zoom meeting URL updated', ctx);
   return { success: true, profile: result.profile };
 }
 

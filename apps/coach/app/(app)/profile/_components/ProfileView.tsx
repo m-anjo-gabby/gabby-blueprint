@@ -19,6 +19,7 @@ import {
   removeProfileIcon,
   updateMyTimezone,
   updateMyCoachProfile,
+  updateMyCoachZoomSettings,
   uploadCoachIntroVideo,
   removeCoachIntroVideo,
 } from '@/actions/coachProfileAction';
@@ -91,7 +92,9 @@ export function ProfileView({
   // Gabby Coach Since はアカウント作成日から自動設定される読み取り専用項目のため、フォームとは別に保持する
   const [coachSince, setCoachSince] = useState(initialCoachProfile?.coach_since ?? null);
   const [introVideoPath, setIntroVideoPath] = useState(initialCoachProfile?.intro_video_path ?? null);
+  const [zoomMeetingUrl, setZoomMeetingUrl] = useState(initialCoachProfile?.zoom_meeting_url ?? '');
   const [isSavingCoachProfile, setIsSavingCoachProfile] = useState(false);
+  const [isSavingZoomSettings, setIsSavingZoomSettings] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
@@ -179,6 +182,21 @@ export function ProfileView({
       showToast('Public profile updated successfully', 'success');
     } finally {
       setIsSavingCoachProfile(false);
+    }
+  };
+
+  const handleSaveZoomSettings = async () => {
+    setIsSavingZoomSettings(true);
+    try {
+      const result = await updateMyCoachZoomSettings({ zoom_meeting_url: zoomMeetingUrl || null });
+      if (!result.success) {
+        showToast(result.message, 'error');
+        return;
+      }
+      setZoomMeetingUrl(result.profile.zoom_meeting_url ?? '');
+      showToast('Live session settings updated successfully', 'success');
+    } finally {
+      setIsSavingZoomSettings(false);
     }
   };
 
@@ -351,6 +369,33 @@ export function ProfileView({
             <Button type="button" onClick={handleSaveCoachProfile} disabled={isSavingCoachProfile}>
               {isSavingCoachProfile && <Loader2 size={14} className="animate-spin" />}
               Save Public Profile
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Live Session Settings</CardTitle>
+          <CardDescription>
+            This link is used for your 1-on-1 live sessions with matched students. It is not shown on your public profile.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-1.5">
+            <Label>Zoom Meeting URL</Label>
+            <Input
+              type="url"
+              value={zoomMeetingUrl}
+              onChange={(e) => setZoomMeetingUrl(e.target.value)}
+              placeholder="https://zoom.us/j/xxxxxxxxxx"
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <Button type="button" onClick={handleSaveZoomSettings} disabled={isSavingZoomSettings}>
+              {isSavingZoomSettings && <Loader2 size={14} className="animate-spin" />}
+              Save Live Session Settings
             </Button>
           </div>
         </CardContent>

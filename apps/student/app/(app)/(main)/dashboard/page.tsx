@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, CheckCircle2, BarChart3, ArrowRight, Eye } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useContentStore } from '@/stores/useContentStore';
 import { useResumeStore } from '@/stores/useResumeStore';
 import { toggleContentFavorite } from '@/actions/contentAction';
+import { getMyLiveSessionTickets } from '@/actions/matchingAction';
 import { getTrainingPath } from '@gabby/lib/navigation/student-path';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
@@ -39,9 +40,13 @@ export default function StudentDashboard() {
   // お知らせストア（取得のみ）
   const { fetchNotices } = useNoticeStore();
 
+  // 専属コーチマッチング導線の表示可否（ライブセッション付き契約の有効なチケットを保持しているか）
+  const [showCoachMatching, setShowCoachMatching] = useState(false);
+
   // 1. 初期データの取得
   useEffect(() => {
     Promise.all([fetchAllContents(), fetchResume(), fetchNotices()]);
+    getMyLiveSessionTickets().then((tickets) => setShowCoachMatching(tickets.length > 0));
   }, [fetchAllContents, fetchResume, fetchNotices]);
 
   // 2. おすすめ教材の算出
@@ -95,7 +100,7 @@ export default function StudentDashboard() {
       <DashboardHero />
 
       {/* クイックナビゲーション */}
-      <NavigationGrid />
+      <NavigationGrid showCoachMatching={showCoachMatching} />
 
       {/* ────────────── データ・アナリティクスセクション ────────────── */}
       {/* セクション見出しを設けることで、上のナビゲーショングリッドとの境界を明確に分離 */}

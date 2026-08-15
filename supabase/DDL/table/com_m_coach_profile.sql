@@ -81,3 +81,18 @@ USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
 
 -- 新規作成・論理削除は handle_new_user() トリガー（Service Role権限）経由のみを想定。
+
+---------------------------------------------
+-- 追加パッチ: ライブセッション用ビデオ通話URL対応 (2026-08-15)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- コーチ専属制のライブセッション（オンラインレッスン）実施場所として、
+-- セッション毎にURLを都度発行するのではなく、コーチが自身のZoom等の
+-- 固定ミーティングURLをプロフィールに1件登録し、以降の全セッションで
+-- 共通利用する運用とする（com_t_session側にURLは持たせない）。
+---------------------------------------------
+ALTER TABLE public.com_m_coach_profile
+  ADD COLUMN IF NOT EXISTS zoom_meeting_url text DEFAULT NULL;
+
+COMMENT ON COLUMN public.com_m_coach_profile.zoom_meeting_url IS 'ライブセッション用の固定ビデオ通話URL（現状はZoomの個人ミーティングURLを想定。生徒への公開は自身の確定レッスン参加者に限定するため、UI側で表示範囲を制御する）';

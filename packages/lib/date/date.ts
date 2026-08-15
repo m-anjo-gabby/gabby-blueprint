@@ -114,3 +114,43 @@ export const formatZonedDateJapanese = (date: Date | string | number | null | un
   if (parts.length !== 3) return zonedStr;
   return `${parts[0]}年${parts[1]}月${parts[2]}日`;
 };
+
+/**
+ * ----------------------------------------------
+ * 専属コーチマッチング機能: レッスン枠計算ユーティリティ
+ * ----------------------------------------------
+ * 1レッスン25分・30分単位の枠が前提（Coach Availability登録時の業務ルールに準拠）。
+ * マッチングリクエスト作成・セッション振替の両画面で共通利用する。
+ */
+const LESSON_MINUTES = 25;
+const LESSON_STEP_MINUTES = 30;
+
+const timeStringToMinutes = (time: string): number => {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+};
+
+const minutesToTimeString = (totalMinutes: number): string => {
+  const h = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+  const m = (totalMinutes % 60).toString().padStart(2, '0');
+  return `${h}:${m}`;
+};
+
+/**
+ * コーチの空き時間ブロック（例: "18:00:00"〜"22:00:00"）内で選択可能な
+ * レッスン開始時刻の一覧を30分単位で生成する（例: 18:00, 18:30, ..., 21:30）。
+ */
+export const generateLessonStartTimeOptions = (blockStartTime: string, blockEndTime: string): string[] => {
+  const start = timeStringToMinutes(blockStartTime.slice(0, 5));
+  const end = timeStringToMinutes(blockEndTime.slice(0, 5));
+  const options: string[] = [];
+  for (let t = start; t + LESSON_MINUTES <= end; t += LESSON_STEP_MINUTES) {
+    options.push(minutesToTimeString(t));
+  }
+  return options;
+};
+
+/** レッスン開始時刻からレッスン終了時刻（開始+25分）を算出する ("HH:MM" -> "HH:MM") */
+export const getLessonEndTime = (startTime: string): string => {
+  return minutesToTimeString(timeStringToMinutes(startTime) + LESSON_MINUTES);
+};
