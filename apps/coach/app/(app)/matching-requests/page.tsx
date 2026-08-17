@@ -5,15 +5,17 @@ export default async function MatchingRequestsPage() {
   const requests = await getIncomingRequests();
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div>
+    <div className="space-y-6">
+      <div className="max-w-2xl">
         <h1 className="text-xl font-bold text-slate-800 tracking-tight">Matching Requests</h1>
         <p className="text-[13px] text-slate-500 mt-1">
           Students requesting a fixed weekly lesson slot with you. Approving a request automatically books every session for the license period.
         </p>
       </div>
 
-      <MatchingRequestsView initialRequests={requests} />
+      <div className="max-w-2xl mx-auto">
+        <MatchingRequestsView initialRequests={requests} />
+      </div>
     </div>
   );
 }
