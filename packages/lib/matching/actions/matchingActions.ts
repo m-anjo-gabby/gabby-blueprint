@@ -115,7 +115,7 @@ export async function getMySlotStatusCore(
 
     const { data: schedules, error: scheduleError } = await supabase
       .from('com_m_lesson_schedule')
-      .select('slot_no, coach_id, day_of_week, start_time, end_time')
+      .select('slot_no, coach_id, day_of_week, start_time, end_time, coach_timezone')
       .eq('ticket_id', ticketId)
       .eq('status', 1);
 
@@ -140,12 +140,14 @@ export async function getMySlotStatusCore(
     (requests ?? []).forEach((r) => coachIds.add(r.coach_id));
 
     let coachNameById = new Map<string, string>();
+    let coachTimezoneById = new Map<string, string>();
     if (coachIds.size > 0) {
       const { data: coaches } = await supabase
         .from('com_m_user')
-        .select('id, user_name')
+        .select('id, user_name, timezone')
         .in('id', Array.from(coachIds));
       coachNameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '']));
+      coachTimezoneById = new Map((coaches ?? []).map((c) => [c.id, c.timezone ?? 'Asia/Tokyo']));
     }
 
     const scheduleBySlot = new Map((schedules ?? []).map((s) => [s.slot_no, s]));
@@ -173,6 +175,7 @@ export async function getMySlotStatusCore(
           day_of_week: schedule.day_of_week as DayOfWeek,
           start_time: schedule.start_time,
           end_time: schedule.end_time,
+          coach_timezone: schedule.coach_timezone,
           request_id: null,
           reject_reason: null,
         });
@@ -189,6 +192,7 @@ export async function getMySlotStatusCore(
           day_of_week: pending.requested_day_of_week as DayOfWeek,
           start_time: pending.requested_start_time,
           end_time: pending.requested_end_time,
+          coach_timezone: coachTimezoneById.get(pending.coach_id) ?? null,
           request_id: pending.request_id,
           reject_reason: null,
         });
@@ -204,6 +208,7 @@ export async function getMySlotStatusCore(
         day_of_week: null,
         start_time: null,
         end_time: null,
+        coach_timezone: null,
         request_id: null,
         reject_reason: rejected?.reject_reason ?? null,
       });
@@ -246,7 +251,7 @@ export async function getCoachBrowseListCore(): Promise<
     const coachIds = profiles.map((p) => p.user_id);
 
     const [{ data: users, error: userError }, { data: availability, error: availabilityError }] = await Promise.all([
-      supabase.from('com_m_user').select('id, user_name, icon_path').in('id', coachIds),
+      supabase.from('com_m_user').select('id, user_name, icon_path, timezone').in('id', coachIds),
       supabase
         .from('com_m_coach_availability')
         .select('availability_id, coach_id, day_of_week, start_time, end_time')
@@ -273,6 +278,7 @@ export async function getCoachBrowseListCore(): Promise<
         user_id: p.user_id,
         user_name: u?.user_name ?? '(Unknown)',
         icon_path: u?.icon_path ?? null,
+        timezone: u?.timezone ?? 'Asia/Tokyo',
         country_code: p.country_code,
         teaching_years: p.teaching_years,
         introduction: p.introduction,

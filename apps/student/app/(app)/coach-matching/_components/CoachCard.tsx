@@ -5,6 +5,8 @@ import { GraduationCap } from 'lucide-react';
 import { CoachBrowseItem } from '@gabby/types/matching';
 import { DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
 
 interface CoachCardProps {
   coach: CoachBrowseItem;
@@ -15,16 +17,40 @@ function formatTimeRange(startTime: string, endTime: string): string {
   return `${startTime.slice(0, 5)}-${endTime.slice(0, 5)}`;
 }
 
+// 表示用: コーチのローカル時刻を、生徒のタイムゾーンでの曜日・時刻に変換したブロック
+interface DisplaySlot {
+  availability_id: string;
+  // クリック時はコーチのローカル時刻（DBの解釈基準）をそのまま渡す
+  sourceDay: DayOfWeek;
+  sourceStartTime: string;
+  sourceEndTime: string;
+  displayDay: DayOfWeek;
+  displayStartTime: string;
+  displayEndTime: string;
+}
+
 export function CoachCard({ coach, onSelectBlock }: CoachCardProps) {
+  const studentTimezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+
   const availabilityByDay = useMemo(() => {
-    const map = new Map<DayOfWeek, typeof coach.availability>();
+    const map = new Map<DayOfWeek, DisplaySlot[]>();
     for (const slot of coach.availability) {
-      const list = map.get(slot.day_of_week) ?? [];
-      list.push(slot);
-      map.set(slot.day_of_week, list);
+      const converted = convertWeeklyTimeZone(slot, coach.timezone, studentTimezone);
+      const displaySlot: DisplaySlot = {
+        availability_id: slot.availability_id,
+        sourceDay: slot.day_of_week,
+        sourceStartTime: slot.start_time,
+        sourceEndTime: slot.end_time,
+        displayDay: converted.day_of_week as DayOfWeek,
+        displayStartTime: converted.start_time,
+        displayEndTime: converted.end_time,
+      };
+      const list = map.get(displaySlot.displayDay) ?? [];
+      list.push(displaySlot);
+      map.set(displaySlot.displayDay, list);
     }
     return map;
-  }, [coach.availability]);
+  }, [coach.availability, coach.timezone, studentTimezone]);
 
   return (
     <article className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
@@ -61,10 +87,10 @@ export function CoachCard({ coach, onSelectBlock }: CoachCardProps) {
                     <button
                       key={slot.availability_id}
                       type="button"
-                      onClick={() => onSelectBlock(day, slot.start_time, slot.end_time)}
+                      onClick={() => onSelectBlock(slot.sourceDay, slot.sourceStartTime, slot.sourceEndTime)}
                       className="px-2.5 py-1 rounded-full bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 text-[11px] font-bold border border-indigo-100 hover:border-indigo-600 transition-colors"
                     >
-                      {formatTimeRange(slot.start_time, slot.end_time)}
+                      {formatTimeRange(slot.displayStartTime, slot.displayEndTime)}
                     </button>
                   ))}
                 </div>

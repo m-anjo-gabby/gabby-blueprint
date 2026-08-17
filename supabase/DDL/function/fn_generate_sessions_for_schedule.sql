@@ -10,8 +10,11 @@
 --
 -- 【タイムゾーン変換】
 -- スケジュールはコーチのローカル時刻（壁時計時刻）で保持しているため、
--- 各日付ごとに coach の timezone を用いて絶対時刻(timestamptz)へ変換する。
--- 同一の「毎週火曜18:00」でも、コーチのタイムゾーンでDSTが発生する期間をまたぐ場合、
+-- 各日付ごとに schedule.coach_timezone（承認時点でスナップショットされたコーチの
+-- タイムゾーン）を用いて絶対時刻(timestamptz)へ変換する。com_m_user.timezoneを
+-- ライブ参照しないのは、承認後にコーチがプロフィールのtimezoneを変更しても、
+-- 既に生徒と合意済みの曜日・時刻の意味が事後的にズレないようにするため。
+-- 同一の「毎週火曜18:00」でも、coach_timezone内でDSTが発生する期間をまたぐ場合、
 -- UTC換算のオフセットは日付ごとに自動的に正しく計算される。
 --
 -- 【例外日のスキップ】
@@ -41,8 +44,8 @@ BEGIN
         RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
     END IF;
 
-    SELECT timezone INTO v_coach_tz FROM public.com_m_user WHERE id = v_schedule.coach_id;
-    v_coach_tz := COALESCE(v_coach_tz, 'Asia/Tokyo');
+    -- com_m_user.timezoneはライブ参照しない（上記【タイムゾーン変換】コメント参照）
+    v_coach_tz := v_schedule.coach_timezone;
 
     -- start_date以降で最初にday_of_weekと一致する日付を求める
     v_cursor_date := v_schedule.start_date

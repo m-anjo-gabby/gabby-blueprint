@@ -22,6 +22,7 @@ DECLARE
     v_license_start date;
     v_license_end date;
     v_start_date date;
+    v_coach_timezone text;
     v_schedule_id uuid;
 BEGIN
     SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
@@ -50,13 +51,18 @@ BEGIN
 
     v_start_date := GREATEST(v_license_start, CURRENT_DATE);
 
+    -- day_of_week/start_time/end_timeの解釈基準として、承認時点のコーチtimezoneを固定保持する
+    -- （以後コーチがプロフィールのtimezoneを変更しても、この契約の意味は変わらない）
+    SELECT timezone INTO v_coach_timezone FROM public.com_m_user WHERE id = v_request.coach_id;
+    v_coach_timezone := COALESCE(v_coach_timezone, 'Asia/Tokyo');
+
     INSERT INTO public.com_m_lesson_schedule (
         ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
-        status, start_date, end_date, source_request_id
+        coach_timezone, status, start_date, end_date, source_request_id
     ) VALUES (
         v_request.ticket_id, v_request.student_id, v_request.coach_id, v_request.slot_no,
         v_request.requested_day_of_week, v_request.requested_start_time, v_request.requested_end_time,
-        1, v_start_date, v_license_end, v_request.request_id
+        v_coach_timezone, 1, v_start_date, v_license_end, v_request.request_id
     )
     RETURNING schedule_id INTO v_schedule_id;
 

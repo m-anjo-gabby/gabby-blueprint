@@ -11,6 +11,14 @@
 -- 以降のキャンセル・振替・日時変更はcom_t_session側の個別行を操作することで行い、
 -- 本テーブル（基本の曜日・時刻パターン）は変更しないのが原則
 -- （＝「定期スケジュールは基本的に維持」）。
+--
+-- 【coach_timezoneについて】
+-- day_of_week/start_time/end_timeはcom_m_coach_availabilityと同様「コーチのローカル時刻」
+-- だが、com_m_user.timezoneはコーチ本人がプロフィールから随時変更できるため、ライブ参照だと
+-- 承認後にコーチがタイムゾーンを変更した場合、生徒が合意した曜日・時刻の意味が事後的に
+-- ズレてしまう。そのため本テーブルは承認時点のcom_m_user.timezoneをcoach_timezoneとして
+-- 固定保持し、以降のSession生成（fn_generate_sessions_for_schedule）は必ずこの値を使う。
+-- 生徒側のタイムゾーンは保持しない（表示変換は常に閲覧者の"現在の"timezoneで行うため不要）。
 ---------------------------------------------
 CREATE TABLE public.com_m_lesson_schedule (
     schedule_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -21,6 +29,7 @@ CREATE TABLE public.com_m_lesson_schedule (
     day_of_week smallint NOT NULL, -- 0:日 ... 6:土（coach_idのローカル時刻基準）
     start_time time NOT NULL,
     end_time time NOT NULL,
+    coach_timezone text NOT NULL REFERENCES public.com_m_timezone(timezone), -- day_of_week/start_time/end_timeの解釈基準（マッチング承認時点のcom_m_user.timezoneを固定）
     status smallint NOT NULL DEFAULT 1, -- 1:active 0:paused 9:terminated
     start_date date NOT NULL, -- Session自動生成の起点日（コーチのローカル日付）
     end_date date NOT NULL,   -- Session自動生成の終点日（通常はライセンス終了日、コーチのローカル日付）
@@ -44,6 +53,7 @@ COMMENT ON COLUMN public.com_m_lesson_schedule.slot_no IS '週n回契約のう�
 COMMENT ON COLUMN public.com_m_lesson_schedule.day_of_week IS '曜日 0:日 ... 6:土（コーチのローカル時刻基準）';
 COMMENT ON COLUMN public.com_m_lesson_schedule.start_time IS 'レッスン開始時刻（コーチのローカル時刻）';
 COMMENT ON COLUMN public.com_m_lesson_schedule.end_time IS 'レッスン終了時刻（コーチのローカル時刻、通常25分）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.coach_timezone IS 'day_of_week/start_time/end_timeの解釈に使うIANAタイムゾーン（承認時点のcom_m_user.timezoneをスナップショットし、以後のコーチ側timezone変更の影響を受けない）';
 COMMENT ON COLUMN public.com_m_lesson_schedule.status IS 'ステータス 1:active(稼働中) 0:paused(一時停止) 9:terminated(終了)';
 COMMENT ON COLUMN public.com_m_lesson_schedule.start_date IS 'Session自動生成の起点日（コーチのローカル日付）';
 COMMENT ON COLUMN public.com_m_lesson_schedule.end_date IS 'Session自動生成の終点日（通常はライセンス終了日、コーチのローカル日付）';
@@ -74,3 +84,33 @@ FOR SELECT TO authenticated USING (
     OR coach_id = auth.uid()
     OR public.get_jwt_user_type() = '0'
 );
+
+---------------------------------------------
+-- 追加パッチ: coach_timezoneスナップショット対応 (2026-08-17)
+-- 既存環境に対しては、このブロックのみをSupabase SQL Editor等で実行してください。
+-- 【背景】上記コメント【coach_timezoneについて】を参照。
+---------------------------------------------
+ALTER TABLE public.com_m_lesson_schedule
+  ADD COLUMN IF NOT EXISTS coach_timezone text;
+
+-- 既存行は承認時点のタイムゾーンが記録されていないため、現在のコーチtimezoneで暫定バックフィルする
+UPDATE public.com_m_lesson_schedule s
+SET coach_timezone = COALESCE(u.timezone, 'Asia/Tokyo')
+FROM public.com_m_user u
+WHERE u.id = s.coach_id AND s.coach_timezone IS NULL;
+
+ALTER TABLE public.com_m_lesson_schedule
+  ALTER COLUMN coach_timezone SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'com_m_lesson_schedule_coach_timezone_fkey'
+  ) THEN
+    ALTER TABLE public.com_m_lesson_schedule
+      ADD CONSTRAINT com_m_lesson_schedule_coach_timezone_fkey FOREIGN KEY (coach_timezone)
+      REFERENCES public.com_m_timezone(timezone);
+  END IF;
+END $$;
+
+COMMENT ON COLUMN public.com_m_lesson_schedule.coach_timezone IS 'day_of_week/start_time/end_timeの解釈に使うIANAタイムゾーン（承認時点のcom_m_user.timezoneをスナップショットし、以後のコーチ側timezone変更の影響を受けない）';

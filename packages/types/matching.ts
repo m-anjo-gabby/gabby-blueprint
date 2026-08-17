@@ -71,6 +71,10 @@ export interface SlotStatusItem {
   day_of_week: DayOfWeek | null;
   start_time: string | null;
   end_time: string | null;
+  // day_of_week/start_time/end_timeの解釈基準（コーチのローカル時刻のタイムゾーン）。
+  // matched: com_m_lesson_schedule.coach_timezone（承認時点のスナップショット）
+  // pending: 未承認のためcom_m_user.timezone（コーチの現在値）をライブ参照
+  coach_timezone: string | null;
   request_id: string | null; // pending時のリクエストID（取消操作用）
   reject_reason: string | null; // 直近が否認だった場合の理由（再リクエストを促す表示用）
 }
@@ -83,6 +87,7 @@ export interface CoachBrowseItem {
   country_code: string | null;
   teaching_years: number | null;
   introduction: string | null;
+  timezone: string; // コーチのIANAタイムゾーン（availabilityの各day_of_week/start_time/end_timeの解釈基準）
   availability: {
     availability_id: string;
     day_of_week: DayOfWeek;

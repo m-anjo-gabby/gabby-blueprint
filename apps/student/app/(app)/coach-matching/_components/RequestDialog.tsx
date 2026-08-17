@@ -17,7 +17,8 @@ import { createMatchingRequest } from '@/actions/matchingAction';
 import { CoachBrowseItem, SlotStatusItem } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
-import { generateLessonStartTimeOptions, getLessonEndTime } from '@gabby/lib/date/date';
+import { generateLessonStartTimeOptions, getLessonEndTime, convertWeeklyTimeZone } from '@gabby/lib/date/date';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 
 interface RequestDialogTarget {
   coach: CoachBrowseItem;
@@ -35,15 +36,33 @@ interface RequestDialogProps {
 }
 
 export function RequestDialog({ target, ticketId, unmatchedSlots, onClose, onRequested }: RequestDialogProps) {
+  const studentTimezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const [selectedSlotNo, setSelectedSlotNo] = useState<number | null>(unmatchedSlots[0]?.slot_no ?? null);
   const [selectedStartTime, setSelectedStartTime] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
+  // 選択肢自体はコーチのローカル時刻（DBの解釈基準・送信値）のまま生成する
   const startTimeOptions = useMemo(
     () => (target ? generateLessonStartTimeOptions(target.blockStartTime, target.blockEndTime) : []),
     [target]
   );
+
+  // 生徒への表示だけ、各選択肢を生徒のタイムゾーンに変換したラベルを添える
+  const startTimeOptionLabels = useMemo(() => {
+    if (!target) return new Map<string, string>();
+    const map = new Map<string, string>();
+    for (const t of startTimeOptions) {
+      const display = convertWeeklyTimeZone(
+        { day_of_week: target.dayOfWeek, start_time: t, end_time: getLessonEndTime(t) },
+        target.coach.timezone,
+        studentTimezone
+      );
+      const dayLabel = display.day_of_week === target.dayOfWeek ? '' : `${DAY_OF_WEEK_LABEL_JA[display.day_of_week as DayOfWeek].slice(0, 1)} `;
+      map.set(t, `${dayLabel}${display.start_time} - ${display.end_time}`);
+    }
+    return map;
+  }, [target, startTimeOptions, studentTimezone]);
 
   const startTime = selectedStartTime ?? startTimeOptions[0] ?? null;
   const slotNo = selectedSlotNo ?? unmatchedSlots[0]?.slot_no ?? null;
@@ -74,6 +93,7 @@ export function RequestDialog({ target, ticketId, unmatchedSlots, onClose, onReq
         day_of_week: target.dayOfWeek,
         start_time: `${startTime}:00`,
         end_time: `${getLessonEndTime(startTime)}:00`,
+        coach_timezone: target.coach.timezone,
       });
       showToast('リクエストを送信しました。コーチの承認をお待ちください。', 'success');
       onClose();
@@ -93,6 +113,7 @@ export function RequestDialog({ target, ticketId, unmatchedSlots, onClose, onReq
               <DialogTitle>{target.coach.user_name} にリクエスト</DialogTitle>
               <DialogDescription>
                 {DAY_OF_WEEK_LABEL_JA[target.dayOfWeek]}の対応可能時間から、レッスン開始時刻を選択してください（1レッスン25分）。
+                時刻はあなたのタイムゾーンで表示しています。
               </DialogDescription>
             </DialogHeader>
 
@@ -126,7 +147,7 @@ export function RequestDialog({ target, ticketId, unmatchedSlots, onClose, onReq
                   >
                     {startTimeOptions.map((t) => (
                       <option key={t} value={t}>
-                        {t} - {getLessonEndTime(t)}
+                        {startTimeOptionLabels.get(t) ?? `${t} - ${getLessonEndTime(t)}`}
                       </option>
                     ))}
                   </select>

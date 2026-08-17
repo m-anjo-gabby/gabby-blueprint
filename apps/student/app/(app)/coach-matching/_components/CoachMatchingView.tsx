@@ -11,6 +11,8 @@ import { CoachBrowseItem, SlotStatusItem } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { LiveSessionTicketSummary } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
 
 interface CoachMatchingViewProps {
   ticket: LiveSessionTicketSummary;
@@ -29,6 +31,7 @@ function formatTimeRange(startTime: string, endTime: string): string {
 }
 
 export function CoachMatchingView({ ticket, initialSlots, coaches }: CoachMatchingViewProps) {
+  const studentTimezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const [slots, setSlots] = useState<SlotStatusItem[]>(initialSlots);
   const [cancellingSlotNo, setCancellingSlotNo] = useState<number | null>(null);
   const [dialogTarget, setDialogTarget] = useState<{
@@ -92,11 +95,19 @@ export function CoachMatchingView({ ticket, initialSlots, coaches }: CoachMatchi
                   </span>
                 </div>
 
-                {slot.coach_name && slot.day_of_week !== null && slot.start_time && slot.end_time && (
-                  <p className="text-xs text-slate-600">
-                    {slot.coach_name} ・ {DAY_OF_WEEK_LABEL_JA[slot.day_of_week]} {formatTimeRange(slot.start_time, slot.end_time)}
-                  </p>
-                )}
+                {slot.coach_name && slot.day_of_week !== null && slot.start_time && slot.end_time && (() => {
+                  const display = convertWeeklyTimeZone(
+                    { day_of_week: slot.day_of_week, start_time: slot.start_time, end_time: slot.end_time },
+                    slot.coach_timezone || 'Asia/Tokyo',
+                    studentTimezone
+                  );
+                  return (
+                    <p className="text-xs text-slate-600">
+                      {slot.coach_name} ・ {DAY_OF_WEEK_LABEL_JA[display.day_of_week as DayOfWeek]}{' '}
+                      {formatTimeRange(display.start_time, display.end_time)}
+                    </p>
+                  );
+                })()}
 
                 {slot.status === 'unmatched' && slot.reject_reason && (
                   <p className="text-[11px] text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-2.5 py-1.5">

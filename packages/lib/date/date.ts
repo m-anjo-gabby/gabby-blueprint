@@ -154,3 +154,82 @@ export const generateLessonStartTimeOptions = (blockStartTime: string, blockEndT
 export const getLessonEndTime = (startTime: string): string => {
   return minutesToTimeString(timeStringToMinutes(startTime) + LESSON_MINUTES);
 };
+
+/** 指定タイムゾーンでの、指定UTC瞬間における「UTCからのオフセット(分)」を求める */
+function getTimeZoneOffsetMinutes(utcInstant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(utcInstant);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+  return (asUtc - utcInstant.getTime()) / 60000;
+}
+
+/** "YYYY-MM-DDTHH:MM:SS" のウォールクロック時刻を、指定タイムゾーンでの時刻とみなしてUTC Dateへ変換する */
+function zonedWallClockToUtc(wallClock: string, timeZone: string): Date {
+  const naiveUtc = new Date(`${wallClock}Z`);
+  const offsetMinutes = getTimeZoneOffsetMinutes(naiveUtc, timeZone);
+  return new Date(naiveUtc.getTime() - offsetMinutes * 60000);
+}
+
+/**
+ * fromTimeZoneの「今日」以降で、直近に指定曜日と一致する日付をYYYY-MM-DDで返す。
+ * DSTの有無は暦日によって変わるため、固定の基準日ではなく直近の実在日を使うことで、
+ * fn_generate_sessions_for_scheduleが実際に生成するSessionのオフセットに近づける。
+ */
+function nextOccurrenceDateInZone(dayOfWeek: number, timeZone: string): string {
+  const todayStr = toIsoDateInZone(new Date(), timeZone);
+  const todayDow = new Date(`${todayStr}T00:00:00Z`).getUTCDay();
+  const diffDays = (dayOfWeek - todayDow + 7) % 7;
+  const anchor = new Date(`${todayStr}T00:00:00Z`);
+  return new Date(anchor.getTime() + diffDays * 86400000).toISOString().slice(0, 10);
+}
+
+/**
+ * 週次の曜日+時刻パターン（例: コーチのローカル基準の「火曜18:00-22:00」）を、
+ * 別のタイムゾーンでの曜日+時刻表示に変換する（コーチ空き時間の生徒向け表示専用）。
+ * 直近の実在日（fromTimeZoneの「今日」以降で最初に該当曜日となる日）を基準にオフセットを
+ * 算出するため、DSTの有無も実態に近い形で反映される。実際のセッション日時（絶対時刻）は
+ * DB側のfn_generate_sessions_for_scheduleがcoach_timezoneを使ってAT TIME ZONE変換するため、
+ * 本関数はUI表示専用の近似変換である（DST切り替え直後・直前の週はズレる場合がある）。
+ */
+export const convertWeeklyTimeZone = (
+  input: { day_of_week: number; start_time: string; end_time: string },
+  fromTimeZone: string,
+  toTimeZone: string
+): { day_of_week: number; start_time: string; end_time: string } => {
+  const startTime = input.start_time.slice(0, 5);
+  const endTime = input.end_time.slice(0, 5);
+
+  if (fromTimeZone === toTimeZone) {
+    return { day_of_week: input.day_of_week, start_time: startTime, end_time: endTime };
+  }
+
+  const dateStr = nextOccurrenceDateInZone(input.day_of_week, fromTimeZone);
+
+  const startUtc = zonedWallClockToUtc(`${dateStr}T${startTime}:00`, fromTimeZone);
+  const durationMinutes = timeStringToMinutes(endTime) - timeStringToMinutes(startTime);
+  const endUtc = new Date(startUtc.getTime() + durationMinutes * 60000);
+
+  const targetDateStr = toIsoDateInZone(startUtc, toTimeZone);
+  const targetDayOfWeek = new Date(`${targetDateStr}T00:00:00Z`).getUTCDay();
+
+  const timeFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: toTimeZone, hourCycle: 'h23', hour: '2-digit', minute: '2-digit',
+  });
+  const formatTime = (d: Date) => {
+    const p = timeFormatter.formatToParts(d);
+    const h = p.find((x) => x.type === 'hour')?.value ?? '00';
+    const m = p.find((x) => x.type === 'minute')?.value ?? '00';
+    return `${h}:${m}`;
+  };
+
+  return {
+    day_of_week: targetDayOfWeek,
+    start_time: formatTime(startUtc),
+    end_time: formatTime(endUtc),
+  };
+};
