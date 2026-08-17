@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { UserFormDialog } from "./UserFormDialog";
 import { LicenseFormDialog } from "./LicenseFormDialog";
+import { ImpersonateButton } from "./ImpersonateButton";
 import { Calendar, Building2, Plus, StickyNote, ShieldCheck, Pencil, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserTypeLabel, UserRecord } from "@gabby/types/user";
@@ -168,14 +169,25 @@ export const columns: ColumnDef<UserRecord>[] = [
   {
     id: "actions",
     header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">操作</div>,
-    cell: ({ row }) => (
-      <div className="flex justify-end items-center gap-2 px-2">
-        {/* ユーザー基本情報の編集 */}
-        <UserFormDialog 
-          mode="edit" 
-          initialData={row.original} 
-        />
-      </div>
-    ),
+    cell: ({ row }) => {
+      const user = row.original;
+      // 本登録済み（招待中ではない）生徒のみ代理ログイン対象とする
+      const isStudent = user.user_type === '1';
+      const isRegistered = !!user.last_sign_in_at || !!user.confirmed_at;
+      const canImpersonate = isStudent && isRegistered;
+
+      return (
+        <div className="flex justify-end items-center gap-2 px-2">
+          {/* 障害対応・問合せ調査用の代理ログイン */}
+          {canImpersonate && <ImpersonateButton user={user} />}
+
+          {/* ユーザー基本情報の編集 */}
+          <UserFormDialog
+            mode="edit"
+            initialData={user}
+          />
+        </div>
+      );
+    },
   },
 ];

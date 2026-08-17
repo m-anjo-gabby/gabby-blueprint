@@ -20,6 +20,7 @@ export interface LogEvent {
   functionName?: string;
   timestamp?: string;
   payload?: any;      // 追加のコンテキスト情報
+  impersonation?: { id: string; adminId: string }; // 代理ログイン中の操作である場合のみ付与される相関情報
   [key: string]: any;
 }
 

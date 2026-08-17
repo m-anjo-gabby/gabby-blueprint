@@ -49,8 +49,10 @@ export function ContractLicenseDialog({ contract, children }: Props) {
   const { showToast } = useToast()
 
   // 契約終了判定
+  // "YYYY-MM-DD"（JSTの日付文字列）をそのままnew Date()に渡すとUTC 00:00として解釈され、
+  // 日本時間との9時間のズレで日付判定がズレるため startOfDay で正規化してから比較する
   const isExpired = useMemo(() => {
-    return new Date(contract.end_date) < startOfDay(new Date());
+    return startOfDay(new Date(contract.end_date)) < startOfDay(new Date());
   }, [contract.end_date]);
 
   // --- 算出プロパティ ---
@@ -272,6 +274,11 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                             <p className="text-sm font-bold text-slate-800 truncate">{user.user_name}</p>
                             <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
                           </div>
+                          {contract.contract_type === 2 && user.ticket && (
+                            <Badge className="shrink-0 bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-50 text-[10px] font-mono font-bold">
+                              {user.ticket.used_sessions} / {user.ticket.total_sessions}回
+                            </Badge>
+                          )}
                         </div>
 
                         {/* 解除確認ダイアログ（有効契約時のみ） */}

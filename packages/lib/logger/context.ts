@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import type { LogEvent } from './index';
+import { IMPERSONATION_REQUEST_HEADER_ID, IMPERSONATION_REQUEST_HEADER_ADMIN_ID } from '../impersonation';
 
 /**
  * Middleware (proxy-base) でセットされたカスタムヘッダーから
@@ -22,10 +23,19 @@ export async function getLogContext(): Promise<Partial<LogEvent>> {
       ip = forwardedFor.split(',')[0].trim();
     }
 
+    // 代理ログイン中のリクエストであれば、実際の操作(userId)とは別に
+    // 「誰が代理で操作したか」をログに残せるよう相関情報を付与する
+    const impersonationId = h.get(IMPERSONATION_REQUEST_HEADER_ID);
+    const impersonationAdminId = h.get(IMPERSONATION_REQUEST_HEADER_ADMIN_ID);
+    const impersonation = impersonationId && impersonationAdminId
+      ? { id: impersonationId, adminId: impersonationAdminId }
+      : undefined;
+
     return {
       userId: userId ?? 'system',
       ip: ip ?? undefined,
       requestId: requestId ?? undefined,
+      ...(impersonation ? { impersonation } : {}),
     };
   } catch {
     // Server Actions 以外（ビルド時や Edge Runtime 以外の特殊な文脈）でのフォールバック

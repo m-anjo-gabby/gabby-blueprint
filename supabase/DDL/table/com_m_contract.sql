@@ -40,3 +40,48 @@ CREATE POLICY "Users can view their own client contracts" ON public.com_m_contra
 FOR SELECT TO authenticated USING (
     client_id = public.get_jwt_client_id()
 );
+
+---------------------------------------------
+-- 追加パッチ: ライブセッション（オンラインレッスン）付き契約への対応 (2026-08-13)
+-- 前提: table/com_m_contract_plan.sql の作成が完了していること。
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+--
+-- 【方針】
+-- 標準プラン（週1回・3か月・全12回／週2回・3か月・全24回）は
+-- com_m_contract_plan マスタで定義しつつ、契約側は実値
+-- (weekly_frequency / total_sessions) をコピーして保持するハイブリッド方式とする。
+-- plan_id が NULL の場合は個別交渉によるカスタム契約を表す。
+-- ライブセッションは常にBlueprint契約に付帯する前提のため、
+-- ライブセッションの有効期間は独立して持たず、契約・ライセンスの期間をそのまま用いる。
+---------------------------------------------
+ALTER TABLE public.com_m_contract
+  ADD COLUMN IF NOT EXISTS contract_type smallint NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS plan_id uuid REFERENCES public.com_m_contract_plan(plan_id),
+  ADD COLUMN IF NOT EXISTS weekly_frequency smallint,
+  ADD COLUMN IF NOT EXISTS total_sessions smallint;
+
+COMMENT ON COLUMN public.com_m_contract.contract_type IS '契約タイプ 1: Blueprintのみ, 2: Blueprint+ライブセッション';
+COMMENT ON COLUMN public.com_m_contract.plan_id IS '契約プランマスタ参照（com_m_contract_plan）。カスタム契約の場合はNULL';
+COMMENT ON COLUMN public.com_m_contract.weekly_frequency IS '週あたりのライブセッション回数（1 or 2）。plan_id選択時はマスタ値をコピー、カスタム契約は自由入力。Blueprintのみの場合はNULL';
+COMMENT ON COLUMN public.com_m_contract.total_sessions IS '契約期間内の総チケット数。plan_id選択時はマスタ値をコピー、カスタム契約は自由入力。Blueprintのみの場合はNULL';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_contract_type'
+  ) THEN
+    ALTER TABLE public.com_m_contract
+      ADD CONSTRAINT chk_contract_type CHECK (contract_type IN (1, 2));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_contract_live_fields'
+  ) THEN
+    ALTER TABLE public.com_m_contract
+      ADD CONSTRAINT chk_contract_live_fields CHECK (
+        (contract_type = 1 AND weekly_frequency IS NULL AND total_sessions IS NULL)
+        OR
+        (contract_type = 2 AND weekly_frequency IN (1, 2) AND total_sessions IS NOT NULL)
+      );
+  END IF;
+END $$;
