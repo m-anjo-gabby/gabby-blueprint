@@ -1,5 +1,5 @@
 import { UserX } from 'lucide-react';
-import { getMyLiveSessionTickets, getMySlotStatus, getCoachBrowseList } from '@/actions/matchingAction';
+import { getMyLiveSessionTickets, getMySlotStatus, getCoachBrowseList, getCountryList } from '@/actions/matchingAction';
 import { CoachMatchingView } from './_components/CoachMatchingView';
 
 export default async function CoachMatchingPage() {
@@ -10,8 +10,8 @@ export default async function CoachMatchingPage() {
 
   if (!ticket) {
     return (
-      <div className="max-w-2xl mx-auto px-2 py-10">
-        <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-slate-200">
+      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
+        <div className="flex flex-col items-center justify-center flex-1 py-16 text-center px-6">
           <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
             <UserX size={22} />
           </div>
@@ -22,21 +22,11 @@ export default async function CoachMatchingPage() {
     );
   }
 
-  const [slots, coaches] = await Promise.all([
+  const [slots, coaches, countries] = await Promise.all([
     getMySlotStatus(ticket.ticket_id),
     getCoachBrowseList(),
+    getCountryList(),
   ]);
 
-  return (
-    <div className="max-w-2xl mx-auto px-2 py-10 space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-xl font-black text-slate-800 tracking-tight">専属コーチを探す</h1>
-        <p className="text-[13px] text-slate-500">
-          週{ticket.weekly_frequency}回のレッスン枠ごとにコーチをリクエストできます。コーチが承認すると、契約期間分のレッスンが自動で予約されます。
-        </p>
-      </div>
-
-      <CoachMatchingView ticket={ticket} initialSlots={slots} coaches={coaches} />
-    </div>
-  );
+  return <CoachMatchingView ticket={ticket} initialSlots={slots} coaches={coaches} countries={countries} />;
 }

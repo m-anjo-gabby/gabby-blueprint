@@ -7,6 +7,7 @@ import {
   createMatchingRequestCore,
   cancelMatchingRequestCore,
 } from '@gabby/lib/matching/actions/matchingActions';
+import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
@@ -16,6 +17,7 @@ import {
   MatchingRequestErrorCode,
   SlotStatusItem,
 } from '@gabby/types/matching';
+import { CountryMaster } from '@gabby/types/country';
 
 const logger = createLogger('student');
 
@@ -66,6 +68,19 @@ export async function getCoachBrowseList(): Promise<CoachBrowseItem[]> {
     return [];
   }
   return result.coaches;
+}
+
+/**
+ * コーチプロフィールプレビュー（国籍表示）用の国マスタ一覧を取得
+ */
+export async function getCountryList(): Promise<CountryMaster[]> {
+  const result = await getCountryListCore();
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_country_list_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.countries;
 }
 
 /**

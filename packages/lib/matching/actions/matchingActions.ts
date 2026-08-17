@@ -237,7 +237,7 @@ export async function getCoachBrowseListCore(): Promise<
 
     const { data: profiles, error: profileError } = await supabase
       .from('com_m_coach_profile')
-      .select('user_id, country_code, teaching_years, introduction')
+      .select('user_id, country_code, coach_since, education, qualifications, teaching_years, job_experience, introduction, intro_video_path')
       .eq('delete_flg', '0');
 
     if (profileError) {
@@ -280,8 +280,13 @@ export async function getCoachBrowseListCore(): Promise<
         icon_path: u?.icon_path ?? null,
         timezone: u?.timezone ?? 'Asia/Tokyo',
         country_code: p.country_code,
+        coach_since: p.coach_since,
+        education: p.education,
+        qualifications: p.qualifications,
         teaching_years: p.teaching_years,
+        job_experience: p.job_experience,
         introduction: p.introduction,
+        intro_video_path: p.intro_video_path,
         availability: (availabilityByCoachId.get(p.user_id) ?? []).map((a) => ({
           availability_id: a.availability_id,
           day_of_week: a.day_of_week as DayOfWeek,

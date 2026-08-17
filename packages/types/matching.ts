@@ -79,14 +79,22 @@ export interface SlotStatusItem {
   reject_reason: string | null; // 直近が否認だった場合の理由（再リクエストを促す表示用）
 }
 
-/** 生徒向けコーチ一覧（公開プロフィール + 空き時間）。zoom_meeting_url等の非公開項目は含めない */
+/**
+ * 生徒向けコーチ一覧（公開プロフィール + 空き時間）。zoom_meeting_url等の非公開項目は含めない。
+ * コーチ選択画面のプロフィールプレビュー（CoachProfileDialog）表示に必要な項目一式を含む。
+ */
 export interface CoachBrowseItem {
   user_id: string;
   user_name: string;
   icon_path: string | null;
   country_code: string | null;
+  coach_since: string | null;
+  education: string | null;
+  qualifications: string | null;
   teaching_years: number | null;
+  job_experience: string | null;
   introduction: string | null;
+  intro_video_path: string | null;
   timezone: string; // コーチのIANAタイムゾーン（availabilityの各day_of_week/start_time/end_timeの解釈基準）
   availability: {
     availability_id: string;
