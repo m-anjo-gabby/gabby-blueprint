@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2, Check, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Loader2, Check, X, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { formatZonedDate } from '@gabby/lib/date/date';
+import { formatZonedDate, getFirstLiveSessionOccurrence } from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
 import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS } from '@gabby/types/matching';
@@ -48,6 +48,14 @@ export function MatchingRequestCard({ request, onResolved }: MatchingRequestCard
 
   const badge = STATUS_BADGE[request.status];
   const isPending = request.status === MATCHING_REQUEST_STATUS.PENDING;
+
+  // First live session date: nearest occurrence of the requested day/time that is at least
+  // 24 real hours from now (not just "tomorrow" by calendar date, to stay correct across timezones).
+  // Only meaningful while pending — once approved, the actual date is fixed in com_t_session.
+  const firstSession = useMemo(() => {
+    if (!isPending) return null;
+    return getFirstLiveSessionOccurrence(request.requested_day_of_week, request.requested_start_time, timezone, timezone);
+  }, [isPending, request.requested_day_of_week, request.requested_start_time, timezone]);
 
   const handleApprove = async () => {
     const ok = await showConfirm(
@@ -102,6 +110,13 @@ export function MatchingRequestCard({ request, onResolved }: MatchingRequestCard
             {formatTimeRange(request.requested_start_time, request.requested_end_time)}
           </p>
           <p className="text-[10px] text-slate-400 mt-1">Requested {formatZonedDate(request.insert_date, timezone)}</p>
+          {firstSession && (
+            <p className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 mt-1">
+              <CalendarClock size={12} />
+              First session: {formatZonedDate(firstSession.instant, timezone)} (
+              {DAY_OF_WEEK_LABEL_EN[firstSession.day_of_week as DayOfWeek]}) {firstSession.start_time}
+            </p>
+          )}
         </div>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
           {badge.label}

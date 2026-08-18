@@ -233,3 +233,58 @@ export const convertWeeklyTimeZone = (
     end_time: formatTime(endUtc),
   };
 };
+
+export interface FirstLiveSessionOccurrence {
+  /** 初回ライブセッションの絶対時刻（UTC） */
+  instant: Date;
+  /** targetTimeZoneでの曜日 (0:日...6:土) */
+  day_of_week: number;
+  /** targetTimeZoneでの開始時刻 "HH:MM" */
+  start_time: string;
+}
+
+/**
+ * 週次の曜日+時刻パターン（sourceTimeZoneのローカル時刻基準）について、
+ * 「現在時刻から実時間で24時間以上先」となる直近の日時（初回ライブセッション日）を求め、
+ * targetTimeZoneでの表示用に変換する。
+ * 単純に暦日で「翌日」を加算すると、タイムゾーン差によっては実際には数時間しか
+ * 先でないケースがあるため、必ず now+24時間（絶対時刻）を下限として判定する。
+ */
+export const getFirstLiveSessionOccurrence = (
+  dayOfWeek: number,
+  startTime: string,
+  sourceTimeZone: string,
+  targetTimeZone: string,
+  now: Date = new Date()
+): FirstLiveSessionOccurrence => {
+  const time = startTime.slice(0, 5);
+  const threshold = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  const thresholdDateStr = toIsoDateInZone(threshold, sourceTimeZone);
+  const thresholdDow = new Date(`${thresholdDateStr}T00:00:00Z`).getUTCDay();
+  const diffDays = (dayOfWeek - thresholdDow + 7) % 7;
+  let candidateDateStr = new Date(new Date(`${thresholdDateStr}T00:00:00Z`).getTime() + diffDays * 86400000)
+    .toISOString()
+    .slice(0, 10);
+  let instant = zonedWallClockToUtc(`${candidateDateStr}T${time}:00`, sourceTimeZone);
+
+  // 該当曜日ちょうどでも、その日の指定時刻が閾値(now+24h)より前ならその日は無効 → 翌週へ
+  if (instant.getTime() < threshold.getTime()) {
+    candidateDateStr = new Date(new Date(`${candidateDateStr}T00:00:00Z`).getTime() + 7 * 86400000)
+      .toISOString()
+      .slice(0, 10);
+    instant = zonedWallClockToUtc(`${candidateDateStr}T${time}:00`, sourceTimeZone);
+  }
+
+  const targetDateStr = toIsoDateInZone(instant, targetTimeZone);
+  const targetDayOfWeek = new Date(`${targetDateStr}T00:00:00Z`).getUTCDay();
+
+  const timeFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: targetTimeZone, hourCycle: 'h23', hour: '2-digit', minute: '2-digit',
+  });
+  const parts = timeFormatter.formatToParts(instant);
+  const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
+
+  return { instant, day_of_week: targetDayOfWeek, start_time: `${h}:${m}` };
+};

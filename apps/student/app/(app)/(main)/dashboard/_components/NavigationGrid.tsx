@@ -58,7 +58,7 @@ export const NavigationGrid = ({ showCoachMatching = false }: NavigationGridProp
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row justify-center gap-4 px-2 max-w-3xl mx-auto">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-2 max-w-3xl mx-auto">
       {navItems.map((item) => (
         <button
           key={item.label}

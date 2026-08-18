@@ -14,7 +14,7 @@ import { CoachBrowseItem, SlotStatusItem } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { CountryMaster } from '@gabby/types/country';
 import { LiveSessionTicketSummary } from '@gabby/types/matching';
-import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
+import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
 
@@ -41,30 +41,37 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
   const [cancellingSlotNo, setCancellingSlotNo] = useState<number | null>(null);
   const [requestTarget, setRequestTarget] = useState<CoachBrowseItem | null>(null);
 
-  // --- コーチ検索フィルター（曜日・時刻範囲） ---
+  // --- コーチ検索フィルター（コーチ名・曜日・大まかな時間帯） ---
   const [selectedDays, setSelectedDays] = useState<Set<DayOfWeek>>(new Set());
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [selectedTimeBuckets, setSelectedTimeBuckets] = useState<Set<string>>(new Set());
+  const [nameQuery, setNameQuery] = useState('');
 
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
 
   const unmatchedSlots = slots.filter((s) => s.status === 'unmatched');
 
-  const hasFilter = selectedDays.size > 0 || !!startTime || !!endTime;
+  const hasFilter = selectedDays.size > 0 || selectedTimeBuckets.size > 0 || nameQuery.trim() !== '';
 
   const filteredCoaches = useMemo(() => {
-    if (!hasFilter) return coaches;
-    return coaches.filter((coach) =>
-      coach.availability.some((slot) => {
+    const trimmedQuery = nameQuery.trim().toLowerCase();
+    return coaches.filter((coach) => {
+      if (trimmedQuery && !coach.user_name.toLowerCase().includes(trimmedQuery)) return false;
+
+      if (selectedDays.size === 0 && selectedTimeBuckets.size === 0) return true;
+
+      return coach.availability.some((slot) => {
         const display = convertWeeklyTimeZone(slot, coach.timezone, studentTimezone);
-        if (selectedDays.size > 0 && !selectedDays.has(display.day_of_week as DayOfWeek)) return false;
-        if (startTime && display.end_time <= startTime) return false;
-        if (endTime && display.start_time >= endTime) return false;
-        return true;
-      })
-    );
-  }, [coaches, hasFilter, selectedDays, startTime, endTime, studentTimezone]);
+        return slotMatchesFilter(
+          display.day_of_week as DayOfWeek,
+          display.start_time,
+          display.end_time,
+          selectedDays,
+          selectedTimeBuckets
+        );
+      });
+    });
+  }, [coaches, selectedDays, selectedTimeBuckets, nameQuery, studentTimezone]);
 
   const handleToggleDay = (day: DayOfWeek) => {
     setSelectedDays((prev) => {
@@ -75,10 +82,19 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
     });
   };
 
+  const handleToggleTimeBucket = (key: string) => {
+    setSelectedTimeBuckets((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const handleClearFilter = () => {
     setSelectedDays(new Set());
-    setStartTime('');
-    setEndTime('');
+    setSelectedTimeBuckets(new Set());
+    setNameQuery('');
   };
 
   const handleSlotUpdate = (slotNo: number, patch: Partial<SlotStatusItem>) => {
@@ -150,7 +166,7 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
               return (
                 <div key={slot.slot_no} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-black text-slate-700">枠 {slot.slot_no}</p>
+                    <p className="text-xs font-black text-slate-700">{slot.slot_no}コマ目</p>
                     <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
                       {badge.label}
                     </span>
@@ -205,10 +221,10 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
               <CoachSearchFilters
                 selectedDays={selectedDays}
                 onToggleDay={handleToggleDay}
-                startTime={startTime}
-                endTime={endTime}
-                onChangeStartTime={setStartTime}
-                onChangeEndTime={setEndTime}
+                selectedTimeBuckets={selectedTimeBuckets}
+                onToggleTimeBucket={handleToggleTimeBucket}
+                nameQuery={nameQuery}
+                onChangeNameQuery={setNameQuery}
                 onClear={handleClearFilter}
                 hasFilter={hasFilter}
               />
@@ -238,7 +254,13 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.97 }}
                       >
-                        <CoachCard coach={coach} countries={countries} onRequest={setRequestTarget} />
+                        <CoachCard
+                          coach={coach}
+                          countries={countries}
+                          onRequest={setRequestTarget}
+                          selectedDays={selectedDays}
+                          selectedTimeBuckets={selectedTimeBuckets}
+                        />
                       </motion.div>
                     ))}
                   </div>

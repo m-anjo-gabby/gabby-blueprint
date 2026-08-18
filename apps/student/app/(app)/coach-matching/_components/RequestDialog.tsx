@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Clock } from 'lucide-react';
+import { Loader2, Clock, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -17,7 +17,13 @@ import { createMatchingRequest } from '@/actions/matchingAction';
 import { CoachBrowseItem, SlotStatusItem } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
-import { generateLessonStartTimeOptions, getLessonEndTime, convertWeeklyTimeZone } from '@gabby/lib/date/date';
+import {
+  generateLessonStartTimeOptions,
+  getLessonEndTime,
+  convertWeeklyTimeZone,
+  getFirstLiveSessionOccurrence,
+  formatZonedDate,
+} from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { CoachAvailabilityCalendar, AvailabilityCell } from './CoachAvailabilityCalendar';
 
@@ -70,6 +76,18 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
   }, [coach, studentTimezone]);
 
   const slotNo = selectedSlotNo ?? unmatchedSlots[0]?.slot_no ?? null;
+
+  // 初回ライブセッション予定日: 当日を除き、現在時刻から実時間で24時間以上先となる直近の指定曜日・時刻
+  // （タイムゾーン差により「翌日」が数時間後になるケースを避けるため、暦日ではなく絶対時刻で判定する）
+  const firstSession = useMemo(() => {
+    if (!coach || !selectedCell) return null;
+    return getFirstLiveSessionOccurrence(
+      selectedCell.sourceDay,
+      selectedCell.sourceStartTime,
+      coach.timezone,
+      studentTimezone
+    );
+  }, [coach, selectedCell, studentTimezone]);
 
   const handleSubmit = async () => {
     if (!coach || !selectedCell || !slotNo) return;
@@ -126,15 +144,24 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
               />
 
               {selectedCell && (
-                <div className="flex items-center gap-2 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2">
-                  <Clock size={14} />
-                  {DAY_OF_WEEK_LABEL_JA[selectedCell.displayDay]} {selectedCell.displayStartTime} - {selectedCell.displayEndTime}
+                <div className="space-y-1.5 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2">
+                  <div className="flex items-center gap-2 text-sm font-bold text-indigo-700">
+                    <Clock size={14} />
+                    毎週 {DAY_OF_WEEK_LABEL_JA[selectedCell.displayDay]} {selectedCell.displayStartTime} - {selectedCell.displayEndTime}
+                  </div>
+                  {firstSession && (
+                    <div className="flex items-center gap-2 border-t border-indigo-100 pt-1.5 text-xs font-bold text-indigo-700">
+                      <CalendarClock size={14} />
+                      初回ライブセッション予定日: {formatZonedDate(firstSession.instant, studentTimezone)}（
+                      {DAY_OF_WEEK_LABEL_JA[firstSession.day_of_week as DayOfWeek]}）{firstSession.start_time}〜
+                    </div>
+                  )}
                 </div>
               )}
 
               {unmatchedSlots.length > 1 && (
                 <div className="space-y-1.5">
-                  <Label>対象の枠</Label>
+                  <Label>リクエストするコマ</Label>
                   <select
                     value={slotNo ?? ''}
                     onChange={(e) => setSelectedSlotNo(Number(e.target.value))}
@@ -142,7 +169,7 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
                   >
                     {unmatchedSlots.map((s) => (
                       <option key={s.slot_no} value={s.slot_no}>
-                        枠{s.slot_no}
+                        {s.slot_no}コマ目
                       </option>
                     ))}
                   </select>

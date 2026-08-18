@@ -3,9 +3,9 @@
 import { useMemo, useState } from 'react';
 import { GraduationCap, Eye, CalendarClock } from 'lucide-react';
 import { CoachBrowseItem } from '@gabby/types/matching';
-import { DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { CountryMaster } from '@gabby/types/country';
-import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
+import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
@@ -13,11 +13,16 @@ import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVide
 import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
 import { CoachProfileDialog } from '@gabby/lib/components/common/CoachProfileDialog';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+const VISIBLE_SLOT_COUNT = 3;
 
 interface CoachCardProps {
   coach: CoachBrowseItem;
   countries: CountryMaster[];
   onRequest: (coach: CoachBrowseItem) => void;
+  selectedDays: Set<DayOfWeek>;
+  selectedTimeBuckets: Set<string>;
 }
 
 // 表示用: コーチのローカル時刻を、生徒のタイムゾーンでの曜日・時刻に変換したブロック
@@ -26,10 +31,7 @@ interface DisplaySlot {
   displayDay: DayOfWeek;
   displayStartTime: string;
   displayEndTime: string;
-}
-
-function formatTimeRange(startTime: string, endTime: string): string {
-  return `${startTime.slice(0, 5)}-${endTime.slice(0, 5)}`;
+  matches: boolean;
 }
 
 /** "2024-11-01" -> "2024年11月" */
@@ -40,26 +42,36 @@ function formatCoachSinceLabel(dateStr: string | null): string | null {
   return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'long' }).format(date);
 }
 
-export function CoachCard({ coach, countries, onRequest }: CoachCardProps) {
+export function CoachCard({ coach, countries, onRequest, selectedDays, selectedTimeBuckets }: CoachCardProps) {
   const studentTimezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const [showPreview, setShowPreview] = useState(false);
+  const [showAllSlots, setShowAllSlots] = useState(false);
 
-  const availabilityByDay = useMemo(() => {
-    const map = new Map<DayOfWeek, DisplaySlot[]>();
-    for (const slot of coach.availability) {
+  const hasActiveFilter = selectedDays.size > 0 || selectedTimeBuckets.size > 0;
+
+  // 検索フィルターに一致する枠を先頭に、曜日・開始時刻順で並べる（カード内で優先的に見せるため）
+  const sortedSlots = useMemo(() => {
+    const list: DisplaySlot[] = coach.availability.map((slot) => {
       const converted = convertWeeklyTimeZone(slot, coach.timezone, studentTimezone);
-      const displaySlot: DisplaySlot = {
+      const displayDay = converted.day_of_week as DayOfWeek;
+      return {
         availability_id: slot.availability_id,
-        displayDay: converted.day_of_week as DayOfWeek,
+        displayDay,
         displayStartTime: converted.start_time,
         displayEndTime: converted.end_time,
+        matches: slotMatchesFilter(displayDay, converted.start_time, converted.end_time, selectedDays, selectedTimeBuckets),
       };
-      const list = map.get(displaySlot.displayDay) ?? [];
-      list.push(displaySlot);
-      map.set(displaySlot.displayDay, list);
-    }
-    return map;
-  }, [coach.availability, coach.timezone, studentTimezone]);
+    });
+    list.sort((a, b) => {
+      if (a.matches !== b.matches) return a.matches ? -1 : 1;
+      if (a.displayDay !== b.displayDay) return a.displayDay - b.displayDay;
+      return a.displayStartTime.localeCompare(b.displayStartTime);
+    });
+    return list;
+  }, [coach.availability, coach.timezone, studentTimezone, selectedDays, selectedTimeBuckets]);
+
+  const visibleSlots = showAllSlots ? sortedSlots : sortedSlots.slice(0, VISIBLE_SLOT_COUNT);
+  const hiddenSlotCount = sortedSlots.length - visibleSlots.length;
 
   const country = useMemo(
     () => countries.find((c) => c.country_code === coach.country_code) ?? null,
@@ -103,28 +115,39 @@ export function CoachCard({ coach, countries, onRequest }: CoachCardProps) {
       {coach.availability.length === 0 ? (
         <p className="text-xs text-slate-400">現在、対応可能時間の登録がありません</p>
       ) : (
-        <div className="space-y-1.5">
-          {DAYS_OF_WEEK.map((day) => {
-            const daySlots = availabilityByDay.get(day);
-            if (!daySlots || daySlots.length === 0) return null;
-            return (
-              <div key={day} className="flex items-start gap-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide pt-1 w-6 shrink-0">
-                  {DAY_OF_WEEK_LABEL_JA[day].slice(0, 1)}
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {daySlots.map((slot) => (
-                    <span
-                      key={slot.availability_id}
-                      className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-100"
-                    >
-                      {formatTimeRange(slot.displayStartTime, slot.displayEndTime)}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {visibleSlots.map((slot) => (
+            <span
+              key={slot.availability_id}
+              className={cn(
+                'px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap',
+                hasActiveFilter && !slot.matches
+                  ? 'bg-slate-50 text-slate-400 border-slate-100'
+                  : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+              )}
+            >
+              {DAY_OF_WEEK_LABEL_JA[slot.displayDay].slice(0, 1)} {slot.displayStartTime}
+              <span className="hidden sm:inline">-{slot.displayEndTime}</span>
+            </span>
+          ))}
+          {hiddenSlotCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAllSlots(true)}
+              className="px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-[11px] font-bold border border-slate-100 hover:bg-slate-100 transition-colors"
+            >
+              +{hiddenSlotCount}
+            </button>
+          )}
+          {showAllSlots && sortedSlots.length > VISIBLE_SLOT_COUNT && (
+            <button
+              type="button"
+              onClick={() => setShowAllSlots(false)}
+              className="px-2 py-1 text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              閉じる
+            </button>
+          )}
         </div>
       )}
 
