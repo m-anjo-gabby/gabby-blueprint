@@ -4,7 +4,10 @@
 -- 作成日: 2026-08-19
 --
 -- 【内容】
---   カレンダー統合機能: com_m_calendar_event（カレンダーイベントマスタ）新規追加
+--   カレンダー統合機能: カレンダーイベント + 参加者管理 統合版
+--   （元: 20260819_calendar-events_release.sql
+--         20260819_calendar-event-participants_release.sql を1本化）
+--   dev環境には上記2本を個別適用済みだが、stg/prodには未適用のため1本化する。
 --
 --   1. com_m_calendar_event テーブルを新規作成
 --      - グループセッション・メンテナンス告知等、生徒/コーチ全体・特定顧客に
@@ -17,12 +20,19 @@
 --        生徒向け配信に加えて将来のコーチ向け配信にも最初から対応する。
 --      - is_published により下書き/公開を管理する（メンテナンス告知等を事前に
 --        準備してから公開できるようにするため）。
+--      - rsvp_enabled（参加確認フラグ）を最初から保持する。TRUEのイベント
+--        （主にグループセッション）のみ、生徒/コーチが参加登録・キャンセル
+--        できるようにする。管理画面のイベント登録フォームでON/OFFを切り替える。
 --      - グループセッションの参加者管理（定員・申込）は対象外。表示専用。
---   2. 管理画面（apps/admin）に本テーブルのCRUD UIを追加（本SQLの対象外、
---      アプリケーションコードのみの変更）。
---   3. 生徒向けカレンダー（apps/student）で com_t_session と本テーブルを
---      マージして表示するUIに刷新（本SQLの対象外、アプリケーションコードのみ
---      の変更）。
+--   2. com_t_calendar_event_participant を新規作成
+--      - 行が存在すれば「参加」、DELETEで「キャンセル」を表す単純な結合テーブル
+--        （com_t_favorite_phraseと同じ設計。ステータス列・取消履歴は持たない）。
+--      - 定員管理・キャンセル待ちは対象外。
+--   3. 管理画面（apps/admin）に本テーブルのCRUD UI・イベント単位の参加者一覧
+--      確認画面を追加（本SQLの対象外、アプリケーションコードのみの変更）。
+--   4. 生徒向けカレンダー（apps/student）で com_t_session と本テーブルを
+--      マージして表示するUIに刷新し、イベント詳細に「参加する/キャンセル」
+--      導線を追加（本SQLの対象外、アプリケーションコードのみの変更）。
 --
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
@@ -46,6 +56,7 @@ CREATE TABLE IF NOT EXISTS public.com_m_calendar_event (
     location_url TEXT,
     target_type VARCHAR(10) NOT NULL DEFAULT 'ALL',
     client_id UUID REFERENCES public.com_m_client(client_id) ON DELETE CASCADE,
+    rsvp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     is_published BOOLEAN NOT NULL DEFAULT FALSE,
     delete_flg TEXT NOT NULL DEFAULT '0',
     insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -83,6 +94,7 @@ COMMENT ON COLUMN public.com_m_calendar_event.end_datetime IS '終了日時（UT
 COMMENT ON COLUMN public.com_m_calendar_event.location_url IS '参加URL（Zoom等、主にグループセッション用、任意）';
 COMMENT ON COLUMN public.com_m_calendar_event.target_type IS '配信対象タイプ (ALL: 生徒全体 / CLIENT: 顧客単位 / COACH: コーチ全体)';
 COMMENT ON COLUMN public.com_m_calendar_event.client_id IS '対象顧客ID (target_typeがCLIENTの場合に使用)';
+COMMENT ON COLUMN public.com_m_calendar_event.rsvp_enabled IS '参加確認フラグ (TRUE: 生徒/コーチが参加登録・キャンセルできる / FALSE: 参加確認機能を使わない告知)';
 COMMENT ON COLUMN public.com_m_calendar_event.is_published IS '公開フラグ (TRUE: 公開中 / FALSE: 下書き)';
 COMMENT ON COLUMN public.com_m_calendar_event.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_calendar_event.insert_date IS '登録日時';
@@ -111,5 +123,33 @@ FOR SELECT TO authenticated USING (
         OR (target_type = 'COACH' AND public.get_jwt_user_type() = '2')
     )
 );
+
+-- =========================================================================
+-- 2. com_t_calendar_event_participant 新規作成
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.com_t_calendar_event_participant (
+    participant_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    calendar_event_id UUID NOT NULL REFERENCES public.com_m_calendar_event(calendar_event_id) ON DELETE CASCADE,
+    insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    UNIQUE(user_id, calendar_event_id)
+);
+
+COMMENT ON TABLE public.com_t_calendar_event_participant IS 'カレンダーイベント参加者（行が存在すれば参加、DELETEでキャンセル）';
+COMMENT ON COLUMN public.com_t_calendar_event_participant.participant_id IS '参加ID';
+COMMENT ON COLUMN public.com_t_calendar_event_participant.user_id IS 'ユーザID';
+COMMENT ON COLUMN public.com_t_calendar_event_participant.calendar_event_id IS 'カレンダーイベントID';
+COMMENT ON COLUMN public.com_t_calendar_event_participant.insert_date IS '参加登録日時';
+
+CREATE INDEX IF NOT EXISTS idx_calendar_event_participant_event ON public.com_t_calendar_event_participant (calendar_event_id);
+
+ALTER TABLE public.com_t_calendar_event_participant ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own participation" ON public.com_t_calendar_event_participant;
+CREATE POLICY "Users can manage their own participation" ON public.com_t_calendar_event_participant
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
 
 COMMIT;
