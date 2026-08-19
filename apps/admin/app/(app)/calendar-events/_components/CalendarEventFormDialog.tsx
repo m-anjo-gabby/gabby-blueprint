@@ -41,6 +41,7 @@ const calendarEventSchema = z
     location_url: z.string().url('URLの形式が正しくありません').optional().or(z.literal('')),
     target_type: z.enum(TARGET_TYPE_KEYS),
     client_id: z.string().optional(),
+    rsvp_enabled: z.boolean(),
     is_published: z.boolean(),
   })
   .refine((v) => !v.has_end || (!!v.end_date && !!v.end_time), {
@@ -92,6 +93,7 @@ const DEFAULT_VALUES: CalendarEventFormValues = {
   location_url: '',
   target_type: 'ALL',
   client_id: '',
+  rsvp_enabled: false,
   is_published: false,
 };
 
@@ -125,6 +127,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
       location_url: data.location_url || '',
       target_type: data.target_type,
       client_id: data.client_id || '',
+      rsvp_enabled: data.rsvp_enabled,
       is_published: data.is_published,
     };
   };
@@ -153,6 +156,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
         location_url: values.location_url || null,
         target_type: values.target_type,
         client_id: values.target_type === 'CLIENT' ? values.client_id : null,
+        rsvp_enabled: values.rsvp_enabled,
         is_published: values.is_published,
       };
 
@@ -398,6 +402,35 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 </FormItem>
               )}
             />
+
+            {/* --- 参加確認 --- */}
+            {!isConfirming && (
+              <FormField
+                control={form.control}
+                name="rsvp_enabled"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-xl border-2 border-slate-100 p-3">
+                    <div>
+                      <FormLabel className="text-xs font-bold text-slate-600">参加確認を有効にする</FormLabel>
+                      <FormDescription className="text-[11px] text-slate-400">
+                        オンの場合、生徒/コーチがこのイベントに参加登録・キャンセルできるようになります。
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+            {isConfirming && (
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">参加確認</p>
+                <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                  {form.getValues('rsvp_enabled') ? '有効' : '無効'}
+                </div>
+              </div>
+            )}
 
             {/* --- 配信対象 --- */}
             <FormField

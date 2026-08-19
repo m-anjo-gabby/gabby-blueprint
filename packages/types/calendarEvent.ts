@@ -38,8 +38,11 @@ export interface CalendarEventItem {
   location_url: string | null;
   target_type: CalendarEventTargetType;
   client_id: string | null;
+  rsvp_enabled: boolean;
   is_published: boolean;
   delete_flg: string;
   insert_date: string;
   update_date: string;
+  // 結合フィールド（生徒向けクエリでのみ計算。com_t_calendar_event_participantから結合）
+  is_joined: boolean;
 }

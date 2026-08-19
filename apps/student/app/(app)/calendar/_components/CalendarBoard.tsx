@@ -100,6 +100,10 @@ export function CalendarBoard() {
     }
   };
 
+  const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {
+    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? { ...e, is_joined: isJoined } : e)));
+  };
+
   const selectedItems = selectedDate ? itemsByDate.get(selectedDate) ?? [] : [];
 
   return (
@@ -185,6 +189,7 @@ export function CalendarBoard() {
         timezone={timezone}
         onClose={() => setSelectedDate(null)}
         onActionRequested={setActionTarget}
+        onParticipationChanged={handleParticipationChanged}
       />
 
       <SessionActionDialog target={actionTarget} onClose={() => setActionTarget(null)} onResolved={handleResolved} />

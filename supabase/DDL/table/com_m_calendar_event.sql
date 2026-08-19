@@ -22,6 +22,7 @@ CREATE TABLE public.com_m_calendar_event (
     location_url TEXT,
     target_type VARCHAR(10) NOT NULL DEFAULT 'ALL',
     client_id UUID REFERENCES public.com_m_client(client_id) ON DELETE CASCADE,
+    rsvp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     is_published BOOLEAN NOT NULL DEFAULT FALSE,
     delete_flg TEXT NOT NULL DEFAULT '0',
     insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -45,6 +46,7 @@ COMMENT ON COLUMN public.com_m_calendar_event.end_datetime IS '終了日時（UT
 COMMENT ON COLUMN public.com_m_calendar_event.location_url IS '参加URL（Zoom等、主にグループセッション用、任意）';
 COMMENT ON COLUMN public.com_m_calendar_event.target_type IS '配信対象タイプ (ALL: 生徒全体 / CLIENT: 顧客単位 / COACH: コーチ全体)';
 COMMENT ON COLUMN public.com_m_calendar_event.client_id IS '対象顧客ID (target_typeがCLIENTの場合に使用)';
+COMMENT ON COLUMN public.com_m_calendar_event.rsvp_enabled IS '参加確認フラグ (TRUE: 生徒/コーチが参加登録・キャンセルできる / FALSE: 参加確認機能を使わない告知)';
 COMMENT ON COLUMN public.com_m_calendar_event.is_published IS '公開フラグ (TRUE: 公開中 / FALSE: 下書き)';
 COMMENT ON COLUMN public.com_m_calendar_event.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_calendar_event.insert_date IS '登録日時';

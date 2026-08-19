@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import {
   ColumnDef,
   flexRender,
@@ -12,7 +13,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronLeft, ChevronRight, Search, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, X, Trash2, Users } from 'lucide-react';
 import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { CalendarEventFormDialog } from './CalendarEventFormDialog';
@@ -90,6 +91,16 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
         header: () => <div className="text-right">操作</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
+            {row.original.rsvp_enabled && (
+              <Link
+                href={`/calendar-events/${row.original.calendar_event_id}/participants`}
+                className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all active:scale-95"
+                title="参加者を確認"
+              >
+                <Users size={15} />
+              </Link>
+            )}
+
             <CalendarEventFormDialog mode="edit" initialData={row.original} />
 
             <AlertDialog>
