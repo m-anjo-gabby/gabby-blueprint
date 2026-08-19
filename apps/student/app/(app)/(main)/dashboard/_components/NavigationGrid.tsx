@@ -34,8 +34,8 @@ export const NavigationGrid = ({ showCoachMatching = false }: NavigationGridProp
     ...(showCoachMatching
       ? [
           {
-            label: 'My Lessons',
-            title: 'マイレッスン',
+            label: 'Calendar',
+            title: 'カレンダー',
             path: '/calendar',
             icon: CalendarClock,
             labelClass: 'text-sky-600',
