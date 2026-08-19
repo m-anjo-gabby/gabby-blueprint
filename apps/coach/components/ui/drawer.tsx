@@ -37,11 +37,20 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onPointerDownOutside, ...props }, ref) => (
   <DrawerPortal>
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
+      onPointerDownOutside={(event) => {
+        // 共通確認ダイアログ(ConfirmModal)はRadix/vaulのポータル外に描画されるため、
+        // それをクリックした際に背後のDrawer(ボトムシート)まで閉じてしまわないようにする
+        if ((event.target as HTMLElement | null)?.closest('[data-confirm-modal]')) {
+          event.preventDefault();
+          return;
+        }
+        onPointerDownOutside?.(event);
+      }}
       className={cn(
         "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
         className

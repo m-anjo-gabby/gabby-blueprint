@@ -10,9 +10,20 @@ interface ConfirmModalProps {
   onCancel: () => void;
   variant?: 'danger' | 'warning' | 'info';
   isModal?: boolean;
+  confirmText?: string;
+  cancelText?: string;
 }
 
-export const ConfirmModal = ({ title, message, onConfirm, onCancel, variant = 'danger', isModal = true }: ConfirmModalProps) => {
+export const ConfirmModal = ({
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  variant = 'danger',
+  isModal = true,
+  confirmText = 'OK',
+  cancelText = 'キャンセル',
+}: ConfirmModalProps) => {
   const themes = {
     danger: { bg: 'bg-rose-50', text: 'text-rose-500', btn: 'bg-rose-500 hover:bg-rose-600 shadow-rose-100', icon: Trash2 },
     warning: { bg: 'bg-amber-50', text: 'text-amber-500', btn: 'bg-amber-500 hover:bg-amber-600 shadow-amber-100', icon: AlertTriangle },
@@ -50,10 +61,10 @@ export const ConfirmModal = ({ title, message, onConfirm, onCancel, variant = 'd
 
         <div className="flex gap-3 pt-2">
           <button onClick={onCancel} className="flex-1 h-12 text-[11px] font-black text-slate-400 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">
-            キャンセル
+            {cancelText}
           </button>
           <button onClick={onConfirm} className={`flex-1 h-12 text-[11px] font-black text-white ${theme.btn} rounded-2xl shadow-lg transition-all active:scale-95`}>
-            OK
+            {confirmText}
           </button>
         </div>
       </motion.div>

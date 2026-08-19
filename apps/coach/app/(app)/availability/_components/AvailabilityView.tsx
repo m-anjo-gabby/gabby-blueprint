@@ -128,7 +128,7 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
       const ok = await showConfirm(
         'Save changes?',
         `This removes ${toDelete.length} time block${toDelete.length > 1 ? 's' : ''} from your availability. Students will no longer be able to book those times, but already scheduled sessions are not affected.`,
-        { variant: 'danger' }
+        { variant: 'danger', confirmText: 'Save', cancelText: 'Cancel' }
       );
       if (!ok) return;
     }

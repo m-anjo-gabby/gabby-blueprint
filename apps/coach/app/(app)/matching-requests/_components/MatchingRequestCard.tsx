@@ -61,7 +61,7 @@ export function MatchingRequestCard({ request, onResolved }: MatchingRequestCard
     const ok = await showConfirm(
       'Approve this request?',
       `This will book every lesson for ${request.student_name} on ${DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]} ${formatTimeRange(request.requested_start_time, request.requested_end_time)} for the remaining license period.`,
-      { variant: 'info' }
+      { variant: 'info', confirmText: 'Approve', cancelText: 'Cancel' }
     );
     if (!ok) return;
 

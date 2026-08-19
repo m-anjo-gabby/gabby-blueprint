@@ -67,7 +67,11 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
   };
 
   const handleCancel = async () => {
-    const ok = await showConfirm('Cancel participation?', 'This will remove your registration for this event.', { variant: 'danger' });
+    const ok = await showConfirm('Cancel participation?', 'This will remove your registration for this event.', {
+      variant: 'danger',
+      confirmText: 'Cancel Participation',
+      cancelText: 'Back',
+    });
     if (!ok) return;
 
     setIsSubmitting(true);

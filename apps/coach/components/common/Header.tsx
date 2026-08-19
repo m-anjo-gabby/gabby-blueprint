@@ -30,7 +30,7 @@ export default function Header() {
     const ok = await showConfirm(
       'Confirm Logout',
       'This will end your session and log you out. Are you sure?',
-      { variant: 'danger', isModal: true }
+      { variant: 'danger', isModal: true, confirmText: 'Log Out', cancelText: 'Cancel' }
     );
     if (ok) await signOut();
   };
