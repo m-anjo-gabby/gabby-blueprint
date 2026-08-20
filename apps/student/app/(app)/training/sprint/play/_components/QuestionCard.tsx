@@ -14,7 +14,6 @@ interface QuestionCardProps {
   groupCurrentIndex?: number;
   groupTotalCount?: number;
   onPlayAudio?: (voiceUrl: string | null, text: string) => void;
-  onStartRecord?: () => void;
   audioPhase?: 'idle' | 'statement' | 'question' | 'thinking' | 'answer'; // 🛠️ 親の 'thinking' フェーズに追従
   isRecording?: boolean; // 🎙️ 親から渡される録音中フラグ
   timeLeft?: number;      // ⏱️ 親から渡される残り時間（秒）
@@ -32,7 +31,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   groupCurrentIndex = 0,
   groupTotalCount = 3,
   onPlayAudio,
-  onStartRecord,
   audioPhase = 'idle',
   isRecording = false,
   timeLeft = 0,

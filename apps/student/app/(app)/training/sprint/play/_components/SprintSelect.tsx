@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, ChevronDown, ChevronRight, Mic, MicOff, Loader2, BookOpen, Settings2, AlertTriangle, Timer, Zap } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,17 +20,10 @@ import { MicTroubleshootingDialog } from '@/components/help/MicTroubleshootingDi
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface SprintSelectProps {
-  initialConfig?: {
-    mode?: 'drill' | 'sprint';
-    questionType?: SprintQuestionType;
-    level?: string;
-    timeLimitSec?: number;
-    contentId?: string | null;
-  };
   onStart: (config: SprintConfig & { answerType: SprintAnswerType; isAssessmentMode: boolean }) => void;
 }
 
-export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onStart }) => {
+export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const router = useRouter();
   const { showConfirm } = useConfirm();
 
@@ -157,35 +150,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
   const isSpeedSelected = selectedType === '0';
   const currentHint = SPRINT_NOTES[selectedType] || '';
-
-  // 🚀 マイクの状態に応じたスタイリング・文言・アイコンのマッピングデータを動的に生成
-  const micUIConfig = useMemo(() => {
-    if (micStatus === 'denied') {
-      return {
-        bg: "bg-rose-50/60 border-rose-100",
-        icon: <MicOff size={14} className="text-rose-500" strokeWidth={2.5} />,
-        label: "発話評価モード (マイクがブロック中)",
-        badge: <span className="text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded border bg-rose-50 text-rose-700 border-rose-100 shrink-0 scale-90 origin-left">DISABLED</span>
-      };
-    }
-    if (micStatus === 'prompt') {
-      return {
-        bg: "bg-amber-50/40 border-amber-100/70",
-        icon: <Mic size={14} className="text-amber-500" strokeWidth={2.5} />,
-        label: "発話評価モード (マイクは未許可です)",
-        badge: <span className="text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-100 shrink-0 scale-90 origin-left">READY</span>
-      };
-    }
-    // granted (許可済み)
-    return {
-      bg: "bg-slate-50/60 border-slate-100/70",
-      icon: <Mic size={14} className={cn(isAssessmentMode ? "text-indigo-500" : "text-slate-400")} strokeWidth={2.5} />,
-      label: "発話評価モード",
-      badge: isAssessmentMode ? (
-        <span className="text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/70 shadow-3xs shrink-0 scale-90 origin-left">ON</span>
-      ) : null
-    };
-  }, [micStatus, isAssessmentMode]);
 
   return (
     <div className="fixed inset-0 w-full h-[100dvh] bg-slate-100 flex items-center justify-center p-2 sm:p-4 overflow-hidden overscroll-none touch-none select-none text-slate-900">

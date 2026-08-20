@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
+import { AnalysisResult, FeedbackConfig, WordMatch } from '@gabby/types/speechAssessment';
 import { cn } from "@/lib/utils";
 
 interface SprintFeedbackProps {
@@ -19,7 +19,7 @@ export const SprintFeedback: React.FC<SprintFeedbackProps> = ({
 }) => {
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number>(-1);
 
-  const getWordStyle = useCallback((match: any) => {
+  const getWordStyle = useCallback((match: WordMatch) => {
     if (!match.isMatch) return { 
       text: 'text-slate-300', 
       deco: 'border-b-2 border-dashed border-slate-300',

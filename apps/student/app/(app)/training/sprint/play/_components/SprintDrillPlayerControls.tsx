@@ -18,7 +18,6 @@ interface SprintDrillPlayerControlsProps {
   playbackRate: number;
   // 🛠️ 修正点：引数で選択された rate（数値）を取るシグネチャに統一
   onChangePlaybackRate: (rate: number) => void;
-  timeLeft: number;
   isStarted?: boolean;
 }
 
@@ -34,7 +33,6 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
   onToggleAutoPlay,
   playbackRate,
   onChangePlaybackRate,
-  timeLeft,
   isStarted = true
 }) => {
   // 🔌 Zustand ストアから状態を直接マッピング

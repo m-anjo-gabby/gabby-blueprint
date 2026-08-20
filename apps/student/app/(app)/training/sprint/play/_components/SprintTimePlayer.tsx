@@ -2,20 +2,21 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Volume2, RotateCcw, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, MicOff, Square, FastForward, Loader2 } from 'lucide-react';
+import { ChevronLeft, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, MicOff, FastForward, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord, cleanAnswerWords } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, cleanAnswerWords } from '@gabby/lib';
 import { SprintQuestion, SPRINT_FLOW_TIMING } from "@gabby/types/sprint";
-import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
-import { playStatementThenQuestion, useStopAllAudioCore } from '@gabby/lib/hooks/useSprintPlaybackFlow';
+import { playStatementThenQuestion, useStopAllAudioCore, useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackFlow';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
+import { useSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useSprintTimers';
+import { ExitProcessingOverlay } from './ExitProcessingOverlay';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
@@ -45,17 +46,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     contentMetadata,
   } = useSprintStore();
 
-  const { currentIndex, isRecording } = session;
+  const { currentIndex } = session;
   const { questionType, answerType, level, timeLimitSec, isAssessmentMode } = config;
 
   // ────────────── 📦 ローカル管理ステート ──────────────
-  const [secondsLeft, setSecondsLeft] = useState<number>(timeLimitSec || 60);
   const [exitLoading, setExitLoading] = useState<boolean>(false);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [resultId, setResultId] = useState<string | null>(null);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
-  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'great' | 'good' | 'fair' | 'poor'>('idle');
   
   // チャイム再生開始〜 recognition.onstart までの短い待機窓口だけ true
@@ -64,10 +63,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // ────────────── 音声カスタムフック ──────────────
   const { startAssessment, stopListening, timeLeft } = useWebSpeech();
-  const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
   // オーディオリソース（AudioContext / チャイム / 再生Promise）を共通フックで管理
   // マウント/アンマウント時の初期化・クリーンアップも内部で行う
+  // 💡 Sprintモードは再生速度変更UIを持たないため、playbackRate指定なし（常に等速）で再生する
   const { playTrack: playTrackBase, playChime, stopTrack, unlockAudioContext } = useSprintAudio(stopListening);
 
   // マイク権限の監視（SprintTimePlayer ではテスト機能は使わず、micStatus のみ参照）
@@ -76,15 +75,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const currentQuestion = questions?.[currentIndex];
 
   const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
-    return playTrackBase(text, audioPath, { playbackRate, exitLoading });
-  }, [playTrackBase, playbackRate, exitLoading]);
+    return playTrackBase(text, audioPath, { exitLoading });
+  }, [playTrackBase, exitLoading]);
 
   const flowIdRef = useRef<number>(0);
   const skippedQuestionIdsRef = useRef<Set<string>>(new Set());
   const isPersistedRef = useRef<boolean>(false);
-  // secondsLeft は毎秒変化するため、ref で最新値を保持してコールバック内で参照する
-  const secondsLeftRef = useRef<number>(secondsLeft);
-  useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
 
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
@@ -130,16 +126,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       totalInGroup: groupQuestions.length
     };
   }, [currentQuestion, questions, isSpeedMode]);
-
-  const timeRatio = useMemo(() => secondsLeft / (timeLimitSec || 60), [secondsLeft, timeLimitSec]);
-  const isWarning = timeRatio <= 0.5 && timeRatio > 0.2;
-  const isCritical = timeRatio <= 0.2;
-
-  const progressPercent = useMemo(() => {
-    if (secondsLeft <= 0 || !timeLimitSec) return 0;
-    return (secondsLeft / timeLimitSec) * 100;
-  }, [secondsLeft, timeLimitSec]);
-
 
   // 全てのオーディオ・発話を安全に即時ストップする
   // 🚀 stopListening も同時に呼び、audioSession を 'playback' に戻すことで
@@ -246,6 +232,24 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [resultId, router, stopAllAudio, resetStore, unlockAudioContext]);
 
+  const handleTimeUp = useCallback(() => {
+    handlePersistAndRedirect(0);
+  }, [handlePersistAndRedirect]);
+
+  // 制限時間のカウントダウン。0になった時点で自動保存・リダイレクトへ進む
+  const { secondsLeft, secondsLeftRef } = useSprintCountdown(timeLimitSec, handleTimeUp, clearSessionProgress);
+
+  // タイムアップ完了オーバーレイ表示中、3秒後に自動で結果画面へ遷移する
+  const redirectCountdown = useAutoRedirectCountdown(showTimeUpOverlay && !!resultId, handleGoToResult);
+
+  const timeRatio = useMemo(() => secondsLeft / (timeLimitSec || 60), [secondsLeft, timeLimitSec]);
+  const isWarning = timeRatio <= 0.5 && timeRatio > 0.2;
+  const isCritical = timeRatio <= 0.2;
+
+  const progressPercent = useMemo(() => {
+    if (secondsLeft <= 0 || !timeLimitSec) return 0;
+    return (secondsLeft / timeLimitSec) * 100;
+  }, [secondsLeft, timeLimitSec]);
 
   // 評価コールバックを含む純粋な録音開始関数
   // secondsLeft は ref 経由で参照（毎秒の再生成を防ぎ、runSprintFlow の安定性を保つ）
@@ -346,16 +350,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     }
   }, [playTrack, playChime, startRecordingFor, isAssessmentMode]);
 
-  // 手動録音ボタン用（マイクボタンタップ時）
-  const handleStartRecord = useCallback(async () => {
-    if (!currentQuestion || !isAssessmentMode) return;
-    await unlockAudioContext();
-    setAudioPhase('answer');
-    setIsAwaitingRecording(true);
-    playChime();
-    startRecordingFor(currentQuestion);
-  }, [currentQuestion, playChime, startRecordingFor, unlockAudioContext, isAssessmentMode]);
-
   const handleStopRecord = useCallback(() => {
     if (!isAssessmentMode) return;
     setIsAwaitingRecording(false);
@@ -379,58 +373,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, stopAllAudio, unlockAudioContext]);
 
   // ────────────── 🔄 副作用 (Effects) ──────────────
-
-  // 全体の残り制限時間カウント
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (secondsLeft > 0) {
-      interval = setInterval(() => {
-        setSecondsLeft((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => { if (interval) clearInterval(interval); };
-  }, [secondsLeft]);
-
-  // タイムアップ判定
-  useEffect(() => {
-    if (secondsLeft <= 0) {
-      handlePersistAndRedirect(0);
-    }
-  }, [secondsLeft, handlePersistAndRedirect]);
-
-  // タイムアップ完了時の自動遷移とカウントダウン
-  useEffect(() => {
-    if (showTimeUpOverlay && resultId) {
-      setRedirectCountdown(3);
-      
-      const interval = setInterval(() => {
-        setRedirectCountdown((prev) => {
-          if (prev === null || prev <= 0) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      const timer = setTimeout(() => {
-        handleGoToResult();
-      }, 3500);
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timer);
-      };
-    }
-  }, [showTimeUpOverlay, resultId, handleGoToResult]);
-
-  // ストアの初期値同期およびクリーンアップ
-  useEffect(() => {
-    setSecondsLeft(timeLimitSec);
-    return () => {
-      clearSessionProgress();
-    };
-  }, [timeLimitSec, clearSessionProgress]);
+  // 制限時間カウントダウン・タイムアップ後の結果画面自動遷移は useSprintCountdown / useAutoRedirectCountdown へ集約済み
 
   // インデックス（問題ID）変更時にフローを最初から走らせる
   useEffect(() => {
@@ -455,21 +398,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving, exitLoading]);
 
   // DOM/オーディオの強制クリーンアップおよびiOSオーディオセッション固定化
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    
-    // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
-    
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      stopAllAudio();
-      setIsRecording(false);
-      stopListening();
-      // 🚀 アンマウント（終了）時に 'playback' に戻してマイクを完全に解放
-      setAudioSessionPlayback();
-    };
-  }, [stopAllAudio, setIsRecording, stopListening]);
+  // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
+  useFullscreenAudioLifecycle(stopAllAudio);
 
   const handleExit = async () => {
     const ok = await showConfirm(
@@ -880,18 +810,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         </div>
       </main>
 
-      {/* 🚀 終了処理中のローディングオーバーレイ */}
-      {exitLoading && (
-        <div className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300">
-          <div className="text-center space-y-4 animate-in zoom-in-95 duration-200">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto" strokeWidth={2.5} />
-            <div className="space-y-1">
-              <h3 className="text-sm font-black text-slate-800 tracking-tight">終了処理を行っています</h3>
-              <p className="text-[11px] text-slate-400 font-medium">マイクの接続を解除しています。少しお待ちください...</p>
-            </div>
-          </div>
-        </div>
-      )}
+      <ExitProcessingOverlay visible={exitLoading} />
 
       {/* 統合された完了レイヤー */}
       {(isSaving || showTimeUpOverlay) && (

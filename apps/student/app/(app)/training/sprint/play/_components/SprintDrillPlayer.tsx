@@ -1,21 +1,23 @@
 'use client';
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
-import { SPRINT_FLOW_TIMING, SprintQuestion, SprintQuestionType } from "@gabby/types/sprint";
+import { SPRINT_FLOW_TIMING, SprintQuestion } from "@gabby/types/sprint";
+import { AnalysisResult } from "@gabby/types/speechAssessment";
 import { QuestionCard } from "./QuestionCard";
 import { SprintDrillPlayerControls } from "./SprintDrillPlayerControls";
 import { SprintFeedback } from "./SprintFeedback";
-import { ChevronLeft, Square, Loader2 } from 'lucide-react';
+import { ExitProcessingOverlay } from "./ExitProcessingOverlay";
+import { ChevronLeft, Square } from 'lucide-react';
 
 import { useSprintStore } from '@/stores/useSprintStore';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord, cleanAnswerWords } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback, cleanAnswerWords } from '@gabby/lib';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
-import { playStatementThenQuestion, useStopAllAudioCore } from '@gabby/lib/hooks/useSprintPlaybackFlow';
-import { reportSprintProgress } from '@/actions/sprintAction';
+import { playStatementThenQuestion, useStopAllAudioCore, useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackFlow';
+import { useSprintProgressSync } from '../_hooks/useSprintProgressSync';
 
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
@@ -34,7 +36,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
 
-  const [isStarted, setIsStarted] = useState<boolean>(!!initialStarted || !initialQuestionId);
+  const isStarted = !!initialStarted || !initialQuestionId;
   const [exitLoading, setExitLoading] = useState<boolean>(false);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
 
@@ -73,7 +75,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const currentQuestion = questions?.[currentIndex];
 
   const isInitialized = useRef<boolean>(false);
-  const prevAnalysisRef = useRef<any>(null);
+  const prevAnalysisRef = useRef<AnalysisResult | null>(null);
   const prevIndexRef = useRef<number>(currentIndex);
 
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -89,42 +91,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   useEffect(() => { isAutoPlayingRef.current = isAutoPlaying; }, [isAutoPlaying]);
   useEffect(() => { isRevealedRef.current = isRevealed; }, [isRevealed]);
 
-  const contentIdRef = useRef(contentId);
-  useEffect(() => {
-    contentIdRef.current = contentId;
-  }, [contentId]);
-
-  const questionTypeRef = useRef(questionType);
-  useEffect(() => {
-    questionTypeRef.current = questionType;
-  }, [questionType]);
-
-  /**
-   * 手動同期関数
-   */
-  const syncProgressNow = useCallback(async () => {
-    if (!contentIdRef.current) return;
-    const { questionCount, assessmentCount } = useSprintStore.getState().clearPendingCounts();
-    if (questionCount > 0 || assessmentCount > 0) {
-      await reportSprintProgress(
-        contentIdRef.current,
-        questionCount,
-        assessmentCount,
-        (questionTypeRef.current || '0') as SprintQuestionType
-      );
-    }
-  }, []);
-
-  /**
-   * 5分ごとの定期自動保存
-   */
-  useEffect(() => {
-    const FIVE_MINUTES = 5 * 60 * 1000;
-    const intervalId = setInterval(() => {
-      syncProgressNow();
-    }, FIVE_MINUTES);
-    return () => clearInterval(intervalId);
-  }, [syncProgressNow]);
+  // ドリル進捗の5分ごと自動保存（内部で contentId/questionType の最新値を ref 経由で追従）
+  const { syncProgressNow, questionTypeRef } = useSprintProgressSync(contentId, questionType);
 
   const isCorpus = contentMetadata?.sprint_type === '1';
   const hasLevel = isCorpus ? contentMetadata?.has_level ?? true : true;
@@ -527,19 +495,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   }, [isRevealed, currentIndex, analysis, isRecording]);
 
   // フルスクリーン固定およびiOSオーディオセッション固定化
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    
-    // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
-    
-    return () => { 
-      document.body.style.overflow = originalOverflow; 
-      stopAllAudio(); 
-      // 🚀 アンマウント（終了）時に 'playback' に戻してマイクを完全に解放
-      setAudioSessionPlayback();
-    };
-  }, [stopAllAudio]);
+  // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
+  useFullscreenAudioLifecycle(stopAllAudio);
 
 
   return (
@@ -567,12 +524,11 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         {/* 🎴 中央：メイン教材カードセクション */}
         <div className="flex-1 flex items-start justify-center p-6 pt-6 overflow-y-auto" onClick={handleReveal}>
           <div className="w-full max-w-xl mx-auto">
-            <QuestionCard 
+            <QuestionCard
               key={currentIndex}
               groupCurrentIndex={groupProgress.groupCurrentIndex}
               groupTotalCount={groupProgress.groupTotalCount}
               onPlayAudio={handleIndividualPlayAudio}
-              onStartRecord={handleStartRecord}
               audioPhase={audioPhase}
               isRecording={isRecording}
               timeLeft={timeLeft}
@@ -592,7 +548,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               onToggleAutoPlay={handleToggleAutoPlay}
               playbackRate={playbackRate}
               onChangePlaybackRate={handleSelectRate}
-              timeLeft={timeLeft}
               isStarted={isStarted}
             />
           </div>
@@ -618,18 +573,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
           onClose={() => setFeedback(null)} 
         />
 
-        {/* 🚀 終了処理中のローディングオーバーレイ */}
-        {exitLoading && (
-          <div className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300">
-            <div className="text-center space-y-4 animate-in zoom-in-95 duration-200">
-              <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto" strokeWidth={2.5} />
-              <div className="space-y-1">
-                <h3 className="text-sm font-black text-slate-800 tracking-tight">終了処理を行っています</h3>
-                <p className="text-[11px] text-slate-400 font-medium">マイクの接続を解除しています。少しお待ちください...</p>
-              </div>
-            </div>
-          </div>
-        )}
+        <ExitProcessingOverlay visible={exitLoading} />
       </main>
     </div>
   );

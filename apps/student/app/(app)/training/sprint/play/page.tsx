@@ -240,14 +240,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // 1. 選択画面
   if (ui.view === 'selecting') {
     return (
-      <SprintSelect 
-        initialConfig={{
-          mode: config.mode,
-          questionType: config.questionType || '0',
-          level: String(config.level),
-          timeLimitSec: config.timeLimitSec,
-          contentId: config.contentId
-        }}
+      <SprintSelect
         onStart={handleStartSession}
       />
     );

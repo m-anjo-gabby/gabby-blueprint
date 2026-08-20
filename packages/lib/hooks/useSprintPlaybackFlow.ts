@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { SPRINT_FLOW_TIMING, SprintQuestion } from '@gabby/types/sprint';
 import { setAudioSessionPlayback } from '../sprint/utils';
 
@@ -64,4 +64,24 @@ export function useStopAllAudioCore(stopTrack: () => void, stopListening: () => 
       setAudioSessionPlayback();
     }, SPRINT_FLOW_TIMING.shared.micReleaseSessionRestoreMs);
   }, [stopTrack, stopListening]);
+}
+
+/**
+ * Drill/Sprint両プレイヤーで共通の「フルスクリーン固定＋アンマウント時クリーンアップ」ライフサイクル。
+ * マウント中は body のスクロールを固定し、アンマウント時に全音声を停止してAudioSessionを
+ * playbackへ確実に復帰させる（stopAllAudio 自身が isRecording リセットやマイク停止を内包しているため、
+ * ここで重複して行う必要はない）。
+ */
+export function useFullscreenAudioLifecycle(stopAllAudio: () => void) {
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      stopAllAudio();
+      // 🚀 アンマウント（終了）時に 'playback' に戻してマイクを完全に解放
+      setAudioSessionPlayback();
+    };
+  }, [stopAllAudio]);
 }
