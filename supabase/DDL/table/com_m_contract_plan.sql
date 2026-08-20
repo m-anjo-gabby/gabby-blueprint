@@ -58,3 +58,21 @@ CREATE POLICY "Admins can manage contract plans" ON public.com_m_contract_plan
 FOR ALL TO authenticated
 USING (public.get_jwt_user_type() = '0')
 WITH CHECK (public.get_jwt_user_type() = '0');
+
+---------------------------------------------
+-- 追加パッチ: 週3回以上のカスタムプランに対応 (2026-08-15)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 現状の標準プランは週1回・週2回のみだが、今後カスタム契約や新規プランで
+-- 週3回以上のライブセッションを提供する可能性があるため、weekly_frequency を
+-- IN (1, 2) の固定値制約から「1以上の任意回数」に一般化する。
+---------------------------------------------
+ALTER TABLE public.com_m_contract_plan DROP CONSTRAINT IF EXISTS chk_contract_plan_live_fields;
+ALTER TABLE public.com_m_contract_plan ADD CONSTRAINT chk_contract_plan_live_fields CHECK (
+    (contract_type = 1 AND weekly_frequency IS NULL AND total_sessions IS NULL)
+    OR
+    (contract_type = 2 AND weekly_frequency >= 1 AND total_sessions IS NOT NULL)
+);
+
+COMMENT ON COLUMN public.com_m_contract_plan.weekly_frequency IS '週あたりのライブセッション回数（1以上。Blueprintのみの場合はNULL）';

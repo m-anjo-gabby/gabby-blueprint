@@ -6,6 +6,7 @@ import Sidebar from '@/components/common/Sidebar';
 import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { UserAppMetadata } from '@gabby/lib/stores/useUserStore';
+import { GlobalNoticePopup } from '@/components/common/GlobalNoticePopup';
 
 /**
  * コーチ用 統合アプリケーションレイアウト
@@ -45,6 +46,7 @@ export default async function CoachAppLayout({
 
       <ToastContainer />
       <ConfirmContainer />
+      <GlobalNoticePopup />
     </>
   );
 }

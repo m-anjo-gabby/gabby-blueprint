@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Bell, ChevronLeft, BellOff } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useNoticeStore } from '@/stores/useNoticeStore';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NoticeCard } from './_components/NoticeCard';
 
 export default function NoticePage() {

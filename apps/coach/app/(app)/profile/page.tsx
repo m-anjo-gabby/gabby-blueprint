@@ -27,24 +27,26 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div>
+    <div className="space-y-6">
+      <div className="max-w-2xl">
         <h1 className="text-xl font-bold text-slate-800 tracking-tight">Profile Settings</h1>
         <p className="text-[13px] text-slate-500 mt-1">
           Review your account information and manage your icon image.
         </p>
       </div>
 
-      <ProfileView
-        userName={profile.user_name ?? '(Not set)'}
-        clientName={profile.client_name}
-        userTypeLabel={USER_TYPE_LABELS_EN[profile.user_type] ?? 'Unknown'}
-        initialIconPath={profile.icon_path}
-        initialTimezone={profile.timezone}
-        timezones={timezones}
-        initialCoachProfile={coachProfile}
-        countries={countries}
-      />
+      <div className="max-w-2xl mx-auto">
+        <ProfileView
+          userName={profile.user_name ?? '(Not set)'}
+          clientName={profile.client_name}
+          userTypeLabel={USER_TYPE_LABELS_EN[profile.user_type] ?? 'Unknown'}
+          initialIconPath={profile.icon_path}
+          initialTimezone={profile.timezone}
+          timezones={timezones}
+          initialCoachProfile={coachProfile}
+          countries={countries}
+        />
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import {
   getNoticesAction,
   markNoticeAsReadAction,
   markNoticesAsReadBatchAction,
-} from '@/actions/noticeAction';
+} from '@gabby/lib/notice/actions/noticeActions';
 import { NoticeItem } from '@gabby/types/notice';
 
 interface NoticeState {

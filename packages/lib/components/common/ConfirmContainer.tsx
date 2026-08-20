@@ -14,6 +14,8 @@ export default function ConfirmContainer() {
           message={confirmState.message}
           variant={confirmState.variant}
           isModal={confirmState.isModal}
+          confirmText={confirmState.confirmText}
+          cancelText={confirmState.cancelText}
           onConfirm={() => closeConfirm(true)}
           onCancel={() => closeConfirm(false)}
         />

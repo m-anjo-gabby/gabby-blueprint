@@ -8,10 +8,10 @@ import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
-import { useNoticeStore } from '@/stores/useNoticeStore';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeItem, NoticeType } from '@gabby/types/notice';
-import { getNoticeAttachmentUrlAction } from '@/actions/noticeAction';
-import { isPreviewableFile, forceDownloadFile } from '@/lib/download';
+import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
+import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
 
 interface NoticePopupDialogProps {
   /** ポップアップ対象のお知らせ一覧 (show_dialog=TRUE かつ未読) */

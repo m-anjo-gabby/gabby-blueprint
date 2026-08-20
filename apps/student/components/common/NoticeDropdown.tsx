@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { useNoticeStore } from '@/stores/useNoticeStore';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';

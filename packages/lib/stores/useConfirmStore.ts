@@ -5,6 +5,8 @@ interface ConfirmOptions {
   message: string;
   variant?: 'danger' | 'warning' | 'info';
   isModal?: boolean;
+  confirmText?: string;
+  cancelText?: string;
   resolve: (value: boolean) => void;
 }
 

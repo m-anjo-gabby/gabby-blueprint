@@ -16,8 +16,8 @@ interface StartImpersonationResult {
 }
 
 /**
- * 対象の生徒として生徒ポータルへ代理ログインするためのマジックリンクを発行する。
- * 障害対応・問合せ調査を目的とした機能のため、対象は生徒アカウントのみに限定する。
+ * 対象ユーザーとして生徒ポータル／コーチポータルへ代理ログインするためのマジックリンクを発行する。
+ * 障害対応・問合せ調査を目的とした機能のため、対象は生徒・コーチアカウントのみに限定する。
  * 発行のたびに監査ログ(com_t_admin_impersonation_log)へ理由付きで記録する。
  */
 export async function startImpersonation(targetUserId: string, reason: string): Promise<StartImpersonationResult> {
@@ -36,7 +36,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
   try {
     const supabase = createAdminClient();
 
-    // 対象ユーザーが「生徒」であることを確認する（管理者・コーチへの代理ログインは対象外）
+    // 対象ユーザーが「生徒」または「コーチ」であることを確認する（管理者への代理ログインは対象外）
     const { data: targetUser, error: targetUserError } = await supabase
       .from('com_m_user')
       .select('id, user_type, user_name, delete_flg')
@@ -48,8 +48,9 @@ export async function startImpersonation(targetUserId: string, reason: string): 
       return { success: false, message: '対象ユーザーが見つかりませんでした' };
     }
 
-    if (targetUser.user_type !== USER_TYPES.STUDENT || targetUser.delete_flg !== '0') {
-      return { success: false, message: '生徒アカウントのみ代理ログインできます' };
+    const isImpersonatableType = targetUser.user_type === USER_TYPES.STUDENT || targetUser.user_type === USER_TYPES.COACH;
+    if (!isImpersonatableType || targetUser.delete_flg !== '0') {
+      return { success: false, message: '生徒・コーチアカウントのみ代理ログインできます' };
     }
 
     // Authユーザー情報（メールアドレス）はcom_m_userに持たないため、Admin APIで別途取得
@@ -91,13 +92,14 @@ export async function startImpersonation(targetUserId: string, reason: string): 
       payload: { impersonationId: logRow.impersonation_id, targetUserId: targetUser.id, reason: trimmedReason },
     });
 
-    const studentBaseUrl = process.env.NEXT_PUBLIC_STUDENT_URL;
-    if (!studentBaseUrl) {
-      logger.error('impersonation:missing_student_url', 'NEXT_PUBLIC_STUDENT_URL is not configured', { ...ctx, payload: { targetUserId } });
-      return { success: false, message: '生徒ポータルのURL設定が見つかりませんでした' };
+    const portalEnvKey = targetUser.user_type === USER_TYPES.COACH ? 'NEXT_PUBLIC_COACH_URL' : 'NEXT_PUBLIC_STUDENT_URL';
+    const portalBaseUrl = process.env[portalEnvKey];
+    if (!portalBaseUrl) {
+      logger.error('impersonation:missing_portal_url', `${portalEnvKey} is not configured`, { ...ctx, payload: { targetUserId } });
+      return { success: false, message: 'ポータルのURL設定が見つかりませんでした' };
     }
 
-    const impersonateUrl = new URL('/auth/impersonate', studentBaseUrl);
+    const impersonateUrl = new URL('/auth/impersonate', portalBaseUrl);
     impersonateUrl.searchParams.set('token_hash', tokenHash);
     impersonateUrl.searchParams.set('imp', logRow.impersonation_id);
 

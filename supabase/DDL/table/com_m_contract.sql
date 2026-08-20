@@ -81,7 +81,21 @@ BEGIN
       ADD CONSTRAINT chk_contract_live_fields CHECK (
         (contract_type = 1 AND weekly_frequency IS NULL AND total_sessions IS NULL)
         OR
-        (contract_type = 2 AND weekly_frequency IN (1, 2) AND total_sessions IS NOT NULL)
+        (contract_type = 2 AND weekly_frequency >= 1 AND total_sessions IS NOT NULL)
       );
   END IF;
 END $$;
+
+---------------------------------------------
+-- 追加パッチ: 週3回以上のカスタムプランに対応 (2026-08-15)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+-- 前提: table/com_m_contract_plan.sql の同日パッチが適用済みであること。
+---------------------------------------------
+ALTER TABLE public.com_m_contract DROP CONSTRAINT IF EXISTS chk_contract_live_fields;
+ALTER TABLE public.com_m_contract ADD CONSTRAINT chk_contract_live_fields CHECK (
+    (contract_type = 1 AND weekly_frequency IS NULL AND total_sessions IS NULL)
+    OR
+    (contract_type = 2 AND weekly_frequency >= 1 AND total_sessions IS NOT NULL)
+);
+
+COMMENT ON COLUMN public.com_m_contract.weekly_frequency IS '週あたりのライブセッション回数（1以上）。plan_id選択時はマスタ値をコピー、カスタム契約は自由入力。Blueprintのみの場合はNULL';

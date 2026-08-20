@@ -1,7 +1,7 @@
 // apps/admin/lib/navigation.ts
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon,
+  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays,
 } from 'lucide-react';
 
 // ============================================================
@@ -77,6 +77,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     label: 'お知らせ管理',
     href: '/notice',
     icon: Bell,
+    requiredRoles: ['admin'],
+  },
+  {
+    label: 'カレンダーイベント管理',
+    href: '/calendar-events',
+    icon: CalendarDays,
     requiredRoles: ['admin'],
   },
   {

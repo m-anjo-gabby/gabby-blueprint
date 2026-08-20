@@ -9,16 +9,17 @@ import { Loader2 } from 'lucide-react';
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; userType?: string }>;
 }) {
   // 1. searchParamsをawaitして検索クエリとページ番号を取得
   const params = await searchParams;
   const searchQuery = params.q || "";
   const currentPage = Number(params.page) || 1;
+  const userType = params.userType || "";
   const pageSize = 10;
 
   // 2. ユーザデータ取得
-  const userData = await getUsers(currentPage, pageSize, searchQuery);
+  const userData = await getUsers(currentPage, pageSize, searchQuery, undefined, userType);
 
   // 3. 全ページ数を計算
   const pageCount = Math.ceil(userData.totalCount / pageSize);
@@ -38,8 +39,8 @@ export default async function AdminUsersPage({
           <UserBulkImportDialog />
 
           {/* 単体登録（ダイアログ形式） */}
-          <UserFormDialog 
-            mode="create" 
+          <UserFormDialog
+            mode="create"
           />
         </div>
       </div>

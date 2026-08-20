@@ -44,9 +44,10 @@ BEGIN
 
     -- 4. コーチ公開プロフィールマスタの初期レコード作成
     -- ユーザタイプが '2' (コーチ) の場合のみ実行
+    -- coach_since（Gabby Coach Since）はアカウント作成日の月初日を自動設定する（手入力不可）
     IF param_user_type = '2' THEN
-        INSERT INTO public.com_m_coach_profile (user_id)
-        VALUES (new.id);
+        INSERT INTO public.com_m_coach_profile (user_id, coach_since)
+        VALUES (new.id, date_trunc('month', now())::date);
     END IF;
 
     RETURN new;

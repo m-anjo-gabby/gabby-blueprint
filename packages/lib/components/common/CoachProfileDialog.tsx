@@ -77,6 +77,18 @@ export function CoachProfileDialog({ data, labels, onClose }: CoachProfileDialog
             </div>
           </div>
 
+          {data.introVideoUrl && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <MessageSquare size={13} />
+                {labels.introVideo}
+              </div>
+              <div className="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 aspect-video">
+                <video src={data.introVideoUrl} controls className="w-full h-full object-cover" />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-5">
             {sections.map(({ icon: Icon, label, value }, index) => (
               <div key={index} className="space-y-1">
