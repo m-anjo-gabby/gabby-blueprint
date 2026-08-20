@@ -17,6 +17,7 @@ import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
 import { useSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useSprintTimers';
 import { ExitProcessingOverlay } from './ExitProcessingOverlay';
+import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
@@ -67,7 +68,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // オーディオリソース（AudioContext / チャイム / 再生Promise）を共通フックで管理
   // マウント/アンマウント時の初期化・クリーンアップも内部で行う
   // 💡 Sprintモードは再生速度変更UIを持たないため、playbackRate指定なし（常に等速）で再生する
-  const { playTrack: playTrackBase, playChime, stopTrack, unlockAudioContext } = useSprintAudio(stopListening);
+  const { playTrack: playTrackBase, playChime, stopTrack, unlockAudioContext, resumeStatus } = useSprintAudio(stopListening);
 
   // マイク権限の監視（SprintTimePlayer ではテスト機能は使わず、micStatus のみ参照）
   const { micStatus } = useMicPermission();
@@ -809,6 +810,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           </div>
         </div>
       </main>
+
+      <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
 
       <ExitProcessingOverlay visible={exitLoading} />
 

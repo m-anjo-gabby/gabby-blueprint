@@ -7,6 +7,7 @@ import { QuestionCard } from "./QuestionCard";
 import { SprintDrillPlayerControls } from "./SprintDrillPlayerControls";
 import { SprintFeedback } from "./SprintFeedback";
 import { ExitProcessingOverlay } from "./ExitProcessingOverlay";
+import { AudioResumeBanner } from "@/components/common/AudioResumeBanner";
 import { ChevronLeft, Square } from 'lucide-react';
 
 import { useSprintStore } from '@/stores/useSprintStore';
@@ -70,7 +71,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
   // オーディオリソース（AudioContext / チャイム / 再生Promise）を共通フックで管理
   // マウント/アンマウント時の初期化・クリーンアップも内部で行う
-  const { playTrack: playTrackBase, playChime, stopTrack, unlockAudioContext } = useSprintAudio(stopListening);
+  const { playTrack: playTrackBase, playChime, stopTrack, unlockAudioContext, resumeStatus } = useSprintAudio(stopListening);
 
   const currentQuestion = questions?.[currentIndex];
 
@@ -572,6 +573,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
           analysis={analysis} 
           onClose={() => setFeedback(null)} 
         />
+
+        <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
 
         <ExitProcessingOverlay visible={exitLoading} />
       </main>

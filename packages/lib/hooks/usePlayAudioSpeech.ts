@@ -94,5 +94,6 @@ export function usePlayAudioSpeech() {
     isDownloading,
     playbackRate,
     changePlaybackRate,
+    resumeStatus: engine.resumeStatus,
   };
 }

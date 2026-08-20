@@ -41,6 +41,16 @@ export interface AudioEnginePlayOptions {
   bucketName?: string;
 }
 
+/**
+ * 'ok': 通常状態。
+ * 'needsResume': バックグラウンド放置によりAudioContextがsuspendedのまま復帰したことを検知した状態。
+ *   「タップして音声を再開」のような軽い導線を表示する。
+ * 'failed': 明示的な再開操作（unlock経由）を試みても running まで回復できなかった状態。
+ *   iOS側でページのJavaScript実行状態ごと破棄されている可能性が高く、
+ *   このアプリ内では復旧できないため、リロードを促す明確な案内を表示する。
+ */
+export type AudioResumeStatus = 'ok' | 'needsResume' | 'failed';
+
 export interface UseAudioEngineReturn {
   audioCtxRef: React.RefObject<AudioContext | null>;
   chimeBufferRef: React.RefObject<AudioBuffer | null>;
@@ -52,6 +62,8 @@ export interface UseAudioEngineReturn {
   /** 再生中に再生速度をライブ変更する（現在再生中のソースがあれば即時反映） */
   setLiveRate: (rate: number) => void;
   isPlaying: string | null;
+  /** 音声再開の状態。呼び出し側はこの値に応じて通知UIを出し分ける */
+  resumeStatus: AudioResumeStatus;
 }
 
 export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
@@ -66,20 +78,31 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
   } = opts;
 
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
+  const [resumeStatus, setResumeStatus] = useState<AudioResumeStatus>('ok');
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const chimeBufferRef = useRef<AudioBuffer | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const currentPlayingIdRef = useRef<string | null>(null);
   const supabaseRef = useRef(urlResolution === 'sdk' ? createBrowserClient() : null);
+  // 🚀 iOS対策: バックグラウンド復帰時にsuspendedを検知したら true。
+  // 次のユーザー操作（同期コールスタック内）で、resumeを試す前に問答無用でAudioContextを
+  // 作り直す。iOSはユーザー操作の同期コールスタックの外で作られた/resumeされたAudioContextを
+  // 確実にはアンロックしないため、「resumeしてダメなら作り直す」という非同期待ち構造では
+  // 長時間放置後の復旧に失敗することがある。
+  const needsHardResetRef = useRef(false);
 
   /**
-   * AudioContextを取得・初期化する。useSuspendedRecovery が true の場合、
-   * suspended状態からの復帰を500msタイムアウト付きで試み、失敗時はインスタンスを再生成する
-   * （usePlayAudioSpeechの元実装が備えていた、結果画面放置後のiOSデッドロック対策）。
-   * false の場合は単純な resume() のみを試みる（useSprintAudioの元実装通り）。
+   * AudioContextを取得・初期化する。needsHardResetRef が立っている場合は、
+   * resumeを試す前にユーザー操作の同期コールスタック内で即座にインスタンスを作り直す。
+   * それでもなお suspended な場合は、useSuspendedRecovery の設定に応じたフォールバックへ進む
+   * （true: タイムアウト付き再生成リトライ / false: 単純な resume() のみ）。
+   *
+   * @param explicitUserResume 「タップして音声を再開」導線など、ユーザーが明示的に再開を
+   *   意図した操作からの呼び出しかどうか。true の場合に限り、復旧に失敗したら 'failed'
+   *   （リロード誘導）まで状態をエスカレーションする。
    */
-  const ensureContextReady = useCallback(async (): Promise<AudioContext | null> => {
+  const ensureContextReady = useCallback(async (explicitUserResume = false): Promise<AudioContext | null> => {
     if (typeof window === 'undefined') return null;
 
     const AudioContextClass =
@@ -89,6 +112,17 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     if (audioCtxRef.current && audioCtxRef.current.state === 'closed') {
       audioCtxRef.current = null;
     }
+
+    // このensureContextReady呼び出しが、バックグラウンド復帰後の復旧試行に該当するかを記録しておく。
+    // 通常時（初回ロード直後で未操作のため単に'suspended'なだけ等）は needsResumeNotice に一切触れない。
+    const isRecoveryAttempt = needsHardResetRef.current;
+
+    if (isRecoveryAttempt && audioCtxRef.current) {
+      try { audioCtxRef.current.close().catch(() => {}); } catch (_) { /* no-op */ }
+      audioCtxRef.current = null;
+    }
+    needsHardResetRef.current = false;
+
     if (!audioCtxRef.current) {
       audioCtxRef.current = new AudioContextClass();
     }
@@ -124,6 +158,22 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
         } catch (e) {
           console.warn('Failed to resume AudioContext:', e);
         }
+      }
+    }
+
+    if (isRecoveryAttempt) {
+      const recovered = audioCtxRef.current?.state === 'running';
+      if (recovered) {
+        setResumeStatus('ok');
+      } else if (explicitUserResume) {
+        // 「タップして音声を再開」導線からの明示的な再開操作でも回復しなかった場合、
+        // ページのJavaScript実行状態ごとiOSに破棄されている可能性が高く、
+        // このセッション内での復旧は見込めないためリロードを促す
+        setResumeStatus('failed');
+      } else {
+        // ユーザー操作の同期コールスタック外（自動再生フロー等）からの呼び出しで
+        // 回復しなかった場合は、まだ「タップして再開」導線での再試行に望みがあるため維持する
+        setResumeStatus('needsResume');
       }
     }
 
@@ -168,6 +218,25 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 🚀 iOS対策: バックグラウンドから復帰した瞬間にAudioContextがsuspendedのままなら、
+  // 「次のユーザー操作で問答無用に作り直す」フラグを立てる。visibilitychange自体は
+  // ユーザー操作ではないため、ここではAudioContextへは一切触れず、フラグを立てるのみに留める。
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && audioCtxRef.current?.state === 'suspended') {
+        needsHardResetRef.current = true;
+        setResumeStatus('needsResume');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   const stop = useCallback(() => {
     if (currentSourceRef.current) {
       try { currentSourceRef.current.stop(); } catch (_) { /* no-op */ }
@@ -181,7 +250,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
   }, []);
 
   const unlock = useCallback(async () => {
-    const ctx = await ensureContextReady();
+    const ctx = await ensureContextReady(true);
     if (ctx && ctx.state === 'suspended') {
       try { await ctx.resume(); } catch (e) { console.warn('Failed to resume AudioContext from interaction:', e); }
     }
@@ -363,5 +432,5 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     }
   }, []);
 
-  return { audioCtxRef, chimeBufferRef, play, playChime, stop, unlock, preload, setLiveRate, isPlaying };
+  return { audioCtxRef, chimeBufferRef, play, playChime, stop, unlock, preload, setLiveRate, isPlaying, resumeStatus };
 }

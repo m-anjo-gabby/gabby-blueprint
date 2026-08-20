@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useAudioEngine } from './useAudioEngine';
+import { useAudioEngine, AudioResumeStatus } from './useAudioEngine';
 
 /**
  * `useSprintAudio` の戻り値
@@ -31,6 +31,8 @@ export interface UseSprintAudioReturn {
   stopTrack: () => void;
   /** iOSの自動再生制限ロックを解除するためにユーザーインタラクション時に呼び出す */
   unlockAudioContext: () => Promise<void>;
+  /** 音声再開の状態。'needsResume'/'failed' に応じて通知UIを出し分ける */
+  resumeStatus: AudioResumeStatus;
 }
 
 /**
@@ -67,5 +69,6 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
     playChime: engine.playChime,
     stopTrack: engine.stop,
     unlockAudioContext: engine.unlock,
+    resumeStatus: engine.resumeStatus,
   };
 }

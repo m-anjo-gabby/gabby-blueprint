@@ -11,6 +11,7 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { setAudioSessionPlayback } from '@gabby/lib';
 
 import { LookupText } from '@/components/common/LookupText';
+import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 
 // 🆕 answered_history 内の個別アイテムの型定義
 interface SprintHistoryItem {
@@ -51,7 +52,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const router = useRouter();
   
   // 🆕 拡張された共通フックの呼び出し。コンポーネント独自の重複AudioContextロジックをリプレイス
-  const { play: playAudioSpeech, stop: stopAudioSpeech, isPlaying: globalPlayingId } = usePlayAudioSpeech();
+  const { play: playAudioSpeech, stop: stopAudioSpeech, isPlaying: globalPlayingId, unlockAudioContext, resumeStatus } = usePlayAudioSpeech();
   
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
   const [isBatchPlaying, setIsBatchPlaying] = useState(false);
@@ -607,6 +608,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
           </button>
         </div>
       </div>
+
+      <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
     </div>
   );
 };
