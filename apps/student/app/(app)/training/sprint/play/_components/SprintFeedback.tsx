@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { X, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AnalysisResult, FeedbackConfig, WordMatch } from '@gabby/types/speechAssessment';
+import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
+import { getWordMatchStyle } from '@gabby/lib/assessment/wordMatchStyle';
 import { cn } from "@/lib/utils";
 
 interface SprintFeedbackProps {
@@ -18,25 +19,6 @@ export const SprintFeedback: React.FC<SprintFeedbackProps> = ({
   onClose 
 }) => {
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number>(-1);
-
-  const getWordStyle = useCallback((match: WordMatch) => {
-    if (!match.isMatch) return { 
-      text: 'text-slate-300', 
-      deco: 'border-b-2 border-dashed border-slate-300',
-      tooltipType: 'missing' 
-    };
-    if (match.isFuzzy) return { 
-      text: 'text-orange-500', 
-      deco: 'underline decoration-wavy decoration-orange-300 underline-offset-8',
-      tooltipType: 'fuzzy'
-    };
-    if (match.isCombined) return { 
-      text: 'text-blue-500', 
-      deco: 'underline decoration-dotted decoration-blue-300 underline-offset-8',
-      tooltipType: 'combined'
-    };
-    return { text: 'text-slate-800', deco: '', tooltipType: null };
-  }, []);
 
   if (!feedback || !analysis || !analysis.matches) return null;
 
@@ -107,7 +89,7 @@ export const SprintFeedback: React.FC<SprintFeedbackProps> = ({
 
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-4 px-2 max-h-[160px] overflow-y-auto w-full py-1">
             {analysis.matches.map((m, idx) => {
-              const { text, deco, tooltipType } = getWordStyle(m);
+              const { text, deco, tooltipType } = getWordMatchStyle(m);
               const isTarget = !!tooltipType;
               const isVisible = activeTooltipIndex === idx;
 

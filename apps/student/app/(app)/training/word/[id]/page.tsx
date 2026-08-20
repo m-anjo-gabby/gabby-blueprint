@@ -3,6 +3,7 @@
 import { useEffect, useRef, use, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
+import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
@@ -143,15 +144,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 5分ごとの定期自動保存
    * 画面を開いている限り、5分ごとにプールされた進捗をバックグラウンドで安全に同期します。
    */
-  useEffect(() => {
-    const FIVE_MINUTES = 5 * 60 * 1000; // 5分（ミリ秒）
-    
-    const intervalId = setInterval(() => {
-      syncProgressNow();
-    }, FIVE_MINUTES);
-
-    return () => clearInterval(intervalId);
-  }, [syncProgressNow]);
+  usePeriodicSync(syncProgressNow, 5 * 60 * 1000);
 
   /**
    * 前の画面に戻るボタン用のハンドラ

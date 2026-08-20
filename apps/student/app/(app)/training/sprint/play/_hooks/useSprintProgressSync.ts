@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { SprintQuestionType } from '@gabby/types/sprint';
+import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
 import { reportSprintProgress } from '@/actions/sprintAction';
 import { useSprintStore } from '@/stores/useSprintStore';
 
@@ -34,13 +35,7 @@ export function useSprintProgressSync(contentId: string | null, questionType: st
     }
   }, []);
 
-  useEffect(() => {
-    const FIVE_MINUTES = 5 * 60 * 1000;
-    const intervalId = setInterval(() => {
-      syncProgressNow();
-    }, FIVE_MINUTES);
-    return () => clearInterval(intervalId);
-  }, [syncProgressNow]);
+  usePeriodicSync(syncProgressNow, 5 * 60 * 1000);
 
   return { syncProgressNow, questionTypeRef };
 }
