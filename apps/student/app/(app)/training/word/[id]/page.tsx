@@ -12,7 +12,7 @@ import { useResumeStore } from '@/stores/useResumeStore';
 import { usePhraseStore } from '@/stores/usePhraseStore';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { WordResumeMetadata } from '@gabby/types/training';
-import { FeedbackConfig } from '@gabby/types/speechAssessment';
+import { getFeedbackConfig } from '@gabby/lib';
 
 // Components
 import { WordHeader } from './_components/WordHeader';
@@ -25,17 +25,6 @@ import { motion } from 'framer-motion';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { PhraseItem } from '@gabby/types/word';
 import { ContentLoading } from '@/components/common/ContentLoading';
-
-/**
- * 発話スコアに基づいたフィードバックUIの設定を返す
- */
-const getFeedbackConfig = (score: number): FeedbackConfig => {
-  if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
-  if (score >= 0.80) return { fill: '#3B82F6', tagText: 'Great' };
-  if (score >= 0.60) return { fill: '#F59E0B', tagText: 'Good' };
-  if (score >= 0.30) return { fill: '#F97316', tagText: 'Fair' };
-  return { fill: '#EF4444', tagText: 'Poor' };
-};
 
 export default function WordTrainingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: sectionId } = use(params);

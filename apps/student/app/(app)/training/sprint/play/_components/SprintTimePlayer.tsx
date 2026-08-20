@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, cleanAnswerWords } from '@gabby/lib';
+import { getFeedbackConfig, getScoreTier, getSprintTitle, cleanAnswerWords } from '@gabby/lib';
 import { SprintQuestion, SPRINT_FLOW_TIMING } from "@gabby/types/sprint";
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
@@ -277,13 +277,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         setIsAwaitingRecording(false);
         setIsRecording(false);
 
-        const score = result.score;
-        let visualState: 'idle' | 'excellent' | 'great' | 'good' | 'fair' | 'poor' = 'idle';
-        if (score >= 0.90) visualState = 'excellent';
-        else if (score >= 0.80) visualState = 'great';
-        else if (score >= 0.60) visualState = 'good';
-        else if (score >= 0.30) visualState = 'fair';
-        else visualState = 'poor';
+        const visualState = getScoreTier(result.score);
 
         const commitAndNext = () => {
           setAssessmentVisualState('idle');

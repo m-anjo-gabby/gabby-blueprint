@@ -1,5 +1,8 @@
-import { FeedbackConfig } from '@gabby/types/speechAssessment';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
+
+// getFeedbackConfig / getScoreTier は packages/lib/assessment/feedbackConfig.ts に一元化。
+// Word/Sprint双方の発話評価UIから共通参照するため、`@gabby/lib` 経由でも従来通り利用できるよう再エクスポートする。
+export { getFeedbackConfig, getScoreTier } from '../assessment/feedbackConfig';
 
 /**
  * 安全な動的教材タイトル生成ヘルパー
@@ -18,19 +21,6 @@ export const getSprintTitle = (type: SprintQuestionType | string, level: number,
   }
   
   return `${typeLabel} Lv.${level}`; // 例: "UG Speed Lv.1"
-};
-
-/**
- * 発話評価のフィードバックスコア設定取得
- * @param score - 発話スコア (0-1)
- * @returns フィードバック設定
- */
-export const getFeedbackConfig = (score: number): FeedbackConfig => {
-  if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
-  if (score >= 0.80) return { fill: '#3B82F6', tagText: 'Great' };
-  if (score >= 0.60) return { fill: '#F59E0B', tagText: 'Good' };
-  if (score >= 0.30) return { fill: '#F97316', tagText: 'Fair' };
-  return { fill: '#EF4444', tagText: 'Poor' };
 };
 
 /**
