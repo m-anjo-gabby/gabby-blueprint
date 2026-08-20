@@ -38,13 +38,13 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
   isStarted = true
 }) => {
   // 🔌 Zustand ストアから状態を直接マッピング
-  const currentIndex = useSprintStore((state) => state.currentIndex);
-  const totalQuestions = useSprintStore((state) => state.questions.length);
-  const isRecording = useSprintStore((state) => state.isRecording);
-  const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying);
-  const isPlayingQuestionSequence = useSprintStore((state) => state.isPlayingQuestionSequence);
-  const isPlayingAnswerSequence = useSprintStore((state) => state.isPlayingAnswerSequence);
-  const isAssessmentMode = useSprintStore((state) => state.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
+  const currentIndex = useSprintStore((state) => state.session.currentIndex);
+  const totalQuestions = useSprintStore((state) => state.session.questions.length);
+  const isRecording = useSprintStore((state) => state.session.isRecording);
+  const isAutoPlaying = useSprintStore((state) => state.drill.isAutoPlaying);
+  const isPlayingQuestionSequence = useSprintStore((state) => state.drill.isPlayingQuestionSequence);
+  const isPlayingAnswerSequence = useSprintStore((state) => state.drill.isPlayingAnswerSequence);
+  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
 
   // 📝 速度ポップオーバーの開閉ステート
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);

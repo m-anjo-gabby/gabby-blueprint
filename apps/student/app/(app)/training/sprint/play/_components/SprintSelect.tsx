@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, DEFAULT_SPRINT_TIME_KEY, type SprintQuestionType, type SprintAnswerType, type SprintConfig } from '@gabby/types/sprint';
 import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
-import { createBrowserClient } from '@gabby/lib/supabase/client';
 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -34,7 +33,6 @@ interface SprintSelectProps {
 export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onStart }) => {
   const router = useRouter();
   const { showConfirm } = useConfirm();
-  const supabase = useMemo(() => createBrowserClient(), []);
 
   const { config, contentMetadata, contentName, setConfig } = useSprintStore();
 

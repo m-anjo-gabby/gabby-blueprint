@@ -40,15 +40,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   
   // 📦 1. まず必要なストアの値をすべて取得
-  const questions = useSprintStore((state) => state.questions) || [];
-  const currentIndex = useSprintStore((state) => state.currentIndex);
-  const mode = useSprintStore((state) => state.mode);
-  const questionType = useSprintStore((state) => state.questionType);
-  const isRevealed = useSprintStore((state) => state.isRevealed);
-  const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying);
+  const questions = useSprintStore((state) => state.session.questions) || [];
+  const currentIndex = useSprintStore((state) => state.session.currentIndex);
+  const mode = useSprintStore((state) => state.config.mode);
+  const questionType = useSprintStore((state) => state.config.questionType);
+  const isRevealed = useSprintStore((state) => state.drill.isRevealed);
+  const isAutoPlaying = useSprintStore((state) => state.drill.isAutoPlaying);
   const setDrillEvalType = useSprintStore((state) => state.setDrillEvalType);
-  const drillEvalType = useSprintStore((state) => state.drillEvalType);
-  const isAssessmentMode = useSprintStore((state) => state.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
+  const drillEvalType = useSprintStore((state) => state.drill.evalType);
+  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
 
   // 🎯 安全に現在の問題データを特定 (Zustand内部の同期ラグ対策)
   // 💡 フック群（useMemo等）よりも前に宣言することで、配下のフック内から安全に変数を参照させエラーを解決します

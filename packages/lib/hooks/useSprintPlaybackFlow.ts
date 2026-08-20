@@ -1,0 +1,67 @@
+'use client';
+
+import { useCallback } from 'react';
+import { SPRINT_FLOW_TIMING, SprintQuestion } from '@gabby/types/sprint';
+import { setAudioSessionPlayback } from '../sprint/utils';
+
+export interface PlayStatementThenQuestionOptions {
+  /** テキスト・音声パスを受け取り再生する関数（各プレイヤーが持つ playTrack をそのまま渡す） */
+  playTrack: (text: string, audioPath: string | null) => Promise<void>;
+  /** 呼び出し時点でこのフローが割り込みキャンセルされているかを判定する関数（flowIdRef比較など） */
+  isCancelled: () => boolean;
+  /** 基本文と問いの間の待機時間（ms）。省略時は SPRINT_FLOW_TIMING.shared.statementQuestionGapMs */
+  gapMs?: number;
+  /** 基本文の再生を開始する直前に呼ばれる（UIのフェーズ表示切り替え用） */
+  onStatementPhase?: () => void;
+  /** 問いの再生を開始する直前に呼ばれる（基本文が無い場合も呼ばれる） */
+  onQuestionPhase?: () => void;
+}
+
+/**
+ * Drill/Sprint両プレイヤーで完全に一致している「基本文再生→間隔待機→問い再生」の
+ * 前半シーケンスのみを抽出した共通関数。
+ * reveal待ちや自動再生タイマー、録音開始などモード固有の分岐は各プレイヤー側に残し、
+ * ここでは含めない。
+ */
+export async function playStatementThenQuestion(
+  question: Pick<SprintQuestion, 'statement_en' | 'statement_voice' | 'question_en' | 'question_voice'>,
+  opts: PlayStatementThenQuestionOptions,
+): Promise<{ cancelled: boolean }> {
+  const { playTrack, isCancelled, gapMs = SPRINT_FLOW_TIMING.shared.statementQuestionGapMs, onStatementPhase, onQuestionPhase } = opts;
+
+  if (question.statement_en) {
+    onStatementPhase?.();
+    await playTrack(question.statement_en, question.statement_voice);
+    if (isCancelled()) return { cancelled: true };
+    await new Promise((r) => setTimeout(r, gapMs));
+    if (isCancelled()) return { cancelled: true };
+  }
+
+  onQuestionPhase?.();
+  if (question.question_en) {
+    await playTrack(question.question_en, question.question_voice);
+    if (isCancelled()) return { cancelled: true };
+  }
+
+  return { cancelled: false };
+}
+
+/**
+ * Drill/Sprint両プレイヤーの `stopAllAudio` に共通する部分
+ * （トラック停止→音声合成キャンセル→マイク停止→ディレイ後にAudioSessionをplaybackへ復帰）のみを抽出したフック。
+ * 各プレイヤー固有の状態リセット（isPlayingXxxSequence、isAwaitingRecording等）は
+ * このフックの戻り値を呼んだ後、呼び出し側で個別に行う。
+ */
+export function useStopAllAudioCore(stopTrack: () => void, stopListening: () => void) {
+  return useCallback(() => {
+    stopTrack();
+    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    stopListening();
+
+    // 🚀 iOS WebKitデッドロック防止:
+    // マイクの切断完了（物理解放）までの遅延を待つため、ディレイの後にセッションを戻す
+    setTimeout(() => {
+      setAudioSessionPlayback();
+    }, SPRINT_FLOW_TIMING.shared.micReleaseSessionRestoreMs);
+  }, [stopTrack, stopListening]);
+}

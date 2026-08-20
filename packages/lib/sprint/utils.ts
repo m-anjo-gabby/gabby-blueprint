@@ -122,6 +122,13 @@ export const playChimeBuffer = (ctx: AudioContext, buffer: AudioBuffer): Promise
 
 
 /**
+ * 発話評価対象のテキストから、句読点・記号を除いた単語配列を生成する共通ヘルパー
+ */
+export const cleanAnswerWords = (text: string): string[] => {
+  return text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").split(" ").filter(Boolean);
+};
+
+/**
  * デコード済みオーディオバッファのグローバルキャッシュ。
  * 画面遷移をまたいで再フェッチを防ぐため、アプリケーション全体で共有する。
  * キー: Supabase Storage の公開 URL

@@ -263,17 +263,22 @@ export async function getSprintResultAction(
   try {
     const supabase = await createServerClient();
 
-    // ① スコア・履歴レコードを1件取得
+    // サーバー側でセッションから安全に本人のユーザーIDを検証・取得
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
+
+    // ① スコア・履歴レコードを1件取得（本人のレコードのみ）
     const { data: scoreRecord, error: scoreError } = await supabase
       .from("self_t_sprint")
       .select("*")
       .eq("self_sprint_id", self_sprint_id)
+      .eq("user_id", user.id)
       .single();
 
     if (scoreError) throw scoreError;
     if (!scoreRecord) throw new Error("Sprint record not found");
 
-    let history: any[] = [];
+    let history: SprintHistoryItem[] = [];
     if (scoreRecord.answered_history) {
       if (typeof scoreRecord.answered_history === 'string') {
         try {
@@ -283,7 +288,7 @@ export async function getSprintResultAction(
           history = [];
         }
       } else {
-        history = scoreRecord.answered_history as any[];
+        history = scoreRecord.answered_history as SprintHistoryItem[];
       }
     }
 

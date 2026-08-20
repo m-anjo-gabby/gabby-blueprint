@@ -7,11 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
-import { SprintQuestion } from "@gabby/types/sprint";
+import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord, cleanAnswerWords } from '@gabby/lib';
+import { SprintQuestion, SPRINT_FLOW_TIMING } from "@gabby/types/sprint";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
+import { playStatementThenQuestion, useStopAllAudioCore } from '@gabby/lib/hooks/useSprintPlaybackFlow';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
@@ -32,22 +33,20 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // ────────────── 🔌 Zustand ストア ──────────────
   const {
-    currentIndex,
-    questionType,
-    answerType,
-    level,
-    timeLimitSec,
-    isRecording,
+    session,
+    config,
     clearSessionProgress,
     resetStore,
-    commitAssessmentResult, 
-    commitSkipResult,        
+    commitAssessmentResult,
+    commitSkipResult,
     setIsRecording,
     incrementAssessmentCount,
     contentName,
-    isAssessmentMode, // 🚀 追加：発話評価ON/OFFフラグ
     contentMetadata,
   } = useSprintStore();
+
+  const { currentIndex, isRecording } = session;
+  const { questionType, answerType, level, timeLimitSec, isAssessmentMode } = config;
 
   // ────────────── 📦 ローカル管理ステート ──────────────
   const [secondsLeft, setSecondsLeft] = useState<number>(timeLimitSec || 60);
@@ -75,7 +74,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const { micStatus } = useMicPermission();
 
   const currentQuestion = questions?.[currentIndex];
-  const totalQuestions = questions?.length || 0;
 
   const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
     return playTrackBase(text, audioPath, { playbackRate, exitLoading });
@@ -146,25 +144,17 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 全てのオーディオ・発話を安全に即時ストップする
   // 🚀 stopListening も同時に呼び、audioSession を 'playback' に戻すことで
   // タイムアップ・スキップ・終了の全経路でマイクが確実に解放される
+  const stopAllAudioCore = useStopAllAudioCore(stopTrack, stopListening);
+
   const stopAllAudio = useCallback(() => {
     flowIdRef.current += 1;
-    // 音声を停止
-    stopTrack();
-    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    // マイク入力を即時停止 (abort)
-    stopListening();
-    
-    // 🚀 iOS WebKitデッドロック防止:
-    // マイクの切断完了（物理解放）までの遅延を待つため、300ms のディレイの後にセッションを戻す
-    setTimeout(() => {
-      setAudioSessionPlayback();
-    }, 300);
+    stopAllAudioCore();
 
     // 録音 UI 状態もリセット
     setIsAwaitingRecording(true); // 遷移中のチラつき防止のため待機中にしておく
     setIsRecording(false);
     setAudioPhase('idle');
-  }, [stopListening, setIsRecording]);
+  }, [stopAllAudioCore, setIsRecording]);
 
   const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
     if (isPersistedRef.current) return;
@@ -175,7 +165,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     stopAllAudio();
 
     const storeState = useSprintStore.getState();
-    const { sprintType, contentId, sessionResults } = storeState;
+    const { sprintType, contentId } = storeState.config;
+    const { sessionResults } = storeState.session;
 
     // 4つの必須パラメータが揃っているかチェック（型ガード）
     if (!sprintType || !contentId || !questionType || !answerType) {
@@ -224,11 +215,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         } else {
           stopAllAudio();
           resetStore();
-          // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために250msの安全バッファを置いてから遷移する
+          // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
           const targetUrl = `/training/sprint/result/${res.data.self_sprint_id}`;
           setTimeout(() => {
             router.push(targetUrl);
-          }, 250);
+          }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
         }
       } else {
         throw new Error(res.error || "Failed to persist score history");
@@ -248,10 +239,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       await unlockAudioContext();
       stopAllAudio(); // stopListening と audioSession リセットを含む
       resetStore();
-      // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために250msの安全バッファを置いてから遷移する
+      // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
       setTimeout(() => {
         router.push(`/training/sprint/result/${resultId}`);
-      }, 250);
+      }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
     }
   }, [resultId, router, stopAllAudio, resetStore, unlockAudioContext]);
 
@@ -268,7 +259,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     if (!targetText) return;
 
-    const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
+    const cleanWords = cleanAnswerWords(targetText);
     const questionId = question.question_id;
 
     startAssessment(
@@ -300,8 +291,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         };
 
         setAssessmentVisualState(visualState);
-        // テンポ維持のため、Excellent/Great/Goodは1000ms、Fair/Poorは800msのウェイトを置いて次へ進む
-        const displayDelay = (visualState === 'excellent' || visualState === 'great' || visualState === 'good') ? 1000 : 800;
+        // テンポ維持のため、スコアの高低でウェイトを置いて次へ進む
+        const displayDelay = (visualState === 'excellent' || visualState === 'great' || visualState === 'good')
+          ? SPRINT_FLOW_TIMING.sprint.visualFeedbackHoldGoodMs
+          : SPRINT_FLOW_TIMING.sprint.visualFeedbackHoldPoorMs;
         setTimeout(() => { commitAndNext(); }, displayDelay);
       },
       {
@@ -321,17 +314,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const runSprintFlow = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
     if (!question) return;
     try {
-      if (question.statement_en) {
-        setAudioPhase('statement');
-        await playTrack(question.statement_en, question.statement_voice);
-        if (flowIdRef.current !== currentFlowId) return;
-        await new Promise(r => setTimeout(r, 150)); // 🚀 150ms に短縮
-        if (flowIdRef.current !== currentFlowId) return;
-      }
-
-      setAudioPhase('question');
-      await playTrack(question.question_en, question.question_voice);
-      if (flowIdRef.current !== currentFlowId) return;
+      const { cancelled } = await playStatementThenQuestion(question, {
+        playTrack,
+        isCancelled: () => flowIdRef.current !== currentFlowId,
+        onStatementPhase: () => setAudioPhase('statement'),
+        onQuestionPhase: () => setAudioPhase('question'),
+      });
+      if (cancelled) return;
 
       // answer フェーズ表示 + 待機フラグ ON（isRecording=false の間は MicOff で待機中を示す）
       setAudioPhase('answer');
@@ -343,7 +332,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       }
 
       setIsAwaitingRecording(true);
-      await new Promise(r => setTimeout(r, 200)); // 🚀 200ms に短縮（物理無音時間が200msあるためiOSでも競合なし）
+      await new Promise(r => setTimeout(r, SPRINT_FLOW_TIMING.sprint.preChimeGapMs)); // 物理無音時間があるためiOSでも競合なし
       if (flowIdRef.current !== currentFlowId) return;
 
       // チャイム再生と録音開始（マイクアクティブ化）を完全に並行して同時に実行
@@ -452,8 +441,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const currentFlowId = flowIdRef.current;
     (async () => {
-      // 🚀 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るために 600ms、2問目以降は 300ms 待つ
-      const initialDelay = currentIndex === 0 ? 600 : 300;
+      // 🚀 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るため、2問目以降より長く待つ
+      const initialDelay = currentIndex === 0
+        ? SPRINT_FLOW_TIMING.shared.initialCushionFirstMs
+        : SPRINT_FLOW_TIMING.shared.initialCushionSubsequentMs;
       await new Promise(resolve => setTimeout(resolve, initialDelay));
       if (flowIdRef.current !== currentFlowId) return;
       await runSprintFlow(currentQuestion, currentFlowId);
@@ -495,10 +486,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     setExitLoading(true);
     stopAllAudio();
 
-    // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために1000ms（1秒）の安全バッファを置いてから戻る
+    // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから戻る
     setTimeout(() => {
       onExit?.();
-    }, 1000);
+    }, SPRINT_FLOW_TIMING.shared.exitSafetyBufferMs);
   };
 
   // HUDはReady段階からセッション終了まで常に表示し、メッセージと活性制御だけを切り替える
