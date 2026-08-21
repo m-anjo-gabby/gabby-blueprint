@@ -296,6 +296,9 @@ export async function createUserDirect(
 
     const userId = authData.user.id;
 
+    // 💡 各サブステップの失敗はthrowせず処理を継続するため、最終ログで欠落なく可視化できるよう記録しておく
+    const partialFailures: string[] = [];
+
     // トリガーで自動作成されたマスタレコード(com_m_user)を確定情報でアップデート
     const { error: dbUserError } = await supabase
       .from('com_m_user')
@@ -308,6 +311,7 @@ export async function createUserDirect(
       .eq('id', userId);
 
     if (dbUserError) {
+      partialFailures.push('com_m_user_sync');
       logger.error('user:create_user_direct_sync_failed', dbUserError.message, { ...ctx, payload: { userId } });
     }
 
@@ -318,6 +322,7 @@ export async function createUserDirect(
         .insert(roles.map(roleId => ({ user_id: userId, role_id: roleId })));
 
       if (roleError) {
+        partialFailures.push('role_insert');
         logger.error('user:create_user_direct_role_insert_failed', roleError.message, { ...ctx, payload: { userId, roles } });
       }
     }
@@ -341,15 +346,24 @@ export async function createUserDirect(
             status: 1
           });
         if (licenseError) {
+          partialFailures.push('license_insert');
           logger.error('user:create_user_direct_license_insert_failed', licenseError.message, { ...ctx, payload: { userId, contract_id } });
         }
       }
     }
 
-    logger.info('user:create_user_direct_success', `User created directly (auto-confirmed): ${email}`, {
-      ...ctx,
-      payload: { userId, email, clientId: client_id }
-    });
+    if (partialFailures.length > 0) {
+      // 一部サブステップが失敗した状態。障害調査で成功ログに埋もれないようwarnで区別する
+      logger.warn('user:create_user_direct_partial_success', `User created with partial failures: ${email}`, {
+        ...ctx,
+        payload: { userId, email, clientId: client_id, partialFailures }
+      });
+    } else {
+      logger.info('user:create_user_direct_success', `User created directly (auto-confirmed): ${email}`, {
+        ...ctx,
+        payload: { userId, email, clientId: client_id }
+      });
+    }
 
     revalidatePath('/users');
     return { success: true, user_id: userId, errorType: null, message: null };
@@ -509,9 +523,9 @@ export async function updateUser(
       return { success: false, errorType: 'update_error', message: `マスタ更新に失敗しました: ${dbError.message}` };
     }
 
-    logger.info('user:update_user_success', `User updated: ${email}`, { 
+    logger.info('user:update_user_success', `User updated: ${email}`, {
       ...ctx,
-      payload: { userId: id, email } 
+      payload: { userId: id, email, roles }
     });
 
     revalidatePath('/users');

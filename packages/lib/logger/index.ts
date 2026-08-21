@@ -45,6 +45,48 @@ const p = pino({
     : undefined,
 });
 
+// ログに出力してはいけない機微情報のキー名パターン（キー名ベースで再帰的に検出しマスクする）
+const SENSITIVE_KEY_PATTERN = /password|token|secret|authorization|api[-_]?key/i;
+const MAX_ARRAY_LENGTH = 20;
+const MAX_STRING_LENGTH = 1000;
+const MAX_SANITIZE_DEPTH = 5;
+
+/**
+ * ログのpayloadを再帰的に走査し、以下を行う。
+ * - 機微情報らしきキー(password/token等)の値をマスク
+ * - 大きすぎる配列/文字列を切り詰め、ログサイズの肥大化を防止
+ */
+function sanitizeForLog(value: unknown, depth = 0): unknown {
+  if (depth > MAX_SANITIZE_DEPTH) return '[Truncated: max depth exceeded]';
+
+  if (Array.isArray(value)) {
+    if (value.length > MAX_ARRAY_LENGTH) {
+      return {
+        truncated: true,
+        length: value.length,
+        sample: value.slice(0, 3).map((v) => sanitizeForLog(v, depth + 1)),
+      };
+    }
+    return value.map((v) => sanitizeForLog(v, depth + 1));
+  }
+
+  if (typeof value === 'string') {
+    return value.length > MAX_STRING_LENGTH
+      ? `${value.slice(0, MAX_STRING_LENGTH)}...(truncated, ${value.length} chars)`
+      : value;
+  }
+
+  if (value && typeof value === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+      result[key] = SENSITIVE_KEY_PATTERN.test(key) ? '[REDACTED]' : sanitizeForLog(v, depth + 1);
+    }
+    return result;
+  }
+
+  return value;
+}
+
 /**
  * スタックトレースから呼び出し元の関数名を取得する。
  * getLogContext 等を経由するため、スタックの階層位置を調整。
@@ -80,6 +122,11 @@ export const createLogger = (service: LogService) => {
       functionName: context?.functionName || getCallerName(),
       ...context,
     };
+
+    // payload は呼び出し元が自由に詰められるフィールドのため、機微情報マスキングとサイズ抑制を一律で適用
+    if (data.payload !== undefined) {
+      data.payload = sanitizeForLog(data.payload);
+    }
 
     // Pino を使用して出力。第一引数にオブジェクトを渡すと JSON フィールドとして展開される。
     p[level](data, message);
