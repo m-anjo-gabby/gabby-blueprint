@@ -1,6 +1,8 @@
 // packages/lib/assessment/native-speech.ts
 import { AnalysisResult, WordMatch } from '@gabby/types/speechAssessment';
 import { getScoreTier, ScoreTier } from './feedbackConfig';
+import { detectPhoneticConfusion, PhoneticConfusionRule } from './phoneticConfusions';
+import { preprocessInputWords } from './inputNormalization';
 
 // 重みの定義
 const WEIGHTS = {
@@ -94,7 +96,10 @@ function checkFuzzy(target: string, input: string): boolean {
  * フレーズの解析を行い、詳細なマッチング結果を返す
  */
 export function analyzePhrase(input: string, target: string, mainWords: string[] = []): AnalysisResult {
-  const rawInputWords = input.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+  // 口語短縮形の展開・フィラー除去・言い直しの統合を行ってからマッチングにかける
+  const rawInputWords = preprocessInputWords(
+    input.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+  );
   const targetWords = target.split(/\s+/).filter(w => w.length > 0);
 
   // 【忖度用データ準備】隣接する単語を結合したリストを作成(元のインデックスを保持)
@@ -169,10 +174,15 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
   };
 }
 
-/** 「正解語」と「実際に認識された語(heard)」のペア。FUZZY/COMBINEDの根拠提示に使う。 */
+/**
+ * 「正解語」と「実際に認識された語(heard)」のペア。FUZZY/COMBINEDの根拠提示に使う。
+ * confusionは既知の音素混同パターン（L/R等）に一致した場合のみ設定され、
+ * summary/issuesで「何の音の混同か」を当て推量なしで名指しする根拠として使う。
+ */
 interface WordEvidence {
   word: string;
   heard: string;
+  confusion?: PhoneticConfusionRule;
 }
 
 interface IssueGroups {
@@ -204,11 +214,11 @@ function collectIssueGroups(matches: WordMatch[], mainWords: string[]): IssueGro
   matches.forEach(m => {
     if (isMain(m.word)) {
       if (!m.isMatch) groups.missingMainWords.push(m.word);
-      else if (m.isFuzzy) groups.fuzzyMainWords.push({ word: m.word, heard: m.heard });
+      else if (m.isFuzzy) groups.fuzzyMainWords.push({ word: m.word, heard: m.heard, confusion: detectPhoneticConfusion(m.word, m.heard) });
       return;
     }
     if (!m.isMatch) groups.missingWords.push(m.word);
-    else if (m.isFuzzy) groups.fuzzyWords.push({ word: m.word, heard: m.heard });
+    else if (m.isFuzzy) groups.fuzzyWords.push({ word: m.word, heard: m.heard, confusion: detectPhoneticConfusion(m.word, m.heard) });
     else if (m.isCombined) groups.combinedWords.push({ word: m.word, heard: m.heard });
   });
 
@@ -229,6 +239,14 @@ function formatWordPairs(pairs: WordEvidence[], max = 2): string {
   if (unique.length === 0) return '';
   const shown = unique.slice(0, max).map(p => `「${p.word}」→「${p.heard}」`).join('、');
   return unique.length > max ? `${shown}など` : shown;
+}
+
+/**
+ * 音素混同ルールが検出できた場合のみ、summary文に添える補足（例:「（「L」と「R」が近い音として認識されやすい発音です）」）を返す。
+ * 未検出の場合は空文字を返し、従来通り事実（heard語）だけの表現に留める。
+ */
+function formatConfusionNote(confusion?: PhoneticConfusionRule): string {
+  return confusion ? `（${confusion.label}が近い音として認識されやすい発音です）` : '';
 }
 
 /**
@@ -260,11 +278,11 @@ function buildSummary(tier: ScoreTier, groups: IssueGroups): string {
   if (missingMainWords.length > 0) {
     diagnosis = `重要な単語 ${formatWords(missingMainWords)} が聞き取れませんでした。`;
   } else if (fuzzyMainWords.length > 0) {
-    diagnosis = `重要な単語の「${fuzzyMainWords[0].word}」が「${fuzzyMainWords[0].heard}」のように聞こえました。`;
+    diagnosis = `重要な単語の「${fuzzyMainWords[0].word}」が「${fuzzyMainWords[0].heard}」のように聞こえました${formatConfusionNote(fuzzyMainWords[0].confusion)}。`;
   } else if (missingWords.length > 0) {
     diagnosis = `${formatWords(missingWords)} が聞き取れませんでした。`;
   } else if (fuzzyWords.length > 0) {
-    diagnosis = `「${fuzzyWords[0].word}」が「${fuzzyWords[0].heard}」のように聞こえました。`;
+    diagnosis = `「${fuzzyWords[0].word}」が「${fuzzyWords[0].heard}」のように聞こえました${formatConfusionNote(fuzzyWords[0].confusion)}。`;
   } else if (combinedWords.length > 0) {
     diagnosis = `${formatWords(combinedWords.map(c => c.word))} は単語同士がつながって聞こえました。`;
   }
@@ -280,6 +298,11 @@ function buildSummary(tier: ScoreTier, groups: IssueGroups): string {
 /**
  * 改善アドバイス欄(issues)の生成。summaryが「診断」なのに対し、こちらは「処方」の役割に専念する。
  * 根拠（正解語→聞き取り結果）は引き続き添えつつ、具体的な練習アクションを主役にする。
+ * 音素混同が検出できた場合は、汎用的な練習文言の代わりにそのルール固有のtip（口の形など）を使い、
+ * 「同じ事実でもsummaryとは異なる、より実践的な処方」として役割を差別化する。
+ *
+ * ポップアップ表示の可読性を優先し、重要度順（重要語→通常語の欠落→曖昧一致→結合）で
+ * 最大2件までに絞って返す。
  */
 function buildIssues(groups: IssueGroups): string[] {
   const { missingMainWords, fuzzyMainWords, missingWords, fuzzyWords, combinedWords } = groups;
@@ -288,17 +311,19 @@ function buildIssues(groups: IssueGroups): string[] {
   if (missingMainWords.length > 0) {
     issues.push(`最重要語の ${formatWords(missingMainWords)} は、口を大きく開けてゆっくり発音するところから練習してみましょう。`);
   } else if (fuzzyMainWords.length > 0) {
-    issues.push(`最重要語の ${formatWordPairs(fuzzyMainWords)} と認識されています。一音ずつ区切って強調すると、さらに伝わりやすくなります。`);
+    const tip = fuzzyMainWords[0].confusion?.tip ?? '一音ずつ区切って強調すると、さらに伝わりやすくなります。';
+    issues.push(`最重要語の ${formatWordPairs(fuzzyMainWords)} と認識されています。${tip}`);
   }
   if (missingWords.length > 0) {
     issues.push(`${formatWords(missingWords)} が認識されていません。息をしっかり出して、はっきり発音してみましょう。`);
   }
   if (fuzzyWords.length > 0) {
-    issues.push(`${formatWordPairs(fuzzyWords)} と認識されています。似た音の単語と聞き比べながら練習すると効果的です。`);
+    const tip = fuzzyWords[0].confusion?.tip ?? '似た音の単語と聞き比べながら練習すると効果的です。';
+    issues.push(`${formatWordPairs(fuzzyWords)} と認識されています。${tip}`);
   }
   if (combinedWords.length > 0) {
     issues.push(`${formatWordPairs(combinedWords)} とつながって聞こえています。区切りを意識すると、さらに自然な発音になります。`);
   }
 
-  return issues;
+  return issues.slice(0, 2);
 }
