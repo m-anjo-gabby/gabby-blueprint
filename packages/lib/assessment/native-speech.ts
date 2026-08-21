@@ -11,7 +11,7 @@ const WEIGHTS = {
   MAIN_WORD_MULTIPLIER: 1.5,
 };
 
-// 課題が見つからなかった場合（全単語が完全一致）に表示する称賛コメント。
+// excellent/great帯で、指摘(issues)が全く無い場合にのみ使う手放しの称賛コメント。
 // 判定結果に差が無い場面でのみ使う表現のバリエーションなので、ランダム選出で問題ない。
 const PRAISE_COMMENTS: Record<'excellent' | 'great', string[]> = {
   excellent: [
@@ -24,6 +24,32 @@ const PRAISE_COMMENTS: Record<'excellent' | 'great', string[]> = {
     "自然なリズムで発音できています。自信を持って次に進みましょう。",
   ],
 };
+
+// excellent/great帯だが、非メイン単語のFUZZY/COMBINED等が1つでも残っている場合の称賛コメント。
+// 長文では些細な1語の乱れがあってもスコアが高くなり得るため、「完璧」と言い切らず、
+// 詳細はissues側に譲ることを明示する。
+const PRAISE_WITH_MINOR_NOTE: Record<'excellent' | 'great', string[]> = {
+  excellent: [
+    "全体的に非常に高いレベルの発話です。細かい点はアドバイス欄も確認してみましょう。",
+    "ほぼ完璧な仕上がりです。さらに磨きたい方はアドバイスもチェックしてみてください。",
+  ],
+  great: [
+    "全体的にとても良い発音です。気になる点はアドバイス欄で確認できます。",
+    "自然な発音で伝わっています。さらに良くしたい部分はアドバイスを参考にしてください。",
+  ],
+};
+
+// メインコメント(summary)で、事実の診断文の後に添える一言（good/fair/poor帯のみ使用）。
+// 「どう直すか」の具体策はissues側の役割なので、ここではモチベーション維持のための短い言葉に留める。
+const ENCOURAGEMENT_BY_TIER: Record<Exclude<ScoreTier, 'excellent' | 'great'>, string[]> = {
+  good: ["練習を重ねれば、さらに伝わりやすくなります。", "この調子で続けていきましょう。"],
+  fair: ["焦らず、繰り返し練習していきましょう。", "反復すれば必ず慣れてきます。"],
+  poor: ["諦めず、もう一度チャレンジしてみましょう。", "反復練習で必ず上達します。"],
+};
+
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
 
 /**
  * 2つの文字列の類似度を計算 (Levenshtein距離ベース)
@@ -143,18 +169,26 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
   };
 }
 
+/** 「正解語」と「実際に認識された語(heard)」のペア。FUZZY/COMBINEDの根拠提示に使う。 */
+interface WordEvidence {
+  word: string;
+  heard: string;
+}
+
 interface IssueGroups {
   missingMainWords: string[];
-  fuzzyMainWords: string[];
+  fuzzyMainWords: WordEvidence[];
   missingWords: string[];
-  fuzzyWords: string[];
-  combinedWords: string[];
+  fuzzyWords: WordEvidence[];
+  combinedWords: WordEvidence[];
 }
 
 /**
  * 一致結果(matches)を、コメント生成に使う単語グループへ分類する。
  * メイン単語（見出し語やフレーズの主要語）とそれ以外を分けて扱うことで、
  * 「何が」「どの単語が」原因でスコアが下がったのかを具体的に示せるようにする。
+ * FUZZY/COMBINEDは実際に認識された語(heard)も保持し、
+ * 「L/Rや母音」のような音素の当て推量をせず、事実（何が何に聞こえたか）だけで根拠を示せるようにする。
  */
 function collectIssueGroups(matches: WordMatch[], mainWords: string[]): IssueGroups {
   const isMain = (word: string) => mainWords.some(mw => mw.toLowerCase() === word.toLowerCase());
@@ -170,18 +204,18 @@ function collectIssueGroups(matches: WordMatch[], mainWords: string[]): IssueGro
   matches.forEach(m => {
     if (isMain(m.word)) {
       if (!m.isMatch) groups.missingMainWords.push(m.word);
-      else if (m.isFuzzy) groups.fuzzyMainWords.push(m.word);
+      else if (m.isFuzzy) groups.fuzzyMainWords.push({ word: m.word, heard: m.heard });
       return;
     }
     if (!m.isMatch) groups.missingWords.push(m.word);
-    else if (m.isFuzzy) groups.fuzzyWords.push(m.word);
-    else if (m.isCombined) groups.combinedWords.push(m.word);
+    else if (m.isFuzzy) groups.fuzzyWords.push({ word: m.word, heard: m.heard });
+    else if (m.isCombined) groups.combinedWords.push({ word: m.word, heard: m.heard });
   });
 
   return groups;
 }
 
-/** 単語リストを「"word1"、"word2"など」の形式に整形する（表示が長くなりすぎないよう上限を設ける） */
+/** 単語リストを「「word1」「word2」など」の形式に整形する（表示が長くなりすぎないよう上限を設ける） */
 function formatWords(words: string[], max = 2): string {
   const unique = Array.from(new Set(words));
   if (unique.length === 0) return '';
@@ -189,53 +223,81 @@ function formatWords(words: string[], max = 2): string {
   return unique.length > max ? `${shown}など` : shown;
 }
 
+/** 「正解語→聞き取られた語」のペアを「「word」→「heard」」の形式に整形する */
+function formatWordPairs(pairs: WordEvidence[], max = 2): string {
+  const unique = Array.from(new Map(pairs.map(p => [`${p.word}:${p.heard}`, p])).values());
+  if (unique.length === 0) return '';
+  const shown = unique.slice(0, max).map(p => `「${p.word}」→「${p.heard}」`).join('、');
+  return unique.length > max ? `${shown}など` : shown;
+}
+
 /**
- * メインコメント(summary)の生成。
- * スコア帯からランダムに選ぶのではなく、実際にどの単語がどう判定されたか(matches)を
- * 優先順位付きで参照し、根拠のある一文を組み立てる。全単語が完全一致の場合のみ、
- * 判定結果に差の無い称賛コメントをバリエーションとしてランダム表示する。
+ * メインコメント(summary)の生成。「診断」の役割に専念する。
+ *
+ * excellent/great帯はスコアそのものが「ほぼ完璧」を表しているため、非メイン単語の
+ * 些細な指摘だけでトーンを診断寄りに崩さない（例: 長文中の1単語だけFUZZYでもスコア91点、
+ * のようなケースで「〜のように聞こえました」＋「自信を持って」が同居する矛盾を避ける）。
+ * 指摘(issues)が実在する場合は、称賛コメントの中で「詳細はアドバイス欄へ」と一言だけ添える。
+ *
+ * good/fair/poor帯は指摘そのものがスコアの主要因なので、従来通り事実（何がどう聞き取られたか）を
+ * 優先順位付きで1点だけ取り上げ、スコア帯に応じた短い一言でモチベーションを支える。
  */
 function buildSummary(tier: ScoreTier, groups: IssueGroups): string {
   const { missingMainWords, fuzzyMainWords, missingWords, fuzzyWords, combinedWords } = groups;
+  const hasAnyIssue =
+    missingMainWords.length > 0 ||
+    fuzzyMainWords.length > 0 ||
+    missingWords.length > 0 ||
+    fuzzyWords.length > 0 ||
+    combinedWords.length > 0;
 
+  if (tier === 'excellent' || tier === 'great') {
+    const pool = hasAnyIssue ? PRAISE_WITH_MINOR_NOTE[tier] : PRAISE_COMMENTS[tier];
+    return pickRandom(pool);
+  }
+
+  let diagnosis: string | null = null;
   if (missingMainWords.length > 0) {
-    return `重要な単語 ${formatWords(missingMainWords)} が聞き取れませんでした。この単語を意識してもう一度挑戦してみましょう。`;
-  }
-  if (fuzzyMainWords.length > 0) {
-    return `重要な単語 ${formatWords(fuzzyMainWords)} の発音がやや不明瞭でした。ここを意識するとぐっと良くなります。`;
-  }
-  if (missingWords.length > 0) {
-    return `${formatWords(missingWords)} が聞き取れませんでした。一音ずつ、はっきりと発音してみましょう。`;
-  }
-  if (fuzzyWords.length > 0) {
-    return `${formatWords(fuzzyWords)} の発音に少し惜しい部分がありました。口の形を意識してみましょう。`;
-  }
-  if (combinedWords.length > 0) {
-    return `${formatWords(combinedWords)} は単語同士がつながって聞こえました。リンキングとしては自然ですが、一語ずつの区切りを意識するとさらに明瞭になります。`;
+    diagnosis = `重要な単語 ${formatWords(missingMainWords)} が聞き取れませんでした。`;
+  } else if (fuzzyMainWords.length > 0) {
+    diagnosis = `重要な単語の「${fuzzyMainWords[0].word}」が「${fuzzyMainWords[0].heard}」のように聞こえました。`;
+  } else if (missingWords.length > 0) {
+    diagnosis = `${formatWords(missingWords)} が聞き取れませんでした。`;
+  } else if (fuzzyWords.length > 0) {
+    diagnosis = `「${fuzzyWords[0].word}」が「${fuzzyWords[0].heard}」のように聞こえました。`;
+  } else if (combinedWords.length > 0) {
+    diagnosis = `${formatWords(combinedWords.map(c => c.word))} は単語同士がつながって聞こえました。`;
   }
 
-  const pool = tier === 'excellent' ? PRAISE_COMMENTS.excellent : PRAISE_COMMENTS.great;
-  return pool[Math.floor(Math.random() * pool.length)];
+  if (diagnosis) {
+    return `${diagnosis} ${pickRandom(ENCOURAGEMENT_BY_TIER[tier])}`;
+  }
+
+  // good/fair/poor帯なのにissuesが全て空になるケース(理論上ほぼ無いが型の網羅性のための保険)
+  return pickRandom(PRAISE_COMMENTS.great);
 }
 
-/** 改善アドバイス欄(issues)の生成。該当するカテゴリごとに、実際の単語名を含む具体的な一文を積み上げる。 */
+/**
+ * 改善アドバイス欄(issues)の生成。summaryが「診断」なのに対し、こちらは「処方」の役割に専念する。
+ * 根拠（正解語→聞き取り結果）は引き続き添えつつ、具体的な練習アクションを主役にする。
+ */
 function buildIssues(groups: IssueGroups): string[] {
   const { missingMainWords, fuzzyMainWords, missingWords, fuzzyWords, combinedWords } = groups;
   const issues: string[] = [];
 
   if (missingMainWords.length > 0) {
-    issues.push(`最重要語の ${formatWords(missingMainWords)} を意識して、もう一度発音してみましょう。`);
+    issues.push(`最重要語の ${formatWords(missingMainWords)} は、口を大きく開けてゆっくり発音するところから練習してみましょう。`);
   } else if (fuzzyMainWords.length > 0) {
-    issues.push(`最重要語の ${formatWords(fuzzyMainWords)} は発音がやや不明瞭でした。強調して伝えると効果的です。`);
+    issues.push(`最重要語の ${formatWordPairs(fuzzyMainWords)} と認識されています。一音ずつ区切って強調すると、さらに伝わりやすくなります。`);
   }
   if (missingWords.length > 0) {
-    issues.push(`${formatWords(missingWords)} が聞き取れていません。注意して発音しましょう。`);
+    issues.push(`${formatWords(missingWords)} が認識されていません。息をしっかり出して、はっきり発音してみましょう。`);
   }
   if (fuzzyWords.length > 0) {
-    issues.push(`${formatWords(fuzzyWords)} はL/Rや母音の音を少し調整すると、より正確になります。`);
+    issues.push(`${formatWordPairs(fuzzyWords)} と認識されています。似た音の単語と聞き比べながら練習すると効果的です。`);
   }
   if (combinedWords.length > 0) {
-    issues.push(`${formatWords(combinedWords)} は単語同士をつなげて読めています。より自然な響きです。`);
+    issues.push(`${formatWordPairs(combinedWords)} とつながって聞こえています。区切りを意識すると、さらに自然な発音になります。`);
   }
 
   return issues;
