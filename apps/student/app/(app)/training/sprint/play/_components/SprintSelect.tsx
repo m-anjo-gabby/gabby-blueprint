@@ -6,7 +6,7 @@ import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, C
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, DEFAULT_SPRINT_TIME_KEY, type SprintQuestionType, type SprintAnswerType, type SprintConfig } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayAndRecord } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
@@ -68,7 +68,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   }, []);
 
   const isCorpus = contentMetadata?.sprint_type === '1';
-  const hasLevel = isCorpus ? contentMetadata?.has_level ?? true : true;
+  const hasLevel = resolveSprintHasLevel(contentMetadata);
 
   const isTypeSupported = useCallback((typeId: SprintQuestionType) => {
     if (!isCorpus || !contentMetadata?.supported_types) return true;

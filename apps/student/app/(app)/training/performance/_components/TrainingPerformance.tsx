@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoDateInZone, toIsoMonthInZone } from '@gabby/lib/date/date';
 import { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
+import { cn } from '@/lib/utils';
 
 interface TrainingPerformanceProps {
   initialData: UserTrainingPerformanceResponse;
@@ -385,11 +386,12 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center">
                   {calendarDays.map((day, idx) => (
                     <div key={idx} className="flex flex-col items-center justify-center">
-                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[11px] sm:text-xs font-mono font-bold flex items-center justify-center transition-all ${
-                        day.hasHistory 
-                          ? 'bg-indigo-600 text-white font-black shadow-xs ring-4 ring-indigo-50' 
-                          : 'bg-slate-50 text-slate-400'
-                      }`}>
+                      <div className={cn(
+                        "w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[11px] sm:text-xs font-mono font-bold flex items-center justify-center transition-all",
+                        day.hasHistory
+                          ? "bg-indigo-600 text-white font-black shadow-xs ring-4 ring-indigo-50"
+                          : "bg-slate-50 text-slate-400"
+                      )}>
                         {day.dayNum}
                       </div>
                     </div>

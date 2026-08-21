@@ -8,16 +8,18 @@ import { SprintDrillPlayerControls } from "./SprintDrillPlayerControls";
 import { SprintFeedback } from "./SprintFeedback";
 import { ExitProcessingOverlay } from "./ExitProcessingOverlay";
 import { AudioResumeBanner } from "@/components/common/AudioResumeBanner";
-import { ChevronLeft, Square } from 'lucide-react';
+import { ChevronLeft, Square, Loader2 } from 'lucide-react';
 
 import { useSprintStore } from '@/stores/useSprintStore';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback, cleanAnswerWords } from '@gabby/lib';
+import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
+import { getFeedbackConfig, getSprintTitle, resolveSprintHasLevel, setAudioSessionPlayback, cleanAnswerWords } from '@gabby/lib';
+import { logClientEvent } from '@gabby/lib/logger/actions';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
-import { playStatementThenQuestion, useStopAllAudioCore, useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackFlow';
+import { playStatementThenQuestion, useStopAllAudioCore, useFullscreenAudioLifecycle, useFlowGuard } from '@gabby/lib/hooks/useSprintPlaybackFlow';
 import { useSprintProgressSync } from '../_hooks/useSprintProgressSync';
 
 interface SprintDrillPlayerProps {
@@ -82,21 +84,24 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isNavigating = useRef<boolean>(false);
 
-  // 💡 フロー管理用の一意のカウンターID
-  const flowIdRef = useRef<number>(0);
+  // 💡 フロー管理用の一意のカウンターID（Drill/Sprint共通のキャンセルトークンフック）
+  const { flowIdRef, invalidateFlow } = useFlowGuard();
 
   const isAutoPlayingRef = useRef(isAutoPlaying);
   const isRevealedRef = useRef(isRevealed);
   const wasRecordingRef = useRef<boolean>(false);
-  
+  // 🛠️ 解答再生時のスピードモード判定用。進捗同期フック（useSprintProgressSync）とは
+  // 無関係な用途のため、自前で保持する（同期タイミングの変更に影響されないようにする）
+  const questionTypeRef = useRef(questionType);
+
   useEffect(() => { isAutoPlayingRef.current = isAutoPlaying; }, [isAutoPlaying]);
   useEffect(() => { isRevealedRef.current = isRevealed; }, [isRevealed]);
+  useEffect(() => { questionTypeRef.current = questionType; }, [questionType]);
 
   // ドリル進捗の5分ごと自動保存（内部で contentId/questionType の最新値を ref 経由で追従）
-  const { syncProgressNow, questionTypeRef } = useSprintProgressSync(contentId, questionType);
+  const { syncProgressNow } = useSprintProgressSync(contentId, questionType);
 
-  const isCorpus = contentMetadata?.sprint_type === '1';
-  const hasLevel = isCorpus ? contentMetadata?.has_level ?? true : true;
+  const hasLevel = resolveSprintHasLevel(contentMetadata);
 
   const courseTitle = useMemo(() => {
     return getSprintTitle(questionType || '0', Number(config.level), hasLevel);
@@ -116,7 +121,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const stopAllAudioCore = useStopAllAudioCore(stopTrack, stopListening);
 
   const stopAllAudio = useCallback(() => {
-    flowIdRef.current += 1;
+    invalidateFlow();
     if (autoPlayTimerRef.current) {
       clearTimeout(autoPlayTimerRef.current);
       autoPlayTimerRef.current = null;
@@ -127,12 +132,38 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     setPlayingAnswerSequence(false);
     setAudioPhase('idle');
     setIsRecording(false);
-  }, [stopAllAudioCore, setPlayingQuestionSequence, setPlayingAnswerSequence, setIsRecording]);
+  }, [invalidateFlow, stopAllAudioCore, setPlayingQuestionSequence, setPlayingAnswerSequence, setIsRecording]);
 
+
+  /**
+   * 音声が再生できない場合の共通ハンドラ
+   * 代替読み上げ（TTSフォールバック）は行わず、ユーザーへの通知とサーバーログ記録のみ行う。
+   * 音声ファイルは常に用意されている前提のため、発生時は運用側で把握できるようにする。
+   */
+  const handleAudioUnavailable = useCallback((text: string, audioPath: string | null, error: unknown) => {
+    showToast('音声を再生できません', 'error');
+    logClientEvent({
+      service: 'student',
+      event: 'sprint:audio_playback_failed',
+      message: `Drill audio unavailable: ${currentQuestion?.question_id ?? 'unknown'}`,
+      payload: {
+        contentId,
+        questionId: currentQuestion?.question_id,
+        mode: 'drill',
+        text,
+        audioPath,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    }).catch(() => { /* ログ送信自体の失敗はユーザー体験に影響させない */ });
+  }, [contentId, currentQuestion, showToast]);
 
   const playSingleTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
-    return playTrackBase(text, audioPath, { playbackRate, exitLoading });
-  }, [playTrackBase, playbackRate, exitLoading]);
+    return playTrackBase(text, audioPath, {
+      playbackRate,
+      exitLoading,
+      onError: (err) => handleAudioUnavailable(text, audioPath, err),
+    });
+  }, [playTrackBase, playbackRate, exitLoading, handleAudioUnavailable]);
 
   // 💡 一意の currentFlowId を受け取り、非同期 await の直後に厳密にチェックを行う
   const playQuestionSequence = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
@@ -156,7 +187,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         setPlayingQuestionSequence(false);
       }
     }
-  }, [playSingleTrack, setPlayingQuestionSequence]);
+  }, [playSingleTrack, setPlayingQuestionSequence, flowIdRef]);
 
   // 💡 解答フェーズ用の一意の currentFlowId 追従ロジック
   const playAnswerSequence = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
@@ -204,7 +235,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         setPlayingAnswerSequence(false);
       }
     }
-  }, [playSingleTrack, setPlayingAnswerSequence]);
+  }, [playSingleTrack, setPlayingAnswerSequence, flowIdRef]);
 
   // 🎮 操作ハンドラー
   const handleReveal = useCallback(async () => {
@@ -253,7 +284,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     await unlockAudioContext();
     stopAllAudio();
     playQuestionSequence(currentQuestion, flowIdRef.current);
-  }, [currentQuestion, isRecording, playQuestionSequence, stopAllAudio, unlockAudioContext]);
+  }, [currentQuestion, isRecording, playQuestionSequence, stopAllAudio, unlockAudioContext, flowIdRef]);
 
   const handleIndividualPlayAudio = useCallback(async (voiceUrl: string | null, text: string) => {
     if (isRecording || isAutoPlayingRef.current) return; 
@@ -335,7 +366,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       }
     };
     runRestart();
-  }, [currentQuestion, playQuestionSequence, setIsRevealed, stopAllAudio]);
+  }, [currentQuestion, playQuestionSequence, setIsRevealed, stopAllAudio, flowIdRef]);
 
   const handleToggleAutoPlay = useCallback(async () => {
     if (!isAutoPlaying) {
@@ -384,30 +415,19 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     }
   }, [questions, initialQuestionId, initSprint, showToast, syncProgressNow]);
 
-  const handleExitWithSync = async () => {
-    if (isAutoPlaying) return;
-
-    const ok = await showConfirm("トレーニングを終了しますか？", "前の画面に戻ります。", { 
-      variant: 'info', 
-      isModal: false 
-    });
-    if (!ok) return;
-
-    // 🚀 終了処理ローディング表示をオンにし、即時にマイク録音・再生を強制クリーンアップ
-    setExitLoading(true);
-    stopAllAudio();
-
-    try {
-      await syncProgressNow();
-    } catch (e) {
-      console.error(e);
-    }
-    
-    // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから戻る
-    setTimeout(() => {
-      onExit?.();
-    }, SPRINT_FLOW_TIMING.shared.exitSafetyBufferMs);
-  };
+  // 🚀 終了確認→ローディング表示→マイク録音/再生の強制クリーンアップ→進捗同期→
+  // iOSのマイク解放待ちバッファ→実際の離脱、という一連の流れは Word/Sprint 共通のためフック化
+  const handleExitWithSync = useExitConfirmFlow({
+    guard: () => isAutoPlaying,
+    confirmTitle: "トレーニングを終了しますか？",
+    confirmMessage: "前の画面に戻ります。",
+    confirmVariant: 'info',
+    setLoading: setExitLoading,
+    cleanup: stopAllAudio,
+    sync: syncProgressNow,
+    bufferMs: SPRINT_FLOW_TIMING.shared.exitSafetyBufferMs,
+    onExit: () => onExit?.(),
+  });
 
   // タイムライン1：問題カード変更検知
   useEffect(() => {
@@ -499,6 +519,18 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
   useFullscreenAudioLifecycle(stopAllAudio);
 
+  // 🛡️ View 層：問題が1件も無い場合の空状態ガード（戻る手段の無い無限ローディングを防ぐ）
+  if (!questions || questions.length === 0 || !currentQuestion) {
+    return (
+      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-4">
+          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">Preparing Questions</h2>
+          <button onClick={() => onExit?.()} className="w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest">Go Back</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none select-none">

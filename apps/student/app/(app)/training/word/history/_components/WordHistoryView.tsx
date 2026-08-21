@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, Calendar, BookOpen, MessageSquareText, ShieldCheck, ArrowLeft, ArrowRight, ChevronDown, Library, Mic } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
+import { formatZonedDate } from '@gabby/lib/date/date';
+import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WordSummaryHistoryItem } from '@/actions/wordAction';
 
@@ -23,10 +24,12 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
-  // 当月の文字列（"YYYY-MM"）を生成
-  const currentMonthStr = useMemo(() => {
-    return toIsoMonthInZone(new Date(), timezone);
-  }, [timezone]);
+  // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算等）はSprint履歴画面と共通のためフック化
+  const { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange } = useMonthNavigator({
+    targetMonth,
+    basePath: '/training/word/history',
+    navigate: 'replace',
+  });
 
   // 🎯 日付ごとにグループ化（React Compiler が確実に追随できるよう外部関数参照を排除し、依存配列を修正）
   const groupedData = useMemo(() => {
@@ -56,26 +59,6 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
     );
   };
 
-  const handleMonthChange = (direction: 'prev' | 'next') => {
-    const [year, month] = targetMonth.split('-').map(Number);
-    let newYear = year;
-    let newMonth = direction === 'prev' ? month - 1 : month + 1;
-
-    if (newMonth === 0) {
-      newMonth = 12;
-      newYear -= 1;
-    } else if (newMonth === 13) {
-      newMonth = 1;
-      newYear += 1;
-    }
-
-    const targetMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-    router.replace(`/training/word/history?month=${targetMonthStr}`, { scroll: false });
-  };
-
-  const [displayYear, displayMonth] = targetMonth.split('-');
-  const isNotCurrentMonth = targetMonth !== currentMonthStr;
-  
   // ソートの計算量最適化
   const sortedDates = useMemo(() => {
     return Object.keys(groupedData).sort((a, b) => b.localeCompare(a));

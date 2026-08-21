@@ -13,17 +13,20 @@ export interface UseSprintAudioReturn {
   chimeBufferRef: React.RefObject<AudioBuffer | null>;
   /**
    * オーディオファイルを再生する Promise。
-   * - audioPath が null の場合は即時 resolve
+   * - audioPath が null の場合は即時 resolve（onError が呼ばれる）
    * - exitLoading が true の場合も即時 resolve（終了処理中の再生防止）
-   * @param text 読み上げテキスト（現在はフォールバック用・未使用）
+   * - 代替読み上げ（TTSフォールバック）は行わない。再生できない場合は
+   *   opts.onError を通じて呼び出し元に通知するのみ。
+   * @param text 読み上げテキスト（onError発火時のログ用コンテキスト）
    * @param audioPath Supabase Storage の相対パス
    * @param opts.playbackRate 再生速度（デフォルト 1.0）
    * @param opts.exitLoading true の場合は即時 resolve して再生しない
+   * @param opts.onError 音声ファイルが無い/取得・デコードに失敗した場合に呼ばれる
    */
   playTrack: (
     text: string,
     audioPath: string | null,
-    opts?: { playbackRate?: number; exitLoading?: boolean },
+    opts?: { playbackRate?: number; exitLoading?: boolean; onError?: (error: unknown) => void },
   ) => Promise<void>;
   /** チャイム音を AudioContext 経由で再生する */
   playChime: () => Promise<void>;
@@ -57,9 +60,13 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
   const playTrack = useCallback((
     _text: string,
     audioPath: string | null,
-    opts: { playbackRate?: number; exitLoading?: boolean } = {},
+    opts: { playbackRate?: number; exitLoading?: boolean; onError?: (error: unknown) => void } = {},
   ): Promise<void> => {
-    return engine.play(audioPath, { playbackRate: opts.playbackRate ?? 1.0, skip: opts.exitLoading });
+    return engine.play(audioPath, {
+      playbackRate: opts.playbackRate ?? 1.0,
+      skip: opts.exitLoading,
+      onError: opts.onError,
+    });
   }, [engine]);
 
   return {

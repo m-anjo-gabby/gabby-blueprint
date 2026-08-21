@@ -13,16 +13,21 @@ export function useSprintCountdown(timeLimitSec: number, onTimeUp: () => void, o
   const secondsLeftRef = useRef<number>(secondsLeft);
   useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
 
-  // 全体の残り制限時間カウント
+  // 全体の残り制限時間カウント。
+  // 💡 interval はマウント時に一度だけ生成し、functional update で毎秒デクリメントする
+  // （secondsLeft を依存配列に入れて毎秒 setInterval/clearInterval を繰り返す実装は不要な再生成コストになる）
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (secondsLeft > 0) {
-      interval = setInterval(() => {
-        setSecondsLeft((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => { if (interval) clearInterval(interval); };
-  }, [secondsLeft]);
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // タイムアップ判定
   useEffect(() => {

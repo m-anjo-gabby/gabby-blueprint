@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { SPRINT_FLOW_TIMING, SprintQuestion } from '@gabby/types/sprint';
 import { setAudioSessionPlayback } from '../sprint/utils';
 
@@ -72,6 +72,24 @@ export function useStopAllAudioCore(stopTrack: () => void, stopListening: () => 
  * playbackへ確実に復帰させる（stopAllAudio 自身が isRecording リセットやマイク停止を内包しているため、
  * ここで重複して行う必要はない）。
  */
+/**
+ * Drill/Sprint両プレイヤーで共通の「非同期音声フローのキャンセルトークン」管理フック。
+ * 世代カウンタ（flowIdRef）を各プレイヤーが個別に useRef(0) で持ち、
+ * stopAllAudio 内で `+= 1` して割り込みを表現し、await の直後に
+ * `flowIdRef.current !== currentFlowId` で古い実行を打ち切る、という
+ * 全く同じパターンがコピペされていたため、ref生成とinvalidate操作のみを集約する。
+ * 比較（isCancelled等）は各呼び出し側の既存コードのまま `flowIdRef.current` を直接参照でよい。
+ */
+export function useFlowGuard() {
+  const flowIdRef = useRef<number>(0);
+
+  const invalidateFlow = useCallback(() => {
+    flowIdRef.current += 1;
+  }, []);
+
+  return { flowIdRef, invalidateFlow };
+}
+
 export function useFullscreenAudioLifecycle(stopAllAudio: () => void) {
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;

@@ -39,6 +39,12 @@ export interface AudioEnginePlayOptions {
   /** trueの場合、一切再生せず即座に解決する（終了処理中の再生防止用） */
   skip?: boolean;
   bucketName?: string;
+  /**
+   * 音声ファイルの取得・デコードに失敗した場合に呼ばれる。
+   * 呼び出し側での代替読み上げ（TTSフォールバック）は廃止したため、
+   * ログ記録やユーザーへの通知は呼び出し元がこのコールバックで行う。
+   */
+  onError?: (error: unknown) => void;
 }
 
 /**
@@ -266,7 +272,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
   }, [urlResolution]);
 
   const play = useCallback((path: string | null, playOpts: AudioEnginePlayOptions = {}): Promise<void> => {
-    const { id, playbackRate = 1.0, restart, skip, bucketName } = playOpts;
+    const { id, playbackRate = 1.0, restart, skip, bucketName, onError } = playOpts;
 
     if (skip) return Promise.resolve();
 
@@ -288,6 +294,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
       if (!path) {
         currentPlayingIdRef.current = null;
         setIsPlaying(null);
+        onError?.(new Error('No audio path provided'));
         return;
       }
 
@@ -384,6 +391,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
             console.warn('Audio Context decode error, fallback resolve:', err);
             setIsPlaying(null);
             currentPlayingIdRef.current = null;
+            onError?.(err);
             resolve();
           });
       });

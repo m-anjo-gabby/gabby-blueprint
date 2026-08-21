@@ -9,6 +9,7 @@ import { Volume2, Eye, CircleDot, Headphones, Languages, Mic, MicOff } from 'luc
 // 🔌 Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
 import { cn } from '@/lib/utils';
+import { CircularProgressRing } from '@/components/common/CircularProgressRing';
 
 interface QuestionCardProps {
   groupCurrentIndex?: number;
@@ -131,15 +132,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     return 'idle';
   }, [isRevealed, isRecording]);
 
-  // ⭕ 円形プログレスバー用の定数と計算
-  const RADIUS = 24;
-  const CIRCUMFERENCE = useMemo(() => 2 * Math.PI * RADIUS, []);
-
-  const strokeDashoffset = useMemo(() => {
-    if (timeLeft <= 0) return CIRCUMFERENCE;
-    const progress = Math.max(0, Math.min(timeLeft, maxTime)) / maxTime;
-    return CIRCUMFERENCE * (1 - progress);
-  }, [timeLeft, maxTime, CIRCUMFERENCE]);
+  // ⭕ 円形プログレスバー（録音カウントダウン）の進捗率
+  const recordingProgress = useMemo(() => {
+    return Math.max(0, Math.min(timeLeft, maxTime)) / maxTime;
+  }, [timeLeft, maxTime]);
 
   // 🔊 オーディオトリガー
   const triggerAudio = (e: React.MouseEvent, voiceUrl: string | null, text: string) => {
@@ -429,32 +425,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <div className="relative z-10 flex flex-col items-center text-center space-y-4">
                   
                   {/* ⏱️ 滑らかな円形プログレスHUD */}
-                  <div className="relative flex items-center justify-center w-14 h-14">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="28" cy="28" r={RADIUS} className="stroke-rose-100/60" strokeWidth="3.5" fill="transparent" />
-                      
-                      <motion.circle
-                        cx="28"
-                        cy="28"
-                        r={RADIUS}
-                        className="stroke-rose-500"
-                        strokeWidth="3.5"
-                        fill="transparent"
-                        strokeDasharray={CIRCUMFERENCE}
-                        animate={{ strokeDashoffset }}
-                        transition={{ 
-                          duration: timeLeft === maxTime ? 0 : 1, 
-                          ease: "linear" 
-                        }}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-sm font-black font-mono text-rose-600 leading-none">{timeLeft}</span>
-                      <span className="text-[6px] font-black uppercase text-rose-400 tracking-wider leading-none mt-0.5">sec</span>
-                    </div>
-                  </div>
+                  <CircularProgressRing
+                    size={56}
+                    radius={24}
+                    strokeWidth={3.5}
+                    progress={recordingProgress}
+                    trackClassName="stroke-rose-100/60"
+                    strokeClassName="stroke-rose-500"
+                    transitionDuration={timeLeft === maxTime ? 0 : 1}
+                  >
+                    <span className="text-sm font-black font-mono text-rose-600 leading-none">{timeLeft}</span>
+                    <span className="text-[6px] font-black uppercase text-rose-400 tracking-wider leading-none mt-0.5">sec</span>
+                  </CircularProgressRing>
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-center gap-1.5 text-rose-600">

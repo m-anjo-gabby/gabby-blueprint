@@ -1,4 +1,17 @@
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
+import type { MetadataSprint } from '@gabby/types/content';
+
+/**
+ * 教材メタデータから「レベル概念を持つか」を判定する共通ヘルパー。
+ * コーパススプリント（sprint_type: '1'）のみ has_level フラグに従い、
+ * 汎用スプリント（'0'）や未取得時は常に true として扱う。
+ * SprintDrillPlayer/SprintTimePlayer/SprintSelect/結果画面など、
+ * courseTitle 算出のために各所で個別に再実装されていたロジックを集約したもの。
+ */
+export const resolveSprintHasLevel = (metadata: Pick<MetadataSprint, 'sprint_type' | 'has_level'> | null | undefined): boolean => {
+  const isCorpus = metadata?.sprint_type === '1';
+  return isCorpus ? metadata?.has_level ?? true : true;
+};
 
 // getFeedbackConfig / getScoreTier は packages/lib/assessment/feedbackConfig.ts に一元化。
 // Word/Sprint双方の発話評価UIから共通参照するため、`@gabby/lib` 経由でも従来通り利用できるよう再エクスポートする。

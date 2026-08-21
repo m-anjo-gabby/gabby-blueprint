@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { SprintQuestion, SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
 import { MetadataSprint } from "@gabby/types/content";
 import { AnalysisResult, FeedbackConfig } from "@gabby/types/speechAssessment";
+import { resolveSprintHasLevel } from "@gabby/lib";
 
 export type SprintUiView = 'loading' | 'selecting' | 'gesture_needed' | 'error' | 'drill' | 'sprint' | 'no_content';
 
@@ -142,7 +143,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     let nextLevel = state.config.level;
 
     const isCorpus = metadata?.sprint_type === '1';
-    const hasLevel = isCorpus ? metadata?.has_level ?? true : true;
+    const hasLevel = resolveSprintHasLevel(metadata);
 
     if (isCorpus && metadata?.supported_types) {
       const support = metadata.supported_types;

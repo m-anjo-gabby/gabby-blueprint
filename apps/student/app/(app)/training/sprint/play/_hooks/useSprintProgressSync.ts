@@ -37,5 +37,5 @@ export function useSprintProgressSync(contentId: string | null, questionType: st
 
   usePeriodicSync(syncProgressNow, 5 * 60 * 1000);
 
-  return { syncProgressNow, questionTypeRef };
+  return { syncProgressNow };
 }

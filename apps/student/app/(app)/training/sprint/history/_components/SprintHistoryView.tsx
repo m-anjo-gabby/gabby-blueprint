@@ -7,7 +7,10 @@ import { cn } from "@/lib/utils";
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
+import { formatZonedDate } from '@gabby/lib/date/date';
+import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
+import { resolveSprintHasLevel } from '@gabby/lib';
+import type { ContentMetadata } from '@gabby/types/content';
 
 interface HistorySession {
   self_sprint_id: string;
@@ -21,10 +24,10 @@ interface HistorySession {
   insert_date: string;
   com_m_contents?: {
     content_name: string;
-    metadata?: any;
-  } | { 
+    metadata?: ContentMetadata | null;
+  } | {
     content_name: string;
-    metadata?: any;
+    metadata?: ContentMetadata | null;
   }[] | null;
 }
 
@@ -60,10 +63,11 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   // 🌍 ユーザーマスタからタイムゾーンを取得（未設定時は Asia/Tokyo にフォールバック）
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
-  // 🌍 ユーザーのタイムゾーンに基づいた「今月（YYYY-MM）」文字列を生成
-  const currentMonthStr = useMemo(() => {
-    return toIsoMonthInZone(new Date(), timezone);
-  }, [timezone]);
+  // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定等）はWord履歴画面と共通のためフック化
+  const { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange } = useMonthNavigator({
+    targetMonth,
+    basePath: '/training/sprint/history',
+  });
 
   // 🎯 初期レンダリング時に URL パラメータから展開すべき日付を特定する
   const [expandedDates, setExpandedDates] = useState<string[]>(() => {
@@ -77,25 +81,28 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     return [];
   });
 
-  // 🎯 スクロール処理のみを Effect で行う（リトライ探索によりタイミングラグを解消）
+  // 🎯 スクロール処理のみを Effect で行う（expandedDates は初期化時点で同期的に確定済みのため、
+  // 対象要素は通常は次の描画で存在する。requestAnimationFrame でペイント後の存在確認を
+  // 数フレームだけリトライし、100ms間隔のポーリングより軽量かつ高速に解決する）
   useEffect(() => {
     if (!focusId) return;
 
+    let rafId: number;
     let attempts = 0;
-    const interval = setInterval(() => {
+    const tryScroll = () => {
       const element = document.getElementById(`session-${focusId}`);
       if (element) {
         element.scrollIntoView({ behavior: 'auto', block: 'center' });
-        clearInterval(interval);
-      } else {
-        attempts++;
-        if (attempts > 10) { // 最大1秒間（100ms * 10回）探索を試みる
-          clearInterval(interval);
-        }
+        return;
       }
-    }, 100);
+      attempts++;
+      if (attempts < 10) {
+        rafId = requestAnimationFrame(tryScroll);
+      }
+    };
+    rafId = requestAnimationFrame(tryScroll);
 
-    return () => clearInterval(interval);
+    return () => cancelAnimationFrame(rafId);
   }, [focusId]);
 
   // 💡 日付ごとにグループ化（React Compiler が確実に自動追随できるよう最適化）
@@ -136,30 +143,10 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   }, [initialData, timezone]);
 
   const toggleDate = (date: string) => {
-    setExpandedDates(prev => 
+    setExpandedDates(prev =>
       prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date]
     );
   };
-
-  const handleMonthChange = (direction: 'prev' | 'next') => {
-    const [year, month] = targetMonth.split('-').map(Number);
-    let newYear = year;
-    let newMonth = direction === 'prev' ? month - 1 : month + 1;
-
-    if (newMonth === 0) {
-      newMonth = 12;
-      newYear -= 1;
-    } else if (newMonth === 13) {
-      newMonth = 1;
-      newYear += 1;
-    }
-
-    const targetMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-    router.push(`/training/sprint/history?month=${targetMonthStr}`);
-  };
-
-  const [displayYear, displayMonth] = targetMonth.split('-');
-  const isNotCurrentMonth = targetMonth !== currentMonthStr;
 
   // ソートの最適化：標準化した文字列（YYYY/MM/DD）で高速に降順ソート
   const sortedDates = useMemo(() => {
@@ -406,8 +393,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                             <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
                                             {(() => {
                                               const content = Array.isArray(session.com_m_contents) ? session.com_m_contents[0] : session.com_m_contents;
-                                              const isCorpus = session.sprint_type === '1';
-                                              const hasLevel = isCorpus ? content?.metadata?.sprint?.has_level ?? true : true;
+                                              const hasLevel = resolveSprintHasLevel(content?.metadata?.sprint);
                                               if (!hasLevel) return null;
                                               return (
                                                 <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">

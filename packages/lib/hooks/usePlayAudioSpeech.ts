@@ -29,12 +29,17 @@ export function usePlayAudioSpeech() {
   const playbackRateRef = useRef<number>(1.0);
   const supabaseRef = useRef(createBrowserClient());
 
-  const play = useCallback((path: string, id: string, options?: { restart?: boolean; bucketName?: string }): Promise<void> => {
+  const play = useCallback((
+    path: string | null,
+    id: string,
+    options?: { restart?: boolean; bucketName?: string; onError?: (error: unknown) => void },
+  ): Promise<void> => {
     return engine.play(path, {
       id,
       restart: options?.restart,
       bucketName: options?.bucketName,
       playbackRate: playbackRateRef.current,
+      onError: options?.onError,
     });
   }, [engine]);
 

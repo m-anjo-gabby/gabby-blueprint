@@ -1,7 +1,7 @@
 // apps\student\app\(app)\training\sprint\result\[id]\_components\SprintResult.tsx
 'use client';
 
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Trophy, CheckCircle2, Volume2, Loader2, MessageSquare, ArrowRight, PlayCircle, Languages, FileCheck2, Award, SkipForward, Mic, ChartSpline, Play, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -63,7 +63,16 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const toggleJa = (key: string) => {
     setJaVisibleMap(prev => ({ ...prev, [key]: !prev[key] }));
   };
- 
+
+  // 🛠️ question_id で履歴を突き合わせる。answered_history 保存時点に存在した問題が
+  // 後からマスタ側で削除/非公開化されていると questions 側だけ短くなり index がずれるため、
+  // index ではなく question_id をキーにして対応関係を保証する。
+  const historyByQuestionId = useMemo(() => {
+    const map = new Map<string, SprintHistoryItem>();
+    scoreData.answered_history?.forEach((h) => map.set(h.question_id, h));
+    return map;
+  }, [scoreData.answered_history]);
+
   const isBatchPlayingRef = useRef(false);
   // グローバルキャッシュを使用（画面遷移後に戻ってきてもバッファを再利用できる）
   const isMountedRef = useRef(true);
@@ -325,8 +334,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                 const isSpeedModePayload = scoreData.question_type === '0' && q.answer_sentence_no_en;
                 const isFocused = focusedCardId === q.question_id;
 
-                // 🆕 サーバーサイドからマッピングされて同期している履歴データを取り出す
-                const historyItem = scoreData.answered_history?.[index];
+                // 🆕 question_id で突き合わせた履歴データを取り出す（index には依存しない）
+                const historyItem = historyByQuestionId.get(q.question_id);
                 const isSkipped = historyItem?.is_skipped ?? false;
                 const totalScore = historyItem?.assessment?.total_score;
 
