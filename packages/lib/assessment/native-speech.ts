@@ -1,5 +1,6 @@
 // packages/lib/assessment/native-speech.ts
 import { AnalysisResult, WordMatch } from '@gabby/types/speechAssessment';
+import { getScoreTier, ScoreTier } from './feedbackConfig';
 
 // 重みの定義
 const WEIGHTS = {
@@ -10,31 +11,18 @@ const WEIGHTS = {
   MAIN_WORD_MULTIPLIER: 1.5,
 };
 
-// 総合スコアによるフィードバックコメント
-const FEEDBACK_MATRIX = {
-  HIGH: [
+// 課題が見つからなかった場合（全単語が完全一致）に表示する称賛コメント。
+// 判定結果に差が無い場面でのみ使う表現のバリエーションなので、ランダム選出で問題ない。
+const PRAISE_COMMENTS: Record<'excellent' | 'great', string[]> = {
+  excellent: [
     "非常に明瞭で正確な発音です。この高い基準を維持しましょう。",
     "完璧なリズムと流暢さです。自信を持って活用してください。",
-    "素晴らしいパフォーマンスです。今の感覚をぜひ定着させましょう。"
+    "素晴らしいパフォーマンスです。今の感覚をぜひ定着させましょう。",
   ],
-  MID: [
-    "的確に伝わっています。細部の音の響きを意識すると、さらに磨きがかかります。",
-    "惜しい精度です。単語のつながりを滑らかにすることで、より自然な響きになります。",
-    "リズムは良好です。口の動きを意識し、より鮮明な発音を目指しましょう。"
+  great: [
+    "全体的にとても良い発音です。この調子で続けましょう。",
+    "自然なリズムで発音できています。自信を持って次に進みましょう。",
   ],
-  LOW: [
-    "難易度の高いフレーズです。反復練習により、必ず慣れてくるはずです。",
-    "一音一音の明瞭さを大切に、ゆっくりと正確な発音を心がけてみましょう。",
-    "全体のリズムを再確認し、焦らずに落ち着いてもう一度挑戦してください。"
-  ]
-};
-
-// 特定の改善ポイントを強調するための「トッピング」コメント
-const ISSUE_SPECIFIC_COMMENTS: Record<string, string> = {
-  MAIN: "メインの単語を強調して伝えると完璧です。",
-  MISSING: "聞き取りづらい単語があるようなので、注意しましょう。",
-  FUZZY: "L/Rや時制の発音を少し微調整すると、ぐっと良くなります。",
-  COMBINED: "単語同士をさらにつなげて読むと、より自然な響きになります。"
 };
 
 /**
@@ -137,34 +125,118 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
   }, 0);
 
   const score = maxPossibleScore > 0 ? totalScore / maxPossibleScore : 0;
-  
-  const hasMainWordMatch = mainWords.every(mw => 
-    matches.some(m => m.word.toLowerCase() === mw.toLowerCase() && m.isMatch && !m.isFuzzy)
-  );
 
-  const { summary, issues } = getFeedback(matches, score, hasMainWordMatch);
-  
-  return { 
-    matches, 
-    score, 
-    summary, 
+  // UIのバッジ・色（feedbackConfig.ts）と同じ5段階しきい値でティアを判定する。
+  // コメント生成側とUI表示側で別基準を持たないようにするため、getScoreTierに一本化。
+  const tier = getScoreTier(score);
+  const groups = collectIssueGroups(matches, mainWords);
+  const summary = buildSummary(tier, groups);
+  const issues = buildIssues(groups);
+
+  return {
+    matches,
+    score,
+    summary,
     issues,
     // hasIssuesはUI側で使う可能性があるため付与
-    hasIssues: matches.some(m => m.isFuzzy || m.isCombined || !m.isMatch) 
+    hasIssues: matches.some(m => m.isFuzzy || m.isCombined || !m.isMatch),
   };
 }
 
-// 優先順位に基づいたフィードバック生成ロジック
-function getFeedback(matches: WordMatch[], score: number, hasMainWordMatch: boolean) {
-  const range = score >= 0.9 ? 'HIGH' : score >= 0.6 ? 'MID' : 'LOW';
-  const baseComments = FEEDBACK_MATRIX[range];
-  const summary = baseComments[Math.floor(Math.random() * baseComments.length)];
+interface IssueGroups {
+  missingMainWords: string[];
+  fuzzyMainWords: string[];
+  missingWords: string[];
+  fuzzyWords: string[];
+  combinedWords: string[];
+}
 
+/**
+ * 一致結果(matches)を、コメント生成に使う単語グループへ分類する。
+ * メイン単語（見出し語やフレーズの主要語）とそれ以外を分けて扱うことで、
+ * 「何が」「どの単語が」原因でスコアが下がったのかを具体的に示せるようにする。
+ */
+function collectIssueGroups(matches: WordMatch[], mainWords: string[]): IssueGroups {
+  const isMain = (word: string) => mainWords.some(mw => mw.toLowerCase() === word.toLowerCase());
+
+  const groups: IssueGroups = {
+    missingMainWords: [],
+    fuzzyMainWords: [],
+    missingWords: [],
+    fuzzyWords: [],
+    combinedWords: [],
+  };
+
+  matches.forEach(m => {
+    if (isMain(m.word)) {
+      if (!m.isMatch) groups.missingMainWords.push(m.word);
+      else if (m.isFuzzy) groups.fuzzyMainWords.push(m.word);
+      return;
+    }
+    if (!m.isMatch) groups.missingWords.push(m.word);
+    else if (m.isFuzzy) groups.fuzzyWords.push(m.word);
+    else if (m.isCombined) groups.combinedWords.push(m.word);
+  });
+
+  return groups;
+}
+
+/** 単語リストを「"word1"、"word2"など」の形式に整形する（表示が長くなりすぎないよう上限を設ける） */
+function formatWords(words: string[], max = 2): string {
+  const unique = Array.from(new Set(words));
+  if (unique.length === 0) return '';
+  const shown = unique.slice(0, max).map(w => `「${w}」`).join('、');
+  return unique.length > max ? `${shown}など` : shown;
+}
+
+/**
+ * メインコメント(summary)の生成。
+ * スコア帯からランダムに選ぶのではなく、実際にどの単語がどう判定されたか(matches)を
+ * 優先順位付きで参照し、根拠のある一文を組み立てる。全単語が完全一致の場合のみ、
+ * 判定結果に差の無い称賛コメントをバリエーションとしてランダム表示する。
+ */
+function buildSummary(tier: ScoreTier, groups: IssueGroups): string {
+  const { missingMainWords, fuzzyMainWords, missingWords, fuzzyWords, combinedWords } = groups;
+
+  if (missingMainWords.length > 0) {
+    return `重要な単語 ${formatWords(missingMainWords)} が聞き取れませんでした。この単語を意識してもう一度挑戦してみましょう。`;
+  }
+  if (fuzzyMainWords.length > 0) {
+    return `重要な単語 ${formatWords(fuzzyMainWords)} の発音がやや不明瞭でした。ここを意識するとぐっと良くなります。`;
+  }
+  if (missingWords.length > 0) {
+    return `${formatWords(missingWords)} が聞き取れませんでした。一音ずつ、はっきりと発音してみましょう。`;
+  }
+  if (fuzzyWords.length > 0) {
+    return `${formatWords(fuzzyWords)} の発音に少し惜しい部分がありました。口の形を意識してみましょう。`;
+  }
+  if (combinedWords.length > 0) {
+    return `${formatWords(combinedWords)} は単語同士がつながって聞こえました。リンキングとしては自然ですが、一語ずつの区切りを意識するとさらに明瞭になります。`;
+  }
+
+  const pool = tier === 'excellent' ? PRAISE_COMMENTS.excellent : PRAISE_COMMENTS.great;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/** 改善アドバイス欄(issues)の生成。該当するカテゴリごとに、実際の単語名を含む具体的な一文を積み上げる。 */
+function buildIssues(groups: IssueGroups): string[] {
+  const { missingMainWords, fuzzyMainWords, missingWords, fuzzyWords, combinedWords } = groups;
   const issues: string[] = [];
-  if (!hasMainWordMatch) issues.push(ISSUE_SPECIFIC_COMMENTS.MAIN);
-  if (matches.some(m => !m.isMatch)) issues.push(ISSUE_SPECIFIC_COMMENTS.MISSING);
-  if (matches.some(m => m.isFuzzy)) issues.push(ISSUE_SPECIFIC_COMMENTS.FUZZY);
-  if (matches.some(m => m.isCombined)) issues.push(ISSUE_SPECIFIC_COMMENTS.COMBINED);
 
-  return { summary, issues };
+  if (missingMainWords.length > 0) {
+    issues.push(`最重要語の ${formatWords(missingMainWords)} を意識して、もう一度発音してみましょう。`);
+  } else if (fuzzyMainWords.length > 0) {
+    issues.push(`最重要語の ${formatWords(fuzzyMainWords)} は発音がやや不明瞭でした。強調して伝えると効果的です。`);
+  }
+  if (missingWords.length > 0) {
+    issues.push(`${formatWords(missingWords)} が聞き取れていません。注意して発音しましょう。`);
+  }
+  if (fuzzyWords.length > 0) {
+    issues.push(`${formatWords(fuzzyWords)} はL/Rや母音の音を少し調整すると、より正確になります。`);
+  }
+  if (combinedWords.length > 0) {
+    issues.push(`${formatWords(combinedWords)} は単語同士をつなげて読めています。より自然な響きです。`);
+  }
+
+  return issues;
 }

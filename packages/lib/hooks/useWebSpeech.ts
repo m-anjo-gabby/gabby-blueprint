@@ -111,7 +111,7 @@ export function useWebSpeech() {
    * 音声認識の生データを取得するための内部関数
    */
   const startListening = useCallback((
-    onUpdate: (heard: string) => void,
+    onUpdate: (heard: string, isFinal: boolean) => void,
     onRecognitionStart?: () => void,
   ) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -172,7 +172,12 @@ export function useWebSpeech() {
       for (let i = 0; i < event.results.length; i++) {
         currentText += event.results[i][0].transcript;
       }
-      onUpdate(currentText);
+      // 末尾セグメントがまだ確定(isFinal)していない場合、ブラウザの言語モデルによる
+      // 「それらしい続きの単語」の先読み推測が乗っていることがある。
+      // このフラグは早期終了の可否判定にのみ使用し、途中経過の反映自体は妨げない。
+      const lastResult = event.results[event.results.length - 1];
+      const isFinal = !!lastResult?.isFinal;
+      onUpdate(currentText, isFinal);
     };
 
     recognitionRef.current = recognition;
@@ -225,12 +230,19 @@ export function useWebSpeech() {
       });
     }, 1000);
 
-    startListening((heard) => {
+    startListening((heard, isFinal) => {
       const result = analyzePhrase(heard, targetPhrase, mainWords);
       latestResultRef.current = result;
 
-      // エクセレント達成時は即座に確定
-      if (result.score >= 0.90) {
+      // エクセレント達成時は即座に確定させ、テンポよく次に進めるようにする。
+      // ただし以下の条件を満たすまでは確定させない:
+      //  - isFinal: ブラウザが「まだ推測中」の未確定セグメントに基づいてスコアが
+      //    たまたま閾値を超えただけのケース（短いフレーズで発話完了前に言語モデルの
+      //    予測が先読みされ、実際と違う単語で高スコアになってしまう）を除外するため。
+      //  - 全単語に何かしらのマッチがある: 単語がまだ認識されていない(MISSING)段階で、
+      //    重み付けの偏りだけで閾値を超えて確定してしまうのを防ぐ保険。
+      const allWordsHeard = !result.matches.some(m => !m.isMatch);
+      if (result.score >= 0.90 && isFinal && allWordsHeard) {
         finalize(result);
       }
     }, options?.onRecognitionStart);
