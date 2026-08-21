@@ -24,6 +24,7 @@ import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
+import { logClientEvent } from '@gabby/lib/logger/actions';
 
 interface MonitorUserListProps {
   users: MonitorUser[];
@@ -150,6 +151,14 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
 
   const handleExportCSV = () => {
     if (users.length === 0) return;
+
+    logClientEvent({
+      service: 'student',
+      event: 'monitor:user_summary_csv_exported',
+      level: 'info',
+      message: `User summary CSV exported: ${currentMonthStr}`,
+      payload: { month: currentMonthStr, targetUserIds: users.map(u => u.id), rowCount: users.length }
+    }).catch(() => {});
 
     const headers = [
       '受講生', 

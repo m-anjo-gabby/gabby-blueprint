@@ -355,7 +355,11 @@ export async function createUserDirect(
     return { success: true, user_id: userId, errorType: null, message: null };
 
   } catch (err) {
-    logger.error("user:create_user_direct_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload });
+    // 💡 セキュリティ: payloadには平文パスワードが含まれるため、ログにはそのまま渡さない
+    logger.error("user:create_user_direct_unexpected", err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      payload: { ...payload, password: undefined }
+    });
     return { success: false, user_id: null, errorType: 'unexpected_error', message: "予期せぬエラーが発生しました" };
   }
 }
