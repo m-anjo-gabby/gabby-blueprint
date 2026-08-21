@@ -6,6 +6,7 @@ import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { resolveSprintHasLevel } from "@gabby/lib";
 import type { ContentMetadata } from "@gabby/types/content";
+import type { AnalysisResult } from "@gabby/types/speechAssessment";
 
 const logger = createLogger("student");
 const SPRINT_LIMIT_COUNT = 10;
@@ -16,14 +17,14 @@ const SPRINT_SPEED_LIMIT_COUNT = 30;
 // ========================================================================
 
 /**
- * 発話評価の詳細レコード型（拡張用）
+ * 発話評価の詳細レコード型
+ * total_score: 結果一覧のスコアバッジ表示・平均スコア集計に使う0-100の丸め値
+ * analysis: 結果画面でスコアをタップした際のフィードバック表示（単語ブレイクダウン・改善点）に必要な詳細情報。
+ *           旧バージョンで保存されたレコードには存在しないため、参照側は無い前提でフォールバックすること
  */
 export interface SprintAssessmentResult {
-  pronunciation_score?: number; // 発音スコア (0-100)
-  fluency_score?: number;       // 流暢さスコア (0-100)
-  total_score?: number;         // 総合スコア
-  evaluated_at?: string;        // 評価日時 (ISOString)
-  // 必要に応じて解析テキスト、エラー詳細などを追加可能
+  total_score: number;
+  analysis?: Pick<AnalysisResult, 'score' | 'summary' | 'matches' | 'issues'>;
 }
 
 /**

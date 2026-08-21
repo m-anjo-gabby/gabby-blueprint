@@ -2,7 +2,7 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, MicOff, FastForward, Loader2 } from 'lucide-react';
+import { ChevronLeft, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, MicOff, FastForward, Loader2, ChartSpline } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -25,6 +25,57 @@ interface SprintTimePlayerProps {
   questions: SprintQuestion[];
   onExit?: () => void;
 }
+
+// 完了オーバーレイ用：結果先出しスタッツの数値をイーズアウトでカウントアップさせる
+function useCountUp(target: number, active: boolean, duration = 700): number {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    // active===false（value未確定＝発話評価OFF等）の間はアニメーション自体不要。
+    // 表示側（StatPreviewTile）も value===null の間は animated を参照しないため、ここでの状態リセットは不要
+    if (!active) return;
+    let raf: number;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(target * eased));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, active, duration]);
+  return value;
+}
+
+interface StatPreviewTileProps {
+  icon: React.ElementType;
+  label: string;
+  value: number | null; // null は「このセッションでは対象外」を表す（発話評価OFF等）
+  suffix?: string;
+  color: string;
+  active: boolean;
+}
+
+// タイムアップ完了オーバーレイ内の「結果先出し」プレビュー統計タイル
+const StatPreviewTile: React.FC<StatPreviewTileProps> = ({ icon: Icon, label, value, suffix, color, active }) => {
+  const animated = useCountUp(value ?? 0, active && value !== null);
+  return (
+    <div className="flex items-center gap-1.5 h-5">
+      <Icon size={13} strokeWidth={2.5} className={cn(color, "shrink-0")} />
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">{label}</span>
+      <span className="text-sm font-black text-slate-800 font-mono leading-none inline-flex items-baseline">
+        {value === null ? (
+          <span className="text-slate-400 font-normal">-</span>
+        ) : (
+          <>
+            {animated}
+            {suffix && <span className="text-[9px] font-medium text-slate-400 ml-0.5 font-sans">{suffix}</span>}
+          </>
+        )}
+      </span>
+    </div>
+  );
+};
 
 
 export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({ 
@@ -57,6 +108,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [resultId, setResultId] = useState<string | null>(null);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
+  // 🆕 完了オーバーレイの「結果先出し」プレビュー用。サーバー保存の成否を待たず、
+  // 保存処理に入った時点で確定しているセッション内訳をそのまま先出し表示する
+  const [previewStats, setPreviewStats] = useState<{ answered: number; assessments: number; avgScore: number; isAssessmentMode: boolean } | null>(null);
   const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'great' | 'good' | 'fair' | 'poor'>('idle');
   
   // チャイム再生開始〜 recognition.onstart までの短い待機窓口だけ true
@@ -186,15 +240,34 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       return {
         question_id: q.question_id,
         group_id: q.group_id || null,
-        seq_no: idx + 1, 
+        seq_no: idx + 1,
         is_skipped: resultRecord?.isSkipped || false,
-        assessment: resultRecord?.feedback ? {
-          total_score: resultRecord?.analysis ? Math.round(resultRecord.analysis.score * 100) : 100
+        // 🆕 結果画面のタップ時フィードバック表示に必要な詳細（summary/matches/issues）も併せて保存する
+        assessment: (resultRecord?.feedback && resultRecord.analysis) ? {
+          total_score: Math.round(resultRecord.analysis.score * 100),
+          analysis: {
+            score: resultRecord.analysis.score,
+            summary: resultRecord.analysis.summary,
+            matches: resultRecord.analysis.matches,
+            issues: resultRecord.analysis.issues,
+          },
         } : null,
       };
     });
 
-    const totalAssessments = history.filter(h => !h.is_skipped && h.assessment).length;
+    const assessedHistory = history.filter(h => !h.is_skipped && h.assessment);
+    const totalAssessments = assessedHistory.length;
+
+    // 🆕 完了オーバーレイの結果先出しプレビュー。保存API完了を待たず、確定済みの内訳をこの時点で表示に反映する
+    const previewAvgScore = totalAssessments > 0
+      ? Math.round(assessedHistory.reduce((sum, h) => sum + (h.assessment?.total_score ?? 0), 0) / totalAssessments)
+      : 0;
+    setPreviewStats({
+      answered: slicedQuestions.length,
+      assessments: totalAssessments,
+      avgScore: previewAvgScore,
+      isAssessmentMode,
+    });
 
     try {
       const res = await createSprintScoreAction({
@@ -233,7 +306,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [stopAllAudio, resetStore, router, showToast, onExit, currentIndex, questions, questionType, answerType, level, timeLimitSec]);
+  }, [stopAllAudio, resetStore, router, showToast, onExit, currentIndex, questions, questionType, answerType, level, timeLimitSec, isAssessmentMode]);
 
   const handleGoToResult = useCallback(async () => {
     if (resultId) {
@@ -248,15 +321,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [resultId, router, stopAllAudio, resetStore, unlockAudioContext]);
 
   const handleTimeUp = useCallback(() => {
-    showToast("Time up! スプリントセッションが終了しました。", "success");
     handlePersistAndRedirect(0);
-  }, [handlePersistAndRedirect, showToast]);
+  }, [handlePersistAndRedirect]);
 
   // 制限時間のカウントダウン。0になった時点で自動保存・リダイレクトへ進む
   const { secondsLeft, secondsLeftRef } = useSprintCountdown(timeLimitSec, handleTimeUp, clearSessionProgress);
 
-  // タイムアップ完了オーバーレイ表示中、3秒後に自動で結果画面へ遷移する
-  const redirectCountdown = useAutoRedirectCountdown(showTimeUpOverlay && !!resultId, handleGoToResult);
+  // タイムアップ完了オーバーレイ表示中、3.5秒後に自動で結果画面へ遷移する
+  // 🆕 数値カウントダウンのテキスト表示は廃止し、CTA下の自動進行プログレスバー（アニメーション秒数と同期）で表現する
+  useAutoRedirectCountdown(showTimeUpOverlay && !!resultId, handleGoToResult);
 
   const timeRatio = useMemo(() => secondsLeft / (timeLimitSec || 60), [secondsLeft, timeLimitSec]);
   const isWarning = timeRatio <= 0.5 && timeRatio > 0.2;
@@ -847,19 +920,37 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
       <ExitProcessingOverlay visible={exitLoading} />
 
-      {/* 統合された完了レイヤー */}
+      {/* 統合された完了レイヤー：結果先出しプレビュー＋自動進行プログレスバー型 */}
       {(isSaving || showTimeUpOverlay) && (
-        <div 
-          className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300 cursor-pointer"
+        <div
+          className="absolute inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300 cursor-pointer"
           onClick={showTimeUpOverlay ? handleGoToResult : undefined}
         >
-          <div className="w-full max-w-xs text-center space-y-6 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
-            <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 shadow-sm text-indigo-600">
-              {isSaving ? (
-                <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
-              ) : (
-                <CheckCircle2 className="w-7 h-7 text-indigo-600" strokeWidth={2.2} />
-              )}
+          {/* shadcn Dialog相当：暗いスクリムの上に浮く独立したモーダルカード（裏のプレイ画面は透けて見える） */}
+          <div className="w-full max-w-xs bg-white rounded-[32px] border border-white/60 shadow-2xl p-6 sm:p-7 text-center space-y-5 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
+            {/* アイコンはスピナー→チェックへ共有layoutIdで滑らかに変形させる */}
+            <div className="relative w-16 h-16 mx-auto">
+              <AnimatePresence mode="popLayout" initial={false}>
+                {isSaving ? (
+                  <motion.div
+                    key="saving-icon"
+                    layoutId="sprint-completion-icon"
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute inset-0 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm text-indigo-600"
+                  >
+                    <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="done-icon"
+                    layoutId="sprint-completion-icon"
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute inset-0 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm text-indigo-600"
+                  >
+                    <CheckCircle2 className="w-7 h-7" strokeWidth={2.2} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="space-y-1.5">
@@ -867,16 +958,44 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 {isSaving ? "スプリントの記録を保存中" : "スプリント完了"}
               </h3>
               <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[220px] mx-auto">
-                {isSaving 
-                  ? "データを登録しています..." 
-                  : redirectCountdown !== null
-                    ? `${redirectCountdown}秒後に自動で結果画面へ遷移します`
-                    : "今回の成果を結果画面で確認しましょう。"}
+                {isSaving ? "今回の成果を集計しています..." : "今回の成果はこちらです"}
               </p>
             </div>
 
+            {/* 🆕 結果先出しスタッツプレビュー：保存API完了を待たず、確定済みの内訳をその場でカウントアップ表示する */}
+            {previewStats && (
+              <div className="flex items-center justify-center gap-x-5 py-1 select-none">
+                <StatPreviewTile
+                  icon={CheckCircle2}
+                  label="回答"
+                  value={previewStats.answered}
+                  active
+                  color="text-indigo-500"
+                />
+                {previewStats.isAssessmentMode && (
+                  <>
+                    <StatPreviewTile
+                      icon={Mic}
+                      label="発話"
+                      value={previewStats.assessments}
+                      active
+                      color="text-rose-500"
+                    />
+                    <StatPreviewTile
+                      icon={ChartSpline}
+                      label="平均スコア"
+                      value={previewStats.assessments > 0 ? previewStats.avgScore : null}
+                      suffix="/100"
+                      active
+                      color="text-amber-500"
+                    />
+                  </>
+                )}
+              </div>
+            )}
+
             <div className={cn(
-              "transition-all duration-500 transform",
+              "space-y-2.5 transition-all duration-500 transform",
               showTimeUpOverlay ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
             )}>
               <button
@@ -892,6 +1011,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 <span>結果を確認する</span>
                 <ArrowRight size={14} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
               </button>
+
+              {/* 自動遷移の演出：テキストカウントダウンの代わりに薄い自動進行バーで示す */}
+              <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                {showTimeUpOverlay && (
+                  <motion.div
+                    key={resultId}
+                    className="h-full bg-indigo-300 rounded-full"
+                    initial={{ width: '100%' }}
+                    animate={{ width: '0%' }}
+                    transition={{ duration: 3.5, ease: 'linear' }}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -8,21 +8,13 @@ import { cn } from "@/lib/utils";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { setAudioSessionPlayback } from '@gabby/lib';
+import { setAudioSessionPlayback, getFeedbackConfig } from '@gabby/lib';
+import type { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
+import type { SprintHistoryItem } from '@/actions/sprintAction';
 
 import { LookupText } from '@/components/common/LookupText';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
-
-// 🆕 answered_history 内の個別アイテムの型定義
-interface SprintHistoryItem {
-  seq_no: number;
-  group_id: string;
-  question_id: string;
-  is_skipped: boolean;
-  assessment: {
-    total_score: number;
-  } | null;
-}
+import { SprintFeedback } from '@/app/(app)/training/sprint/play/_components/SprintFeedback';
 
 interface SprintResultProps {
   scoreData: {
@@ -57,6 +49,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
   const [isBatchPlaying, setIsBatchPlaying] = useState(false);
   const [jaVisibleMap, setJaVisibleMap] = useState<Record<string, boolean>>({});
+  // 🆕 スコアタップ時のドリル同様の発話フィードバック表示（旧データはanalysis無しのためタップ不可）
+  const [feedbackTarget, setFeedbackTarget] = useState<{ feedback: FeedbackConfig; analysis: AnalysisResult } | null>(null);
  
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
  
@@ -223,7 +217,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
-      <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
+      <div className="relative w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
         
 {/* ────────────── ヘッダー：シンプル中央寄せ・余白調整モデル ────────────── */}
         <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
@@ -338,6 +332,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                 const historyItem = historyByQuestionId.get(q.question_id);
                 const isSkipped = historyItem?.is_skipped ?? false;
                 const totalScore = historyItem?.assessment?.total_score;
+                // 🆕 旧データ（analysis未保存）はタップ不可の通常バッジとして表示する
+                const analysisDetail = historyItem?.assessment?.analysis;
 
                 // 🆕 各種音声再生を共通フックのグローバル再生IDと突き合わせるための個別ID定義
                 const stAudioId = q.question_id + '-st';
@@ -406,16 +402,36 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           </span>
                         ) : (
                           typeof totalScore === 'number' && (
-                            <span className={cn(
-                              "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono tracking-tight border shadow-3xs",
-                              totalScore >= 80 
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                                : totalScore >= 50
-                                ? "bg-sky-50 text-sky-700 border-sky-200/60"
-                                : "bg-slate-50 text-slate-700 border-slate-200/60"
-                            )}>
-                              スコア {totalScore}
-                            </span>
+                            <button
+                              type="button"
+                              disabled={!analysisDetail}
+                              onClick={() => {
+                                if (!analysisDetail) return;
+                                setFeedbackTarget({
+                                  feedback: getFeedbackConfig(analysisDetail.score),
+                                  analysis: {
+                                    score: analysisDetail.score,
+                                    summary: analysisDetail.summary,
+                                    matches: analysisDetail.matches,
+                                    issues: analysisDetail.issues,
+                                  },
+                                });
+                              }}
+                              title={analysisDetail ? "タップして発話フィードバックを見る" : undefined}
+                              className={cn(
+                                "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono tracking-tight border shadow-3xs transition-transform",
+                                totalScore >= 80
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                                  : totalScore >= 50
+                                  ? "bg-sky-50 text-sky-700 border-sky-200/60"
+                                  : "bg-slate-50 text-slate-700 border-slate-200/60",
+                                analysisDetail ? "cursor-pointer active:scale-95 hover:brightness-95" : "cursor-default"
+                              )}
+                            >
+                              <span>スコア {totalScore}</span>
+                              {/* 🆕 タップ可能（=詳細フィードバックあり）であることを示すアイコン。旧データ（analysis未保存）には付与しない */}
+                              {analysisDetail && <MessageSquare size={11} strokeWidth={2.5} className="opacity-80" />}
+                            </button>
                           )
                         )}
                       </div>
@@ -616,6 +632,13 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
+
+        {/* 🆕 スコアタップ時の発話フィードバック（ドリルモードと同一のSpeechFeedbackModal） */}
+        <SprintFeedback
+          feedback={feedbackTarget?.feedback ?? null}
+          analysis={feedbackTarget?.analysis ?? null}
+          onClose={() => setFeedbackTarget(null)}
+        />
       </div>
 
       <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
