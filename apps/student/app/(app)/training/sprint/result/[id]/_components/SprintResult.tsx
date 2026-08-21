@@ -3,7 +3,7 @@
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Trophy, CheckCircle2, Volume2, Loader2, MessageSquare, ArrowRight, PlayCircle, Languages, FileCheck2, Award, SkipForward, Mic, ChartSpline, Play, Home } from 'lucide-react';
+import { ChevronLeft, Trophy, CheckCircle2, Volume2, Loader2, ArrowRight, PlayCircle, Languages, FileCheck2, Award, SkipForward, Mic, ChartSpline, Play, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { formatZonedDate } from '@gabby/lib/date/date';
@@ -396,7 +396,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                       {/* 右側：スキップ判定 or 個別スコアバッジ */}
                       <div>
                         {isSkipped ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black font-mono tracking-wider bg-amber-50 text-amber-600 border border-amber-200/50">
+                          <span className="h-6 inline-flex items-center justify-center gap-1 px-2 rounded-full text-[9px] font-black font-mono tracking-wider bg-amber-50 text-amber-600 border border-amber-200/50">
                             <SkipForward size={10} strokeWidth={2.5} />
                             スキップ
                           </span>
@@ -419,7 +419,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                               }}
                               title={analysisDetail ? "タップして発話フィードバックを見る" : undefined}
                               className={cn(
-                                "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono tracking-tight border shadow-3xs transition-transform",
+                                "h-6 inline-flex items-center justify-center gap-1 px-2.5 rounded-full text-[10px] font-black tracking-tight border shadow-3xs transition-transform leading-none",
                                 totalScore >= 80
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
                                   : totalScore >= 50
@@ -428,9 +428,9 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                                 analysisDetail ? "cursor-pointer active:scale-95 hover:brightness-95" : "cursor-default"
                               )}
                             >
-                              <span>スコア {totalScore}</span>
-                              {/* 🆕 タップ可能（=詳細フィードバックあり）であることを示すアイコン。旧データ（analysis未保存）には付与しない */}
-                              {analysisDetail && <MessageSquare size={11} strokeWidth={2.5} className="opacity-80" />}
+                              <ChartSpline size={11} strokeWidth={2.5} className="opacity-80 shrink-0" />
+                              <span className="leading-none">スコア</span>
+                              <span className="font-mono leading-none">{totalScore}</span>
                             </button>
                           )
                         )}
