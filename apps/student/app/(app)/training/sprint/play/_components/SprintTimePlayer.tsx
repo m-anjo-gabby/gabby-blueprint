@@ -20,6 +20,7 @@ import { useSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useSprin
 import { ExitProcessingOverlay } from './ExitProcessingOverlay';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { CircularProgressRing } from '@/components/common/CircularProgressRing';
+import { QuestionStepBadge, StepIndicator } from '@/components/common/QuestionStepBadge';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
@@ -60,16 +61,16 @@ interface StatPreviewTileProps {
 const StatPreviewTile: React.FC<StatPreviewTileProps> = ({ icon: Icon, label, value, suffix, color, active }) => {
   const animated = useCountUp(value ?? 0, active && value !== null);
   return (
-    <div className="flex items-center gap-1.5 h-5">
+    <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
       <Icon size={13} strokeWidth={2.5} className={cn(color, "shrink-0")} />
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">{label}</span>
+      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">{label}</span>
       <span className="text-sm font-black text-slate-800 font-mono leading-none inline-flex items-baseline">
         {value === null ? (
           <span className="text-slate-400 font-normal">-</span>
         ) : (
           <>
             {animated}
-            {suffix && <span className="text-[9px] font-medium text-slate-400 ml-0.5 font-sans">{suffix}</span>}
+            {suffix && <span className="text-[10px] font-medium text-slate-400 ml-0.5 font-sans">{suffix}</span>}
           </>
         )}
       </span>
@@ -638,7 +639,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               {/* 右端に完全固定された秒数表示レイヤー（バーの重なり度合いで文字色を動的に変化） */}
               <div className="absolute inset-y-0 right-3 flex items-center select-none pointer-events-none z-20">
                 <div className={cn(
-                  "flex items-center gap-1 font-mono text-[11px] font-black tracking-tight tabular-nums transition-colors duration-300",
+                  "flex items-center gap-1 font-mono text-xs font-black tracking-tight tabular-nums transition-colors duration-300 whitespace-nowrap",
                   progressPercent >= 90
                     ? "text-white"
                     : isCritical
@@ -662,29 +663,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           {/* ②-A: 問題番号・ステップ表示 */}
           <div className="w-full max-w-xl mx-auto flex flex-col gap-6 shrink-0 pb-4">
             {/* 問題番号表示 */}
-            <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600 self-start">
-              <div className="flex items-center gap-2.5 px-3 py-1.5">
-                <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
-                <span className="text-sm font-black text-white font-mono leading-none">
-                  {isSpeedMode ? currentIndex + 1 : groupData.uniqueGroupIndex}
-                </span>
-              </div>
-
-              {isSpeedMode ? (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
-                  <span className="text-[10px] font-black tracking-tight text-slate-700">
+            <QuestionStepBadge
+              className="self-start"
+              questionNumber={isSpeedMode ? currentIndex + 1 : groupData.uniqueGroupIndex}
+              rightSlot={
+                isSpeedMode ? (
+                  <span className="text-[11px] font-black tracking-tight text-slate-700 whitespace-nowrap">
                     {answerType === '1' ? 'NOで回答' : 'YESで回答'}
                   </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
-                  <span className="text-xs font-bold text-indigo-600 font-mono leading-none">
-                    {groupData.currentInGroup + 1} <span className="text-slate-300 mx-0.5">/</span> {groupData.totalInGroup}
-                  </span>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <StepIndicator current={groupData.currentInGroup + 1} total={groupData.totalInGroup} />
+                )
+              }
+            />
 
             {/* 改修箇所：洗練されたカプセル・コネクト型のステッププログレスバー表示 */}
             <div className="w-full flex justify-center pt-2 select-none">
@@ -704,7 +695,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                             ? "bg-indigo-50 border-indigo-100 text-indigo-600 font-bold" 
                             : "bg-white border-slate-200 text-slate-400 font-medium"
                       )}>
-                        <span className="text-[11px] sm:text-xs tracking-tight whitespace-nowrap">
+                        <span className="text-xs sm:text-sm tracking-tight whitespace-nowrap">
                           {step}
                         </span>
                       </div>
@@ -1000,7 +991,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
             {/* 🆕 結果先出しスタッツプレビュー：保存API完了を待たず、確定済みの内訳をその場でカウントアップ表示する */}
             {previewStats && (
-              <div className="flex items-center justify-center gap-x-5 py-1 select-none">
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 py-1 select-none">
                 <StatPreviewTile
                   icon={CheckCircle2}
                   label="回答"

@@ -3,7 +3,7 @@
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Trophy, CheckCircle2, Volume2, Loader2, ArrowRight, PlayCircle, Languages, FileCheck2, Award, SkipForward, Mic, ChartSpline, Play, Home } from 'lucide-react';
+import { ChevronLeft, Trophy, CheckCircle2, ArrowRight, PlayCircle, SkipForward, Mic, ChartSpline, Play, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { formatZonedDate } from '@gabby/lib/date/date';
@@ -14,6 +14,7 @@ import type { SprintHistoryItem } from '@/actions/sprintAction';
 
 import { LookupText } from '@/components/common/LookupText';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
+import { PhraseAudioHeader } from '@/components/common/PhraseAudioHeader';
 import { SprintFeedback } from '@/app/(app)/training/sprint/play/_components/SprintFeedback';
 
 interface SprintResultProps {
@@ -284,28 +285,28 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
           {/* 下段：実績スコアボード（中央寄せ） */}
           <div className="relative z-10 pt-0.5 flex justify-center select-none">
-            <div className="flex items-center gap-x-5 text-slate-700 font-sans">
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-slate-700 font-sans">
               {/* 回答数 */}
-              <div className="flex items-center gap-1.5 h-5">
+              <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
                 <CheckCircle2 size={13} fill="none" strokeWidth={2.5} className="text-indigo-500 shrink-0" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">回答</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">回答</span>
                 <span className="text-sm font-black text-slate-800 font-mono leading-none">{displayTotalAnswered}</span>
               </div>
               {/* 発話数 */}
-              <div className="flex items-center gap-1.5 h-5">
+              <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
                 <Mic size={13} className="text-rose-500 shrink-0 stroke-[2.5]" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">発話</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">発話</span>
                 <span className="text-sm font-black text-slate-800 font-mono leading-none">{displayTotalAssessment}</span>
               </div>
               {/* 平均スコア */}
-              <div className="flex items-center gap-1.5 h-5">
+              <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
                 <ChartSpline size={13} strokeWidth={2.5} className="text-amber-500 shrink-0" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">平均スコア</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">平均スコア</span>
                 <span className="text-sm font-black text-indigo-600 font-mono leading-none inline-flex items-baseline">
                   {displayTotalAssessment > 0 ? (
                     <>
                       {displayAverageScore}
-                      <span className="text-[9px] font-medium text-slate-400 ml-0.5 font-sans leading-none">/100</span>
+                      <span className="text-[10px] font-medium text-slate-400 ml-0.5 font-sans leading-none">/100</span>
                     </>
                   ) : (
                     <span className="text-slate-400 font-normal leading-none">-</span>
@@ -365,27 +366,27 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                         <button
                           onClick={() => handlePlaySingleQuestion(q)}
                           className={cn(
-                            "h-6 pl-2 pr-2.5 rounded-full flex items-center gap-1.5 transition-all active:scale-95 border select-none group",
-                            isFocused 
-                              ? "bg-indigo-600 border-transparent text-white shadow-xs shadow-indigo-200" 
+                            "h-7 pl-2.5 pr-3 rounded-full flex items-center gap-1.5 transition-all active:scale-95 border select-none group whitespace-nowrap",
+                            isFocused
+                              ? "bg-indigo-600 border-transparent text-white shadow-xs shadow-indigo-200"
                               : "bg-slate-50 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/70 border-slate-200/50"
                           )}
                           title="一連の流れを再生"
                         >
                           {/* 再生/再生中アイコンの切り替え */}
                           {isFocused ? (
-                            <span className="flex gap-0.5 items-center justify-center h-2.5 w-2.5">
+                            <span className="flex gap-0.5 items-center justify-center h-2.5 w-2.5 shrink-0">
                               <span className="w-0.5 h-full bg-current rounded-xs animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
                               <span className="w-0.5 h-full bg-current rounded-xs animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
                               <span className="w-0.5 h-2/3 bg-current rounded-xs animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
                             </span>
                           ) : (
-                            <Play size={10} fill="currentColor" className="shrink-0 transition-transform group-hover:scale-110" />
+                            <Play size={11} fill="currentColor" className="shrink-0 transition-transform group-hover:scale-110" />
                           )}
-                          
+
                           {/* 役割を明示するコンパクトなラベル */}
                           <span className={cn(
-                            "text-[9px] font-black tracking-widest mt-[-0.5px]",
+                            "text-[10px] font-black tracking-widest",
                             isFocused ? "text-indigo-100" : "text-slate-400 group-hover:text-indigo-500"
                           )}>
                             {isFocused ? "再生中" : "再生"}
@@ -396,8 +397,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                       {/* 右側：スキップ判定 or 個別スコアバッジ */}
                       <div>
                         {isSkipped ? (
-                          <span className="h-6 inline-flex items-center justify-center gap-1 px-2 rounded-full text-[9px] font-black font-mono tracking-wider bg-amber-50 text-amber-600 border border-amber-200/50">
-                            <SkipForward size={10} strokeWidth={2.5} />
+                          <span className="h-7 inline-flex items-center justify-center gap-1 px-2.5 rounded-full text-[10px] font-black font-mono tracking-wider bg-amber-50 text-amber-600 border border-amber-200/50 whitespace-nowrap">
+                            <SkipForward size={11} strokeWidth={2.5} />
                             スキップ
                           </span>
                         ) : (
@@ -419,7 +420,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                               }}
                               title={analysisDetail ? "タップして発話フィードバックを見る" : undefined}
                               className={cn(
-                                "h-6 inline-flex items-center justify-center gap-1 px-2.5 rounded-full text-[10px] font-black tracking-tight border shadow-3xs transition-transform leading-none",
+                                "h-7 inline-flex items-center justify-center gap-1 px-3 rounded-full text-[11px] font-black tracking-tight border shadow-3xs transition-transform leading-none whitespace-nowrap",
                                 totalScore >= 80
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
                                   : totalScore >= 50
@@ -428,7 +429,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                                 analysisDetail ? "cursor-pointer active:scale-95 hover:brightness-95" : "cursor-default"
                               )}
                             >
-                              <ChartSpline size={11} strokeWidth={2.5} className="opacity-80 shrink-0" />
+                              <ChartSpline size={12} strokeWidth={2.5} className="opacity-80 shrink-0" />
                               <span className="leading-none">スコア</span>
                               <span className="font-mono leading-none">{totalScore}</span>
                             </button>
@@ -440,29 +441,15 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                     {/* Statementセクション */}
                     {q.statement_en && (
                       <div className="w-full text-left border-l-4 border-slate-200 pl-3 py-0.5 flex flex-col gap-1">
-                        <div className="flex items-center w-full mb-1">
-                          <div className="flex items-center gap-x-1.5 text-slate-400">
-                            <span className="text-xs font-bold tracking-wider">基本文</span>
-                            <button 
-                              onClick={() => handlePlayAudio(stAudioId, q.statement_en!, q.statement_voice, true)}
-                              className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", globalPlayingId === stAudioId ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-indigo-500 hover:bg-slate-100')}
-                            >
-                              {globalPlayingId === stAudioId ? (
-                                <Loader2 size={16} className="animate-spin text-indigo-600" />
-                              ) : (
-                                <Volume2 size={16} />
-                              )}
-                            </button>
-                            {q.statement_ja && (
-                              <button
-                                onClick={() => toggleJa(stAudioId)}
-                                className={cn("w-6 h-6 flex items-center justify-center rounded-md transition-all", jaVisibleMap[stAudioId] ? "bg-slate-100 text-indigo-600" : "text-slate-300 hover:text-slate-400 hover:bg-slate-50")}
-                              >
-                                <Languages size={14} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
+                        <PhraseAudioHeader
+                          label="基本文"
+                          tone="slate"
+                          onPlay={() => handlePlayAudio(stAudioId, q.statement_en!, q.statement_voice, true)}
+                          isLoading={globalPlayingId === stAudioId}
+                          jaText={q.statement_ja}
+                          isJaVisible={jaVisibleMap[stAudioId]}
+                          onToggleJa={() => toggleJa(stAudioId)}
+                        />
                         {jaVisibleMap[stAudioId] ? (
                           <p className="text-sm font-bold text-slate-600 leading-relaxed">{q.statement_ja}</p>
                         ) : (
@@ -473,29 +460,15 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
                     {/* Question / Instructionセクション */}
                     <div className="w-full text-left border-l-4 border-indigo-500 pl-3 py-0.5 flex flex-col gap-1">
-                      <div className="flex items-center w-full mb-1">
-                        <div className="flex items-center gap-x-1.5 text-indigo-500">
-                          <span className="text-xs font-bold tracking-wider">{isQuestionBased ? "質問文" : "指示文"}</span>
-                          <button 
-                            onClick={() => handlePlayAudio(qAudioId, q.question_en, q.question_voice, true)}
-                            className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", globalPlayingId === qAudioId ? 'text-indigo-600 bg-indigo-50' : 'text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50')}
-                          >
-                            {globalPlayingId === qAudioId ? (
-                              <Loader2 size={16} strokeWidth={2.5} className="animate-spin text-indigo-600" />
-                            ) : (
-                              <Volume2 size={16} strokeWidth={2.5} />
-                            )}
-                          </button>
-                          {q.question_ja && (
-                            <button
-                              onClick={() => toggleJa(qAudioId)}
-                              className={cn("w-6 h-6 flex items-center justify-center rounded-md transition-all", jaVisibleMap[qAudioId] ? "bg-indigo-50 text-indigo-600" : "text-indigo-200 hover:text-indigo-400 hover:bg-indigo-50")}
-                            >
-                              <Languages size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <PhraseAudioHeader
+                        label={isQuestionBased ? "質問文" : "指示文"}
+                        tone="indigo"
+                        onPlay={() => handlePlayAudio(qAudioId, q.question_en, q.question_voice, true)}
+                        isLoading={globalPlayingId === qAudioId}
+                        jaText={q.question_ja}
+                        isJaVisible={jaVisibleMap[qAudioId]}
+                        onToggleJa={() => toggleJa(qAudioId)}
+                      />
                       {jaVisibleMap[qAudioId] ? (
                         <p className="text-lg sm:text-xl font-black text-slate-800 leading-snug tracking-tight">{q.question_ja}</p>
                       ) : (
@@ -509,29 +482,15 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                         <div className="w-full">
                           {scoreData.answer_type === '0' && (
                             <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-3 py-2.5 rounded-r-xl flex flex-col gap-0.5 w-full">
-                              <div className="flex items-center w-full mb-1">
-                                <div className="flex items-center gap-x-1.5 text-emerald-600">
-                                  <span className="text-xs font-black tracking-widest uppercase">解答文</span>
-                                  <button 
-                                    onClick={() => handlePlayAudio(yesAudioId, q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)} 
-                                    className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", globalPlayingId === yesAudioId ? 'text-indigo-600 bg-indigo-50' : 'text-emerald-500 hover:bg-emerald-50')}
-                                  >
-                                    {globalPlayingId === yesAudioId ? (
-                                      <Loader2 size={16} className="animate-spin text-indigo-600" />
-                                    ) : (
-                                      <Volume2 size={16} />
-                                    )}
-                                  </button>
-                                  {q.answer_sentence_yes_ja && (
-                                    <button
-                                      onClick={() => toggleJa(yesAudioId)}
-                                      className={cn("w-5 h-5 flex items-center justify-center rounded-md transition-all", jaVisibleMap[yesAudioId] ? "bg-emerald-100 text-emerald-600" : "text-emerald-300/60 hover:text-emerald-600 hover:bg-emerald-100/50")}
-                                    >
-                                      <Languages size={12} />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
+                              <PhraseAudioHeader
+                                label="解答文"
+                                tone="emerald"
+                                onPlay={() => handlePlayAudio(yesAudioId, q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)}
+                                isLoading={globalPlayingId === yesAudioId}
+                                jaText={q.answer_sentence_yes_ja}
+                                isJaVisible={jaVisibleMap[yesAudioId]}
+                                onToggleJa={() => toggleJa(yesAudioId)}
+                              />
                               {jaVisibleMap[yesAudioId] ? (
                                 <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{q.answer_sentence_yes_ja}</p>
                               ) : (
@@ -541,29 +500,15 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           )}
                           {scoreData.answer_type === '1' && (
                             <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-3 pr-3 py-2.5 rounded-r-xl flex flex-col gap-0.5 w-full">
-                              <div className="flex items-center w-full mb-1">
-                                <div className="flex items-center gap-x-1.5 text-amber-600">
-                                  <span className="text-xs font-black tracking-widest uppercase">解答文</span>
-                                  <button 
-                                    onClick={() => handlePlayAudio(noAudioId, q.answer_sentence_no_en!, q.answer_sentence_no_voice, true)} 
-                                    className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", globalPlayingId === noAudioId ? 'text-indigo-600 bg-indigo-50' : 'text-amber-500 hover:bg-amber-50')}
-                                  >
-                                    {globalPlayingId === noAudioId ? (
-                                      <Loader2 size={16} className="animate-spin text-indigo-600" />
-                                    ) : (
-                                      <Volume2 size={16} />
-                                    )}
-                                  </button>
-                                  {q.answer_sentence_no_ja && (
-                                    <button
-                                      onClick={() => toggleJa(noAudioId)}
-                                      className={cn("w-5 h-5 flex items-center justify-center rounded-md transition-all", jaVisibleMap[noAudioId] ? "bg-amber-100 text-amber-600" : "text-amber-300/60 hover:text-amber-600 hover:bg-amber-100/50")}
-                                    >
-                                      <Languages size={12} />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
+                              <PhraseAudioHeader
+                                label="解答文"
+                                tone="amber"
+                                onPlay={() => handlePlayAudio(noAudioId, q.answer_sentence_no_en!, q.answer_sentence_no_voice, true)}
+                                isLoading={globalPlayingId === noAudioId}
+                                jaText={q.answer_sentence_no_ja}
+                                isJaVisible={jaVisibleMap[noAudioId]}
+                                onToggleJa={() => toggleJa(noAudioId)}
+                              />
                               {jaVisibleMap[noAudioId] ? (
                                 <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{q.answer_sentence_no_ja}</p>
                               ) : (
@@ -574,29 +519,15 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                         </div>
                       ) : (
                         <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-3 pr-3 py-2.5 rounded-r-xl flex flex-col gap-0.5">
-                          <div className="flex items-center w-full mb-1">
-                            <div className="flex items-center gap-x-1.5 text-emerald-600">
-                              <span className="text-xs font-black tracking-widest uppercase">解答文</span>
-                              <button 
-                                onClick={() => handlePlayAudio(ansAudioId, q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)} 
-                                className={cn("w-6 h-6 flex items-center justify-center rounded-full transition-colors", globalPlayingId === ansAudioId ? 'text-indigo-600 bg-indigo-50' : 'text-emerald-500 hover:bg-emerald-50')}
-                              >
-                                {globalPlayingId === ansAudioId ? (
-                                  <Loader2 size={16} strokeWidth={2.5} className="animate-spin text-indigo-600" />
-                                ) : (
-                                  <Volume2 size={16} strokeWidth={2.5} />
-                                )}
-                              </button>
-                              {q.answer_sentence_yes_ja && (
-                                <button
-                                  onClick={() => toggleJa(ansAudioId)}
-                                  className={cn("w-6 h-6 flex items-center justify-center rounded-md transition-all", jaVisibleMap[ansAudioId] ? "bg-emerald-100 text-emerald-600" : "text-emerald-300/60 hover:text-emerald-600 hover:bg-emerald-100/50")}
-                                >
-                                  <Languages size={14} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                          <PhraseAudioHeader
+                            label="解答文"
+                            tone="emerald"
+                            onPlay={() => handlePlayAudio(ansAudioId, q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)}
+                            isLoading={globalPlayingId === ansAudioId}
+                            jaText={q.answer_sentence_yes_ja}
+                            isJaVisible={jaVisibleMap[ansAudioId]}
+                            onToggleJa={() => toggleJa(ansAudioId)}
+                          />
                           {jaVisibleMap[ansAudioId] ? (
                             <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">{q.answer_sentence_yes_ja}</p>
                           ) : (

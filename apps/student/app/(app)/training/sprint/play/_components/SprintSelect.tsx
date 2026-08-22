@@ -227,12 +227,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                 {/* 1段目: トレーニングモード（上段タブ） */}
                 <div className="space-y-2">
                   {/* 🚀 改修: ヘルプアイコンを右寄せから「小見出しのすぐ横」へインライン配置に変更 */}
-                  <div className="flex items-center gap-1.5 pl-1 h-5">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">トレーニングモード</span>
+                  <div className="flex items-center gap-1.5 pl-1 h-6">
+                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">トレーニングモード</span>
                     <Dialog>
                       <DialogTrigger asChild>
-                        <button className="h-4 w-4 flex items-center justify-center rounded-full text-[9px] border bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100 hover:text-indigo-600 active:scale-95 transition-all cursor-pointer">
-                          <HelpCircle size={12} strokeWidth={2.5} />
+                        <button className="h-6 w-6 shrink-0 flex items-center justify-center rounded-full border bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100 hover:text-indigo-600 active:scale-95 transition-all cursor-pointer">
+                          <HelpCircle size={13} strokeWidth={2.5} />
                         </button>
                       </DialogTrigger>
                       <DialogContent 
@@ -273,11 +273,11 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                 <div className="space-y-2">
                   {/* 🚀 改修①: チェックアイコン ＋ 視認性を高めたテキストメッセージ（マイク権限OK）でアプリ設定との混同を完全に防ぐ */}
                   <div className="flex items-center gap-2 pl-1 h-5">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">発話評価</span>
+                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">発話評価</span>
                     {micStatus === 'granted' && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/70 shadow-3xs leading-none shrink-0 animate-fade-in">
-                        <Check size={10} strokeWidth={4} className="text-emerald-600" />
-                        <span className="text-[9px] font-bold tracking-wider">マイク許可</span>
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/70 shadow-3xs leading-none shrink-0 animate-fade-in whitespace-nowrap">
+                        <Check size={10} strokeWidth={4} className="text-emerald-600 shrink-0" />
+                        <span className="text-[10px] font-bold tracking-wider">マイク許可</span>
                       </div>
                     )}
                   </div>
@@ -531,16 +531,16 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 whitespace-nowrap">
                     {QUESTION_TYPES[selectedType]?.label}
                   </span>
                   {hasLevel && (
-                    <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 whitespace-nowrap">
                       {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
                     </span>
                   )}
                   {mode === 'sprint' && (
-                    <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 font-mono">
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 font-mono whitespace-nowrap">
                       {selectedTimeLimitSec}s
                     </span>
                   )}
@@ -575,7 +575,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                     
                     {/* 01. 種別 */}
                     <div className="space-y-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">問題種別の選択</span>
+                      <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">問題種別の選択</span>
                       <div className="grid grid-cols-2 gap-2">
                         {sortedTypes.map((type) => {
                           const isSelected = selectedType === type.value;
@@ -595,9 +595,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                             >
                               <span>{type.label}</span>
                               {!isSupported && (
-                                <div className="flex items-center gap-0.5 text-rose-500">
-                                  <Lock size={9} strokeWidth={2.5} />
-                                  <span className="text-[8px] font-bold tracking-normal leading-none">提供されていません</span>
+                                <div className="flex items-center gap-0.5 text-rose-500 whitespace-nowrap">
+                                  <Lock size={9} strokeWidth={2.5} className="shrink-0" />
+                                  <span className="text-[9px] font-bold tracking-normal leading-none">提供されていません</span>
                                 </div>
                               )}
                             </button>
@@ -608,7 +608,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
 
                     {/* 02. レベル */}
                     <div className="space-y-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">レベルの選択</span>
+                      <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">レベルの選択</span>
                       {hasLevel ? (
                         <div className="grid grid-cols-4 gap-2">
                           {levelItems.map((item) => {
@@ -643,7 +643,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                     {/* 03. 制限時間 */}
                     {mode === 'sprint' && (
                       <div className="space-y-2">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">制限時間の選択</span>
+                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">制限時間の選択</span>
                         <div className="grid grid-cols-2 gap-2">
                           {sortedTimes.map((opt) => {
                             const isSelected = selectedTimeLimitSec === opt.value;
@@ -656,7 +656,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                               >
                                 <div>
                                   <div className="text-xs font-black">{opt.label}</div>
-                                  <div className={cn("text-[9px] font-bold", isSelected ? "text-indigo-200" : "text-slate-400")}>{opt.desc}</div>
+                                  <div className={cn("text-[10px] font-bold", isSelected ? "text-indigo-200" : "text-slate-400")}>{opt.desc}</div>
                                 </div>
                                 {isSelected && <Check size={12} strokeWidth={3} />}
                               </button>

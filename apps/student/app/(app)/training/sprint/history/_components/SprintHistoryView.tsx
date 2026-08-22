@@ -173,10 +173,10 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             </button>
             
             <div className="text-right">
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
+              <span className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
                 Sprint History
               </span>
-              <p className="text-[9px] font-bold text-slate-400 opacity-90 mt-0.5">
+              <p className="text-[10px] font-bold text-slate-400 opacity-90 mt-0.5">
                 スプリント履歴の詳細ログ
               </p>
             </div>
@@ -194,7 +194,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
               </button>
               
               <div className="px-5 text-center min-w-[120px] select-none border-x border-slate-100">
-                <span className="text-[9px] font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
+                <span className="text-[10px] font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
                   {displayYear}
                 </span>
                 <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
@@ -256,7 +256,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                       </div>
                       <div>
                         <div className="text-sm font-bold text-slate-800 tracking-tight mb-1.5">{date}</div>
-                        <div className="flex items-center gap-2 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono">
+                        <div className="flex items-center gap-2 mt-1 text-[11px] font-black text-slate-400 uppercase tracking-wider font-mono flex-wrap">
                           <span className="flex items-center gap-0.5">
                             <Zap size={11} fill="currentColor" className="text-slate-400" />
                             スプリント {sessions.length}
@@ -287,7 +287,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                           {/* 1. ドリル履歴一覧 */}
                           {drills.length > 0 && (
                             <div className="space-y-2">
-                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">
+                              <div className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-1">
                                 ドリル
                               </div>
                               <div className="space-y-2">
@@ -301,7 +301,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                         <span className="text-[10px] font-black text-indigo-400/80 font-mono w-4 text-center">{idx + 1}</span>
                                         <div className="space-y-1">
                                           {/* 1段目: 教材名 */}
-                                          <div className="text-[10px] font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
+                                          <div className="text-[11px] font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
                                             {(() => {
                                               const raw = drill.com_m_contents;
                                               const name = Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name;
@@ -320,28 +320,28 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                             </span>
                                           </div>
                                           {/* 3段目: 各種別の内訳 */}
-                                          <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 flex-wrap">
+                                          <div className="flex items-center gap-3 text-[11px] font-bold text-slate-400 flex-wrap">
                                             {drill.speed_count > 0 && (
                                               <span className="flex items-center gap-1">
-                                                <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-1 rounded leading-none py-0.5">SPEED</span>
+                                                <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-1 rounded leading-none py-0.5">SPEED</span>
                                                 <span className="font-mono text-slate-700 font-extrabold">{drill.speed_count}</span>
                                               </span>
                                             )}
                                             {drill.structure_count > 0 && (
                                               <span className="flex items-center gap-1">
-                                                <span className="text-[8px] font-black text-emerald-500 bg-emerald-50 px-1 rounded leading-none py-0.5">STR</span>
+                                                <span className="text-[9px] font-black text-emerald-500 bg-emerald-50 px-1 rounded leading-none py-0.5">STR</span>
                                                 <span className="font-mono text-slate-700 font-extrabold">{drill.structure_count}</span>
                                               </span>
                                             )}
                                             {drill.builders_count > 0 && (
                                               <span className="flex items-center gap-1">
-                                                <span className="text-[8px] font-black text-sky-500 bg-sky-50 px-1 rounded leading-none py-0.5">BLD</span>
+                                                <span className="text-[9px] font-black text-sky-500 bg-sky-50 px-1 rounded leading-none py-0.5">BLD</span>
                                                 <span className="font-mono text-slate-700 font-extrabold">{drill.builders_count}</span>
                                               </span>
                                             )}
                                             {drill.mastery_count > 0 && (
                                               <span className="flex items-center gap-1">
-                                                <span className="text-[8px] font-black text-purple-500 bg-purple-50 px-1 rounded leading-none py-0.5">MST</span>
+                                                <span className="text-[9px] font-black text-purple-500 bg-purple-50 px-1 rounded leading-none py-0.5">MST</span>
                                                 <span className="font-mono text-slate-700 font-extrabold">{drill.mastery_count}</span>
                                               </span>
                                             )}
@@ -358,7 +358,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                           {/* 2. スプリントセッション履歴一覧 */}
                           {sessions.length > 0 && (
                             <div className="space-y-2">
-                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">
+                              <div className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-1">
                                 スプリント
                               </div>
                               <div className="space-y-2">
@@ -380,7 +380,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                         <span className="text-[11px] font-black text-indigo-400/80 font-mono w-4 text-center">{idx + 1}</span>
                                         <div className="space-y-1">
                                           {/* 1段目: 教材名 */}
-                                          <div className="text-[10px] font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
+                                          <div className="text-[11px] font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
                                             {(() => {
                                               const raw = session.com_m_contents;
                                               const name = Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name;
@@ -396,7 +396,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                               const hasLevel = resolveSprintHasLevel(content?.metadata?.sprint);
                                               if (!hasLevel) return null;
                                               return (
-                                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
+                                                <span className="text-[11px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 whitespace-nowrap">
                                                   {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
                                                 </span>
                                               );
@@ -404,7 +404,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
 
                                             {isSpeedMode && (
                                               <span className={cn(
-                                                "text-[9px] font-black px-1.5 py-0.5 rounded-md border tracking-wider",
+                                                "text-[10px] font-black px-1.5 py-0.5 rounded-md border tracking-wider whitespace-nowrap",
                                                 session.answer_type === '1'
                                                   ? "bg-amber-50 border-amber-100 text-amber-600"
                                                   : "bg-emerald-50 border-emerald-100 text-emerald-600"
@@ -415,7 +415,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                           </div>
                                           
                                           {/* 3段目: 実施結果数値 (時間, 回答数など) */}
-                                          <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
+                                          <div className="flex items-center gap-3 text-[11px] font-bold text-slate-400 flex-wrap">
                                             <span className="flex items-center gap-1"><Timer size={11} /> {session.time_limit_sec}秒</span>
                                             <span className="flex items-center gap-1">
                                               <CheckCircle2 size={11} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
