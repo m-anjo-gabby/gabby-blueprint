@@ -38,6 +38,8 @@ export function useWebSpeech() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  // 🚀 エクセレント即時確定のデバウンス用（isFinalに依存しないフォールバック経路。下記コメント参照）
+  const excellentDebounceRef = useRef<NodeJS.Timeout | null>(null);
   
   // 評価結果の一時保持およびコールバック用
   const latestResultRef = useRef<AnalysisResult | null>(null);
@@ -53,8 +55,10 @@ export function useWebSpeech() {
   const clearAllTimers = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (excellentDebounceRef.current) clearTimeout(excellentDebounceRef.current);
     timerRef.current = null;
     intervalRef.current = null;
+    excellentDebounceRef.current = null;
   }, []);
 
   /**
@@ -234,17 +238,35 @@ export function useWebSpeech() {
       const result = analyzePhrase(heard, targetPhrase, mainWords);
       latestResultRef.current = result;
 
+      // 直前の候補が確定待ちだった場合は、テキスト更新のたびに一旦リセットする
+      // （まだ推測中の文言が変化し続けている間は確定させないため）
+      if (excellentDebounceRef.current) {
+        clearTimeout(excellentDebounceRef.current);
+        excellentDebounceRef.current = null;
+      }
+
       // エクセレント達成時は即座に確定させ、テンポよく次に進めるようにする。
       // ただし以下の条件を満たすまでは確定させない:
-      //  - isFinal: ブラウザが「まだ推測中」の未確定セグメントに基づいてスコアが
-      //    たまたま閾値を超えただけのケース（短いフレーズで発話完了前に言語モデルの
-      //    予測が先読みされ、実際と違う単語で高スコアになってしまう）を除外するため。
       //  - 全単語に何かしらのマッチがある: 単語がまだ認識されていない(MISSING)段階で、
       //    重み付けの偏りだけで閾値を超えて確定してしまうのを防ぐ保険。
       const allWordsHeard = !result.matches.some(m => !m.isMatch);
-      if (result.score >= 0.90 && isFinal && allWordsHeard) {
+      if (result.score < 0.90 || !allWordsHeard) return;
+
+      if (isFinal) {
+        // ブラウザが確定済みと報告した場合はそのまま即座に確定（最速経路）
         finalize(result);
+        return;
       }
+
+      // 🚀 iOS Safari 等（continuous=false環境）では isFinal が信頼できず、
+      // 発話が終わっても isFinal=true が一切送られてこないことがある。
+      // その場合に閾値到達のまま延々と待ち続けてしまう（最悪セーフティタイマーの
+      // 11.5秒待ち）のを避けるため、短いデバウンス猶予を置いたうえで
+      // 認識テキストがそれ以上更新されなければ「発話が確定した」とみなして進める
+      excellentDebounceRef.current = setTimeout(() => {
+        excellentDebounceRef.current = null;
+        if (isAssessingRef.current) finalize(result);
+      }, 350);
     }, options?.onRecognitionStart);
 
     // セーフティタイマー（猶予分を考慮して調整）
