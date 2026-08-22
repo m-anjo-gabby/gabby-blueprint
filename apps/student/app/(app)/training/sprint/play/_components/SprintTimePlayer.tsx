@@ -148,6 +148,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 🛠️ 音声再生に失敗した問題のID。回答履歴（answered_history）から除外するために使用
   const audioFailedQuestionIdsRef = useRef<Set<string>>(new Set());
   const isPersistedRef = useRef<boolean>(false);
+  // 🆕 タイムアップ経由での確定処理かどうか。true の間は発話評価完了時の演出（結果表示ウェイト）をスキップし、即座に保存へ進む
+  const timeUpTriggeredRef = useRef<boolean>(false);
+  // 🆕 発話評価は完了したが、演出ウェイト（displayDelay）の反映待ちだった問題を、タイムアップ時に即時確定させるためのコミット関数を保持
+  const pendingCommitRef = useRef<(() => void) | null>(null);
 
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
@@ -167,13 +171,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const currentActionIndex = useMemo(() => {
     if (isSpeedMode) {
-      if (audioPhase === 'question') return 0;
       if (audioPhase === 'answer') return 1;
-      return 0;
+      return 0; // idle（初期表示）・question ともに先頭ステップ（問題文）を指す
     }
-    if (audioPhase === 'statement') return 0;
+    if (audioPhase === 'answer') return 2;
     if (audioPhase === 'question') return 1;
-    return 2;
+    return 0; // idle（初期表示）・statement ともに先頭ステップ（基本文）を指す
   }, [audioPhase, isSpeedMode]);
 
   const groupData = useMemo(() => {
@@ -208,10 +211,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     setAudioPhase('idle');
   }, [invalidateFlow, stopAllAudioCore, setIsRecording]);
 
-  const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
+  const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number, includeCurrentOnTimeUp: boolean = false) => {
     if (isPersistedRef.current) return;
     isPersistedRef.current = true;
-    setIsSaving(true); 
+    setIsSaving(true);
 
     // 🚀 保存/リダイレクト処理に入った瞬間に再生・録音をすべて即時停止し、マイクを確実に解放する
     stopAllAudio();
@@ -229,7 +232,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       return;
     }
 
-    const answeredCount = currentSecondsLeft <= 0 ? currentIndex : Math.min(currentIndex + 1, questions.length);
+    // 🆕 タイムアップ時点で回答フェーズだった問題は、includeCurrentOnTimeUp が true の場合のみ回答履歴に含める
+    // （基本文・指示文・質問文の再生中や、発話評価の録音開始前は対象外）
+    const answeredCount = currentSecondsLeft <= 0
+      ? (includeCurrentOnTimeUp ? Math.min(currentIndex + 1, questions.length) : currentIndex)
+      : Math.min(currentIndex + 1, questions.length);
     // 🛠️ 音声再生に失敗した問題は回答履歴（answered_history）から完全に除外する
     const slicedQuestions = questions
       .slice(0, answeredCount)
@@ -321,8 +328,28 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [resultId, router, stopAllAudio, resetStore, unlockAudioContext]);
 
   const handleTimeUp = useCallback(() => {
-    handlePersistAndRedirect(0);
-  }, [handlePersistAndRedirect]);
+    timeUpTriggeredRef.current = true;
+    const { isRecording } = useSprintStore.getState().session;
+
+    if (isRecording) {
+      // 🆕 発話評価の録音中にタイムアップ：その時点までの認識結果で確定評価してから保存へ進む
+      // （結果は startRecordingFor の onComplete → commitAndNext 経由で確定・保存される）
+      stopListening();
+      return;
+    }
+
+    if (pendingCommitRef.current) {
+      // 🆕 発話評価は完了済みだが、結果演出（ウェイト）の反映待ちだった問題を即時確定させる
+      pendingCommitRef.current();
+      return;
+    }
+
+    // 🆕 回答フェーズ中（発話評価OFF・マイク拒否時、または録音開始前のチャイム待ちを除く）は「回答扱い」として履歴に含める
+    // 基本文・指示文・質問文の再生中は対象外のまま
+    const isBrainAnswer = micStatus === 'denied' || !isAssessmentMode;
+    const includeCurrentOnTimeUp = audioPhase === 'answer' && (isBrainAnswer || !isAwaitingRecording);
+    handlePersistAndRedirect(0, includeCurrentOnTimeUp);
+  }, [handlePersistAndRedirect, stopListening, audioPhase, isAwaitingRecording, micStatus, isAssessmentMode]);
 
   // 制限時間のカウントダウン。0になった時点で自動保存・リダイレクトへ進む
   const { secondsLeft, secondsLeftRef } = useSprintCountdown(timeLimitSec, handleTimeUp, clearSessionProgress);
@@ -368,20 +395,29 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         const visualState = getScoreTier(result.score);
 
         const commitAndNext = () => {
+          pendingCommitRef.current = null;
           setAssessmentVisualState('idle');
           incrementAssessmentCount();
           const { isLast } = commitAssessmentResult(questionId, getFeedbackConfig(result.score), result);
-          if (isLast) {
-            showToast("すべての問題を消化しました！スプリント完了です。", "success");
-            handlePersistAndRedirect(secondsLeftRef.current);
+          if (isLast || timeUpTriggeredRef.current) {
+            if (isLast) showToast("すべての問題を消化しました！スプリント完了です。", "success");
+            // 🆕 タイムアップ経由の確定時は、seconds=0・現在問題を含める指定で保存へ進む
+            handlePersistAndRedirect(timeUpTriggeredRef.current ? 0 : secondsLeftRef.current, timeUpTriggeredRef.current);
           }
         };
+
+        if (timeUpTriggeredRef.current) {
+          // 🆕 タイムアップ経由の確定：結果演出（ウェイト）をスキップして即座に保存へ進む
+          commitAndNext();
+          return;
+        }
 
         setAssessmentVisualState(visualState);
         // テンポ維持のため、スコアの高低でウェイトを置いて次へ進む
         const displayDelay = (visualState === 'excellent' || visualState === 'great' || visualState === 'good')
           ? SPRINT_FLOW_TIMING.sprint.visualFeedbackHoldGoodMs
           : SPRINT_FLOW_TIMING.sprint.visualFeedbackHoldPoorMs;
+        pendingCommitRef.current = commitAndNext;
         setTimeout(() => { commitAndNext(); }, displayDelay);
       },
       {
