@@ -3,7 +3,7 @@
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Trophy, CheckCircle2, ArrowRight, PlayCircle, SkipForward, Mic, ChartSpline, Play, Home } from 'lucide-react';
+import { ChevronLeft, Trophy, CheckCircle2, ArrowRight, PlayCircle, SkipForward, Mic, ChartSpline, Play, Home, FastForward } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { formatZonedDate } from '@gabby/lib/date/date';
@@ -35,20 +35,26 @@ interface SprintResultProps {
   };
   questions: any[];
   courseTitle: string;
+  // 🆕 スプリント実施画面から遷移してきたかどうか（フッターの初期表示を出し分ける）
+  cameFromPlay?: boolean;
 }
 
 export const SprintResult: React.FC<SprintResultProps> = ({
   scoreData,
   questions,
   courseTitle,
+  cameFromPlay = false,
 }) => {
   const router = useRouter();
-  
+
   // 🆕 拡張された共通フックの呼び出し。コンポーネント独自の重複AudioContextロジックをリプレイス
   const { play: playAudioSpeech, stop: stopAudioSpeech, isPlaying: globalPlayingId, unlockAudioContext, resumeStatus } = usePlayAudioSpeech();
-  
+
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
   const [isBatchPlaying, setIsBatchPlaying] = useState(false);
+  // 🆕 フッターの主役ボタンの表示モード。実施直後(cameFromPlay)は「全て再生」から始まり、
+  // 再生完了/停止で「リトライ」に切り替わる。履歴一覧からの遷移は常にリトライ固定。
+  const [footerShowsRetry, setFooterShowsRetry] = useState(!cameFromPlay);
   const [jaVisibleMap, setJaVisibleMap] = useState<Record<string, boolean>>({});
   // 🆕 スコアタップ時のドリル同様の発話フィードバック表示（旧データはanalysis無しのためタップ不可）
   const [feedbackTarget, setFeedbackTarget] = useState<{ feedback: FeedbackConfig; analysis: AnalysisResult } | null>(null);
@@ -167,6 +173,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
       setIsBatchPlaying(false);
       stopAllAudio();
       setFocusedCardId(null);
+      // 🆕 手動停止後はフッターをリトライボタンに戻す
+      setFooterShowsRetry(true);
       return;
     }
 
@@ -205,6 +213,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
         isBatchPlayingRef.current = false;
         setIsBatchPlaying(false);
         setFocusedCardId(null);
+        // 🆕 再生完了後はフッターをリトライボタンに戻す
+        setFooterShowsRetry(true);
       }
     }
   };
@@ -320,12 +330,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
         {/* ────────────── メイン：出題リスト ────────────── */}
         <div className="flex-1 overflow-y-auto bg-slate-50/50 p-5 sm:p-6">
           <div className="max-w-2xl mx-auto space-y-3">
-            <h3 className="text-xs font-black text-slate-400 tracking-[0.2em] uppercase pl-1 flex items-center gap-2">
-              Answer History
-            </h3>
-
-            <div className="space-y-3">
-              {questions.map((q, index) => {
+            {questions.map((q, index) => {
                 const isSpeedModePayload = scoreData.question_type === '0' && q.answer_sentence_no_en;
                 const isFocused = focusedCardId === q.question_id;
 
@@ -538,30 +543,57 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                     </div>
                   </div>
                 );
-              })}
-            </div>
+            })}
           </div>
         </div>
 
-        {/* ────────────── フッター ────────────── */}
-        <div className="shrink-0 p-5 sm:p-6 bg-white border-t border-slate-100 flex items-center justify-center gap-3">
-          <button
-            onClick={handlePlayAll}
-            className={cn(
-              "flex-1 max-w-[160px] h-12 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 border-2",
-              isBatchPlaying ? "bg-indigo-50 border-indigo-200 text-indigo-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-            )}
-          >
-            <PlayCircle size={16} strokeWidth={3} className={isBatchPlaying ? "animate-pulse" : "text-slate-400"} />
-            <span>{isBatchPlaying ? "停止" : "全て再生"}</span>
-          </button>
-          <button
-            onClick={() => router.push(`/training/sprint/play?mode=sprint&sprint_type=${scoreData.sprint_type}&content_id=${scoreData.content_id}`)}
-            className="flex-[2] max-w-sm h-12 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/10 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
-          >
-            <span>スプリントをリトライ</span>
-            <ArrowRight size={14} strokeWidth={3} />
-          </button>
+        {/* ────────────── フッター：状況に応じて役割が切り替わる単一ボタン ────────────── */}
+        <div className="shrink-0 p-5 sm:p-6 bg-white border-t border-slate-100">
+          {footerShowsRetry ? (
+            // 履歴一覧からの遷移、または全て再生の完了/停止後：リトライへ
+            <button
+              onClick={() => router.push(`/training/sprint/play?mode=sprint&sprint_type=${scoreData.sprint_type}&content_id=${scoreData.content_id}`)}
+              className="w-full h-13 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/10 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
+            >
+              <span>スプリントをリトライ</span>
+              <ArrowRight size={14} strokeWidth={3} />
+            </button>
+          ) : (
+            // スプリント実施直後：まず全て再生から。停止/完了で自動的にリトライへ切り替わる
+            // 🆕 発話評価直下の「スキップする」と同じ視覚パターンで、再生を挟まず即リトライする逃げ道を用意する
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={handlePlayAll}
+                className={cn(
+                  "w-full h-13 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 border-none",
+                  isBatchPlaying
+                    ? "bg-indigo-50 text-indigo-600 shadow-none border border-indigo-200"
+                    : "bg-indigo-600 text-white shadow-indigo-600/10 hover:bg-indigo-700"
+                )}
+              >
+                {isBatchPlaying ? (
+                  <span className="flex gap-0.5 items-center justify-center h-3 w-3 shrink-0">
+                    <span className="w-0.5 h-full bg-current rounded-xs animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
+                    <span className="w-0.5 h-full bg-current rounded-xs animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
+                    <span className="w-0.5 h-2/3 bg-current rounded-xs animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
+                  </span>
+                ) : (
+                  <PlayCircle size={16} strokeWidth={3} />
+                )}
+                <span>{isBatchPlaying ? "停止" : "全て再生"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => router.push(`/training/sprint/play?mode=sprint&sprint_type=${scoreData.sprint_type}&content_id=${scoreData.content_id}`)}
+                className="flex items-center justify-center gap-1.5 px-6 py-1.5 rounded-xl text-slate-400 hover:text-indigo-600 active:scale-[0.98] transition-all cursor-pointer border-none"
+                title="再生せずにすぐリトライする"
+              >
+                <FastForward size={12} strokeWidth={2.5} />
+                <span className="text-[11px] font-bold uppercase tracking-wider">スプリントをリトライ</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 🆕 スコアタップ時の発話フィードバック（ドリルモードと同一のSpeechFeedbackModal） */}

@@ -298,7 +298,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           stopAllAudio();
           resetStore();
           // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
-          const targetUrl = `/training/sprint/result/${res.data.self_sprint_id}`;
+          const targetUrl = `/training/sprint/result/${res.data.self_sprint_id}?from=play`;
           setTimeout(() => {
             router.push(targetUrl);
           }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
@@ -323,7 +323,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       resetStore();
       // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
       setTimeout(() => {
-        router.push(`/training/sprint/result/${resultId}`);
+        router.push(`/training/sprint/result/${resultId}?from=play`);
       }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
     }
   }, [resultId, router, stopAllAudio, resetStore, unlockAudioContext]);

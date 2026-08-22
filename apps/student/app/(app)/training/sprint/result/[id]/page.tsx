@@ -7,10 +7,16 @@ interface PageProps {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{
+    from?: string;
+  }>;
 }
 
-export default async function SprintResultPage({ params }: PageProps) {
+export default async function SprintResultPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { from } = await searchParams;
+  // 🆕 スプリント実施画面からの遷移時のみ、フッターの初期状態を「全て再生」にする
+  const cameFromPlay = from === 'play';
 
   const res = await getSprintResultAction(id);
 
@@ -53,6 +59,7 @@ export default async function SprintResultPage({ params }: PageProps) {
       }} 
       questions={questions}
       courseTitle={courseTitle}
+      cameFromPlay={cameFromPlay}
     />
   );
 }
