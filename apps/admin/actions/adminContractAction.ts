@@ -131,6 +131,50 @@ function isWithinContractPeriod(
 }
 
 /**
+ * 同一ユーザーに対して、指定期間と重複するライセンスが既に存在するかを確認する。
+ * 生徒に複数ライセンスを付与する運用は「契約更新に伴う次タームへの切替」のみを想定しており、
+ * 期間が重なるライセンスの重複付与（＝二重契約状態）を防止するための検証。
+ * 更新時は自分自身のライセンス（excludeLicenseId）を比較対象から除外する。
+ */
+async function findOverlappingLicense(
+  supabase: ReturnType<typeof createAdminClient>,
+  userId: string,
+  startUtc: string,
+  endUtc: string,
+  excludeLicenseId?: string
+): Promise<{ start_date: string; end_date: string; plan_name: string } | null> {
+  let query = supabase
+    .from('com_t_user_license')
+    .select('license_id, start_date, end_date, com_m_contract(plan_name)')
+    .eq('user_id', userId)
+    .lte('start_date', endUtc)
+    .gte('end_date', startUtc)
+    .limit(1);
+
+  if (excludeLicenseId) {
+    query = query.neq('license_id', excludeLicenseId);
+  }
+
+  const { data, error } = await query;
+  if (error || !data || data.length === 0) return null;
+
+  const row = data[0] as unknown as {
+    start_date: string;
+    end_date: string;
+    com_m_contract: { plan_name: string } | null;
+  };
+  return {
+    start_date: row.start_date,
+    end_date: row.end_date,
+    plan_name: row.com_m_contract?.plan_name || '不明なプラン',
+  };
+}
+
+function buildOverlapMessage(overlap: { start_date: string; end_date: string; plan_name: string }): string {
+  return `このユーザーは既に期間が重なるライセンス「${overlap.plan_name}」（${formatToJstDate(overlap.start_date)}〜${formatToJstDate(overlap.end_date)}）を保有しているため割当できません`;
+}
+
+/**
  * 契約プランマスタの一覧取得（契約登録フォームの選択肢用）
  */
 export async function getContractPlans() {
@@ -223,11 +267,16 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
     if (userId) {
       const { data: userLicenses } = await supabase
         .from('com_t_user_license')
-        .select('contract_id')
+        .select('contract_id, start_date, end_date')
         .eq('user_id', userId);
 
-      const existingIds = new Set(userLicenses?.map(l => l.contract_id));
-      const available = contracts.filter(c => !existingIds.has(c.contract_id));
+      const licenses = userLicenses || [];
+      // 既存ライセンスと契約IDが同じ、または期間が重複する契約は選択肢から除外する
+      // （生徒への複数ライセンス付与は契約更新に伴う次タームへの切替のみを想定しているため）
+      const available = contracts.filter(c => !licenses.some(l =>
+        l.contract_id === c.contract_id ||
+        (new Date(l.start_date) <= new Date(c.end_date) && new Date(l.end_date) >= new Date(c.start_date))
+      ));
       return formatContracts(available);
     }
 
@@ -330,6 +379,31 @@ export async function updateContract(
     const { startUtc, endUtc } = getUtcRangeFromJstDate(params.start_date, params.end_date);
     const isLive = params.contract_type === 2;
 
+    // 契約期間の短縮・上限数の引き下げが、既存のライセンス発行実績と矛盾しないかを検証する
+    // （UI上は「※超過」等の警告表示のみで書き込み自体は防げていなかったため）
+    const { data: existingLicenses, error: licensesError } = await supabase
+      .from('com_t_user_license')
+      .select('license_id, start_date, end_date')
+      .eq('contract_id', contractId);
+
+    if (licensesError) {
+      logger.error('contract:update_contract_licenses_lookup_failed', licensesError.message, { ...ctx, payload: { contractId } });
+      return { success: false, message: '既存ライセンスの確認に失敗しました' };
+    }
+
+    const licenses = existingLicenses || [];
+
+    if (licenses.length > params.max_licenses) {
+      return { success: false, message: `既に${licenses.length}件のライセンスが割り当てられているため、上限をそれ未満に変更できません` };
+    }
+
+    const outOfRangeLicense = licenses.find(l =>
+      new Date(l.start_date) < new Date(startUtc) || new Date(l.end_date) > new Date(endUtc)
+    );
+    if (outOfRangeLicense) {
+      return { success: false, message: '既存のライセンス期間が新しい契約期間からはみ出すため、契約期間を変更できません（対象ライセンスの期間を先に調整してください）' };
+    }
+
     const { data, error } = await supabase
       .from('com_m_contract')
       .update({
@@ -363,6 +437,105 @@ export async function updateContract(
     return { success: true, contract: data[0] };
   } catch (error) {
     logger.error('contract:update_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId, ...params } });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
+/**
+ * 契約情報の削除（物理削除）
+ * ライセンス発行実績（現在の割当）が一切ない契約に限り削除を許可する。
+ * 過去に一度でも割当実績がある契約は、履歴テーブル（com_t_user_license_history等）に
+ * 残る外部キー参照により、アプリ側のチェックをすり抜けてもDB制約(23503)で削除が拒否される。
+ */
+export async function deleteContract(contractId: string) {
+  const ctx = await getLogContext();
+  try {
+    const supabase = createAdminClient();
+
+    const { count, error: countError } = await supabase
+      .from('com_t_user_license')
+      .select('license_id', { count: 'exact', head: true })
+      .eq('contract_id', contractId);
+
+    if (countError) {
+      logger.error('contract:delete_contract_count_failed', countError.message, { ...ctx, payload: { contractId } });
+      return { success: false, message: '契約情報の確認に失敗しました' };
+    }
+
+    if ((count || 0) > 0) {
+      return { success: false, message: 'ライセンスが割り当てられているため削除できません' };
+    }
+
+    const { error } = await supabase
+      .from('com_m_contract')
+      .delete()
+      .eq('contract_id', contractId);
+
+    if (error) {
+      if (error.code === '23503') {
+        return {
+          success: false,
+          message: '過去にライセンス発行の実績があるため、この契約は削除できません',
+          reason: 'has_history' as const,
+        };
+      }
+      logger.error('contract:delete_contract_failed', error.message, { ...ctx, payload: { contractId } });
+      return { success: false, message: error.message };
+    }
+
+    logger.info('contract:delete_contract_success', 'Contract deleted', { ...ctx, payload: { contractId } });
+
+    revalidatePath('/contracts');
+    return { success: true };
+  } catch (error) {
+    logger.error('contract:delete_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId } });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
+/**
+ * 契約の完全削除（履歴含む・検証用契約の後片付け専用）
+ * 通常の deleteContract とは異なり、割当実績・履歴があっても物理削除する。
+ * 監査ログ（誰がいつライセンスを割当/解除したか）ごと復元不能に失われるため、
+ * 実運用契約には絶対に使用しないこと。呼び出し元では、通常の削除ボタンとは
+ * 別の強い確認UI（対象名の入力等）を経由させる。
+ */
+export async function purgeContractWithHistory(contractId: string) {
+  const ctx = await getLogContext();
+  try {
+    const supabase = createAdminClient();
+
+    // DB側の履歴は本処理で失われるため、削除前の件数だけはアプリログに残しておく
+    const [licenseCount, licenseHistoryCount, ticketHistoryCount] = await Promise.all([
+      supabase.from('com_t_user_license').select('license_id', { count: 'exact', head: true }).eq('contract_id', contractId),
+      supabase.from('com_t_user_license_history').select('history_id', { count: 'exact', head: true }).eq('contract_id', contractId),
+      supabase.from('com_t_user_session_ticket_history').select('history_id', { count: 'exact', head: true }).eq('contract_id', contractId),
+    ]);
+
+    logger.warn('contract:purge_contract_with_history_start', 'Purging contract including assignment/license history (irreversible)', {
+      ...ctx,
+      payload: {
+        contractId,
+        currentLicenseCount: licenseCount.count || 0,
+        licenseHistoryCount: licenseHistoryCount.count || 0,
+        ticketHistoryCount: ticketHistoryCount.count || 0,
+      },
+    });
+
+    const { error } = await supabase.rpc('purge_contract_with_history', { p_contract_id: contractId });
+
+    if (error) {
+      logger.error('contract:purge_contract_with_history_failed', error.message, { ...ctx, payload: { contractId } });
+      return { success: false, message: error.message };
+    }
+
+    logger.warn('contract:purge_contract_with_history_success', 'Contract purged including history', { ...ctx, payload: { contractId } });
+
+    revalidatePath('/contracts');
+    revalidatePath('/users');
+    return { success: true };
+  } catch (error) {
+    logger.error('contract:purge_contract_with_history_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -436,7 +609,7 @@ export async function assignLicenseToUser(
     // 契約期間内に収まっているかを検証（UI表記「ライセンスの有効期間は契約期間に準じます」との整合）
     const { data: contract, error: contractError } = await supabase
       .from('com_m_contract')
-      .select('start_date, end_date, contract_type, weekly_frequency, total_sessions')
+      .select('start_date, end_date, contract_type, weekly_frequency, total_sessions, max_licenses')
       .eq('contract_id', contractId)
       .single();
 
@@ -447,6 +620,27 @@ export async function assignLicenseToUser(
 
     if (!isWithinContractPeriod(startUtc, endUtc, contract.start_date, contract.end_date)) {
       return { success: false, message: 'ライセンス期間は契約期間内で指定してください' };
+    }
+
+    const overlap = await findOverlappingLicense(supabase, userId, startUtc, endUtc);
+    if (overlap) {
+      return { success: false, message: buildOverlapMessage(overlap) };
+    }
+
+    // UI側の上限チェック（isLicenseFull）は表示専用のため、書き込み直前に改めてサーバー側で検証する
+    // （複数管理者による同時操作や複数タブでの多重実行時に上限を超過させないため）
+    const { count: assignedCount, error: countError } = await supabase
+      .from('com_t_user_license')
+      .select('license_id', { count: 'exact', head: true })
+      .eq('contract_id', contractId);
+
+    if (countError) {
+      logger.error('contract:assign_license_count_failed', countError.message, { ...ctx, payload: { contractId } });
+      return { success: false, message: '割当状況の確認に失敗しました' };
+    }
+
+    if ((assignedCount || 0) >= contract.max_licenses) {
+      return { success: false, message: '上限数に達しているため追加できません' };
     }
 
     const { data: inserted, error } = await supabase
@@ -637,6 +831,11 @@ export async function updateUserLicense(
       if (!isWithinContractPeriod(effectiveStart, effectiveEnd, contract.start_date, contract.end_date)) {
         return { success: false, message: 'ライセンス期間は契約期間内で指定してください' };
       }
+
+      const overlap = await findOverlappingLicense(supabase, existing.user_id, effectiveStart, effectiveEnd, licenseId);
+      if (overlap) {
+        return { success: false, message: buildOverlapMessage(overlap) };
+      }
     }
 
     const { error } = await supabase
@@ -696,7 +895,7 @@ export async function bulkAssignLicenses(
     // 契約期間内に収まっているかを検証（個別割当と同じ制御を一括割当にも適用）
     const { data: contract, error: contractError } = await supabase
       .from('com_m_contract')
-      .select('start_date, end_date, contract_type, weekly_frequency, total_sessions')
+      .select('start_date, end_date, contract_type, weekly_frequency, total_sessions, max_licenses')
       .eq('contract_id', contractId)
       .single();
 
@@ -709,7 +908,48 @@ export async function bulkAssignLicenses(
       return { success: false, message: 'ライセンス期間は契約期間内で指定してください', errorCount: userIds.length };
     }
 
-    const insertData = userIds.map(userId => ({
+    // 期間が重複する既存ライセンスを持つユーザーは対象から除外する
+    const overlapResults = await Promise.all(
+      userIds.map(async userId => ({ userId, overlap: await findOverlappingLicense(supabase, userId, startUtc, endUtc) }))
+    );
+    const skippedForOverlap = overlapResults.filter(r => r.overlap).map(r => r.userId);
+    let targetUserIds = overlapResults.filter(r => !r.overlap).map(r => r.userId);
+
+    if (targetUserIds.length === 0) {
+      return {
+        success: false,
+        message: '対象ユーザーは全員、期間が重複する既存のライセンスを保有しているため割当できません',
+        errorCount: userIds.length,
+        skippedForOverlap,
+      };
+    }
+
+    // UI側の上限チェックは表示専用のため、書き込み直前に改めてサーバー側で上限を検証する
+    const { count: assignedCount, error: countError } = await supabase
+      .from('com_t_user_license')
+      .select('license_id', { count: 'exact', head: true })
+      .eq('contract_id', contractId);
+
+    if (countError) {
+      logger.error('contract:bulk_assign_licenses_count_failed', countError.message, { ...ctx, payload: { contractId } });
+      return { success: false, message: '割当状況の確認に失敗しました', errorCount: userIds.length };
+    }
+
+    const remainingSlots = Math.max(contract.max_licenses - (assignedCount || 0), 0);
+    const skippedForCapacity = targetUserIds.slice(remainingSlots);
+    targetUserIds = targetUserIds.slice(0, remainingSlots);
+
+    if (targetUserIds.length === 0) {
+      return {
+        success: false,
+        message: '上限数に達しているため追加できません',
+        errorCount: userIds.length,
+        skippedForOverlap,
+        skippedForCapacity,
+      };
+    }
+
+    const insertData = targetUserIds.map(userId => ({
       contract_id: contractId,
       user_id: userId,
       status: 1,
@@ -763,7 +1003,9 @@ export async function bulkAssignLicenses(
     return {
       success: true,
       successCount: data?.length || 0,
-      assignedUserIds: (data || []).map(d => d.user_id)
+      assignedUserIds: (data || []).map(d => d.user_id),
+      skippedForOverlap,
+      skippedForCapacity,
     };
   } catch (error) {
     logger.error('contract:bulk_assign_licenses_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId, userIds } });
