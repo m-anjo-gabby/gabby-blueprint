@@ -158,43 +158,33 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
       <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
         
         {/* ────────────── ヘッダー ────────────── */}
-        <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
+        <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-3">
           <div className="absolute top-0 right-0 p-3 opacity-[0.08] pointer-events-none">
             <History size={115} strokeWidth={1.2} className="text-indigo-600" />
           </div>
 
-          <div className="relative flex items-center justify-between">
+          {/* Row1: 戻る（左端固定）+ 月移動（中央） */}
+          <div className="relative flex items-center">
             <button
               onClick={() => router.push('/training/performance')}
-              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+              className="absolute left-0 h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
               title="パフォーマンスに戻る"
             >
               <ChevronLeft size={20} strokeWidth={2.5} />
             </button>
-            
-            <div className="text-right">
-              <span className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
-                Sprint History
-              </span>
-              <p className="text-[11px] font-bold text-slate-400 opacity-90 mt-0.5">
-                スプリント履歴の詳細ログ
-              </p>
-            </div>
-          </div>
 
-          {/* 月移動：カプセル型UI */}
-          <div className="relative flex items-center justify-center pt-1">
-            <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
+            <div className="w-full flex justify-center">
+            <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-xl p-0.5 relative">
               <button
                 onClick={() => handleMonthChange('prev')}
                 disabled={isPending}
-                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
                 title="前月"
               >
-                <ArrowLeft size={14} strokeWidth={2.5} />
+                <ArrowLeft size={13} strokeWidth={2.5} />
               </button>
 
-              <div className="px-5 text-center min-w-[120px] select-none border-x border-slate-100">
+              <div className="px-3 text-center min-w-24 select-none border-x border-slate-100">
                 {isPending ? (
                   <div className="h-9.5 flex items-center justify-center">
                     <Loader2 size={16} className="text-indigo-400 animate-spin" />
@@ -214,10 +204,10 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
               <button
                 onClick={() => handleMonthChange('next')}
                 disabled={isPending}
-                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
                 title="来月"
               >
-                <ArrowRight size={14} strokeWidth={2.5} />
+                <ArrowRight size={13} strokeWidth={2.5} />
               </button>
 
               {/* 「今月」ボタン */}
@@ -237,6 +227,26 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                   </motion.button>
                 )}
               </AnimatePresence>
+            </div>
+            </div>
+          </div>
+
+          {/* Row2: 月次サマリー */}
+          <div className="relative flex items-center justify-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-white/70 border border-slate-200/60 rounded-xl px-2.5 py-1.5">
+              <Calendar size={13} className="text-slate-400" strokeWidth={2.5} />
+              <span className="text-sm font-black text-slate-800 font-mono">{sortedDates.length}</span>
+              <span className="text-xs font-bold text-slate-400">日実施</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/70 border border-slate-200/60 rounded-xl px-2.5 py-1.5">
+              <Zap size={13} fill="currentColor" className="text-indigo-500" />
+              <span className="text-sm font-black text-slate-800 font-mono">{initialData?.sessions?.length ?? 0}</span>
+              <span className="text-xs font-bold text-slate-400">スプリント</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/70 border border-slate-200/60 rounded-xl px-2.5 py-1.5">
+              <Sliders size={13} className="text-indigo-500" strokeWidth={2.5} />
+              <span className="text-sm font-black text-slate-800 font-mono">{initialData?.drills?.length ?? 0}</span>
+              <span className="text-xs font-bold text-slate-400">ドリル</span>
             </div>
           </div>
         </div>
