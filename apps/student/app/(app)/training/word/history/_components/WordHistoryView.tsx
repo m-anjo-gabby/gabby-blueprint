@@ -86,17 +86,28 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
             <BookOpen size={115} strokeWidth={1.2} className="text-indigo-600" />
           </div>
 
-          {/* Row1: 戻る（左端固定）+ 月移動（中央） */}
-          <div className="relative flex items-center">
+          {/* Row1: 戻る（左端）+ 画面名（右端） */}
+          <div className="relative flex items-center justify-between z-10">
             <button
               onClick={() => router.push('/training/performance')}
-              className="absolute left-0 h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
+              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
               title="パフォーマンスに戻る"
             >
               <ChevronLeft size={20} strokeWidth={2.5} />
             </button>
 
-            <div className="w-full flex justify-center">
+            <div className="text-right">
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
+                Word Drill History
+              </span>
+              <p className="text-[9px] font-bold text-slate-400 opacity-90 mt-0.5">
+                単語ドリルの学習履歴
+              </p>
+            </div>
+          </div>
+
+          {/* Row2: 月移動 */}
+          <div className="relative flex items-center justify-center z-10">
             <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-xl p-0.5 relative">
               <button
                 onClick={() => handleMonthChange('prev')}
@@ -107,20 +118,14 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                 <ArrowLeft size={13} strokeWidth={2.5} />
               </button>
 
-              <div className="px-3 text-center min-w-24 select-none border-x border-slate-100">
+              <div className="px-3 h-8 flex items-center justify-center min-w-24 select-none border-x border-slate-100">
                 {isPending ? (
-                  <div className="h-9.5 flex items-center justify-center">
-                    <Loader2 size={16} className="text-indigo-400 animate-spin" />
-                  </div>
+                  <Loader2 size={16} className="text-indigo-400 animate-spin" />
                 ) : (
-                  <>
-                    <span className="text-xs font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
-                      {displayYear}
-                    </span>
-                    <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
-                      {parseInt(displayMonth)}月
-                    </span>
-                  </>
+                  <span className="text-sm font-black text-slate-800 font-mono tracking-tight whitespace-nowrap">
+                    <span className="text-slate-400 font-bold mr-1.5">{displayYear}年</span>
+                    {parseInt(displayMonth)}月
+                  </span>
                 )}
               </div>
 
@@ -151,25 +156,26 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                 )}
               </AnimatePresence>
             </div>
-            </div>
           </div>
 
-          {/* Row2: 月次サマリー */}
-          <div className="relative flex items-center justify-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-white/70 border border-slate-200/60 rounded-xl px-2.5 py-1.5">
-              <Calendar size={13} className="text-slate-400" strokeWidth={2.5} />
-              <span className="text-sm font-black text-slate-800 font-mono">{sortedDates.length}</span>
-              <span className="text-xs font-bold text-slate-400">日実施</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-white/70 border border-slate-200/60 rounded-xl px-2.5 py-1.5">
-              <BookOpen size={13} className="text-blue-500" strokeWidth={2.5} />
-              <span className="text-sm font-black text-slate-800 font-mono">{monthlyTotals.words}</span>
-              <span className="text-xs font-bold text-slate-400">単語</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-white/70 border border-slate-200/60 rounded-xl px-2.5 py-1.5">
-              <MessageSquareText size={13} className="text-emerald-500" strokeWidth={2.5} />
-              <span className="text-sm font-black text-slate-800 font-mono">{monthlyTotals.phrases}</span>
-              <span className="text-xs font-bold text-slate-400">フレーズ</span>
+          {/* Row3: 月次サマリー */}
+          <div className="relative z-10 flex justify-center select-none">
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-slate-700 font-sans">
+              <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
+                <Calendar size={13} strokeWidth={2.5} className="text-slate-400 shrink-0" />
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">実施日数</span>
+                <span className="text-sm font-black text-slate-800 font-mono leading-none">{sortedDates.length}</span>
+              </div>
+              <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
+                <BookOpen size={13} strokeWidth={2.5} className="text-blue-500 shrink-0" />
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">単語</span>
+                <span className="text-sm font-black text-slate-800 font-mono leading-none">{monthlyTotals.words}</span>
+              </div>
+              <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
+                <MessageSquareText size={13} strokeWidth={2.5} className="text-emerald-500 shrink-0" />
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">フレーズ</span>
+                <span className="text-sm font-black text-slate-800 font-mono leading-none">{monthlyTotals.phrases}</span>
+              </div>
             </div>
           </div>
         </div>

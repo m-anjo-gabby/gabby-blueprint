@@ -245,17 +245,17 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                   const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                   router.push(`/training/sprint/history?month=${monthStr}&focus=${scoreData.self_sprint_id}`);
                 }}
-                className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
                 title="履歴に戻る"
               >
-                <ChevronLeft size={18} strokeWidth={2.5} />
+                <ChevronLeft size={20} strokeWidth={2.5} />
               </button>
-              <button 
+              <button
                 onClick={() => router.push('/dashboard')}
-                className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
                 title="ダッシュボードに戻る"
               >
-                <Home size={16} strokeWidth={2.5} />
+                <Home size={18} strokeWidth={2.5} />
               </button>
             </div>
             

@@ -139,7 +139,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
           <div className="relative flex items-center justify-between">
             <button
               onClick={() => router.push('/dashboard')}
-              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
               title="ダッシュボードに戻る"
             >
               <ChevronLeft size={20} strokeWidth={2.5} />

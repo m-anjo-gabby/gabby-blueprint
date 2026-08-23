@@ -106,6 +106,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // ────────────── 📦 ローカル管理ステート ──────────────
   const [exitLoading, setExitLoading] = useState<boolean>(false);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
+  // 🆕 直近の非idleフェーズを保持するref。2問目以降の問題切替時に発生する短い idle 区間（クッション）で
+  // 毎回「Ready」がちらつくのを防ぎ、直前のメッセージ／アイコンを表示し続けるために使用する
+  const lastActivePhaseRef = useRef<'statement' | 'question' | 'answer'>('statement');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [resultId, setResultId] = useState<string | null>(null);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
@@ -588,6 +591,20 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 🚀 追加：回答フェーズ以外（再生中等）の時は、発話評価OFFモード時のスキップボタンを非活性（disabled）に倒す制御フラグ[cite: 1]
   const isBrainActionDisabled = audioPhase !== 'answer';
 
+  // 🆕 直前の非idleフェーズを記録（idle区間中のメッセージ表示継続に使用）
+  useEffect(() => {
+    if (audioPhase !== 'idle') {
+      lastActivePhaseRef.current = audioPhase;
+    }
+  }, [audioPhase]);
+
+  // 🆕 「Ready」表示は1問目の開始前のみとし、2問目以降のidle区間（問題切替クッション）では
+  // 直前のメッセージ／アイコンを維持したまま次のフェーズへ切り替えることで、
+  // Speedモード等での高頻度な「Ready」フラッシュ（ノイズ）を抑止する
+  const displayPhase = (audioPhase === 'idle' && currentIndex > 0)
+    ? lastActivePhaseRef.current
+    : audioPhase;
+
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
       <main className="bg-white border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden shadow-2xl">
@@ -725,42 +742,42 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 <div
                   className={cn(
                     "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
-                    audioPhase === 'idle'
+                    displayPhase === 'idle'
                       ? "text-slate-300"
-                      : audioPhase === 'answer'
+                      : displayPhase === 'answer'
                         ? (isBrainAnswerMode ? "text-rose-500" : "text-indigo-500")
                         : "text-indigo-600"
                   )}
                 >
-                  {audioPhase === 'answer' ? (
+                  {displayPhase === 'answer' ? (
                     isBrainAnswerMode ? (
                       <MicOff className="w-full h-full" strokeWidth={2.5} />
                     ) : (
                       <CircleDot className="w-full h-full" strokeWidth={2.5} />
                     )
-                  ) : audioPhase === 'idle' ? (
+                  ) : displayPhase === 'idle' ? (
                     <CircleDot className="w-full h-full" strokeWidth={2.5} />
                   ) : (
                     <Headphones className="w-full h-full" strokeWidth={2.5} />
                   )}
                 </div>
                 <h2 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight whitespace-nowrap select-none">
-                  {audioPhase === 'statement' && "基本文を再生中"}
-                  {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
-                  {audioPhase === 'answer' && (
+                  {displayPhase === 'statement' && "基本文を再生中"}
+                  {displayPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
+                  {displayPhase === 'answer' && (
                     isBrainAnswerMode ? "脳内で回答しましょう" : "発話して回答しましょう"
                   )}
-                  {audioPhase === 'idle' && "Ready"}
+                  {displayPhase === 'idle' && "Ready"}
                 </h2>
               </div>
               {/* サブテキスト表示（iOSでもメッセージを表示するように条件をシンプル化） */}
               <p className={cn(
                 "text-xs sm:text-sm font-semibold text-slate-400 transition-opacity duration-150",
-                audioPhase === 'answer' ? "opacity-100" : "opacity-0 select-none pointer-events-none"
+                displayPhase === 'answer' ? "opacity-100" : "opacity-0 select-none pointer-events-none"
               )}>
-                {isBrainAnswerMode && audioPhase === 'answer'
+                {isBrainAnswerMode && displayPhase === 'answer'
                   ? (!isAssessmentMode ? "※発話評価をOFFにしています" : "※マイク権限が拒否されています")
-                  : "※開始音の後に発話してください"} 
+                  : "※開始音の後に発話してください"}
                   {/* 🚀 iOS判定を削除し、どのデバイスでも開始音のアナウンスが流れるように統一 */}
               </p>
             </div>
