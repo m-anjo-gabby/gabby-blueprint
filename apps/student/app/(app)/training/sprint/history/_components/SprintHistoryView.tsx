@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight, Sliders, CheckCircle2, Mic, Loader2 } from 'lucide-react';
+import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight, Sliders, CheckCircle2, Mic, Loader2, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -165,13 +165,22 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
 
           {/* Row1: 戻る（左端）+ 画面名（右端） */}
           <div className="relative flex items-center justify-between z-10">
-            <button
-              onClick={() => router.push('/training/performance')}
-              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
-              title="パフォーマンスに戻る"
-            >
-              <ChevronLeft size={20} strokeWidth={2.5} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/training/performance')}
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
+                title="パフォーマンスに戻る"
+              >
+                <ChevronLeft size={20} strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+                title="ダッシュボードに戻る"
+              >
+                <Home size={18} strokeWidth={2.5} />
+              </button>
+            </div>
 
             <div className="text-right">
               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
@@ -244,7 +253,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                 <span className="text-sm font-black text-slate-800 font-mono leading-none">{sortedDates.length}</span>
               </div>
               <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
-                <Zap size={13} fill="currentColor" className="text-indigo-500 shrink-0" />
+                <Zap size={13} fill="currentColor" className="text-amber-500 shrink-0" />
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">スプリント</span>
                 <span className="text-sm font-black text-slate-800 font-mono leading-none">{initialData?.sessions?.length ?? 0}</span>
               </div>
@@ -280,7 +289,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                       <div className="text-sm font-bold text-slate-800 tracking-tight mb-1.5">{date}</div>
                       <div className="flex items-center gap-2 mt-1 text-xs font-black text-slate-400 uppercase tracking-wider font-mono flex-wrap">
                         <span className="flex items-center gap-0.5">
-                          <Zap size={11} fill="currentColor" className="text-slate-400" />
+                          <Zap size={11} fill="currentColor" className="text-amber-500" />
                           スプリント {sessions.length}
                         </span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full" />

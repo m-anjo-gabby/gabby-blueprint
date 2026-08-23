@@ -2,10 +2,11 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, CalendarDays, ArrowLeft, HelpCircle } from 'lucide-react';
+import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, CalendarDays, ArrowLeft, HelpCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { toIsoDateInZone, toIsoMonthInZone } from '@gabby/lib/date/date';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
+import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
 import { cn } from '@/lib/utils';
 
@@ -20,11 +21,12 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
   const [showSprintTooltip, setShowSprintTooltip] = useState(false);
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
-
-  // 当月の文字列（"YYYY-MM"）を生成
-  const currentMonthStr = useMemo(() => {
-    return toIsoMonthInZone(new Date(), timezone);
-  }, [timezone]);
+  // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定・ペンディング状態）は
+  // 単語履歴・スプリント履歴画面と共通のためフック化
+  const { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange, goToMonth, isPending } = useMonthNavigator({
+    targetMonth,
+    basePath: '/training/performance',
+  });
 
   // 1. 統計データの算出
   const stats = useMemo(() => {
@@ -72,23 +74,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     };
   }, [initialData, timezone]);
 
-  const handleMonthChange = (direction: 'prev' | 'next') => {
-    const [year, month] = targetMonth.split('-').map(Number);
-    let newYear = year;
-    let newMonth = direction === 'prev' ? month - 1 : month + 1;
-
-    if (newMonth === 0) {
-      newMonth = 12;
-      newYear -= 1;
-    } else if (newMonth === 13) {
-      newMonth = 1;
-      newYear += 1;
-    }
-
-    const targetMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-    router.replace(`/training/performance?month=${targetMonthStr}`, { scroll: false });
-  };
-
   // 2. カレンダーデータの生成
   const calendarDays = useMemo(() => {
     const [year, month] = targetMonth.split('-').map(Number);
@@ -122,10 +107,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     return days;
   }, [initialData, targetMonth, timezone]);
 
-  const [displayYear, displayMonth] = targetMonth.split('-');
-  const isNotCurrentMonth = targetMonth !== currentMonthStr;
-
-
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
       <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-[32px] sm:rounded-[40px] shadow-xl flex flex-col overflow-hidden animate-fade-in">
@@ -157,26 +138,34 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
 
           <div className="relative flex items-center justify-center pt-1">
             <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
-              <button 
+              <button
                 onClick={() => handleMonthChange('prev')}
-                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                disabled={isPending}
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
                 title="前月"
               >
                 <ArrowLeft size={14} strokeWidth={2.5} />
               </button>
-              
-              <div className="px-5 text-center min-w-[120px] select-none border-x border-slate-100">
-                <span className="text-[9px] font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
-                  {displayYear}
-                </span>
-                <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
-                  {parseInt(displayMonth)}月
-                </span>
+
+              <div className="px-5 h-9 flex flex-col items-center justify-center min-w-[120px] select-none border-x border-slate-100">
+                {isPending ? (
+                  <Loader2 size={16} className="text-indigo-400 animate-spin" />
+                ) : (
+                  <>
+                    <span className="text-[9px] font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
+                      {displayYear}
+                    </span>
+                    <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
+                      {parseInt(displayMonth)}月
+                    </span>
+                  </>
+                )}
               </div>
 
-              <button 
+              <button
                 onClick={() => handleMonthChange('next')}
-                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                disabled={isPending}
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
                 title="来月"
               >
                 <ArrowRight size={14} strokeWidth={2.5} />
@@ -189,8 +178,9 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: -6, scale: 0.95 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
-                    onClick={() => router.replace(`/training/performance?month=${currentMonthStr}`, { scroll: false })}
-                    className="absolute left-full ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap"
+                    onClick={() => goToMonth(currentMonthStr)}
+                    disabled={isPending}
+                    className="absolute left-full ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none"
                     title="現在の月に戻る"
                   >
                     今月
@@ -461,12 +451,12 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
         </div>
 
         {/* ────────────── フッター ────────────── */}
-        <div className="shrink-0 p-4 sm:p-5 bg-white border-t border-slate-100 flex flex-col items-center">
+        <div className="shrink-0 p-5 sm:p-6 bg-white border-t border-slate-100">
           <button
             onClick={() => router.push('/library')}
-            className="w-full max-w-sm h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
+            className="w-full h-13 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>教材を選択</span>
+            <span>教材を選択する</span>
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Calendar, BookOpen, MessageSquareText, ArrowLeft, ArrowRight, ChevronDown, Library, Mic, Loader2 } from 'lucide-react';
+import { ChevronLeft, Calendar, BookOpen, MessageSquareText, ArrowLeft, ArrowRight, ChevronDown, Library, Mic, Loader2, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatZonedDate } from '@gabby/lib/date/date';
@@ -88,13 +88,22 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
 
           {/* Row1: 戻る（左端）+ 画面名（右端） */}
           <div className="relative flex items-center justify-between z-10">
-            <button
-              onClick={() => router.push('/training/performance')}
-              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
-              title="パフォーマンスに戻る"
-            >
-              <ChevronLeft size={20} strokeWidth={2.5} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/training/performance')}
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
+                title="パフォーマンスに戻る"
+              >
+                <ChevronLeft size={20} strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+                title="ダッシュボードに戻る"
+              >
+                <Home size={18} strokeWidth={2.5} />
+              </button>
+            </div>
 
             <div className="text-right">
               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
