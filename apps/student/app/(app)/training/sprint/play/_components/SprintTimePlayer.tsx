@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
-import { getFeedbackConfig, getScoreTier, getSprintTitle, resolveSprintHasLevel, cleanAnswerWords } from '@gabby/lib';
+import { getFeedbackConfig, getScoreTier, getSprintTitle, resolveSprintHasLevel, extractContentWords } from '@gabby/lib';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 import { SprintQuestion, SPRINT_FLOW_TIMING } from "@gabby/types/sprint";
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
@@ -383,12 +383,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     if (!targetText) return;
 
-    const cleanWords = cleanAnswerWords(targetText);
+    const contentWords = extractContentWords(targetText);
     const questionId = question.question_id;
 
     startAssessment(
       targetText,
-      cleanWords,
+      contentWords,
       (result) => {
         if (skippedQuestionIdsRef.current.has(questionId)) return;
 

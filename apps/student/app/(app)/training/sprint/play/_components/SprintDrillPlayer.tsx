@@ -16,7 +16,7 @@ import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
-import { getFeedbackConfig, getSprintTitle, resolveSprintHasLevel, setAudioSessionPlayback, cleanAnswerWords } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, resolveSprintHasLevel, setAudioSessionPlayback, extractContentWords } from '@gabby/lib';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
 import { playStatementThenQuestion, useStopAllAudioCore, useFullscreenAudioLifecycle, useFlowGuard } from '@gabby/lib/hooks/useSprintPlaybackFlow';
@@ -320,13 +320,13 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     // 3. チャイム再生（非同期）と録音開始（マイクアクティブ化）を同時にパラレル起動
     playChime();
 
-    const cleanWords = cleanAnswerWords(targetText);
+    const contentWords = extractContentWords(targetText);
 
     wasRecordingRef.current = true;
 
     startAssessment(
       targetText,
-      cleanWords,
+      contentWords,
       (result) => {
         // 🚀 iOSでスピーカー出力を即時回復させるため、再生モードに戻す
         setAudioSessionPlayback();
