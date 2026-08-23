@@ -178,7 +178,15 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
             </span>
           </div>
           
-          <div className="w-9 h-9 opacity-0 pointer-events-none" />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsSettingsOpen(true);
+            }}
+            className="h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-indigo-600 active:scale-95 transition-all cursor-pointer z-30"
+          >
+            <Settings2 size={18} strokeWidth={2.5} />
+          </button>
         </div>
 
         {/* コア情報を完全に中央へ数珠つなぎ配置 */}
@@ -206,12 +214,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
               )}
             </AnimatePresence>
 
-            <Settings2 
-              size={18} 
-              strokeWidth={2.5} 
-              className="text-slate-400 group-hover:text-indigo-500 group-hover:scale-110 transition-all shrink-0" 
-            />
-            
           </motion.div>
         </div>
       </div>
@@ -352,6 +354,19 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                   </AnimatePresence>
                 </div>
 
+                {/* 3段目: 詳細設定（種別・レベル・時間）への導線 */}
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="w-full flex items-center justify-between pl-1 pr-2 py-1.5 rounded-xl hover:bg-slate-50/80 active:scale-[0.99] transition-all group border-t border-slate-100/70 -mt-1 pt-2.5"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Settings2 size={12} className="text-slate-400 group-hover:text-indigo-500 transition-colors" strokeWidth={2.5} />
+                    <span className="text-[11px] font-black text-slate-500 group-hover:text-indigo-600 transition-colors">種別・レベル・時間を変更</span>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" strokeWidth={2.5} />
+                </button>
+
               </div>
 
               {/* 出題テーマセクション */}
@@ -408,7 +423,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                         <Settings2 size={14} className="text-indigo-500 shrink-0 mt-0.5" strokeWidth={2.5} />
                         <div className="space-y-0.5">
                           <h5 className="text-[11px] font-black text-slate-700 leading-none">トレーニング設定の変更方法</h5>
-                          <p className="text-[10px] text-slate-400 font-bold leading-relaxed">画面最上部の「ヘッダーエリア（タイトルや制限時間が並んでいる部分）」をタップすると、問題種別やレベル、制限時間を変更できます。</p>
+                          <p className="text-[10px] text-slate-400 font-bold leading-relaxed">画面最上部のヘッダーエリア、または右上の歯車アイコン、「種別・レベル・時間を変更」の行をタップすると、問題種別やレベル、制限時間を変更できます。</p>
                         </div>
                       </div>
 
