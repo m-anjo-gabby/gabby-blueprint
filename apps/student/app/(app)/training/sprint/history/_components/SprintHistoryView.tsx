@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight, Sliders, CheckCircle2, Mic } from 'lucide-react';
+import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight, Sliders, CheckCircle2, Mic, Loader2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,7 +64,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
   // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定等）はWord履歴画面と共通のためフック化
-  const { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange } = useMonthNavigator({
+  const { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange, goToMonth, isPending } = useMonthNavigator({
     targetMonth,
     basePath: '/training/sprint/history',
   });
@@ -173,10 +173,10 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             </button>
             
             <div className="text-right">
-              <span className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
+              <span className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
                 Sprint History
               </span>
-              <p className="text-[10px] font-bold text-slate-400 opacity-90 mt-0.5">
+              <p className="text-[11px] font-bold text-slate-400 opacity-90 mt-0.5">
                 スプリント履歴の詳細ログ
               </p>
             </div>
@@ -185,26 +185,36 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
           {/* 月移動：カプセル型UI */}
           <div className="relative flex items-center justify-center pt-1">
             <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
-              <button 
-                onClick={() => handleMonthChange('prev')} 
-                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+              <button
+                onClick={() => handleMonthChange('prev')}
+                disabled={isPending}
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
                 title="前月"
               >
                 <ArrowLeft size={14} strokeWidth={2.5} />
               </button>
-              
+
               <div className="px-5 text-center min-w-[120px] select-none border-x border-slate-100">
-                <span className="text-[10px] font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
-                  {displayYear}
-                </span>
-                <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
-                  {parseInt(displayMonth)}月
-                </span>
+                {isPending ? (
+                  <div className="h-9.5 flex items-center justify-center">
+                    <Loader2 size={16} className="text-indigo-400 animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-xs font-mono font-bold text-slate-400 tracking-wider block leading-none mb-0.5">
+                      {displayYear}
+                    </span>
+                    <span className="text-sm font-black text-slate-800 font-mono tracking-tight">
+                      {parseInt(displayMonth)}月
+                    </span>
+                  </>
+                )}
               </div>
 
-              <button 
-                onClick={() => handleMonthChange('next')} 
-                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+              <button
+                onClick={() => handleMonthChange('next')}
+                disabled={isPending}
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
                 title="来月"
               >
                 <ArrowRight size={14} strokeWidth={2.5} />
@@ -218,8 +228,9 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: -6, scale: 0.95 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
-                    onClick={() => router.push(`/training/sprint/history?month=${currentMonthStr}`)}
-                    className="absolute left-full ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap"
+                    onClick={() => goToMonth(currentMonthStr)}
+                    disabled={isPending}
+                    className="absolute left-full ml-3 px-2.5 py-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none"
                     title="現在の月に戻る"
                   >
                     今月
@@ -239,34 +250,28 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
               <p className="text-sm font-bold text-slate-400">この月のスプリント履歴はありません</p>
             </div>
           ) : (
-            sortedDates.map((date, index) => {
+            sortedDates.map((date) => {
               const { sessions, drills } = groupedData[date] || { sessions: [], drills: [] };
               const isExpanded = expandedDates.includes(date);
-              const dayNo = sortedDates.length - index;
 
               return (
                 <div key={date} className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm">
-                  <button 
+                  <button
                     onClick={() => toggleDate(date)}
                     className="w-full p-5 sm:p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
                   >
-                    <div className="flex items-center gap-4 text-left">
-                      <div className="w-12 h-12 bg-indigo-50/40 border border-indigo-100/50 rounded-2xl flex items-center justify-center text-indigo-500/90 font-black text-base font-mono shrink-0 select-none">
-                        {dayNo}
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-slate-800 tracking-tight mb-1.5">{date}</div>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] font-black text-slate-400 uppercase tracking-wider font-mono flex-wrap">
-                          <span className="flex items-center gap-0.5">
-                            <Zap size={11} fill="currentColor" className="text-slate-400" />
-                            スプリント {sessions.length}
-                          </span>
-                          <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                          <span className="text-indigo-500 flex items-center gap-0.5">
-                            <Sliders size={11} className="text-indigo-500" />
-                            ドリル {drills.length}
-                          </span>
-                        </div>
+                    <div className="text-left">
+                      <div className="text-sm font-bold text-slate-800 tracking-tight mb-1.5">{date}</div>
+                      <div className="flex items-center gap-2 mt-1 text-xs font-black text-slate-400 uppercase tracking-wider font-mono flex-wrap">
+                        <span className="flex items-center gap-0.5">
+                          <Zap size={11} fill="currentColor" className="text-slate-400" />
+                          スプリント {sessions.length}
+                        </span>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                        <span className="text-indigo-500 flex items-center gap-0.5">
+                          <Sliders size={11} className="text-indigo-500" />
+                          ドリル {drills.length}
+                        </span>
                       </div>
                     </div>
                     <div className={cn("transition-transform duration-300", isExpanded ? "rotate-180" : "")}>
@@ -287,65 +292,62 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                           {/* 1. ドリル履歴一覧 */}
                           {drills.length > 0 && (
                             <div className="space-y-2">
-                              <div className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-1">
+                              <div className="text-xs font-black text-slate-400 uppercase tracking-wider px-1">
                                 ドリル
                               </div>
                               <div className="space-y-2">
-                                {drills.map((drill, idx) => {
+                                {drills.map((drill) => {
                                   return (
-                                    <div 
+                                    <div
                                       key={drill.summary_id}
                                       className="flex items-center justify-between p-3.5 bg-white border border-dashed border-slate-200 rounded-2xl transition-all"
                                     >
-                                      <div className="flex items-center gap-3">
-                                        <span className="text-[10px] font-black text-indigo-400/80 font-mono w-4 text-center">{idx + 1}</span>
-                                        <div className="space-y-1">
-                                          {/* 1段目: 教材名 */}
-                                          <div className="text-[11px] font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
-                                            {(() => {
-                                              const raw = drill.com_m_contents;
-                                              const name = Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name;
-                                              return name || '教材データなし';
-                                            })()}
-                                          </div>
-                                          {/* 2段目: 回答数と発話数 */}
-                                          <div className="text-xs font-black text-slate-800 flex items-center gap-3 flex-wrap">
+                                      <div className="space-y-1">
+                                        {/* 1段目: 教材名 */}
+                                        <div className="text-xs font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
+                                          {(() => {
+                                            const raw = drill.com_m_contents;
+                                            const name = Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name;
+                                            return name || '教材データなし';
+                                          })()}
+                                        </div>
+                                        {/* 2段目: 回答数と発話数 */}
+                                        <div className="text-xs font-black text-slate-800 flex items-center gap-3 flex-wrap">
+                                          <span className="flex items-center gap-1">
+                                            <CheckCircle2 size={13} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
+                                            回答 <span className="font-mono font-extrabold text-indigo-600">{drill.question_count}</span>
+                                          </span>
+                                          <span className="flex items-center gap-1">
+                                            <Mic size={13} className="text-rose-500 shrink-0 stroke-[2.5]" />
+                                            発話 <span className="font-mono font-extrabold text-rose-600">{drill.assessment_count}</span>
+                                          </span>
+                                        </div>
+                                        {/* 3段目: 各種別の内訳 */}
+                                        <div className="flex items-center gap-3 text-xs font-bold text-slate-400 flex-wrap">
+                                          {drill.speed_count > 0 && (
                                             <span className="flex items-center gap-1">
-                                              <CheckCircle2 size={13} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
-                                              回答 <span className="font-mono font-extrabold text-indigo-600">{drill.question_count}</span>
+                                              <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-1 rounded leading-none py-0.5">SPEED</span>
+                                              <span className="font-mono text-slate-700 font-extrabold">{drill.speed_count}</span>
                                             </span>
+                                          )}
+                                          {drill.structure_count > 0 && (
                                             <span className="flex items-center gap-1">
-                                              <Mic size={13} className="text-rose-500 shrink-0 stroke-[2.5]" />
-                                              発話 <span className="font-mono font-extrabold text-rose-600">{drill.assessment_count}</span>
+                                              <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 px-1 rounded leading-none py-0.5">STR</span>
+                                              <span className="font-mono text-slate-700 font-extrabold">{drill.structure_count}</span>
                                             </span>
-                                          </div>
-                                          {/* 3段目: 各種別の内訳 */}
-                                          <div className="flex items-center gap-3 text-[11px] font-bold text-slate-400 flex-wrap">
-                                            {drill.speed_count > 0 && (
-                                              <span className="flex items-center gap-1">
-                                                <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-1 rounded leading-none py-0.5">SPEED</span>
-                                                <span className="font-mono text-slate-700 font-extrabold">{drill.speed_count}</span>
-                                              </span>
-                                            )}
-                                            {drill.structure_count > 0 && (
-                                              <span className="flex items-center gap-1">
-                                                <span className="text-[9px] font-black text-emerald-500 bg-emerald-50 px-1 rounded leading-none py-0.5">STR</span>
-                                                <span className="font-mono text-slate-700 font-extrabold">{drill.structure_count}</span>
-                                              </span>
-                                            )}
-                                            {drill.builders_count > 0 && (
-                                              <span className="flex items-center gap-1">
-                                                <span className="text-[9px] font-black text-sky-500 bg-sky-50 px-1 rounded leading-none py-0.5">BLD</span>
-                                                <span className="font-mono text-slate-700 font-extrabold">{drill.builders_count}</span>
-                                              </span>
-                                            )}
-                                            {drill.mastery_count > 0 && (
-                                              <span className="flex items-center gap-1">
-                                                <span className="text-[9px] font-black text-purple-500 bg-purple-50 px-1 rounded leading-none py-0.5">MST</span>
-                                                <span className="font-mono text-slate-700 font-extrabold">{drill.mastery_count}</span>
-                                              </span>
-                                            )}
-                                          </div>
+                                          )}
+                                          {drill.builders_count > 0 && (
+                                            <span className="flex items-center gap-1">
+                                              <span className="text-[10px] font-black text-sky-500 bg-sky-50 px-1 rounded leading-none py-0.5">BLD</span>
+                                              <span className="font-mono text-slate-700 font-extrabold">{drill.builders_count}</span>
+                                            </span>
+                                          )}
+                                          {drill.mastery_count > 0 && (
+                                            <span className="flex items-center gap-1">
+                                              <span className="text-[10px] font-black text-purple-500 bg-purple-50 px-1 rounded leading-none py-0.5">MST</span>
+                                              <span className="font-mono text-slate-700 font-extrabold">{drill.mastery_count}</span>
+                                            </span>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -358,76 +360,69 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                           {/* 2. スプリントセッション履歴一覧 */}
                           {sessions.length > 0 && (
                             <div className="space-y-2">
-                              <div className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-1">
+                              <div className="text-xs font-black text-slate-400 uppercase tracking-wider px-1">
                                 スプリント
                               </div>
                               <div className="space-y-2">
-                                {sessions.map((session, idx) => {
+                                {sessions.map((session) => {
                                   const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];
                                   const isSpeedMode = session.question_type === '0';
+                                  const raw = session.com_m_contents;
+                                  const name = (Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name) || '教材データなし';
+                                  const content = Array.isArray(raw) ? raw[0] : raw;
+                                  const hasLevel = resolveSprintHasLevel(content?.metadata?.sprint);
 
                                   return (
-                                    <div 
+                                    <button
                                       key={session.self_sprint_id}
                                       id={`session-${session.self_sprint_id}`}
+                                      type="button"
                                       onClick={() => router.push(`/training/sprint/result/${session.self_sprint_id}`)}
                                       className={cn(
-                                        "flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer",
+                                        "w-full flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400",
                                         focusId === session.self_sprint_id && "ring-2 ring-blue-500 border-transparent bg-blue-50/30 shadow-sm"
                                       )}
                                     >
-                                      <div className="flex items-center gap-4">
-                                        <span className="text-[11px] font-black text-indigo-400/80 font-mono w-4 text-center">{idx + 1}</span>
-                                        <div className="space-y-1">
-                                          {/* 1段目: 教材名 */}
-                                          <div className="text-[11px] font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
-                                            {(() => {
-                                              const raw = session.com_m_contents;
-                                              const name = Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name;
-                                              return name || '教材データなし';
-                                            })()}
-                                          </div>
-                                          
-                                          {/* 2段目: メタ情報 (種別, レベル, 形式など) */}
-                                          <div className="flex items-center gap-1.5 flex-wrap">
-                                            <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
-                                            {(() => {
-                                              const content = Array.isArray(session.com_m_contents) ? session.com_m_contents[0] : session.com_m_contents;
-                                              const hasLevel = resolveSprintHasLevel(content?.metadata?.sprint);
-                                              if (!hasLevel) return null;
-                                              return (
-                                                <span className="text-[11px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 whitespace-nowrap">
-                                                  {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
-                                                </span>
-                                              );
-                                            })()}
+                                      <div className="space-y-1">
+                                        {/* 1段目: 教材名 */}
+                                        <div className="text-xs font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
+                                          {name}
+                                        </div>
 
-                                            {isSpeedMode && (
-                                              <span className={cn(
-                                                "text-[10px] font-black px-1.5 py-0.5 rounded-md border tracking-wider whitespace-nowrap",
-                                                session.answer_type === '1'
-                                                  ? "bg-amber-50 border-amber-100 text-amber-600"
-                                                  : "bg-emerald-50 border-emerald-100 text-emerald-600"
-                                              )}>
-                                                {session.answer_type === '1' ? 'NO' : 'YES'}
-                                              </span>
-                                            )}
-                                          </div>
-                                          
-                                          {/* 3段目: 実施結果数値 (時間, 回答数など) */}
-                                          <div className="flex items-center gap-3 text-[11px] font-bold text-slate-400 flex-wrap">
-                                            <span className="flex items-center gap-1"><Timer size={11} /> {session.time_limit_sec}秒</span>
-                                            <span className="flex items-center gap-1">
-                                              <CheckCircle2 size={11} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
-                                              回答 <span className="font-mono font-extrabold text-slate-800">{session.total_answered}</span>
+                                        {/* 2段目: メタ情報 (種別, レベル, 形式など) */}
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
+                                          {hasLevel && (
+                                            <span className="text-xs font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 whitespace-nowrap">
+                                              {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
                                             </span>
-                                          </div>
+                                          )}
+
+                                          {isSpeedMode && (
+                                            <span className={cn(
+                                              "text-[11px] font-black px-1.5 py-0.5 rounded-md border tracking-wider whitespace-nowrap",
+                                              session.answer_type === '1'
+                                                ? "bg-amber-50 border-amber-100 text-amber-600"
+                                                : "bg-emerald-50 border-emerald-100 text-emerald-600"
+                                            )}>
+                                              {session.answer_type === '1' ? 'NO' : 'YES'}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {/* 3段目: 実施結果数値 (時間, 回答数など) */}
+                                        <div className="flex items-center gap-3 text-xs font-bold text-slate-400 flex-wrap">
+                                          <span className="flex items-center gap-1"><Timer size={11} /> {session.time_limit_sec}秒</span>
+                                          <span className="flex items-center gap-1">
+                                            <CheckCircle2 size={11} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
+                                            回答 <span className="font-mono font-extrabold text-slate-800">{session.total_answered}</span>
+                                          </span>
                                         </div>
                                       </div>
-                                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-200 bg-slate-50 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-200 bg-slate-50 group-hover:bg-blue-600 group-hover:text-white transition-all shrink-0">
                                         <ArrowRight size={14} strokeWidth={3} className="group-hover:translate-x-0.5 transition-transform duration-200" />
                                       </div>
-                                    </div>
+                                    </button>
                                   );
                                 })}
                               </div>
@@ -445,20 +440,13 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
         </div>
 
         {/* ────────────── フッター ────────────── */}
-        <div className="shrink-0 p-5 bg-white border-t border-slate-100 flex gap-3 w-full max-w-lg mx-auto">
+        <div className="shrink-0 p-5 sm:p-6 bg-white border-t border-slate-100">
           <button
             onClick={() => router.push('/library')}
-            className="flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
+            className="w-full h-13 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
           >
-            <span>教材を選択</span>
+            <span>教材を選択する</span>
             <ArrowRight size={14} strokeWidth={3} />
-          </button>
-          <button
-            onClick={() => router.push('/training/sprint/play?mode=sprint')}
-            className="flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
-          >
-            <span>スプリントをする</span>
-            <ArrowRight size={14} strokeWidth={2.5} />
           </button>
         </div>
 

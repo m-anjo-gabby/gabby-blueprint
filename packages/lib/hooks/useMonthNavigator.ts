@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '../stores/useUserStore';
 import { toIsoMonthInZone } from '../date/date';
@@ -22,9 +22,23 @@ export interface UseMonthNavigatorOptions {
  */
 export function useMonthNavigator({ targetMonth, basePath, navigate = 'push' }: UseMonthNavigatorOptions) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
   const currentMonthStr = useMemo(() => toIsoMonthInZone(new Date(), timezone), [timezone]);
+
+  // 💡 router遷移をuseTransitionでラップし、月移動中のペンディング状態をUI側で表示できるようにする
+  const goToMonth = (targetMonthStr: string) => {
+    const url = `${basePath}?month=${targetMonthStr}`;
+
+    startTransition(() => {
+      if (navigate === 'replace') {
+        router.replace(url, { scroll: false });
+      } else {
+        router.push(url);
+      }
+    });
+  };
 
   const handleMonthChange = (direction: 'prev' | 'next') => {
     const [year, month] = targetMonth.split('-').map(Number);
@@ -39,18 +53,11 @@ export function useMonthNavigator({ targetMonth, basePath, navigate = 'push' }: 
       newYear += 1;
     }
 
-    const targetMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-    const url = `${basePath}?month=${targetMonthStr}`;
-
-    if (navigate === 'replace') {
-      router.replace(url, { scroll: false });
-    } else {
-      router.push(url);
-    }
+    goToMonth(`${newYear}-${String(newMonth).padStart(2, '0')}`);
   };
 
   const [displayYear, displayMonth] = targetMonth.split('-');
   const isNotCurrentMonth = targetMonth !== currentMonthStr;
 
-  return { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange };
+  return { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange, goToMonth, isPending };
 }
