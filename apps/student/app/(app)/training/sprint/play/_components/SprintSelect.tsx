@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, ChevronDown, ChevronRight, Mic, MicOff, Loader2, BookOpen, Settings2, AlertTriangle, Timer, Zap } from 'lucide-react';
+import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, ChevronDown, ChevronRight, Mic, MicOff, Loader2, BookOpen, Settings2, AlertTriangle, Timer, Zap, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, DEFAULT_SPRINT_TIME_KEY, type SprintQuestionType, type SprintAnswerType, type SprintConfig } from '@gabby/types/sprint';
@@ -162,16 +162,28 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
       >
         {/* 最上段レイヤー：ナビゲーションとメインラベル */}
         <div className="w-full flex items-center justify-between min-h-[40px] px-6">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation(); 
-              router.back();
-            }} 
-            className="h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-slate-600 active:scale-95 transition-all cursor-pointer z-30"
-          >
-            <ChevronLeft size={20} strokeWidth={2.5} />
-          </button>
-          
+          <div className="flex items-center gap-2 z-30">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.back();
+              }}
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-slate-600 active:scale-95 transition-all cursor-pointer"
+            >
+              <ChevronLeft size={20} strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push('/dashboard');
+              }}
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-indigo-600 active:scale-95 transition-all cursor-pointer"
+              title="ダッシュボードに戻る"
+            >
+              <Home size={18} strokeWidth={2.5} />
+            </button>
+          </div>
+
           <div className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-0.5 rounded-full max-w-[60%] z-30">
             <span className="text-sm font-black text-indigo-600 truncate leading-none">
               {contentName || 'Gabby Blueprint'}

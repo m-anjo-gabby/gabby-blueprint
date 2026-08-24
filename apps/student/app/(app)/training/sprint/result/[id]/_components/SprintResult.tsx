@@ -51,7 +51,11 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const { play: playAudioSpeech, stop: stopAudioSpeech, isPlaying: globalPlayingId, unlockAudioContext, resumeStatus } = usePlayAudioSpeech();
 
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
-  const [isBatchPlaying, setIsBatchPlaying] = useState(false);
+  // 🆕 現在進行中の再生アクション種別。'all' 実施中は他の再生操作を無効化し、
+  // 'sequence'/'single' 実施中に別の再生操作が来た場合はトークンを進めて即座に中断・切替する。
+  type PlaybackMode = 'all' | 'sequence' | 'single' | null;
+  const [activePlaybackMode, setActivePlaybackMode] = useState<PlaybackMode>(null);
+  const playbackTokenRef = useRef(0);
   // 🆕 フッターの主役ボタンの表示モード。実施直後(cameFromPlay)は「全て再生」から始まり、
   // 再生完了/停止で「リトライ」に切り替わる。履歴一覧からの遷移は常にリトライ固定。
   const [footerShowsRetry, setFooterShowsRetry] = useState(!cameFromPlay);
@@ -74,7 +78,6 @@ export const SprintResult: React.FC<SprintResultProps> = ({
     return map;
   }, [scoreData.answered_history]);
 
-  const isBatchPlayingRef = useRef(false);
   // グローバルキャッシュを使用（画面遷移後に戻ってきてもバッファを再利用できる）
   const isMountedRef = useRef(true);
  
@@ -95,13 +98,12 @@ export const SprintResult: React.FC<SprintResultProps> = ({
 
     return () => {
       isMountedRef.current = false;
-      isBatchPlayingRef.current = false;
       stopAllAudio();
     };
   }, [stopAllAudio]);
- 
+
   useEffect(() => {
-    if (focusedCardId && isBatchPlaying) {
+    if (focusedCardId && activePlaybackMode === 'all') {
       const element = document.getElementById(`card-${focusedCardId}`);
       if (element) {
         element.scrollIntoView({
@@ -110,22 +112,35 @@ export const SprintResult: React.FC<SprintResultProps> = ({
         });
       }
     }
-  }, [focusedCardId, isBatchPlaying]);
- 
+  }, [focusedCardId, activePlaybackMode]);
+
   const handlePlayAudio = async (
-    questionId: string, 
-    text: string, 
+    questionId: string,
+    text: string,
     audioPath: string | null,
     isManualClick = false
   ): Promise<void> => {
     if (!isMountedRef.current) return;
-    
+
     if (isManualClick) {
-      isBatchPlayingRef.current = false;
-      setIsBatchPlaying(false);
+      // 🆕 全て再生中は個別再生を無効化する（ボタン側もdisabled指定だが、念のため二重ガード）
+      if (activePlaybackMode === 'all') return;
+
+      // 🆕 進行中の問題毎再生・個別再生があればトークンを進めて中断し、この個別再生を優先する
+      const token = ++playbackTokenRef.current;
+      setActivePlaybackMode('single');
       setFocusedCardId(questionId.split('-')[0]);
+
+      if (audioPath) {
+        await playAudioSpeech(audioPath, questionId, { restart: true });
+      }
+
+      if (isMountedRef.current && playbackTokenRef.current === token) {
+        setActivePlaybackMode(null);
+      }
+      return;
     }
-    
+
     if (audioPath) {
       // 共通フックの play を await することで再生完了まで同期的に待機する
       await playAudioSpeech(audioPath, questionId, { restart: true });
@@ -133,44 +148,52 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   };
 
   const handlePlaySingleQuestion = async (q: any) => {
-    isBatchPlayingRef.current = false;
-    setIsBatchPlaying(false);
+    // 🆕 全て再生中は問題毎再生を無効化する（ボタン側もdisabled指定だが、念のため二重ガード）
+    if (activePlaybackMode === 'all') return;
+
+    // 🆕 進行中の問題毎再生・個別再生があればトークンを進めて中断し、この再生を優先する
+    const token = ++playbackTokenRef.current;
+    setActivePlaybackMode('sequence');
     stopAllAudio();
     if (!isMountedRef.current) return;
     setFocusedCardId(q.question_id);
     const isSpeedMode = scoreData.question_type === '0';
 
+    const isCancelled = () => !isMountedRef.current || playbackTokenRef.current !== token;
+
     try {
       if (!isSpeedMode && q.statement_en) {
         await handlePlayAudio(q.question_id + '-st', q.statement_en, q.statement_voice);
-        if (!isMountedRef.current) return;
+        if (isCancelled()) return;
         await new Promise(r => setTimeout(r, 400));
       }
-      if (!isMountedRef.current) return;
+      if (isCancelled()) return;
       await handlePlayAudio(q.question_id + '-q', q.question_en, q.question_voice);
-      if (!isMountedRef.current) return;
+      if (isCancelled()) return;
       await new Promise(r => setTimeout(r, 400));
-      
-      if (!isMountedRef.current) return;
+
+      if (isCancelled()) return;
       const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no_en : q.answer_sentence_yes_en;
       const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
-      const ansId = isSpeedMode 
+      const ansId = isSpeedMode
         ? (scoreData.answer_type === '1' ? q.question_id + '-no' : q.question_id + '-yes')
         : q.question_id + '-ans';
       await handlePlayAudio(ansId, ansText ?? "", ansVoice);
     } catch (e) {
       console.error("Single sequence play error:", e);
     } finally {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && playbackTokenRef.current === token) {
         setFocusedCardId(null);
+        setActivePlaybackMode(null);
       }
     }
   };
 
   const handlePlayAll = async () => {
-    if (isBatchPlayingRef.current) {
-      isBatchPlayingRef.current = false;
-      setIsBatchPlaying(false);
+    if (activePlaybackMode === 'all') {
+      // フッターの停止ボタンとして機能
+      playbackTokenRef.current++;
+      setActivePlaybackMode(null);
       stopAllAudio();
       setFocusedCardId(null);
       // 🆕 手動停止後はフッターをリトライボタンに戻す
@@ -178,40 +201,43 @@ export const SprintResult: React.FC<SprintResultProps> = ({
       return;
     }
 
-    isBatchPlayingRef.current = true;
-    setIsBatchPlaying(true);
+    // 🆕 進行中の問題毎再生・個別再生があればトークンを進めて中断し、全て再生を優先する
+    const token = ++playbackTokenRef.current;
+    setActivePlaybackMode('all');
+    stopAllAudio();
     const isSpeedMode = scoreData.question_type === '0';
+
+    const isCancelled = () => !isMountedRef.current || playbackTokenRef.current !== token;
 
     try {
       for (const q of questions) {
-        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
+        if (isCancelled()) break;
         setFocusedCardId(q.question_id);
 
         if (!isSpeedMode && q.statement_en) {
           await handlePlayAudio(q.question_id + '-st', q.statement_en, q.statement_voice);
-          if (!isBatchPlayingRef.current || !isMountedRef.current) break;
+          if (isCancelled()) break;
           await new Promise(r => setTimeout(r, 400));
         }
 
-        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
+        if (isCancelled()) break;
         await handlePlayAudio(q.question_id + '-q', q.question_en, q.question_voice);
-        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
+        if (isCancelled()) break;
         await new Promise(r => setTimeout(r, 400));
-        
-        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
+
+        if (isCancelled()) break;
         const ansText = scoreData.answer_type === '1' ? q.answer_sentence_no_en : q.answer_sentence_yes_en;
         const ansVoice = scoreData.answer_type === '1' ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
-        const ansId = isSpeedMode 
+        const ansId = isSpeedMode
           ? (scoreData.answer_type === '1' ? q.question_id + '-no' : q.question_id + '-yes')
           : q.question_id + '-ans';
         await handlePlayAudio(ansId, ansText ?? "", ansVoice);
-        if (!isBatchPlayingRef.current || !isMountedRef.current) break;
+        if (isCancelled()) break;
         await new Promise(r => setTimeout(r, 800));
       }
     } finally {
-      if (isMountedRef.current) {
-        isBatchPlayingRef.current = false;
-        setIsBatchPlaying(false);
+      if (isMountedRef.current && playbackTokenRef.current === token) {
+        setActivePlaybackMode(null);
         setFocusedCardId(null);
         // 🆕 再生完了後はフッターをリトライボタンに戻す
         setFooterShowsRetry(true);
@@ -370,8 +396,9 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                         {/* カプセル型の「一連再生」コントロールバッジ */}
                         <button
                           onClick={() => handlePlaySingleQuestion(q)}
+                          disabled={activePlaybackMode === 'all'}
                           className={cn(
-                            "h-7 pl-2.5 pr-3 rounded-full flex items-center gap-1.5 transition-all active:scale-95 border select-none group whitespace-nowrap",
+                            "h-7 pl-2.5 pr-3 rounded-full flex items-center gap-1.5 transition-all active:scale-95 border select-none group whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none",
                             isFocused
                               ? "bg-indigo-600 border-transparent text-white shadow-xs shadow-indigo-200"
                               : "bg-slate-50 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/70 border-slate-200/50"
@@ -450,6 +477,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           label="基本文"
                           tone="slate"
                           onPlay={() => handlePlayAudio(stAudioId, q.statement_en!, q.statement_voice, true)}
+                          playDisabled={activePlaybackMode === 'all'}
                           isLoading={globalPlayingId === stAudioId}
                           jaText={q.statement_ja}
                           isJaVisible={jaVisibleMap[stAudioId]}
@@ -469,6 +497,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                         label={isQuestionBased ? "質問文" : "指示文"}
                         tone="indigo"
                         onPlay={() => handlePlayAudio(qAudioId, q.question_en, q.question_voice, true)}
+                        playDisabled={activePlaybackMode === 'all'}
                         isLoading={globalPlayingId === qAudioId}
                         jaText={q.question_ja}
                         isJaVisible={jaVisibleMap[qAudioId]}
@@ -491,6 +520,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                                 label="解答文"
                                 tone="emerald"
                                 onPlay={() => handlePlayAudio(yesAudioId, q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)}
+                                playDisabled={activePlaybackMode === 'all'}
                                 isLoading={globalPlayingId === yesAudioId}
                                 jaText={q.answer_sentence_yes_ja}
                                 isJaVisible={jaVisibleMap[yesAudioId]}
@@ -509,6 +539,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                                 label="解答文"
                                 tone="amber"
                                 onPlay={() => handlePlayAudio(noAudioId, q.answer_sentence_no_en!, q.answer_sentence_no_voice, true)}
+                                playDisabled={activePlaybackMode === 'all'}
                                 isLoading={globalPlayingId === noAudioId}
                                 jaText={q.answer_sentence_no_ja}
                                 isJaVisible={jaVisibleMap[noAudioId]}
@@ -528,6 +559,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                             label="解答文"
                             tone="emerald"
                             onPlay={() => handlePlayAudio(ansAudioId, q.answer_sentence_yes_en, q.answer_sentence_yes_voice, true)}
+                            playDisabled={activePlaybackMode === 'all'}
                             isLoading={globalPlayingId === ansAudioId}
                             jaText={q.answer_sentence_yes_ja}
                             isJaVisible={jaVisibleMap[ansAudioId]}
@@ -566,12 +598,12 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                 onClick={handlePlayAll}
                 className={cn(
                   "w-full h-13 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 border-none",
-                  isBatchPlaying
+                  activePlaybackMode === 'all'
                     ? "bg-indigo-50 text-indigo-600 shadow-none border border-indigo-200"
                     : "bg-indigo-600 text-white shadow-indigo-600/10 hover:bg-indigo-700"
                 )}
               >
-                {isBatchPlaying ? (
+                {activePlaybackMode === 'all' ? (
                   <span className="flex gap-0.5 items-center justify-center h-3 w-3 shrink-0">
                     <span className="w-0.5 h-full bg-current rounded-xs animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
                     <span className="w-0.5 h-full bg-current rounded-xs animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
@@ -580,7 +612,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                 ) : (
                   <PlayCircle size={16} strokeWidth={3} />
                 )}
-                <span>{isBatchPlaying ? "停止" : "全て再生"}</span>
+                <span>{activePlaybackMode === 'all' ? "停止" : "全て再生"}</span>
               </button>
 
               <button
