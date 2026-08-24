@@ -429,15 +429,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                 <div className={cn("grid transition-all duration-200 ease-in-out", isHelpAccordionOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
                   <div className="overflow-hidden">
                     <div className="px-4 pb-3 pt-1 border-t border-slate-50/60 flex flex-col gap-1">
-                      
-                      {/* 案内カード */}
-                      <div className="mx-2 my-2 p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex gap-2.5 items-start">
-                        <Settings2 size={14} className="text-indigo-500 shrink-0 mt-0.5" strokeWidth={2.5} />
-                        <div className="space-y-0.5">
-                          <h5 className="text-[11px] font-black text-slate-700 leading-none">トレーニング設定の変更方法</h5>
-                          <p className="text-[10px] text-slate-400 font-bold leading-relaxed">画面最上部のヘッダーエリア、または右上の歯車アイコン、「種別・レベル・時間を変更」の行をタップすると、問題種別やレベル、制限時間を変更できます。</p>
-                        </div>
-                      </div>
 
                       <button type="button" onClick={() => setIsHelpOpen(true)} className="w-full flex items-center justify-between text-left py-2.5 px-2 hover:bg-slate-50/80 active:scale-[0.99] transition-all rounded-xl group">
                         <span className="text-[11px] sm:text-xs font-bold text-slate-600 truncate mr-4 group-hover:text-indigo-600 transition-colors">音声が聞こえない・認識しない場合</span>
