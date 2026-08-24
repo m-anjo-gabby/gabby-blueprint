@@ -2,13 +2,14 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, CalendarDays, ArrowLeft, HelpCircle, Loader2 } from 'lucide-react';
+import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, CalendarDays, ArrowLeft, HelpCircle, Loader2, Mic } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
 interface TrainingPerformanceProps {
   initialData: UserTrainingPerformanceResponse;
@@ -19,6 +20,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
   const router = useRouter();
   const [showTooltip, setShowTooltip] = useState(false);
   const [showSprintTooltip, setShowSprintTooltip] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
   // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定・ペンディング状態）は
@@ -74,34 +76,61 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     };
   }, [initialData, timezone]);
 
-  // 2. カレンダーデータの生成
+  // 2. カレンダーデータの生成（日別サマリー付き）
   const calendarDays = useMemo(() => {
     const [year, month] = targetMonth.split('-').map(Number);
-    const days = [];
 
-    const historySet = new Set<string>();
-    
+    interface DayDetail {
+      wordCount: number;
+      phraseCount: number;
+      sprintSessionCount: number;
+      sprintAnswerCount: number;
+      assessmentCount: number;
+    }
+    const detailMap = new Map<string, DayDetail>();
+    const getOrCreate = (dateStr: string): DayDetail => {
+      let entry = detailMap.get(dateStr);
+      if (!entry) {
+        entry = { wordCount: 0, phraseCount: 0, sprintSessionCount: 0, sprintAnswerCount: 0, assessmentCount: 0 };
+        detailMap.set(dateStr, entry);
+      }
+      return entry;
+    };
+
     (initialData?.words || []).forEach(item => {
-      historySet.add(toIsoDateInZone(item.training_date, timezone));
+      const entry = getOrCreate(toIsoDateInZone(item.training_date, timezone));
+      entry.wordCount += item.word_count;
+      entry.phraseCount += item.phrase_count;
+      entry.assessmentCount += item.assessment_count;
     });
     (initialData?.sprint_sessions || []).forEach(item => {
-      if (item.insert_date) {
-        historySet.add(toIsoDateInZone(item.insert_date, timezone));
-      }
+      if (!item.insert_date) return;
+      const entry = getOrCreate(toIsoDateInZone(item.insert_date, timezone));
+      entry.sprintSessionCount += 1;
+      entry.sprintAnswerCount += item.total_answered;
+      entry.assessmentCount += item.assessment_count || 0;
     });
     (initialData?.sprint_drills || []).forEach(item => {
-      historySet.add(toIsoDateInZone(item.training_date, timezone));
+      const entry = getOrCreate(toIsoDateInZone(item.training_date, timezone));
+      entry.assessmentCount += item.assessment_count;
     });
-    
+
     const daysInMonth = new Date(year, month, 0).getDate();
-    
+    const days = [];
+
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const hasHistory = historySet.has(dateStr);
+      const detail = detailMap.get(dateStr);
 
       days.push({
         dayNum: d,
-        hasHistory
+        dateStr,
+        hasHistory: !!detail,
+        wordCount: detail?.wordCount ?? 0,
+        phraseCount: detail?.phraseCount ?? 0,
+        sprintSessionCount: detail?.sprintSessionCount ?? 0,
+        sprintAnswerCount: detail?.sprintAnswerCount ?? 0,
+        assessmentCount: detail?.assessmentCount ?? 0,
       });
     }
     return days;
@@ -266,12 +295,16 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
               
               <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 {/* 1. 単語帳 */}
-                <div className="p-3 sm:p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
+                <button
+                  type="button"
+                  onClick={() => router.push('/training/word/history')}
+                  className="w-full text-left p-3 sm:p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group hover:border-indigo-200 hover:bg-slate-50/20 transition-all active:scale-[0.99] cursor-pointer"
+                >
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="w-5 h-5 sm:w-6 sm:h-6 bg-indigo-50/60 text-indigo-600 rounded-md flex items-center justify-center border border-indigo-100/20">
                       <BookOpen strokeWidth={2.5} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
-                    <span className="text-[11px] sm:text-xs font-black text-slate-700">単語帳ドリル</span>
+                    <span className="text-[11px] sm:text-xs font-black text-slate-700 group-hover:text-indigo-600 transition-colors">単語帳ドリル</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 sm:gap-4 pt-1">
@@ -284,21 +317,42 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                       <span className="text-sm sm:text-base font-mono font-black text-slate-900 tracking-tight">{stats.totalPhrases}</span>
                     </div>
                   </div>
-                </div>
+
+                  <div className="mt-2 pt-2 border-t border-slate-100/60 flex items-center justify-end gap-1">
+                    <span className="text-[9px] font-bold text-indigo-500/80 group-hover:text-indigo-600 transition-colors">履歴を見る</span>
+                    <div className="w-5 h-5 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all shrink-0">
+                      <ArrowRight size={10} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                </button>
 
                 {/* 2. スプリント */}
-                <div className="p-3 sm:p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => router.push('/training/sprint/history')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push('/training/sprint/history');
+                    }
+                  }}
+                  className="p-3 sm:p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group hover:border-amber-200 hover:bg-slate-50/20 transition-all active:scale-[0.99] cursor-pointer"
+                >
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 bg-amber-50/60 text-amber-500 rounded-md flex items-center justify-center border border-amber-100/20">
                         <Zap strokeWidth={2.5} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
-                      <span className="text-[11px] sm:text-xs font-black text-slate-700">スプリント</span>
+                      <span className="text-[11px] sm:text-xs font-black text-slate-700 group-hover:text-amber-600 transition-colors">スプリント</span>
                     </div>
                     <div className="relative flex items-center">
                       <button
                         type="button"
-                        onClick={() => setShowSprintTooltip(!showSprintTooltip)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowSprintTooltip(!showSprintTooltip);
+                        }}
                         onMouseEnter={() => setShowSprintTooltip(true)}
                         onMouseLeave={() => setShowSprintTooltip(false)}
                         className="text-slate-400 hover:text-slate-600 cursor-help transition-colors focus:outline-none flex items-center justify-center"
@@ -315,7 +369,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                             className="absolute bottom-full mb-2 right-0 bg-slate-800 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md whitespace-nowrap z-50 pointer-events-none"
                           >
                             ドリルモードの回答数は含まれていません
-                            <div className="absolute top-full right-[4px] border-4 border-transparent border-t-slate-800" />
+                            <div className="absolute top-full right-1 border-4 border-transparent border-t-slate-800" />
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -330,6 +384,13 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                     <div>
                       <span className="text-[9px] font-medium text-slate-400 block">回答数</span>
                       <span className="text-sm sm:text-base font-mono font-black text-slate-900 tracking-tight">{stats.sprintAnswers}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 pt-2 border-t border-slate-100/60 flex items-center justify-end gap-1">
+                    <span className="text-[9px] font-bold text-amber-600/80 group-hover:text-amber-600 transition-colors">履歴を見る</span>
+                    <div className="w-5 h-5 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-600 transition-all shrink-0">
+                      <ArrowRight size={10} strokeWidth={2.5} />
                     </div>
                   </div>
                 </div>
@@ -359,9 +420,11 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -4, scale: 0.95 }}
                             transition={{ duration: 0.12, ease: "easeOut" }}
-                            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md whitespace-nowrap z-50 pointer-events-none"
+                            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md whitespace-nowrap z-50 pointer-events-none text-center leading-relaxed"
                           >
                             トレーニングした日付がマークされます
+                            <br />
+                            マークをタップすると実施内容を確認できます
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
                           </motion.div>
                         )}
@@ -374,77 +437,79 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 </div>
                 
                 <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center">
-                  {calendarDays.map((day, idx) => (
-                    <div key={idx} className="flex flex-col items-center justify-center">
-                      <div className={cn(
-                        "w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[11px] sm:text-xs font-mono font-bold flex items-center justify-center transition-all",
-                        day.hasHistory
-                          ? "bg-indigo-600 text-white font-black shadow-xs ring-4 ring-indigo-50"
-                          : "bg-slate-50 text-slate-400"
-                      )}>
-                        {day.dayNum}
-                      </div>
+                  {calendarDays.map((day) => (
+                    <div key={day.dateStr} className="flex flex-col items-center justify-center">
+                      {day.hasHistory ? (
+                        <Popover
+                          open={selectedDate === day.dateStr}
+                          onOpenChange={(open) => setSelectedDate(open ? day.dateStr : null)}
+                        >
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[11px] sm:text-xs font-mono flex items-center justify-center transition-all bg-indigo-600 text-white font-black shadow-xs ring-4 ring-indigo-50 active:scale-90 cursor-pointer focus:outline-none"
+                            >
+                              {day.dayNum}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="center"
+                            collisionPadding={12}
+                            className="w-56 p-3 rounded-xl border-slate-200/80 shadow-lg"
+                          >
+                            <div className="space-y-2 text-xs">
+                              <div className="flex items-center gap-1.5 pb-1.5 border-b border-slate-100">
+                                <CalendarDays size={12} className="text-indigo-500 shrink-0" />
+                                <span className="font-black text-slate-700">
+                                  {parseInt(displayMonth)}月{day.dayNum}日の実施内容
+                                </span>
+                              </div>
+
+                              {(day.wordCount > 0 || day.phraseCount > 0) && (
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="flex items-center gap-1 text-slate-500 font-bold shrink-0">
+                                    <BookOpen size={11} className="text-indigo-500" />
+                                    単語帳ドリル
+                                  </span>
+                                  <span className="font-mono font-black text-slate-800 text-right">
+                                    {day.phraseCount}フレーズ
+                                  </span>
+                                </div>
+                              )}
+
+                              {day.sprintSessionCount > 0 && (
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="flex items-center gap-1 text-slate-500 font-bold shrink-0">
+                                    <Zap size={11} className="text-amber-500" />
+                                    スプリント
+                                  </span>
+                                  <span className="font-mono font-black text-slate-800 text-right">
+                                    {day.sprintSessionCount}本 / {day.sprintAnswerCount}回答
+                                  </span>
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
+                                <span className="flex items-center gap-1 text-slate-500 font-bold shrink-0">
+                                  <Mic size={11} className="text-rose-500" />
+                                  総発話回数
+                                </span>
+                                <span className="font-mono font-black text-rose-600">
+                                  {day.assessmentCount}回
+                                </span>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[11px] sm:text-xs font-mono font-bold flex items-center justify-center bg-slate-50 text-slate-400">
+                          {day.dayNum}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* LOGS MENUセクション */}
-            <div className="space-y-2">
-              <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest block px-1">
-                Logs Menu
-              </span>
-
-              {/* 1. 単語ドリル履歴 */}
-              <button
-                onClick={() => router.push('/training/word/history')}
-                className="w-full text-left p-4 bg-white border border-slate-200/80 rounded-xl shadow-xs flex items-center justify-between hover:border-indigo-200 hover:bg-slate-50/20 transition-all group active:scale-[0.995] cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center shrink-0 border border-indigo-100/40">
-                    <BookOpen size={16} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-xs font-black text-slate-800 group-hover:text-indigo-600 transition-colors">
-                        単語帳ドリルのトレーニング履歴
-                      </h2>
-                    </div>
-                    <p className="text-[11px] font-medium text-slate-400 mt-1 leading-normal">
-                      日ごとの成果や、取り組んだ教材ごとの内訳を振り返ります。
-                    </p>
-                  </div>
-                </div>
-                <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all shrink-0">
-                  <ArrowRight size={12} strokeWidth={2.5} />
-                </div>
-              </button>
-
-              {/* 2. スプリント履歴 */}
-              <button
-                onClick={() => router.push('/training/sprint/history')}
-                className="w-full text-left p-4 bg-white border border-slate-200/80 rounded-xl shadow-xs flex items-center justify-between hover:border-amber-200 hover:bg-slate-50/20 transition-all group active:scale-[0.995] cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center shrink-0 border border-amber-100/40">
-                    <Zap size={16} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-xs font-black text-slate-800 group-hover:text-amber-600 transition-colors">
-                        スプリントのトレーニング履歴
-                      </h2>
-                    </div>
-                    <p className="text-[11px] font-medium text-slate-400 mt-1 leading-normal">
-                      自らの発話・瞬発力を鍛えたログを一覧でチェックします。
-                    </p>
-                  </div>
-                </div>
-                <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-600 transition-all shrink-0">
-                  <ArrowRight size={12} strokeWidth={2.5} />
-                </div>
-              </button>
             </div>
 
           </div>
