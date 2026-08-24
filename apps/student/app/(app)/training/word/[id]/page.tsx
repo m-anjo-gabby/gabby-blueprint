@@ -27,6 +27,7 @@ import { motion } from 'framer-motion';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { PhraseItem } from '@gabby/types/word';
 import { ContentLoading } from '@/components/common/ContentLoading';
+import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 
 export default function WordTrainingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: sectionId } = use(params);
@@ -39,14 +40,15 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const { startAssessment, stopListening, isListening, timeLeft } = useWebSpeech();
   
   // 統合された音声再生フック（playChime, unlockAudioContextを追加抽出）
-  const { 
-    play, 
-    preload, 
-    playChime, 
-    unlockAudioContext, 
-    isPlaying: isAudioPlaying, 
-    playbackRate, 
-    changePlaybackRate 
+  const {
+    play,
+    preload,
+    playChime,
+    unlockAudioContext,
+    isPlaying: isAudioPlaying,
+    playbackRate,
+    changePlaybackRate,
+    resumeStatus,
   } = usePlayAudioSpeech();
 
   // ドリル状態管理（Zustand）
@@ -454,6 +456,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
         <WordFeedback feedback={feedback} analysis={analysis} onClose={() => setFeedback(null)} />
         <WordIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
+
+        <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
       </main>
 
       <style jsx global>{`

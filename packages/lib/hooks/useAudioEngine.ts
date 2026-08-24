@@ -8,10 +8,15 @@ import { setAudioSessionPlayback, createChimeAudioBuffer, playChimeBuffer, audio
  * `useSprintAudio` / `usePlayAudioSpeech` の共通AudioContext基盤。
  *
  * 両フックはiOS WebKit対応のために微妙に異なる挙動（再生開始ディレイ、
- * unmount時のAudioContext破棄有無、suspended状態からの復旧方法、
- * decodeAudioDataのタイムアウト有無、チャイム再生前の既存トラック停止有無、
- * URL解決方法）を持っており、本フックはそれらを暗黙的に統一せず、
- * すべてオプションとして明示的に受け取ることで両フックの挙動を1:1で再現する。
+ * unmount時のAudioContext破棄有無、decodeAudioDataのタイムアウト有無、
+ * チャイム再生前の既存トラック停止有無、URL解決方法）を持っており、
+ * 本フックはそれらを暗黙的に統一せず、すべてオプションとして明示的に受け取ることで
+ * 両フックの挙動を1:1で再現する。
+ *
+ * suspended/interrupted状態からの復旧のみは例外的に両フック共通・常時有効の
+ * ハイブリッド戦略に統一している: play/playChime/unlockのすべての起点で
+ * 「まずresume()を試みる → 500ms以内にrunningへ戻らなければclose()して
+ * 新規AudioContextを作り直す」を毎回実行する（isSuspendedLike参照）。
  */
 export interface AudioEngineOptions {
   /** マウント/アンマウント時に連動して停止させる音声認識の停止関数（useSprintAudio用途） */
@@ -20,14 +25,24 @@ export interface AudioEngineOptions {
   startDelayMs?: number;
   /** unmount時にAudioContextをcloseするか。false の場合はネイティブGCに委ねる */
   closeOnUnmount?: boolean;
-  /** suspended状態からの復旧に、タイムアウト付き強制再生成リカバリを使うか */
-  useSuspendedRecovery?: boolean;
   /** decodeAudioDataにタイムアウトを設けるか（ms）。未指定はタイムアウトなし */
   decodeTimeoutMs?: number;
   /** チャイム再生前に、再生中のトラックを停止するか */
   stopBeforeChime?: boolean;
   /** 再生URLの解決方法。'concat' = 環境変数から手動組み立て / 'sdk' = supabase.storage.getPublicUrl */
   urlResolution: 'concat' | 'sdk';
+}
+
+/**
+ * WebKit（iOS/iPadOS Safari）は標準の 'suspended' に加え、電話着信・Siri・
+ * 他アプリへの切り替え等によるオーディオセッション中断時に非標準の 'interrupted' を
+ * AudioContext.state として返すことがある。TypeScript の AudioContextState 型には
+ * 含まれないため、ここで文字列として吸収し「要復旧」を一括判定する。
+ * この判定漏れがあると、バックグラウンド復帰後にresume()もvisibilitychange検知も
+ * 一切発火せず、再生ボタンがローディング状態のまま無音で固まる不具合につながる。
+ */
+function isSuspendedLike(state: AudioContextState): boolean {
+  return state === 'suspended' || (state as string) === 'interrupted';
 }
 
 export interface AudioEnginePlayOptions {
@@ -77,7 +92,6 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     stopListening,
     startDelayMs = 0,
     closeOnUnmount = false,
-    useSuspendedRecovery = false,
     decodeTimeoutMs,
     stopBeforeChime = false,
     urlResolution,
@@ -101,8 +115,11 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
   /**
    * AudioContextを取得・初期化する。needsHardResetRef が立っている場合は、
    * resumeを試す前にユーザー操作の同期コールスタック内で即座にインスタンスを作り直す。
-   * それでもなお suspended な場合は、useSuspendedRecovery の設定に応じたフォールバックへ進む
-   * （true: タイムアウト付き再生成リトライ / false: 単純な resume() のみ）。
+   * それでもなお suspended/interrupted な場合は、常に以下のハイブリッド戦略で復旧する
+   * （基本戦略: resume()を試す → 保険戦略: 500ms以内に running に戻らなければ
+   * close()して新しいインスタンスを作り直す）。このフォールバックは
+   * needsHardResetRef の有無に関わらず、すべての再生アクション（play/playChime/unlock）の
+   * 起点で毎回働く。
    *
    * @param explicitUserResume 「タップして音声を再開」導線など、ユーザーが明示的に再開を
    *   意図した操作からの呼び出しかどうか。true の場合に限り、復旧に失敗したら 'failed'
@@ -120,7 +137,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     }
 
     // このensureContextReady呼び出しが、バックグラウンド復帰後の復旧試行に該当するかを記録しておく。
-    // 通常時（初回ロード直後で未操作のため単に'suspended'なだけ等）は needsResumeNotice に一切触れない。
+    // 通常時（初回ロード直後で未操作のため単に'suspended'なだけ等）は resumeStatus に一切触れない。
     const isRecoveryAttempt = needsHardResetRef.current;
 
     if (isRecoveryAttempt && audioCtxRef.current) {
@@ -135,35 +152,27 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
 
     let ctx = audioCtxRef.current;
 
-    if (ctx.state === 'suspended') {
-      if (useSuspendedRecovery) {
-        try {
-          const resumeWithTimeout = Promise.race([
-            ctx.resume(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('AudioContext resume timeout')), 500)),
-          ]);
-          await resumeWithTimeout;
+    if (isSuspendedLike(ctx.state)) {
+      try {
+        const resumeWithTimeout = Promise.race([
+          ctx.resume(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('AudioContext resume timeout')), 500)),
+        ]);
+        await resumeWithTimeout;
 
-          if (ctx.state === 'suspended') {
-            console.warn('AudioContext locked. Re-creating instance...');
-            ctx.close().catch(() => {});
-            audioCtxRef.current = new AudioContextClass();
-            ctx = audioCtxRef.current;
-            await ctx.resume();
-          }
-        } catch (e) {
-          console.warn('Failed or timed out resuming AudioContext. Force recreating...', e);
-          try { ctx.close().catch(() => {}); } catch (_) { /* no-op */ }
+        if (isSuspendedLike(ctx.state)) {
+          console.warn('AudioContext locked. Re-creating instance...');
+          ctx.close().catch(() => {});
           audioCtxRef.current = new AudioContextClass();
           ctx = audioCtxRef.current;
-          try { await ctx.resume(); } catch (_) { /* no-op */ }
-        }
-      } else {
-        try {
           await ctx.resume();
-        } catch (e) {
-          console.warn('Failed to resume AudioContext:', e);
         }
+      } catch (e) {
+        console.warn('Failed or timed out resuming AudioContext. Force recreating...', e);
+        try { ctx.close().catch(() => {}); } catch (_) { /* no-op */ }
+        audioCtxRef.current = new AudioContextClass();
+        ctx = audioCtxRef.current;
+        try { await ctx.resume(); } catch (_) { /* no-op */ }
       }
     }
 
@@ -184,7 +193,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     }
 
     return audioCtxRef.current;
-  }, [useSuspendedRecovery]);
+  }, []);
 
   // ─── マウント時の初期化 / アンマウント時のクリーンアップ ────────────────
   useEffect(() => {
@@ -231,7 +240,8 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     if (typeof document === 'undefined') return;
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && audioCtxRef.current?.state === 'suspended') {
+      const ctx = audioCtxRef.current;
+      if (document.visibilityState === 'visible' && ctx && isSuspendedLike(ctx.state)) {
         needsHardResetRef.current = true;
         setResumeStatus('needsResume');
       }
@@ -257,7 +267,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
 
   const unlock = useCallback(async () => {
     const ctx = await ensureContextReady(true);
-    if (ctx && ctx.state === 'suspended') {
+    if (ctx && ctx.state !== 'closed') {
       try { await ctx.resume(); } catch (e) { console.warn('Failed to resume AudioContext from interaction:', e); }
     }
   }, [ensureContextReady]);
@@ -348,15 +358,21 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
             }
           };
 
-          if (ctx.state === 'suspended') {
-            ctx.resume().then(run).catch(() => {
-              setIsPlaying(null);
-              currentPlayingIdRef.current = null;
-              resolve();
-            });
-          } else {
-            run();
+          // 🚀 iOS対策: 再生直前に必ずresume()を試みる。ctx.state文字列の網羅チェックに
+          // 依存しないことで、'interrupted'等の未知の状態値でも取りこぼさない。
+          // 既に running の場合は即時resolveされる no-op。
+          // fetch/decode の非同期区間を挟むため、捕捉済みの ctx ではなく
+          // audioCtxRef.current を都度参照する（区間中にhard resetが起きる場合があるため）。
+          const latestCtx = audioCtxRef.current;
+          if (!latestCtx || latestCtx.state === 'closed') {
+            resolve();
+            return;
           }
+          latestCtx.resume().then(run).catch(() => {
+            setIsPlaying(null);
+            currentPlayingIdRef.current = null;
+            resolve();
+          });
         };
 
         const cached = audioBufferCache.get(bucketUrl);
@@ -404,7 +420,8 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     if (!ctx || !buffer) return;
 
     try {
-      if (ctx.state === 'suspended') {
+      // 🚀 iOS対策: 再生直前に必ずresume()を試みる（'interrupted'等の状態も取りこぼさない）
+      if (ctx.state !== 'closed') {
         await ctx.resume();
       }
       if (stopBeforeChime) {

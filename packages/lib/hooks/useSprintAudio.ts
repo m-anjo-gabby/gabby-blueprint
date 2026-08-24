@@ -43,7 +43,8 @@ export interface UseSprintAudioReturn {
  * 内部的には `useAudioEngine` の薄いラッパーであり、以下の挙動を維持している:
  * - 再生開始を150ms遅延させる（iOSのマイク停止音フェードアウト待ち）
  * - unmount時にAudioContextを明示的にcloseする
- * - suspended状態からの復旧は単純なresume()のみ（強制再生成リカバリは行わない）
+ * - suspended/interrupted状態からの復旧はresume→タイムアウト付き再生成の
+ *   ハイブリッド戦略で行う（usePlayAudioSpeechと共通。useAudioEngine参照）
  *
  * @param stopListening useWebSpeech から受け取った stopListening 関数
  */
@@ -52,7 +53,6 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
     stopListening,
     startDelayMs: 150,
     closeOnUnmount: true,
-    useSuspendedRecovery: false,
     stopBeforeChime: false,
     urlResolution: 'concat',
   });

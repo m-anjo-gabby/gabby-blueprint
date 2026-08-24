@@ -9,7 +9,8 @@ import { useAudioEngine } from './useAudioEngine';
  * 内部的には `useAudioEngine` の薄いラッパーであり、以下の挙動を維持している:
  * - 再生は即時開始（iOS向けディレイなし）
  * - unmount時にAudioContextをcloseしない（iOS WebKitのレシーバー固着バグ対策）
- * - suspended状態からは500msタイムアウト付きで強制再生成リカバリを行う
+ * - suspended/interrupted状態からはresume→タイムアウト付き再生成の
+ *   ハイブリッド戦略で復旧する（useSprintAudioと共通。useAudioEngine参照）
  * - decodeAudioDataに1秒のタイムアウトを設ける
  * - チャイム再生前に既存トラックを停止する
  * - URL解決には supabase.storage.getPublicUrl を使用する
@@ -18,7 +19,6 @@ export function usePlayAudioSpeech() {
   const engine = useAudioEngine({
     startDelayMs: 0,
     closeOnUnmount: false,
-    useSuspendedRecovery: true,
     decodeTimeoutMs: 1000,
     stopBeforeChime: true,
     urlResolution: 'sdk',
