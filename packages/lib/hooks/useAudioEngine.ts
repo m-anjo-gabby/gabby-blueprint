@@ -15,8 +15,10 @@ import { setAudioSessionPlayback, createChimeAudioBuffer, playChimeBuffer, audio
  *
  * suspended/interrupted状態からの復旧のみは例外的に両フック共通・常時有効の
  * ハイブリッド戦略に統一している: play/playChime/unlockのすべての起点で
- * 「まずresume()を試みる → 500ms以内にrunningへ戻らなければclose()して
- * 新規AudioContextを作り直す」を毎回実行する（isSuspendedLike参照）。
+ * 呼び出しの都度 ctx.state が running かどうかを直接確認し、running でなければ
+ * 「まずその場でAudioContextを作り直す → それでも running にならなければ
+ * resume()をタイムアウト付きで試す → それでもダメならもう一度作り直す」を実行する
+ * （ensureContextReady / isNotRunning 参照）。
  */
 export interface AudioEngineOptions {
   /** マウント/アンマウント時に連動して停止させる音声認識の停止関数（useSprintAudio用途） */
@@ -34,15 +36,18 @@ export interface AudioEngineOptions {
 }
 
 /**
- * WebKit（iOS/iPadOS Safari）は標準の 'suspended' に加え、電話着信・Siri・
- * 他アプリへの切り替え等によるオーディオセッション中断時に非標準の 'interrupted' を
- * AudioContext.state として返すことがある。TypeScript の AudioContextState 型には
- * 含まれないため、ここで文字列として吸収し「要復旧」を一括判定する。
- * この判定漏れがあると、バックグラウンド復帰後にresume()もvisibilitychange検知も
- * 一切発火せず、再生ボタンがローディング状態のまま無音で固まる不具合につながる。
+ * running 以外のすべての状態を「要復旧」とみなす。WebKit（iOS/iPadOS Safari）は
+ * 標準の 'suspended' に加え、電話着信・Siri・他アプリへの切り替え等による
+ * オーディオセッション中断時に非標準の 'interrupted' を AudioContext.state として
+ * 返すことがあり、TypeScript の AudioContextState 型には含まれない。個別の状態値を
+ * 網羅的に列挙するのではなく「running かどうか」だけを見ることで、'interrupted' は
+ * もちろん将来的な未知の状態値も一括して取りこぼさない。
+ * `state as string` で受けることで、TypeScript が呼び出し元の `ctx.state` を
+ * このチェックの結果に基づいて誤って永続的に narrowing してしまうのを防いでいる
+ * （ctx.state は非同期処理を挟んで変化し得るライブな値のため）。
  */
-function isSuspendedLike(state: AudioContextState): boolean {
-  return state === 'suspended' || (state as string) === 'interrupted';
+function isNotRunning(state: string): boolean {
+  return state !== 'running';
 }
 
 export interface AudioEnginePlayOptions {
@@ -105,21 +110,23 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const currentPlayingIdRef = useRef<string | null>(null);
   const supabaseRef = useRef(urlResolution === 'sdk' ? createBrowserClient() : null);
-  // 🚀 iOS対策: バックグラウンド復帰時にsuspendedを検知したら true。
-  // 次のユーザー操作（同期コールスタック内）で、resumeを試す前に問答無用でAudioContextを
-  // 作り直す。iOSはユーザー操作の同期コールスタックの外で作られた/resumeされたAudioContextを
-  // 確実にはアンロックしないため、「resumeしてダメなら作り直す」という非同期待ち構造では
-  // 長時間放置後の復旧に失敗することがある。
-  const needsHardResetRef = useRef(false);
 
   /**
-   * AudioContextを取得・初期化する。needsHardResetRef が立っている場合は、
-   * resumeを試す前にユーザー操作の同期コールスタック内で即座にインスタンスを作り直す。
-   * それでもなお suspended/interrupted な場合は、常に以下のハイブリッド戦略で復旧する
-   * （基本戦略: resume()を試す → 保険戦略: 500ms以内に running に戻らなければ
-   * close()して新しいインスタンスを作り直す）。このフォールバックは
-   * needsHardResetRef の有無に関わらず、すべての再生アクション（play/playChime/unlock）の
-   * 起点で毎回働く。
+   * AudioContextを取得・初期化する。
+   *
+   * 🚀 iOS対策: 呼び出し時点で既存コンテキストが running でなければ、resumeを試す前に
+   * 「この呼び出し自身の（同期的な）コールスタック内で」問答無用に作り直すことを最優先する。
+   * iOSはユーザー操作の同期コールスタック外で作られた/resumeされたAudioContextを
+   * 確実にはアンロックしないため、「まずresumeを試して、ダメだったら作り直す」という
+   * 非同期待ちを一段挟む手順では、tap起点の呼び出しであっても復旧に失敗することがある。
+   *
+   * 以前はバックグラウンド復帰を visibilitychange で検知し、その結果をrefフラグに保持して
+   * 「次の呼び出しで」使う設計だったが、mount時のチャイムプリロードや次トラックのpreload等、
+   * ユーザー操作を伴わない呼び出しが先にそのフラグを消費してしまい、結果としてtap起点の
+   * 呼び出しでは何の復旧処理も行われない（バナーも出ない）レースが起こり得た。
+   * そのため状態管理はやめ、呼び出しの都度 ctx.state を直接見て判定する。
+   * 'suspended' だけでなく WebKit 非標準の 'interrupted' 等も含め、running 以外は
+   * すべて「要復旧」として扱う（文字列の網羅チェックに依存しない）。
    *
    * @param explicitUserResume 「タップして音声を再開」導線など、ユーザーが明示的に再開を
    *   意図した操作からの呼び出しかどうか。true の場合に限り、復旧に失敗したら 'failed'
@@ -136,15 +143,14 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
       audioCtxRef.current = null;
     }
 
-    // このensureContextReady呼び出しが、バックグラウンド復帰後の復旧試行に該当するかを記録しておく。
-    // 通常時（初回ロード直後で未操作のため単に'suspended'なだけ等）は resumeStatus に一切触れない。
-    const isRecoveryAttempt = needsHardResetRef.current;
+    // このensureContextReady呼び出しが、壊れていたコンテキストの復旧試行に該当するかを記録しておく。
+    // 初回マウント時（audioCtxRef.current が null）は単なる新規作成であり、復旧試行ではない。
+    const isRecoveryAttempt = !!audioCtxRef.current && isNotRunning(audioCtxRef.current.state);
 
     if (isRecoveryAttempt && audioCtxRef.current) {
       try { audioCtxRef.current.close().catch(() => {}); } catch (_) { /* no-op */ }
       audioCtxRef.current = null;
     }
-    needsHardResetRef.current = false;
 
     if (!audioCtxRef.current) {
       audioCtxRef.current = new AudioContextClass();
@@ -152,7 +158,10 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
 
     let ctx = audioCtxRef.current;
 
-    if (isSuspendedLike(ctx.state)) {
+    // 作り直した/元からあったコンテキストがそれでも running でない場合
+    // （ユーザー操作の同期コールスタック外からの呼び出し等）は、保険として
+    // タイムアウト付きでresumeを試み、それでもダメなら最後にもう一度作り直す。
+    if (isNotRunning(ctx.state)) {
       try {
         const resumeWithTimeout = Promise.race([
           ctx.resume(),
@@ -160,7 +169,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
         ]);
         await resumeWithTimeout;
 
-        if (isSuspendedLike(ctx.state)) {
+        if (isNotRunning(ctx.state)) {
           console.warn('AudioContext locked. Re-creating instance...');
           ctx.close().catch(() => {});
           audioCtxRef.current = new AudioContextClass();
@@ -233,26 +242,6 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 🚀 iOS対策: バックグラウンドから復帰した瞬間にAudioContextがsuspendedのままなら、
-  // 「次のユーザー操作で問答無用に作り直す」フラグを立てる。visibilitychange自体は
-  // ユーザー操作ではないため、ここではAudioContextへは一切触れず、フラグを立てるのみに留める。
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-
-    const handleVisibilityChange = () => {
-      const ctx = audioCtxRef.current;
-      if (document.visibilityState === 'visible' && ctx && isSuspendedLike(ctx.state)) {
-        needsHardResetRef.current = true;
-        setResumeStatus('needsResume');
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
   const stop = useCallback(() => {
     if (currentSourceRef.current) {
       try { currentSourceRef.current.stop(); } catch (_) { /* no-op */ }
@@ -266,10 +255,9 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
   }, []);
 
   const unlock = useCallback(async () => {
-    const ctx = await ensureContextReady(true);
-    if (ctx && ctx.state !== 'closed') {
-      try { await ctx.resume(); } catch (e) { console.warn('Failed to resume AudioContext from interaction:', e); }
-    }
+    // ensureContextReady 自体が「running でなければ resume→再生成」のハイブリッド
+    // 復旧を必ず行うため、ここで追加のresume()呼び出しは不要。
+    await ensureContextReady(true);
   }, [ensureContextReady]);
 
   const resolveUrl = useCallback((path: string, bucketName?: string): string => {
@@ -358,17 +346,16 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
             }
           };
 
-          // 🚀 iOS対策: 再生直前に必ずresume()を試みる。ctx.state文字列の網羅チェックに
-          // 依存しないことで、'interrupted'等の未知の状態値でも取りこぼさない。
-          // 既に running の場合は即時resolveされる no-op。
-          // fetch/decode の非同期区間を挟むため、捕捉済みの ctx ではなく
-          // audioCtxRef.current を都度参照する（区間中にhard resetが起きる場合があるため）。
-          const latestCtx = audioCtxRef.current;
-          if (!latestCtx || latestCtx.state === 'closed') {
-            resolve();
-            return;
-          }
-          latestCtx.resume().then(run).catch(() => {
+          // 🚀 iOS対策: 再生直前に ensureContextReady() を再度通し、running でなければ
+          // resume→再生成のハイブリッド復旧をもう一度行う。fetch/decode の非同期区間を
+          // 挟むため、その間に再度中断が起きていても取りこぼさない。
+          ensureContextReady().then((freshCtx) => {
+            if (!freshCtx || freshCtx.state === 'closed') {
+              resolve();
+              return;
+            }
+            run();
+          }).catch(() => {
             setIsPlaying(null);
             currentPlayingIdRef.current = null;
             resolve();
@@ -420,10 +407,8 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     if (!ctx || !buffer) return;
 
     try {
-      // 🚀 iOS対策: 再生直前に必ずresume()を試みる（'interrupted'等の状態も取りこぼさない）
-      if (ctx.state !== 'closed') {
-        await ctx.resume();
-      }
+      // ensureContextReady が running でなければ resume→再生成のハイブリッド復旧を
+      // 既に行っているため、ここでの追加resume()は不要。
       if (stopBeforeChime) {
         stop();
       }
