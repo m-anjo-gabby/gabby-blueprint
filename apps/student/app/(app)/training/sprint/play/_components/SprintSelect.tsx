@@ -46,8 +46,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const isAssessmentMode = config.isAssessmentMode !== false;
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isThemeOpen, setIsThemeOpen] = useState(false);
-  const [isHintOpen, setIsHintOpen] = useState(false);
+  const [isThemeTipsOpen, setIsThemeTipsOpen] = useState(false);
 
   const { micStatus, requestMicPermission } = useMicPermission();
 
@@ -381,41 +380,39 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
 
               </div>
 
-              {/* 出題テーマセクション */}
-              <div className="bg-white border border-slate-100 rounded-2xl shadow-3xs overflow-hidden">
-                <button type="button" onClick={() => setIsThemeOpen(!isThemeOpen)} className="w-full px-4 py-3.5 flex items-center justify-between text-left select-none active:bg-slate-50/50 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center"><BookOpen size={12} strokeWidth={2.5} /></div>
-                    <span className="text-xs font-black text-slate-700">出題テーマを確認</span>
-                  </div>
-                  <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-200", isThemeOpen && "rotate-180")} />
-                </button>
-                <div className={cn("grid transition-all duration-200", isThemeOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
-                  <div className="overflow-hidden">
-                    <div className="px-4 pb-4 pt-1 border-t border-slate-50/60">
-                      <p className="text-xs font-bold text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">{currentTheme}</p>
+              {/* 出題テーマとTips */}
+              <Dialog open={isThemeTipsOpen} onOpenChange={setIsThemeTipsOpen}>
+                <DialogTrigger asChild>
+                  <button type="button" className="w-full bg-white border border-slate-100 rounded-2xl shadow-3xs px-4 py-3.5 flex items-center justify-between text-left select-none active:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-md bg-slate-50 text-slate-400 flex items-center justify-center"><BookOpen size={12} strokeWidth={2.5} /></div>
+                      <span className="text-xs font-black text-slate-700">出題テーマとTips</span>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ヒント (Tips) */}
-              <div className={cn("bg-white border rounded-2xl shadow-3xs overflow-hidden transition-all", currentHint ? "border-slate-100 opacity-100" : "border-slate-100 opacity-50 pointer-events-none")}>
-                <button type="button" disabled={!currentHint} onClick={() => setIsHintOpen(!isHintOpen)} className="w-full px-4 py-3.5 flex items-center justify-between text-left select-none active:bg-slate-50/50 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <div className={cn("h-6 w-6 rounded-md flex items-center justify-center", currentHint ? "bg-indigo-50 text-indigo-600" : "bg-slate-100 text-slate-400")}><Lightbulb size={12} strokeWidth={2.5} /></div>
-                    <span className="text-xs font-black text-slate-700">回答のヒント (Tips)</span>
-                  </div>
-                  <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-200", isHintOpen && "rotate-180")} />
-                </button>
-                <div className={cn("grid transition-all duration-200", isHintOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
-                  <div className="overflow-hidden">
-                    <div className="px-4 pb-4 pt-1 border-t border-slate-50/60">
-                      <p className="text-xs font-medium text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">{currentHint}</p>
+                    <ChevronRight size={14} className="text-slate-300" strokeWidth={2.5} />
+                  </button>
+                </DialogTrigger>
+                <DialogContent
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                  className="sm:max-w-sm border-none bg-white p-6 shadow-2xl rounded-2xl text-slate-900"
+                >
+                  <DialogHeader><DialogTitle className="text-sm font-black text-slate-400 tracking-wider">出題テーマとTips</DialogTitle></DialogHeader>
+                  <div className="space-y-4 mt-3">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-indigo-600 flex items-center gap-1.5"><BookOpen size={14} /> 出題テーマ</h4>
+                      <p className="text-xs text-slate-600 font-bold leading-relaxed">{currentTheme}</p>
                     </div>
+                    {currentHint && (
+                      <>
+                        <hr className="border-slate-100" />
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5"><Lightbulb size={14} /> Tips</h4>
+                          <p className="text-xs text-slate-600 font-bold leading-relaxed">{currentHint}</p>
+                        </div>
+                      </>
+                    )}
                   </div>
-                </div>
-              </div>
+                </DialogContent>
+              </Dialog>
 
               {/* ヘルプアコーディオン */}
               <div className="bg-white border border-slate-100 rounded-2xl shadow-3xs overflow-hidden">
