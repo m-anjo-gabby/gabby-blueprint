@@ -4,10 +4,12 @@ import {
   getPublishedCalendarEventsCore,
   joinCalendarEventCore,
   cancelCalendarEventParticipationCore,
+  getCalendarEventMessagesCore,
+  getCalendarEventMessageAttachmentUrlCore,
 } from '@gabby/lib/calendarEvent/actions/calendarEventActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { CalendarEventItem } from '@gabby/types/calendarEvent';
+import { CalendarEventItem, CalendarEventMessageItem } from '@gabby/types/calendarEvent';
 
 const logger = createLogger('student');
 
@@ -52,4 +54,24 @@ export async function cancelCalendarEventParticipation(
     return { success: false, message: CALENDAR_EVENT_ERROR_MESSAGE };
   }
   return { success: true };
+}
+
+/**
+ * 参加登録済み/担当コーチとして紐づくカレンダーイベントのアナウンス一覧を取得する
+ */
+export async function getCalendarEventMessages(calendarEventId: string): Promise<CalendarEventMessageItem[]> {
+  const result = await getCalendarEventMessagesCore(calendarEventId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_calendar_event_messages_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.messages;
+}
+
+/**
+ * アナウンス添付ファイルの公開URLを取得する
+ */
+export async function getCalendarEventMessageAttachmentUrl(path: string): Promise<{ url: string | null }> {
+  return getCalendarEventMessageAttachmentUrlCore(path);
 }

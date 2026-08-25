@@ -4,7 +4,14 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { CalendarEventItem, CalendarEventType, CalendarEventTargetType, CalendarEventCoachOption } from '@gabby/types/calendarEvent';
+import {
+  CalendarEventItem,
+  CalendarEventType,
+  CalendarEventTargetType,
+  CalendarEventCoachOption,
+  CalendarEventMessageItem,
+  CalendarEventMessageAttachment,
+} from '@gabby/types/calendarEvent';
 
 const logger = createLogger('admin');
 
@@ -300,5 +307,267 @@ export async function getCalendarEventParticipants(
       payload: { calendarEventId },
     });
     return { event: null, participants: [], totalCount: 0 };
+  }
+}
+
+export interface CalendarEventMessageFormData {
+  calendar_event_message_id?: string; // 添付ファイルのStorageパス採番のため、送信前にクライアント側で生成する
+  title: string;
+  content: string;
+  attachments: CalendarEventMessageAttachment[];
+}
+
+/**
+ * カレンダーイベント単位のアナウンス配信履歴を取得（新しい順）
+ */
+export async function getCalendarEventMessages(calendarEventId: string): Promise<CalendarEventMessageItem[]> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('com_t_calendar_event_message')
+      .select('*')
+      .eq('calendar_event_id', calendarEventId)
+      .order('insert_date', { ascending: false });
+
+    if (error) {
+      logger.error('calendarEvent:get_messages_failed', error.message, { ...ctx, payload: { calendarEventId } });
+      return [];
+    }
+
+    return (data ?? []).map((row: any) => ({ ...row, attachments: Array.isArray(row.attachments) ? row.attachments : [] }));
+  } catch (error) {
+    logger.error('calendarEvent:get_messages_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      payload: { calendarEventId },
+    });
+    return [];
+  }
+}
+
+/**
+ * カレンダーイベントへのアナウンス送信（新規作成）
+ */
+export async function createCalendarEventMessage(
+  calendarEventId: string,
+  formData: CalendarEventMessageFormData
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  try {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      return { success: false, message: 'タイトルと本文は必須です' };
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await supabase.from('com_t_calendar_event_message').insert({
+      ...(formData.calendar_event_message_id ? { calendar_event_message_id: formData.calendar_event_message_id } : {}),
+      calendar_event_id: calendarEventId,
+      title: formData.title,
+      content: formData.content,
+      attachments: formData.attachments,
+    });
+
+    if (error) {
+      logger.error('calendarEvent:create_message_failed', error.message, { ...ctx, payload: { calendarEventId, ...formData } });
+      return { success: false, message: error.message };
+    }
+
+    logger.info('calendarEvent:create_message_success', 'Calendar event message sent', { ...ctx, payload: { calendarEventId } });
+
+    revalidatePath(`/calendar-events/${calendarEventId}/participants`);
+    return { success: true };
+  } catch (error) {
+    logger.error('calendarEvent:create_message_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      payload: { calendarEventId },
+    });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
+/**
+ * アナウンスの更新（編集）
+ */
+export async function updateCalendarEventMessage(
+  calendarEventMessageId: string,
+  calendarEventId: string,
+  formData: CalendarEventMessageFormData
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  try {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      return { success: false, message: 'タイトルと本文は必須です' };
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from('com_t_calendar_event_message')
+      .update({
+        title: formData.title,
+        content: formData.content,
+        attachments: formData.attachments,
+        update_date: new Date().toISOString(),
+      })
+      .eq('calendar_event_message_id', calendarEventMessageId);
+
+    if (error) {
+      logger.error('calendarEvent:update_message_failed', error.message, { ...ctx, payload: { calendarEventMessageId, ...formData } });
+      return { success: false, message: error.message };
+    }
+
+    logger.info('calendarEvent:update_message_success', 'Calendar event message updated', { ...ctx, payload: { calendarEventMessageId } });
+
+    revalidatePath(`/calendar-events/${calendarEventId}/participants`);
+    return { success: true };
+  } catch (error) {
+    logger.error('calendarEvent:update_message_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      payload: { calendarEventMessageId },
+    });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
+/**
+ * アナウンスの削除（誤送信時の取り消し用。添付ファイルもStorageから物理削除する）
+ */
+export async function deleteCalendarEventMessage(
+  calendarEventMessageId: string,
+  calendarEventId: string
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = createAdminClient();
+
+    const { data: message, error: fetchError } = await supabase
+      .from('com_t_calendar_event_message')
+      .select('attachments')
+      .eq('calendar_event_message_id', calendarEventMessageId)
+      .single();
+
+    if (fetchError) {
+      logger.error('calendarEvent:delete_message_fetch_failed', fetchError.message, { ...ctx, payload: { calendarEventMessageId } });
+      return { success: false, message: fetchError.message };
+    }
+
+    const attachments: CalendarEventMessageAttachment[] = Array.isArray(message?.attachments) ? message.attachments : [];
+    if (attachments.length > 0) {
+      await supabase.storage.from('calendar-event-message').remove(attachments.map((a) => a.path));
+    }
+
+    const { error } = await supabase
+      .from('com_t_calendar_event_message')
+      .delete()
+      .eq('calendar_event_message_id', calendarEventMessageId);
+
+    if (error) {
+      logger.error('calendarEvent:delete_message_failed', error.message, { ...ctx, payload: { calendarEventMessageId } });
+      return { success: false, message: error.message };
+    }
+
+    logger.info('calendarEvent:delete_message_success', 'Calendar event message deleted', { ...ctx, payload: { calendarEventMessageId } });
+
+    revalidatePath(`/calendar-events/${calendarEventId}/participants`);
+    return { success: true };
+  } catch (error) {
+    logger.error('calendarEvent:delete_message_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      payload: { calendarEventMessageId },
+    });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
+/**
+ * アナウンス添付ファイルのアップロード（FormData）
+ * Storageバケット "calendar-event-message" に calendar-event-message/{calendar_event_message_id}/{file.name} で保存
+ */
+export async function uploadCalendarEventMessageFile(
+  calendarEventMessageId: string,
+  formData: FormData
+): Promise<{ success: boolean; attachment?: CalendarEventMessageAttachment; message?: string }> {
+  const ctx = await getLogContext();
+  try {
+    const file = formData.get('file') as File;
+    if (!file) {
+      return { success: false, message: 'ファイルが選択されていません' };
+    }
+
+    const supabase = createAdminClient();
+
+    const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `calendar-event-message/${calendarEventMessageId}/${cleanFileName}`;
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { error: uploadError } = await supabase.storage
+      .from('calendar-event-message')
+      .upload(storagePath, buffer, {
+        contentType: file.type || 'application/octet-stream',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      logger.error('calendarEvent:upload_message_file_failed', uploadError.message, {
+        ...ctx,
+        payload: { calendarEventMessageId, fileName: file.name },
+      });
+      return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
+    }
+
+    const newAttachment: CalendarEventMessageAttachment = {
+      id: crypto.randomUUID(),
+      name: file.name,
+      path: storagePath,
+      size: file.size,
+      mime_type: file.type || 'application/octet-stream',
+    };
+
+    logger.info('calendarEvent:upload_message_file_success', `Attachment uploaded: ${storagePath}`, {
+      ...ctx,
+      payload: { calendarEventMessageId, storagePath },
+    });
+
+    return { success: true, attachment: newAttachment };
+  } catch (error) {
+    logger.error('calendarEvent:upload_message_file_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      payload: { calendarEventMessageId },
+    });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
+/**
+ * アナウンス添付ファイルの公開URLを取得（"calendar-event-message" はPublicバケット）
+ */
+export async function getCalendarEventMessageAttachmentUrl(path: string): Promise<{ url: string | null }> {
+  const supabase = createAdminClient();
+  const { data } = supabase.storage.from('calendar-event-message').getPublicUrl(path);
+  return { url: data?.publicUrl ?? null };
+}
+
+/**
+ * アナウンス添付ファイルの削除（Storageから物理削除。送信前の差し替え用）
+ */
+export async function deleteCalendarEventMessageFile(storagePath: string): Promise<{ success: boolean; message?: string }> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = createAdminClient();
+    const cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
+
+    const { error } = await supabase.storage.from('calendar-event-message').remove([cleanPath]);
+
+    if (error) {
+      logger.error('calendarEvent:delete_message_file_failed', error.message, { ...ctx, payload: { storagePath } });
+      return { success: false, message: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    logger.error('calendarEvent:delete_message_file_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      payload: { storagePath },
+    });
+    return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

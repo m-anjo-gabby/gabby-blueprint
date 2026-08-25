@@ -61,3 +61,29 @@ export interface CalendarEventItem {
   // 結合フィールド（管理画面一覧でのみ計算。com_t_calendar_event_coachから結合）
   coaches?: CalendarEventCoachOption[];
 }
+
+/**
+ * アナウンス添付ファイル情報（JSONB格納形式）
+ * Supabase Storage の calendar-event-message バケットに格納
+ */
+export interface CalendarEventMessageAttachment {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  mime_type: string;
+}
+
+/**
+ * カレンダーイベントのアナウンス（com_t_calendar_event_message）のデータ型
+ * 管理者から参加者/担当コーチへの一方向メッセージ配信。返信・既読管理は持たない。
+ */
+export interface CalendarEventMessageItem {
+  calendar_event_message_id: string;
+  calendar_event_id: string;
+  title: string;
+  content: string;
+  attachments: CalendarEventMessageAttachment[];
+  insert_date: string; // UTC ISO文字列
+  update_date: string; // UTC ISO文字列（insert_dateと異なる場合は編集済み）
+}

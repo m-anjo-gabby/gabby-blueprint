@@ -56,6 +56,16 @@
 --        担当コーチとして割り当てられている場合に限りイベント本体を閲覧できるよう、
 --        既存ポリシーへ追加のOR条件を加える（他ロールへの影響は無い）。
 --
+--   カレンダーイベントのアナウンス（メッセージ送信）機能
+--   10. com_t_calendar_event_message テーブルを新規作成
+--      - 管理者がカレンダーイベントの参加者・担当コーチへ一方向配信するアナウンスの
+--        履歴テーブル。チャットとは異なり返信機能は無く、既読管理も持たない
+--        （参加/キャンセルが自由なため運用が煩雑になることを避けるため）。
+--        添付ファイルはcom_m_noticeと同様にJSONBカラムで保持する。
+--        管理画面からの編集に対応するためupdate_dateを持つ（insert_dateと異なれば編集済み）。
+--   11. Storage Bucket "calendar-event-message" を新規作成
+--      - 10.のアナウンス添付ファイル用。"notices"バケットと同方針のPublicバケット。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -580,6 +590,102 @@ FOR SELECT TO authenticated USING (
     )
 );
 
+-- =========================================================================
+-- 10. com_t_calendar_event_message 新規作成（アナウンス機能）
+-- =========================================================================
+-- 【背景】
+-- com_m_calendar_event（グループセッション・メンテナンス告知等）に対して、
+-- 管理者がその参加者（com_t_calendar_event_participant）・担当コーチ
+-- （com_t_calendar_event_coach）向けに送るアナウンス（一方向のメッセージ配信）。
+--
+-- チャット（com_t_chat、双方向・スレッド）とは異なり、返信機能は持たない。
+-- 1イベントに対して複数回配信できるよう、com_m_calendar_eventへの直接カラム
+-- 追加ではなく別テーブルの履歴ログとして持つ（添付ファイルはcom_m_notice.attachments
+-- と同様にJSONB埋め込みで管理。画像プレビュー等は不要なためcom_t_chat_attachment
+-- のような正規化テーブルへの分離は行わない）。
+--
+-- 既読管理（お知らせのcom_t_notice_read相当）は、参加/キャンセルが自由な
+-- カレンダーイベントの性質上、運用が煩雑になるためPhase1では持たない。
+CREATE TABLE IF NOT EXISTS public.com_t_calendar_event_message (
+    calendar_event_message_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    calendar_event_id UUID NOT NULL REFERENCES public.com_m_calendar_event(calendar_event_id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    attachments JSONB NOT NULL DEFAULT '[]'::jsonb,
+    insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- 冪等性確保: 本スクリプトの以前のバージョン（update_date追加前）を既に適用済みの環境向け
+ALTER TABLE public.com_t_calendar_event_message ADD COLUMN IF NOT EXISTS update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+
+COMMENT ON TABLE public.com_t_calendar_event_message IS 'カレンダーイベントのアナウンス（管理者から参加者/担当コーチへの一方向メッセージ配信履歴）';
+COMMENT ON COLUMN public.com_t_calendar_event_message.calendar_event_message_id IS 'アナウンスID';
+COMMENT ON COLUMN public.com_t_calendar_event_message.calendar_event_id IS 'カレンダーイベントID';
+COMMENT ON COLUMN public.com_t_calendar_event_message.title IS 'タイトル';
+COMMENT ON COLUMN public.com_t_calendar_event_message.content IS '本文';
+COMMENT ON COLUMN public.com_t_calendar_event_message.attachments IS '添付ファイル情報 (JSONB形式)';
+COMMENT ON COLUMN public.com_t_calendar_event_message.insert_date IS '配信日時';
+COMMENT ON COLUMN public.com_t_calendar_event_message.update_date IS '更新日時（編集時に更新。insert_dateと異なる場合は編集済みとみなす）';
+
+CREATE INDEX IF NOT EXISTS idx_calendar_event_message_event ON public.com_t_calendar_event_message (calendar_event_id, insert_date DESC);
+
+ALTER TABLE public.com_t_calendar_event_message ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admin can manage calendar event messages" ON public.com_t_calendar_event_message;
+DROP POLICY IF EXISTS "Recipients can view their calendar event messages" ON public.com_t_calendar_event_message;
+
+CREATE POLICY "Admin can manage calendar event messages" ON public.com_t_calendar_event_message
+FOR ALL TO authenticated
+USING (public.get_jwt_user_type() = '0')
+WITH CHECK (public.get_jwt_user_type() = '0');
+
+-- 参加者または担当コーチとして紐づくユーザーのみ閲覧可
+-- （target_type/rsvp_enabledの状態に関わらず、実際の紐付け行の有無で判定する）
+CREATE POLICY "Recipients can view their calendar event messages" ON public.com_t_calendar_event_message
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_t_calendar_event_participant p
+        WHERE p.calendar_event_id = com_t_calendar_event_message.calendar_event_id
+          AND p.user_id = auth.uid()
+    )
+    OR EXISTS (
+        SELECT 1 FROM public.com_t_calendar_event_coach c
+        WHERE c.calendar_event_id = com_t_calendar_event_message.calendar_event_id
+          AND c.coach_id = auth.uid()
+    )
+);
+
+-- =========================================================================
+-- 11. Storage Bucket "calendar-event-message" 新規作成（アナウンス添付ファイル用）
+-- =========================================================================
+-- 保存パス例: calendar-event-message/{calendar_event_message_id}/{cleanFileName}
+-- 公開設定: Public バケット（"notices" バケットと同方針。getPublicUrl() で直接配信）
+-- アップロード/削除はアドミン側の運用（Server Action + Service Role Key）を想定しており、
+-- Storage Object 単位のRLSポリシーは付与していない。
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'calendar-event-message',
+  'calendar-event-message',
+  true,
+  20971520,
+  ARRAY[
+    'image/png', 'image/jpeg', 'image/webp', 'image/gif',
+    'application/pdf', 'text/plain', 'text/csv',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/zip'
+  ]
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
 COMMIT;
 
 -- =========================================================================
@@ -617,3 +723,12 @@ COMMIT;
 --
 -- SELECT policyname, qual FROM pg_policies
 -- WHERE tablename = 'com_m_calendar_event' AND policyname = 'Users can view published calendar events';
+--
+-- SELECT * FROM information_schema.tables
+-- WHERE table_schema = 'public' AND table_name = 'com_t_calendar_event_message';
+--
+-- SELECT policyname FROM pg_policies
+-- WHERE tablename = 'com_t_calendar_event_message';
+--
+-- SELECT id, public, file_size_limit FROM storage.buckets
+-- WHERE id = 'calendar-event-message';

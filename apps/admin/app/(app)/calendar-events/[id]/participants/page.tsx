@@ -1,12 +1,17 @@
 // apps/admin/app/(app)/calendar-events/[id]/participants/page.tsx
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { getCalendarEventParticipants } from '@/actions/adminCalendarEventAction';
+import { getCalendarEventParticipants, getCalendarEventMessages } from '@/actions/adminCalendarEventAction';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarEventParticipantsTable } from './_components/CalendarEventParticipantsTable';
+import { CalendarEventAnnouncementPanel } from './_components/CalendarEventAnnouncementPanel';
 
 export default async function CalendarEventParticipantsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { event, participants, totalCount } = await getCalendarEventParticipants(id);
+  const [{ event, participants, totalCount }, messages] = await Promise.all([
+    getCalendarEventParticipants(id),
+    getCalendarEventMessages(id),
+  ]);
 
   if (!event) {
     return (
@@ -31,11 +36,22 @@ export default async function CalendarEventParticipantsPage({ params }: { params
         >
           <ArrowLeft size={14} /> カレンダーイベント一覧に戻る
         </Link>
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight line-clamp-1">参加者一覧: {event.title}</h1>
-        <p className="text-[13px] text-slate-500 mt-1">このカレンダーイベントに参加登録している生徒/コーチの一覧です。</p>
+        <h1 className="text-xl font-bold text-slate-800 tracking-tight line-clamp-1">参加者・アナウンス管理: {event.title}</h1>
+        <p className="text-[13px] text-slate-500 mt-1">参加登録済みの生徒/コーチの確認と、参加者・担当コーチへのアナウンス配信を行います。</p>
       </div>
 
-      <CalendarEventParticipantsTable data={participants} totalCount={totalCount} />
+      <Tabs defaultValue="participants">
+        <TabsList>
+          <TabsTrigger value="participants">参加者一覧</TabsTrigger>
+          <TabsTrigger value="announcements">アナウンス</TabsTrigger>
+        </TabsList>
+        <TabsContent value="participants">
+          <CalendarEventParticipantsTable data={participants} totalCount={totalCount} />
+        </TabsContent>
+        <TabsContent value="announcements">
+          <CalendarEventAnnouncementPanel calendarEventId={id} initialMessages={messages} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

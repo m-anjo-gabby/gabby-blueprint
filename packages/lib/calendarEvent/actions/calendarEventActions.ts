@@ -3,7 +3,7 @@
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { CalendarEventItem } from '@gabby/types/calendarEvent';
+import { CalendarEventItem, CalendarEventMessageItem } from '@gabby/types/calendarEvent';
 
 const logger = createLogger('common');
 
@@ -119,4 +119,51 @@ export async function cancelCalendarEventParticipationCore(
     logger.error('calendarEvent:cancel_participation_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
+}
+
+/**
+ * 指定カレンダーイベントのアナウンス一覧を取得する（生徒/コーチ共通。ポータル共通）
+ * RLS（参加者本人 or 担当コーチのみ閲覧可）に依存するため、対象外のイベントIDを
+ * 指定した場合は空配列が返る。
+ */
+export async function getCalendarEventMessagesCore(
+  calendarEventId: string
+): Promise<{ success: true; messages: CalendarEventMessageItem[] } | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_calendar_event_message')
+      .select('*')
+      .eq('calendar_event_id', calendarEventId)
+      .order('insert_date', { ascending: false });
+
+    if (error) {
+      logger.error('calendarEvent:get_messages_failed', error.message, { ...ctx, userId: user.id, payload: { calendarEventId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const messages: CalendarEventMessageItem[] = (data ?? []).map((row: any) => ({
+      ...row,
+      attachments: Array.isArray(row.attachments) ? row.attachments : [],
+    }));
+
+    return { success: true, messages };
+  } catch (err) {
+    logger.error('calendarEvent:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * アナウンス添付ファイルの公開URLを取得する（"calendar-event-message" はPublicバケット）
+ */
+export async function getCalendarEventMessageAttachmentUrlCore(path: string): Promise<{ url: string | null }> {
+  const supabase = await createServerClient();
+  const { data } = supabase.storage.from('calendar-event-message').getPublicUrl(path);
+  return { url: data?.publicUrl ?? null };
 }

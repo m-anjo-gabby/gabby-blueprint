@@ -104,11 +104,11 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
         header: () => <div className="text-right">操作</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
-            {row.original.rsvp_enabled && (
+            {(row.original.rsvp_enabled || (row.original.coaches?.length ?? 0) > 0) && (
               <Link
                 href={`/calendar-events/${row.original.calendar_event_id}/participants`}
                 className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all active:scale-95"
-                title="参加者を確認"
+                title="参加者・アナウンスを管理"
               >
                 <Users size={15} />
               </Link>
