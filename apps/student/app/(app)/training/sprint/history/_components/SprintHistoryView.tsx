@@ -192,9 +192,13 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
             </div>
           </div>
 
-          {/* Row2: 月移動 */}
-          <div className="relative flex items-center justify-center z-10">
-            <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-xl p-0.5 relative">
+          {/* Row2: 月移動
+              💡 今月ボタンの有無に関わらず月カプセルが常に中央に来るよう、
+              左右を1frの空セルで挟んだ3カラムgridで配置する（左右セル幅は常に等しい） */}
+          <div className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <div aria-hidden="true" />
+
+            <div className="justify-self-center inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-xl p-0.5">
               <button
                 onClick={() => handleMonthChange('prev')}
                 disabled={isPending}
@@ -223,18 +227,20 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
               >
                 <ArrowRight size={13} strokeWidth={2.5} />
               </button>
+            </div>
 
-              {/* 「今月」ボタン */}
+            {/* 「今月」ボタン */}
+            <div className="flex items-center justify-start">
               <AnimatePresence>
                 {isNotCurrentMonth && (
                   <motion.button
-                    initial={{ opacity: 0, x: -6, scale: 0.95 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: -6, scale: 0.95 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
                     onClick={() => goToMonth(currentMonthStr)}
                     disabled={isPending}
-                    className="absolute left-full ml-3 px-2.5 py-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none"
+                    className="ml-3 px-2.5 py-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none"
                     title="現在の月に戻る"
                   >
                     今月

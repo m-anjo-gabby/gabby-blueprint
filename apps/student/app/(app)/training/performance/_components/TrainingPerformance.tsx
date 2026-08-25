@@ -165,8 +165,12 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
             </div>
           </div>
 
-          <div className="relative flex items-center justify-center pt-1">
-            <div className="inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1 relative">
+          {/* 💡 今月ボタンの有無に関わらず月カプセルが常に中央に来るよう、
+              左右を1frの空セルで挟んだ3カラムgridで配置する（左右セル幅は常に等しい） */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pt-1">
+            <div aria-hidden="true" />
+
+            <div className="justify-self-center inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-2xl p-1">
               <button
                 onClick={() => handleMonthChange('prev')}
                 disabled={isPending}
@@ -199,17 +203,19 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
               >
                 <ArrowRight size={14} strokeWidth={2.5} />
               </button>
+            </div>
 
+            <div className="flex items-center justify-start">
               <AnimatePresence>
                 {isNotCurrentMonth && (
                   <motion.button
-                    initial={{ opacity: 0, x: -6, scale: 0.95 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: -6, scale: 0.95 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
                     onClick={() => goToMonth(currentMonthStr)}
                     disabled={isPending}
-                    className="absolute left-full ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none"
+                    className="ml-3 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none"
                     title="現在の月に戻る"
                   >
                     今月
@@ -297,7 +303,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 {/* 1. 単語帳 */}
                 <button
                   type="button"
-                  onClick={() => router.push('/training/word/history')}
+                  onClick={() => router.push(`/training/word/history?month=${targetMonth}`)}
                   className="w-full text-left p-3 sm:p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group hover:border-indigo-200 hover:bg-slate-50/20 transition-all active:scale-[0.99] cursor-pointer"
                 >
                   <div className="flex items-center gap-2 mb-1.5">
@@ -330,11 +336,11 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={() => router.push('/training/sprint/history')}
+                  onClick={() => router.push(`/training/sprint/history?month=${targetMonth}`)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      router.push('/training/sprint/history');
+                      router.push(`/training/sprint/history?month=${targetMonth}`);
                     }
                   }}
                   className="p-3 sm:p-3.5 bg-white border border-slate-200/60 rounded-2xl shadow-xs flex flex-col justify-between relative group hover:border-amber-200 hover:bg-slate-50/20 transition-all active:scale-[0.99] cursor-pointer"
@@ -455,7 +461,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                           <PopoverContent
                             align="center"
                             collisionPadding={12}
-                            className="w-56 p-3 rounded-xl border-slate-200/80 shadow-lg"
+                            className="w-64 p-3 rounded-xl border-slate-200/80 shadow-lg"
                           >
                             <div className="space-y-2 text-xs">
                               <div className="flex items-center gap-1.5 pb-1.5 border-b border-slate-100">
@@ -472,7 +478,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                                     単語帳ドリル
                                   </span>
                                   <span className="font-mono font-black text-slate-800 text-right">
-                                    {day.phraseCount}フレーズ
+                                    {day.wordCount}単語 / {day.phraseCount}フレーズ
                                   </span>
                                 </div>
                               )}
