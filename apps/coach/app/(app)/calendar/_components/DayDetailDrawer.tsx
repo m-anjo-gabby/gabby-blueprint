@@ -102,7 +102,13 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
         <div>
           <div className="flex items-center gap-1.5 mb-1">
             <span className={cn('text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border', badge.badgeClass)}>{label}</span>
-            {event.rsvp_enabled && event.is_joined && (
+            {event.is_assigned_coach && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-md px-2 py-1">
+                <CheckCircle2 size={11} />
+                You&apos;re the coach
+              </span>
+            )}
+            {!event.is_assigned_coach && event.rsvp_enabled && event.is_joined && (
               <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-2 py-1">
                 <CheckCircle2 size={11} />
                 Joined
@@ -122,7 +128,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
         <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 whitespace-pre-wrap">{event.description}</p>
       )}
 
-      {!event.rsvp_enabled && event.location_url && (
+      {(!event.rsvp_enabled || event.is_assigned_coach) && event.location_url && (
         <a
           href={event.location_url}
           target="_blank"
@@ -134,14 +140,14 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
         </a>
       )}
 
-      {event.rsvp_enabled && !event.is_joined && isFuture && (
+      {event.rsvp_enabled && !event.is_assigned_coach && !event.is_joined && isFuture && (
         <Button type="button" size="sm" onClick={handleJoin} disabled={isSubmitting} className="mt-1">
           {isSubmitting && <Loader2 size={13} className="animate-spin" />}
           Join
         </Button>
       )}
 
-      {event.rsvp_enabled && event.is_joined && (event.location_url || isFuture) && (
+      {event.rsvp_enabled && !event.is_assigned_coach && event.is_joined && (event.location_url || isFuture) && (
         <div className="space-y-2 pt-1">
           <div className="flex items-center gap-2">
             {event.location_url && (

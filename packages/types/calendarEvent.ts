@@ -26,6 +26,16 @@ export type CalendarEventType = keyof typeof CALENDAR_EVENT_TYPES;
 export type CalendarEventTargetType = 'ALL' | 'CLIENT' | 'COACH';
 
 /**
+ * 担当コーチ（com_t_calendar_event_coach）の選択肢・表示用の軽量型
+ * 生徒/コーチ本人によるRSVP参加登録（is_joined）とは別概念で、
+ * 管理者がグループセッションに割り当てる担当コーチを表す。
+ */
+export interface CalendarEventCoachOption {
+  coach_id: string;
+  user_name: string | null;
+}
+
+/**
  * カレンダーイベントマスタ（com_m_calendar_event）のデータ型
  */
 export interface CalendarEventItem {
@@ -43,6 +53,11 @@ export interface CalendarEventItem {
   delete_flg: string;
   insert_date: string;
   update_date: string;
-  // 結合フィールド（生徒向けクエリでのみ計算。com_t_calendar_event_participantから結合）
+  // 結合フィールド（生徒/コーチ向けクエリでのみ計算。com_t_calendar_event_participantから結合）
   is_joined: boolean;
+  // 結合フィールド（コーチ向けクエリでのみ計算。com_t_calendar_event_coachから結合。
+  // TRUEの場合、このコーチはRSVP参加者ではなく担当コーチ（主催者側）である）
+  is_assigned_coach: boolean;
+  // 結合フィールド（管理画面一覧でのみ計算。com_t_calendar_event_coachから結合）
+  coaches?: CalendarEventCoachOption[];
 }

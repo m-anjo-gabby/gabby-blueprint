@@ -12,12 +12,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { upsertCalendarEvent, CalendarEventFormData } from '@/actions/adminCalendarEventAction';
+import { upsertCalendarEvent, getCoachesFilter, CalendarEventFormData } from '@/actions/adminCalendarEventAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { CalendarEventItem, CalendarEventType, CalendarEventTargetType, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
+import {
+  CalendarEventItem,
+  CalendarEventType,
+  CalendarEventTargetType,
+  CalendarEventCoachOption,
+  CALENDAR_EVENT_TYPES,
+} from '@gabby/types/calendarEvent';
 import { ClientOption } from '@gabby/types/client';
+import { CalendarEventCoachPicker } from './CalendarEventCoachPicker';
 
 const EVENT_TYPE_KEYS = Object.keys(CALENDAR_EVENT_TYPES) as [CalendarEventType, ...CalendarEventType[]];
 const TARGET_TYPE_KEYS: [CalendarEventTargetType, ...CalendarEventTargetType[]] = ['ALL', 'CLIENT', 'COACH'];
@@ -43,6 +50,7 @@ const calendarEventSchema = z
     client_id: z.string().optional(),
     rsvp_enabled: z.boolean(),
     is_published: z.boolean(),
+    coach_ids: z.array(z.string()),
   })
   .refine((v) => !v.has_end || (!!v.end_date && !!v.end_time), {
     message: '終了日時を入力してください',
@@ -95,6 +103,7 @@ const DEFAULT_VALUES: CalendarEventFormValues = {
   client_id: '',
   rsvp_enabled: false,
   is_published: false,
+  coach_ids: [],
 };
 
 /**
@@ -105,10 +114,12 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
   const [isConfirming, setIsConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientOption[]>([]);
+  const [coaches, setCoaches] = useState<CalendarEventCoachOption[]>([]);
   const { showToast } = useToast();
 
   useEffect(() => {
     getClientsFilter().then(setClients);
+    getCoachesFilter().then(setCoaches);
   }, []);
 
   const getInitialValues = (data?: CalendarEventItem): CalendarEventFormValues => {
@@ -129,6 +140,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
       client_id: data.client_id || '',
       rsvp_enabled: data.rsvp_enabled,
       is_published: data.is_published,
+      coach_ids: (data.coaches ?? []).map((c) => c.coach_id),
     };
   };
 
@@ -140,6 +152,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
   const { isSubmitting } = form.formState;
   const hasEnd = form.watch('has_end');
   const targetType = form.watch('target_type');
+  const eventType = form.watch('event_type');
 
   const onSubmit = async (values: CalendarEventFormValues) => {
     setServerError(null);
@@ -158,6 +171,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
         client_id: values.target_type === 'CLIENT' ? values.client_id : null,
         rsvp_enabled: values.rsvp_enabled,
         is_published: values.is_published,
+        coach_ids: values.event_type === 'GROUP_SESSION' ? values.coach_ids : [],
       };
 
       const result = await upsertCalendarEvent(payload);
@@ -491,6 +505,34 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                         </SelectContent>
                       </Select>
                     )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* --- 担当コーチ（グループセッションのみ） --- */}
+            {eventType === 'GROUP_SESSION' && (
+              <FormField
+                control={form.control}
+                name="coach_ids"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">担当コーチ（任意・複数選択可）</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                        {field.value.length > 0
+                          ? field.value.map((id) => coaches.find((c) => c.coach_id === id)?.user_name || '(名称未設定)').join(', ')
+                          : '（未設定）'}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <CalendarEventCoachPicker coaches={coaches} selectedIds={field.value} onChange={field.onChange} />
+                      </FormControl>
+                    )}
+                    <FormDescription className="text-[11px] text-slate-400">
+                      登録すると自動的にコーチアプリのカレンダーにこのイベントが表示されます。
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

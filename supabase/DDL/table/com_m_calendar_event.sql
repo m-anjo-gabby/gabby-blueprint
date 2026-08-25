@@ -81,3 +81,34 @@ FOR SELECT TO authenticated USING (
         OR (target_type = 'COACH' AND public.get_jwt_user_type() = '2')
     )
 );
+
+---------------------------------------------
+-- 追加パッチ: グループセッション担当コーチ対応 (2026-08-25)
+-- 既存環境に対しては、このDROP POLICY/CREATE POLICY文のみをSupabase SQL Editor等で実行してください。
+-- 前提: table/com_t_calendar_event_coach.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- グループセッションに担当コーチ（com_t_calendar_event_coach）を割り当てられるようにした。
+-- target_type='ALL'（生徒全体配信）のイベントは本来コーチには非公開だが、
+-- 担当コーチとして割り当てられている場合に限り、そのイベント本体を閲覧できるようにする
+-- （既存の可視範囲を狭めない追加のOR条件のため、他ロールへの影響は無い）。
+---------------------------------------------
+DROP POLICY IF EXISTS "Users can view published calendar events" ON public.com_m_calendar_event;
+CREATE POLICY "Users can view published calendar events" ON public.com_m_calendar_event
+FOR SELECT TO authenticated USING (
+    is_published = TRUE
+    AND delete_flg = '0'
+    AND (
+        (target_type = 'ALL' AND public.get_jwt_user_type() = '1')
+        OR (target_type = 'CLIENT' AND public.get_jwt_user_type() = '1' AND client_id = public.get_jwt_client_id())
+        OR (target_type = 'COACH' AND public.get_jwt_user_type() = '2')
+        OR (
+            public.get_jwt_user_type() = '2'
+            AND EXISTS (
+                SELECT 1 FROM public.com_t_calendar_event_coach c
+                WHERE c.calendar_event_id = com_m_calendar_event.calendar_event_id
+                  AND c.coach_id = auth.uid()
+            )
+        )
+    )
+);

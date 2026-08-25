@@ -24,10 +24,15 @@ export async function getPublishedCalendarEventsCore(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    // participant はRLS（user_id = auth.uid()）により本人の参加行のみ結合される（com_t_notice_readの既読結合と同じ考え方）
+    // participant/assigned_coach はいずれもRLS（user_id/coach_id = auth.uid()）により
+    // 本人の行のみ結合される（com_t_notice_readの既読結合と同じ考え方）。
+    // assigned_coach はコーチが担当コーチとして割り当てられている場合のみ行が返る
+    // （生徒には該当行が無いため常に空配列になる）。
     const { data, error } = await supabase
       .from('com_m_calendar_event')
-      .select('*, participant:com_t_calendar_event_participant(calendar_event_id)')
+      .select(
+        '*, participant:com_t_calendar_event_participant(calendar_event_id), assigned_coach:com_t_calendar_event_coach(calendar_event_id)'
+      )
       .gte('start_datetime', startIso)
       .lt('start_datetime', endIso)
       .order('start_datetime', { ascending: true });
@@ -40,6 +45,7 @@ export async function getPublishedCalendarEventsCore(
     const events: CalendarEventItem[] = (data ?? []).map((row: any) => ({
       ...row,
       is_joined: Array.isArray(row.participant) && row.participant.length > 0,
+      is_assigned_coach: Array.isArray(row.assigned_coach) && row.assigned_coach.length > 0,
     }));
 
     return { success: true, events };

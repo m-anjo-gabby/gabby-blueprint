@@ -70,7 +70,20 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
       {
         accessorKey: 'start_datetime',
         header: '開始日時',
-        cell: ({ row }) => <span className="text-slate-600">{formatDateTimeByZone(row.original.start_datetime)}</span>,
+        cell: ({ row }) => (
+          <span className="text-slate-600">{formatDateTimeByZone(row.original.start_datetime, 'Asia/Tokyo', false)}</span>
+        ),
+      },
+      {
+        id: 'coaches',
+        header: '担当コーチ',
+        cell: ({ row }) => {
+          const coaches = row.original.coaches ?? [];
+          if (coaches.length === 0) return <span className="text-slate-300">-</span>;
+          return (
+            <span className="text-xs text-slate-600">{coaches.map((c) => c.user_name || '(名称未設定)').join(', ')}</span>
+          );
+        },
       },
       {
         accessorKey: 'is_published',

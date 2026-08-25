@@ -45,6 +45,17 @@
 --      - service_role（管理画面のサーバーアクション）経由のみを想定し、
 --        anon/authenticated からの直接実行は REVOKE 済み。
 --
+--   グループセッションの担当コーチ対応
+--   8. com_t_calendar_event_coach テーブルを新規作成
+--      - com_m_calendar_event（主にtarget_type='ALL'のグループセッション）に対して、
+--        運営が割り当てる担当コーチを管理する結合テーブル。com_t_calendar_event_participant
+--        （生徒/コーチ本人によるRSVP参加登録）とは用途・権限モデルが異なるため専用に分離。
+--        原則1〜3名想定だが上限は設けない。
+--   9. com_m_calendar_event のコーチ向けSELECTポリシーを更新
+--      - target_type='ALL'（生徒全体配信）のイベントは本来コーチには非公開だが、
+--        担当コーチとして割り当てられている場合に限りイベント本体を閲覧できるよう、
+--        既存ポリシーへ追加のOR条件を加える（他ロールへの影響は無い）。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -495,6 +506,80 @@ $$;
 -- 一般ロールからの直接実行は許可しない
 REVOKE EXECUTE ON FUNCTION public.purge_contract_with_history(uuid) FROM PUBLIC, anon, authenticated;
 
+-- =========================================================================
+-- 8. com_t_calendar_event_coach 新規作成（グループセッション担当コーチ対応）
+-- =========================================================================
+-- 【背景】
+-- com_m_calendar_event（主にtarget_type='ALL'のグループセッション）に対して、
+-- 運営が割り当てる担当コーチを管理する結合テーブル。
+--
+-- com_t_calendar_event_participant（生徒/コーチ本人によるRSVP参加登録。行が
+-- 存在すれば参加、DELETEでキャンセル）とは用途・権限モデルが異なるため、
+-- 専用テーブルとして分離する。担当コーチの割当・解除は管理画面
+-- （service-roleクライアント経由）のみが行い、rsvp_enabledの状態には依存しない。
+--
+-- 原則1〜3名想定だが、上限は設けない。
+CREATE TABLE IF NOT EXISTS public.com_t_calendar_event_coach (
+    calendar_event_coach_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    calendar_event_id UUID NOT NULL REFERENCES public.com_m_calendar_event(calendar_event_id) ON DELETE CASCADE,
+    coach_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    UNIQUE(calendar_event_id, coach_id)
+);
+
+COMMENT ON TABLE public.com_t_calendar_event_coach IS 'カレンダーイベント担当コーチ（管理者が割り当てる担当コーチ。生徒/コーチのRSVP参加登録とは別概念）';
+COMMENT ON COLUMN public.com_t_calendar_event_coach.calendar_event_coach_id IS '担当コーチ割当ID';
+COMMENT ON COLUMN public.com_t_calendar_event_coach.calendar_event_id IS 'カレンダーイベントID';
+COMMENT ON COLUMN public.com_t_calendar_event_coach.coach_id IS 'コーチのユーザID (com_m_user.id)';
+COMMENT ON COLUMN public.com_t_calendar_event_coach.insert_date IS '割当登録日時';
+
+CREATE INDEX IF NOT EXISTS idx_calendar_event_coach_event ON public.com_t_calendar_event_coach (calendar_event_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_event_coach_coach ON public.com_t_calendar_event_coach (coach_id);
+
+ALTER TABLE public.com_t_calendar_event_coach ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admin can manage calendar event coaches" ON public.com_t_calendar_event_coach;
+DROP POLICY IF EXISTS "Coaches can view their own assignments" ON public.com_t_calendar_event_coach;
+
+-- 管理者はフル操作可（割当・解除は管理画面のservice-roleクライアント経由でRLSをバイパスして行う）
+CREATE POLICY "Admin can manage calendar event coaches" ON public.com_t_calendar_event_coach
+FOR ALL TO authenticated
+USING (public.get_jwt_user_type() = '0')
+WITH CHECK (public.get_jwt_user_type() = '0');
+
+-- コーチは自分が割り当てられた行のみ参照可（コーチアプリのカレンダー表示用）
+CREATE POLICY "Coaches can view their own assignments" ON public.com_t_calendar_event_coach
+FOR SELECT TO authenticated USING (coach_id = auth.uid());
+
+-- =========================================================================
+-- 9. com_m_calendar_event のコーチ向けSELECTポリシー更新（担当コーチ対応）
+-- =========================================================================
+-- 【背景】
+-- target_type='ALL'（生徒全体配信）のイベントは本来コーチには非公開だが、
+-- 担当コーチとして割り当てられている場合に限り、そのイベント本体を閲覧できるようにする
+-- （既存の可視範囲を狭めない追加のOR条件のため、他ロールへの影響は無い）。
+-- 前提: 8. の com_t_calendar_event_coach 作成が完了していること。
+DROP POLICY IF EXISTS "Users can view published calendar events" ON public.com_m_calendar_event;
+CREATE POLICY "Users can view published calendar events" ON public.com_m_calendar_event
+FOR SELECT TO authenticated USING (
+    is_published = TRUE
+    AND delete_flg = '0'
+    AND (
+        (target_type = 'ALL' AND public.get_jwt_user_type() = '1')
+        OR (target_type = 'CLIENT' AND public.get_jwt_user_type() = '1' AND client_id = public.get_jwt_client_id())
+        OR (target_type = 'COACH' AND public.get_jwt_user_type() = '2')
+        OR (
+            public.get_jwt_user_type() = '2'
+            AND EXISTS (
+                SELECT 1 FROM public.com_t_calendar_event_coach c
+                WHERE c.calendar_event_id = com_m_calendar_event.calendar_event_id
+                  AND c.coach_id = auth.uid()
+            )
+        )
+    )
+);
+
 COMMIT;
 
 -- =========================================================================
@@ -523,3 +608,12 @@ COMMIT;
 -- FROM public.student_m_training_lifetime_stats
 -- ORDER BY update_date DESC
 -- LIMIT 10;
+--
+-- SELECT * FROM information_schema.tables
+-- WHERE table_schema = 'public' AND table_name = 'com_t_calendar_event_coach';
+--
+-- SELECT policyname FROM pg_policies
+-- WHERE tablename = 'com_t_calendar_event_coach';
+--
+-- SELECT policyname, qual FROM pg_policies
+-- WHERE tablename = 'com_m_calendar_event' AND policyname = 'Users can view published calendar events';
