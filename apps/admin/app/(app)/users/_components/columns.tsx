@@ -7,7 +7,7 @@ import { LicenseFormDialog } from "./LicenseFormDialog";
 import { ImpersonateButton } from "./ImpersonateButton";
 import { Calendar, Building2, Plus, StickyNote, ShieldCheck, Pencil, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getUserTypeLabel, UserRecord } from "@gabby/types/user";
+import { getUserTypeLabel, UserRecord, USER_TYPES } from "@gabby/types/user";
 import { isBefore, startOfDay } from "date-fns";
 
 export const columns: ColumnDef<UserRecord>[] = [
@@ -171,10 +171,10 @@ export const columns: ColumnDef<UserRecord>[] = [
     header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">操作</div>,
     cell: ({ row }) => {
       const user = row.original;
-      // 本登録済み（招待中ではない）生徒のみ代理ログイン対象とする
-      const isStudent = user.user_type === '1';
+      // 本登録済み（招待中ではない）の生徒・コーチのみ代理ログイン対象とする（管理者は対象外）
+      const isImpersonatableType = user.user_type === USER_TYPES.STUDENT || user.user_type === USER_TYPES.COACH;
       const isRegistered = !!user.last_sign_in_at || !!user.confirmed_at;
-      const canImpersonate = isStudent && isRegistered;
+      const canImpersonate = isImpersonatableType && isRegistered;
 
       return (
         <div className="flex justify-end items-center gap-2 px-2">

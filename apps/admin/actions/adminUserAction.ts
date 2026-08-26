@@ -80,7 +80,8 @@ export async function getUsers(
   page: number = 1,
   pageSize: number = 10,
   searchQuery?: string,
-  clientId?: string
+  clientId?: string,
+  userType?: string
 ): Promise<{ users: UserRecord[]; totalCount: number }> {
   const ctx = await getLogContext();
   try {
@@ -102,12 +103,16 @@ export async function getUsers(
       query = query.eq('client_id', clientId);
     };
 
+    if (userType) {
+      query = query.eq('user_type', userType);
+    };
+
     const { data, error, count } = await query
       .order('insert_date', { ascending: false }) // 💡 改善: 統合されたビューの特性に合わせ、最新の招待・登録者が一番上に来るように降順に最適化
       .range(from, to);
 
     if (error) {
-      logger.error('user:get_users_failed', error.message, { ...ctx, payload: { page, pageSize, searchQuery, clientId } });
+      logger.error('user:get_users_failed', error.message, { ...ctx, payload: { page, pageSize, searchQuery, clientId, userType } });
       throw error;
     }
 
@@ -122,7 +127,7 @@ export async function getUsers(
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, pageSize, searchQuery, clientId } });
+    logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, pageSize, searchQuery, clientId, userType } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

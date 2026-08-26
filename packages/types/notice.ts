@@ -37,8 +37,8 @@ export const NOTICE_IMPORTANT_BADGE = {
 } as const;
 
 
-// 配信対象タイプ
-export type NoticeTargetType = 'ALL' | 'CLIENT';
+// 配信対象タイプ (ALL: 生徒全体 / CLIENT: 顧客単位 / COACH: コーチ全体)
+export type NoticeTargetType = 'ALL' | 'CLIENT' | 'COACH';
 
 /**
  * 添付ファイル情報（JSONB格納形式）

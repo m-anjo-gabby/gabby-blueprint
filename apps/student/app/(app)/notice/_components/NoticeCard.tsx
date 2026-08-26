@@ -10,8 +10,8 @@ import { cn } from '@/lib/utils';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
-import { getNoticeAttachmentUrlAction } from '@/actions/noticeAction';
-import { isPreviewableFile, forceDownloadFile } from '@/lib/download';
+import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
+import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
 
 // ─── ファイルサイズ表示ユーティリティ ──────────────────────
 function formatFileSize(bytes: number): string {

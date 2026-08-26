@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useNoticeStore } from '@/stores/useNoticeStore';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NoticePopupDialog } from '@/components/common/NoticePopupDialog';
 
 /**

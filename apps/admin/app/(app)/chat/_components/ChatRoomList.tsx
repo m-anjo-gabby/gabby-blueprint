@@ -61,6 +61,7 @@ export function ChatRoomList() {
   const myRooms = useChatStore((state) => state.rooms);
   const isLoadingMyRooms = useChatStore((state) => state.isLoading);
   const fetchMyRooms = useChatStore((state) => state.fetchRooms);
+  const invalidateMyRooms = useChatStore((state) => state.invalidate);
   const currentUser = useUserStore((state) => state.user);
   const isAdmin = currentUser?.app_metadata?.user_type === USER_TYPES.ADMIN;
   const timeZone = currentUser?.timezone || 'Asia/Tokyo';
@@ -133,7 +134,7 @@ export function ChatRoomList() {
             searchPlaceholder="顧客名で検索..."
             className="w-56"
           />
-          <CreateChatRoomDialog onCreated={() => fetchMyRooms(true)} />
+          <CreateChatRoomDialog onCreated={invalidateMyRooms} />
         </div>
       </div>
 

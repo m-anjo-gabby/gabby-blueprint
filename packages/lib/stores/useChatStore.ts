@@ -10,6 +10,13 @@ interface ChatState {
   lastFetched: number | null;
 
   fetchRooms: (force?: boolean) => Promise<void>;
+  /**
+   * 次回の fetchRooms 呼び出しで再取得させるためキャッシュを無効化するだけの軽量な操作。
+   * 画面遷移の直前にここで getChatRooms() を即時実行してしまうと、その応答が
+   * 遷移後に届いた際 Next.js のルーターが遷移前のツリーへ巻き戻すことがあるため、
+   * 遷移を伴う操作の直後は fetchRooms(true) ではなく invalidate() を使う。
+   */
+  invalidate: () => void;
   markRoomAsRead: (roomId: string, chatId: string) => Promise<void>;
   applyIncomingMessage: (roomId: string, isMine: boolean) => void;
 }
@@ -38,6 +45,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ isLoading: false });
     }
   },
+
+  invalidate: () => set({ lastFetched: null }),
 
   markRoomAsRead: async (roomId: string, chatId: string) => {
     // 楽観的UI更新

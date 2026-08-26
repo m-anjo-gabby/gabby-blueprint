@@ -14,14 +14,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { LogIn, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { startImpersonation } from '@/actions/adminImpersonationAction';
-import { UserRecord } from '@gabby/types/user';
+import { UserRecord, USER_TYPES } from '@gabby/types/user';
 
 interface Props {
   user: UserRecord;
 }
 
 /**
- * 障害対応・問合せ調査のため、対象の生徒として生徒ポータルへ代理ログインするボタン。
+ * 障害対応・問合せ調査のため、対象ユーザーとして生徒／コーチポータルへ代理ログインするボタン。
  * 理由の入力を必須とし、実行内容は監査ログ(com_t_admin_impersonation_log)に記録される。
  */
 export function ImpersonateButton({ user }: Props) {
@@ -29,6 +29,7 @@ export function ImpersonateButton({ user }: Props) {
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
+  const portalLabel = user.user_type === USER_TYPES.COACH ? 'コーチポータル' : '生徒ポータル';
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
@@ -75,7 +76,7 @@ export function ImpersonateButton({ user }: Props) {
           <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-xl">
             <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
             <p className="text-[11px] leading-relaxed text-amber-700 font-medium">
-              <span className="font-bold">{user.user_name || user.email}</span> さんとして生徒ポータルに実際にログインします。
+              <span className="font-bold">{user.user_name || user.email}</span> さんとして{portalLabel}に実際にログインします。
               画面上の操作は全て本人の操作として実際に反映されるため、障害対応・問合せ調査の範囲に限定して利用してください。
               実行内容は監査ログに記録されます。
             </p>
@@ -111,7 +112,7 @@ export function ImpersonateButton({ user }: Props) {
             onClick={handleStart}
             disabled={loading || reason.trim().length === 0}
           >
-            {loading ? <Loader2 className="animate-spin" size={16} /> : '生徒として開く'}
+            {loading ? <Loader2 className="animate-spin" size={16} /> : `${portalLabel}を開く`}
           </Button>
         </DialogFooter>
       </DialogContent>

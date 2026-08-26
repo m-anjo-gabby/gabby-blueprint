@@ -64,3 +64,12 @@ FOR SELECT TO authenticated USING (
         WHERE client_id = public.get_jwt_client_id()
     )
 );
+
+---------------------------------------------
+-- 追加パッチ: 週3回以上のカスタムプランに対応 (2026-08-15)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+ALTER TABLE public.com_t_user_session_ticket DROP CONSTRAINT IF EXISTS chk_ticket_weekly_frequency;
+ALTER TABLE public.com_t_user_session_ticket ADD CONSTRAINT chk_ticket_weekly_frequency CHECK (weekly_frequency >= 1);
+
+COMMENT ON COLUMN public.com_t_user_session_ticket.weekly_frequency IS '週あたりのライブセッション回数（1以上）';

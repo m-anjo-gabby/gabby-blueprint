@@ -1,7 +1,8 @@
 ---------------------------------------------
--- DDL: Storage Bucket "profile" (プロフィールアイコン画像)
+-- DDL: Storage Bucket "profile" (プロフィールアイコン画像 / 紹介ビデオ)
 ---------------------------------------------
 -- 保存パス例: profile/{user_id}/icon/{uuid}.png
+--             profile/{user_id}/video/{uuid}.mp4 （コーチ紹介ビデオ、2026-08-14追加）
 -- 公開設定: Public バケット（getPublicUrl() で直接配信、キャッシュしやすくするため）
 -- アップロード/削除はアプリ側（Server Action + Service Role Key）で
 -- 認証済みユーザー本人の行のみ更新可能なことを確認した上で実行するため、
@@ -12,8 +13,8 @@ VALUES (
   'profile',
   'profile',
   true,
-  5242880, -- 5MB
-  ARRAY['image/png', 'image/jpeg', 'image/webp']
+  104857600, -- 100MB（紹介ビデオ対応のため拡大。旧: 5MB）
+  ARRAY['image/png', 'image/jpeg', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime']
 )
 ON CONFLICT (id) DO UPDATE SET
   public = EXCLUDED.public,

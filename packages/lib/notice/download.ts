@@ -1,5 +1,3 @@
-// apps/student/lib/download.ts
-
 /** プレビュー可能なファイル拡張子のホワイトリスト */
 const PREVIEWABLE_EXTENSIONS = new Set([
   'pdf',

@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import UserTypeFilter from "./UserTypeFilter";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -71,7 +72,7 @@ export function UserDataTable<TData, TValue>({
   return (
     <div className="space-y-0">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-slate-50/80 rounded-t-lg border-x border-t border-slate-200">
-        <div className="flex items-center gap-2 w-full max-w-md">
+        <div className="flex items-center gap-2 w-full max-w-2xl">
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
@@ -90,6 +91,9 @@ export function UserDataTable<TData, TValue>({
           <Button onClick={() => handleSearchTrigger(searchValue)} variant="secondary" size="sm" className="h-9 px-4 bg-white border border-slate-200 shadow-sm font-medium">
             検索
           </Button>
+
+          {/* 区分フィルタ（管理者・生徒・コーチ） */}
+          <UserTypeFilter />
         </div>
 
         <div className="flex items-center gap-4">

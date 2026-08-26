@@ -18,7 +18,10 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
-    // 空にするか、他の設定があれば残す
+    serverActions: {
+      // 紹介ビデオアップロード（最大100MB）に対応するため拡張（デフォルト1MB）
+      bodySizeLimit: '100mb',
+    },
   },
 };
 

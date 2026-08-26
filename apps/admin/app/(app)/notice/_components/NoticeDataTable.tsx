@@ -14,11 +14,13 @@ import {
   Bell, 
   FileText, 
   Paperclip, 
-  Globe, 
+  Globe,
   Building2,
+  Users,
   CheckCircle2,
   Clock,
-  EyeOff
+  EyeOff,
+  CheckCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { deleteNotice } from '@/actions/adminNoticeAction';
@@ -38,7 +40,7 @@ import {
 
 interface NoticeItemData {
   notice_id: string;
-  target_type: 'ALL' | 'CLIENT';
+  target_type: 'ALL' | 'CLIENT' | 'COACH';
   client_id: string | null;
   client_name?: string | null;
   notice_type: NoticeType;
@@ -251,7 +253,11 @@ export function NoticeDataTable({ data, pageCount, totalCount }: NoticeDataTable
                     <td className="py-4 px-4">
                       {notice.target_type === 'ALL' ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600">
-                          <Globe size={13} className="text-slate-400" /> 全体配信
+                          <Globe size={13} className="text-slate-400" /> 生徒全体配信
+                        </span>
+                      ) : notice.target_type === 'COACH' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600">
+                          <Users size={13} className="text-emerald-500" /> コーチ一括配信
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600">
@@ -285,6 +291,13 @@ export function NoticeDataTable({ data, pageCount, totalCount }: NoticeDataTable
                           title="編集"
                         >
                           <Edit3 size={15} />
+                        </Link>
+                        <Link
+                          href={`/notice/${notice.notice_id}/reads`}
+                          className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all active:scale-95"
+                          title="既読状況を確認"
+                        >
+                          <CheckCheck size={15} />
                         </Link>
                         <button
                           onClick={() => setDeleteId(notice.notice_id)}

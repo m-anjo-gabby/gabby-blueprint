@@ -15,7 +15,12 @@ export const useConfirm = () => {
     async (
       title: string,
       message: string,
-      options: { variant?: 'danger' | 'warning' | 'info'; isModal?: boolean } = {}
+      options: {
+        variant?: 'danger' | 'warning' | 'info';
+        isModal?: boolean;
+        confirmText?: string;
+        cancelText?: string;
+      } = {}
     ) => {
       // ストアのアクションを呼び出して結果を待機
       return await openConfirm({
@@ -23,6 +28,8 @@ export const useConfirm = () => {
         message,
         variant: options.variant ?? 'danger',
         isModal: options.isModal ?? true,
+        confirmText: options.confirmText,
+        cancelText: options.cancelText,
       });
     },
     [openConfirm]
