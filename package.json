@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "turbo dev",
+    "dev:ssl": "turbo run dev:ssl",
     "build": "turbo build",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
