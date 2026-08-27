@@ -32,16 +32,29 @@ function collapseRepeats(words: string[]): string[] {
 }
 
 /**
+ * マイク入力の音声認識結果には、文末のピリオドなど発話として存在しない句読点が
+ * ブラウザ/OSのASR実装依存で付与されることがある。ターゲット側（analyzePhrase内のtLower）は
+ * 同じ記号セットを除去した上で比較しているため、入力側だけ除去しないと
+ * 「完全一致のはずがFUZZY扱いになりスコアが下がる」という不整合が起きる。
+ * ここで除去する記号セットは native-speech.ts の各所（calculateSimilarity等）と揃えている
+ * （アポストロフィは "don't" 等の短縮形を壊さないよう対象外）。
+ */
+const normalizeWord = (word: string): string =>
+  word.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+
+/**
  * Web Speech APIの認識結果に対する前処理パイプライン。
- * 1. 口語短縮形を展開して複数単語に戻す
- * 2. フィラーを除去する
- * 3. 直前と同じ単語の連続（言い直し）を1つにまとめる
+ * 1. 句読点を除去する（ASR依存で付与される記号による誤判定を防ぐ）
+ * 2. 口語短縮形を展開して複数単語に戻す
+ * 3. フィラーを除去する
+ * 4. 直前と同じ単語の連続（言い直し）を1つにまとめる
  *
  * analyzePhrase本体のマッチングロジックには手を加えず、入力側だけを正規化することで、
  * 各施策を独立に追加・調整できるようにしている。
  */
 export function preprocessInputWords(rawInputWords: string[]): string[] {
-  const expanded = rawInputWords.flatMap(w => CONTRACTIONS[w] ?? [w]);
+  const normalized = rawInputWords.map(normalizeWord).filter(w => w.length > 0);
+  const expanded = normalized.flatMap(w => CONTRACTIONS[w] ?? [w]);
   const withoutFillers = expanded.filter(w => !FILLER_WORDS.has(w));
   return collapseRepeats(withoutFillers);
 }
