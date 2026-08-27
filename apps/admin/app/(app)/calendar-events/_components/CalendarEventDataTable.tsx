@@ -70,7 +70,20 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
       {
         accessorKey: 'start_datetime',
         header: '開始日時',
-        cell: ({ row }) => <span className="text-slate-600">{formatDateTimeByZone(row.original.start_datetime)}</span>,
+        cell: ({ row }) => (
+          <span className="text-slate-600">{formatDateTimeByZone(row.original.start_datetime, 'Asia/Tokyo', false)}</span>
+        ),
+      },
+      {
+        id: 'coaches',
+        header: '担当コーチ',
+        cell: ({ row }) => {
+          const coaches = row.original.coaches ?? [];
+          if (coaches.length === 0) return <span className="text-slate-300">-</span>;
+          return (
+            <span className="text-xs text-slate-600">{coaches.map((c) => c.user_name || '(名称未設定)').join(', ')}</span>
+          );
+        },
       },
       {
         accessorKey: 'is_published',
@@ -91,11 +104,11 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
         header: () => <div className="text-right">操作</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
-            {row.original.rsvp_enabled && (
+            {(row.original.rsvp_enabled || (row.original.coaches?.length ?? 0) > 0) && (
               <Link
                 href={`/calendar-events/${row.original.calendar_event_id}/participants`}
                 className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all active:scale-95"
-                title="参加者を確認"
+                title="参加者・アナウンスを管理"
               >
                 <Users size={15} />
               </Link>

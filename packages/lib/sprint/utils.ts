@@ -1,5 +1,21 @@
-import { FeedbackConfig } from '@gabby/types/speechAssessment';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
+import type { MetadataSprint } from '@gabby/types/content';
+
+/**
+ * 教材メタデータから「レベル概念を持つか」を判定する共通ヘルパー。
+ * コーパススプリント（sprint_type: '1'）のみ has_level フラグに従い、
+ * 汎用スプリント（'0'）や未取得時は常に true として扱う。
+ * SprintDrillPlayer/SprintTimePlayer/SprintSelect/結果画面など、
+ * courseTitle 算出のために各所で個別に再実装されていたロジックを集約したもの。
+ */
+export const resolveSprintHasLevel = (metadata: Pick<MetadataSprint, 'sprint_type' | 'has_level'> | null | undefined): boolean => {
+  const isCorpus = metadata?.sprint_type === '1';
+  return isCorpus ? metadata?.has_level ?? true : true;
+};
+
+// getFeedbackConfig / getScoreTier は packages/lib/assessment/feedbackConfig.ts に一元化。
+// Word/Sprint双方の発話評価UIから共通参照するため、`@gabby/lib` 経由でも従来通り利用できるよう再エクスポートする。
+export { getFeedbackConfig, getScoreTier } from '../assessment/feedbackConfig';
 
 /**
  * 安全な動的教材タイトル生成ヘルパー
@@ -18,19 +34,6 @@ export const getSprintTitle = (type: SprintQuestionType | string, level: number,
   }
   
   return `${typeLabel} Lv.${level}`; // 例: "UG Speed Lv.1"
-};
-
-/**
- * 発話評価のフィードバックスコア設定取得
- * @param score - 発話スコア (0-1)
- * @returns フィードバック設定
- */
-export const getFeedbackConfig = (score: number): FeedbackConfig => {
-  if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
-  if (score >= 0.80) return { fill: '#3B82F6', tagText: 'Great' };
-  if (score >= 0.60) return { fill: '#F59E0B', tagText: 'Good' };
-  if (score >= 0.30) return { fill: '#F97316', tagText: 'Fair' };
-  return { fill: '#EF4444', tagText: 'Poor' };
 };
 
 /**
@@ -120,6 +123,13 @@ export const playChimeBuffer = (ctx: AudioContext, buffer: AudioBuffer): Promise
   });
 };
 
+
+/**
+ * 発話評価対象のテキストから、句読点・記号を除いた単語配列を生成する共通ヘルパー
+ */
+export const cleanAnswerWords = (text: string): string[] => {
+  return text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").split(" ").filter(Boolean);
+};
 
 /**
  * デコード済みオーディオバッファのグローバルキャッシュ。

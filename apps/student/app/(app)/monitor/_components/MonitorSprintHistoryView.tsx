@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MonitorUser, MonitorSprintHistoryItem, MonitorSprintDrillHistoryItem, MonitorSprintHistoryResponse } from '@/actions/monitorAction';
+import { logClientEvent } from '@gabby/lib/logger/actions';
 
 export interface DisplayHistoryItem {
   id: string;
@@ -287,6 +288,14 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
       const items = groupedData[date] || [];
       sortedItems.push(...items);
     });
+
+    logClientEvent({
+      service: 'student',
+      event: 'monitor:sprint_history_csv_exported',
+      level: 'info',
+      message: `Sprint history CSV exported: ${startDate}~${endDate}`,
+      payload: { startDate, endDate, targetUserIds: selectedUserIds, rowCount: sortedItems.length }
+    }).catch(() => {});
 
     const rows = sortedItems.map(item => {
       const date = item.dateStr;

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getSprintResultAction, getContentAction } from '@/actions/sprintAction'; 
+import { getSprintResultAction } from '@/actions/sprintAction';
 import { getSprintTitle } from '@gabby/lib';
 import { SprintResult } from './_components/SprintResult';
 
@@ -7,10 +7,16 @@ interface PageProps {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{
+    from?: string;
+  }>;
 }
 
-export default async function SprintResultPage({ params }: PageProps) {
+export default async function SprintResultPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { from } = await searchParams;
+  // 🆕 スプリント実施画面からの遷移時のみ、フッターの初期状態を「全て再生」にする
+  const cameFromPlay = from === 'play';
 
   const res = await getSprintResultAction(id);
 
@@ -18,18 +24,8 @@ export default async function SprintResultPage({ params }: PageProps) {
     return notFound();
   }
 
-  // Server Action が計算してくれた追加フィールドと、パース済みの履歴(または scoreRecord 内のもの)を取り出す
-  const { scoreRecord, questions, totalAssessmentCount, averageAssessmentScore } = res.data;
-
-  // 教材のメタデータから hasLevel を解決
-  let hasLevel = true;
-  if (scoreRecord.content_id) {
-    const contentRes = await getContentAction(scoreRecord.content_id);
-    if (contentRes.success && contentRes.data) {
-      const isCorpus = contentRes.data.metadata?.sprint?.sprint_type === '1';
-      hasLevel = isCorpus ? contentRes.data.metadata?.sprint?.has_level ?? true : true;
-    }
-  }
+  // Server Action が計算してくれた追加フィールド（hasLevel は com_m_contents を1クエリでJOINして解決済み）を取り出す
+  const { scoreRecord, questions, totalAssessmentCount, averageAssessmentScore, hasLevel } = res.data;
 
   const courseTitle = getSprintTitle(
     scoreRecord.question_type || '0', 
@@ -63,6 +59,7 @@ export default async function SprintResultPage({ params }: PageProps) {
       }} 
       questions={questions}
       courseTitle={courseTitle}
+      cameFromPlay={cameFromPlay}
     />
   );
 }

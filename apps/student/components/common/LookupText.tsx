@@ -22,7 +22,8 @@ export function LookupText({
   className,
   as: Component = 'p',
 }: LookupTextProps) {
-  const { openTooltip, activeWord } = useColorVowelLookup();
+  const { openTooltip, activeWordKey } = useColorVowelLookup();
+  const instanceId = React.useId();
 
   // 単語 (英数字・アポストロフィ・ハイフン) と非単語 (空白・記号) に分割
   const tokens = React.useMemo(() => {
@@ -42,14 +43,15 @@ export function LookupText({
 
   const handleWordClick = (
     e: React.MouseEvent<HTMLSpanElement>,
-    wordContent: string
+    wordContent: string,
+    wordKey: string
   ) => {
     e.stopPropagation();
     const cleaned = wordContent.replace(/^[.,!?;:"'()]+|[.,!?;:"'()]+$/g, '').trim();
     if (!cleaned) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    openTooltip(cleaned, rect);
+    openTooltip(cleaned, rect, wordKey);
   };
 
   return (
@@ -60,16 +62,14 @@ export function LookupText({
         }
 
         const cleaned = token.content.replace(/^[.,!?;:"'()]+|[.,!?;:"'()]+$/g, '').trim();
-        const isActive =
-          Boolean(activeWord) &&
-          Boolean(cleaned) &&
-          activeWord?.toLowerCase() === cleaned.toLowerCase();
+        const wordKey = `${instanceId}-${index}`;
+        const isActive = Boolean(activeWordKey) && activeWordKey === wordKey;
 
         return (
           <span
             key={index}
             data-lookup-word={cleaned}
-            onClick={(e) => handleWordClick(e, token.content)}
+            onClick={(e) => handleWordClick(e, token.content, wordKey)}
             className={cn(
               'inline-block cursor-pointer rounded px-[1.5px] transition-colors',
               isActive

@@ -39,11 +39,20 @@ BEGIN
     p_assessment_count
   )
   ON CONFLICT (user_id, content_id, training_date)
-  DO UPDATE SET 
+  DO UPDATE SET
     word_count = self_t_word_summary.word_count + p_word_count,
     phrase_count = self_t_word_summary.phrase_count + p_phrase_count,
     assessment_count = self_t_word_summary.assessment_count + p_assessment_count,
     update_date = NOW();
+
+  -- 4. 学習実績サマリー（通算学習日数・連続学習日数・最終トレーニング日・通算単語数等）を更新
+  PERFORM public.update_training_lifetime_stats(
+    v_user_id,
+    v_local_today,
+    p_word_delta => p_word_count,
+    p_phrase_delta => p_phrase_count,
+    p_assessment_delta => p_assessment_count
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
+import { PlaybackRateControl } from '@/components/common/PlaybackRateControl';
 
 // 🔌 Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
@@ -18,7 +19,6 @@ interface SprintDrillPlayerControlsProps {
   playbackRate: number;
   // 🛠️ 修正点：引数で選択された rate（数値）を取るシグネチャに統一
   onChangePlaybackRate: (rate: number) => void;
-  timeLeft: number;
   isStarted?: boolean;
 }
 
@@ -34,17 +34,16 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
   onToggleAutoPlay,
   playbackRate,
   onChangePlaybackRate,
-  timeLeft,
   isStarted = true
 }) => {
   // 🔌 Zustand ストアから状態を直接マッピング
-  const currentIndex = useSprintStore((state) => state.currentIndex);
-  const totalQuestions = useSprintStore((state) => state.questions.length);
-  const isRecording = useSprintStore((state) => state.isRecording);
-  const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying);
-  const isPlayingQuestionSequence = useSprintStore((state) => state.isPlayingQuestionSequence);
-  const isPlayingAnswerSequence = useSprintStore((state) => state.isPlayingAnswerSequence);
-  const isAssessmentMode = useSprintStore((state) => state.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
+  const currentIndex = useSprintStore((state) => state.session.currentIndex);
+  const totalQuestions = useSprintStore((state) => state.session.questions.length);
+  const isRecording = useSprintStore((state) => state.session.isRecording);
+  const isAutoPlaying = useSprintStore((state) => state.drill.isAutoPlaying);
+  const isPlayingQuestionSequence = useSprintStore((state) => state.drill.isPlayingQuestionSequence);
+  const isPlayingAnswerSequence = useSprintStore((state) => state.drill.isPlayingAnswerSequence);
+  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
 
   // 📝 速度ポップオーバーの開閉ステート
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
@@ -60,21 +59,9 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
   // --- 共通スタイル定義 ---
   const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50 text-slate-400";
   const unitBase = "flex items-center rounded-2xl border shadow-sm transition-all";
-  const splitLeftBase = "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-2xl";
-
-  // 選択可能な速度リスト（見やすい順）
-  const AVAILABLE_RATES = [0.8, 1.0, 1.2, 1.5];
 
   return (
     <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2 relative">
-
-      {/* 外側タップでポップオーバーを閉じるためのバックドロップ */}
-      {isRateMenuOpen && (
-        <div 
-          className="fixed inset-0 z-30 cursor-default" 
-          onClick={() => setIsRateMenuOpen(false)} 
-        />
-      )}
 
       {/* 1. 上段：ナビゲーション・レイヤー（戻る・進む） */}
       <div className="flex items-center justify-between w-full gap-2 h-14 z-10">        
@@ -125,63 +112,14 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
         <div className={cn("h-full bg-slate-50 border-slate-200 overflow-visible", unitBase)}>
           
           {/* ⏱️ 再生速度セクション */}
-          <div className="h-full relative shrink-0 overflow-visible">
-            <button
-              onClick={() => !isInteractionDisabled && setIsRateMenuOpen(!isRateMenuOpen)}
-              disabled={isInteractionDisabled}
-              className={cn(
-                splitLeftBase,
-                "border-r border-slate-200 hover:bg-slate-100 active:bg-slate-200 cursor-pointer h-full z-10",
-                playbackRate !== 1.0 
-                  ? "bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700 active:bg-indigo-800" 
-                  : "text-slate-600"
-              )}
-            >
-              <span className="text-[11px] font-black leading-none">{playbackRate.toFixed(1)}</span>
-              <span className={cn(
-                "text-[9px] font-black uppercase tracking-tight mt-0.5",
-                playbackRate !== 1.0 ? "text-indigo-100" : "text-slate-400"
-              )}>Rate</span>
-            </button>
-
-            {/* ✨ Framer Motion ツールチップメニュー */}
-            <AnimatePresence>
-              {isRateMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                  animate={{ opacity: 1, y: -10, scale: 1 }}
-                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                  transition={{ duration: 0.12, ease: "easeOut" }}
-                  className="absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-slate-200/90 shadow-2xl rounded-2xl p-1.5 min-w-[80px] flex flex-col gap-1 z-50 mb-1"
-                >
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2.5 h-2.5 bg-white border-b border-r border-slate-200 rotate-45" />
-
-                  {AVAILABLE_RATES.map((rate) => {
-                    const isSelected = playbackRate === rate;
-                    return (
-                      <button
-                        key={rate}
-                        onClick={() => {
-                          // 🛠️ 修正点：親の関数に選択したレートの数値をそのまま伝える
-                          onChangePlaybackRate(rate);
-                          setIsRateMenuOpen(false);
-                        }}
-                        className={cn(
-                          "w-full px-2.5 py-1.5 text-xs font-black font-mono rounded-xl transition-all flex items-center justify-between gap-2 cursor-pointer",
-                          isSelected 
-                            ? "bg-indigo-50 text-indigo-600" 
-                            : "text-slate-600 hover:bg-slate-50 hover:text-indigo-500"
-                        )}
-                      >
-                        <span>{rate.toFixed(1)}x</span>
-                        {isSelected && <Check size={12} strokeWidth={3} className="text-indigo-600 shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <PlaybackRateControl
+            playbackRate={playbackRate}
+            onChangePlaybackRate={onChangePlaybackRate}
+            isOpen={isRateMenuOpen}
+            onOpenChange={setIsRateMenuOpen}
+            disabled={isInteractionDisabled}
+            variant="sprint"
+          />
 
           <button
             onClick={onPlayAudio}

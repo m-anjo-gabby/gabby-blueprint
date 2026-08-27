@@ -18,7 +18,13 @@ export const ResumeCard = ({ data, onClear }: ResumeCardProps) => {
   const router = useRouter();
   const content = data.com_m_contents;
   const { metadata } = data;
-  
+
+  // 参照先コンテンツがRLS等で不可視・削除済みの場合は描画しない
+  // （サーバー側の取得処理で孤立ブックマークは自動クリーンアップされる想定）
+  if (!content) {
+    return null;
+  }
+
   // コンテンツ種別に応じたアイコンや配色設定を取得
   const { icon: TypeIcon, label: typeLabel, theme } = getContentTypeConfig(content.content_type);
 

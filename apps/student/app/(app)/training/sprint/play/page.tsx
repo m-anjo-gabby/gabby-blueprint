@@ -42,7 +42,13 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       // プレイヤーから「戻ってきた」場合はストアのセッション状態が最優先
       // 💡 体系化された session オブジェクトの有無でクリーンに判定
       const isReturningFromSession = session?.isActive && config.contentId === contentId;
-      
+
+      // 🌟 教材切り替え時（戻りセッションでない場合）はストアに前回の教材情報が残っているため、
+      // config/contentMetadataの再取得が完了するまでSprintSelectをマウントさせない
+      if (!isReturningFromSession) {
+        setUiView('loading');
+      }
+
       let targetConfig;
 
       if (isReturningFromSession) {
@@ -240,14 +246,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // 1. 選択画面
   if (ui.view === 'selecting') {
     return (
-      <SprintSelect 
-        initialConfig={{
-          mode: config.mode,
-          questionType: config.questionType || '0',
-          level: String(config.level),
-          timeLimitSec: config.timeLimitSec,
-          contentId: config.contentId
-        }}
+      <SprintSelect
         onStart={handleStartSession}
       />
     );

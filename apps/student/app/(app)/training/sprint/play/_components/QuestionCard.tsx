@@ -4,17 +4,19 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SprintQuestionType } from "@gabby/types/sprint";
-import { Volume2, Eye, CircleDot, Headphones, Languages, Mic, MicOff } from 'lucide-react';
+import { Eye, CircleDot, Headphones, Mic, MicOff } from 'lucide-react';
 
 // 🔌 Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
 import { cn } from '@/lib/utils';
+import { CircularProgressRing } from '@/components/common/CircularProgressRing';
+import { QuestionStepBadge, StepIndicator } from '@/components/common/QuestionStepBadge';
+import { PhraseAudioHeader } from '@/components/common/PhraseAudioHeader';
 
 interface QuestionCardProps {
   groupCurrentIndex?: number;
   groupTotalCount?: number;
   onPlayAudio?: (voiceUrl: string | null, text: string) => void;
-  onStartRecord?: () => void;
   audioPhase?: 'idle' | 'statement' | 'question' | 'thinking' | 'answer'; // 🛠️ 親の 'thinking' フェーズに追従
   isRecording?: boolean; // 🎙️ 親から渡される録音中フラグ
   timeLeft?: number;      // ⏱️ 親から渡される残り時間（秒）
@@ -32,7 +34,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   groupCurrentIndex = 0,
   groupTotalCount = 3,
   onPlayAudio,
-  onStartRecord,
   audioPhase = 'idle',
   isRecording = false,
   timeLeft = 0,
@@ -40,15 +41,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   
   // 📦 1. まず必要なストアの値をすべて取得
-  const questions = useSprintStore((state) => state.questions) || [];
-  const currentIndex = useSprintStore((state) => state.currentIndex);
-  const mode = useSprintStore((state) => state.mode);
-  const questionType = useSprintStore((state) => state.questionType);
-  const isRevealed = useSprintStore((state) => state.isRevealed);
-  const isAutoPlaying = useSprintStore((state) => state.isAutoPlaying);
+  const questions = useSprintStore((state) => state.session.questions) || [];
+  const currentIndex = useSprintStore((state) => state.session.currentIndex);
+  const mode = useSprintStore((state) => state.config.mode);
+  const questionType = useSprintStore((state) => state.config.questionType);
+  const isRevealed = useSprintStore((state) => state.drill.isRevealed);
+  const isAutoPlaying = useSprintStore((state) => state.drill.isAutoPlaying);
   const setDrillEvalType = useSprintStore((state) => state.setDrillEvalType);
-  const drillEvalType = useSprintStore((state) => state.drillEvalType);
-  const isAssessmentMode = useSprintStore((state) => state.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
+  const drillEvalType = useSprintStore((state) => state.drill.evalType);
+  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
 
   // 🎯 安全に現在の問題データを特定 (Zustand内部の同期ラグ対策)
   // 💡 フック群（useMemo等）よりも前に宣言することで、配下のフック内から安全に変数を参照させエラーを解決します
@@ -133,15 +134,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     return 'idle';
   }, [isRevealed, isRecording]);
 
-  // ⭕ 円形プログレスバー用の定数と計算
-  const RADIUS = 24;
-  const CIRCUMFERENCE = useMemo(() => 2 * Math.PI * RADIUS, []);
-
-  const strokeDashoffset = useMemo(() => {
-    if (timeLeft <= 0) return CIRCUMFERENCE;
-    const progress = Math.max(0, Math.min(timeLeft, maxTime)) / maxTime;
-    return CIRCUMFERENCE * (1 - progress);
-  }, [timeLeft, maxTime, CIRCUMFERENCE]);
+  // ⭕ 円形プログレスバー（録音カウントダウン）の進捗率
+  const recordingProgress = useMemo(() => {
+    return Math.max(0, Math.min(timeLeft, maxTime)) / maxTime;
+  }, [timeLeft, maxTime]);
 
   // 🔊 オーディオトリガー
   const triggerAudio = (e: React.MouseEvent, voiceUrl: string | null, text: string) => {
@@ -173,20 +169,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       {/* 【ヘッダー領域】 */}
       <div className="w-full flex items-center pb-0.5 px-0.5">
         <div className="flex items-center gap-3">
-          <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600">
-            <div className="flex items-center gap-2.5 px-3 py-1.5">
-              <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
-              <span className="text-sm font-black text-white font-mono leading-none">{questionNumberLabel}</span>
-            </div>
-            {questionType !== '0' && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
-                <span className="text-xs font-bold text-indigo-600 font-mono leading-none">
-                  {groupCurrentIndex + 1} <span className="text-slate-300 mx-0.5">/</span> {groupTotalCount}
-                </span>
-              </div>
-            )}
-          </div>
+          <QuestionStepBadge
+            questionNumber={questionNumberLabel}
+            rightSlot={
+              questionType !== '0' ? (
+                <StepIndicator current={groupCurrentIndex + 1} total={groupTotalCount} />
+              ) : undefined
+            }
+          />
 
           {questionType === '0' && (
             <div className="flex items-center gap-1.5 bg-indigo-50/50 border border-indigo-100/30 rounded-full p-0.5 shadow-2xs select-none">
@@ -261,9 +251,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                       />
                     </div>
                     <span className={cn(
-                      "text-[9px] font-black tracking-tight transition-colors duration-200",
+                      "text-[10px] font-black tracking-tight transition-colors duration-200 whitespace-nowrap",
                       isRecording && isCurrent ? "text-rose-500 font-extrabold" :
-                      isCurrent ? "text-indigo-600 font-extrabold" : 
+                      isCurrent ? "text-indigo-600 font-extrabold" :
                       isCompleted ? "text-emerald-600" : "text-slate-400"
                     )}>
                       {stepName}
@@ -287,8 +277,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               {isRecording ? <Mic size={18} /> : (audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed ? <CircleDot size={18} /> : <Headphones size={18} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />}
             </div>
             
-            <div className="flex flex-col text-left">
-              <h3 className={cn("text-[11px] font-black uppercase tracking-wider leading-none", statusMessage.color)}>
+            <div className="flex flex-col text-left min-w-0">
+              <h3 className={cn("text-xs font-black uppercase tracking-wider leading-none whitespace-nowrap", statusMessage.color)}>
                 {statusMessage.text}
               </h3>
               {/* 🚀 改修：回答・シンキング状態で未オープン・未録音状態の場合のサブテキストを、発話評価ON/OFFの状態に応じて動的に分岐 */}
@@ -296,13 +286,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <div className="flex items-center gap-1 mt-1 text-slate-400">
                   {isAssessmentMode ? (
                     <>
-                      <Mic size={10} className="text-rose-400" fill="currentColor" />
-                      <span className="text-[9px] font-bold leading-none">マイクボタンから発話できます</span>
+                      <Mic size={10} className="text-rose-400 shrink-0" fill="currentColor" />
+                      <span className="text-[10px] font-bold leading-none whitespace-nowrap">マイクボタンから発話できます</span>
                     </>
                   ) : (
                     <>
-                      <MicOff size={10} className="text-slate-400" />
-                      <span className="text-[9px] font-bold leading-none text-slate-400">発話評価がOFFになっています</span>
+                      <MicOff size={10} className="text-slate-400 shrink-0" />
+                      <span className="text-[10px] font-bold leading-none text-slate-400 whitespace-nowrap">発話評価がOFFになっています</span>
                     </>
                   )}
                 </div>
@@ -333,26 +323,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               exit={{ opacity: 0, y: -4 }}
               className="w-full text-left border-l-4 border-slate-200 pl-3 sm:pl-4 py-0.5 flex flex-col gap-1"
             >
-              <div className="flex items-center w-full mb-0.5">
-                <div className="flex items-center gap-x-1.5 text-slate-400">
-                  <span className="text-[10px] font-bold tracking-wider leading-none">基本文</span>
-                  <button 
-                    onClick={(e) => triggerAudio(e, question.statement_voice, question.statement_en || "")}
-                    disabled={isAutoPlaying || isRecording}
-                    className="w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-indigo-500 hover:bg-slate-100 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
-                  >
-                    <Volume2 size={13} />
-                  </button>
-                  {question.statement_ja && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowJaStatement(!showJaStatement); }}
-                      className={cn("w-6 h-6 flex items-center justify-center rounded-md transition-all cursor-pointer", showJaStatement ? "bg-indigo-50 text-indigo-600" : "text-slate-300 hover:text-slate-400 hover:bg-slate-50")}
-                    >
-                      <Languages size={13} />
-                    </button>
-                  )}
-                </div>
-              </div>
+              <PhraseAudioHeader
+                label="基本文"
+                tone="slate"
+                onPlay={(e) => triggerAudio(e, question.statement_voice, question.statement_en || "")}
+                playDisabled={isAutoPlaying || isRecording}
+                jaText={question.statement_ja}
+                isJaVisible={showJaStatement}
+                onToggleJa={(e) => { e.stopPropagation(); setShowJaStatement(!showJaStatement); }}
+              />
               <p className="text-sm sm:text-base font-bold text-slate-600 leading-relaxed tracking-tight">
                 {showJaStatement ? question.statement_ja : question.statement_en}
               </p>
@@ -369,26 +348,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               exit={{ opacity: 0, y: -4 }}
               className="w-full text-left border-l-4 border-indigo-500 pl-3 sm:pl-4 py-0.5 flex flex-col gap-1"
             >
-              <div className="flex items-center w-full mb-0.5">
-                <div className="flex items-center gap-x-1.5 text-indigo-500">
-                  <span className="text-[10px] font-bold tracking-wider leading-none">{config.sectionTitle}</span>
-                  <button 
-                    onClick={(e) => triggerAudio(e, question.question_voice, question.question_en || "")}
-                    disabled={isAutoPlaying || isRecording}
-                    className="w-5 h-5 flex items-center justify-center rounded-full text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none"
-                  >
-                    <Volume2 size={13} strokeWidth={2.5} />
-                  </button>
-                  {question.question_ja && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowJaQuestion(!showJaQuestion); }}
-                      className={cn("w-6 h-6 flex items-center justify-center rounded-md transition-all cursor-pointer", showJaQuestion ? "bg-indigo-50 text-indigo-600" : "text-slate-300 hover:text-slate-400 hover:bg-slate-50")}
-                    >
-                      <Languages size={13} />
-                    </button>
-                  )}
-                </div>
-              </div>
+              <PhraseAudioHeader
+                label={config.sectionTitle}
+                tone="indigo"
+                onPlay={(e) => triggerAudio(e, question.question_voice, question.question_en || "")}
+                playDisabled={isAutoPlaying || isRecording}
+                jaText={question.question_ja}
+                isJaVisible={showJaQuestion}
+                onToggleJa={(e) => { e.stopPropagation(); setShowJaQuestion(!showJaQuestion); }}
+              />
               <p className="text-xl sm:text-[32px] font-black text-slate-800 leading-[1.25] tracking-tighter antialiased">
                 {showJaQuestion ? question.question_ja : question.question_en}
               </p>
@@ -431,32 +399,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <div className="relative z-10 flex flex-col items-center text-center space-y-4">
                   
                   {/* ⏱️ 滑らかな円形プログレスHUD */}
-                  <div className="relative flex items-center justify-center w-14 h-14">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="28" cy="28" r={RADIUS} className="stroke-rose-100/60" strokeWidth="3.5" fill="transparent" />
-                      
-                      <motion.circle
-                        cx="28"
-                        cy="28"
-                        r={RADIUS}
-                        className="stroke-rose-500"
-                        strokeWidth="3.5"
-                        fill="transparent"
-                        strokeDasharray={CIRCUMFERENCE}
-                        animate={{ strokeDashoffset }}
-                        transition={{ 
-                          duration: timeLeft === maxTime ? 0 : 1, 
-                          ease: "linear" 
-                        }}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-sm font-black font-mono text-rose-600 leading-none">{timeLeft}</span>
-                      <span className="text-[6px] font-black uppercase text-rose-400 tracking-wider leading-none mt-0.5">sec</span>
-                    </div>
-                  </div>
+                  <CircularProgressRing
+                    size={56}
+                    radius={24}
+                    strokeWidth={3.5}
+                    progress={recordingProgress}
+                    trackClassName="stroke-rose-100/60"
+                    strokeClassName="stroke-rose-500"
+                    transitionDuration={timeLeft === maxTime ? 0 : 1}
+                  >
+                    <span className="text-sm font-black font-mono text-rose-600 leading-none">{timeLeft}</span>
+                    <span className="text-[6px] font-black uppercase text-rose-400 tracking-wider leading-none mt-0.5">sec</span>
+                  </CircularProgressRing>
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-center gap-1.5 text-rose-600">
@@ -481,54 +435,45 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 {question.answer_sentence_no_en ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                     <div className="text-left border-l-4 border-emerald-500 bg-emerald-50/20 pl-4 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
-                      <div className="flex items-center w-full mb-0.5">
-                        <div className="flex items-center gap-x-1.5 text-emerald-600">
-                          <span className="text-[9px] font-bold tracking-wider">解答（YES）</span>
-                          <button onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes_en)} disabled={isAutoPlaying} className="w-4 h-4 flex items-center justify-center text-emerald-500 hover:bg-emerald-100 rounded-full cursor-pointer">
-                            <Volume2 size={11} strokeWidth={2.5} />
-                          </button>
-                          {question.answer_sentence_yes_ja && (
-                            <button onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }} className={cn("w-5 h-5 flex items-center justify-center rounded-md transition-all cursor-pointer", showJaAnswer ? "bg-emerald-100 text-emerald-600" : "text-emerald-400/60 hover:text-emerald-600 hover:bg-emerald-100/50")}>
-                              <Languages size={12} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <PhraseAudioHeader
+                        label="解答（YES）"
+                        tone="emerald"
+                        onPlay={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes_en)}
+                        playDisabled={isAutoPlaying}
+                        jaText={question.answer_sentence_yes_ja}
+                        isJaVisible={showJaAnswer}
+                        onToggleJa={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
+                        className="mb-0.5"
+                      />
                       <p className="text-lg sm:text-xl font-black text-emerald-700 leading-snug tracking-tight">{showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes_en}</p>
                     </div>
 
                     <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-4 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
-                      <div className="flex items-center w-full mb-0.5">
-                        <div className="flex items-center gap-x-1.5 text-amber-600">
-                          <span className="text-[9px] font-bold tracking-wider">解答（NO）</span>
-                          <button onClick={(e) => triggerAudio(e, question.answer_sentence_no_voice, question.answer_sentence_no_en || "")} disabled={isAutoPlaying} className="w-4 h-4 flex items-center justify-center text-amber-500 hover:bg-amber-100 rounded-full cursor-pointer">
-                            <Volume2 size={11} strokeWidth={2.5} />
-                          </button>
-                          {question.answer_sentence_no_ja && (
-                            <button onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }} className={cn("w-5 h-5 flex items-center justify-center rounded-md transition-all cursor-pointer", showJaAnswer ? "bg-amber-100 text-amber-600" : "text-emerald-400/60 hover:text-emerald-600 hover:bg-emerald-100/50")}>
-                              <Languages size={12} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <PhraseAudioHeader
+                        label="解答（NO）"
+                        tone="amber"
+                        onPlay={(e) => triggerAudio(e, question.answer_sentence_no_voice, question.answer_sentence_no_en || "")}
+                        playDisabled={isAutoPlaying}
+                        jaText={question.answer_sentence_no_ja}
+                        isJaVisible={showJaAnswer}
+                        onToggleJa={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
+                        className="mb-0.5"
+                      />
                       <p className="text-lg sm:text-xl font-black text-amber-700 leading-snug tracking-tight">{showJaAnswer ? question.answer_sentence_no_ja : question.answer_sentence_no_en}</p>
                     </div>
                   </div>
                 ) : (
                   <div className="w-full text-left border-l-4 border-emerald-500 bg-emerald-50/25 pl-4 pr-3 py-2.5 rounded-r-xl flex flex-col gap-0.5">
-                    <div className="flex items-center w-full mb-0.5">
-                      <div className="flex items-center gap-x-1.5 text-emerald-600">
-                        <span className="text-[10px] font-bold tracking-wider uppercase">解答</span>
-                        <button onClick={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes_en || "")} disabled={isAutoPlaying} className="w-5 h-5 flex items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-100 cursor-pointer">
-                          <Volume2 size={12} strokeWidth={2.5} />
-                        </button>
-                        {question.answer_sentence_yes_ja && (
-                          <button onClick={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }} className={cn("w-6 h-6 flex items-center justify-center rounded-md transition-all cursor-pointer", showJaAnswer ? "bg-emerald-100 text-emerald-600" : "text-emerald-400/60 hover:text-emerald-600 hover:bg-emerald-100/50")}>
-                            <Languages size={13} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                    <PhraseAudioHeader
+                      label="解答"
+                      tone="emerald"
+                      onPlay={(e) => triggerAudio(e, question.answer_sentence_yes_voice, question.answer_sentence_yes_en || "")}
+                      playDisabled={isAutoPlaying}
+                      jaText={question.answer_sentence_yes_ja}
+                      isJaVisible={showJaAnswer}
+                      onToggleJa={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
+                      className="mb-0.5"
+                    />
                     <p className="text-xl sm:text-2xl font-black text-emerald-600 leading-snug tracking-tight">{showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes_en}</p>
                   </div>
                 )}

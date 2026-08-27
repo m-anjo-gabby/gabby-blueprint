@@ -98,11 +98,32 @@ export interface SprintConfig {
   timeLimitSec: number; // スプリント時は秒数(60, 90...)、ドリル時は9999などのダミー
 }
 
-export const DRILL_TIMING = {
-  thinkingTime: 2000,   // 問いのあとの沈黙
-  nextCardDelay: 2000,  // 解答が終わって次へ行くまでの余韻
-  audioGap: 200,        // 基本文と問いの間の隙間
-};
+/**
+ * スプリント／ドリル両プレイヤーの音声シーケンス用タイミング定数。
+ * shared: 両プレイヤーで完全に同一の値・用途で使われているもの。
+ * drill / sprint: 各プレイヤー固有のタイミング（意図的に値を揃えていない）。
+ */
+export const SPRINT_FLOW_TIMING = {
+  shared: {
+    statementQuestionGapMs: 150,      // 基本文と問いの間の隙間
+    micReleaseSessionRestoreMs: 300,  // マイク停止後、AudioSessionをplaybackへ戻すまでの遅延
+    initialCushionFirstMs: 600,       // 1問目の開始前クッション
+    initialCushionSubsequentMs: 300,  // 2問目以降の開始前クッション
+    exitSafetyBufferMs: 1000,         // 終了処理後、画面遷移までの安全バッファ
+  },
+  drill: {
+    thinkingTimeMs: 2000,             // 問いのあとの沈黙（自動再生時）
+    nextCardDelayMs: 2000,            // 解答が終わって次へ行くまでの余韻
+    yesNoAnswerGapMs: 500,            // YES/NO解答再生の間隔
+    postRecordingAnswerDelayMs: 1500, // 録音完了直後に解答再生を始めるまでの遅延
+  },
+  sprint: {
+    preChimeGapMs: 200,               // 問い再生終了からチャイム・録音開始までの間隔
+    resultRedirectBufferMs: 250,      // 結果画面遷移前の安全バッファ
+    visualFeedbackHoldGoodMs: 1000,   // excellent/great/goodスコア表示の保持時間
+    visualFeedbackHoldPoorMs: 800,    // fair/poorスコア表示の保持時間
+  },
+} as const;
 
 /**
  * スプリント問題マスタ（com_m_sprint_questions）エンティティ

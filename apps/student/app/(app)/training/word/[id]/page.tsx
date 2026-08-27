@@ -3,15 +3,18 @@
 import { useEffect, useRef, use, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
+import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
+import { logClientEvent } from '@gabby/lib/logger/actions';
 import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
 import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
 import { useResumeStore } from '@/stores/useResumeStore';
 import { usePhraseStore } from '@/stores/usePhraseStore';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { WordResumeMetadata } from '@gabby/types/training';
-import { FeedbackConfig } from '@gabby/types/speechAssessment';
+import { getFeedbackConfig } from '@gabby/lib';
 
 // Components
 import { WordHeader } from './_components/WordHeader';
@@ -24,17 +27,7 @@ import { motion } from 'framer-motion';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { PhraseItem } from '@gabby/types/word';
 import { ContentLoading } from '@/components/common/ContentLoading';
-
-/**
- * 発話スコアに基づいたフィードバックUIの設定を返す
- */
-const getFeedbackConfig = (score: number): FeedbackConfig => {
-  if (score >= 0.90) return { fill: '#10B981', tagText: 'Excellent' };
-  if (score >= 0.80) return { fill: '#3B82F6', tagText: 'Great' };
-  if (score >= 0.60) return { fill: '#F59E0B', tagText: 'Good' };
-  if (score >= 0.30) return { fill: '#F97316', tagText: 'Fair' };
-  return { fill: '#EF4444', tagText: 'Poor' };
-};
+import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 
 export default function WordTrainingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: sectionId } = use(params);
@@ -44,17 +37,18 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const { showConfirm } = useConfirm();
   
   // 音声エンジン・録音・評価ロジック
-  const { speak, setSpeechRate, startAssessment, stopListening, isListening, isSpeaking, timeLeft } = useWebSpeech();
+  const { startAssessment, stopListening, isListening, timeLeft } = useWebSpeech();
   
   // 統合された音声再生フック（playChime, unlockAudioContextを追加抽出）
-  const { 
-    play, 
-    preload, 
-    playChime, 
-    unlockAudioContext, 
-    isPlaying: isAudioPlaying, 
-    playbackRate, 
-    changePlaybackRate 
+  const {
+    play,
+    preload,
+    playChime,
+    unlockAudioContext,
+    isPlaying: isAudioPlaying,
+    playbackRate,
+    changePlaybackRate,
+    resumeStatus,
   } = usePlayAudioSpeech();
 
   // ドリル状態管理（Zustand）
@@ -143,53 +137,56 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 5分ごとの定期自動保存
    * 画面を開いている限り、5分ごとにプールされた進捗をバックグラウンドで安全に同期します。
    */
-  useEffect(() => {
-    const FIVE_MINUTES = 5 * 60 * 1000; // 5分（ミリ秒）
-    
-    const intervalId = setInterval(() => {
-      syncProgressNow();
-    }, FIVE_MINUTES);
-
-    return () => clearInterval(intervalId);
-  }, [syncProgressNow]);
+  usePeriodicSync(syncProgressNow, 5 * 60 * 1000);
 
   /**
    * 前の画面に戻るボタン用のハンドラ
+   * 確認→ローディング表示→進捗同期→離脱、という流れはSprintプレイヤーと共通のためフック化
    */
-  const handleBackToPrevious = async () => {
-    const ok = await showConfirm("トレーニングを終了しますか？", "前の画面に戻ります。", { 
-      variant: 'info', 
-      isModal: false 
-    });
-    if (!ok) return;
-
-    setLoading(true);
-    try {
-      // 戻る前に溜まっている進捗を確実にフラッシュ
-      await syncProgressNow();
-    } catch (e) {
-      console.error(e);
-    }
-    router.back();
-  };
+  const handleBackToPrevious = useExitConfirmFlow({
+    confirmTitle: "トレーニングを終了しますか？",
+    confirmMessage: "前の画面に戻ります。",
+    confirmVariant: 'info',
+    setLoading,
+    sync: syncProgressNow,
+    onExit: () => router.back(),
+  });
 
   /**
-   * 再生速度の同期
+   * 音声が再生できない場合の共通ハンドラ
+   * 代替読み上げ（TTSフォールバック）は行わず、ユーザーへの通知とサーバーログ記録のみ行う。
+   * 音声ファイルは常に用意されている前提のため、発生時は運用側で把握できるようにする。
    */
-  useEffect(() => {
-    setSpeechRate(playbackRate);
-  }, [playbackRate, setSpeechRate]);
+  const handleAudioUnavailable = useCallback((phrase: PhraseItem, reason: string) => {
+    showToast('音声を再生できません', 'error');
+    logClientEvent({
+      service: 'student',
+      event: 'word:audio_playback_failed',
+      message: `Phrase audio unavailable: ${phrase.phrase_id}`,
+      payload: {
+        sectionId,
+        phraseId: phrase.phrase_id,
+        wordId: phrase.word_id,
+        audioPath: phrase.audio_path,
+        ttsStatus: phrase.tts_status,
+        reason,
+      },
+    }).catch(() => { /* ログ送信自体の失敗はユーザー体験に影響させない */ });
+  }, [sectionId, showToast]);
 
   /**
    * 音声再生用統合ハンドラ
    */
   const handleGlobalSpeak = useCallback((phrase: PhraseItem) => {
     if (phrase.audio_path && phrase.tts_status === 1) {
-      play(phrase.audio_path, phrase.phrase_id, { restart: true });
+      play(phrase.audio_path, phrase.phrase_id, {
+        restart: true,
+        onError: (err) => handleAudioUnavailable(phrase, err instanceof Error ? err.message : String(err)),
+      });
     } else {
-      speak(phrase.phrase_en, playbackRate);
+      handleAudioUnavailable(phrase, 'tts_not_ready');
     }
-  }, [play, speak, playbackRate]);
+  }, [play, handleAudioUnavailable]);
 
   /**
    * ナビゲーション：次へ進む
@@ -324,18 +321,18 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 自動再生：次ステップへの遷移
    */
   useEffect(() => {
-    const stillSpeaking = isSpeaking || (isAudioPlaying !== null);
-    if (!isAutoPlaying || isListening || stillSpeaking || loading) return;
+    const stillPlaying = isAudioPlaying !== null;
+    if (!isAutoPlaying || isListening || stillPlaying || loading) return;
 
     const nextTimer = setTimeout(() => {
       const latestState = useWordDrillStore.getState();
       if (latestState.isAutoPlaying && !isNavigating.current) {
         handleNext();
       }
-    }, 1500); 
+    }, 1500);
 
     return () => clearTimeout(nextTimer);
-  }, [isAutoPlaying, isSpeaking, isAudioPlaying, isListening, loading, handleNext]);
+  }, [isAutoPlaying, isAudioPlaying, isListening, loading, handleNext]);
 
   /**
    * 自動再生モードの切り替え
@@ -444,7 +441,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         <div className="px-6 pb-8 shrink-0">
           <WordControls 
             isListening={isListening}
-            isPlaying={isSpeaking || (isAudioPlaying !== null)}
+            isPlaying={isAudioPlaying !== null}
             timeLeft={timeLeft}
             playbackRate={playbackRate}
             onChangePlaybackRate={changePlaybackRate}
@@ -459,6 +456,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
         <WordFeedback feedback={feedback} analysis={analysis} onClose={() => setFeedback(null)} />
         <WordIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
+
+        <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
       </main>
 
       <style jsx global>{`

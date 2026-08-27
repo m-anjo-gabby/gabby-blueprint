@@ -31,7 +31,7 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
     ],
     pc: [
       { text: "ブラウザのアドレスバーの左端にある「鍵マーク（または設定アイコン）」をクリックします。" },
-      { text: "マイクの項目を探し、プルダウンから「許可」を選択します Rhodes。" },
+      { text: "マイクの項目を探し、プルダウンから「許可」を選択します。" },
       { text: "ページ上部に「再読み込み」の案内が表示されたら、ボタンを押してページを更新します。" }
     ]
   };
@@ -98,7 +98,7 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
                 className="space-y-3.5 absolute inset-0 p-4 w-full h-full"
               >
                 {steps[activeTab].map((step, index) => (
-                  <div key={index} className="flex gap-2.5 items-start状態">
+                  <div key={index} className="flex gap-2.5 items-start">
                     <div className="h-5 w-5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 font-mono">
                       {index + 1}
                     </div>
