@@ -21,6 +21,13 @@ interface Props {
 }
 
 /**
+ * ユーザー種別（生徒／コーチ）ごとに直近で開いた代理ログインタブの参照。
+ * テーブルの行ごとに ImpersonateButton のインスタンスが分かれるため、モジュールスコープで共有する。
+ * window.open の name 引数によるブラウザ側の名前解決には頼らない（後述の理由で信頼できないため）。
+ */
+const impersonationWindows: Partial<Record<string, Window>> = {};
+
+/**
  * 障害対応・問合せ調査のため、対象ユーザーとして生徒／コーチポータルへ代理ログインするボタン。
  * 理由の入力を必須とし、実行内容は監査ログ(com_t_admin_impersonation_log)に記録される。
  */
@@ -44,13 +51,23 @@ export function ImpersonateButton({ user }: Props) {
     try {
       const result = await startImpersonation(user.id, reason);
       if (result.success && result.url) {
-        // ユーザー種別ごとに固定のウィンドウ名を指定し、同一種別への連続代理ログインは
-        // 既存タブを再利用させる（生徒⇔コーチは別タブで共存可能なまま維持する）。
-        // noopener/noreferrer を渡すと名前による既存ウィンドウの再利用が仕様上無効化されるため
-        // 付与せず、開いた後に window.opener を明示的に切り離す。
-        const impersonationWindow = window.open(result.url, `impersonate-${user.user_type}`);
-        if (impersonationWindow) {
-          impersonationWindow.opener = null;
+        // ユーザー種別（生徒／コーチ）ごとに直近で開いたタブへの参照を保持しておき、
+        // 同一種別への連続代理ログインはその参照を直接ナビゲートして再利用する。
+        // window.open(url, name) のブラウザ内部の名前解決に頼ると、開いた後に
+        // window.opener を切り離した時点で「同じ名前のウィンドウ」として認識されなくなり
+        // （タブナビタビング対策の opener 切り離しと、名前による再利用は仕様上両立しない）、
+        // 2回目以降のクリックで毎回新しいタブが開いてしまう不具合があったため、
+        // 自前でウィンドウ参照を管理する方式に変更している。
+        const existingWindow = impersonationWindows[user.user_type];
+        if (existingWindow && !existingWindow.closed) {
+          existingWindow.location.href = result.url;
+          existingWindow.focus();
+        } else {
+          const impersonationWindow = window.open(result.url, `impersonate-${user.user_type}`);
+          if (impersonationWindow) {
+            impersonationWindow.opener = null;
+            impersonationWindows[user.user_type] = impersonationWindow;
+          }
         }
         showToast('代理ログイン用のタブを開きました', 'success');
         handleOpenChange(false);

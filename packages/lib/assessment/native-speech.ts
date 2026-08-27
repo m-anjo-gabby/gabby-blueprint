@@ -355,7 +355,11 @@ function buildIssues(groups: IssueGroups): string[] {
     issues.push(`${formatWordPairs(fuzzyWords)} と認識されています。${tip}`);
   }
   if (combinedWords.length > 0) {
-    issues.push(`${formatWordPairs(combinedWords)} とつながって聞こえています。区切りを意識すると、さらに自然な発音になります。`);
+    // combinedWordsは常に「本来1語のターゲットが、認識結果では音の近い2語に割れて聞こえた」
+    // ケース（例: filtrate → filter rate、six-membered → six member）。ターゲットは元々1語なので
+    // 「区切って発音する」方向のアドバイスは矛盾する。単語内の音をなめらかに一続きに
+    // つなげる（リンキング）方向で助言する。
+    issues.push(`${formatWordPairs(combinedWords)} のように2語に分かれて聞こえています。音を区切らず、なめらかに1語としてつなげて（リンキングを意識して）発音すると、さらに伝わりやすくなります。`);
   }
 
   return issues.slice(0, 2);
