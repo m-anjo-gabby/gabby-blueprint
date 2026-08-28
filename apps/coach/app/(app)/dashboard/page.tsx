@@ -1,6 +1,7 @@
 import { Info } from 'lucide-react';
 import DashboardHeader from './_components/DashboardHeader';
 import StatGrid from './_components/StatGrid';
+import AssignedStudentsPanel from './_components/AssignedStudentsPanel';
 
 export default function Page() {
   return (
@@ -15,6 +16,8 @@ export default function Page() {
       </div>
 
       <StatGrid />
+
+      <AssignedStudentsPanel />
     </div>
   );
 }

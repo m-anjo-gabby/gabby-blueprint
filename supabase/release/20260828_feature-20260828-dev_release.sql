@@ -27,6 +27,15 @@
 --        問わず一律に通知行を作成する）。
 --   4. アプリケーションコード側の変更は本SQLの対象外（DB変更のみ）。
 --
+--   Student Overview画面(コーチ向け・担当生徒詳細)の新規追加
+--   5. com_t_coach_student_note テーブルを新規作成
+--      - コーチが担当生徒ごとに自分用のメモを記録するためのテーブル。他コーチのメモは不可視
+--        (coach_id = auth.uid()の行のみ)。更新は行わず追記のみとし、画面では最新順に表示する。
+--   6. student_m_sprint_progress に、担当コーチ向けの参照許可ポリシーを追加
+--      - com_m_lesson_scheduleで結びついたコーチ(status不問。コーチ交代後の引き継ぎ閲覧を想定)が、
+--        生徒のスプリント進捗(ステージ・レベル)を参照できるようにする。既存の本人向けALLポリシー
+--        はそのまま残るため、本人のフルアクセスは変わらない(追加の許可のみ)。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -199,6 +208,64 @@ FOR EACH ROW EXECUTE PROCEDURE public.notify_chat_new_message();
 
 REVOKE EXECUTE ON FUNCTION public.notify_chat_new_message() FROM PUBLIC, anon, authenticated;
 
+-- =========================================================================
+-- 4. com_t_coach_student_note 新規作成
+--    （Student Overview画面: コーチが担当生徒ごとに記録する自分用メモ。追記のみ・履歴管理）
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.com_t_coach_student_note (
+    note_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    coach_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    student_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    note_text text NOT NULL,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_coach_student_note_text_not_blank CHECK (btrim(note_text) <> '')
+);
+
+COMMENT ON TABLE public.com_t_coach_student_note IS 'コーチ担当生徒メモ（コーチ自分用、追記のみ・履歴管理）';
+COMMENT ON COLUMN public.com_t_coach_student_note.note_id IS 'メモID';
+COMMENT ON COLUMN public.com_t_coach_student_note.coach_id IS '記入したコーチのユーザID';
+COMMENT ON COLUMN public.com_t_coach_student_note.student_id IS '対象の生徒のユーザID';
+COMMENT ON COLUMN public.com_t_coach_student_note.note_text IS 'メモ本文';
+COMMENT ON COLUMN public.com_t_coach_student_note.insert_date IS '登録日時';
+
+CREATE INDEX IF NOT EXISTS idx_coach_student_note_lookup ON public.com_t_coach_student_note (coach_id, student_id, insert_date DESC);
+
+ALTER TABLE public.com_t_coach_student_note ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Coaches can view their own student notes" ON public.com_t_coach_student_note;
+DROP POLICY IF EXISTS "Coaches can create their own student notes" ON public.com_t_coach_student_note;
+
+-- [参照] 自分が記入したメモのみ閲覧可能（他コーチのメモは不可視）。管理者は全件参照可能。
+CREATE POLICY "Coaches can view their own student notes" ON public.com_t_coach_student_note
+FOR SELECT TO authenticated USING (
+    coach_id = auth.uid()
+    OR public.get_jwt_user_type() = '0'
+);
+
+-- [登録] 自分自身をcoach_idとしてのみ作成可能
+CREATE POLICY "Coaches can create their own student notes" ON public.com_t_coach_student_note
+FOR INSERT TO authenticated WITH CHECK (
+    coach_id = auth.uid()
+);
+
+-- 更新・削除は許可しない（履歴として保持するため、authenticatedロールへのUPDATE/DELETE権限は付与しない）。
+
+-- =========================================================================
+-- 5. student_m_sprint_progress へのコーチ閲覧ポリシー追加
+--    （Student Overview画面: 担当コーチが生徒のスプリント進捗(ステージ・レベル)を閲覧できるようにする。
+--      既存の本人向け "Users can manage their own sprint progress" (FOR ALL) はそのまま残るため、
+--      本人のフルアクセスは変わらない（追加の許可のみ）。
+-- =========================================================================
+DROP POLICY IF EXISTS "Coaches can view sprint progress of their students" ON public.student_m_sprint_progress;
+CREATE POLICY "Coaches can view sprint progress of their students" ON public.student_m_sprint_progress
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+    )
+);
+
 COMMIT;
 
 -- =========================================================================
@@ -227,3 +294,12 @@ COMMIT;
 -- SELECT * FROM public.com_t_notification
 -- WHERE notification_type = 'CHAT_NEW_MESSAGE'
 -- ORDER BY occurred_at DESC LIMIT 10;
+--
+-- SELECT * FROM information_schema.tables
+-- WHERE table_schema = 'public' AND table_name = 'com_t_coach_student_note';
+--
+-- SELECT policyname FROM pg_policies WHERE tablename = 'com_t_coach_student_note';
+--
+-- SELECT policyname FROM pg_policies
+-- WHERE tablename = 'student_m_sprint_progress'
+--   AND policyname = 'Coaches can view sprint progress of their students';
