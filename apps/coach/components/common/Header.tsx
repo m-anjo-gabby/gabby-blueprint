@@ -18,6 +18,7 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { signOut } from '@/actions/coachAuthAction';
 import { NoticeDropdown } from './NoticeDropdown';
+import { NotificationDropdown } from './NotificationDropdown';
 
 export default function Header() {
   const user = useUserStore((state) => state.user);
@@ -59,8 +60,9 @@ export default function Header() {
         </Link>
       </div>
 
-      {/* Right: notice bell + account dropdown */}
+      {/* Right: notification bell + notice bell + account dropdown */}
       <div className="flex items-center gap-2">
+      <NotificationDropdown />
       <NoticeDropdown />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

@@ -30,6 +30,7 @@ import { signOut } from '@/actions/authAction';
 import { getLatestTerms } from '@/actions/termAction';
 import { TermsAgreementModal } from './TermsAgreementModal';
 import { NoticeDropdown } from './NoticeDropdown';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface TermItem {
   term_id: string;
@@ -90,6 +91,8 @@ export default function Header() {
         
         {/* ユーザー操作エリア */}
         <div className="flex items-center gap-2">          
+          {/* 通知ベルアイコン（学習進捗の達成等） */}
+          <NotificationDropdown />
           {/* お知らせベルアイコン */}
           <NoticeDropdown />
           <DropdownMenu>
