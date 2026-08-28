@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import { BookOpen, Star, Users, CalendarClock, ArrowRight } from 'lucide-react';
+import { BookOpen, Star, Users, CalendarClock, MessageCircle, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NavigationGridProps {
@@ -52,6 +52,16 @@ export const NavigationGrid = ({ showCoachMatching = false }: NavigationGridProp
             bgClass: 'bg-emerald-300 hover:bg-linear-to-br hover:from-emerald-400 hover:via-slate-100 hover:to-teal-600',
             iconClass: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white',
             shadow: 'shadow-emerald-100/50'
+          },
+          {
+            label: 'Chat',
+            title: 'チャットを確認する',
+            path: '/chat',
+            icon: MessageCircle,
+            labelClass: 'text-violet-600',
+            bgClass: 'bg-violet-300 hover:bg-linear-to-br hover:from-violet-400 hover:via-slate-100 hover:to-purple-600',
+            iconClass: 'bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white',
+            shadow: 'shadow-violet-100/50'
           }
         ]
       : [])
