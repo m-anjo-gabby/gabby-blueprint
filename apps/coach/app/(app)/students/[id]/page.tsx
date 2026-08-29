@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation';
 import { getStudentOverview, getStudentSessionHistory, getStudentNotes } from '@/actions/studentAction';
 import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
 import { StudentOverviewHeader } from './_components/StudentOverviewHeader';
-import { SprintProgressCard } from './_components/SprintProgressCard';
 import { LiveSessionHistoryCard } from './_components/LiveSessionHistoryCard';
 import { CoachNotesCard } from './_components/CoachNotesCard';
 import { LessonSprintCard } from './_components/LessonSprintCard';
@@ -30,7 +29,6 @@ export default async function StudentOverviewPage({
       <StudentOverviewHeader profile={overview.profile} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <SprintProgressCard progress={overview.profile.sprint_progress} />
         <LiveSessionHistoryCard sessions={sessions} />
         <LessonSprintCard studentId={id} history={lessonSprints} />
         <div className="lg:col-span-2">

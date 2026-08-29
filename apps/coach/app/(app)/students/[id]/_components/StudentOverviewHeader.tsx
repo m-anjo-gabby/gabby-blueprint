@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { ArrowLeft, BadgeCheck, BadgeX } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
+import { SprintProgressRadar } from './SprintProgressRadar';
 
 interface Props {
   profile: StudentOverviewProfile;
@@ -24,25 +25,46 @@ export function StudentOverviewHeader({ profile }: Props) {
         <ArrowLeft size={14} />
         Back to Students
       </Link>
-      <div className="flex items-center gap-4">
-        <UserAvatar userName={profile.user_name} iconPath={profile.icon_path} size={56} />
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">{profile.user_name}</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Timezone: {profile.timezone}</p>
-          {active_contract ? (
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1 mt-1.5">
-              <BadgeCheck size={13} />
-              <span>{active_contract.plan_name}</span>
-              <span className="text-emerald-400 font-normal">
-                ({formatContractPeriod(active_contract.start_date, active_contract.end_date)})
-              </span>
+      <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-start gap-5 lg:gap-14 lg:w-fit lg:mx-auto">
+          <div className="space-y-3">
+            <div className="flex items-center gap-4">
+              <UserAvatar userName={profile.user_name} iconPath={profile.icon_path} size={56} />
+              <div>
+                <h1 className="text-xl font-bold text-slate-800 tracking-tight">{profile.user_name}</h1>
+                <p className="text-xs text-slate-400 mt-0.5">Timezone: {profile.timezone}</p>
+              </div>
             </div>
-          ) : (
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 bg-slate-50 border border-slate-200 rounded-full px-2.5 py-1 mt-1.5">
-              <BadgeX size={13} />
-              <span>No active contract</span>
-            </div>
-          )}
+            {active_contract ? (
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3.5 py-2.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 tracking-wide">
+                  <BadgeCheck size={13} />
+                  <span>Current Contract</span>
+                </div>
+                <div className="mt-1.5 space-y-0.5 text-xs text-emerald-700">
+                  <p>
+                    <span className="font-semibold text-emerald-500/80">Plan </span>
+                    {active_contract.plan_name}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-emerald-500/80">Period </span>
+                    {formatContractPeriod(active_contract.start_date, active_contract.end_date)}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 tracking-wide">
+                  <BadgeX size={13} />
+                  <span>Current Contract</span>
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400">No active contract</p>
+              </div>
+            )}
+          </div>
+          <div className="lg:w-[28rem] lg:shrink-0 lg:border-l lg:border-slate-100 lg:pl-8">
+            <SprintProgressRadar progress={profile.sprint_progress} />
+          </div>
         </div>
       </div>
     </div>
