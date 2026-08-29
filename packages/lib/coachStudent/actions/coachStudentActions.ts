@@ -128,19 +128,36 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
       return { success: false, errorCode: 'forbidden' };
     }
 
-    const [{ data: student, error: userError }, { data: progress, error: progressError }] = await Promise.all([
+    const nowIso = new Date().toISOString();
+
+    const [
+      { data: student, error: userError },
+      { data: progress, error: progressError },
+      { data: license, error: licenseError },
+    ] = await Promise.all([
       supabase.from('com_m_user').select('id, user_name, icon_path, timezone').eq('id', studentId).maybeSingle(),
       supabase
         .from('student_m_sprint_progress')
         .select('stage, level_speed, level_structure, level_builders, level_mastery')
         .eq('user_id', studentId)
         .maybeSingle(),
+      supabase
+        .from('com_t_user_license')
+        .select('start_date, end_date, com_m_contract!inner(plan_name, status)')
+        .eq('user_id', studentId)
+        .eq('status', 1)
+        .eq('com_m_contract.status', 1)
+        .lte('start_date', nowIso)
+        .gte('end_date', nowIso)
+        .order('end_date', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
-    if (userError || progressError) {
+    if (userError || progressError || licenseError) {
       logger.error(
         'coachStudent:get_overview_failed',
-        userError?.message ?? progressError?.message ?? 'unknown',
+        userError?.message ?? progressError?.message ?? licenseError?.message ?? 'unknown',
         { ...ctx, userId: user.id, payload: { studentId } }
       );
       return { success: false, errorCode: 'unexpected_error' };
@@ -148,6 +165,12 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
     if (!student) {
       return { success: false, errorCode: 'forbidden' };
     }
+
+    const contract = license
+      ? Array.isArray(license.com_m_contract)
+        ? license.com_m_contract[0]
+        : license.com_m_contract
+      : null;
 
     return {
       success: true,
@@ -163,6 +186,10 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
           level_builders: progress?.level_builders ?? 0,
           level_mastery: progress?.level_mastery ?? 0,
         },
+        active_contract:
+          license && contract
+            ? { plan_name: contract.plan_name, start_date: license.start_date, end_date: license.end_date }
+            : null,
       },
     };
   } catch (err) {

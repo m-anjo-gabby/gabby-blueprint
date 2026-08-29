@@ -30,6 +30,13 @@ export interface AssignedStudentSummary extends StudentSprintProgress {
   active_slot_count: number;
 }
 
+/** 生徒が現在保有する有効契約の概要（ヘッダー表示用） */
+export interface StudentActiveContract {
+  plan_name: string;
+  start_date: string; // UTC ISO文字列
+  end_date: string; // UTC ISO文字列
+}
+
 /** Student Overview画面のヘッダー・基本情報 */
 export interface StudentOverviewProfile {
   student_id: string;
@@ -37,6 +44,8 @@ export interface StudentOverviewProfile {
   icon_path: string | null;
   timezone: string;
   sprint_progress: StudentSprintProgress;
+  /** 現在有効な契約（status=1かつ現在日時が期間内のライセンス）。無い場合はnull */
+  active_contract: StudentActiveContract | null;
 }
 
 /** Student Overview画面のライブセッション履歴1件分 */

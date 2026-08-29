@@ -39,10 +39,26 @@ DROP POLICY IF EXISTS "Users can view relevant licenses" ON public.com_t_user_li
 
 CREATE POLICY "Users can view relevant licenses" ON public.com_t_user_license
 FOR SELECT TO authenticated USING (
-    user_id = auth.uid() 
-    OR 
+    user_id = auth.uid()
+    OR
     contract_id IN (
-        SELECT contract_id FROM public.com_m_contract 
+        SELECT contract_id FROM public.com_m_contract
         WHERE client_id = public.get_jwt_client_id()
+    )
+);
+
+---------------------------------------------
+-- 追加パッチ: Student Overview画面 契約情報表示対応 (2026-08-29)
+-- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- [参照] com_m_lesson_scheduleで結びついたコーチ(status不問。コーチ交代後の引き継ぎ閲覧を想定)が、
+-- 生徒のライセンス（契約期間の判定）を参照できるようにする。既存ポリシーはそのまま残るため、
+-- 本人・契約先クライアントのアクセスは変わらない（追加の許可のみ）。
+DROP POLICY IF EXISTS "Coaches can view licenses of their students" ON public.com_t_user_license;
+CREATE POLICY "Coaches can view licenses of their students" ON public.com_t_user_license
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = com_t_user_license.user_id AND s.coach_id = auth.uid()
     )
 );

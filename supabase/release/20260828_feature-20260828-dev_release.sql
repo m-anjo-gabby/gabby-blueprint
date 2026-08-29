@@ -44,6 +44,19 @@
 --        生徒本人は自分が対象の記録をSELECTのみ可能。com_t_session/com_m_lesson_scheduleへの紐付けは
 --        行わず、coach_id/student_id/insert_dateのみで管理するシンプルな構成とした。
 --
+--   Student Overview画面ヘッダーへの契約情報表示対応
+--   8. com_t_user_license / com_m_contract に、担当コーチ向けの参照許可ポリシーを追加
+--      - 生徒が現在有効な契約を持っているか（契約期間・プラン名）をヘッダーに表示するため、
+--        担当コーチがライセンス行および紐づく契約を参照できるようにする。
+--        com_m_lesson_scheduleで結びついたコーチ(status不問。コーチ交代後の引き継ぎ閲覧を想定)
+--        のみが対象で、既存の本人・契約先クライアント向けポリシーはそのまま残る(追加の許可のみ)。
+--        アプリケーションコード側の変更(getStudentOverviewCoreの拡張、ヘッダーUIの表示追加)は
+--        本SQLの対象外。
+--      - com_m_contract側のポリシーがcom_t_user_licenseを直接参照すると、com_t_user_license
+--        側の既存ポリシーがcom_m_contractを参照しているため2テーブル間の循環参照(infinite
+--        recursion detected in policy for relation)になる。is_coach_of_contract_license()
+--        (SECURITY DEFINER)を新規作成し、これを経由させることで回避している。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -340,6 +353,43 @@ FOR SELECT TO authenticated USING (
     student_id = auth.uid()
 );
 
+-- =========================================================================
+-- 8. com_t_user_license / com_m_contract: 担当コーチ向けの参照許可ポリシー追加
+--    （Student Overview画面ヘッダー: 生徒の契約有効性・プラン名表示のため）
+-- =========================================================================
+DROP POLICY IF EXISTS "Coaches can view licenses of their students" ON public.com_t_user_license;
+CREATE POLICY "Coaches can view licenses of their students" ON public.com_t_user_license
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = com_t_user_license.user_id AND s.coach_id = auth.uid()
+    )
+);
+
+-- com_m_contract側の新規ポリシーがcom_t_user_licenseを直接EXISTSで参照すると、
+-- com_t_user_license側の既存ポリシー("Users can view relevant licenses")がcom_m_contract
+-- を参照しているため、2テーブル間の循環参照(infinite recursion detected in policy for
+-- relation)になる。is_chat_room_memberと同様、SECURITY DEFINER関数で回避する。
+CREATE OR REPLACE FUNCTION public.is_coach_of_contract_license(p_contract_id uuid)
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.com_t_user_license l
+    JOIN public.com_m_lesson_schedule s ON s.student_id = l.user_id
+    WHERE l.contract_id = p_contract_id
+      AND s.coach_id = auth.uid()
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.is_coach_of_contract_license(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_coach_of_contract_license(uuid) TO authenticated;
+
+DROP POLICY IF EXISTS "Coaches can view contracts of their students' licenses" ON public.com_m_contract;
+CREATE POLICY "Coaches can view contracts of their students' licenses" ON public.com_m_contract
+FOR SELECT TO authenticated USING (
+    public.is_coach_of_contract_license(com_m_contract.contract_id)
+);
+
 COMMIT;
 
 -- =========================================================================
@@ -382,3 +432,13 @@ COMMIT;
 -- WHERE table_schema = 'public' AND table_name = 'lesson_t_sprint';
 --
 -- SELECT policyname FROM pg_policies WHERE tablename = 'lesson_t_sprint';
+--
+-- SELECT policyname FROM pg_policies
+-- WHERE tablename = 'com_t_user_license'
+--   AND policyname = 'Coaches can view licenses of their students';
+--
+-- SELECT policyname FROM pg_policies
+-- WHERE tablename = 'com_m_contract'
+--   AND policyname = 'Coaches can view contracts of their students'' licenses';
+--
+-- SELECT proname, pronargs FROM pg_proc WHERE proname = 'is_coach_of_contract_license';
