@@ -97,7 +97,8 @@ export function LessonSprintSetup({ studentId, studentName, contents, onStart }:
       level: String(difficultyLevel),
       timeLimitSec,
       answerType,
-      sprintType: result.questions[0]?.sprint_type ?? '0',
+      // DB由来の値はランタイムで数値になっていることがあるため、明示的に文字列化する
+      sprintType: String(result.questions[0]?.sprint_type ?? '0'),
     });
     setContentName(selectedContent?.content_name ?? null);
     setContentMetadata(sprintMeta ?? null);

@@ -73,7 +73,8 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
     const { config: latestConfig } = useLessonSprintStore.getState();
     const history = buildHistory();
 
-    if (!latestConfig.contentId || !latestConfig.questionType || !latestConfig.answerType || !latestConfig.sprintType) {
+    const isMissing = (v: string | null | undefined) => v === null || v === undefined || v === '';
+    if (isMissing(latestConfig.contentId) || isMissing(latestConfig.questionType) || isMissing(latestConfig.answerType) || isMissing(latestConfig.sprintType)) {
       showToast('Missing sprint configuration. Could not save.', 'error');
       setIsSaving(false);
       onExit();
@@ -106,6 +107,7 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
 
   const handleTimeUp = useCallback(() => {
     const state = useLessonSprintStore.getState().session;
+    if (!state.isActive) return;
     const current = state.questions[state.currentIndex];
     const alreadyCommitted = current && state.sessionResults.some((r) => r.questionId === current.question_id);
     if (current && !alreadyCommitted) {

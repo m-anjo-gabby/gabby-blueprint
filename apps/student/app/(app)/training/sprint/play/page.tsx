@@ -87,7 +87,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         } else if (resolvedParams.mode === 'drill') {
           fallbackMode = 'drill';
         } else {
-          const isExplicitDrill = (dbConfig && dbConfig.sprint_type === '0'); 
+          const isExplicitDrill = (dbConfig && String(dbConfig.sprint_type) === '0');
           fallbackMode = isExplicitDrill ? 'drill' : 'sprint';
         }
 

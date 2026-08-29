@@ -64,17 +64,19 @@ const initialSession: LessonSprintState['session'] = {
   currentHighlightedWords: [],
 };
 
+const initialConfig: LessonSprintConfigState = {
+  contentId: null,
+  questionType: '0',
+  level: '1',
+  timeLimitSec: 90,
+  answerType: '0',
+  sprintType: '0',
+};
+
 export const useLessonSprintStore = create<LessonSprintState>((set, get) => ({
   contentName: null,
   contentMetadata: null,
-  config: {
-    contentId: null,
-    questionType: '0',
-    level: '1',
-    timeLimitSec: 90,
-    answerType: '0',
-    sprintType: '0',
-  },
+  config: initialConfig,
   session: initialSession,
 
   setContentName: (name) => set({ contentName: name }),
@@ -159,6 +161,9 @@ export const useLessonSprintStore = create<LessonSprintState>((set, get) => ({
   setSessionNote: (sessionNote) => set((state) => ({ session: { ...state.session, sessionNote } })),
 
   resetStore: () => set({
+    contentName: null,
+    contentMetadata: null,
+    config: initialConfig,
     session: initialSession,
   }),
 }));
