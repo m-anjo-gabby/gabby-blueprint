@@ -21,7 +21,7 @@ const MAX_NOTE_LENGTH = 4000;
  * com_m_lesson_scheduleはstatusを問わず判定する（コーチ交代後も、過去に担当した
  * コーチが引き継ぎ目的でStudent Overviewを閲覧できるようにするため）。
  */
-async function hasCoachStudentRelationship(
+export async function hasCoachStudentRelationship(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   coachId: string,
   studentId: string

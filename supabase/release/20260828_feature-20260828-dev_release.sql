@@ -36,6 +36,14 @@
 --        生徒のスプリント進捗(ステージ・レベル)を参照できるようにする。既存の本人向けALLポリシー
 --        はそのまま残るため、本人のフルアクセスは変わらない(追加の許可のみ)。
 --
+--   コーチ向け Lesson Sprint 機能の新規追加
+--   7. lesson_t_sprint テーブルを新規作成
+--      - コーチがレッスン中に対面で実施するスプリントトレーニング（self_t_sprintの生徒自主トレ版に
+--        対応するコーチ運用版）の結果・履歴を保持する。音声再生/認識は行わず、コーチが1-5の手動評価と
+--        解答文中のクリック単語（ハイライト）を記録する。コーチは自分が実施した記録をFOR ALLで操作でき、
+--        生徒本人は自分が対象の記録をSELECTのみ可能。com_t_session/com_m_lesson_scheduleへの紐付けは
+--        行わず、coach_id/student_id/insert_dateのみで管理するシンプルな構成とした。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -266,6 +274,72 @@ FOR SELECT TO authenticated USING (
     )
 );
 
+-- =========================================================================
+-- 6. lesson_t_sprint 新規作成
+--    （コーチ向け Lesson Sprint 機能: レッスン中にコーチが対面で実施するスプリントトレーニングの
+--      結果・履歴。self_t_sprintの生徒自主トレ版に対応するコーチ運用版）
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.lesson_t_sprint (
+  lesson_sprint_id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  coach_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  sprint_type TEXT NOT NULL,
+  content_id UUID NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+  question_type TEXT NOT NULL,
+  answer_type TEXT NOT NULL,
+  difficulty_level SMALLINT NOT NULL,
+  time_limit_sec SMALLINT NOT NULL,
+  total_answered SMALLINT NOT NULL,
+  total_evaluated SMALLINT NOT NULL,
+  paused_duration_sec SMALLINT NOT NULL DEFAULT 0,
+  session_note TEXT,
+  answered_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.lesson_t_sprint IS 'コーチ主導レッスンスプリント結果・履歴管理テーブル';
+COMMENT ON COLUMN public.lesson_t_sprint.lesson_sprint_id IS 'レッスンスプリント結果ユニークID (UUID)';
+COMMENT ON COLUMN public.lesson_t_sprint.coach_id IS '実施したコーチのユーザーID (com_m_user.id)';
+COMMENT ON COLUMN public.lesson_t_sprint.student_id IS '対象の生徒のユーザーID (com_m_user.id)';
+COMMENT ON COLUMN public.lesson_t_sprint.sprint_type IS 'スプリント種別';
+COMMENT ON COLUMN public.lesson_t_sprint.content_id IS 'コンテンツID';
+COMMENT ON COLUMN public.lesson_t_sprint.question_type IS 'スプリント問題種別 (''0'': Speed, ''4'': Structure, ''5'': Builders, ''6'': Mastery)';
+COMMENT ON COLUMN public.lesson_t_sprint.answer_type IS '解答種別（''0'': YES回答, ''1'': NO回答）';
+COMMENT ON COLUMN public.lesson_t_sprint.difficulty_level IS '難易度レベル (0: Basic 〜 10)';
+COMMENT ON COLUMN public.lesson_t_sprint.time_limit_sec IS '制限時間 (60, 90, 120, 150秒)';
+COMMENT ON COLUMN public.lesson_t_sprint.total_answered IS '総提示問題数';
+COMMENT ON COLUMN public.lesson_t_sprint.total_evaluated IS 'コーチが1-5評価した総回数（スキップ除く）';
+COMMENT ON COLUMN public.lesson_t_sprint.paused_duration_sec IS '一時停止していた合計秒数（参考値）';
+COMMENT ON COLUMN public.lesson_t_sprint.session_note IS 'スプリント中に記録したコーチのメモ';
+COMMENT ON COLUMN public.lesson_t_sprint.answered_history IS '実施問題の履歴情報(JSON): question_id, group_id, seq_no, is_skipped, score(1-5|null), highlighted_word_indices';
+COMMENT ON COLUMN public.lesson_t_sprint.insert_date IS '登録日時';
+COMMENT ON COLUMN public.lesson_t_sprint.update_date IS '更新日時';
+
+CREATE INDEX IF NOT EXISTS idx_lesson_t_sprint_coach_student
+  ON public.lesson_t_sprint (coach_id, student_id, insert_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_lesson_t_sprint_student
+  ON public.lesson_t_sprint (student_id, insert_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_lesson_t_sprint_content_id
+  ON public.lesson_t_sprint (content_id);
+
+ALTER TABLE public.lesson_t_sprint ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint;
+DROP POLICY IF EXISTS "Students can view their own lesson sprints" ON public.lesson_t_sprint;
+
+CREATE POLICY "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint
+FOR ALL TO authenticated
+USING (coach_id = auth.uid() OR public.get_jwt_user_type() = '0')
+WITH CHECK (coach_id = auth.uid());
+
+CREATE POLICY "Students can view their own lesson sprints" ON public.lesson_t_sprint
+FOR SELECT TO authenticated USING (
+    student_id = auth.uid()
+);
+
 COMMIT;
 
 -- =========================================================================
@@ -303,3 +377,8 @@ COMMIT;
 -- SELECT policyname FROM pg_policies
 -- WHERE tablename = 'student_m_sprint_progress'
 --   AND policyname = 'Coaches can view sprint progress of their students';
+--
+-- SELECT * FROM information_schema.tables
+-- WHERE table_schema = 'public' AND table_name = 'lesson_t_sprint';
+--
+-- SELECT policyname FROM pg_policies WHERE tablename = 'lesson_t_sprint';
