@@ -6,6 +6,7 @@ import {
   createLessonSprintResultCore,
   getLessonSprintHistoryCore,
   getLessonSprintResultCore,
+  updateLessonSprintSessionNoteCore,
 } from '@gabby/lib/coachStudent/actions/lessonSprintActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -98,4 +99,21 @@ export async function getLessonSprintResult(
     return { success: false, message: LESSON_SPRINT_ERROR_MESSAGES_EN[result.errorCode] };
   }
   return { success: true, record: result.record, questions: result.questions };
+}
+
+/**
+ * Updates the session note on a completed Lesson Sprint result
+ */
+export async function updateLessonSprintSessionNote(
+  lessonSprintId: string,
+  sessionNote: string
+): Promise<{ success: true } | { success: false; message: string }> {
+  const trimmed = sessionNote.trim();
+  const result = await updateLessonSprintSessionNoteCore(lessonSprintId, trimmed.length > 0 ? trimmed : null);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:update_lesson_sprint_session_note_failed', result.errorCode, ctx);
+    return { success: false, message: LESSON_SPRINT_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+  return { success: true };
 }

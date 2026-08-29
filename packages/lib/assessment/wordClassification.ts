@@ -56,3 +56,15 @@ export const tokenizeWords = (text: string): string[] =>
     .replace(/[.,/#!$%^&*;:{}=\-_`~()?]/g, "")
     .split(/\s+/)
     .filter(Boolean);
+
+/**
+ * tokenizeWordsと同じ空白区切り位置で単語を分割するが、句読点は保持する。
+ * highlighted_word_indices はtokenizeWords基準のインデックスなので、
+ * 表示専用にこちらを使う場合もインデックスの整合性は保たれる
+ * （句読点の除去は単語境界を変えないため）。
+ */
+export const tokenizeWordsWithPunctuation = (text: string): string[] =>
+  text
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);

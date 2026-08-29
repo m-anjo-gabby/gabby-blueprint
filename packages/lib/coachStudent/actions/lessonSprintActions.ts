@@ -14,6 +14,7 @@ import {
   LessonSprintHistoryItem,
   LessonSprintHistoryListItem,
   LessonSprintRecord,
+  UpdateLessonSprintSessionNoteResult,
 } from '@gabby/types/lessonSprint';
 import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
 
@@ -279,6 +280,43 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
     return { success: true, record: record as LessonSprintRecord, questions: sortedQuestions };
   } catch (err) {
     logger.error('lessonSprint:get_result_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * Lesson Sprint結果画面から、担当コーチ自身のセッションノートを更新する
+ */
+export async function updateLessonSprintSessionNoteCore(
+  lessonSprintId: string,
+  sessionNote: string | null
+): Promise<UpdateLessonSprintSessionNoteResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('lesson_t_sprint')
+      .update({ session_note: sessionNote })
+      .eq('lesson_sprint_id', lessonSprintId)
+      .eq('coach_id', user.id)
+      .select('lesson_sprint_id')
+      .maybeSingle();
+
+    if (error) {
+      logger.error('lessonSprint:update_session_note_failed', error.message, { ...ctx, userId: user.id, payload: { lessonSprintId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!data) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    return { success: true };
+  } catch (err) {
+    logger.error('lessonSprint:update_session_note_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

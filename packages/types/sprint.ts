@@ -81,7 +81,7 @@ export const DEFAULT_SPRINT_TIME_KEY = 2 as const; // 2 = スダンダード(90s
  * 制限時間オプションの実体マスタデータ (キーは連番)
  */
 export const SPRINT_TIME_OPTIONS: Record<number, SprintTimeOption> = {
-  1: { value: 60,  label: '60s',  desc: 'クイックアタック', seq_no: 1 },
+  1: { value: 10,  label: '60s',  desc: 'クイックアタック', seq_no: 1 },
   2: { value: 90,  label: '90s',  desc: 'スタンダード',     seq_no: 2 },
   3: { value: 120, label: '120s', desc: 'ディープラン',     seq_no: 3 },
   4: { value: 150, label: '150s', desc: 'インテンシブ',     seq_no: 4 },

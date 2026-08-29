@@ -101,3 +101,7 @@ export type GetLessonSprintHistoryResult =
 export type GetLessonSprintDetailResult =
   | { success: true; record: LessonSprintRecord; questions: SprintQuestion[] }
   | { success: false; errorCode: CoachStudentErrorCode };
+
+export type UpdateLessonSprintSessionNoteResult =
+  | { success: true }
+  | { success: false; errorCode: CoachStudentErrorCode };
