@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Sparkles, Flame, MessageCircle, BellRing, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -172,6 +173,18 @@ export function NotificationDropdown() {
                 })}
               </div>
             )}
+          </div>
+
+          {/* ─── フッター ────────────────────────────────── */}
+          <div className="px-4 pb-4 pt-2 border-t border-slate-50">
+            <DropdownMenuItem asChild className="p-0 border-none outline-none">
+              <Link
+                href="/notification"
+                className="flex items-center justify-center w-full h-10 !bg-indigo-600 hover:!bg-indigo-700 !text-white focus:!text-white focus:!bg-indigo-700 data-[highlighted]:!bg-indigo-700 data-[highlighted]:!text-white rounded-xl text-[11px] font-black uppercase tracking-wider shadow-sm transition-all outline-none cursor-pointer"
+              >
+                すべて見る →
+              </Link>
+            </DropdownMenuItem>
           </div>
         </motion.div>
       </DropdownMenuContent>
