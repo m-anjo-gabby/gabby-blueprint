@@ -11,10 +11,25 @@ import {
   GetStudentSessionHistoryResult,
   GetStudentNotesResult,
   AddCoachStudentNoteResult,
+  UpdateStudentSprintProgressResult,
+  StudentSprintProgress,
 } from '@gabby/types/coachStudent';
+import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
+import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
+import { clampLevel, computeStage, getForcedLevels } from '../../sprint/stageProgression';
 
 const logger = createLogger('common');
 const MAX_NOTE_LENGTH = 4000;
+
+/** StudentSprintProgress(dbKey命名) <-> StageLevels(SprintQuestionTypeキー) の相互変換 */
+function toStageLevels(progress: StudentSprintProgress): StageLevels {
+  return {
+    '0': progress.level_speed,
+    '4': progress.level_structure,
+    '5': progress.level_builders,
+    '6': progress.level_mastery,
+  };
+}
 
 /**
  * ログイン中コーチが指定の生徒と担当関係を持つか判定する。
@@ -290,6 +305,151 @@ export async function addCoachStudentNoteCore(studentId: string, noteText: strin
     return { success: true, note: data as CoachStudentNote };
   } catch (err) {
     logger.error('coachStudent:add_note_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定生徒の、指定した問題種別1つのレベルを引き上げる（コーチ向け）。
+ * レベルは常に「上げる」方向のみ許可し、更新後は computeStage() でstageを再計算して一致させる
+ * （個別種別のレベルアップだけで次ステージの条件を満たした場合、自動的にステージも進む）。
+ */
+export async function updateStudentSprintLevelCore(
+  studentId: string,
+  questionType: SprintQuestionType,
+  newLevel: number
+): Promise<UpdateStudentSprintProgressResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    const { data: current, error: fetchError } = await supabase
+      .from('student_m_sprint_progress')
+      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .eq('user_id', studentId)
+      .maybeSingle();
+
+    if (fetchError) {
+      logger.error('coachStudent:update_level_fetch_failed', fetchError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const currentProgress: StudentSprintProgress = {
+      stage: current?.stage ?? 0,
+      level_speed: current?.level_speed ?? 0,
+      level_structure: current?.level_structure ?? 0,
+      level_builders: current?.level_builders ?? 0,
+      level_mastery: current?.level_mastery ?? 0,
+    };
+
+    const typeMeta = QUESTION_TYPES[questionType];
+    const currentLevel = toStageLevels(currentProgress)[questionType];
+    const clampedLevel = clampLevel(questionType, newLevel);
+
+    // レベルは「上げる」方向のみ許可（範囲外・現状以下の値は不正入力として拒否）
+    if (!Number.isInteger(newLevel) || clampedLevel !== newLevel || newLevel <= currentLevel) {
+      return { success: false, errorCode: 'invalid_input' };
+    }
+
+    const newLevels = { ...toStageLevels(currentProgress), [questionType]: newLevel };
+    const newStage = computeStage(newLevels);
+
+    const { data: updated, error: updateError } = await supabase
+      .from('student_m_sprint_progress')
+      .update({ [typeMeta.dbKey]: newLevel, stage: newStage, update_date: new Date().toISOString() })
+      .eq('user_id', studentId)
+      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .single();
+
+    if (updateError || !updated) {
+      logger.error('coachStudent:update_level_failed', updateError?.message ?? 'No row updated', { ...ctx, userId: user.id, payload: { studentId, questionType, newLevel } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    logger.info('coachStudent:update_level_success', 'Student sprint level updated', { ...ctx, userId: user.id, payload: { studentId, questionType, newLevel, newStage } });
+    return { success: true, progress: updated as StudentSprintProgress };
+  } catch (err) {
+    logger.error('coachStudent:update_level_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定生徒を、指定ステージへ強制的に到達させる（コーチ向け）。
+ * 既に到達条件を満たしている問題種別のレベルは変更せず、不足している種別のみ必要値まで底上げする。
+ */
+export async function forceStageUpStudentCore(
+  studentId: string,
+  targetStage: number
+): Promise<UpdateStudentSprintProgressResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    const { data: current, error: fetchError } = await supabase
+      .from('student_m_sprint_progress')
+      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .eq('user_id', studentId)
+      .maybeSingle();
+
+    if (fetchError) {
+      logger.error('coachStudent:force_stage_up_fetch_failed', fetchError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const currentProgress: StudentSprintProgress = {
+      stage: current?.stage ?? 0,
+      level_speed: current?.level_speed ?? 0,
+      level_structure: current?.level_structure ?? 0,
+      level_builders: current?.level_builders ?? 0,
+      level_mastery: current?.level_mastery ?? 0,
+    };
+
+    // ステージも「上げる」方向のみ許可
+    if (!Number.isInteger(targetStage) || targetStage <= currentProgress.stage || targetStage > MAX_STAGE) {
+      return { success: false, errorCode: 'invalid_input' };
+    }
+
+    const forcedLevels = getForcedLevels(targetStage, toStageLevels(currentProgress));
+    const newStage = computeStage(forcedLevels);
+
+    const { data: updated, error: updateError } = await supabase
+      .from('student_m_sprint_progress')
+      .update({
+        level_speed: forcedLevels['0'],
+        level_structure: forcedLevels['4'],
+        level_builders: forcedLevels['5'],
+        level_mastery: forcedLevels['6'],
+        stage: newStage,
+        update_date: new Date().toISOString(),
+      })
+      .eq('user_id', studentId)
+      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .single();
+
+    if (updateError || !updated) {
+      logger.error('coachStudent:force_stage_up_failed', updateError?.message ?? 'No row updated', { ...ctx, userId: user.id, payload: { studentId, targetStage } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    logger.info('coachStudent:force_stage_up_success', 'Student stage forced up', { ...ctx, userId: user.id, payload: { studentId, targetStage, newStage } });
+    return { success: true, progress: updated as StudentSprintProgress };
+  } catch (err) {
+    logger.error('coachStudent:force_stage_up_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

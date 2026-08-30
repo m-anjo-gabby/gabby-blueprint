@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 import {
@@ -12,8 +15,10 @@ import {
   Tooltip,
   type BaseTickContentProps,
 } from 'recharts';
+import { StageLevelDialog } from './StageLevelDialog';
 
 interface Props {
+  studentId: string;
   progress: StudentSprintProgress;
 }
 
@@ -60,7 +65,9 @@ function AngleTick({ x, y, textAnchor, payload }: BaseTickContentProps) {
   );
 }
 
-export function SprintProgressRadar({ progress }: Props) {
+export function SprintProgressRadar({ studentId, progress: initialProgress }: Props) {
+  const [progress, setProgress] = useState(initialProgress);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const data = buildRadarData(progress);
 
   return (
@@ -80,6 +87,16 @@ export function SprintProgressRadar({ progress }: Props) {
                 </div>
               ))}
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-center mt-1 h-7 text-[11px]"
+              onClick={() => setIsDialogOpen(true)}
+            >
+              <SlidersHorizontal size={12} />
+              Manage Levels
+            </Button>
           </div>
         </div>
         <div className="h-56 w-full min-w-0">
@@ -94,6 +111,14 @@ export function SprintProgressRadar({ progress }: Props) {
           </ResponsiveContainer>
         </div>
       </div>
+
+      <StageLevelDialog
+        studentId={studentId}
+        progress={progress}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onUpdated={setProgress}
+      />
     </div>
   );
 }

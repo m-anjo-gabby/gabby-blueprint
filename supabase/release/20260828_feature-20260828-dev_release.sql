@@ -57,6 +57,15 @@
 --        recursion detected in policy for relation)になる。is_coach_of_contract_license()
 --        (SECURITY DEFINER)を新規作成し、これを経由させることで回避している。
 --
+--   Student Overview画面: コーチによる生徒レベル/ステージ手動編集機能の新規追加
+--   9. student_m_sprint_progress に、担当コーチ向けの更新許可ポリシーを追加
+--      - 問題種別ごとのレベルアップ、およびステージの強制アップ（不足レベルの底上げ）を
+--        コーチが行えるようにする。既存の担当関係チェック(SELECTポリシーと同一条件)でUPDATEを
+--        許可し、値の妥当性検証（範囲・「上げる」方向のみ等）はアプリケーション層で行う。
+--      - ステージ到達条件マスタ(packages/types/stageProgression.ts)と判定ロジック
+--        (packages/lib/sprint/stageProgression.ts)を新規追加し、Coach/Admin/将来の自動判定から
+--        共通利用できるようにした。アプリケーションコード側の変更は本SQLの対象外（DB変更のみ）。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -390,6 +399,24 @@ FOR SELECT TO authenticated USING (
     public.is_coach_of_contract_license(com_m_contract.contract_id)
 );
 
+-- =========================================================================
+-- 9. student_m_sprint_progress: 担当コーチ向けの更新許可ポリシー追加
+--    （Student Overview画面: コーチによる生徒のレベル/ステージ手動編集機能のため）
+-- =========================================================================
+DROP POLICY IF EXISTS "Coaches can update sprint progress of their students" ON public.student_m_sprint_progress;
+CREATE POLICY "Coaches can update sprint progress of their students" ON public.student_m_sprint_progress
+FOR UPDATE TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+    )
+) WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+    )
+);
+
 COMMIT;
 
 -- =========================================================================
@@ -442,3 +469,7 @@ COMMIT;
 --   AND policyname = 'Coaches can view contracts of their students'' licenses';
 --
 -- SELECT proname, pronargs FROM pg_proc WHERE proname = 'is_coach_of_contract_license';
+--
+-- SELECT policyname FROM pg_policies
+-- WHERE tablename = 'student_m_sprint_progress'
+--   AND policyname = 'Coaches can update sprint progress of their students';

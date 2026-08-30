@@ -58,7 +58,7 @@ export const QUESTION_TYPES: Record<SprintQuestionType, QuestionTypeMetadata> = 
   '0': { label: 'UG Speed', value: '0', seq_no: 1, dbKey: 'level_speed', hasBasic: true, minLevel: 0, maxLevel: 10 },
   '5': { label: 'UG Builders', value: '5', seq_no: 2, dbKey: 'level_builders', hasBasic: false, minLevel: 1, maxLevel: 5 },
   '4': { label: 'UG Structure', value: '4', seq_no: 3, dbKey: 'level_structure', hasBasic: true, minLevel: 0, maxLevel: 10 },
-  '6': { label: 'UG Mastery', value: '6', seq_no: 4, dbKey: 'level_mastery', hasBasic: false, minLevel: 1, maxLevel: 5 },
+  '6': { label: 'UG Mastery', value: '6', seq_no: 4, dbKey: 'level_mastery', hasBasic: false, minLevel: 1, maxLevel: 10 },
 } as const;
 
 /**

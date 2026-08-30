@@ -63,7 +63,7 @@ export function StudentOverviewHeader({ profile }: Props) {
             )}
           </div>
           <div className="lg:w-[28rem] lg:shrink-0 lg:border-l lg:border-slate-100 lg:pl-8">
-            <SprintProgressRadar progress={profile.sprint_progress} />
+            <SprintProgressRadar studentId={profile.student_id} progress={profile.sprint_progress} />
           </div>
         </div>
       </div>

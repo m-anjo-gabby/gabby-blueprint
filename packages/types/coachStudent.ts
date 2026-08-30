@@ -1,4 +1,5 @@
 import { SessionStatus } from './session';
+import type { SprintQuestionType } from './sprint';
 
 /**
  * ----------------------------------------------
@@ -86,3 +87,17 @@ export type GetStudentNotesResult =
 export type AddCoachStudentNoteResult =
   | { success: true; note: CoachStudentNote }
   | { success: false; errorCode: CoachStudentErrorCode };
+
+/**
+ * コーチによる生徒スプリント進捗（レベル/ステージ）更新の結果。
+ * levelUp: 問題種別を1つ指定してレベルを上げた場合、forceStageUp: ステージを強制到達させた場合に使用する。
+ */
+export type UpdateStudentSprintProgressResult =
+  | { success: true; progress: StudentSprintProgress }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+/** レベル更新1件分のリクエストパラメータ（問題種別+新しい到達レベル） */
+export interface UpdateStudentLevelInput {
+  questionType: SprintQuestionType;
+  newLevel: number;
+}

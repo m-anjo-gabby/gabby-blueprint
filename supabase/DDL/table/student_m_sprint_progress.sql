@@ -51,3 +51,26 @@ FOR SELECT TO authenticated USING (
         WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
     )
 );
+
+---------------------------------------------
+-- 追加パッチ: コーチによる担当生徒のレベル/ステージ手動編集許可 (2026-08-30)
+-- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- Student Overview画面（コーチ向け）に、問題種別ごとのレベルアップ、およびステージの
+-- （必要に応じ不足レベルを底上げする）強制アップを行う導線を追加するため、
+-- 上記SELECTポリシーと同一の担当関係チェックでUPDATEも許可する。
+-- 値の妥当性（範囲・「上げる」方向のみ等）はアプリケーション層(coachStudentActions.ts)で検証する。
+DROP POLICY IF EXISTS "Coaches can update sprint progress of their students" ON public.student_m_sprint_progress;
+CREATE POLICY "Coaches can update sprint progress of their students" ON public.student_m_sprint_progress
+FOR UPDATE TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+    )
+) WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+    )
+);
