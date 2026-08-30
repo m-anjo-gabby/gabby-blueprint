@@ -75,6 +75,14 @@ export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUp
         return;
       }
       onUpdated(result.progress);
+      // 更新後は選択肢リストが変わる（現在レベルは選択肢に含めないため）ため、
+      // 古い選択値を保持しているとSelect表示がブランクになる。次回開いた際の
+      // デフォルト値（現在レベル+1）に委ねるよう選択状態をリセットする。
+      setLevelSelections((prev) => {
+        const next = { ...prev };
+        delete next[questionType];
+        return next;
+      });
       showToast(`${meta.label} raised to ${levelLabel(questionType, newLevel)}.`, 'success');
     } finally {
       setSavingType(null);
