@@ -29,8 +29,7 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { signOut } from '@/actions/authAction';
 import { getLatestTerms } from '@/actions/termAction';
 import { TermsAgreementModal } from './TermsAgreementModal';
-import { NoticeDropdown } from './NoticeDropdown';
-import { NotificationDropdown } from './NotificationDropdown';
+import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 
 interface TermItem {
   term_id: string;
@@ -91,10 +90,8 @@ export default function Header() {
         
         {/* ユーザー操作エリア */}
         <div className="flex items-center gap-2">          
-          {/* 通知ベルアイコン（学習進捗の達成等） */}
-          <NotificationDropdown />
-          {/* お知らせベルアイコン */}
-          <NoticeDropdown />
+          {/* 通知センター（お知らせ + 通知を統合） */}
+          <NotificationCenterDropdown />
           <DropdownMenu>
             {/* ドロップダウンのトリガーボタン */}
             <DropdownMenuTrigger asChild>
