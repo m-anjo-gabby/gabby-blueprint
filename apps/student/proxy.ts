@@ -29,6 +29,7 @@ const VALID_STUDENT_ROUTES = [
   '/coach-matching',
   '/calendar',
   '/chat',
+  '/live-room',
 ];
 
 export async function proxy(req: NextRequest) {

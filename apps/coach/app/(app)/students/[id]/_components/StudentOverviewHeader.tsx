@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { ArrowLeft, BadgeCheck, BadgeX } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, BadgeX, Video } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 import { SprintProgressRadar } from './SprintProgressRadar';
@@ -18,13 +18,22 @@ export function StudentOverviewHeader({ profile }: Props) {
 
   return (
     <div className="space-y-4">
-      <Link
-        href="/students"
-        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
-      >
-        <ArrowLeft size={14} />
-        Back to Students
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/students"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          <ArrowLeft size={14} />
+          Back to Students
+        </Link>
+        <Link
+          href={`/students/${profile.student_id}/room`}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-3.5 py-2 rounded-full shadow-sm"
+        >
+          <Video size={14} />
+          Start Live Session
+        </Link>
+      </div>
       <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-start gap-5 lg:gap-14 lg:w-fit lg:mx-auto">
           <div className="space-y-3">

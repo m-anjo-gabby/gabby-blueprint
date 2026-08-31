@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import { BookOpen, Star, Users, CalendarClock, MessageCircle, ArrowRight } from 'lucide-react';
+import { BookOpen, Star, Users, CalendarClock, MessageCircle, Video, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NavigationGridProps {
@@ -42,6 +42,16 @@ export const NavigationGrid = ({ showCoachMatching = false }: NavigationGridProp
             bgClass: 'bg-sky-300 hover:bg-linear-to-br hover:from-sky-400 hover:via-slate-100 hover:to-blue-600',
             iconClass: 'bg-sky-50 text-sky-600 group-hover:bg-sky-600 group-hover:text-white',
             shadow: 'shadow-sky-100/50'
+          },
+          {
+            label: 'Live Session',
+            title: 'コーチとレッスンする',
+            path: '/live-room',
+            icon: Video,
+            labelClass: 'text-rose-600',
+            bgClass: 'bg-rose-300 hover:bg-linear-to-br hover:from-rose-400 hover:via-slate-100 hover:to-pink-600',
+            iconClass: 'bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white',
+            shadow: 'shadow-rose-100/50'
           },
           {
             label: 'Coaching',

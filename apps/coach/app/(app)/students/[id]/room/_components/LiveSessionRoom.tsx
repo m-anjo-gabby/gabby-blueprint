@@ -1,0 +1,177 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Mic,
+  MicOff,
+  MonitorUp,
+  MonitorX,
+  PhoneOff,
+  Send,
+  Video,
+  VideoOff,
+} from 'lucide-react';
+import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
+import { UserAvatar } from '@/components/common/UserAvatar';
+import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
+
+interface Props {
+  studentId: string;
+  access: LiveSessionRoomAccess;
+}
+
+export function LiveSessionRoom({ studentId, access }: Props) {
+  const router = useRouter();
+  const {
+    isJoined,
+    isJoining,
+    isMicOn,
+    isCameraOn,
+    isScreenSharing,
+    chatMessages,
+    errorMessage,
+    join,
+    leave,
+    toggleMic,
+    toggleCamera,
+    toggleScreenShare,
+    sendChatMessage,
+  } = useZoomVideoSession();
+
+  const selfVideoRef = useRef<HTMLDivElement>(null);
+  const peerVideoRef = useRef<HTMLDivElement>(null);
+  const shareCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [chatInput, setChatInput] = useState('');
+  const joinRequested = useRef(false);
+
+  useEffect(() => {
+    if (joinRequested.current) return;
+    if (!selfVideoRef.current || !peerVideoRef.current) return;
+    joinRequested.current = true;
+    join(access, selfVideoRef.current, peerVideoRef.current);
+  }, [access, join]);
+
+  useEffect(() => {
+    return () => {
+      leave();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleLeave = async () => {
+    await leave();
+    router.push(`/students/${studentId}`);
+  };
+
+  const handleSendChat = () => {
+    if (!chatInput.trim()) return;
+    sendChatMessage(chatInput);
+    setChatInput('');
+  };
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[600px] rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden shadow-sm">
+      <div className="flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <UserAvatar userName={access.peerName} iconPath={access.peerIconPath} size={32} />
+          <div>
+            <p className="text-sm font-bold text-white leading-tight">{access.peerName}</p>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              {isJoined ? 'Live Session in progress' : isJoining ? 'Connecting...' : 'Not connected'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {errorMessage && (
+        <div className="px-5 py-2 bg-red-500/10 text-red-300 text-xs font-semibold border-b border-red-500/20">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="flex-1 flex min-h-0">
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 min-h-0">
+          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-[220px]">
+            <div ref={peerVideoRef} className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full" />
+            <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white/80 bg-black/40 px-2 py-0.5 rounded-md">
+              {access.peerName}
+            </span>
+          </div>
+          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-[220px]">
+            <div ref={selfVideoRef} className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full" />
+            <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white/80 bg-black/40 px-2 py-0.5 rounded-md">
+              You
+            </span>
+            <canvas ref={shareCanvasRef} className="hidden" />
+          </div>
+        </div>
+
+        <div className="hidden lg:flex w-72 flex-col border-l border-slate-800 bg-slate-900/60">
+          <div className="px-4 py-2.5 border-b border-slate-800">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">In-call Chat</p>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+            {chatMessages.length === 0 ? (
+              <p className="text-xs text-slate-500 text-center mt-6">No messages yet</p>
+            ) : (
+              chatMessages.map((msg) => (
+                <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
+                  <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
+                  <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-100'}`}>
+                    {msg.message}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="p-3 border-t border-slate-800 flex items-center gap-2">
+            <input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+              placeholder="Type a message..."
+              className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <button
+              onClick={handleSendChat}
+              className="shrink-0 w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
+            >
+              <Send size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-3 px-5 py-4 bg-slate-900/80 border-t border-slate-800">
+        <button
+          onClick={toggleMic}
+          disabled={!isJoined}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+        >
+          {isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
+        </button>
+        <button
+          onClick={toggleCamera}
+          disabled={!isJoined}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+        >
+          {isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
+        </button>
+        <button
+          onClick={() => shareCanvasRef.current && toggleScreenShare(shareCanvasRef.current)}
+          disabled={!isJoined}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isScreenSharing ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+        >
+          {isScreenSharing ? <MonitorX size={18} /> : <MonitorUp size={18} />}
+        </button>
+        <button
+          onClick={handleLeave}
+          className="w-11 h-11 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center transition-colors ml-2"
+        >
+          <PhoneOff size={18} />
+        </button>
+      </div>
+    </div>
+  );
+}
