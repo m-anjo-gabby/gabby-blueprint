@@ -8,6 +8,7 @@ import { ja } from 'date-fns/locale';
 import { ContractDetail } from '@gabby/types/contract';
 import { ContractFormDialog } from './ContractFormDialog';
 import { ContractLicenseDialog } from './ContractLicenseDialog';
+import { DeleteContractDialog } from './DeleteContractDialog';
 import { Eye, Pencil } from 'lucide-react';
 
 export const columns: ColumnDef<ContractDetail>[] = [
@@ -164,6 +165,8 @@ export const columns: ColumnDef<ContractDetail>[] = [
       <div className="flex justify-end items-center gap-2">
         {/* 契約内容の編集ダイアログ */}
         <ContractFormDialog mode="edit" initialData={row.original} />
+        {/* 契約の削除（ライセンス割当実績がある契約は不可） */}
+        <DeleteContractDialog contract={row.original} />
       </div>
     ),
   },

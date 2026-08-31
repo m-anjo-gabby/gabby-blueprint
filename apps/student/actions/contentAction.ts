@@ -225,6 +225,14 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
 
     if (!data) return null; // レコードなしは正常系
 
+    // 参照先コンテンツがRLS/論理削除等で不可視になった場合、com_m_contentsはnullで返る
+    // （content_id自体はFKで維持されるため、レコードは残るがJOIN結果のみnullになる）
+    if (!data.com_m_contents) {
+      logger.warn("training:get_resume_orphaned", "Resume content is no longer accessible; clearing stale bookmark", { ...ctx, payload: { contentId: data.content_id } });
+      await supabase.from('com_t_resume_contents').delete().eq('user_id', user.id);
+      return null;
+    }
+
     return data as unknown as ResumeContentResponse;
   } catch (err) {
     logger.error("training:get_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);

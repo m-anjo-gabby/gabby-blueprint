@@ -68,7 +68,7 @@ BEGIN
     v_mastery_inc
   )
   ON CONFLICT (user_id, content_id, training_date)
-  DO UPDATE SET 
+  DO UPDATE SET
     question_count = self_t_sprint_summary.question_count + p_question_count,
     assessment_count = self_t_sprint_summary.assessment_count + p_assessment_count,
     speed_count = self_t_sprint_summary.speed_count + v_speed_inc,
@@ -76,6 +76,15 @@ BEGIN
     builders_count = self_t_sprint_summary.builders_count + v_builders_inc,
     mastery_count = self_t_sprint_summary.mastery_count + v_mastery_inc,
     update_date = NOW();
+
+  -- 5. 学習実績サマリー（通算学習日数・連続学習日数・最終トレーニング日・通算発話評価回数）を更新
+  -- 💡 ドリルモードのため通算スプリント本数・回答数（total_sprint_sessions/total_sprint_answers）は
+  --    加算しない。これらはセッションモード（self_t_sprint への INSERT）専用のカウンタ。
+  PERFORM public.update_training_lifetime_stats(
+    v_user_id,
+    v_local_today,
+    p_assessment_delta => p_assessment_count
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 

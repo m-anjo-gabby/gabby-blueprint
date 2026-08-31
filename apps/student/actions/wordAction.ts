@@ -14,7 +14,8 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
 
     const { data, error } = await supabase
       .from('com_m_word')
@@ -29,7 +30,7 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
       .eq('content_id', contentId)
       .eq('status', 'live')
       .eq('com_m_phrase.status', 'live')
-      .eq('com_m_phrase.com_t_favorite_phrase.user_id', user?.id)
+      .eq('com_m_phrase.com_t_favorite_phrase.user_id', user.id)
       .order('frequency_rank', { ascending: true })
       .order('seq_no', { referencedTable: 'com_m_phrase', ascending: true });
 
@@ -140,9 +141,13 @@ export async function getFavoriteCount(): Promise<number> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return 0;
+
     const { count, error } = await supabase
       .from('com_t_favorite_phrase')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
 
     if (error) {
       logger.error("word:get_favorite_count_failed", error.message, ctx);

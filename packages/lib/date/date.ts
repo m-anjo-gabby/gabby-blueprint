@@ -47,7 +47,8 @@ export const formatDateByZone = (
  */
 export const formatDateTimeByZone = (
   dateString?: string | null,
-  timeZone: string = 'Asia/Tokyo'
+  timeZone: string = 'Asia/Tokyo',
+  withSeconds: boolean = true
 ): string => {
   if (!dateString) return "---";
   const date = new Date(dateString);
@@ -60,11 +61,11 @@ export const formatDateTimeByZone = (
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit', // 必要に応じて
+      ...(withSeconds ? { second: '2-digit' as const } : {}),
       timeZone: timeZone,
     }).format(date);
   } catch (e) {
-    return formatDateTimeByZone(dateString, 'Asia/Tokyo');
+    return formatDateTimeByZone(dateString, 'Asia/Tokyo', withSeconds);
   }
 };
 

@@ -1,19 +1,81 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, RotateCcw, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, RotateCcw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { formatZonedDateJapanese } from '@gabby/lib/date/date';
+import { formatZonedDateJapanese, formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
-import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
+import { CalendarEventItem, CalendarEventMessageItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
-import { joinCalendarEvent, cancelCalendarEventParticipation } from '@/actions/calendarEventAction';
+import {
+  joinCalendarEvent,
+  cancelCalendarEventParticipation,
+  getCalendarEventMessages,
+  getCalendarEventMessageAttachmentUrl,
+} from '@/actions/calendarEventAction';
 import { SessionActionTarget } from './SessionActionDialog';
+
+function formatAttachmentSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function CalendarEventAnnouncements({ calendarEventId, timezone }: { calendarEventId: string; timezone: string }) {
+  const [messages, setMessages] = useState<CalendarEventMessageItem[]>([]);
+
+  useEffect(() => {
+    getCalendarEventMessages(calendarEventId).then(setMessages);
+  }, [calendarEventId]);
+
+  const handleDownload = async (path: string) => {
+    const { url } = await getCalendarEventMessageAttachmentUrl(path);
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  if (messages.length === 0) return null;
+
+  return (
+    <div className="space-y-2 pt-2 border-t border-slate-100">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+        <Megaphone size={11} /> アナウンス
+      </p>
+      {messages.map((message) => (
+        <div key={message.calendar_event_message_id} className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 space-y-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs font-black text-slate-800">{message.title}</p>
+            <p className="text-[10px] text-slate-400 font-bold shrink-0">{formatDateTimeByZone(message.insert_date, timezone, false)}</p>
+          </div>
+          <p className="text-xs text-slate-600 whitespace-pre-wrap">{message.content}</p>
+          {message.attachments.length > 0 && (
+            <div className="space-y-1 pt-1">
+              {message.attachments.map((att) => (
+                <button
+                  key={att.id}
+                  type="button"
+                  onClick={() => handleDownload(att.path)}
+                  className="w-full flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-100 hover:border-indigo-200 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Paperclip size={12} className="text-slate-400 shrink-0" />
+                    <span className="text-[11px] font-bold text-slate-700 truncate">{att.name}</span>
+                    <span className="text-[10px] text-slate-400 font-mono shrink-0">{formatAttachmentSize(att.size)}</span>
+                  </div>
+                  <Download size={12} className="text-slate-400 shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const WEEKDAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -191,6 +253,8 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
           )}
         </div>
       )}
+
+      <CalendarEventAnnouncements calendarEventId={event.calendar_event_id} timezone={timezone} />
     </article>
   );
 }

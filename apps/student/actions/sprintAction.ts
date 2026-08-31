@@ -4,6 +4,9 @@ import { createServerClient } from "@gabby/lib/supabase/server";
 import { SprintQuestion, SprintQuestionResponse, SprintQuestionType } from "@gabby/types/sprint";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
+import { resolveSprintHasLevel } from "@gabby/lib";
+import type { ContentMetadata } from "@gabby/types/content";
+import type { AnalysisResult } from "@gabby/types/speechAssessment";
 
 const logger = createLogger("student");
 const SPRINT_LIMIT_COUNT = 10;
@@ -14,14 +17,14 @@ const SPRINT_SPEED_LIMIT_COUNT = 30;
 // ========================================================================
 
 /**
- * 発話評価の詳細レコード型（拡張用）
+ * 発話評価の詳細レコード型
+ * total_score: 結果一覧のスコアバッジ表示・平均スコア集計に使う0-100の丸め値
+ * analysis: 結果画面でスコアをタップした際のフィードバック表示（単語ブレイクダウン・改善点）に必要な詳細情報。
+ *           旧バージョンで保存されたレコードには存在しないため、参照側は無い前提でフォールバックすること
  */
 export interface SprintAssessmentResult {
-  pronunciation_score?: number; // 発音スコア (0-100)
-  fluency_score?: number;       // 流暢さスコア (0-100)
-  total_score?: number;         // 総合スコア
-  evaluated_at?: string;        // 評価日時 (ISOString)
-  // 必要に応じて解析テキスト、エラー詳細などを追加可能
+  total_score: number;
+  analysis?: Pick<AnalysisResult, 'score' | 'summary' | 'matches' | 'issues'>;
 }
 
 /**
@@ -75,6 +78,10 @@ export interface SprintResultResponse {
     questions: SprintQuestion[];
     totalAssessmentCount: number;
     averageAssessmentScore: number;
+    // 🛠️ 教材メタデータから解決した「レベル概念の有無」。
+    // 呼び出し側（page.tsx）が別途 getContentAction で再取得する必要がないよう、
+    // self_t_sprint と com_m_contents を1クエリでJOINして解決した値をここに含める。
+    hasLevel: boolean;
   } | null;
   error?: string;
 }
@@ -263,17 +270,28 @@ export async function getSprintResultAction(
   try {
     const supabase = await createServerClient();
 
-    // ① スコア・履歴レコードを1件取得
+    // サーバー側でセッションから安全に本人のユーザーIDを検証・取得
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
+
+    // ① スコア・履歴レコードを1件取得（本人のレコードのみ）
+    // 🛠️ hasLevel 解決に必要な教材メタデータ（com_m_contents.metadata）を同一クエリでJOIN取得し、
+    // 呼び出し側（page.tsx）での直列2回目のDB往復（getContentAction）を不要にする
     const { data: scoreRecord, error: scoreError } = await supabase
       .from("self_t_sprint")
-      .select("*")
+      .select("*, com_m_contents(metadata)")
       .eq("self_sprint_id", self_sprint_id)
+      .eq("user_id", user.id)
       .single();
 
     if (scoreError) throw scoreError;
     if (!scoreRecord) throw new Error("Sprint record not found");
 
-    let history: any[] = [];
+    const joinedContent = scoreRecord.com_m_contents as { metadata?: ContentMetadata | null } | { metadata?: ContentMetadata | null }[] | null;
+    const contentMetadata = Array.isArray(joinedContent) ? joinedContent[0]?.metadata : joinedContent?.metadata;
+    const hasLevel = resolveSprintHasLevel(contentMetadata?.sprint);
+
+    let history: SprintHistoryItem[] = [];
     if (scoreRecord.answered_history) {
       if (typeof scoreRecord.answered_history === 'string') {
         try {
@@ -283,7 +301,7 @@ export async function getSprintResultAction(
           history = [];
         }
       } else {
-        history = scoreRecord.answered_history as any[];
+        history = scoreRecord.answered_history as SprintHistoryItem[];
       }
     }
 
@@ -312,14 +330,15 @@ export async function getSprintResultAction(
 
 
     if (history.length === 0) {
-      return { 
-        success: true, 
-        data: { 
-          scoreRecord: scoreRecord as any, 
+      return {
+        success: true,
+        data: {
+          scoreRecord: scoreRecord as any,
           questions: [],
           totalAssessmentCount: 0,
-          averageAssessmentScore: 0
-        } 
+          averageAssessmentScore: 0,
+          hasLevel,
+        }
       };
     }
 
@@ -352,8 +371,9 @@ export async function getSprintResultAction(
       data: {
         scoreRecord: scoreRecord as any,
         questions: sortedQuestions,
-        totalAssessmentCount, 
-        averageAssessmentScore 
+        totalAssessmentCount,
+        averageAssessmentScore,
+        hasLevel,
       }
     };
 

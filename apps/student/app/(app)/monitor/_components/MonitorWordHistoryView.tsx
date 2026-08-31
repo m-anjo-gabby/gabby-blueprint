@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatZonedDate } from '@gabby/lib/date/date';
+import { logClientEvent } from '@gabby/lib/logger/actions';
 
 interface MonitorWordHistoryViewProps {
   initialData: MonitorWordSummaryHistoryItem[];
@@ -169,6 +170,14 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
   // CSVエクスポート処理
   const handleExportCSV = (): void => {
     if (initialData.length === 0) return;
+
+    logClientEvent({
+      service: 'student',
+      event: 'monitor:word_history_csv_exported',
+      level: 'info',
+      message: `Word history CSV exported: ${startDate}~${endDate}`,
+      payload: { startDate, endDate, targetUserIds: selectedUserIds, rowCount: initialData.length }
+    }).catch(() => {});
 
     const headers = ['日付', '受講生名', 'トレーニング教材', '単語数', 'フレーズ数', '発話評価数'];
     

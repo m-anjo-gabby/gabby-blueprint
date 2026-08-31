@@ -18,9 +18,9 @@ import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 // -----------------------------------------------------------------------
 
 export interface ColorVowelLookupContextType {
-  openTooltip: (word: string, rect: DOMRect) => void;
+  openTooltip: (word: string, rect: DOMRect, wordKey: string) => void;
   closeTooltip: () => void;
-  activeWord: string | null;
+  activeWordKey: string | null;
 }
 
 const ColorVowelLookupContext = React.createContext<ColorVowelLookupContextType | null>(null);
@@ -40,6 +40,8 @@ interface ColorVowelLookupProviderProps {
 interface TooltipState {
   /** 選択されたテキスト（辞書検索キー） */
   text: string;
+  /** タップされた単語インスタンスを一意に識別するキー（フォーカス対象の特定に使用） */
+  key: string;
   /** ツールチップ水平中心 of viewport X 座標 */
   x: number;
   /** 配置基準点の viewport Y 座標 */
@@ -55,7 +57,7 @@ interface TooltipState {
 /**
  * 単語要素の DOMRect からツールチップ表示位置を計算する。
  */
-function resolveTooltipPositionFromRect(rect: DOMRect): Omit<TooltipState, 'text'> {
+function resolveTooltipPositionFromRect(rect: DOMRect): Omit<TooltipState, 'text' | 'key'> {
   const GAP = 8; // 単語とツールチップの間隔
   const HORIZONTAL_PADDING = 70;
 
@@ -167,6 +169,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
 
   const { play: playAudio, stop: stopAudio, isPlaying } = usePlayAudioSpeech();
   const isLoadingRef = React.useRef(false);
+  const openedAtRef = React.useRef(0);
 
   React.useEffect(() => setMounted(true), []);
   React.useEffect(() => { isLoadingRef.current = isLoading; }, [isLoading]);
@@ -176,7 +179,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     return results.find((r) => r.partOfSpeech === activeTab) || results[0];
   }, [results, activeTab]);
 
-  const openTooltip = React.useCallback((word: string, rect: DOMRect) => {
+  const openTooltip = React.useCallback((word: string, rect: DOMRect, wordKey: string) => {
     const cleaned = word.replace(/^[.,!?;:"'()]+|[.,!?;:"'()]+$/g, '').trim();
     if (!cleaned || cleaned.length <= 1) {
       setTooltip(null);
@@ -184,7 +187,8 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     }
 
     const pos = resolveTooltipPositionFromRect(rect);
-    setTooltip({ text: cleaned, ...pos });
+    openedAtRef.current = Date.now();
+    setTooltip({ text: cleaned, key: wordKey, ...pos });
   }, []);
 
   const closeTooltip = React.useCallback(() => {
@@ -204,6 +208,11 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     };
 
     const handleScroll = () => {
+      // タップ直後（慣性スクロールの残滓等）に発火した scroll イベントは無視する。
+      // モバイルではタップ操作自体が touchmove を伴い、開いた直後に
+      // スクロールコンテナの momentum scroll が scroll イベントを発生させ、
+      // ツールチップが開いた瞬間に閉じてしまう事象を防ぐ。
+      if (Date.now() - openedAtRef.current < 300) return;
       setTooltip(null);
     };
 
@@ -261,7 +270,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
     () => ({
       openTooltip,
       closeTooltip,
-      activeWord: tooltip?.text ?? null,
+      activeWordKey: tooltip?.key ?? null,
     }),
     [openTooltip, closeTooltip, tooltip]
   );

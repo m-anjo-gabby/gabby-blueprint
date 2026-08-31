@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, ChevronDown, ChevronRight, Mic, MicOff, Loader2, BookOpen, Settings2, AlertTriangle, Timer, Zap } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, ChevronDown, ChevronRight, Mic, MicOff, Loader2, BookOpen, Settings2, AlertTriangle, Timer, Zap, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, DEFAULT_SPRINT_TIME_KEY, type SprintQuestionType, type SprintAnswerType, type SprintConfig } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, setAudioSessionPlayAndRecord } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
-import { createBrowserClient } from '@gabby/lib/supabase/client';
 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -21,20 +20,12 @@ import { MicTroubleshootingDialog } from '@/components/help/MicTroubleshootingDi
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface SprintSelectProps {
-  initialConfig?: {
-    mode?: 'drill' | 'sprint';
-    questionType?: SprintQuestionType;
-    level?: string;
-    timeLimitSec?: number;
-    contentId?: string | null;
-  };
   onStart: (config: SprintConfig & { answerType: SprintAnswerType; isAssessmentMode: boolean }) => void;
 }
 
-export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onStart }) => {
+export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const router = useRouter();
   const { showConfirm } = useConfirm();
-  const supabase = useMemo(() => createBrowserClient(), []);
 
   const { config, contentMetadata, contentName, setConfig } = useSprintStore();
 
@@ -55,16 +46,54 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const isAssessmentMode = config.isAssessmentMode !== false;
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isThemeOpen, setIsThemeOpen] = useState(false);
-  const [isHintOpen, setIsHintOpen] = useState(false);
+  const [isThemeTipsOpen, setIsThemeTipsOpen] = useState(false);
 
   const { micStatus, requestMicPermission } = useMicPermission();
+
+  // 🚀 改修: メインエリアのスクロール残量を検知し、上下フェードマスクの表示を制御
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+  const [mainScrollState, setMainScrollState] = useState({ top: false, bottom: false });
+
+  const updateMainScrollState = useCallback(() => {
+    const el = mainScrollRef.current;
+    if (!el) return;
+    setMainScrollState({
+      top: el.scrollTop > 4,
+      bottom: el.scrollHeight - el.scrollTop - el.clientHeight > 4,
+    });
+  }, []);
+
+  // 🚀 改修: 設定ドロワー内スクロールエリア(Radix ScrollArea)のフェードマスク制御
+  const drawerScrollWrapRef = useRef<HTMLDivElement>(null);
+  const [drawerScrollState, setDrawerScrollState] = useState({ top: false, bottom: false });
+
+  const updateDrawerScrollState = useCallback(() => {
+    const viewport = drawerScrollWrapRef.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
+    if (!viewport) return;
+    setDrawerScrollState({
+      top: viewport.scrollTop > 4,
+      bottom: viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 4,
+    });
+  }, []);
 
   useEffect(() => {
     if (micStatus === 'denied') {
       setConfig({ isAssessmentMode: false });
     }
   }, [micStatus, setConfig]);
+
+  useEffect(() => {
+    updateMainScrollState();
+  }, [mode, isAssessmentMode, micStatus, isHelpAccordionOpen, updateMainScrollState]);
+
+  useEffect(() => {
+    if (!isSettingsOpen || userProgress === null) return;
+    const viewport = drawerScrollWrapRef.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
+    if (!viewport) return;
+    updateDrawerScrollState();
+    viewport.addEventListener('scroll', updateDrawerScrollState);
+    return () => viewport.removeEventListener('scroll', updateDrawerScrollState);
+  }, [isSettingsOpen, userProgress, updateDrawerScrollState]);
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -77,7 +106,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   }, []);
 
   const isCorpus = contentMetadata?.sprint_type === '1';
-  const hasLevel = isCorpus ? contentMetadata?.has_level ?? true : true;
+  const hasLevel = resolveSprintHasLevel(contentMetadata);
+
+  useEffect(() => {
+    if (!isSettingsOpen || userProgress === null) return;
+    updateDrawerScrollState();
+  }, [isSettingsOpen, userProgress, mode, selectedType, hasLevel, updateDrawerScrollState]);
 
   const isTypeSupported = useCallback((typeId: SprintQuestionType) => {
     if (!isCorpus || !contentMetadata?.supported_types) return true;
@@ -160,35 +194,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
   const isSpeedSelected = selectedType === '0';
   const currentHint = SPRINT_NOTES[selectedType] || '';
 
-  // 🚀 マイクの状態に応じたスタイリング・文言・アイコンのマッピングデータを動的に生成
-  const micUIConfig = useMemo(() => {
-    if (micStatus === 'denied') {
-      return {
-        bg: "bg-rose-50/60 border-rose-100",
-        icon: <MicOff size={14} className="text-rose-500" strokeWidth={2.5} />,
-        label: "発話評価モード (マイクがブロック中)",
-        badge: <span className="text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded border bg-rose-50 text-rose-700 border-rose-100 shrink-0 scale-90 origin-left">DISABLED</span>
-      };
-    }
-    if (micStatus === 'prompt') {
-      return {
-        bg: "bg-amber-50/40 border-amber-100/70",
-        icon: <Mic size={14} className="text-amber-500" strokeWidth={2.5} />,
-        label: "発話評価モード (マイクは未許可です)",
-        badge: <span className="text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-100 shrink-0 scale-90 origin-left">READY</span>
-      };
-    }
-    // granted (許可済み)
-    return {
-      bg: "bg-slate-50/60 border-slate-100/70",
-      icon: <Mic size={14} className={cn(isAssessmentMode ? "text-indigo-500" : "text-slate-400")} strokeWidth={2.5} />,
-      label: "発話評価モード",
-      badge: isAssessmentMode ? (
-        <span className="text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/70 shadow-3xs shrink-0 scale-90 origin-left">ON</span>
-      ) : null
-    };
-  }, [micStatus, isAssessmentMode]);
-
   return (
     <div className="fixed inset-0 w-full h-[100dvh] bg-slate-100 flex items-center justify-center p-2 sm:p-4 overflow-hidden overscroll-none touch-none select-none text-slate-900">
       <main className="bg-white shadow-2xl w-full max-w-2xl h-full flex flex-col relative overflow-hidden rounded-[40px]">
@@ -200,23 +205,43 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
       >
         {/* 最上段レイヤー：ナビゲーションとメインラベル */}
         <div className="w-full flex items-center justify-between min-h-[40px] px-6">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation(); 
-              router.back();
-            }} 
-            className="h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-slate-600 active:scale-95 transition-all cursor-pointer z-30"
-          >
-            <ChevronLeft size={20} strokeWidth={2.5} />
-          </button>
-          
+          <div className="flex items-center gap-2 z-30">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.back();
+              }}
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-slate-600 active:scale-95 transition-all cursor-pointer"
+            >
+              <ChevronLeft size={20} strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push('/dashboard');
+              }}
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-indigo-600 active:scale-95 transition-all cursor-pointer"
+              title="ダッシュボードに戻る"
+            >
+              <Home size={18} strokeWidth={2.5} />
+            </button>
+          </div>
+
           <div className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-0.5 rounded-full max-w-[60%] z-30">
             <span className="text-sm font-black text-indigo-600 truncate leading-none">
               {contentName || 'Gabby Blueprint'}
             </span>
           </div>
           
-          <div className="w-9 h-9 opacity-0 pointer-events-none" />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsSettingsOpen(true);
+            }}
+            className="h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-indigo-600 active:scale-95 transition-all cursor-pointer z-30"
+          >
+            <Settings2 size={18} strokeWidth={2.5} />
+          </button>
         </div>
 
         {/* コア情報を完全に中央へ数珠つなぎ配置 */}
@@ -236,7 +261,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   animate={{ opacity: 1, scale: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.8, x: 12 }}
                   transition={{ type: "spring", stiffness: 380, damping: 26 }}
-                  className="text-[11px] font-mono font-black px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 shadow-3xs flex items-center gap-0.5 shrink-0 h-5 align-middle"
+                  className="text-xs font-mono font-black px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 shadow-3xs flex items-center gap-0.5 shrink-0 h-6 align-middle"
                 >
                   <Timer size={12} className="text-amber-500" />
                   {selectedTimeLimitSec}s
@@ -244,36 +269,43 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
               )}
             </AnimatePresence>
 
-            <Settings2 
-              size={18} 
-              strokeWidth={2.5} 
-              className="text-slate-400 group-hover:text-indigo-500 group-hover:scale-110 transition-all shrink-0" 
-            />
-            
           </motion.div>
         </div>
       </div>
 
         {/* メインスペース */}
-        <div className={cn("flex-1 min-h-0 flex flex-col", mode === 'sprint' ? "bg-indigo-50/30" : "bg-slate-50/50")}>
-          <div className="flex-1 min-h-0 overflow-y-scroll px-6 py-4 overscroll-contain stable-gutter">
+        <div className={cn("flex-1 min-h-0 flex flex-col relative", mode === 'sprint' ? "bg-indigo-50/30" : "bg-slate-50/50")}>
+          {/* 🚀 改修: スクロール上端フェードマスク(残量がある時のみ表示) */}
+          <div
+            aria-hidden
+            className={cn(
+              "absolute top-0 inset-x-0 h-7 z-10 pointer-events-none bg-linear-to-b transition-opacity duration-200",
+              mode === 'sprint' ? "from-indigo-50" : "from-slate-100",
+              "to-transparent",
+              mainScrollState.top ? "opacity-100" : "opacity-0"
+            )}
+          />
+          <div
+            ref={mainScrollRef}
+            onScroll={updateMainScrollState}
+            className="flex-1 min-h-0 overflow-y-scroll px-6 py-4 overscroll-contain stable-gutter"
+          >
             <div className="w-full max-w-xl mx-auto space-y-4 pt-1 pb-6">
 
-              {/* 🚀 改善版: 上下段のUIデザインを「タブ構造」で完全統一したモード選択セクション */}
-              <div className="bg-white border border-slate-100 rounded-3xl p-3 shadow-3xs flex flex-col gap-4">
-                
-                {/* 1段目: トレーニングモード（上段タブ） */}
-                <div className="space-y-2">
-                  {/* 🚀 改修: ヘルプアイコンを右寄せから「小見出しのすぐ横」へインライン配置に変更 */}
-                  <div className="flex items-center gap-1.5 pl-1 h-5">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">トレーニングモード</span>
+              {/* 🚀 改修: モード選択カードを役割ごとに分割し、タップ対象の境界を明確化 */}
+              <div className="space-y-3">
+
+                {/* カードA: トレーニングモード */}
+                <div className="bg-white border border-slate-100 rounded-3xl p-3 shadow-3xs space-y-2">
+                  <div className="flex items-center gap-1.5 pl-1 h-6">
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">トレーニングモード</span>
                     <Dialog>
                       <DialogTrigger asChild>
-                        <button className="h-4 w-4 flex items-center justify-center rounded-full text-[9px] border bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100 hover:text-indigo-600 active:scale-95 transition-all cursor-pointer">
-                          <HelpCircle size={12} strokeWidth={2.5} />
+                        <button className="h-6 w-6 shrink-0 flex items-center justify-center rounded-full border bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100 hover:text-indigo-600 active:scale-95 transition-all cursor-pointer">
+                          <HelpCircle size={13} strokeWidth={2.5} />
                         </button>
                       </DialogTrigger>
-                      <DialogContent 
+                      <DialogContent
                         onOpenAutoFocus={(e) => e.preventDefault()}
                         className="sm:max-w-sm border-none bg-white p-6 shadow-2xl rounded-2xl text-slate-900"
                       >
@@ -293,73 +325,73 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     </Dialog>
                   </div>
 
-                  <div className="bg-slate-100/80 p-1 rounded-xl grid grid-cols-2 gap-1 relative overflow-hidden isolate">
+                  <div className="bg-slate-200/70 p-1 rounded-xl grid grid-cols-2 gap-1 relative overflow-hidden isolate">
                     <button type="button" onClick={() => handleModeChange('sprint')} className={cn("relative py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 text-xs font-black z-10 outline-none select-none", mode === 'sprint' ? "text-indigo-600" : "text-slate-400 hover:text-slate-600")}>
-                      {mode === 'sprint' && <motion.div layoutId="activeModeBg" className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-slate-200/40 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />}
+                      {mode === 'sprint' && <motion.div layoutId="activeModeBg" className="absolute inset-0 bg-white rounded-lg shadow-xs border border-slate-200 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />}
                       <Zap size={12} className={cn(mode === 'sprint' ? "fill-current text-amber-400" : "text-slate-400")} />
                       <span>スプリント</span>
                     </button>
                     <button type="button" onClick={() => handleModeChange('drill')} className={cn("relative py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 text-xs font-black z-10 outline-none select-none", mode === 'drill' ? "text-slate-900" : "text-slate-400 hover:text-slate-600")}>
-                      {mode === 'drill' && <motion.div layoutId="activeModeBg" className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-slate-200/40 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />}
+                      {mode === 'drill' && <motion.div layoutId="activeModeBg" className="absolute inset-0 bg-white rounded-lg shadow-xs border border-slate-200 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />}
                       <Sliders size={12} strokeWidth={3} className={cn(mode === 'drill' ? "text-teal-500" : "text-slate-400")} />
                       <span>ドリル</span>
                     </button>
                   </div>
                 </div>
 
-                {/* 2段目: 発話評価モード */}
-                <div className="space-y-2">
+                {/* カードB: 発話評価 */}
+                <div className="bg-white border border-slate-100 rounded-3xl p-3 shadow-3xs space-y-2">
                   {/* 🚀 改修①: チェックアイコン ＋ 視認性を高めたテキストメッセージ（マイク権限OK）でアプリ設定との混同を完全に防ぐ */}
                   <div className="flex items-center gap-2 pl-1 h-5">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">発話評価</span>
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">発話評価</span>
                     {micStatus === 'granted' && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/70 shadow-3xs leading-none shrink-0 animate-fade-in">
-                        <Check size={10} strokeWidth={4} className="text-emerald-600" />
-                        <span className="text-[9px] font-bold tracking-wider">マイク許可</span>
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/70 shadow-3xs leading-none shrink-0 animate-fade-in whitespace-nowrap">
+                        <Check size={10} strokeWidth={4} className="text-emerald-600 shrink-0" />
+                        <span className="text-xs font-bold tracking-wider">マイク許可</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="bg-slate-100/80 p-1 rounded-xl grid grid-cols-2 gap-1 relative overflow-hidden isolate">
+                  <div className="bg-slate-200/70 p-1 rounded-xl grid grid-cols-2 gap-1 relative overflow-hidden isolate">
                     {/* 評価ONボタン */}
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       disabled={micStatus === 'denied'}
-                      onClick={() => setConfig({ isAssessmentMode: true })} 
+                      onClick={() => setConfig({ isAssessmentMode: true })}
                       className={cn(
-                        "relative py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 text-xs font-black z-10 outline-none select-none disabled:opacity-50 disabled:cursor-not-allowed", 
+                        "relative py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 text-xs font-black z-10 outline-none select-none disabled:opacity-50 disabled:cursor-not-allowed",
                         isAssessmentMode && micStatus !== 'denied' ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"
                       )}
                     >
                       {isAssessmentMode && micStatus !== 'denied' && (
-                        <motion.div layoutId="activeAssessBg" className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-slate-200/40 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />
+                        <motion.div layoutId="activeAssessBg" className="absolute inset-0 bg-white rounded-lg shadow-xs border border-slate-200 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />
                       )}
-                      
+
                       {/* 🚀 改修②: 下部警告エリアのシグナルカラーと動的に同期。有効感・警告・ブロック状態を直感的に伝える */}
-                      <Mic 
-                        size={12} 
+                      <Mic
+                        size={12}
                         className={cn(
                           "transition-colors duration-200",
                           !isAssessmentMode ? "text-slate-400" : // 非アクティブ時
                           micStatus === 'granted' ? "text-emerald-500" : // 許可済みで有効
                           micStatus === 'prompt' ? "text-amber-500" : // 未許可（ブラウザのポップアップ誘導待ち）
                           "text-rose-500" // ブロック状態
-                        )} 
+                        )}
                       />
                       <span>ON</span>
                     </button>
 
                     {/* 評価OFFボタン */}
-                    <button 
-                      type="button" 
-                      onClick={() => setConfig({ isAssessmentMode: false })} 
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ isAssessmentMode: false })}
                       className={cn(
-                        "relative py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 text-xs font-black z-10 outline-none select-none", 
+                        "relative py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 text-xs font-black z-10 outline-none select-none",
                         !isAssessmentMode || micStatus === 'denied' ? "text-slate-950" : "text-slate-400 hover:text-slate-600"
                       )}
                     >
                       {(!isAssessmentMode || micStatus === 'denied') && (
-                        <motion.div layoutId="activeAssessBg" className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-slate-200/40 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />
+                        <motion.div layoutId="activeAssessBg" className="absolute inset-0 bg-white rounded-lg shadow-xs border border-slate-200 -z-10" transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} />
                       )}
                       <MicOff size={12} className={cn(!isAssessmentMode || micStatus === 'denied' ? "text-slate-600" : "text-slate-400")} />
                       <span>OFF</span>
@@ -369,9 +401,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   {/* 下部の1行案内エリア: 既存の洗練された AnimatePresence ロジックを完全維持 */}
                   <AnimatePresence mode="wait">
                     {micStatus === 'denied' && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, y: -2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -2 }} transition={{ duration: 0.15 }}
-                        className="p-2 rounded-xl border flex items-center gap-2 text-[10px] font-bold tracking-tight leading-none bg-rose-50/60 border-rose-100 text-rose-700"
+                        className="p-2 rounded-xl border flex items-center gap-2 text-xs font-bold tracking-tight leading-none bg-rose-50/60 border-rose-100 text-rose-700"
                       >
                         <MicOff size={12} className="shrink-0 text-rose-500" strokeWidth={2.5} />
                         <span>マイクがブロックされています。ブラウザ設定を確認してください。</span>
@@ -379,9 +411,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     )}
 
                     {micStatus === 'prompt' && isAssessmentMode && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, y: -2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -2 }} transition={{ duration: 0.15 }}
-                        className="p-2 rounded-xl border flex items-center gap-2 text-[10px] font-bold tracking-tight leading-none bg-amber-50/70 border-amber-100 text-amber-700"
+                        className="p-2 rounded-xl border flex items-center gap-2 text-xs font-bold tracking-tight leading-none bg-amber-50/70 border-amber-100 text-amber-700"
                       >
                         <AlertTriangle size={12} className="shrink-0 text-amber-500" strokeWidth={2.5} />
                         <span>下部のボタンよりマイクの許可をしてください。</span>
@@ -390,43 +422,54 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   </AnimatePresence>
                 </div>
 
+                {/* カードC: 詳細設定（種別・レベル・時間）への導線 — 下段の「出題テーマとTips」と同じ行ボタン様式に統一 */}
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="w-full bg-white border border-slate-100 rounded-2xl shadow-3xs px-4 py-3.5 flex items-center justify-between text-left select-none active:bg-slate-50/50 transition-colors group"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-md bg-slate-50 text-slate-400 group-hover:text-indigo-500 flex items-center justify-center transition-colors"><Settings2 size={12} strokeWidth={2.5} /></div>
+                    <span className="text-xs font-black text-slate-700 group-hover:text-indigo-600 transition-colors">種別・レベル・時間を変更</span>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" strokeWidth={2.5} />
+                </button>
+
               </div>
 
-              {/* 出題テーマセクション */}
-              <div className="bg-white border border-slate-100 rounded-2xl shadow-3xs overflow-hidden">
-                <button type="button" onClick={() => setIsThemeOpen(!isThemeOpen)} className="w-full px-4 py-3.5 flex items-center justify-between text-left select-none active:bg-slate-50/50 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center"><BookOpen size={12} strokeWidth={2.5} /></div>
-                    <span className="text-xs font-black text-slate-700">出題テーマを確認</span>
-                  </div>
-                  <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-200", isThemeOpen && "rotate-180")} />
-                </button>
-                <div className={cn("grid transition-all duration-200", isThemeOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
-                  <div className="overflow-hidden">
-                    <div className="px-4 pb-4 pt-1 border-t border-slate-50/60">
-                      <p className="text-xs font-bold text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">{currentTheme}</p>
+              {/* 出題テーマとTips */}
+              <Dialog open={isThemeTipsOpen} onOpenChange={setIsThemeTipsOpen}>
+                <DialogTrigger asChild>
+                  <button type="button" className="w-full bg-white border border-slate-100 rounded-2xl shadow-3xs px-4 py-3.5 flex items-center justify-between text-left select-none active:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-md bg-slate-50 text-slate-400 flex items-center justify-center"><BookOpen size={12} strokeWidth={2.5} /></div>
+                      <span className="text-xs font-black text-slate-700">出題テーマとTips</span>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ヒント (Tips) */}
-              <div className={cn("bg-white border rounded-2xl shadow-3xs overflow-hidden transition-all", currentHint ? "border-slate-100 opacity-100" : "border-slate-100 opacity-50 pointer-events-none")}>
-                <button type="button" disabled={!currentHint} onClick={() => setIsHintOpen(!isHintOpen)} className="w-full px-4 py-3.5 flex items-center justify-between text-left select-none active:bg-slate-50/50 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <div className={cn("h-6 w-6 rounded-md flex items-center justify-center", currentHint ? "bg-indigo-50 text-indigo-600" : "bg-slate-100 text-slate-400")}><Lightbulb size={12} strokeWidth={2.5} /></div>
-                    <span className="text-xs font-black text-slate-700">回答のヒント (Tips)</span>
-                  </div>
-                  <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-200", isHintOpen && "rotate-180")} />
-                </button>
-                <div className={cn("grid transition-all duration-200", isHintOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
-                  <div className="overflow-hidden">
-                    <div className="px-4 pb-4 pt-1 border-t border-slate-50/60">
-                      <p className="text-xs font-medium text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">{currentHint}</p>
+                    <ChevronRight size={14} className="text-slate-300" strokeWidth={2.5} />
+                  </button>
+                </DialogTrigger>
+                <DialogContent
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                  className="sm:max-w-sm border-none bg-white p-6 shadow-2xl rounded-2xl text-slate-900"
+                >
+                  <DialogHeader><DialogTitle className="text-sm font-black text-slate-400 tracking-wider">出題テーマとTips</DialogTitle></DialogHeader>
+                  <div className="space-y-4 mt-3">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-indigo-600 flex items-center gap-1.5"><BookOpen size={14} /> 出題テーマ</h4>
+                      <p className="text-xs text-slate-600 font-bold leading-relaxed">{currentTheme}</p>
                     </div>
+                    {currentHint && (
+                      <>
+                        <hr className="border-slate-100" />
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5"><Lightbulb size={14} /> Tips</h4>
+                          <p className="text-xs text-slate-600 font-bold leading-relaxed">{currentHint}</p>
+                        </div>
+                      </>
+                    )}
                   </div>
-                </div>
-              </div>
+                </DialogContent>
+              </Dialog>
 
               {/* ヘルプアコーディオン */}
               <div className="bg-white border border-slate-100 rounded-2xl shadow-3xs overflow-hidden">
@@ -440,22 +483,13 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                 <div className={cn("grid transition-all duration-200 ease-in-out", isHelpAccordionOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
                   <div className="overflow-hidden">
                     <div className="px-4 pb-3 pt-1 border-t border-slate-50/60 flex flex-col gap-1">
-                      
-                      {/* 案内カード */}
-                      <div className="mx-2 my-2 p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex gap-2.5 items-start">
-                        <Settings2 size={14} className="text-indigo-500 shrink-0 mt-0.5" strokeWidth={2.5} />
-                        <div className="space-y-0.5">
-                          <h5 className="text-[11px] font-black text-slate-700 leading-none">トレーニング設定の変更方法</h5>
-                          <p className="text-[10px] text-slate-400 font-bold leading-relaxed">画面最上部の「ヘッダーエリア（タイトルや制限時間が並んでいる部分）」をタップすると、問題種別やレベル、制限時間を変更できます。</p>
-                        </div>
-                      </div>
 
                       <button type="button" onClick={() => setIsHelpOpen(true)} className="w-full flex items-center justify-between text-left py-2.5 px-2 hover:bg-slate-50/80 active:scale-[0.99] transition-all rounded-xl group">
-                        <span className="text-[11px] sm:text-xs font-bold text-slate-600 truncate mr-4 group-hover:text-indigo-600 transition-colors">音声が聞こえない・認識しない場合</span>
+                        <span className="text-xs sm:text-sm font-bold text-slate-600 truncate mr-4 group-hover:text-indigo-600 transition-colors">音声が聞こえない・認識しない場合</span>
                         <ChevronRight size={14} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all shrink-0" strokeWidth={2.5} />
                       </button>
                       <button type="button" onClick={() => setIsMicHelpOpen(true)} className="w-full flex items-center justify-between text-left py-2.5 px-2 hover:bg-slate-50/80 active:scale-[0.99] transition-all rounded-xl group border-t border-slate-100/50 mt-0.5">
-                        <span className="text-[11px] sm:text-xs font-bold text-slate-600 truncate mr-4 group-hover:text-indigo-600 transition-colors">マイクがブロックされて開始できない場合</span>
+                        <span className="text-xs sm:text-sm font-bold text-slate-600 truncate mr-4 group-hover:text-indigo-600 transition-colors">マイクがブロックされて開始できない場合</span>
                         <ChevronRight size={14} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all shrink-0" strokeWidth={2.5} />
                       </button>
                     </div>
@@ -465,6 +499,16 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
             </div>
           </div>
+          {/* 🚀 改修: スクロール下端フェードマスク(残量がある時のみ表示) */}
+          <div
+            aria-hidden
+            className={cn(
+              "absolute bottom-0 inset-x-0 h-9 z-10 pointer-events-none bg-linear-to-t transition-opacity duration-200",
+              mode === 'sprint' ? "from-indigo-50" : "from-slate-100",
+              "to-transparent",
+              mainScrollState.bottom ? "opacity-100" : "opacity-0"
+            )}
+          />
         </div>
 
         {/* 下部確定エリア */}
@@ -562,23 +606,23 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     トレーニング設定
                   </DrawerTitle>
                   <DrawerClose asChild>
-                    <button className="h-8 px-4 flex items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100/50 text-indigo-600 hover:bg-indigo-100/80 text-[10px] font-black tracking-wider transition-all active:scale-95 cursor-pointer">
+                    <button className="h-8 px-4 flex items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100/50 text-indigo-600 hover:bg-indigo-100/80 text-xs font-black tracking-wider transition-all active:scale-95 cursor-pointer">
                       閉じる
                     </button>
                   </DrawerClose>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
+                  <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 whitespace-nowrap">
                     {QUESTION_TYPES[selectedType]?.label}
                   </span>
                   {hasLevel && (
-                    <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
+                    <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 whitespace-nowrap">
                       {selectedLevel === '0' ? 'Basic' : `Lv ${selectedLevel}`}
                     </span>
                   )}
                   {mode === 'sprint' && (
-                    <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 font-mono">
+                    <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 font-mono whitespace-nowrap">
                       {selectedTimeLimitSec}s
                     </span>
                   )}
@@ -586,7 +630,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
               </DrawerHeader>
             </div>
 
-            <div className="flex-1 relative min-h-0 overflow-hidden border-t border-slate-50 mt-6" data-vaul-no-drag>
+            <div ref={drawerScrollWrapRef} className="flex-1 relative min-h-0 overflow-hidden border-t border-slate-50 mt-6" data-vaul-no-drag>
               {/* 🚀 改修: ユーザー状況ロード中（null時）のガタつき（レイアウトシフト）を完全に抑制する美しいスケルトンをマッピング */}
               {userProgress === null ? (
                 <div className="px-8 py-6 space-y-6 animate-pulse">
@@ -613,7 +657,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     
                     {/* 01. 種別 */}
                     <div className="space-y-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">問題種別の選択</span>
+                      <span className="text-xs font-black text-slate-400 uppercase tracking-wider block">問題種別の選択</span>
                       <div className="grid grid-cols-2 gap-2">
                         {sortedTypes.map((type) => {
                           const isSelected = selectedType === type.value;
@@ -633,9 +677,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                             >
                               <span>{type.label}</span>
                               {!isSupported && (
-                                <div className="flex items-center gap-0.5 text-rose-500">
-                                  <Lock size={9} strokeWidth={2.5} />
-                                  <span className="text-[8px] font-bold tracking-normal leading-none">提供されていません</span>
+                                <div className="flex items-center gap-0.5 text-rose-500 whitespace-nowrap">
+                                  <Lock size={9} strokeWidth={2.5} className="shrink-0" />
+                                  <span className="text-[10px] font-bold tracking-normal leading-none">提供されていません</span>
                                 </div>
                               )}
                             </button>
@@ -646,7 +690,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
 
                     {/* 02. レベル */}
                     <div className="space-y-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">レベルの選択</span>
+                      <span className="text-xs font-black text-slate-400 uppercase tracking-wider block">レベルの選択</span>
                       {hasLevel ? (
                         <div className="grid grid-cols-4 gap-2">
                           {levelItems.map((item) => {
@@ -681,7 +725,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                     {/* 03. 制限時間 */}
                     {mode === 'sprint' && (
                       <div className="space-y-2">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">制限時間の選択</span>
+                        <span className="text-xs font-black text-slate-400 uppercase tracking-wider block">制限時間の選択</span>
                         <div className="grid grid-cols-2 gap-2">
                           {sortedTimes.map((opt) => {
                             const isSelected = selectedTimeLimitSec === opt.value;
@@ -694,7 +738,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                               >
                                 <div>
                                   <div className="text-xs font-black">{opt.label}</div>
-                                  <div className={cn("text-[9px] font-bold", isSelected ? "text-indigo-200" : "text-slate-400")}>{opt.desc}</div>
+                                  <div className={cn("text-xs font-bold", isSelected ? "text-indigo-200" : "text-slate-400")}>{opt.desc}</div>
                                 </div>
                                 {isSelected && <Check size={12} strokeWidth={3} />}
                               </button>
@@ -708,6 +752,21 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ initialConfig, onSta
                   <ScrollBar orientation="vertical" className="w-2.5 bg-slate-50/30" data-vaul-no-drag />
                 </ScrollArea>
               )}
+              {/* 🚀 改修: 設定ドロワーのスクロール上下フェードマスク(残量がある時のみ表示) */}
+              <div
+                aria-hidden
+                className={cn(
+                  "absolute top-0 inset-x-0 h-6 z-10 pointer-events-none bg-linear-to-b from-white to-transparent transition-opacity duration-200",
+                  drawerScrollState.top ? "opacity-100" : "opacity-0"
+                )}
+              />
+              <div
+                aria-hidden
+                className={cn(
+                  "absolute bottom-0 inset-x-0 h-10 z-10 pointer-events-none bg-linear-to-t from-white to-transparent transition-opacity duration-200",
+                  drawerScrollState.bottom ? "opacity-100" : "opacity-0"
+                )}
+              />
             </div>
           </DrawerContent>
         </Drawer>

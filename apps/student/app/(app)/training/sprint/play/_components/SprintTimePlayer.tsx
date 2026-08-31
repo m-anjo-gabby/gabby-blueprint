@@ -2,24 +2,81 @@
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Volume2, RotateCcw, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, MicOff, Square, FastForward, Loader2 } from 'lucide-react';
+import { ChevronLeft, Timer, CircleDot, ArrowRight, CheckCircle2, Headphones, Mic, MicOff, FastForward, Loader2, ChartSpline } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFeedbackConfig, getSprintTitle, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '@gabby/lib';
-import { SprintQuestion } from "@gabby/types/sprint";
-import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
+import { getFeedbackConfig, getScoreTier, getSprintTitle, resolveSprintHasLevel, extractContentWords } from '@gabby/lib';
+import { logClientEvent } from '@gabby/lib/logger/actions';
+import { SprintQuestion, SPRINT_FLOW_TIMING } from "@gabby/types/sprint";
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
+import { playStatementThenQuestion, useStopAllAudioCore, useFullscreenAudioLifecycle, useFlowGuard } from '@gabby/lib/hooks/useSprintPlaybackFlow';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
+import { useSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useSprintTimers';
+import { ExitProcessingOverlay } from './ExitProcessingOverlay';
+import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
+import { CircularProgressRing } from '@/components/common/CircularProgressRing';
+import { QuestionStepBadge, StepIndicator } from '@/components/common/QuestionStepBadge';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
   onExit?: () => void;
 }
+
+// 完了オーバーレイ用：結果先出しスタッツの数値をイーズアウトでカウントアップさせる
+function useCountUp(target: number, active: boolean, duration = 700): number {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    // active===false（value未確定＝発話評価OFF等）の間はアニメーション自体不要。
+    // 表示側（StatPreviewTile）も value===null の間は animated を参照しないため、ここでの状態リセットは不要
+    if (!active) return;
+    let raf: number;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(target * eased));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, active, duration]);
+  return value;
+}
+
+interface StatPreviewTileProps {
+  icon: React.ElementType;
+  label: string;
+  value: number | null; // null は「このセッションでは対象外」を表す（発話評価OFF等）
+  suffix?: string;
+  color: string;
+  active: boolean;
+}
+
+// タイムアップ完了オーバーレイ内の「結果先出し」プレビュー統計タイル
+const StatPreviewTile: React.FC<StatPreviewTileProps> = ({ icon: Icon, label, value, suffix, color, active }) => {
+  const animated = useCountUp(value ?? 0, active && value !== null);
+  return (
+    <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
+      <Icon size={13} strokeWidth={2.5} className={cn(color, "shrink-0")} />
+      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">{label}</span>
+      <span className="text-sm font-black text-slate-800 font-mono leading-none inline-flex items-baseline">
+        {value === null ? (
+          <span className="text-slate-400 font-normal">-</span>
+        ) : (
+          <>
+            {animated}
+            {suffix && <span className="text-[10px] font-medium text-slate-400 ml-0.5 font-sans">{suffix}</span>}
+          </>
+        )}
+      </span>
+    </div>
+  );
+};
 
 
 export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({ 
@@ -28,35 +85,36 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 }) => {
   const router = useRouter();
   const { showToast } = useToast();
-  const { showConfirm } = useConfirm();
 
   // ────────────── 🔌 Zustand ストア ──────────────
   const {
-    currentIndex,
-    questionType,
-    answerType,
-    level,
-    timeLimitSec,
-    isRecording,
+    session,
+    config,
     clearSessionProgress,
     resetStore,
-    commitAssessmentResult, 
-    commitSkipResult,        
+    commitAssessmentResult,
+    commitSkipResult,
     setIsRecording,
     incrementAssessmentCount,
     contentName,
-    isAssessmentMode, // 🚀 追加：発話評価ON/OFFフラグ
     contentMetadata,
   } = useSprintStore();
 
+  const { currentIndex } = session;
+  const { questionType, answerType, level, timeLimitSec, isAssessmentMode } = config;
+
   // ────────────── 📦 ローカル管理ステート ──────────────
-  const [secondsLeft, setSecondsLeft] = useState<number>(timeLimitSec || 60);
   const [exitLoading, setExitLoading] = useState<boolean>(false);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
+  // 🆕 直近の非idleフェーズを保持するref。2問目以降の問題切替時に発生する短い idle 区間（クッション）で
+  // 毎回「Ready」がちらつくのを防ぎ、直前のメッセージ／アイコンを表示し続けるために使用する
+  const lastActivePhaseRef = useRef<'statement' | 'question' | 'answer'>('statement');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [resultId, setResultId] = useState<string | null>(null);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState<boolean>(false);
-  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
+  // 🆕 完了オーバーレイの「結果先出し」プレビュー用。サーバー保存の成否を待たず、
+  // 保存処理に入った時点で確定しているセッション内訳をそのまま先出し表示する
+  const [previewStats, setPreviewStats] = useState<{ answered: number; assessments: number; avgScore: number; isAssessmentMode: boolean } | null>(null);
   const [assessmentVisualState, setAssessmentVisualState] = useState<'idle' | 'excellent' | 'great' | 'good' | 'fair' | 'poor'>('idle');
   
   // チャイム再生開始〜 recognition.onstart までの短い待機窓口だけ true
@@ -65,33 +123,43 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // ────────────── 音声カスタムフック ──────────────
   const { startAssessment, stopListening, timeLeft } = useWebSpeech();
-  const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
   // オーディオリソース（AudioContext / チャイム / 再生Promise）を共通フックで管理
   // マウント/アンマウント時の初期化・クリーンアップも内部で行う
-  const { playTrack: playTrackBase, playChime, stopTrack, unlockAudioContext } = useSprintAudio(stopListening);
+  // 💡 Sprintモードは再生速度変更UIを持たないため、playbackRate指定なし（常に等速）で再生する
+  const { playTrack: playTrackBase, playChime, stopTrack, unlockAudioContext, resumeStatus } = useSprintAudio(stopListening);
 
   // マイク権限の監視（SprintTimePlayer ではテスト機能は使わず、micStatus のみ参照）
   const { micStatus } = useMicPermission();
 
   const currentQuestion = questions?.[currentIndex];
-  const totalQuestions = questions?.length || 0;
+
+  // 🛠️ 音声再生失敗（代替読み上げは行わない）の直近の発生を記録するref。
+  // playStatementThenQuestion の完了直後にこれを確認し、問題文が聞こえないまま
+  // 回答フェーズへ進んでしまうのを防ぐ（該当問題はスキップして履歴からも除外する）。
+  const lastAudioErrorRef = useRef<{ text: string; audioPath: string | null; error: unknown } | null>(null);
 
   const playTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
-    return playTrackBase(text, audioPath, { playbackRate, exitLoading });
-  }, [playTrackBase, playbackRate, exitLoading]);
+    return playTrackBase(text, audioPath, {
+      exitLoading,
+      onError: (err) => { lastAudioErrorRef.current = { text, audioPath, error: err }; },
+    });
+  }, [playTrackBase, exitLoading]);
 
-  const flowIdRef = useRef<number>(0);
+  // フロー管理用の一意のカウンターID（Drill/Sprint共通のキャンセルトークンフック）
+  const { flowIdRef, invalidateFlow } = useFlowGuard();
   const skippedQuestionIdsRef = useRef<Set<string>>(new Set());
+  // 🛠️ 音声再生に失敗した問題のID。回答履歴（answered_history）から除外するために使用
+  const audioFailedQuestionIdsRef = useRef<Set<string>>(new Set());
   const isPersistedRef = useRef<boolean>(false);
-  // secondsLeft は毎秒変化するため、ref で最新値を保持してコールバック内で参照する
-  const secondsLeftRef = useRef<number>(secondsLeft);
-  useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
+  // 🆕 タイムアップ経由での確定処理かどうか。true の間は発話評価完了時の演出（結果表示ウェイト）をスキップし、即座に保存へ進む
+  const timeUpTriggeredRef = useRef<boolean>(false);
+  // 🆕 発話評価は完了したが、演出ウェイト（displayDelay）の反映待ちだった問題を、タイムアップ時に即時確定させるためのコミット関数を保持
+  const pendingCommitRef = useRef<(() => void) | null>(null);
 
   const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
 
-  const isCorpus = contentMetadata?.sprint_type === '1';
-  const hasLevel = isCorpus ? contentMetadata?.has_level ?? true : true;
+  const hasLevel = resolveSprintHasLevel(contentMetadata);
 
   const courseTitle = useMemo(() => {
     return getSprintTitle(questionType || '0', Number(level), hasLevel);
@@ -107,13 +175,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   const currentActionIndex = useMemo(() => {
     if (isSpeedMode) {
-      if (audioPhase === 'question') return 0;
       if (audioPhase === 'answer') return 1;
-      return 0;
+      return 0; // idle（初期表示）・question ともに先頭ステップ（問題文）を指す
     }
-    if (audioPhase === 'statement') return 0;
+    if (audioPhase === 'answer') return 2;
     if (audioPhase === 'question') return 1;
-    return 2;
+    return 0; // idle（初期表示）・statement ともに先頭ステップ（基本文）を指す
   }, [audioPhase, isSpeedMode]);
 
   const groupData = useMemo(() => {
@@ -133,49 +200,32 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     };
   }, [currentQuestion, questions, isSpeedMode]);
 
-  const timeRatio = useMemo(() => secondsLeft / (timeLimitSec || 60), [secondsLeft, timeLimitSec]);
-  const isWarning = timeRatio <= 0.5 && timeRatio > 0.2;
-  const isCritical = timeRatio <= 0.2;
-
-  const progressPercent = useMemo(() => {
-    if (secondsLeft <= 0 || !timeLimitSec) return 0;
-    return (secondsLeft / timeLimitSec) * 100;
-  }, [secondsLeft, timeLimitSec]);
-
-
   // 全てのオーディオ・発話を安全に即時ストップする
   // 🚀 stopListening も同時に呼び、audioSession を 'playback' に戻すことで
   // タイムアップ・スキップ・終了の全経路でマイクが確実に解放される
+  const stopAllAudioCore = useStopAllAudioCore(stopTrack, stopListening);
+
   const stopAllAudio = useCallback(() => {
-    flowIdRef.current += 1;
-    // 音声を停止
-    stopTrack();
-    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    // マイク入力を即時停止 (abort)
-    stopListening();
-    
-    // 🚀 iOS WebKitデッドロック防止:
-    // マイクの切断完了（物理解放）までの遅延を待つため、300ms のディレイの後にセッションを戻す
-    setTimeout(() => {
-      setAudioSessionPlayback();
-    }, 300);
+    invalidateFlow();
+    stopAllAudioCore();
 
     // 録音 UI 状態もリセット
     setIsAwaitingRecording(true); // 遷移中のチラつき防止のため待機中にしておく
     setIsRecording(false);
     setAudioPhase('idle');
-  }, [stopListening, setIsRecording]);
+  }, [invalidateFlow, stopAllAudioCore, setIsRecording]);
 
-  const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number) => {
+  const handlePersistAndRedirect = useCallback(async (currentSecondsLeft: number, includeCurrentOnTimeUp: boolean = false) => {
     if (isPersistedRef.current) return;
     isPersistedRef.current = true;
-    setIsSaving(true); 
+    setIsSaving(true);
 
     // 🚀 保存/リダイレクト処理に入った瞬間に再生・録音をすべて即時停止し、マイクを確実に解放する
     stopAllAudio();
 
     const storeState = useSprintStore.getState();
-    const { sprintType, contentId, sessionResults } = storeState;
+    const { sprintType, contentId } = storeState.config;
+    const { sessionResults } = storeState.session;
 
     // 4つの必須パラメータが揃っているかチェック（型ガード）
     if (!sprintType || !contentId || !questionType || !answerType) {
@@ -186,23 +236,49 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       return;
     }
 
-    const answeredCount = currentSecondsLeft <= 0 ? currentIndex : Math.min(currentIndex + 1, questions.length);
-    const slicedQuestions = questions.slice(0, answeredCount);
+    // 🆕 タイムアップ時点で回答フェーズだった問題は、includeCurrentOnTimeUp が true の場合のみ回答履歴に含める
+    // （基本文・指示文・質問文の再生中や、発話評価の録音開始前は対象外）
+    const answeredCount = currentSecondsLeft <= 0
+      ? (includeCurrentOnTimeUp ? Math.min(currentIndex + 1, questions.length) : currentIndex)
+      : Math.min(currentIndex + 1, questions.length);
+    // 🛠️ 音声再生に失敗した問題は回答履歴（answered_history）から完全に除外する
+    const slicedQuestions = questions
+      .slice(0, answeredCount)
+      .filter(q => !audioFailedQuestionIdsRef.current.has(q.question_id));
 
     const history: SprintHistoryItem[] = slicedQuestions.map((q, idx) => {
       const resultRecord = sessionResults.find(r => r.questionId === q.question_id);
       return {
         question_id: q.question_id,
         group_id: q.group_id || null,
-        seq_no: idx + 1, 
+        seq_no: idx + 1,
         is_skipped: resultRecord?.isSkipped || false,
-        assessment: resultRecord?.feedback ? {
-          total_score: resultRecord?.analysis ? Math.round(resultRecord.analysis.score * 100) : 100
+        // 🆕 結果画面のタップ時フィードバック表示に必要な詳細（summary/matches/issues）も併せて保存する
+        assessment: (resultRecord?.feedback && resultRecord.analysis) ? {
+          total_score: Math.round(resultRecord.analysis.score * 100),
+          analysis: {
+            score: resultRecord.analysis.score,
+            summary: resultRecord.analysis.summary,
+            matches: resultRecord.analysis.matches,
+            issues: resultRecord.analysis.issues,
+          },
         } : null,
       };
     });
 
-    const totalAssessments = history.filter(h => !h.is_skipped && h.assessment).length;
+    const assessedHistory = history.filter(h => !h.is_skipped && h.assessment);
+    const totalAssessments = assessedHistory.length;
+
+    // 🆕 完了オーバーレイの結果先出しプレビュー。保存API完了を待たず、確定済みの内訳をこの時点で表示に反映する
+    const previewAvgScore = totalAssessments > 0
+      ? Math.round(assessedHistory.reduce((sum, h) => sum + (h.assessment?.total_score ?? 0), 0) / totalAssessments)
+      : 0;
+    setPreviewStats({
+      answered: slicedQuestions.length,
+      assessments: totalAssessments,
+      avgScore: previewAvgScore,
+      isAssessmentMode,
+    });
 
     try {
       const res = await createSprintScoreAction({
@@ -212,7 +288,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         answer_type: answerType,
         difficulty_level: Number(level),
         time_limit_sec: timeLimitSec,
-        total_answered: answeredCount,
+        total_answered: slicedQuestions.length,
         total_assessments: totalAssessments,
         history: history,
       });
@@ -224,11 +300,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         } else {
           stopAllAudio();
           resetStore();
-          // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために250msの安全バッファを置いてから遷移する
-          const targetUrl = `/training/sprint/result/${res.data.self_sprint_id}`;
+          // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
+          const targetUrl = `/training/sprint/result/${res.data.self_sprint_id}?from=play`;
           setTimeout(() => {
             router.push(targetUrl);
-          }, 250);
+          }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
         }
       } else {
         throw new Error(res.error || "Failed to persist score history");
@@ -241,20 +317,59 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [stopAllAudio, resetStore, router, showToast, onExit, currentIndex, questions, questionType, answerType, level, timeLimitSec]);
+  }, [stopAllAudio, resetStore, router, showToast, onExit, currentIndex, questions, questionType, answerType, level, timeLimitSec, isAssessmentMode]);
 
   const handleGoToResult = useCallback(async () => {
     if (resultId) {
       await unlockAudioContext();
       stopAllAudio(); // stopListening と audioSession リセットを含む
       resetStore();
-      // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために250msの安全バッファを置いてから遷移する
+      // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
       setTimeout(() => {
-        router.push(`/training/sprint/result/${resultId}`);
-      }, 250);
+        router.push(`/training/sprint/result/${resultId}?from=play`);
+      }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
     }
   }, [resultId, router, stopAllAudio, resetStore, unlockAudioContext]);
 
+  const handleTimeUp = useCallback(() => {
+    timeUpTriggeredRef.current = true;
+    const { isRecording } = useSprintStore.getState().session;
+
+    if (isRecording) {
+      // 🆕 発話評価の録音中にタイムアップ：その時点までの認識結果で確定評価してから保存へ進む
+      // （結果は startRecordingFor の onComplete → commitAndNext 経由で確定・保存される）
+      stopListening();
+      return;
+    }
+
+    if (pendingCommitRef.current) {
+      // 🆕 発話評価は完了済みだが、結果演出（ウェイト）の反映待ちだった問題を即時確定させる
+      pendingCommitRef.current();
+      return;
+    }
+
+    // 🆕 回答フェーズ中（発話評価OFF・マイク拒否時、または録音開始前のチャイム待ちを除く）は「回答扱い」として履歴に含める
+    // 基本文・指示文・質問文の再生中は対象外のまま
+    const isBrainAnswer = micStatus === 'denied' || !isAssessmentMode;
+    const includeCurrentOnTimeUp = audioPhase === 'answer' && (isBrainAnswer || !isAwaitingRecording);
+    handlePersistAndRedirect(0, includeCurrentOnTimeUp);
+  }, [handlePersistAndRedirect, stopListening, audioPhase, isAwaitingRecording, micStatus, isAssessmentMode]);
+
+  // 制限時間のカウントダウン。0になった時点で自動保存・リダイレクトへ進む
+  const { secondsLeft, secondsLeftRef } = useSprintCountdown(timeLimitSec, handleTimeUp, clearSessionProgress);
+
+  // タイムアップ完了オーバーレイ表示中、3.5秒後に自動で結果画面へ遷移する
+  // 🆕 数値カウントダウンのテキスト表示は廃止し、CTA下の自動進行プログレスバー（アニメーション秒数と同期）で表現する
+  useAutoRedirectCountdown(showTimeUpOverlay && !!resultId, handleGoToResult);
+
+  const timeRatio = useMemo(() => secondsLeft / (timeLimitSec || 60), [secondsLeft, timeLimitSec]);
+  const isWarning = timeRatio <= 0.5 && timeRatio > 0.2;
+  const isCritical = timeRatio <= 0.2;
+
+  const progressPercent = useMemo(() => {
+    if (secondsLeft <= 0 || !timeLimitSec) return 0;
+    return (secondsLeft / timeLimitSec) * 100;
+  }, [secondsLeft, timeLimitSec]);
 
   // 評価コールバックを含む純粋な録音開始関数
   // secondsLeft は ref 経由で参照（毎秒の再生成を防ぎ、runSprintFlow の安定性を保つ）
@@ -268,12 +383,12 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     if (!targetText) return;
 
-    const cleanWords = targetText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(" ").filter(Boolean);
+    const contentWords = extractContentWords(targetText);
     const questionId = question.question_id;
 
     startAssessment(
       targetText,
-      cleanWords,
+      contentWords,
       (result) => {
         if (skippedQuestionIdsRef.current.has(questionId)) return;
 
@@ -281,27 +396,32 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         setIsAwaitingRecording(false);
         setIsRecording(false);
 
-        const score = result.score;
-        let visualState: 'idle' | 'excellent' | 'great' | 'good' | 'fair' | 'poor' = 'idle';
-        if (score >= 0.90) visualState = 'excellent';
-        else if (score >= 0.80) visualState = 'great';
-        else if (score >= 0.60) visualState = 'good';
-        else if (score >= 0.30) visualState = 'fair';
-        else visualState = 'poor';
+        const visualState = getScoreTier(result.score);
 
         const commitAndNext = () => {
+          pendingCommitRef.current = null;
           setAssessmentVisualState('idle');
           incrementAssessmentCount();
           const { isLast } = commitAssessmentResult(questionId, getFeedbackConfig(result.score), result);
-          if (isLast) {
-            showToast("すべての問題を消化しました！スプリント完了です。", "success");
-            handlePersistAndRedirect(secondsLeftRef.current);
+          if (isLast || timeUpTriggeredRef.current) {
+            if (isLast) showToast("すべての問題を消化しました！スプリント完了です。", "success");
+            // 🆕 タイムアップ経由の確定時は、seconds=0・現在問題を含める指定で保存へ進む
+            handlePersistAndRedirect(timeUpTriggeredRef.current ? 0 : secondsLeftRef.current, timeUpTriggeredRef.current);
           }
         };
 
+        if (timeUpTriggeredRef.current) {
+          // 🆕 タイムアップ経由の確定：結果演出（ウェイト）をスキップして即座に保存へ進む
+          commitAndNext();
+          return;
+        }
+
         setAssessmentVisualState(visualState);
-        // テンポ維持のため、Excellent/Great/Goodは1000ms、Fair/Poorは800msのウェイトを置いて次へ進む
-        const displayDelay = (visualState === 'excellent' || visualState === 'great' || visualState === 'good') ? 1000 : 800;
+        // テンポ維持のため、スコアの高低でウェイトを置いて次へ進む
+        const displayDelay = (visualState === 'excellent' || visualState === 'great' || visualState === 'good')
+          ? SPRINT_FLOW_TIMING.sprint.visualFeedbackHoldGoodMs
+          : SPRINT_FLOW_TIMING.sprint.visualFeedbackHoldPoorMs;
+        pendingCommitRef.current = commitAndNext;
         setTimeout(() => { commitAndNext(); }, displayDelay);
       },
       {
@@ -317,21 +437,61 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     );
   }, [isSpeedMode, answerType, setIsRecording, startAssessment, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect, isAssessmentMode]);
 
+  /**
+   * 問題文（statement/question）の音声が再生できなかった場合のハンドラ。
+   * 代替読み上げ（TTSフォールバック）は行わず、ユーザーに通知した上でこの問題を
+   * スキップし、回答履歴（answered_history）からも完全に除外する。
+   */
+  const handleAudioFailureSkip = useCallback(async (
+    question: SprintQuestion,
+    info: { text: string; audioPath: string | null; error: unknown },
+  ) => {
+    audioFailedQuestionIdsRef.current.add(question.question_id);
+    showToast('この問題は音声を再生できないため、スキップしました。', 'error');
+    logClientEvent({
+      service: 'student',
+      event: 'sprint:audio_playback_failed',
+      message: `Sprint audio unavailable: ${question.question_id}`,
+      payload: {
+        contentId: config.contentId,
+        questionId: question.question_id,
+        mode: 'sprint',
+        text: info.text,
+        audioPath: info.audioPath,
+        error: info.error instanceof Error ? info.error.message : String(info.error),
+      },
+    }).catch(() => { /* ログ送信自体の失敗はユーザー体験に影響させない */ });
+
+    await unlockAudioContext();
+    stopAllAudio();
+
+    const { isLast } = commitSkipResult(question.question_id);
+    if (isLast) {
+      handlePersistAndRedirect(secondsLeftRef.current);
+    }
+  }, [showToast, config.contentId, unlockAudioContext, stopAllAudio, commitSkipResult, handlePersistAndRedirect, secondsLeftRef]);
+
   // ★ 音声再生→チャイム→録音を直接呼び出す直列フロー（useEffect 間接トリガーを廃止）
   const runSprintFlow = useCallback(async (question: SprintQuestion, currentFlowId: number) => {
     if (!question) return;
     try {
-      if (question.statement_en) {
-        setAudioPhase('statement');
-        await playTrack(question.statement_en, question.statement_voice);
-        if (flowIdRef.current !== currentFlowId) return;
-        await new Promise(r => setTimeout(r, 150)); // 🚀 150ms に短縮
-        if (flowIdRef.current !== currentFlowId) return;
-      }
+      lastAudioErrorRef.current = null;
+      const { cancelled } = await playStatementThenQuestion(question, {
+        playTrack,
+        isCancelled: () => flowIdRef.current !== currentFlowId,
+        onStatementPhase: () => setAudioPhase('statement'),
+        onQuestionPhase: () => setAudioPhase('question'),
+      });
+      if (cancelled) return;
 
-      setAudioPhase('question');
-      await playTrack(question.question_en, question.question_voice);
-      if (flowIdRef.current !== currentFlowId) return;
+      if (lastAudioErrorRef.current) {
+        const failedInfo = lastAudioErrorRef.current;
+        lastAudioErrorRef.current = null;
+        if (flowIdRef.current === currentFlowId) {
+          await handleAudioFailureSkip(question, failedInfo);
+        }
+        return;
+      }
 
       // answer フェーズ表示 + 待機フラグ ON（isRecording=false の間は MicOff で待機中を示す）
       setAudioPhase('answer');
@@ -343,7 +503,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       }
 
       setIsAwaitingRecording(true);
-      await new Promise(r => setTimeout(r, 200)); // 🚀 200ms に短縮（物理無音時間が200msあるためiOSでも競合なし）
+      await new Promise(r => setTimeout(r, SPRINT_FLOW_TIMING.sprint.preChimeGapMs)); // 物理無音時間があるためiOSでも競合なし
       if (flowIdRef.current !== currentFlowId) return;
 
       // チャイム再生と録音開始（マイクアクティブ化）を完全に並行して同時に実行
@@ -355,17 +515,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         setAudioPhase('answer');
       }
     }
-  }, [playTrack, playChime, startRecordingFor, isAssessmentMode]);
-
-  // 手動録音ボタン用（マイクボタンタップ時）
-  const handleStartRecord = useCallback(async () => {
-    if (!currentQuestion || !isAssessmentMode) return;
-    await unlockAudioContext();
-    setAudioPhase('answer');
-    setIsAwaitingRecording(true);
-    playChime();
-    startRecordingFor(currentQuestion);
-  }, [currentQuestion, playChime, startRecordingFor, unlockAudioContext, isAssessmentMode]);
+  }, [playTrack, playChime, startRecordingFor, isAssessmentMode, handleAudioFailureSkip, flowIdRef]);
 
   const handleStopRecord = useCallback(() => {
     if (!isAssessmentMode) return;
@@ -390,58 +540,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, stopAllAudio, unlockAudioContext]);
 
   // ────────────── 🔄 副作用 (Effects) ──────────────
-
-  // 全体の残り制限時間カウント
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (secondsLeft > 0) {
-      interval = setInterval(() => {
-        setSecondsLeft((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => { if (interval) clearInterval(interval); };
-  }, [secondsLeft]);
-
-  // タイムアップ判定
-  useEffect(() => {
-    if (secondsLeft <= 0) {
-      handlePersistAndRedirect(0);
-    }
-  }, [secondsLeft, handlePersistAndRedirect]);
-
-  // タイムアップ完了時の自動遷移とカウントダウン
-  useEffect(() => {
-    if (showTimeUpOverlay && resultId) {
-      setRedirectCountdown(3);
-      
-      const interval = setInterval(() => {
-        setRedirectCountdown((prev) => {
-          if (prev === null || prev <= 0) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      const timer = setTimeout(() => {
-        handleGoToResult();
-      }, 3500);
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timer);
-      };
-    }
-  }, [showTimeUpOverlay, resultId, handleGoToResult]);
-
-  // ストアの初期値同期およびクリーンアップ
-  useEffect(() => {
-    setSecondsLeft(timeLimitSec);
-    return () => {
-      clearSessionProgress();
-    };
-  }, [timeLimitSec, clearSessionProgress]);
+  // 制限時間カウントダウン・タイムアップ後の結果画面自動遷移は useSprintCountdown / useAutoRedirectCountdown へ集約済み
 
   // インデックス（問題ID）変更時にフローを最初から走らせる
   useEffect(() => {
@@ -452,8 +551,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const currentFlowId = flowIdRef.current;
     (async () => {
-      // 🚀 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るために 600ms、2問目以降は 300ms 待つ
-      const initialDelay = currentIndex === 0 ? 600 : 300;
+      // 🚀 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るため、2問目以降より長く待つ
+      const initialDelay = currentIndex === 0
+        ? SPRINT_FLOW_TIMING.shared.initialCushionFirstMs
+        : SPRINT_FLOW_TIMING.shared.initialCushionSubsequentMs;
       await new Promise(resolve => setTimeout(resolve, initialDelay));
       if (flowIdRef.current !== currentFlowId) return;
       await runSprintFlow(currentQuestion, currentFlowId);
@@ -464,42 +565,20 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving, exitLoading]);
 
   // DOM/オーディオの強制クリーンアップおよびiOSオーディオセッション固定化
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    
-    // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
-    
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      stopAllAudio();
-      setIsRecording(false);
-      stopListening();
-      // 🚀 アンマウント（終了）時に 'playback' に戻してマイクを完全に解放
-      setAudioSessionPlayback();
-    };
-  }, [stopAllAudio, setIsRecording, stopListening]);
+  // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
+  useFullscreenAudioLifecycle(stopAllAudio);
 
-  const handleExit = async () => {
-    const ok = await showConfirm(
-      "Quit Sprint?", 
-      "進行中のスプリントを終了して戻りますか？（スコアは記録されません）", 
-      { variant: 'warning', isModal: false }
-    );
-
-    if (!ok) {
-      return;
-    }
-
-    // 🚀 終了処理ローディング表示をオンにし、即時にマイク録音・再生を強制クリーンアップ
-    setExitLoading(true);
-    stopAllAudio();
-
-    // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために1000ms（1秒）の安全バッファを置いてから戻る
-    setTimeout(() => {
-      onExit?.();
-    }, 1000);
-  };
+  // 🚀 終了確認→ローディング表示→強制クリーンアップ→iOSのマイク解放待ちバッファ→
+  // 実際の離脱、という一連の流れは Word/Sprint 共通のためフック化（進捗同期は不要なため sync 未指定）
+  const handleExit = useExitConfirmFlow({
+    confirmTitle: "Quit Sprint?",
+    confirmMessage: "進行中のスプリントを終了して戻りますか？（スコアは記録されません）",
+    confirmVariant: 'warning',
+    setLoading: setExitLoading,
+    cleanup: stopAllAudio,
+    bufferMs: SPRINT_FLOW_TIMING.shared.exitSafetyBufferMs,
+    onExit: () => onExit?.(),
+  });
 
   // HUDはReady段階からセッション終了まで常に表示し、メッセージと活性制御だけを切り替える
   const showRecordingHud = true;
@@ -511,6 +590,20 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
   // 🚀 追加：回答フェーズ以外（再生中等）の時は、発話評価OFFモード時のスキップボタンを非活性（disabled）に倒す制御フラグ[cite: 1]
   const isBrainActionDisabled = audioPhase !== 'answer';
+
+  // 🆕 直前の非idleフェーズを記録（idle区間中のメッセージ表示継続に使用）
+  useEffect(() => {
+    if (audioPhase !== 'idle') {
+      lastActivePhaseRef.current = audioPhase;
+    }
+  }, [audioPhase]);
+
+  // 🆕 「Ready」表示は1問目の開始前のみとし、2問目以降のidle区間（問題切替クッション）では
+  // 直前のメッセージ／アイコンを維持したまま次のフェーズへ切り替えることで、
+  // Speedモード等での高頻度な「Ready」フラッシュ（ノイズ）を抑止する
+  const displayPhase = (audioPhase === 'idle' && currentIndex > 0)
+    ? lastActivePhaseRef.current
+    : audioPhase;
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
@@ -563,7 +656,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               {/* 右端に完全固定された秒数表示レイヤー（バーの重なり度合いで文字色を動的に変化） */}
               <div className="absolute inset-y-0 right-3 flex items-center select-none pointer-events-none z-20">
                 <div className={cn(
-                  "flex items-center gap-1 font-mono text-[11px] font-black tracking-tight tabular-nums transition-colors duration-300",
+                  "flex items-center gap-1 font-mono text-xs font-black tracking-tight tabular-nums transition-colors duration-300 whitespace-nowrap",
                   progressPercent >= 90
                     ? "text-white"
                     : isCritical
@@ -587,29 +680,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           {/* ②-A: 問題番号・ステップ表示 */}
           <div className="w-full max-w-xl mx-auto flex flex-col gap-6 shrink-0 pb-4">
             {/* 問題番号表示 */}
-            <div className="flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600 self-start">
-              <div className="flex items-center gap-2.5 px-3 py-1.5">
-                <span className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none">Question</span>
-                <span className="text-sm font-black text-white font-mono leading-none">
-                  {isSpeedMode ? currentIndex + 1 : groupData.uniqueGroupIndex}
-                </span>
-              </div>
-
-              {isSpeedMode ? (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
-                  <span className="text-[10px] font-black tracking-tight text-slate-700">
+            <QuestionStepBadge
+              className="self-start"
+              questionNumber={isSpeedMode ? currentIndex + 1 : groupData.uniqueGroupIndex}
+              rightSlot={
+                isSpeedMode ? (
+                  <span className="text-[11px] font-black tracking-tight text-slate-700 whitespace-nowrap">
                     {answerType === '1' ? 'NOで回答' : 'YESで回答'}
                   </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Step</span>
-                  <span className="text-xs font-bold text-indigo-600 font-mono leading-none">
-                    {groupData.currentInGroup + 1} <span className="text-slate-300 mx-0.5">/</span> {groupData.totalInGroup}
-                  </span>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <StepIndicator current={groupData.currentInGroup + 1} total={groupData.totalInGroup} />
+                )
+              }
+            />
 
             {/* 改修箇所：洗練されたカプセル・コネクト型のステッププログレスバー表示 */}
             <div className="w-full flex justify-center pt-2 select-none">
@@ -629,7 +712,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                             ? "bg-indigo-50 border-indigo-100 text-indigo-600 font-bold" 
                             : "bg-white border-slate-200 text-slate-400 font-medium"
                       )}>
-                        <span className="text-[11px] sm:text-xs tracking-tight whitespace-nowrap">
+                        <span className="text-xs sm:text-sm tracking-tight whitespace-nowrap">
                           {step}
                         </span>
                       </div>
@@ -659,42 +742,42 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 <div
                   className={cn(
                     "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
-                    audioPhase === 'idle'
+                    displayPhase === 'idle'
                       ? "text-slate-300"
-                      : audioPhase === 'answer'
+                      : displayPhase === 'answer'
                         ? (isBrainAnswerMode ? "text-rose-500" : "text-indigo-500")
                         : "text-indigo-600"
                   )}
                 >
-                  {audioPhase === 'answer' ? (
+                  {displayPhase === 'answer' ? (
                     isBrainAnswerMode ? (
                       <MicOff className="w-full h-full" strokeWidth={2.5} />
                     ) : (
                       <CircleDot className="w-full h-full" strokeWidth={2.5} />
                     )
-                  ) : audioPhase === 'idle' ? (
+                  ) : displayPhase === 'idle' ? (
                     <CircleDot className="w-full h-full" strokeWidth={2.5} />
                   ) : (
                     <Headphones className="w-full h-full" strokeWidth={2.5} />
                   )}
                 </div>
                 <h2 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight whitespace-nowrap select-none">
-                  {audioPhase === 'statement' && "基本文を再生中"}
-                  {audioPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
-                  {audioPhase === 'answer' && (
+                  {displayPhase === 'statement' && "基本文を再生中"}
+                  {displayPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
+                  {displayPhase === 'answer' && (
                     isBrainAnswerMode ? "脳内で回答しましょう" : "発話して回答しましょう"
                   )}
-                  {audioPhase === 'idle' && "Ready"}
+                  {displayPhase === 'idle' && "Ready"}
                 </h2>
               </div>
               {/* サブテキスト表示（iOSでもメッセージを表示するように条件をシンプル化） */}
               <p className={cn(
                 "text-xs sm:text-sm font-semibold text-slate-400 transition-opacity duration-150",
-                audioPhase === 'answer' ? "opacity-100" : "opacity-0 select-none pointer-events-none"
+                displayPhase === 'answer' ? "opacity-100" : "opacity-0 select-none pointer-events-none"
               )}>
-                {isBrainAnswerMode && audioPhase === 'answer'
+                {isBrainAnswerMode && displayPhase === 'answer'
                   ? (!isAssessmentMode ? "※発話評価をOFFにしています" : "※マイク権限が拒否されています")
-                  : "※開始音の後に発話してください"} 
+                  : "※開始音の後に発話してください"}
                   {/* 🚀 iOS判定を削除し、どのデバイスでも開始音のアナウンスが流れるように統一 */}
               </p>
             </div>
@@ -741,9 +824,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                       // 通常の録音中／待機中／演出中のHUD
                       <>
                         {(() => {
-                          const RADIUS = 36;
-                          const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-                          
                           const isExcellent = assessmentVisualState === 'excellent';
                           const isGreat = assessmentVisualState === 'great';
                           const isGood = assessmentVisualState === 'good';
@@ -774,70 +854,61 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
                           const MAX_TIME = 10;
                           const progress = isVisualizing ? 1 : isControlDisabled ? 1 : (Math.max(0, Math.min(timeLeft, MAX_TIME)) / MAX_TIME);
-                          const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
                           return (
-                            <div className="relative flex items-center justify-center w-24 h-24 select-none">
-                              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 92 92">
-                                <circle cx="46" cy="46" r={RADIUS} className={cn(trackColor, "transition-colors duration-300")} strokeWidth="5" fill={fillColor} />
-                                <motion.circle
-                                  cx="46"
-                                  cy="46"
-                                  r={RADIUS}
-                                  className={strokeColor}
-                                  strokeWidth="5"
-                                  fill="transparent"
-                                  strokeDasharray={CIRCUMFERENCE}
-                                  animate={{ strokeDashoffset }}
-                                  transition={{
-                                    duration: isVisualizing ? 0.3 : isControlDisabled ? 0 : (timeLeft === MAX_TIME ? 0 : 1),
-                                    ease: isVisualizing ? "easeOut" : "linear"
-                                  }}
-                                  strokeLinecap="round"
-                                />
-                              </svg>
-                              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                {isVisualizing ? (
-                                  <motion.div
-                                    initial={{ scale: 0.5, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="flex flex-col items-center justify-center"
-                                  >
-                                    <span className={cn(
-                                      "text-[10px] font-black tracking-normal uppercase leading-none",
-                                      isExcellent ? "text-emerald-600" : 
-                                      isGreat ? "text-blue-600" : 
-                                      isGood ? "text-amber-600" : 
-                                      isFair ? "text-orange-600" : "text-rose-600"
-                                    )}>
-                                      {isExcellent ? "Excellent" : 
-                                       isGreat ? "Great!" : 
-                                       isGood ? "Good!" : 
-                                       isFair ? "Fair" : "Poor"}
-                                    </span>
-                                  </motion.div>
-                                ) : isControlDisabled ? (
-                                  <>
-                                    <span className="text-3xl font-black font-mono text-slate-300 leading-none">
-                                      --
-                                    </span>
-                                    <div className="flex items-center gap-1 mt-0.5 text-slate-400">
-                                      <MicOff size={10} className="text-slate-400" />
-                                      <span className="text-[9px] font-black uppercase tracking-wider leading-none">WAIT</span>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span className="text-3xl font-black font-mono text-rose-600 leading-none">
-                                      {timeLeft}
-                                    </span>
-                                    <div className="flex items-center gap-1 mt-0.5 text-rose-400">
-                                      <Mic size={10} fill="currentColor" className="animate-pulse" />
-                                      <span className="text-[9px] font-black uppercase tracking-wider leading-none">REC</span>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
+                            <CircularProgressRing
+                              size={96}
+                              viewBoxSize={92}
+                              radius={36}
+                              strokeWidth={5}
+                              progress={progress}
+                              trackClassName={cn(trackColor, "transition-colors duration-300")}
+                              strokeClassName={strokeColor}
+                              trackFill={fillColor}
+                              transitionDuration={isVisualizing ? 0.3 : isControlDisabled ? 0 : (timeLeft === MAX_TIME ? 0 : 1)}
+                              transitionEase={isVisualizing ? "easeOut" : "linear"}
+                              className="select-none"
+                            >
+                              {isVisualizing ? (
+                                <motion.div
+                                  initial={{ scale: 0.5, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  className="flex flex-col items-center justify-center"
+                                >
+                                  <span className={cn(
+                                    "text-[10px] font-black tracking-normal uppercase leading-none",
+                                    isExcellent ? "text-emerald-600" :
+                                    isGreat ? "text-blue-600" :
+                                    isGood ? "text-amber-600" :
+                                    isFair ? "text-orange-600" : "text-rose-600"
+                                  )}>
+                                    {isExcellent ? "Excellent" :
+                                     isGreat ? "Great!" :
+                                     isGood ? "Good!" :
+                                     isFair ? "Fair" : "Poor"}
+                                  </span>
+                                </motion.div>
+                              ) : isControlDisabled ? (
+                                <>
+                                  <span className="text-3xl font-black font-mono text-slate-300 leading-none">
+                                    --
+                                  </span>
+                                  <div className="flex items-center gap-1 mt-0.5 text-slate-400">
+                                    <MicOff size={10} className="text-slate-400" />
+                                    <span className="text-[9px] font-black uppercase tracking-wider leading-none">WAIT</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-3xl font-black font-mono text-rose-600 leading-none">
+                                    {timeLeft}
+                                  </span>
+                                  <div className="flex items-center gap-1 mt-0.5 text-rose-400">
+                                    <Mic size={10} fill="currentColor" className="animate-pulse" />
+                                    <span className="text-[9px] font-black uppercase tracking-wider leading-none">REC</span>
+                                  </div>
+                                </>
+                              )}
+                            </CircularProgressRing>
                           );
                         })()}
 
@@ -889,32 +960,41 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         </div>
       </main>
 
-      {/* 🚀 終了処理中のローディングオーバーレイ */}
-      {exitLoading && (
-        <div className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300">
-          <div className="text-center space-y-4 animate-in zoom-in-95 duration-200">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto" strokeWidth={2.5} />
-            <div className="space-y-1">
-              <h3 className="text-sm font-black text-slate-800 tracking-tight">終了処理を行っています</h3>
-              <p className="text-[11px] text-slate-400 font-medium">マイクの接続を解除しています。少しお待ちください...</p>
-            </div>
-          </div>
-        </div>
-      )}
+      <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
 
-      {/* 統合された完了レイヤー */}
+      <ExitProcessingOverlay visible={exitLoading} />
+
+      {/* 統合された完了レイヤー：結果先出しプレビュー＋自動進行プログレスバー型 */}
       {(isSaving || showTimeUpOverlay) && (
-        <div 
-          className="absolute inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300 cursor-pointer"
+        <div
+          className="absolute inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300 cursor-pointer"
           onClick={showTimeUpOverlay ? handleGoToResult : undefined}
         >
-          <div className="w-full max-w-xs text-center space-y-6 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
-            <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 shadow-sm text-indigo-600">
-              {isSaving ? (
-                <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
-              ) : (
-                <CheckCircle2 className="w-7 h-7 text-indigo-600" strokeWidth={2.2} />
-              )}
+          {/* shadcn Dialog相当：暗いスクリムの上に浮く独立したモーダルカード（裏のプレイ画面は透けて見える） */}
+          <div className="w-full max-w-xs bg-white rounded-[32px] border border-white/60 shadow-2xl p-6 sm:p-7 text-center space-y-5 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
+            {/* アイコンはスピナー→チェックへ共有layoutIdで滑らかに変形させる */}
+            <div className="relative w-16 h-16 mx-auto">
+              <AnimatePresence mode="popLayout" initial={false}>
+                {isSaving ? (
+                  <motion.div
+                    key="saving-icon"
+                    layoutId="sprint-completion-icon"
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute inset-0 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm text-indigo-600"
+                  >
+                    <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="done-icon"
+                    layoutId="sprint-completion-icon"
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute inset-0 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm text-indigo-600"
+                  >
+                    <CheckCircle2 className="w-7 h-7" strokeWidth={2.2} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="space-y-1.5">
@@ -922,16 +1002,44 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 {isSaving ? "スプリントの記録を保存中" : "スプリント完了"}
               </h3>
               <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[220px] mx-auto">
-                {isSaving 
-                  ? "データを登録しています..." 
-                  : redirectCountdown !== null
-                    ? `${redirectCountdown}秒後に自動で結果画面へ遷移します`
-                    : "今回の成果を結果画面で確認しましょう。"}
+                {isSaving ? "今回の成果を集計しています..." : "今回の成果はこちらです"}
               </p>
             </div>
 
+            {/* 🆕 結果先出しスタッツプレビュー：保存API完了を待たず、確定済みの内訳をその場でカウントアップ表示する */}
+            {previewStats && (
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 py-1 select-none">
+                <StatPreviewTile
+                  icon={CheckCircle2}
+                  label="回答"
+                  value={previewStats.answered}
+                  active
+                  color="text-indigo-500"
+                />
+                {previewStats.isAssessmentMode && (
+                  <>
+                    <StatPreviewTile
+                      icon={Mic}
+                      label="発話"
+                      value={previewStats.assessments}
+                      active
+                      color="text-rose-500"
+                    />
+                    <StatPreviewTile
+                      icon={ChartSpline}
+                      label="平均スコア"
+                      value={previewStats.assessments > 0 ? previewStats.avgScore : null}
+                      suffix="/100"
+                      active
+                      color="text-amber-500"
+                    />
+                  </>
+                )}
+              </div>
+            )}
+
             <div className={cn(
-              "transition-all duration-500 transform",
+              "space-y-2.5 transition-all duration-500 transform",
               showTimeUpOverlay ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
             )}>
               <button
@@ -947,6 +1055,19 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 <span>結果を確認する</span>
                 <ArrowRight size={14} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
               </button>
+
+              {/* 自動遷移の演出：テキストカウントダウンの代わりに薄い自動進行バーで示す */}
+              <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                {showTimeUpOverlay && (
+                  <motion.div
+                    key={resultId}
+                    className="h-full bg-indigo-300 rounded-full"
+                    initial={{ width: '100%' }}
+                    animate={{ width: '0%' }}
+                    transition={{ duration: 3.5, ease: 'linear' }}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>

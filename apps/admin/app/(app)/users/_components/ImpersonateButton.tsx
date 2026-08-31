@@ -44,7 +44,12 @@ export function ImpersonateButton({ user }: Props) {
     try {
       const result = await startImpersonation(user.id, reason);
       if (result.success && result.url) {
-        window.open(result.url, '_blank', 'noopener,noreferrer');
+        // ユーザー種別ごとに固定のウィンドウ名を指定し、同一種別への連続代理ログインは
+        // 既存タブを再利用させる（生徒⇔コーチは別タブで共存可能なまま維持する）。
+        // window.opener は意図的に切り離さない。切り離すと別オリジンの生徒／コーチポータルを
+        // 名前指定で再ナビゲートする権限（allowed to navigate）自体が失われ、2人目以降の
+        // 代理ログインでブラウザにナビゲーションを拒否されるため（tabnabbing対策との両立不可）。
+        window.open(result.url, `impersonate-${user.user_type}`);
         showToast('代理ログイン用のタブを開きました', 'success');
         handleOpenChange(false);
       } else {

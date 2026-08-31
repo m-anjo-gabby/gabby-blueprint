@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Bookmark, ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
+import { PlaybackRateControl } from '@/components/common/PlaybackRateControl';
 import { cn } from "@/lib/utils";
 
 interface WordControlsProps {
@@ -56,9 +57,6 @@ export const WordControls: React.FC<WordControlsProps> = ({
   // 手動再生中のみくるくる表示を出すための判定（自動再生中はステータス表示を優先するため）
   const isManualPlaying = isPlaying && !isAutoPlaying;
 
-  // 選択可能な再生速度の選択肢
-  const AVAILABLE_RATES = [0.8, 1.0, 1.2, 1.5];
-
   // --- 共通スタイル定義 ---
   const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50";
   // 💡 ポップオーバーが枠外に突き出るため overflow-hidden から overflow-visible に調整
@@ -67,14 +65,6 @@ export const WordControls: React.FC<WordControlsProps> = ({
 
   return (
     <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2 relative">
-      
-      {/* 外側タップでポップオーバーを閉じるための全画面透過バックドロップ */}
-      {isRateMenuOpen && (
-        <div 
-          className="fixed inset-0 z-30 cursor-default" 
-          onClick={() => setIsRateMenuOpen(false)} 
-        />
-      )}
 
       {/* 1. ステータス・インジケーター（録音中や再生中の状態表示） */}
       <div className="h-6 flex items-center justify-center">
@@ -165,62 +155,14 @@ export const WordControls: React.FC<WordControlsProps> = ({
         <div className={cn("h-full bg-slate-50 border-slate-200", unitBase)}>
           
           {/* ⏱️ 再生速度セクション（ポップオーバー開閉ボタン） */}
-          <div className="h-full relative shrink-0 overflow-visible">
-            <button
-              onClick={() => !isInteractionDisabled && setIsRateMenuOpen(!isRateMenuOpen)}
-              disabled={isInteractionDisabled}
-              className={cn(
-                splitLeftBase,
-                playbackRate !== 1.0 
-                  ? "bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700 active:bg-indigo-800" 
-                  : "text-slate-400 border-slate-200 hover:bg-slate-100 active:bg-slate-200"
-              )}
-            >
-              <span className="text-[10px] font-black leading-none">{playbackRate.toFixed(1)}</span>
-              <span className={cn(
-                "text-[10px] font-bold uppercase tracking-tighter",
-                playbackRate !== 1.0 ? "opacity-90" : "opacity-70"
-              )}>Rate</span>
-            </button>
-
-            {/* ✨ Framer Motion ポップオーバーメニュー（スプリントドリルと同一の共通UIデザイン） */}
-            <AnimatePresence>
-              {isRateMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                  animate={{ opacity: 1, y: -10, scale: 1 }}
-                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                  transition={{ duration: 0.12, ease: "easeOut" }}
-                  className="absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-slate-200/90 shadow-2xl rounded-2xl p-1.5 min-w-[80px] flex flex-col gap-1 z-50 mb-1"
-                >
-                  {/* ツールチップのトゲ（矢印） */}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2.5 h-2.5 bg-white border-b border-r border-slate-200 rotate-45" />
-
-                  {AVAILABLE_RATES.map((rate) => {
-                    const isSelected = playbackRate === rate;
-                    return (
-                      <button
-                        key={rate}
-                        onClick={() => {
-                          onChangePlaybackRate(rate);
-                          setIsRateMenuOpen(false);
-                        }}
-                        className={cn(
-                          "w-full px-2.5 py-1.5 text-xs font-black font-mono rounded-xl transition-all flex items-center justify-between gap-2 cursor-pointer",
-                          isSelected 
-                            ? "bg-indigo-50 text-indigo-600" 
-                            : "text-slate-600 hover:bg-slate-50 hover:text-indigo-500"
-                        )}
-                      >
-                        <span>{rate.toFixed(1)}x</span>
-                        {isSelected && <Check size={12} strokeWidth={3} className="text-indigo-600 shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <PlaybackRateControl
+            playbackRate={playbackRate}
+            onChangePlaybackRate={onChangePlaybackRate}
+            isOpen={isRateMenuOpen}
+            onOpenChange={setIsRateMenuOpen}
+            disabled={isInteractionDisabled}
+            variant="word"
+          />
 
           {/* 音声再生セクション */}
           <button

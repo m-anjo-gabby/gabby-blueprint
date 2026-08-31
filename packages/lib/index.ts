@@ -1,5 +1,6 @@
 export * from './proxy-base';
 export * from './assessment/native-speech';
+export * from './assessment/wordClassification';
 export * from './content/ui';
 export * from './date/date';
 export * from './navigation/student-path';
