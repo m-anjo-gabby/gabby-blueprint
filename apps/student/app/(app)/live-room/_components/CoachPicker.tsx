@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, User, Video } from 'lucide-react';
+import { ArrowRight, ChevronLeft, User } from 'lucide-react';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import type { LiveSessionCoachOption } from '@gabby/types/liveSessionRoom';
 
@@ -11,36 +11,44 @@ interface Props {
 
 export function CoachPicker({ coaches }: Props) {
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-5 py-8 px-4">
-      <div className="px-1">
-        <h1 className="text-lg font-black text-slate-800">ライブセッション</h1>
-        <p className="text-xs text-slate-400 mt-1">レッスンを開始するコーチを選択してください</p>
-      </div>
+    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
+      <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            href="/dashboard"
+            className="p-2 -ml-2 hover:bg-slate-100 rounded-2xl transition-all active:scale-90 text-slate-400 shrink-0"
+          >
+            <ChevronLeft size={24} />
+          </Link>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">ライブセッション</h1>
+        </div>
 
-      <div className="space-y-3">
+        <p className="text-[13px] text-slate-500">レッスンを開始する専属コーチを選択してください。</p>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 bg-slate-50/50 space-y-2">
         {coaches.map((coach) => {
           const iconUrl = getProfileIconUrl(coach.coachIconPath);
           return (
             <Link
               key={coach.coachId}
               href={`/live-room/${coach.coachId}`}
-              className="flex items-center gap-4 bg-white border border-slate-100 rounded-[24px] px-5 py-4 shadow-sm hover:bg-slate-50/80 hover:border-slate-200 transition-all group active:scale-[0.99]"
+              className="flex items-center gap-3.5 px-3.5 py-3.5 bg-white rounded-[24px] border border-slate-100 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all group"
             >
-              <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center text-slate-400 shrink-0">
+              <div className="w-12 h-12 rounded-full bg-rose-50 overflow-hidden flex items-center justify-center text-rose-400 shrink-0">
                 {iconUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={iconUrl} alt={coach.coachName} className="w-full h-full object-cover" />
                 ) : (
-                  <User size={22} />
+                  <User size={20} />
                 )}
               </div>
-              <div className="flex-1">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-rose-600 mb-0.5">Live Session</p>
-                <p className="text-sm font-black text-slate-700">{coach.coachName} コーチ</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-black text-slate-800 truncate">{coach.coachName} コーチ</p>
+                <p className="text-[13px] text-slate-500 truncate mt-0.5">タップしてビデオレッスンを開始</p>
               </div>
-              <div className="flex items-center gap-2 text-rose-500 shrink-0">
-                <Video size={16} />
-                <ArrowRight size={16} className="text-slate-300 group-hover:text-rose-600 group-hover:translate-x-0.5 transition-all" />
+              <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-rose-50 group-hover:text-rose-600 transition-all shrink-0">
+                <ArrowRight size={15} strokeWidth={2.5} />
               </div>
             </Link>
           );

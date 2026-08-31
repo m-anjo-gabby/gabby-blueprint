@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ArrowLeft,
   ArrowRight,
+  ChevronLeft,
   Maximize2,
   Mic,
   MicOff,
@@ -110,22 +110,26 @@ export function LiveSessionRoomView({ access }: Props) {
 
   if (phase === 'preview') {
     return (
-      <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[600px] w-full max-w-lg mx-auto rounded-[32px] bg-slate-900 overflow-hidden shadow-2xl">
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center gap-3">
-          <Link
-            href="/live-room"
-            className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <ArrowLeft size={16} />
-          </Link>
-          <div>
-            <p className="text-sm font-bold text-white">{access.peerName} コーチとのレッスン</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">カメラとマイクを確認してから参加してください</p>
+      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
+        <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link
+              href="/live-room"
+              className="p-2 -ml-2 hover:bg-slate-100 rounded-2xl transition-all active:scale-90 text-slate-400 shrink-0"
+            >
+              <ChevronLeft size={24} />
+            </Link>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">
+              {access.peerName} コーチとのレッスン
+            </h1>
           </div>
-        </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center p-5 gap-4">
-          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-800">
+          <p className="text-[13px] text-slate-500">カメラとマイクを確認してから参加してください。</p>
+        </header>
+
+        <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center bg-slate-50/50 p-5 sm:p-8 gap-4">
+          <div className="w-full max-w-md mx-auto flex flex-col items-center gap-4">
+          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 shadow-sm">
             <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
             {!preview.isCameraOn && (
               <div className="absolute inset-0 flex items-center justify-center text-slate-500">
@@ -135,21 +139,21 @@ export function LiveSessionRoomView({ access }: Props) {
           </div>
 
           <div className="w-full flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
               <div
-                className="h-full bg-emerald-500 transition-all duration-100"
+                className="h-full bg-rose-500 transition-all duration-100"
                 style={{ width: `${Math.min(100, preview.micVolume)}%` }}
               />
             </div>
-            <span className="text-[10px] font-bold text-slate-500 shrink-0">マイク入力</span>
+            <span className="text-[10px] font-bold text-slate-400 shrink-0">マイク入力</span>
           </div>
 
           {preview.errorMessage && (
             <div className="text-center">
-              <p className="text-xs font-semibold text-red-300">
+              <p className="text-xs font-semibold text-rose-500">
                 カメラ・マイクへのアクセスに失敗しました。ブラウザの権限設定をご確認ください。
               </p>
-              <p className="text-[10px] text-red-400/70 mt-0.5">{preview.errorMessage}</p>
+              <p className="text-[10px] text-rose-400 mt-0.5">{preview.errorMessage}</p>
             </div>
           )}
 
@@ -157,14 +161,14 @@ export function LiveSessionRoomView({ access }: Props) {
             <button
               onClick={preview.toggleMic}
               disabled={!preview.isPreviewing}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
             >
               {preview.isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
             </button>
             <button
               onClick={() => previewCanvasRef.current && preview.toggleCamera(previewCanvasRef.current)}
               disabled={!preview.isPreviewing}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
             >
               {preview.isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
             </button>
@@ -172,21 +176,22 @@ export function LiveSessionRoomView({ access }: Props) {
               onClick={() => previewCanvasRef.current && preview.toggleBlur(previewCanvasRef.current)}
               disabled={!preview.isPreviewing || !preview.isCameraOn}
               title="背景をぼかす"
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm'}`}
             >
               <Sparkles size={18} />
             </button>
           </div>
+          </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-slate-800">
+        <div className="px-5 py-4 sm:py-5 border-t border-slate-100 shrink-0 bg-white">
           <button
             onClick={handleStartCall}
             disabled={!preview.isPreviewing}
-            className="w-full flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-sm font-bold py-3 rounded-xl transition-colors"
+            className="w-full h-12 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-rose-600/10 transition-all active:scale-95"
           >
             レッスンに参加する
-            <ArrowRight size={16} />
+            <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
       </div>
@@ -196,7 +201,7 @@ export function LiveSessionRoomView({ access }: Props) {
   return (
     <div
       ref={roomContainerRef}
-      className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'h-[calc(100vh-8rem)] min-h-[600px] w-full max-w-3xl mx-auto rounded-[32px] shadow-2xl'}`}
+      className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'w-full max-w-2xl h-full rounded-[32px] sm:rounded-[40px] shadow-2xl'}`}
     >
       <div className="flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
@@ -225,7 +230,7 @@ export function LiveSessionRoomView({ access }: Props) {
       </div>
 
       {errorMessage && (
-        <div className="px-5 py-2 bg-red-500/10 text-red-300 text-xs font-semibold border-b border-red-500/20">
+        <div className="px-5 py-2 bg-rose-500/10 text-rose-300 text-xs font-semibold border-b border-rose-500/20">
           {errorMessage}
         </div>
       )}
@@ -234,16 +239,16 @@ export function LiveSessionRoomView({ access }: Props) {
         {/* 常に同一DOMノードを維持する（表示切替のたびに要素が入れ替わるとhook側のコンテナ参照が古いノードを指したままになるため） */}
         <div
           ref={shareViewRef}
-          className={`rounded-xl overflow-hidden bg-slate-800 [&_video-player-container]:w-full [&_video-player-container]:h-full ${isReceivingScreenShare ? 'flex-1 min-h-[160px]' : 'hidden'}`}
+          className={`rounded-xl overflow-hidden bg-slate-800 [&_video-player-container]:w-full [&_video-player-container]:h-full ${isReceivingScreenShare ? 'flex-1 min-h-40' : 'hidden'}`}
         />
         <div className={`grid gap-3 ${isReceivingScreenShare ? 'grid-cols-2 h-28' : 'flex-1 grid-cols-1 sm:grid-cols-2'}`}>
-          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-[110px]">
+          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-27.5">
             <div ref={peerVideoRef} className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full" />
             <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white/80 bg-black/40 px-2 py-0.5 rounded-md">
               {access.peerName}
             </span>
           </div>
-          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-[110px]">
+          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-27.5">
             <div ref={selfVideoRef} className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full" />
             <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white/80 bg-black/40 px-2 py-0.5 rounded-md">
               自分
@@ -259,7 +264,7 @@ export function LiveSessionRoomView({ access }: Props) {
               chatMessages.map((msg) => (
                 <div key={msg.id} className={`text-[11px] ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                   <span className="font-bold text-slate-400 mr-1.5">{msg.senderName}</span>
-                  <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
+                  <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
                     {msg.message}
                   </span>
                 </div>
@@ -272,11 +277,11 @@ export function LiveSessionRoomView({ access }: Props) {
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
               placeholder="メッセージを入力..."
-              className="flex-1 text-xs bg-slate-900 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
+              className="flex-1 text-xs bg-slate-900 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
             />
             <button
               onClick={handleSendChat}
-              className="shrink-0 w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
+              className="shrink-0 w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center transition-colors"
             >
               <Send size={14} />
             </button>
@@ -288,14 +293,14 @@ export function LiveSessionRoomView({ access }: Props) {
         <button
           onClick={toggleMic}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
         </button>
         <button
           onClick={toggleCamera}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
         </button>
@@ -303,13 +308,13 @@ export function LiveSessionRoomView({ access }: Props) {
           onClick={toggleBlur}
           disabled={!isJoined || !isCameraOn || !isBlurSupported}
           title={isBlurSupported ? '背景をぼかす' : 'この端末では背景ぼかしを利用できません'}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
         >
           <Sparkles size={18} />
         </button>
         <button
           onClick={handleLeave}
-          className="w-11 h-11 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center transition-colors ml-2"
+          className="w-11 h-11 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-colors ml-2"
         >
           <PhoneOff size={18} />
         </button>
