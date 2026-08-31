@@ -1,9 +1,12 @@
 'use server';
 
-import { getStudentLiveSessionRoomAccessCore } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
+import {
+  getMyActiveLiveSessionCoachesCore,
+  getStudentLiveSessionRoomAccessCore,
+} from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { LiveSessionRoomAccess, LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
+import { LiveSessionCoachOption, LiveSessionRoomAccess, LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
 
 const logger = createLogger('student');
 
@@ -15,12 +18,27 @@ const LIVE_SESSION_ROOM_ERROR_MESSAGES_JA: Record<LiveSessionRoomErrorCode, stri
 };
 
 /**
- * ログイン中の生徒が、自身のライブセッションルームに入室するためのアクセス情報（Zoom Video SDK署名等）を取得する
+ * ログイン中の生徒に、マッチング済みの専属コーチ一覧を取得する（ルーム入室前のコーチ選択画面用）
  */
-export async function getMyLiveSessionRoomAccess(): Promise<
-  { success: true; access: LiveSessionRoomAccess } | { success: false; message: string }
+export async function getMyLiveSessionCoaches(): Promise<
+  { success: true; coaches: LiveSessionCoachOption[] } | { success: false; message: string }
 > {
-  const result = await getStudentLiveSessionRoomAccessCore();
+  const result = await getMyActiveLiveSessionCoachesCore();
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_live_session_coaches_failed', result.errorCode, ctx);
+    return { success: false, message: LIVE_SESSION_ROOM_ERROR_MESSAGES_JA[result.errorCode] };
+  }
+  return { success: true, coaches: result.coaches };
+}
+
+/**
+ * ログイン中の生徒が、指定した専属コーチとのライブセッションルームに入室するためのアクセス情報（Zoom Video SDK署名等）を取得する
+ */
+export async function getMyLiveSessionRoomAccess(
+  coachId: string
+): Promise<{ success: true; access: LiveSessionRoomAccess } | { success: false; message: string }> {
+  const result = await getStudentLiveSessionRoomAccessCore(coachId);
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('student:get_live_session_room_access_failed', result.errorCode, ctx);

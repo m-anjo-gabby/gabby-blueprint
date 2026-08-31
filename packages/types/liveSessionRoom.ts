@@ -29,3 +29,14 @@ export type LiveSessionRoomErrorCode = 'unauthorized' | 'forbidden' | 'not_eligi
 export type GetLiveSessionRoomAccessResult =
   | { success: true; access: LiveSessionRoomAccess }
   | { success: false; errorCode: LiveSessionRoomErrorCode };
+
+/** 生徒が選択可能な、マッチング済みの専属コーチ1件分（ライブセッションルーム入室前の選択画面用） */
+export interface LiveSessionCoachOption {
+  coachId: string;
+  coachName: string;
+  coachIconPath: string | null;
+}
+
+export type GetMyLiveSessionCoachesResult =
+  | { success: true; coaches: LiveSessionCoachOption[] }
+  | { success: false; errorCode: LiveSessionRoomErrorCode };

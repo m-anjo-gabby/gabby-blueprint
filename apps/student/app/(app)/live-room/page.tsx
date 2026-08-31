@@ -1,9 +1,9 @@
 import { VideoOff } from 'lucide-react';
-import { getMyLiveSessionRoomAccess } from '@/actions/videoSessionAction';
-import { LiveSessionRoomView } from './_components/LiveSessionRoomView';
+import { getMyLiveSessionCoaches } from '@/actions/videoSessionAction';
+import { CoachPicker } from './_components/CoachPicker';
 
-export default async function LiveSessionRoomPage() {
-  const result = await getMyLiveSessionRoomAccess();
+export default async function LiveSessionCoachPickerPage() {
+  const result = await getMyLiveSessionCoaches();
 
   if (!result.success) {
     return (
@@ -18,5 +18,5 @@ export default async function LiveSessionRoomPage() {
     );
   }
 
-  return <LiveSessionRoomView access={result.access} />;
+  return <CoachPicker coaches={result.coaches} />;
 }

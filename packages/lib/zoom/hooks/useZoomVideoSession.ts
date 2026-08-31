@@ -4,6 +4,7 @@
 // 下記API（attachVideo/attachShareView, video-player-container要件, イベント名等）を実際に確認済み。
 // メジャーバージョンを上げる際は再度突き合わせること。
 import { useCallback, useRef, useState } from 'react';
+import { ensureZoomClientInitialized } from '../client';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,15 +26,27 @@ interface UseZoomVideoSessionResult {
   isJoining: boolean;
   isMicOn: boolean;
   isCameraOn: boolean;
+  isBlurOn: boolean;
+  /** 現在の環境で背景ぼかしが利用可能か（isJoinedになるまではfalse） */
+  isBlurSupported: boolean;
   isScreenSharing: boolean;
   isReceivingScreenShare: boolean;
   chatMessages: LiveSessionChatMessage[];
   errorMessage: string | null;
-  /** selfVideoContainer/peerVideoContainerは通常の<div>でよい（内部でvideo-player-containerを生成し格納する） */
-  join: (access: LiveSessionRoomAccess, selfVideoContainer: HTMLElement, peerVideoContainer: HTMLElement) => Promise<void>;
+  /**
+   * selfVideoContainer/peerVideoContainerは通常の<div>でよい（内部でvideo-player-containerを生成し格納する）。
+   * initialMicOn/initialCameraOn/initialBlurOnは入室前プレビュー画面での選択を引き継ぐためのもの（省略時はマイク/カメラON、ぼかしOFF）。
+   */
+  join: (
+    access: LiveSessionRoomAccess,
+    selfVideoContainer: HTMLElement,
+    peerVideoContainer: HTMLElement,
+    options?: { initialMicOn?: boolean; initialCameraOn?: boolean; initialBlurOn?: boolean }
+  ) => Promise<void>;
   leave: () => Promise<void>;
   toggleMic: () => Promise<void>;
   toggleCamera: () => Promise<void>;
+  toggleBlur: () => Promise<void>;
   /** 画面共有の開始/停止（コーチ側のみ使用。送信側はcanvas要素へ描画する必要がある） */
   toggleScreenShare: (shareCanvas: HTMLCanvasElement) => Promise<void>;
   /** 相手の画面共有を表示するコンテナを登録する（生徒側で使用。呼び出しておけばactive-share-change時に自動描画） */
@@ -64,6 +77,8 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
   const [isJoining, setIsJoining] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [isBlurOn, setIsBlurOn] = useState(false);
+  const [isBlurSupported, setIsBlurSupported] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isReceivingScreenShare, setIsReceivingScreenShare] = useState(false);
   const [chatMessages, setChatMessages] = useState<LiveSessionChatMessage[]>([]);
@@ -90,7 +105,15 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
   }, []);
 
   const join = useCallback(
-    async (access: LiveSessionRoomAccess, selfVideoContainer: HTMLElement, peerVideoContainer: HTMLElement) => {
+    async (
+      access: LiveSessionRoomAccess,
+      selfVideoContainer: HTMLElement,
+      peerVideoContainer: HTMLElement,
+      options?: { initialMicOn?: boolean; initialCameraOn?: boolean; initialBlurOn?: boolean }
+    ) => {
+      const initialMicOn = options?.initialMicOn ?? true;
+      const initialCameraOn = options?.initialCameraOn ?? true;
+      const initialBlurOn = options?.initialBlurOn ?? false;
       setIsJoining(true);
       setErrorMessage(null);
       selfWrapperRef.current = selfVideoContainer;
@@ -98,13 +121,9 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       selfIdentityRef.current = access.userIdentity;
 
       try {
-        const { default: ZoomVideo } = await import('@zoom/videosdk');
-        const client = ZoomVideo.createClient();
+        // プレビュー画面で既にclient.init()済みの場合はそれを再利用し、二重初期化を避ける
+        const client = await ensureZoomClientInitialized();
         clientRef.current = client;
-
-        // SharedArrayBuffer（COOP/COEPヘッダ）無しでも動作させるため、複数動画レンダリングを強制する。
-        // 1on1通話（自分+相手1名）はデフォルト上限(4)内に収まるため disableRenderLimits は不要。
-        await client.init('en-US', 'Global', { enforceMultipleVideos: true });
 
         client.on('peer-video-state-change', (payload: { action: 'Start' | 'Stop'; userId: number }) => {
           if (payload.action === 'Start') {
@@ -153,17 +172,24 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         const currentUser = client.getCurrentUserInfo();
         const stream = client.getMediaStream();
 
+        setIsBlurSupported(stream.isSupportVirtualBackground());
+
         await stream.startAudio();
-        setIsMicOn(true);
-
-        await stream.startVideo();
-        setIsCameraOn(true);
-
-        const selfPlayerContainer = resetPlayerContainer(selfVideoContainer);
-        const selfVideoElement = await stream.attachVideo(currentUser.userId, VIDEO_QUALITY_720P);
-        if (selfVideoElement instanceof HTMLElement) {
-          selfPlayerContainer.appendChild(selfVideoElement);
+        if (!initialMicOn) {
+          await stream.muteAudio();
         }
+        setIsMicOn(initialMicOn);
+
+        if (initialCameraOn) {
+          await stream.startVideo(initialBlurOn ? { virtualBackground: { imageUrl: 'blur' } } : undefined);
+          const selfPlayerContainer = resetPlayerContainer(selfVideoContainer);
+          const selfVideoElement = await stream.attachVideo(currentUser.userId, VIDEO_QUALITY_720P);
+          if (selfVideoElement instanceof HTMLElement) {
+            selfPlayerContainer.appendChild(selfVideoElement);
+          }
+          setIsBlurOn(initialBlurOn);
+        }
+        setIsCameraOn(initialCameraOn);
 
         setIsJoined(true);
       } catch (err) {
@@ -188,6 +214,8 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       setIsJoined(false);
       setIsMicOn(false);
       setIsCameraOn(false);
+      setIsBlurOn(false);
+      setIsBlurSupported(false);
       setIsScreenSharing(false);
       setIsReceivingScreenShare(false);
     }
@@ -215,7 +243,8 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       await stream.stopVideo();
       wrapper.replaceChildren();
     } else {
-      await stream.startVideo();
+      // ぼかし設定はカメラOFF/ON後も維持する
+      await stream.startVideo(isBlurOn ? { virtualBackground: { imageUrl: 'blur' } } : undefined);
       const playerContainer = resetPlayerContainer(wrapper);
       const videoElement = await stream.attachVideo(currentUser.userId, VIDEO_QUALITY_720P);
       if (videoElement instanceof HTMLElement) {
@@ -223,7 +252,20 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       }
     }
     setIsCameraOn((prev) => !prev);
-  }, [isCameraOn]);
+  }, [isCameraOn, isBlurOn]);
+
+  const toggleBlur = useCallback(async () => {
+    const client = clientRef.current;
+    if (!client || !isCameraOn) return;
+    const stream = client.getMediaStream();
+    try {
+      const next = !isBlurOn;
+      await stream.updateVirtualBackgroundImage(next ? 'blur' : undefined);
+      setIsBlurOn(next);
+    } catch (err) {
+      console.error('Failed to toggle background blur', err);
+    }
+  }, [isBlurOn, isCameraOn]);
 
   const toggleScreenShare = useCallback(
     async (shareCanvas: HTMLCanvasElement) => {
@@ -257,6 +299,8 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     isJoining,
     isMicOn,
     isCameraOn,
+    isBlurOn,
+    isBlurSupported,
     isScreenSharing,
     isReceivingScreenShare,
     chatMessages,
@@ -265,6 +309,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     leave,
     toggleMic,
     toggleCamera,
+    toggleBlur,
     toggleScreenShare,
     registerShareViewContainer,
     sendChatMessage,
