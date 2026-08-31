@@ -5,6 +5,7 @@
 // メジャーバージョンを上げる際は再度突き合わせること。
 import { useCallback, useRef, useState } from 'react';
 import { ensureZoomClientInitialized } from '../client';
+import { describeZoomError } from '../errors';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,8 +50,11 @@ interface UseZoomVideoSessionResult {
   toggleMic: () => Promise<void>;
   toggleCamera: () => Promise<void>;
   toggleBlur: () => Promise<void>;
-  /** 画面共有の開始/停止（コーチ側のみ使用。送信側はcanvas要素へ描画する必要がある） */
-  toggleScreenShare: (shareCanvas: HTMLCanvasElement) => Promise<void>;
+  /**
+   * 画面共有の開始/停止（コーチ側のみ使用）。送信側の描画先はvideo要素を渡すこと
+   * （WebCodecs有効なブラウザではcanvas要素だと"INVALID_PARAMETERS"で失敗するため）。
+   */
+  toggleScreenShare: (shareVideoElement: HTMLVideoElement) => Promise<void>;
   /** 相手の画面共有を表示するコンテナを登録する（生徒側で使用。呼び出しておけばactive-share-change時に自動描画） */
   registerShareViewContainer: (container: HTMLElement | null) => void;
   sendChatMessage: (text: string) => Promise<void>;
@@ -163,6 +167,12 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         client.on('user-added', updatePeerConnected);
         client.on('user-removed', updatePeerConnected);
 
+        // ブラウザのネイティブ「共有を停止」バーから終了された場合など、
+        // こちらのAPI呼び出しを経ずに共有が止まるケースをここで拾ってisScreenSharingを追従させる
+        client.on('passively-stop-share', () => {
+          setIsScreenSharing(false);
+        });
+
         client.on('chat-on-message', (payload: { message?: string; sender: { name: string }; timestamp: number }) => {
           setChatMessages((prev) => [
             ...prev,
@@ -207,8 +217,9 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
 
         setIsJoined(true);
       } catch (err) {
-        console.error('Failed to join live session room', err);
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to join the room');
+        const { detail, message } = describeZoomError(err);
+        console.error('Failed to join live session room:', message, detail);
+        setErrorMessage(message);
       } finally {
         setIsJoining(false);
       }
@@ -222,7 +233,8 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     try {
       await client.leave();
     } catch (err) {
-      console.error('Failed to leave live session room', err);
+      const { detail, message } = describeZoomError(err);
+      console.error('Failed to leave live session room:', message, detail);
     } finally {
       clientRef.current = null;
       setIsJoined(false);
@@ -240,12 +252,18 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     const client = clientRef.current;
     if (!client) return;
     const stream = client.getMediaStream();
-    if (isMicOn) {
-      await stream.muteAudio();
-    } else {
-      await stream.unmuteAudio();
+    try {
+      if (isMicOn) {
+        await stream.muteAudio();
+      } else {
+        await stream.unmuteAudio();
+      }
+      setIsMicOn((prev) => !prev);
+    } catch (err) {
+      const { detail, message } = describeZoomError(err);
+      console.error('Failed to toggle microphone:', message, detail);
+      setErrorMessage(message);
     }
-    setIsMicOn((prev) => !prev);
   }, [isMicOn]);
 
   const toggleCamera = useCallback(async () => {
@@ -254,19 +272,25 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     if (!client || !wrapper) return;
     const stream = client.getMediaStream();
     const currentUser = client.getCurrentUserInfo();
-    if (isCameraOn) {
-      await stream.stopVideo();
-      wrapper.replaceChildren();
-    } else {
-      // ぼかし設定はカメラOFF/ON後も維持する。画質は課金に影響しないため常にHDで送信する
-      await stream.startVideo({ hd: true, ...(isBlurOn ? { virtualBackground: { imageUrl: 'blur' } } : {}) });
-      const playerContainer = resetPlayerContainer(wrapper);
-      const videoElement = await stream.attachVideo(currentUser.userId, VIDEO_QUALITY_720P);
-      if (videoElement instanceof HTMLElement) {
-        playerContainer.appendChild(videoElement);
+    try {
+      if (isCameraOn) {
+        await stream.stopVideo();
+        wrapper.replaceChildren();
+      } else {
+        // ぼかし設定はカメラOFF/ON後も維持する。画質は課金に影響しないため常にHDで送信する
+        await stream.startVideo({ hd: true, ...(isBlurOn ? { virtualBackground: { imageUrl: 'blur' } } : {}) });
+        const playerContainer = resetPlayerContainer(wrapper);
+        const videoElement = await stream.attachVideo(currentUser.userId, VIDEO_QUALITY_720P);
+        if (videoElement instanceof HTMLElement) {
+          playerContainer.appendChild(videoElement);
+        }
       }
+      setIsCameraOn((prev) => !prev);
+    } catch (err) {
+      const { detail, message } = describeZoomError(err);
+      console.error('Failed to toggle camera:', message, detail);
+      setErrorMessage(message);
     }
-    setIsCameraOn((prev) => !prev);
   }, [isCameraOn, isBlurOn]);
 
   const toggleBlur = useCallback(async () => {
@@ -278,21 +302,34 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       await stream.updateVirtualBackgroundImage(next ? 'blur' : undefined);
       setIsBlurOn(next);
     } catch (err) {
-      console.error('Failed to toggle background blur', err);
+      const { detail, message } = describeZoomError(err);
+      console.error('Failed to toggle background blur:', message, detail);
+      setErrorMessage(message);
     }
   }, [isBlurOn, isCameraOn]);
 
   const toggleScreenShare = useCallback(
-    async (shareCanvas: HTMLCanvasElement) => {
+    async (shareVideoElement: HTMLVideoElement) => {
       const client = clientRef.current;
       if (!client) return;
       const stream = client.getMediaStream();
-      if (isScreenSharing) {
-        await stream.stopShareScreen();
-      } else {
-        await stream.startShareScreen(shareCanvas);
+      try {
+        if (isScreenSharing) {
+          await stream.stopShareScreen();
+        } else {
+          await stream.startShareScreen(shareVideoElement);
+        }
+        setIsScreenSharing((prev) => !prev);
+      } catch (err) {
+        const { detail, message } = describeZoomError(err);
+        console.error('Failed to toggle screen share:', message, detail);
+        // 共有ダイアログでユーザーが「キャンセル」した場合は正常な操作なので、
+        // エラーバナーは出さずログのみに留める
+        const reason = (detail as { reason?: string } | null)?.reason ?? '';
+        if (!reason.toLowerCase().includes('deny')) {
+          setErrorMessage(message);
+        }
       }
-      setIsScreenSharing((prev) => !prev);
     },
     [isScreenSharing]
   );
@@ -301,12 +338,18 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     const client = clientRef.current;
     const trimmed = text.trim();
     if (!client || !trimmed) return;
-    const chatClient = client.getChatClient();
-    await chatClient.sendToAll(trimmed);
-    setChatMessages((prev) => [
-      ...prev,
-      { id: `self-${Date.now()}-${prev.length}`, senderName: selfIdentityRef.current, message: trimmed, timestamp: Date.now(), isSelf: true },
-    ]);
+    try {
+      const chatClient = client.getChatClient();
+      await chatClient.sendToAll(trimmed);
+      setChatMessages((prev) => [
+        ...prev,
+        { id: `self-${Date.now()}-${prev.length}`, senderName: selfIdentityRef.current, message: trimmed, timestamp: Date.now(), isSelf: true },
+      ]);
+    } catch (err) {
+      const { detail, message } = describeZoomError(err);
+      console.error('Failed to send chat message:', message, detail);
+      setErrorMessage(message);
+    }
   }, []);
 
   return {

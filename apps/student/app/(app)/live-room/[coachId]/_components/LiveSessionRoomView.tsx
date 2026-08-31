@@ -77,17 +77,19 @@ export function LiveSessionRoomView({ access }: Props) {
 
   useEffect(() => {
     if (phase !== 'in-call' || joinRequested.current) return;
-    if (!selfVideoRef.current || !peerVideoRef.current) return;
+    // shareViewRefはin-callフェーズのJSXでのみマウントされるため、preview中に登録すると
+    // nullのまま固定されてしまう。in-callへの切り替え後、ここで確実に登録する。
+    if (!selfVideoRef.current || !peerVideoRef.current || !shareViewRef.current) return;
     joinRequested.current = true;
+    registerShareViewContainer(shareViewRef.current);
     join(access, selfVideoRef.current, peerVideoRef.current, {
       initialMicOn: initialDeviceStateRef.current.micOn,
       initialCameraOn: initialDeviceStateRef.current.cameraOn,
       initialBlurOn: initialDeviceStateRef.current.blurOn,
     });
-  }, [phase, access, join]);
+  }, [phase, access, join, registerShareViewContainer]);
 
   useEffect(() => {
-    registerShareViewContainer(shareViewRef.current);
     return () => {
       preview.stopPreview();
       leave();
@@ -248,14 +250,8 @@ export function LiveSessionRoomView({ access }: Props) {
             className={`absolute inset-0 [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full ${isReceivingScreenShare ? '' : 'hidden'}`}
           />
 
-          {/* 相手カメラ: 通常時はメイン全面、画面共有中は右下の小窓に切り替え（object-coverで隙間なく埋める） */}
-          <div
-            className={
-              isReceivingScreenShare
-                ? 'absolute bottom-3 right-3 w-32 sm:w-40 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-900 z-10'
-                : 'absolute inset-0'
-            }
-          >
+          {/* 相手カメラ: 通常時はメイン全面、画面共有中は共有画面に集中させるため非表示にする */}
+          <div className={isReceivingScreenShare ? 'hidden' : 'absolute inset-0'}>
             <div
               ref={peerVideoRef}
               className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full [&_video-player]:object-cover"

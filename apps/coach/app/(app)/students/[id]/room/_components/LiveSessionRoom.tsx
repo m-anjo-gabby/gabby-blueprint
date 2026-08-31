@@ -61,7 +61,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const selfVideoRef = useRef<HTMLDivElement>(null);
   const peerVideoRef = useRef<HTMLDivElement>(null);
-  const shareCanvasRef = useRef<HTMLCanvasElement>(null);
+  const shareVideoRef = useRef<HTMLVideoElement>(null);
   const roomContainerRef = useRef<HTMLDivElement>(null);
   const [chatInput, setChatInput] = useState('');
   const previewRequested = useRef(false);
@@ -259,7 +259,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
           </div>
         </div>
         {/* 画面共有の送信元canvas（自分がシェアする内容の描画先。表示はしないため自分カメラ非表示トグルの影響を受けない位置に置く） */}
-        <canvas ref={shareCanvasRef} className="hidden" />
+        <video ref={shareVideoRef} className="hidden" muted playsInline />
 
         <div className="hidden lg:flex w-72 flex-col border-l border-slate-800 bg-slate-900/60">
           <div className="px-4 py-2.5 border-b border-slate-800">
@@ -329,7 +329,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
           <Sparkles size={18} />
         </button>
         <button
-          onClick={() => shareCanvasRef.current && toggleScreenShare(shareCanvasRef.current)}
+          onClick={() => shareVideoRef.current && toggleScreenShare(shareVideoRef.current)}
           disabled={!isJoined}
           className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isScreenSharing ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
         >

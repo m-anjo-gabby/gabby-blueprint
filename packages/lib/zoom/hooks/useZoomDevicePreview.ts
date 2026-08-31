@@ -5,6 +5,7 @@
 // セッションのclientインスタンスとは独立して動作する。
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ensureZoomClientInitialized } from '../client';
+import { describeZoomError } from '../errors';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LocalAudioTrack = any;
@@ -20,24 +21,6 @@ const ASSUMED_MAX_RAW_VOLUME = 1;
 function normalizeMicVolume(raw: number): number {
   const ratio = Math.min(1, Math.max(0, raw / ASSUMED_MAX_RAW_VOLUME));
   return Math.round(Math.sqrt(ratio) * 100);
-}
-
-/**
- * @zoom/videosdkのエラーは通常のErrorとは限らず、{type, reason, errorCode}形式
- * （ExecutedFailure）で返ることがある。console.error(err)だけだと（特にNext.jsの開発者
- * オーバーレイ経由では）中身が「{}」に潰れて見えるため、name/message/reasonを明示的に取り出す。
- */
-function describeZoomError(err: unknown): { detail: unknown; message: string } {
-  if (err instanceof Error) {
-    return { detail: { name: err.name, message: err.message }, message: err.message || err.name };
-  }
-  if (err && typeof err === 'object') {
-    const e = err as { type?: string; reason?: string; errorCode?: number };
-    if (e.type || e.reason) {
-      return { detail: e, message: [e.type, e.reason].filter(Boolean).join(': ') || 'Unknown error' };
-    }
-  }
-  return { detail: err, message: 'Unknown error' };
 }
 
 interface UseZoomDevicePreviewResult {
