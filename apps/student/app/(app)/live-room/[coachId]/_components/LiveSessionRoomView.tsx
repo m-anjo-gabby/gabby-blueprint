@@ -111,7 +111,7 @@ export function LiveSessionRoomView({ access }: Props) {
   if (phase === 'preview') {
     return (
       <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
-        <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
+        <header className="shrink-0 px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
           <div className="flex items-center gap-3 min-w-0">
             <Link
               href="/live-room"
@@ -203,7 +203,7 @@ export function LiveSessionRoomView({ access }: Props) {
       ref={roomContainerRef}
       className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'w-full max-w-2xl h-full rounded-[32px] sm:rounded-[40px] shadow-2xl'}`}
     >
-      <div className="flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
+      <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center text-slate-400 shrink-0">
             {peerIconUrl ? (
@@ -289,7 +289,7 @@ export function LiveSessionRoomView({ access }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-3 px-5 py-4 bg-slate-900/80 border-t border-slate-800">
+      <div className="shrink-0 flex items-center justify-center gap-3 px-5 py-4 bg-slate-900/80 border-t border-slate-800">
         <button
           onClick={toggleMic}
           disabled={!isJoined}

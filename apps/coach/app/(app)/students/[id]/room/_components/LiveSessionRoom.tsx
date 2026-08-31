@@ -110,8 +110,8 @@ export function LiveSessionRoom({ studentId, access }: Props) {
 
   if (phase === 'preview') {
     return (
-      <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[600px] max-w-lg mx-auto rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center gap-3">
+      <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[600px] rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden shadow-sm">
+        <div className="shrink-0 px-5 py-4 border-b border-slate-800 flex items-center gap-3">
           <Link
             href={`/students/${studentId}`}
             className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -124,7 +124,8 @@ export function LiveSessionRoom({ studentId, access }: Props) {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center p-5 gap-4">
+        <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-5 gap-4">
+          <div className="w-full max-w-2xl flex flex-col items-center gap-4">
           <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-800">
             <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
             {!preview.isCameraOn && (
@@ -177,13 +178,14 @@ export function LiveSessionRoom({ studentId, access }: Props) {
               <Sparkles size={18} />
             </button>
           </div>
+          </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-slate-800">
+        <div className="shrink-0 px-5 py-4 border-t border-slate-800">
           <button
             onClick={handleStartCall}
             disabled={!preview.isPreviewing}
-            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold py-3 rounded-xl transition-colors"
+            className="w-full max-w-2xl mx-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold py-3 rounded-xl transition-colors"
           >
             Join Session
             <ArrowRight size={16} />
@@ -198,7 +200,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
       ref={roomContainerRef}
       className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'h-[calc(100vh-8rem)] min-h-[600px] rounded-2xl border border-slate-200 shadow-sm'}`}
     >
-      <div className="flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
+      <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
           <UserAvatar userName={access.peerName} iconPath={access.peerIconPath} size={32} />
           <div>
@@ -276,7 +278,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-3 px-5 py-4 bg-slate-900/80 border-t border-slate-800">
+      <div className="shrink-0 flex items-center justify-center gap-3 px-5 py-4 bg-slate-900/80 border-t border-slate-800">
         <button
           onClick={toggleMic}
           disabled={!isJoined}
