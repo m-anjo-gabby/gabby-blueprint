@@ -29,6 +29,8 @@ interface UseZoomVideoSessionResult {
   isBlurOn: boolean;
   /** 現在の環境で背景ぼかしが利用可能か（isJoinedになるまではfalse） */
   isBlurSupported: boolean;
+  /** 相手が現在セッションに入室済みか（自分1人だけの場合はfalse） */
+  isPeerConnected: boolean;
   isScreenSharing: boolean;
   isReceivingScreenShare: boolean;
   chatMessages: LiveSessionChatMessage[];
@@ -79,6 +81,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isBlurOn, setIsBlurOn] = useState(false);
   const [isBlurSupported, setIsBlurSupported] = useState(false);
+  const [isPeerConnected, setIsPeerConnected] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isReceivingScreenShare, setIsReceivingScreenShare] = useState(false);
   const [chatMessages, setChatMessages] = useState<LiveSessionChatMessage[]>([]);
@@ -154,6 +157,12 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
           }
         });
 
+        const updatePeerConnected = () => {
+          setIsPeerConnected((client.getAllUser()?.length ?? 1) > 1);
+        };
+        client.on('user-added', updatePeerConnected);
+        client.on('user-removed', updatePeerConnected);
+
         client.on('chat-on-message', (payload: { message?: string; sender: { name: string }; timestamp: number }) => {
           setChatMessages((prev) => [
             ...prev,
@@ -168,6 +177,10 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         });
 
         await client.join(access.sessionName, access.signature, access.userIdentity);
+
+        // 'user-added'は自分の入室後に相手が入ってきた場合のみ発火するため、
+        // 相手が自分より先に入室済みだったケースをここで拾う
+        setIsPeerConnected((client.getAllUser()?.length ?? 1) > 1);
 
         const currentUser = client.getCurrentUserInfo();
         const stream = client.getMediaStream();
@@ -217,6 +230,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       setIsCameraOn(false);
       setIsBlurOn(false);
       setIsBlurSupported(false);
+      setIsPeerConnected(false);
       setIsScreenSharing(false);
       setIsReceivingScreenShare(false);
     }
@@ -302,6 +316,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     isCameraOn,
     isBlurOn,
     isBlurSupported,
+    isPeerConnected,
     isScreenSharing,
     isReceivingScreenShare,
     chatMessages,

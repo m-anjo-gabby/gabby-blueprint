@@ -6,6 +6,8 @@ import Link from 'next/link';
 import {
   ArrowRight,
   ChevronLeft,
+  Eye,
+  EyeOff,
   Maximize2,
   Mic,
   MicOff,
@@ -39,6 +41,7 @@ export function LiveSessionRoomView({ access }: Props) {
     isCameraOn,
     isBlurOn,
     isBlurSupported,
+    isPeerConnected,
     isReceivingScreenShare,
     chatMessages,
     errorMessage,
@@ -52,6 +55,7 @@ export function LiveSessionRoomView({ access }: Props) {
   } = useZoomVideoSession();
 
   const [phase, setPhase] = useState<RoomPhase>('preview');
+  const [isSelfViewVisible, setIsSelfViewVisible] = useState(true);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const selfVideoRef = useRef<HTMLDivElement>(null);
   const peerVideoRef = useRef<HTMLDivElement>(null);
@@ -236,23 +240,56 @@ export function LiveSessionRoomView({ access }: Props) {
       )}
 
       <div className="flex-1 flex flex-col min-h-0 p-3 gap-3">
-        {/* 常に同一DOMノードを維持する（表示切替のたびに要素が入れ替わるとhook側のコンテナ参照が古いノードを指したままになるため） */}
-        <div
-          ref={shareViewRef}
-          className={`rounded-xl overflow-hidden bg-slate-800 [&_video-player-container]:w-full [&_video-player-container]:h-full ${isReceivingScreenShare ? 'flex-1 min-h-40' : 'hidden'}`}
-        />
-        <div className={`grid gap-3 ${isReceivingScreenShare ? 'grid-cols-2 h-28' : 'flex-1 grid-cols-1 sm:grid-cols-2'}`}>
-          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-27.5">
-            <div ref={peerVideoRef} className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full" />
-            <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white/80 bg-black/40 px-2 py-0.5 rounded-md">
-              {access.peerName}
-            </span>
+        <div className="flex-1 relative min-h-0 rounded-xl overflow-hidden bg-slate-800">
+          {/* 画面共有: 常に同一DOMノードを維持し、共有中のみメイン表示にする
+              （表示切替のたびに要素が入れ替わるとhook側のコンテナ参照が古いノードを指したままになるため） */}
+          <div
+            ref={shareViewRef}
+            className={`absolute inset-0 [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full ${isReceivingScreenShare ? '' : 'hidden'}`}
+          />
+
+          {/* 相手カメラ: 通常時はメイン全面、画面共有中は右下の小窓に切り替え（object-coverで隙間なく埋める） */}
+          <div
+            className={
+              isReceivingScreenShare
+                ? 'absolute bottom-3 right-3 w-32 sm:w-40 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-900 z-10'
+                : 'absolute inset-0'
+            }
+          >
+            <div
+              ref={peerVideoRef}
+              className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full [&_video-player]:object-cover"
+            />
+            {!isReceivingScreenShare && (
+              <span className="absolute bottom-3 left-3 text-xs font-bold text-white/80 bg-black/40 px-2.5 py-1 rounded-md">
+                {access.peerName}
+              </span>
+            )}
+
+            {/* 相手がまだ入室していない間の待機表示 */}
+            {isJoined && !isPeerConnected && !isReceivingScreenShare && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
+                <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center text-slate-400 shrink-0">
+                  {peerIconUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={24} />
+                  )}
+                </div>
+                <p className="text-xs font-semibold text-slate-400">{access.peerName}コーチの入室をお待ちしています</p>
+              </div>
+            )}
           </div>
-          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-27.5">
-            <div ref={selfVideoRef} className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full" />
-            <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white/80 bg-black/40 px-2 py-0.5 rounded-md">
-              自分
-            </span>
+
+          {/* 自分はワイプとして右上に小さく重ねる */}
+          <div
+            className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-900 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
+          >
+            <div
+              ref={selfVideoRef}
+              className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full [&_video-player]:object-cover"
+            />
           </div>
         </div>
 
@@ -303,6 +340,14 @@ export function LiveSessionRoomView({ access }: Props) {
           className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
+        </button>
+        <button
+          onClick={() => setIsSelfViewVisible((prev) => !prev)}
+          disabled={!isJoined}
+          title={isSelfViewVisible ? '自分の映像を非表示' : '自分の映像を表示'}
+          className="w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 bg-slate-700 hover:bg-slate-600 text-white"
+        >
+          {isSelfViewVisible ? <Eye size={18} /> : <EyeOff size={18} />}
         </button>
         <button
           onClick={toggleBlur}

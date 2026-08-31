@@ -6,6 +6,8 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowRight,
+  Eye,
+  EyeOff,
   Maximize2,
   Mic,
   MicOff,
@@ -41,6 +43,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
     isCameraOn,
     isBlurOn,
     isBlurSupported,
+    isPeerConnected,
     isScreenSharing,
     chatMessages,
     errorMessage,
@@ -54,6 +57,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
   } = useZoomVideoSession();
 
   const [phase, setPhase] = useState<RoomPhase>('preview');
+  const [isSelfViewVisible, setIsSelfViewVisible] = useState(true);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const selfVideoRef = useRef<HTMLDivElement>(null);
   const peerVideoRef = useRef<HTMLDivElement>(null);
@@ -226,21 +230,36 @@ export function LiveSessionRoom({ studentId, access }: Props) {
       )}
 
       <div className="flex-1 flex min-h-0">
-        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 min-h-0">
-          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-[220px]">
-            <div ref={peerVideoRef} className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full" />
-            <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white/80 bg-black/40 px-2 py-0.5 rounded-md">
-              {access.peerName}
-            </span>
-          </div>
-          <div className="relative rounded-xl overflow-hidden bg-slate-800 min-h-[220px]">
-            <div ref={selfVideoRef} className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full" />
-            <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white/80 bg-black/40 px-2 py-0.5 rounded-md">
-              You
-            </span>
-            <canvas ref={shareCanvasRef} className="hidden" />
+        <div className="flex-1 relative min-h-0 m-3 rounded-xl overflow-hidden bg-slate-800">
+          {/* 相手をメインとしてペイン全体に表示（object-coverで隙間なく埋める） */}
+          <div
+            ref={peerVideoRef}
+            className="absolute inset-0 [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full [&_video-player]:object-cover"
+          />
+          <span className="absolute bottom-3 left-3 text-xs font-bold text-white/80 bg-black/40 px-2.5 py-1 rounded-md">
+            {access.peerName}
+          </span>
+
+          {/* 相手がまだ入室していない間の待機表示 */}
+          {isJoined && !isPeerConnected && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
+              <UserAvatar userName={access.peerName} iconPath={access.peerIconPath} size={56} />
+              <p className="text-xs font-semibold text-slate-400">Waiting for {access.peerName} to join...</p>
+            </div>
+          )}
+
+          {/* 自分はワイプとして右上に小さく重ねる */}
+          <div
+            className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-900 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
+          >
+            <div
+              ref={selfVideoRef}
+              className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full [&_video-player]:object-cover"
+            />
           </div>
         </div>
+        {/* 画面共有の送信元canvas（自分がシェアする内容の描画先。表示はしないため自分カメラ非表示トグルの影響を受けない位置に置く） */}
+        <canvas ref={shareCanvasRef} className="hidden" />
 
         <div className="hidden lg:flex w-72 flex-col border-l border-slate-800 bg-slate-900/60">
           <div className="px-4 py-2.5 border-b border-slate-800">
@@ -292,6 +311,14 @@ export function LiveSessionRoom({ studentId, access }: Props) {
           className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
         >
           {isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
+        </button>
+        <button
+          onClick={() => setIsSelfViewVisible((prev) => !prev)}
+          disabled={!isJoined}
+          title={isSelfViewVisible ? 'Hide self view' : 'Show self view'}
+          className="w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 bg-slate-700 hover:bg-slate-600 text-white"
+        >
+          {isSelfViewVisible ? <Eye size={18} /> : <EyeOff size={18} />}
         </button>
         <button
           onClick={toggleBlur}
