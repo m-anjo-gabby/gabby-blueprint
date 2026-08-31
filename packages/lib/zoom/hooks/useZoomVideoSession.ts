@@ -181,7 +181,8 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         setIsMicOn(initialMicOn);
 
         if (initialCameraOn) {
-          await stream.startVideo(initialBlurOn ? { virtualBackground: { imageUrl: 'blur' } } : undefined);
+          // 画質は課金（セッション分数課金のみで解像度による差はない）に影響しないため、常にHDで送信する
+          await stream.startVideo({ hd: true, ...(initialBlurOn ? { virtualBackground: { imageUrl: 'blur' } } : {}) });
           const selfPlayerContainer = resetPlayerContainer(selfVideoContainer);
           const selfVideoElement = await stream.attachVideo(currentUser.userId, VIDEO_QUALITY_720P);
           if (selfVideoElement instanceof HTMLElement) {
@@ -243,8 +244,8 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       await stream.stopVideo();
       wrapper.replaceChildren();
     } else {
-      // ぼかし設定はカメラOFF/ON後も維持する
-      await stream.startVideo(isBlurOn ? { virtualBackground: { imageUrl: 'blur' } } : undefined);
+      // ぼかし設定はカメラOFF/ON後も維持する。画質は課金に影響しないため常にHDで送信する
+      await stream.startVideo({ hd: true, ...(isBlurOn ? { virtualBackground: { imageUrl: 'blur' } } : {}) });
       const playerContainer = resetPlayerContainer(wrapper);
       const videoElement = await stream.attachVideo(currentUser.userId, VIDEO_QUALITY_720P);
       if (videoElement instanceof HTMLElement) {

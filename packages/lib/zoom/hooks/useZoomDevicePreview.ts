@@ -12,6 +12,15 @@ type LocalAudioTrack = any;
 type LocalVideoTrack = any;
 
 const VOLUME_POLL_INTERVAL_MS = 200;
+// LocalAudioTrack.getCurrentVolume()の戻り値スケールはSDKの型定義に明記されていない。
+// 当初は同SDKの`current-audio-level-change`イベント（0〜9のレベル値）に合わせて9を上限と仮定したが、
+// 実機検証でマイクに近づいて大声で発話しても1/3程度までしか振れなかったため、実測に基づき1に修正。
+const ASSUMED_MAX_RAW_VOLUME = 1;
+
+function normalizeMicVolume(raw: number): number {
+  const ratio = Math.min(1, Math.max(0, raw / ASSUMED_MAX_RAW_VOLUME));
+  return Math.round(Math.sqrt(ratio) * 100);
+}
 
 /**
  * @zoom/videosdkのエラーは通常のErrorとは限らず、{type, reason, errorCode}形式
@@ -37,7 +46,7 @@ interface UseZoomDevicePreviewResult {
   isCameraOn: boolean;
   /** 背景ぼかしのON/OFF */
   isBlurOn: boolean;
-  /** マイク入力レベル（0〜100の目安値。ミュート中も入力自体は継続しているため計測できる） */
+  /** マイク入力レベル（0〜100に正規化済み。ミュート中も入力自体は継続しているため計測できる） */
   micVolume: number;
   errorMessage: string | null;
   /**
@@ -95,7 +104,7 @@ export function useZoomDevicePreview(): UseZoomDevicePreviewResult {
 
       clearVolumePolling();
       volumeIntervalRef.current = setInterval(() => {
-        setMicVolume(audioTrackRef.current?.getCurrentVolume() ?? 0);
+        setMicVolume(normalizeMicVolume(audioTrackRef.current?.getCurrentVolume() ?? 0));
       }, VOLUME_POLL_INTERVAL_MS);
 
       setIsPreviewing(true);
