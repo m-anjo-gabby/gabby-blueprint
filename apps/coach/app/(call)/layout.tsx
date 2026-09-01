@@ -22,7 +22,7 @@ export default async function CallLayout({
 
   return (
     <>
-      <div className="h-dvh w-full overflow-hidden bg-slate-950">
+      <div className="h-dvh w-full overflow-hidden bg-slate-50">
         {children}
       </div>
       <ConfirmContainer />

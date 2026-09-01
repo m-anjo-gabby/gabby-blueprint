@@ -221,11 +221,11 @@ export function LiveSessionRoomView({ access }: Props) {
   return (
     <div
       ref={roomContainerRef}
-      className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'w-full h-full rounded-[32px] sm:rounded-[40px] shadow-2xl'}`}
+      className={`flex flex-col bg-white overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'w-full h-full rounded-[32px] sm:rounded-[40px] shadow-2xl'}`}
     >
-      <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
+      <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-white border-b border-slate-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center text-slate-400 shrink-0">
+          <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center text-slate-400 shrink-0">
             {peerIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
@@ -234,7 +234,7 @@ export function LiveSessionRoomView({ access }: Props) {
             )}
           </div>
           <div>
-            <p className="text-sm font-bold text-white leading-tight">{access.peerName} コーチ</p>
+            <p className="text-sm font-bold text-slate-900 leading-tight">{access.peerName} コーチ</p>
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
               {isJoined ? 'レッスン中' : isJoining ? '接続中...' : '未接続'}
             </p>
@@ -242,7 +242,7 @@ export function LiveSessionRoomView({ access }: Props) {
         </div>
         <button
           onClick={toggleFullscreen}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           title={isFullscreen ? '全画面を終了' : '全画面表示'}
         >
           {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -250,14 +250,15 @@ export function LiveSessionRoomView({ access }: Props) {
       </div>
 
       {errorMessage && (
-        <div className="px-5 py-2 bg-rose-500/10 text-rose-300 text-xs font-semibold border-b border-rose-500/20">
+        <div className="px-5 py-2 bg-rose-50 text-rose-600 text-xs font-semibold border-b border-rose-100">
           {errorMessage}
         </div>
       )}
 
       <div className="flex-1 flex min-h-0">
         <div className="flex-1 flex flex-col min-h-0 p-3 gap-3">
-          <div className="flex-1 relative min-h-0 rounded-xl overflow-hidden bg-slate-800">
+          {/* 映像そのものが映るキャンバス部分はコントラスト・視認性の観点から意図的にダークのまま維持する */}
+          <div className="flex-1 relative min-h-0 rounded-xl overflow-hidden bg-slate-900">
             {/* 画面共有: 常に同一DOMノードを維持し、共有中のみメイン表示にする
                 （表示切替のたびに要素が入れ替わるとhook側のコンテナ参照が古いノードを指したままになるため） */}
             <div
@@ -295,7 +296,7 @@ export function LiveSessionRoomView({ access }: Props) {
 
             {/* 自分はワイプとして右上に小さく重ねる */}
             <div
-              className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-900 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
+              className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-950 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
             >
               <div
                 ref={selfVideoRef}
@@ -305,28 +306,28 @@ export function LiveSessionRoomView({ access }: Props) {
           </div>
 
           {/* モバイル(lg未満)ではPC向けサイドパネルの余地が無いため、映像の下にチャットを表示する */}
-          <div className="lg:hidden max-h-40 flex flex-col rounded-xl bg-slate-800/60 overflow-hidden shrink-0">
+          <div className="lg:hidden max-h-40 flex flex-col rounded-xl bg-slate-50 border border-slate-100 overflow-hidden shrink-0">
             <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
               {chatMessages.length === 0 ? (
-                <p className="text-[11px] text-slate-500 text-center py-2">まだメッセージはありません</p>
+                <p className="text-[11px] text-slate-400 text-center py-2">まだメッセージはありません</p>
               ) : (
                 chatMessages.map((msg) => (
                   <div key={msg.id} className={`text-[11px] ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                     <span className="font-bold text-slate-400 mr-1.5">{msg.senderName}</span>
-                    <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
+                    <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
                       {msg.message}
                     </span>
                   </div>
                 ))
               )}
             </div>
-            <div className="p-2 border-t border-slate-700 flex items-center gap-2">
+            <div className="p-2 border-t border-slate-100 flex items-center gap-2">
               <input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
                 placeholder="メッセージを入力..."
-                className="flex-1 text-xs bg-slate-900 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
+                className="flex-1 text-xs bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
               />
               <button
                 onClick={handleSendChat}
@@ -339,31 +340,31 @@ export function LiveSessionRoomView({ access }: Props) {
         </div>
 
         {/* デスクトップ(lg以上)では映像の右側にチャットパネルを常設する */}
-        <div className="hidden lg:flex w-72 flex-col border-l border-slate-800 bg-slate-900/60 shrink-0">
-          <div className="px-4 py-2.5 border-b border-slate-800">
+        <div className="hidden lg:flex w-72 flex-col border-l border-slate-100 bg-slate-50 shrink-0">
+          <div className="px-4 py-2.5 border-b border-slate-100">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">チャット</p>
           </div>
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
             {chatMessages.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center mt-6">まだメッセージはありません</p>
+              <p className="text-xs text-slate-400 text-center mt-6">まだメッセージはありません</p>
             ) : (
               chatMessages.map((msg) => (
                 <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                   <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
-                  <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-100'}`}>
+                  <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
                     {msg.message}
                   </p>
                 </div>
               ))
             )}
           </div>
-          <div className="p-3 border-t border-slate-800 flex items-center gap-2">
+          <div className="p-3 border-t border-slate-100 flex items-center gap-2">
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
               placeholder="メッセージを入力..."
-              className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
+              className="flex-1 text-xs bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
             />
             <button
               onClick={handleSendChat}
@@ -375,18 +376,18 @@ export function LiveSessionRoomView({ access }: Props) {
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center justify-center gap-3 px-5 py-4 bg-slate-900/80 border-t border-slate-800">
+      <div className="shrink-0 flex items-center justify-center gap-3 px-5 py-4 bg-white border-t border-slate-100">
         <button
           onClick={toggleMic}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isMicOn ? 'bg-slate-100 hover:bg-slate-200 text-slate-600' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
         </button>
         <button
           onClick={toggleCamera}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-100 hover:bg-slate-200 text-slate-600' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
         </button>
@@ -394,7 +395,7 @@ export function LiveSessionRoomView({ access }: Props) {
           onClick={() => setIsSelfViewVisible((prev) => !prev)}
           disabled={!isJoined}
           title={isSelfViewVisible ? '自分の映像を非表示' : '自分の映像を表示'}
-          className="w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 bg-slate-700 hover:bg-slate-600 text-white"
+          className="w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 bg-slate-100 hover:bg-slate-200 text-slate-600"
         >
           {isSelfViewVisible ? <Eye size={18} /> : <EyeOff size={18} />}
         </button>
@@ -402,7 +403,7 @@ export function LiveSessionRoomView({ access }: Props) {
           onClick={toggleBlur}
           disabled={!isJoined || !isCameraOn || !isBlurSupported}
           title={isBlurSupported ? '背景をぼかす' : 'この端末では背景ぼかしを利用できません'}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
         >
           <Sparkles size={18} />
         </button>

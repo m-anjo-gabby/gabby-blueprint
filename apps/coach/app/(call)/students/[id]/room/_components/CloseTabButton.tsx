@@ -7,7 +7,7 @@ export function CloseTabButton() {
   return (
     <button
       onClick={() => window.close()}
-      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-300 transition-colors"
+      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
     >
       <X size={14} />
       Close Tab

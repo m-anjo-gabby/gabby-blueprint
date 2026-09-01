@@ -171,25 +171,25 @@ export function LiveSessionRoom({ access }: Props) {
   };
 
   if (lockStatus === 'checking') {
-    return <div className="h-full w-full bg-slate-900" />;
+    return <div className="h-full w-full bg-white" />;
   }
 
   if (lockStatus === 'denied') {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center gap-4 px-6 text-center bg-slate-900">
-        <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-700">
+      <div className="h-full w-full flex flex-col items-center justify-center gap-4 px-6 text-center bg-white">
+        <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500 border border-rose-100">
           <Lock size={22} />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-bold text-white">Live session already open</p>
-          <p className="text-xs text-slate-400 max-w-xs">
+          <p className="text-sm font-bold text-slate-900">Live session already open</p>
+          <p className="text-xs text-slate-500 max-w-xs">
             You already have a live session open in another tab. Please close that tab before starting a new one.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => window.close()}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors px-3.5 py-2 rounded-full border border-slate-700 hover:bg-slate-800"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors px-3.5 py-2 rounded-full border border-slate-200 hover:bg-slate-50"
           >
             <X size={14} />
             Close Tab
@@ -201,7 +201,7 @@ export function LiveSessionRoom({ access }: Props) {
             I closed the other tab — Retry
           </button>
         </div>
-        <p className="text-[10px] text-slate-500 max-w-xs">
+        <p className="text-[10px] text-slate-400 max-w-xs">
           If the tab doesn&apos;t close automatically, you can close it manually.
         </p>
       </div>
@@ -210,13 +210,13 @@ export function LiveSessionRoom({ access }: Props) {
 
   if (phase === 'ended') {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center gap-4 px-6 text-center bg-slate-900">
-        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+      <div className="h-full w-full flex flex-col items-center justify-center gap-4 px-6 text-center bg-white">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
           <CheckCircle2 size={22} />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-bold text-white">Session ended</p>
-          <p className="text-xs text-slate-400">You can close this tab now.</p>
+          <p className="text-sm font-bold text-slate-900">Session ended</p>
+          <p className="text-xs text-slate-500">You can close this tab now.</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -227,7 +227,7 @@ export function LiveSessionRoom({ access }: Props) {
             Close Tab
           </button>
         </div>
-        <p className="text-[10px] text-slate-500 max-w-xs">
+        <p className="text-[10px] text-slate-400 max-w-xs">
           If the tab doesn&apos;t close automatically, you can close it manually.
         </p>
       </div>
@@ -237,24 +237,24 @@ export function LiveSessionRoom({ access }: Props) {
   if (phase === 'preview') {
     return (
       <div className="h-full w-full flex items-center justify-center p-2 sm:p-4">
-        <div className="flex flex-col w-full max-w-2xl h-full bg-slate-900 rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-800 overflow-hidden">
-          <div className="shrink-0 px-5 py-4 border-b border-slate-800 flex items-center gap-3">
+        <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
+          <div className="shrink-0 px-5 py-4 border-b border-slate-100 flex items-center gap-3">
             <button
               onClick={() => window.close()}
               title="Close tab"
-              className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             >
               <X size={16} />
             </button>
             <div>
-              <p className="text-sm font-bold text-white">Session with {access.peerName}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Check your camera and microphone before joining</p>
+              <p className="text-sm font-bold text-slate-900">Session with {access.peerName}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Check your camera and microphone before joining</p>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-5 gap-4">
+          <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center bg-slate-50/50 p-5 gap-4">
             <div className="w-full max-w-md flex flex-col items-center gap-4">
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-800">
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 shadow-sm">
               <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
               {!preview.isCameraOn && (
                 <div className="absolute inset-0 flex items-center justify-center text-slate-500">
@@ -264,21 +264,21 @@ export function LiveSessionRoom({ access }: Props) {
             </div>
 
             <div className="w-full flex items-center gap-2">
-              <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                 <div
                   className="h-full bg-emerald-500 transition-all duration-100"
                   style={{ width: `${Math.min(100, preview.micVolume)}%` }}
                 />
               </div>
-              <span className="text-[10px] font-bold text-slate-500 shrink-0">Mic level</span>
+              <span className="text-[10px] font-bold text-slate-400 shrink-0">Mic level</span>
             </div>
 
             {preview.errorMessage && (
               <div className="text-center">
-                <p className="text-xs font-semibold text-red-300">
+                <p className="text-xs font-semibold text-rose-600">
                   Failed to access camera/microphone. Please check your browser permissions.
                 </p>
-                <p className="text-[10px] text-red-400/70 mt-0.5">{preview.errorMessage}</p>
+                <p className="text-[10px] text-rose-400 mt-0.5">{preview.errorMessage}</p>
               </div>
             )}
 
@@ -286,14 +286,14 @@ export function LiveSessionRoom({ access }: Props) {
               <button
                 onClick={preview.toggleMic}
                 disabled={!preview.isPreviewing}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
               >
                 {preview.isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
               </button>
               <button
                 onClick={() => previewCanvasRef.current && preview.toggleCamera(previewCanvasRef.current)}
                 disabled={!preview.isPreviewing}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
               >
                 {preview.isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
               </button>
@@ -301,7 +301,7 @@ export function LiveSessionRoom({ access }: Props) {
                 onClick={() => previewCanvasRef.current && preview.toggleBlur(previewCanvasRef.current)}
                 disabled={!preview.isPreviewing || !preview.isCameraOn}
                 title="Blur background"
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm'}`}
               >
                 <Sparkles size={18} />
               </button>
@@ -309,11 +309,11 @@ export function LiveSessionRoom({ access }: Props) {
             </div>
           </div>
 
-          <div className="shrink-0 px-5 py-4 border-t border-slate-800">
+          <div className="shrink-0 px-5 py-4 border-t border-slate-100 bg-white">
             <button
               onClick={handleStartCall}
               disabled={!preview.isPreviewing}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold py-3 rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold py-3 rounded-xl shadow-lg shadow-indigo-600/10 transition-all"
             >
               Join Session
               <ArrowRight size={16} />
@@ -327,13 +327,13 @@ export function LiveSessionRoom({ access }: Props) {
   return (
     <div
       ref={roomContainerRef}
-      className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'h-full w-full'}`}
+      className={`flex flex-col bg-white overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'h-full w-full'}`}
     >
-      <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
+      <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-white border-b border-slate-100">
         <div className="flex items-center gap-2.5">
           <UserAvatar userName={access.peerName} iconPath={access.peerIconPath} size={32} />
           <div>
-            <p className="text-sm font-bold text-white leading-tight">{access.peerName}</p>
+            <p className="text-sm font-bold text-slate-900 leading-tight">{access.peerName}</p>
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
               {isJoined ? 'Live Session in progress' : isJoining ? 'Connecting...' : 'Not connected'}
             </p>
@@ -341,7 +341,7 @@ export function LiveSessionRoom({ access }: Props) {
         </div>
         <button
           onClick={toggleFullscreen}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
         >
           {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -349,13 +349,14 @@ export function LiveSessionRoom({ access }: Props) {
       </div>
 
       {errorMessage && (
-        <div className="px-5 py-2 bg-red-500/10 text-red-300 text-xs font-semibold border-b border-red-500/20">
+        <div className="px-5 py-2 bg-rose-50 text-rose-600 text-xs font-semibold border-b border-rose-100">
           {errorMessage}
         </div>
       )}
 
       <div className="flex-1 flex min-h-0">
-        <div className="flex-1 relative min-h-0 m-3 rounded-xl overflow-hidden bg-slate-800">
+        {/* 映像そのものが映るキャンバス部分はコントラスト・視認性の観点から意図的にダークのまま維持する */}
+        <div className="flex-1 relative min-h-0 m-3 rounded-xl overflow-hidden bg-slate-900">
           {/* 相手をメインとしてペイン全体に表示（object-coverで隙間なく埋める） */}
           <div
             ref={peerVideoRef}
@@ -375,7 +376,7 @@ export function LiveSessionRoom({ access }: Props) {
 
           {/* 自分はワイプとして右上に小さく重ねる */}
           <div
-            className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-900 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
+            className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-950 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
           >
             <div
               ref={selfVideoRef}
@@ -386,31 +387,31 @@ export function LiveSessionRoom({ access }: Props) {
         {/* 画面共有の送信元canvas（自分がシェアする内容の描画先。表示はしないため自分カメラ非表示トグルの影響を受けない位置に置く） */}
         <video ref={shareVideoRef} className="hidden" muted playsInline />
 
-        <div className="hidden lg:flex w-72 flex-col border-l border-slate-800 bg-slate-900/60">
-          <div className="px-4 py-2.5 border-b border-slate-800">
+        <div className="hidden lg:flex w-72 flex-col border-l border-slate-100 bg-slate-50">
+          <div className="px-4 py-2.5 border-b border-slate-100">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">In-call Chat</p>
           </div>
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
             {chatMessages.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center mt-6">No messages yet</p>
+              <p className="text-xs text-slate-400 text-center mt-6">No messages yet</p>
             ) : (
               chatMessages.map((msg) => (
                 <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                   <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
-                  <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-100'}`}>
+                  <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
                     {msg.message}
                   </p>
                 </div>
               ))
             )}
           </div>
-          <div className="p-3 border-t border-slate-800 flex items-center gap-2">
+          <div className="p-3 border-t border-slate-100 flex items-center gap-2">
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
               placeholder="Type a message..."
-              className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
+              className="flex-1 text-xs bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
             />
             <button
               onClick={handleSendChat}
@@ -422,18 +423,18 @@ export function LiveSessionRoom({ access }: Props) {
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center justify-center gap-3 px-5 py-4 bg-slate-900/80 border-t border-slate-800">
+      <div className="shrink-0 flex items-center justify-center gap-3 px-5 py-4 bg-white border-t border-slate-100">
         <button
           onClick={toggleMic}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isMicOn ? 'bg-slate-100 hover:bg-slate-200 text-slate-600' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
         </button>
         <button
           onClick={toggleCamera}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-100 hover:bg-slate-200 text-slate-600' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
         </button>
@@ -441,7 +442,7 @@ export function LiveSessionRoom({ access }: Props) {
           onClick={() => setIsSelfViewVisible((prev) => !prev)}
           disabled={!isJoined}
           title={isSelfViewVisible ? 'Hide self view' : 'Show self view'}
-          className="w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 bg-slate-700 hover:bg-slate-600 text-white"
+          className="w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 bg-slate-100 hover:bg-slate-200 text-slate-600"
         >
           {isSelfViewVisible ? <Eye size={18} /> : <EyeOff size={18} />}
         </button>
@@ -449,20 +450,20 @@ export function LiveSessionRoom({ access }: Props) {
           onClick={toggleBlur}
           disabled={!isJoined || !isCameraOn || !isBlurSupported}
           title={isBlurSupported ? 'Blur background' : 'Background blur is not supported on this device'}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
         >
           <Sparkles size={18} />
         </button>
         <button
           onClick={() => shareVideoRef.current && toggleScreenShare(shareVideoRef.current)}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isScreenSharing ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isScreenSharing ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
         >
           {isScreenSharing ? <MonitorX size={18} /> : <MonitorUp size={18} />}
         </button>
         <button
           onClick={handleLeave}
-          className="w-11 h-11 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center transition-colors ml-2"
+          className="w-11 h-11 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center transition-colors ml-2"
         >
           <PhoneOff size={18} />
         </button>
