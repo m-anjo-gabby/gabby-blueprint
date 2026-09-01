@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
-  ArrowLeft,
   ArrowRight,
+  CheckCircle2,
   Eye,
   EyeOff,
+  Lock,
   Maximize2,
   Mic,
   MicOff,
@@ -19,6 +18,7 @@ import {
   Sparkles,
   Video,
   VideoOff,
+  X,
 } from 'lucide-react';
 import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
 import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
@@ -28,14 +28,17 @@ import { UserAvatar } from '@/components/common/UserAvatar';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
-  studentId: string;
   access: LiveSessionRoomAccess;
 }
 
-type RoomPhase = 'preview' | 'in-call';
+type RoomPhase = 'preview' | 'in-call' | 'ended';
+type LockStatus = 'checking' | 'granted' | 'denied';
 
-export function LiveSessionRoom({ studentId, access }: Props) {
-  const router = useRouter();
+// コーチにつき同時に1つのライブセッションタブしか開けないようにするための排他ロック名
+// （生徒A/生徒Bを問わず、コーチアカウント単位で共有する）
+const COACH_LIVE_SESSION_LOCK_NAME = 'gabby-coach-live-session-room';
+
+export function LiveSessionRoom({ access }: Props) {
   const preview = useZoomDevicePreview();
   const {
     isJoined,
@@ -71,12 +74,44 @@ export function LiveSessionRoom({ studentId, access }: Props) {
   const { isFullscreen, toggleFullscreen } = useFullscreen(roomContainerRef);
   const { showConfirm } = useConfirm();
 
+  const [lockStatus, setLockStatus] = useState<LockStatus>('checking');
+  const [lockRetryToken, setLockRetryToken] = useState(0);
+  const releaseLockRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
-    if (phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
+    if (!('locks' in navigator)) {
+      setLockStatus('granted');
+      return;
+    }
+
+    let cancelled = false;
+    navigator.locks.request(COACH_LIVE_SESSION_LOCK_NAME, { mode: 'exclusive', ifAvailable: true }, (lock) => {
+      if (!lock) {
+        if (!cancelled) setLockStatus('denied');
+        return;
+      }
+      if (!cancelled) setLockStatus('granted');
+      // タブを閉じる/退室するまでロックを保持し続けるため、外部から解放できるPromiseを返す
+      return new Promise<void>((resolve) => {
+        releaseLockRef.current = resolve;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      releaseLockRef.current?.();
+      releaseLockRef.current = null;
+    };
+  }, [lockRetryToken]);
+
+  useEffect(() => {
+    // lockStatusが'checking'の間はプレビュー画面自体がマウントされずcanvasが存在しないため、
+    // 'granted'に変わって実際にプレビューJSXがマウントされたタイミングでも再実行されるようdepsに含める
+    if (lockStatus !== 'granted' || phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
     previewRequested.current = true;
     preview.startPreview(previewCanvasRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, lockStatus]);
 
   useEffect(() => {
     if (phase !== 'in-call' || joinRequested.current) return;
@@ -117,7 +152,16 @@ export function LiveSessionRoom({ studentId, access }: Props) {
     if (!confirmed) return;
 
     await leave();
-    router.push(`/students/${studentId}`);
+    // 通話終了時点でロックを解放し、他のタブから新しいセッションを開始できるようにする
+    // （このタブ自体は「閉じてください」の案内画面のまま残るため、ここではまだ遷移しない）
+    releaseLockRef.current?.();
+    releaseLockRef.current = null;
+    setPhase('ended');
+  };
+
+  const handleRetryLockCheck = () => {
+    setLockStatus('checking');
+    setLockRetryToken((prev) => prev + 1);
   };
 
   const handleSendChat = () => {
@@ -126,88 +170,155 @@ export function LiveSessionRoom({ studentId, access }: Props) {
     setChatInput('');
   };
 
+  if (lockStatus === 'checking') {
+    return <div className="h-full w-full bg-slate-900" />;
+  }
+
+  if (lockStatus === 'denied') {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center gap-4 px-6 text-center bg-slate-900">
+        <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-700">
+          <Lock size={22} />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-bold text-white">Live session already open</p>
+          <p className="text-xs text-slate-400 max-w-xs">
+            You already have a live session open in another tab. Please close that tab before starting a new one.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.close()}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors px-3.5 py-2 rounded-full border border-slate-700 hover:bg-slate-800"
+          >
+            <X size={14} />
+            Close Tab
+          </button>
+          <button
+            onClick={handleRetryLockCheck}
+            className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-3.5 py-2 rounded-full"
+          >
+            I closed the other tab — Retry
+          </button>
+        </div>
+        <p className="text-[10px] text-slate-500 max-w-xs">
+          If the tab doesn&apos;t close automatically, you can close it manually.
+        </p>
+      </div>
+    );
+  }
+
+  if (phase === 'ended') {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center gap-4 px-6 text-center bg-slate-900">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+          <CheckCircle2 size={22} />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-bold text-white">Session ended</p>
+          <p className="text-xs text-slate-400">You can close this tab now.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.close()}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
+          >
+            <X size={14} />
+            Close Tab
+          </button>
+        </div>
+        <p className="text-[10px] text-slate-500 max-w-xs">
+          If the tab doesn&apos;t close automatically, you can close it manually.
+        </p>
+      </div>
+    );
+  }
+
   if (phase === 'preview') {
     return (
-      <div className="flex flex-col h-full w-full bg-slate-900 overflow-hidden">
-        <div className="shrink-0 px-5 py-4 border-b border-slate-800 flex items-center gap-3">
-          <Link
-            href={`/students/${studentId}`}
-            className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <ArrowLeft size={16} />
-          </Link>
-          <div>
-            <p className="text-sm font-bold text-white">Session with {access.peerName}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Check your camera and microphone before joining</p>
+      <div className="h-full w-full flex items-center justify-center p-2 sm:p-4">
+        <div className="flex flex-col w-full max-w-2xl h-full bg-slate-900 rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-800 overflow-hidden">
+          <div className="shrink-0 px-5 py-4 border-b border-slate-800 flex items-center gap-3">
+            <button
+              onClick={() => window.close()}
+              title="Close tab"
+              className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <X size={16} />
+            </button>
+            <div>
+              <p className="text-sm font-bold text-white">Session with {access.peerName}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Check your camera and microphone before joining</p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-5 gap-4">
-          <div className="w-full max-w-2xl flex flex-col items-center gap-4">
-          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-800">
-            <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
-            {!preview.isCameraOn && (
-              <div className="absolute inset-0 flex items-center justify-center text-slate-500">
-                <VideoOff size={28} />
+          <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-5 gap-4">
+            <div className="w-full max-w-md flex flex-col items-center gap-4">
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-800">
+              <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
+              {!preview.isCameraOn && (
+                <div className="absolute inset-0 flex items-center justify-center text-slate-500">
+                  <VideoOff size={28} />
+                </div>
+              )}
+            </div>
+
+            <div className="w-full flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 transition-all duration-100"
+                  style={{ width: `${Math.min(100, preview.micVolume)}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-bold text-slate-500 shrink-0">Mic level</span>
+            </div>
+
+            {preview.errorMessage && (
+              <div className="text-center">
+                <p className="text-xs font-semibold text-red-300">
+                  Failed to access camera/microphone. Please check your browser permissions.
+                </p>
+                <p className="text-[10px] text-red-400/70 mt-0.5">{preview.errorMessage}</p>
               </div>
             )}
-          </div>
 
-          <div className="w-full flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 transition-all duration-100"
-                style={{ width: `${Math.min(100, preview.micVolume)}%` }}
-              />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={preview.toggleMic}
+                disabled={!preview.isPreviewing}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+              >
+                {preview.isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
+              </button>
+              <button
+                onClick={() => previewCanvasRef.current && preview.toggleCamera(previewCanvasRef.current)}
+                disabled={!preview.isPreviewing}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+              >
+                {preview.isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
+              </button>
+              <button
+                onClick={() => previewCanvasRef.current && preview.toggleBlur(previewCanvasRef.current)}
+                disabled={!preview.isPreviewing || !preview.isCameraOn}
+                title="Blur background"
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+              >
+                <Sparkles size={18} />
+              </button>
             </div>
-            <span className="text-[10px] font-bold text-slate-500 shrink-0">Mic level</span>
-          </div>
-
-          {preview.errorMessage && (
-            <div className="text-center">
-              <p className="text-xs font-semibold text-red-300">
-                Failed to access camera/microphone. Please check your browser permissions.
-              </p>
-              <p className="text-[10px] text-red-400/70 mt-0.5">{preview.errorMessage}</p>
             </div>
-          )}
+          </div>
 
-          <div className="flex items-center gap-3">
+          <div className="shrink-0 px-5 py-4 border-t border-slate-800">
             <button
-              onClick={preview.toggleMic}
+              onClick={handleStartCall}
               disabled={!preview.isPreviewing}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold py-3 rounded-xl transition-colors"
             >
-              {preview.isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
-            </button>
-            <button
-              onClick={() => previewCanvasRef.current && preview.toggleCamera(previewCanvasRef.current)}
-              disabled={!preview.isPreviewing}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'}`}
-            >
-              {preview.isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
-            </button>
-            <button
-              onClick={() => previewCanvasRef.current && preview.toggleBlur(previewCanvasRef.current)}
-              disabled={!preview.isPreviewing || !preview.isCameraOn}
-              title="Blur background"
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
-            >
-              <Sparkles size={18} />
+              Join Session
+              <ArrowRight size={16} />
             </button>
           </div>
-          </div>
-        </div>
-
-        <div className="shrink-0 px-5 py-4 border-t border-slate-800">
-          <button
-            onClick={handleStartCall}
-            disabled={!preview.isPreviewing}
-            className="w-full max-w-2xl mx-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold py-3 rounded-xl transition-colors"
-          >
-            Join Session
-            <ArrowRight size={16} />
-          </button>
         </div>
       </div>
     );

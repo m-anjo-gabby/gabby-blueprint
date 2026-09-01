@@ -1,7 +1,7 @@
-import Link from 'next/link';
-import { ArrowLeft, VideoOff } from 'lucide-react';
+import { VideoOff } from 'lucide-react';
 import { getLiveSessionRoomAccess } from '@/actions/videoSessionAction';
 import { LiveSessionRoom } from './_components/LiveSessionRoom';
+import { CloseTabButton } from './_components/CloseTabButton';
 
 export default async function CoachLiveSessionRoomPage({
   params,
@@ -18,16 +18,10 @@ export default async function CoachLiveSessionRoomPage({
           <VideoOff size={22} />
         </div>
         <p className="text-sm font-bold text-slate-400">{result.message}</p>
-        <Link
-          href={`/students/${id}`}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-300 transition-colors"
-        >
-          <ArrowLeft size={14} />
-          Back to Student
-        </Link>
+        <CloseTabButton />
       </div>
     );
   }
 
-  return <LiveSessionRoom studentId={id} access={result.access} />;
+  return <LiveSessionRoom access={result.access} />;
 }
