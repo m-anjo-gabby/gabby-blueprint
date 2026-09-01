@@ -22,6 +22,7 @@ import {
 import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
 import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
@@ -67,6 +68,7 @@ export function LiveSessionRoomView({ access }: Props) {
   const initialDeviceStateRef = useRef({ micOn: true, cameraOn: true, blurOn: false });
   const peerIconUrl = getProfileIconUrl(access.peerIconPath);
   const { isFullscreen, toggleFullscreen } = useFullscreen(roomContainerRef);
+  const { showConfirm } = useConfirm();
 
   useEffect(() => {
     if (phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
@@ -104,6 +106,18 @@ export function LiveSessionRoomView({ access }: Props) {
   };
 
   const handleLeave = async () => {
+    // ネイティブ全画面表示中は確認ダイアログがフルスクリーン要素の外側に描画され不可視になるため、先に解除する
+    if (isFullscreen) {
+      await toggleFullscreen();
+    }
+
+    const confirmed = await showConfirm(
+      'レッスンを終了しますか？',
+      '通話が終了し、退室します。この操作は取り消せません。',
+      { variant: 'danger', isModal: false, confirmText: '退室する' }
+    );
+    if (!confirmed) return;
+
     await leave();
     router.push('/dashboard');
   };
@@ -207,7 +221,7 @@ export function LiveSessionRoomView({ access }: Props) {
   return (
     <div
       ref={roomContainerRef}
-      className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'w-full max-w-2xl h-full rounded-[32px] sm:rounded-[40px] shadow-2xl'}`}
+      className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'w-full h-full rounded-[32px] sm:rounded-[40px] shadow-2xl'}`}
     >
       <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
@@ -241,76 +255,115 @@ export function LiveSessionRoomView({ access }: Props) {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col min-h-0 p-3 gap-3">
-        <div className="flex-1 relative min-h-0 rounded-xl overflow-hidden bg-slate-800">
-          {/* 画面共有: 常に同一DOMノードを維持し、共有中のみメイン表示にする
-              （表示切替のたびに要素が入れ替わるとhook側のコンテナ参照が古いノードを指したままになるため） */}
-          <div
-            ref={shareViewRef}
-            className={`absolute inset-0 [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full ${isReceivingScreenShare ? '' : 'hidden'}`}
-          />
-
-          {/* 相手カメラ: 通常時はメイン全面、画面共有中は共有画面に集中させるため非表示にする */}
-          <div className={isReceivingScreenShare ? 'hidden' : 'absolute inset-0'}>
+      <div className="flex-1 flex min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 p-3 gap-3">
+          <div className="flex-1 relative min-h-0 rounded-xl overflow-hidden bg-slate-800">
+            {/* 画面共有: 常に同一DOMノードを維持し、共有中のみメイン表示にする
+                （表示切替のたびに要素が入れ替わるとhook側のコンテナ参照が古いノードを指したままになるため） */}
             <div
-              ref={peerVideoRef}
-              className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full [&_video-player]:object-cover"
+              ref={shareViewRef}
+              className={`absolute inset-0 [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full ${isReceivingScreenShare ? '' : 'hidden'}`}
             />
-            {!isReceivingScreenShare && (
-              <span className="absolute bottom-3 left-3 text-xs font-bold text-white/80 bg-black/40 px-2.5 py-1 rounded-md">
-                {access.peerName}
-              </span>
-            )}
 
-            {/* 相手がまだ入室していない間の待機表示 */}
-            {isJoined && !isPeerConnected && !isReceivingScreenShare && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
-                <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center text-slate-400 shrink-0">
-                  {peerIconUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
-                  ) : (
-                    <User size={24} />
-                  )}
+            {/* 相手カメラ: 通常時はメイン全面、画面共有中は共有画面に集中させるため非表示にする */}
+            <div className={isReceivingScreenShare ? 'hidden' : 'absolute inset-0'}>
+              <div
+                ref={peerVideoRef}
+                className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full [&_video-player]:object-cover"
+              />
+              {!isReceivingScreenShare && (
+                <span className="absolute bottom-3 left-3 text-xs font-bold text-white/80 bg-black/40 px-2.5 py-1 rounded-md">
+                  {access.peerName}
+                </span>
+              )}
+
+              {/* 相手がまだ入室していない間の待機表示 */}
+              {isJoined && !isPeerConnected && !isReceivingScreenShare && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
+                  <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center text-slate-400 shrink-0">
+                    {peerIconUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={24} />
+                    )}
+                  </div>
+                  <p className="text-xs font-semibold text-slate-400">{access.peerName}コーチの入室をお待ちしています</p>
                 </div>
-                <p className="text-xs font-semibold text-slate-400">{access.peerName}コーチの入室をお待ちしています</p>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* 自分はワイプとして右上に小さく重ねる */}
+            <div
+              className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-900 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
+            >
+              <div
+                ref={selfVideoRef}
+                className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full [&_video-player]:object-cover"
+              />
+            </div>
           </div>
 
-          {/* 自分はワイプとして右上に小さく重ねる */}
-          <div
-            className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-900 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
-          >
-            <div
-              ref={selfVideoRef}
-              className="w-full h-full [&_video-player-container]:w-full [&_video-player-container]:h-full [&_video-player]:w-full [&_video-player]:h-full [&_video-player]:object-cover"
-            />
+          {/* モバイル(lg未満)ではPC向けサイドパネルの余地が無いため、映像の下にチャットを表示する */}
+          <div className="lg:hidden max-h-40 flex flex-col rounded-xl bg-slate-800/60 overflow-hidden shrink-0">
+            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
+              {chatMessages.length === 0 ? (
+                <p className="text-[11px] text-slate-500 text-center py-2">まだメッセージはありません</p>
+              ) : (
+                chatMessages.map((msg) => (
+                  <div key={msg.id} className={`text-[11px] ${msg.isSelf ? 'text-right' : 'text-left'}`}>
+                    <span className="font-bold text-slate-400 mr-1.5">{msg.senderName}</span>
+                    <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
+                      {msg.message}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="p-2 border-t border-slate-700 flex items-center gap-2">
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                placeholder="メッセージを入力..."
+                className="flex-1 text-xs bg-slate-900 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
+              />
+              <button
+                onClick={handleSendChat}
+                className="shrink-0 w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center transition-colors"
+              >
+                <Send size={14} />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="max-h-40 flex flex-col rounded-xl bg-slate-800/60 overflow-hidden shrink-0">
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
+        {/* デスクトップ(lg以上)では映像の右側にチャットパネルを常設する */}
+        <div className="hidden lg:flex w-72 flex-col border-l border-slate-800 bg-slate-900/60 shrink-0">
+          <div className="px-4 py-2.5 border-b border-slate-800">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">チャット</p>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
             {chatMessages.length === 0 ? (
-              <p className="text-[11px] text-slate-500 text-center py-2">まだメッセージはありません</p>
+              <p className="text-xs text-slate-500 text-center mt-6">まだメッセージはありません</p>
             ) : (
               chatMessages.map((msg) => (
-                <div key={msg.id} className={`text-[11px] ${msg.isSelf ? 'text-right' : 'text-left'}`}>
-                  <span className="font-bold text-slate-400 mr-1.5">{msg.senderName}</span>
-                  <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
+                <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
+                  <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
+                  <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-100'}`}>
                     {msg.message}
-                  </span>
+                  </p>
                 </div>
               ))
             )}
           </div>
-          <div className="p-2 border-t border-slate-700 flex items-center gap-2">
+          <div className="p-3 border-t border-slate-800 flex items-center gap-2">
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
               placeholder="メッセージを入力..."
-              className="flex-1 text-xs bg-slate-900 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
+              className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
             />
             <button
               onClick={handleSendChat}

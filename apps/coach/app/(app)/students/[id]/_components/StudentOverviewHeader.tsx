@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { ArrowLeft, BadgeCheck, BadgeX, Video } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, BadgeX, ExternalLink, Video } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 import { SprintProgressRadar } from './SprintProgressRadar';
@@ -28,10 +28,14 @@ export function StudentOverviewHeader({ profile }: Props) {
         </Link>
         <Link
           href={`/students/${profile.student_id}/room`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-3.5 py-2 rounded-full shadow-sm"
         >
           <Video size={14} />
           Start Live Session
+          <ExternalLink size={12} className="opacity-70" />
         </Link>
       </div>
       <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">

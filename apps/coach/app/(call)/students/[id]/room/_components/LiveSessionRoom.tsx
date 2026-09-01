@@ -23,6 +23,7 @@ import {
 import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
 import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
@@ -68,6 +69,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
   const joinRequested = useRef(false);
   const initialDeviceStateRef = useRef({ micOn: true, cameraOn: true, blurOn: false });
   const { isFullscreen, toggleFullscreen } = useFullscreen(roomContainerRef);
+  const { showConfirm } = useConfirm();
 
   useEffect(() => {
     if (phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
@@ -102,6 +104,18 @@ export function LiveSessionRoom({ studentId, access }: Props) {
   };
 
   const handleLeave = async () => {
+    // ネイティブ全画面表示中は確認ダイアログがフルスクリーン要素の外側に描画され不可視になるため、先に解除する
+    if (isFullscreen) {
+      await toggleFullscreen();
+    }
+
+    const confirmed = await showConfirm(
+      'End live session?',
+      'This will disconnect the call for both you and the student. This cannot be undone.',
+      { variant: 'danger', isModal: false, confirmText: 'End Session', cancelText: 'Cancel' }
+    );
+    if (!confirmed) return;
+
     await leave();
     router.push(`/students/${studentId}`);
   };
@@ -114,7 +128,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
 
   if (phase === 'preview') {
     return (
-      <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[600px] rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden shadow-sm">
+      <div className="flex flex-col h-full w-full bg-slate-900 overflow-hidden">
         <div className="shrink-0 px-5 py-4 border-b border-slate-800 flex items-center gap-3">
           <Link
             href={`/students/${studentId}`}
@@ -202,7 +216,7 @@ export function LiveSessionRoom({ studentId, access }: Props) {
   return (
     <div
       ref={roomContainerRef}
-      className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'h-[calc(100vh-8rem)] min-h-[600px] rounded-2xl border border-slate-200 shadow-sm'}`}
+      className={`flex flex-col bg-slate-900 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'h-full w-full'}`}
     >
       <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
