@@ -8,6 +8,8 @@ import {
   EyeOff,
   Lock,
   Maximize2,
+  MessageSquare,
+  MessageSquareOff,
   Mic,
   MicOff,
   Minimize2,
@@ -62,6 +64,7 @@ export function LiveSessionRoom({ access }: Props) {
 
   const [phase, setPhase] = useState<RoomPhase>('preview');
   const [isSelfViewVisible, setIsSelfViewVisible] = useState(true);
+  const [isChatVisible, setIsChatVisible] = useState(true);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const selfVideoRef = useRef<HTMLDivElement>(null);
   const peerVideoRef = useRef<HTMLDivElement>(null);
@@ -327,13 +330,13 @@ export function LiveSessionRoom({ access }: Props) {
   return (
     <div
       ref={roomContainerRef}
-      className={`flex flex-col bg-white overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'h-full w-full'}`}
+      className={`flex flex-col bg-slate-950 overflow-hidden ${isFullscreen ? 'h-screen w-screen' : 'h-full w-full'}`}
     >
-      <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-white border-b border-slate-100">
+      <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-slate-900/80 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
           <UserAvatar userName={access.peerName} iconPath={access.peerIconPath} size={32} />
           <div>
-            <p className="text-sm font-bold text-slate-900 leading-tight">{access.peerName}</p>
+            <p className="text-sm font-bold text-white leading-tight">{access.peerName}</p>
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
               {isJoined ? 'Live Session in progress' : isJoining ? 'Connecting...' : 'Not connected'}
             </p>
@@ -341,7 +344,7 @@ export function LiveSessionRoom({ access }: Props) {
         </div>
         <button
           onClick={toggleFullscreen}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
         >
           {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -349,14 +352,14 @@ export function LiveSessionRoom({ access }: Props) {
       </div>
 
       {errorMessage && (
-        <div className="px-5 py-2 bg-rose-50 text-rose-600 text-xs font-semibold border-b border-rose-100">
+        <div className="px-5 py-2 bg-red-500/10 text-red-300 text-xs font-semibold border-b border-red-500/20">
           {errorMessage}
         </div>
       )}
 
       <div className="flex-1 flex min-h-0">
-        {/* 映像そのものが映るキャンバス部分はコントラスト・視認性の観点から意図的にダークのまま維持する */}
-        <div className="flex-1 relative min-h-0 m-3 rounded-xl overflow-hidden bg-slate-900">
+        {/* 映像そのものが映るキャンバス部分。ZoomやMeet同様、余白・角丸なしで画面端まで敷き詰める */}
+        <div className="flex-1 relative min-h-0 overflow-hidden bg-black">
           {/* 相手をメインとしてペイン全体に表示（object-coverで隙間なく埋める） */}
           <div
             ref={peerVideoRef}
@@ -376,7 +379,7 @@ export function LiveSessionRoom({ access }: Props) {
 
           {/* 自分はワイプとして右上に小さく重ねる */}
           <div
-            className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-950 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
+            className={`absolute top-3 right-3 w-28 sm:w-36 aspect-video rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-slate-900 z-10 ${isSelfViewVisible ? '' : 'hidden'}`}
           >
             <div
               ref={selfVideoRef}
@@ -387,54 +390,56 @@ export function LiveSessionRoom({ access }: Props) {
         {/* 画面共有の送信元canvas（自分がシェアする内容の描画先。表示はしないため自分カメラ非表示トグルの影響を受けない位置に置く） */}
         <video ref={shareVideoRef} className="hidden" muted playsInline />
 
-        <div className="hidden lg:flex w-72 flex-col border-l border-slate-100 bg-slate-50">
-          <div className="px-4 py-2.5 border-b border-slate-100">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">In-call Chat</p>
+        {isChatVisible && (
+          <div className="hidden lg:flex w-72 flex-col border-l border-slate-800 bg-slate-900/60">
+            <div className="px-4 py-2.5 border-b border-slate-800">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">In-call Chat</p>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+              {chatMessages.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center mt-6">No messages yet</p>
+              ) : (
+                chatMessages.map((msg) => (
+                  <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
+                    <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
+                    <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-100'}`}>
+                      {msg.message}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="p-3 border-t border-slate-800 flex items-center gap-2">
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                placeholder="Type a message..."
+                className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+              <button
+                onClick={handleSendChat}
+                className="shrink-0 w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
+              >
+                <Send size={14} />
+              </button>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-            {chatMessages.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center mt-6">No messages yet</p>
-            ) : (
-              chatMessages.map((msg) => (
-                <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
-                  <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
-                  <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
-                    {msg.message}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="p-3 border-t border-slate-100 flex items-center gap-2">
-            <input
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
-              placeholder="Type a message..."
-              className="flex-1 text-xs bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-            <button
-              onClick={handleSendChat}
-              className="shrink-0 w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
-            >
-              <Send size={14} />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
-      <div className="shrink-0 flex items-center justify-center gap-3 px-5 py-4 bg-white border-t border-slate-100">
+      <div className="shrink-0 flex items-center justify-center gap-3 px-5 py-4 bg-slate-900/80 border-t border-slate-800">
         <button
           onClick={toggleMic}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isMicOn ? 'bg-slate-100 hover:bg-slate-200 text-slate-600' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isMicOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
         </button>
         <button
           onClick={toggleCamera}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-100 hover:bg-slate-200 text-slate-600' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isCameraOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
         </button>
@@ -442,22 +447,30 @@ export function LiveSessionRoom({ access }: Props) {
           onClick={() => setIsSelfViewVisible((prev) => !prev)}
           disabled={!isJoined}
           title={isSelfViewVisible ? 'Hide self view' : 'Show self view'}
-          className="w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 bg-slate-100 hover:bg-slate-200 text-slate-600"
+          className="w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 bg-slate-700 hover:bg-slate-600 text-white"
         >
           {isSelfViewVisible ? <Eye size={18} /> : <EyeOff size={18} />}
+        </button>
+        <button
+          onClick={() => setIsChatVisible((prev) => !prev)}
+          disabled={!isJoined}
+          title={isChatVisible ? 'Hide chat' : 'Show chat'}
+          className="hidden lg:flex w-11 h-11 rounded-full items-center justify-center transition-colors disabled:opacity-40 bg-slate-700 hover:bg-slate-600 text-white"
+        >
+          {isChatVisible ? <MessageSquare size={18} /> : <MessageSquareOff size={18} />}
         </button>
         <button
           onClick={toggleBlur}
           disabled={!isJoined || !isCameraOn || !isBlurSupported}
           title={isBlurSupported ? 'Blur background' : 'Background blur is not supported on this device'}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
         >
           <Sparkles size={18} />
         </button>
         <button
           onClick={() => shareVideoRef.current && toggleScreenShare(shareVideoRef.current)}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isScreenSharing ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isScreenSharing ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
         >
           {isScreenSharing ? <MonitorX size={18} /> : <MonitorUp size={18} />}
         </button>
