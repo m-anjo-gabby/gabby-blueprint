@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, SprintQuestionType, SprintAnswerType, SprintQuestion } from '@gabby/types/sprint';
-import { resolveSprintHasLevel } from '@gabby/lib';
+import { resolveSprintHasLevel, formatSprintLevelLabel } from '@gabby/lib';
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -82,7 +82,7 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
     if (!meta || !hasLevel) return [];
     const items = [];
     for (let i = meta.minLevel; i <= meta.maxLevel; i++) {
-      items.push({ value: String(i), label: i === 0 ? 'Basic' : `Lv.${i}` });
+      items.push({ value: String(i), label: formatSprintLevelLabel(questionType, i) });
     }
     return items;
   }, [questionType, hasLevel]);

@@ -37,6 +37,19 @@ export const getSprintTitle = (type: SprintQuestionType | string, level: number,
 };
 
 /**
+ * レベルのみの表示ラベルを生成する共通ヘルパー（種別名は含まない）。
+ * Level=0かつBasicレベルを持つ種別の場合のみ「Basic」、それ以外は「Lv.X」。
+ * Setup/Player/結果画面/生徒概要など、レベル単体で表示する箇所の表記揺れを防ぐために使用する。
+ */
+export const formatSprintLevelLabel = (type: SprintQuestionType | string, level: number): string => {
+  const typeConfig = QUESTION_TYPES[type as SprintQuestionType];
+  if (level === 0 && typeConfig?.hasBasic) {
+    return 'Basic';
+  }
+  return `Lv.${level}`;
+};
+
+/**
  * OfflineAudioContext を使用して高品質な開始チャイム音を事前レンダリングし、
  * AudioBuffer として生成する共通ヘルパー関数。
  * (マウント時等に一度生成しキャッシュして使い回します)

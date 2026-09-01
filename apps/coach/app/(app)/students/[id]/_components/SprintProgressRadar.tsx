@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatSprintLevelLabel } from '@gabby/lib';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 import {
@@ -36,7 +37,7 @@ function buildRadarData(progress: StudentSprintProgress): RadarDatum[] {
   return TYPE_ORDER.map((type) => {
     const level = (progress[type.dbKey as keyof StudentSprintProgress] as number) ?? type.minLevel;
     const percent = ((level - type.minLevel) / (type.maxLevel - type.minLevel)) * 100;
-    const levelLabel = level === 0 && type.hasBasic ? 'Basic' : `Lv.${level}`;
+    const levelLabel = formatSprintLevelLabel(type.value, level);
     return {
       type: type.label,
       axisLabel: type.label.replace(/^UG\s+/, ''),

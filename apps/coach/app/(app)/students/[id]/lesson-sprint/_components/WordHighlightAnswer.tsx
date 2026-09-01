@@ -14,7 +14,7 @@ interface Props {
  */
 export function WordHighlightAnswer({ words, highlighted, onToggle }: Props) {
   return (
-    <div className="flex flex-wrap gap-1.5 justify-center">
+    <div className="flex flex-wrap gap-x-1 gap-y-1.5 justify-center">
       {words.map((word, idx) => {
         const isHighlighted = highlighted.includes(idx);
         return (
@@ -23,10 +23,10 @@ export function WordHighlightAnswer({ words, highlighted, onToggle }: Props) {
             type="button"
             onClick={() => onToggle(idx)}
             className={cn(
-              'px-2 py-1 rounded-lg text-lg sm:text-xl font-black transition-colors cursor-pointer select-none',
+              'px-1 py-0.5 rounded-lg text-lg sm:text-xl font-black transition-colors cursor-pointer select-none',
               isHighlighted
                 ? 'bg-rose-100 text-rose-700 ring-2 ring-rose-300'
-                : 'bg-slate-50 text-slate-800 hover:bg-slate-100'
+                : 'text-slate-800 hover:bg-slate-100'
             )}
           >
             {word}

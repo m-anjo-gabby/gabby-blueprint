@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Timer, Pause, Play, FastForward, StickyNote, Loader2 } from 'lucide-react';
+import { ChevronLeft, Timer, Pause, Play, StickyNote, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -23,11 +23,10 @@ interface Props {
 
 export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
   const { showToast } = useToast();
-  const { session, config, contentName, contentMetadata, commitScoreResult, commitSkipResult, toggleWordHighlight, setSessionNote } = useLessonSprintStore();
+  const { session, config, contentName, contentMetadata, commitScoreResult, toggleWordHighlight, setSessionNote } = useLessonSprintStore();
   const { currentIndex, questions, currentHighlightedWords, sessionNote } = session;
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isNotesOpen, setIsNotesOpen] = useState(false);
   const isPersistedRef = useRef(false);
 
   const currentQuestion = questions[currentIndex];
@@ -134,21 +133,13 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
     }
   };
 
-  const handleSkip = () => {
-    if (!currentQuestion || isSaving) return;
-    const { isLast } = commitSkipResult(currentQuestion.question_id);
-    if (isLast) {
-      void handleSave(pausedSecondsRef.current);
-    }
-  };
-
   const timeRatio = secondsLeft / (config.timeLimitSec || 60);
   const isWarning = timeRatio <= 0.5 && timeRatio > 0.2;
   const isCritical = timeRatio <= 0.2;
   const progressPercent = Math.max(0, Math.min(100, (secondsLeft / (config.timeLimitSec || 60)) * 100));
 
   return (
-    <div className="fixed inset-0 z-40 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
+    <div className="fixed inset-0 z-40 w-full h-full bg-slate-50 flex items-center justify-center gap-4 p-2 overflow-hidden text-slate-900">
       <main className="bg-white border border-slate-100 w-full max-w-3xl h-full max-h-[95vh] rounded-[32px] flex flex-col relative overflow-hidden shadow-2xl">
         {/* ヘッダー: 戻る・タイトル・タイマー */}
         <div className="shrink-0 w-full px-6 pt-5 pb-3 border-b border-slate-100/60 bg-white relative z-10">
@@ -207,7 +198,7 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
         <div className="flex-1 flex flex-col p-6 overflow-y-auto overscroll-contain">
           <div className="w-full max-w-2xl mx-auto flex flex-col gap-5">
             <div className="text-xs font-bold text-slate-400 text-center">
-              Question {currentIndex + 1} / {questions.length}
+              Question {currentIndex + 1}
             </div>
 
             {currentQuestion?.statement_en && !isSpeedMode && (
@@ -239,42 +230,26 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
           </div>
         </div>
 
-        {/* フッター: 評価・スキップ・メモ */}
-        <div className="shrink-0 px-6 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-slate-100/60 bg-white space-y-3">
+        {/* フッター: 評価 */}
+        <div className="shrink-0 px-6 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-slate-100/60 bg-white">
           <ScoreButtons onScore={handleScore} disabled={isSaving} />
-          <div className="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={handleSkip}
-              disabled={isSaving}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-slate-400 hover:text-slate-600 text-xs font-bold disabled:opacity-50 cursor-pointer"
-            >
-              <FastForward size={13} strokeWidth={2.5} />
-              Skip
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsNotesOpen((v) => !v)}
-              className={cn(
-                'flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors',
-                isNotesOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'
-              )}
-            >
-              <StickyNote size={13} strokeWidth={2.5} />
-              Notes{sessionNote ? ' •' : ''}
-            </button>
-          </div>
-          {isNotesOpen && (
-            <Textarea
-              value={sessionNote}
-              onChange={(e) => setSessionNote(e.target.value)}
-              placeholder="Jot down notes during the session (pronunciation, dropped words, etc.)"
-              className="text-sm"
-              rows={3}
-            />
-          )}
         </div>
       </main>
+
+      {/* メモ: メインパネルとバランスを崩さないよう、独立したカードとして右側に配置。
+          制限時間のあるトレーニング中も記録し続けられるよう常時表示。 */}
+      <aside className="hidden lg:flex flex-col w-72 h-full max-h-[95vh] bg-white border border-slate-100 rounded-[32px] shadow-2xl overflow-hidden p-4 gap-2">
+        <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-500 uppercase tracking-wider shrink-0">
+          <StickyNote size={13} strokeWidth={2.5} />
+          Notes
+        </div>
+        <Textarea
+          value={sessionNote}
+          onChange={(e) => setSessionNote(e.target.value)}
+          placeholder="Jot down notes during the session (pronunciation, dropped words, etc.)"
+          className="flex-1 min-h-0 resize-none text-sm bg-slate-50/50"
+        />
+      </aside>
 
       {isSaving && (
         <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-6 z-50">

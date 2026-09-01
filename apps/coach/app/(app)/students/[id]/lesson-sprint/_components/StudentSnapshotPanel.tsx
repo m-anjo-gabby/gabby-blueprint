@@ -4,6 +4,7 @@ import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { formatSprintLevelLabel } from '@gabby/lib';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
@@ -35,7 +36,7 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
           <div className="space-y-1">
             {TYPE_ORDER.map((type) => {
               const level = (sprint_progress[type.dbKey as keyof typeof sprint_progress] as number) ?? type.minLevel;
-              const levelLabel = level === 0 && type.hasBasic ? 'Basic' : `Lv.${level}`;
+              const levelLabel = formatSprintLevelLabel(type.value, level);
               const isCurrentSelection = type.value === highlightedType;
               return (
                 <div
@@ -77,7 +78,7 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-400 mt-0.5">
-                      {typeLabel} · Lv.{item.difficulty_level} · {item.time_limit_sec}s · {formatDateTimeByZone(item.insert_date, timezone, false)}
+                      {typeLabel} · {formatSprintLevelLabel(item.question_type, item.difficulty_level)} · {item.time_limit_sec}s · {formatDateTimeByZone(item.insert_date, timezone, false)}
                     </p>
                   </li>
                 );

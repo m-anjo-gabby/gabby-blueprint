@@ -46,7 +46,6 @@ interface LessonSprintState {
 
   toggleWordHighlight: (index: number) => void;
   commitScoreResult: (questionId: string, score: number) => { isLast: boolean };
-  commitSkipResult: (questionId: string) => { isLast: boolean };
 
   setIsPaused: (paused: boolean) => void;
   addPausedSeconds: (seconds: number) => void;
@@ -114,30 +113,6 @@ export const useLessonSprintStore = create<LessonSprintState>((set, get) => ({
       questionId,
       isSkipped: false,
       score,
-      highlightedWordIndices: session.currentHighlightedWords,
-    };
-    const updatedResults = [...session.sessionResults.filter((r) => r.questionId !== questionId), newResult];
-
-    set((state) => ({
-      session: {
-        ...state.session,
-        sessionResults: updatedResults,
-        currentIndex: !isLast ? state.session.currentIndex + 1 : state.session.currentIndex,
-        currentHighlightedWords: [],
-      },
-    }));
-
-    return { isLast };
-  },
-
-  commitSkipResult: (questionId) => {
-    const { session } = get();
-    const isLast = session.currentIndex >= session.questions.length - 1;
-
-    const newResult: LessonSprintSessionResult = {
-      questionId,
-      isSkipped: true,
-      score: null,
       highlightedWordIndices: session.currentHighlightedWords,
     };
     const updatedResults = [...session.sessionResults.filter((r) => r.questionId !== questionId), newResult];
