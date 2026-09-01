@@ -318,7 +318,7 @@ export function LiveSessionRoomView({ access }: Props) {
                   chatMessages.map((msg) => (
                     <div key={msg.id} className={`text-[11px] ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                       <span className="font-bold text-slate-400 mr-1.5">{msg.senderName}</span>
-                      <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
+                      <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
                         {msg.message}
                       </span>
                     </div>
@@ -331,11 +331,11 @@ export function LiveSessionRoomView({ access }: Props) {
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
                   placeholder="メッセージを入力..."
-                  className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
+                  className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
                 />
                 <button
                   onClick={handleSendChat}
-                  className="shrink-0 w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center transition-colors"
+                  className="shrink-0 w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
                 >
                   <Send size={14} />
                 </button>
@@ -357,7 +357,7 @@ export function LiveSessionRoomView({ access }: Props) {
                 chatMessages.map((msg) => (
                   <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                     <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
-                    <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-100'}`}>
+                    <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-100'}`}>
                       {msg.message}
                     </p>
                   </div>
@@ -370,11 +370,11 @@ export function LiveSessionRoomView({ access }: Props) {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
                 placeholder="メッセージを入力..."
-                className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-rose-500"
+                className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
               />
               <button
                 onClick={handleSendChat}
-                className="shrink-0 w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center transition-colors"
+                className="shrink-0 w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
               >
                 <Send size={14} />
               </button>

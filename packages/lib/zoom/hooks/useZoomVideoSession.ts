@@ -77,7 +77,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
   const selfWrapperRef = useRef<HTMLElement | null>(null);
   const peerWrapperRef = useRef<HTMLElement | null>(null);
   const shareViewWrapperRef = useRef<HTMLElement | null>(null);
-  const selfIdentityRef = useRef<string>('');
+  const selfUserIdRef = useRef<number | null>(null);
 
   const [isJoined, setIsJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -125,7 +125,6 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       setErrorMessage(null);
       selfWrapperRef.current = selfVideoContainer;
       peerWrapperRef.current = peerVideoContainer;
-      selfIdentityRef.current = access.userIdentity;
 
       try {
         // プレビュー画面で既にclient.init()済みの場合はそれを再利用し、二重初期化を避ける
@@ -173,7 +172,9 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
           setIsScreenSharing(false);
         });
 
-        client.on('chat-on-message', (payload: { message?: string; sender: { name: string }; timestamp: number }) => {
+        client.on('chat-on-message', (payload: { message?: string; sender: { name: string; userId: number }; timestamp: number }) => {
+          // chat-on-messageは送信者自身にもエコーされるため、sendChatMessage側では楽観的な追加を行わず、
+          // このイベントを唯一の情報源としてuserIdの一致でisSelfを判定する（二重表示防止）
           setChatMessages((prev) => [
             ...prev,
             {
@@ -181,7 +182,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
               senderName: payload.sender.name,
               message: payload.message ?? '',
               timestamp: payload.timestamp,
-              isSelf: false,
+              isSelf: payload.sender.userId === selfUserIdRef.current,
             },
           ]);
         });
@@ -193,6 +194,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         setIsPeerConnected((client.getAllUser()?.length ?? 1) > 1);
 
         const currentUser = client.getCurrentUserInfo();
+        selfUserIdRef.current = currentUser.userId;
         const stream = client.getMediaStream();
 
         setIsBlurSupported(stream.isSupportVirtualBackground());
@@ -340,11 +342,9 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     if (!client || !trimmed) return;
     try {
       const chatClient = client.getChatClient();
+      // 送信した内容は 'chat-on-message' が送信者自身にもエコーしてくるため、
+      // ここで楽観的に追加すると二重表示になる。反映はそのイベント側に一本化する。
       await chatClient.sendToAll(trimmed);
-      setChatMessages((prev) => [
-        ...prev,
-        { id: `self-${Date.now()}-${prev.length}`, senderName: selfIdentityRef.current, message: trimmed, timestamp: Date.now(), isSelf: true },
-      ]);
     } catch (err) {
       const { detail, message } = describeZoomError(err);
       console.error('Failed to send chat message:', message, detail);
