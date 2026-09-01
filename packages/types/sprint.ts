@@ -49,16 +49,17 @@ export interface QuestionTypeMetadata {
   hasBasic: boolean;      // レベル0(Basic)が存在するかどうか
   minLevel: number;       // 最小レベル (0 または 1)
   maxLevel: number;       // 上限レベル (5 または 10)
+  recommendedTimeSec: number; // 種別に応じた推奨スプリント制限時間（秒）
 }
 
 /**
  * スプリント問題種別の画面表示用マスタ
  */
 export const QUESTION_TYPES: Record<SprintQuestionType, QuestionTypeMetadata> = {
-  '0': { label: 'UG Speed', value: '0', seq_no: 1, dbKey: 'level_speed', hasBasic: true, minLevel: 0, maxLevel: 10 },
-  '5': { label: 'UG Builders', value: '5', seq_no: 2, dbKey: 'level_builders', hasBasic: false, minLevel: 1, maxLevel: 5 },
-  '4': { label: 'UG Structure', value: '4', seq_no: 3, dbKey: 'level_structure', hasBasic: true, minLevel: 0, maxLevel: 10 },
-  '6': { label: 'UG Mastery', value: '6', seq_no: 4, dbKey: 'level_mastery', hasBasic: false, minLevel: 1, maxLevel: 10 },
+  '0': { label: 'UG Speed', value: '0', seq_no: 1, dbKey: 'level_speed', hasBasic: true, minLevel: 0, maxLevel: 10, recommendedTimeSec: 60 },
+  '5': { label: 'UG Builders', value: '5', seq_no: 2, dbKey: 'level_builders', hasBasic: false, minLevel: 1, maxLevel: 5, recommendedTimeSec: 90 },
+  '4': { label: 'UG Structure', value: '4', seq_no: 3, dbKey: 'level_structure', hasBasic: true, minLevel: 0, maxLevel: 10, recommendedTimeSec: 120 },
+  '6': { label: 'UG Mastery', value: '6', seq_no: 4, dbKey: 'level_mastery', hasBasic: false, minLevel: 1, maxLevel: 10, recommendedTimeSec: 120 },
 } as const;
 
 /**
@@ -81,7 +82,7 @@ export const DEFAULT_SPRINT_TIME_KEY = 2 as const; // 2 = スダンダード(90s
  * 制限時間オプションの実体マスタデータ (キーは連番)
  */
 export const SPRINT_TIME_OPTIONS: Record<number, SprintTimeOption> = {
-  1: { value: 10,  label: '60s',  desc: 'クイックアタック', seq_no: 1 },
+  1: { value: 60,  label: '60s',  desc: 'クイックアタック', seq_no: 1 },
   2: { value: 90,  label: '90s',  desc: 'スタンダード',     seq_no: 2 },
   3: { value: 120, label: '120s', desc: 'ディープラン',     seq_no: 3 },
   4: { value: 150, label: '150s', desc: 'インテンシブ',     seq_no: 4 },

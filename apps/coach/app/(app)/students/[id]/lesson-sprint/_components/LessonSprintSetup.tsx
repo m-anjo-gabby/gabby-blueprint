@@ -11,11 +11,14 @@ import { resolveSprintHasLevel } from '@gabby/lib';
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import type { LessonSprintContentSummary } from '@gabby/types/lessonSprint';
+import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
+import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
+import { StudentSnapshotPanel } from './StudentSnapshotPanel';
 
 interface Props {
   studentId: string;
-  studentName: string;
+  profile: StudentOverviewProfile;
+  lessonSprints: LessonSprintHistoryListItem[];
   contents: LessonSprintContentSummary[];
   onStart: (questions: SprintQuestion[]) => void;
 }
@@ -23,14 +26,26 @@ interface Props {
 const sortedTypes = Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no);
 const sortedTimes = Object.values(SPRINT_TIME_OPTIONS).sort((a, b) => a.seq_no - b.seq_no);
 
-export function LessonSprintSetup({ studentId, studentName, contents, onStart }: Props) {
+export function LessonSprintSetup({ studentId, profile, lessonSprints, contents, onStart }: Props) {
   const { showToast } = useToast();
   const { setConfig, setContentName, setContentMetadata } = useLessonSprintStore();
 
-  const [contentId, setContentId] = useState<string>(contents[0]?.content_id ?? '');
-  const [questionType, setQuestionType] = useState<SprintQuestionType>('0');
-  const [level, setLevel] = useState<string>('1');
-  const [timeLimitSec, setTimeLimitSec] = useState<number>(90);
+  // 初期値は直近の実施条件を踏襲する。前回コンテンツが現在の一覧に無ければ先頭コンテンツにフォールバック。
+  const lastSession = lessonSprints[0];
+  const hasLastContent = !!lastSession && contents.some((c) => c.content_id === lastSession.content_id);
+
+  const [contentId, setContentId] = useState<string>(
+    hasLastContent ? lastSession.content_id : (contents[0]?.content_id ?? '')
+  );
+  const [questionType, setQuestionType] = useState<SprintQuestionType>(
+    hasLastContent ? (lastSession.question_type as SprintQuestionType) : '0'
+  );
+  const [level, setLevel] = useState<string>(
+    hasLastContent ? String(lastSession.difficulty_level) : '1'
+  );
+  const [timeLimitSec, setTimeLimitSec] = useState<number>(
+    hasLastContent ? lastSession.time_limit_sec : QUESTION_TYPES['0'].recommendedTimeSec
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   const selectedContent = useMemo(() => contents.find((c) => c.content_id === contentId), [contents, contentId]);
@@ -56,6 +71,7 @@ export function LessonSprintSetup({ studentId, studentName, contents, onStart }:
       if (firstSupported) {
         setQuestionType(firstSupported.value);
         setLevel(hasLevel ? String(firstSupported.minLevel) : '1');
+        setTimeLimitSec(firstSupported.recommendedTimeSec);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,6 +90,7 @@ export function LessonSprintSetup({ studentId, studentName, contents, onStart }:
   const handleTypeChange = (typeId: SprintQuestionType) => {
     setQuestionType(typeId);
     setLevel(hasLevel ? String(QUESTION_TYPES[typeId]?.minLevel ?? 0) : '1');
+    setTimeLimitSec(QUESTION_TYPES[typeId].recommendedTimeSec);
   };
 
   const handleStart = async (answerType: SprintAnswerType = '0') => {
@@ -109,7 +126,7 @@ export function LessonSprintSetup({ studentId, studentName, contents, onStart }:
   const isSpeedSelected = questionType === '0';
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div className="space-y-1">
         <Link
           href={`/students/${studentId}`}
@@ -119,9 +136,10 @@ export function LessonSprintSetup({ studentId, studentName, contents, onStart }:
           Back to Overview
         </Link>
         <h1 className="text-xl font-bold text-slate-800 tracking-tight">Start Lesson Sprint</h1>
-        <p className="text-xs text-slate-400">Configure a live sprint training for {studentName}.</p>
+        <p className="text-xs text-slate-400">Configure a live sprint training for {profile.user_name}.</p>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
       {contents.length === 0 ? (
         <Card className="rounded-2xl border-slate-200 shadow-sm">
           <CardContent className="py-12 flex flex-col items-center text-center gap-2">
@@ -130,7 +148,7 @@ export function LessonSprintSetup({ studentId, studentName, contents, onStart }:
           </CardContent>
         </Card>
       ) : (
-        <>
+        <div className="space-y-6">
           <Card className="rounded-2xl border-slate-200 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-slate-800">Content</CardTitle>
@@ -213,20 +231,27 @@ export function LessonSprintSetup({ studentId, studentName, contents, onStart }:
             </CardHeader>
             <CardContent className="pt-2">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {sortedTimes.map((opt) => (
-                  <button
-                    key={opt.seq_no}
-                    type="button"
-                    onClick={() => setTimeLimitSec(opt.value)}
-                    className={cn(
-                      "p-3 rounded-xl border text-left transition-all",
-                      timeLimitSec === opt.value ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                    )}
-                  >
-                    <div className="text-xs font-black">{opt.label}</div>
-                    <div className={cn("text-[11px] font-bold", timeLimitSec === opt.value ? "text-indigo-200" : "text-slate-400")}>{opt.desc}</div>
-                  </button>
-                ))}
+                {sortedTimes.map((opt) => {
+                  const isRecommended = opt.value === QUESTION_TYPES[questionType].recommendedTimeSec;
+                  return (
+                    <button
+                      key={opt.seq_no}
+                      type="button"
+                      onClick={() => setTimeLimitSec(opt.value)}
+                      className={cn(
+                        "p-3 rounded-xl border text-left transition-all",
+                        timeLimitSec === opt.value ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                      )}
+                    >
+                      <div className="text-xs font-black">{opt.label}</div>
+                      {isRecommended && (
+                        <div className={cn("text-[11px] font-bold", timeLimitSec === opt.value ? "text-amber-300" : "text-indigo-600")}>
+                          Recommended
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -259,8 +284,11 @@ export function LessonSprintSetup({ studentId, studentName, contents, onStart }:
               </button>
             )}
           </div>
-        </>
+        </div>
       )}
+
+      <StudentSnapshotPanel profile={profile} lessonSprints={lessonSprints} highlightedType={questionType} />
+      </div>
     </div>
   );
 }

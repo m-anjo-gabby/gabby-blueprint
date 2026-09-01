@@ -5,17 +5,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { tokenizeWordsWithPunctuation } from '@gabby/lib';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { LESSON_SPRINT_SCORE_META } from '@gabby/types/lessonSprint';
-import type { LessonSprintRecord } from '@gabby/types/lessonSprint';
+import type { LessonSprintRecord, LessonSprintContentSummary } from '@gabby/types/lessonSprint';
 import type { SprintQuestion } from '@gabby/types/sprint';
 import { SessionNoteCard } from './SessionNoteCard';
+import { RepeatSprintButton } from './RepeatSprintButton';
 
 interface Props {
   studentId: string;
   record: LessonSprintRecord;
   questions: SprintQuestion[];
+  content: LessonSprintContentSummary | undefined;
 }
 
-export function LessonSprintResult({ studentId, record, questions }: Props) {
+export function LessonSprintResult({ studentId, record, questions, content }: Props) {
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const isQuestionBased = record.question_type === '0' || record.question_type === '6';
 
@@ -83,13 +85,16 @@ export function LessonSprintResult({ studentId, record, questions }: Props) {
 
           <SessionNoteCard lessonSprintId={record.lesson_sprint_id} initialNote={record.session_note} />
 
-          <Link
-            href={`/students/${studentId}/lesson-sprint`}
-            className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shrink-0"
-          >
-            <Zap size={14} className="fill-current text-amber-300" />
-            Start Another Lesson Sprint
-          </Link>
+          <div className="space-y-2">
+            <RepeatSprintButton studentId={studentId} record={record} content={content} />
+            <Link
+              href={`/students/${studentId}/lesson-sprint`}
+              className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shrink-0"
+            >
+              <Zap size={14} className="fill-current text-amber-300" />
+              Start Another Lesson Sprint
+            </Link>
+          </div>
         </div>
 
         {/* Right pane: scrollable answer history */}

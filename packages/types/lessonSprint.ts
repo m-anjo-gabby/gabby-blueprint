@@ -42,9 +42,11 @@ export interface CreateLessonSprintResultInput {
 /** Student Overview画面のLesson Sprint履歴一覧に表示する簡易レコード（教材名を含む） */
 export interface LessonSprintHistoryListItem {
   lesson_sprint_id: string;
+  content_id: string;
   content_name: string;
   question_type: string;
   difficulty_level: number;
+  time_limit_sec: number;
   total_answered: number;
   total_evaluated: number;
   average_score: number | null;

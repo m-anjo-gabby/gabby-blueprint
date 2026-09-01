@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getStudentOverview } from '@/actions/studentAction';
-import { getAvailableSprintContents } from '@/actions/lessonSprintAction';
+import { getAvailableSprintContents, getLessonSprintHistory } from '@/actions/lessonSprintAction';
 import { LessonSprintApp } from './_components/LessonSprintApp';
 
 export default async function LessonSprintSetupPage({
@@ -15,12 +15,16 @@ export default async function LessonSprintSetupPage({
     notFound();
   }
 
-  const contents = await getAvailableSprintContents();
+  const [contents, lessonSprints] = await Promise.all([
+    getAvailableSprintContents(),
+    getLessonSprintHistory(id),
+  ]);
 
   return (
     <LessonSprintApp
       studentId={id}
-      studentName={overview.profile.user_name}
+      profile={overview.profile}
+      lessonSprints={lessonSprints}
       contents={contents}
     />
   );
