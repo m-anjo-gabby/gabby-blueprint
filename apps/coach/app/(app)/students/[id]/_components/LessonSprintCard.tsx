@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Zap, ArrowRight, ChevronRight } from 'lucide-react';
+import { Zap, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -18,16 +18,8 @@ export function LessonSprintCard({ studentId, history }: Props) {
 
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="pb-2">
         <CardTitle className="text-sm font-bold text-slate-800">Lesson Sprint</CardTitle>
-        <Link
-          href={`/students/${studentId}/lesson-sprint`}
-          className="inline-flex items-center gap-1.5 text-[11px] font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-full px-3 py-1.5 transition-colors"
-        >
-          <Zap size={12} className="fill-current text-amber-300" />
-          Start Lesson Sprint
-          <ArrowRight size={12} />
-        </Link>
       </CardHeader>
       <CardContent className="pt-2">
         {history.length === 0 ? (

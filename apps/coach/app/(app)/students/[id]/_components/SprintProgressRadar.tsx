@@ -99,7 +99,7 @@ export function SprintProgressRadar({ studentId, progress: initialProgress }: Pr
             </Button>
           </div>
         </div>
-        <div className="h-56 w-full min-w-0">
+        <div className="h-56 w-full max-w-xs min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={data} outerRadius="72%">
               <PolarGrid stroke="#e2e8f0" />
