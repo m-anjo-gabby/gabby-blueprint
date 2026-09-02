@@ -3,6 +3,7 @@
 import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { formatSprintLevelLabel } from '@gabby/lib';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -29,6 +30,11 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
         <CardTitle className="text-sm font-bold text-slate-800">Student Snapshot</CardTitle>
       </CardHeader>
       <CardContent className="pt-2 space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+          <UserAvatar userName={profile.user_name} iconPath={profile.icon_path} size={40} />
+          <span className="text-sm font-bold text-slate-800 truncate">{profile.user_name}</span>
+        </div>
+
         <div className="space-y-1.5">
           <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
             Sprint Progress · Stage {sprint_progress.stage}

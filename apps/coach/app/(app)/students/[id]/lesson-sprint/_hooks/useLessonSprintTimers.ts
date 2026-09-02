@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
  * 一時停止中は interval 自体は動かし続けたまま、コールバック内で
  * デクリメントをスキップするガード方式にすることで再生成コストを避ける。
  */
-export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => void) {
+export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => void, started: boolean = true) {
   const [secondsLeft, setSecondsLeft] = useState<number>(timeLimitSec || 60);
   const [isPaused, setIsPaused] = useState<boolean>(false);
 
@@ -24,9 +24,13 @@ export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => v
   // フック呼び出し順序（宣言前参照）を気にせず安全に使える。
   const pausedSecondsRef = useRef<number>(0);
 
+  // 開始前インストラクション画面の間はタイマーを進行させないためのガード。
+  const startedRef = useRef<boolean>(started);
+  useEffect(() => { startedRef.current = started; }, [started]);
+
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isPausedRef.current) return;
+      if (!startedRef.current || isPausedRef.current) return;
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);

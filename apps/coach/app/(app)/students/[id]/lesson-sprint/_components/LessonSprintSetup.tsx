@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Loader2, Lock, BookOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft, ArrowRight, Loader2, Lock, BookOpen, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, SprintQuestionType, SprintAnswerType, SprintQuestion } from '@gabby/types/sprint';
-import { resolveSprintHasLevel, formatSprintLevelLabel } from '@gabby/lib';
+import { resolveSprintHasLevel, formatSprintLevelLabel, getSprintTitle } from '@gabby/lib';
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -27,6 +27,7 @@ const sortedTypes = Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.se
 const sortedTimes = Object.values(SPRINT_TIME_OPTIONS).sort((a, b) => a.seq_no - b.seq_no);
 
 export function LessonSprintSetup({ studentId, profile, lessonSprints, contents, onStart }: Props) {
+  const router = useRouter();
   const { showToast } = useToast();
   const { setConfig, setContentName, setContentMetadata } = useLessonSprintStore();
 
@@ -126,20 +127,42 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
   const isSpeedSelected = questionType === '0';
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="space-y-1">
-        <Link
-          href={`/students/${studentId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
-        >
-          <ArrowLeft size={14} />
-          Back to Overview
-        </Link>
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight">Start Lesson Sprint</h1>
-        <p className="text-xs text-slate-400">Configure a live sprint training for {profile.user_name}.</p>
-      </div>
+    <>
+      <main className="bg-white border border-slate-100 w-full max-w-3xl h-full max-h-[95vh] rounded-[32px] flex flex-col relative overflow-hidden shadow-2xl">
+        {/* ヘッダー: 戻る・タイトル */}
+        <div className="shrink-0 w-full px-6 pt-5 pb-3 border-b border-slate-100/60 bg-white relative z-10">
+          <div className="flex items-center justify-between h-10">
+            <button
+              onClick={() => router.push(`/students/${studentId}`)}
+              className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200/80 active:scale-95 cursor-pointer transition-all shrink-0"
+            >
+              <ChevronLeft size={16} strokeWidth={2.5} />
+            </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+            <div className="flex-1 flex flex-col items-center gap-1 px-4 min-w-0">
+              <div className="inline-flex items-center max-w-full bg-slate-100/80 px-2.5 py-0.5 rounded-full">
+                <span className="text-xs font-black text-indigo-600 truncate leading-none">
+                  {selectedContent?.content_name || 'Select content'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h1 className="text-sm font-black text-slate-800 tracking-tight truncate">
+                  {getSprintTitle(questionType, Number(level), hasLevel)}
+                </h1>
+                <span className="inline-flex items-center gap-1 text-[11px] font-mono font-black px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 shrink-0">
+                  <Timer size={11} className="text-amber-500" />
+                  {timeLimitSec}s
+                </span>
+              </div>
+            </div>
+
+            <div className="h-10 w-10 shrink-0" />
+          </div>
+        </div>
+
+        {/* メイン: 設定エリア */}
+        <div className="flex-1 flex flex-col p-6 overflow-y-auto overscroll-contain">
+          <div className="w-full max-w-2xl mx-auto flex flex-col gap-5">
       {contents.length === 0 ? (
         <Card className="rounded-2xl border-slate-200 shadow-sm">
           <CardContent className="py-12 flex flex-col items-center text-center gap-2">
@@ -148,7 +171,7 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <>
           <Card className="rounded-2xl border-slate-200 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-slate-800">Content</CardTitle>
@@ -255,8 +278,14 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
               </div>
             </CardContent>
           </Card>
+        </>
+      )}
+          </div>
+        </div>
 
-          <div className="pb-6">
+        {/* フッター: 開始 */}
+        {contents.length > 0 && (
+          <div className="shrink-0 px-6 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-slate-100/60 bg-white">
             {isSpeedSelected ? (
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -284,11 +313,13 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
               </button>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </main>
 
-      <StudentSnapshotPanel profile={profile} lessonSprints={lessonSprints} highlightedType={questionType} />
-      </div>
-    </div>
+      {/* Student Snapshot: メインパネルとバランスを崩さないよう、独立したカードとして右側に配置 */}
+      <aside className="hidden lg:flex flex-col w-72 h-full max-h-[95vh] overflow-y-auto">
+        <StudentSnapshotPanel profile={profile} lessonSprints={lessonSprints} highlightedType={questionType} />
+      </aside>
+    </>
   );
 }
