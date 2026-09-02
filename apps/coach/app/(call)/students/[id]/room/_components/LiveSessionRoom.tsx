@@ -18,12 +18,15 @@ import {
   PhoneOff,
   Send,
   Sparkles,
+  TimerReset,
   Video,
   VideoOff,
   X,
 } from 'lucide-react';
 import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
 import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
+import { useLiveSessionPresence } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionPresence';
+import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { UserAvatar } from '@/components/common/UserAvatar';
@@ -61,8 +64,14 @@ export function LiveSessionRoom({ access }: Props) {
     toggleScreenShare,
     sendChatMessage,
   } = useZoomVideoSession();
+  const { isStudentPresent, trackSelf, untrackSelf } = useLiveSessionPresence(access.sessionName);
 
   const [phase, setPhase] = useState<RoomPhase>('preview');
+  const [isTimeWarningVisible, setIsTimeWarningVisible] = useState(false);
+  const [wasTimeLimitReached, setWasTimeLimitReached] = useState(false);
+  const sessionStartRequested = useRef(false);
+  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isSelfViewVisible, setIsSelfViewVisible] = useState(true);
   const [isChatVisible, setIsChatVisible] = useState(true);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -127,9 +136,40 @@ export function LiveSessionRoom({ access }: Props) {
     });
   }, [phase, access, join]);
 
+  // 自分（コーチ）の在室状態を、生徒側から見える形でRealtime Presenceに反映する
+  useEffect(() => {
+    if (!isJoined) return;
+    trackSelf('coach');
+  }, [isJoined, trackSelf]);
+
+  const clearSessionTimers = () => {
+    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+    if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
+    warningTimeoutRef.current = null;
+    endTimeoutRef.current = null;
+  };
+
+  // 生徒の入室（＝実質的なレッスン開始）を検知したタイミングを起点に、残り時間の警告と自動終了を仕込む
+  useEffect(() => {
+    if (!isJoined || !isStudentPresent || sessionStartRequested.current) return;
+    sessionStartRequested.current = true;
+
+    warningTimeoutRef.current = setTimeout(() => {
+      setIsTimeWarningVisible(true);
+    }, LIVE_SESSION_WARNING_AFTER_MS);
+
+    endTimeoutRef.current = setTimeout(() => {
+      handleTimeLimitReached();
+    }, LIVE_SESSION_END_AFTER_MS);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isJoined, isStudentPresent]);
+
   useEffect(() => {
     return () => {
       preview.stopPreview();
+      clearSessionTimers();
+      untrackSelf();
       leave();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,6 +179,17 @@ export function LiveSessionRoom({ access }: Props) {
     initialDeviceStateRef.current = { micOn: preview.isMicOn, cameraOn: preview.isCameraOn, blurOn: preview.isBlurOn };
     await preview.stopPreview();
     setPhase('in-call');
+  };
+
+  // 30分の制限時間に達した場合、コーチ側から全員（自分＋生徒）を強制的に退出させる
+  const handleTimeLimitReached = async () => {
+    clearSessionTimers();
+    await untrackSelf();
+    await leave(true);
+    releaseLockRef.current?.();
+    releaseLockRef.current = null;
+    setWasTimeLimitReached(true);
+    setPhase('ended');
   };
 
   const handleLeave = async () => {
@@ -154,7 +205,9 @@ export function LiveSessionRoom({ access }: Props) {
     );
     if (!confirmed) return;
 
-    await leave();
+    clearSessionTimers();
+    await untrackSelf();
+    await leave(true);
     // 通話終了時点でロックを解放し、他のタブから新しいセッションを開始できるようにする
     // （このタブ自体は「閉じてください」の案内画面のまま残るため、ここではまだ遷移しない）
     releaseLockRef.current?.();
@@ -219,7 +272,11 @@ export function LiveSessionRoom({ access }: Props) {
         </div>
         <div className="space-y-1">
           <p className="text-sm font-bold text-slate-900">Session ended</p>
-          <p className="text-xs text-slate-500">You can close this tab now.</p>
+          <p className="text-xs text-slate-500">
+            {wasTimeLimitReached
+              ? 'The 30-minute session time limit was reached, so the call was ended automatically. You can close this tab now.'
+              : 'You can close this tab now.'}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -354,6 +411,13 @@ export function LiveSessionRoom({ access }: Props) {
       {errorMessage && (
         <div className="px-5 py-2 bg-red-500/10 text-red-300 text-xs font-semibold border-b border-red-500/20">
           {errorMessage}
+        </div>
+      )}
+
+      {isTimeWarningVisible && (
+        <div className="flex items-center gap-2 px-5 py-2 bg-amber-500/10 text-amber-300 text-xs font-semibold border-b border-amber-500/20">
+          <TimerReset size={14} />
+          5 minutes remaining — this session will end automatically at the 30-minute mark.
         </div>
       )}
 

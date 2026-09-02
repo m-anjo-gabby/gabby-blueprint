@@ -34,6 +34,8 @@ interface UseZoomVideoSessionResult {
   isPeerConnected: boolean;
   isScreenSharing: boolean;
   isReceivingScreenShare: boolean;
+  /** ホスト（コーチ）によってセッションが終了させられたか（時間切れの強制終了等）。leave/次のjoinでリセットされる */
+  wasEndedByHost: boolean;
   chatMessages: LiveSessionChatMessage[];
   errorMessage: string | null;
   /**
@@ -46,7 +48,8 @@ interface UseZoomVideoSessionResult {
     peerVideoContainer: HTMLElement,
     options?: { initialMicOn?: boolean; initialCameraOn?: boolean; initialBlurOn?: boolean }
   ) => Promise<void>;
-  leave: () => Promise<void>;
+  /** end=trueを渡すと、ホスト（コーチ）権限で全参加者を退出させてセッションを終了する */
+  leave: (end?: boolean) => Promise<void>;
   toggleMic: () => Promise<void>;
   toggleCamera: () => Promise<void>;
   toggleBlur: () => Promise<void>;
@@ -88,6 +91,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
   const [isPeerConnected, setIsPeerConnected] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isReceivingScreenShare, setIsReceivingScreenShare] = useState(false);
+  const [wasEndedByHost, setWasEndedByHost] = useState(false);
   const [chatMessages, setChatMessages] = useState<LiveSessionChatMessage[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -123,6 +127,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       const initialBlurOn = options?.initialBlurOn ?? false;
       setIsJoining(true);
       setErrorMessage(null);
+      setWasEndedByHost(false);
       selfWrapperRef.current = selfVideoContainer;
       peerWrapperRef.current = peerVideoContainer;
 
@@ -170,6 +175,14 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         // こちらのAPI呼び出しを経ずに共有が止まるケースをここで拾ってisScreenSharingを追従させる
         client.on('passively-stop-share', () => {
           setIsScreenSharing(false);
+        });
+
+        // 時間切れ等でホスト（コーチ）がclient.leave(true)を呼んだ場合、参加者側はこのイベントで
+        // reason: 'ended by host' を受け取る。UI側で専用の終了画面へ遷移させるためのフラグを立てる
+        client.on('connection-change', (payload: { state: string; reason?: string }) => {
+          if (payload.state === 'Closed' && payload.reason === 'ended by host') {
+            setWasEndedByHost(true);
+          }
         });
 
         client.on('chat-on-message', (payload: { message?: string; sender: { name: string; userId: number }; timestamp: number }) => {
@@ -229,11 +242,11 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     [renderPeerVideo]
   );
 
-  const leave = useCallback(async () => {
+  const leave = useCallback(async (end?: boolean) => {
     const client = clientRef.current;
     if (!client) return;
     try {
-      await client.leave();
+      await client.leave(end);
     } catch (err) {
       const { detail, message } = describeZoomError(err);
       console.error('Failed to leave live session room:', message, detail);
@@ -362,6 +375,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     isPeerConnected,
     isScreenSharing,
     isReceivingScreenShare,
+    wasEndedByHost,
     chatMessages,
     errorMessage,
     join,

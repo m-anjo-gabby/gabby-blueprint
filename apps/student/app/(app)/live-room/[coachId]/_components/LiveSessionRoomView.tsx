@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowRight,
+  CheckCircle2,
   ChevronLeft,
   Eye,
   EyeOff,
@@ -17,12 +18,15 @@ import {
   PhoneOff,
   Send,
   Sparkles,
+  TimerReset,
   User,
   Video,
   VideoOff,
 } from 'lucide-react';
 import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
 import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
+import { useLiveSessionPresence } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionPresence';
+import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
@@ -32,7 +36,7 @@ interface Props {
   access: LiveSessionRoomAccess;
 }
 
-type RoomPhase = 'preview' | 'in-call';
+type RoomPhase = 'preview' | 'in-call' | 'ended';
 
 export function LiveSessionRoomView({ access }: Props) {
   const router = useRouter();
@@ -46,6 +50,7 @@ export function LiveSessionRoomView({ access }: Props) {
     isBlurSupported,
     isPeerConnected,
     isReceivingScreenShare,
+    wasEndedByHost,
     chatMessages,
     errorMessage,
     join,
@@ -56,10 +61,12 @@ export function LiveSessionRoomView({ access }: Props) {
     registerShareViewContainer,
     sendChatMessage,
   } = useZoomVideoSession();
+  const { isCoachPresent, trackSelf, untrackSelf } = useLiveSessionPresence(access.sessionName);
 
   const [phase, setPhase] = useState<RoomPhase>('preview');
   const [isSelfViewVisible, setIsSelfViewVisible] = useState(true);
   const [isChatVisible, setIsChatVisible] = useState(true);
+  const [isTimeWarningVisible, setIsTimeWarningVisible] = useState(false);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const selfVideoRef = useRef<HTMLDivElement>(null);
   const peerVideoRef = useRef<HTMLDivElement>(null);
@@ -68,6 +75,9 @@ export function LiveSessionRoomView({ access }: Props) {
   const [chatInput, setChatInput] = useState('');
   const previewRequested = useRef(false);
   const joinRequested = useRef(false);
+  const sessionTimersStarted = useRef(false);
+  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialDeviceStateRef = useRef({ micOn: true, cameraOn: true, blurOn: false });
   const peerIconUrl = getProfileIconUrl(access.peerIconPath);
   const { isFullscreen, toggleFullscreen } = useFullscreen(roomContainerRef);
@@ -94,9 +104,51 @@ export function LiveSessionRoomView({ access }: Props) {
     });
   }, [phase, access, join, registerShareViewContainer]);
 
+  // 自分（生徒）の在室状態を、コーチ側から見える形でRealtime Presenceに反映する
+  useEffect(() => {
+    if (!isJoined) return;
+    trackSelf('student');
+  }, [isJoined, trackSelf]);
+
+  const clearSessionTimers = () => {
+    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+    if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
+    warningTimeoutRef.current = null;
+    endTimeoutRef.current = null;
+  };
+
+  // 自分の入室（＝レッスン開始）を起点に、残り時間の警告と自動終了を仕込む。
+  // コーチ側が制限時間到達時に全員を強制終了させるが、その通知が何らかの理由で届かない場合の保険として
+  // 自分自身でも独立して制限時間を計測する。
+  useEffect(() => {
+    if (!isJoined || sessionTimersStarted.current) return;
+    sessionTimersStarted.current = true;
+
+    warningTimeoutRef.current = setTimeout(() => {
+      setIsTimeWarningVisible(true);
+    }, LIVE_SESSION_WARNING_AFTER_MS);
+
+    endTimeoutRef.current = setTimeout(() => {
+      handleTimeLimitReached();
+    }, LIVE_SESSION_END_AFTER_MS);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isJoined]);
+
+  // コーチ側が（制限時間到達 or 手動操作で）通話を終了させた場合、専用の終了画面へ遷移する
+  useEffect(() => {
+    if (!wasEndedByHost || phase !== 'in-call') return;
+    clearSessionTimers();
+    untrackSelf();
+    setPhase('ended');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wasEndedByHost, phase]);
+
   useEffect(() => {
     return () => {
       preview.stopPreview();
+      clearSessionTimers();
+      untrackSelf();
       leave();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,6 +158,14 @@ export function LiveSessionRoomView({ access }: Props) {
     initialDeviceStateRef.current = { micOn: preview.isMicOn, cameraOn: preview.isCameraOn, blurOn: preview.isBlurOn };
     await preview.stopPreview();
     setPhase('in-call');
+  };
+
+  // 30分の制限時間に達した場合、自分から退出して終了画面へ遷移する（コーチ側の強制終了が届かない場合の保険）
+  const handleTimeLimitReached = async () => {
+    clearSessionTimers();
+    await untrackSelf();
+    await leave();
+    setPhase('ended');
   };
 
   const handleLeave = async () => {
@@ -120,6 +180,9 @@ export function LiveSessionRoomView({ access }: Props) {
       { variant: 'danger', isModal: false, confirmText: '退室する' }
     );
     if (!confirmed) return;
+
+    clearSessionTimers();
+    await untrackSelf();
 
     await leave();
     router.push('/dashboard');
@@ -180,6 +243,12 @@ export function LiveSessionRoomView({ access }: Props) {
             </div>
           )}
 
+          {!isCoachPresent && (
+            <p className="text-xs font-semibold text-slate-400 text-center">
+              {access.peerName}コーチの入室をお待ちしています…コーチが入室すると参加できます。
+            </p>
+          )}
+
           <div className="flex items-center gap-3">
             <button
               onClick={preview.toggleMic}
@@ -210,13 +279,33 @@ export function LiveSessionRoomView({ access }: Props) {
         <div className="px-5 py-4 sm:py-5 border-t border-slate-100 shrink-0 bg-white">
           <button
             onClick={handleStartCall}
-            disabled={!preview.isPreviewing}
+            disabled={!preview.isPreviewing || !isCoachPresent}
             className="w-full h-12 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-rose-600/10 transition-all active:scale-95"
           >
             レッスンに参加する
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (phase === 'ended') {
+    return (
+      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden items-center justify-center gap-4 px-6 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
+          <CheckCircle2 size={22} />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-bold text-slate-900">レッスンが終了しました</p>
+          <p className="text-xs text-slate-500 max-w-xs">通話が終了しました。</p>
+        </div>
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
+        >
+          ダッシュボードに戻る
+        </button>
       </div>
     );
   }
@@ -255,6 +344,13 @@ export function LiveSessionRoomView({ access }: Props) {
       {errorMessage && (
         <div className="px-5 py-2 bg-rose-500/10 text-rose-300 text-xs font-semibold border-b border-rose-500/20">
           {errorMessage}
+        </div>
+      )}
+
+      {isTimeWarningVisible && (
+        <div className="flex items-center gap-2 px-5 py-2 bg-amber-500/10 text-amber-300 text-xs font-semibold border-b border-amber-500/20">
+          <TimerReset size={14} />
+          残り5分です。レッスンは開始から30分で自動的に終了します。
         </div>
       )}
 
