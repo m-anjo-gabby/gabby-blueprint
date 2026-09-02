@@ -190,11 +190,11 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
             )}
           </div>
 
-          <div className="mt-4 w-full select-none">
-            <div className="h-6 w-full bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/30">
+          <div className="mt-4 w-full flex items-center gap-2 select-none">
+            <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/30">
               <div
                 className={cn(
-                  'absolute top-0 left-0 h-full rounded-full flex items-center justify-end pr-3',
+                  'absolute top-0 left-0 h-full rounded-full',
                   isPaused ? 'bg-slate-300' :
                   isCritical ? 'bg-gradient-to-r from-rose-500 to-rose-600' :
                   isWarning ? 'bg-gradient-to-r from-amber-400 to-amber-500' :
@@ -202,12 +202,22 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
                 )}
                 style={{ width: `${progressPercent}%`, transition: 'width 1s linear' }}
               />
-              <div className="absolute inset-y-0 right-3 flex items-center select-none pointer-events-none z-20">
-                <div className="flex items-center gap-1 font-mono text-xs font-black tracking-tight tabular-nums text-slate-600">
-                  <Timer size={11} className={cn(isCritical && !isPaused && 'animate-pulse')} strokeWidth={3} />
-                  <span>{secondsLeft}s{isPaused && ' · Paused'}</span>
-                </div>
-              </div>
+            </div>
+            <div
+              className={cn(
+                'shrink-0 flex items-center gap-1 font-mono text-xs font-black tracking-tight tabular-nums text-slate-700 bg-white border rounded-full px-2 py-0.5 shadow-sm',
+                isCritical ? 'border-rose-200' : isWarning ? 'border-amber-200' : 'border-slate-200'
+              )}
+            >
+              <Timer
+                size={11}
+                className={cn(
+                  isCritical && !isPaused && 'animate-pulse',
+                  isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-indigo-500'
+                )}
+                strokeWidth={3}
+              />
+              <span>{secondsLeft}s{isPaused && ' · Paused'}</span>
             </div>
           </div>
         </div>
