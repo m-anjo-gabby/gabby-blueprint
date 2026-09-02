@@ -2,6 +2,7 @@ export * from './proxy-base';
 export * from './assessment/native-speech';
 export * from './assessment/wordClassification';
 export * from './content/ui';
+export * from './content/utils';
 export * from './date/date';
 export * from './navigation/student-path';
 export * from './supabase/client';

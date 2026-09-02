@@ -66,6 +66,13 @@
 --        (packages/lib/sprint/stageProgression.ts)を新規追加し、Coach/Admin/将来の自動判定から
 --        共通利用できるようにした。アプリケーションコード側の変更は本SQLの対象外（DB変更のみ）。
 --
+--   教材名称の英語版対応
+--   10. com_m_contents に content_name_en (NULL許容) を追加
+--      - 既存のcontent_name（日本語・必須）は生徒向け設計のまま維持しつつ、コーチ向け画面
+--        （Lesson Sprintの教材選択・実施・結果・履歴）で使う英語版名称を任意項目として追加する。
+--        全コンテンツ種別共通の項目とし、アドミンの教材管理画面から入力する。未入力の教材は
+--        アプリ側でcontent_nameにフォールバックするため、既存データの一括バックフィルは不要。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -417,6 +424,14 @@ FOR UPDATE TO authenticated USING (
     )
 );
 
+-- =========================================================================
+-- 10. com_m_contents: 教材名称の英語版カラム追加
+--    （コーチ向け画面での教材名表示のため。全コンテンツ種別共通の任意項目。
+--      未入力の教材はアプリ側でcontent_name（日本語・必須）にフォールバックする）
+-- =========================================================================
+ALTER TABLE public.com_m_contents ADD COLUMN IF NOT EXISTS content_name_en TEXT;
+COMMENT ON COLUMN public.com_m_contents.content_name_en IS 'コンテンツ名称（英語版・任意。コーチ向け画面で使用し、未入力時はcontent_nameにフォールバックする）';
+
 COMMIT;
 
 -- =========================================================================
@@ -473,3 +488,6 @@ COMMIT;
 -- SELECT policyname FROM pg_policies
 -- WHERE tablename = 'student_m_sprint_progress'
 --   AND policyname = 'Coaches can update sprint progress of their students';
+--
+-- SELECT column_name, is_nullable, data_type FROM information_schema.columns
+-- WHERE table_schema = 'public' AND table_name = 'com_m_contents' AND column_name = 'content_name_en';

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Zap, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { formatSprintLevelLabel } from '@gabby/lib';
+import { formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
@@ -39,7 +39,7 @@ export function LessonSprintCard({ studentId, history }: Props) {
                     className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-100/80 hover:border-slate-200 transition-colors"
                   >
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-700 truncate">{record.content_name}</p>
+                      <p className="text-xs font-semibold text-slate-700 truncate">{resolveCoachContentName(record)}</p>
                       <p className="text-[11px] text-slate-400">
                         {typeLabel} · {formatSprintLevelLabel(record.question_type, record.difficulty_level)} · {formatDateTimeByZone(record.insert_date, timezone, false)}
                       </p>

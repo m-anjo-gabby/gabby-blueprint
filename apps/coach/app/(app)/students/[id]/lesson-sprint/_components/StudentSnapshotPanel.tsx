@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { formatSprintLevelLabel } from '@gabby/lib';
+import { formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
@@ -78,7 +78,7 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
                 return (
                   <li key={item.lesson_sprint_id} className="px-3 py-2 rounded-xl border border-slate-100 bg-slate-50/60">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-slate-700 truncate">{item.content_name}</span>
+                      <span className="text-xs font-semibold text-slate-700 truncate">{resolveCoachContentName(item)}</span>
                       <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 rounded-full px-2 py-0.5 shrink-0">
                         {item.average_score !== null ? `${item.average_score}/5` : '—'}
                       </span>

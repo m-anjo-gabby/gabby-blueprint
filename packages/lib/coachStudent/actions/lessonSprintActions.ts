@@ -48,7 +48,7 @@ export async function getAvailableSprintContentsCore(): Promise<GetLessonSprintC
 
     const { data, error } = await supabase
       .from('com_m_contents')
-      .select('content_id, content_name, metadata')
+      .select('content_id, content_name, content_name_en, metadata')
       .eq('content_type', 2)
       .eq('delete_flg', '0')
       .order('seq_no', { ascending: true });
@@ -192,7 +192,7 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
 
     const { data, error } = await supabase
       .from('lesson_t_sprint')
-      .select('lesson_sprint_id, content_id, question_type, difficulty_level, time_limit_sec, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name)')
+      .select('lesson_sprint_id, content_id, question_type, difficulty_level, time_limit_sec, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)')
       .eq('coach_id', user.id)
       .eq('student_id', studentId)
       .order('insert_date', { ascending: false })
@@ -215,6 +215,7 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
         lesson_sprint_id: row.lesson_sprint_id,
         content_id: row.content_id,
         content_name: contentJoin?.content_name ?? '(Unknown)',
+        content_name_en: contentJoin?.content_name_en ?? null,
         question_type: row.question_type,
         difficulty_level: row.difficulty_level,
         time_limit_sec: row.time_limit_sec,

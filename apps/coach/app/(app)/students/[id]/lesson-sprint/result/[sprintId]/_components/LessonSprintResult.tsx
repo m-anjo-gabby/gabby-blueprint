@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { ArrowLeft, Zap } from 'lucide-react';
+import { ArrowLeft, Zap, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
-import { tokenizeWordsWithPunctuation, formatSprintLevelLabel } from '@gabby/lib';
+import { tokenizeWordsWithPunctuation, formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { LESSON_SPRINT_SCORE_META } from '@gabby/types/lessonSprint';
 import type { LessonSprintRecord, LessonSprintContentSummary } from '@gabby/types/lessonSprint';
@@ -56,10 +56,17 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
 
           <Card className="rounded-2xl border-slate-200 shadow-sm shrink-0">
             <CardContent className="pt-6 space-y-4">
+              {content && (
+                <h3 className="text-base font-black text-slate-800 truncate">{resolveCoachContentName(content)}</h3>
+              )}
               <div className="flex items-center gap-2">
                 <span className="text-sm font-black text-slate-800">{typeLabel}</span>
                 <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 rounded-full px-2.5 py-0.5">
                   {formatSprintLevelLabel(record.question_type, record.difficulty_level)}
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-mono font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+                  <Timer size={11} className="text-amber-500" />
+                  {record.time_limit_sec}s
                 </span>
               </div>
               <p className="text-xs text-slate-400">{formattedDate}</p>
@@ -70,16 +77,8 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Answered</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-slate-800">{record.total_evaluated}</p>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Evaluated</p>
-                </div>
-                <div>
                   <p className="text-2xl font-black text-indigo-600">{averageScore ?? '—'}{averageScore !== null && <span className="text-sm text-slate-400">/5</span>}</p>
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avg Score</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-black text-slate-800">{record.time_limit_sec}s</p>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Time Limit</p>
                 </div>
               </div>
             </CardContent>
@@ -87,7 +86,8 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
 
           <SessionNoteCard lessonSprintId={record.lesson_sprint_id} initialNote={record.session_note} />
 
-          <div className="space-y-2">
+          {/* 次のアクション: メモの長さ等でペインが縦に伸びても常に見えるよう、左ペイン下端にsticky固定する */}
+          <div className="lg:sticky lg:bottom-0 lg:bg-white lg:border-t lg:border-slate-100 lg:pt-3 space-y-2">
             <RepeatSprintButton studentId={studentId} record={record} content={content} />
             <Link
               href={`/students/${studentId}/lesson-sprint`}

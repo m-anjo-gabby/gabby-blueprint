@@ -20,6 +20,7 @@ export interface LessonSprintHistoryItem {
 export interface LessonSprintContentSummary {
   content_id: string;
   content_name: string;
+  content_name_en: string | null;
   metadata: ContentMetadata;
 }
 
@@ -44,6 +45,7 @@ export interface LessonSprintHistoryListItem {
   lesson_sprint_id: string;
   content_id: string;
   content_name: string;
+  content_name_en: string | null;
   question_type: string;
   difficulty_level: number;
   time_limit_sec: number;

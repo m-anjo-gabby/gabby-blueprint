@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, SprintQuestionType, SprintAnswerType, SprintQuestion } from '@gabby/types/sprint';
-import { resolveSprintHasLevel, formatSprintLevelLabel, getSprintTitle } from '@gabby/lib';
+import { resolveSprintHasLevel, formatSprintLevelLabel, getSprintTitle, resolveCoachContentName } from '@gabby/lib';
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -118,7 +118,7 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
       // DB由来の値はランタイムで数値になっていることがあるため、明示的に文字列化する
       sprintType: String(result.questions[0]?.sprint_type ?? '0'),
     });
-    setContentName(selectedContent?.content_name ?? null);
+    setContentName(selectedContent ? resolveCoachContentName(selectedContent) : null);
     setContentMetadata(sprintMeta ?? null);
 
     onStart(result.questions);
@@ -142,7 +142,7 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
             <div className="flex-1 flex flex-col items-center gap-1 px-4 min-w-0">
               <div className="inline-flex items-center max-w-full bg-slate-100/80 px-2.5 py-0.5 rounded-full">
                 <span className="text-xs font-black text-indigo-600 truncate leading-none">
-                  {selectedContent?.content_name || 'Select content'}
+                  {selectedContent ? resolveCoachContentName(selectedContent) : 'Select content'}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 min-w-0">
@@ -183,7 +183,7 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
                 </SelectTrigger>
                 <SelectContent>
                   {contents.map((c) => (
-                    <SelectItem key={c.content_id} value={c.content_id}>{c.content_name}</SelectItem>
+                    <SelectItem key={c.content_id} value={c.content_id}>{resolveCoachContentName(c)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

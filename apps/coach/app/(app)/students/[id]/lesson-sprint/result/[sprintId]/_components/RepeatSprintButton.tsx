@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, RotateCcw } from 'lucide-react';
+import { resolveCoachContentName } from '@gabby/lib';
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -40,7 +41,7 @@ export function RepeatSprintButton({ studentId, record, content }: Props) {
       answerType: record.answer_type as SprintAnswerType,
       sprintType: record.sprint_type,
     });
-    setContentName(content?.content_name ?? null);
+    setContentName(content ? resolveCoachContentName(content) : null);
     setContentMetadata(content?.metadata?.sprint ?? null);
     startSession(result.questions);
 
