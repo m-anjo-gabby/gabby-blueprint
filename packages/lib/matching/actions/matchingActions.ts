@@ -250,17 +250,28 @@ export async function getCoachBrowseListCore(): Promise<
 
     const coachIds = profiles.map((p) => p.user_id);
 
-    const [{ data: users, error: userError }, { data: availability, error: availabilityError }] = await Promise.all([
+    const [
+      { data: users, error: userError },
+      { data: availability, error: availabilityError },
+      { data: unavailableSlots, error: unavailableError },
+    ] = await Promise.all([
       supabase.from('com_m_user').select('id, user_name, icon_path, timezone').in('id', coachIds),
       supabase
         .from('com_m_coach_availability')
         .select('availability_id, coach_id, day_of_week, start_time, end_time')
         .in('coach_id', coachIds)
         .eq('delete_flg', '0'),
+      // 予約済み（確定済み＋承認待ち）の曜日・時間帯。カレンダーで選択不可として表示するための
+      // ソフトチェック用途（最終的な整合性はcheck_coach_schedule_conflict()側で担保する）
+      supabase.rpc('get_coaches_unavailable_slots', { p_coach_ids: coachIds }),
     ]);
 
-    if (userError || availabilityError) {
-      logger.error('matching:get_coach_list_join_failed', userError?.message ?? availabilityError?.message ?? 'unknown', ctx);
+    if (userError || availabilityError || unavailableError) {
+      logger.error(
+        'matching:get_coach_list_join_failed',
+        userError?.message ?? availabilityError?.message ?? unavailableError?.message ?? 'unknown',
+        ctx
+      );
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -270,6 +281,14 @@ export async function getCoachBrowseListCore(): Promise<
       const list = availabilityByCoachId.get(slot.coach_id) ?? [];
       list.push(slot);
       availabilityByCoachId.set(slot.coach_id, list);
+    }
+
+    type UnavailableSlotRow = { coach_id: string; day_of_week: number; start_time: string; end_time: string };
+    const unavailableByCoachId = new Map<string, UnavailableSlotRow[]>();
+    for (const slot of (unavailableSlots ?? []) as UnavailableSlotRow[]) {
+      const list = unavailableByCoachId.get(slot.coach_id) ?? [];
+      list.push(slot);
+      unavailableByCoachId.set(slot.coach_id, list);
     }
 
     const coaches: CoachBrowseItem[] = profiles.map((p) => {
@@ -292,6 +311,11 @@ export async function getCoachBrowseListCore(): Promise<
           day_of_week: a.day_of_week as DayOfWeek,
           start_time: a.start_time,
           end_time: a.end_time,
+        })),
+        unavailable_slots: (unavailableByCoachId.get(p.user_id) ?? []).map((s) => ({
+          day_of_week: s.day_of_week as DayOfWeek,
+          start_time: s.start_time,
+          end_time: s.end_time,
         })),
       };
     });

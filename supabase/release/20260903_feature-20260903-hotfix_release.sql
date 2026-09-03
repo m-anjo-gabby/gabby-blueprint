@@ -62,8 +62,38 @@
 --        承認を中断する（申請〜承認の間に別の申請が先に承認される競合(TOCTOU)対策）。
 --        本関数内で取得するロックは常にこの1本のみのため、デッドロックは起こり得ない。
 --
+--   UX改善: マッチング申請カレンダーで、既に埋まっている枠を選択不可にする
+--   【背景】
+--   ダブルブッキング防止のサーバー側チェックは上記8/9で担保済みだが、生徒が申請する時点では
+--   埋まっている枠かどうかがカレンダー上で分からず、送信して初めてエラーになっていた。
+--   旅行・ホテル予約サイトの空室検索と同様に、埋まっている枠は最初から選択できないようにする。
+--
+--   10. get_coaches_unavailable_slots() を新規作成 (SECURITY DEFINER)
+--      - 指定コーチ群について、確定済み(com_m_lesson_schedule.status=1)および承認待ち
+--        (com_t_matching_request.status=1)の曜日・時間帯を一括取得する。誰が確保しているか
+--        （student_id等）は返さない。承認待ち同士の重複は申請時・承認時のハードチェックでは
+--        弾かない方針のため、本関数のみが承認待ち同士の重複を防ぐソフトチェックとして機能する
+--        （それでも重複が発生した場合はコーチが個別に調整する）。
+--
+--   UX追加: 契約セッション数に対する未消化枠のコーチ向けアラート
+--   【背景】
+--   マッチング申請が契約のライセンス開始日より後に承認されると、その分だけ契約期間内に
+--   生成できるセッション回数が本来の想定を下回る（例: 6-9月・週1・全12回の契約で6月中旬に
+--   承認された場合、数回分は契約期間内に収まらない）。振替・個別予約の導線は別途検討中のため、
+--   現時点ではStudent Overview画面での検知・アラート表示のみを行う。
+--
+--   11. com_t_user_session_ticket に、担当コーチ向けの参照許可ポリシーを追加
+--      - 上記アラートの算出（ticketのtotal_sessions/weekly_frequency、および紐づく
+--        com_t_user_licenseの契約期間の参照）に必要。com_m_coach_student_relationshipで
+--        結びついたコーチ(status不問)のみが対象で、既存の本人・契約先クライアント向け
+--        ポリシーはそのまま残る(追加の許可のみ)。実際の未消化枠の算出（契約開始日を起点に
+--        本来確保できたはずの曜日出現回数と、実際に生成されたcom_t_sessionの件数を比較する
+--        ロジック）はアプリケーションコード側(coachStudentActions.ts)で行う。
+--
 --   アプリケーションコード側の変更（coachStudentActions.ts, liveSessionRoomActions.tsの
---   クエリ差し替え、matchingActions.tsへの申請時重複チェック追加）は本SQLの対象外（DB変更のみ）。
+--   クエリ差し替え、matchingActions.tsへの申請時重複チェック・カレンダー用データ取得の追加、
+--   RequestDialog/CoachAvailabilityCalendarの選択不可表示、未消化枠アラートの算出・表示）は
+--   本SQLの対象外（DB変更のみ）。
 --
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
@@ -356,6 +386,35 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.approve_matching_request(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.approve_matching_request(uuid) TO authenticated;
 
+-- =========================================================================
+-- 10. get_coaches_unavailable_slots() 新規作成
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.get_coaches_unavailable_slots(p_coach_ids uuid[])
+RETURNS TABLE (coach_id uuid, day_of_week smallint, start_time time, end_time time) AS $$
+  SELECT s.coach_id, s.day_of_week, s.start_time, s.end_time
+  FROM public.com_m_lesson_schedule s
+  WHERE s.coach_id = ANY(p_coach_ids) AND s.status = 1
+  UNION
+  SELECT r.coach_id, r.requested_day_of_week, r.requested_start_time, r.requested_end_time
+  FROM public.com_t_matching_request r
+  WHERE r.coach_id = ANY(p_coach_ids) AND r.status = 1;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_coaches_unavailable_slots(uuid[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coaches_unavailable_slots(uuid[]) TO authenticated;
+
+-- =========================================================================
+-- 11. com_t_user_session_ticket: 担当コーチ向けの参照許可ポリシー追加
+-- =========================================================================
+DROP POLICY IF EXISTS "Coaches can view session tickets of their students" ON public.com_t_user_session_ticket;
+CREATE POLICY "Coaches can view session tickets of their students" ON public.com_t_user_session_ticket
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = com_t_user_session_ticket.user_id AND r.coach_id = auth.uid()
+    )
+);
+
 COMMIT;
 
 -- =========================================================================
@@ -401,3 +460,12 @@ COMMIT;
 -- SELECT public.check_coach_schedule_conflict(
 --   '<coach_id>'::uuid, 4, '21:00:00'::time, '21:25:00'::time, CURRENT_DATE, CURRENT_DATE + INTERVAL '90 days'
 -- );
+--
+-- SELECT proname, pronargs FROM pg_proc WHERE proname = 'get_coaches_unavailable_slots';
+--
+-- -- 予約済み枠一括取得の動作確認
+-- SELECT * FROM public.get_coaches_unavailable_slots(ARRAY['<coach_id>']::uuid[]);
+--
+-- SELECT policyname FROM pg_policies
+-- WHERE tablename = 'com_t_user_session_ticket'
+--   AND policyname = 'Coaches can view session tickets of their students';

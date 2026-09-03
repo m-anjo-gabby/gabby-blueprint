@@ -80,6 +80,17 @@ export interface SlotStatusItem {
 }
 
 /**
+ * コーチの予約済み枠（曜日・時間帯）。誰が確保しているか（student_id等）は含まない。
+ * 承認済みの確定予約、および承認待ちの申請の両方を含む
+ * （マッチング申請カレンダーで選択不可として表示するためのソフトチェック用途）。
+ */
+export interface CoachUnavailableSlot {
+  day_of_week: DayOfWeek;
+  start_time: string;
+  end_time: string;
+}
+
+/**
  * 生徒向けコーチ一覧（公開プロフィール + 空き時間）。zoom_meeting_url等の非公開項目は含めない。
  * コーチ選択画面のプロフィールプレビュー（CoachProfileDialog）表示に必要な項目一式を含む。
  */
@@ -102,6 +113,7 @@ export interface CoachBrowseItem {
     start_time: string;
     end_time: string;
   }[];
+  unavailable_slots: CoachUnavailableSlot[];
 }
 
 export type MatchingRequestErrorCode =

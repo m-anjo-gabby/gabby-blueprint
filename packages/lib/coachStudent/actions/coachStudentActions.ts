@@ -9,6 +9,8 @@ import {
   GetAssignedStudentsResult,
   GetStudentOverviewResult,
   GetStudentSessionHistoryResult,
+  GetStudentLiveSessionShortfallsResult,
+  LiveSessionShortfallItem,
   GetStudentNotesResult,
   AddCoachStudentNoteResult,
   UpdateStudentSprintProgressResult,
@@ -246,6 +248,125 @@ export async function getStudentSessionHistoryCore(studentId: string): Promise<G
     return { success: true, sessions: sessions ?? [] };
   } catch (err) {
     logger.error('coachStudent:get_session_history_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定の曜日(0-6)が、[startDate, endDate]（両端含む、日付のみで比較）の間に何回出現するかを数える。
+ * fn_generate_sessions_for_schedule()のSQL側カーソルロジック（直近の一致日から7日刻み）と同じ考え方。
+ */
+function countWeekdayOccurrences(dayOfWeek: number, startDate: Date, endDate: Date): number {
+  if (startDate > endDate) return 0;
+  const cursor = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
+  const diff = (dayOfWeek - cursor.getUTCDay() + 7) % 7;
+  cursor.setUTCDate(cursor.getUTCDate() + diff);
+
+  let count = 0;
+  while (cursor <= endDate) {
+    count += 1;
+    cursor.setUTCDate(cursor.getUTCDate() + 7);
+  }
+  return count;
+}
+
+/**
+ * 指定生徒との、自分（コーチ）の定期スケジュールについて、契約セッション数に対する未消化枠を検知する。
+ * マッチング申請が契約期間の途中（ライセンス開始日より後）に承認されると、その分だけ本来確保できた
+ * はずのセッション回数を下回る。振替や個別予約の導線は別途検討中のため、現時点では検知結果を
+ * Student Overview画面でコーチに知らせる（アラート表示）だけに留める。
+ */
+export async function getStudentLiveSessionShortfallsCore(studentId: string): Promise<GetStudentLiveSessionShortfallsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: schedules, error: scheduleError } = await supabase
+      .from('com_m_lesson_schedule')
+      .select('schedule_id, ticket_id, day_of_week, start_time')
+      .eq('coach_id', user.id)
+      .eq('student_id', studentId)
+      .eq('status', 1);
+
+    if (scheduleError) {
+      logger.error('coachStudent:get_session_shortfalls_schedule_failed', scheduleError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!schedules || schedules.length === 0) {
+      return { success: true, shortfalls: [] };
+    }
+
+    const ticketIds = Array.from(new Set(schedules.map((s) => s.ticket_id)));
+    const { data: tickets, error: ticketError } = await supabase
+      .from('com_t_user_session_ticket')
+      .select('ticket_id, license_id')
+      .in('ticket_id', ticketIds);
+
+    if (ticketError) {
+      logger.error('coachStudent:get_session_shortfalls_ticket_failed', ticketError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const licenseIdByTicketId = new Map((tickets ?? []).map((t) => [t.ticket_id, t.license_id]));
+    const licenseIds = Array.from(new Set((tickets ?? []).map((t) => t.license_id)));
+
+    const [{ data: licenses, error: licenseError }, { data: sessions, error: sessionsError }] = await Promise.all([
+      supabase.from('com_t_user_license').select('license_id, start_date, end_date').in('license_id', licenseIds),
+      supabase
+        .from('com_t_session')
+        .select('schedule_id')
+        .eq('coach_id', user.id)
+        .eq('student_id', studentId)
+        .in('schedule_id', schedules.map((s) => s.schedule_id)),
+    ]);
+
+    if (licenseError || sessionsError) {
+      logger.error(
+        'coachStudent:get_session_shortfalls_join_failed',
+        licenseError?.message ?? sessionsError?.message ?? 'unknown',
+        { ...ctx, userId: user.id, payload: { studentId } }
+      );
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const licenseById = new Map((licenses ?? []).map((l) => [l.license_id, l]));
+    const actualCountByScheduleId = new Map<string, number>();
+    for (const s of sessions ?? []) {
+      actualCountByScheduleId.set(s.schedule_id, (actualCountByScheduleId.get(s.schedule_id) ?? 0) + 1);
+    }
+
+    const shortfalls: LiveSessionShortfallItem[] = [];
+    for (const schedule of schedules) {
+      const licenseId = licenseIdByTicketId.get(schedule.ticket_id);
+      const license = licenseId ? licenseById.get(licenseId) : undefined;
+      if (!license) continue;
+
+      const expectedSessions = countWeekdayOccurrences(
+        schedule.day_of_week,
+        new Date(license.start_date),
+        new Date(license.end_date)
+      );
+      const actualSessions = actualCountByScheduleId.get(schedule.schedule_id) ?? 0;
+      const shortfall = expectedSessions - actualSessions;
+
+      if (shortfall > 0) {
+        shortfalls.push({
+          schedule_id: schedule.schedule_id,
+          day_of_week: schedule.day_of_week,
+          start_time: schedule.start_time,
+          expected_sessions: expectedSessions,
+          actual_sessions: actualSessions,
+          shortfall,
+        });
+      }
+    }
+
+    return { success: true, shortfalls };
+  } catch (err) {
+    logger.error('coachStudent:get_session_shortfalls_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
