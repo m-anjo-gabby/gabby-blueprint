@@ -20,6 +20,7 @@ import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import {
   generateLessonStartTimeOptions,
   getLessonEndTime,
+  doTimeRangesOverlap,
   convertWeeklyTimeZone,
   getFirstLiveSessionOccurrence,
   formatZonedDate,
@@ -74,6 +75,24 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
     }
     return list;
   }, [coach, studentTimezone]);
+
+  // 既に埋まっている（確定済み、または承認待ちの）曜日・時間帯と重なるセルを選択不可にする。
+  // 判定はコーチのローカル時刻（sourceDay/sourceStartTime）ベースで行う
+  // （coach.unavailable_slotsもcom_m_lesson_schedule/com_t_matching_request由来でコーチのローカル時刻）。
+  // あくまでUI上のソフトチェックで、最終的な整合性はサーバー側(schedule_conflict)で担保する。
+  const unavailableKeys = useMemo(() => {
+    if (!coach) return new Set<string>();
+    const keys = new Set<string>();
+    for (const cell of cells) {
+      const cellEndTime = getLessonEndTime(cell.sourceStartTime);
+      const isBooked = coach.unavailable_slots.some((slot) =>
+        slot.day_of_week === cell.sourceDay &&
+        doTimeRangesOverlap(cell.sourceStartTime, cellEndTime, slot.start_time, slot.end_time)
+      );
+      if (isBooked) keys.add(cell.key);
+    }
+    return keys;
+  }, [coach, cells]);
 
   const slotNo = selectedSlotNo ?? unmatchedSlots[0]?.slot_no ?? null;
 
@@ -139,9 +158,11 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
             <div className="space-y-4">
               <CoachAvailabilityCalendar
                 cells={cells}
+                unavailableKeys={unavailableKeys}
                 selectedKey={selectedCell?.key ?? null}
                 onSelect={setSelectedCell}
               />
+              <p className="text-[11px] text-slate-400">〇は申請可能、×は受付終了です。</p>
 
               {selectedCell && (
                 <div className="space-y-1.5 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2">

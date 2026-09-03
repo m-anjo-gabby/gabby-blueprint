@@ -41,6 +41,10 @@ ALTER TABLE public.com_m_contents ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view common or assigned corpora" ON public.com_m_contents;
 
+-- content_scope=1（クライアント限定）は、閲覧者自身のclient_idでのアクセス権に加え、
+-- コーチが担当する生徒（テナント横断しうる）のclient_idでのアクセス権でも閲覧可能とする
+-- (2026-09-03: コーチ向けLesson Sprint教材選択画面でコーパススプリントが表示されない不具合の対応。
+--  is_coach_content_accessible()の詳細はDDL/function/is_coach_content_accessible.sqlを参照)
 CREATE POLICY "Users can view common or assigned corpora" ON public.com_m_contents
 FOR SELECT TO authenticated USING (
     delete_flg = '0'
@@ -53,5 +57,6 @@ FOR SELECT TO authenticated USING (
               AND a.client_id = public.get_jwt_client_id()
               AND a.delete_flg = '0'
         )
+        OR public.is_coach_content_accessible(public.com_m_contents.content_id)
     )
 );

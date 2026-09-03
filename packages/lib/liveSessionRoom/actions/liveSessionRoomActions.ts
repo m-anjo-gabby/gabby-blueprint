@@ -37,7 +37,7 @@ async function hasActiveLiveSessionTicket(supabase: SupabaseClient, userId: stri
 
 /**
  * ログイン中コーチが、指定生徒とのライブセッションルームに入室するためのアクセス情報を取得する。
- * 現役の担当関係（com_m_lesson_schedule.status=1）を持つ場合のみ許可する
+ * 現役の担当関係（com_m_coach_student_relationship.is_active=true）を持つ場合のみ許可する
  * （生徒メモ閲覧等で使うhasCoachStudentRelationshipより厳しく、過去の担当関係は対象外）。
  */
 export async function getCoachLiveSessionRoomAccessCore(studentId: string): Promise<GetLiveSessionRoomAccessResult> {
@@ -48,20 +48,20 @@ export async function getCoachLiveSessionRoomAccessCore(studentId: string): Prom
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data: schedule, error: scheduleError } = await supabase
-      .from('com_m_lesson_schedule')
-      .select('schedule_id')
+    const { data: relationship, error: relationshipError } = await supabase
+      .from('com_m_coach_student_relationship')
+      .select('relationship_id')
       .eq('coach_id', user.id)
       .eq('student_id', studentId)
-      .eq('status', 1)
+      .eq('is_active', true)
       .limit(1)
       .maybeSingle();
 
-    if (scheduleError) {
-      logger.error('liveSessionRoom:coach_access_schedule_failed', scheduleError.message, { ...ctx, userId: user.id, payload: { studentId } });
+    if (relationshipError) {
+      logger.error('liveSessionRoom:coach_access_schedule_failed', relationshipError.message, { ...ctx, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (!schedule) {
+    if (!relationship) {
       return { success: false, errorCode: 'not_eligible' };
     }
 
@@ -101,7 +101,7 @@ export async function getCoachLiveSessionRoomAccessCore(studentId: string): Prom
 }
 
 /**
- * ログイン中生徒に、現在マッチング済み（com_m_lesson_schedule.status=1）の専属コーチ一覧を取得する。
+ * ログイン中生徒に、現在マッチング済み（com_m_coach_student_relationship.is_active=true）の専属コーチ一覧を取得する。
  * ライブセッションルームの入室前に、どのコーチと接続するかを選択させるための画面で使用する。
  */
 export async function getMyActiveLiveSessionCoachesCore(): Promise<GetMyLiveSessionCoachesResult> {
@@ -116,22 +116,22 @@ export async function getMyActiveLiveSessionCoachesCore(): Promise<GetMyLiveSess
       return { success: false, errorCode: 'not_eligible' };
     }
 
-    const { data: schedules, error: scheduleError } = await supabase
-      .from('com_m_lesson_schedule')
+    const { data: relationships, error: relationshipError } = await supabase
+      .from('com_m_coach_student_relationship')
       .select('coach_id')
       .eq('student_id', user.id)
-      .eq('status', 1)
-      .order('slot_no', { ascending: true });
+      .eq('is_active', true)
+      .order('insert_date', { ascending: true });
 
-    if (scheduleError) {
-      logger.error('liveSessionRoom:student_coaches_schedule_failed', scheduleError.message, { ...ctx, userId: user.id });
+    if (relationshipError) {
+      logger.error('liveSessionRoom:student_coaches_schedule_failed', relationshipError.message, { ...ctx, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (!schedules || schedules.length === 0) {
+    if (!relationships || relationships.length === 0) {
       return { success: false, errorCode: 'not_eligible' };
     }
 
-    const coachIds = Array.from(new Set(schedules.map((s) => s.coach_id)));
+    const coachIds = Array.from(new Set(relationships.map((r) => r.coach_id)));
     const { data: coaches, error: coachError } = await supabase
       .from('com_m_user')
       .select('id, user_name, icon_path')
@@ -160,8 +160,9 @@ export async function getMyActiveLiveSessionCoachesCore(): Promise<GetMyLiveSess
 
 /**
  * ログイン中生徒が、指定した専属コーチとのライブセッションルームに入室するためのアクセス情報を取得する。
- * 有効なライブセッションチケットを保持し、かつ指定コーチとの現役の担当関係（com_m_lesson_schedule.status=1）
- * を持つ場合のみ許可する（本来はcom_t_sessionの予約実績で判定すべきだが、POCの簡易チェックとする）。
+ * 有効なライブセッションチケットを保持し、かつ指定コーチとの現役の担当関係
+ * （com_m_coach_student_relationship.is_active=true）を持つ場合のみ許可する
+ * （本来はcom_t_sessionの予約実績で判定すべきだが、POCの簡易チェックとする）。
  */
 export async function getStudentLiveSessionRoomAccessCore(coachId: string): Promise<GetLiveSessionRoomAccessResult> {
   const ctx = await getLogContext();
@@ -175,20 +176,20 @@ export async function getStudentLiveSessionRoomAccessCore(coachId: string): Prom
       return { success: false, errorCode: 'not_eligible' };
     }
 
-    const { data: schedule, error: scheduleError } = await supabase
-      .from('com_m_lesson_schedule')
+    const { data: relationship, error: relationshipError } = await supabase
+      .from('com_m_coach_student_relationship')
       .select('coach_id')
       .eq('student_id', user.id)
       .eq('coach_id', coachId)
-      .eq('status', 1)
+      .eq('is_active', true)
       .limit(1)
       .maybeSingle();
 
-    if (scheduleError) {
-      logger.error('liveSessionRoom:student_access_schedule_failed', scheduleError.message, { ...ctx, userId: user.id, payload: { coachId } });
+    if (relationshipError) {
+      logger.error('liveSessionRoom:student_access_schedule_failed', relationshipError.message, { ...ctx, userId: user.id, payload: { coachId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (!schedule) {
+    if (!relationship) {
       return { success: false, errorCode: 'not_eligible' };
     }
 

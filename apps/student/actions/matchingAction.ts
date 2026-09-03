@@ -26,6 +26,7 @@ const MATCHING_ERROR_MESSAGES_JA: Record<MatchingRequestErrorCode, string> = {
   invalid_input: '入力内容をご確認ください（希望時間がコーチの対応可能時間内に収まっているかご確認ください）。',
   not_eligible: 'この操作を行う権限がありません。',
   slot_already_requested: 'この枠は既にマッチング済み、または承認待ちのリクエストがあります。',
+  schedule_conflict: 'この時間帯はコーチの既存の予約と重複しています。別の時間帯をお選びください。',
   db_insert_failed: 'リクエストの送信に失敗しました。',
   db_update_failed: '更新に失敗しました。既にコーチが対応済みの可能性があります。',
   unexpected_error: '予期しないエラーが発生しました。',

@@ -59,6 +59,24 @@ export interface StudentSessionHistoryItem {
   cancel_reason: string | null;
 }
 
+/**
+ * 契約セッション数に対する未消化枠1件分（週◯曜の定期スケジュール単位）。
+ * マッチング申請のタイミングにより、契約期間の途中からしかセッションを生成できず、
+ * 本来確保できたはずの回数に届かないケースをコーチに知らせるためのアラート用データ。
+ * 振替・個別予約の導線は別途検討中のため、現時点では検知・表示のみを行う。
+ */
+export interface LiveSessionShortfallItem {
+  schedule_id: string;
+  day_of_week: number;
+  start_time: string; // "HH:MM:SS"（コーチのローカル時刻）
+  /** 契約のライセンス開始日を起点に、本来確保できたはずのセッション回数 */
+  expected_sessions: number;
+  /** 実際に生成されたセッション回数 */
+  actual_sessions: number;
+  /** expected_sessions - actual_sessions（1以上の場合のみ本配列に含まれる） */
+  shortfall: number;
+}
+
 /** コーチ自分用の生徒メモ (com_t_coach_student_note) */
 export interface CoachStudentNote {
   note_id: string;
@@ -78,6 +96,10 @@ export type GetStudentOverviewResult =
 
 export type GetStudentSessionHistoryResult =
   | { success: true; sessions: StudentSessionHistoryItem[] }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+export type GetStudentLiveSessionShortfallsResult =
+  | { success: true; shortfalls: LiveSessionShortfallItem[] }
   | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetStudentNotesResult =

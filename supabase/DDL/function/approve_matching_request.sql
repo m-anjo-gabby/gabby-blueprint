@@ -2,7 +2,8 @@
 -- マッチングリクエスト承認RPC (2026-08-15 追加)
 -- 前提: table/com_t_matching_request.sql, table/com_m_lesson_schedule.sql,
 --       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql,
---       function/fn_generate_sessions_for_schedule.sql の作成が完了していること。
+--       function/fn_generate_sessions_for_schedule.sql,
+--       function/check_coach_schedule_conflict.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
 -- コーチがマッチングリクエストを承認する唯一の入口。
@@ -10,6 +11,17 @@
 -- 承認処理（ステータス更新 + com_m_lesson_schedule作成 + com_t_session一括生成）は
 -- 必ず本関数を通す。SECURITY DEFINERにより、内部のテーブル操作はRLSをバイパスするが、
 -- 呼び出し元が宛先コーチ本人（またはadmin）であることは関数内で明示的に検証する。
+--
+-- 【二重予約防止 (2026-09-03 追加)】
+-- 申請時(createMatchingRequestCore)にも同一のcheck_coach_schedule_conflict()で重複チェックを
+-- 行うが、申請〜承認の間に別の申請が先に承認される競合（TOCTOU）は申請時チェックだけでは
+-- 防げない。そのため承認時にも必ず同じ関数で再チェックする。
+-- 加えて、ほぼ同時に別々の承認処理（異なるrequest_id、同一コーチ×同一曜日）が走った場合、
+-- どちらも重複チェック時点ではまだ相手のcom_m_lesson_schedule行が存在せず、チェックを
+-- すり抜けてしまうレース条件が起こり得る。これを防ぐため、重複チェックの前に対象
+-- (coach_id, day_of_week)単位のトランザクションアドバイザリロックを取得し、同一コーチ×
+-- 同一曜日への承認処理を直列化する（コミット/ロールバックで自動解放。本関数内で取得する
+-- ロックは常にこの1本のみのため、デッドロックの起こりようがない）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
 RETURNS uuid
@@ -50,6 +62,17 @@ BEGIN
     END IF;
 
     v_start_date := GREATEST(v_license_start, CURRENT_DATE);
+
+    -- 同一コーチ×同一曜日への承認を直列化し、重複チェックのレース条件を防ぐ
+    PERFORM pg_advisory_xact_lock(hashtextextended(v_request.coach_id::text || ':' || v_request.requested_day_of_week::text, 0));
+
+    IF public.check_coach_schedule_conflict(
+        v_request.coach_id, v_request.requested_day_of_week,
+        v_request.requested_start_time, v_request.requested_end_time,
+        v_start_date, v_license_end
+    ) THEN
+        RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', v_request.coach_id;
+    END IF;
 
     -- day_of_week/start_time/end_timeの解釈基準として、承認時点のコーチtimezoneを固定保持する
     -- （以後コーチがプロフィールのtimezoneを変更しても、この契約の意味は変わらない）

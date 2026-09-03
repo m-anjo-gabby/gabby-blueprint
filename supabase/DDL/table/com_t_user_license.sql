@@ -51,14 +51,18 @@ FOR SELECT TO authenticated USING (
 -- 追加パッチ: Student Overview画面 契約情報表示対応 (2026-08-29)
 -- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
 ---------------------------------------------
--- [参照] com_m_lesson_scheduleで結びついたコーチ(status不問。コーチ交代後の引き継ぎ閲覧を想定)が、
+-- [参照] 担当関係にあるコーチ(status不問。コーチ交代後の引き継ぎ閲覧を想定)が、
 -- 生徒のライセンス（契約期間の判定）を参照できるようにする。既存ポリシーはそのまま残るため、
 -- 本人・契約先クライアントのアクセスは変わらない（追加の許可のみ）。
+--
+-- 2026-09-03: 担当関係の判定元をcom_m_lesson_schedule（スケジューリング用データ）から
+-- 判定専用の派生マスタcom_m_coach_student_relationshipに変更（意味論・挙動は変更なし。
+-- 詳細はtable/com_m_coach_student_relationship.sqlを参照）。
 DROP POLICY IF EXISTS "Coaches can view licenses of their students" ON public.com_t_user_license;
 CREATE POLICY "Coaches can view licenses of their students" ON public.com_t_user_license
 FOR SELECT TO authenticated USING (
     EXISTS (
-        SELECT 1 FROM public.com_m_lesson_schedule s
-        WHERE s.student_id = com_t_user_license.user_id AND s.coach_id = auth.uid()
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = com_t_user_license.user_id AND r.coach_id = auth.uid()
     )
 );

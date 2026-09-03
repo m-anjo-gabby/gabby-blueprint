@@ -39,16 +39,20 @@ WITH CHECK (user_id = auth.uid());
 -- 【背景】
 -- Student Overview画面（コーチ向け・生徒詳細）でスプリントのステージ・レベルを表示するため、
 -- 担当関係のあるコーチにも参照を許可する。生徒は専属コーチを変更できるため、
--- com_m_lesson_scheduleで一度でも結びついたことがあるコーチであれば、status（稼働中/終了）を
+-- 一度でも結びついたことがあるコーチであれば、担当状況（稼働中/終了）を
 -- 問わず継続して参照可能とする（コーチ交代後の引き継ぎ確認を想定）。
 -- 既存の "Users can manage their own sprint progress" (FOR ALL) はそのまま残るため、
 -- 本人のフルアクセスは変わらない（追加の許可のみ）。
+--
+-- 2026-09-03: 担当関係の判定元をcom_m_lesson_schedule（スケジューリング用データ）から
+-- 判定専用の派生マスタcom_m_coach_student_relationshipに変更（意味論・挙動は変更なし。
+-- 詳細はtable/com_m_coach_student_relationship.sqlを参照）。
 DROP POLICY IF EXISTS "Coaches can view sprint progress of their students" ON public.student_m_sprint_progress;
 CREATE POLICY "Coaches can view sprint progress of their students" ON public.student_m_sprint_progress
 FOR SELECT TO authenticated USING (
     EXISTS (
-        SELECT 1 FROM public.com_m_lesson_schedule s
-        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = student_m_sprint_progress.user_id AND r.coach_id = auth.uid()
     )
 );
 
@@ -61,16 +65,19 @@ FOR SELECT TO authenticated USING (
 -- （必要に応じ不足レベルを底上げする）強制アップを行う導線を追加するため、
 -- 上記SELECTポリシーと同一の担当関係チェックでUPDATEも許可する。
 -- 値の妥当性（範囲・「上げる」方向のみ等）はアプリケーション層(coachStudentActions.ts)で検証する。
+--
+-- 2026-09-03: 上記SELECTポリシーと同様、判定元をcom_m_coach_student_relationshipに変更
+-- （意味論・挙動は変更なし）。
 DROP POLICY IF EXISTS "Coaches can update sprint progress of their students" ON public.student_m_sprint_progress;
 CREATE POLICY "Coaches can update sprint progress of their students" ON public.student_m_sprint_progress
 FOR UPDATE TO authenticated USING (
     EXISTS (
-        SELECT 1 FROM public.com_m_lesson_schedule s
-        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = student_m_sprint_progress.user_id AND r.coach_id = auth.uid()
     )
 ) WITH CHECK (
     EXISTS (
-        SELECT 1 FROM public.com_m_lesson_schedule s
-        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = student_m_sprint_progress.user_id AND r.coach_id = auth.uid()
     )
 );

@@ -4,6 +4,7 @@ import {
   getAssignedStudentsCore,
   getStudentOverviewCore,
   getStudentSessionHistoryCore,
+  getStudentLiveSessionShortfallsCore,
   getStudentNotesCore,
   addCoachStudentNoteCore,
   updateStudentSprintLevelCore,
@@ -15,6 +16,7 @@ import {
   AssignedStudentSummary,
   StudentOverviewProfile,
   StudentSessionHistoryItem,
+  LiveSessionShortfallItem,
   CoachStudentNote,
   CoachStudentErrorCode,
   StudentSprintProgress,
@@ -69,6 +71,21 @@ export async function getStudentSessionHistory(studentId: string): Promise<Stude
     return [];
   }
   return result.sessions;
+}
+
+/**
+ * Fetches live session shortfalls (contracted sessions that couldn't all be scheduled,
+ * typically because the matching request was approved partway through the license period)
+ * for this coach's schedules with the given student.
+ */
+export async function getStudentLiveSessionShortfalls(studentId: string): Promise<LiveSessionShortfallItem[]> {
+  const result = await getStudentLiveSessionShortfallsCore(studentId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_student_session_shortfalls_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.shortfalls;
 }
 
 /**
