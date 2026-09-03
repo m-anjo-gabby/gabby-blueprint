@@ -33,8 +33,8 @@ function toStageLevels(progress: StudentSprintProgress): StageLevels {
 
 /**
  * ログイン中コーチが指定の生徒と担当関係を持つか判定する。
- * com_m_lesson_scheduleはstatusを問わず判定する（コーチ交代後も、過去に担当した
- * コーチが引き継ぎ目的でStudent Overviewを閲覧できるようにするため）。
+ * com_m_coach_student_relationshipはis_active(現役か)を問わず判定する（コーチ交代後も、
+ * 過去に担当したコーチが引き継ぎ目的でStudent Overviewを閲覧できるようにするため）。
  */
 export async function hasCoachStudentRelationship(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
@@ -42,8 +42,8 @@ export async function hasCoachStudentRelationship(
   studentId: string
 ): Promise<boolean> {
   const { data } = await supabase
-    .from('com_m_lesson_schedule')
-    .select('schedule_id')
+    .from('com_m_coach_student_relationship')
+    .select('relationship_id')
     .eq('coach_id', coachId)
     .eq('student_id', studentId)
     .limit(1);
@@ -62,38 +62,40 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data: schedules, error } = await supabase
-      .from('com_m_lesson_schedule')
+    const { data: relationships, error } = await supabase
+      .from('com_m_coach_student_relationship')
       .select('student_id')
       .eq('coach_id', user.id)
-      .eq('status', 1);
+      .eq('is_active', true);
 
     if (error) {
       logger.error('coachStudent:get_assigned_students_failed', error.message, { ...ctx, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (!schedules || schedules.length === 0) {
+    if (!relationships || relationships.length === 0) {
       return { success: true, students: [] };
     }
 
-    const slotCountByStudent = new Map<string, number>();
-    for (const s of schedules) {
-      slotCountByStudent.set(s.student_id, (slotCountByStudent.get(s.student_id) ?? 0) + 1);
-    }
-    const studentIds = Array.from(slotCountByStudent.keys());
+    const studentIds = relationships.map((r) => r.student_id);
 
-    const [{ data: users, error: userError }, { data: progress, error: progressError }] = await Promise.all([
+    const [{ data: users, error: userError }, { data: progress, error: progressError }, { data: schedules, error: scheduleError }] = await Promise.all([
       supabase.from('com_m_user').select('id, user_name, icon_path').in('id', studentIds),
       supabase
         .from('student_m_sprint_progress')
         .select('user_id, stage, level_speed, level_structure, level_builders, level_mastery')
         .in('user_id', studentIds),
+      supabase
+        .from('com_m_lesson_schedule')
+        .select('student_id')
+        .eq('coach_id', user.id)
+        .eq('status', 1)
+        .in('student_id', studentIds),
     ]);
 
-    if (userError || progressError) {
+    if (userError || progressError || scheduleError) {
       logger.error(
         'coachStudent:get_assigned_students_join_failed',
-        userError?.message ?? progressError?.message ?? 'unknown',
+        userError?.message ?? progressError?.message ?? scheduleError?.message ?? 'unknown',
         { ...ctx, userId: user.id }
       );
       return { success: false, errorCode: 'unexpected_error' };
@@ -101,6 +103,10 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
     const userById = new Map((users ?? []).map((u) => [u.id, u]));
     const progressByStudent = new Map((progress ?? []).map((p) => [p.user_id, p]));
+    const slotCountByStudent = new Map<string, number>();
+    for (const s of schedules ?? []) {
+      slotCountByStudent.set(s.student_id, (slotCountByStudent.get(s.student_id) ?? 0) + 1);
+    }
 
     const students: AssignedStudentSummary[] = studentIds
       .map((studentId) => {
@@ -129,7 +135,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
 /**
  * Student Overview画面向けに、指定生徒の基本情報とスプリント進捗を取得する（コーチ向け）
- * 担当関係（現在または過去のcom_m_lesson_schedule）がない生徒IDが指定された場合は forbidden を返す。
+ * 担当関係（現在または過去のcom_m_coach_student_relationship）がない生徒IDが指定された場合は forbidden を返す。
  */
 export async function getStudentOverviewCore(studentId: string): Promise<GetStudentOverviewResult> {
   const ctx = await getLogContext();

@@ -109,6 +109,7 @@ export type MatchingRequestErrorCode =
   | 'invalid_input'
   | 'not_eligible'
   | 'slot_already_requested'
+  | 'schedule_conflict'
   | 'db_insert_failed'
   | 'db_update_failed'
   | 'unexpected_error';
