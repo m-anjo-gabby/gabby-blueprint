@@ -42,7 +42,7 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
     hasLastContent ? (lastSession.question_type as SprintQuestionType) : '0'
   );
   const [level, setLevel] = useState<string>(
-    hasLastContent ? String(lastSession.difficulty_level) : '1'
+    hasLastContent ? String(lastSession.difficulty_level) : String(QUESTION_TYPES['0'].minLevel)
   );
   const [timeLimitSec, setTimeLimitSec] = useState<number>(
     hasLastContent ? lastSession.time_limit_sec : QUESTION_TYPES['0'].recommendedTimeSec
@@ -100,7 +100,7 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
       return;
     }
     setIsLoading(true);
-    const difficultyLevel = hasLevel ? Number(level) : QUESTION_TYPES[questionType].minLevel;
+    const difficultyLevel = hasLevel ? Number(level) : 1;
     const result = await getLessonSprintQuestions(contentId, questionType, difficultyLevel);
     setIsLoading(false);
 
