@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { UserFormDialog } from "./UserFormDialog";
 import { LicenseFormDialog } from "./LicenseFormDialog";
 import { ImpersonateButton } from "./ImpersonateButton";
-import { Calendar, Building2, Plus, StickyNote, ShieldCheck, Pencil, ShieldAlert } from "lucide-react";
+import { SprintProgressFormDialog } from "./SprintProgressFormDialog";
+import { Calendar, Building2, Plus, StickyNote, ShieldCheck, Pencil, ShieldAlert, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserTypeLabel, UserRecord, USER_TYPES } from "@gabby/types/user";
 import { isBefore, startOfDay } from "date-fns";
@@ -175,11 +176,21 @@ export const columns: ColumnDef<UserRecord>[] = [
       const isImpersonatableType = user.user_type === USER_TYPES.STUDENT || user.user_type === USER_TYPES.COACH;
       const isRegistered = !!user.last_sign_in_at || !!user.confirmed_at;
       const canImpersonate = isImpersonatableType && isRegistered;
+      const isStudent = user.user_type === USER_TYPES.STUDENT;
 
       return (
         <div className="flex justify-end items-center gap-2 px-2">
           {/* 障害対応・問合せ調査用の代理ログイン */}
           {canImpersonate && <ImpersonateButton user={user} />}
+
+          {/* 生徒のスプリントステージ・レベル管理（コーチの誤操作補正も含め、上げ下げ両方に対応） */}
+          {isStudent && (
+            <SprintProgressFormDialog user={user}>
+              <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
+                <Rocket size={14} /> ステージ
+              </Button>
+            </SprintProgressFormDialog>
+          )}
 
           {/* ユーザー基本情報の編集 */}
           <UserFormDialog

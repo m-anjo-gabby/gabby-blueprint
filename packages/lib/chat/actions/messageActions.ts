@@ -191,6 +191,8 @@ export async function getChatMessageById(chatId: string): Promise<{
 
 /**
  * 既読位置の更新（com_t_chat_room_user.last_read_chat_id）
+ * 併せて、このルームに紐づく通知(com_t_notification, CHAT_NEW_MESSAGE)も既読化する
+ * （通知センターの未読集約行と、チャット画面自体の既読状態を一致させるため）。
  */
 export async function markAsRead(params: {
   roomId: string;
@@ -211,6 +213,18 @@ export async function markAsRead(params: {
     if (error) {
       logger.error('chat:mark_read_failed', error.message, { ...ctx, payload: params });
       return { success: false, error: error.message };
+    }
+
+    // 通知側の既読化は失敗してもチャット既読自体は成功として扱う（通知はベストエフォート）
+    const { error: notificationError } = await supabase
+      .from('com_t_notification')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('notification_type', 'CHAT_NEW_MESSAGE')
+      .eq('dedup_key', params.roomId);
+
+    if (notificationError) {
+      logger.warn('chat:mark_read_notification_sync_failed', notificationError.message, { ...ctx, payload: params });
     }
 
     return { success: true };

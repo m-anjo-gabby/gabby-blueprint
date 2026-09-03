@@ -71,6 +71,11 @@ export function ContentDataTable({
           <span className="text-sm font-bold text-slate-900 leading-tight">
             {row.original.content_name}
           </span>
+          {row.original.content_name_en && (
+            <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]">
+              {row.original.content_name_en}
+            </span>
+          )}
           <span className="text-[10px] text-slate-400 font-mono font-medium tracking-tight truncate max-w-[200px]">
             {row.original.content_label}
           </span>

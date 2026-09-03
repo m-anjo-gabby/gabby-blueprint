@@ -31,3 +31,46 @@ CREATE POLICY "Users can manage their own sprint progress" ON public.student_m_s
 FOR ALL TO authenticated
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
+
+---------------------------------------------
+-- 追加パッチ: コーチによる担当生徒の進捗閲覧許可 (2026-08-28)
+-- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- Student Overview画面（コーチ向け・生徒詳細）でスプリントのステージ・レベルを表示するため、
+-- 担当関係のあるコーチにも参照を許可する。生徒は専属コーチを変更できるため、
+-- com_m_lesson_scheduleで一度でも結びついたことがあるコーチであれば、status（稼働中/終了）を
+-- 問わず継続して参照可能とする（コーチ交代後の引き継ぎ確認を想定）。
+-- 既存の "Users can manage their own sprint progress" (FOR ALL) はそのまま残るため、
+-- 本人のフルアクセスは変わらない（追加の許可のみ）。
+DROP POLICY IF EXISTS "Coaches can view sprint progress of their students" ON public.student_m_sprint_progress;
+CREATE POLICY "Coaches can view sprint progress of their students" ON public.student_m_sprint_progress
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+    )
+);
+
+---------------------------------------------
+-- 追加パッチ: コーチによる担当生徒のレベル/ステージ手動編集許可 (2026-08-30)
+-- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- Student Overview画面（コーチ向け）に、問題種別ごとのレベルアップ、およびステージの
+-- （必要に応じ不足レベルを底上げする）強制アップを行う導線を追加するため、
+-- 上記SELECTポリシーと同一の担当関係チェックでUPDATEも許可する。
+-- 値の妥当性（範囲・「上げる」方向のみ等）はアプリケーション層(coachStudentActions.ts)で検証する。
+DROP POLICY IF EXISTS "Coaches can update sprint progress of their students" ON public.student_m_sprint_progress;
+CREATE POLICY "Coaches can update sprint progress of their students" ON public.student_m_sprint_progress
+FOR UPDATE TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+    )
+) WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.com_m_lesson_schedule s
+        WHERE s.student_id = student_m_sprint_progress.user_id AND s.coach_id = auth.uid()
+    )
+);

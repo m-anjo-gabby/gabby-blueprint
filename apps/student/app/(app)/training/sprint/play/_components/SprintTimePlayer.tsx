@@ -636,39 +636,39 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             <div className="w-10 h-10 shrink-0 pointer-events-none" aria-hidden="true" />
           </div>
 
-          {/* 下段：数値秒数が美しく融合した、カプセル型インサイド・プログレスバー */}
-          <div className="mt-4 w-full select-none">
-            <div className="h-6 w-full bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/30">
+          {/* 下段：プログレスバーと秒数バッジを横並びに固定表示。バッジは常に白背景のため、進捗状態によらず視認性が一定 */}
+          <div className="mt-4 w-full flex items-center gap-2 select-none">
+            <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/30">
               {/* 動的プログレスバー本体 */}
-              <div 
+              <div
                 className={cn(
-                  "absolute top-0 left-0 h-full rounded-full transition-all flex items-center justify-end pr-3 shadow-[inset_-3px_0_8px_rgba(0,0,0,0.05)]",
+                  "absolute top-0 left-0 h-full rounded-full transition-all shadow-[inset_-3px_0_8px_rgba(0,0,0,0.05)]",
                   isCritical ? "bg-gradient-to-r from-rose-500 to-rose-600 shadow-[0_0_15px_rgba(225,29,72,0.2)]" :
                   isWarning ? "bg-gradient-to-r from-amber-400 to-amber-500" :
                   "bg-gradient-to-r from-indigo-500 to-indigo-600"
                 )}
-                style={{ 
+                style={{
                   width: `${progressPercent}%`,
                   transition: secondsLeft <= 0 ? 'width 0.2s ease-out' : 'width 1s linear'
                 }}
               />
+            </div>
 
-              {/* 右端に完全固定された秒数表示レイヤー（バーの重なり度合いで文字色を動的に変化） */}
-              <div className="absolute inset-y-0 right-3 flex items-center select-none pointer-events-none z-20">
-                <div className={cn(
-                  "flex items-center gap-1 font-mono text-xs font-black tracking-tight tabular-nums transition-colors duration-300 whitespace-nowrap",
-                  progressPercent >= 90
-                    ? "text-white"
-                    : isCritical
-                      ? "text-rose-600"
-                      : isWarning
-                        ? "text-amber-600"
-                        : "text-slate-600"
-                )}>
-                  <Timer size={11} className={cn(isCritical && "animate-pulse")} strokeWidth={3} />
-                  <span>{secondsLeft}s</span>
-                </div>
-              </div>
+            <div
+              className={cn(
+                "shrink-0 flex items-center gap-1 font-mono text-xs font-black tracking-tight tabular-nums whitespace-nowrap bg-white border rounded-full px-2 py-0.5 shadow-sm text-slate-700",
+                isCritical ? "border-rose-200" : isWarning ? "border-amber-200" : "border-slate-200"
+              )}
+            >
+              <Timer
+                size={11}
+                className={cn(
+                  isCritical && "animate-pulse",
+                  isCritical ? "text-rose-500" : isWarning ? "text-amber-500" : "text-indigo-500"
+                )}
+                strokeWidth={3}
+              />
+              <span>{secondsLeft}s</span>
             </div>
           </div>
 

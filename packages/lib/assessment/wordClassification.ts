@@ -44,3 +44,27 @@ export const extractContentWords = (text: string): string[] =>
     .split(/\s+/)
     .filter(Boolean)
     .filter(word => !isArticle(word) && !isFunctionWord(word));
+
+/**
+ * 文中の全単語をクリック位置順に保持したまま分割する（冠詞・機能語も含む）。
+ * Lesson Sprintの「解答文を単語単位でクリックしてハイライトする」UI向け。
+ * extractContentWordsは重要語抽出用に冠詞・機能語を除外するため、
+ * どの単語でも印を付けられる用途にはこちらを使う。
+ */
+export const tokenizeWords = (text: string): string[] =>
+  text
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()?]/g, "")
+    .split(/\s+/)
+    .filter(Boolean);
+
+/**
+ * tokenizeWordsと同じ空白区切り位置で単語を分割するが、句読点は保持する。
+ * highlighted_word_indices はtokenizeWords基準のインデックスなので、
+ * 表示専用にこちらを使う場合もインデックスの整合性は保たれる
+ * （句読点の除去は単語境界を変えないため）。
+ */
+export const tokenizeWordsWithPunctuation = (text: string): string[] =>
+  text
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
