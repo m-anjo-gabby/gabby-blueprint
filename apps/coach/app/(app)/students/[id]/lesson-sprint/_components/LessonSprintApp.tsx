@@ -36,7 +36,9 @@ export function LessonSprintApp({ studentId, profile, lessonSprints, contents }:
   };
 
   const handleComplete = (lessonSprintId: string) => {
-    resetStore();
+    // 🚀 store のリセットはプレイヤー側の完了ダイアログ遷移時（handleGoToResult）で行う。
+    // ここで先にリセットすると、まだ画面遷移が完了する前にヘッダーのタイトル等が
+    // 初期値（Speed）へ一瞬切り替わって見えるノイズが発生するため。
     router.push(`/students/${studentId}/lesson-sprint/result/${lessonSprintId}`);
   };
 

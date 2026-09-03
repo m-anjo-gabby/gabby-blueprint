@@ -72,3 +72,27 @@ export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => v
 
   return { secondsLeft, secondsLeftRef, isPaused, pause, resume, togglePause, pausedSecondsRef };
 }
+
+/**
+ * 完了オーバーレイ表示中、数秒後に自動で結果画面へ遷移するカウントダウン。
+ * 生徒アプリの useAutoRedirectCountdown（apps/student/.../useSprintTimers.ts）と同じ方針。
+ * trigger が true になった瞬間から redirectDelayMs 後に onRedirect を呼び出す。
+ */
+export function useAutoRedirectCountdown(
+  trigger: boolean,
+  onRedirect: () => void,
+  opts?: { redirectDelayMs?: number },
+) {
+  const redirectDelayMs = opts?.redirectDelayMs ?? 3500;
+
+  useEffect(() => {
+    if (!trigger) return;
+
+    const timer = setTimeout(() => {
+      onRedirect();
+    }, redirectDelayMs);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger, onRedirect]);
+}
