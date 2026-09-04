@@ -9,6 +9,7 @@ import {
   GetAssignedStudentsResult,
   GetStudentOverviewResult,
   GetStudentSessionHistoryResult,
+  GetStudentUpcomingSessionResult,
   GetStudentLiveSessionShortfallsResult,
   LiveSessionShortfallItem,
   GetStudentNotesResult,
@@ -16,6 +17,7 @@ import {
   UpdateStudentSprintProgressResult,
   StudentSprintProgress,
 } from '@gabby/types/coachStudent';
+import { SESSION_STATUS } from '@gabby/types/session';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
 import { clampLevel, computeStage, getForcedLevels } from '../../sprint/stageProgression';
@@ -234,7 +236,7 @@ export async function getStudentSessionHistoryCore(studentId: string): Promise<G
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason')
+      .select('session_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note')
       .eq('coach_id', user.id)
       .eq('student_id', studentId)
       .order('start_datetime', { ascending: false })
@@ -248,6 +250,47 @@ export async function getStudentSessionHistoryCore(studentId: string): Promise<G
     return { success: true, sessions: sessions ?? [] };
   } catch (err) {
     logger.error('coachStudent:get_session_history_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定生徒との、次に実施可能なセッション（status=scheduled かつ 終了予定時刻が未来）を1件取得する。
+ * TodaysLessonPanelの「Start Live Session」「End Lesson」の対象決定に使用する専用クエリ。
+ *
+ * getStudentSessionHistoryCore（降順50件・履歴表示用）を流用しないのは、契約期間分まとめて
+ * 事前生成されたセッションが50件を超える場合、降順+件数制限により直近（今日等）のセッションが
+ * 取得結果から漏れ、次に近い将来のセッション（例: 来週分）が誤って選ばれてしまうため
+ * （ライブルームがsession_id単位になったことで、生徒側と異なるセッションを選んでしまうと
+ * 別々の部屋に入室してしまい、レッスンを開始できなくなる）。
+ */
+export async function getStudentUpcomingSessionCore(studentId: string): Promise<GetStudentUpcomingSessionResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: session, error } = await supabase
+      .from('com_t_session')
+      .select('session_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note')
+      .eq('coach_id', user.id)
+      .eq('student_id', studentId)
+      .eq('status', SESSION_STATUS.SCHEDULED)
+      .gt('end_datetime', new Date().toISOString())
+      .order('start_datetime', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('coachStudent:get_upcoming_session_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true, session: session ?? null };
+  } catch (err) {
+    logger.error('coachStudent:get_upcoming_session_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

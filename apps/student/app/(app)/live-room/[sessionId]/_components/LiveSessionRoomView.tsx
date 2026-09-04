@@ -30,6 +30,7 @@ import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { recordCallJoin, recordCallLeave } from '@/actions/videoSessionAction';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
@@ -51,6 +52,7 @@ export function LiveSessionRoomView({ access }: Props) {
     isPeerConnected,
     isReceivingScreenShare,
     wasEndedByHost,
+    zoomSessionId,
     chatMessages,
     errorMessage,
     join,
@@ -83,6 +85,15 @@ export function LiveSessionRoomView({ access }: Props) {
   const { isFullscreen, toggleFullscreen } = useFullscreen(roomContainerRef);
   const { showConfirm } = useConfirm();
 
+  // コーチ側のルームと同様、入退室のたびにcom_t_session_call_logへ記録する
+  const callLogIdRef = useRef<string | null>(null);
+  const recordLeaveIfNeeded = () => {
+    const id = callLogIdRef.current;
+    if (!id) return;
+    callLogIdRef.current = null;
+    void recordCallLeave(id);
+  };
+
   useEffect(() => {
     if (phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
     previewRequested.current = true;
@@ -109,6 +120,14 @@ export function LiveSessionRoomView({ access }: Props) {
     if (!isJoined) return;
     trackSelf('student');
   }, [isJoined, trackSelf]);
+
+  // Zoom Video SDKへの入室が確定した時点で、com_t_session_call_logに入室記録を残す
+  useEffect(() => {
+    if (!isJoined || !zoomSessionId || callLogIdRef.current) return;
+    recordCallJoin(access.sessionId, zoomSessionId).then((callLogId) => {
+      callLogIdRef.current = callLogId;
+    });
+  }, [isJoined, zoomSessionId, access.sessionId]);
 
   const clearSessionTimers = () => {
     if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
@@ -140,6 +159,7 @@ export function LiveSessionRoomView({ access }: Props) {
     if (!wasEndedByHost || phase !== 'in-call') return;
     clearSessionTimers();
     untrackSelf();
+    recordLeaveIfNeeded();
     setPhase('ended');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasEndedByHost, phase]);
@@ -149,6 +169,7 @@ export function LiveSessionRoomView({ access }: Props) {
       preview.stopPreview();
       clearSessionTimers();
       untrackSelf();
+      recordLeaveIfNeeded();
       leave();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,6 +185,7 @@ export function LiveSessionRoomView({ access }: Props) {
   const handleTimeLimitReached = async () => {
     clearSessionTimers();
     await untrackSelf();
+    recordLeaveIfNeeded();
     await leave();
     setPhase('ended');
   };
@@ -183,6 +205,7 @@ export function LiveSessionRoomView({ access }: Props) {
 
     clearSessionTimers();
     await untrackSelf();
+    recordLeaveIfNeeded();
 
     await leave();
     router.push('/dashboard');

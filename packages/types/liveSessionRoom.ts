@@ -13,6 +13,8 @@ export type LiveSessionRoomRole = typeof LIVE_SESSION_ROOM_ROLE[keyof typeof LIV
 
 /** ルーム入室に必要な、Zoom Video SDKへの参加情報一式 */
 export interface LiveSessionRoomAccess {
+  /** 紐づく個別レッスンセッション (com_t_session.session_id)。入退室ログ記録RPCの呼び出しに使用する */
+  sessionId: string;
   sdkKey: string;
   signature: string;
   sessionName: string;
@@ -30,13 +32,7 @@ export type GetLiveSessionRoomAccessResult =
   | { success: true; access: LiveSessionRoomAccess }
   | { success: false; errorCode: LiveSessionRoomErrorCode };
 
-/** 生徒が選択可能な、マッチング済みの専属コーチ1件分（ライブセッションルーム入室前の選択画面用） */
-export interface LiveSessionCoachOption {
-  coachId: string;
-  coachName: string;
-  coachIconPath: string | null;
-}
-
-export type GetMyLiveSessionCoachesResult =
-  | { success: true; coaches: LiveSessionCoachOption[] }
+/** 通話 入室記録RPC(record_session_call_join)の結果 */
+export type RecordCallJoinResult =
+  | { success: true; callLogId: string }
   | { success: false; errorCode: LiveSessionRoomErrorCode };

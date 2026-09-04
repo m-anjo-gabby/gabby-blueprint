@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarCheck, Video, ExternalLink } from 'lucide-react';
-import { getMySessions } from '@/actions/sessionAction';
+import { CalendarCheck, CheckCircle2, Loader2, Video, ExternalLink } from 'lucide-react';
+import { getMySessions, hasCoachJoinedSessions } from '@/actions/sessionAction';
+import { useEndLesson } from '@/hooks/useEndLesson';
+import { EndLessonReasonDialog } from '@/components/session/EndLessonReasonDialog';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { SessionListItem, SESSION_STATUS } from '@gabby/types/session';
@@ -17,6 +19,8 @@ export default function TodaysSessionsPanel() {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [callLogPresence, setCallLogPresence] = useState<Record<string, boolean>>({});
+  const { endLesson, endingSessionId, reasonDialogOpen, closeReasonDialog, submitReason } = useEndLesson();
 
   useEffect(() => {
     let cancelled = false;
@@ -26,9 +30,14 @@ export default function TodaysSessionsPanel() {
       const rangeStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const rangeEnd = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
       const data = await getMySessions(rangeStart.toISOString(), rangeEnd.toISOString());
-      if (!cancelled) {
-        setSessions(data);
-        setIsLoading(false);
+      if (cancelled) return;
+      setSessions(data);
+      setIsLoading(false);
+
+      const scheduledIds = data.filter((s) => s.status === SESSION_STATUS.SCHEDULED).map((s) => s.session_id);
+      if (scheduledIds.length > 0) {
+        const presence = await hasCoachJoinedSessions(scheduledIds);
+        if (!cancelled) setCallLogPresence(presence);
       }
     })();
     return () => {
@@ -90,20 +99,32 @@ export default function TodaysSessionsPanel() {
                 </p>
               </div>
 
-              <Link
-                href={`/students/${session.counterpart_id}/room`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-3.5 py-2 rounded-full shadow-sm shrink-0"
-              >
-                <Video size={13} />
-                Start
-                <ExternalLink size={11} className="opacity-70" />
-              </Link>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href={`/students/${session.counterpart_id}/room/${session.session_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-3.5 py-2 rounded-full shadow-sm"
+                >
+                  <Video size={13} />
+                  Start
+                  <ExternalLink size={11} className="opacity-70" />
+                </Link>
+                <button
+                  onClick={() => endLesson(session.session_id, session.counterpart_id)}
+                  disabled={!callLogPresence[session.session_id] || endingSessionId === session.session_id}
+                  title={callLogPresence[session.session_id] ? 'Record this lesson’s outcome' : 'Join the call at least once before ending the lesson'}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors px-3.5 py-2 rounded-full shadow-sm"
+                >
+                  {endingSessionId === session.session_id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                  End Lesson
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
+      <EndLessonReasonDialog open={reasonDialogOpen} onClose={closeReasonDialog} onSubmit={submitReason} />
     </section>
   );
 }

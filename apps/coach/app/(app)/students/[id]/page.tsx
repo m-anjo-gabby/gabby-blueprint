@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getStudentOverview, getStudentSessionHistory, getStudentLiveSessionShortfalls, getStudentNotes } from '@/actions/studentAction';
+import { getStudentOverview, getStudentSessionHistory, getStudentUpcomingSession, getStudentLiveSessionShortfalls, getStudentNotes } from '@/actions/studentAction';
 import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
 import { StudentOverviewHeader } from './_components/StudentOverviewHeader';
 import { LiveSessionHistoryCard } from './_components/LiveSessionHistoryCard';
@@ -18,8 +18,9 @@ export default async function StudentOverviewPage({
     notFound();
   }
 
-  const [sessions, sessionShortfalls, notes, lessonSprints] = await Promise.all([
+  const [sessions, upcomingSession, sessionShortfalls, notes, lessonSprints] = await Promise.all([
     getStudentSessionHistory(id),
+    getStudentUpcomingSession(id),
     getStudentLiveSessionShortfalls(id),
     getStudentNotes(id),
     getLessonSprintHistory(id),
@@ -27,7 +28,7 @@ export default async function StudentOverviewPage({
 
   return (
     <div className="space-y-6">
-      <StudentOverviewHeader profile={overview.profile} sessions={sessions} lessonSprints={lessonSprints} />
+      <StudentOverviewHeader profile={overview.profile} sessions={sessions} upcomingSession={upcomingSession} lessonSprints={lessonSprints} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <LiveSessionHistoryCard sessions={sessions} shortfalls={sessionShortfalls} />

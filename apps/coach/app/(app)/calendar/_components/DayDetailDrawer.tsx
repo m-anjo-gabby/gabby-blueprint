@@ -300,7 +300,9 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
                 const session = item.data;
                 const badge = SESSION_STATUS_BADGE[session.status];
                 const isFuture = new Date(session.start_datetime) > new Date();
+                const isPastEnd = new Date(session.end_datetime) < new Date();
                 const canAct = session.status === SESSION_STATUS.SCHEDULED && isFuture;
+                const canResolve = session.status === SESSION_STATUS.SCHEDULED && isPastEnd;
                 return (
                   <article key={getCalendarItemKey(item)} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
@@ -334,6 +336,21 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
                         >
                           <X size={13} />
                           Cancel
+                        </Button>
+                      </div>
+                    )}
+
+                    {canResolve && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="text-amber-700 border-amber-200 hover:bg-amber-50"
+                          onClick={() => onActionRequested({ session, mode: 'resolve' })}
+                        >
+                          <CheckCircle2 size={13} />
+                          Resolve
                         </Button>
                       </div>
                     )}

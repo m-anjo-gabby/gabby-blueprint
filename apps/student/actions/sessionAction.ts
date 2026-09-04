@@ -20,6 +20,7 @@ const SESSION_ERROR_MESSAGES_JA: Record<SessionActionErrorCode, string> = {
   not_actionable: 'このレッスンは既に開始済み、または対応済みのため変更できません。',
   slot_unavailable: '選択した時間はコーチの対応可能時間外です。',
   schedule_conflict: '選択した時間には既に他のレッスンの予定があります。',
+  reason_required: '理由を入力してください。',
   unexpected_error: '予期しないエラーが発生しました。',
 };
 

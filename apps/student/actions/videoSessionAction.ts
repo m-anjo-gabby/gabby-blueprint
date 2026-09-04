@@ -1,12 +1,13 @@
 'use server';
 
 import {
-  getMyActiveLiveSessionCoachesCore,
   getStudentLiveSessionRoomAccessCore,
+  recordSessionCallJoinCore,
+  recordSessionCallLeaveCore,
 } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { LiveSessionCoachOption, LiveSessionRoomAccess, LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
+import { LiveSessionRoomAccess, LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
 
 const logger = createLogger('student');
 
@@ -18,31 +19,36 @@ const LIVE_SESSION_ROOM_ERROR_MESSAGES_JA: Record<LiveSessionRoomErrorCode, stri
 };
 
 /**
- * ログイン中の生徒に、マッチング済みの専属コーチ一覧を取得する（ルーム入室前のコーチ選択画面用）
- */
-export async function getMyLiveSessionCoaches(): Promise<
-  { success: true; coaches: LiveSessionCoachOption[] } | { success: false; message: string }
-> {
-  const result = await getMyActiveLiveSessionCoachesCore();
-  if (!result.success) {
-    const ctx = await getLogContext();
-    logger.error('student:get_live_session_coaches_failed', result.errorCode, ctx);
-    return { success: false, message: LIVE_SESSION_ROOM_ERROR_MESSAGES_JA[result.errorCode] };
-  }
-  return { success: true, coaches: result.coaches };
-}
-
-/**
- * ログイン中の生徒が、指定した専属コーチとのライブセッションルームに入室するためのアクセス情報（Zoom Video SDK署名等）を取得する
+ * ログイン中の生徒が、指定した個別レッスンセッションのライブセッションルームに入室するためのアクセス情報（Zoom Video SDK署名等）を取得する
  */
 export async function getMyLiveSessionRoomAccess(
-  coachId: string
+  sessionId: string
 ): Promise<{ success: true; access: LiveSessionRoomAccess } | { success: false; message: string }> {
-  const result = await getStudentLiveSessionRoomAccessCore(coachId);
+  const result = await getStudentLiveSessionRoomAccessCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('student:get_live_session_room_access_failed', result.errorCode, ctx);
     return { success: false, message: LIVE_SESSION_ROOM_ERROR_MESSAGES_JA[result.errorCode] };
   }
   return { success: true, access: result.access };
+}
+
+/**
+ * この生徒が通話に入室したことを記録する。返るcall_log_idは退室時のrecordCallLeaveに渡す。
+ */
+export async function recordCallJoin(sessionId: string, zoomSessionId: string | null): Promise<string | null> {
+  const result = await recordSessionCallJoinCore(sessionId, zoomSessionId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:record_call_join_failed', result.errorCode, ctx);
+    return null;
+  }
+  return result.callLogId;
+}
+
+/**
+ * この生徒が通話から退室したことを記録する。複数の退室経路から多重に呼ばれても安全。
+ */
+export async function recordCallLeave(callLogId: string): Promise<void> {
+  await recordSessionCallLeaveCore(callLogId);
 }

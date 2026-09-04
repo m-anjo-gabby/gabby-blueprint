@@ -8,4 +8,5 @@ export const SESSION_STATUS_BADGE: Record<SessionStatus, { label: string; classN
   [SESSION_STATUS.CANCELLED_BY_COACH]: { label: 'キャンセル済み（コーチ都合）', className: 'bg-rose-50 text-rose-700 border-rose-100', dotClassName: 'bg-rose-400' },
   [SESSION_STATUS.RESCHEDULED]: { label: '振替済み', className: 'bg-slate-100 text-slate-600 border-slate-200', dotClassName: 'bg-slate-400' },
   [SESSION_STATUS.NO_SHOW]: { label: '未参加', className: 'bg-amber-50 text-amber-700 border-amber-100', dotClassName: 'bg-amber-500' },
+  [SESSION_STATUS.EARLY_ENDED]: { label: '早期終了', className: 'bg-orange-50 text-orange-700 border-orange-100', dotClassName: 'bg-orange-500' },
 };

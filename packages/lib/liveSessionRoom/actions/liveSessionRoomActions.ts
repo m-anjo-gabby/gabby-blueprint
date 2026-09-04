@@ -4,17 +4,22 @@ import { getLogContext } from '../../logger/context';
 import { generateVideoSdkSignature } from '../../zoom/signature';
 import {
   GetLiveSessionRoomAccessResult,
-  GetMyLiveSessionCoachesResult,
   LIVE_SESSION_ROOM_ROLE,
+  RecordCallJoinResult,
 } from '@gabby/types/liveSessionRoom';
+import { GetSessionCallLogPresenceResult } from '@gabby/types/session';
 
 const logger = createLogger('common');
 
 type SupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
-/** コーチ⇔生徒のペアから、両者が同じセッションに入室するための決定的なセッション名を作る */
-function buildSessionName(coachId: string, studentId: string): string {
-  return `live-${[coachId, studentId].sort().join('-')}`;
+/**
+ * 個別レッスンセッション(session_id)単位で、両者が同じZoom Video SDKセッションに
+ * 入室するための決定的なセッション名を作る。以前はコーチ⇔生徒ペア単位で固定していたが、
+ * 同一ペアで1日に複数コマ実施するケースに対応するため、session_id単位に変更した。
+ */
+function buildSessionName(sessionId: string): string {
+  return `live-${sessionId}`;
 }
 
 /** ログイン中生徒が、現在有効なライブセッションチケットを保持しているか判定する */
@@ -36,11 +41,11 @@ async function hasActiveLiveSessionTicket(supabase: SupabaseClient, userId: stri
 }
 
 /**
- * ログイン中コーチが、指定生徒とのライブセッションルームに入室するためのアクセス情報を取得する。
- * 現役の担当関係（com_m_coach_student_relationship.is_active=true）を持つ場合のみ許可する
- * （生徒メモ閲覧等で使うhasCoachStudentRelationshipより厳しく、過去の担当関係は対象外）。
+ * ログイン中コーチが、指定の個別レッスンセッションのライブセッションルームに入室するための
+ * アクセス情報を取得する。対象session_idのcoach_idがログイン中コーチ本人であることのみを
+ * 検証する（POCにつき、開始/終了予定時刻による活性化チェックは行わない）。
  */
-export async function getCoachLiveSessionRoomAccessCore(studentId: string): Promise<GetLiveSessionRoomAccessResult> {
+export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Promise<GetLiveSessionRoomAccessResult> {
   const ctx = await getLogContext();
 
   try {
@@ -48,34 +53,31 @@ export async function getCoachLiveSessionRoomAccessCore(studentId: string): Prom
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data: relationship, error: relationshipError } = await supabase
-      .from('com_m_coach_student_relationship')
-      .select('relationship_id')
-      .eq('coach_id', user.id)
-      .eq('student_id', studentId)
-      .eq('is_active', true)
-      .limit(1)
+    const { data: session, error: sessionError } = await supabase
+      .from('com_t_session')
+      .select('session_id, coach_id, student_id')
+      .eq('session_id', sessionId)
       .maybeSingle();
 
-    if (relationshipError) {
-      logger.error('liveSessionRoom:coach_access_schedule_failed', relationshipError.message, { ...ctx, userId: user.id, payload: { studentId } });
+    if (sessionError) {
+      logger.error('liveSessionRoom:coach_access_session_lookup_failed', sessionError.message, { ...ctx, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (!relationship) {
-      return { success: false, errorCode: 'not_eligible' };
+    if (!session || session.coach_id !== user.id) {
+      return { success: false, errorCode: 'forbidden' };
     }
 
     const [{ data: coach, error: coachError }, { data: student, error: studentError }] = await Promise.all([
       supabase.from('com_m_user').select('user_name').eq('id', user.id).maybeSingle(),
-      supabase.from('com_m_user').select('user_name, icon_path').eq('id', studentId).maybeSingle(),
+      supabase.from('com_m_user').select('user_name, icon_path').eq('id', session.student_id).maybeSingle(),
     ]);
 
     if (coachError || studentError || !coach || !student) {
-      logger.error('liveSessionRoom:coach_access_user_lookup_failed', coachError?.message ?? studentError?.message ?? 'user not found', { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('liveSessionRoom:coach_access_user_lookup_failed', coachError?.message ?? studentError?.message ?? 'user not found', { ...ctx, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const sessionName = buildSessionName(user.id, studentId);
+    const sessionName = buildSessionName(sessionId);
     const signature = generateVideoSdkSignature({
       sessionName,
       role: LIVE_SESSION_ROOM_ROLE.HOST,
@@ -85,6 +87,7 @@ export async function getCoachLiveSessionRoomAccessCore(studentId: string): Prom
     return {
       success: true,
       access: {
+        sessionId,
         sdkKey: process.env.ZOOM_VIDEO_SDK_KEY!,
         signature,
         sessionName,
@@ -101,10 +104,12 @@ export async function getCoachLiveSessionRoomAccessCore(studentId: string): Prom
 }
 
 /**
- * ログイン中生徒に、現在マッチング済み（com_m_coach_student_relationship.is_active=true）の専属コーチ一覧を取得する。
- * ライブセッションルームの入室前に、どのコーチと接続するかを選択させるための画面で使用する。
+ * ログイン中生徒が、指定の個別レッスンセッションのライブセッションルームに入室するための
+ * アクセス情報を取得する。有効なライブセッションチケットを保持し、かつ対象session_idの
+ * student_idがログイン中生徒本人であることを検証する（POCにつき、開始/終了予定時刻による
+ * 活性化チェックは行わない）。
  */
-export async function getMyActiveLiveSessionCoachesCore(): Promise<GetMyLiveSessionCoachesResult> {
+export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Promise<GetLiveSessionRoomAccessResult> {
   const ctx = await getLogContext();
 
   try {
@@ -116,94 +121,31 @@ export async function getMyActiveLiveSessionCoachesCore(): Promise<GetMyLiveSess
       return { success: false, errorCode: 'not_eligible' };
     }
 
-    const { data: relationships, error: relationshipError } = await supabase
-      .from('com_m_coach_student_relationship')
-      .select('coach_id')
-      .eq('student_id', user.id)
-      .eq('is_active', true)
-      .order('insert_date', { ascending: true });
-
-    if (relationshipError) {
-      logger.error('liveSessionRoom:student_coaches_schedule_failed', relationshipError.message, { ...ctx, userId: user.id });
-      return { success: false, errorCode: 'unexpected_error' };
-    }
-    if (!relationships || relationships.length === 0) {
-      return { success: false, errorCode: 'not_eligible' };
-    }
-
-    const coachIds = Array.from(new Set(relationships.map((r) => r.coach_id)));
-    const { data: coaches, error: coachError } = await supabase
-      .from('com_m_user')
-      .select('id, user_name, icon_path')
-      .in('id', coachIds);
-
-    if (coachError) {
-      logger.error('liveSessionRoom:student_coaches_lookup_failed', coachError.message, { ...ctx, userId: user.id });
-      return { success: false, errorCode: 'unexpected_error' };
-    }
-
-    const coachById = new Map((coaches ?? []).map((c) => [c.id, c]));
-
-    return {
-      success: true,
-      coaches: coachIds.map((coachId) => ({
-        coachId,
-        coachName: coachById.get(coachId)?.user_name ?? '(Unknown)',
-        coachIconPath: coachById.get(coachId)?.icon_path ?? null,
-      })),
-    };
-  } catch (err) {
-    logger.error('liveSessionRoom:student_coaches_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
-    return { success: false, errorCode: 'unexpected_error' };
-  }
-}
-
-/**
- * ログイン中生徒が、指定した専属コーチとのライブセッションルームに入室するためのアクセス情報を取得する。
- * 有効なライブセッションチケットを保持し、かつ指定コーチとの現役の担当関係
- * （com_m_coach_student_relationship.is_active=true）を持つ場合のみ許可する
- * （本来はcom_t_sessionの予約実績で判定すべきだが、POCの簡易チェックとする）。
- */
-export async function getStudentLiveSessionRoomAccessCore(coachId: string): Promise<GetLiveSessionRoomAccessResult> {
-  const ctx = await getLogContext();
-
-  try {
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, errorCode: 'unauthorized' };
-
-    if (!(await hasActiveLiveSessionTicket(supabase, user.id))) {
-      return { success: false, errorCode: 'not_eligible' };
-    }
-
-    const { data: relationship, error: relationshipError } = await supabase
-      .from('com_m_coach_student_relationship')
-      .select('coach_id')
-      .eq('student_id', user.id)
-      .eq('coach_id', coachId)
-      .eq('is_active', true)
-      .limit(1)
+    const { data: session, error: sessionError } = await supabase
+      .from('com_t_session')
+      .select('session_id, coach_id, student_id')
+      .eq('session_id', sessionId)
       .maybeSingle();
 
-    if (relationshipError) {
-      logger.error('liveSessionRoom:student_access_schedule_failed', relationshipError.message, { ...ctx, userId: user.id, payload: { coachId } });
+    if (sessionError) {
+      logger.error('liveSessionRoom:student_access_session_lookup_failed', sessionError.message, { ...ctx, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (!relationship) {
-      return { success: false, errorCode: 'not_eligible' };
+    if (!session || session.student_id !== user.id) {
+      return { success: false, errorCode: 'forbidden' };
     }
 
     const [{ data: student, error: studentError }, { data: coach, error: coachError }] = await Promise.all([
       supabase.from('com_m_user').select('user_name').eq('id', user.id).maybeSingle(),
-      supabase.from('com_m_user').select('user_name, icon_path').eq('id', coachId).maybeSingle(),
+      supabase.from('com_m_user').select('user_name, icon_path').eq('id', session.coach_id).maybeSingle(),
     ]);
 
     if (studentError || coachError || !student || !coach) {
-      logger.error('liveSessionRoom:student_access_user_lookup_failed', studentError?.message ?? coachError?.message ?? 'user not found', { ...ctx, userId: user.id, payload: { coachId } });
+      logger.error('liveSessionRoom:student_access_user_lookup_failed', studentError?.message ?? coachError?.message ?? 'user not found', { ...ctx, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const sessionName = buildSessionName(coachId, user.id);
+    const sessionName = buildSessionName(sessionId);
     const signature = generateVideoSdkSignature({
       sessionName,
       role: LIVE_SESSION_ROOM_ROLE.PARTICIPANT,
@@ -213,6 +155,7 @@ export async function getStudentLiveSessionRoomAccessCore(coachId: string): Prom
     return {
       success: true,
       access: {
+        sessionId,
         sdkKey: process.env.ZOOM_VIDEO_SDK_KEY!,
         signature,
         sessionName,
@@ -225,5 +168,99 @@ export async function getStudentLiveSessionRoomAccessCore(coachId: string): Prom
   } catch (err) {
     logger.error('liveSessionRoom:student_access_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定したsession_id群それぞれについて、コーチ自身の入室ログ(com_t_session_call_log, role='coach')が
+ * 1件でも存在するかを一括取得する。ダッシュボード/生徒詳細画面の「レッスン終了」ボタンの活性判定に使用する
+ * （1件ずつ問い合わせるN+1を避けるため、対象session_id配列をまとめて1クエリで取得する）。
+ */
+export async function getSessionCallLogPresenceCore(sessionIds: string[]): Promise<GetSessionCallLogPresenceResult> {
+  const ctx = await getLogContext();
+
+  try {
+    if (sessionIds.length === 0) {
+      return { success: true, joinedBySessionId: {} };
+    }
+
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: rows, error } = await supabase
+      .from('com_t_session_call_log')
+      .select('session_id')
+      .in('session_id', sessionIds)
+      .eq('role', 'coach');
+
+    if (error) {
+      logger.error('liveSessionRoom:call_log_presence_failed', error.message, { ...ctx, userId: user.id, payload: { sessionIds } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const joinedBySessionId: Record<string, boolean> = {};
+    for (const id of sessionIds) joinedBySessionId[id] = false;
+    for (const row of rows ?? []) joinedBySessionId[row.session_id] = true;
+
+    return { success: true, joinedBySessionId };
+  } catch (err) {
+    logger.error('liveSessionRoom:call_log_presence_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ライブセッション通話への入室を記録する(record_session_call_join RPC呼び出し)。
+ * 入室日時はRPC側でNOW()により確定するため、ここではsession_id/zoomSessionIdのみ渡す。
+ */
+export async function recordSessionCallJoinCore(sessionId: string, zoomSessionId: string | null): Promise<RecordCallJoinResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase.rpc('record_session_call_join', {
+      p_session_id: sessionId,
+      p_zoom_session_id: zoomSessionId,
+    });
+
+    if (error || !data) {
+      logger.error('liveSessionRoom:record_call_join_failed', error?.message ?? 'No call_log_id returned', { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    return { success: true, callLogId: data as string };
+  } catch (err) {
+    logger.error('liveSessionRoom:record_call_join_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ライブセッション通話からの退室を記録する(record_session_call_leave RPC呼び出し)。
+ * 明示的な退室ボタン・30分自動終了・ホスト強制終了検知・コンポーネントのアンマウント処理など、
+ * 複数の経路から多重に呼ばれても安全な冪等操作（RPC側でleft_at IS NULLの行にのみ適用される）。
+ */
+export async function recordSessionCallLeaveCore(callLogId: string): Promise<{ success: boolean }> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false };
+
+    const { error } = await supabase.rpc('record_session_call_leave', { p_call_log_id: callLogId });
+    if (error) {
+      logger.error('liveSessionRoom:record_call_leave_failed', error.message, { ...ctx, userId: user.id, payload: { callLogId } });
+      return { success: false };
+    }
+
+    return { success: true };
+  } catch (err) {
+    logger.error('liveSessionRoom:record_call_leave_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false };
   }
 }

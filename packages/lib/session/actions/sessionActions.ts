@@ -5,23 +5,35 @@ import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import {
   CancelSessionResult,
+  FinalizeSessionResult,
+  GetSessionResultSummaryResult,
   RescheduleSessionResult,
+  ResolveStaleSessionResult,
   SessionActionErrorCode,
+  SessionCallLogEntry,
   SessionListItem,
+  SessionStatus,
 } from '@gabby/types/session';
 
 const logger = createLogger('common');
 
 /**
  * RPCから返るPostgresエラーメッセージを、画面向けのエラーコードへ大まかに分類する。
- * cancel_session / reschedule_session はいずれもRAISE EXCEPTIONのメッセージ文言を
- * 一定のパターンに統一しているため、文字列一致で判定する。
+ * cancel_session / reschedule_session / finalize_session / resolve_stale_session はいずれも
+ * RAISE EXCEPTIONのメッセージ文言を一定のパターンに統一しているため、文字列一致で判定する。
  */
 function classifyRpcError(message: string | undefined): SessionActionErrorCode {
   if (!message) return 'unexpected_error';
   if (message.includes('not authorized')) return 'unauthorized';
   if (message.includes('not found')) return 'not_found';
-  if (message.includes('not scheduled') || message.includes('already started') || message.includes('must be in the future')) {
+  if (message.includes('reason required')) return 'reason_required';
+  if (message.includes('invalid resolved status')) return 'invalid_input';
+  if (
+    message.includes('not scheduled')
+    || message.includes('already started')
+    || message.includes('must be in the future')
+    || message.includes('cannot resolve a session before its end time')
+  ) {
     return 'not_actionable';
   }
   if (message.includes('outside coach availability') || message.includes('blocked by coach exception')) {
@@ -49,7 +61,7 @@ export async function getMySessionsCore(
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason')
+      .select('session_id, schedule_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note')
       .gte('start_datetime', startIso)
       .lt('start_datetime', endIso)
       .order('start_datetime', { ascending: true });
@@ -87,6 +99,7 @@ export async function getMySessionsCore(
         counterpart_name: nameById.get(counterpartId) ?? '(Unknown)',
         rescheduled_from: s.rescheduled_from,
         cancel_reason: s.cancel_reason,
+        status_note: s.status_note,
       };
     });
 
@@ -166,6 +179,148 @@ export async function rescheduleSessionCore(
     return { success: true, newSessionId: data as string };
   } catch (err) {
     logger.error('session:reschedule_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 「レッスン終了」ボタン用。コーチ・生徒双方の入退室ログの重複時間からセッション実施結果
+ * （completed/early_ended/no_show）を自動判定する finalize_session RPC（SECURITY DEFINER）を呼び出す。
+ * 20分未満かつ生徒の入室記録がある場合はreasonが必須で、未指定だとRPCが'reason required'で
+ * 失敗する（errorCode: 'reason_required'）。呼び出し側はこれを検知して理由入力ダイアログを表示し、
+ * reason付きで再実行すること。
+ */
+export async function finalizeSessionCore(sessionId: string, reason?: string): Promise<FinalizeSessionResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase.rpc('finalize_session', {
+      p_session_id: sessionId,
+      p_early_end_reason: reason?.trim() || null,
+    });
+
+    if (error || !data || data.length === 0) {
+      logger.error('session:finalize_failed', error?.message ?? 'No row returned', { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: classifyRpcError(error?.message) };
+    }
+
+    const row = data[0] as { new_status: number; overlap_seconds: number };
+    logger.info('session:finalize_success', 'Session finalized', { ...ctx, userId: user.id, payload: { sessionId, status: row.new_status } });
+    return { success: true, status: row.new_status as SessionStatus, overlapSeconds: row.overlap_seconds };
+  } catch (err) {
+    logger.error('session:finalize_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 予定終了時刻を過ぎてもscheduledのまま残ったセッションを、コーチが理由付きで手動解決する
+ * （resolve_stale_session RPC呼び出し）。アプリ外Zoom等で代替実施したケース等の唯一の解決経路。
+ */
+export async function resolveStaleSessionCore(
+  sessionId: string,
+  resolvedStatus: number,
+  reason: string
+): Promise<ResolveStaleSessionResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      return { success: false, errorCode: 'invalid_input' };
+    }
+
+    const { error } = await supabase.rpc('resolve_stale_session', {
+      p_session_id: sessionId,
+      p_resolved_status: resolvedStatus,
+      p_reason: trimmed,
+    });
+
+    if (error) {
+      logger.error('session:resolve_stale_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId, resolvedStatus } });
+      return { success: false, errorCode: classifyRpcError(error.message) };
+    }
+
+    logger.info('session:resolve_stale_success', 'Stale session resolved', { ...ctx, userId: user.id, payload: { sessionId, resolvedStatus } });
+    return { success: true };
+  } catch (err) {
+    logger.error('session:resolve_stale_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * レッスン結果画面用。対象セッションの基本情報＋入退室ログ一覧（コーチ・生徒共通、RLSにより
+ * 本人が関わるセッションのみ取得可能）をまとめて取得する。
+ */
+export async function getSessionResultSummaryCore(sessionId: string): Promise<GetSessionResultSummaryResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: session, error: sessionError } = await supabase
+      .from('com_t_session')
+      .select('session_id, student_id, coach_id, start_datetime, end_datetime, status, status_note')
+      .eq('session_id', sessionId)
+      .maybeSingle();
+
+    if (sessionError) {
+      logger.error('session:get_result_summary_failed', sessionError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!session) {
+      return { success: false, errorCode: 'not_found' };
+    }
+
+    const isCoach = session.coach_id === user.id;
+    const counterpartId = isCoach ? session.student_id : session.coach_id;
+
+    const [{ data: counterpart }, { data: callLogRows, error: callLogError }] = await Promise.all([
+      supabase.from('com_m_user').select('user_name').eq('id', counterpartId).maybeSingle(),
+      supabase
+        .from('com_t_session_call_log')
+        .select('call_log_id, role, joined_at, left_at')
+        .eq('session_id', sessionId)
+        .order('joined_at', { ascending: true }),
+    ]);
+
+    if (callLogError) {
+      logger.error('session:get_result_summary_call_log_failed', callLogError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const callLog: SessionCallLogEntry[] = (callLogRows ?? []).map((r) => ({
+      call_log_id: r.call_log_id,
+      role: r.role,
+      joined_at: r.joined_at,
+      left_at: r.left_at,
+    }));
+
+    return {
+      success: true,
+      session: {
+        session_id: session.session_id,
+        start_datetime: session.start_datetime,
+        end_datetime: session.end_datetime,
+        status: session.status,
+        status_note: session.status_note,
+        counterpart_name: counterpart?.user_name ?? '(Unknown)',
+        call_log: callLog,
+      },
+    };
+  } catch (err) {
+    logger.error('session:get_result_summary_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

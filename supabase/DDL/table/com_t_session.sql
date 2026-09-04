@@ -83,3 +83,23 @@ FOR SELECT TO authenticated USING (
     OR coach_id = auth.uid()
     OR public.get_jwt_user_type() = '0'
 );
+
+---------------------------------------------
+-- 追加パッチ: ライブセッション実施結果の連携 (2026-09-04)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- Zoom Video SDKのライブ通話ルームをsession_id単位に紐づけ、コーチが押す
+-- 「レッスン終了」ボタンでの自動判定（completed/no_show/early_ended）、および
+-- 予定時刻超過後もscheduledのまま残ったセッションの手動解決に対応するため、
+-- ステータス値を追加し、理由テキストの保存先を新設する。
+-- cancel_reasonは事前キャンセル専用の意味で使われているため流用せず、
+-- 早期終了・手動解決の理由は本カラムに分離して保持する。
+---------------------------------------------
+ALTER TABLE public.com_t_session ADD COLUMN IF NOT EXISTS status_note text DEFAULT NULL;
+COMMENT ON COLUMN public.com_t_session.status_note IS '早期終了理由・停滞セッションの手動解決理由（cancel_reasonとは意味的に分離）';
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由)';

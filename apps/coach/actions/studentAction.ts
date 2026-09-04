@@ -4,6 +4,7 @@ import {
   getAssignedStudentsCore,
   getStudentOverviewCore,
   getStudentSessionHistoryCore,
+  getStudentUpcomingSessionCore,
   getStudentLiveSessionShortfallsCore,
   getStudentNotesCore,
   addCoachStudentNoteCore,
@@ -71,6 +72,23 @@ export async function getStudentSessionHistory(studentId: string): Promise<Stude
     return [];
   }
   return result.sessions;
+}
+
+/**
+ * Fetches the next session with this student that is still scheduled and hasn't ended yet
+ * (used to decide which session_id "Start Live Session"/"End Lesson" should target — deliberately
+ * a dedicated, tightly-filtered query rather than derived from getStudentSessionHistory's
+ * descending/limited history list, since that list can omit the nearest upcoming session once
+ * enough future sessions have been pre-generated for a long contract).
+ */
+export async function getStudentUpcomingSession(studentId: string): Promise<StudentSessionHistoryItem | null> {
+  const result = await getStudentUpcomingSessionCore(studentId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_student_upcoming_session_failed', result.errorCode, ctx);
+    return null;
+  }
+  return result.session;
 }
 
 /**

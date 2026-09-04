@@ -15,15 +15,21 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { generateLessonStartTimeOptions } from '@gabby/lib/date/date';
-import { cancelSession, rescheduleSession } from '@/actions/sessionAction';
+import { cancelSession, rescheduleSession, resolveStaleSession } from '@/actions/sessionAction';
 import { getMyAvailability } from '@/actions/availabilityAction';
 import { CoachAvailabilitySlot } from '@gabby/types/coachAvailability';
-import { SessionListItem } from '@gabby/types/session';
+import { SESSION_STATUS, SessionListItem, SessionStatus } from '@gabby/types/session';
 
 export interface SessionActionTarget {
   session: SessionListItem;
-  mode: 'cancel' | 'reschedule';
+  mode: 'cancel' | 'reschedule' | 'resolve';
 }
+
+const RESOLVE_STATUS_OPTIONS: { value: SessionStatus; label: string }[] = [
+  { value: SESSION_STATUS.COMPLETED, label: 'Completed (conducted outside the app)' },
+  { value: SESSION_STATUS.EARLY_ENDED, label: 'Ended early' },
+  { value: SESSION_STATUS.NO_SHOW, label: 'No-show' },
+];
 
 interface SessionActionDialogProps {
   target: SessionActionTarget | null;
@@ -47,6 +53,7 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
   const [availability, setAvailability] = useState<CoachAvailabilitySlot[]>([]);
   const [newDate, setNewDate] = useState(tomorrowIsoDate());
   const [newStartTime, setNewStartTime] = useState<string | null>(null);
+  const [resolvedStatus, setResolvedStatus] = useState<SessionStatus>(SESSION_STATUS.COMPLETED);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
@@ -55,6 +62,9 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
       setNewDate(tomorrowIsoDate());
       setNewStartTime(null);
       getMyAvailability().then(setAvailability);
+    }
+    if (target?.mode === 'resolve') {
+      setResolvedStatus(SESSION_STATUS.COMPLETED);
     }
     setReason('');
   }, [target]);
@@ -78,6 +88,23 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
       }
       onResolved(target.session.session_id, { status: 4, cancel_reason: reason || null });
       showToast('Session cancelled.', 'success');
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResolve = async () => {
+    if (!target || !reason.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const result = await resolveStaleSession(target.session.session_id, resolvedStatus, reason);
+      if (!result.success) {
+        showToast(result.message, 'error');
+        return;
+      }
+      onResolved(target.session.session_id, { status: resolvedStatus });
+      showToast('Session resolved.', 'success');
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -183,6 +210,48 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
               <Button type="button" onClick={handleReschedule} disabled={isSubmitting || !newStartTime}>
                 {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                 Reschedule
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {target?.mode === 'resolve' && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Resolve Session</DialogTitle>
+              <DialogDescription>
+                This session with {target.session.counterpart_name} is past its scheduled end time but still shows as
+                scheduled (e.g. it was conducted outside the app, or the End Lesson button was never pressed). Record
+                what actually happened.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Outcome</Label>
+                <select
+                  value={resolvedStatus}
+                  onChange={(e) => setResolvedStatus(Number(e.target.value) as SessionStatus)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+                >
+                  {RESOLVE_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reason (required)</Label>
+                <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Conducted the lesson over a direct Zoom call instead." />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+                Back
+              </Button>
+              <Button type="button" onClick={handleResolve} disabled={isSubmitting || !reason.trim()}>
+                {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+                Resolve
               </Button>
             </DialogFooter>
           </>

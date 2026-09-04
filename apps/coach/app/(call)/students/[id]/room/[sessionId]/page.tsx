@@ -6,10 +6,10 @@ import { CloseTabButton } from './_components/CloseTabButton';
 export default async function CoachLiveSessionRoomPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; sessionId: string }>;
 }) {
-  const { id } = await params;
-  const result = await getLiveSessionRoomAccess(id);
+  const { sessionId } = await params;
+  const result = await getLiveSessionRoomAccess(sessionId);
 
   if (!result.success) {
     return (

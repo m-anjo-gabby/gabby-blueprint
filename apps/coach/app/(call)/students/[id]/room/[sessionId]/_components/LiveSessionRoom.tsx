@@ -30,6 +30,7 @@ import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { recordCallJoin, recordCallLeave } from '@/actions/videoSessionAction';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
@@ -54,6 +55,7 @@ export function LiveSessionRoom({ access }: Props) {
     isBlurSupported,
     isPeerConnected,
     isScreenSharing,
+    zoomSessionId,
     chatMessages,
     errorMessage,
     join,
@@ -89,6 +91,17 @@ export function LiveSessionRoom({ access }: Props) {
   const [lockStatus, setLockStatus] = useState<LockStatus>('checking');
   const [lockRetryToken, setLockRetryToken] = useState(0);
   const releaseLockRef = useRef<(() => void) | null>(null);
+
+  // 通話ルーム内の「退室」ボタンとは別に、コーチの外側画面（ダッシュボード/生徒詳細）に
+  // 配置する「レッスン終了」ボタンでのcompleted/no_show/early_ended自動判定の基礎データとするため、
+  // 入退室のたびにcom_t_session_call_logへ1行記録する。callLogIdRefは自分の未クローズ行を追跡する。
+  const callLogIdRef = useRef<string | null>(null);
+  const recordLeaveIfNeeded = () => {
+    const id = callLogIdRef.current;
+    if (!id) return;
+    callLogIdRef.current = null;
+    void recordCallLeave(id);
+  };
 
   useEffect(() => {
     if (!('locks' in navigator)) {
@@ -142,6 +155,15 @@ export function LiveSessionRoom({ access }: Props) {
     trackSelf('coach');
   }, [isJoined, trackSelf]);
 
+  // Zoom Video SDKへの入室が確定した時点で、com_t_session_call_logに入室記録を残す
+  // （joined_atはRPC側でNOW()により確定するため、ここではsession_id/zoomSessionIdのみ渡す）。
+  useEffect(() => {
+    if (!isJoined || !zoomSessionId || callLogIdRef.current) return;
+    recordCallJoin(access.sessionId, zoomSessionId).then((callLogId) => {
+      callLogIdRef.current = callLogId;
+    });
+  }, [isJoined, zoomSessionId, access.sessionId]);
+
   const clearSessionTimers = () => {
     if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
     if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
@@ -170,6 +192,7 @@ export function LiveSessionRoom({ access }: Props) {
       preview.stopPreview();
       clearSessionTimers();
       untrackSelf();
+      recordLeaveIfNeeded();
       leave();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,6 +208,7 @@ export function LiveSessionRoom({ access }: Props) {
   const handleTimeLimitReached = async () => {
     clearSessionTimers();
     await untrackSelf();
+    recordLeaveIfNeeded();
     await leave(true);
     releaseLockRef.current?.();
     releaseLockRef.current = null;
@@ -207,6 +231,7 @@ export function LiveSessionRoom({ access }: Props) {
 
     clearSessionTimers();
     await untrackSelf();
+    recordLeaveIfNeeded();
     await leave(true);
     // 通話終了時点でロックを解放し、他のタブから新しいセッションを開始できるようにする
     // （このタブ自体は「閉じてください」の案内画面のまま残るため、ここではまだ遷移しない）
@@ -276,6 +301,9 @@ export function LiveSessionRoom({ access }: Props) {
             {wasTimeLimitReached
               ? 'The 30-minute session time limit was reached, so the call was ended automatically. You can close this tab now.'
               : 'You can close this tab now.'}
+          </p>
+          <p className="text-xs text-slate-500">
+            Don&apos;t forget to press <span className="font-bold">End Lesson</span> on the student&apos;s page to record this lesson&apos;s outcome.
           </p>
         </div>
         <div className="flex items-center gap-3">

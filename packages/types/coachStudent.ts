@@ -57,6 +57,7 @@ export interface StudentSessionHistoryItem {
   status: SessionStatus;
   rescheduled_from: string | null;
   cancel_reason: string | null;
+  status_note: string | null;
 }
 
 /**
@@ -96,6 +97,11 @@ export type GetStudentOverviewResult =
 
 export type GetStudentSessionHistoryResult =
   | { success: true; sessions: StudentSessionHistoryItem[] }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+/** 次に実施可能な（status=scheduled かつ 終了予定時刻が未来の）セッション1件。無ければnull */
+export type GetStudentUpcomingSessionResult =
+  | { success: true; session: StudentSessionHistoryItem | null }
   | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetStudentLiveSessionShortfallsResult =

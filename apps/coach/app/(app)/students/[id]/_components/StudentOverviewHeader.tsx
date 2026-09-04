@@ -10,6 +10,7 @@ import { TodaysLessonPanel } from './TodaysLessonPanel';
 interface Props {
   profile: StudentOverviewProfile;
   sessions: StudentSessionHistoryItem[];
+  upcomingSession: StudentSessionHistoryItem | null;
   lessonSprints: LessonSprintHistoryListItem[];
 }
 
@@ -17,7 +18,7 @@ function formatContractPeriod(startDate: string, endDate: string): string {
   return `${format(new Date(startDate), 'MMM d, yyyy')} – ${format(new Date(endDate), 'MMM d, yyyy')}`;
 }
 
-export function StudentOverviewHeader({ profile, sessions, lessonSprints }: Props) {
+export function StudentOverviewHeader({ profile, sessions, upcomingSession, lessonSprints }: Props) {
   const { active_contract } = profile;
 
   return (
@@ -73,7 +74,7 @@ export function StudentOverviewHeader({ profile, sessions, lessonSprints }: Prop
           </div>
         </div>
         <div className="border-t border-indigo-100 bg-linear-to-br from-indigo-50/80 to-indigo-50/10 px-5 py-4">
-          <TodaysLessonPanel studentId={profile.student_id} sessions={sessions} lessonSprints={lessonSprints} />
+          <TodaysLessonPanel studentId={profile.student_id} sessions={sessions} upcomingSession={upcomingSession} lessonSprints={lessonSprints} />
         </div>
       </div>
     </div>

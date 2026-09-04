@@ -6,10 +6,10 @@ import { LiveSessionRoomView } from './_components/LiveSessionRoomView';
 export default async function LiveSessionRoomPage({
   params,
 }: {
-  params: Promise<{ coachId: string }>;
+  params: Promise<{ sessionId: string }>;
 }) {
-  const { coachId } = await params;
-  const result = await getMyLiveSessionRoomAccess(coachId);
+  const { sessionId } = await params;
+  const result = await getMyLiveSessionRoomAccess(sessionId);
 
   if (!result.success) {
     return (

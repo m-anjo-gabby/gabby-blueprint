@@ -8,4 +8,5 @@ export const SESSION_STATUS_BADGE: Record<SessionStatus, { label: string; classN
   [SESSION_STATUS.CANCELLED_BY_COACH]: { label: 'Cancelled by you', className: 'bg-rose-50 text-rose-700 border-rose-200', dotClassName: 'bg-rose-400' },
   [SESSION_STATUS.RESCHEDULED]: { label: 'Rescheduled', className: 'bg-slate-100 text-slate-600 border-slate-200', dotClassName: 'bg-slate-400' },
   [SESSION_STATUS.NO_SHOW]: { label: 'No-show', className: 'bg-amber-50 text-amber-700 border-amber-200', dotClassName: 'bg-amber-500' },
+  [SESSION_STATUS.EARLY_ENDED]: { label: 'Ended early', className: 'bg-orange-50 text-orange-700 border-orange-200', dotClassName: 'bg-orange-500' },
 };
