@@ -1,22 +1,25 @@
-import { getMySessions } from '@/actions/sessionAction';
-import { getMyBookableTickets } from '@/actions/matchingAction';
-import { SESSION_STATUS } from '@gabby/types/session';
-import { SessionPicker } from './_components/SessionPicker';
+import { getMyUpcomingSessions, getMyPastSessions } from '@/actions/sessionAction';
+import { getMyBookableTickets, getMyLiveSessionContracts } from '@/actions/matchingAction';
+import { LiveSessionHub } from './_components/LiveSessionHub';
 
-export default async function LiveSessionSessionPickerPage() {
-  const now = new Date();
-  const rangeStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const rangeEnd = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
-  const [sessions, bookableSlots] = await Promise.all([
-    getMySessions(rangeStart.toISOString(), rangeEnd.toISOString()),
+export default async function LiveSessionHubPage() {
+  const [contracts, upcomingSessions, bookableSlots] = await Promise.all([
+    getMyLiveSessionContracts(),
+    getMyUpcomingSessions(),
     getMyBookableTickets(),
   ]);
 
-  // サーバー時刻(now)を基準に、終了予定時刻を過ぎたセッションは一覧から除外する
-  // （このページはサーバーコンポーネントのため、nowはリクエスト処理時のサーバー時刻）。
-  const joinableSessions = sessions
-    .filter((s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime).getTime() > now.getTime())
-    .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime));
+  // 現在有効な契約を優先し、無ければ直近の過去契約(contractsはstart_date降順)を初期選択とする
+  const initialContract = contracts.find((c) => c.is_current) ?? contracts[0] ?? null;
+  const initialPastSessions = initialContract ? await getMyPastSessions(initialContract.ticket_id) : [];
 
-  return <SessionPicker sessions={joinableSessions} hasBookableTickets={bookableSlots.length > 0} />;
+  return (
+    <LiveSessionHub
+      contracts={contracts}
+      initialTicketId={initialContract?.ticket_id ?? null}
+      upcomingSessions={upcomingSessions}
+      initialPastSessions={initialPastSessions}
+      bookableSlots={bookableSlots}
+    />
+  );
 }

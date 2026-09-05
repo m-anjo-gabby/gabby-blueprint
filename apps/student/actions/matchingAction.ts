@@ -2,6 +2,7 @@
 
 import {
   getMyLiveSessionTicketsCore,
+  getMyLiveSessionContractsCore,
   getMySlotStatusCore,
   getCoachBrowseListCore,
   getMyBookableTicketsCore,
@@ -15,6 +16,7 @@ import {
   BookableTicketSlot,
   CoachBrowseItem,
   CreateMatchingRequestInput,
+  LiveSessionContractSummary,
   LiveSessionTicketSummary,
   MatchingRequestErrorCode,
   SlotStatusItem,
@@ -84,6 +86,20 @@ export async function getCountryList(): Promise<CountryMaster[]> {
     return [];
   }
   return result.countries;
+}
+
+/**
+ * ライブセッションチケット付き契約の一覧(現在有効・過去満了分の両方)を取得する
+ * （ライブセッションハブの契約切替用）
+ */
+export async function getMyLiveSessionContracts(): Promise<LiveSessionContractSummary[]> {
+  const result = await getMyLiveSessionContractsCore();
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_my_contracts_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.contracts;
 }
 
 /**

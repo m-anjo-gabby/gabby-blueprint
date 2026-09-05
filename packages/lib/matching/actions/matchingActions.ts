@@ -12,8 +12,10 @@ import {
   CancelMatchingRequestResult,
   ApproveMatchingRequestResult,
   GetMyBookableTicketsResult,
+  GetMyLiveSessionContractsResult,
   RejectMatchingRequestResult,
   IncomingMatchingRequestItem,
+  LiveSessionContractSummary,
   LiveSessionTicketSummary,
   MATCHING_REQUEST_STATUS,
   MatchingRequestErrorCode,
@@ -85,6 +87,68 @@ export async function getMyLiveSessionTicketsCore(): Promise<
     return { success: true, tickets: activeTickets };
   } catch (err) {
     logger.error('matching:get_my_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中の生徒が保有する、ライブセッションチケット付き契約の一覧（現在有効・過去満了分の両方）を
+ * 取得する（ライブセッションハブの契約切替用）。getMyLiveSessionTicketsCoreと異なり、
+ * 満了済み(status<>1 または end_date<now)の契約も含めて全件返す。
+ */
+export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionContractsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: tickets, error: ticketError } = await supabase
+      .from('com_t_user_session_ticket')
+      .select('ticket_id, license_id')
+      .eq('user_id', user.id);
+
+    if (ticketError) {
+      logger.error('matching:get_my_contracts_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!tickets || tickets.length === 0) {
+      return { success: true, contracts: [] };
+    }
+
+    const { data: licenses, error: licenseError } = await supabase
+      .from('com_t_user_license')
+      .select('license_id, status, start_date, end_date')
+      .in('license_id', tickets.map((t) => t.license_id));
+
+    if (licenseError) {
+      logger.error('matching:get_my_contracts_license_failed', licenseError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const licenseById = new Map((licenses ?? []).map((l) => [l.license_id, l]));
+    const now = new Date();
+
+    const contracts: LiveSessionContractSummary[] = tickets
+      .map((t) => {
+        const license = licenseById.get(t.license_id);
+        if (!license) return null;
+        const isCurrent = license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
+        return {
+          ticket_id: t.ticket_id,
+          license_id: t.license_id,
+          start_date: license.start_date,
+          end_date: license.end_date,
+          is_current: isCurrent,
+        };
+      })
+      .filter((c): c is LiveSessionContractSummary => c !== null)
+      .sort((a, b) => b.start_date.localeCompare(a.start_date));
+
+    return { success: true, contracts };
+  } catch (err) {
+    logger.error('matching:get_my_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

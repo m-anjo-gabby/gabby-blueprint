@@ -2,15 +2,18 @@
 
 import {
   getMySessionsCore,
+  getMyUpcomingSessionsCore,
+  getMyPastSessionsCore,
   cancelSessionCore,
   rescheduleSessionCore,
   bookMakeupSessionCore,
+  getSessionResultSummaryCore,
 } from '@gabby/lib/session/actions/sessionActions';
 import { getCoachAvailabilityByUserIdCore } from '@gabby/lib/coachAvailability/actions/coachAvailabilityActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { CoachAvailabilitySlot } from '@gabby/types/coachAvailability';
-import { SessionActionErrorCode, SessionListItem } from '@gabby/types/session';
+import { SessionActionErrorCode, SessionListItem, SessionResultSummary } from '@gabby/types/session';
 
 const logger = createLogger('student');
 
@@ -34,6 +37,34 @@ export async function getMySessions(startIso: string, endIso: string): Promise<S
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('student:get_my_sessions_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.sessions;
+}
+
+/**
+ * ログイン中の生徒の、今後予定されているセッション一覧を取得する（ライブセッションハブのUpcomingタブ、
+ * ダッシュボードの次回レッスン表示用）
+ */
+export async function getMyUpcomingSessions(limit?: number): Promise<SessionListItem[]> {
+  const result = await getMyUpcomingSessionsCore(limit);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_my_upcoming_sessions_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.sessions;
+}
+
+/**
+ * ログイン中の生徒の、確定済みの過去のセッション一覧を取得する（ライブセッションハブの
+ * 契約別スケジュール/変更履歴表示用。ticketIdで契約を絞り込める）
+ */
+export async function getMyPastSessions(ticketId?: string, limit?: number): Promise<SessionListItem[]> {
+  const result = await getMyPastSessionsCore(ticketId, limit);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_my_past_sessions_failed', result.errorCode, ctx);
     return [];
   }
   return result.sessions;
@@ -110,4 +141,20 @@ export async function bookMakeupSession(
 
   logger.info('student:book_makeup_session_success', 'Makeup session booked', ctx);
   return { success: true };
+}
+
+/**
+ * レッスン結果画面用。対象セッションの基本情報＋入退室ログ一覧を取得する
+ * （RLSにより本人が関わるセッションのみ取得可能）
+ */
+export async function getSessionResultSummary(
+  sessionId: string
+): Promise<{ success: true; session: SessionResultSummary } | { success: false; message: string }> {
+  const result = await getSessionResultSummaryCore(sessionId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_session_result_summary_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
+  }
+  return { success: true, session: result.session };
 }

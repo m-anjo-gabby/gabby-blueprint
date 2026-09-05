@@ -60,6 +60,24 @@ export interface LiveSessionTicketSummary {
   used_sessions: number;
 }
 
+/**
+ * 生徒が保有する契約(ライブセッションチケット付き)1件分の概要（ライブセッションハブの契約切替用）。
+ * ticket:licenseは1:1のため、契約の識別には常にticket_idを使う
+ * （com_t_session.ticket_idで直接絞り込める）。
+ */
+export interface LiveSessionContractSummary {
+  ticket_id: string;
+  license_id: string;
+  start_date: string; // ライセンス開始日
+  end_date: string;   // ライセンス終了日
+  /** status=1(有効)かつ現在日時が期間内であればtrue */
+  is_current: boolean;
+}
+
+export type GetMyLiveSessionContractsResult =
+  | { success: true; contracts: LiveSessionContractSummary[] }
+  | { success: false; errorCode: MatchingRequestErrorCode };
+
 export type SlotMatchStatus = 'unmatched' | 'pending' | 'matched';
 
 /** 週n回契約のうち1枠分のマッチング状況（生徒のマイページ表示用） */

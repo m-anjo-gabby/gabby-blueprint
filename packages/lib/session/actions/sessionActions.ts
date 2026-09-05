@@ -10,6 +10,7 @@ import {
   GetSessionResultSummaryResult,
   RescheduleSessionResult,
   ResolveStaleSessionResult,
+  SESSION_STATUS,
   SessionActionErrorCode,
   SessionCallLogEntry,
   SessionListItem,
@@ -47,6 +48,62 @@ function classifyRpcError(message: string | undefined): SessionActionErrorCode {
   return 'unexpected_error';
 }
 
+type SessionRow = {
+  session_id: string;
+  schedule_id: string;
+  student_id: string;
+  coach_id: string;
+  start_datetime: string;
+  end_datetime: string;
+  status: SessionStatus;
+  rescheduled_from: string | null;
+  cancel_reason: string | null;
+  status_note: string | null;
+};
+
+/**
+ * com_t_sessionの生行から、相手方(counterpart)の名前を解決してSessionListItem[]を組み立てる。
+ * getMySessionsCore/getMyUpcomingSessionsCore/getMyPastSessionsCoreで共通利用する。
+ */
+async function toSessionListItems(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  userId: string,
+  rows: SessionRow[]
+): Promise<SessionListItem[]> {
+  if (rows.length === 0) return [];
+
+  const counterpartIds = new Set<string>();
+  for (const s of rows) {
+    counterpartIds.add(s.student_id === userId ? s.coach_id : s.student_id);
+  }
+
+  const { data: counterparts } = await supabase
+    .from('com_m_user')
+    .select('id, user_name')
+    .in('id', Array.from(counterpartIds));
+  const nameById = new Map((counterparts ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+
+  return rows.map((s) => {
+    const isStudent = s.student_id === userId;
+    const counterpartId = isStudent ? s.coach_id : s.student_id;
+    return {
+      session_id: s.session_id,
+      schedule_id: s.schedule_id,
+      start_datetime: s.start_datetime,
+      end_datetime: s.end_datetime,
+      status: s.status,
+      viewer_role: isStudent ? 'student' : 'coach',
+      counterpart_id: counterpartId,
+      counterpart_name: nameById.get(counterpartId) ?? '(Unknown)',
+      rescheduled_from: s.rescheduled_from,
+      cancel_reason: s.cancel_reason,
+      status_note: s.status_note,
+    };
+  });
+}
+
+const SESSION_ROW_COLUMNS = 'session_id, schedule_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note';
+
 /**
  * ログイン中ユーザー（生徒/コーチいずれか）の、指定期間内のセッション一覧を取得する（ポータル共通）
  * RLSにより student_id = auth.uid() OR coach_id = auth.uid() の行のみ自動的に返るため、
@@ -65,7 +122,7 @@ export async function getMySessionsCore(
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note')
+      .select(SESSION_ROW_COLUMNS)
       .gte('start_datetime', startIso)
       .lt('start_datetime', endIso)
       .order('start_datetime', { ascending: true });
@@ -74,42 +131,85 @@ export async function getMySessionsCore(
       logger.error('session:get_my_sessions_failed', error.message, { ...ctx, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (!sessions || sessions.length === 0) {
-      return { success: true, sessions: [] };
-    }
 
-    const counterpartIds = new Set<string>();
-    for (const s of sessions) {
-      counterpartIds.add(s.student_id === user.id ? s.coach_id : s.student_id);
-    }
-
-    const { data: counterparts } = await supabase
-      .from('com_m_user')
-      .select('id, user_name')
-      .in('id', Array.from(counterpartIds));
-    const nameById = new Map((counterparts ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
-
-    const items: SessionListItem[] = sessions.map((s) => {
-      const isStudent = s.student_id === user.id;
-      const counterpartId = isStudent ? s.coach_id : s.student_id;
-      return {
-        session_id: s.session_id,
-        schedule_id: s.schedule_id,
-        start_datetime: s.start_datetime,
-        end_datetime: s.end_datetime,
-        status: s.status,
-        viewer_role: isStudent ? 'student' : 'coach',
-        counterpart_id: counterpartId,
-        counterpart_name: nameById.get(counterpartId) ?? '(Unknown)',
-        rescheduled_from: s.rescheduled_from,
-        cancel_reason: s.cancel_reason,
-        status_note: s.status_note,
-      };
-    });
-
-    return { success: true, sessions: items };
+    return { success: true, sessions: await toSessionListItems(supabase, user.id, sessions ?? []) };
   } catch (err) {
     logger.error('session:get_my_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中ユーザーの、今後予定されている(status=scheduledかつ終了予定時刻が未来の)セッション一覧を
+ * 開始時刻の昇順で取得する（ライブセッションハブのUpcomingタブ、ダッシュボードの次回レッスン表示用）。
+ * 契約期間分まとめて事前生成されたセッションが多い場合でも直近の予定が漏れないよう、昇順+上限件数で取得する。
+ */
+export async function getMyUpcomingSessionsCore(
+  limit = 20
+): Promise<{ success: true; sessions: SessionListItem[] } | { success: false; errorCode: SessionActionErrorCode }> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: sessions, error } = await supabase
+      .from('com_t_session')
+      .select(SESSION_ROW_COLUMNS)
+      .eq('status', SESSION_STATUS.SCHEDULED)
+      .gt('end_datetime', new Date().toISOString())
+      .order('start_datetime', { ascending: true })
+      .limit(limit);
+
+    if (error) {
+      logger.error('session:get_my_upcoming_sessions_failed', error.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true, sessions: await toSessionListItems(supabase, user.id, sessions ?? []) };
+  } catch (err) {
+    logger.error('session:get_my_upcoming_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中ユーザーの、確定済みの過去のセッション（完了・キャンセル・振替済み等、scheduled以外）を
+ * 開始時刻の降順で取得する（ライブセッションハブの契約別スケジュール/変更履歴表示用）。
+ * ticketIdを指定すると、その契約(チケット)分のみに絞り込む（契約切替用。ticket:licenseは1:1のため
+ * ticket_idで契約単位の絞り込みができる）。
+ */
+export async function getMyPastSessionsCore(
+  ticketId?: string,
+  limit = 100
+): Promise<{ success: true; sessions: SessionListItem[] } | { success: false; errorCode: SessionActionErrorCode }> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    let query = supabase
+      .from('com_t_session')
+      .select(SESSION_ROW_COLUMNS)
+      .neq('status', SESSION_STATUS.SCHEDULED)
+      .order('start_datetime', { ascending: false })
+      .limit(limit);
+    if (ticketId) {
+      query = query.eq('ticket_id', ticketId);
+    }
+    const { data: sessions, error } = await query;
+
+    if (error) {
+      logger.error('session:get_my_past_sessions_failed', error.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true, sessions: await toSessionListItems(supabase, user.id, sessions ?? []) };
+  } catch (err) {
+    logger.error('session:get_my_past_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

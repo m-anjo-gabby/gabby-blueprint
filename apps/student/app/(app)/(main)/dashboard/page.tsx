@@ -10,15 +10,18 @@ import { useContentStore } from '@/stores/useContentStore';
 import { useResumeStore } from '@/stores/useResumeStore';
 import { toggleContentFavorite } from '@/actions/contentAction';
 import { getMyLiveSessionTickets } from '@/actions/matchingAction';
+import { getMyUpcomingSessions } from '@/actions/sessionAction';
 import { getTrainingPath } from '@gabby/lib/navigation/student-path';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { SessionListItem } from '@gabby/types/session';
 
 // Components
 import { ContentCard } from '@/components/common/ContentCard';
 import { DashboardHero } from './_components/DashboardHero';
 import { NavigationGrid } from './_components/NavigationGrid';
 import { ResumeCard } from './_components/ResumeCard';
+import { NextLessonCard } from './_components/NextLessonCard';
 import { DashboardEmptyState } from './_components/DashboardEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -42,11 +45,20 @@ export default function StudentDashboard() {
 
   // 専属コーチマッチング導線の表示可否（ライブセッション付き契約の有効なチケットを保持しているか）
   const [showCoachMatching, setShowCoachMatching] = useState(false);
+  // 次回レッスンカードの表示データ。ライブセッション付き契約は本番未提供のため、
+  // showCoachMatchingと同じ判定（有効なチケット保持）でのみ表示する
+  const [nextSession, setNextSession] = useState<SessionListItem | null>(null);
 
   // 1. 初期データの取得
   useEffect(() => {
     Promise.all([fetchAllContents(), fetchResume(), fetchNotices()]);
-    getMyLiveSessionTickets().then((tickets) => setShowCoachMatching(tickets.length > 0));
+    getMyLiveSessionTickets().then((tickets) => {
+      const hasLiveSessionContract = tickets.length > 0;
+      setShowCoachMatching(hasLiveSessionContract);
+      if (hasLiveSessionContract) {
+        getMyUpcomingSessions(1).then((sessions) => setNextSession(sessions[0] ?? null));
+      }
+    });
   }, [fetchAllContents, fetchResume, fetchNotices]);
 
   // 2. おすすめ教材の算出
@@ -101,6 +113,13 @@ export default function StudentDashboard() {
 
       {/* クイックナビゲーション */}
       <NavigationGrid showCoachMatching={showCoachMatching} />
+
+      {/* 次回レッスン：ライブセッション付き契約保持者のみ表示 */}
+      {showCoachMatching && nextSession && (
+        <div className="px-2">
+          <NextLessonCard session={nextSession} />
+        </div>
+      )}
 
       {/* ────────────── データ・アナリティクスセクション ────────────── */}
       {/* セクション見出しを設けることで、上のナビゲーショングリッドとの境界を明確に分離 */}
