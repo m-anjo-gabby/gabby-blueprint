@@ -103,3 +103,16 @@ ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
 ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7));
 
 COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由)';
+
+---------------------------------------------
+-- 追加パッチ: キャンセル時のチケット返還可否 (2026-09-05)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 生徒による事前キャンセルは、開始12時間以上前なら「チケット返還（未割当扱いに戻し、
+-- 担当コーチ限定で再予約可能）」、12時間未満は「返還なし（消化済み扱い、再予約不可）」。
+-- コーチによるキャンセルは時間帯を問わず常に返還する。status IN (1,2,6,7)の行は
+-- そもそも本カラムを使わないため常にNULLのまま（cancel_session側でのみセットする）。
+---------------------------------------------
+ALTER TABLE public.com_t_session ADD COLUMN IF NOT EXISTS ticket_refunded boolean DEFAULT NULL;
+COMMENT ON COLUMN public.com_t_session.ticket_refunded IS 'キャンセル(status 3/4)時のみ意味を持つ。true:チケット返還(未割当扱いに戻り担当コーチ限定で再予約可能) false:返還なし(消化済み扱い)。生徒キャンセルは開始12時間以上前ならtrue、未満ならfalse。コーチキャンセルは常にtrue。';

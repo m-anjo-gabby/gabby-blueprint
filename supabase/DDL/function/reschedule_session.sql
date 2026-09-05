@@ -14,6 +14,9 @@
 -- クライアントからは新しい日付(date)と、コーチのローカル時刻としての開始時刻(time)を
 -- 受け取る（マッチング申請時と同じ考え方）。絶対時刻への変換とタイムゾーン、
 -- 空き時間・重複チェックはすべてサーバー側(本関数内)で行う。
+--
+-- 【12時間ルール (2026-09-05追加)】
+-- 開始12時間以内の振替は生徒・コーチどちらからの操作でも禁止する。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.reschedule_session(
     p_session_id uuid,
@@ -49,8 +52,8 @@ BEGIN
         RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
     END IF;
 
-    IF v_session.start_datetime <= NOW() THEN
-        RAISE EXCEPTION 'cannot reschedule a session that has already started';
+    IF v_session.start_datetime - NOW() < interval '12 hours' THEN
+        RAISE EXCEPTION 'cannot reschedule a session within 12 hours of its start time';
     END IF;
 
     SELECT timezone INTO v_coach_tz FROM public.com_m_user WHERE id = v_session.coach_id;

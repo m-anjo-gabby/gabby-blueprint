@@ -1,16 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, ChevronLeft, Clock, VideoOff } from 'lucide-react';
+import { ArrowRight, ChevronLeft, Clock, Ticket, VideoOff } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import type { SessionListItem } from '@gabby/types/session';
 
 interface Props {
   sessions: SessionListItem[];
+  hasBookableTickets: boolean;
 }
 
-export function SessionPicker({ sessions }: Props) {
+export function SessionPicker({ sessions, hasBookableTickets }: Props) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
   return (
@@ -30,6 +31,20 @@ export function SessionPicker({ sessions }: Props) {
       </header>
 
       <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 bg-slate-50/50 space-y-2">
+        {hasBookableTickets && (
+          <Link
+            href="/calendar"
+            className="flex items-center gap-3 px-3.5 py-3 bg-indigo-50 rounded-[20px] border border-indigo-100 hover:bg-indigo-100/60 active:scale-[0.99] transition-all"
+          >
+            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-indigo-500 shrink-0">
+              <Ticket size={16} />
+            </div>
+            <p className="text-xs font-bold text-indigo-700 flex-1">
+              未割当のチケットがあります。カレンダーから予約できます。
+            </p>
+            <ArrowRight size={14} className="text-indigo-400 shrink-0" />
+          </Link>
+        )}
         {sessions.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-300 mb-4 border border-rose-100/60">

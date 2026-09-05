@@ -4,6 +4,7 @@ import {
   getMySessionsCore,
   cancelSessionCore,
   rescheduleSessionCore,
+  bookMakeupSessionCore,
 } from '@gabby/lib/session/actions/sessionActions';
 import { getCoachAvailabilityByUserIdCore } from '@gabby/lib/coachAvailability/actions/coachAvailabilityActions';
 import { createLogger } from '@gabby/lib/logger';
@@ -21,6 +22,7 @@ const SESSION_ERROR_MESSAGES_JA: Record<SessionActionErrorCode, string> = {
   slot_unavailable: '選択した時間はコーチの対応可能時間外です。',
   schedule_conflict: '選択した時間には既に他のレッスンの予定があります。',
   reason_required: '理由を入力してください。',
+  no_ticket_available: '予約可能な未割当のチケットがありません。',
   unexpected_error: '予期しないエラーが発生しました。',
 };
 
@@ -87,5 +89,25 @@ export async function rescheduleSession(
   }
 
   logger.info('student:reschedule_session_success', 'Session rescheduled', ctx);
+  return { success: true };
+}
+
+/**
+ * 未割当のチケット（キャンセルにより返還された枠）を、担当コーチ限定で新規に予約する
+ */
+export async function bookMakeupSession(
+  scheduleId: string,
+  newDate: string,
+  newStartTime: string
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await bookMakeupSessionCore(scheduleId, newDate, newStartTime);
+
+  if (!result.success) {
+    logger.error('student:book_makeup_session_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
+  }
+
+  logger.info('student:book_makeup_session_success', 'Makeup session booked', ctx);
   return { success: true };
 }

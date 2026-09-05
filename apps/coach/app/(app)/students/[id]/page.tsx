@@ -31,7 +31,12 @@ export default async function StudentOverviewPage({
       <StudentOverviewHeader profile={overview.profile} sessions={sessions} upcomingSession={upcomingSession} lessonSprints={lessonSprints} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <LiveSessionHistoryCard sessions={sessions} shortfalls={sessionShortfalls} />
+        <LiveSessionHistoryCard
+          studentId={id}
+          studentName={overview.profile.user_name}
+          sessions={sessions}
+          shortfalls={sessionShortfalls}
+        />
         <LessonSprintCard studentId={id} history={lessonSprints} />
         <div className="lg:col-span-2">
           <CoachNotesCard studentId={id} initialNotes={notes} />

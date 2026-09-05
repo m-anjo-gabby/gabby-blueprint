@@ -4,6 +4,7 @@ import {
   getMySessionsCore,
   cancelSessionCore,
   rescheduleSessionCore,
+  bookMakeupSessionCore,
   finalizeSessionCore,
   resolveStaleSessionCore,
   getSessionResultSummaryCore,
@@ -23,6 +24,7 @@ const SESSION_ERROR_MESSAGES_EN: Record<SessionActionErrorCode, string> = {
   slot_unavailable: 'The selected time is outside your declared availability.',
   schedule_conflict: 'The selected time conflicts with another scheduled session.',
   reason_required: 'Please provide a reason.',
+  no_ticket_available: 'No unassigned ticket is available to book.',
   unexpected_error: 'An unexpected error occurred.',
 };
 
@@ -76,6 +78,28 @@ export async function rescheduleSession(
   }
 
   logger.info('coach:reschedule_session_success', 'Session rescheduled', ctx);
+  return { success: true };
+}
+
+/**
+ * Books a new session against an unassigned ticket (a refunded cancellation) for a
+ * lesson schedule this coach is already assigned to. No coach selection is needed since
+ * the schedule already fixes the coach.
+ */
+export async function bookMakeupSession(
+  scheduleId: string,
+  newDate: string,
+  newStartTime: string
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await bookMakeupSessionCore(scheduleId, newDate, newStartTime);
+
+  if (!result.success) {
+    logger.error('coach:book_makeup_session_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+
+  logger.info('coach:book_makeup_session_success', 'Makeup session booked', ctx);
   return { success: true };
 }
 

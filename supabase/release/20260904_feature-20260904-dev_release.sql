@@ -43,6 +43,31 @@
 --   sessionActions.tsへのRPC呼び出し追加、レッスン結果画面・宿題投稿UI等）は
 --   本SQLの対象外（DB変更のみ）。
 --
+--   ---------------------------------------------------------------------
+--   【追加分】生徒⇔コーチ予約管理（振替・キャンセル・未割当チケット予約）(2026-09-05)
+--   ---------------------------------------------------------------------
+--   キャンセル時のチケット返還ルール（開始12時間以上前の生徒キャンセルは返還、
+--   12時間未満は返還なし、コーチキャンセルは常に返還）と、返還により未割当に戻った
+--   チケットを担当コーチ限定で再予約するフローを追加する。
+--
+--   8. com_t_session に ticket_refunded カラムを追加する。
+--   9. cancel_session() を更新し、上記ルールに基づき ticket_refunded を記録する。
+--   10. reschedule_session() を更新し、開始12時間以内の振替を生徒・コーチ双方で
+--       禁止する。
+--   11. fn_schedule_shortfall() (STABLE) を新規作成する
+--       - 定期スケジュール(com_m_lesson_schedule)単位で、契約上本来確保できたはずの
+--         セッション回数(expected)と、消化済み扱いの回数(actual。ticket_refunded=false
+--         のキャンセルは消化済み扱いに含め、trueは未割当として除外する)の差分
+--         (shortfall)を算出する。Student Overview画面の未消化枠表示と、
+--         book_makeup_session()の予約可否判定の両方がこの関数を単一の真実源として使う。
+--   12. book_makeup_session() (SECURITY DEFINER) を新規作成する
+--       - 未割当チケットを、そのコマ(schedule_id)の担当コーチ限定で新規に予約するRPC。
+--         コーチは com_m_lesson_schedule.coach_id で既に確定しているため、
+--         コーチ選択は受け付けない。
+--
+--   アプリケーションコード側の変更（生徒・コーチ両カレンダーの予約UI、
+--   LiveSessionHistoryCardの操作化等）は本SQLの対象外（DB変更のみ）。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -417,5 +442,328 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.resolve_stale_session(uuid, smallint, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.resolve_stale_session(uuid, smallint, text) TO authenticated;
+
+-- =========================================================================
+-- 8. com_t_session に ticket_refunded カラム追加
+-- =========================================================================
+ALTER TABLE public.com_t_session ADD COLUMN IF NOT EXISTS ticket_refunded boolean DEFAULT NULL;
+COMMENT ON COLUMN public.com_t_session.ticket_refunded IS 'キャンセル(status 3/4)時のみ意味を持つ。true:チケット返還(未割当扱いに戻り担当コーチ限定で再予約可能) false:返還なし(消化済み扱い)。生徒キャンセルは開始12時間以上前ならtrue、未満ならfalse。コーチキャンセルは常にtrue。';
+
+-- =========================================================================
+-- 9. cancel_session() 更新（チケット返還ルール対応）
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.cancel_session(p_session_id uuid, p_reason text DEFAULT NULL)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_new_status smallint;
+    v_refunded boolean;
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_session.student_id <> auth.uid() AND v_session.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to cancel this session';
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime <= NOW() THEN
+        RAISE EXCEPTION 'cannot cancel a session that has already started';
+    END IF;
+
+    IF v_session.student_id = auth.uid() THEN
+        v_new_status := 3;
+        v_refunded := (v_session.start_datetime - NOW()) >= interval '12 hours';
+    ELSE
+        v_new_status := 4;
+        v_refunded := true;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = v_new_status, cancel_reason = p_reason, cancelled_by = auth.uid(),
+        ticket_refunded = v_refunded, update_date = NOW()
+    WHERE session_id = p_session_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text) TO authenticated;
+
+-- =========================================================================
+-- 10. reschedule_session() 更新（開始12時間以内の振替を禁止）
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.reschedule_session(
+    p_session_id uuid,
+    p_new_date date,
+    p_new_start_time time,
+    p_reason text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_coach_tz text;
+    v_duration interval;
+    v_new_start timestamptz;
+    v_new_end timestamptz;
+    v_new_end_time time;
+    v_day_of_week smallint;
+    v_new_session_id uuid;
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_session.student_id <> auth.uid() AND v_session.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to reschedule this session';
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime - NOW() < interval '12 hours' THEN
+        RAISE EXCEPTION 'cannot reschedule a session within 12 hours of its start time';
+    END IF;
+
+    SELECT timezone INTO v_coach_tz FROM public.com_m_user WHERE id = v_session.coach_id;
+    v_coach_tz := COALESCE(v_coach_tz, 'Asia/Tokyo');
+
+    v_duration := v_session.end_datetime - v_session.start_datetime;
+    v_new_start := (p_new_date + p_new_start_time) AT TIME ZONE v_coach_tz;
+    v_new_end := v_new_start + v_duration;
+    v_new_end_time := p_new_start_time + v_duration;
+    v_day_of_week := EXTRACT(DOW FROM p_new_date)::smallint;
+
+    IF v_new_start <= NOW() THEN
+        RAISE EXCEPTION 'new start datetime must be in the future';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.com_m_coach_availability a
+        WHERE a.coach_id = v_session.coach_id
+          AND a.day_of_week = v_day_of_week
+          AND a.delete_flg = '0'
+          AND a.start_time <= p_new_start_time
+          AND a.end_time >= v_new_end_time
+    ) THEN
+        RAISE EXCEPTION 'requested time is outside coach availability';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_coach_availability_exception e
+        WHERE e.coach_id = v_session.coach_id
+          AND e.exception_date = p_new_date
+          AND e.exception_type = 'BLOCK'
+          AND e.start_time < v_new_end_time
+          AND e.end_time > p_new_start_time
+    ) THEN
+        RAISE EXCEPTION 'requested date is blocked by coach exception';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.coach_id = v_session.coach_id
+          AND s.status = 1
+          AND s.session_id <> p_session_id
+          AND s.start_datetime < v_new_end
+          AND s.end_datetime > v_new_start
+    ) THEN
+        RAISE EXCEPTION 'coach already has a session at this time';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.student_id = v_session.student_id
+          AND s.status = 1
+          AND s.session_id <> p_session_id
+          AND s.start_datetime < v_new_end
+          AND s.end_datetime > v_new_start
+    ) THEN
+        RAISE EXCEPTION 'student already has a session at this time';
+    END IF;
+
+    INSERT INTO public.com_t_session (
+        schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from
+    ) VALUES (
+        v_session.schedule_id, v_session.ticket_id, v_session.student_id, v_session.coach_id,
+        v_new_start, v_new_end, 1, p_session_id
+    )
+    RETURNING session_id INTO v_new_session_id;
+
+    UPDATE public.com_t_session
+    SET status = 5, cancel_reason = p_reason, cancelled_by = auth.uid(), update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    RETURN v_new_session_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.reschedule_session(uuid, date, time, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reschedule_session(uuid, date, time, text) TO authenticated;
+
+-- =========================================================================
+-- 11. fn_schedule_shortfall() 新規作成
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.fn_schedule_shortfall(p_schedule_id uuid)
+RETURNS TABLE(expected_sessions integer, actual_sessions integer, shortfall integer)
+LANGUAGE plpgsql
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_cursor_date date;
+    v_expected integer := 0;
+    v_actual integer;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    v_cursor_date := v_schedule.start_date
+        + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
+
+    WHILE v_cursor_date <= v_schedule.end_date LOOP
+        v_expected := v_expected + 1;
+        v_cursor_date := v_cursor_date + 7;
+    END LOOP;
+
+    SELECT COUNT(*) INTO v_actual
+    FROM public.com_t_session s
+    WHERE s.schedule_id = p_schedule_id
+      AND (
+        s.status IN (1, 2, 6, 7)
+        OR (s.status IN (3, 4) AND s.ticket_refunded = false)
+      );
+
+    RETURN QUERY SELECT v_expected, v_actual, GREATEST(v_expected - v_actual, 0);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) TO authenticated;
+
+-- =========================================================================
+-- 12. book_makeup_session() 新規作成
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.book_makeup_session(
+    p_schedule_id uuid,
+    p_new_date date,
+    p_new_start_time time
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_shortfall integer;
+    v_duration interval;
+    v_new_start timestamptz;
+    v_new_end timestamptz;
+    v_new_end_time time;
+    v_day_of_week smallint;
+    v_new_session_id uuid;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    IF v_schedule.student_id <> auth.uid() AND v_schedule.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to book a session for this schedule';
+    END IF;
+
+    IF v_schedule.status <> 1 THEN
+        RAISE EXCEPTION 'lesson schedule % is not active (status=%)', p_schedule_id, v_schedule.status;
+    END IF;
+
+    SELECT shortfall INTO v_shortfall FROM public.fn_schedule_shortfall(p_schedule_id);
+    IF v_shortfall <= 0 THEN
+        RAISE EXCEPTION 'no unassigned ticket available for this schedule';
+    END IF;
+
+    v_duration := v_schedule.end_time - v_schedule.start_time;
+    v_new_start := (p_new_date + p_new_start_time) AT TIME ZONE v_schedule.coach_timezone;
+    v_new_end := v_new_start + v_duration;
+    v_new_end_time := p_new_start_time + v_duration;
+    v_day_of_week := EXTRACT(DOW FROM p_new_date)::smallint;
+
+    IF v_new_start <= NOW() THEN
+        RAISE EXCEPTION 'new start datetime must be in the future';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.com_m_coach_availability a
+        WHERE a.coach_id = v_schedule.coach_id
+          AND a.day_of_week = v_day_of_week
+          AND a.delete_flg = '0'
+          AND a.start_time <= p_new_start_time
+          AND a.end_time >= v_new_end_time
+    ) THEN
+        RAISE EXCEPTION 'requested time is outside coach availability';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_coach_availability_exception e
+        WHERE e.coach_id = v_schedule.coach_id
+          AND e.exception_date = p_new_date
+          AND e.exception_type = 'BLOCK'
+          AND e.start_time < v_new_end_time
+          AND e.end_time > p_new_start_time
+    ) THEN
+        RAISE EXCEPTION 'requested date is blocked by coach exception';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.coach_id = v_schedule.coach_id
+          AND s.status = 1
+          AND s.start_datetime < v_new_end
+          AND s.end_datetime > v_new_start
+    ) THEN
+        RAISE EXCEPTION 'coach already has a session at this time';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.student_id = v_schedule.student_id
+          AND s.status = 1
+          AND s.start_datetime < v_new_end
+          AND s.end_datetime > v_new_start
+    ) THEN
+        RAISE EXCEPTION 'student already has a session at this time';
+    END IF;
+
+    INSERT INTO public.com_t_session (
+        schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status
+    ) VALUES (
+        v_schedule.schedule_id, v_schedule.ticket_id, v_schedule.student_id, v_schedule.coach_id,
+        v_new_start, v_new_end, 1
+    )
+    RETURNING session_id INTO v_new_session_id;
+
+    RETURN v_new_session_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.book_makeup_session(uuid, date, time) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.book_makeup_session(uuid, date, time) TO authenticated;
 
 COMMIT;

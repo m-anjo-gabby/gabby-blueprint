@@ -4,6 +4,7 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import {
+  BookMakeupSessionResult,
   CancelSessionResult,
   FinalizeSessionResult,
   GetSessionResultSummaryResult,
@@ -31,8 +32,10 @@ function classifyRpcError(message: string | undefined): SessionActionErrorCode {
   if (
     message.includes('not scheduled')
     || message.includes('already started')
+    || message.includes('within 12 hours of its start time')
     || message.includes('must be in the future')
     || message.includes('cannot resolve a session before its end time')
+    || message.includes('is not active')
   ) {
     return 'not_actionable';
   }
@@ -40,6 +43,7 @@ function classifyRpcError(message: string | undefined): SessionActionErrorCode {
     return 'slot_unavailable';
   }
   if (message.includes('already has a session')) return 'schedule_conflict';
+  if (message.includes('no unassigned ticket available')) return 'no_ticket_available';
   return 'unexpected_error';
 }
 
@@ -179,6 +183,47 @@ export async function rescheduleSessionCore(
     return { success: true, newSessionId: data as string };
   } catch (err) {
     logger.error('session:reschedule_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 未割当チケット（キャンセルによりticket_refunded=trueとなり未消化に戻った枠）を、
+ * その定期スケジュール(コマ)の担当コーチ限定で新規に予約する（生徒・コーチ共通）。
+ * DB側の book_makeup_session RPC（SECURITY DEFINER）を呼び出す。コーチ選択は行わず、
+ * スケジュール(コマ)IDで対象コーチを一意に確定させる。
+ */
+export async function bookMakeupSessionCore(
+  scheduleId: string,
+  newDate: string, // "YYYY-MM-DD"
+  newStartTime: string // "HH:MM"
+): Promise<BookMakeupSessionResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate) || !/^\d{2}:\d{2}$/.test(newStartTime)) {
+      return { success: false, errorCode: 'invalid_input' };
+    }
+
+    const { data, error } = await supabase.rpc('book_makeup_session', {
+      p_schedule_id: scheduleId,
+      p_new_date: newDate,
+      p_new_start_time: `${newStartTime}:00`,
+    });
+
+    if (error || !data) {
+      logger.error('session:book_makeup_failed', error?.message ?? 'No session_id returned', { ...ctx, userId: user.id, payload: { scheduleId } });
+      return { success: false, errorCode: classifyRpcError(error?.message) };
+    }
+
+    logger.info('session:book_makeup_success', 'Makeup session booked', { ...ctx, userId: user.id, payload: { scheduleId } });
+    return { success: true, newSessionId: data as string };
+  } catch (err) {
+    logger.error('session:book_makeup_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

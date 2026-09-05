@@ -52,6 +52,7 @@ export interface StudentOverviewProfile {
 /** Student Overview画面のライブセッション履歴1件分 */
 export interface StudentSessionHistoryItem {
   session_id: string;
+  schedule_id: string;
   start_datetime: string; // UTC ISO文字列
   end_datetime: string;
   status: SessionStatus;

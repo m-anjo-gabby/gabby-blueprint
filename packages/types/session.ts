@@ -45,6 +45,7 @@ export type SessionActionErrorCode =
   | 'slot_unavailable'
   | 'schedule_conflict'
   | 'reason_required'
+  | 'no_ticket_available'
   | 'unexpected_error';
 
 export type CancelSessionResult =
@@ -52,6 +53,11 @@ export type CancelSessionResult =
   | { success: false; errorCode: SessionActionErrorCode };
 
 export type RescheduleSessionResult =
+  | { success: true; newSessionId: string }
+  | { success: false; errorCode: SessionActionErrorCode };
+
+/** 未割当チケットによる新規セッション予約(book_makeup_session RPC)の結果 */
+export type BookMakeupSessionResult =
   | { success: true; newSessionId: string }
   | { success: false; errorCode: SessionActionErrorCode };
 

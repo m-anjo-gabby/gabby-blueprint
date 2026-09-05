@@ -116,6 +116,32 @@ export interface CoachBrowseItem {
   unavailable_slots: CoachUnavailableSlot[];
 }
 
+/**
+ * 生徒本人の、未割当チケット(ticket_refunded=trueのキャンセル等)により再予約可能な
+ * 定期スケジュール(コマ)1件分。週n回契約でコマごとに担当コーチが異なる場合があるため、
+ * コーチは選択させず(既に確定済み)このスケジュール単位で選ばせる想定。
+ */
+export interface BookableTicketSlot {
+  schedule_id: string;
+  slot_no: number;
+  coach_id: string;
+  coach_name: string;
+  coach_timezone: string;
+  day_of_week: DayOfWeek;
+  start_time: string; // "HH:MM:SS"（コーチのローカル時刻、コマ本来の曜日・時刻）
+  end_time: string;
+  /** 現在予約可能な未割当チケット数 */
+  shortfall: number;
+  /** 日時選択UI(CoachAvailabilityCalendar)用の、対象コーチの空き時間帯 */
+  availability: { availability_id: string; day_of_week: DayOfWeek; start_time: string; end_time: string }[];
+  /** 日時選択UI用の、対象コーチの予約済み枠(選択不可として表示) */
+  unavailable_slots: CoachUnavailableSlot[];
+}
+
+export type GetMyBookableTicketsResult =
+  | { success: true; slots: BookableTicketSlot[] }
+  | { success: false; errorCode: MatchingRequestErrorCode };
+
 export type MatchingRequestErrorCode =
   | 'unauthorized'
   | 'invalid_input'
