@@ -136,7 +136,7 @@ export function LiveSessionRoomView({ access }: Props) {
     endTimeoutRef.current = null;
   };
 
-  // 自分の入室（＝レッスン開始）を起点に、残り時間の警告と自動終了を仕込む。
+  // 自分の入室（＝セッション開始）を起点に、残り時間の警告と自動終了を仕込む。
   // コーチ側が制限時間到達時に全員を強制終了させるが、その通知が何らかの理由で届かない場合の保険として
   // 自分自身でも独立して制限時間を計測する。
   useEffect(() => {
@@ -197,7 +197,7 @@ export function LiveSessionRoomView({ access }: Props) {
     }
 
     const confirmed = await showConfirm(
-      'レッスンを終了しますか？',
+      'セッションを終了しますか？',
       '通話が終了し、退室します。この操作は取り消せません。',
       { variant: 'danger', isModal: false, confirmText: '退室する' }
     );
@@ -229,7 +229,7 @@ export function LiveSessionRoomView({ access }: Props) {
               <ChevronLeft size={24} />
             </Link>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">
-              {access.peerName} コーチとのレッスン
+              {access.peerName} コーチとのセッション
             </h1>
           </div>
 
@@ -305,7 +305,7 @@ export function LiveSessionRoomView({ access }: Props) {
             disabled={!preview.isPreviewing || !isCoachPresent}
             className="w-full h-12 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-rose-600/10 transition-all active:scale-95"
           >
-            レッスンに参加する
+            セッションに参加する
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
@@ -320,7 +320,7 @@ export function LiveSessionRoomView({ access }: Props) {
           <CheckCircle2 size={22} />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-bold text-slate-900">レッスンが終了しました</p>
+          <p className="text-sm font-bold text-slate-900">セッションが終了しました</p>
           <p className="text-xs text-slate-500 max-w-xs">通話が終了しました。</p>
         </div>
         <button
@@ -351,7 +351,7 @@ export function LiveSessionRoomView({ access }: Props) {
           <div>
             <p className="text-sm font-bold text-white leading-tight">{access.peerName} コーチ</p>
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              {isJoined ? 'レッスン中' : isJoining ? '接続中...' : '未接続'}
+              {isJoined ? 'セッション中' : isJoining ? '接続中...' : '未接続'}
             </p>
           </div>
         </div>
@@ -373,7 +373,7 @@ export function LiveSessionRoomView({ access }: Props) {
       {isTimeWarningVisible && (
         <div className="flex items-center gap-2 px-5 py-2 bg-amber-500/10 text-amber-300 text-xs font-semibold border-b border-amber-500/20">
           <TimerReset size={14} />
-          残り5分です。レッスンは開始から30分で自動的に終了します。
+          残り5分です。セッションは開始から30分で自動的に終了します。
         </div>
       )}
 

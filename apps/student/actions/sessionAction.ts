@@ -20,10 +20,10 @@ const logger = createLogger('student');
 const SESSION_ERROR_MESSAGES_JA: Record<SessionActionErrorCode, string> = {
   unauthorized: 'セッションの有効期限が切れました。再度ログインしてください。',
   invalid_input: '選択した日時をご確認ください。',
-  not_found: '対象のレッスンが見つかりませんでした。',
-  not_actionable: 'このレッスンは既に開始済み、または対応済みのため変更できません。',
+  not_found: '対象のセッションが見つかりませんでした。',
+  not_actionable: 'このセッションは既に開始済み、または対応済みのため変更できません。',
   slot_unavailable: '選択した時間はコーチの対応可能時間外です。',
-  schedule_conflict: '選択した時間には既に他のレッスンの予定があります。',
+  schedule_conflict: '選択した時間には既に他のセッションの予定があります。',
   reason_required: '理由を入力してください。',
   no_ticket_available: '予約可能な未割当のチケットがありません。',
   unexpected_error: '予期しないエラーが発生しました。',
@@ -44,7 +44,7 @@ export async function getMySessions(startIso: string, endIso: string): Promise<S
 
 /**
  * ログイン中の生徒の、今後予定されているセッション一覧を取得する（ライブセッションハブのUpcomingタブ、
- * ダッシュボードの次回レッスン表示用）
+ * ダッシュボードの次回セッション表示用）
  */
 export async function getMyUpcomingSessions(limit?: number): Promise<SessionListItem[]> {
   const result = await getMyUpcomingSessionsCore(limit);
@@ -84,7 +84,7 @@ export async function getCoachAvailabilityForReschedule(coachId: string): Promis
 }
 
 /**
- * 予定されているレッスンをキャンセルする
+ * 予定されているセッションをキャンセルする
  */
 export async function cancelSession(
   sessionId: string,
@@ -103,7 +103,7 @@ export async function cancelSession(
 }
 
 /**
- * 予定されているレッスンをコーチの対応可能時間内で振替/日時変更する
+ * 予定されているセッションをコーチの対応可能時間内で振替/日時変更する
  */
 export async function rescheduleSession(
   sessionId: string,
@@ -144,7 +144,7 @@ export async function bookMakeupSession(
 }
 
 /**
- * レッスン結果画面用。対象セッションの基本情報＋入退室ログ一覧を取得する
+ * セッション結果画面用。対象セッションの基本情報＋入退室ログ一覧を取得する
  * （RLSにより本人が関わるセッションのみ取得可能）
  */
 export async function getSessionResultSummary(

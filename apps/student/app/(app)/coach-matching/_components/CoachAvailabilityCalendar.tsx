@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 const SLOTS_PER_DAY = 48;
 
-/** カレンダー上でクリック可能な1つのレッスン開始候補（25分レッスン、30分刻み） */
+/** カレンダー上でクリック可能な1つのセッション開始候補（25分セッション、30分刻み） */
 export interface AvailabilityCell {
   key: string;
   // 送信値：コーチのローカル時刻（DBの解釈基準）
@@ -40,7 +40,7 @@ function slotIndexToLabel(slotIndex: number): string {
 
 /**
  * コーチの空き時間をハイライト表示する読み取り専用の週間カレンダー。
- * セルをクリックするとそのままレッスン開始時刻の選択として確定する
+ * セルをクリックするとそのままセッション開始時刻の選択として確定する
  * （曜日チップ＋プルダウンの2段階選択に代わる、直感的な1ステップ操作）。
  */
 export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey, onSelect }: CoachAvailabilityCalendarProps) {

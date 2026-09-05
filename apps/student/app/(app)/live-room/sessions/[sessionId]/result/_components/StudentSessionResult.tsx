@@ -18,7 +18,7 @@ interface Props {
 }
 
 /**
- * 生徒向けレッスン結果画面。コーチ向け(apps/coach/.../sessions/[sessionId]/result)と異なり
+ * 生徒向けセッション結果画面。コーチ向け(apps/coach/.../sessions/[sessionId]/result)と異なり
  * 閲覧専用（宿題投稿は不可。RLSでもコーチのみに制限されている）。
  */
 export function StudentSessionResult({ session, homework }: Props) {
@@ -35,7 +35,7 @@ export function StudentSessionResult({ session, homework }: Props) {
           >
             <ChevronLeft size={24} />
           </Link>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">レッスン結果</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">セッション結果</h1>
         </div>
       </header>
 

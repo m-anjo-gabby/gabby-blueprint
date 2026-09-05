@@ -35,7 +35,7 @@ export const NavigationGrid = ({ showCoachMatching = false }: NavigationGridProp
       ? [
           {
             label: 'Live Session',
-            title: 'レッスンの予定・振替・キャンセル',
+            title: 'セッションを管理する',
             path: '/live-room',
             icon: Video,
             labelClass: 'text-rose-600',
@@ -45,7 +45,7 @@ export const NavigationGrid = ({ showCoachMatching = false }: NavigationGridProp
           },
           {
             label: 'Calendar',
-            title: 'カレンダーで全体を確認',
+            title: 'カレンダーでイベントを確認',
             path: '/calendar',
             icon: CalendarClock,
             labelClass: 'text-sky-600',

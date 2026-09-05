@@ -19,7 +19,7 @@ const LIVE_SESSION_ROOM_ERROR_MESSAGES_JA: Record<LiveSessionRoomErrorCode, stri
 };
 
 /**
- * ログイン中の生徒が、指定した個別レッスンセッションのライブセッションルームに入室するためのアクセス情報（Zoom Video SDK署名等）を取得する
+ * ログイン中の生徒が、指定した個別セッションのライブセッションルームに入室するためのアクセス情報（Zoom Video SDK署名等）を取得する
  */
 export async function getMyLiveSessionRoomAccess(
   sessionId: string

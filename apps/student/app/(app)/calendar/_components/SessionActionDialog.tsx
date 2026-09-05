@@ -83,7 +83,7 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
         return;
       }
       onResolved(target.session.session_id, { status: 3, cancel_reason: reason || null });
-      showToast('レッスンをキャンセルしました', 'success');
+      showToast('セッションをキャンセルしました', 'success');
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -113,9 +113,9 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
         {target?.mode === 'cancel' && (
           <>
             <DialogHeader>
-              <DialogTitle>レッスンをキャンセル</DialogTitle>
+              <DialogTitle>セッションをキャンセル</DialogTitle>
               <DialogDescription>
-                {target.session.counterpart_name}コーチとのレッスンをキャンセルします。
+                {target.session.counterpart_name}コーチとのセッションをキャンセルします。
               </DialogDescription>
             </DialogHeader>
             <p
@@ -149,7 +149,7 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
         {target?.mode === 'reschedule' && (
           <>
             <DialogHeader>
-              <DialogTitle>レッスンを振替</DialogTitle>
+              <DialogTitle>セッションを振替</DialogTitle>
               <DialogDescription>
                 {target.session.counterpart_name}コーチの対応可能時間内で、新しい日時を選択してください。
               </DialogDescription>

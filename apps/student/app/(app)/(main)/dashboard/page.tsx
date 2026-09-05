@@ -21,7 +21,7 @@ import { ContentCard } from '@/components/common/ContentCard';
 import { DashboardHero } from './_components/DashboardHero';
 import { NavigationGrid } from './_components/NavigationGrid';
 import { ResumeCard } from './_components/ResumeCard';
-import { NextLessonCard } from './_components/NextLessonCard';
+import { NextSessionCard } from './_components/NextSessionCard';
 import { DashboardEmptyState } from './_components/DashboardEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -45,7 +45,7 @@ export default function StudentDashboard() {
 
   // 専属コーチマッチング導線の表示可否（ライブセッション付き契約の有効なチケットを保持しているか）
   const [showCoachMatching, setShowCoachMatching] = useState(false);
-  // 次回レッスンカードの表示データ。ライブセッション付き契約は本番未提供のため、
+  // 次回セッションカードの表示データ。ライブセッション付き契約は本番未提供のため、
   // showCoachMatchingと同じ判定（有効なチケット保持）でのみ表示する
   const [nextSession, setNextSession] = useState<SessionListItem | null>(null);
 
@@ -114,10 +114,10 @@ export default function StudentDashboard() {
       {/* クイックナビゲーション */}
       <NavigationGrid showCoachMatching={showCoachMatching} />
 
-      {/* 次回レッスン：ライブセッション付き契約保持者のみ表示 */}
+      {/* 次回セッション：ライブセッション付き契約保持者のみ表示 */}
       {showCoachMatching && nextSession && (
         <div className="px-2">
-          <NextLessonCard session={nextSession} />
+          <NextSessionCard session={nextSession} />
         </div>
       )}
 

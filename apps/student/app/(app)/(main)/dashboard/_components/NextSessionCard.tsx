@@ -13,15 +13,15 @@ function isJoinableSoon(startDatetime: string): boolean {
   return new Date(startDatetime).getTime() - Date.now() <= JOINABLE_WINDOW_MS;
 }
 
-interface NextLessonCardProps {
+interface NextSessionCardProps {
   session: SessionListItem;
 }
 
 /**
- * ライブセッション付き契約保持者向けの「次回レッスン」ミニカード。
+ * ライブセッション付き契約保持者向けの「次回セッション」ミニカード。
  * 予約管理(振替・キャンセル等)は持たず、ライブセッションハブへの導線のみを担う。
  */
-export const NextLessonCard = ({ session }: NextLessonCardProps) => {
+export const NextSessionCard = ({ session }: NextSessionCardProps) => {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const href = isJoinableSoon(session.start_datetime) ? `/live-room/${session.session_id}` : '/live-room';
 
@@ -35,7 +35,7 @@ export const NextLessonCard = ({ session }: NextLessonCardProps) => {
           <Video size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[9px] font-black tracking-wider text-rose-500 uppercase">Next Lesson</p>
+          <p className="text-[9px] font-black tracking-wider text-rose-500 uppercase">Next Session</p>
           <p className="text-sm font-black text-slate-800 truncate mt-0.5">{session.counterpart_name} コーチ</p>
           <p className="text-xs text-slate-500 mt-0.5">{formatDateTimeByZone(session.start_datetime, timezone, false)}</p>
         </div>
