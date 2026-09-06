@@ -45,6 +45,8 @@ export interface CreateLessonSprintResultInput {
 /** Student Overview画面のLesson Sprint履歴一覧に表示する簡易レコード（教材名を含む） */
 export interface LessonSprintHistoryListItem {
   lesson_sprint_id: string;
+  /** 実施したライブセッション。単独実施の場合はnull（セッション準備/実施ハブで「前回の実施」を絞り込む際に使用） */
+  session_id: string | null;
   content_id: string;
   content_name: string;
   content_name_en: string | null;

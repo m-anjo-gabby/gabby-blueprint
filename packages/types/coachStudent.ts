@@ -79,6 +79,22 @@ export interface LiveSessionShortfallItem {
   shortfall: number;
 }
 
+/**
+ * 直近N日間の自主トレ実施サマリー（self_t_sprint_summaryの日次集計を期間合算したもの）。
+ * セッション準備/実施ハブでの表示用。self_t_sprint本体（回答内容・個別スコア）は
+ * コーチに開示しないため、件数の合計のみを持つ。
+ */
+export interface SelfTrainingWeekSummary {
+  /** 集計対象日数 */
+  days: number;
+  /** 実施日数（1問でも取り組んだ日の数） */
+  active_days: number;
+  /** 延べ問題数の合計 */
+  total_questions: number;
+  /** 発話評価回数の合計 */
+  total_assessments: number;
+}
+
 /** コーチ自分用の生徒メモ (com_t_coach_student_note) */
 export interface CoachStudentNote {
   note_id: string;
@@ -111,6 +127,10 @@ export type GetStudentLiveSessionShortfallsResult =
 
 export type GetStudentNotesResult =
   | { success: true; notes: CoachStudentNote[] }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+export type GetSelfTrainingWeekSummaryResult =
+  | { success: true; summary: SelfTrainingWeekSummary }
   | { success: false; errorCode: CoachStudentErrorCode };
 
 export type AddCoachStudentNoteResult =

@@ -51,6 +51,43 @@ export async function getSessionHomeworkCore(sessionId: string): Promise<GetSess
 }
 
 /**
+ * セッション準備/実施ハブ向け。指定セッションを除く、直近の宿題投稿を新しい順に取得する
+ * （「前回の宿題」を通話前に振り返れるようにするため）。
+ */
+export async function getRecentSessionHomeworkCore(
+  studentId: string,
+  excludeSessionId: string,
+  limit = 3
+): Promise<GetSessionHomeworkResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_session_homework')
+      .select(HOMEWORK_SELECT_WITH_ATTACHMENTS)
+      .eq('coach_id', user.id)
+      .eq('student_id', studentId)
+      .neq('session_id', excludeSessionId)
+      .order('insert_date', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      logger.error('sessionHomework:get_recent_homework_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true, entries: (data ?? []).map(normalizeHomeworkRow) };
+  } catch (err) {
+    logger.error('sessionHomework:get_recent_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
  * 宿題を投稿する（コーチのみ）。session_idからcoach_id/student_idをサーバー側で解決し、
  * ログイン中コーチが対象セッションの担当コーチであることを検証してから投稿する
  * （RLSのINSERT WITH CHECKでも同等の検証が行われるが、ここでも明示的にチェックして

@@ -7,6 +7,7 @@ import {
   getStudentUpcomingSessionCore,
   getStudentLiveSessionShortfallsCore,
   getStudentNotesCore,
+  getSelfTrainingWeekSummaryCore,
   addCoachStudentNoteCore,
   updateStudentSprintLevelCore,
   forceStageUpStudentCore,
@@ -21,6 +22,7 @@ import {
   CoachStudentNote,
   CoachStudentErrorCode,
   StudentSprintProgress,
+  SelfTrainingWeekSummary,
 } from '@gabby/types/coachStudent';
 import { SprintQuestionType } from '@gabby/types/sprint';
 
@@ -117,6 +119,23 @@ export async function getStudentNotes(studentId: string): Promise<CoachStudentNo
     return [];
   }
   return result.notes;
+}
+
+const DEFAULT_SELF_TRAINING_WEEK_SUMMARY: SelfTrainingWeekSummary = { days: 7, active_days: 0, total_questions: 0, total_assessments: 0 };
+
+/**
+ * Fetches a summary (active days / total questions / total speaking assessments) of this
+ * student's self-training activity over the last `days` days. Used by the session prep/execution
+ * hub so a coach can check recent self-training activity without leaving the page.
+ */
+export async function getSelfTrainingWeekSummary(studentId: string, days = 7): Promise<SelfTrainingWeekSummary> {
+  const result = await getSelfTrainingWeekSummaryCore(studentId, days);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_self_training_week_summary_failed', result.errorCode, ctx);
+    return DEFAULT_SELF_TRAINING_WEEK_SUMMARY;
+  }
+  return result.summary;
 }
 
 /**

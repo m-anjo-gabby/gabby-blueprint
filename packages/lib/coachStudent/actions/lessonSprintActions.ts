@@ -253,7 +253,7 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
 
     const { data, error } = await supabase
       .from('lesson_t_sprint')
-      .select('lesson_sprint_id, content_id, question_type, difficulty_level, time_limit_sec, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)')
+      .select('lesson_sprint_id, session_id, content_id, question_type, difficulty_level, time_limit_sec, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)')
       .eq('coach_id', user.id)
       .eq('student_id', studentId)
       .order('insert_date', { ascending: false })
@@ -274,6 +274,7 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
 
       return {
         lesson_sprint_id: row.lesson_sprint_id,
+        session_id: row.session_id,
         content_id: row.content_id,
         content_name: contentJoin?.content_name ?? '(Unknown)',
         content_name_en: contentJoin?.content_name_en ?? null,

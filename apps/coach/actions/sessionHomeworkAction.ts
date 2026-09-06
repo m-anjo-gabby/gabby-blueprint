@@ -1,6 +1,6 @@
 'use server';
 
-import { getSessionHomeworkCore, addSessionHomeworkCore } from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
+import { getSessionHomeworkCore, getRecentSessionHomeworkCore, addSessionHomeworkCore } from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { PendingHomeworkAttachment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
@@ -15,6 +15,20 @@ export async function getSessionHomework(sessionId: string): Promise<SessionHome
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('coach:get_session_homework_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.entries;
+}
+
+/**
+ * Fetches the most recent homework posts for this student, excluding the given session
+ * (used by the session prep/execution hub to show "last homework" without navigating away).
+ */
+export async function getRecentSessionHomework(studentId: string, excludeSessionId: string): Promise<SessionHomeworkEntry[]> {
+  const result = await getRecentSessionHomeworkCore(studentId, excludeSessionId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_recent_session_homework_failed', result.errorCode, ctx);
     return [];
   }
   return result.entries;

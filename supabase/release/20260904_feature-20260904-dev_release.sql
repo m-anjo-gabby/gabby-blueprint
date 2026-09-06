@@ -85,6 +85,21 @@
 --         誤紐づけを防止する。
 --
 --   ---------------------------------------------------------------------
+--   【追加分】セッション準備/実施ハブへの事前情報表示 (2026-09-06)
+--   ---------------------------------------------------------------------
+--   ハブ画面から、通話開始前後に生徒の直近の状況（前回セッションの宿題・
+--   Lesson Sprint実施状況、直近1週間の自主トレ実施状況）を画面遷移せずに
+--   確認できるようにする。
+--
+--   15. self_t_sprint_summary に、担当コーチ向けの閲覧ポリシーを追加する
+--       - self_t_sprint（回答内容・個別スコアを含む生ログ）ではなく、日次の
+--         実施件数のみを持つ本サマリーテーブルに限定して開示する（最小権限。
+--         生徒の自主トレの解答内容そのものはコーチに見せない）。
+--
+--   アプリケーションコード側の変更（ハブ画面のPrep/Self-Trainingセクション追加、
+--   getLessonSprintHistoryCoreへのsession_id追加等）は本SQLの対象外（DB変更のみ）。
+--
+--   ---------------------------------------------------------------------
 --   【追加分】ライブ通話チャット履歴の永続化 (2026-09-06)
 --   ---------------------------------------------------------------------
 --   Zoom Video SDKのin-callチャットはSDK側に永続化機能・取得APIを持たず、
@@ -880,6 +895,19 @@ WITH CHECK (
           AND s.coach_id = auth.uid()
           AND s.student_id = lesson_t_sprint.student_id
       )
+    )
+);
+
+-- =========================================================================
+-- 15. self_t_sprint_summary に担当コーチ向け閲覧ポリシーを追加
+-- =========================================================================
+DROP POLICY IF EXISTS "Coaches can view their assigned students' sprint summaries" ON public.self_t_sprint_summary;
+CREATE POLICY "Coaches can view their assigned students' sprint summaries" ON public.self_t_sprint_summary
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = public.self_t_sprint_summary.user_id
+          AND r.coach_id = auth.uid()
     )
 );
 

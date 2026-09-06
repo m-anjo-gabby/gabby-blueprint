@@ -13,6 +13,7 @@ import {
   GetStudentLiveSessionShortfallsResult,
   LiveSessionShortfallItem,
   GetStudentNotesResult,
+  GetSelfTrainingWeekSummaryResult,
   AddCoachStudentNoteResult,
   UpdateStudentSprintProgressResult,
   StudentSprintProgress,
@@ -386,6 +387,52 @@ export async function getStudentNotesCore(studentId: string): Promise<GetStudent
     return { success: true, notes: notes ?? [] };
   } catch (err) {
     logger.error('coachStudent:get_notes_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * セッション準備/実施ハブ向け。直近days日間の自主トレ実施サマリー（実施日数・延べ問題数・
+ * 発話評価回数の合計）を取得する。self_t_sprint（回答内容・個別スコアを含む生ログ）は
+ * 参照せず、self_t_sprint_summary（日次件数のみ）に限定することで、生徒の自主トレの
+ * 解答内容そのものはコーチに開示しない。
+ */
+export async function getSelfTrainingWeekSummaryCore(studentId: string, days = 7): Promise<GetSelfTrainingWeekSummaryResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const { data, error } = await supabase
+      .from('self_t_sprint_summary')
+      .select('training_date, question_count, assessment_count')
+      .eq('user_id', studentId)
+      .gte('training_date', sinceDate);
+
+    if (error) {
+      logger.error('coachStudent:get_self_training_summary_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const rows = data ?? [];
+    const activeDays = new Set(rows.map((r) => r.training_date)).size;
+    const totalQuestions = rows.reduce((sum, r) => sum + r.question_count, 0);
+    const totalAssessments = rows.reduce((sum, r) => sum + r.assessment_count, 0);
+
+    return {
+      success: true,
+      summary: { days, active_days: activeDays, total_questions: totalQuestions, total_assessments: totalAssessments },
+    };
+  } catch (err) {
+    logger.error('coachStudent:get_self_training_summary_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
