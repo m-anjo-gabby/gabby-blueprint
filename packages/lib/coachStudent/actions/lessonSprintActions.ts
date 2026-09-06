@@ -3,6 +3,7 @@
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
+import { LIVE_SESSION_END_AFTER_MS } from '../../liveSessionRoom/constants';
 import { hasCoachStudentRelationship } from './coachStudentActions';
 import {
   CreateLessonSprintResultInput,
@@ -16,7 +17,42 @@ import {
   LessonSprintRecord,
   UpdateLessonSprintSessionNoteResult,
 } from '@gabby/types/lessonSprint';
+import { SESSION_STATUS } from '@gabby/types/session';
 import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+
+type SupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
+
+// ライブセッションの自動終了猶予（30分想定、環境変数で上書き可）に、クロックのずれ等を
+// 吸収するための余裕を足した値。この時間より前に入室したままの通話ログは「もう終わっている
+// 可能性が高い放置ログ」とみなし、自動紐づけの対象から外す。
+const ACTIVE_CALL_LOOKBACK_MS = LIVE_SESSION_END_AFTER_MS + 5 * 60 * 1000;
+
+/**
+ * 呼び出し元がsession_idを明示しなかった場合の自動推定。「このコーチが、対象の生徒との
+ * ライブセッション通話に現在も接続したまま（left_at IS NULL）」であるcom_t_session_call_log
+ * があれば、そのsession_idを採用する。受講生概要画面など、session_idを運ぶ手段を持たない
+ * 導線からLesson Sprintを開始しても、実際に通話中であれば正しく紐づくようにするための保険。
+ * 該当が無ければ（＝通話していない＝外部Zoom実施等）nullを返し、単独実施として扱う。
+ */
+async function inferActiveSessionId(supabase: SupabaseClient, coachId: string, studentId: string): Promise<string | null> {
+  const lookbackIso = new Date(Date.now() - ACTIVE_CALL_LOOKBACK_MS).toISOString();
+
+  const { data, error } = await supabase
+    .from('com_t_session_call_log')
+    .select('session_id, joined_at, com_t_session!inner(student_id, status)')
+    .eq('user_id', coachId)
+    .eq('role', 'coach')
+    .is('left_at', null)
+    .gte('joined_at', lookbackIso)
+    .eq('com_t_session.student_id', studentId)
+    .eq('com_t_session.status', SESSION_STATUS.SCHEDULED)
+    .order('joined_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.session_id as string;
+}
 
 const logger = createLogger('common');
 
@@ -146,22 +182,28 @@ export async function createLessonSprintResultCore(
       return { success: false, errorCode: 'forbidden' };
     }
 
-    if (input.session_id) {
+    let resolvedSessionId = input.session_id;
+
+    if (resolvedSessionId) {
       const { data: session, error: sessionError } = await supabase
         .from('com_t_session')
         .select('session_id')
-        .eq('session_id', input.session_id)
+        .eq('session_id', resolvedSessionId)
         .eq('coach_id', user.id)
         .eq('student_id', input.student_id)
         .maybeSingle();
 
       if (sessionError) {
-        logger.error('lessonSprint:create_result_session_lookup_failed', sessionError.message, { ...ctx, userId: user.id, payload: { sessionId: input.session_id } });
+        logger.error('lessonSprint:create_result_session_lookup_failed', sessionError.message, { ...ctx, userId: user.id, payload: { sessionId: resolvedSessionId } });
         return { success: false, errorCode: 'unexpected_error' };
       }
       if (!session) {
         return { success: false, errorCode: 'forbidden' };
       }
+    } else {
+      // 呼び出し元がsession_idを渡さなかった場合、実は今まさに通話中かもしれないので推定を試みる
+      // （受講生概要画面など、session_idを運ばない導線から開始したケースの保険）。
+      resolvedSessionId = await inferActiveSessionId(supabase, user.id, input.student_id);
     }
 
     const { data, error } = await supabase
@@ -169,7 +211,7 @@ export async function createLessonSprintResultCore(
       .insert({
         coach_id: user.id,
         student_id: input.student_id,
-        session_id: input.session_id,
+        session_id: resolvedSessionId,
         sprint_type: input.sprint_type,
         content_id: input.content_id,
         question_type: input.question_type,

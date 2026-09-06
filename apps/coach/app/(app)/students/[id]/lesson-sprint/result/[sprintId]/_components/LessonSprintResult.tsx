@@ -90,7 +90,7 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
           <div className="lg:sticky lg:bottom-0 lg:bg-white lg:border-t lg:border-slate-100 lg:pt-3 space-y-2">
             <RepeatSprintButton studentId={studentId} record={record} content={content} />
             <Link
-              href={`/students/${studentId}/lesson-sprint`}
+              href={`/students/${studentId}/lesson-sprint${record.session_id ? `?session_id=${record.session_id}` : ''}`}
               className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shrink-0"
             >
               <Zap size={14} className="fill-current text-amber-300" />
