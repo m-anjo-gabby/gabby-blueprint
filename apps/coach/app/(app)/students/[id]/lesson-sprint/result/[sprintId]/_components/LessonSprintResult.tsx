@@ -32,16 +32,24 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
     day: 'numeric',
   });
 
+  // このスプリントがライブセッションに紐づいていれば、そのセッション結果画面に戻る方が文脈的に自然
+  // （受講生概要の全履歴一覧から開いた場合も、セッションに属する実施であればそちらへ戻す）。
+  // 紐づきが無い(単独実施)場合のみ受講生概要に戻る。
+  const backHref = record.session_id
+    ? `/students/${studentId}/sessions/${record.session_id}/result`
+    : `/students/${studentId}`;
+  const backLabel = record.session_id ? 'Back to Session Result' : 'Back to Overview';
+
   return (
     <div className="flex flex-col lg:h-full max-w-7xl mx-auto w-full pb-6 lg:pb-0">
       {/* ────────────── Header area: navigation + screen title ────────────── */}
       <div className="space-y-1 pb-6 shrink-0">
         <Link
-          href={`/students/${studentId}`}
+          href={backHref}
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
         >
           <ArrowLeft size={14} />
-          Back to Overview
+          {backLabel}
         </Link>
         <h1 className="text-xl font-bold text-slate-800 tracking-tight">Lesson Sprint Result</h1>
       </div>

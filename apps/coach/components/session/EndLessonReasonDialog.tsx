@@ -50,7 +50,7 @@ export function EndLessonReasonDialog({ open, onClose, onSubmit }: Props) {
         <DialogHeader>
           <DialogTitle>Session ended early</DialogTitle>
           <DialogDescription>
-            The coach and student were connected together for less than 20 minutes. Please provide a reason before this lesson can be recorded.
+            The coach and student were connected together for less than 20 minutes. Please provide a reason before this session can be recorded.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">

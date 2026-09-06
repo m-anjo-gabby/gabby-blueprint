@@ -240,7 +240,7 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
               <DialogTitle>Resolve Session</DialogTitle>
               <DialogDescription>
                 This session with {target.session.counterpart_name} is past its scheduled end time but still shows as
-                scheduled (e.g. it was conducted outside the app, or the End Lesson button was never pressed). Record
+                scheduled (e.g. it was conducted outside the app, or the End Session button was never pressed). Record
                 what actually happened.
               </DialogDescription>
             </DialogHeader>

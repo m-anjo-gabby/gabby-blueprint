@@ -318,7 +318,7 @@ export function LiveSessionRoom({ access }: Props) {
               : 'You can close this tab now.'}
           </p>
           <p className="text-xs text-slate-500">
-            Don&apos;t forget to press <span className="font-bold">End Lesson</span> on the student&apos;s page to record this lesson&apos;s outcome.
+            Don&apos;t forget to press <span className="font-bold">End Session</span> on the student&apos;s page to record this session&apos;s outcome.
           </p>
         </div>
         <div className="flex items-center gap-3">

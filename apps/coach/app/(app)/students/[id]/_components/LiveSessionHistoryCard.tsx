@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarClock, RotateCcw, TriangleAlert, X } from 'lucide-react';
+import { CalendarClock, CheckCircle2, ChevronRight, RotateCcw, TriangleAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
@@ -94,20 +95,34 @@ export function LiveSessionHistoryCard({ studentId, studentName, sessions: initi
             {sessions.map((session) => {
               const badge = SESSION_STATUS_BADGE[session.status];
               const isFuture = new Date(session.start_datetime) > new Date();
+              const isPastEnd = new Date(session.end_datetime) < new Date();
               const canAct = session.status === SESSION_STATUS.SCHEDULED && isFuture;
+              const canResolve = session.status === SESSION_STATUS.SCHEDULED && isPastEnd;
+              // scheduled(未終了含む)ならセッション準備/実施ハブへ、確定済みならレッスン結果画面へ。
+              // ハブは終了予定時刻を過ぎていても引き続きここからたどり着ける必要がある
+              // （通話後にEnd Sessionを押し忘れたセッションを後から終了させるため）。
+              const href = session.status === SESSION_STATUS.SCHEDULED
+                ? `/students/${studentId}/sessions/${session.session_id}`
+                : `/students/${studentId}/sessions/${session.session_id}/result`;
               return (
                 <li
                   key={session.session_id}
                   className="flex flex-col gap-2 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60"
                 >
-                  <div className="flex items-center justify-between gap-3">
+                  <Link
+                    href={href}
+                    className="flex items-center justify-between gap-3 -m-1 p-1 rounded-lg hover:bg-slate-100/80 transition-colors"
+                  >
                     <span className="text-xs font-semibold text-slate-700">
                       {formatDateTimeByZone(session.start_datetime, timezone, false)}
                     </span>
-                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
-                      {badge.label}
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                      <ChevronRight size={14} className="text-slate-300" />
                     </span>
-                  </div>
+                  </Link>
                   {canAct && (
                     <div className="flex items-center gap-2">
                       <Button
@@ -128,6 +143,20 @@ export function LiveSessionHistoryCard({ studentId, studentName, sessions: initi
                       >
                         <X size={13} />
                         Cancel
+                      </Button>
+                    </div>
+                  )}
+                  {canResolve && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="text-amber-700 border-amber-200 hover:bg-amber-50"
+                        onClick={() => setActionTarget({ session: toSessionListItem(session, studentId, studentName), mode: 'resolve' })}
+                      >
+                        <CheckCircle2 size={13} />
+                        Resolve
                       </Button>
                     </div>
                   )}

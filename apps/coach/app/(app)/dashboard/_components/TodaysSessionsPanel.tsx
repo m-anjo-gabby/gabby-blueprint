@@ -113,11 +113,11 @@ export default function TodaysSessionsPanel() {
                 <button
                   onClick={() => endLesson(session.session_id, session.counterpart_id)}
                   disabled={!callLogPresence[session.session_id] || endingSessionId === session.session_id}
-                  title={callLogPresence[session.session_id] ? 'Record this lesson’s outcome' : 'Join the call at least once before ending the lesson'}
+                  title={callLogPresence[session.session_id] ? 'Record this session’s outcome' : 'Join the call at least once before ending the session'}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors px-3.5 py-2 rounded-full shadow-sm"
                 >
                   {endingSessionId === session.session_id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-                  End Lesson
+                  End Session
                 </button>
               </div>
             </div>

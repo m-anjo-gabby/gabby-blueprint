@@ -109,11 +109,11 @@ export function SessionHub({ studentId, session, homework }: Props) {
               <button
                 onClick={() => endLesson(session.session_id, studentId)}
                 disabled={!hasCoachJoined || endingSessionId === session.session_id}
-                title={hasCoachJoined ? 'Record this lesson’s outcome' : 'Join the call at least once before ending the lesson'}
+                title={hasCoachJoined ? 'Record this session’s outcome' : 'Join the call at least once before ending the session'}
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors px-4 py-2.5 rounded-full shadow-sm"
               >
                 {endingSessionId === session.session_id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                End Lesson
+                End Session
               </button>
             </div>
           ) : (

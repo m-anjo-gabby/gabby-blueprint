@@ -43,9 +43,9 @@ export function useEndLesson() {
 
   const endLesson = async (sessionId: string, studentId: string) => {
     const confirmed = await showConfirm(
-      'End lesson?',
-      'This will record the outcome of this lesson based on who joined the call and for how long. This cannot be undone.',
-      { variant: 'danger', isModal: false, confirmText: 'End Lesson', cancelText: 'Cancel' }
+      'End session?',
+      'This will record the outcome of this session based on who joined the call and for how long. This cannot be undone.',
+      { variant: 'danger', isModal: false, confirmText: 'End Session', cancelText: 'Cancel' }
     );
     if (!confirmed) return;
     await runFinalize(sessionId, studentId);
