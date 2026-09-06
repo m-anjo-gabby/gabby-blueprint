@@ -45,7 +45,10 @@ export function RepeatSprintButton({ studentId, record, content }: Props) {
     setContentMetadata(content?.metadata?.sprint ?? null);
     startSession(result.questions);
 
-    router.push(`/students/${studentId}/lesson-sprint`);
+    // 元の実施がライブセッションに紐づいていた場合は、Repeat後もそのセッションへの
+    // 紐づけを引き継ぐ（セッション終了後にRepeatした場合はsession_idが無くても問題ない）。
+    const query = record.session_id ? `?session_id=${record.session_id}` : '';
+    router.push(`/students/${studentId}/lesson-sprint${query}`);
   };
 
   return (

@@ -81,6 +81,36 @@ export function SessionResult({ studentId, session, homework }: Props) {
 
         <Card className="rounded-2xl border-slate-200 shadow-sm">
           <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-slate-800">Lesson Sprint History</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {session.sprint_log.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No Lesson Sprint was run in this session.</p>
+            ) : (
+              <ul className="space-y-2">
+                {session.sprint_log.map((entry) => (
+                  <li key={entry.lesson_sprint_id}>
+                    <Link
+                      href={`/students/${studentId}/lesson-sprint/result/${entry.lesson_sprint_id}`}
+                      className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-100/80 hover:border-slate-200 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-700 truncate">{entry.content_name}</p>
+                        <p className="text-[11px] text-slate-400">{formatDateTimeByZone(entry.insert_date, timezone, false)}</p>
+                      </div>
+                      <span className="shrink-0 text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1">
+                        {entry.average_score !== null ? `${entry.average_score}/5` : '—'}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-slate-200 shadow-sm">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold text-slate-800">In-call Chat History</CardTitle>
           </CardHeader>
           <CardContent className="pt-2">

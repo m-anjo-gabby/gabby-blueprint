@@ -101,6 +101,27 @@ export function StudentSessionResult({ session, homework }: Props) {
         </section>
 
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+          <h2 className="text-sm font-bold text-slate-800">レッスンスプリント</h2>
+          {session.sprint_log.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">このセッションでは実施されませんでした。</p>
+          ) : (
+            <ul className="space-y-2">
+              {session.sprint_log.map((entry) => (
+                <li key={entry.lesson_sprint_id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 truncate">{entry.content_name}</p>
+                    <p className="text-[11px] text-slate-400">{formatDateTimeByZone(entry.insert_date, timezone, false)}</p>
+                  </div>
+                  <span className="shrink-0 text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1">
+                    {entry.average_score !== null ? `${entry.average_score}/5` : '—'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
           <h2 className="text-sm font-bold text-slate-800">宿題</h2>
           {homework.length === 0 ? (
             <p className="text-xs text-slate-400 italic">宿題はまだ投稿されていません。</p>

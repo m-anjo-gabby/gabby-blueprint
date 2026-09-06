@@ -1,14 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, ExternalLink, Loader2, MessageCircle, Video, Zap } from 'lucide-react';
+import { ArrowRight, SquareArrowOutUpRight } from 'lucide-react';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { hasCoachJoinedSessions } from '@/actions/sessionAction';
-import { useEndLesson } from '@/hooks/useEndLesson';
-import { EndLessonReasonDialog } from '@/components/session/EndLessonReasonDialog';
 import type { StudentSessionHistoryItem } from '@gabby/types/coachStudent';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 
@@ -29,25 +25,10 @@ interface Props {
 
 export function TodaysLessonPanel({ studentId, sessions, upcomingSession, lessonSprints }: Props) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
-  const [hasCoachJoined, setHasCoachJoined] = useState(false);
-  const { endLesson, endingSessionId, reasonDialogOpen, closeReasonDialog, submitReason } = useEndLesson();
 
   const targetSession = upcomingSession;
   const lastCompletedSession = sessions.find((session) => session.status === SESSION_STATUS.COMPLETED);
   const lastSprint = lessonSprints[0];
-  const targetSessionId = targetSession?.session_id;
-
-  useEffect(() => {
-    // targetSessionIdが無い間はEnd Lessonボタン自体が描画されないため、hasCoachJoinedのリセットは不要
-    if (!targetSessionId) return;
-    let cancelled = false;
-    hasCoachJoinedSessions([targetSessionId]).then((presence) => {
-      if (!cancelled) setHasCoachJoined(!!presence[targetSessionId]);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [targetSessionId]);
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -76,47 +57,25 @@ export function TodaysLessonPanel({ studentId, sessions, upcomingSession, lesson
       </div>
 
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        {targetSession && (
-          <>
-            <Link
-              href={`/students/${studentId}/room/${targetSession.session_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-indigo-200"
-            >
-              <Video size={14} />
-              Start Live Session
-              <ExternalLink size={12} className="opacity-70" />
-            </Link>
-            <button
-              onClick={() => endLesson(targetSession.session_id, studentId)}
-              disabled={!hasCoachJoined || endingSessionId === targetSession.session_id}
-              title={hasCoachJoined ? 'Record this lesson’s outcome' : 'Join the call at least once before ending the lesson'}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors px-4 py-2.5 rounded-full shadow-sm"
-            >
-              {endingSessionId === targetSession.session_id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-              End Lesson
-            </button>
-          </>
+        {targetSession ? (
+          <Link
+            href={`/students/${studentId}/sessions/${targetSession.session_id}`}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-indigo-200"
+          >
+            Open Session
+            <ArrowRight size={14} />
+          </Link>
+        ) : (
+          <Link
+            href={`/students/${studentId}/lesson-sprint`}
+            title="No upcoming live session — start a standalone Lesson Sprint (e.g. run over an external call)"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 transition-colors px-4 py-2.5 rounded-full shadow-sm"
+          >
+            Start Lesson Sprint
+            <SquareArrowOutUpRight size={12} className="opacity-70" />
+          </Link>
         )}
-        <Link
-          href={`/students/${studentId}/lesson-sprint`}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 transition-colors px-4 py-2.5 rounded-full shadow-sm"
-        >
-          <Zap size={14} className="fill-current text-amber-300" />
-          Start Lesson Sprint
-        </Link>
-        <span
-          title="Dialog practice is coming soon"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-white/70 border border-slate-200 px-4 py-2.5 rounded-full cursor-not-allowed"
-        >
-          <MessageCircle size={14} />
-          Dialog Practice
-          <span className="text-[9px] font-black uppercase tracking-wide">Soon</span>
-        </span>
       </div>
-      <EndLessonReasonDialog open={reasonDialogOpen} onClose={closeReasonDialog} onSubmit={submitReason} />
     </div>
   );
 }

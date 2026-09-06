@@ -15,6 +15,7 @@ import {
   SessionCallLogEntry,
   SessionChatMessageEntry,
   SessionListItem,
+  SessionSprintSummaryEntry,
   SessionStatus,
 } from '@gabby/types/session';
 
@@ -432,7 +433,12 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
     const isCoach = session.coach_id === user.id;
     const counterpartId = isCoach ? session.student_id : session.coach_id;
 
-    const [{ data: counterpart }, { data: callLogRows, error: callLogError }, { data: chatRows, error: chatError }] = await Promise.all([
+    const [
+      { data: counterpart },
+      { data: callLogRows, error: callLogError },
+      { data: chatRows, error: chatError },
+      { data: sprintRows, error: sprintError },
+    ] = await Promise.all([
       supabase.from('com_m_user').select('user_name').eq('id', counterpartId).maybeSingle(),
       supabase
         .from('com_t_session_call_log')
@@ -444,6 +450,11 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         .select('chat_id, sender_role, message, created_at')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true }),
+      supabase
+        .from('lesson_t_sprint')
+        .select('lesson_sprint_id, question_type, difficulty_level, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)')
+        .eq('session_id', sessionId)
+        .order('insert_date', { ascending: true }),
     ]);
 
     if (callLogError) {
@@ -452,6 +463,10 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
     }
     if (chatError) {
       logger.error('session:get_result_summary_chat_failed', chatError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (sprintError) {
+      logger.error('session:get_result_summary_sprint_failed', sprintError.message, { ...ctx, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -469,6 +484,27 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
       created_at: r.created_at,
     }));
 
+    const sprintLog: SessionSprintSummaryEntry[] = (sprintRows ?? []).map((r) => {
+      const history = (r.answered_history as { score: number | null }[] | null) ?? [];
+      const scored = history.filter((h) => typeof h.score === 'number');
+      const averageScore = scored.length > 0
+        ? Math.round((scored.reduce((sum, h) => sum + (h.score ?? 0), 0) / scored.length) * 10) / 10
+        : null;
+      const contentJoin = Array.isArray(r.com_m_contents) ? r.com_m_contents[0] : r.com_m_contents;
+
+      return {
+        lesson_sprint_id: r.lesson_sprint_id,
+        content_name: contentJoin?.content_name ?? '(Unknown)',
+        content_name_en: contentJoin?.content_name_en ?? null,
+        question_type: r.question_type,
+        difficulty_level: r.difficulty_level,
+        total_answered: r.total_answered,
+        total_evaluated: r.total_evaluated,
+        average_score: averageScore,
+        insert_date: r.insert_date,
+      };
+    });
+
     return {
       success: true,
       session: {
@@ -480,6 +516,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         counterpart_name: counterpart?.user_name ?? '(Unknown)',
         call_log: callLog,
         chat_log: chatLog,
+        sprint_log: sprintLog,
       },
     };
   } catch (err) {

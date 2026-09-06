@@ -87,6 +87,19 @@ export interface SessionChatMessageEntry {
   created_at: string; // UTC ISO文字列
 }
 
+/** lesson_t_sprint 1行分（このセッション中に実施されたLesson Sprintの要約。セッション準備/実施ハブ・レッスン結果画面で共用） */
+export interface SessionSprintSummaryEntry {
+  lesson_sprint_id: string;
+  content_name: string;
+  content_name_en: string | null;
+  question_type: string;
+  difficulty_level: number;
+  total_answered: number;
+  total_evaluated: number;
+  average_score: number | null;
+  insert_date: string; // UTC ISO文字列
+}
+
 /** レッスン結果画面のサマリー情報一式 */
 export interface SessionResultSummary {
   session_id: string;
@@ -97,6 +110,7 @@ export interface SessionResultSummary {
   counterpart_name: string;
   call_log: SessionCallLogEntry[];
   chat_log: SessionChatMessageEntry[];
+  sprint_log: SessionSprintSummaryEntry[];
 }
 
 export type GetSessionResultSummaryResult =

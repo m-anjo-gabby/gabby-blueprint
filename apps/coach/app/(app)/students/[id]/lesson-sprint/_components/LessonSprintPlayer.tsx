@@ -19,11 +19,12 @@ import { DEFAULT_LESSON_SPRINT_SCORE } from '@gabby/types/lessonSprint';
 
 interface Props {
   studentId: string;
+  sessionId: string | null;
   onExit: () => void;
   onComplete: (lessonSprintId: string) => void;
 }
 
-export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
+export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }: Props) {
   const { showToast } = useToast();
   const { session, config, contentName, contentMetadata, commitScoreResult, toggleWordHighlight, setSessionNote, resetStore } = useLessonSprintStore();
   const { currentIndex, questions, currentHighlightedWords, sessionNote } = session;
@@ -99,6 +100,7 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
 
     const result = await createLessonSprintResult({
       student_id: studentId,
+      session_id: sessionId,
       sprint_type: latestConfig.sprintType,
       content_id: latestConfig.contentId,
       question_type: latestConfig.questionType,
@@ -120,7 +122,7 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
     }
 
     setResultId(result.lessonSprintId);
-  }, [studentId, showToast, onExit, buildHistory]);
+  }, [studentId, sessionId, showToast, onExit, buildHistory]);
 
   const handleGoToResult = useCallback(() => {
     if (!resultId) return;

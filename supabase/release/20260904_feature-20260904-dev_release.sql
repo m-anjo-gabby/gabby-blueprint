@@ -69,6 +69,22 @@
 --   LiveSessionHistoryCardの操作化等）は本SQLの対象外（DB変更のみ）。
 --
 --   ---------------------------------------------------------------------
+--   【追加分】Lesson Sprintのライブセッション紐づけ、セッション準備/実施ハブ (2026-09-06)
+--   ---------------------------------------------------------------------
+--   コーチの受講生概要画面から直接ビデオ通話・スプリント実施・セッション終了を
+--   行う導線を廃止し、個別レッスンセッション(com_t_session)単位の「セッション
+--   準備/実施ハブ」画面（アプリケーションコード側、本SQLの対象外）に集約する。
+--   これに伴い、Lesson Sprintの実施回をどのライブセッション中に行ったか記録
+--   できるようにする。
+--
+--   14. lesson_t_sprint に session_id カラムを追加する
+--       - NULL許容（アプリ内Zoomが利用できず外部Zoom等で代替実施した場合等の
+--         単独実施をケアするため必須にはしない）。指定する場合はRLSの
+--         WITH CHECKで「そのコーチが担当し、かつ対象student_idと一致する
+--         セッションであること」を検証し、他コーチ・他生徒のセッションへの
+--         誤紐づけを防止する。
+--
+--   ---------------------------------------------------------------------
 --   【追加分】ライブ通話チャット履歴の永続化 (2026-09-06)
 --   ---------------------------------------------------------------------
 --   Zoom Video SDKのin-callチャットはSDK側に永続化機能・取得APIを持たず、
@@ -837,6 +853,33 @@ FOR INSERT TO authenticated WITH CHECK (
           (s.coach_id = auth.uid() AND com_t_session_chat.sender_role = 'coach')
           OR (s.student_id = auth.uid() AND com_t_session_chat.sender_role = 'student')
         )
+    )
+);
+
+-- =========================================================================
+-- 14. lesson_t_sprint に session_id カラムを追加
+-- =========================================================================
+ALTER TABLE public.lesson_t_sprint
+  ADD COLUMN IF NOT EXISTS session_id uuid REFERENCES public.com_t_session(session_id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.lesson_t_sprint.session_id IS '実施したライブセッション (com_t_session)。NULL許容（単独実施・外部Zoom実施等はNULL）';
+
+CREATE INDEX IF NOT EXISTS idx_lesson_t_sprint_session ON public.lesson_t_sprint (session_id, insert_date);
+
+DROP POLICY IF EXISTS "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint;
+CREATE POLICY "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint
+FOR ALL TO authenticated
+USING (coach_id = auth.uid() OR public.get_jwt_user_type() = '0')
+WITH CHECK (
+    coach_id = auth.uid()
+    AND (
+      session_id IS NULL
+      OR EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.session_id = lesson_t_sprint.session_id
+          AND s.coach_id = auth.uid()
+          AND s.student_id = lesson_t_sprint.student_id
+      )
     )
 );
 

@@ -146,11 +146,30 @@ export async function createLessonSprintResultCore(
       return { success: false, errorCode: 'forbidden' };
     }
 
+    if (input.session_id) {
+      const { data: session, error: sessionError } = await supabase
+        .from('com_t_session')
+        .select('session_id')
+        .eq('session_id', input.session_id)
+        .eq('coach_id', user.id)
+        .eq('student_id', input.student_id)
+        .maybeSingle();
+
+      if (sessionError) {
+        logger.error('lessonSprint:create_result_session_lookup_failed', sessionError.message, { ...ctx, userId: user.id, payload: { sessionId: input.session_id } });
+        return { success: false, errorCode: 'unexpected_error' };
+      }
+      if (!session) {
+        return { success: false, errorCode: 'forbidden' };
+      }
+    }
+
     const { data, error } = await supabase
       .from('lesson_t_sprint')
       .insert({
         coach_id: user.id,
         student_id: input.student_id,
+        session_id: input.session_id,
         sprint_type: input.sprint_type,
         content_id: input.content_id,
         question_type: input.question_type,
