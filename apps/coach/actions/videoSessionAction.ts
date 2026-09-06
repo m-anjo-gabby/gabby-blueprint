@@ -4,6 +4,7 @@ import {
   getCoachLiveSessionRoomAccessCore,
   recordSessionCallJoinCore,
   recordSessionCallLeaveCore,
+  recordSessionChatMessageCore,
 } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -52,4 +53,12 @@ export async function recordCallJoin(sessionId: string, zoomSessionId: string | 
  */
 export async function recordCallLeave(callLogId: string): Promise<void> {
   await recordSessionCallLeaveCore(callLogId);
+}
+
+/**
+ * Records a chat message this coach sent during the call into com_t_session_chat.
+ * Only call this when chat-on-message fires with isSelf===true (calling it for both sides would double-save).
+ */
+export async function recordChatMessage(sessionId: string, message: string): Promise<void> {
+  await recordSessionChatMessageCore(sessionId, message);
 }

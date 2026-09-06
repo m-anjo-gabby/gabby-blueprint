@@ -79,6 +79,28 @@ export function StudentSessionResult({ session, homework }: Props) {
         </section>
 
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+          <h2 className="text-sm font-bold text-slate-800">チャット履歴</h2>
+          {session.chat_log.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">通話中のチャットメッセージはありません。</p>
+          ) : (
+            <ul className="space-y-2">
+              {session.chat_log.map((entry) => (
+                <li key={entry.chat_id} className={`text-xs ${entry.sender_role === 'student' ? 'text-right' : 'text-left'}`}>
+                  <p className="font-bold text-slate-400 text-[10px]">{entry.sender_role === 'coach' ? 'コーチ' : '自分'}</p>
+                  <p
+                    className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${
+                      entry.sender_role === 'student' ? 'bg-indigo-50 text-indigo-700' : 'bg-rose-50 text-rose-700'
+                    }`}
+                  >
+                    {entry.message}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
           <h2 className="text-sm font-bold text-slate-800">宿題</h2>
           {homework.length === 0 ? (
             <p className="text-xs text-slate-400 italic">宿題はまだ投稿されていません。</p>

@@ -264,3 +264,58 @@ export async function recordSessionCallLeaveCore(callLogId: string): Promise<{ s
     return { success: false };
   }
 }
+
+/**
+ * ライブセッション通話中のチャットメッセージをcom_t_session_chatへ保存する。
+ * Zoom Video SDKのin-callチャットはSDK側に永続化機能が無く、client.on('chat-on-message')が
+ * 送受信両者にリアルタイム配信するのみで通話終了・離脱と共に消失するため、送信イベントを
+ * 受け取った時点でアプリ側が都度保存する。呼び出し元（chat-on-messageでisSelf===trueの場合のみ）が
+ * 送信者自身のクライアントからのみ呼ぶことで、送受信双方からの二重保存を防ぐ。
+ * sender_roleはクライアントから受け取らず、ログイン中ユーザーと対象session_idのcoach_id/student_idの
+ * 一致から都度サーバー側で解決する（なりすまし防止）。
+ */
+export async function recordSessionChatMessageCore(sessionId: string, message: string): Promise<{ success: boolean }> {
+  const ctx = await getLogContext();
+
+  try {
+    const trimmed = message.trim();
+    if (!trimmed) return { success: false };
+
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false };
+
+    const { data: session, error: sessionError } = await supabase
+      .from('com_t_session')
+      .select('coach_id, student_id')
+      .eq('session_id', sessionId)
+      .maybeSingle();
+
+    if (sessionError || !session) {
+      logger.error('liveSessionRoom:record_chat_session_lookup_failed', sessionError?.message ?? 'session not found', { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false };
+    }
+
+    const senderRole = session.coach_id === user.id ? 'coach' : session.student_id === user.id ? 'student' : null;
+    if (!senderRole) {
+      return { success: false };
+    }
+
+    const { error } = await supabase.from('com_t_session_chat').insert({
+      session_id: sessionId,
+      sender_user_id: user.id,
+      sender_role: senderRole,
+      message: trimmed,
+    });
+
+    if (error) {
+      logger.error('liveSessionRoom:record_chat_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false };
+    }
+
+    return { success: true };
+  } catch (err) {
+    logger.error('liveSessionRoom:record_chat_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false };
+  }
+}

@@ -79,6 +79,14 @@ export interface SessionCallLogEntry {
   left_at: string | null;
 }
 
+/** com_t_session_chat 1行分（レッスン結果画面のチャット履歴表示用） */
+export interface SessionChatMessageEntry {
+  chat_id: string;
+  sender_role: 'coach' | 'student';
+  message: string;
+  created_at: string; // UTC ISO文字列
+}
+
 /** レッスン結果画面のサマリー情報一式 */
 export interface SessionResultSummary {
   session_id: string;
@@ -88,6 +96,7 @@ export interface SessionResultSummary {
   status_note: string | null;
   counterpart_name: string;
   call_log: SessionCallLogEntry[];
+  chat_log: SessionChatMessageEntry[];
 }
 
 export type GetSessionResultSummaryResult =

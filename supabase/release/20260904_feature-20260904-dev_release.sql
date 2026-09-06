@@ -68,6 +68,28 @@
 --   アプリケーションコード側の変更（生徒・コーチ両カレンダーの予約UI、
 --   LiveSessionHistoryCardの操作化等）は本SQLの対象外（DB変更のみ）。
 --
+--   ---------------------------------------------------------------------
+--   【追加分】ライブ通話チャット履歴の永続化 (2026-09-06)
+--   ---------------------------------------------------------------------
+--   Zoom Video SDKのin-callチャットはSDK側に永続化機能・取得APIを持たず、
+--   client.on('chat-on-message')が両者にリアルタイム配信するのみで通話終了・
+--   ページ離脱と共に消失する。レッスン結果画面で通話中のやり取りを振り返れる
+--   ようにするため、送信イベントを受け取った時点でアプリ側が都度保存する方式を
+--   採用する（Webhookでの事後取得は、Zoom側の保持を前提にできない上、結局
+--   自前DBへの保存が必要になる点で本方式と変わらないため不採用）。
+--
+--   13. com_t_session_chat テーブルを新規作成
+--       - com_t_chatと同様、直接INSERT+RLSでなりすましを防止する方式（時刻の
+--         真正性がクリティカルなcom_t_session_call_logのようなRPC限定方式は
+--         チャット本文には過剰なため採用しない）。書き込みは送信者自身の
+--         クライアントからのみ行う想定（chat-on-messageは送信者にもエコー
+--         されるため、受信側が重複保存しないようアプリ側でisSelf判定する）。
+--         更新・削除は許可しない追記専用の履歴として保持する。
+--
+--   アプリケーションコード側の変更（useZoomVideoSessionのchatMessagesを起点に
+--   LiveSessionRoomView.tsx/LiveSessionRoom.tsxからcom_t_session_chatへ保存、
+--   レッスン結果画面へのチャット履歴表示追加等）は本SQLの対象外（DB変更のみ）。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -765,5 +787,57 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.book_makeup_session(uuid, date, time) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.book_makeup_session(uuid, date, time) TO authenticated;
+
+-- =========================================================================
+-- 13. com_t_session_chat 新規作成
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.com_t_session_chat (
+    chat_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id uuid NOT NULL REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
+    sender_user_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    sender_role text NOT NULL,
+    message text NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_session_chat_sender_role CHECK (sender_role IN ('coach', 'student')),
+    CONSTRAINT chk_session_chat_message_not_blank CHECK (btrim(message) <> '')
+);
+
+COMMENT ON TABLE public.com_t_session_chat IS 'ライブセッション通話中のチャット履歴（Zoom Video SDKのchat-on-messageイベントを送信者側で都度保存）';
+COMMENT ON COLUMN public.com_t_session_chat.chat_id IS 'チャットメッセージID';
+COMMENT ON COLUMN public.com_t_session_chat.session_id IS '対象の個別レッスンセッション (com_t_session)';
+COMMENT ON COLUMN public.com_t_session_chat.sender_user_id IS '送信者のユーザID（コーチまたは生徒）';
+COMMENT ON COLUMN public.com_t_session_chat.sender_role IS '送信者の役割 (coach, student)。com_t_session.coach_id/student_idとの一致をRLSで検証';
+COMMENT ON COLUMN public.com_t_session_chat.message IS 'メッセージ本文';
+COMMENT ON COLUMN public.com_t_session_chat.created_at IS '送信日時（サーバー確定）';
+
+CREATE INDEX IF NOT EXISTS idx_session_chat_session ON public.com_t_session_chat (session_id, created_at);
+
+ALTER TABLE public.com_t_session_chat ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Involved users can view session chat" ON public.com_t_session_chat;
+CREATE POLICY "Involved users can view session chat" ON public.com_t_session_chat
+FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.com_t_session s
+      WHERE s.session_id = com_t_session_chat.session_id
+        AND (s.coach_id = auth.uid() OR s.student_id = auth.uid())
+    )
+    OR public.get_jwt_user_type() = '0'
+);
+
+DROP POLICY IF EXISTS "Involved users can post session chat as themselves" ON public.com_t_session_chat;
+CREATE POLICY "Involved users can post session chat as themselves" ON public.com_t_session_chat
+FOR INSERT TO authenticated WITH CHECK (
+    sender_user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.com_t_session s
+      WHERE s.session_id = com_t_session_chat.session_id
+        AND (
+          (s.coach_id = auth.uid() AND com_t_session_chat.sender_role = 'coach')
+          OR (s.student_id = auth.uid() AND com_t_session_chat.sender_role = 'student')
+        )
+    )
+);
 
 COMMIT;

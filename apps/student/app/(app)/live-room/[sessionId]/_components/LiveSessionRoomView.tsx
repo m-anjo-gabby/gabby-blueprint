@@ -30,7 +30,7 @@ import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { recordCallJoin, recordCallLeave } from '@/actions/videoSessionAction';
+import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
@@ -128,6 +128,21 @@ export function LiveSessionRoomView({ access }: Props) {
       callLogIdRef.current = callLogId;
     });
   }, [isJoined, zoomSessionId, access.sessionId]);
+
+  // Zoom Video SDKのin-callチャットは永続化機能を持たないため、自分が送信したメッセージのみ
+  // （chat-on-messageは送受信双方にエコーされるためisSelfで判定）com_t_session_chatへ保存する。
+  // 二重保存防止のため保存済み件数をrefで追跡し、新規追加分のみ処理する。
+  const persistedChatCountRef = useRef(0);
+  useEffect(() => {
+    const newMessages = chatMessages.slice(persistedChatCountRef.current);
+    if (newMessages.length === 0) return;
+    persistedChatCountRef.current = chatMessages.length;
+    for (const msg of newMessages) {
+      if (msg.isSelf) {
+        void recordChatMessage(access.sessionId, msg.message);
+      }
+    }
+  }, [chatMessages, access.sessionId]);
 
   const clearSessionTimers = () => {
     if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);

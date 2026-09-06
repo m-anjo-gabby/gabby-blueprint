@@ -4,6 +4,7 @@ import {
   getStudentLiveSessionRoomAccessCore,
   recordSessionCallJoinCore,
   recordSessionCallLeaveCore,
+  recordSessionChatMessageCore,
 } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -51,4 +52,12 @@ export async function recordCallJoin(sessionId: string, zoomSessionId: string | 
  */
 export async function recordCallLeave(callLogId: string): Promise<void> {
   await recordSessionCallLeaveCore(callLogId);
+}
+
+/**
+ * この生徒が通話中に送信したチャットメッセージをcom_t_session_chatへ保存する。
+ * chat-on-messageでisSelf===trueの場合のみ呼び出すこと（送受信双方が呼ぶと二重保存になる）。
+ */
+export async function recordChatMessage(sessionId: string, message: string): Promise<void> {
+  await recordSessionChatMessageCore(sessionId, message);
 }

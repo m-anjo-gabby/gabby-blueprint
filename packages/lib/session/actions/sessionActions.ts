@@ -13,6 +13,7 @@ import {
   SESSION_STATUS,
   SessionActionErrorCode,
   SessionCallLogEntry,
+  SessionChatMessageEntry,
   SessionListItem,
   SessionStatus,
 } from '@gabby/types/session';
@@ -431,17 +432,26 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
     const isCoach = session.coach_id === user.id;
     const counterpartId = isCoach ? session.student_id : session.coach_id;
 
-    const [{ data: counterpart }, { data: callLogRows, error: callLogError }] = await Promise.all([
+    const [{ data: counterpart }, { data: callLogRows, error: callLogError }, { data: chatRows, error: chatError }] = await Promise.all([
       supabase.from('com_m_user').select('user_name').eq('id', counterpartId).maybeSingle(),
       supabase
         .from('com_t_session_call_log')
         .select('call_log_id, role, joined_at, left_at')
         .eq('session_id', sessionId)
         .order('joined_at', { ascending: true }),
+      supabase
+        .from('com_t_session_chat')
+        .select('chat_id, sender_role, message, created_at')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true }),
     ]);
 
     if (callLogError) {
       logger.error('session:get_result_summary_call_log_failed', callLogError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (chatError) {
+      logger.error('session:get_result_summary_chat_failed', chatError.message, { ...ctx, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -450,6 +460,13 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
       role: r.role,
       joined_at: r.joined_at,
       left_at: r.left_at,
+    }));
+
+    const chatLog: SessionChatMessageEntry[] = (chatRows ?? []).map((r) => ({
+      chat_id: r.chat_id,
+      sender_role: r.sender_role,
+      message: r.message,
+      created_at: r.created_at,
     }));
 
     return {
@@ -462,6 +479,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         status_note: session.status_note,
         counterpart_name: counterpart?.user_name ?? '(Unknown)',
         call_log: callLog,
+        chat_log: chatLog,
       },
     };
   } catch (err) {

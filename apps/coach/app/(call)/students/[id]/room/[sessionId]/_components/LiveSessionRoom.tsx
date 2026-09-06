@@ -30,7 +30,7 @@ import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { UserAvatar } from '@/components/common/UserAvatar';
-import { recordCallJoin, recordCallLeave } from '@/actions/videoSessionAction';
+import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
@@ -163,6 +163,21 @@ export function LiveSessionRoom({ access }: Props) {
       callLogIdRef.current = callLogId;
     });
   }, [isJoined, zoomSessionId, access.sessionId]);
+
+  // Zoom Video SDK's in-call chat has no persistence of its own, so only the message we actually
+  // sent (chat-on-message echoes to both sides, hence the isSelf check) is saved to com_t_session_chat.
+  // A ref tracks how many messages have already been persisted to avoid double-saving on re-render.
+  const persistedChatCountRef = useRef(0);
+  useEffect(() => {
+    const newMessages = chatMessages.slice(persistedChatCountRef.current);
+    if (newMessages.length === 0) return;
+    persistedChatCountRef.current = chatMessages.length;
+    for (const msg of newMessages) {
+      if (msg.isSelf) {
+        void recordChatMessage(access.sessionId, msg.message);
+      }
+    }
+  }, [chatMessages, access.sessionId]);
 
   const clearSessionTimers = () => {
     if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
