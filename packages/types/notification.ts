@@ -30,6 +30,22 @@ export const NOTIFICATION_TYPES = {
     icon: 'MessageCircle',
     badgeClass: 'bg-indigo-50 text-indigo-600 border-indigo-100',
   },
+  SESSION_CANCELLED_BY_COACH: {
+    icon: 'CalendarX',
+    badgeClass: 'bg-rose-50 text-rose-600 border-rose-100',
+  },
+  SESSION_RESCHEDULE_PROPOSED: {
+    icon: 'CalendarClock',
+    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  SESSION_CANCELLED_BY_STUDENT: {
+    icon: 'CalendarX',
+    badgeClass: 'bg-rose-50 text-rose-600 border-rose-100',
+  },
+  SESSION_BOOKED_BY_STUDENT: {
+    icon: 'CalendarCheck',
+    badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
@@ -78,5 +94,24 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
   CHAT_NEW_MESSAGE: (payload) => ({
     title: String(payload.sender_name ?? 'メッセージ'),
     body: String(payload.preview ?? '新着メッセージがあります'),
+  }),
+  SESSION_CANCELLED_BY_COACH: (payload) => ({
+    title: 'セッションがキャンセルされました',
+    body: `${String(payload.coach_name ?? 'コーチ')}が予定していたセッションをキャンセルしました。`,
+  }),
+  SESSION_RESCHEDULE_PROPOSED: (payload) => {
+    const count = Number(payload.proposal_count ?? 0);
+    return {
+      title: '振替候補が届いています',
+      body: `${String(payload.coach_name ?? 'コーチ')}からキャンセルの振替候補（${count}件）が届いています。ライブセッション画面でご確認ください。`,
+    };
+  },
+  SESSION_CANCELLED_BY_STUDENT: (payload) => ({
+    title: 'セッションがキャンセルされました',
+    body: `${String(payload.student_name ?? '生徒')}が予定していたセッションをキャンセルしました。`,
+  }),
+  SESSION_BOOKED_BY_STUDENT: (payload) => ({
+    title: '新しいセッションが予約されました',
+    body: `${String(payload.student_name ?? '生徒')}がセッションを予約/振替しました。`,
   }),
 };

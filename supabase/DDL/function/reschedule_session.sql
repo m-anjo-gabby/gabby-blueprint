@@ -17,6 +17,12 @@
 --
 -- 【12時間ルール (2026-09-05追加)】
 -- 開始12時間以内の振替は生徒・コーチどちらからの操作でも禁止する。
+--
+-- 【生徒限定化 (2026-09-07追加)】
+-- 予約・振替の決定権は生徒側に一本化する方針のため、本関数はコーチからの実行を
+-- 拒否するよう変更した。コーチがキャンセルする際に候補時間を提案したい場合は
+-- cancel_session()のp_proposed_slotsを使う（Availability外の時間も指定できる）。
+-- 振替完了時はコーチへ通知(SESSION_BOOKED_BY_STUDENT)する。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.reschedule_session(
     p_session_id uuid,
@@ -44,7 +50,7 @@ BEGIN
         RAISE EXCEPTION 'session % not found', p_session_id;
     END IF;
 
-    IF v_session.student_id <> auth.uid() AND v_session.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+    IF v_session.student_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
         RAISE EXCEPTION 'not authorized to reschedule this session';
     END IF;
 
@@ -124,6 +130,18 @@ BEGIN
     UPDATE public.com_t_session
     SET status = 5, cancel_reason = p_reason, cancelled_by = auth.uid(), update_date = NOW()
     WHERE session_id = p_session_id;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    SELECT
+        v_session.coach_id,
+        'SESSION_BOOKED_BY_STUDENT',
+        jsonb_build_object(
+            'session_id', v_new_session_id,
+            'student_name', u.user_name,
+            'session_start_datetime', v_new_start
+        ),
+        '/students/' || v_session.student_id
+    FROM public.com_m_user u WHERE u.id = v_session.student_id;
 
     RETURN v_new_session_id;
 END;

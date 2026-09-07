@@ -8,12 +8,20 @@ import {
   rescheduleSessionCore,
   bookMakeupSessionCore,
   getSessionResultSummaryCore,
+  getMyRescheduleProposalsCore,
+  acceptRescheduleProposalCore,
+  declineRescheduleProposalCore,
 } from '@gabby/lib/session/actions/sessionActions';
 import { getCoachAvailabilityByUserIdCore } from '@gabby/lib/coachAvailability/actions/coachAvailabilityActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { CoachAvailabilitySlot } from '@gabby/types/coachAvailability';
-import { SessionActionErrorCode, SessionListItem, SessionResultSummary } from '@gabby/types/session';
+import {
+  SessionActionErrorCode,
+  SessionListItem,
+  SessionResultSummary,
+  SessionRescheduleProposal,
+} from '@gabby/types/session';
 
 const logger = createLogger('student');
 
@@ -140,6 +148,55 @@ export async function bookMakeupSession(
   }
 
   logger.info('student:book_makeup_session_success', 'Makeup session booked', ctx);
+  return { success: true };
+}
+
+/**
+ * ログイン中生徒宛の、未回答かつ未失効のコーチ提案（振替候補）一覧を取得する
+ */
+export async function getMyRescheduleProposals(): Promise<SessionRescheduleProposal[]> {
+  const result = await getMyRescheduleProposalsCore();
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_reschedule_proposals_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.proposals;
+}
+
+/**
+ * コーチ提案の振替候補を承諾する
+ */
+export async function acceptRescheduleProposal(
+  proposalId: string
+): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await acceptRescheduleProposalCore(proposalId);
+
+  if (!result.success) {
+    logger.error('student:accept_reschedule_proposal_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
+  }
+
+  logger.info('student:accept_reschedule_proposal_success', 'Reschedule proposal accepted', ctx);
+  return { success: true, newSessionId: result.newSessionId };
+}
+
+/**
+ * コーチ提案の振替候補を却下する
+ */
+export async function declineRescheduleProposal(
+  proposalId: string
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await declineRescheduleProposalCore(proposalId);
+
+  if (!result.success) {
+    logger.error('student:decline_reschedule_proposal_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
+  }
+
+  logger.info('student:decline_reschedule_proposal_success', 'Reschedule proposal declined', ctx);
   return { success: true };
 }
 

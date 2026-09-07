@@ -61,6 +61,46 @@ export type BookMakeupSessionResult =
   | { success: true; newSessionId: string }
   | { success: false; errorCode: SessionActionErrorCode };
 
+/** cancel_session RPCに渡す、コーチ提案の候補時間1件分（最大3件まで） */
+export interface ProposedSlotInput {
+  start_datetime: string; // UTC ISO文字列
+  end_datetime: string;
+}
+
+// com_t_session_reschedule_proposal.status
+export const RESCHEDULE_PROPOSAL_STATUS = {
+  PENDING: 1,
+  ACCEPTED: 2,
+  DECLINED: 3,
+  EXPIRED: 4,
+} as const;
+export type RescheduleProposalStatus = typeof RESCHEDULE_PROPOSAL_STATUS[keyof typeof RESCHEDULE_PROPOSAL_STATUS];
+
+/** com_t_session_reschedule_proposal 1行分。コーチキャンセル時に提案された振替候補 */
+export interface SessionRescheduleProposal {
+  proposal_id: string;
+  session_id: string;
+  coach_id: string;
+  student_id: string;
+  proposed_start_datetime: string;
+  proposed_end_datetime: string;
+  status: RescheduleProposalStatus;
+  expires_at: string;
+}
+
+export type GetMyRescheduleProposalsResult =
+  | { success: true; proposals: SessionRescheduleProposal[] }
+  | { success: false; errorCode: SessionActionErrorCode };
+
+/** 振替候補の承諾(accept_session_reschedule_proposal RPC)の結果 */
+export type AcceptRescheduleProposalResult =
+  | { success: true; newSessionId: string }
+  | { success: false; errorCode: SessionActionErrorCode };
+
+export type DeclineRescheduleProposalResult =
+  | { success: true }
+  | { success: false; errorCode: SessionActionErrorCode };
+
 /** レッスン終了ボタン(finalize_session RPC)の結果 */
 export type FinalizeSessionResult =
   | { success: true; status: SessionStatus; overlapSeconds: number }

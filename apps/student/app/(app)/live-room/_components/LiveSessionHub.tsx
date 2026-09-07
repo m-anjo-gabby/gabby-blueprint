@@ -3,15 +3,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, CalendarClock, ChevronLeft, FileText, Loader2, RotateCcw, Ticket, Video, X } from 'lucide-react';
+import { ArrowRight, CalendarClock, CheckCircle2, ChevronLeft, FileText, Loader2, RotateCcw, Ticket, Video, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { getMyPastSessions } from '@/actions/sessionAction';
-import { SESSION_STATUS, SessionListItem } from '@gabby/types/session';
+import { getMyPastSessions, acceptRescheduleProposal, declineRescheduleProposal } from '@/actions/sessionAction';
+import { SESSION_STATUS, SessionListItem, SessionRescheduleProposal } from '@gabby/types/session';
 import { BookableTicketSlot, LiveSessionContractSummary } from '@gabby/types/matching';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
@@ -36,11 +37,20 @@ interface Props {
   upcomingSessions: SessionListItem[];
   initialPastSessions: SessionListItem[];
   bookableSlots: BookableTicketSlot[];
+  pendingProposals: SessionRescheduleProposal[];
 }
 
-export function LiveSessionHub({ contracts, initialTicketId, upcomingSessions: initialUpcoming, initialPastSessions, bookableSlots }: Props) {
+export function LiveSessionHub({
+  contracts,
+  initialTicketId,
+  upcomingSessions: initialUpcoming,
+  initialPastSessions,
+  bookableSlots,
+  pendingProposals: initialPendingProposals,
+}: Props) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const router = useRouter();
+  const { showToast } = useToast();
   const [upcomingSessions, setUpcomingSessions] = useState(initialUpcoming);
   const [selectedTicketId, setSelectedTicketId] = useState(initialTicketId);
   const [pastSessionsByTicket, setPastSessionsByTicket] = useState<Record<string, SessionListItem[]>>(
@@ -48,6 +58,8 @@ export function LiveSessionHub({ contracts, initialTicketId, upcomingSessions: i
   );
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
   const [isBookMakeupOpen, setIsBookMakeupOpen] = useState(false);
+  const [pendingProposals, setPendingProposals] = useState(initialPendingProposals);
+  const [respondingProposalId, setRespondingProposalId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedTicketId || pastSessionsByTicket[selectedTicketId]) return;
@@ -83,6 +95,41 @@ export function LiveSessionHub({ contracts, initialTicketId, upcomingSessions: i
     // 選択中の契約の履歴キャッシュを破棄しつつサーバーの最新データも取得し直す
     invalidateSelectedPastSessions();
     router.refresh();
+  };
+
+  const handleAcceptProposal = async (proposalId: string) => {
+    setRespondingProposalId(proposalId);
+    try {
+      const result = await acceptRescheduleProposal(proposalId);
+      if (!result.success) {
+        showToast(result.message, 'error');
+        return;
+      }
+      // 承諾された候補・同じキャンセルに紐づく他の候補は両方ともpendingでなくなるため一覧から消す
+      const acceptedSessionId = pendingProposals.find((p) => p.proposal_id === proposalId)?.session_id;
+      setPendingProposals((prev) => prev.filter((p) => p.session_id !== acceptedSessionId));
+      setUpcomingSessions((prev) => [...prev]);
+      invalidateSelectedPastSessions();
+      router.refresh();
+      showToast('新しいセッションを予約しました。', 'success');
+    } finally {
+      setRespondingProposalId(null);
+    }
+  };
+
+  const handleDeclineProposal = async (proposalId: string) => {
+    setRespondingProposalId(proposalId);
+    try {
+      const result = await declineRescheduleProposal(proposalId);
+      if (!result.success) {
+        showToast(result.message, 'error');
+        return;
+      }
+      setPendingProposals((prev) => prev.filter((p) => p.proposal_id !== proposalId));
+      showToast('候補を却下しました。', 'success');
+    } finally {
+      setRespondingProposalId(null);
+    }
   };
 
   return (
@@ -124,7 +171,14 @@ export function LiveSessionHub({ contracts, initialTicketId, upcomingSessions: i
           <TabsList className={cn('grid w-full', showUpcomingTab ? 'grid-cols-3' : 'grid-cols-2')}>
             {showUpcomingTab && <TabsTrigger value="upcoming">今後の予定</TabsTrigger>}
             <TabsTrigger value="completed">実施済み</TabsTrigger>
-            <TabsTrigger value="history">変更履歴</TabsTrigger>
+            <TabsTrigger value="history">
+              変更履歴
+              {pendingProposals.length > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black">
+                  {pendingProposals.length}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           {showUpcomingTab && (
@@ -245,6 +299,7 @@ export function LiveSessionHub({ contracts, initialTicketId, upcomingSessions: i
             ) : (
               changeHistorySessions.map((session) => {
                 const badge = SESSION_STATUS_BADGE[session.status];
+                const sessionProposals = pendingProposals.filter((p) => p.session_id === session.session_id);
                 return (
                   <div
                     key={session.session_id}
@@ -263,6 +318,46 @@ export function LiveSessionHub({ contracts, initialTicketId, upcomingSessions: i
                     </div>
                     {session.cancel_reason && (
                       <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">{session.cancel_reason}</p>
+                    )}
+                    {sessionProposals.length > 0 && (
+                      <div className="mt-1 space-y-1.5 rounded-xl border border-indigo-100 bg-indigo-50/60 p-2.5">
+                        <p className="text-[11px] font-bold text-indigo-700">
+                          コーチから振替候補が届いています。ご希望の時間を選んでください。
+                        </p>
+                        {sessionProposals.map((proposal) => (
+                          <div key={proposal.proposal_id} className="flex items-center justify-between gap-2 bg-white rounded-lg border border-indigo-100 px-2.5 py-2">
+                            <span className="text-[11px] font-semibold text-slate-700">
+                              {formatDateTimeByZone(proposal.proposed_start_datetime, timezone, false)}
+                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2.5 text-[11px]"
+                                disabled={respondingProposalId === proposal.proposal_id}
+                                onClick={() => handleDeclineProposal(proposal.proposal_id)}
+                              >
+                                却下
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="h-7 px-2.5 text-[11px]"
+                                disabled={respondingProposalId === proposal.proposal_id}
+                                onClick={() => handleAcceptProposal(proposal.proposal_id)}
+                              >
+                                {respondingProposalId === proposal.proposal_id ? (
+                                  <Loader2 size={12} className="animate-spin" />
+                                ) : (
+                                  <CheckCircle2 size={12} />
+                                )}
+                                承諾
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 );

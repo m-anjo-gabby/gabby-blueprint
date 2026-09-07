@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarClock, CheckCircle2, ChevronRight, RotateCcw, TriangleAlert, Video, X } from 'lucide-react';
+import { CalendarClock, CheckCircle2, ChevronRight, TriangleAlert, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
@@ -14,7 +14,6 @@ import type { DayOfWeek } from '@gabby/types/coachAvailability';
 import { SESSION_STATUS, SessionListItem } from '@gabby/types/session';
 import type { LiveSessionShortfallItem, StudentSessionHistoryItem } from '@gabby/types/coachStudent';
 import { SessionActionDialog, SessionActionTarget } from '../../../calendar/_components/SessionActionDialog';
-import { BookMakeupSessionDialog } from './BookMakeupSessionDialog';
 
 interface Props {
   studentId: string;
@@ -44,7 +43,6 @@ export function LiveSessionHistoryCard({ studentId, studentName, sessions: initi
   const router = useRouter();
   const [sessions, setSessions] = useState(initialSessions);
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
-  const [bookMakeupScheduleId, setBookMakeupScheduleId] = useState<string | null>(null);
 
   const handleResolved = (sessionId: string, patch: Partial<SessionListItem>) => {
     setSessions((prev) => prev.map((s) => (s.session_id === sessionId ? { ...s, ...patch } : s)));
@@ -68,21 +66,12 @@ export function LiveSessionHistoryCard({ studentId, studentName, sessions: initi
               <TriangleAlert size={14} className="shrink-0" />
               Not all contracted sessions could be scheduled
             </div>
+            {/* 予約・振替の決定権は生徒側にあるため、コーチ側では「未消化枠がある」ことの
+                通知のみとし、Bookボタン（book_makeup_sessionの直接呼び出し）は置かない */}
             <ul className="space-y-1.5 pl-5.5">
               {shortfalls.map((s) => (
-                <li key={s.schedule_id} className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold text-amber-700">
-                    {DAY_OF_WEEK_SHORT_LABEL_EN[s.day_of_week as DayOfWeek]} {s.start_time.slice(0, 5)}: only {s.actual_sessions} of {s.expected_sessions} sessions scheduled ({s.shortfall} short).
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 text-amber-700 border-amber-200 hover:bg-amber-100"
-                    onClick={() => setBookMakeupScheduleId(s.schedule_id)}
-                  >
-                    Book
-                  </Button>
+                <li key={s.schedule_id} className="text-[11px] font-semibold text-amber-700">
+                  {DAY_OF_WEEK_SHORT_LABEL_EN[s.day_of_week as DayOfWeek]} {s.start_time.slice(0, 5)}: only {s.actual_sessions} of {s.expected_sessions} sessions scheduled ({s.shortfall} short). The student can book a makeup session.
                 </li>
               ))}
             </ul>
@@ -132,15 +121,6 @@ export function LiveSessionHistoryCard({ studentId, studentName, sessions: initi
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => setActionTarget({ session: toSessionListItem(session, studentId, studentName), mode: 'reschedule' })}
-                      >
-                        <RotateCcw size={13} />
-                        Reschedule
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
                         className="text-rose-600 border-rose-200 hover:bg-rose-50"
                         onClick={() => setActionTarget({ session: toSessionListItem(session, studentId, studentName), mode: 'cancel' })}
                       >
@@ -171,15 +151,6 @@ export function LiveSessionHistoryCard({ studentId, studentName, sessions: initi
       </CardContent>
 
       <SessionActionDialog target={actionTarget} onClose={() => setActionTarget(null)} onResolved={handleResolved} />
-
-      <BookMakeupSessionDialog
-        scheduleId={bookMakeupScheduleId}
-        onClose={() => setBookMakeupScheduleId(null)}
-        onBooked={() => {
-          setBookMakeupScheduleId(null);
-          router.refresh();
-        }}
-      />
     </Card>
   );
 }

@@ -3,8 +3,6 @@
 import {
   getMySessionsCore,
   cancelSessionCore,
-  rescheduleSessionCore,
-  bookMakeupSessionCore,
   finalizeSessionCore,
   resolveStaleSessionCore,
   getSessionResultSummaryCore,
@@ -15,6 +13,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
   CoachSessionTasksSummary,
+  ProposedSlotInput,
   SessionActionErrorCode,
   SessionListItem,
   SessionResultSummary,
@@ -49,14 +48,17 @@ export async function getMySessions(startIso: string, endIso: string): Promise<S
 }
 
 /**
- * Cancels an upcoming session
+ * Cancels an upcoming session. As the coach, up to 3 proposed alternative times can be
+ * attached at the same time (decision authority still rests with the student — these are
+ * only suggestions; the student books via acceptRescheduleProposal or their own self-serve flow).
  */
 export async function cancelSession(
   sessionId: string,
-  reason?: string
+  reason?: string,
+  proposedSlots?: ProposedSlotInput[]
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await cancelSessionCore(sessionId, reason);
+  const result = await cancelSessionCore(sessionId, reason, proposedSlots);
 
   if (!result.success) {
     logger.error('coach:cancel_session_failed', result.errorCode, ctx);
@@ -64,49 +66,6 @@ export async function cancelSession(
   }
 
   logger.info('coach:cancel_session_success', 'Session cancelled', ctx);
-  return { success: true };
-}
-
-/**
- * Reschedules an upcoming session to a new date/time within the coach's own availability
- */
-export async function rescheduleSession(
-  sessionId: string,
-  newDate: string,
-  newStartTime: string,
-  reason?: string
-): Promise<{ success: true } | { success: false; message: string }> {
-  const ctx = await getLogContext();
-  const result = await rescheduleSessionCore(sessionId, newDate, newStartTime, reason);
-
-  if (!result.success) {
-    logger.error('coach:reschedule_session_failed', result.errorCode, ctx);
-    return { success: false, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
-  }
-
-  logger.info('coach:reschedule_session_success', 'Session rescheduled', ctx);
-  return { success: true };
-}
-
-/**
- * Books a new session against an unassigned ticket (a refunded cancellation) for a
- * lesson schedule this coach is already assigned to. No coach selection is needed since
- * the schedule already fixes the coach.
- */
-export async function bookMakeupSession(
-  scheduleId: string,
-  newDate: string,
-  newStartTime: string
-): Promise<{ success: true } | { success: false; message: string }> {
-  const ctx = await getLogContext();
-  const result = await bookMakeupSessionCore(scheduleId, newDate, newStartTime);
-
-  if (!result.success) {
-    logger.error('coach:book_makeup_session_failed', result.errorCode, ctx);
-    return { success: false, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
-  }
-
-  logger.info('coach:book_makeup_session_success', 'Makeup session booked', ctx);
   return { success: true };
 }
 

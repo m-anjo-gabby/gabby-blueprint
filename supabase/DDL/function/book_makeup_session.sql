@@ -11,6 +11,10 @@
 -- コーチ選択を受け付けず、スケジュール(コマ)IDのみを受け取る。
 -- reschedule_session() と同じ空き時間・重複チェックのパターンを流用するが、
 -- 元になる既存セッション行が無い（新規に枠を使う）点が異なる。
+--
+-- 【生徒限定化 (2026-09-07追加)】
+-- 予約・振替の決定権は生徒側に一本化する方針のため、本関数はコーチからの実行を
+-- 拒否するよう変更した。予約完了時はコーチへ通知(SESSION_BOOKED_BY_STUDENT)する。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.book_makeup_session(
     p_schedule_id uuid,
@@ -37,7 +41,7 @@ BEGIN
         RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
     END IF;
 
-    IF v_schedule.student_id <> auth.uid() AND v_schedule.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+    IF v_schedule.student_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
         RAISE EXCEPTION 'not authorized to book a session for this schedule';
     END IF;
 
@@ -109,6 +113,18 @@ BEGIN
         v_new_start, v_new_end, 1
     )
     RETURNING session_id INTO v_new_session_id;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    SELECT
+        v_schedule.coach_id,
+        'SESSION_BOOKED_BY_STUDENT',
+        jsonb_build_object(
+            'session_id', v_new_session_id,
+            'student_name', u.user_name,
+            'session_start_datetime', v_new_start
+        ),
+        '/students/' || v_schedule.student_id
+    FROM public.com_m_user u WHERE u.id = v_schedule.student_id;
 
     RETURN v_new_session_id;
 END;

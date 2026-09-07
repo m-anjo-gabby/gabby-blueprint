@@ -26,4 +26,20 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
     title: String(payload.sender_name ?? 'New message'),
     body: String(payload.preview ?? 'You have a new message'),
   }),
+  SESSION_CANCELLED_BY_COACH: () => ({
+    title: 'Session cancelled',
+    body: 'You cancelled a scheduled session.',
+  }),
+  SESSION_RESCHEDULE_PROPOSED: () => ({
+    title: 'Reschedule proposal sent',
+    body: 'Your proposed reschedule times were sent to the student.',
+  }),
+  SESSION_CANCELLED_BY_STUDENT: (payload) => ({
+    title: 'Session cancelled',
+    body: `${String(payload.student_name ?? 'A student')} cancelled a scheduled session.`,
+  }),
+  SESSION_BOOKED_BY_STUDENT: (payload) => ({
+    title: 'New session booked',
+    body: `${String(payload.student_name ?? 'A student')} booked or rescheduled a session.`,
+  }),
 };

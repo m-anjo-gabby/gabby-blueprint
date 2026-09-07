@@ -100,6 +100,41 @@
 --   getLessonSprintHistoryCoreへのsession_id追加等）は本SQLの対象外（DB変更のみ）。
 --
 --   ---------------------------------------------------------------------
+--   【追加分】予約・振替の生徒限定化とコーチ提案機能、通知拡充 (2026-09-07)
+--   ---------------------------------------------------------------------
+--   予約・振替の決定権を生徒側に一本化する方針とし、reschedule_session()/
+--   book_makeup_session()をコーチから実行できないよう変更する。代わりに、
+--   コーチがキャンセルする際に候補時間（Availability外も可、最大3件、
+--   回答期限48時間）を生徒へ提案できる機能を追加する。あわせて、セッションの
+--   キャンセル・予約・振替それぞれのタイミングで相手方へ通知(com_t_notification)
+--   を作成するようにする。
+--
+--   16. com_t_session_reschedule_proposal テーブルを新規作成
+--       - 1提案=1候補行。書き込みはcom_t_session本体と同様、SECURITY DEFINER
+--         関数経由のみ（直接INSERT/UPDATEのRLSは許可しない）。
+--   17. cancel_session() を更新する
+--       - p_proposed_slots(jsonb, 最大3件)を追加。コーチキャンセル時のみ有効。
+--       - キャンセル完了時、相手方へ通知を作成する
+--         (コーチ→生徒: SESSION_CANCELLED_BY_COACH/SESSION_RESCHEDULE_PROPOSED、
+--          生徒→コーチ: SESSION_CANCELLED_BY_STUDENT)。
+--   18. reschedule_session() を更新する
+--       - 生徒本人のみ実行可能に変更（コーチからの実行を拒否）。
+--       - 振替完了時、コーチへ通知(SESSION_BOOKED_BY_STUDENT)を作成する。
+--   19. book_makeup_session() を更新する
+--       - 生徒本人のみ実行可能に変更（コーチからの実行を拒否）。
+--       - 予約完了時、コーチへ通知(SESSION_BOOKED_BY_STUDENT)を作成する。
+--   20. accept_session_reschedule_proposal() / decline_session_reschedule_proposal()
+--       を新規作成する
+--       - 生徒がコーチ提案の候補を承諾/却下するRPC。承諾時はAvailabilityチェックを
+--         行わず(コーチが明示的に提案した時間のため)、二重予約チェックのみ行う。
+--         承諾された候補以外の同一キャンセルの候補は自動的にdeclined化する。
+--
+--   通知種別(SESSION_CANCELLED_BY_COACH/SESSION_RESCHEDULE_PROPOSED/
+--   SESSION_CANCELLED_BY_STUDENT/SESSION_BOOKED_BY_STUDENT)のTS側定義
+--   (packages/types/notification.ts、apps/coach/constants/notification.ts)、
+--   および各画面のUI変更は本SQLの対象外（DB変更のみ）。
+--
+--   ---------------------------------------------------------------------
 --   【追加分】ライブ通話チャット履歴の永続化 (2026-09-06)
 --   ---------------------------------------------------------------------
 --   Zoom Video SDKのin-callチャットはSDK側に永続化機能・取得APIを持たず、
@@ -910,5 +945,539 @@ FOR SELECT TO authenticated USING (
           AND r.coach_id = auth.uid()
     )
 );
+
+-- =========================================================================
+-- 16. com_t_session_reschedule_proposal 新規作成
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.com_t_session_reschedule_proposal (
+    proposal_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id uuid NOT NULL REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
+    coach_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    student_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    proposed_start_datetime timestamp with time zone NOT NULL,
+    proposed_end_datetime timestamp with time zone NOT NULL,
+    status smallint NOT NULL DEFAULT 1,
+    expires_at timestamp with time zone NOT NULL,
+    responded_at timestamp with time zone,
+    resulting_session_id uuid REFERENCES public.com_t_session(session_id),
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_proposal_status CHECK (status IN (1, 2, 3, 4)),
+    CONSTRAINT chk_proposal_time_range CHECK (proposed_end_datetime > proposed_start_datetime)
+);
+
+COMMENT ON TABLE public.com_t_session_reschedule_proposal IS 'コーチがキャンセル時に生徒へ提案する振替候補時間（決定権は生徒側。最大3件/キャンセル）';
+COMMENT ON COLUMN public.com_t_session_reschedule_proposal.status IS 'ステータス 1:pending(未回答) 2:accepted(承諾済み) 3:declined(却下/他候補の承諾により自動不採用) 4:expired(期限切れ)';
+COMMENT ON COLUMN public.com_t_session_reschedule_proposal.expires_at IS '回答期限。cancel_session実行時に決定した固定値';
+COMMENT ON COLUMN public.com_t_session_reschedule_proposal.resulting_session_id IS '承諾により新規作成されたcom_t_session行（accepted以外はNULL）';
+
+CREATE INDEX IF NOT EXISTS idx_session_reschedule_proposal_session ON public.com_t_session_reschedule_proposal (session_id);
+CREATE INDEX IF NOT EXISTS idx_session_reschedule_proposal_student_status ON public.com_t_session_reschedule_proposal (student_id, status);
+
+ALTER TABLE public.com_t_session_reschedule_proposal ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Involved users can view reschedule proposals" ON public.com_t_session_reschedule_proposal;
+CREATE POLICY "Involved users can view reschedule proposals" ON public.com_t_session_reschedule_proposal
+FOR SELECT TO authenticated USING (
+    student_id = auth.uid()
+    OR coach_id = auth.uid()
+    OR public.get_jwt_user_type() = '0'
+);
+
+-- =========================================================================
+-- 17. cancel_session() 更新（提案スロット対応・通知追加）
+-- =========================================================================
+DROP FUNCTION IF EXISTS public.cancel_session(uuid, text);
+
+CREATE OR REPLACE FUNCTION public.cancel_session(
+    p_session_id uuid,
+    p_reason text DEFAULT NULL,
+    p_proposed_slots jsonb DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_new_status smallint;
+    v_refunded boolean;
+    v_is_coach boolean;
+    v_coach_name text;
+    v_student_name text;
+    v_slot jsonb;
+    v_slot_start timestamptz;
+    v_slot_end timestamptz;
+    v_proposal_count integer := 0;
+    v_proposal_validity_hours CONSTANT integer := 48;
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_session.student_id <> auth.uid() AND v_session.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to cancel this session';
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime <= NOW() THEN
+        RAISE EXCEPTION 'cannot cancel a session that has already started';
+    END IF;
+
+    v_is_coach := (v_session.coach_id = auth.uid());
+
+    IF v_session.student_id = auth.uid() THEN
+        v_new_status := 3;
+        v_refunded := (v_session.start_datetime - NOW()) >= interval '12 hours';
+    ELSE
+        v_new_status := 4;
+        v_refunded := true;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = v_new_status, cancel_reason = p_reason, cancelled_by = auth.uid(),
+        ticket_refunded = v_refunded, update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_session.coach_id;
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_session.student_id;
+
+    IF v_is_coach THEN
+        IF p_proposed_slots IS NOT NULL THEN
+            v_proposal_count := jsonb_array_length(p_proposed_slots);
+            IF v_proposal_count > 3 THEN
+                RAISE EXCEPTION 'cannot propose more than 3 alternative times';
+            END IF;
+
+            FOR v_slot IN SELECT * FROM jsonb_array_elements(p_proposed_slots) LOOP
+                v_slot_start := (v_slot->>'start_datetime')::timestamptz;
+                v_slot_end := (v_slot->>'end_datetime')::timestamptz;
+
+                IF v_slot_start <= NOW() THEN
+                    RAISE EXCEPTION 'proposed time must be in the future';
+                END IF;
+                IF v_slot_end <= v_slot_start THEN
+                    RAISE EXCEPTION 'invalid proposed time range';
+                END IF;
+
+                INSERT INTO public.com_t_session_reschedule_proposal (
+                    session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime, expires_at
+                ) VALUES (
+                    p_session_id, v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end,
+                    NOW() + (v_proposal_validity_hours || ' hours')::interval
+                );
+            END LOOP;
+        END IF;
+
+        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+        VALUES (
+            v_session.student_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED' ELSE 'SESSION_CANCELLED_BY_COACH' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'coach_name', v_coach_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            '/live-room'
+        );
+    ELSE
+        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+        VALUES (
+            v_session.coach_id,
+            'SESSION_CANCELLED_BY_STUDENT',
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'student_name', v_student_name,
+                'session_start_datetime', v_session.start_datetime
+            ),
+            '/students/' || v_session.student_id
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb) TO authenticated;
+
+-- =========================================================================
+-- 18. reschedule_session() 更新（生徒限定化・通知追加）
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.reschedule_session(
+    p_session_id uuid,
+    p_new_date date,
+    p_new_start_time time,
+    p_reason text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_coach_tz text;
+    v_duration interval;
+    v_new_start timestamptz;
+    v_new_end timestamptz;
+    v_new_end_time time;
+    v_day_of_week smallint;
+    v_new_session_id uuid;
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_session.student_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to reschedule this session';
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime - NOW() < interval '12 hours' THEN
+        RAISE EXCEPTION 'cannot reschedule a session within 12 hours of its start time';
+    END IF;
+
+    SELECT timezone INTO v_coach_tz FROM public.com_m_user WHERE id = v_session.coach_id;
+    v_coach_tz := COALESCE(v_coach_tz, 'Asia/Tokyo');
+
+    v_duration := v_session.end_datetime - v_session.start_datetime;
+    v_new_start := (p_new_date + p_new_start_time) AT TIME ZONE v_coach_tz;
+    v_new_end := v_new_start + v_duration;
+    v_new_end_time := p_new_start_time + v_duration;
+    v_day_of_week := EXTRACT(DOW FROM p_new_date)::smallint;
+
+    IF v_new_start <= NOW() THEN
+        RAISE EXCEPTION 'new start datetime must be in the future';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.com_m_coach_availability a
+        WHERE a.coach_id = v_session.coach_id
+          AND a.day_of_week = v_day_of_week
+          AND a.delete_flg = '0'
+          AND a.start_time <= p_new_start_time
+          AND a.end_time >= v_new_end_time
+    ) THEN
+        RAISE EXCEPTION 'requested time is outside coach availability';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_coach_availability_exception e
+        WHERE e.coach_id = v_session.coach_id
+          AND e.exception_date = p_new_date
+          AND e.exception_type = 'BLOCK'
+          AND e.start_time < v_new_end_time
+          AND e.end_time > p_new_start_time
+    ) THEN
+        RAISE EXCEPTION 'requested date is blocked by coach exception';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.coach_id = v_session.coach_id
+          AND s.status = 1
+          AND s.session_id <> p_session_id
+          AND s.start_datetime < v_new_end
+          AND s.end_datetime > v_new_start
+    ) THEN
+        RAISE EXCEPTION 'coach already has a session at this time';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.student_id = v_session.student_id
+          AND s.status = 1
+          AND s.session_id <> p_session_id
+          AND s.start_datetime < v_new_end
+          AND s.end_datetime > v_new_start
+    ) THEN
+        RAISE EXCEPTION 'student already has a session at this time';
+    END IF;
+
+    INSERT INTO public.com_t_session (
+        schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from
+    ) VALUES (
+        v_session.schedule_id, v_session.ticket_id, v_session.student_id, v_session.coach_id,
+        v_new_start, v_new_end, 1, p_session_id
+    )
+    RETURNING session_id INTO v_new_session_id;
+
+    UPDATE public.com_t_session
+    SET status = 5, cancel_reason = p_reason, cancelled_by = auth.uid(), update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    SELECT
+        v_session.coach_id,
+        'SESSION_BOOKED_BY_STUDENT',
+        jsonb_build_object(
+            'session_id', v_new_session_id,
+            'student_name', u.user_name,
+            'session_start_datetime', v_new_start
+        ),
+        '/students/' || v_session.student_id
+    FROM public.com_m_user u WHERE u.id = v_session.student_id;
+
+    RETURN v_new_session_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.reschedule_session(uuid, date, time, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reschedule_session(uuid, date, time, text) TO authenticated;
+
+-- =========================================================================
+-- 19. book_makeup_session() 更新（生徒限定化・通知追加）
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.book_makeup_session(
+    p_schedule_id uuid,
+    p_new_date date,
+    p_new_start_time time
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_shortfall integer;
+    v_duration interval;
+    v_new_start timestamptz;
+    v_new_end timestamptz;
+    v_new_end_time time;
+    v_day_of_week smallint;
+    v_new_session_id uuid;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    IF v_schedule.student_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to book a session for this schedule';
+    END IF;
+
+    IF v_schedule.status <> 1 THEN
+        RAISE EXCEPTION 'lesson schedule % is not active (status=%)', p_schedule_id, v_schedule.status;
+    END IF;
+
+    SELECT shortfall INTO v_shortfall FROM public.fn_schedule_shortfall(p_schedule_id);
+    IF v_shortfall <= 0 THEN
+        RAISE EXCEPTION 'no unassigned ticket available for this schedule';
+    END IF;
+
+    v_duration := v_schedule.end_time - v_schedule.start_time;
+    v_new_start := (p_new_date + p_new_start_time) AT TIME ZONE v_schedule.coach_timezone;
+    v_new_end := v_new_start + v_duration;
+    v_new_end_time := p_new_start_time + v_duration;
+    v_day_of_week := EXTRACT(DOW FROM p_new_date)::smallint;
+
+    IF v_new_start <= NOW() THEN
+        RAISE EXCEPTION 'new start datetime must be in the future';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.com_m_coach_availability a
+        WHERE a.coach_id = v_schedule.coach_id
+          AND a.day_of_week = v_day_of_week
+          AND a.delete_flg = '0'
+          AND a.start_time <= p_new_start_time
+          AND a.end_time >= v_new_end_time
+    ) THEN
+        RAISE EXCEPTION 'requested time is outside coach availability';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_coach_availability_exception e
+        WHERE e.coach_id = v_schedule.coach_id
+          AND e.exception_date = p_new_date
+          AND e.exception_type = 'BLOCK'
+          AND e.start_time < v_new_end_time
+          AND e.end_time > p_new_start_time
+    ) THEN
+        RAISE EXCEPTION 'requested date is blocked by coach exception';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.coach_id = v_schedule.coach_id
+          AND s.status = 1
+          AND s.start_datetime < v_new_end
+          AND s.end_datetime > v_new_start
+    ) THEN
+        RAISE EXCEPTION 'coach already has a session at this time';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.student_id = v_schedule.student_id
+          AND s.status = 1
+          AND s.start_datetime < v_new_end
+          AND s.end_datetime > v_new_start
+    ) THEN
+        RAISE EXCEPTION 'student already has a session at this time';
+    END IF;
+
+    INSERT INTO public.com_t_session (
+        schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status
+    ) VALUES (
+        v_schedule.schedule_id, v_schedule.ticket_id, v_schedule.student_id, v_schedule.coach_id,
+        v_new_start, v_new_end, 1
+    )
+    RETURNING session_id INTO v_new_session_id;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    SELECT
+        v_schedule.coach_id,
+        'SESSION_BOOKED_BY_STUDENT',
+        jsonb_build_object(
+            'session_id', v_new_session_id,
+            'student_name', u.user_name,
+            'session_start_datetime', v_new_start
+        ),
+        '/students/' || v_schedule.student_id
+    FROM public.com_m_user u WHERE u.id = v_schedule.student_id;
+
+    RETURN v_new_session_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.book_makeup_session(uuid, date, time) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.book_makeup_session(uuid, date, time) TO authenticated;
+
+-- =========================================================================
+-- 20. accept_session_reschedule_proposal() / decline_session_reschedule_proposal() 新規作成
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.accept_session_reschedule_proposal(p_proposal_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_proposal RECORD;
+    v_session RECORD;
+    v_new_session_id uuid;
+BEGIN
+    SELECT * INTO v_proposal FROM public.com_t_session_reschedule_proposal WHERE proposal_id = p_proposal_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'proposal % not found', p_proposal_id;
+    END IF;
+
+    IF v_proposal.student_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to respond to this proposal';
+    END IF;
+
+    IF v_proposal.status = 4 OR (v_proposal.status = 1 AND v_proposal.expires_at <= NOW()) THEN
+        UPDATE public.com_t_session_reschedule_proposal SET status = 4, update_date = NOW() WHERE proposal_id = p_proposal_id AND status = 1;
+        RAISE EXCEPTION 'this proposal has expired';
+    END IF;
+
+    IF v_proposal.status <> 1 THEN
+        RAISE EXCEPTION 'this proposal is no longer pending (status=%)', v_proposal.status;
+    END IF;
+
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = v_proposal.session_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'original session % not found', v_proposal.session_id;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.coach_id = v_session.coach_id
+          AND s.status = 1
+          AND s.start_datetime < v_proposal.proposed_end_datetime
+          AND s.end_datetime > v_proposal.proposed_start_datetime
+    ) THEN
+        RAISE EXCEPTION 'coach already has a session at this time';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.student_id = v_session.student_id
+          AND s.status = 1
+          AND s.start_datetime < v_proposal.proposed_end_datetime
+          AND s.end_datetime > v_proposal.proposed_start_datetime
+    ) THEN
+        RAISE EXCEPTION 'student already has a session at this time';
+    END IF;
+
+    INSERT INTO public.com_t_session (
+        schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from
+    ) VALUES (
+        v_session.schedule_id, v_session.ticket_id, v_session.student_id, v_session.coach_id,
+        v_proposal.proposed_start_datetime, v_proposal.proposed_end_datetime, 1, v_proposal.session_id
+    )
+    RETURNING session_id INTO v_new_session_id;
+
+    UPDATE public.com_t_session_reschedule_proposal
+    SET status = 2, responded_at = NOW(), resulting_session_id = v_new_session_id, update_date = NOW()
+    WHERE proposal_id = p_proposal_id;
+
+    UPDATE public.com_t_session_reschedule_proposal
+    SET status = 3, responded_at = NOW(), update_date = NOW()
+    WHERE session_id = v_proposal.session_id
+      AND proposal_id <> p_proposal_id
+      AND status = 1;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    SELECT
+        v_session.coach_id,
+        'SESSION_BOOKED_BY_STUDENT',
+        jsonb_build_object(
+            'session_id', v_new_session_id,
+            'student_name', u.user_name,
+            'session_start_datetime', v_proposal.proposed_start_datetime
+        ),
+        '/students/' || v_session.student_id
+    FROM public.com_m_user u WHERE u.id = v_session.student_id;
+
+    RETURN v_new_session_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.accept_session_reschedule_proposal(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.accept_session_reschedule_proposal(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.decline_session_reschedule_proposal(p_proposal_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_proposal RECORD;
+BEGIN
+    SELECT * INTO v_proposal FROM public.com_t_session_reschedule_proposal WHERE proposal_id = p_proposal_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'proposal % not found', p_proposal_id;
+    END IF;
+
+    IF v_proposal.student_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to respond to this proposal';
+    END IF;
+
+    IF v_proposal.status <> 1 THEN
+        RAISE EXCEPTION 'this proposal is no longer pending (status=%)', v_proposal.status;
+    END IF;
+
+    UPDATE public.com_t_session_reschedule_proposal
+    SET status = 3, responded_at = NOW(), update_date = NOW()
+    WHERE proposal_id = p_proposal_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.decline_session_reschedule_proposal(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.decline_session_reschedule_proposal(uuid) TO authenticated;
 
 COMMIT;
