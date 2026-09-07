@@ -7,9 +7,11 @@ import {
   ArrowRight,
   BadgeCheck,
   CheckCircle2,
+  Clock,
   ExternalLink,
   Loader2,
   MessageCircle,
+  TriangleAlert,
   Video,
   Zap,
 } from 'lucide-react';
@@ -21,6 +23,7 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { hasCoachJoinedSessions } from '@/actions/sessionAction';
 import { useEndLesson } from '@/hooks/useEndLesson';
 import { EndLessonReasonDialog } from '@/components/session/EndLessonReasonDialog';
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { SESSION_STATUS, type SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
@@ -79,6 +82,30 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
     };
   }, [isActionable, session.session_id]);
 
+  // 終了予定時刻超過の警告は時間経過で状態が変わるため、画面を開いたまま放置されても
+  // 最新状態を保てるよう定期的に「今」を更新する（この用途にのみ使う。ボタンの有効/無効の
+  // 見た目はこのタイマーに依存させない。早期入室の可否はクリック時にその場で判定する）。
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 15000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const earliestJoinTime = new Date(new Date(session.start_datetime).getTime() - LIVE_SESSION_EARLY_JOIN_BEFORE_MS);
+  const isPastScheduledEnd = now > new Date(session.end_datetime);
+  const [showEarlyJoinNotice, setShowEarlyJoinNotice] = useState(false);
+
+  // ボタンは常に活性状態のまま表示し、クリックされた瞬間にのみ判定する
+  // （render時点の状態に基づく無効化はせず、画面を放置してもリフレッシュ不要で正しく動く）。
+  const handleStartLiveSessionClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (Date.now() < earliestJoinTime.getTime()) {
+      e.preventDefault();
+      setShowEarlyJoinNotice(true);
+      return;
+    }
+    setShowEarlyJoinNotice(false);
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-8">
       <div>
@@ -120,27 +147,43 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
             </div>
 
             {isActionable ? (
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <Link
-                  href={`/students/${studentId}/room/${session.session_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-indigo-200"
-                >
-                  <Video size={14} />
-                  Start Live Session
-                  <ExternalLink size={12} className="opacity-70" />
-                </Link>
-                <button
-                  onClick={() => endLesson(session.session_id, studentId)}
-                  disabled={!hasCoachJoined || endingSessionId === session.session_id}
-                  title={hasCoachJoined ? 'Record this session’s outcome' : 'Join the call at least once before ending the session'}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors px-4 py-2.5 rounded-full shadow-sm"
-                >
-                  {endingSessionId === session.session_id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  End Session
-                </button>
+              <div className="space-y-1.5 pt-1">
+                {isPastScheduledEnd && (
+                  <div className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                    <TriangleAlert size={13} className="shrink-0" />
+                    This session’s scheduled end time has passed. Please press End Session once you’re done
+                    {!hasCoachJoined && ' (or use Resolve from the Live Sessions list on the student overview if the call didn’t happen)'}.
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/students/${studentId}/room/${session.session_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
+                    onClick={handleStartLiveSessionClick}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-indigo-200"
+                  >
+                    <Video size={14} />
+                    Start Live Session
+                    <ExternalLink size={12} className="opacity-70" />
+                  </Link>
+                  <button
+                    onClick={() => endLesson(session.session_id, studentId)}
+                    disabled={!hasCoachJoined || endingSessionId === session.session_id}
+                    title={hasCoachJoined ? 'Record this session’s outcome' : 'Join the call at least once before ending the session'}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors px-4 py-2.5 rounded-full shadow-sm"
+                  >
+                    {endingSessionId === session.session_id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    End Session
+                  </button>
+                </div>
+                <p className={`flex items-center gap-1 text-[11px] ${showEarlyJoinNotice ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
+                  {showEarlyJoinNotice ? <TriangleAlert size={11} className="shrink-0" /> : <Clock size={11} className="shrink-0" />}
+                  {showEarlyJoinNotice
+                    ? `Not yet — you can start at ${formatDateTimeEn(earliestJoinTime, timezone)}`
+                    : `Available starting ${formatDateTimeEn(earliestJoinTime, timezone)}`}
+                </p>
               </div>
             ) : (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3">

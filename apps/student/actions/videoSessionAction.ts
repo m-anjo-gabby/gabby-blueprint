@@ -8,14 +8,17 @@ import {
 } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { LiveSessionRoomAccess, LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
 
 const logger = createLogger('student');
+const EARLY_JOIN_MINUTES = LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000;
 
 const LIVE_SESSION_ROOM_ERROR_MESSAGES_JA: Record<LiveSessionRoomErrorCode, string> = {
   unauthorized: 'セッションの有効期限が切れました。再度ログインしてください。',
   forbidden: 'この操作を行う権限がありません。',
   not_eligible: 'この機能はライブセッション付きプランの方のみご利用いただけます。専属コーチのマッチングが完了しているかもご確認ください。',
+  not_yet_available: `まだ入室できません。開始予定時刻の${EARLY_JOIN_MINUTES}分前から入室できます。`,
   unexpected_error: '予期しないエラーが発生しました。',
 };
 

@@ -2,6 +2,7 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { generateVideoSdkSignature } from '../../zoom/signature';
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../constants';
 import {
   GetLiveSessionRoomAccessResult,
   LIVE_SESSION_ROOM_ROLE,
@@ -12,6 +13,11 @@ import { GetSessionCallLogPresenceResult } from '@gabby/types/session';
 const logger = createLogger('common');
 
 type SupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
+
+/** 予定開始時刻より早すぎる入室(Zoom Video SDKの従量課金対象)を防ぐための判定 */
+function isTooEarlyToJoin(startDatetime: string): boolean {
+  return Date.now() < new Date(startDatetime).getTime() - LIVE_SESSION_EARLY_JOIN_BEFORE_MS;
+}
 
 /**
  * 個別レッスンセッション(session_id)単位で、両者が同じZoom Video SDKセッションに
@@ -42,8 +48,9 @@ async function hasActiveLiveSessionTicket(supabase: SupabaseClient, userId: stri
 
 /**
  * ログイン中コーチが、指定の個別レッスンセッションのライブセッションルームに入室するための
- * アクセス情報を取得する。対象session_idのcoach_idがログイン中コーチ本人であることのみを
- * 検証する（POCにつき、開始/終了予定時刻による活性化チェックは行わない）。
+ * アクセス情報を取得する。対象session_idのcoach_idがログイン中コーチ本人であることに加え、
+ * 開始予定時刻の`LIVE_SESSION_EARLY_JOIN_BEFORE_MS`より前でないことを検証する
+ * （Zoom Video SDKは入室時点から従量課金されるため、早すぎる入室でのコスト発生を防ぐ）。
  */
 export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Promise<GetLiveSessionRoomAccessResult> {
   const ctx = await getLogContext();
@@ -55,7 +62,7 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
 
     const { data: session, error: sessionError } = await supabase
       .from('com_t_session')
-      .select('session_id, coach_id, student_id')
+      .select('session_id, coach_id, student_id, start_datetime')
       .eq('session_id', sessionId)
       .maybeSingle();
 
@@ -65,6 +72,9 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
     }
     if (!session || session.coach_id !== user.id) {
       return { success: false, errorCode: 'forbidden' };
+    }
+    if (isTooEarlyToJoin(session.start_datetime)) {
+      return { success: false, errorCode: 'not_yet_available' };
     }
 
     const [{ data: coach, error: coachError }, { data: student, error: studentError }] = await Promise.all([
@@ -95,6 +105,7 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
         role: LIVE_SESSION_ROOM_ROLE.HOST,
         peerName: student.user_name ?? '(Unknown)',
         peerIconPath: student.icon_path ?? null,
+        startDatetime: session.start_datetime,
       },
     };
   } catch (err) {
@@ -105,9 +116,10 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
 
 /**
  * ログイン中生徒が、指定の個別レッスンセッションのライブセッションルームに入室するための
- * アクセス情報を取得する。有効なライブセッションチケットを保持し、かつ対象session_idの
- * student_idがログイン中生徒本人であることを検証する（POCにつき、開始/終了予定時刻による
- * 活性化チェックは行わない）。
+ * アクセス情報を取得する。有効なライブセッションチケットを保持し、対象session_idの
+ * student_idがログイン中生徒本人であることに加え、開始予定時刻の
+ * `LIVE_SESSION_EARLY_JOIN_BEFORE_MS`より前でないことを検証する
+ * （Zoom Video SDKは入室時点から従量課金されるため、早すぎる入室でのコスト発生を防ぐ）。
  */
 export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Promise<GetLiveSessionRoomAccessResult> {
   const ctx = await getLogContext();
@@ -123,7 +135,7 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
 
     const { data: session, error: sessionError } = await supabase
       .from('com_t_session')
-      .select('session_id, coach_id, student_id')
+      .select('session_id, coach_id, student_id, start_datetime')
       .eq('session_id', sessionId)
       .maybeSingle();
 
@@ -133,6 +145,9 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
     }
     if (!session || session.student_id !== user.id) {
       return { success: false, errorCode: 'forbidden' };
+    }
+    if (isTooEarlyToJoin(session.start_datetime)) {
+      return { success: false, errorCode: 'not_yet_available' };
     }
 
     const [{ data: student, error: studentError }, { data: coach, error: coachError }] = await Promise.all([
@@ -163,6 +178,7 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
         role: LIVE_SESSION_ROOM_ROLE.PARTICIPANT,
         peerName: coach.user_name ?? '(Unknown)',
         peerIconPath: coach.icon_path ?? null,
+        startDatetime: session.start_datetime,
       },
     };
   } catch (err) {

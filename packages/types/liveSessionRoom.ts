@@ -24,9 +24,11 @@ export interface LiveSessionRoomAccess {
   /** 相手（コーチ⇔生徒）の表示名。UIヘッダー等で使用 */
   peerName: string;
   peerIconPath: string | null;
+  /** セッション開始予定日時 (UTC ISO文字列)。早期入室不可の案内表示に使用する */
+  startDatetime: string;
 }
 
-export type LiveSessionRoomErrorCode = 'unauthorized' | 'forbidden' | 'not_eligible' | 'unexpected_error';
+export type LiveSessionRoomErrorCode = 'unauthorized' | 'forbidden' | 'not_eligible' | 'not_yet_available' | 'unexpected_error';
 
 export type GetLiveSessionRoomAccessResult =
   | { success: true; access: LiveSessionRoomAccess }

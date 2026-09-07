@@ -8,14 +8,17 @@ import {
 } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { LiveSessionRoomAccess, LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
 
 const logger = createLogger('coach');
+const EARLY_JOIN_MINUTES = LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000;
 
 const LIVE_SESSION_ROOM_ERROR_MESSAGES_EN: Record<LiveSessionRoomErrorCode, string> = {
   unauthorized: 'Your session has expired. Please sign in again.',
   forbidden: 'You do not have access to this room.',
   not_eligible: 'This student is not currently assigned to you.',
+  not_yet_available: `This session isn't open yet — you can join starting ${EARLY_JOIN_MINUTES} minutes before the scheduled start time.`,
   unexpected_error: 'An unexpected error occurred.',
 };
 
