@@ -3,22 +3,19 @@ import { ArrowLeft, BadgeCheck, BadgeX } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import type { StudentOverviewProfile, StudentSessionHistoryItem } from '@gabby/types/coachStudent';
-import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 import { SprintProgressRadar } from './SprintProgressRadar';
 import { TodaysLessonPanel } from './TodaysLessonPanel';
 
 interface Props {
   profile: StudentOverviewProfile;
-  sessions: StudentSessionHistoryItem[];
   upcomingSession: StudentSessionHistoryItem | null;
-  lessonSprints: LessonSprintHistoryListItem[];
 }
 
 function formatContractPeriod(startDate: string, endDate: string, timezone: string): string {
   return `${formatDateEn(startDate, timezone)} – ${formatDateEn(endDate, timezone)}`;
 }
 
-export function StudentOverviewHeader({ profile, sessions, upcomingSession, lessonSprints }: Props) {
+export function StudentOverviewHeader({ profile, upcomingSession }: Props) {
   const { active_contract } = profile;
 
   return (
@@ -74,7 +71,7 @@ export function StudentOverviewHeader({ profile, sessions, upcomingSession, less
           </div>
         </div>
         <div className="border-t border-indigo-100 bg-linear-to-br from-indigo-50/80 to-indigo-50/10 px-5 py-4">
-          <TodaysLessonPanel studentId={profile.student_id} sessions={sessions} upcomingSession={upcomingSession} lessonSprints={lessonSprints} />
+          <TodaysLessonPanel studentId={profile.student_id} upcomingSession={upcomingSession} />
         </div>
       </div>
     </div>

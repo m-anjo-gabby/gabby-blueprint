@@ -28,7 +28,7 @@ export default async function StudentOverviewPage({
 
   return (
     <div className="space-y-6">
-      <StudentOverviewHeader profile={overview.profile} sessions={sessions} upcomingSession={upcomingSession} lessonSprints={lessonSprints} />
+      <StudentOverviewHeader profile={overview.profile} upcomingSession={upcomingSession} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <LiveSessionHistoryCard
