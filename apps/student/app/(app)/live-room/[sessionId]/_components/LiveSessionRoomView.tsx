@@ -283,7 +283,7 @@ export function LiveSessionRoomView({ access }: Props) {
 
           {!isCoachPresent && (
             <p className="text-xs font-semibold text-slate-400 text-center">
-              {access.peerName}コーチの入室をお待ちしています…コーチが入室すると参加できます。
+              {access.peerName}コーチの入室を待機しています。入室が確認でき次第、参加できます。
             </p>
           )}
 
@@ -314,7 +314,10 @@ export function LiveSessionRoomView({ access }: Props) {
           </div>
         </div>
 
-        <div className="px-5 py-4 sm:py-5 border-t border-slate-100 shrink-0 bg-white">
+        <div className="px-5 py-4 sm:py-5 border-t border-slate-100 shrink-0 bg-white space-y-2">
+          {preview.isPreviewing && isCoachPresent && (
+            <p className="text-[11px] text-slate-400 text-center">カメラとマイクの準備ができたら、下のボタンで参加してください</p>
+          )}
           <button
             onClick={handleStartCall}
             disabled={!preview.isPreviewing || !isCoachPresent}
@@ -426,7 +429,7 @@ export function LiveSessionRoomView({ access }: Props) {
                       <User size={24} />
                     )}
                   </div>
-                  <p className="text-xs font-semibold text-slate-400">{access.peerName}コーチの入室をお待ちしています</p>
+                  <p className="text-xs font-semibold text-slate-400">{access.peerName}コーチの入室を待機しています</p>
                 </div>
               )}
             </div>

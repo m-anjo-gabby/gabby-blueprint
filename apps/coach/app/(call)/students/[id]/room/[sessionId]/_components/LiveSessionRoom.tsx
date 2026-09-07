@@ -412,7 +412,10 @@ export function LiveSessionRoom({ access }: Props) {
             </div>
           </div>
 
-          <div className="shrink-0 px-5 py-4 border-t border-slate-100 bg-white">
+          <div className="shrink-0 px-5 py-4 border-t border-slate-100 bg-white space-y-2">
+            {preview.isPreviewing && (
+              <p className="text-[11px] text-slate-400 text-center">Camera and mic look good? Tap below to join.</p>
+            )}
             <button
               onClick={handleStartCall}
               disabled={!preview.isPreviewing}
