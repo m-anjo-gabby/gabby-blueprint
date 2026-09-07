@@ -1,5 +1,6 @@
 'use client';
 
+import { Circle, X } from 'lucide-react';
 import { DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,8 @@ export interface AvailabilityCell {
 
 interface CoachAvailabilityCalendarProps {
   cells: AvailabilityCell[];
+  // 既に埋まっている（確定済み、または承認待ちの）セルのkey。選択不可として×表示する
+  unavailableKeys: Set<string>;
   selectedKey: string | null;
   onSelect: (cell: AvailabilityCell) => void;
 }
@@ -40,7 +43,7 @@ function slotIndexToLabel(slotIndex: number): string {
  * セルをクリックするとそのままレッスン開始時刻の選択として確定する
  * （曜日チップ＋プルダウンの2段階選択に代わる、直感的な1ステップ操作）。
  */
-export function CoachAvailabilityCalendar({ cells, selectedKey, onSelect }: CoachAvailabilityCalendarProps) {
+export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey, onSelect }: CoachAvailabilityCalendarProps) {
   if (cells.length === 0) {
     return <p className="text-xs text-slate-400 text-center py-10">現在、対応可能時間の登録がありません</p>;
   }
@@ -88,25 +91,38 @@ export function CoachAvailabilityCalendar({ cells, selectedKey, onSelect }: Coac
               {DAYS_OF_WEEK.map((day) => {
                 const cell = cellByDaySlot.get(`${day}-${slotIndex}`);
                 const isSelected = !!cell && cell.key === selectedKey;
+                const isUnavailable = !!cell && unavailableKeys.has(cell.key);
+                const isSelectable = !!cell && !isUnavailable;
                 return (
                   <button
                     key={day}
                     type="button"
-                    tabIndex={cell ? 0 : -1}
-                    disabled={!cell}
-                    onClick={() => cell && onSelect(cell)}
+                    tabIndex={isSelectable ? 0 : -1}
+                    disabled={!isSelectable}
+                    onClick={() => isSelectable && onSelect(cell)}
                     aria-pressed={isSelected}
-                    aria-label={cell ? `${DAY_OF_WEEK_LABEL_JA[day]} ${cell.displayStartTime}` : undefined}
-                    className={cn(
-                      'h-[26px] border-l border-slate-100 transition-colors disabled:cursor-default',
-                      isHour ? 'border-t border-t-slate-200' : 'border-t border-t-slate-100',
+                    aria-label={
                       cell
-                        ? isSelected
-                          ? 'bg-indigo-600'
-                          : 'bg-indigo-50 hover:bg-indigo-500 hover:text-white'
-                        : 'bg-white'
+                        ? isUnavailable
+                          ? `${DAY_OF_WEEK_LABEL_JA[day]} ${cell.displayStartTime} 受付終了`
+                          : `${DAY_OF_WEEK_LABEL_JA[day]} ${cell.displayStartTime} 申請可能`
+                        : undefined
+                    }
+                    className={cn(
+                      'h-[26px] border-l border-slate-100 transition-colors disabled:cursor-default flex items-center justify-center',
+                      isHour ? 'border-t border-t-slate-200' : 'border-t border-t-slate-100',
+                      isUnavailable
+                        ? 'bg-slate-100 text-slate-400'
+                        : cell
+                          ? isSelected
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-indigo-50 text-indigo-500 hover:bg-indigo-500 hover:text-white'
+                          : 'bg-white'
                     )}
-                  />
+                  >
+                    {isUnavailable && <X size={15} strokeWidth={3} aria-hidden="true" />}
+                    {isSelectable && <Circle size={13} strokeWidth={3} aria-hidden="true" />}
+                  </button>
                 );
               })}
             </div>

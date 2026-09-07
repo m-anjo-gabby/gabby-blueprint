@@ -73,3 +73,21 @@ ALTER TABLE public.com_t_user_session_ticket DROP CONSTRAINT IF EXISTS chk_ticke
 ALTER TABLE public.com_t_user_session_ticket ADD CONSTRAINT chk_ticket_weekly_frequency CHECK (weekly_frequency >= 1);
 
 COMMENT ON COLUMN public.com_t_user_session_ticket.weekly_frequency IS '週あたりのライブセッション回数（1以上）';
+
+---------------------------------------------
+-- 追加パッチ: 担当コーチ向けの参照許可 (2026-09-03)
+-- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- [参照] Student Overview画面で、契約セッション数に対する未消化枠（申請タイミングにより
+-- 全回数を予約しきれないケース）を検知・表示するため、担当コーチ(com_m_coach_student_relationship
+-- で結びついたコーチ。status不問。コーチ交代後の引き継ぎ閲覧を想定)がticketのtotal_sessions/
+-- weekly_frequencyを参照できるようにする。既存の本人・契約先クライアント向けポリシーはそのまま
+-- 残るため、本人のアクセスは変わらない（追加の許可のみ）。
+DROP POLICY IF EXISTS "Coaches can view session tickets of their students" ON public.com_t_user_session_ticket;
+CREATE POLICY "Coaches can view session tickets of their students" ON public.com_t_user_session_ticket
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = com_t_user_session_ticket.user_id AND r.coach_id = auth.uid()
+    )
+);

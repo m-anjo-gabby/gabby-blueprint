@@ -99,3 +99,20 @@ ALTER TABLE public.com_m_contract ADD CONSTRAINT chk_contract_live_fields CHECK 
 );
 
 COMMENT ON COLUMN public.com_m_contract.weekly_frequency IS '週あたりのライブセッション回数（1以上）。plan_id選択時はマスタ値をコピー、カスタム契約は自由入力。Blueprintのみの場合はNULL';
+
+---------------------------------------------
+-- 追加パッチ: Student Overview画面 契約情報表示対応 (2026-08-29)
+-- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- [参照] コーチが担当生徒のライセンス(com_t_user_license)経由で、そのライセンスが紐づく
+-- 契約(plan_name・期間等)を参照できるようにする。既存の顧客側ポリシーはそのまま残るため、
+-- 契約先クライアントのアクセスは変わらない（追加の許可のみ）。
+-- 前提: function/is_coach_of_contract_license.sql の作成が完了していること。
+-- com_t_user_licenseを直接EXISTSで参照すると、com_t_user_license側の既存ポリシーが
+-- com_m_contractを参照しているため循環参照(infinite recursion)になる。
+-- SECURITY DEFINER関数経由にすることでこれを回避している。
+DROP POLICY IF EXISTS "Coaches can view contracts of their students' licenses" ON public.com_m_contract;
+CREATE POLICY "Coaches can view contracts of their students' licenses" ON public.com_m_contract
+FOR SELECT TO authenticated USING (
+    public.is_coach_of_contract_license(com_m_contract.contract_id)
+);

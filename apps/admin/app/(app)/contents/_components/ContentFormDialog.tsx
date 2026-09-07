@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
  */
 const contentSchema = z.object({
   content_name: z.string().min(1, '教材名称は必須です'),
+  content_name_en: z.string().optional(),
   content_type: z.string().min(1, '種別を選択してください'),
   content_scope: z.string().min(1, '公開範囲を選択してください'),
   content_label: z.string().min(1, '管理ラベルは必須です'),
@@ -85,6 +86,7 @@ interface ContentFormDialogProps {
 
 const DEFAULT_VALUES: ContentFormValues = {
   content_name: '',
+  content_name_en: '',
   content_type: '0',
   content_scope: '9',
   content_label: '',
@@ -114,6 +116,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
     const sprintMeta = data.metadata?.sprint;
     return {
       content_name: data.content_name,
+      content_name_en: data.content_name_en || '',
       content_type: String(data.content_type),
       content_scope: String(data.content_scope),
       content_label: data.content_label,
@@ -191,6 +194,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
       const payload: Partial<Content> = {
         content_name: values.content_name,
+        content_name_en: values.content_name_en?.trim() || null,
         content_type: Number(values.content_type) as ContentType,
         content_scope: Number(values.content_scope) as ContentScope,
         content_label: values.content_label,
@@ -276,6 +280,22 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                   ) : (
                     <FormControl><Input {...field} placeholder="例: Gabby Sprint UG" className="bg-white rounded-xl border-slate-200" /></FormControl>
                   )}
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              {/* 教材名称（英語） */}
+              <FormField control={form.control} name="content_name_en" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">教材名称（英語・任意）</FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value || '-'}</div>
+                  ) : (
+                    <FormControl><Input {...field} placeholder="例: Gabby Sprint UG" className="bg-white rounded-xl border-slate-200" /></FormControl>
+                  )}
+                  <FormDescription className="text-[11px] text-slate-400">
+                    コーチ向け画面で使用します。未入力の場合は教材名称（日本語）が表示されます。
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )} />

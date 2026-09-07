@@ -250,17 +250,28 @@ export async function getCoachBrowseListCore(): Promise<
 
     const coachIds = profiles.map((p) => p.user_id);
 
-    const [{ data: users, error: userError }, { data: availability, error: availabilityError }] = await Promise.all([
+    const [
+      { data: users, error: userError },
+      { data: availability, error: availabilityError },
+      { data: unavailableSlots, error: unavailableError },
+    ] = await Promise.all([
       supabase.from('com_m_user').select('id, user_name, icon_path, timezone').in('id', coachIds),
       supabase
         .from('com_m_coach_availability')
         .select('availability_id, coach_id, day_of_week, start_time, end_time')
         .in('coach_id', coachIds)
         .eq('delete_flg', '0'),
+      // 予約済み（確定済み＋承認待ち）の曜日・時間帯。カレンダーで選択不可として表示するための
+      // ソフトチェック用途（最終的な整合性はcheck_coach_schedule_conflict()側で担保する）
+      supabase.rpc('get_coaches_unavailable_slots', { p_coach_ids: coachIds }),
     ]);
 
-    if (userError || availabilityError) {
-      logger.error('matching:get_coach_list_join_failed', userError?.message ?? availabilityError?.message ?? 'unknown', ctx);
+    if (userError || availabilityError || unavailableError) {
+      logger.error(
+        'matching:get_coach_list_join_failed',
+        userError?.message ?? availabilityError?.message ?? unavailableError?.message ?? 'unknown',
+        ctx
+      );
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -270,6 +281,14 @@ export async function getCoachBrowseListCore(): Promise<
       const list = availabilityByCoachId.get(slot.coach_id) ?? [];
       list.push(slot);
       availabilityByCoachId.set(slot.coach_id, list);
+    }
+
+    type UnavailableSlotRow = { coach_id: string; day_of_week: number; start_time: string; end_time: string };
+    const unavailableByCoachId = new Map<string, UnavailableSlotRow[]>();
+    for (const slot of (unavailableSlots ?? []) as UnavailableSlotRow[]) {
+      const list = unavailableByCoachId.get(slot.coach_id) ?? [];
+      list.push(slot);
+      unavailableByCoachId.set(slot.coach_id, list);
     }
 
     const coaches: CoachBrowseItem[] = profiles.map((p) => {
@@ -292,6 +311,11 @@ export async function getCoachBrowseListCore(): Promise<
           day_of_week: a.day_of_week as DayOfWeek,
           start_time: a.start_time,
           end_time: a.end_time,
+        })),
+        unavailable_slots: (unavailableByCoachId.get(p.user_id) ?? []).map((s) => ({
+          day_of_week: s.day_of_week as DayOfWeek,
+          start_time: s.start_time,
+          end_time: s.end_time,
         })),
       };
     });
@@ -324,7 +348,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
 
     const { data: ticket, error: ticketError } = await supabase
       .from('com_t_user_session_ticket')
-      .select('ticket_id, weekly_frequency')
+      .select('ticket_id, license_id, weekly_frequency')
       .eq('ticket_id', input.ticket_id)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -350,6 +374,41 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
 
     if (!availabilityMatch || availabilityMatch.length === 0) {
       return { success: false, errorCode: 'invalid_input' };
+    }
+
+    // コーチの既存の稼働中スケジュールとの重複確認（ダブルブッキング防止）。
+    // 承認時(approve_matching_request)にも同一関数で再チェックするため、ここでの判定は
+    // 「無駄になりうるリクエストを早期に弾く」ためのもので、最終的な防御線ではない。
+    const { data: licenseForConflictCheck, error: licenseError } = await supabase
+      .from('com_t_user_license')
+      .select('start_date, end_date')
+      .eq('license_id', ticket.license_id)
+      .maybeSingle();
+
+    if (licenseError || !licenseForConflictCheck) {
+      logger.error('matching:create_request_license_check_failed', licenseError?.message ?? 'license not found', { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const conflictStartDate = new Date(licenseForConflictCheck.start_date) > new Date()
+      ? licenseForConflictCheck.start_date
+      : new Date().toISOString();
+
+    const { data: hasConflict, error: conflictError } = await supabase.rpc('check_coach_schedule_conflict', {
+      p_coach_id: input.coach_id,
+      p_day_of_week: input.day_of_week,
+      p_start_time: `${input.start_time}:00`,
+      p_end_time: `${input.end_time}:00`,
+      p_start_date: conflictStartDate.slice(0, 10),
+      p_end_date: licenseForConflictCheck.end_date.slice(0, 10),
+    });
+
+    if (conflictError) {
+      logger.error('matching:create_request_conflict_check_failed', conflictError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (hasConflict) {
+      return { success: false, errorCode: 'schedule_conflict' };
     }
 
     const { data, error } = await supabase
@@ -480,6 +539,12 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
 
     if (error || !data) {
       logger.error('matching:approve_request_failed', error?.message ?? 'No schedule_id returned', { ...ctx, userId: user.id, payload: { requestId } });
+      // コーチの既存スケジュールとの重複はcheck_coach_schedule_conflict()経由でapprove_matching_request()内から
+      // RAISE EXCEPTIONされる（詳細はfunction/approve_matching_request.sqlを参照）。個別調整が必要な旨を
+      // 区別して伝えるため、専用のerrorCodeにマッピングする。
+      if (error?.message?.includes('SCHEDULE_CONFLICT')) {
+        return { success: false, errorCode: 'schedule_conflict' };
+      }
       return { success: false, errorCode: 'db_update_failed' };
     }
 

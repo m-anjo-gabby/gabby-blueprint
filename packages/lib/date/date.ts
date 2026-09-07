@@ -156,6 +156,17 @@ export const getLessonEndTime = (startTime: string): string => {
   return minutesToTimeString(timeStringToMinutes(startTime) + LESSON_MINUTES);
 };
 
+/** 2つの時間帯（"HH:MM"、終了時刻は含まない半開区間）が重なっているかを判定する */
+export const doTimeRangesOverlap = (
+  aStart: string, aEnd: string, bStart: string, bEnd: string
+): boolean => {
+  const aS = timeStringToMinutes(aStart.slice(0, 5));
+  const aE = timeStringToMinutes(aEnd.slice(0, 5));
+  const bS = timeStringToMinutes(bStart.slice(0, 5));
+  const bE = timeStringToMinutes(bEnd.slice(0, 5));
+  return aS < bE && aE > bS;
+};
+
 /** 指定タイムゾーンでの、指定UTC瞬間における「UTCからのオフセット(分)」を求める */
 function getTimeZoneOffsetMinutes(utcInstant: Date, timeZone: string): number {
   const parts = new Intl.DateTimeFormat('en-US', {

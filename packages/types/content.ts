@@ -120,6 +120,7 @@ export interface ContentMetadata {
 export interface ContentRecord {
   content_id: string;
   content_name: string;
+  content_name_en: string | null;
   content_type: ContentType;
   content_scope: ContentScope;
   content_label: string;
