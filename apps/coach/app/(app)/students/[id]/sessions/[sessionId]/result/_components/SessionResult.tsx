@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, LogIn, LogOut } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
@@ -54,7 +54,7 @@ export function SessionResult({ studentId, session, homework }: Props) {
                 {badge.label}
               </span>
               <p className="text-xs font-semibold text-slate-600">
-                {formatDateTimeByZone(session.start_datetime, timezone, false)} – {formatDateTimeByZone(session.end_datetime, timezone, false)}
+                {formatDateTimeEn(session.start_datetime, timezone)} – {formatDateTimeEn(session.end_datetime, timezone)}
               </p>
               <p className="text-xs font-semibold text-slate-400">with {session.counterpart_name}</p>
               {session.status_note && (
@@ -82,8 +82,8 @@ export function SessionResult({ studentId, session, homework }: Props) {
                       </span>
                       <span className="text-slate-600">
                         <span className="font-bold capitalize">{entry.role}</span>{' '}
-                        joined {formatDateTimeByZone(entry.joined_at, timezone, false)}
-                        {entry.left_at ? <> · left {formatDateTimeByZone(entry.left_at, timezone, false)}</> : <> · still connected</>}
+                        joined {formatDateTimeEn(entry.joined_at, timezone)}
+                        {entry.left_at ? <> · left {formatDateTimeEn(entry.left_at, timezone)}</> : <> · still connected</>}
                       </span>
                     </li>
                   ))}
@@ -104,11 +104,11 @@ export function SessionResult({ studentId, session, homework }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="rounded-2xl border-slate-200 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-800">Lesson Sprint History</CardTitle>
+              <CardTitle className="text-sm font-bold text-slate-800">Live Sprint History</CardTitle>
             </CardHeader>
             <CardContent className="pt-2">
               {session.sprint_log.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No Lesson Sprint was run in this session.</p>
+                <p className="text-xs text-slate-400 italic">No Live Sprint was run in this session.</p>
               ) : (
                 <ul className="space-y-2">
                   {session.sprint_log.map((entry) => (
@@ -119,7 +119,7 @@ export function SessionResult({ studentId, session, homework }: Props) {
                       >
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-slate-700 truncate">{entry.content_name}</p>
-                          <p className="text-[11px] text-slate-400">{formatDateTimeByZone(entry.insert_date, timezone, false)}</p>
+                          <p className="text-[11px] text-slate-400">{formatDateTimeEn(entry.insert_date, timezone)}</p>
                         </div>
                         <span className="shrink-0 text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1">
                           {entry.average_score !== null ? `${entry.average_score}/5` : '—'}

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Zap, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
@@ -20,7 +20,7 @@ export function LessonSprintCard({ studentId, history }: Props) {
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-bold text-slate-800">Lesson Sprint</CardTitle>
+        <CardTitle className="text-sm font-bold text-slate-800">Live Sprint</CardTitle>
       </CardHeader>
       <CardContent className="pt-2">
         {history.length === 0 ? (
@@ -41,7 +41,7 @@ export function LessonSprintCard({ studentId, history }: Props) {
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-slate-700 truncate">{resolveCoachContentName(record)}</p>
                       <p className="text-[11px] text-slate-400">
-                        {typeLabel} · {formatSprintLevelLabel(record.question_type, record.difficulty_level)} · {formatDateTimeByZone(record.insert_date, timezone, false)}
+                        {typeLabel} · {formatSprintLevelLabel(record.question_type, record.difficulty_level)} · {formatDateTimeEn(record.insert_date, timezone)}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">

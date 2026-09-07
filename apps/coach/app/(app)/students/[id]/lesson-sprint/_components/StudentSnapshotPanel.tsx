@@ -4,7 +4,7 @@ import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserAvatar } from '@/components/common/UserAvatar';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
@@ -65,7 +65,7 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
         </div>
 
         <div className="space-y-1.5 pt-3 border-t border-slate-100">
-          <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Recent Lesson Sprints</p>
+          <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Recent Live Sprints</p>
           {recentSprints.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <Zap size={20} className="text-slate-300 mb-2" />
@@ -84,7 +84,7 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-400 mt-0.5">
-                      {typeLabel} · {formatSprintLevelLabel(item.question_type, item.difficulty_level)} · {item.time_limit_sec}s · {formatDateTimeByZone(item.insert_date, timezone, false)}
+                      {typeLabel} · {formatSprintLevelLabel(item.question_type, item.difficulty_level)} · {item.time_limit_sec}s · {formatDateTimeEn(item.insert_date, timezone)}
                     </p>
                   </li>
                 );

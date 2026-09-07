@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight, SquareArrowOutUpRight } from 'lucide-react';
 import { SESSION_STATUS } from '@gabby/types/session';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { StudentSessionHistoryItem } from '@gabby/types/coachStudent';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
@@ -38,19 +38,19 @@ export function TodaysLessonPanel({ studentId, sessions, upcomingSession, lesson
           <span>
             Next session:{' '}
             <span className="text-slate-700">
-              {targetSession ? formatDateTimeByZone(targetSession.start_datetime, timezone, false) : 'Not scheduled'}
+              {targetSession ? formatDateTimeEn(targetSession.start_datetime, timezone) : 'Not scheduled'}
             </span>
           </span>
           <span>
             Last live session:{' '}
             <span className="text-slate-700">
-              {lastCompletedSession ? formatDateTimeByZone(lastCompletedSession.start_datetime, timezone, false) : '—'}
+              {lastCompletedSession ? formatDateTimeEn(lastCompletedSession.start_datetime, timezone) : '—'}
             </span>
           </span>
           <span>
             Last sprint:{' '}
             <span className="text-slate-700">
-              {lastSprint ? formatDateTimeByZone(lastSprint.insert_date, timezone, false) : '—'}
+              {lastSprint ? formatDateTimeEn(lastSprint.insert_date, timezone) : '—'}
             </span>
           </span>
         </div>
@@ -68,10 +68,10 @@ export function TodaysLessonPanel({ studentId, sessions, upcomingSession, lesson
         ) : (
           <Link
             href={`/students/${studentId}/lesson-sprint`}
-            title="No upcoming live session — start a standalone Lesson Sprint (e.g. run over an external call)"
+            title="No upcoming live session — start a standalone Live Sprint (e.g. run over an external call)"
             className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 transition-colors px-4 py-2.5 rounded-full shadow-sm"
           >
-            Start Lesson Sprint
+            Start Live Sprint
             <SquareArrowOutUpRight size={12} className="opacity-70" />
           </Link>
         )}

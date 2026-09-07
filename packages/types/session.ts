@@ -108,6 +108,7 @@ export interface SessionResultSummary {
   status: SessionStatus;
   status_note: string | null;
   counterpart_name: string;
+  counterpart_icon_path: string | null;
   call_log: SessionCallLogEntry[];
   chat_log: SessionChatMessageEntry[];
   sprint_log: SessionSprintSummaryEntry[];

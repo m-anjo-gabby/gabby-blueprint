@@ -148,7 +148,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
   const { secondsLeft, isPaused, togglePause, pausedSecondsRef } = useLessonSprintCountdown(config.timeLimitSec, handleTimeUp, hasStarted);
 
   const requestExit = useExitConfirmFlow({
-    confirmTitle: 'Quit Lesson Sprint?',
+    confirmTitle: 'Quit Live Sprint?',
     confirmMessage: 'Progress will not be saved if you quit now. Continue?',
     confirmVariant: 'warning',
     onExit: () => onExit(),
@@ -182,7 +182,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
 
             <div className="flex-1 flex flex-col items-center px-4 min-w-0">
               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5 select-none shrink-0">
-                {contentName || 'Lesson Sprint'}
+                {contentName || 'Live Sprint'}
               </span>
               <h1 className="text-sm font-black text-slate-800 tracking-tight text-center w-full truncate">
                 {courseTitle}
@@ -375,7 +375,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
 
             <div className="space-y-1.5">
               <h3 className="text-lg font-black text-slate-800 tracking-tight">
-                {isSaving ? 'Saving results' : 'Lesson Sprint Complete'}
+                {isSaving ? 'Saving results' : 'Live Sprint Complete'}
               </h3>
               <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[220px] mx-auto">
                 {isSaving ? 'Please wait a moment...' : "Here's how this session went"}

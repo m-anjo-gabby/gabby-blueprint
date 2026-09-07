@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { DayOfWeek } from '@gabby/types/coachAvailability';
 import { SESSION_STATUS, SessionListItem } from '@gabby/types/session';
@@ -114,7 +114,7 @@ export function LiveSessionHistoryCard({ studentId, studentName, sessions: initi
                     className="flex items-center justify-between gap-3 -m-1 p-1 rounded-lg hover:bg-slate-100/80 transition-colors"
                   >
                     <span className="text-xs font-semibold text-slate-700">
-                      {formatDateTimeByZone(session.start_datetime, timezone, false)}
+                      {formatDateTimeEn(session.start_datetime, timezone)}
                     </span>
                     <span className="flex items-center gap-1.5 shrink-0">
                       <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>

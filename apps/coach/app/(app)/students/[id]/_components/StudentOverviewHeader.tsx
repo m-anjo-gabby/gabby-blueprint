@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { format } from 'date-fns';
 import { ArrowLeft, BadgeCheck, BadgeX } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
 import type { StudentOverviewProfile, StudentSessionHistoryItem } from '@gabby/types/coachStudent';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 import { SprintProgressRadar } from './SprintProgressRadar';
@@ -14,8 +14,8 @@ interface Props {
   lessonSprints: LessonSprintHistoryListItem[];
 }
 
-function formatContractPeriod(startDate: string, endDate: string): string {
-  return `${format(new Date(startDate), 'MMM d, yyyy')} – ${format(new Date(endDate), 'MMM d, yyyy')}`;
+function formatContractPeriod(startDate: string, endDate: string, timezone: string): string {
+  return `${formatDateEn(startDate, timezone)} – ${formatDateEn(endDate, timezone)}`;
 }
 
 export function StudentOverviewHeader({ profile, sessions, upcomingSession, lessonSprints }: Props) {
@@ -54,7 +54,7 @@ export function StudentOverviewHeader({ profile, sessions, upcomingSession, less
                     </p>
                     <p>
                       <span className="font-semibold text-emerald-500/80">Period </span>
-                      {formatContractPeriod(active_contract.start_date, active_contract.end_date)}
+                      {formatContractPeriod(active_contract.start_date, active_contract.end_date, profile.timezone)}
                     </p>
                   </div>
                 </div>

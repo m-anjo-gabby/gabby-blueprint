@@ -439,7 +439,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
       { data: chatRows, error: chatError },
       { data: sprintRows, error: sprintError },
     ] = await Promise.all([
-      supabase.from('com_m_user').select('user_name').eq('id', counterpartId).maybeSingle(),
+      supabase.from('com_m_user').select('user_name, icon_path').eq('id', counterpartId).maybeSingle(),
       supabase
         .from('com_t_session_call_log')
         .select('call_log_id, role, joined_at, left_at')
@@ -514,6 +514,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         status: session.status,
         status_note: session.status_note,
         counterpart_name: counterpart?.user_name ?? '(Unknown)',
+        counterpart_icon_path: counterpart?.icon_path ?? null,
         call_log: callLog,
         chat_log: chatLog,
         sprint_log: sprintLog,

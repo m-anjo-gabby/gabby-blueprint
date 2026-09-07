@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
 import { addSessionHomework } from '@/actions/sessionHomeworkAction';
@@ -143,7 +143,7 @@ export function HomeworkComposer({ sessionId, initialEntries }: Props) {
           ) : (
             entries.map((entry) => (
               <div key={entry.homework_id} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3 space-y-2">
-                <p className="text-[10px] font-bold text-slate-400">{formatDateTimeByZone(entry.insert_date, timezone, false)}</p>
+                <p className="text-[10px] font-bold text-slate-400">{formatDateTimeEn(entry.insert_date, timezone)}</p>
                 {entry.homework_text && (
                   <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-word">{linkifyText(entry.homework_text)}</p>
                 )}

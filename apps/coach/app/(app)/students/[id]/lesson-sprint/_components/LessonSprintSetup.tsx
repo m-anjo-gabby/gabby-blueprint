@@ -309,7 +309,7 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
                 disabled={isLoading}
                 className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                {isLoading ? <Loader2 size={16} className="animate-spin" /> : <>Start Lesson Sprint<ArrowRight size={14} /></>}
+                {isLoading ? <Loader2 size={16} className="animate-spin" /> : <>Start Live Sprint<ArrowRight size={14} /></>}
               </button>
             )}
           </div>

@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { formatZonedDate, getFirstLiveSessionOccurrence } from '@gabby/lib/date/date';
+import { getFirstLiveSessionOccurrence } from '@gabby/lib/date/date';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
 import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS } from '@gabby/types/matching';
@@ -109,11 +110,11 @@ export function MatchingRequestCard({ request, onResolved }: MatchingRequestCard
             Slot {request.slot_no} &middot; {DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]}{' '}
             {formatTimeRange(request.requested_start_time, request.requested_end_time)}
           </p>
-          <p className="text-[10px] text-slate-400 mt-1">Requested {formatZonedDate(request.insert_date, timezone)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">Requested {formatDateEn(request.insert_date, timezone)}</p>
           {firstSession && (
             <p className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 mt-1">
               <CalendarClock size={12} />
-              First session: {formatZonedDate(firstSession.instant, timezone)} (
+              First session: {formatDateEn(firstSession.instant, timezone)} (
               {DAY_OF_WEEK_LABEL_EN[firstSession.day_of_week as DayOfWeek]}) {firstSession.start_time}
             </p>
           )}
