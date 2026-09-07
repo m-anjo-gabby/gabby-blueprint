@@ -9,10 +9,17 @@ import {
   resolveStaleSessionCore,
   getSessionResultSummaryCore,
 } from '@gabby/lib/session/actions/sessionActions';
+import { getCoachSessionTasksCore } from '@gabby/lib/session/actions/sessionTaskActions';
 import { getSessionCallLogPresenceCore } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { SessionActionErrorCode, SessionListItem, SessionResultSummary, SessionStatus } from '@gabby/types/session';
+import {
+  CoachSessionTasksSummary,
+  SessionActionErrorCode,
+  SessionListItem,
+  SessionResultSummary,
+  SessionStatus,
+} from '@gabby/types/session';
 
 const logger = createLogger('coach');
 
@@ -178,4 +185,21 @@ export async function hasCoachJoinedSessions(sessionIds: string[]): Promise<Reco
     return {};
   }
   return result.joinedBySessionId;
+}
+
+const EMPTY_SESSION_TASKS: CoachSessionTasksSummary = { unfinalizedSessions: [], missingHomeworkSessions: [], shortfalls: [] };
+
+/**
+ * Fetches the dashboard's "Session Tasks" data: sessions past their scheduled end time that
+ * still need End Session/Resolve, recently finalized sessions missing homework, and live
+ * session shortfalls across all of this coach's students (makeup sessions to book).
+ */
+export async function getMySessionTasks(): Promise<CoachSessionTasksSummary> {
+  const result = await getCoachSessionTasksCore();
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_my_session_tasks_failed', result.errorCode, ctx);
+    return EMPTY_SESSION_TASKS;
+  }
+  return result.tasks;
 }

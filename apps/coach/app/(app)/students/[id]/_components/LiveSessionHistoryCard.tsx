@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarClock, CheckCircle2, ChevronRight, RotateCcw, TriangleAlert, X } from 'lucide-react';
+import { CalendarClock, CheckCircle2, ChevronRight, RotateCcw, TriangleAlert, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
@@ -56,7 +56,10 @@ export function LiveSessionHistoryCard({ studentId, studentName, sessions: initi
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-bold text-slate-800">Live Sessions</CardTitle>
+        <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+          <Video size={14} className="text-indigo-500" />
+          Live Sessions
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-2 space-y-3">
         {shortfalls.length > 0 && (

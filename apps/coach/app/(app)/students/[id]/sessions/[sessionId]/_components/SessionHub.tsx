@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -9,14 +9,18 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  History,
+  Info,
   Loader2,
   MessageCircle,
+  TrendingUp,
   TriangleAlert,
   Video,
   Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { Section } from '@/components/common/Section';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -37,15 +41,6 @@ interface Props {
   /** 直近のLive Sprint実施（このセッション自身の実施分を除く） */
   recentSprints: LessonSprintHistoryListItem[];
   selfTrainingSummary: SelfTrainingWeekSummary;
-}
-
-function Section({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <section>
-      <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">{label}</h2>
-      {children}
-    </section>
-  );
 }
 
 /**
@@ -118,7 +113,7 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
         </Link>
       </div>
 
-      <Section label="Session Info">
+      <Section label="Session Info" icon={Info}>
         <Card className="rounded-2xl border-slate-200 shadow-sm">
           <CardContent className="pt-5 space-y-4">
             <div className="flex items-center justify-between gap-3">
@@ -240,7 +235,7 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
         </Section>
       )}
 
-      <Section label="Prep">
+      <Section label="Prep" icon={History}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="rounded-2xl border-slate-200 shadow-sm">
             <CardHeader className="pb-2">
@@ -296,7 +291,7 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
         </div>
       </Section>
 
-      <Section label="Self-Training">
+      <Section label="Self-Training" icon={TrendingUp}>
         <Card className="rounded-2xl border-slate-200 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold text-slate-800">Last {selfTrainingSummary.days} Days</CardTitle>

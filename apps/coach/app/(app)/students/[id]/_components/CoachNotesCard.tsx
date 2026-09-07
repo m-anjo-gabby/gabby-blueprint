@@ -46,7 +46,10 @@ export function CoachNotesCard({ studentId, initialNotes }: Props) {
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-bold text-slate-800">Coach Notes</CardTitle>
+        <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+          <StickyNote size={14} className="text-slate-400" />
+          Coach Notes
+        </CardTitle>
         <p className="text-[11px] text-slate-400">Private notes only visible to you. Newest first.</p>
       </CardHeader>
       <CardContent className="space-y-4 pt-2">

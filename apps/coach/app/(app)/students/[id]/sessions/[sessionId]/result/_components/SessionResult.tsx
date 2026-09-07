@@ -1,9 +1,9 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, LogIn, LogOut } from 'lucide-react';
+import { ArrowLeft, BookOpen, Info, LogIn, LogOut, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Section } from '@/components/common/Section';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -15,15 +15,6 @@ interface Props {
   studentId: string;
   session: SessionResultSummary;
   homework: SessionHomeworkEntry[];
-}
-
-function Section({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <section>
-      <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">{label}</h2>
-      {children}
-    </section>
-  );
 }
 
 export function SessionResult({ studentId, session, homework }: Props) {
@@ -43,7 +34,7 @@ export function SessionResult({ studentId, session, homework }: Props) {
         <h1 className="text-lg font-black text-slate-900">Session Result</h1>
       </div>
 
-      <Section label="Summary">
+      <Section label="Summary" icon={Info}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="rounded-2xl border-slate-200 shadow-sm">
             <CardHeader className="pb-2">
@@ -94,7 +85,7 @@ export function SessionResult({ studentId, session, homework }: Props) {
         </div>
       </Section>
 
-      <Section label="Homework">
+      <Section label="Homework" icon={BookOpen}>
         <div className="max-w-2xl">
           <HomeworkComposer sessionId={session.session_id} initialEntries={homework} />
         </div>
@@ -148,7 +139,7 @@ export function SessionResult({ studentId, session, homework }: Props) {
         </div>
       </Section>
 
-      <Section label="Other">
+      <Section label="Other" icon={MessageCircle}>
         <div className="max-w-2xl">
           <Card className="rounded-2xl border-slate-200 shadow-sm">
             <CardHeader className="pb-2">

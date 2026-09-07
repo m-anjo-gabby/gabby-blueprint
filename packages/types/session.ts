@@ -122,3 +122,51 @@ export type GetSessionResultSummaryResult =
 export type GetSessionCallLogPresenceResult =
   | { success: true; joinedBySessionId: Record<string, boolean> }
   | { success: false; errorCode: SessionActionErrorCode };
+
+/**
+ * ----------------------------------------------
+ * ダッシュボードの"Session Tasks"パネル向け型定義
+ * ----------------------------------------------
+ * 専用のタスク管理テーブルは持たず、既存のセッション・宿題・スケジュールの各テーブルから
+ * その場で導出する（バッチ処理を新設せずに済み、常に最新の状態を反映できるため）。
+ */
+
+/** 終了予定時刻を過ぎてもscheduledのまま未確定のセッション（End Session/Resolveが必要） */
+export interface UnfinalizedSessionTask {
+  session_id: string;
+  student_id: string;
+  student_name: string;
+  start_datetime: string;
+  end_datetime: string;
+}
+
+/** 確定済み(completed/no_show/early_ended)だが宿題が未投稿のセッション（直近の実施分に限定） */
+export interface MissingHomeworkTask {
+  session_id: string;
+  student_id: string;
+  student_name: string;
+  start_datetime: string;
+  status: SessionStatus;
+}
+
+/** コーチが担当する全生徒を横断した、定期スケジュール単位の未消化枠（振替予約が必要） */
+export interface CoachLiveSessionShortfallItem {
+  schedule_id: string;
+  student_id: string;
+  student_name: string;
+  day_of_week: number;
+  start_time: string; // "HH:MM:SS"（コーチのローカル時刻）
+  expected_sessions: number;
+  actual_sessions: number;
+  shortfall: number;
+}
+
+export interface CoachSessionTasksSummary {
+  unfinalizedSessions: UnfinalizedSessionTask[];
+  missingHomeworkSessions: MissingHomeworkTask[];
+  shortfalls: CoachLiveSessionShortfallItem[];
+}
+
+export type GetCoachSessionTasksResult =
+  | { success: true; tasks: CoachSessionTasksSummary }
+  | { success: false; errorCode: SessionActionErrorCode };

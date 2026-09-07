@@ -20,7 +20,10 @@ export function LessonSprintCard({ studentId, history }: Props) {
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-bold text-slate-800">Live Sprint</CardTitle>
+        <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+          <Zap size={14} className="fill-current text-amber-400" />
+          Live Sprint
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-2">
         {history.length === 0 ? (
