@@ -27,7 +27,7 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { hasCoachJoinedSessions } from '@/actions/sessionAction';
 import { useEndLesson } from '@/hooks/useEndLesson';
 import { EndLessonReasonDialog } from '@/components/session/EndLessonReasonDialog';
-import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { SESSION_STATUS, type SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
@@ -59,12 +59,20 @@ interface Props {
  * 情報を見たい」という要望があったため）。
  */
 export function SessionHub({ studentId, session, recentHomework, recentSprints, selfTrainingSummary }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const user = useUserStore((state) => state.user);
+  const timezone = user?.timezone || 'Asia/Tokyo';
+  // UserStoreInitializerはDBからのプロフィール取得が完了するまでuser_id: 0の仮ユーザーを
+  // セットする（timezoneも仮値のAsia/Tokyoになる）。その仮値でセッション日時を表示すると、
+  // 実際のコーチのタイムゾーンに切り替わった瞬間にちらつくため、確定するまでは表示しない。
+  const isTimezoneReady = !!user && user.user_id !== 0;
   const badge = SESSION_STATUS_BADGE[session.status];
-  const isActionable = session.status === SESSION_STATUS.SCHEDULED;
+  const { endLesson, endingSessionId, reasonDialogOpen, closeReasonDialog, submitReason, notActionableSessionId } = useEndLesson();
+  // 別タブで先にEnd Session済みだった場合、このタブでのEnd SessionクリックはRPC側の
+  // 二重確定防止チェックで拒否される。そのエラーを検知したら、リフレッシュせずとも
+  // このタブも「既に確定済み」の読み取り専用表示へ切り替える。
+  const isActionable = session.status === SESSION_STATUS.SCHEDULED && notActionableSessionId !== session.session_id;
 
   const [hasCoachJoined, setHasCoachJoined] = useState(false);
-  const { endLesson, endingSessionId, reasonDialogOpen, closeReasonDialog, submitReason } = useEndLesson();
 
   useEffect(() => {
     if (!isActionable) return;
@@ -88,6 +96,11 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
 
   const earliestJoinTime = new Date(new Date(session.start_datetime).getTime() - LIVE_SESSION_EARLY_JOIN_BEFORE_MS);
   const isPastScheduledEnd = now > new Date(session.end_datetime);
+  // 終了予定時刻からVideo SDKの最大通話時間(LIVE_SESSION_END_AFTER_MS、開始遅延分の猶予も兼ねる)
+  // を過ぎたら、新しく通話やLive Sprintを開始する導線は閉じ、End Sessionのみの参照モードにする
+  // （既に進行中の通話自体には影響しない。この定数を再利用することで、Video SDK側の最大通話時間の
+  // 設定が変わった場合もここが自動的に追従する）。
+  const isPastActionWindow = now.getTime() > new Date(session.end_datetime).getTime() + LIVE_SESSION_END_AFTER_MS;
   const [showEarlyJoinNotice, setShowEarlyJoinNotice] = useState(false);
 
   // ボタンは常に活性状態のまま表示し、クリックされた瞬間にのみ判定する
@@ -136,9 +149,13 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
 
             {/* 誤ったセッションを操作してしまうことを防ぐため、日時は強調して表示する */}
             <div className="rounded-xl bg-slate-50/80 border border-slate-100 px-4 py-3">
-              <p className="text-base font-black text-slate-800 tracking-tight">
-                {formatDateTimeEn(session.start_datetime, timezone)} – {formatDateTimeEn(session.end_datetime, timezone)}
-              </p>
+              {isTimezoneReady ? (
+                <p className="text-base font-black text-slate-800 tracking-tight">
+                  {formatDateTimeEn(session.start_datetime, timezone)} – {formatDateTimeEn(session.end_datetime, timezone)}
+                </p>
+              ) : (
+                <div className="h-5 w-56 max-w-full rounded bg-slate-200 animate-pulse" />
+              )}
             </div>
 
             {isActionable ? (
@@ -151,18 +168,20 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={`/students/${studentId}/room/${session.session_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
-                    onClick={handleStartLiveSessionClick}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-indigo-200"
-                  >
-                    <Video size={14} />
-                    Start Live Session
-                    <ExternalLink size={12} className="opacity-70" />
-                  </Link>
+                  {!isPastActionWindow && (
+                    <Link
+                      href={`/students/${studentId}/room/${session.session_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
+                      onClick={handleStartLiveSessionClick}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-indigo-200"
+                    >
+                      <Video size={14} />
+                      Start Live Session
+                      <ExternalLink size={12} className="opacity-70" />
+                    </Link>
+                  )}
                   <button
                     onClick={() => endLesson(session.session_id, studentId)}
                     disabled={!hasCoachJoined || endingSessionId === session.session_id}
@@ -173,12 +192,19 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
                     End Session
                   </button>
                 </div>
-                <p className={`flex items-center gap-1 text-[11px] ${showEarlyJoinNotice ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
-                  {showEarlyJoinNotice ? <TriangleAlert size={11} className="shrink-0" /> : <Clock size={11} className="shrink-0" />}
-                  {showEarlyJoinNotice
-                    ? `Not yet — you can start at ${formatDateTimeEn(earliestJoinTime, timezone)}`
-                    : `Available starting ${formatDateTimeEn(earliestJoinTime, timezone)}`}
-                </p>
+                {isPastActionWindow ? (
+                  <p className="flex items-center gap-1 text-[11px] text-slate-400">
+                    <Clock size={11} className="shrink-0" />
+                    Starting a new call or Live Sprint is no longer available for this session — press End Session to record the outcome.
+                  </p>
+                ) : (
+                  <p className={`flex items-center gap-1 text-[11px] ${showEarlyJoinNotice ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
+                    {showEarlyJoinNotice ? <TriangleAlert size={11} className="shrink-0" /> : <Clock size={11} className="shrink-0" />}
+                    {showEarlyJoinNotice
+                      ? `Not yet — you can start at ${formatDateTimeEn(earliestJoinTime, timezone)}`
+                      : `Available starting ${formatDateTimeEn(earliestJoinTime, timezone)}`}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3">
@@ -195,7 +221,7 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
         </Card>
       </Section>
 
-      {isActionable && (
+      {isActionable && !isPastActionWindow && (
         <Section label="Training">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="rounded-2xl border-slate-200 shadow-sm">

@@ -8,7 +8,7 @@ export default async function CoachLiveSessionRoomPage({
 }: {
   params: Promise<{ id: string; sessionId: string }>;
 }) {
-  const { sessionId } = await params;
+  const { id, sessionId } = await params;
   const result = await getLiveSessionRoomAccess(sessionId);
 
   if (!result.success) {
@@ -23,5 +23,5 @@ export default async function CoachLiveSessionRoomPage({
     );
   }
 
-  return <LiveSessionRoom access={result.access} />;
+  return <LiveSessionRoom access={result.access} studentId={id} />;
 }

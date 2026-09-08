@@ -22,6 +22,11 @@ export function useEndLesson() {
   const { showToast } = useToast();
   const [reasonDialogTarget, setReasonDialogTarget] = useState<ReasonDialogTarget | null>(null);
   const [endingSessionId, setEndingSessionId] = useState<string | null>(null);
+  // 別タブで既にEnd Session済みのセッションに対してこのタブから押してしまった場合のID。
+  // finalize_session RPCは行ロック+status再チェックで二重確定自体を防いでいるため、
+  // ここではDBへの追加問い合わせなしに、そのエラー応答から「既に確定済み」と判定して
+  // 画面側を読み取り専用表示に切り替えるためだけに使う。
+  const [notActionableSessionId, setNotActionableSessionId] = useState<string | null>(null);
 
   const runFinalize = async (sessionId: string, studentId: string, reason?: string) => {
     setEndingSessionId(sessionId);
@@ -33,6 +38,9 @@ export function useEndLesson() {
           return;
         }
         showToast(result.message, 'error');
+        if (result.errorCode === 'not_actionable') {
+          setNotActionableSessionId(sessionId);
+        }
         return;
       }
       router.push(`/students/${studentId}/sessions/${sessionId}/result`);
@@ -64,5 +72,6 @@ export function useEndLesson() {
     reasonDialogOpen: reasonDialogTarget !== null,
     closeReasonDialog: () => setReasonDialogTarget(null),
     submitReason,
+    notActionableSessionId,
   };
 }

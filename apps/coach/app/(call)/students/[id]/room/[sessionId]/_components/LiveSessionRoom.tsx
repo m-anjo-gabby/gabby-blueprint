@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowRight,
   CheckCircle2,
@@ -35,6 +36,7 @@ import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
   access: LiveSessionRoomAccess;
+  studentId: string;
 }
 
 type RoomPhase = 'preview' | 'in-call' | 'ended';
@@ -44,7 +46,7 @@ type LockStatus = 'checking' | 'granted' | 'denied';
 // （生徒A/生徒Bを問わず、コーチアカウント単位で共有する）
 const COACH_LIVE_SESSION_LOCK_NAME = 'gabby-coach-live-session-room';
 
-export function LiveSessionRoom({ access }: Props) {
+export function LiveSessionRoom({ access, studentId }: Props) {
   const preview = useZoomDevicePreview();
   const {
     isJoined,
@@ -318,20 +320,27 @@ export function LiveSessionRoom({ access }: Props) {
               : 'You can close this tab now.'}
           </p>
           <p className="text-xs text-slate-500">
-            Don&apos;t forget to press <span className="font-bold">End Session</span> on the student&apos;s page to record this session&apos;s outcome.
+            Don&apos;t forget to press <span className="font-bold">End Session</span> to record this session&apos;s outcome.
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href={`/students/${studentId}/sessions/${access.sessionId}`}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
+          >
+            Go to Session Hub
+            <ArrowRight size={14} />
+          </Link>
           <button
             onClick={() => window.close()}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors px-4 py-2 rounded-full"
           >
             <X size={14} />
             Close Tab
           </button>
         </div>
         <p className="text-[10px] text-slate-400 max-w-xs">
-          If the tab doesn&apos;t close automatically, you can close it manually.
+          If you&apos;re done for now, you can close this tab manually.
         </p>
       </div>
     );
