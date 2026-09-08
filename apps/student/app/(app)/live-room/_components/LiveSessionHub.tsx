@@ -12,16 +12,17 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { getMyPastSessions, acceptRescheduleProposal, declineRescheduleProposal } from '@/actions/sessionAction';
-import { SESSION_STATUS, SessionListItem, SessionRescheduleProposal } from '@gabby/types/session';
+import { SessionListItem, SessionRescheduleProposal, SESSION_RESULT_STATUSES, SESSION_CHANGE_HISTORY_STATUSES } from '@gabby/types/session';
 import { BookableTicketSlot, LiveSessionContractSummary } from '@gabby/types/matching';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
 
 const JOINABLE_WINDOW_MS = 48 * 60 * 60 * 1000;
-// 結果画面への導線を出す(=call_logが記録されている想定の)確定ステータス
-const RESULT_LINKABLE_STATUSES = new Set<number>([SESSION_STATUS.COMPLETED, SESSION_STATUS.NO_SHOW, SESSION_STATUS.EARLY_ENDED]);
-const CHANGE_HISTORY_STATUSES = new Set<number>([SESSION_STATUS.CANCELLED_BY_STUDENT, SESSION_STATUS.CANCELLED_BY_COACH, SESSION_STATUS.RESCHEDULED]);
+// 結果画面への導線を出す(=call_logが記録されている想定の)確定ステータス、変更履歴タブの対象は
+// packages/types/session.tsで共通定義したものを使う（コーチ側のLive Sessionsカードとも共有）
+const RESULT_LINKABLE_STATUSES = new Set<number>(SESSION_RESULT_STATUSES);
+const CHANGE_HISTORY_STATUSES = new Set<number>(SESSION_CHANGE_HISTORY_STATUSES);
 
 function isJoinableSoon(startDatetime: string): boolean {
   return new Date(startDatetime).getTime() - Date.now() <= JOINABLE_WINDOW_MS;

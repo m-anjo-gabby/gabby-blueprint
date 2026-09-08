@@ -208,6 +208,26 @@
 --   アプリケーションコード側の変更（契約登録フォームのプラン一本化、プランマスタ管理
 --   画面の追加、生徒概要のプラン名英語表示化等）は本SQLの対象外（DB変更のみ）。
 --
+--   ---------------------------------------------------------------------
+--   【追加分】カレンダーのキャンセル済み非表示、コーチのLive Sessionsカードの
+--   契約単位・担当外セッション参照対応 (2026-09-08)
+--   ---------------------------------------------------------------------
+--   週2回契約等で1コマ目・2コマ目を別コーチが分担する運用や、生徒が過去に別のコーチから
+--   引き継がれた運用があるため、担当外セッションも一覧としては参照できるようにする
+--   （結果の詳細=call_log/chat/homeworkは対象外。これらのRLSは変更しない）。
+--
+--   28. com_t_session の閲覧RLSを拡張する
+--       - 従来: student_id=自分 OR coach_id=自分 OR admin
+--       - 追加: 担当関係(com_m_coach_student_relationship)がある生徒のセッションも閲覧可能に
+--       - 【重要】本拡張により、com_t_sessionをRLSだけに委ねて問い合わせている既存コードが
+--         意図せず他コーチのセッションを取得してしまう。packages/lib/session/actions/
+--         sessionActions.ts の getMySessionsCore（メインカレンダー・ダッシュボード用）は
+--         明示的な .or(coach_id.eq/student_id.eq) フィルタを追加済み。
+--
+--   アプリケーションコード側の変更（カレンダーでのキャンセル済み等の非表示、コーチの
+--   Live Sessionsカードの契約切替・3タブ化、担当外セッションの表示等）は本SQLの対象外
+--   （DB変更のみ）。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -1712,5 +1732,20 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.invalidate_user_license(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.invalidate_user_license(uuid) TO authenticated;
+
+-- =========================================================================
+-- 28. com_t_session の閲覧RLSを拡張（担当関係のある生徒の担当外セッションも参照可）
+-- =========================================================================
+DROP POLICY IF EXISTS "Involved users can view sessions" ON public.com_t_session;
+CREATE POLICY "Involved users can view sessions" ON public.com_t_session
+FOR SELECT TO authenticated USING (
+    student_id = auth.uid()
+    OR coach_id = auth.uid()
+    OR EXISTS (
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = com_t_session.student_id AND r.coach_id = auth.uid()
+    )
+    OR public.get_jwt_user_type() = '0'
+);
 
 COMMIT;

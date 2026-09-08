@@ -63,6 +63,39 @@ export interface StudentSessionHistoryItem {
 }
 
 /**
+ * 生徒の契約(チケット)1件分の概要（コーチ視点のLive Sessionsカードの契約切替用）。
+ * 生徒側のLiveSessionContractSummaryと同型だが、対象が「ログイン中の生徒自身」ではなく
+ * 「コーチが閲覧している特定の生徒」である点が異なる。
+ */
+export interface StudentLiveSessionContractSummary {
+  ticket_id: string;
+  license_id: string;
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+}
+
+/**
+ * コーチ視点で見る、契約(チケット)単位のセッション1件分。
+ * 週2回契約等で他コーチと分担しているケースや、生徒が過去に別のコーチから引き継がれた
+ * ケースがあるため、coach_idが必ずしも閲覧者自身とは限らない（担当外セッションも含みうる）。
+ * 担当外セッションは一覧上の存在確認のみを目的とし、結果の詳細（call_log/chat/homework）
+ * には別途アクセス権が必要なため、この型には含めない。
+ */
+export interface CoachSessionListItem {
+  session_id: string;
+  schedule_id: string;
+  start_datetime: string;
+  end_datetime: string;
+  status: SessionStatus;
+  rescheduled_from: string | null;
+  cancel_reason: string | null;
+  status_note: string | null;
+  coach_id: string;
+  coach_name: string;
+}
+
+/**
  * 契約セッション数に対する未消化枠1件分（週◯曜の定期スケジュール単位）。
  * マッチング申請のタイミングにより、契約期間の途中からしかセッションを生成できず、
  * 本来確保できたはずの回数に届かないケースをコーチに知らせるためのアラート用データ。
@@ -113,8 +146,12 @@ export type GetStudentOverviewResult =
   | { success: true; profile: StudentOverviewProfile }
   | { success: false; errorCode: CoachStudentErrorCode };
 
-export type GetStudentSessionHistoryResult =
-  | { success: true; sessions: StudentSessionHistoryItem[] }
+export type GetStudentLiveSessionContractsResult =
+  | { success: true; contracts: StudentLiveSessionContractSummary[] }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+export type GetStudentSessionsByTicketResult =
+  | { success: true; sessions: CoachSessionListItem[] }
   | { success: false; errorCode: CoachStudentErrorCode };
 
 /** 次に実施可能な（status=scheduled かつ 終了予定時刻が未来の）セッション1件。無ければnull */

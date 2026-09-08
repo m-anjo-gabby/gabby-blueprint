@@ -3,9 +3,10 @@
 import {
   getAssignedStudentsCore,
   getStudentOverviewCore,
-  getStudentSessionHistoryCore,
   getStudentUpcomingSessionCore,
   getStudentLiveSessionShortfallsCore,
+  getStudentLiveSessionContractsCore,
+  getStudentSessionsByTicketCore,
   getStudentNotesCore,
   getSelfTrainingWeekSummaryCore,
   addCoachStudentNoteCore,
@@ -19,6 +20,8 @@ import {
   StudentOverviewProfile,
   StudentSessionHistoryItem,
   LiveSessionShortfallItem,
+  StudentLiveSessionContractSummary,
+  CoachSessionListItem,
   CoachStudentNote,
   CoachStudentErrorCode,
   StudentSprintProgress,
@@ -64,13 +67,29 @@ export async function getStudentOverview(
 }
 
 /**
- * Fetches this coach's live session history with the given student
+ * Fetches the list of live-session contracts (tickets) this student has ever held
+ * (current and past), for the Live Sessions card's contract switcher.
  */
-export async function getStudentSessionHistory(studentId: string): Promise<StudentSessionHistoryItem[]> {
-  const result = await getStudentSessionHistoryCore(studentId);
+export async function getStudentLiveSessionContracts(studentId: string): Promise<StudentLiveSessionContractSummary[]> {
+  const result = await getStudentLiveSessionContractsCore(studentId);
   if (!result.success) {
     const ctx = await getLogContext();
-    logger.error('coach:get_student_session_history_failed', result.errorCode, ctx);
+    logger.error('coach:get_student_live_session_contracts_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.contracts;
+}
+
+/**
+ * Fetches every session under the given contract (ticket), regardless of which coach ran it —
+ * used by the Live Sessions card so a coach can see the full curriculum for a shared/handed-over
+ * contract, not just their own sessions.
+ */
+export async function getStudentSessionsByTicket(studentId: string, ticketId: string): Promise<CoachSessionListItem[]> {
+  const result = await getStudentSessionsByTicketCore(studentId, ticketId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_student_sessions_by_ticket_failed', result.errorCode, ctx);
     return [];
   }
   return result.sessions;
@@ -79,9 +98,9 @@ export async function getStudentSessionHistory(studentId: string): Promise<Stude
 /**
  * Fetches the next session with this student that is still scheduled and hasn't ended yet
  * (used to decide which session_id "Start Live Session"/"End Lesson" should target — deliberately
- * a dedicated, tightly-filtered query rather than derived from getStudentSessionHistory's
- * descending/limited history list, since that list can omit the nearest upcoming session once
- * enough future sessions have been pre-generated for a long contract).
+ * a dedicated, tightly-filtered query rather than derived from the per-contract session list,
+ * since that list can omit the nearest upcoming session once enough future sessions have been
+ * pre-generated for a long contract).
  */
 export async function getStudentUpcomingSession(studentId: string): Promise<StudentSessionHistoryItem | null> {
   const result = await getStudentUpcomingSessionCore(studentId);

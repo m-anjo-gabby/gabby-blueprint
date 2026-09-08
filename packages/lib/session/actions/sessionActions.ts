@@ -116,9 +116,11 @@ async function toSessionListItems(
 const SESSION_ROW_COLUMNS = 'session_id, schedule_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note';
 
 /**
- * ログイン中ユーザー（生徒/コーチいずれか）の、指定期間内のセッション一覧を取得する（ポータル共通）
- * RLSにより student_id = auth.uid() OR coach_id = auth.uid() の行のみ自動的に返るため、
- * 呼び出し側でロールを意識する必要はない。
+ * ログイン中ユーザー（生徒/コーチいずれか）の、指定期間内のセッション一覧を取得する（ポータル共通、
+ * メインカレンダー・ダッシュボード用）。呼び出し側でロールを意識する必要はない。
+ * coach_id/student_idの絞り込みを明示的に行う（RLSは「担当外だが担当関係のある生徒のセッション」も
+ * コーチに開示するよう別途拡張されているため、それに引きずられてこの画面（自分の予定表）に
+ * 他コーチのセッションが混ざらないよう、ここでは常に「自分が直接の当事者」のみに限定する）。
  */
 export async function getMySessionsCore(
   startIso: string,
@@ -134,6 +136,7 @@ export async function getMySessionsCore(
     const { data: sessions, error } = await supabase
       .from('com_t_session')
       .select(SESSION_ROW_COLUMNS)
+      .or(`coach_id.eq.${user.id},student_id.eq.${user.id}`)
       .gte('start_datetime', startIso)
       .lt('start_datetime', endIso)
       .order('start_datetime', { ascending: true });

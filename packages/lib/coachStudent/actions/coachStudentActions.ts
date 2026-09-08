@@ -8,9 +8,10 @@ import {
   CoachStudentNote,
   GetAssignedStudentsResult,
   GetStudentOverviewResult,
-  GetStudentSessionHistoryResult,
   GetStudentUpcomingSessionResult,
   GetStudentLiveSessionShortfallsResult,
+  GetStudentLiveSessionContractsResult,
+  GetStudentSessionsByTicketResult,
   LiveSessionShortfallItem,
   GetStudentNotesResult,
   GetSelfTrainingWeekSummaryResult,
@@ -230,9 +231,13 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
 }
 
 /**
- * 指定生徒との、自分（コーチ）のライブセッション履歴を取得する（コーチ向け、直近50件・新しい順）
+ * 指定生徒が保有するライブセッションチケット付き契約の一覧（現在有効・過去満了分の両方）を
+ * 取得する（コーチ向け、Live Sessionsカードの契約切替用）。生徒側のgetMyLiveSessionContractsCore
+ * と同じ形だが、対象がログイン中の本人ではなく「担当関係にある特定の生徒」である点が異なる。
+ * ticket/licenseへの参照は「担当関係にある生徒であれば、担当した契約かどうかを問わず参照可能」
+ * というRLS（com_t_user_session_ticket/com_t_user_licenseに既存）にそのまま乗る。
  */
-export async function getStudentSessionHistoryCore(studentId: string): Promise<GetStudentSessionHistoryResult> {
+export async function getStudentLiveSessionContractsCore(studentId: string): Promise<GetStudentLiveSessionContractsResult> {
   const ctx = await getLogContext();
 
   try {
@@ -240,22 +245,105 @@ export async function getStudentSessionHistoryCore(studentId: string): Promise<G
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data: sessions, error } = await supabase
-      .from('com_t_session')
-      .select('session_id, schedule_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note')
-      .eq('coach_id', user.id)
-      .eq('student_id', studentId)
-      .order('start_datetime', { ascending: false })
-      .limit(50);
+    if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
 
-    if (error) {
-      logger.error('coachStudent:get_session_history_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+    const { data: tickets, error: ticketError } = await supabase
+      .from('com_t_user_session_ticket')
+      .select('ticket_id, license_id')
+      .eq('user_id', studentId);
+
+    if (ticketError) {
+      logger.error('coachStudent:get_student_contracts_ticket_failed', ticketError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!tickets || tickets.length === 0) {
+      return { success: true, contracts: [] };
+    }
+
+    const { data: licenses, error: licenseError } = await supabase
+      .from('com_t_user_license')
+      .select('license_id, status, start_date, end_date')
+      .in('license_id', tickets.map((t) => t.license_id));
+
+    if (licenseError) {
+      logger.error('coachStudent:get_student_contracts_license_failed', licenseError.message, { ...ctx, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return { success: true, sessions: sessions ?? [] };
+    const licenseById = new Map((licenses ?? []).map((l) => [l.license_id, l]));
+    const now = new Date();
+
+    const contracts = tickets
+      .map((t) => {
+        const license = licenseById.get(t.license_id);
+        if (!license) return null;
+        const isCurrent = license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
+        return {
+          ticket_id: t.ticket_id,
+          license_id: t.license_id,
+          start_date: license.start_date,
+          end_date: license.end_date,
+          is_current: isCurrent,
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null)
+      .sort((a, b) => b.start_date.localeCompare(a.start_date));
+
+    return { success: true, contracts };
   } catch (err) {
-    logger.error('coachStudent:get_session_history_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定生徒・指定契約(チケット)単位のセッション一覧を取得する（コーチ向け、Live Sessionsカード用）。
+ * 週2回契約等で他コーチと分担しているケースや、過去に別のコーチから引き継いだケースがあるため、
+ * 意図的にcoach_idでの絞り込みを行わない（RLS「Involved users can view sessions」の
+ * 担当関係ベースの許可範囲をそのまま使う）。結果として担当外セッションも含まれうるため、
+ * 表示側で「どのコーチが担当したか」を判別できるよう、coach_nameを解決して付与する。
+ * 結果の詳細（call_log/chat/homework）は含めない・別途アクセス権が必要。
+ */
+export async function getStudentSessionsByTicketCore(studentId: string, ticketId: string): Promise<GetStudentSessionsByTicketResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    const { data: sessions, error } = await supabase
+      .from('com_t_session')
+      .select('session_id, schedule_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note, coach_id')
+      .eq('student_id', studentId)
+      .eq('ticket_id', ticketId)
+      .order('start_datetime', { ascending: false });
+
+    if (error) {
+      logger.error('coachStudent:get_student_sessions_by_ticket_failed', error.message, { ...ctx, userId: user.id, payload: { studentId, ticketId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const rows = sessions ?? [];
+    const coachIds = Array.from(new Set(rows.map((s) => s.coach_id)));
+    let nameById = new Map<string, string>();
+    if (coachIds.length > 0) {
+      const { data: coaches } = await supabase.from('com_m_user').select('id, user_name').in('id', coachIds);
+      nameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+    }
+
+    return {
+      success: true,
+      sessions: rows.map((s) => ({ ...s, coach_name: nameById.get(s.coach_id) ?? '(Unknown)' })),
+    };
+  } catch (err) {
+    logger.error('coachStudent:get_student_sessions_by_ticket_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

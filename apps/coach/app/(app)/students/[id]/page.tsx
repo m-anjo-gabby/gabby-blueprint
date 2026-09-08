@@ -1,5 +1,12 @@
 import { notFound } from 'next/navigation';
-import { getStudentOverview, getStudentSessionHistory, getStudentUpcomingSession, getStudentLiveSessionShortfalls, getStudentNotes } from '@/actions/studentAction';
+import {
+  getStudentOverview,
+  getStudentLiveSessionContracts,
+  getStudentSessionsByTicket,
+  getStudentUpcomingSession,
+  getStudentLiveSessionShortfalls,
+  getStudentNotes,
+} from '@/actions/studentAction';
 import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
 import { StudentOverviewHeader } from './_components/StudentOverviewHeader';
 import { LiveSessionHistoryCard } from './_components/LiveSessionHistoryCard';
@@ -18,13 +25,17 @@ export default async function StudentOverviewPage({
     notFound();
   }
 
-  const [sessions, upcomingSession, sessionShortfalls, notes, lessonSprints] = await Promise.all([
-    getStudentSessionHistory(id),
+  const [contracts, upcomingSession, sessionShortfalls, notes, lessonSprints] = await Promise.all([
+    getStudentLiveSessionContracts(id),
     getStudentUpcomingSession(id),
     getStudentLiveSessionShortfalls(id),
     getStudentNotes(id),
     getLessonSprintHistory(id),
   ]);
+
+  // 現在有効な契約を優先し、無ければ直近の過去契約(contractsはstart_date降順)を初期選択とする
+  const initialContract = contracts.find((c) => c.is_current) ?? contracts[0] ?? null;
+  const initialSessions = initialContract ? await getStudentSessionsByTicket(id, initialContract.ticket_id) : [];
 
   return (
     <div className="space-y-6">
@@ -34,7 +45,9 @@ export default async function StudentOverviewPage({
         <LiveSessionHistoryCard
           studentId={id}
           studentName={overview.profile.user_name}
-          sessions={sessions}
+          contracts={contracts}
+          initialTicketId={initialContract?.ticket_id ?? null}
+          initialSessions={initialSessions}
           shortfalls={sessionShortfalls}
         />
         <LessonSprintCard studentId={id} history={lessonSprints} />

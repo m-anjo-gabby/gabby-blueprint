@@ -130,3 +130,34 @@ ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
 ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8));
 
 COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル)';
+
+---------------------------------------------
+-- 追加パッチ: 担当外セッション（同一契約を分担する他コーチ・過去に担当していた他コーチ）の
+-- 参照を許可 (2026-09-08)
+-- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 週2回契約等で1コマ目・2コマ目を別のコーチが分担するケースや、生徒が過去に別のコーチから
+-- 引き継いだケースがある。カリキュラムの一覧性・参照のため、マッチング済み（現在または過去に
+-- com_m_coach_student_relationshipの行がある）生徒であれば、自分が担当者ではないセッションも
+-- 一覧として見えるようにする（結果の詳細=com_t_session_call_log/chat/homeworkは対象外。
+-- これらのRLSは変更しないため、担当外セッションの入退室ログ・チャット・宿題は引き続き見えない）。
+--
+-- 【重要: 呼び出し側の対応が必須】
+-- 本ポリシー変更により、com_t_sessionを「担当コーチかどうかをRLSだけに委ねて」問い合わせている
+-- 既存コードは、意図せず他コーチのセッションを取得してしまう。実際に packages/lib/session/
+-- actions/sessionActions.ts の getMySessionsCore（メインカレンダー・ダッシュボード用）は
+-- このパッチに合わせて明示的な .or(coach_id.eq/student_id.eq) フィルタを追加済み。
+-- 今後 com_t_session を新たに問い合わせるコードを書く場合、「自分の予定表」を意図するなら
+-- 必ず coach_id/student_id を明示的に絞り込むこと（RLSの許可範囲＝自分の予定、とは限らない）。
+DROP POLICY IF EXISTS "Involved users can view sessions" ON public.com_t_session;
+CREATE POLICY "Involved users can view sessions" ON public.com_t_session
+FOR SELECT TO authenticated USING (
+    student_id = auth.uid()
+    OR coach_id = auth.uid()
+    OR EXISTS (
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = com_t_session.student_id AND r.coach_id = auth.uid()
+    )
+    OR public.get_jwt_user_type() = '0'
+);
