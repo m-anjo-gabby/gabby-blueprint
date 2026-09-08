@@ -111,6 +111,9 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
     const isPastEnd = new Date(session.end_datetime) < now;
     const canAct = isOwn && session.status === SESSION_STATUS.SCHEDULED && isFuture;
     const canResolve = isOwn && session.status === SESSION_STATUS.SCHEDULED && isPastEnd;
+    // キャンセル・振替済み（Changesタブ対象）は実施されていないため、Hub/結果画面への
+    // 導線を出さない（押しても実質何も無い画面に遷移してしまうため）
+    const isLinkable = isOwn && !SESSION_NON_ACTIONABLE_STATUSES.includes(session.status);
     const href = session.status === SESSION_STATUS.SCHEDULED
       ? `/students/${studentId}/sessions/${session.session_id}`
       : `/students/${studentId}/sessions/${session.session_id}/result`;
@@ -132,7 +135,7 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
           <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
             {badge.label}
           </span>
-          {isOwn && <ChevronRight size={14} className="text-slate-300" />}
+          {isLinkable && <ChevronRight size={14} className="text-slate-300" />}
         </span>
       </div>
     );
@@ -142,7 +145,7 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
         key={session.session_id}
         className="flex flex-col gap-2 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60"
       >
-        {isOwn ? (
+        {isLinkable ? (
           <Link href={href} className="hover:bg-slate-100/80 -m-1 p-1 rounded-lg transition-colors">
             {content}
           </Link>
@@ -235,7 +238,7 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
             <TabsList className={showUpcomingTab ? 'grid w-full grid-cols-3' : 'grid w-full grid-cols-2'}>
               {showUpcomingTab && <TabsTrigger value="upcoming">Upcoming</TabsTrigger>}
               <TabsTrigger value="completed">Completed</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
+              <TabsTrigger value="history">Changes</TabsTrigger>
             </TabsList>
 
             {isLoading ? (
@@ -269,7 +272,7 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
                   {historySessions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 text-center">
                       <CalendarClock size={22} className="text-slate-300 mb-2" />
-                      <p className="text-xs font-semibold text-slate-400">No history yet</p>
+                      <p className="text-xs font-semibold text-slate-400">No changes yet</p>
                     </div>
                   ) : (
                     <ul className="space-y-2 max-h-96 overflow-y-auto">
