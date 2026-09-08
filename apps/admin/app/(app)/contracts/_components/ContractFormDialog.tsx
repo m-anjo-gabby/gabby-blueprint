@@ -7,7 +7,6 @@ import { z } from 'zod'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
-import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -27,36 +26,26 @@ const CONTRACT_STATUS_OPTIONS = [
   { value: 9, label: '解約', className: 'text-rose-600' },
 ] as const;
 
-// --- 契約タイプの選択肢 ---
-const CONTRACT_TYPE_OPTIONS = [
-  { value: 1, label: 'Blueprintのみ' },
-  { value: 2, label: 'Blueprint + ライブセッション' },
-] as const;
-
-// プラン選択で「カスタム（自由入力）」を表す特別値
-const CUSTOM_PLAN_VALUE = 'custom';
-
 function getContractStatusLabel(status: number): string {
   return CONTRACT_STATUS_OPTIONS.find((s) => s.value === status)?.label ?? '不明';
 }
 
-function getContractTypeLabel(contractType: number): string {
-  return CONTRACT_TYPE_OPTIONS.find((t) => t.value === contractType)?.label ?? '不明';
-}
-
 // --- スキーマ定義 ---
+// 契約タイプ（コーチ有無）はプラン選択に完全に従属する構造的な属性のため、契約側の
+// 入力項目からは廃止した（サーバー側でplan_idからプランマスタのcontract_typeを取得する）。
 const contractSchema = z.object({
   client_id: z.string().min(1, '顧客を選択してください'),
-  plan_name: z.string().min(1, 'プラン名は必須です'),
+  plan_id: z.string().min(1, 'プランを選択してください'),
+  plan_name: z.string().min(1, 'プラン名（日本語）は必須です'),
+  plan_name_en: z.string().min(1, 'プラン名（英語）は必須です'),
   max_licenses: z.coerce.number().min(1, '1以上の数値を入力してください'),
   start_date: z.string().min(1, '開始日は必須です'),
   end_date: z.string().min(1, '終了日は必須です'),
   status: z.coerce.number(),
   note: z.string().nullable().optional(),
-  contract_type: z.coerce.number().refine((v) => v === 1 || v === 2, { message: '契約タイプを選択してください' }),
-  plan_id: z.string().nullable().optional(),
   weekly_frequency: z.coerce.number().nullable().optional(),
   total_sessions: z.coerce.number().nullable().optional(),
+  has_dialogue_practice: z.boolean(),
 }).refine((data) => {
   // 開始日と終了日が両方存在する場合のみチェック
   if (data.start_date && data.end_date) {
@@ -66,14 +55,11 @@ const contractSchema = z.object({
 }, {
   message: "終了日は開始日以降の日付を入力してください",
   path: ["end_date"], // エラーを end_date フィールドに紐付ける
-}).refine((data) => {
-  // ライブセッション付き契約の場合、週回数・チケット数は必須
-  if (data.contract_type === 2) {
-    return (data.weekly_frequency === 1 || data.weekly_frequency === 2) && (data.total_sessions ?? 0) >= 1;
-  }
-  return true;
-}, {
-  message: "週回数とチケット数を指定してください",
+}).refine((data) => data.weekly_frequency == null || data.weekly_frequency >= 1, {
+  message: "週回数は1以上を入力してください",
+  path: ["weekly_frequency"],
+}).refine((data) => data.total_sessions == null || data.total_sessions >= 1, {
+  message: "チケット数は1以上を入力してください",
   path: ["total_sessions"],
 });
 
@@ -82,16 +68,17 @@ type ContractFormOutput = z.output<typeof contractSchema>
 
 const DEFAULT_VALUES: ContractFormInput = {
   client_id: '',
-  plan_name: 'Standard',
+  plan_id: '',
+  plan_name: '',
+  plan_name_en: '',
   max_licenses: 10,
   start_date: '',
   end_date: '',
   status: 1,
   note: '',
-  contract_type: 1,
-  plan_id: null,
   weekly_frequency: null,
   total_sessions: null,
+  has_dialogue_practice: false,
 }
 
 interface ContractFormDialogProps {
@@ -110,8 +97,6 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
   const [serverError, setServerError] = useState<string | null>(null)
   const [clients, setClients] = useState<{ client_id: string; client_name: string }[]>([])
   const [plans, setPlans] = useState<ContractPlan[]>([])
-  // プラン選択UIの選択状態（'custom' またはプランID）。plan_idそのものはformで管理する
-  const [selectedPlanOption, setSelectedPlanOption] = useState<string>(CUSTOM_PLAN_VALUE)
 
   const { showToast } = useToast()
   const router = useRouter()
@@ -121,16 +106,17 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
     if (!data || mode === 'create') return DEFAULT_VALUES
     return {
       client_id: data.client_id ?? '',
+      plan_id: data.plan_id,
       plan_name: data.plan_name ?? '',
+      plan_name_en: data.plan_name_en ?? '',
       max_licenses: data.max_licenses ?? 0,
       start_date: data.start_date ?? '',
       end_date: data.end_date ?? '',
       status: data.status ?? 1,
       note: data.note ?? '',
-      contract_type: data.contract_type ?? 1,
-      plan_id: data.plan_id ?? null,
       weekly_frequency: data.weekly_frequency ?? null,
       total_sessions: data.total_sessions ?? null,
+      has_dialogue_practice: data.has_dialogue_practice ?? false,
     }
   }, [mode])
 
@@ -139,39 +125,24 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
     defaultValues: getInitialValues(initialData),
   })
 
-  const contractType = form.watch('contract_type')
-  const livePlans = useMemo(() => plans.filter((p) => p.contract_type === 2), [plans])
+  const selectedPlanId = form.watch('plan_id')
+  const selectedPlan = useMemo(() => plans.find((p) => p.plan_id === selectedPlanId) ?? null, [plans, selectedPlanId])
+  const isLivePlan = selectedPlan?.contract_type === 2
 
   /**
-   * 標準プランを選択した際に、プラン名・週回数・チケット数をマスタ値で確定する
-   * 「カスタム」を選択した場合はplan_idをクリアし、自由入力を許可する
+   * プラン選択時に、プラン名・週回数・チケット数・ダイアログプラクティス提供有無を
+   * マスタ値で初期セットする（この後、契約ごとに個別調整可能）
    */
-  const handlePlanOptionChange = useCallback((value: string) => {
-    setSelectedPlanOption(value)
-    if (value === CUSTOM_PLAN_VALUE) {
-      form.setValue('plan_id', null)
-      return
-    }
-    const plan = livePlans.find((p) => p.plan_id === value)
+  const handlePlanChange = useCallback((planId: string) => {
+    form.setValue('plan_id', planId)
+    const plan = plans.find((p) => p.plan_id === planId)
     if (!plan) return
-    form.setValue('plan_id', plan.plan_id)
     form.setValue('plan_name', plan.plan_name)
+    form.setValue('plan_name_en', plan.plan_name_en)
     form.setValue('weekly_frequency', plan.weekly_frequency)
     form.setValue('total_sessions', plan.total_sessions)
-  }, [form, livePlans])
-
-  /**
-   * 契約タイプ切替時、Blueprintのみに戻した場合はライブセッション関連の入力をクリアする
-   */
-  const handleContractTypeChange = useCallback((value: number) => {
-    form.setValue('contract_type', value)
-    if (value === 1) {
-      setSelectedPlanOption(CUSTOM_PLAN_VALUE)
-      form.setValue('plan_id', null)
-      form.setValue('weekly_frequency', null)
-      form.setValue('total_sessions', null)
-    }
-  }, [form])
+    form.setValue('has_dialogue_practice', plan.has_dialogue_practice)
+  }, [form, plans])
 
   /**
    * ダイアログ状態管理
@@ -188,7 +159,6 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
       // 開くときは最新のデータでフォームを初期化し、マスターを取得
       const initialValues = getInitialValues(initialData)
       form.reset(initialValues)
-      setSelectedPlanOption(initialValues.plan_id || CUSTOM_PLAN_VALUE)
       const [clientData, planData] = await Promise.all([getClientsFilter(), getContractPlans()])
       setClients(clientData)
       setPlans(planData)
@@ -289,25 +259,27 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
               )}
             />
 
-            {/* --- 契約タイプ --- */}
-            <FormField control={form.control} name="contract_type" render={({ field }) => (
+            {/* --- プラン選択 --- */}
+            {/* プランを選ぶだけで契約タイプ（コーチ有無）・週回数・チケット数・ダイアログ
+                プラクティス提供有無が一意に決まる。以降の各フィールドはこの初期値を
+                契約ごとに個別調整するためのものであり、値自体はプランマスタとは独立に保存される。 */}
+            <FormField control={form.control} name="plan_id" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">契約タイプ</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                    {getContractTypeLabel(field.value as number)}
+                    {selectedPlan?.plan_name ?? '不明なプラン'}
                   </div>
                 ) : (
-                  <Select
-                    onValueChange={(val) => handleContractTypeChange(Number(val))}
-                    value={String(field.value ?? 1)}
-                  >
+                  <Select onValueChange={handlePlanChange} value={field.value as string}>
                     <FormControl>
-                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder="プランを選択してください" /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {CONTRACT_TYPE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                      {plans.map((plan) => (
+                        <SelectItem key={plan.plan_id} value={plan.plan_id}>
+                          {plan.plan_name}{plan.contract_type === 1 ? '（コーチ無し）' : `（コーチ有り・週${plan.weekly_frequency}回）`}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -316,46 +288,26 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
               </FormItem>
             )} />
 
-            {/* --- ライブセッション設定（契約タイプがライブ付きの場合のみ表示） --- */}
-            {contractType === 2 && (
+            {/* --- ライブセッション設定（コーチ有りプランの場合のみ表示） --- */}
+            {isLivePlan && (
               <div className="space-y-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン</Label>
-                  {isConfirming ? (
-                    <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 text-slate-700">
-                      {selectedPlanOption === CUSTOM_PLAN_VALUE ? 'カスタム（自由入力）' : livePlans.find(p => p.plan_id === selectedPlanOption)?.plan_name}
-                    </div>
-                  ) : (
-                    <Select onValueChange={handlePlanOptionChange} value={selectedPlanOption}>
-                      <SelectTrigger className="rounded-xl border-slate-200 bg-white"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {livePlans.map((plan) => (
-                          <SelectItem key={plan.plan_id} value={plan.plan_id}>{plan.plan_name}</SelectItem>
-                        ))}
-                        <SelectItem value={CUSTOM_PLAN_VALUE}>カスタム（自由入力）</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="weekly_frequency" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">週回数</FormLabel>
                       {isConfirming ? (
                         <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">週{(field.value as number | null) ?? '-'}回</div>
-                      ) : selectedPlanOption === CUSTOM_PLAN_VALUE ? (
-                        <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value ? String(field.value) : undefined}>
-                          <FormControl>
-                            <SelectTrigger className="rounded-xl border-slate-200 bg-white"><SelectValue placeholder="選択してください" /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="1">週1回</SelectItem>
-                            <SelectItem value="2">週2回</SelectItem>
-                          </SelectContent>
-                        </Select>
                       ) : (
-                        <div className="p-3 bg-slate-100 rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-500">週{(field.value as number | null) ?? '-'}回</div>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={1}
+                            {...field}
+                            value={(field.value as number | string) ?? ''}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            className="bg-white rounded-xl border-slate-200"
+                          />
+                        </FormControl>
                       )}
                       <FormMessage />
                     </FormItem>
@@ -366,34 +318,52 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                       <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">チケット数（回）</FormLabel>
                       {isConfirming ? (
                         <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{(field.value as number | null) ?? '-'}回</div>
-                      ) : selectedPlanOption === CUSTOM_PLAN_VALUE ? (
+                      ) : (
                         <FormControl>
                           <Input
                             type="number"
+                            min={1}
                             {...field}
                             value={(field.value as number | string) ?? ''}
                             onChange={(e) => field.onChange(e.target.value)}
                             className="bg-white rounded-xl border-slate-200"
                           />
                         </FormControl>
-                      ) : (
-                        <div className="p-3 bg-slate-100 rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-500">{(field.value as number | null) ?? '-'}回</div>
                       )}
                       <FormMessage />
                     </FormItem>
                   )} />
                 </div>
+
+                <FormField control={form.control} name="has_dialogue_practice" render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2.5">
+                    <FormLabel className="text-xs font-bold text-slate-600">ダイアログプラクティス（自主トレ）を提供する</FormLabel>
+                    {isConfirming ? (
+                      <span className={`text-xs font-bold ${field.value ? 'text-indigo-600' : 'text-slate-400'}`}>{field.value ? '有り' : '無し'}</span>
+                    ) : (
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value as boolean}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 accent-indigo-600"
+                        />
+                      </FormControl>
+                    )}
+                  </FormItem>
+                )} />
+
                 <p className="text-[10px] text-slate-400 leading-relaxed">
                   ※ チケットは生徒への割当（ライセンス発行）時に個別に発行され、契約期間満了で失効します（繰越なし）
                 </p>
               </div>
             )}
 
-            {/* --- プラン & ライセンス --- */}
+            {/* --- プラン名 & ライセンス --- */}
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="plan_name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン名</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン名（日本語）</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value as string}</div>
                   ) : (
@@ -409,18 +379,16 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="max_licenses" render={({ field }) => (
+              <FormField control={form.control} name="plan_name_en" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">上限ライセンス数</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン名（英語・coach画面表示用）</FormLabel>
                   {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{String(field.value ?? '')}</div>
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value as string}</div>
                   ) : (
                     <FormControl>
                       <Input
-                        type="number"
                         {...field}
-                        value={(field.value as number | string) ?? ''}
-                        onChange={(e) => field.onChange(e.target.value)}
+                        value={(field.value as string) ?? ''}
                         className="bg-white rounded-xl border-slate-200"
                       />
                     </FormControl>
@@ -429,6 +397,26 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                 </FormItem>
               )} />
             </div>
+
+            <FormField control={form.control} name="max_licenses" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">上限ライセンス数</FormLabel>
+                {isConfirming ? (
+                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{String(field.value ?? '')}</div>
+                ) : (
+                  <FormControl>
+                    <Input
+                      type="number"
+                      {...field}
+                      value={(field.value as number | string) ?? ''}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="bg-white rounded-xl border-slate-200"
+                    />
+                  </FormControl>
+                )}
+                <FormMessage />
+              </FormItem>
+            )} />
 
             {/* --- 契約期間 --- */}
             <div className="grid grid-cols-2 gap-4">

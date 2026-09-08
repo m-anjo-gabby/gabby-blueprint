@@ -15,6 +15,7 @@ export interface ContractDetail {
   contract_id: string;
   client_id: string;
   plan_name: string;
+  plan_name_en: string;
   max_licenses: number;
   start_date: string;
   end_date: string;
@@ -27,9 +28,10 @@ export interface ContractDetail {
   current_assigned_count: number;
   current_active_count: number;
   contract_type: ContractType;
-  plan_id: string | null;
+  plan_id: string;
   weekly_frequency: number | null;
   total_sessions: number | null;
+  has_dialogue_practice: boolean;
 }
 
 // 契約プランマスタ（com_m_contract_plan）
@@ -37,10 +39,13 @@ export interface ContractPlan {
   plan_id: string;
   plan_code: string;
   plan_name: string;
+  plan_name_en: string;
   contract_type: ContractType;
   weekly_frequency: number | null;
   period_months: number;
   total_sessions: number | null;
+  has_dialogue_practice: boolean;
+  sort_no: number;
 }
 
 // ライセンス割当画面で表示するためのユーザー簡略情報

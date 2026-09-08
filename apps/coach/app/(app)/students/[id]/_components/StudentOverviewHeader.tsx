@@ -47,7 +47,7 @@ export function StudentOverviewHeader({ profile, upcomingSession }: Props) {
                   <div className="mt-1.5 space-y-0.5 text-xs text-emerald-700">
                     <p>
                       <span className="font-semibold text-emerald-500/80">Plan </span>
-                      {active_contract.plan_name}
+                      {active_contract.plan_name_en}
                     </p>
                     <p>
                       <span className="font-semibold text-emerald-500/80">Period </span>

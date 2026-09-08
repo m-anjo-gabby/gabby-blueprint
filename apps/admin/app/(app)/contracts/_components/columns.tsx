@@ -36,9 +36,16 @@ export const columns: ColumnDef<ContractDetail>[] = [
             {row.getValue('plan_name')}
           </span>
           {contract.contract_type === 2 && (
-            <Badge className="w-fit bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-[10px] font-bold">
-              ライブ週{contract.weekly_frequency}回・全{contract.total_sessions}回
-            </Badge>
+            <div className="flex flex-wrap gap-1">
+              <Badge className="w-fit bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-[10px] font-bold">
+                ライブ週{contract.weekly_frequency}回・全{contract.total_sessions}回
+              </Badge>
+              {contract.has_dialogue_practice && (
+                <Badge className="w-fit bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100 text-[10px] font-bold">
+                  ダイアログプラクティス
+                </Badge>
+              )}
+            </div>
           )}
         </div>
       );

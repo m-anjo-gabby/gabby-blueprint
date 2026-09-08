@@ -156,6 +156,27 @@
 --   LiveSessionRoomView.tsx/LiveSessionRoom.tsxからcom_t_session_chatへ保存、
 --   レッスン結果画面へのチャット履歴表示追加等）は本SQLの対象外（DB変更のみ）。
 --
+--   ---------------------------------------------------------------------
+--   【追加分】契約プランの一本化、プラン英語名・ダイアログプラクティス対応 (2026-09-08)
+--   ---------------------------------------------------------------------
+--   契約作成を「契約タイプ＋プラン」の2段階選択から「プラン選択のみ」に一本化する。
+--   契約タイプ・週回数・チケット数・ダイアログプラクティス（自主トレコンテンツ）提供
+--   有無はすべて選択したプランマスタの値に一意に決まり、契約側は個別調整用にコピーを
+--   持つ（既存のweekly_frequency/total_sessionsと同じハイブリッド方式）。
+--   あわせて、生徒概要等でプラン名を英語表示できるよう英語名カラムを追加する。
+--
+--   21. com_m_contract_plan に plan_name_en / has_dialogue_practice を追加する
+--   22. com_m_contract に plan_name_en / has_dialogue_practice を追加し、plan_id を
+--       必須参照化する（既存のBlueprintのみ契約をBLUEPRINT_ONLYプランへ自動紐付け）
+--   23. com_t_user_license に has_dialogue_practice を追加する
+--       - ライブセッションチケット(com_t_user_session_ticket)とは別に持つ。チケットは
+--         消化型のライブセッション予約枠、ダイアログプラクティスはライセンス期間中
+--         ずっと有効な自主トレコンテンツの利用可否であり、性質が異なるため。
+--   24. com_t_user_license_history に has_dialogue_practice を追加する（監査用スナップショット）
+--
+--   アプリケーションコード側の変更（契約登録フォームのプラン一本化、プランマスタ管理
+--   画面の追加、生徒概要のプラン名英語表示化等）は本SQLの対象外（DB変更のみ）。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -1479,5 +1500,93 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.decline_session_reschedule_proposal(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.decline_session_reschedule_proposal(uuid) TO authenticated;
+
+-- =========================================================================
+-- 21. com_m_contract_plan に plan_name_en / has_dialogue_practice を追加
+-- =========================================================================
+ALTER TABLE public.com_m_contract_plan
+  ADD COLUMN IF NOT EXISTS plan_name_en text,
+  ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
+
+UPDATE public.com_m_contract_plan SET plan_name_en = plan_name WHERE plan_name_en IS NULL;
+ALTER TABLE public.com_m_contract_plan ALTER COLUMN plan_name_en SET NOT NULL;
+
+COMMENT ON COLUMN public.com_m_contract_plan.plan_name_en IS 'プラン表示名（英語。coachアプリでの表示用）';
+COMMENT ON COLUMN public.com_m_contract_plan.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の提供有無';
+
+ALTER TABLE public.com_m_contract_plan DROP CONSTRAINT IF EXISTS chk_contract_plan_dialogue_requires_coach;
+ALTER TABLE public.com_m_contract_plan ADD CONSTRAINT chk_contract_plan_dialogue_requires_coach CHECK (
+    NOT has_dialogue_practice OR contract_type = 2
+);
+
+-- プラン表示名・ダイアログプラクティス提供有無の実値を投入（plan_codeは変更しない）
+INSERT INTO public.com_m_contract_plan (plan_code, plan_name, plan_name_en, contract_type, weekly_frequency, period_months, total_sessions, has_dialogue_practice, sort_no) VALUES
+  ('BLUEPRINT_ONLY',   'アプリのみ',       'App only',                 1, NULL, 3, NULL, false, 1),
+  ('LIVE_WEEKLY1_3M',  'スピーキング強化', 'Standard',                 2, 1,    3, 12,   false, 2),
+  ('LIVE_WEEKLY2_3M',  'ビジネス英語プロ', 'Business Pro (Dialogue)',  2, 2,    3, 24,   true,  3)
+ON CONFLICT (plan_code) DO UPDATE SET
+  plan_name = EXCLUDED.plan_name,
+  plan_name_en = EXCLUDED.plan_name_en,
+  contract_type = EXCLUDED.contract_type,
+  weekly_frequency = EXCLUDED.weekly_frequency,
+  period_months = EXCLUDED.period_months,
+  total_sessions = EXCLUDED.total_sessions,
+  has_dialogue_practice = EXCLUDED.has_dialogue_practice,
+  sort_no = EXCLUDED.sort_no,
+  update_date = NOW();
+
+-- =========================================================================
+-- 22. com_m_contract に plan_name_en / has_dialogue_practice を追加し、plan_id を必須化
+-- =========================================================================
+ALTER TABLE public.com_m_contract
+  ADD COLUMN IF NOT EXISTS plan_name_en text,
+  ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
+
+-- 既存のBlueprintのみ契約（plan_id未設定）をBLUEPRINT_ONLYプランへ紐付ける
+UPDATE public.com_m_contract c
+SET plan_id = p.plan_id,
+    plan_name_en = p.plan_name_en
+FROM public.com_m_contract_plan p
+WHERE c.plan_id IS NULL AND c.contract_type = 1 AND p.plan_code = 'BLUEPRINT_ONLY';
+
+-- 既にplan_idが設定済みの契約（検証環境のLive契約等）は、プランマスタの正しい英語名を
+-- そのまま引き継ぐ（日本語名の暫定コピーより優先する）
+UPDATE public.com_m_contract c
+SET plan_name_en = p.plan_name_en
+FROM public.com_m_contract_plan p
+WHERE c.plan_id = p.plan_id AND c.plan_name_en IS NULL;
+
+-- 上記でも埋まらなかった行（plan_id未設定のまま残っているcontract_type=2の個別交渉契約が
+-- 万一存在する場合）のみ、最終フォールバックとして日本語名を暫定コピーする。該当行があると
+-- 直後のNOT NULL化(plan_id)が意図的に失敗するため、事前に次のクエリで確認しておくこと:
+-- SELECT contract_id, contract_type, plan_name FROM com_m_contract WHERE plan_id IS NULL;
+UPDATE public.com_m_contract SET plan_name_en = plan_name WHERE plan_name_en IS NULL;
+ALTER TABLE public.com_m_contract ALTER COLUMN plan_name_en SET NOT NULL;
+ALTER TABLE public.com_m_contract ALTER COLUMN plan_id SET NOT NULL;
+
+COMMENT ON COLUMN public.com_m_contract.plan_name_en IS 'プラン名称（表示・制御用、英語。coachアプリでの表示用）';
+COMMENT ON COLUMN public.com_m_contract.plan_id IS '契約プランマスタ参照（com_m_contract_plan）。契約作成時は必須選択で、他の実値カラムはここからのコピーを起点に個別調整する';
+COMMENT ON COLUMN public.com_m_contract.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の提供有無。プラン選択時にマスタ値をコピー、契約側で上書き可';
+
+ALTER TABLE public.com_m_contract DROP CONSTRAINT IF EXISTS chk_contract_dialogue_requires_coach;
+ALTER TABLE public.com_m_contract ADD CONSTRAINT chk_contract_dialogue_requires_coach CHECK (
+    NOT has_dialogue_practice OR contract_type = 2
+);
+
+-- =========================================================================
+-- 23. com_t_user_license に has_dialogue_practice を追加
+-- =========================================================================
+ALTER TABLE public.com_t_user_license
+  ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.com_t_user_license.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の利用可否。ライセンス発行時にcom_m_contractの値をコピーする';
+
+-- =========================================================================
+-- 24. com_t_user_license_history に has_dialogue_practice を追加（監査用スナップショット）
+-- =========================================================================
+ALTER TABLE public.com_t_user_license_history
+  ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.com_t_user_license_history.has_dialogue_practice IS '記録時点でのダイアログプラクティス利用可否';
 
 COMMIT;

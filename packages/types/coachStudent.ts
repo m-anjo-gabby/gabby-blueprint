@@ -34,6 +34,7 @@ export interface AssignedStudentSummary extends StudentSprintProgress {
 /** 生徒が現在保有する有効契約の概要（ヘッダー表示用） */
 export interface StudentActiveContract {
   plan_name: string;
+  plan_name_en: string;
   start_date: string; // UTC ISO文字列
   end_date: string; // UTC ISO文字列
 }

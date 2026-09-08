@@ -169,7 +169,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
         .maybeSingle(),
       supabase
         .from('com_t_user_license')
-        .select('start_date, end_date, com_m_contract!inner(plan_name, status)')
+        .select('start_date, end_date, com_m_contract!inner(plan_name, plan_name_en, status)')
         .eq('user_id', studentId)
         .eq('status', 1)
         .eq('com_m_contract.status', 1)
@@ -214,7 +214,12 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
         },
         active_contract:
           license && contract
-            ? { plan_name: contract.plan_name, start_date: license.start_date, end_date: license.end_date }
+            ? {
+                plan_name: contract.plan_name,
+                plan_name_en: contract.plan_name_en,
+                start_date: license.start_date,
+                end_date: license.end_date,
+              }
             : null,
       },
     };
