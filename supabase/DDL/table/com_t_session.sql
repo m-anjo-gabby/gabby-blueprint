@@ -116,3 +116,17 @@ COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:
 ---------------------------------------------
 ALTER TABLE public.com_t_session ADD COLUMN IF NOT EXISTS ticket_refunded boolean DEFAULT NULL;
 COMMENT ON COLUMN public.com_t_session.ticket_refunded IS 'キャンセル(status 3/4)時のみ意味を持つ。true:チケット返還(未割当扱いに戻り担当コーチ限定で再予約可能) false:返還なし(消化済み扱い)。生徒キャンセルは開始12時間以上前ならtrue、未満ならfalse。コーチキャンセルは常にtrue。';
+
+---------------------------------------------
+-- 追加パッチ: ライセンス無効化に伴うセッション自動キャンセルへの対応 (2026-09-08)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- ライセンス無効化(invalidate_user_license)は、まだ実施されていない未来のscheduled
+-- セッションをキャンセル扱いにする。既存のcancelled_by_coach(4)を流用すると、コーチ側
+-- 画面で「Cancelled by you」等、実際にはコーチが行っていない操作の表示になり誤解を招く
+-- ため、専用のステータス値を新設する。
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル)';

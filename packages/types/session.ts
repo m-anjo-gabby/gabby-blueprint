@@ -13,6 +13,7 @@ export const SESSION_STATUS = {
   RESCHEDULED: 5,
   NO_SHOW: 6,
   EARLY_ENDED: 7,
+  CANCELLED_LICENSE_ENDED: 8,
 } as const;
 export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
 

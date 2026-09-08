@@ -9,14 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { RefreshCcw, ClipboardList, Loader2, AlertCircle, Edit2, Trash2 } from 'lucide-react';
+import { RefreshCcw, ClipboardList, Loader2, AlertCircle, Edit2, Ban } from 'lucide-react';
 import { ContractDetail } from '@gabby/types/contract';
-import { 
-  getActiveContractsByClient, 
-  getLicenseTimeline, 
-  assignLicenseToUser, 
-  removeLicenseFromUser, 
-  updateUserLicense 
+import {
+  getActiveContractsByClient,
+  getLicenseTimeline,
+  assignLicenseToUser,
+  invalidateUserLicense,
+  updateUserLicense
 } from '@/actions/adminContractAction';
 import { UserRecord } from '@gabby/types/user';
 
@@ -122,11 +122,11 @@ export function LicenseFormDialog({ user, children }: Props) {
     }
   };
 
-  const handleRemove = async (contractId: string) => {
+  const handleInvalidate = async (licenseId: string) => {
     setLoading(true);
     try {
-      await removeLicenseFromUser(contractId, user.id);
-      showToast("ライセンスを解除しました", "success");
+      await invalidateUserLicense(licenseId);
+      showToast("ライセンスを無効化しました", "success");
       await loadData();
     } finally {
       setLoading(false);
@@ -172,7 +172,8 @@ export function LicenseFormDialog({ user, children }: Props) {
                 <TabsContent value="list" className="mt-0 space-y-3">
                   {licenses.map(l => {
                     const isPast = new Date(l.end_date) < new Date(new Date().setHours(0,0,0,0));
-                    const isInactive = isPast || l.is_removed;
+                    const isInvalidated = l.status === 0;
+                    const isInactive = isPast || l.is_removed || isInvalidated;
                     return (
                       <div key={l.license_id} className={`p-4 border border-slate-100 rounded-xl flex justify-between items-center ${isInactive ? 'bg-slate-50 opacity-60' : 'bg-white shadow-sm'}`}>
                         <div>
@@ -180,6 +181,8 @@ export function LicenseFormDialog({ user, children }: Props) {
                             <p className="text-xs font-black">{l.plan_name}</p>
                             {l.is_removed ? (
                               <span className="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">解除済み</span>
+                            ) : isInvalidated ? (
+                              <span className="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">無効化済み</span>
                             ) : isPast && (
                               <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">終了</span>
                             )}
@@ -191,16 +194,20 @@ export function LicenseFormDialog({ user, children }: Props) {
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(l)}><Edit2 size={14} /></Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="text-rose-500"><Trash2 size={14} /></Button>
+                                <Button variant="ghost" size="sm" className="text-rose-500"><Ban size={14} /></Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent className="rounded-3xl p-8">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>ライセンスを解除しますか？</AlertDialogTitle>
-                                  <AlertDialogDescription>解除すると即座にシステム利用が不可となります。本当によろしいですか？</AlertDialogDescription>
+                                  <AlertDialogTitle>ライセンスを無効化しますか？</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    即座にシステム利用が不可となり、未実施の今後のセッションもキャンセルされます。
+                                    実施済みのセッション履歴・チャット・宿題は削除されず残ります。チケット消化数も元に戻りません。
+                                    本当によろしいですか？
+                                  </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleRemove(l.contract_id)} className="bg-rose-500">解除する</AlertDialogAction>
+                                  <AlertDialogAction onClick={() => handleInvalidate(l.license_id)} className="bg-rose-500">無効化する</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>

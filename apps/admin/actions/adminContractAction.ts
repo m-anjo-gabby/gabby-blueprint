@@ -681,7 +681,7 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
 
     const { data: currentAssignments, error: assignError } = await supabase
       .from('com_t_user_license')
-      .select('user_id')
+      .select('user_id, license_id, status')
       .eq('contract_id', contractId);
 
     if (assignError) {
@@ -689,7 +689,12 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       throw new Error("割当情報の取得に失敗しました");
     }
 
-    const assignedUserIds = new Set((currentAssignments || []).map(a => a.user_id));
+    // vw_user_list.license_idはユーザー単位で「直近の契約に関わらず最も関連性の高い
+    // 1件」を返す仕様のため、この契約(contractId)配下の割当かどうかの判定・license_id/
+    // statusの表示にはそのまま使わず、必ずこちらの直接クエリ結果を正とする
+    const assignmentByUserId = new Map(
+      (currentAssignments || []).map(a => [a.user_id, { license_id: a.license_id, status: a.status }])
+    );
 
     // ライブセッション付き契約の場合、割当済みユーザーのチケット消化状況を合わせて取得する
     const { data: tickets } = await supabase
@@ -701,9 +706,17 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
 
     return {
       assignedUsers: (allUsers || [])
-        .filter(u => assignedUserIds.has(u.id))
-        .map(u => ({ ...u, ticket: ticketByUserId.get(u.id) ?? null })),
-      unassignedUsers: (allUsers || []).filter(u => !assignedUserIds.has(u.id)),
+        .filter(u => assignmentByUserId.has(u.id))
+        .map(u => {
+          const assignment = assignmentByUserId.get(u.id)!;
+          return {
+            ...u,
+            license_id: assignment.license_id,
+            license_status: assignment.status,
+            ticket: ticketByUserId.get(u.id) ?? null,
+          };
+        }),
+      unassignedUsers: (allUsers || []).filter(u => !assignmentByUserId.has(u.id)),
     };
   } catch (error) {
     logger.error('contract:get_license_assignment_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId, clientId } });
@@ -820,79 +833,39 @@ export async function assignLicenseToUser(
 }
 
 /**
- * ライセンスの個別解除（物理削除）
+ * ライセンスの無効化（停止）
+ * 従来の物理削除（解除）は、ON DELETE CASCADEにより紐づくチケット・スケジュール・
+ * 過去の実施済みセッション（call_log/chat/homeworkを含む）まで連鎖して完全に消えてしまう
+ * 問題があったため廃止した。本関数はDELETEを一切行わず、invalidate_user_license()
+ * （SECURITY DEFINER RPC）を通じて以下の3点をUPDATEするだけに留める。
+ *   1. ライセンス自体をstatus=0(停止)にする（チケット消化数はそのまま。返還・復元は
+ *      行わない。上限が必要な場合は契約編集でmax_licensesを増やす運用とする）
+ *   2. 紐づく稼働中のスケジュールをterminatedにする
+ *   3. まだ実施されていない未来のセッションのみキャンセル扱いにする
+ * 実施済みのセッション結果・チャット・宿題は一切変更されない。
  */
-export async function removeLicenseFromUser(contractId: string, userId: string) {
+export async function invalidateUserLicense(licenseId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
-    // 物理削除で失われる情報を消す前に履歴としてスナップショットを残す
-    const { data: existing } = await supabase
-      .from('com_t_user_license')
-      .select('license_id, status, start_date, end_date, note, has_dialogue_practice')
-      .eq('contract_id', contractId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    // ライブセッション付き契約の場合、紐づくチケットも同様にスナップショットを残す
-    // （ライセンス削除時にFK ON DELETE CASCADEでチケット本体は自動的に削除される）
-    const { data: existingTicket } = existing
-      ? await supabase
-          .from('com_t_user_session_ticket')
-          .select('ticket_id, used_sessions, total_sessions')
-          .eq('license_id', existing.license_id)
-          .maybeSingle()
-      : { data: null };
-
-    const { error } = await supabase
-      .from('com_t_user_license')
-      .delete()
-      .eq('contract_id', contractId)
-      .eq('user_id', userId);
+    const { error } = await supabase.rpc('invalidate_user_license', { p_license_id: licenseId });
 
     if (error) {
-      logger.error('contract:remove_license_failed', error.message, { ...ctx, payload: { contractId, userId } });
+      logger.error('contract:invalidate_license_failed', error.message, { ...ctx, payload: { licenseId } });
       return { success: false, message: error.message };
     }
 
-    if (existing) {
-      await recordLicenseHistory(supabase, {
-        license_id: existing.license_id,
-        contract_id: contractId,
-        user_id: userId,
-        action: 'removed',
-        status: existing.status,
-        start_date: existing.start_date,
-        end_date: existing.end_date,
-        has_dialogue_practice: existing.has_dialogue_practice,
-        note: existing.note,
-        performed_by: resolvePerformedBy(ctx.userId),
-      }, ctx);
-    }
-
-    if (existingTicket) {
-      await recordTicketHistory(supabase, {
-        ticket_id: existingTicket.ticket_id,
-        contract_id: contractId,
-        user_id: userId,
-        action: 'removed',
-        sessions_delta: 0,
-        used_sessions_after: existingTicket.used_sessions,
-        total_sessions: existingTicket.total_sessions,
-        performed_by: resolvePerformedBy(ctx.userId),
-      }, ctx);
-    }
-
-    logger.info('contract:remove_license_success', `License removed from user`, {
+    logger.info('contract:invalidate_license_success', `License invalidated`, {
       ...ctx,
-      payload: { contractId, userId }
+      payload: { licenseId }
     });
 
     revalidatePath('/contracts');
+    revalidatePath('/users');
     return { success: true };
   } catch (error) {
-    logger.error('contract:remove_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId, userId } });
+    logger.error('contract:invalidate_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { licenseId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

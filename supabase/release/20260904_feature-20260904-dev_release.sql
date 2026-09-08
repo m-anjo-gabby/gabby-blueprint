@@ -182,6 +182,29 @@
 --         で開いてもプランが空欄に見える不具合が発生していた。VIEWの定義自体は変更せず、
 --         再実行のみ行う。
 --
+--   ---------------------------------------------------------------------
+--   【追加分】ライセンス「解除」を廃止し「無効化」に変更 (2026-09-08)
+--   ---------------------------------------------------------------------
+--   従来のライセンス解除（com_t_user_licenseの物理DELETE）は、ON DELETE CASCADEにより
+--   チケット・スケジュール・実施済みセッション（call_log/chat/homework含む）まで連鎖して
+--   完全に削除してしまい、復元不能なデータ損失リスクがあった。BtoB運用では契約途中の
+--   解除はほぼ発生せず、標準は契約期間満了による自然終了であるため、「削除」ではなく
+--   「無効化（停止）」という扱いに変更する。誤割当の是正は、無効化した上で契約編集で
+--   max_licensesを増やして正しいユーザーに割り当て直す運用とする（チケット消化数は
+--   無効化後もそのまま。返還・復元は行わない）。
+--
+--   26. com_t_session.status に 8(cancelled_license_ended) を追加する
+--       - 無効化に伴う自動キャンセルを、既存のcancelled_by_coach(4)と区別するための専用値。
+--         4を流用すると、コーチ側画面で実際には行っていない「Cancelled by you」等の
+--         誤解を招く表示になってしまうため。
+--   27. invalidate_user_license() (SECURITY DEFINER) を新規作成する
+--       - ライセンスをstatus=0にし、紐づく稼働中のスケジュールをterminated(9)にし、
+--         まだ実施されていない未来のscheduledセッションのみをキャンセルする。DELETEは
+--         一切行わないため、実施済みのセッション結果・チャット・宿題は変更されない。
+--
+--   アプリケーションコード側の変更（removeLicenseFromUserの廃止、invalidateUserLicense
+--   への置き換え、確認ダイアログの文言変更等）は本SQLの対象外（DB変更のみ）。
+--
 --   アプリケーションコード側の変更（契約登録フォームのプラン一本化、プランマスタ管理
 --   画面の追加、生徒概要のプラン名英語表示化等）は本SQLの対象外（DB変更のみ）。
 --
@@ -1629,5 +1652,65 @@ LEFT JOIN (
 
 COMMENT ON VIEW public.vw_contract_details IS '統計情報・顧客名を含む契約詳細ビュー';
 ALTER VIEW public.vw_contract_details SET (security_invoker = on);
+
+-- =========================================================================
+-- 26. com_t_session.status に 8(cancelled_license_ended) を追加
+-- =========================================================================
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル)';
+
+-- =========================================================================
+-- 27. invalidate_user_license() 新規作成
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.invalidate_user_license(p_license_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_license RECORD;
+    v_ticket_id uuid;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to invalidate a license';
+    END IF;
+
+    SELECT * INTO v_license FROM public.com_t_user_license WHERE license_id = p_license_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'license % not found', p_license_id;
+    END IF;
+
+    IF v_license.status <> 1 THEN
+        RAISE EXCEPTION 'license % is not active (status=%)', p_license_id, v_license.status;
+    END IF;
+
+    UPDATE public.com_t_user_license
+    SET status = 0, update_date = NOW()
+    WHERE license_id = p_license_id;
+
+    SELECT ticket_id INTO v_ticket_id
+    FROM public.com_t_user_session_ticket
+    WHERE license_id = p_license_id;
+
+    IF v_ticket_id IS NOT NULL THEN
+        UPDATE public.com_m_lesson_schedule
+        SET status = 9, update_date = NOW()
+        WHERE ticket_id = v_ticket_id AND status = 1;
+
+        UPDATE public.com_t_session
+        SET status = 8,
+            cancel_reason = 'ライセンス無効化のため',
+            cancelled_by = auth.uid(),
+            update_date = NOW()
+        WHERE ticket_id = v_ticket_id AND status = 1;
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.invalidate_user_license(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.invalidate_user_license(uuid) TO authenticated;
 
 COMMIT;

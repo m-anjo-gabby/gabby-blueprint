@@ -53,6 +53,10 @@ export interface LicenseUserItem {
   id: string;
   user_name: string;
   email: string;
+  // 割当済みの場合のみ設定されるライセンスID（無効化操作に使用）
+  license_id?: string;
+  // 割当済みの場合のみ設定されるライセンスステータス（1:有効 0:無効化済み）
+  license_status?: number;
   // ライブセッション付き契約の場合のみ設定されるチケット消化状況
   ticket?: {
     total_sessions: number;
