@@ -228,6 +228,29 @@
 --   Live Sessionsカードの契約切替・3タブ化、担当外セッションの表示等）は本SQLの対象外
 --   （DB変更のみ）。
 --
+--   ---------------------------------------------------------------------
+--   【追加分】アドミンのライブセッション管理画面、契約途中のコーチ交代対応 (2026-09-08)
+--   ---------------------------------------------------------------------
+--   契約途中で担当コーチを交代する必要が生じた場合に、アドミンが対象の生徒・契約・
+--   スケジュール枠を特定して交代を行えるようにする。DELETEは一切行わず、実施済みの
+--   セッション結果・チャット・宿題・チケット消化数は一切変更しない。
+--
+--   29. com_t_matching_request.status に 5(ended) を追加する
+--       - コーチ交代等でアドミンが承認済みリクエストを終了させたことを表す専用値。
+--         既存の4(cancelled、生徒による取消)とは意味が異なるため区別する。
+--   30. com_t_session.status に 9(cancelled_coach_reassigned) を追加する
+--       - コーチ交代に伴う自動キャンセルを、既存の8(cancelled_license_ended)や
+--         4(cancelled_by_coach)と区別するための専用値。
+--   31. release_lesson_schedule_slot() (SECURITY DEFINER) を新規作成する
+--       - 対象スケジュールをterminated(9)にし、紐づく承認済みマッチングリクエストを
+--         ended(5)にし、まだ実施されていない未来のscheduledセッションのみを
+--         キャンセルする。これにより、生徒は同じ(ticket_id, slot_no)へ新しいコーチを
+--         改めてリクエストできるようになる。
+--
+--   アプリケーションコード側の変更（アドミンの「ライブセッション管理」画面新設、
+--   顧客/生徒/契約選択、スケジュール枠・セッション一覧表示、コーチ交代ボタン等）は
+--   本SQLの対象外（DB変更のみ）。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -1747,5 +1770,81 @@ FOR SELECT TO authenticated USING (
     )
     OR public.get_jwt_user_type() = '0'
 );
+
+-- =========================================================================
+-- 29. com_t_matching_request.status に 5(ended) を追加
+-- =========================================================================
+ALTER TABLE public.com_t_matching_request DROP CONSTRAINT IF EXISTS chk_matching_request_status;
+ALTER TABLE public.com_t_matching_request ADD CONSTRAINT chk_matching_request_status CHECK (status IN (1, 2, 3, 4, 5));
+
+ALTER TABLE public.com_t_matching_request DROP CONSTRAINT IF EXISTS chk_matching_request_status_fields;
+ALTER TABLE public.com_t_matching_request ADD CONSTRAINT chk_matching_request_status_fields CHECK (
+    (status = 1 AND responded_by IS NULL AND responded_at IS NULL AND reject_reason IS NULL)
+    OR
+    (status = 2 AND responded_by IS NOT NULL AND responded_at IS NOT NULL)
+    OR
+    (status = 3 AND responded_by IS NOT NULL AND responded_at IS NOT NULL AND reject_reason IS NOT NULL)
+    OR
+    (status = 4)
+    OR
+    (status = 5 AND responded_by IS NOT NULL AND responded_at IS NOT NULL)
+);
+
+COMMENT ON COLUMN public.com_t_matching_request.status IS 'ステータス 1:pending(承認待ち) 2:approved(承認) 3:rejected(否認) 4:cancelled(生徒による取消) 5:ended(コーチ交代等によりアドミンが終了)';
+
+-- =========================================================================
+-- 30. com_t_session.status に 9(cancelled_coach_reassigned) を追加
+-- =========================================================================
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8, 9));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル) 9:cancelled_coach_reassigned(コーチ交代による自動キャンセル)';
+
+-- =========================================================================
+-- 31. release_lesson_schedule_slot() 新規作成
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.release_lesson_schedule_slot(p_schedule_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to release a lesson schedule slot';
+    END IF;
+
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'schedule % not found', p_schedule_id;
+    END IF;
+
+    IF v_schedule.status <> 1 THEN
+        RAISE EXCEPTION 'schedule % is not active (status=%)', p_schedule_id, v_schedule.status;
+    END IF;
+
+    UPDATE public.com_m_lesson_schedule
+    SET status = 9, update_date = NOW()
+    WHERE schedule_id = p_schedule_id;
+
+    IF v_schedule.source_request_id IS NOT NULL THEN
+        UPDATE public.com_t_matching_request
+        SET status = 5, update_date = NOW()
+        WHERE request_id = v_schedule.source_request_id AND status = 2;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = 9,
+        cancel_reason = 'コーチ交代のため',
+        cancelled_by = auth.uid(),
+        update_date = NOW()
+    WHERE schedule_id = p_schedule_id AND status = 1;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.release_lesson_schedule_slot(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.release_lesson_schedule_slot(uuid) TO authenticated;
 
 COMMIT;

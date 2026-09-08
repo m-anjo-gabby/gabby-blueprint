@@ -161,3 +161,18 @@ FOR SELECT TO authenticated USING (
     )
     OR public.get_jwt_user_type() = '0'
 );
+
+---------------------------------------------
+-- 追加パッチ: コーチ交代に伴うセッション自動キャンセルへの対応 (2026-09-08)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- アドミンのライブセッション管理画面からのコーチ交代(release_lesson_schedule_slot)は、
+-- まだ実施されていない未来のscheduledセッションをキャンセル扱いにする。既存の
+-- cancelled_license_ended(8)は契約終了が理由のため意味が異なり、cancelled_by_coach(4)を
+-- 流用すると「Cancelled by you」等、実際にはコーチが行っていない操作の表示になり誤解を招く。
+-- そのため専用のステータス値を新設する。
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8, 9));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル) 9:cancelled_coach_reassigned(コーチ交代による自動キャンセル)';
