@@ -163,7 +163,7 @@ ALTER TABLE public.com_m_contract ALTER COLUMN plan_id SET NOT NULL;
 
 COMMENT ON COLUMN public.com_m_contract.plan_name_en IS 'プラン名称（表示・制御用、英語。coachアプリでの表示用）';
 COMMENT ON COLUMN public.com_m_contract.plan_id IS '契約プランマスタ参照（com_m_contract_plan）。契約作成時は必須選択で、他の実値カラムはここからのコピーを起点に個別調整する';
-COMMENT ON COLUMN public.com_m_contract.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の提供有無。プラン選択時にマスタ値をコピー、契約側で上書き可';
+COMMENT ON COLUMN public.com_m_contract.has_dialogue_practice IS 'ダイアログプラクティスの提供有無（自主トレ・コーチとのセッション両方での利用可否に使う）。プラン選択時にマスタ値をコピー、契約側で上書き可';
 
 ALTER TABLE public.com_m_contract DROP CONSTRAINT IF EXISTS chk_contract_dialogue_requires_coach;
 ALTER TABLE public.com_m_contract ADD CONSTRAINT chk_contract_dialogue_requires_coach CHECK (

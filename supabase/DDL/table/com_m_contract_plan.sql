@@ -99,7 +99,7 @@ UPDATE public.com_m_contract_plan SET plan_name_en = plan_name WHERE plan_name_e
 ALTER TABLE public.com_m_contract_plan ALTER COLUMN plan_name_en SET NOT NULL;
 
 COMMENT ON COLUMN public.com_m_contract_plan.plan_name_en IS 'プラン表示名（英語。coachアプリでの表示用）';
-COMMENT ON COLUMN public.com_m_contract_plan.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の提供有無';
+COMMENT ON COLUMN public.com_m_contract_plan.has_dialogue_practice IS 'ダイアログプラクティスの提供有無（自主トレ・コーチとのセッション両方での利用可否に使う）';
 
 -- ダイアログプラクティスはコーチ付き契約（ライブセッションあり）にのみ提供する
 ALTER TABLE public.com_m_contract_plan DROP CONSTRAINT IF EXISTS chk_contract_plan_dialogue_requires_coach;

@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { addMonths, format } from 'date-fns'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
@@ -13,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@gabby/lib/hooks/useToast'
 import { createContract, updateContract, getContractPlans } from '@/actions/adminContractAction'
 import { getClientsFilter } from '@/actions/adminClientAction'
-import { useRouter } from 'next/navigation'
 import { AlertCircle, PlusCircle, Edit, CheckCircle2 } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { ContractDetail, ContractPlan } from '@gabby/types/contract'
@@ -99,7 +99,6 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
   const [plans, setPlans] = useState<ContractPlan[]>([])
 
   const { showToast } = useToast()
-  const router = useRouter()
 
   // --- Helpers ---
   const getInitialValues = useCallback((data?: ContractDetail): ContractFormInput => {
@@ -131,7 +130,9 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
 
   /**
    * プラン選択時に、プラン名・週回数・チケット数・ダイアログプラクティス提供有無を
-   * マスタ値で初期セットする（この後、契約ごとに個別調整可能）
+   * マスタ値で初期セットする（この後、契約ごとに個別調整可能）。
+   * あわせて、開始日=本日・終了日=本日からプランの標準契約期間(period_months)分先、
+   * を初期値として提案する（これも後から自由に変更できる）。
    */
   const handlePlanChange = useCallback((planId: string) => {
     form.setValue('plan_id', planId)
@@ -142,6 +143,10 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
     form.setValue('weekly_frequency', plan.weekly_frequency)
     form.setValue('total_sessions', plan.total_sessions)
     form.setValue('has_dialogue_practice', plan.has_dialogue_practice)
+
+    const today = new Date()
+    form.setValue('start_date', format(today, 'yyyy-MM-dd'))
+    form.setValue('end_date', format(addMonths(today, plan.period_months), 'yyyy-MM-dd'))
   }, [form, plans])
 
   /**
@@ -207,7 +212,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh] [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100">
+      <DialogContent className="max-w-lg p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh] [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100">
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
@@ -221,7 +226,8 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white overflow-y-auto min-h-0">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col min-h-0 flex-1">
+          <div className="p-6 space-y-4 bg-white overflow-y-auto min-h-0 flex-1">
 
             {/* --- 対象顧客 --- */}
             <FormField
@@ -337,7 +343,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
 
                 <FormField control={form.control} name="has_dialogue_practice" render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2.5">
-                    <FormLabel className="text-xs font-bold text-slate-600">ダイアログプラクティス（自主トレ）を提供する</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-600">ダイアログプラクティスを提供する</FormLabel>
                     {isConfirming ? (
                       <span className={`text-xs font-bold ${field.value ? 'text-indigo-600' : 'text-slate-400'}`}>{field.value ? '有り' : '無し'}</span>
                     ) : (
@@ -381,7 +387,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
 
               <FormField control={form.control} name="plan_name_en" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン名（英語・coach画面表示用）</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン名（英語）</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value as string}</div>
                   ) : (
@@ -487,9 +493,10 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                 <FormMessage />
               </FormItem>
             )} />
+          </div>
 
-            {/* --- アクションエリア --- */}
-            <div className="pt-4 mt-6 border-t border-slate-100">
+            {/* --- アクションエリア（スクロール領域の外。画面が小さくても常に見える） --- */}
+            <div className="shrink-0 p-6 pt-4 border-t border-slate-100 bg-white">
               {isConfirming ? (
                 <div className="space-y-4">
                   <p className="text-sm font-bold text-center text-slate-800">この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？</p>
@@ -506,8 +513,8 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                   </div>
                 </div>
               ) : (
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md"
                   onClick={async () => {
                     const isValid = await form.trigger();

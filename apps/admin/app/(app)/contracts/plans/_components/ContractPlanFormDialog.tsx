@@ -148,7 +148,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh] [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100">
+      <DialogContent className="max-w-lg p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh] [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100">
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
@@ -162,7 +162,8 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white overflow-y-auto min-h-0">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col min-h-0 flex-1">
+          <div className="p-6 space-y-4 bg-white overflow-y-auto min-h-0 flex-1">
 
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="plan_name" render={({ field }) => (
@@ -254,7 +255,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
 
                 <FormField control={form.control} name="has_dialogue_practice" render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2.5">
-                    <FormLabel className="text-xs font-bold text-slate-600">ダイアログプラクティス（自主トレ）を提供する</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-600">ダイアログプラクティスを提供する</FormLabel>
                     {isConfirming ? (
                       <span className={`text-xs font-bold ${field.value ? 'text-indigo-600' : 'text-slate-400'}`}>{field.value ? '有り' : '無し'}</span>
                     ) : (
@@ -314,8 +315,9 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
                 </FormItem>
               )} />
             </div>
+          </div>
 
-            <div className="pt-4 mt-6 border-t border-slate-100">
+            <div className="shrink-0 p-6 pt-4 border-t border-slate-100 bg-white">
               {isConfirming ? (
                 <div className="space-y-4">
                   <p className="text-sm font-bold text-center text-slate-800">この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？</p>

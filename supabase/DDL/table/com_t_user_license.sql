@@ -68,13 +68,14 @@ FOR SELECT TO authenticated USING (
 );
 
 ---------------------------------------------
--- 追加パッチ: ダイアログプラクティス（自主トレ）利用可否のライセンス単位管理 (2026-09-08)
+-- 追加パッチ: ダイアログプラクティス利用可否のライセンス単位管理 (2026-09-08)
 -- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
 -- 前提: table/com_m_contract.sql の同日パッチ（has_dialogue_practice追加）が適用済みであること。
 ---------------------------------------------
 -- 【背景】
 -- ダイアログプラクティスはライブセッションのチケット消化状況とは無関係に、ライセンス
--- 期間中ずっと有効な自主トレコンテンツの利用可否である
+-- 期間中ずっと有効な利用可否である（自主トレ画面だけでなく、コーチとのライブセッション中に
+-- ダイアログ教材を使えるかどうかの判定にも使う）
 -- （com_t_user_session_ticketは消化型のライブセッション予約枠であり、性質が異なるため
 -- 同居させない）。ライセンス発行時にcom_m_contract.has_dialogue_practiceをコピーし、
 -- 自主トレ画面（生徒本人）・ライブセッション中の可否判定（担当コーチ）の両方が、
@@ -82,4 +83,4 @@ FOR SELECT TO authenticated USING (
 ALTER TABLE public.com_t_user_license
   ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
 
-COMMENT ON COLUMN public.com_t_user_license.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の利用可否。ライセンス発行時にcom_m_contractの値をコピーする';
+COMMENT ON COLUMN public.com_t_user_license.has_dialogue_practice IS 'ダイアログプラクティスの利用可否（自主トレ・コーチとのセッション両方での利用可否に使う）。ライセンス発行時にcom_m_contractの値をコピーする';

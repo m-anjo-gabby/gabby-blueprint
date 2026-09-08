@@ -160,8 +160,9 @@
 --   【追加分】契約プランの一本化、プラン英語名・ダイアログプラクティス対応 (2026-09-08)
 --   ---------------------------------------------------------------------
 --   契約作成を「契約タイプ＋プラン」の2段階選択から「プラン選択のみ」に一本化する。
---   契約タイプ・週回数・チケット数・ダイアログプラクティス（自主トレコンテンツ）提供
---   有無はすべて選択したプランマスタの値に一意に決まり、契約側は個別調整用にコピーを
+--   契約タイプ・週回数・チケット数・ダイアログプラクティス（自主トレ・コーチとのセッション
+--   両方で使う教材利用可否）提供有無はすべて選択したプランマスタの値に一意に決まり、
+--   契約側は個別調整用にコピーを
 --   持つ（既存のweekly_frequency/total_sessionsと同じハイブリッド方式）。
 --   あわせて、生徒概要等でプラン名を英語表示できるよう英語名カラムを追加する。
 --
@@ -171,8 +172,15 @@
 --   23. com_t_user_license に has_dialogue_practice を追加する
 --       - ライブセッションチケット(com_t_user_session_ticket)とは別に持つ。チケットは
 --         消化型のライブセッション予約枠、ダイアログプラクティスはライセンス期間中
---         ずっと有効な自主トレコンテンツの利用可否であり、性質が異なるため。
+--         ずっと有効な利用可否（自主トレ・コーチとのセッション両方が対象）であり、
+--         性質が異なるため。
 --   24. com_t_user_license_history に has_dialogue_practice を追加する（監査用スナップショット）
+--   25. vw_contract_details を再実行する（重要な不具合修正）
+--       - 本VIEWは SELECT c.* で列展開しており、PostgreSQLの仕様上VIEWを再実行しない限り
+--         元テーブルへの列追加は反映されない。2026-08-15のplan_id等追加時からこの再実行が
+--         漏れており、契約編集ダイアログでplan_idが取得できず、プラン選択済みの契約を編集
+--         で開いてもプランが空欄に見える不具合が発生していた。VIEWの定義自体は変更せず、
+--         再実行のみ行う。
 --
 --   アプリケーションコード側の変更（契約登録フォームのプラン一本化、プランマスタ管理
 --   画面の追加、生徒概要のプラン名英語表示化等）は本SQLの対象外（DB変更のみ）。
@@ -1512,7 +1520,7 @@ UPDATE public.com_m_contract_plan SET plan_name_en = plan_name WHERE plan_name_e
 ALTER TABLE public.com_m_contract_plan ALTER COLUMN plan_name_en SET NOT NULL;
 
 COMMENT ON COLUMN public.com_m_contract_plan.plan_name_en IS 'プラン表示名（英語。coachアプリでの表示用）';
-COMMENT ON COLUMN public.com_m_contract_plan.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の提供有無';
+COMMENT ON COLUMN public.com_m_contract_plan.has_dialogue_practice IS 'ダイアログプラクティスの提供有無（自主トレ・コーチとのセッション両方での利用可否に使う）';
 
 ALTER TABLE public.com_m_contract_plan DROP CONSTRAINT IF EXISTS chk_contract_plan_dialogue_requires_coach;
 ALTER TABLE public.com_m_contract_plan ADD CONSTRAINT chk_contract_plan_dialogue_requires_coach CHECK (
@@ -1566,7 +1574,7 @@ ALTER TABLE public.com_m_contract ALTER COLUMN plan_id SET NOT NULL;
 
 COMMENT ON COLUMN public.com_m_contract.plan_name_en IS 'プラン名称（表示・制御用、英語。coachアプリでの表示用）';
 COMMENT ON COLUMN public.com_m_contract.plan_id IS '契約プランマスタ参照（com_m_contract_plan）。契約作成時は必須選択で、他の実値カラムはここからのコピーを起点に個別調整する';
-COMMENT ON COLUMN public.com_m_contract.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の提供有無。プラン選択時にマスタ値をコピー、契約側で上書き可';
+COMMENT ON COLUMN public.com_m_contract.has_dialogue_practice IS 'ダイアログプラクティスの提供有無（自主トレ・コーチとのセッション両方での利用可否に使う）。プラン選択時にマスタ値をコピー、契約側で上書き可';
 
 ALTER TABLE public.com_m_contract DROP CONSTRAINT IF EXISTS chk_contract_dialogue_requires_coach;
 ALTER TABLE public.com_m_contract ADD CONSTRAINT chk_contract_dialogue_requires_coach CHECK (
@@ -1579,7 +1587,7 @@ ALTER TABLE public.com_m_contract ADD CONSTRAINT chk_contract_dialogue_requires_
 ALTER TABLE public.com_t_user_license
   ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
 
-COMMENT ON COLUMN public.com_t_user_license.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の利用可否。ライセンス発行時にcom_m_contractの値をコピーする';
+COMMENT ON COLUMN public.com_t_user_license.has_dialogue_practice IS 'ダイアログプラクティスの利用可否（自主トレ・コーチとのセッション両方での利用可否に使う）。ライセンス発行時にcom_m_contractの値をコピーする';
 
 -- =========================================================================
 -- 24. com_t_user_license_history に has_dialogue_practice を追加（監査用スナップショット）
@@ -1588,5 +1596,38 @@ ALTER TABLE public.com_t_user_license_history
   ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN public.com_t_user_license_history.has_dialogue_practice IS '記録時点でのダイアログプラクティス利用可否';
+
+-- =========================================================================
+-- 25. vw_contract_details を再実行（SELECT c.* が列追加に自動追従しないための再展開）
+-- =========================================================================
+-- c.* が cl.client_name 等より前に展開されるため、com_m_contractの列が増えるたびに
+-- それ以降の列の出力位置がずれ、CREATE OR REPLACE VIEWでは「cannot change name of
+-- view column」エラーになる（既存出力列名は後から変更できないため）。そのため
+-- DROP → CREATE で作り直す。
+DROP VIEW IF EXISTS public.vw_contract_details;
+CREATE VIEW public.vw_contract_details AS
+SELECT
+    c.*,
+    cl.client_name,
+    COALESCE(stats.total_assigned_count, 0) AS current_assigned_count,
+    COALESCE(stats.active_snapshot_count, 0) AS current_active_count,
+    c.max_licenses - COALESCE(stats.total_assigned_count, 0) AS remaining_licenses
+FROM
+    public.com_m_contract c
+JOIN
+    public.com_m_client cl ON c.client_id = cl.client_id
+LEFT JOIN (
+    SELECT
+        contract_id,
+        COUNT(license_id) AS total_assigned_count,
+        COUNT(CASE WHEN status = 1 AND NOW() BETWEEN start_date AND end_date THEN 1 END) AS active_snapshot_count
+    FROM
+        public.com_t_user_license
+    GROUP BY
+        contract_id
+) stats ON c.contract_id = stats.contract_id;
+
+COMMENT ON VIEW public.vw_contract_details IS '統計情報・顧客名を含む契約詳細ビュー';
+ALTER VIEW public.vw_contract_details SET (security_invoker = on);
 
 COMMIT;
