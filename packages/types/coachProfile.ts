@@ -111,11 +111,10 @@ export type RemoveCoachIntroVideoResult =
  */
 
 /**
- * CoachProfileDialogLabels: ダイアログ内の静的UI文言
+ * CoachProfileCardLabels: プロフィールカード（CoachProfileCard / CoachProfileDialog共通）の静的UI文言
  * 言語はポータル側（coach: 英語 / student: 日本語）で決定するため、ここでは受け取るだけ。
  */
-export interface CoachProfileDialogLabels {
-  closeLabel: string;
+export interface CoachProfileCardLabels {
   coachSince: string;
   education: string;
   qualifications: string;
@@ -125,11 +124,16 @@ export interface CoachProfileDialogLabels {
   introVideo: string;
 }
 
+/** CoachProfileDialogLabels: モーダル表示（CoachProfileDialog）でのみ必要な文言を追加したもの */
+export interface CoachProfileDialogLabels extends CoachProfileCardLabels {
+  closeLabel: string;
+}
+
 /**
- * CoachProfileDialogData: ダイアログに表示する内容（フォーマット済み・表示用の値）
+ * CoachProfileCardData: プロフィールカードに表示する内容（フォーマット済み・表示用の値）
  * 日付や年数の文言整形（例: "Nov, 2024" / "2 years"）は呼び出し側（各ポータル）の責務とする。
  */
-export interface CoachProfileDialogData {
+export interface CoachProfileCardData {
   userName: string;
   iconUrl: string | null;
   countryName: string | null;
@@ -142,3 +146,6 @@ export interface CoachProfileDialogData {
   introduction: string | null;
   introVideoUrl: string | null;
 }
+
+/** CoachProfileDialogData: CoachProfileDialog用のエイリアス（カードと表示内容は同一） */
+export type CoachProfileDialogData = CoachProfileCardData;
