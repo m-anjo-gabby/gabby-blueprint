@@ -15,15 +15,16 @@ export const SESSION_STATUS = {
   EARLY_ENDED: 7,
   CANCELLED_LICENSE_ENDED: 8,
   CANCELLED_COACH_REASSIGNED: 9,
+  CANCELLED_BY_ADMIN: 10,
 } as const;
 export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
 
 /**
  * カレンダーには表示すべきでないステータス（キャンセル済み・振替元・ライセンス無効化や
- * コーチ交代による自動キャンセル）。振替後の新しいコマや、別の生徒の予約が同じ枠に入る
- * ケースがあるため、これらのステータスの行をカレンダーに残すとノイズ・誤解のもとになる。
- * 担当外セッション（自分以外のコーチが担当したセッション）を一覧に混在させる際にも、
- * これらのステータスは参照価値が無いため同様に除外する。
+ * コーチ交代、アドミン代理操作による自動キャンセル）。振替後の新しいコマや、別の生徒の
+ * 予約が同じ枠に入るケースがあるため、これらのステータスの行をカレンダーに残すと
+ * ノイズ・誤解のもとになる。担当外セッション（自分以外のコーチが担当したセッション）を
+ * 一覧に混在させる際にも、これらのステータスは参照価値が無いため同様に除外する。
  */
 export const SESSION_NON_ACTIONABLE_STATUSES: readonly SessionStatus[] = [
   SESSION_STATUS.CANCELLED_BY_STUDENT,
@@ -31,6 +32,7 @@ export const SESSION_NON_ACTIONABLE_STATUSES: readonly SessionStatus[] = [
   SESSION_STATUS.RESCHEDULED,
   SESSION_STATUS.CANCELLED_LICENSE_ENDED,
   SESSION_STATUS.CANCELLED_COACH_REASSIGNED,
+  SESSION_STATUS.CANCELLED_BY_ADMIN,
 ];
 
 /** 実施結果があるステータス（結果画面への導線を出す対象。call_logが記録されている想定） */
@@ -42,10 +44,11 @@ export const SESSION_RESULT_STATUSES: readonly SessionStatus[] = [
 
 /**
  * 「変更履歴」タブに表示する対象（生徒・コーチ本人起因のキャンセル・振替のみ）。
- * ライセンス無効化(CANCELLED_LICENSE_ENDED)・コーチ交代(CANCELLED_COACH_REASSIGNED)は
- * いずれも運用都合の内部処理であり、生徒・コーチの操作起因ではないため、変更履歴にも
- * カレンダーにも一切表示しない（SESSION_NON_ACTIONABLE_STATUSESには含めて非表示対象に
- * しつつ、こちらの変更履歴用の集合には含めない）。
+ * ライセンス無効化(CANCELLED_LICENSE_ENDED)・コーチ交代(CANCELLED_COACH_REASSIGNED)・
+ * アドミン代理キャンセル(CANCELLED_BY_ADMIN)はいずれも運用都合の内部処理であり、
+ * 生徒・コーチの操作起因ではないため、変更履歴にもカレンダーにも一切表示しない
+ * （SESSION_NON_ACTIONABLE_STATUSESには含めて非表示対象にしつつ、こちらの
+ * 変更履歴用の集合には含めない）。
  */
 export const SESSION_CHANGE_HISTORY_STATUSES: readonly SessionStatus[] = [
   SESSION_STATUS.CANCELLED_BY_STUDENT,

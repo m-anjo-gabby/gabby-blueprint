@@ -30,14 +30,24 @@
 -- 通知を作成する。既存の通知(TRAINING_*/CHAT_NEW_MESSAGE)と異なりトリガーではなく、
 -- 本関数(SECURITY DEFINER)内で直接INSERTする（本関数自身が状態変更の唯一の発生源のため）。
 ---------------------------------------------
--- 2引数版(uuid, text)からのシグネチャ変更のため、先に古い関数を明示的に削除する
+-- 旧シグネチャからの変更のため、先に古い関数を明示的に削除する
 -- （デフォルト引数を持つ新シグネチャと共存させるとPostgres側でオーバーロードの曖昧性が生じるため）。
 DROP FUNCTION IF EXISTS public.cancel_session(uuid, text);
+DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb);
 
+-- 【アドミン代理キャンセル対応 (2026-09-09追加)】
+-- 生徒キャンセル(3)・コーチキャンセル(4)はいずれもauth.uid()が本人と一致することを
+-- 前提に返還ルール・通知内容を決めているため、管理者自身のauth.uid()（どちらとも
+-- 一致しない）で呼び出すと誤判定してしまう。p_admin_refund_ticketが指定された場合のみ、
+-- 呼び出し者を「生徒でもコーチでもない＝アドミン代理操作」とみなし、返還可否を
+-- 管理者が明示的に指定した値でそのまま確定させる（12時間ルール等は適用しない）。
+-- ステータスは専用のcancelled_by_admin(10)を用い、通知は生徒・コーチ双方へ、
+-- どちらが原因かを特定しない中立的な文言で送る。
 CREATE OR REPLACE FUNCTION public.cancel_session(
     p_session_id uuid,
     p_reason text DEFAULT NULL,
-    p_proposed_slots jsonb DEFAULT NULL
+    p_proposed_slots jsonb DEFAULT NULL,
+    p_admin_refund_ticket boolean DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -49,6 +59,7 @@ DECLARE
     v_new_status smallint;
     v_refunded boolean;
     v_is_coach boolean;
+    v_is_admin_proxy boolean;
     v_coach_name text;
     v_student_name text;
     v_slot jsonb;
@@ -62,7 +73,9 @@ BEGIN
         RAISE EXCEPTION 'session % not found', p_session_id;
     END IF;
 
-    IF v_session.student_id <> auth.uid() AND v_session.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+    v_is_admin_proxy := (v_session.student_id <> auth.uid() AND v_session.coach_id <> auth.uid());
+
+    IF v_is_admin_proxy AND public.get_jwt_user_type() <> '0' THEN
         RAISE EXCEPTION 'not authorized to cancel this session';
     END IF;
 
@@ -76,7 +89,13 @@ BEGIN
 
     v_is_coach := (v_session.coach_id = auth.uid());
 
-    IF v_session.student_id = auth.uid() THEN
+    IF v_is_admin_proxy THEN
+        IF p_admin_refund_ticket IS NULL THEN
+            RAISE EXCEPTION 'p_admin_refund_ticket is required for an admin-initiated cancellation';
+        END IF;
+        v_new_status := 10;
+        v_refunded := p_admin_refund_ticket;
+    ELSIF v_session.student_id = auth.uid() THEN
         v_new_status := 3;
         v_refunded := (v_session.start_datetime - NOW()) >= interval '12 hours';
     ELSE
@@ -92,7 +111,12 @@ BEGIN
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_session.coach_id;
     SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_session.student_id;
 
-    IF v_is_coach THEN
+    IF v_is_admin_proxy THEN
+        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+        VALUES
+            (v_session.student_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/live-room'),
+            (v_session.coach_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/students/' || v_session.student_id);
+    ELSIF v_is_coach THEN
         IF p_proposed_slots IS NOT NULL THEN
             v_proposal_count := jsonb_array_length(p_proposed_slots);
             IF v_proposal_count > 3 THEN
@@ -147,5 +171,5 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean) TO authenticated;

@@ -46,6 +46,22 @@ export const NOTIFICATION_TYPES = {
     icon: 'CalendarCheck',
     badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   },
+  SESSION_CANCELLED_BY_ADMIN: {
+    icon: 'CalendarX',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
+  MATCHING_APPROVED: {
+    icon: 'UserCheck',
+    badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  },
+  MATCHING_REJECTED: {
+    icon: 'CalendarClock',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
+  MATCHING_ASSIGNED_TO_COACH: {
+    icon: 'Users',
+    badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
@@ -113,5 +129,21 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
   SESSION_BOOKED_BY_STUDENT: (payload) => ({
     title: '新しいセッションが予約されました',
     body: `${String(payload.student_name ?? '生徒')}がセッションを予約/振替しました。`,
+  }),
+  SESSION_CANCELLED_BY_ADMIN: () => ({
+    title: 'セッションがキャンセルされました',
+    body: '予定されていたセッションがキャンセルされました。詳しくはカレンダーをご確認ください。',
+  }),
+  MATCHING_APPROVED: (payload) => ({
+    title: 'マッチングが成立しました！',
+    body: `${String(payload.coach_name ?? 'コーチ')}とのライブセッションが予約されました。`,
+  }),
+  MATCHING_REJECTED: (payload) => ({
+    title: 'マッチングについて',
+    body: `${String(payload.coach_name ?? 'コーチ')}は今回ご希望の枠を受け付けられませんでした。他の時間帯やコーチもぜひお試しください。`,
+  }),
+  MATCHING_ASSIGNED_TO_COACH: (payload) => ({
+    title: '新しい生徒とマッチングしました',
+    body: `${String(payload.student_name ?? '生徒')}さんとのライブセッションが予約されました。`,
   }),
 };

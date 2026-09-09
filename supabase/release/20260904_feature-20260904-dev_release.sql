@@ -251,6 +251,55 @@
 --   顧客/生徒/契約選択、スケジュール枠・セッション一覧表示、コーチ交代ボタン等）は
 --   本SQLの対象外（DB変更のみ）。
 --
+--   ---------------------------------------------------------------------
+--   【追加分】アドミンによるセッション代理操作、マッチング通知の新設 (2026-09-09)
+--   ---------------------------------------------------------------------
+--   アドミンのライブセッション管理画面から、生徒・コーチに代わってセッションの
+--   キャンセル・振替・予約、およびコーチとの直接マッチング（生徒の申請・コーチの
+--   承認を省略してその場で成立させる）を行えるようにする。あわせて、これまで
+--   通知が抜けていたマッチング成立・否認時の通知を新設する。
+--
+--   32. com_t_notification の通知種別に以下を追加する（DBスキーマ変更は不要。
+--       TypeScript側の型定義・メッセージビルダーのみ）
+--       - SESSION_CANCELLED_BY_ADMIN: アドミン代理キャンセル時、生徒・コーチ双方へ
+--       - MATCHING_APPROVED: マッチング成立時、生徒へ（approve_matching_request・
+--         admin_match_student_with_coachの両方から送信）
+--       - MATCHING_REJECTED: コーチがリクエストを否認した時、生徒へ（柔らかい表現）
+--       - MATCHING_ASSIGNED_TO_COACH: アドミンの直接マッチング成立時、コーチへ
+--   33. com_t_session.status に 10(cancelled_by_admin) を追加する
+--       - 生徒キャンセル(3)・コーチキャンセル(4)はauth.uid()が本人と一致することを
+--         前提に返還ルール・通知内容を決めているため、アドミン自身のauth.uid()では
+--         流用できない。返還可否をアドミンが明示的に指定する専用値。
+--   34. cancel_session() を更新する
+--       - p_admin_refund_ticket(boolean)を追加。呼び出し者が生徒でもコーチでもない
+--         場合（＝アドミン代理操作）のみ有効で、必須指定とする。指定された値を
+--         そのままticket_refundedに反映し、ステータスはcancelled_by_admin(10)にする。
+--         通知は生徒・コーチ双方へ、どちらが原因かを特定しない中立的な内容で送る。
+--   35. fn_schedule_shortfall() を更新する
+--       - cancelled_by_admin(10)もticket_refundedの値次第でoccupied/availableが
+--         変わる点は生徒・コーチキャンセル(3/4)と同じ扱いのため、判定条件に追加する。
+--   36. approve_matching_request() を更新する
+--       - 承認完了時、生徒へMATCHING_APPROVEDを通知する（コーチは自ら承認操作を
+--         行っているため通知不要）。
+--   37. reject_matching_request() を更新する
+--       - 否認完了時、生徒へMATCHING_REJECTEDを通知する（柔らかい表現。否認理由の
+--         詳細は通知本文には転記しない）。
+--   38. admin_match_student_with_coach() (SECURITY DEFINER) を新規作成する
+--       - approve_matching_request()の承認後ロジック（アドバイザリロック、コーチの
+--         空き時間衝突チェック、スケジュール作成、セッション一括生成）を踏襲しつつ、
+--         事前にpendingなリクエストが存在しない状態から、承認済み(status=2)の
+--         リクエストを直接作成する。生徒へMATCHING_APPROVED、コーチへ
+--         MATCHING_ASSIGNED_TO_COACHをそれぞれ通知する。
+--
+--   【実装上の重要な注意点】
+--   cancel_session/reschedule_session/book_makeup_session/admin_match_student_with_coachは
+--   いずれも内部でget_jwt_user_type()/auth.uid()を見て認可・分岐しているため、
+--   アドミンから呼び出す際はservice_role(createAdminClient)ではなく、アドミン自身の
+--   認証済みセッションに紐づくクライアント(createServerClient)を使うこと。
+--
+--   アプリケーションコード側の変更（アドミンのライブセッション管理画面への
+--   キャンセル・振替・予約・直接マッチングUIの追加等）は本SQLの対象外（DB変更のみ）。
+--
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
@@ -1846,5 +1895,423 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.release_lesson_schedule_slot(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.release_lesson_schedule_slot(uuid) TO authenticated;
+
+-- =========================================================================
+-- 33. com_t_session.status に 10(cancelled_by_admin) を追加
+-- =========================================================================
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル) 9:cancelled_coach_reassigned(コーチ交代による自動キャンセル) 10:cancelled_by_admin(アドミンによる代理キャンセル。ticket_refundedは管理者が明示的に指定)';
+
+-- =========================================================================
+-- 34. cancel_session() 更新（アドミン代理キャンセル対応）
+-- =========================================================================
+DROP FUNCTION IF EXISTS public.cancel_session(uuid, text);
+DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb);
+
+CREATE OR REPLACE FUNCTION public.cancel_session(
+    p_session_id uuid,
+    p_reason text DEFAULT NULL,
+    p_proposed_slots jsonb DEFAULT NULL,
+    p_admin_refund_ticket boolean DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_new_status smallint;
+    v_refunded boolean;
+    v_is_coach boolean;
+    v_is_admin_proxy boolean;
+    v_coach_name text;
+    v_student_name text;
+    v_slot jsonb;
+    v_slot_start timestamptz;
+    v_slot_end timestamptz;
+    v_proposal_count integer := 0;
+    v_proposal_validity_hours CONSTANT integer := 48;
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    v_is_admin_proxy := (v_session.student_id <> auth.uid() AND v_session.coach_id <> auth.uid());
+
+    IF v_is_admin_proxy AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to cancel this session';
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime <= NOW() THEN
+        RAISE EXCEPTION 'cannot cancel a session that has already started';
+    END IF;
+
+    v_is_coach := (v_session.coach_id = auth.uid());
+
+    IF v_is_admin_proxy THEN
+        IF p_admin_refund_ticket IS NULL THEN
+            RAISE EXCEPTION 'p_admin_refund_ticket is required for an admin-initiated cancellation';
+        END IF;
+        v_new_status := 10;
+        v_refunded := p_admin_refund_ticket;
+    ELSIF v_session.student_id = auth.uid() THEN
+        v_new_status := 3;
+        v_refunded := (v_session.start_datetime - NOW()) >= interval '12 hours';
+    ELSE
+        v_new_status := 4;
+        v_refunded := true;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = v_new_status, cancel_reason = p_reason, cancelled_by = auth.uid(),
+        ticket_refunded = v_refunded, update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_session.coach_id;
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_session.student_id;
+
+    IF v_is_admin_proxy THEN
+        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+        VALUES
+            (v_session.student_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/live-room'),
+            (v_session.coach_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/students/' || v_session.student_id);
+    ELSIF v_is_coach THEN
+        IF p_proposed_slots IS NOT NULL THEN
+            v_proposal_count := jsonb_array_length(p_proposed_slots);
+            IF v_proposal_count > 3 THEN
+                RAISE EXCEPTION 'cannot propose more than 3 alternative times';
+            END IF;
+
+            FOR v_slot IN SELECT * FROM jsonb_array_elements(p_proposed_slots) LOOP
+                v_slot_start := (v_slot->>'start_datetime')::timestamptz;
+                v_slot_end := (v_slot->>'end_datetime')::timestamptz;
+
+                IF v_slot_start <= NOW() THEN
+                    RAISE EXCEPTION 'proposed time must be in the future';
+                END IF;
+                IF v_slot_end <= v_slot_start THEN
+                    RAISE EXCEPTION 'invalid proposed time range';
+                END IF;
+
+                INSERT INTO public.com_t_session_reschedule_proposal (
+                    session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime, expires_at
+                ) VALUES (
+                    p_session_id, v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end,
+                    NOW() + (v_proposal_validity_hours || ' hours')::interval
+                );
+            END LOOP;
+        END IF;
+
+        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+        VALUES (
+            v_session.student_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED' ELSE 'SESSION_CANCELLED_BY_COACH' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'coach_name', v_coach_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            '/live-room'
+        );
+    ELSE
+        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+        VALUES (
+            v_session.coach_id,
+            'SESSION_CANCELLED_BY_STUDENT',
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'student_name', v_student_name,
+                'session_start_datetime', v_session.start_datetime
+            ),
+            '/students/' || v_session.student_id
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean) TO authenticated;
+
+-- =========================================================================
+-- 35. fn_schedule_shortfall() 更新（cancelled_by_admin(10)への対応）
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.fn_schedule_shortfall(p_schedule_id uuid)
+RETURNS TABLE(expected_sessions integer, actual_sessions integer, shortfall integer)
+LANGUAGE plpgsql
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_cursor_date date;
+    v_expected integer := 0;
+    v_actual integer;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    v_cursor_date := v_schedule.start_date
+        + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
+
+    WHILE v_cursor_date <= v_schedule.end_date LOOP
+        v_expected := v_expected + 1;
+        v_cursor_date := v_cursor_date + 7;
+    END LOOP;
+
+    SELECT COUNT(*) INTO v_actual
+    FROM public.com_t_session s
+    WHERE s.schedule_id = p_schedule_id
+      AND (
+        s.status IN (1, 2, 6, 7)
+        OR (s.status IN (3, 4, 10) AND s.ticket_refunded = false)
+      );
+
+    RETURN QUERY SELECT v_expected, v_actual, GREATEST(v_expected - v_actual, 0);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) TO authenticated;
+
+-- =========================================================================
+-- 36. approve_matching_request() 更新（MATCHING_APPROVED通知の追加）
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_request RECORD;
+    v_license_start date;
+    v_license_end date;
+    v_start_date date;
+    v_coach_timezone text;
+    v_schedule_id uuid;
+    v_coach_name text;
+BEGIN
+    SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'matching request % not found', p_request_id;
+    END IF;
+
+    IF v_request.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to approve this request';
+    END IF;
+
+    IF v_request.status <> 1 THEN
+        RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
+    END IF;
+
+    SELECT l.start_date::date, l.end_date::date
+    INTO v_license_start, v_license_end
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE t.ticket_id = v_request.ticket_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'license not found for ticket %', v_request.ticket_id;
+    END IF;
+
+    v_start_date := GREATEST(v_license_start, CURRENT_DATE);
+
+    PERFORM pg_advisory_xact_lock(hashtextextended(v_request.coach_id::text || ':' || v_request.requested_day_of_week::text, 0));
+
+    IF public.check_coach_schedule_conflict(
+        v_request.coach_id, v_request.requested_day_of_week,
+        v_request.requested_start_time, v_request.requested_end_time,
+        v_start_date, v_license_end
+    ) THEN
+        RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', v_request.coach_id;
+    END IF;
+
+    SELECT timezone INTO v_coach_timezone FROM public.com_m_user WHERE id = v_request.coach_id;
+    v_coach_timezone := COALESCE(v_coach_timezone, 'Asia/Tokyo');
+
+    INSERT INTO public.com_m_lesson_schedule (
+        ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
+        coach_timezone, status, start_date, end_date, source_request_id
+    ) VALUES (
+        v_request.ticket_id, v_request.student_id, v_request.coach_id, v_request.slot_no,
+        v_request.requested_day_of_week, v_request.requested_start_time, v_request.requested_end_time,
+        v_coach_timezone, 1, v_start_date, v_license_end, v_request.request_id
+    )
+    RETURNING schedule_id INTO v_schedule_id;
+
+    UPDATE public.com_t_matching_request
+    SET status = 2, responded_by = auth.uid(), responded_at = NOW(), update_date = NOW()
+    WHERE request_id = p_request_id;
+
+    PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id);
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        v_request.student_id,
+        'MATCHING_APPROVED',
+        jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id),
+        '/live-room'
+    );
+
+    RETURN v_schedule_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_matching_request(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_matching_request(uuid) TO authenticated;
+
+-- =========================================================================
+-- 37. reject_matching_request() 更新（MATCHING_REJECTED通知の追加）
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.reject_matching_request(p_request_id uuid, p_reason text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_request RECORD;
+    v_coach_name text;
+BEGIN
+    IF p_reason IS NULL OR length(trim(p_reason)) = 0 THEN
+        RAISE EXCEPTION 'reject_reason is required';
+    END IF;
+
+    SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'matching request % not found', p_request_id;
+    END IF;
+
+    IF v_request.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to reject this request';
+    END IF;
+
+    IF v_request.status <> 1 THEN
+        RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
+    END IF;
+
+    UPDATE public.com_t_matching_request
+    SET status = 3, reject_reason = p_reason, responded_by = auth.uid(), responded_at = NOW(), update_date = NOW()
+    WHERE request_id = p_request_id;
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        v_request.student_id,
+        'MATCHING_REJECTED',
+        jsonb_build_object('coach_name', v_coach_name),
+        '/coach-matching'
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.reject_matching_request(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reject_matching_request(uuid, text) TO authenticated;
+
+-- =========================================================================
+-- 38. admin_match_student_with_coach() 新規作成
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.admin_match_student_with_coach(
+    p_ticket_id uuid,
+    p_coach_id uuid,
+    p_slot_no smallint,
+    p_day_of_week smallint,
+    p_start_time time,
+    p_end_time time
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_student_id uuid;
+    v_license_start date;
+    v_license_end date;
+    v_start_date date;
+    v_coach_timezone text;
+    v_schedule_id uuid;
+    v_request_id uuid;
+    v_coach_name text;
+    v_student_name text;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to perform admin matching';
+    END IF;
+
+    SELECT user_id INTO v_student_id FROM public.com_t_user_session_ticket WHERE ticket_id = p_ticket_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'ticket % not found', p_ticket_id;
+    END IF;
+
+    SELECT l.start_date::date, l.end_date::date
+    INTO v_license_start, v_license_end
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE t.ticket_id = p_ticket_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'license not found for ticket %', p_ticket_id;
+    END IF;
+
+    v_start_date := GREATEST(v_license_start, CURRENT_DATE);
+
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_coach_id::text || ':' || p_day_of_week::text, 0));
+
+    IF public.check_coach_schedule_conflict(
+        p_coach_id, p_day_of_week, p_start_time, p_end_time, v_start_date, v_license_end
+    ) THEN
+        RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', p_coach_id;
+    END IF;
+
+    SELECT timezone INTO v_coach_timezone FROM public.com_m_user WHERE id = p_coach_id;
+    v_coach_timezone := COALESCE(v_coach_timezone, 'Asia/Tokyo');
+
+    INSERT INTO public.com_t_matching_request (
+        ticket_id, student_id, coach_id, slot_no, requested_day_of_week, requested_start_time, requested_end_time,
+        status, responded_by, responded_at
+    ) VALUES (
+        p_ticket_id, v_student_id, p_coach_id, p_slot_no, p_day_of_week, p_start_time, p_end_time,
+        2, auth.uid(), NOW()
+    )
+    RETURNING request_id INTO v_request_id;
+
+    INSERT INTO public.com_m_lesson_schedule (
+        ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
+        coach_timezone, status, start_date, end_date, source_request_id
+    ) VALUES (
+        p_ticket_id, v_student_id, p_coach_id, p_slot_no, p_day_of_week, p_start_time, p_end_time,
+        v_coach_timezone, 1, v_start_date, v_license_end, v_request_id
+    )
+    RETURNING schedule_id INTO v_schedule_id;
+
+    PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id);
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = p_coach_id;
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_student_id;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES
+        (v_student_id, 'MATCHING_APPROVED', jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id), '/live-room'),
+        (p_coach_id, 'MATCHING_ASSIGNED_TO_COACH', jsonb_build_object('student_name', v_student_name, 'schedule_id', v_schedule_id), '/students/' || v_student_id);
+
+    RETURN v_schedule_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_match_student_with_coach(uuid, uuid, smallint, smallint, time, time) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_match_student_with_coach(uuid, uuid, smallint, smallint, time, time) TO authenticated;
 
 COMMIT;

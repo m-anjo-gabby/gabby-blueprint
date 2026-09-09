@@ -176,3 +176,19 @@ ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
 ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8, 9));
 
 COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル) 9:cancelled_coach_reassigned(コーチ交代による自動キャンセル)';
+
+---------------------------------------------
+-- 追加パッチ: アドミンによるセッション代理キャンセルへの対応 (2026-09-09)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- アドミンのライブセッション管理画面から、生徒・コーチに代わってセッションをキャンセル
+-- できるようにする。生徒キャンセル(3)・コーチキャンセル(4)はどちらもauth.uid()が
+-- 本人と一致することが前提のロジック（返還ルール・通知の宛先/文言）を持つため、
+-- 管理者自身のauth.uid()はそのどちらとも一致せず、流用すると返還可否や通知内容を
+-- 誤判定してしまう。そのため、返還有無を管理者が明示的に指定する専用ステータス値を
+-- 新設する（cancel_session.sql参照）。
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル) 9:cancelled_coach_reassigned(コーチ交代による自動キャンセル) 10:cancelled_by_admin(アドミンによる代理キャンセル。ticket_refundedは管理者が明示的に指定)';

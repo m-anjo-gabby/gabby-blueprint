@@ -15,6 +15,7 @@ export const ADMIN_SESSION_STATUS_BADGE: Record<SessionStatus, { label: string; 
   [SESSION_STATUS.EARLY_ENDED]: { label: '早期終了', className: 'bg-orange-50 text-orange-700 border-orange-100' },
   [SESSION_STATUS.CANCELLED_LICENSE_ENDED]: { label: 'キャンセル（契約終了）', className: 'bg-slate-100 text-slate-500 border-slate-200' },
   [SESSION_STATUS.CANCELLED_COACH_REASSIGNED]: { label: 'キャンセル（コーチ交代）', className: 'bg-slate-100 text-slate-500 border-slate-200' },
+  [SESSION_STATUS.CANCELLED_BY_ADMIN]: { label: 'キャンセル（アドミン代理）', className: 'bg-slate-100 text-slate-500 border-slate-200' },
 };
 
 /** com_m_lesson_schedule.status のラベル（アドミン向け、日本語） */

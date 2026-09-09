@@ -32,6 +32,14 @@ export interface AdminScheduleSlotSummary {
   coach_id: string;
   coach_name: string;
   status: number; // com_m_lesson_schedule.status (1:active 0:paused 9:terminated)
+  /** 未割当のチケット枠数（fn_schedule_shortfallより。稼働中(status=1)の枠のみ意味を持つ） */
+  shortfall: number;
+}
+
+/** コーチ（アドミンの直接マッチング画面のコーチ選択用の簡略情報） */
+export interface AdminCoachSummary {
+  id: string;
+  user_name: string;
 }
 
 export type GetClientStudentsResult =
@@ -45,3 +53,8 @@ export type GetScheduleSlotsForTicketResult =
 export type ReleaseLessonScheduleSlotResult =
   | { success: true }
   | { success: false; errorCode: AdminLiveSessionErrorCode; message: string };
+
+/** アドミン代理操作系（キャンセル・振替・予約・直接マッチング）の共通の結果型 */
+export type AdminSessionActionResult =
+  | { success: true }
+  | { success: false; message: string };

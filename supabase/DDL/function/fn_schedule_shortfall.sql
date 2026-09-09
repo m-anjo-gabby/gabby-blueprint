@@ -28,6 +28,10 @@
 -- 戻り値をexpected/actual/shortfallの3列テーブルとしているのは、Student Overview画面の
 -- 「◯回中◯回」といった内訳表示（LiveSessionShortfallItem.expected_sessions/actual_sessions）
 -- を、TS側で計算をやり直すことなくこの関数だけで賄うため。
+--
+-- 【アドミン代理キャンセルへの対応 (2026-09-09追加)】
+-- cancelled_by_admin(10)もticket_refundedの値次第で occupied/available が変わる点は
+-- 生徒・コーチキャンセル(3/4)と同じ扱いのため、actualの判定条件にstatus=10を追加する。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_schedule_shortfall(p_schedule_id uuid)
 RETURNS TABLE(expected_sessions integer, actual_sessions integer, shortfall integer)
@@ -59,7 +63,7 @@ BEGIN
     WHERE s.schedule_id = p_schedule_id
       AND (
         s.status IN (1, 2, 6, 7)
-        OR (s.status IN (3, 4) AND s.ticket_refunded = false)
+        OR (s.status IN (3, 4, 10) AND s.ticket_refunded = false)
       );
 
     RETURN QUERY SELECT v_expected, v_actual, GREATEST(v_expected - v_actual, 0);
