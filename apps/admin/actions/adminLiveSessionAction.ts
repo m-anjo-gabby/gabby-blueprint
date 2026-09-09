@@ -10,12 +10,13 @@ import {
   AdminStudentSummary,
   AdminScheduleSlotSummary,
   AdminCoachSummary,
+  AdminContractSummary,
   AdminSessionActionResult,
   GetClientStudentsResult,
   GetScheduleSlotsForTicketResult,
   ReleaseLessonScheduleSlotResult,
 } from '@gabby/types/adminLiveSession';
-import { StudentLiveSessionContractSummary, CoachSessionListItem } from '@gabby/types/coachStudent';
+import { CoachSessionListItem } from '@gabby/types/coachStudent';
 
 const logger = createLogger('admin');
 
@@ -55,15 +56,17 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
  * 指定生徒が保有するライブセッションチケット付き契約の一覧（現在有効・過去満了分の両方）を
  * 取得する（アドミン向け。コーチ側のgetStudentLiveSessionContractsCoreと同じ形だが、
  * 担当関係の確認は行わない＝アドミンは常に全件参照可能）。
+ * plan_name/total_sessions（com_m_contractに非正規化済み）・used_sessions（チケット側）を
+ * 追加で持たせ、「対象の選択」セクションのプラン情報表示に使う。
  */
-export async function getStudentLiveSessionContractsForAdmin(studentId: string): Promise<StudentLiveSessionContractSummary[]> {
+export async function getStudentLiveSessionContractsForAdmin(studentId: string): Promise<AdminContractSummary[]> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
     const { data: tickets, error: ticketError } = await supabase
       .from('com_t_user_session_ticket')
-      .select('ticket_id, license_id')
+      .select('ticket_id, license_id, contract_id, weekly_frequency, total_sessions, used_sessions')
       .eq('user_id', studentId);
 
     if (ticketError) {
@@ -72,17 +75,28 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
     }
     if (!tickets || tickets.length === 0) return [];
 
-    const { data: licenses, error: licenseError } = await supabase
-      .from('com_t_user_license')
-      .select('license_id, status, start_date, end_date')
-      .in('license_id', tickets.map((t) => t.license_id));
+    const [{ data: licenses, error: licenseError }, { data: contracts, error: contractError }] = await Promise.all([
+      supabase
+        .from('com_t_user_license')
+        .select('license_id, status, start_date, end_date')
+        .in('license_id', tickets.map((t) => t.license_id)),
+      supabase
+        .from('com_m_contract')
+        .select('contract_id, plan_name')
+        .in('contract_id', tickets.map((t) => t.contract_id)),
+    ]);
 
     if (licenseError) {
       logger.error('liveSession:get_student_contracts_license_failed', licenseError.message, { ...ctx, payload: { studentId } });
       return [];
     }
+    if (contractError) {
+      logger.error('liveSession:get_student_contracts_contract_failed', contractError.message, { ...ctx, payload: { studentId } });
+      return [];
+    }
 
     const licenseById = new Map((licenses ?? []).map((l) => [l.license_id, l]));
+    const planNameByContractId = new Map((contracts ?? []).map((c) => [c.contract_id, c.plan_name]));
     const now = new Date();
 
     return tickets
@@ -96,9 +110,13 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
           start_date: license.start_date,
           end_date: license.end_date,
           is_current: isCurrent,
+          weekly_frequency: t.weekly_frequency,
+          plan_name: planNameByContractId.get(t.contract_id) ?? '(不明なプラン)',
+          total_sessions: t.total_sessions,
+          used_sessions: t.used_sessions,
         };
       })
-      .filter((c): c is StudentLiveSessionContractSummary => c !== null)
+      .filter((c): c is AdminContractSummary => c !== null)
       .sort((a, b) => b.start_date.localeCompare(a.start_date));
   } catch (err) {
     logger.error('liveSession:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { studentId } });

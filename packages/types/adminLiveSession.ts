@@ -1,3 +1,5 @@
+import type { StudentLiveSessionContractSummary } from './coachStudent';
+
 /**
  * ----------------------------------------------
  * アドミン向け ライブセッション管理画面 型定義
@@ -34,6 +36,18 @@ export interface AdminScheduleSlotSummary {
   status: number; // com_m_lesson_schedule.status (1:active 0:paused 9:terminated)
   /** 未割当のチケット枠数（fn_schedule_shortfallより。稼働中(status=1)の枠のみ意味を持つ） */
   shortfall: number;
+}
+
+/**
+ * 契約(チケット)1件分の概要（アドミン視点、コーチ・生徒共用のStudentLiveSessionContractSummary
+ * を拡張）。「対象の選択」セクションでのプラン情報表示（プラン名・週n回・消化数）に使う。
+ * plan_name/total_sessions/used_sessionsはcom_m_contract・com_t_user_session_ticketに
+ * 既に非正規化済みの値のため、追加のDB変更なしで取得できる。
+ */
+export interface AdminContractSummary extends StudentLiveSessionContractSummary {
+  plan_name: string;
+  total_sessions: number;
+  used_sessions: number;
 }
 
 /** コーチ（アドミンの直接マッチング画面のコーチ選択用の簡略情報） */

@@ -15,6 +15,12 @@
 -- 【生徒限定化 (2026-09-07追加)】
 -- 予約・振替の決定権は生徒側に一本化する方針のため、本関数はコーチからの実行を
 -- 拒否するよう変更した。予約完了時はコーチへ通知(SESSION_BOOKED_BY_STUDENT)する。
+--
+-- 【アドミン代理操作への対応 (2026-09-09追加)】
+-- アドミンのライブセッション管理画面から代理で予約を行う場合のみ、コーチの
+-- 空き時間・例外ブロックのチェックを免除する（アドミンがコーチと直接調整済み
+-- であることを前提とするため）。未割当チケット数(shortfall)の存在確認、および
+-- 二重予約チェックは、データ不整合を避けるためアドミン操作でも常に適用する。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.book_makeup_session(
     p_schedule_id uuid,
@@ -28,6 +34,7 @@ SET search_path = public
 AS $$
 DECLARE
     v_schedule RECORD;
+    v_is_admin_proxy boolean;
     v_shortfall integer;
     v_duration interval;
     v_new_start timestamptz;
@@ -44,6 +51,8 @@ BEGIN
     IF v_schedule.student_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
         RAISE EXCEPTION 'not authorized to book a session for this schedule';
     END IF;
+
+    v_is_admin_proxy := (v_schedule.student_id <> auth.uid());
 
     IF v_schedule.status <> 1 THEN
         RAISE EXCEPTION 'lesson schedule % is not active (status=%)', p_schedule_id, v_schedule.status;
@@ -64,7 +73,7 @@ BEGIN
         RAISE EXCEPTION 'new start datetime must be in the future';
     END IF;
 
-    IF NOT EXISTS (
+    IF NOT v_is_admin_proxy AND NOT EXISTS (
         SELECT 1 FROM public.com_m_coach_availability a
         WHERE a.coach_id = v_schedule.coach_id
           AND a.day_of_week = v_day_of_week
@@ -75,7 +84,7 @@ BEGIN
         RAISE EXCEPTION 'requested time is outside coach availability';
     END IF;
 
-    IF EXISTS (
+    IF NOT v_is_admin_proxy AND EXISTS (
         SELECT 1 FROM public.com_t_coach_availability_exception e
         WHERE e.coach_id = v_schedule.coach_id
           AND e.exception_date = p_new_date

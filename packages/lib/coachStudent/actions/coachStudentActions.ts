@@ -251,7 +251,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
 
     const { data: tickets, error: ticketError } = await supabase
       .from('com_t_user_session_ticket')
-      .select('ticket_id, license_id')
+      .select('ticket_id, license_id, weekly_frequency')
       .eq('user_id', studentId);
 
     if (ticketError) {
@@ -286,6 +286,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
           start_date: license.start_date,
           end_date: license.end_date,
           is_current: isCurrent,
+          weekly_frequency: t.weekly_frequency,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null)

@@ -73,6 +73,9 @@ export interface StudentLiveSessionContractSummary {
   start_date: string;
   end_date: string;
   is_current: boolean;
+  /** 週あたりのライブセッション回数（=定期スケジュール枠の数）。アドミンのライブセッション
+   * 管理画面で、枠数分のプレースホルダーを表示するために使う。 */
+  weekly_frequency: number;
 }
 
 /**

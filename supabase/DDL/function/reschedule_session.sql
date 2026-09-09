@@ -23,6 +23,13 @@
 -- 拒否するよう変更した。コーチがキャンセルする際に候補時間を提案したい場合は
 -- cancel_session()のp_proposed_slotsを使う（Availability外の時間も指定できる）。
 -- 振替完了時はコーチへ通知(SESSION_BOOKED_BY_STUDENT)する。
+--
+-- 【アドミン代理操作への対応 (2026-09-09追加)】
+-- アドミンのライブセッション管理画面から代理で振替を行う場合のみ、12時間ルールと
+-- コーチの空き時間・例外ブロックのチェックを免除する（アドミンがコーチと直接
+-- 調整済みであることを前提とするため）。二重予約チェック（同一コーチ/生徒が
+-- 同時刻に別セッションを持っていないか）は、データ不整合を避けるため
+-- アドミン操作でも常に適用する。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.reschedule_session(
     p_session_id uuid,
@@ -37,6 +44,7 @@ SET search_path = public
 AS $$
 DECLARE
     v_session RECORD;
+    v_is_admin_proxy boolean;
     v_coach_tz text;
     v_duration interval;
     v_new_start timestamptz;
@@ -54,11 +62,13 @@ BEGIN
         RAISE EXCEPTION 'not authorized to reschedule this session';
     END IF;
 
+    v_is_admin_proxy := (v_session.student_id <> auth.uid());
+
     IF v_session.status <> 1 THEN
         RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
     END IF;
 
-    IF v_session.start_datetime - NOW() < interval '12 hours' THEN
+    IF NOT v_is_admin_proxy AND v_session.start_datetime - NOW() < interval '12 hours' THEN
         RAISE EXCEPTION 'cannot reschedule a session within 12 hours of its start time';
     END IF;
 
@@ -75,7 +85,7 @@ BEGIN
         RAISE EXCEPTION 'new start datetime must be in the future';
     END IF;
 
-    IF NOT EXISTS (
+    IF NOT v_is_admin_proxy AND NOT EXISTS (
         SELECT 1 FROM public.com_m_coach_availability a
         WHERE a.coach_id = v_session.coach_id
           AND a.day_of_week = v_day_of_week
@@ -86,7 +96,7 @@ BEGIN
         RAISE EXCEPTION 'requested time is outside coach availability';
     END IF;
 
-    IF EXISTS (
+    IF NOT v_is_admin_proxy AND EXISTS (
         SELECT 1 FROM public.com_t_coach_availability_exception e
         WHERE e.coach_id = v_session.coach_id
           AND e.exception_date = p_new_date

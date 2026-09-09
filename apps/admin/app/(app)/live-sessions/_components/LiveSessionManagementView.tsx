@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { generateLessonStartTimeOptions } from '@gabby/lib/date/date';
@@ -45,10 +46,14 @@ import {
   matchStudentWithCoachAsAdmin,
 } from '@/actions/adminLiveSessionAction';
 import { ADMIN_SESSION_STATUS_BADGE, ADMIN_SCHEDULE_STATUS_LABEL } from '@/constants/session';
-import { SESSION_STATUS } from '@gabby/types/session';
+import {
+  SESSION_STATUS,
+  SESSION_NON_ACTIONABLE_STATUSES,
+  SESSION_RESULT_STATUSES,
+} from '@gabby/types/session';
 import type { ClientOption } from '@gabby/types/client';
-import type { AdminStudentSummary, AdminScheduleSlotSummary, AdminCoachSummary } from '@gabby/types/adminLiveSession';
-import type { StudentLiveSessionContractSummary, CoachSessionListItem } from '@gabby/types/coachStudent';
+import type { AdminStudentSummary, AdminScheduleSlotSummary, AdminCoachSummary, AdminContractSummary } from '@gabby/types/adminLiveSession';
+import type { CoachSessionListItem } from '@gabby/types/coachStudent';
 
 const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
 // セッションは30分単位の枠のため、時間選択もこの粒度に揃える
@@ -84,7 +89,7 @@ export function LiveSessionManagementView({ clients }: Props) {
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
   const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [contracts, setContracts] = useState<StudentLiveSessionContractSummary[]>([]);
+  const [contracts, setContracts] = useState<AdminContractSummary[]>([]);
   const [isLoadingContracts, setIsLoadingContracts] = useState(false);
 
   const [selectedTicketId, setSelectedTicketId] = useState('');
@@ -94,6 +99,7 @@ export function LiveSessionManagementView({ clients }: Props) {
   const [releasingScheduleId, setReleasingScheduleId] = useState<string | null>(null);
 
   const [coaches, setCoaches] = useState<AdminCoachSummary[]>([]);
+  const [sessionTab, setSessionTab] = useState('upcoming');
 
   // キャンセルダイアログ
   const [cancelTarget, setCancelTarget] = useState<CoachSessionListItem | null>(null);
@@ -266,6 +272,11 @@ export function LiveSessionManagementView({ clients }: Props) {
     setMatchStartTime('');
   };
 
+  const openMatchDialog = (slotNo: number) => {
+    setMatchSlotNo(String(slotNo));
+    setIsMatchDialogOpen(true);
+  };
+
   const handleMatch = async () => {
     if (!matchCoachId || !matchStartTime) return;
     setIsMatching(true);
@@ -290,6 +301,74 @@ export function LiveSessionManagementView({ clients }: Props) {
     }
   };
 
+  const selectedContract = contracts.find((c) => c.ticket_id === selectedTicketId) ?? null;
+  // 過去契約（is_current=false）は参照専用とし、操作導線を一切出さない
+  const isPastContract = selectedContract !== null && !selectedContract.is_current;
+
+  const activeSlotNos = new Set(slots.filter((s) => s.status === 1).map((s) => s.slot_no));
+  const unassignedSlotNos = selectedContract
+    ? Array.from({ length: selectedContract.weekly_frequency }, (_, i) => i + 1).filter((n) => !activeSlotNos.has(n))
+    : [];
+
+  const now = new Date();
+  const upcomingSessions = sessions.filter((s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) > now);
+  const completedSessions = sessions.filter((s) => SESSION_RESULT_STATUSES.includes(s.status));
+  // アドミンの変更履歴タブは監査目的のため、コーチ/生徒向けの狭い集合ではなく
+  // ライセンス無効化・コーチ交代・アドミン代理キャンセルも含む広い集合を使う
+  const changeHistorySessions = sessions.filter((s) => SESSION_NON_ACTIONABLE_STATUSES.includes(s.status));
+
+  const renderSessionList = (list: CoachSessionListItem[], disableActions: boolean) => {
+    if (list.length === 0) {
+      return <p className="text-xs text-slate-400 py-4">該当するセッションはありません</p>;
+    }
+    return (
+      <ul className="space-y-1.5 max-h-96 overflow-y-auto">
+        {list.map((session) => {
+          const badge = ADMIN_SESSION_STATUS_BADGE[session.status];
+          const isScheduled = session.status === SESSION_STATUS.SCHEDULED;
+          return (
+            <li
+              key={session.session_id}
+              className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-slate-100 bg-white"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-700">{formatSessionDateTime(session.start_datetime)}</p>
+                <p className="text-[11px] text-slate-400">担当: {session.coach_name}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {isScheduled && !disableActions && (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[11px] text-slate-500 hover:text-indigo-600"
+                      onClick={() => setRescheduleTarget(session)}
+                    >
+                      振替
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[11px] text-slate-500 hover:text-rose-600"
+                      onClick={() => setCancelTarget(session)}
+                    >
+                      キャンセル
+                    </Button>
+                  </>
+                )}
+                <Badge variant="outline" className={`${badge.className} text-[10px] font-bold`}>
+                  {badge.label}
+                </Badge>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
+
   return (
     <div className="space-y-5">
       <Card className="rounded-2xl border-slate-200 shadow-sm">
@@ -299,50 +378,55 @@ export function LiveSessionManagementView({ clients }: Props) {
             対象の選択
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">顧客</Label>
-            <SearchableSelect
-              options={clients.map((c) => ({ value: c.client_id, label: c.client_name }))}
-              value={selectedClientId}
-              onChange={setSelectedClientId}
-              placeholder="顧客を選択"
-              searchPlaceholder="顧客名で検索..."
-              className="bg-white"
-            />
+        <CardContent className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">顧客</Label>
+              <SearchableSelect
+                options={clients.map((c) => ({ value: c.client_id, label: c.client_name }))}
+                value={selectedClientId}
+                onChange={setSelectedClientId}
+                placeholder="顧客を選択"
+                searchPlaceholder="顧客名で検索..."
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">生徒</Label>
+              <SearchableSelect
+                options={students.map((s) => ({ value: s.id, label: `${s.user_name}（${s.email}）` }))}
+                value={selectedStudentId}
+                onChange={setSelectedStudentId}
+                placeholder={isLoadingStudents ? '読み込み中...' : '生徒を選択'}
+                searchPlaceholder="生徒名・メールで検索..."
+                disabled={!selectedClientId || isLoadingStudents}
+                className="bg-white"
+              />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">生徒</Label>
-            <SearchableSelect
-              options={students.map((s) => ({ value: s.id, label: `${s.user_name}（${s.email}）` }))}
-              value={selectedStudentId}
-              onChange={setSelectedStudentId}
-              placeholder={isLoadingStudents ? '読み込み中...' : '生徒を選択'}
-              searchPlaceholder="生徒名・メールで検索..."
-              disabled={!selectedClientId || isLoadingStudents}
-              className="bg-white"
-            />
-          </div>
-        </CardContent>
-      </Card>
 
-      {selectedStudentId && (
-        <Card className="rounded-2xl border-slate-200 shadow-sm">
-          <CardHeader className="pb-3 space-y-3">
-            <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              <Video size={14} className="text-indigo-500" />
-              ライブセッション予約状況
-            </CardTitle>
-            {isLoadingContracts ? (
-              <div className="flex items-center gap-2 text-xs text-slate-400">
+          <div className="hidden sm:block w-px bg-slate-200" />
+
+          <div className="border-t sm:border-t-0 border-slate-200 pt-4 sm:pt-0 flex-1 space-y-1.5">
+            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">契約</Label>
+            {!selectedStudentId ? (
+              <>
+                <select disabled value="" className="flex h-9 w-full rounded-md border border-input bg-slate-50 px-3 text-sm text-slate-400 shadow-sm cursor-not-allowed">
+                  <option value="">生徒を選択してください</option>
+                </select>
+                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 px-3 py-2.5 min-h-13 flex items-center">
+                  <p className="text-xs text-slate-300">生徒を選択すると契約プランの情報が表示されます</p>
+                </div>
+              </>
+            ) : isLoadingContracts ? (
+              <div className="flex items-center gap-2 text-xs text-slate-400 h-9">
                 <Loader2 size={14} className="animate-spin" />
                 契約を確認しています...
               </div>
             ) : contracts.length === 0 ? (
               <p className="text-xs text-slate-400">この生徒はライブセッション付き契約を保有していません</p>
-            ) : contracts.length > 1 ? (
-              <div className="space-y-1.5">
-                <Label className="text-[11px] text-slate-400">契約</Label>
+            ) : (
+              <>
                 <select
                   value={selectedTicketId}
                   onChange={(e) => setSelectedTicketId(e.target.value)}
@@ -350,13 +434,38 @@ export function LiveSessionManagementView({ clients }: Props) {
                 >
                   {contracts.map((c) => (
                     <option key={c.ticket_id} value={c.ticket_id}>
-                      {c.is_current ? '現在の契約 ' : ''}
+                      {c.is_current ? '現在の契約 ' : '過去の契約（参照のみ） '}
                       {formatContractDate(c.start_date)} 〜 {formatContractDate(c.end_date)}
                     </option>
                   ))}
                 </select>
-              </div>
-            ) : null}
+                {selectedContract && (
+                  <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5 space-y-1 min-h-13">
+                    <p className="text-xs font-bold text-slate-700">{selectedContract.plan_name}</p>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                      <span>週{selectedContract.weekly_frequency}回</span>
+                      <span>{selectedContract.used_sessions}/{selectedContract.total_sessions}回消化</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {selectedStudentId && contracts.length > 0 && (
+        <Card className="rounded-2xl border-slate-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+              <Video size={14} className="text-indigo-500" />
+              ライブセッション予約状況
+              {isPastContract && (
+                <Badge variant="outline" className="bg-slate-100 text-slate-500 border-slate-200 text-[10px] font-bold">
+                  過去契約（参照のみ）
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
 
           {selectedTicketId && (
@@ -368,20 +477,8 @@ export function LiveSessionManagementView({ clients }: Props) {
               ) : (
                 <>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">定期スケジュール枠</p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2.5 text-[11px]"
-                        onClick={() => setIsMatchDialogOpen(true)}
-                      >
-                        <UserPlus size={12} />
-                        直接マッチング
-                      </Button>
-                    </div>
-                    {slots.length === 0 ? (
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">定期スケジュール枠</p>
+                    {slots.length === 0 && unassignedSlotNos.length === 0 ? (
                       <p className="text-xs text-slate-400">まだマッチングが成立していません</p>
                     ) : (
                       <div className="space-y-2">
@@ -409,7 +506,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                                 </div>
                                 <p className="text-[11px] text-slate-400 mt-0.5">担当コーチ: {slot.coach_name}</p>
                               </div>
-                              {isActive && (
+                              {isActive && !isPastContract && (
                                 <div className="flex items-center gap-2 shrink-0">
                                   {slot.shortfall > 0 && (
                                     <Button
@@ -468,6 +565,32 @@ export function LiveSessionManagementView({ clients }: Props) {
                             </div>
                           );
                         })}
+                        {!isPastContract && unassignedSlotNos.map((slotNo) => (
+                          <div
+                            key={`unassigned-${slotNo}`}
+                            className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-dashed border-slate-200 bg-white"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold text-slate-400">第{slotNo}枠</span>
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-100 text-[10px] font-bold">
+                                  未割当
+                                </Badge>
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-0.5">まだコーチが割り当てられていません</p>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="text-indigo-700 border-indigo-200 hover:bg-indigo-50 shrink-0"
+                              onClick={() => openMatchDialog(slotNo)}
+                            >
+                              <UserPlus size={13} />
+                              直接マッチング
+                            </Button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -477,50 +600,22 @@ export function LiveSessionManagementView({ clients }: Props) {
                     {sessions.length === 0 ? (
                       <p className="text-xs text-slate-400">セッションはまだありません</p>
                     ) : (
-                      <ul className="space-y-1.5 max-h-96 overflow-y-auto">
-                        {sessions.map((session) => {
-                          const badge = ADMIN_SESSION_STATUS_BADGE[session.status];
-                          const isScheduled = session.status === SESSION_STATUS.SCHEDULED;
-                          return (
-                            <li
-                              key={session.session_id}
-                              className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-slate-100 bg-white"
-                            >
-                              <div className="min-w-0">
-                                <p className="text-xs font-semibold text-slate-700">{formatSessionDateTime(session.start_datetime)}</p>
-                                <p className="text-[11px] text-slate-400">担当: {session.coach_name}</p>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {isScheduled && (
-                                  <>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-7 px-2 text-[11px] text-slate-500 hover:text-indigo-600"
-                                      onClick={() => setRescheduleTarget(session)}
-                                    >
-                                      振替
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-7 px-2 text-[11px] text-slate-500 hover:text-rose-600"
-                                      onClick={() => setCancelTarget(session)}
-                                    >
-                                      キャンセル
-                                    </Button>
-                                  </>
-                                )}
-                                <Badge variant="outline" className={`${badge.className} text-[10px] font-bold`}>
-                                  {badge.label}
-                                </Badge>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
+                      <Tabs value={sessionTab} onValueChange={setSessionTab}>
+                        <TabsList className="grid w-full grid-cols-3">
+                          <TabsTrigger value="upcoming">今後の予定</TabsTrigger>
+                          <TabsTrigger value="completed">実施済み</TabsTrigger>
+                          <TabsTrigger value="changes">変更履歴</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="upcoming">
+                          {renderSessionList(upcomingSessions, isPastContract)}
+                        </TabsContent>
+                        <TabsContent value="completed">
+                          {renderSessionList(completedSessions, isPastContract)}
+                        </TabsContent>
+                        <TabsContent value="changes">
+                          {renderSessionList(changeHistorySessions, isPastContract)}
+                        </TabsContent>
+                      </Tabs>
                     )}
                   </div>
                 </>
