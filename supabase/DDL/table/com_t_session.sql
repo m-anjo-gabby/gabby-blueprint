@@ -83,3 +83,112 @@ FOR SELECT TO authenticated USING (
     OR coach_id = auth.uid()
     OR public.get_jwt_user_type() = '0'
 );
+
+---------------------------------------------
+-- 追加パッチ: ライブセッション実施結果の連携 (2026-09-04)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- Zoom Video SDKのライブ通話ルームをsession_id単位に紐づけ、コーチが押す
+-- 「レッスン終了」ボタンでの自動判定（completed/no_show/early_ended）、および
+-- 予定時刻超過後もscheduledのまま残ったセッションの手動解決に対応するため、
+-- ステータス値を追加し、理由テキストの保存先を新設する。
+-- cancel_reasonは事前キャンセル専用の意味で使われているため流用せず、
+-- 早期終了・手動解決の理由は本カラムに分離して保持する。
+---------------------------------------------
+ALTER TABLE public.com_t_session ADD COLUMN IF NOT EXISTS status_note text DEFAULT NULL;
+COMMENT ON COLUMN public.com_t_session.status_note IS '早期終了理由・停滞セッションの手動解決理由（cancel_reasonとは意味的に分離）';
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由)';
+
+---------------------------------------------
+-- 追加パッチ: キャンセル時のチケット返還可否 (2026-09-05)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 生徒による事前キャンセルは、開始12時間以上前なら「チケット返還（未割当扱いに戻し、
+-- 担当コーチ限定で再予約可能）」、12時間未満は「返還なし（消化済み扱い、再予約不可）」。
+-- コーチによるキャンセルは時間帯を問わず常に返還する。status IN (1,2,6,7)の行は
+-- そもそも本カラムを使わないため常にNULLのまま（cancel_session側でのみセットする）。
+---------------------------------------------
+ALTER TABLE public.com_t_session ADD COLUMN IF NOT EXISTS ticket_refunded boolean DEFAULT NULL;
+COMMENT ON COLUMN public.com_t_session.ticket_refunded IS 'キャンセル(status 3/4)時のみ意味を持つ。true:チケット返還(未割当扱いに戻り担当コーチ限定で再予約可能) false:返還なし(消化済み扱い)。生徒キャンセルは開始12時間以上前ならtrue、未満ならfalse。コーチキャンセルは常にtrue。';
+
+---------------------------------------------
+-- 追加パッチ: ライセンス無効化に伴うセッション自動キャンセルへの対応 (2026-09-08)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- ライセンス無効化(invalidate_user_license)は、まだ実施されていない未来のscheduled
+-- セッションをキャンセル扱いにする。既存のcancelled_by_coach(4)を流用すると、コーチ側
+-- 画面で「Cancelled by you」等、実際にはコーチが行っていない操作の表示になり誤解を招く
+-- ため、専用のステータス値を新設する。
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル)';
+
+---------------------------------------------
+-- 追加パッチ: 担当外セッション（同一契約を分担する他コーチ・過去に担当していた他コーチ）の
+-- 参照を許可 (2026-09-08)
+-- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 週2回契約等で1コマ目・2コマ目を別のコーチが分担するケースや、生徒が過去に別のコーチから
+-- 引き継いだケースがある。カリキュラムの一覧性・参照のため、マッチング済み（現在または過去に
+-- com_m_coach_student_relationshipの行がある）生徒であれば、自分が担当者ではないセッションも
+-- 一覧として見えるようにする（結果の詳細=com_t_session_call_log/chat/homeworkは対象外。
+-- これらのRLSは変更しないため、担当外セッションの入退室ログ・チャット・宿題は引き続き見えない）。
+--
+-- 【重要: 呼び出し側の対応が必須】
+-- 本ポリシー変更により、com_t_sessionを「担当コーチかどうかをRLSだけに委ねて」問い合わせている
+-- 既存コードは、意図せず他コーチのセッションを取得してしまう。実際に packages/lib/session/
+-- actions/sessionActions.ts の getMySessionsCore（メインカレンダー・ダッシュボード用）は
+-- このパッチに合わせて明示的な .or(coach_id.eq/student_id.eq) フィルタを追加済み。
+-- 今後 com_t_session を新たに問い合わせるコードを書く場合、「自分の予定表」を意図するなら
+-- 必ず coach_id/student_id を明示的に絞り込むこと（RLSの許可範囲＝自分の予定、とは限らない）。
+DROP POLICY IF EXISTS "Involved users can view sessions" ON public.com_t_session;
+CREATE POLICY "Involved users can view sessions" ON public.com_t_session
+FOR SELECT TO authenticated USING (
+    student_id = auth.uid()
+    OR coach_id = auth.uid()
+    OR EXISTS (
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = com_t_session.student_id AND r.coach_id = auth.uid()
+    )
+    OR public.get_jwt_user_type() = '0'
+);
+
+---------------------------------------------
+-- 追加パッチ: コーチ交代に伴うセッション自動キャンセルへの対応 (2026-09-08)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- アドミンのライブセッション管理画面からのコーチ交代(release_lesson_schedule_slot)は、
+-- まだ実施されていない未来のscheduledセッションをキャンセル扱いにする。既存の
+-- cancelled_license_ended(8)は契約終了が理由のため意味が異なり、cancelled_by_coach(4)を
+-- 流用すると「Cancelled by you」等、実際にはコーチが行っていない操作の表示になり誤解を招く。
+-- そのため専用のステータス値を新設する。
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8, 9));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル) 9:cancelled_coach_reassigned(コーチ交代による自動キャンセル)';
+
+---------------------------------------------
+-- 追加パッチ: アドミンによるセッション代理キャンセルへの対応 (2026-09-09)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- アドミンのライブセッション管理画面から、生徒・コーチに代わってセッションをキャンセル
+-- できるようにする。生徒キャンセル(3)・コーチキャンセル(4)はどちらもauth.uid()が
+-- 本人と一致することが前提のロジック（返還ルール・通知の宛先/文言）を持つため、
+-- 管理者自身のauth.uid()はそのどちらとも一致せず、流用すると返還可否や通知内容を
+-- 誤判定してしまう。そのため、返還有無を管理者が明示的に指定する専用ステータス値を
+-- 新設する（cancel_session.sql参照）。
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル) 9:cancelled_coach_reassigned(コーチ交代による自動キャンセル) 10:cancelled_by_admin(アドミンによる代理キャンセル。ticket_refundedは管理者が明示的に指定)';

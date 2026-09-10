@@ -1,4 +1,6 @@
 // src/app/(app)/admin/contracts/page.tsx
+import Link from 'next/link';
+import { Settings } from 'lucide-react';
 import { getContracts } from '@/actions/adminContractAction';
 import { ContractDataTable } from './_components/contract-data-table';
 import { columns } from './_components/columns';
@@ -32,6 +34,12 @@ export default async function AdminContractsPage({
         </div>
         
         <div className="flex items-center gap-3">
+          <Link
+            href="/contracts/plans"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <Settings size={14} /> プランマスタ管理
+          </Link>
           <ContractFormDialog mode="create" />
         </div>
       </div>

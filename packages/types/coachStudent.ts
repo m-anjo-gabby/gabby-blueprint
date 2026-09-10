@@ -34,6 +34,7 @@ export interface AssignedStudentSummary extends StudentSprintProgress {
 /** 生徒が現在保有する有効契約の概要（ヘッダー表示用） */
 export interface StudentActiveContract {
   plan_name: string;
+  plan_name_en: string;
   start_date: string; // UTC ISO文字列
   end_date: string; // UTC ISO文字列
 }
@@ -52,11 +53,49 @@ export interface StudentOverviewProfile {
 /** Student Overview画面のライブセッション履歴1件分 */
 export interface StudentSessionHistoryItem {
   session_id: string;
+  schedule_id: string;
   start_datetime: string; // UTC ISO文字列
   end_datetime: string;
   status: SessionStatus;
   rescheduled_from: string | null;
   cancel_reason: string | null;
+  status_note: string | null;
+}
+
+/**
+ * 生徒の契約(チケット)1件分の概要（コーチ視点のLive Sessionsカードの契約切替用）。
+ * 生徒側のLiveSessionContractSummaryと同型だが、対象が「ログイン中の生徒自身」ではなく
+ * 「コーチが閲覧している特定の生徒」である点が異なる。
+ */
+export interface StudentLiveSessionContractSummary {
+  ticket_id: string;
+  license_id: string;
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+  /** 週あたりのライブセッション回数（=定期スケジュール枠の数）。アドミンのライブセッション
+   * 管理画面で、枠数分のプレースホルダーを表示するために使う。 */
+  weekly_frequency: number;
+}
+
+/**
+ * コーチ視点で見る、契約(チケット)単位のセッション1件分。
+ * 週2回契約等で他コーチと分担しているケースや、生徒が過去に別のコーチから引き継がれた
+ * ケースがあるため、coach_idが必ずしも閲覧者自身とは限らない（担当外セッションも含みうる）。
+ * 担当外セッションは一覧上の存在確認のみを目的とし、結果の詳細（call_log/chat/homework）
+ * には別途アクセス権が必要なため、この型には含めない。
+ */
+export interface CoachSessionListItem {
+  session_id: string;
+  schedule_id: string;
+  start_datetime: string;
+  end_datetime: string;
+  status: SessionStatus;
+  rescheduled_from: string | null;
+  cancel_reason: string | null;
+  status_note: string | null;
+  coach_id: string;
+  coach_name: string;
 }
 
 /**
@@ -77,6 +116,22 @@ export interface LiveSessionShortfallItem {
   shortfall: number;
 }
 
+/**
+ * 直近N日間の自主トレ実施サマリー（self_t_sprint_summaryの日次集計を期間合算したもの）。
+ * セッション準備/実施ハブでの表示用。self_t_sprint本体（回答内容・個別スコア）は
+ * コーチに開示しないため、件数の合計のみを持つ。
+ */
+export interface SelfTrainingWeekSummary {
+  /** 集計対象日数 */
+  days: number;
+  /** 実施日数（1問でも取り組んだ日の数） */
+  active_days: number;
+  /** 延べ問題数の合計 */
+  total_questions: number;
+  /** 発話評価回数の合計 */
+  total_assessments: number;
+}
+
 /** コーチ自分用の生徒メモ (com_t_coach_student_note) */
 export interface CoachStudentNote {
   note_id: string;
@@ -94,8 +149,17 @@ export type GetStudentOverviewResult =
   | { success: true; profile: StudentOverviewProfile }
   | { success: false; errorCode: CoachStudentErrorCode };
 
-export type GetStudentSessionHistoryResult =
-  | { success: true; sessions: StudentSessionHistoryItem[] }
+export type GetStudentLiveSessionContractsResult =
+  | { success: true; contracts: StudentLiveSessionContractSummary[] }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+export type GetStudentSessionsByTicketResult =
+  | { success: true; sessions: CoachSessionListItem[] }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+/** 次に実施可能な（status=scheduled かつ 終了予定時刻が未来の）セッション1件。無ければnull */
+export type GetStudentUpcomingSessionResult =
+  | { success: true; session: StudentSessionHistoryItem | null }
   | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetStudentLiveSessionShortfallsResult =
@@ -104,6 +168,10 @@ export type GetStudentLiveSessionShortfallsResult =
 
 export type GetStudentNotesResult =
   | { success: true; notes: CoachStudentNote[] }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+export type GetSelfTrainingWeekSummaryResult =
+  | { success: true; summary: SelfTrainingWeekSummary }
   | { success: false; errorCode: CoachStudentErrorCode };
 
 export type AddCoachStudentNoteResult =

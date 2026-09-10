@@ -28,14 +28,14 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div className="max-w-2xl">
+      <div>
         <h1 className="text-xl font-bold text-slate-800 tracking-tight">Profile Settings</h1>
         <p className="text-[13px] text-slate-500 mt-1">
-          Review your account information and manage your icon image.
+          Review your account information and manage your public coach profile.
         </p>
       </div>
 
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-330">
         <ProfileView
           userName={profile.user_name ?? '(Not set)'}
           clientName={profile.client_name}

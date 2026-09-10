@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { format } from 'date-fns';
-import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, RotateCcw, X } from 'lucide-react';
+import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { SESSION_STATUS } from '@gabby/types/session';
+import { SESSION_STATUS, SessionStatus } from '@gabby/types/session';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { CalendarEventItem, CalendarEventMessageItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CALENDAR_EVENT_TYPE_LABEL_EN } from '@/constants/calendarEvent';
@@ -300,7 +301,12 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
                 const session = item.data;
                 const badge = SESSION_STATUS_BADGE[session.status];
                 const isFuture = new Date(session.start_datetime) > new Date();
+                const isPastEnd = new Date(session.end_datetime) < new Date();
                 const canAct = session.status === SESSION_STATUS.SCHEDULED && isFuture;
+                const canResolve = session.status === SESSION_STATUS.SCHEDULED && isPastEnd;
+                const hasResult = (
+                  [SESSION_STATUS.COMPLETED, SESSION_STATUS.NO_SHOW, SESSION_STATUS.EARLY_ENDED] as SessionStatus[]
+                ).includes(session.status);
                 return (
                   <article key={getCalendarItemKey(item)} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
@@ -321,10 +327,6 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
 
                     {canAct && (
                       <div className="flex items-center gap-2 pt-1">
-                        <Button type="button" size="sm" variant="outline" onClick={() => onActionRequested({ session, mode: 'reschedule' })}>
-                          <RotateCcw size={13} />
-                          Reschedule
-                        </Button>
                         <Button
                           type="button"
                           size="sm"
@@ -335,6 +337,32 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
                           <X size={13} />
                           Cancel
                         </Button>
+                      </div>
+                    )}
+
+                    {canResolve && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="text-amber-700 border-amber-200 hover:bg-amber-50"
+                          onClick={() => onActionRequested({ session, mode: 'resolve' })}
+                        >
+                          <CheckCircle2 size={13} />
+                          Resolve
+                        </Button>
+                      </div>
+                    )}
+
+                    {hasResult && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <Link
+                          href={`/students/${session.counterpart_id}/sessions/${session.session_id}/result`}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                        >
+                          View Session Result
+                        </Link>
                       </div>
                     )}
                   </article>

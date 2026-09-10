@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Cropper, { type Area, type Point } from 'react-easy-crop';
 import { User, Camera, Trash2, Loader2, X } from 'lucide-react';
 import { getCroppedImageBlob } from '../../profile/cropImage';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 
 export interface AvatarCropUploaderLabels {
   /** モーダルのタイトル */
@@ -19,6 +20,10 @@ export interface AvatarCropUploaderLabels {
   removeLabel?: string;
   /** アップロード失敗時のトースト等に使う汎用エラーラベル（サイズ超過・形式不正） */
   invalidFileLabel: string;
+  /** 削除確認ダイアログのタイトル（onRemove未指定時は使用しない） */
+  removeConfirmTitle: string;
+  /** 削除確認ダイアログの説明文（onRemove未指定時は使用しない） */
+  removeConfirmMessage: string;
 }
 
 export interface AvatarCropUploaderProps {
@@ -66,6 +71,7 @@ export function AvatarCropUploader({
   const [isSaving, setIsSaving] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const { showConfirm } = useConfirm();
 
   const closeModal = useCallback(() => {
     if (selectedImageUrl) URL.revokeObjectURL(selectedImageUrl);
@@ -108,6 +114,12 @@ export function AvatarCropUploader({
 
   const handleRemove = async () => {
     if (!onRemove) return;
+    const confirmed = await showConfirm(labels.removeConfirmTitle, labels.removeConfirmMessage, {
+      variant: 'danger',
+      confirmText: labels.removeLabel,
+      cancelText: labels.cancelLabel,
+    });
+    if (!confirmed) return;
     setIsRemoving(true);
     try {
       await onRemove();

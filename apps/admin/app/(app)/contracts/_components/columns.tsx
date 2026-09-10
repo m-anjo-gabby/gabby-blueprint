@@ -36,9 +36,16 @@ export const columns: ColumnDef<ContractDetail>[] = [
             {row.getValue('plan_name')}
           </span>
           {contract.contract_type === 2 && (
-            <Badge className="w-fit bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-[10px] font-bold">
-              ライブ週{contract.weekly_frequency}回・全{contract.total_sessions}回
-            </Badge>
+            <div className="flex flex-wrap gap-1">
+              <Badge className="w-fit bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-[10px] font-bold">
+                ライブ週{contract.weekly_frequency}回・全{contract.total_sessions}回
+              </Badge>
+              {contract.has_dialogue_practice && (
+                <Badge className="w-fit bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100 text-[10px] font-bold">
+                  ダイアログプラクティス
+                </Badge>
+              )}
+            </div>
           )}
         </div>
       );
@@ -58,9 +65,11 @@ export const columns: ColumnDef<ContractDetail>[] = [
       const isExpired = isBefore(end, now);
       
       const max = contract.max_licenses;
-      const active = contract.current_active_count || 0;
+      // 無効化されたライセンスも「消化済み」として扱い続ける（枠は戻らない）ため、
+      // 現在有効かどうか(current_active_count)ではなく、割当実績の総数
+      // (current_assigned_count)を主要な使用状況の数値として表示する。
       const assigned = contract.current_assigned_count || 0;
-      const usageRate = Math.min(Math.ceil((active / max) * 100), 100);
+      const usageRate = Math.min(Math.ceil((assigned / max) * 100), 100);
 
       // 表示用の共通UIコンポーネント
       const UsageDisplay = (
@@ -68,16 +77,16 @@ export const columns: ColumnDef<ContractDetail>[] = [
           {/* 左側：数値 ＋ プログレスバー */}
           <div className="flex flex-col gap-1.5 min-w-[120px]">
             <div className="flex items-baseline gap-1">
-              <span className={`text-sm font-bold font-mono ${active >= max ? 'text-amber-600' : 'text-slate-900'} ${!isExpired && 'group-hover/usage:text-indigo-600'} transition-colors`}>
-                {active}
+              <span className={`text-sm font-bold font-mono ${assigned >= max ? 'text-amber-600' : 'text-slate-900'} ${!isExpired && 'group-hover/usage:text-indigo-600'} transition-colors`}>
+                {assigned}
               </span>
               <span className="text-slate-400 text-[10px]">/ {max}</span>
               <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap opacity-80">( {usageRate}% )</span>
             </div>
 
             <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-sm transition-all">
-              <div 
-                className={`h-full transition-all duration-500 ${active >= max ? 'bg-amber-500' : 'bg-indigo-500'}`}
+              <div
+                className={`h-full transition-all duration-500 ${assigned >= max ? 'bg-amber-500' : 'bg-indigo-500'}`}
                 style={{ width: `${usageRate}%` }}
               />
             </div>

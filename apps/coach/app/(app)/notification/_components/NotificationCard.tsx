@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, Flame, MessageCircle, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { formatZonedDate } from '@gabby/lib/date/date';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { NotificationItem, NOTIFICATION_TYPES, NotificationType } from '@gabby/types/notification';
 import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@/constants/notification';
 
@@ -69,7 +69,7 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
             {text.body}
           </p>
           <p className="text-[10px] text-slate-400 mt-2 font-bold">
-            {formatZonedDate(notification.occurred_at, timezone)}
+            {formatDateEn(notification.occurred_at, timezone)}
           </p>
         </div>
       </button>

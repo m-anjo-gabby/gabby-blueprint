@@ -1,8 +1,12 @@
+'use client';
+
 import Link from 'next/link';
 import { ArrowLeft, Zap, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { tokenizeWordsWithPunctuation, formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { LESSON_SPRINT_SCORE_META } from '@gabby/types/lessonSprint';
 import type { LessonSprintRecord, LessonSprintContentSummary } from '@gabby/types/lessonSprint';
@@ -18,6 +22,7 @@ interface Props {
 }
 
 export function LessonSprintResult({ studentId, record, questions, content }: Props) {
+  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const isQuestionBased = record.question_type === '0' || record.question_type === '6';
 
@@ -26,24 +31,28 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
     ? Math.round((scoredItems.reduce((sum, h) => sum + (h.score ?? 0), 0) / scoredItems.length) * 10) / 10
     : null;
 
-  const formattedDate = new Date(record.insert_date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  const formattedDate = formatDateTimeEn(record.insert_date, timezone);
+
+  // このスプリントがライブセッションに紐づいていれば、そのセッション結果画面に戻る方が文脈的に自然
+  // （受講生概要の全履歴一覧から開いた場合も、セッションに属する実施であればそちらへ戻す）。
+  // 紐づきが無い(単独実施)場合のみ受講生概要に戻る。
+  const backHref = record.session_id
+    ? `/students/${studentId}/sessions/${record.session_id}/result`
+    : `/students/${studentId}`;
+  const backLabel = record.session_id ? 'Back to Session Result' : 'Back to Overview';
 
   return (
     <div className="flex flex-col lg:h-full max-w-7xl mx-auto w-full pb-6 lg:pb-0">
       {/* ────────────── Header area: navigation + screen title ────────────── */}
       <div className="space-y-1 pb-6 shrink-0">
         <Link
-          href={`/students/${studentId}`}
+          href={backHref}
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
         >
           <ArrowLeft size={14} />
-          Back to Overview
+          {backLabel}
         </Link>
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight">Lesson Sprint Result</h1>
+        <h1 className="text-xl font-bold text-slate-800 tracking-tight">Live Sprint Result</h1>
       </div>
 
       {/* ────────────── Main content: two-pane layout. On lg+, each pane scrolls independently within a fixed-height row. ────────────── */}
@@ -90,11 +99,11 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
           <div className="lg:sticky lg:bottom-0 lg:bg-white lg:border-t lg:border-slate-100 lg:pt-3 space-y-2">
             <RepeatSprintButton studentId={studentId} record={record} content={content} />
             <Link
-              href={`/students/${studentId}/lesson-sprint`}
+              href={`/students/${studentId}/lesson-sprint${record.session_id ? `?session_id=${record.session_id}` : ''}`}
               className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shrink-0"
             >
               <Zap size={14} className="fill-current text-amber-300" />
-              Start Another Lesson Sprint
+              Start Another Live Sprint
             </Link>
           </div>
         </div>

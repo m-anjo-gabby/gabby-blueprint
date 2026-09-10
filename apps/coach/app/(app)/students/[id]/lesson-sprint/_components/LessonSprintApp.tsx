@@ -11,12 +11,14 @@ import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 
 interface Props {
   studentId: string;
+  /** 実施中のライブセッション (com_t_session.session_id)。ハブ画面経由でない単独実施の場合はnull */
+  sessionId: string | null;
   profile: StudentOverviewProfile;
   lessonSprints: LessonSprintHistoryListItem[];
   contents: LessonSprintContentSummary[];
 }
 
-export function LessonSprintApp({ studentId, profile, lessonSprints, contents }: Props) {
+export function LessonSprintApp({ studentId, sessionId, profile, lessonSprints, contents }: Props) {
   const router = useRouter();
   // 「Repeat Same Settings」（結果画面）から遷移してきた場合、既にセッションが開始済みのことがあるため、
   // マウント時点のストア状態を見て初期ビューを決める（常に'selecting'から始めない）。
@@ -49,6 +51,7 @@ export function LessonSprintApp({ studentId, profile, lessonSprints, contents }:
       {view === 'playing' ? (
         <LessonSprintPlayer
           studentId={studentId}
+          sessionId={sessionId}
           onExit={handleExit}
           onComplete={handleComplete}
         />

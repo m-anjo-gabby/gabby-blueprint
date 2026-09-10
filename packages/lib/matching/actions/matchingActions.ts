@@ -5,13 +5,17 @@ import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import {
+  BookableTicketSlot,
   CoachBrowseItem,
   CreateMatchingRequestInput,
   CreateMatchingRequestResult,
   CancelMatchingRequestResult,
   ApproveMatchingRequestResult,
+  GetMyBookableTicketsResult,
+  GetMyLiveSessionContractsResult,
   RejectMatchingRequestResult,
   IncomingMatchingRequestItem,
+  LiveSessionContractSummary,
   LiveSessionTicketSummary,
   MATCHING_REQUEST_STATUS,
   MatchingRequestErrorCode,
@@ -23,6 +27,8 @@ const logger = createLogger('common');
 function isValidTimeRange(startTime: string, endTime: string): boolean {
   return /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime) && startTime < endTime;
 }
+
+type ScheduleShortfallRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
 
 /**
  * ログイン中の生徒が保有する、現在有効なライブセッションチケットの一覧を取得する（ポータル共通）
@@ -81,6 +87,68 @@ export async function getMyLiveSessionTicketsCore(): Promise<
     return { success: true, tickets: activeTickets };
   } catch (err) {
     logger.error('matching:get_my_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中の生徒が保有する、ライブセッションチケット付き契約の一覧（現在有効・過去満了分の両方）を
+ * 取得する（ライブセッションハブの契約切替用）。getMyLiveSessionTicketsCoreと異なり、
+ * 満了済み(status<>1 または end_date<now)の契約も含めて全件返す。
+ */
+export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionContractsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: tickets, error: ticketError } = await supabase
+      .from('com_t_user_session_ticket')
+      .select('ticket_id, license_id')
+      .eq('user_id', user.id);
+
+    if (ticketError) {
+      logger.error('matching:get_my_contracts_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!tickets || tickets.length === 0) {
+      return { success: true, contracts: [] };
+    }
+
+    const { data: licenses, error: licenseError } = await supabase
+      .from('com_t_user_license')
+      .select('license_id, status, start_date, end_date')
+      .in('license_id', tickets.map((t) => t.license_id));
+
+    if (licenseError) {
+      logger.error('matching:get_my_contracts_license_failed', licenseError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const licenseById = new Map((licenses ?? []).map((l) => [l.license_id, l]));
+    const now = new Date();
+
+    const contracts: LiveSessionContractSummary[] = tickets
+      .map((t) => {
+        const license = licenseById.get(t.license_id);
+        if (!license) return null;
+        const isCurrent = license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
+        return {
+          ticket_id: t.ticket_id,
+          license_id: t.license_id,
+          start_date: license.start_date,
+          end_date: license.end_date,
+          is_current: isCurrent,
+        };
+      })
+      .filter((c): c is LiveSessionContractSummary => c !== null)
+      .sort((a, b) => b.start_date.localeCompare(a.start_date));
+
+    return { success: true, contracts };
+  } catch (err) {
+    logger.error('matching:get_my_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -217,6 +285,131 @@ export async function getMySlotStatusCore(
     return { success: true, slots };
   } catch (err) {
     logger.error('matching:get_slot_status_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 生徒本人の、未割当チケット(キャンセルによりticket_refunded=trueとなり未消化に戻った枠等)により
+ * 再予約可能な定期スケジュール(コマ)の一覧を取得する（生徒向け。ポータル共通）。
+ * 週n回契約でコマごとに担当コーチが異なりうるため、コーチ選択はさせず対象コマ(schedule_id)を
+ * 選ばせる（担当コーチはcom_m_lesson_schedule.coach_idで既に確定している）。
+ * shortfall算出はDB側のfn_schedule_shortfall()（book_makeup_session RPCの予約可否判定と同一）。
+ */
+export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: schedules, error: scheduleError } = await supabase
+      .from('com_m_lesson_schedule')
+      .select('schedule_id, slot_no, coach_id, day_of_week, start_time, end_time, coach_timezone')
+      .eq('student_id', user.id)
+      .eq('status', 1);
+
+    if (scheduleError) {
+      logger.error('matching:get_my_bookable_tickets_schedule_failed', scheduleError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!schedules || schedules.length === 0) {
+      return { success: true, slots: [] };
+    }
+
+    const shortfallResults = await Promise.all(
+      schedules.map((schedule) =>
+        supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single()
+      )
+    );
+
+    const bookableSchedules = schedules.filter((_, index) => {
+      const { error } = shortfallResults[index];
+      const data = shortfallResults[index].data as ScheduleShortfallRow | null;
+      if (error || !data) {
+        logger.error('matching:get_my_bookable_tickets_rpc_failed', error?.message ?? 'No row returned', { ...ctx, userId: user.id, payload: { scheduleId: schedules[index].schedule_id } });
+        return false;
+      }
+      return data.shortfall > 0;
+    });
+
+    if (bookableSchedules.length === 0) {
+      return { success: true, slots: [] };
+    }
+
+    const shortfallByScheduleId = new Map(
+      schedules.map((schedule, index) => [schedule.schedule_id, (shortfallResults[index].data as ScheduleShortfallRow | null)?.shortfall ?? 0])
+    );
+
+    const coachIds = Array.from(new Set(bookableSchedules.map((s) => s.coach_id)));
+
+    const [
+      { data: coaches, error: coachError },
+      { data: availability, error: availabilityError },
+      { data: unavailableSlots, error: unavailableError },
+    ] = await Promise.all([
+      supabase.from('com_m_user').select('id, user_name').in('id', coachIds),
+      supabase
+        .from('com_m_coach_availability')
+        .select('availability_id, coach_id, day_of_week, start_time, end_time')
+        .in('coach_id', coachIds)
+        .eq('delete_flg', '0'),
+      supabase.rpc('get_coaches_unavailable_slots', { p_coach_ids: coachIds }),
+    ]);
+
+    if (coachError || availabilityError || unavailableError) {
+      logger.error(
+        'matching:get_my_bookable_tickets_join_failed',
+        coachError?.message ?? availabilityError?.message ?? unavailableError?.message ?? 'unknown',
+        { ...ctx, userId: user.id }
+      );
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const coachNameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+
+    const availabilityByCoachId = new Map<string, typeof availability>();
+    for (const a of availability ?? []) {
+      const list = availabilityByCoachId.get(a.coach_id) ?? [];
+      list.push(a);
+      availabilityByCoachId.set(a.coach_id, list);
+    }
+
+    type UnavailableSlotRow = { coach_id: string; day_of_week: number; start_time: string; end_time: string };
+    const unavailableByCoachId = new Map<string, UnavailableSlotRow[]>();
+    for (const s of (unavailableSlots ?? []) as UnavailableSlotRow[]) {
+      const list = unavailableByCoachId.get(s.coach_id) ?? [];
+      list.push(s);
+      unavailableByCoachId.set(s.coach_id, list);
+    }
+
+    const slots: BookableTicketSlot[] = bookableSchedules.map((schedule) => ({
+      schedule_id: schedule.schedule_id,
+      slot_no: schedule.slot_no,
+      coach_id: schedule.coach_id,
+      coach_name: coachNameById.get(schedule.coach_id) ?? '(Unknown)',
+      coach_timezone: schedule.coach_timezone,
+      day_of_week: schedule.day_of_week as DayOfWeek,
+      start_time: schedule.start_time,
+      end_time: schedule.end_time,
+      shortfall: shortfallByScheduleId.get(schedule.schedule_id) ?? 0,
+      availability: (availabilityByCoachId.get(schedule.coach_id) ?? []).map((a) => ({
+        availability_id: a.availability_id,
+        day_of_week: a.day_of_week as DayOfWeek,
+        start_time: a.start_time,
+        end_time: a.end_time,
+      })),
+      unavailable_slots: (unavailableByCoachId.get(schedule.coach_id) ?? []).map((s) => ({
+        day_of_week: s.day_of_week as DayOfWeek,
+        start_time: s.start_time,
+        end_time: s.end_time,
+      })),
+    }));
+
+    return { success: true, slots };
+  } catch (err) {
+    logger.error('matching:get_my_bookable_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

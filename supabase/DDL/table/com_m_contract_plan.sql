@@ -76,3 +76,33 @@ ALTER TABLE public.com_m_contract_plan ADD CONSTRAINT chk_contract_plan_live_fie
 );
 
 COMMENT ON COLUMN public.com_m_contract_plan.weekly_frequency IS '週あたりのライブセッション回数（1以上。Blueprintのみの場合はNULL）';
+
+---------------------------------------------
+-- 追加パッチ: プラン英語名・ダイアログプラクティス提供有無 (2026-09-08)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+-- 前提: DML/com_m_contract_plan.sql の同日パッチが適用済みであること（英語名の実値投入）。
+---------------------------------------------
+-- 【背景】
+-- 契約作成を「契約タイプ選択＋プラン選択」の2段階から「プラン選択のみ」に一本化する
+-- （詳細はtable/com_m_contract.sqlの同日パッチを参照）。これに伴いプランマスタ側にも
+-- 表示名の英語版と、ダイアログプラクティス（自主トレ）提供有無を持たせる。
+-- 今後もトレーニング種別が増える可能性はあるが頻度は高くない想定のため、正規化した
+-- 別テーブル（プラン×トレーニング種別のN:M）ではなく、素直にboolean列を追加する方式を
+-- 採用する。boolean列の追加は非破壊的なため、将来的に組み合わせが複雑化した場合の
+-- テーブル分離への移行も難しくない。
+ALTER TABLE public.com_m_contract_plan
+  ADD COLUMN IF NOT EXISTS plan_name_en text,
+  ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
+
+-- 英語名が未設定の行は暫定的に日本語名を流用しておく（直後のDMLパッチで正しい英語名に上書きされる）
+UPDATE public.com_m_contract_plan SET plan_name_en = plan_name WHERE plan_name_en IS NULL;
+ALTER TABLE public.com_m_contract_plan ALTER COLUMN plan_name_en SET NOT NULL;
+
+COMMENT ON COLUMN public.com_m_contract_plan.plan_name_en IS 'プラン表示名（英語。coachアプリでの表示用）';
+COMMENT ON COLUMN public.com_m_contract_plan.has_dialogue_practice IS 'ダイアログプラクティスの提供有無（自主トレ・コーチとのセッション両方での利用可否に使う）';
+
+-- ダイアログプラクティスはコーチ付き契約（ライブセッションあり）にのみ提供する
+ALTER TABLE public.com_m_contract_plan DROP CONSTRAINT IF EXISTS chk_contract_plan_dialogue_requires_coach;
+ALTER TABLE public.com_m_contract_plan ADD CONSTRAINT chk_contract_plan_dialogue_requires_coach CHECK (
+    NOT has_dialogue_practice OR contract_type = 2
+);

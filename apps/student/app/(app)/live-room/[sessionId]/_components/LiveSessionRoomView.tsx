@@ -30,6 +30,7 @@ import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
@@ -51,6 +52,7 @@ export function LiveSessionRoomView({ access }: Props) {
     isPeerConnected,
     isReceivingScreenShare,
     wasEndedByHost,
+    zoomSessionId,
     chatMessages,
     errorMessage,
     join,
@@ -83,6 +85,15 @@ export function LiveSessionRoomView({ access }: Props) {
   const { isFullscreen, toggleFullscreen } = useFullscreen(roomContainerRef);
   const { showConfirm } = useConfirm();
 
+  // コーチ側のルームと同様、入退室のたびにcom_t_session_call_logへ記録する
+  const callLogIdRef = useRef<string | null>(null);
+  const recordLeaveIfNeeded = () => {
+    const id = callLogIdRef.current;
+    if (!id) return;
+    callLogIdRef.current = null;
+    void recordCallLeave(id);
+  };
+
   useEffect(() => {
     if (phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
     previewRequested.current = true;
@@ -110,6 +121,29 @@ export function LiveSessionRoomView({ access }: Props) {
     trackSelf('student');
   }, [isJoined, trackSelf]);
 
+  // Zoom Video SDKへの入室が確定した時点で、com_t_session_call_logに入室記録を残す
+  useEffect(() => {
+    if (!isJoined || !zoomSessionId || callLogIdRef.current) return;
+    recordCallJoin(access.sessionId, zoomSessionId).then((callLogId) => {
+      callLogIdRef.current = callLogId;
+    });
+  }, [isJoined, zoomSessionId, access.sessionId]);
+
+  // Zoom Video SDKのin-callチャットは永続化機能を持たないため、自分が送信したメッセージのみ
+  // （chat-on-messageは送受信双方にエコーされるためisSelfで判定）com_t_session_chatへ保存する。
+  // 二重保存防止のため保存済み件数をrefで追跡し、新規追加分のみ処理する。
+  const persistedChatCountRef = useRef(0);
+  useEffect(() => {
+    const newMessages = chatMessages.slice(persistedChatCountRef.current);
+    if (newMessages.length === 0) return;
+    persistedChatCountRef.current = chatMessages.length;
+    for (const msg of newMessages) {
+      if (msg.isSelf) {
+        void recordChatMessage(access.sessionId, msg.message);
+      }
+    }
+  }, [chatMessages, access.sessionId]);
+
   const clearSessionTimers = () => {
     if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
     if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
@@ -117,7 +151,7 @@ export function LiveSessionRoomView({ access }: Props) {
     endTimeoutRef.current = null;
   };
 
-  // 自分の入室（＝レッスン開始）を起点に、残り時間の警告と自動終了を仕込む。
+  // 自分の入室（＝セッション開始）を起点に、残り時間の警告と自動終了を仕込む。
   // コーチ側が制限時間到達時に全員を強制終了させるが、その通知が何らかの理由で届かない場合の保険として
   // 自分自身でも独立して制限時間を計測する。
   useEffect(() => {
@@ -140,6 +174,7 @@ export function LiveSessionRoomView({ access }: Props) {
     if (!wasEndedByHost || phase !== 'in-call') return;
     clearSessionTimers();
     untrackSelf();
+    recordLeaveIfNeeded();
     setPhase('ended');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasEndedByHost, phase]);
@@ -149,6 +184,7 @@ export function LiveSessionRoomView({ access }: Props) {
       preview.stopPreview();
       clearSessionTimers();
       untrackSelf();
+      recordLeaveIfNeeded();
       leave();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,6 +200,7 @@ export function LiveSessionRoomView({ access }: Props) {
   const handleTimeLimitReached = async () => {
     clearSessionTimers();
     await untrackSelf();
+    recordLeaveIfNeeded();
     await leave();
     setPhase('ended');
   };
@@ -175,7 +212,7 @@ export function LiveSessionRoomView({ access }: Props) {
     }
 
     const confirmed = await showConfirm(
-      'レッスンを終了しますか？',
+      'セッションを終了しますか？',
       '通話が終了し、退室します。この操作は取り消せません。',
       { variant: 'danger', isModal: false, confirmText: '退室する' }
     );
@@ -183,6 +220,7 @@ export function LiveSessionRoomView({ access }: Props) {
 
     clearSessionTimers();
     await untrackSelf();
+    recordLeaveIfNeeded();
 
     await leave();
     router.push('/dashboard');
@@ -206,7 +244,7 @@ export function LiveSessionRoomView({ access }: Props) {
               <ChevronLeft size={24} />
             </Link>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">
-              {access.peerName} コーチとのレッスン
+              {access.peerName} コーチとのセッション
             </h1>
           </div>
 
@@ -245,7 +283,7 @@ export function LiveSessionRoomView({ access }: Props) {
 
           {!isCoachPresent && (
             <p className="text-xs font-semibold text-slate-400 text-center">
-              {access.peerName}コーチの入室をお待ちしています…コーチが入室すると参加できます。
+              {access.peerName}コーチの入室を待機しています。入室が確認でき次第、参加できます。
             </p>
           )}
 
@@ -276,13 +314,16 @@ export function LiveSessionRoomView({ access }: Props) {
           </div>
         </div>
 
-        <div className="px-5 py-4 sm:py-5 border-t border-slate-100 shrink-0 bg-white">
+        <div className="px-5 py-4 sm:py-5 border-t border-slate-100 shrink-0 bg-white space-y-2">
+          {preview.isPreviewing && isCoachPresent && (
+            <p className="text-[11px] text-slate-400 text-center">カメラとマイクの準備ができたら、下のボタンで参加してください</p>
+          )}
           <button
             onClick={handleStartCall}
             disabled={!preview.isPreviewing || !isCoachPresent}
             className="w-full h-12 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-rose-600/10 transition-all active:scale-95"
           >
-            レッスンに参加する
+            セッションに参加する
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
@@ -297,7 +338,7 @@ export function LiveSessionRoomView({ access }: Props) {
           <CheckCircle2 size={22} />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-bold text-slate-900">レッスンが終了しました</p>
+          <p className="text-sm font-bold text-slate-900">セッションが終了しました</p>
           <p className="text-xs text-slate-500 max-w-xs">通話が終了しました。</p>
         </div>
         <button
@@ -328,7 +369,7 @@ export function LiveSessionRoomView({ access }: Props) {
           <div>
             <p className="text-sm font-bold text-white leading-tight">{access.peerName} コーチ</p>
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              {isJoined ? 'レッスン中' : isJoining ? '接続中...' : '未接続'}
+              {isJoined ? 'セッション中' : isJoining ? '接続中...' : '未接続'}
             </p>
           </div>
         </div>
@@ -350,7 +391,7 @@ export function LiveSessionRoomView({ access }: Props) {
       {isTimeWarningVisible && (
         <div className="flex items-center gap-2 px-5 py-2 bg-amber-500/10 text-amber-300 text-xs font-semibold border-b border-amber-500/20">
           <TimerReset size={14} />
-          残り5分です。レッスンは開始から30分で自動的に終了します。
+          残り5分です。セッションは開始から30分で自動的に終了します。
         </div>
       )}
 
@@ -388,7 +429,7 @@ export function LiveSessionRoomView({ access }: Props) {
                       <User size={24} />
                     )}
                   </div>
-                  <p className="text-xs font-semibold text-slate-400">{access.peerName}コーチの入室をお待ちしています</p>
+                  <p className="text-xs font-semibold text-slate-400">{access.peerName}コーチの入室を待機しています</p>
                 </div>
               )}
             </div>

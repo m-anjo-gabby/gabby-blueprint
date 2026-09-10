@@ -152,14 +152,14 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
         </div>
 
         <p className="text-[13px] text-slate-500">
-          週{ticket.weekly_frequency}回のレッスン枠ごとにコーチをリクエストできます。コーチが承認すると、契約期間分のレッスンが自動で予約されます。
+          週{ticket.weekly_frequency}回のセッション枠ごとにコーチをリクエストできます。コーチが承認すると、契約期間分のセッションが自動で予約されます。
         </p>
       </header>
 
       {/* 2. コンテンツエリア（スクロール） */}
       <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 bg-slate-50/50 space-y-6">
         <section className="space-y-3">
-          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-widest px-1">レッスン枠の状況</h2>
+          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-widest px-1">セッション枠の状況</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {slots.map((slot) => {
               const badge = STATUS_BADGE[slot.status];

@@ -16,7 +16,7 @@ export default function CalendarPage() {
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">カレンダー</h1>
         </div>
 
-        <p className="text-[13px] text-slate-500">レッスンやグループセッション、お知らせなどの予定をまとめて確認できます。</p>
+        <p className="text-[13px] text-slate-500">個別セッションやグループセッション、お知らせなどの予定をまとめて確認できます。</p>
       </header>
 
       <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 bg-slate-50/50 space-y-6">

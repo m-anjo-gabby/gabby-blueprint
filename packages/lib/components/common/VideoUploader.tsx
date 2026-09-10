@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { Film, Trash2, Loader2, Upload } from 'lucide-react';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 
 export interface VideoUploaderLabels {
   /** 動画が未設定の場合のプレースホルダー文言 */
@@ -14,6 +15,12 @@ export interface VideoUploaderLabels {
   removeLabel?: string;
   /** アップロード失敗時のトースト等に使う汎用エラーラベル（サイズ超過・形式不正） */
   invalidFileLabel: string;
+  /** 削除確認ダイアログのタイトル（onRemove未指定時は使用しない） */
+  removeConfirmTitle: string;
+  /** 削除確認ダイアログの説明文（onRemove未指定時は使用しない） */
+  removeConfirmMessage: string;
+  /** 削除確認ダイアログのキャンセルボタンのラベル（onRemove未指定時は使用しない） */
+  removeConfirmCancelLabel: string;
 }
 
 export interface VideoUploaderProps {
@@ -51,6 +58,7 @@ export function VideoUploader({
   const [isUploading, setIsUploading] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const { showConfirm } = useConfirm();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -74,6 +82,12 @@ export function VideoUploader({
 
   const handleRemove = async () => {
     if (!onRemove) return;
+    const confirmed = await showConfirm(labels.removeConfirmTitle, labels.removeConfirmMessage, {
+      variant: 'danger',
+      confirmText: labels.removeLabel,
+      cancelText: labels.removeConfirmCancelLabel,
+    });
+    if (!confirmed) return;
     setIsRemoving(true);
     try {
       await onRemove();

@@ -19,11 +19,12 @@ import { DEFAULT_LESSON_SPRINT_SCORE } from '@gabby/types/lessonSprint';
 
 interface Props {
   studentId: string;
+  sessionId: string | null;
   onExit: () => void;
   onComplete: (lessonSprintId: string) => void;
 }
 
-export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
+export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }: Props) {
   const { showToast } = useToast();
   const { session, config, contentName, contentMetadata, commitScoreResult, toggleWordHighlight, setSessionNote, resetStore } = useLessonSprintStore();
   const { currentIndex, questions, currentHighlightedWords, sessionNote } = session;
@@ -99,6 +100,7 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
 
     const result = await createLessonSprintResult({
       student_id: studentId,
+      session_id: sessionId,
       sprint_type: latestConfig.sprintType,
       content_id: latestConfig.contentId,
       question_type: latestConfig.questionType,
@@ -120,7 +122,7 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
     }
 
     setResultId(result.lessonSprintId);
-  }, [studentId, showToast, onExit, buildHistory]);
+  }, [studentId, sessionId, showToast, onExit, buildHistory]);
 
   const handleGoToResult = useCallback(() => {
     if (!resultId) return;
@@ -146,7 +148,7 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
   const { secondsLeft, isPaused, togglePause, pausedSecondsRef } = useLessonSprintCountdown(config.timeLimitSec, handleTimeUp, hasStarted);
 
   const requestExit = useExitConfirmFlow({
-    confirmTitle: 'Quit Lesson Sprint?',
+    confirmTitle: 'Quit Live Sprint?',
     confirmMessage: 'Progress will not be saved if you quit now. Continue?',
     confirmVariant: 'warning',
     onExit: () => onExit(),
@@ -180,7 +182,7 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
 
             <div className="flex-1 flex flex-col items-center px-4 min-w-0">
               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5 select-none shrink-0">
-                {contentName || 'Lesson Sprint'}
+                {contentName || 'Live Sprint'}
               </span>
               <h1 className="text-sm font-black text-slate-800 tracking-tight text-center w-full truncate">
                 {courseTitle}
@@ -373,7 +375,7 @@ export function LessonSprintPlayer({ studentId, onExit, onComplete }: Props) {
 
             <div className="space-y-1.5">
               <h3 className="text-lg font-black text-slate-800 tracking-tight">
-                {isSaving ? 'Saving results' : 'Lesson Sprint Complete'}
+                {isSaving ? 'Saving results' : 'Live Sprint Complete'}
               </h3>
               <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[220px] mx-auto">
                 {isSaving ? 'Please wait a moment...' : "Here's how this session went"}

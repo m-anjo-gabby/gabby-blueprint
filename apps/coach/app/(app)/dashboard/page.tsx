@@ -1,10 +1,12 @@
+import { CalendarClock } from 'lucide-react';
 import { getMyProfile } from '@/actions/coachProfileAction';
 import { getIncomingRequests } from '@/actions/matchingRequestAction';
+import { Section } from '@/components/common/Section';
 import { MATCHING_REQUEST_STATUS } from '@gabby/types/matching';
 import DashboardHeader from './_components/DashboardHeader';
 import AttentionStrip from './_components/AttentionStrip';
 import TodaysSessionsPanel from './_components/TodaysSessionsPanel';
-import AssignedStudentsPanel from './_components/AssignedStudentsPanel';
+import SessionTasksPanel from './_components/SessionTasksPanel';
 
 function getGreeting(timeZone: string): string {
   const hour = Number(
@@ -33,9 +35,12 @@ export default async function Page() {
 
       <AttentionStrip pendingRequestCount={pendingRequestCount} />
 
-      <TodaysSessionsPanel />
-
-      <AssignedStudentsPanel />
+      <Section label="Sessions" icon={CalendarClock}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <TodaysSessionsPanel />
+          <SessionTasksPanel />
+        </div>
+      </Section>
     </div>
   );
 }

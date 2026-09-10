@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowRight,
   CheckCircle2,
@@ -30,10 +31,12 @@ import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
   access: LiveSessionRoomAccess;
+  studentId: string;
 }
 
 type RoomPhase = 'preview' | 'in-call' | 'ended';
@@ -43,7 +46,7 @@ type LockStatus = 'checking' | 'granted' | 'denied';
 // （生徒A/生徒Bを問わず、コーチアカウント単位で共有する）
 const COACH_LIVE_SESSION_LOCK_NAME = 'gabby-coach-live-session-room';
 
-export function LiveSessionRoom({ access }: Props) {
+export function LiveSessionRoom({ access, studentId }: Props) {
   const preview = useZoomDevicePreview();
   const {
     isJoined,
@@ -54,6 +57,7 @@ export function LiveSessionRoom({ access }: Props) {
     isBlurSupported,
     isPeerConnected,
     isScreenSharing,
+    zoomSessionId,
     chatMessages,
     errorMessage,
     join,
@@ -89,6 +93,17 @@ export function LiveSessionRoom({ access }: Props) {
   const [lockStatus, setLockStatus] = useState<LockStatus>('checking');
   const [lockRetryToken, setLockRetryToken] = useState(0);
   const releaseLockRef = useRef<(() => void) | null>(null);
+
+  // 通話ルーム内の「退室」ボタンとは別に、コーチの外側画面（ダッシュボード/生徒詳細）に
+  // 配置する「レッスン終了」ボタンでのcompleted/no_show/early_ended自動判定の基礎データとするため、
+  // 入退室のたびにcom_t_session_call_logへ1行記録する。callLogIdRefは自分の未クローズ行を追跡する。
+  const callLogIdRef = useRef<string | null>(null);
+  const recordLeaveIfNeeded = () => {
+    const id = callLogIdRef.current;
+    if (!id) return;
+    callLogIdRef.current = null;
+    void recordCallLeave(id);
+  };
 
   useEffect(() => {
     if (!('locks' in navigator)) {
@@ -142,6 +157,30 @@ export function LiveSessionRoom({ access }: Props) {
     trackSelf('coach');
   }, [isJoined, trackSelf]);
 
+  // Zoom Video SDKへの入室が確定した時点で、com_t_session_call_logに入室記録を残す
+  // （joined_atはRPC側でNOW()により確定するため、ここではsession_id/zoomSessionIdのみ渡す）。
+  useEffect(() => {
+    if (!isJoined || !zoomSessionId || callLogIdRef.current) return;
+    recordCallJoin(access.sessionId, zoomSessionId).then((callLogId) => {
+      callLogIdRef.current = callLogId;
+    });
+  }, [isJoined, zoomSessionId, access.sessionId]);
+
+  // Zoom Video SDK's in-call chat has no persistence of its own, so only the message we actually
+  // sent (chat-on-message echoes to both sides, hence the isSelf check) is saved to com_t_session_chat.
+  // A ref tracks how many messages have already been persisted to avoid double-saving on re-render.
+  const persistedChatCountRef = useRef(0);
+  useEffect(() => {
+    const newMessages = chatMessages.slice(persistedChatCountRef.current);
+    if (newMessages.length === 0) return;
+    persistedChatCountRef.current = chatMessages.length;
+    for (const msg of newMessages) {
+      if (msg.isSelf) {
+        void recordChatMessage(access.sessionId, msg.message);
+      }
+    }
+  }, [chatMessages, access.sessionId]);
+
   const clearSessionTimers = () => {
     if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
     if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
@@ -170,6 +209,7 @@ export function LiveSessionRoom({ access }: Props) {
       preview.stopPreview();
       clearSessionTimers();
       untrackSelf();
+      recordLeaveIfNeeded();
       leave();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,6 +225,7 @@ export function LiveSessionRoom({ access }: Props) {
   const handleTimeLimitReached = async () => {
     clearSessionTimers();
     await untrackSelf();
+    recordLeaveIfNeeded();
     await leave(true);
     releaseLockRef.current?.();
     releaseLockRef.current = null;
@@ -207,6 +248,7 @@ export function LiveSessionRoom({ access }: Props) {
 
     clearSessionTimers();
     await untrackSelf();
+    recordLeaveIfNeeded();
     await leave(true);
     // 通話終了時点でロックを解放し、他のタブから新しいセッションを開始できるようにする
     // （このタブ自体は「閉じてください」の案内画面のまま残るため、ここではまだ遷移しない）
@@ -277,18 +319,28 @@ export function LiveSessionRoom({ access }: Props) {
               ? 'The 30-minute session time limit was reached, so the call was ended automatically. You can close this tab now.'
               : 'You can close this tab now.'}
           </p>
+          <p className="text-xs text-slate-500">
+            Don&apos;t forget to press <span className="font-bold">End Session</span> to record this session&apos;s outcome.
+          </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href={`/students/${studentId}/sessions/${access.sessionId}`}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
+          >
+            Go to Session Hub
+            <ArrowRight size={14} />
+          </Link>
           <button
             onClick={() => window.close()}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors px-4 py-2 rounded-full"
           >
             <X size={14} />
             Close Tab
           </button>
         </div>
         <p className="text-[10px] text-slate-400 max-w-xs">
-          If the tab doesn&apos;t close automatically, you can close it manually.
+          If you&apos;re done for now, you can close this tab manually.
         </p>
       </div>
     );
@@ -369,7 +421,10 @@ export function LiveSessionRoom({ access }: Props) {
             </div>
           </div>
 
-          <div className="shrink-0 px-5 py-4 border-t border-slate-100 bg-white">
+          <div className="shrink-0 px-5 py-4 border-t border-slate-100 bg-white space-y-2">
+            {preview.isPreviewing && (
+              <p className="text-[11px] text-slate-400 text-center">Camera and mic look good? Tap below to join.</p>
+            )}
             <button
               onClick={handleStartCall}
               disabled={!preview.isPreviewing}
