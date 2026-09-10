@@ -1,0 +1,14 @@
+{
+  "name": "@gabby/testing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@gabby/lib": "workspace:*",
+    "@supabase/supabase-js": "^2.94.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "dotenv": "^17.4.2"
+  }
+}
