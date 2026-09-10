@@ -8,6 +8,7 @@
  */
 import { loadTestEnv, resolveTestEnvFromArgs } from "../../../helpers/env.ts";
 import { createAdminClient } from "../../../helpers/auth.ts";
+import { writeResultLog } from "../../../helpers/results.ts";
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
@@ -105,11 +106,17 @@ for (const student of students ?? []) {
 console.log("\n=== 検証結果 ===");
 console.table(checks.map((c) => ({ name: c.name, ok: c.ok, detail: c.detail ?? "" })));
 
-const failed = checks.filter((c) => !c.ok);
-if (failed.length > 0) {
-  console.error(`\nNG: ${failed.length}件の不整合`);
+const log = writeResultLog({
+  scenario: "features/branches/feature-20260904-dev/live-session-data-integrity.feature",
+  env,
+  tag: TAG,
+  checks,
+});
+
+if (!log.ok) {
+  console.error(`\nNG: ${log.failed}件の不整合`);
   process.exit(1);
 } else {
-  console.log(`\nOK: 全${checks.length}件のチェックに合格`);
+  console.log(`\nOK: 全${log.totalChecks}件のチェックに合格`);
   process.exit(0);
 }

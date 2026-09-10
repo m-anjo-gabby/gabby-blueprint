@@ -1,0 +1,106 @@
+{
+  "scenario": "features/branches/feature-20260904-dev/live-session-data-integrity.feature",
+  "env": "staging",
+  "tag": "auto0910",
+  "executedAt": "2026-09-10T07:31:54.124Z",
+  "gitCommit": "adbf928b",
+  "gitBranch": "feature/20260911-dev",
+  "totalChecks": 19,
+  "passed": 19,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "生徒1: 完了6件",
+      "ok": true,
+      "detail": "actual=6"
+    },
+    {
+      "name": "生徒1: 予定5件",
+      "ok": true,
+      "detail": "actual=5"
+    },
+    {
+      "name": "生徒1: 本人キャンセル1件・返還あり",
+      "ok": true
+    },
+    {
+      "name": "生徒1: 代理キャンセル1件・返還なし",
+      "ok": true
+    },
+    {
+      "name": "生徒1: used_sessionsが完了数と一致",
+      "ok": true,
+      "detail": "used_sessions=6"
+    },
+    {
+      "name": "生徒2: 振替元が2件rescheduled化",
+      "ok": true,
+      "detail": "actual=2"
+    },
+    {
+      "name": "生徒2: 振替先セッションが2件存在",
+      "ok": true,
+      "detail": "actual=2"
+    },
+    {
+      "name": "生徒2: 代理キャンセル(返還あり)1件",
+      "ok": true,
+      "detail": "actual=1"
+    },
+    {
+      "name": "生徒2: used_sessionsは0のまま(未完了のみ)",
+      "ok": true,
+      "detail": "used_sessions=0"
+    },
+    {
+      "name": "生徒3: 完了8件",
+      "ok": true,
+      "detail": "actual=8"
+    },
+    {
+      "name": "生徒3: 交代キャンセルが1件以上、ticket_refundedはNULL",
+      "ok": true,
+      "detail": "actual=4"
+    },
+    {
+      "name": "生徒3: CoachBへの新規予定セッションが存在",
+      "ok": true,
+      "detail": "actual=5"
+    },
+    {
+      "name": "生徒3: used_sessionsは完了数(8)のみ・交代キャンセルは算入されない",
+      "ok": true,
+      "detail": "used_sessions=8"
+    },
+    {
+      "name": "生徒4: 契約なし",
+      "ok": true,
+      "detail": "tickets=0"
+    },
+    {
+      "name": "生徒4: セッションなし",
+      "ok": true,
+      "detail": "sessions=0"
+    },
+    {
+      "name": "生徒5: チケットが2件(過去+現在)",
+      "ok": true,
+      "detail": "actual=2"
+    },
+    {
+      "name": "生徒5: 過去契約はused_sessions=total_sessions(満了)",
+      "ok": true,
+      "detail": "tickets=[{\"id\":\"a34c0fb5-6efc-405a-8f91-62b9a0e4151a\",\"used\":12,\"total\":12},{\"id\":\"08d7dc4f-adab-45e2-b633-34190c5228f2\",\"used\":0,\"total\":12}]"
+    },
+    {
+      "name": "生徒5: 現在契約はused_sessions=0(独立管理)",
+      "ok": true
+    },
+    {
+      "name": "生徒5: 過去契約のセッションは全てcompleted",
+      "ok": true,
+      "detail": "statuses=2,2,2,2,2,2,2,2,2,2,2,2"
+    }
+  ]
+}
