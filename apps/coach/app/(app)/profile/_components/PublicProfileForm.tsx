@@ -63,6 +63,7 @@ interface PublicProfileFormProps {
   onRemoveIntroVideo: () => Promise<void>;
   onSave: () => void;
   isSaving: boolean;
+  completionPercent: number;
 }
 
 export function PublicProfileForm({
@@ -76,11 +77,23 @@ export function PublicProfileForm({
   onRemoveIntroVideo,
   onSave,
   isSaving,
+  completionPercent,
 }: PublicProfileFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Public Coach Profile</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          Public Coach Profile
+          <span
+            className={
+              completionPercent >= 100
+                ? 'inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold px-2 py-0.5'
+                : 'inline-flex items-center rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5'
+            }
+          >
+            {completionPercent}% complete
+          </span>
+        </CardTitle>
         <CardDescription>
           These details are shown to students when they choose a coach. The panel on the right previews your changes
           as you type, but nothing is saved until you press Save Public Profile below.

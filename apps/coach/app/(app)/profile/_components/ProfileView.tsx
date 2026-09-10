@@ -175,7 +175,7 @@ export function ProfileView({
     }
   };
 
-  const completeness = useMemo(
+  const completionPercent = useMemo(
     () => getCoachProfileCompleteness(coachProfileForm, !!introVideoPath),
     [coachProfileForm, introVideoPath]
   );
@@ -220,6 +220,7 @@ export function ProfileView({
           onRemoveIntroVideo={handleRemoveIntroVideo}
           onSave={handleSaveCoachProfile}
           isSaving={isSavingCoachProfile}
+          completionPercent={completionPercent}
         />
 
         <div className="lg:sticky lg:top-6">
@@ -235,8 +236,6 @@ export function ProfileView({
               personalIntroduction: 'Personal Introduction',
               introVideo: 'Introduction Video',
             }}
-            completionPercent={completeness.percent}
-            missingLabels={completeness.missingLabels}
           />
         </div>
       </div>
