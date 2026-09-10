@@ -1,13 +1,18 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { createAdminClient } from "@gabby/lib/supabase/admin";
 
 /**
  * service_role権限のクライアント。
  * テストデータの初期セットアップ／後始末専用に使うこと。
  * SECURITY DEFINER関数（本人 or admin 認可判定を含むRPC）の実行には
  * 絶対に使わない（auth.uid()がNULLになり認可分岐を誤って通過するため。CLAUDE.md 6章参照）。
+ *
+ * @gabby/lib/supabase/admin はモジュール評価時に process.env を読むため、
+ * loadTestEnv() 実行前に静的importされないよう動的importで遅延読み込みする。
  */
-export { createAdminClient };
+export async function createAdminClient(): Promise<SupabaseClient> {
+  const { createAdminClient: createLibAdminClient } = await import("@gabby/lib/supabase/admin");
+  return createLibAdminClient();
+}
 
 /**
  * 実際にメール/パスワードでサインインし、そのロールの実JWTを持つ
