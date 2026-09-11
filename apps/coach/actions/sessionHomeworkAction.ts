@@ -1,9 +1,15 @@
 'use server';
 
-import { getSessionHomeworkCore, getRecentSessionHomeworkCore, addSessionHomeworkCore } from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
+import {
+  getSessionHomeworkCore,
+  getRecentSessionHomeworkCore,
+  addSessionHomeworkCore,
+  getHomeworkChecklistCore,
+  addHomeworkChecklistItemsCore,
+} from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { PendingHomeworkAttachment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import { PendingHomeworkAttachment, SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 
 const logger = createLogger('coach');
 
@@ -53,4 +59,40 @@ export async function addSessionHomework(
 
   logger.info('coach:add_session_homework_success', 'Homework posted', ctx);
   return { success: true, entry: result.entry };
+}
+
+/**
+ * Fetches the session's homework checklist (one checklist per session, independent of the
+ * free-text homework messages above).
+ */
+export async function getSessionHomeworkChecklist(sessionId: string): Promise<SessionHomeworkChecklistItem[]> {
+  const result = await getHomeworkChecklistCore(sessionId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_session_homework_checklist_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.items;
+}
+
+/**
+ * Adds one or more items to the session's homework checklist (coach-only). Existing items'
+ * text can never be changed or removed, only new items appended, up to
+ * HOMEWORK_CHECKLIST_MAX_ITEMS per session.
+ */
+export async function addHomeworkChecklistItems(
+  sessionId: string,
+  itemTexts: string[]
+): Promise<{ success: true; items: SessionHomeworkChecklistItem[] } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await addHomeworkChecklistItemsCore(sessionId, itemTexts);
+
+  if (!result.success) {
+    logger.error('coach:add_homework_checklist_items_failed', result.errorCode, ctx);
+    const message = result.errorCode === 'invalid_input' ? 'Checklist item is invalid or exceeds the maximum count.' : 'Failed to update checklist. Please try again.';
+    return { success: false, message };
+  }
+
+  logger.info('coach:add_homework_checklist_items_success', 'Checklist items added', ctx);
+  return { success: true, items: result.items };
 }

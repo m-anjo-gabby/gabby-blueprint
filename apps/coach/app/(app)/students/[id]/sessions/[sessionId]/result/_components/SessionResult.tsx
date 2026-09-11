@@ -8,16 +8,17 @@ import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { SessionResultSummary } from '@gabby/types/session';
-import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import type { SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import { HomeworkComposer } from './HomeworkComposer';
 
 interface Props {
   studentId: string;
   session: SessionResultSummary;
   homework: SessionHomeworkEntry[];
+  checklist: SessionHomeworkChecklistItem[];
 }
 
-export function SessionResult({ studentId, session, homework }: Props) {
+export function SessionResult({ studentId, session, homework, checklist }: Props) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const badge = SESSION_STATUS_BADGE[session.status];
 
@@ -87,7 +88,7 @@ export function SessionResult({ studentId, session, homework }: Props) {
 
       <Section label="Homework" icon={BookOpen}>
         <div className="max-w-2xl">
-          <HomeworkComposer sessionId={session.session_id} initialEntries={homework} />
+          <HomeworkComposer sessionId={session.session_id} initialEntries={homework} initialChecklist={checklist} />
         </div>
       </Section>
 

@@ -60,3 +60,37 @@ export type GetSessionHomeworkResult =
 export type AddSessionHomeworkResult =
   | { success: true; entry: SessionHomeworkEntry }
   | { success: false; errorCode: SessionHomeworkErrorCode };
+
+/**
+ * ----------------------------------------------
+ * セッション単位の宿題チェックリスト (com_t_session_homework_checklist_item) 型定義
+ * 宿題メッセージ(SessionHomeworkEntry)とは独立したライフサイクルを持つ
+ * （1セッションに対して1つのチェックリスト。コーチは項目の追加のみ可能、
+ * 生徒はis_doneのON/OFFのみ更新可能）。
+ * ----------------------------------------------
+ */
+
+// 宿題チェックリストの項目数上限（セッションあたり。コーチが自由記述で追加する最大件数）
+export const HOMEWORK_CHECKLIST_MAX_ITEMS = 5;
+
+/** com_t_session_homework_checklist_item のデータ型 */
+export interface SessionHomeworkChecklistItem {
+  checklist_item_id: string;
+  session_id: string;
+  item_no: number;
+  item_text: string;
+  is_done: boolean;
+  done_at: string | null;
+}
+
+export type GetHomeworkChecklistResult =
+  | { success: true; items: SessionHomeworkChecklistItem[] }
+  | { success: false; errorCode: SessionHomeworkErrorCode };
+
+export type AddHomeworkChecklistItemsResult =
+  | { success: true; items: SessionHomeworkChecklistItem[] }
+  | { success: false; errorCode: SessionHomeworkErrorCode };
+
+export type UpdateHomeworkChecklistItemResult =
+  | { success: true; item: SessionHomeworkChecklistItem }
+  | { success: false; errorCode: SessionHomeworkErrorCode };

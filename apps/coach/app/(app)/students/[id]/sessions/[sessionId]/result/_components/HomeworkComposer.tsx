@@ -1,32 +1,44 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FileText, Loader2, Paperclip, Send, X } from 'lucide-react';
+import { CheckCircle2, Circle, FileText, ListChecks, Loader2, Paperclip, Plus, Send, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
-import { addSessionHomework } from '@/actions/sessionHomeworkAction';
+import { addSessionHomework, addHomeworkChecklistItems } from '@/actions/sessionHomeworkAction';
 import { uploadSessionHomeworkAttachment, getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
-import { HOMEWORK_ATTACHMENT_MAX_SIZE, PendingHomeworkAttachment, SessionHomeworkAttachment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import {
+  HOMEWORK_ATTACHMENT_MAX_SIZE,
+  HOMEWORK_CHECKLIST_MAX_ITEMS,
+  PendingHomeworkAttachment,
+  SessionHomeworkAttachment,
+  SessionHomeworkChecklistItem,
+  SessionHomeworkEntry,
+} from '@gabby/types/sessionHomework';
 
 interface Props {
   sessionId: string;
   initialEntries: SessionHomeworkEntry[];
+  initialChecklist: SessionHomeworkChecklistItem[];
 }
 
-export function HomeworkComposer({ sessionId, initialEntries }: Props) {
+export function HomeworkComposer({ sessionId, initialEntries, initialChecklist }: Props) {
   const { showToast } = useToast();
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const [entries, setEntries] = useState(initialEntries);
+  const [checklist, setChecklist] = useState(initialChecklist);
   const [text, setText] = useState('');
   const [pendingAttachments, setPendingAttachments] = useState<PendingHomeworkAttachment[]>([]);
+  const [newChecklistItemText, setNewChecklistItemText] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isAddingChecklistItem, setIsAddingChecklistItem] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const busy = isUploading || isSending;
@@ -82,13 +94,79 @@ export function HomeworkComposer({ sessionId, initialEntries }: Props) {
     setPendingAttachments((prev) => prev.filter((a) => a.file_path !== filePath));
   };
 
+  const handleAddChecklistItem = async () => {
+    const trimmed = newChecklistItemText.trim();
+    if (!trimmed || isAddingChecklistItem || checklist.length >= HOMEWORK_CHECKLIST_MAX_ITEMS) return;
+
+    setIsAddingChecklistItem(true);
+    try {
+      const res = await addHomeworkChecklistItems(sessionId, [trimmed]);
+      if (!res.success) {
+        showToast(res.message, 'error');
+        return;
+      }
+      setChecklist((prev) => [...prev, ...res.items]);
+      setNewChecklistItemText('');
+    } finally {
+      setIsAddingChecklistItem(false);
+    }
+  };
+
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-bold text-slate-800">Homework</CardTitle>
       </CardHeader>
-      <CardContent className="pt-2 space-y-4">
-        <div className="space-y-2">
+      <CardContent className="pt-2 space-y-3">
+        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Checklist</p>
+
+        {checklist.length > 0 && (
+          <ul className="space-y-1.5">
+            {checklist.map((item) => (
+              <li key={item.checklist_item_id} className="flex items-start gap-1.5 text-sm">
+                {item.is_done ? (
+                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                ) : (
+                  <Circle size={16} className="text-slate-300 shrink-0 mt-0.5" />
+                )}
+                <span className={item.is_done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.item_text}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {checklist.length < HOMEWORK_CHECKLIST_MAX_ITEMS && (
+          <div className="flex items-center gap-2">
+            <ListChecks size={14} className="text-slate-300 shrink-0" />
+            <Input
+              value={newChecklistItemText}
+              onChange={(e) => setNewChecklistItemText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddChecklistItem();
+                }
+              }}
+              placeholder={`Add a checklist item (optional, ${checklist.length}/${HOMEWORK_CHECKLIST_MAX_ITEMS})`}
+              disabled={isAddingChecklistItem}
+              className="h-8 text-xs"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              disabled={!newChecklistItemText.trim() || isAddingChecklistItem}
+              onClick={handleAddChecklistItem}
+            >
+              {isAddingChecklistItem ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+            </Button>
+          </div>
+        )}
+
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Follow-up Comments</p>
+
           {pendingAttachments.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {pendingAttachments.map((a) => (
@@ -121,7 +199,7 @@ export function HomeworkComposer({ sessionId, initialEntries }: Props) {
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Assign homework for this lesson (visible to the student)..."
+              placeholder="Send a message about this lesson's homework (visible to the student)..."
               className="min-h-10 max-h-32 resize-none"
               disabled={busy}
             />
@@ -139,7 +217,7 @@ export function HomeworkComposer({ sessionId, initialEntries }: Props) {
 
         <div className="space-y-3 pt-2 border-t border-slate-100">
           {entries.length === 0 ? (
-            <p className="text-xs text-slate-400 italic">No homework posted yet.</p>
+            <p className="text-xs text-slate-400 italic">No follow-up comments yet.</p>
           ) : (
             entries.map((entry) => (
               <div key={entry.homework_id} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3 space-y-2">

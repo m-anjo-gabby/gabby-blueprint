@@ -5,25 +5,44 @@ import Link from 'next/link';
 import { ChevronLeft, FileText, Loader2, LogIn, LogOut } from 'lucide-react';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
+import { updateHomeworkChecklistItemStatus } from '@/actions/sessionHomeworkAction';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { Switch } from '@/components/ui/switch';
 import type { SessionResultSummary } from '@gabby/types/session';
-import type { SessionHomeworkAttachment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import type { SessionHomeworkAttachment, SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 
 interface Props {
   session: SessionResultSummary;
   homework: SessionHomeworkEntry[];
+  checklist: SessionHomeworkChecklistItem[];
 }
 
 /**
  * 生徒向けセッション結果画面。コーチ向け(apps/coach/.../sessions/[sessionId]/result)と異なり
- * 閲覧専用（宿題投稿は不可。RLSでもコーチのみに制限されている）。
+ * 宿題本文・添付ファイルの投稿は不可（RLSでもコーチのみに制限されている）。ただしセッション
+ * 単位のチェックリスト（宿題メッセージとは独立）については、その完了状態（ON/OFF）のみ
+ * 生徒本人が更新できる。
  */
-export function StudentSessionResult({ session, homework }: Props) {
+export function StudentSessionResult({ session, homework, checklist: initialChecklist }: Props) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const { showToast } = useToast();
+  const [checklist, setChecklist] = useState(initialChecklist);
   const badge = SESSION_STATUS_BADGE[session.status];
+
+  const handleToggleChecklistItem = async (checklistItemId: string, isDone: boolean) => {
+    // 楽観的更新。失敗時は元の状態に戻す。
+    setChecklist((prev) => prev.map((item) => (item.checklist_item_id === checklistItemId ? { ...item, is_done: isDone } : item)));
+
+    const res = await updateHomeworkChecklistItemStatus(checklistItemId, isDone);
+    if (!res.success) {
+      showToast(res.message, 'error');
+      setChecklist((prev) => prev.map((item) => (item.checklist_item_id === checklistItemId ? { ...item, is_done: !isDone } : item)));
+    }
+  };
 
   return (
     <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
@@ -123,8 +142,31 @@ export function StudentSessionResult({ session, homework }: Props) {
 
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
           <h2 className="text-sm font-bold text-slate-800">宿題</h2>
+
+          {checklist.length > 0 && (
+            <div className="space-y-2 pb-2 border-b border-slate-100">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">チェックリスト</p>
+              <ul className="space-y-2.5">
+                {checklist.map((item) => (
+                  <li key={item.checklist_item_id} className="flex items-center justify-between gap-3">
+                    <span className={`text-sm ${item.is_done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                      {item.item_text}
+                    </span>
+                    <Switch
+                      checked={item.is_done}
+                      onCheckedChange={(checked) => handleToggleChecklistItem(item.checklist_item_id, checked)}
+                      className="shrink-0"
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">フォローアップコメント</p>
+
           {homework.length === 0 ? (
-            <p className="text-xs text-slate-400 italic">宿題はまだ投稿されていません。</p>
+            <p className="text-xs text-slate-400 italic">フォローアップコメントはまだありません。</p>
           ) : (
             <div className="space-y-3">
               {homework.map((entry) => (
