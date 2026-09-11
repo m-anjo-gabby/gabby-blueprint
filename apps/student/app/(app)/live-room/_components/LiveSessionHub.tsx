@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, CalendarClock, CheckCircle2, ChevronLeft, FileText, Loader2, RotateCcw, Ticket, Video, X } from 'lucide-react';
+import { ArrowRight, CalendarClock, ChevronLeft, Clock, FileText, Loader2, Ticket, Video, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -11,12 +11,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { getMyPastSessions, acceptRescheduleProposal, declineRescheduleProposal } from '@/actions/sessionAction';
-import { SessionListItem, SessionRescheduleProposal, SESSION_RESULT_STATUSES, SESSION_CHANGE_HISTORY_STATUSES } from '@gabby/types/session';
+import { getMyPastSessions, withdrawSessionBookingRequest } from '@/actions/sessionAction';
+import {
+  MyRescheduleProposalGroup,
+  SessionBookingRequest,
+  SessionListItem,
+  SESSION_RESULT_STATUSES,
+  SESSION_CHANGE_HISTORY_STATUSES,
+} from '@gabby/types/session';
 import { BookableTicketSlot, LiveSessionContractSummary } from '@gabby/types/matching';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
+import { RescheduleProposalDialog } from './RescheduleProposalDialog';
 
 const JOINABLE_WINDOW_MS = 48 * 60 * 60 * 1000;
 // 結果画面への導線を出す(=call_logが記録されている想定の)確定ステータス、変更履歴タブの対象は
@@ -38,7 +45,8 @@ interface Props {
   upcomingSessions: SessionListItem[];
   initialPastSessions: SessionListItem[];
   bookableSlots: BookableTicketSlot[];
-  pendingProposals: SessionRescheduleProposal[];
+  pendingProposalGroups: MyRescheduleProposalGroup[];
+  myBookingRequests: SessionBookingRequest[];
 }
 
 export function LiveSessionHub({
@@ -47,7 +55,8 @@ export function LiveSessionHub({
   upcomingSessions: initialUpcoming,
   initialPastSessions,
   bookableSlots,
-  pendingProposals: initialPendingProposals,
+  pendingProposalGroups: initialPendingProposalGroups,
+  myBookingRequests: initialMyBookingRequests,
 }: Props) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const router = useRouter();
@@ -59,8 +68,10 @@ export function LiveSessionHub({
   );
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
   const [isBookMakeupOpen, setIsBookMakeupOpen] = useState(false);
-  const [pendingProposals, setPendingProposals] = useState(initialPendingProposals);
-  const [respondingProposalId, setRespondingProposalId] = useState<string | null>(null);
+  const [pendingProposalGroups, setPendingProposalGroups] = useState(initialPendingProposalGroups);
+  const [proposalDetailGroup, setProposalDetailGroup] = useState<MyRescheduleProposalGroup | null>(null);
+  const [myBookingRequests, setMyBookingRequests] = useState(initialMyBookingRequests);
+  const [withdrawingRequestId, setWithdrawingRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedTicketId || pastSessionsByTicket[selectedTicketId]) return;
@@ -92,44 +103,37 @@ export function LiveSessionHub({
 
   const handleResolved = (sessionId: string, patch: Partial<SessionListItem>) => {
     setUpcomingSessions((prev) => prev.map((s) => (s.session_id === sessionId ? { ...s, ...patch } : s)));
-    // キャンセル・振替は変更履歴タブ、返還可否は未割当チケットにも影響するため、
+    // キャンセルは変更履歴タブ、返還可否は未予約のセッションにも影響するため、
     // 選択中の契約の履歴キャッシュを破棄しつつサーバーの最新データも取得し直す
     invalidateSelectedPastSessions();
     router.refresh();
   };
 
-  const handleAcceptProposal = async (proposalId: string) => {
-    setRespondingProposalId(proposalId);
-    try {
-      const result = await acceptRescheduleProposal(proposalId);
-      if (!result.success) {
-        showToast(result.message, 'error');
-        return;
-      }
-      // 承諾された候補・同じキャンセルに紐づく他の候補は両方ともpendingでなくなるため一覧から消す
-      const acceptedSessionId = pendingProposals.find((p) => p.proposal_id === proposalId)?.session_id;
-      setPendingProposals((prev) => prev.filter((p) => p.session_id !== acceptedSessionId));
-      setUpcomingSessions((prev) => [...prev]);
-      invalidateSelectedPastSessions();
-      router.refresh();
-      showToast('新しいセッションを予約しました。', 'success');
-    } finally {
-      setRespondingProposalId(null);
-    }
+  const handleProposalAccepted = (sessionId: string) => {
+    setPendingProposalGroups((prev) => prev.filter((g) => g.session_id !== sessionId));
+    setProposalDetailGroup(null);
+    setUpcomingSessions((prev) => [...prev]);
+    invalidateSelectedPastSessions();
+    router.refresh();
   };
 
-  const handleDeclineProposal = async (proposalId: string) => {
-    setRespondingProposalId(proposalId);
+  const handleProposalDeclined = (sessionId: string) => {
+    setPendingProposalGroups((prev) => prev.filter((g) => g.session_id !== sessionId));
+    setProposalDetailGroup(null);
+  };
+
+  const handleWithdrawBookingRequest = async (requestId: string) => {
+    setWithdrawingRequestId(requestId);
     try {
-      const result = await declineRescheduleProposal(proposalId);
+      const result = await withdrawSessionBookingRequest(requestId);
       if (!result.success) {
         showToast(result.message, 'error');
         return;
       }
-      setPendingProposals((prev) => prev.filter((p) => p.proposal_id !== proposalId));
-      showToast('候補を却下しました。', 'success');
+      setMyBookingRequests((prev) => prev.filter((r) => r.request_id !== requestId));
+      showToast('予約リクエストを取り下げました。', 'success');
     } finally {
-      setRespondingProposalId(null);
+      setWithdrawingRequestId(null);
     }
   };
 
@@ -146,7 +150,7 @@ export function LiveSessionHub({
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">ライブセッション</h1>
         </div>
 
-        <p className="text-[13px] text-slate-500">セッションの予定確認・予約・振替・キャンセルをここで管理できます。</p>
+        <p className="text-[13px] text-slate-500">セッションの予定確認・予約・キャンセルをここで管理できます。</p>
 
         {contracts.length > 1 && (
           <div className="space-y-1.5">
@@ -167,19 +171,33 @@ export function LiveSessionHub({
         )}
       </header>
 
-      <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 bg-slate-50/50">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 bg-slate-50/50 space-y-2">
+        {pendingProposalGroups.length > 0 && (
+          <div className="space-y-2">
+            {pendingProposalGroups.map((group) => (
+              <button
+                key={group.session_id}
+                type="button"
+                onClick={() => setProposalDetailGroup(group)}
+                className="w-full flex items-center gap-3 px-3.5 py-3 bg-amber-50 rounded-[20px] border border-amber-200 hover:bg-amber-100/60 active:scale-[0.99] transition-all"
+              >
+                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-rose-500 shrink-0">
+                  <CalendarClock size={16} />
+                </div>
+                <p className="text-xs font-bold text-amber-800 flex-1 text-left">
+                  {group.coach_name}コーチから振替候補が届いています。タップしてご確認ください。
+                </p>
+                <ArrowRight size={14} className="text-amber-500 shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
+
         <Tabs value={displayedTab} onValueChange={setActiveTab} className="space-y-2">
           <TabsList className={cn('grid w-full', showUpcomingTab ? 'grid-cols-3' : 'grid-cols-2')}>
             {showUpcomingTab && <TabsTrigger value="upcoming">今後の予定</TabsTrigger>}
             <TabsTrigger value="completed">実施済み</TabsTrigger>
-            <TabsTrigger value="history">
-              変更履歴
-              {pendingProposals.length > 0 && (
-                <span className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black">
-                  {pendingProposals.length}
-                </span>
-              )}
-            </TabsTrigger>
+            <TabsTrigger value="history">変更履歴</TabsTrigger>
           </TabsList>
 
           {showUpcomingTab && (
@@ -194,11 +212,39 @@ export function LiveSessionHub({
                     <Ticket size={16} />
                   </div>
                   <p className="text-xs font-bold text-indigo-700 flex-1 text-left">
-                    未割当のチケットがあります。タップして予約できます。
+                    未予約のセッションがあります。タップして予約をリクエストできます。
                   </p>
                   <ArrowRight size={14} className="text-indigo-400 shrink-0" />
                 </button>
               )}
+
+              {myBookingRequests.map((request) => (
+                <div
+                  key={request.request_id}
+                  className="flex items-center gap-3 px-3.5 py-3 bg-slate-50 rounded-[20px] border border-dashed border-slate-200"
+                >
+                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-slate-400 shrink-0">
+                    <Clock size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-600">コーチの承認待ち</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                      {formatDateTimeByZone(request.requested_start_datetime, timezone, false)}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 h-7 px-2.5 text-[11px]"
+                    disabled={withdrawingRequestId === request.request_id}
+                    onClick={() => handleWithdrawBookingRequest(request.request_id)}
+                  >
+                    {withdrawingRequestId === request.request_id && <Loader2 size={12} className="animate-spin" />}
+                    取り下げる
+                  </Button>
+                </div>
+              ))}
 
               {upcomingSessions.map((session) => {
                 const joinable = isJoinableSoon(session.start_datetime);
@@ -227,15 +273,6 @@ export function LiveSessionHub({
                           </Link>
                         </Button>
                       )}
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setActionTarget({ session, mode: 'reschedule' })}
-                      >
-                        <RotateCcw size={13} />
-                        振替
-                      </Button>
                       <Button
                         type="button"
                         size="sm"
@@ -300,7 +337,6 @@ export function LiveSessionHub({
             ) : (
               changeHistorySessions.map((session) => {
                 const badge = SESSION_STATUS_BADGE[session.status];
-                const sessionProposals = pendingProposals.filter((p) => p.session_id === session.session_id);
                 return (
                   <div
                     key={session.session_id}
@@ -320,46 +356,6 @@ export function LiveSessionHub({
                     {session.cancel_reason && (
                       <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">{session.cancel_reason}</p>
                     )}
-                    {sessionProposals.length > 0 && (
-                      <div className="mt-1 space-y-1.5 rounded-xl border border-indigo-100 bg-indigo-50/60 p-2.5">
-                        <p className="text-[11px] font-bold text-indigo-700">
-                          コーチから振替候補が届いています。ご希望の時間を選んでください。
-                        </p>
-                        {sessionProposals.map((proposal) => (
-                          <div key={proposal.proposal_id} className="flex items-center justify-between gap-2 bg-white rounded-lg border border-indigo-100 px-2.5 py-2">
-                            <span className="text-[11px] font-semibold text-slate-700">
-                              {formatDateTimeByZone(proposal.proposed_start_datetime, timezone, false)}
-                            </span>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2.5 text-[11px]"
-                                disabled={respondingProposalId === proposal.proposal_id}
-                                onClick={() => handleDeclineProposal(proposal.proposal_id)}
-                              >
-                                却下
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                className="h-7 px-2.5 text-[11px]"
-                                disabled={respondingProposalId === proposal.proposal_id}
-                                onClick={() => handleAcceptProposal(proposal.proposal_id)}
-                              >
-                                {respondingProposalId === proposal.proposal_id ? (
-                                  <Loader2 size={12} className="animate-spin" />
-                                ) : (
-                                  <CheckCircle2 size={12} />
-                                )}
-                                承諾
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 );
               })
@@ -374,11 +370,18 @@ export function LiveSessionHub({
         open={isBookMakeupOpen}
         slots={bookableSlots}
         onClose={() => setIsBookMakeupOpen(false)}
-        onBooked={() => {
+        onRequested={(request) => {
           setIsBookMakeupOpen(false);
-          invalidateSelectedPastSessions();
-          router.refresh();
+          setMyBookingRequests((prev) => [request, ...prev]);
         }}
+      />
+
+      <RescheduleProposalDialog
+        group={proposalDetailGroup}
+        timezone={timezone}
+        onClose={() => setProposalDetailGroup(null)}
+        onAccepted={handleProposalAccepted}
+        onDeclined={handleProposalDeclined}
       />
     </div>
   );

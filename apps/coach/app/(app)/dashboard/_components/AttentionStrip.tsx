@@ -64,7 +64,7 @@ export default function AttentionStrip({ pendingRequestCount }: Props) {
   }, [fetchChatRooms, fetchNotices, fetchNotifications]);
 
   const tiles: Tile[] = [
-    { key: 'requests', href: '/matching-requests', icon: UserPlus, label: 'Matching Requests', count: pendingRequestCount },
+    { key: 'requests', href: '/matching-requests', icon: UserPlus, label: 'Requests', count: pendingRequestCount },
     { key: 'chat', href: '/chat', icon: MessageCircle, label: 'Unread Messages', count: totalUnreadChat },
     { key: 'updates', href: '/notification', icon: Bell, label: 'Updates', count: noticeUnread + notificationUnread },
   ];

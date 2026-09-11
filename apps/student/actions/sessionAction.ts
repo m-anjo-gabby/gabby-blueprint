@@ -5,22 +5,23 @@ import {
   getMyUpcomingSessionsCore,
   getMyPastSessionsCore,
   cancelSessionCore,
-  rescheduleSessionCore,
-  bookMakeupSessionCore,
+  createSessionBookingRequestCore,
+  withdrawSessionBookingRequestCore,
+  getMyBookingRequestsCore,
+  checkSessionConflictCore,
   getSessionResultSummaryCore,
-  getMyRescheduleProposalsCore,
+  getMyRescheduleProposalGroupsCore,
   acceptRescheduleProposalCore,
-  declineRescheduleProposalCore,
+  declineRescheduleProposalsCore,
 } from '@gabby/lib/session/actions/sessionActions';
-import { getCoachAvailabilityByUserIdCore } from '@gabby/lib/coachAvailability/actions/coachAvailabilityActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { CoachAvailabilitySlot } from '@gabby/types/coachAvailability';
 import {
+  MyRescheduleProposalGroup,
   SessionActionErrorCode,
+  SessionBookingRequest,
   SessionListItem,
   SessionResultSummary,
-  SessionRescheduleProposal,
 } from '@gabby/types/session';
 
 const logger = createLogger('student');
@@ -30,10 +31,9 @@ const SESSION_ERROR_MESSAGES_JA: Record<SessionActionErrorCode, string> = {
   invalid_input: '選択した日時をご確認ください。',
   not_found: '対象のセッションが見つかりませんでした。',
   not_actionable: 'このセッションは既に開始済み、または対応済みのため変更できません。',
-  slot_unavailable: '選択した時間はコーチの対応可能時間外です。',
   schedule_conflict: '選択した時間には既に他のセッションの予定があります。',
   reason_required: '理由を入力してください。',
-  no_ticket_available: '予約可能な未割当のチケットがありません。',
+  no_ticket_available: '予約可能な未消化のセッションがありません。',
   unexpected_error: '予期しないエラーが発生しました。',
 };
 
@@ -79,27 +79,16 @@ export async function getMyPastSessions(ticketId?: string, limit?: number): Prom
 }
 
 /**
- * 指定コーチの空き時間一覧を取得する（振替時の候補時間表示用）
- */
-export async function getCoachAvailabilityForReschedule(coachId: string): Promise<CoachAvailabilitySlot[]> {
-  const result = await getCoachAvailabilityByUserIdCore(coachId);
-  if (!result.success) {
-    const ctx = await getLogContext();
-    logger.error('student:get_coach_availability_failed', result.errorCode, ctx);
-    return [];
-  }
-  return result.slots;
-}
-
-/**
- * 予定されているセッションをキャンセルする
+ * 予定されているセッションをキャンセルする。proposedSlots を渡すと、その場でコーチへ
+ * 振替候補（最大3件、任意）を提案する。
  */
 export async function cancelSession(
   sessionId: string,
-  reason?: string
+  reason?: string,
+  proposedSlots?: { start_datetime: string; end_datetime: string }[]
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await cancelSessionCore(sessionId, reason);
+  const result = await cancelSessionCore(sessionId, reason, proposedSlots);
 
   if (!result.success) {
     logger.error('student:cancel_session_failed', result.errorCode, ctx);
@@ -111,57 +100,92 @@ export async function cancelSession(
 }
 
 /**
- * 予定されているセッションをコーチの対応可能時間内で振替/日時変更する
+ * コーチ・生徒それぞれのダブルブッキング有無を事前チェックする（候補提案・予約リクエストの
+ * 日時入力中に呼び、インラインでエラーメッセージを表示するために使う）。
  */
-export async function rescheduleSession(
-  sessionId: string,
-  newDate: string,
-  newStartTime: string,
-  reason?: string
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function checkSessionConflict(
+  coachId: string,
+  studentId: string,
+  startIso: string,
+  endIso: string,
+  excludeSessionId?: string
+): Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await rescheduleSessionCore(sessionId, newDate, newStartTime, reason);
+  const result = await checkSessionConflictCore(coachId, studentId, startIso, endIso, excludeSessionId);
 
   if (!result.success) {
-    logger.error('student:reschedule_session_failed', result.errorCode, ctx);
+    logger.error('student:check_session_conflict_failed', result.errorCode, ctx);
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
-  logger.info('student:reschedule_session_success', 'Session rescheduled', ctx);
-  return { success: true };
+  return { success: true, coachConflict: result.coachConflict, studentConflict: result.studentConflict };
 }
 
 /**
- * 未割当のチケット（キャンセルにより返還された枠）を、担当コーチ限定で新規に予約する
+ * 未消化のセッション（未割当／キャンセルで返還されたもの）を使い、自由な日時で新規予約を
+ * リクエストする。即時確定ではなく、担当コーチの承認を待つ。
  */
-export async function bookMakeupSession(
+export async function createSessionBookingRequest(
   scheduleId: string,
-  newDate: string,
-  newStartTime: string
-): Promise<{ success: true } | { success: false; message: string }> {
+  startIso: string,
+  endIso: string,
+  reason?: string
+): Promise<{ success: true; requestId: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await bookMakeupSessionCore(scheduleId, newDate, newStartTime);
+  const result = await createSessionBookingRequestCore(scheduleId, startIso, endIso, reason);
 
   if (!result.success) {
-    logger.error('student:book_makeup_session_failed', result.errorCode, ctx);
+    logger.error('student:create_booking_request_failed', result.errorCode, ctx);
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
-  logger.info('student:book_makeup_session_success', 'Makeup session booked', ctx);
+  logger.info('student:create_booking_request_success', 'Session booking requested', ctx);
+  return { success: true, requestId: result.requestId };
+}
+
+/**
+ * コーチの応答を待たずに、自分の予約リクエスト（pending中）を取り下げる
+ */
+export async function withdrawSessionBookingRequest(
+  requestId: string
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await withdrawSessionBookingRequestCore(requestId);
+
+  if (!result.success) {
+    logger.error('student:withdraw_booking_request_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
+  }
+
+  logger.info('student:withdraw_booking_request_success', 'Session booking request withdrawn', ctx);
   return { success: true };
 }
 
 /**
- * ログイン中生徒宛の、未回答かつ未失効のコーチ提案（振替候補）一覧を取得する
+ * ログイン中生徒本人の、コーチの承認待ち(pending)の予約リクエスト一覧を取得する
  */
-export async function getMyRescheduleProposals(): Promise<SessionRescheduleProposal[]> {
-  const result = await getMyRescheduleProposalsCore();
+export async function getMyBookingRequests(): Promise<SessionBookingRequest[]> {
+  const result = await getMyBookingRequestsCore();
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_my_booking_requests_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.requests;
+}
+
+/**
+ * ログイン中生徒宛の、未回答かつ未失効の振替候補一覧を、キャンセル(セッション)単位で
+ * グルーピングして取得する（コーチが提案したもののみ）
+ */
+export async function getMyRescheduleProposalGroups(): Promise<MyRescheduleProposalGroup[]> {
+  const result = await getMyRescheduleProposalGroupsCore();
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('student:get_reschedule_proposals_failed', result.errorCode, ctx);
     return [];
   }
-  return result.proposals;
+  return result.groups;
 }
 
 /**
@@ -183,20 +207,20 @@ export async function acceptRescheduleProposal(
 }
 
 /**
- * コーチ提案の振替候補を却下する
+ * コーチ提案の振替候補を、同一セッション(キャンセル)単位でまとめて却下する
  */
-export async function declineRescheduleProposal(
-  proposalId: string
+export async function declineRescheduleProposals(
+  sessionId: string
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await declineRescheduleProposalCore(proposalId);
+  const result = await declineRescheduleProposalsCore(sessionId);
 
   if (!result.success) {
-    logger.error('student:decline_reschedule_proposal_failed', result.errorCode, ctx);
+    logger.error('student:decline_reschedule_proposals_failed', result.errorCode, ctx);
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
-  logger.info('student:decline_reschedule_proposal_success', 'Reschedule proposal declined', ctx);
+  logger.info('student:decline_reschedule_proposals_success', 'Reschedule proposals declined', ctx);
   return { success: true };
 }
 

@@ -1,8 +1,8 @@
 import { CalendarClock } from 'lucide-react';
 import { getMyProfile } from '@/actions/coachProfileAction';
-import { getIncomingRequests } from '@/actions/matchingRequestAction';
+import { getIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
 import { Section } from '@/components/common/Section';
-import { MATCHING_REQUEST_STATUS } from '@gabby/types/matching';
+import { isPendingCoachIncomingRequest } from '@gabby/types/coachInbox';
 import DashboardHeader from './_components/DashboardHeader';
 import AttentionStrip from './_components/AttentionStrip';
 import TodaysSessionsPanel from './_components/TodaysSessionsPanel';
@@ -21,12 +21,12 @@ function getGreeting(timeZone: string): string {
 export default async function Page() {
   const [profile, incomingRequests] = await Promise.all([
     getMyProfile(),
-    getIncomingRequests(),
+    getIncomingRequestsForCoach(),
   ]);
 
   const timezone = profile?.timezone || 'Asia/Tokyo';
   const firstName = profile?.user_name?.split(' ')[0] || 'Coach';
-  const pendingRequestCount = incomingRequests.filter((r) => r.status === MATCHING_REQUEST_STATUS.PENDING).length;
+  const pendingRequestCount = incomingRequests.filter(isPendingCoachIncomingRequest).length;
   const dateLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: timezone }).format(new Date());
 
   return (

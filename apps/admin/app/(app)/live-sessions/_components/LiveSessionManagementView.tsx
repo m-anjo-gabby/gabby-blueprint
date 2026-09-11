@@ -229,7 +229,15 @@ export function LiveSessionManagementView({ clients }: Props) {
     if (!rescheduleTarget || !rescheduleDate || !rescheduleTime) return;
     setIsRescheduling(true);
     try {
-      const result = await rescheduleSessionAsAdmin(rescheduleTarget.session_id, rescheduleDate, rescheduleTime, rescheduleReason || undefined);
+      const duration = new Date(rescheduleTarget.end_datetime).getTime() - new Date(rescheduleTarget.start_datetime).getTime();
+      const newStart = new Date(`${rescheduleDate}T${rescheduleTime}:00`);
+      const newEnd = new Date(newStart.getTime() + duration);
+      const result = await rescheduleSessionAsAdmin(
+        rescheduleTarget.session_id,
+        newStart.toISOString(),
+        newEnd.toISOString(),
+        rescheduleReason || undefined
+      );
       if (result.success) {
         showToast('セッションを振替しました', 'success');
         setRescheduleTarget(null);
@@ -249,7 +257,12 @@ export function LiveSessionManagementView({ clients }: Props) {
     if (!bookTarget || !bookDate || !bookTime) return;
     setIsBooking(true);
     try {
-      const result = await bookMakeupSessionAsAdmin(bookTarget.schedule_id, bookDate, bookTime);
+      const [startH, startM, startS] = bookTarget.start_time.split(':').map(Number);
+      const [endH, endM, endS] = bookTarget.end_time.split(':').map(Number);
+      const duration = ((endH * 60 + endM) * 60 + (endS ?? 0)) * 1000 - ((startH * 60 + startM) * 60 + (startS ?? 0)) * 1000;
+      const newStart = new Date(`${bookDate}T${bookTime}:00`);
+      const newEnd = new Date(newStart.getTime() + duration);
+      const result = await bookMakeupSessionAsAdmin(bookTarget.schedule_id, newStart.toISOString(), newEnd.toISOString());
       if (result.success) {
         showToast('セッションを予約しました', 'success');
         setBookTarget(null);

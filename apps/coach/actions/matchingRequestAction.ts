@@ -1,13 +1,14 @@
 'use server';
 
 import {
-  getIncomingRequestsAsCoachCore,
   approveMatchingRequestCore,
   rejectMatchingRequestCore,
 } from '@gabby/lib/matching/actions/matchingActions';
+import { getIncomingRequestsForCoachCore } from '@gabby/lib/coachInbox/actions/coachInboxActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { IncomingMatchingRequestItem, MatchingRequestErrorCode } from '@gabby/types/matching';
+import { MatchingRequestErrorCode } from '@gabby/types/matching';
+import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
 
 const logger = createLogger('coach');
 
@@ -23,10 +24,12 @@ const MATCHING_ERROR_MESSAGES_EN: Record<MatchingRequestErrorCode, string> = {
 };
 
 /**
- * Fetches matching requests sent to the current coach
+ * Fetches all incoming requests addressed to the current coach — fixed-slot matching
+ * requests, free-time session booking requests, and reschedule candidates a student
+ * proposed when cancelling — merged into one list for the requests inbox.
  */
-export async function getIncomingRequests(): Promise<IncomingMatchingRequestItem[]> {
-  const result = await getIncomingRequestsAsCoachCore();
+export async function getIncomingRequestsForCoach(): Promise<CoachIncomingRequestItem[]> {
+  const result = await getIncomingRequestsForCoachCore();
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('coach:get_incoming_requests_failed', result.errorCode, ctx);

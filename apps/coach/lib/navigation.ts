@@ -60,7 +60,7 @@ export const COACH_NAV_CONFIG: readonly NavItem[] = [
     requiredRoles: [],
   },
   {
-    label: 'Matching Requests',
+    label: 'Requests',
     href: '/matching-requests',
     icon: UserCheck,
     requiredRoles: [],

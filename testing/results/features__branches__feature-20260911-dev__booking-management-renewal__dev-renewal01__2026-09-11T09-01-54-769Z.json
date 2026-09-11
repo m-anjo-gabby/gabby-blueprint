@@ -1,0 +1,136 @@
+{
+  "scenario": "features/branches/feature-20260911-dev/booking-management-renewal.feature",
+  "env": "dev",
+  "tag": "renewal01",
+  "executedAt": "2026-09-11T09:01:54.769Z",
+  "gitCommit": "7f9caee9",
+  "gitBranch": "feature/20260911-dev",
+  "totalChecks": 25,
+  "passed": 25,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "生徒1: 候補が2件生成されている",
+      "ok": true,
+      "detail": "actual=2"
+    },
+    {
+      "name": "生徒1: 1件がaccepted・1件がdeclined",
+      "ok": true,
+      "detail": "accepted=1 declined=1"
+    },
+    {
+      "name": "生徒1: proposed_by_role=2(コーチ提案)",
+      "ok": true,
+      "detail": "roles=2,2"
+    },
+    {
+      "name": "生徒1: expires_atがinsert_dateから24時間後(±5分)",
+      "ok": true,
+      "detail": "diffs=24,24"
+    },
+    {
+      "name": "生徒1: 承諾した候補の日時でセッションが新規作成されている",
+      "ok": true,
+      "detail": "resulting_session_id=58b8da77-a080-4d9c-b921-1452d57c8f15"
+    },
+    {
+      "name": "生徒1: 新規セッションのrescheduled_fromが元セッションを参照",
+      "ok": true
+    },
+    {
+      "name": "生徒2: proposed_by_role=1(生徒提案)がすべて",
+      "ok": true,
+      "detail": "roles=1,1,1"
+    },
+    {
+      "name": "生徒2: 候補が合計3件(却下2件+承諾1件)",
+      "ok": true,
+      "detail": "actual=3"
+    },
+    {
+      "name": "生徒2: 却下2件・承諾1件",
+      "ok": true,
+      "detail": "declined=2 accepted=1"
+    },
+    {
+      "name": "生徒2: コーチが承諾した候補の日時でセッションが新規作成されている",
+      "ok": true,
+      "detail": "resulting_session_id=88a0015a-3bac-42e5-b0ab-8df9026aa9c2"
+    },
+    {
+      "name": "生徒2: SESSION_BOOKING_APPROVED通知が生徒へ届いている",
+      "ok": true,
+      "detail": "notifications=1"
+    },
+    {
+      "name": "生徒3: 予約リクエストが3件",
+      "ok": true,
+      "detail": "actual=3"
+    },
+    {
+      "name": "生徒3: 承認1件・却下1件・取下げ1件",
+      "ok": true,
+      "detail": "approved=1 rejected=1 withdrawn=1"
+    },
+    {
+      "name": "生徒3: 承認されたリクエストの日時でセッションが作成されている",
+      "ok": true,
+      "detail": "resulting_session_id=3d988db6-e71a-46c7-805a-4ae91cf44227"
+    },
+    {
+      "name": "生徒3: 却下されたリクエストにresulting_session_idが無い",
+      "ok": true
+    },
+    {
+      "name": "生徒3: 却下されたリクエストにreject_reasonがある",
+      "ok": true,
+      "detail": "reject_reason=QA自動テスト: この時間は対応不可"
+    },
+    {
+      "name": "生徒3: SESSION_BOOKING_REJECTED通知が生徒へ届いている",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "生徒4: 予約リクエストが1件(キャンセル済みと同一日時のもの)",
+      "ok": true,
+      "detail": "actual=1"
+    },
+    {
+      "name": "生徒4: そのリクエストが承認済み",
+      "ok": true,
+      "detail": "status=2"
+    },
+    {
+      "name": "生徒4: 元セッションがcancelled_by_coachになっている",
+      "ok": true,
+      "detail": "actual=1"
+    },
+    {
+      "name": "生徒4: 承認後の新規セッションが元セッションと同一schedule_id・同一start_datetimeで作成されている(ホットフィックス確認)",
+      "ok": true,
+      "detail": "resulting_session_id=14d5dcab-13e1-4ce6-9887-209f925065df"
+    },
+    {
+      "name": "生徒4: 新規セッションのschedule_id・start_datetimeがキャンセル済みセッションと一致",
+      "ok": true,
+      "detail": "new={\"schedule_id\":\"7ab0a06b-8e0c-48eb-85d9-4d10c7b4ca9e\",\"start_datetime\":\"2026-09-23T01:00:00+00:00\",\"status\":1} cancelled={\"schedule_id\":\"7ab0a06b-8e0c-48eb-85d9-4d10c7b4ca9e\",\"start_datetime\":\"2026-09-23T01:00:00+00:00\"}"
+    },
+    {
+      "name": "生徒5: 元セッションがrescheduled(5)になっている",
+      "ok": true,
+      "detail": "actual=1"
+    },
+    {
+      "name": "生徒5: アドミン代理変更後・直接予約後のscheduledセッションが2件",
+      "ok": true,
+      "detail": "actual=2"
+    },
+    {
+      "name": "生徒5: 後継セッションがrescheduled_fromで元セッションを参照",
+      "ok": true
+    }
+  ]
+}

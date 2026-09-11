@@ -46,4 +46,30 @@
 
 ---
 
+### KJ-2026-0912-01 廃止RPCの存在確認は42883だけでなくPGRST202も見る必要がある
+
+- **該当シナリオ**: `testing/features/branches/feature-20260911-dev/seed.ts`（preflightの`assertRpcRemoved`実装時）
+- **事象**: `supabase/release/20260911_feature-20260911-dev_release.sql` 適用後のdev環境に対し、
+  `reschedule_session`/`book_makeup_session`/`decline_session_reschedule_proposal`（いずれも
+  同リリースでDROP FUNCTIONしたはずの旧RPC）が「まだ存在する」と誤判定され、preflightで
+  テストが停止した。
+- **原因**: `assertReleaseApplied`と対になる「削除確認」ヘルパー(`assertRpcRemoved`)を、
+  既存の`UNDEFINED_FUNCTION = "42883"`（Postgresのundefined_function）とだけ突き合わせる
+  実装にしていた。実際に該当RPCを直接呼び出して調べたところ、DROP FUNCTION自体は正しく
+  適用済みで、supabase-js経由のエラーコードは`42883`ではなく`PGRST202`
+  （`Could not find the function ... in the schema cache`）だった。PostgRESTは関数名+
+  引数名の組み合わせをスキーマキャッシュ上で解決できない場合、Postgresに問い合わせる前に
+  この時点で弾くため、「本当に存在しない関数」を呼んだ場合は42883まで到達しない。
+- **対処**: `testing/helpers/preflight.ts`に`POSTGREST_FUNCTION_NOT_FOUND = "PGRST202"`を追加し、
+  `42883`・`PGRST202`のいずれでも「存在しない」と判定する`isFunctionNotFoundError()`に統一した。
+  `assertReleaseApplied`（存在確認）・`assertRpcRemoved`（削除確認）の両方をこの関数経由に修正。
+- **判断基準への反映**:
+  - **RPCの「存在しない」判定は`42883`単独ではなく`PGRST202`も含めて判定すること。**
+    `assertReleaseApplied`は「存在する（＝42883以外全部）」を条件にしていたため今まで問題が
+    表面化しなかったが、「存在しない」ことを確認する用途（廃止RPCの削除確認、今後追加され得る
+    他のnegativeチェック）では同じ考慮が必須。
+  - エラーコードの実際の値は必ず一度、対象クライアント（supabase-js等、PostgREST経由）で
+    直接叩いて確認してから判定ロジックを書く。Postgresの生のSQLSTATEとPostgREST層が返す
+    エラーコードは別物であることを前提にする。
+
 <!-- 新しい事例はこの下に追記していく -->

@@ -294,7 +294,7 @@ export async function getMySlotStatusCore(
  * 再予約可能な定期スケジュール(コマ)の一覧を取得する（生徒向け。ポータル共通）。
  * 週n回契約でコマごとに担当コーチが異なりうるため、コーチ選択はさせず対象コマ(schedule_id)を
  * 選ばせる（担当コーチはcom_m_lesson_schedule.coach_idで既に確定している）。
- * shortfall算出はDB側のfn_schedule_shortfall()（book_makeup_session RPCの予約可否判定と同一）。
+ * shortfall算出はDB側のfn_schedule_shortfall()（create_session_booking_request RPCの予約可否判定と同一）。
  */
 export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsResult> {
   const ctx = await getLogContext();

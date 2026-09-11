@@ -82,7 +82,6 @@ export type SessionActionErrorCode =
   | 'invalid_input'
   | 'not_found'
   | 'not_actionable'
-  | 'slot_unavailable'
   | 'schedule_conflict'
   | 'reason_required'
   | 'no_ticket_available'
@@ -92,16 +91,7 @@ export type CancelSessionResult =
   | { success: true }
   | { success: false; errorCode: SessionActionErrorCode };
 
-export type RescheduleSessionResult =
-  | { success: true; newSessionId: string }
-  | { success: false; errorCode: SessionActionErrorCode };
-
-/** 未割当チケットによる新規セッション予約(book_makeup_session RPC)の結果 */
-export type BookMakeupSessionResult =
-  | { success: true; newSessionId: string }
-  | { success: false; errorCode: SessionActionErrorCode };
-
-/** cancel_session RPCに渡す、コーチ提案の候補時間1件分（最大3件まで） */
+/** cancel_session RPCに渡す、候補提案する時間1件分（最大3件まで。コーチ・生徒どちらのキャンセルでも使う） */
 export interface ProposedSlotInput {
   start_datetime: string; // UTC ISO文字列
   end_datetime: string;
@@ -116,7 +106,14 @@ export const RESCHEDULE_PROPOSAL_STATUS = {
 } as const;
 export type RescheduleProposalStatus = typeof RESCHEDULE_PROPOSAL_STATUS[keyof typeof RESCHEDULE_PROPOSAL_STATUS];
 
-/** com_t_session_reschedule_proposal 1行分。コーチキャンセル時に提案された振替候補 */
+// com_t_session_reschedule_proposal.proposed_by_role
+export const PROPOSED_BY_ROLE = {
+  STUDENT: 1,
+  COACH: 2,
+} as const;
+export type ProposedByRole = typeof PROPOSED_BY_ROLE[keyof typeof PROPOSED_BY_ROLE];
+
+/** com_t_session_reschedule_proposal 1行分。キャンセル時に相手方へ提案された候補（コーチ・生徒いずれの提案も含む） */
 export interface SessionRescheduleProposal {
   proposal_id: string;
   session_id: string;
@@ -125,7 +122,31 @@ export interface SessionRescheduleProposal {
   proposed_start_datetime: string;
   proposed_end_datetime: string;
   status: RescheduleProposalStatus;
+  proposed_by_role: ProposedByRole;
   expires_at: string;
+  insert_date: string;
+}
+
+/** 同一セッションのキャンセルに紐づく候補提案をグルーピングした単位（UI表示・一括却下用） */
+export interface SessionRescheduleProposalGroup {
+  session_id: string;
+  coach_id: string;
+  student_id: string;
+  proposed_by_role: ProposedByRole;
+  /** グループ内で最も古い候補のinsert_date（一覧の並び替え用） */
+  insert_date: string;
+  candidates: SessionRescheduleProposal[];
+}
+
+/** 生徒側で表示する振替候補グループ（コーチ名を結合済み） */
+export interface MyRescheduleProposalGroup extends SessionRescheduleProposalGroup {
+  coach_name: string;
+}
+
+/** コーチ側の申請一覧で表示する振替候補グループ（生徒名・元セッション日時を結合済み） */
+export interface IncomingRescheduleProposalGroup extends SessionRescheduleProposalGroup {
+  student_name: string;
+  original_session_start_datetime: string;
 }
 
 export type GetMyRescheduleProposalsResult =
@@ -137,8 +158,52 @@ export type AcceptRescheduleProposalResult =
   | { success: true; newSessionId: string }
   | { success: false; errorCode: SessionActionErrorCode };
 
+/** 振替候補の一括却下(decline_session_reschedule_proposals RPC)の結果 */
 export type DeclineRescheduleProposalResult =
   | { success: true }
+  | { success: false; errorCode: SessionActionErrorCode };
+
+// com_t_session_booking_request.status
+export const SESSION_BOOKING_REQUEST_STATUS = {
+  PENDING: 1,
+  APPROVED: 2,
+  REJECTED: 3,
+  WITHDRAWN: 4,
+} as const;
+export type SessionBookingRequestStatus = typeof SESSION_BOOKING_REQUEST_STATUS[keyof typeof SESSION_BOOKING_REQUEST_STATUS];
+
+/** com_t_session_booking_request 1行分。未消化チケットによる自由日時の新規予約リクエスト */
+export interface SessionBookingRequest {
+  request_id: string;
+  schedule_id: string;
+  student_id: string;
+  coach_id: string;
+  requested_start_datetime: string;
+  requested_end_datetime: string;
+  reason: string | null;
+  status: SessionBookingRequestStatus;
+  reject_reason: string | null;
+  insert_date: string;
+}
+
+/** 予約リクエスト作成(create_session_booking_request RPC)の結果 */
+export type CreateSessionBookingRequestResult =
+  | { success: true; requestId: string }
+  | { success: false; errorCode: SessionActionErrorCode };
+
+/** 予約リクエストの承認(approve_session_booking_request RPC)の結果 */
+export type ApproveSessionBookingRequestResult =
+  | { success: true; newSessionId: string }
+  | { success: false; errorCode: SessionActionErrorCode };
+
+/** 予約リクエストの却下/取下げの結果 */
+export type RespondSessionBookingRequestResult =
+  | { success: true }
+  | { success: false; errorCode: SessionActionErrorCode };
+
+/** コーチ・生徒それぞれのダブルブッキング有無(check_session_conflict RPC)の結果 */
+export type CheckSessionConflictResult =
+  | { success: true; coachConflict: boolean; studentConflict: boolean }
   | { success: false; errorCode: SessionActionErrorCode };
 
 /** レッスン終了ボタン(finalize_session RPC)の結果 */

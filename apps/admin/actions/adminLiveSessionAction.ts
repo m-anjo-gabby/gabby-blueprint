@@ -298,21 +298,25 @@ export async function cancelSessionAsAdmin(sessionId: string, refundTicket: bool
 }
 
 /**
- * セッションの振替（アドミン代理操作）。生徒本人が行うのと同じreschedule_session RPCを使う。
+ * セッションの日時変更（アドミン代理操作）。生徒・コーチ向けの「振替」概念は廃止した
+ * （cancel_session+create_session_booking_request/accept_session_reschedule_proposalの
+ * 2ステップに置き換え）が、アドミンは既に関係者間で調整済みの内容を即時反映すればよいため、
+ * 管理者専用のadmin_reschedule_session RPCを使う（Availability・12時間ルールは適用せず、
+ * ダブルブッキングのみチェックする）。
  */
-export async function rescheduleSessionAsAdmin(sessionId: string, newDate: string, newStartTime: string, reason?: string): Promise<AdminSessionActionResult> {
+export async function rescheduleSessionAsAdmin(sessionId: string, newStartIso: string, newEndIso: string, reason?: string): Promise<AdminSessionActionResult> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { error } = await supabase.rpc('reschedule_session', {
+    const { error } = await supabase.rpc('admin_reschedule_session', {
       p_session_id: sessionId,
-      p_new_date: newDate,
-      p_new_start_time: newStartTime,
+      p_new_start_datetime: newStartIso,
+      p_new_end_datetime: newEndIso,
       p_reason: reason || null,
     });
 
     if (error) {
-      logger.error('liveSession:reschedule_as_admin_failed', error.message, { ...ctx, payload: { sessionId, newDate, newStartTime } });
+      logger.error('liveSession:reschedule_as_admin_failed', error.message, { ...ctx, payload: { sessionId, newStartIso, newEndIso } });
       return { success: false, message: error.message };
     }
 
@@ -325,21 +329,23 @@ export async function rescheduleSessionAsAdmin(sessionId: string, newDate: strin
 }
 
 /**
- * 未割当チケットの新規予約（アドミン代理操作）。生徒本人が行うのと同じ
- * book_makeup_session RPCを使う。
+ * 未消化チケットの新規予約（アドミン代理操作）。生徒向けの新規予約は承認制になった
+ * （create_session_booking_request+approve_session_booking_requestの2ステップ）が、
+ * アドミンは既に関係者間で調整済みの内容を即時反映すればよいため、管理者専用の
+ * admin_book_session_direct RPCを使う（承認ステップを挟まず即座にセッション行を作る）。
  */
-export async function bookMakeupSessionAsAdmin(scheduleId: string, newDate: string, newStartTime: string): Promise<AdminSessionActionResult> {
+export async function bookMakeupSessionAsAdmin(scheduleId: string, startIso: string, endIso: string): Promise<AdminSessionActionResult> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { error } = await supabase.rpc('book_makeup_session', {
+    const { error } = await supabase.rpc('admin_book_session_direct', {
       p_schedule_id: scheduleId,
-      p_new_date: newDate,
-      p_new_start_time: newStartTime,
+      p_start_datetime: startIso,
+      p_end_datetime: endIso,
     });
 
     if (error) {
-      logger.error('liveSession:book_makeup_as_admin_failed', error.message, { ...ctx, payload: { scheduleId, newDate, newStartTime } });
+      logger.error('liveSession:book_makeup_as_admin_failed', error.message, { ...ctx, payload: { scheduleId, startIso, endIso } });
       return { success: false, message: error.message };
     }
 

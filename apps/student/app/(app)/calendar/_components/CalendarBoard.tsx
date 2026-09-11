@@ -216,7 +216,7 @@ export function CalendarBoard() {
         slots={bookableSlots}
         initialDate={bookMakeupDate}
         onClose={() => setBookMakeupDate(null)}
-        onBooked={() => {
+        onRequested={() => {
           loadMonth();
           loadBookableSlots();
         }}

@@ -192,3 +192,24 @@ ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
 ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
 
 COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル) 9:cancelled_coach_reassigned(コーチ交代による自動キャンセル) 10:cancelled_by_admin(アドミンによる代理キャンセル。ticket_refundedは管理者が明示的に指定)';
+
+---------------------------------------------
+-- 追加パッチ: Wブッキング防止の一意制約を有効な予約枠のみに限定 (2026-09-12)
+-- 既存環境に対しては、このDROP INDEX/CREATE INDEX文のみをSupabase SQL Editor等で
+-- 実行してください。
+---------------------------------------------
+-- 【背景】
+-- uq_session_schedule_datetime は元々fn_generate_sessions_for_schedule()の冪等性
+-- 担保用（同一スケジュール・同一開始日時の重複生成防止）として、ステータスを問わず
+-- 全行を対象とした一意制約だった。これにより、あるschedule_id・start_datetimeの
+-- 組み合わせで一度でもキャンセル(3/4/10)・振替元(5)等の行が存在すると、その後
+-- 同じ日時への新規予約（accept_session_reschedule_proposal/
+-- approve_session_booking_request/admin_reschedule_session/
+-- admin_book_session_direct、いずれもcom_t_sessionへのINSERT）がunique制約違反で
+-- 失敗してしまう不具合があった（Wブッキング防止の対象が「有効な予約枠」ではなく
+-- 過去の行も含めた全行になっていたため）。fn_generate_sessions_for_schedule()は
+-- 常にstatus=1の行しか作らないため、対象をstatus=1の行に限定した部分一意インデックス
+-- に変更しても、本来の冪等性担保という目的は損なわれない。
+---------------------------------------------
+DROP INDEX IF EXISTS public.uq_session_schedule_datetime;
+CREATE UNIQUE INDEX uq_session_schedule_datetime ON public.com_t_session (schedule_id, start_datetime) WHERE status = 1;

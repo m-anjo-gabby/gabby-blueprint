@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, RotateCcw, Ticket, X } from 'lucide-react';
+import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, Ticket, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -292,7 +292,7 @@ export function DayDetailDrawer({
               onClick={() => onBookMakeupRequested(date)}
             >
               <Ticket size={13} />
-              未割当のチケットをこの日で予約する
+              この日で未予約のセッションをリクエストする
             </Button>
           )}
 
@@ -328,10 +328,6 @@ export function DayDetailDrawer({
 
                     {canAct && (
                       <div className="flex items-center gap-2 pt-1">
-                        <Button type="button" size="sm" variant="outline" onClick={() => onActionRequested({ session, mode: 'reschedule' })}>
-                          <RotateCcw size={13} />
-                          振替
-                        </Button>
                         <Button
                           type="button"
                           size="sm"

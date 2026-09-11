@@ -14,8 +14,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { generateLessonStartTimeOptions } from '@gabby/lib/date/date';
-import { cancelSession, resolveStaleSession } from '@/actions/sessionAction';
+import { cancelSession, checkSessionConflict, resolveStaleSession } from '@/actions/sessionAction';
 import { SESSION_STATUS, SessionListItem, SessionStatus } from '@gabby/types/session';
 import type { ProposedSlotInput } from '@gabby/types/session';
 
@@ -46,6 +47,8 @@ interface SessionActionDialogProps {
 interface ProposedSlotDraft {
   date: string; // YYYY-MM-DD
   time: string; // HH:MM
+  conflictMessage: string | null;
+  isChecking: boolean;
 }
 
 function tomorrowIsoDate(): string {
@@ -55,6 +58,7 @@ function tomorrowIsoDate(): string {
 }
 
 export function SessionActionDialog({ target, onClose, onResolved }: SessionActionDialogProps) {
+  const currentUserId = useUserStore((state) => state.user?.id);
   const [reason, setReason] = useState('');
   const [proposedSlots, setProposedSlots] = useState<ProposedSlotDraft[]>([]);
   const [resolvedStatus, setResolvedStatus] = useState<SessionStatus>(SESSION_STATUS.COMPLETED);
@@ -70,22 +74,57 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
   }, [target]);
 
   const addProposedSlot = () => {
-    setProposedSlots((prev) => (prev.length >= MAX_PROPOSED_SLOTS ? prev : [...prev, { date: tomorrowIsoDate(), time: '' }]));
+    setProposedSlots((prev) =>
+      prev.length >= MAX_PROPOSED_SLOTS ? prev : [...prev, { date: tomorrowIsoDate(), time: '', conflictMessage: null, isChecking: false }]
+    );
   };
 
-  const updateProposedSlot = (index: number, patch: Partial<ProposedSlotDraft>) => {
-    setProposedSlots((prev) => prev.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)));
+  const checkSlotConflict = async (index: number, date: string, time: string) => {
+    if (!target || !currentUserId) return;
+    setProposedSlots((prev) => prev.map((s, i) => (i === index ? { ...s, isChecking: true } : s)));
+
+    const duration = new Date(target.session.end_datetime).getTime() - new Date(target.session.start_datetime).getTime();
+    const start = new Date(`${date}T${time}:00`);
+    const end = new Date(start.getTime() + duration);
+    const result = await checkSessionConflict(
+      currentUserId,
+      target.session.counterpart_id,
+      start.toISOString(),
+      end.toISOString(),
+      target.session.session_id
+    );
+
+    setProposedSlots((prev) =>
+      prev.map((s, i) => {
+        if (i !== index) return s;
+        if (!result.success) return { ...s, isChecking: false };
+        const message = result.coachConflict
+          ? 'You already have another session at this time.'
+          : result.studentConflict
+            ? 'The student already has another session at this time.'
+            : null;
+        return { ...s, isChecking: false, conflictMessage: message };
+      })
+    );
+  };
+
+  const updateProposedSlot = (index: number, patch: Partial<Pick<ProposedSlotDraft, 'date' | 'time'>>) => {
+    setProposedSlots((prev) => prev.map((slot, i) => (i === index ? { ...slot, ...patch, conflictMessage: null } : slot)));
+    const merged = { ...proposedSlots[index], ...patch };
+    if (merged.date && merged.time) checkSlotConflict(index, merged.date, merged.time);
   };
 
   const removeProposedSlot = (index: number) => {
     setProposedSlots((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const hasBlockingConflict = proposedSlots.some((s) => s.date && s.time && s.conflictMessage);
+
   const handleCancel = async () => {
-    if (!target) return;
+    if (!target || hasBlockingConflict) return;
     setIsSubmitting(true);
     try {
-      const validSlots = proposedSlots.filter((s) => s.date && s.time);
+      const validSlots = proposedSlots.filter((s) => s.date && s.time && !s.conflictMessage);
       const duration = new Date(target.session.end_datetime).getTime() - new Date(target.session.start_datetime).getTime();
       const proposedSlotInputs: ProposedSlotInput[] = validSlots.map((s) => {
         const start = new Date(`${s.date}T${s.time}:00`);
@@ -163,36 +202,40 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
               ) : (
                 <div className="space-y-2">
                   {proposedSlots.map((slot, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <input
-                        type="date"
-                        min={tomorrowIsoDate()}
-                        value={slot.date}
-                        onChange={(e) => updateProposedSlot(index, { date: e.target.value })}
-                        className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
-                      />
-                      <select
-                        value={slot.time}
-                        onChange={(e) => updateProposedSlot(index, { time: e.target.value })}
-                        className="flex h-9 w-28 rounded-md border border-input bg-transparent px-2 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
-                      >
-                        <option value="" disabled>
-                          Time
-                        </option>
-                        {PROPOSED_TIME_OPTIONS.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
+                    <div key={index} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="date"
+                          min={tomorrowIsoDate()}
+                          value={slot.date}
+                          onChange={(e) => updateProposedSlot(index, { date: e.target.value })}
+                          className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+                        />
+                        <select
+                          value={slot.time}
+                          onChange={(e) => updateProposedSlot(index, { time: e.target.value })}
+                          className="flex h-9 w-28 rounded-md border border-input bg-transparent px-2 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+                        >
+                          <option value="" disabled>
+                            Time
                           </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => removeProposedSlot(index)}
-                        className="shrink-0 text-slate-400 hover:text-rose-500 transition-colors p-1"
-                        title="Remove"
-                      >
-                        <XIcon size={14} />
-                      </button>
+                          {PROPOSED_TIME_OPTIONS.map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => removeProposedSlot(index)}
+                          className="shrink-0 text-slate-400 hover:text-rose-500 transition-colors p-1"
+                          title="Remove"
+                        >
+                          <XIcon size={14} />
+                        </button>
+                      </div>
+                      {slot.isChecking && <p className="text-[11px] text-slate-400">Checking…</p>}
+                      {slot.conflictMessage && <p className="text-[11px] text-rose-600">{slot.conflictMessage}</p>}
                     </div>
                   ))}
                 </div>
@@ -203,7 +246,7 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
               <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Back
               </Button>
-              <Button type="button" onClick={handleCancel} disabled={isSubmitting}>
+              <Button type="button" onClick={handleCancel} disabled={isSubmitting || hasBlockingConflict}>
                 {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                 Cancel Session
               </Button>

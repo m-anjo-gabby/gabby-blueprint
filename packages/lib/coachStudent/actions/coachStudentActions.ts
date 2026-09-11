@@ -395,7 +395,7 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
  * チケット）を検知する。マッチング申請が契約期間の途中（ライセンス開始日より後）に承認された場合や、
  * 生徒キャンセル(12時間以上前)・コーチキャンセルによりticket_refunded=trueとなった場合に発生する。
  * expected/actual/shortfallの算出はDB側のfn_schedule_shortfall()を唯一の真実源とし、
- * book_makeup_session RPCの予約可否判定と齟齬が生じないようにする。
+ * create_session_booking_request RPCの予約可否判定と齟齬が生じないようにする。
  */
 type ScheduleShortfallRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
 

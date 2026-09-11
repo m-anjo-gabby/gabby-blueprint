@@ -216,12 +216,13 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
               <TriangleAlert size={14} className="shrink-0" />
               Not all contracted sessions could be scheduled
             </div>
-            {/* 予約・振替の決定権は生徒側にあるため、コーチ側では「未消化枠がある」ことの
-                通知のみとし、Bookボタン（book_makeup_sessionの直接呼び出し）は置かない */}
+            {/* 新規予約はコーチの承認が必要なため、コーチ側では「未消化枠がある」ことの
+                通知のみとし、Bookボタン（アドミン専用のadmin_book_session_direct同等の
+                直接予約導線）は置かない。生徒がリクエストすれば申請一覧に届く */}
             <ul className="space-y-1.5 pl-5.5">
               {shortfalls.map((s) => (
                 <li key={s.schedule_id} className="text-[11px] font-semibold text-amber-700">
-                  {DAY_OF_WEEK_SHORT_LABEL_EN[s.day_of_week as DayOfWeek]} {s.start_time.slice(0, 5)}: only {s.actual_sessions} of {s.expected_sessions} sessions scheduled ({s.shortfall} short). The student can book a makeup session.
+                  {DAY_OF_WEEK_SHORT_LABEL_EN[s.day_of_week as DayOfWeek]} {s.start_time.slice(0, 5)}: only {s.actual_sessions} of {s.expected_sessions} sessions scheduled ({s.shortfall} short). The student can request a new booking.
                 </li>
               ))}
             </ul>

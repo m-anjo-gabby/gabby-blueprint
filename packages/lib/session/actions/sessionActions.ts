@@ -3,20 +3,28 @@
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
+import { groupRescheduleProposals } from '../rescheduleProposalUtils';
 import {
   AcceptRescheduleProposalResult,
-  BookMakeupSessionResult,
+  ApproveSessionBookingRequestResult,
   CancelSessionResult,
+  CheckSessionConflictResult,
+  CreateSessionBookingRequestResult,
   DeclineRescheduleProposalResult,
   FinalizeSessionResult,
   GetMyRescheduleProposalsResult,
   GetSessionResultSummaryResult,
+  IncomingRescheduleProposalGroup,
+  MyRescheduleProposalGroup,
+  PROPOSED_BY_ROLE,
   ProposedSlotInput,
   RESCHEDULE_PROPOSAL_STATUS,
-  RescheduleSessionResult,
+  RespondSessionBookingRequestResult,
   ResolveStaleSessionResult,
+  SESSION_BOOKING_REQUEST_STATUS,
   SESSION_STATUS,
   SessionActionErrorCode,
+  SessionBookingRequest,
   SessionCallLogEntry,
   SessionChatMessageEntry,
   SessionListItem,
@@ -35,7 +43,7 @@ const logger = createLogger('common');
 function classifyRpcError(message: string | undefined): SessionActionErrorCode {
   if (!message) return 'unexpected_error';
   if (message.includes('not authorized')) return 'unauthorized';
-  if (message.includes('not found')) return 'not_found';
+  if (message.includes('not found') || message.includes('no pending proposals')) return 'not_found';
   if (message.includes('reason required')) return 'reason_required';
   if (message.includes('invalid resolved status')) return 'invalid_input';
   if (
@@ -49,9 +57,6 @@ function classifyRpcError(message: string | undefined): SessionActionErrorCode {
     || message.includes('has expired')
   ) {
     return 'not_actionable';
-  }
-  if (message.includes('outside coach availability') || message.includes('blocked by coach exception')) {
-    return 'slot_unavailable';
   }
   if (message.includes('already has a session')) return 'schedule_conflict';
   if (message.includes('no unassigned ticket available')) return 'no_ticket_available';
@@ -270,9 +275,13 @@ export async function cancelSessionCore(
   }
 }
 
+const RESCHEDULE_PROPOSAL_ROW_COLUMNS = 'proposal_id, session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime, status, proposed_by_role, expires_at, insert_date';
+
 /**
  * ログイン中の生徒宛の、未回答(pending)かつ未失効の振替候補一覧を取得する
- * （ライブセッションハブの変更履歴タブで、キャンセルされたセッションに紐づけて表示する）。
+ * （ライブセッションハブで、応答が必要な候補提案として表示する）。
+ * コーチが提案したもの(proposed_by_role=COACH)のみが対象。生徒自身が提案したもの
+ * (proposed_by_role=STUDENT)はコーチ側が応答するため、ここには含めない。
  */
 export async function getMyRescheduleProposalsCore(): Promise<GetMyRescheduleProposalsResult> {
   const ctx = await getLogContext();
@@ -284,8 +293,9 @@ export async function getMyRescheduleProposalsCore(): Promise<GetMyReschedulePro
 
     const { data, error } = await supabase
       .from('com_t_session_reschedule_proposal')
-      .select('proposal_id, session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime, status, expires_at')
+      .select(RESCHEDULE_PROPOSAL_ROW_COLUMNS)
       .eq('student_id', user.id)
+      .eq('proposed_by_role', PROPOSED_BY_ROLE.COACH)
       .eq('status', RESCHEDULE_PROPOSAL_STATUS.PENDING)
       .gt('expires_at', new Date().toISOString())
       .order('proposed_start_datetime', { ascending: true });
@@ -298,6 +308,105 @@ export async function getMyRescheduleProposalsCore(): Promise<GetMyReschedulePro
     return { success: true, proposals: (data ?? []) as SessionRescheduleProposal[] };
   } catch (err) {
     logger.error('session:get_reschedule_proposals_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中生徒宛の、未回答(pending)かつ未失効の振替候補を、キャンセル(セッション)単位で
+ * グルーピングし、コーチ名を結合して取得する（ライブセッションハブでの表示用）。
+ */
+export async function getMyRescheduleProposalGroupsCore(): Promise<
+  { success: true; groups: MyRescheduleProposalGroup[] } | { success: false; errorCode: SessionActionErrorCode }
+> {
+  const result = await getMyRescheduleProposalsCore();
+  if (!result.success) return result;
+
+  const groups = groupRescheduleProposals(result.proposals);
+  if (groups.length === 0) return { success: true, groups: [] };
+
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createServerClient();
+    const coachIds = Array.from(new Set(groups.map((g) => g.coach_id)));
+    const { data: coaches } = await supabase.from('com_m_user').select('id, user_name').in('id', coachIds);
+    const nameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+
+    return { success: true, groups: groups.map((g) => ({ ...g, coach_name: nameById.get(g.coach_id) ?? '(Unknown)' })) };
+  } catch (err) {
+    logger.error('session:get_my_reschedule_proposal_groups_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * コーチ宛の、未回答(pending)かつ未失効の振替候補一覧を取得する（生徒がキャンセル時に
+ * 提案したもののみ。proposed_by_role=STUDENT）。コーチ側の申請一覧画面用。
+ */
+export async function getIncomingRescheduleProposalsForCoachCore(): Promise<GetMyRescheduleProposalsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_session_reschedule_proposal')
+      .select(RESCHEDULE_PROPOSAL_ROW_COLUMNS)
+      .eq('coach_id', user.id)
+      .eq('proposed_by_role', PROPOSED_BY_ROLE.STUDENT)
+      .eq('status', RESCHEDULE_PROPOSAL_STATUS.PENDING)
+      .gt('expires_at', new Date().toISOString())
+      .order('proposed_start_datetime', { ascending: true });
+
+    if (error) {
+      logger.error('session:get_incoming_reschedule_proposals_failed', error.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true, proposals: (data ?? []) as SessionRescheduleProposal[] };
+  } catch (err) {
+    logger.error('session:get_incoming_reschedule_proposals_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中コーチ宛の、生徒がキャンセル時に提案した振替候補を、キャンセル(セッション)単位で
+ * グルーピングし、生徒名・元セッションの開始日時を結合して取得する（申請一覧画面用）。
+ */
+export async function getIncomingRescheduleProposalGroupsForCoachCore(): Promise<
+  { success: true; groups: IncomingRescheduleProposalGroup[] } | { success: false; errorCode: SessionActionErrorCode }
+> {
+  const result = await getIncomingRescheduleProposalsForCoachCore();
+  if (!result.success) return result;
+
+  const groups = groupRescheduleProposals(result.proposals);
+  if (groups.length === 0) return { success: true, groups: [] };
+
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createServerClient();
+    const studentIds = Array.from(new Set(groups.map((g) => g.student_id)));
+    const sessionIds = groups.map((g) => g.session_id);
+    const [{ data: students }, { data: sessions }] = await Promise.all([
+      supabase.from('com_m_user').select('id, user_name').in('id', studentIds),
+      supabase.from('com_t_session').select('session_id, start_datetime').in('session_id', sessionIds),
+    ]);
+    const nameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
+    const startById = new Map((sessions ?? []).map((s) => [s.session_id, s.start_datetime]));
+
+    return {
+      success: true,
+      groups: groups.map((g) => ({
+        ...g,
+        student_name: nameById.get(g.student_id) ?? '(Unknown)',
+        original_session_start_datetime: startById.get(g.session_id) ?? g.insert_date,
+      })),
+    };
+  } catch (err) {
+    logger.error('session:get_incoming_reschedule_proposal_groups_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -330,10 +439,12 @@ export async function acceptRescheduleProposalCore(proposalId: string): Promise<
 }
 
 /**
- * コーチ提案の振替候補を生徒が却下する。DB側の decline_session_reschedule_proposal RPC
- * （SECURITY DEFINER）を呼び出す。
+ * 振替候補を一括却下する（応答者本人。生徒提案ならコーチが、コーチ提案なら生徒が呼ぶ）。
+ * DB側の decline_session_reschedule_proposals RPC（SECURITY DEFINER）を呼び出す。
+ * 候補は「いずれか1つを選んで承諾する」ための選択肢のため、却下は候補単位ではなく
+ * 同一キャンセル(session_id)にまとめて対する操作とする。
  */
-export async function declineRescheduleProposalCore(proposalId: string): Promise<DeclineRescheduleProposalResult> {
+export async function declineRescheduleProposalsCore(sessionId: string): Promise<DeclineRescheduleProposalResult> {
   const ctx = await getLogContext();
 
   try {
@@ -341,33 +452,34 @@ export async function declineRescheduleProposalCore(proposalId: string): Promise
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { error } = await supabase.rpc('decline_session_reschedule_proposal', { p_proposal_id: proposalId });
+    const { error } = await supabase.rpc('decline_session_reschedule_proposals', { p_session_id: sessionId });
 
     if (error) {
-      logger.error('session:decline_reschedule_proposal_failed', error.message, { ...ctx, userId: user.id, payload: { proposalId } });
+      logger.error('session:decline_reschedule_proposals_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: classifyRpcError(error.message) };
     }
 
-    logger.info('session:decline_reschedule_proposal_success', 'Reschedule proposal declined', { ...ctx, userId: user.id });
+    logger.info('session:decline_reschedule_proposals_success', 'Reschedule proposals declined', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('session:decline_reschedule_proposal_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:decline_reschedule_proposals_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
- * 個別セッションを振替/日時変更する（生徒・コーチ共通。ポータル共通）
- * DB側の reschedule_session RPC（SECURITY DEFINER）を呼び出す。
- * newDate / newStartTime はコーチのローカル時刻として扱われ、絶対時刻への変換・
- * 空き時間/重複チェックはすべてRPC側で行う。
+ * コーチ・生徒それぞれのダブルブッキング有無を事前チェックする（生徒・コーチ共通）。
+ * DB側の check_session_conflict RPC（SECURITY DEFINER）を呼び出す。候補提案・予約
+ * リクエストの日時入力中に呼び、インラインでエラーメッセージを表示するために使う
+ * （サーバー側の最終防衛ラインである各RPC内部のチェックとは別に、UXのために先出しする）。
  */
-export async function rescheduleSessionCore(
-  sessionId: string,
-  newDate: string, // "YYYY-MM-DD"
-  newStartTime: string, // "HH:MM"
-  reason?: string
-): Promise<RescheduleSessionResult> {
+export async function checkSessionConflictCore(
+  coachId: string,
+  studentId: string,
+  startIso: string,
+  endIso: string,
+  excludeSessionId?: string
+): Promise<CheckSessionConflictResult> {
   const ctx = await getLogContext();
 
   try {
@@ -375,41 +487,71 @@ export async function rescheduleSessionCore(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate) || !/^\d{2}:\d{2}$/.test(newStartTime)) {
-      return { success: false, errorCode: 'invalid_input' };
+    const { data, error } = await supabase.rpc('check_session_conflict', {
+      p_coach_id: coachId,
+      p_student_id: studentId,
+      p_start_datetime: startIso,
+      p_end_datetime: endIso,
+      p_exclude_session_id: excludeSessionId ?? null,
+    });
+
+    if (error || !data || data.length === 0) {
+      logger.error('session:check_conflict_failed', error?.message ?? 'No row returned', { ...ctx, userId: user.id });
+      return { success: false, errorCode: classifyRpcError(error?.message) };
     }
 
-    const { data, error } = await supabase.rpc('reschedule_session', {
-      p_session_id: sessionId,
-      p_new_date: newDate,
-      p_new_start_time: `${newStartTime}:00`,
+    const row = data[0] as { coach_conflict: boolean; student_conflict: boolean };
+    return { success: true, coachConflict: row.coach_conflict, studentConflict: row.student_conflict };
+  } catch (err) {
+    logger.error('session:check_conflict_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 未消化チケット（未割当／キャンセルで返還されたもの）を使い、自由な日時で新規予約を
+ * リクエストする（生徒本人のみ）。DB側の create_session_booking_request RPC
+ * （SECURITY DEFINER）を呼び出す。即時確定ではなく、担当コーチの承認を待つ
+ * pending行(com_t_session_booking_request)を作成するのみ。
+ */
+export async function createSessionBookingRequestCore(
+  scheduleId: string,
+  startIso: string,
+  endIso: string,
+  reason?: string
+): Promise<CreateSessionBookingRequestResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase.rpc('create_session_booking_request', {
+      p_schedule_id: scheduleId,
+      p_start_datetime: startIso,
+      p_end_datetime: endIso,
       p_reason: reason?.trim() || null,
     });
 
     if (error || !data) {
-      logger.error('session:reschedule_failed', error?.message ?? 'No session_id returned', { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('session:create_booking_request_failed', error?.message ?? 'No request_id returned', { ...ctx, userId: user.id, payload: { scheduleId } });
       return { success: false, errorCode: classifyRpcError(error?.message) };
     }
 
-    logger.info('session:reschedule_success', 'Session rescheduled', { ...ctx, userId: user.id });
-    return { success: true, newSessionId: data as string };
+    logger.info('session:create_booking_request_success', 'Session booking requested', { ...ctx, userId: user.id, payload: { scheduleId } });
+    return { success: true, requestId: data as string };
   } catch (err) {
-    logger.error('session:reschedule_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:create_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
- * 未割当チケット（キャンセルによりticket_refunded=trueとなり未消化に戻った枠）を、
- * その定期スケジュール(コマ)の担当コーチ限定で新規に予約する（生徒・コーチ共通）。
- * DB側の book_makeup_session RPC（SECURITY DEFINER）を呼び出す。コーチ選択は行わず、
- * スケジュール(コマ)IDで対象コーチを一意に確定させる。
+ * 予約リクエストを担当コーチが承認する。DB側の approve_session_booking_request RPC
+ * （SECURITY DEFINER）を呼び出す。承認によりcom_t_sessionへ新規行が作成される。
  */
-export async function bookMakeupSessionCore(
-  scheduleId: string,
-  newDate: string, // "YYYY-MM-DD"
-  newStartTime: string // "HH:MM"
-): Promise<BookMakeupSessionResult> {
+export async function approveSessionBookingRequestCore(requestId: string): Promise<ApproveSessionBookingRequestResult> {
   const ctx = await getLogContext();
 
   try {
@@ -417,25 +559,140 @@ export async function bookMakeupSessionCore(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate) || !/^\d{2}:\d{2}$/.test(newStartTime)) {
-      return { success: false, errorCode: 'invalid_input' };
-    }
-
-    const { data, error } = await supabase.rpc('book_makeup_session', {
-      p_schedule_id: scheduleId,
-      p_new_date: newDate,
-      p_new_start_time: `${newStartTime}:00`,
-    });
+    const { data, error } = await supabase.rpc('approve_session_booking_request', { p_request_id: requestId });
 
     if (error || !data) {
-      logger.error('session:book_makeup_failed', error?.message ?? 'No session_id returned', { ...ctx, userId: user.id, payload: { scheduleId } });
+      logger.error('session:approve_booking_request_failed', error?.message ?? 'No session_id returned', { ...ctx, userId: user.id, payload: { requestId } });
       return { success: false, errorCode: classifyRpcError(error?.message) };
     }
 
-    logger.info('session:book_makeup_success', 'Makeup session booked', { ...ctx, userId: user.id, payload: { scheduleId } });
+    logger.info('session:approve_booking_request_success', 'Session booking request approved', { ...ctx, userId: user.id });
     return { success: true, newSessionId: data as string };
   } catch (err) {
-    logger.error('session:book_makeup_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:approve_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 予約リクエストを担当コーチが却下する。DB側の reject_session_booking_request RPC
+ * （SECURITY DEFINER）を呼び出す。却下してもチケットは未割当のまま残る。
+ */
+export async function rejectSessionBookingRequestCore(requestId: string, reason?: string): Promise<RespondSessionBookingRequestResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { error } = await supabase.rpc('reject_session_booking_request', {
+      p_request_id: requestId,
+      p_reason: reason?.trim() || null,
+    });
+
+    if (error) {
+      logger.error('session:reject_booking_request_failed', error.message, { ...ctx, userId: user.id, payload: { requestId } });
+      return { success: false, errorCode: classifyRpcError(error.message) };
+    }
+
+    logger.info('session:reject_booking_request_success', 'Session booking request rejected', { ...ctx, userId: user.id });
+    return { success: true };
+  } catch (err) {
+    logger.error('session:reject_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 予約リクエストを生徒本人が取り下げる。DB側の withdraw_session_booking_request RPC
+ * （SECURITY DEFINER）を呼び出す。コーチの応答を待たずに取り下げたい場合の経路。
+ */
+export async function withdrawSessionBookingRequestCore(requestId: string): Promise<RespondSessionBookingRequestResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { error } = await supabase.rpc('withdraw_session_booking_request', { p_request_id: requestId });
+
+    if (error) {
+      logger.error('session:withdraw_booking_request_failed', error.message, { ...ctx, userId: user.id, payload: { requestId } });
+      return { success: false, errorCode: classifyRpcError(error.message) };
+    }
+
+    logger.info('session:withdraw_booking_request_success', 'Session booking request withdrawn', { ...ctx, userId: user.id });
+    return { success: true };
+  } catch (err) {
+    logger.error('session:withdraw_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+const BOOKING_REQUEST_ROW_COLUMNS = 'request_id, schedule_id, student_id, coach_id, requested_start_datetime, requested_end_datetime, reason, status, reject_reason, insert_date';
+
+/**
+ * ログイン中生徒本人の、未消化チケットによる予約リクエスト一覧を取得する（pending中のものを
+ * ライブセッションハブで「コーチの承認待ち」として表示するために使う）。
+ */
+export async function getMyBookingRequestsCore(): Promise<
+  { success: true; requests: SessionBookingRequest[] } | { success: false; errorCode: SessionActionErrorCode }
+> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_session_booking_request')
+      .select(BOOKING_REQUEST_ROW_COLUMNS)
+      .eq('student_id', user.id)
+      .eq('status', SESSION_BOOKING_REQUEST_STATUS.PENDING)
+      .order('insert_date', { ascending: false });
+
+    if (error) {
+      logger.error('session:get_my_booking_requests_failed', error.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true, requests: (data ?? []) as SessionBookingRequest[] };
+  } catch (err) {
+    logger.error('session:get_my_booking_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中コーチ宛の、未消化チケットによる予約リクエスト一覧を取得する（申請一覧画面用）。
+ */
+export async function getIncomingBookingRequestsForCoachCore(): Promise<
+  { success: true; requests: SessionBookingRequest[] } | { success: false; errorCode: SessionActionErrorCode }
+> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_session_booking_request')
+      .select(BOOKING_REQUEST_ROW_COLUMNS)
+      .eq('coach_id', user.id)
+      .order('insert_date', { ascending: false });
+
+    if (error) {
+      logger.error('session:get_incoming_booking_requests_failed', error.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true, requests: (data ?? []) as SessionBookingRequest[] };
+  } catch (err) {
+    logger.error('session:get_incoming_booking_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

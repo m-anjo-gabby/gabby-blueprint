@@ -64,3 +64,18 @@ FOR SELECT TO authenticated USING (
     OR coach_id = auth.uid()
     OR public.get_jwt_user_type() = '0'
 );
+
+---------------------------------------------
+-- 追加パッチ: 生徒発の振替候補提案への対応 (2026-09-11)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 「振替」という独立概念を廃止し、キャンセル時の候補提案をコーチ→生徒だけでなく
+-- 生徒→コーチの双方向に一般化する（cancel_session参照）。承認/却下の権限判定
+-- （提案者と逆側のみ応答可）にこのカラムを用いる。既存行はすべてコーチ提案のため
+-- default 2で後方互換を保つ。
+---------------------------------------------
+ALTER TABLE public.com_t_session_reschedule_proposal ADD COLUMN IF NOT EXISTS proposed_by_role smallint NOT NULL DEFAULT 2;
+ALTER TABLE public.com_t_session_reschedule_proposal DROP CONSTRAINT IF EXISTS chk_proposal_proposed_by_role;
+ALTER TABLE public.com_t_session_reschedule_proposal ADD CONSTRAINT chk_proposal_proposed_by_role CHECK (proposed_by_role IN (1, 2));
+COMMENT ON COLUMN public.com_t_session_reschedule_proposal.proposed_by_role IS '候補の提案者 1:生徒が提案（コーチが承認/却下） 2:コーチが提案（生徒が承認/却下、デフォルト・既存仕様）';
