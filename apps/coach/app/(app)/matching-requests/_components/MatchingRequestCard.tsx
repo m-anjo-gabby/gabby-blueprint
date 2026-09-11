@@ -21,6 +21,7 @@ import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchin
 import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
+import { RequestKindTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {
   [MATCHING_REQUEST_STATUS.PENDING]: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -105,7 +106,8 @@ export function MatchingRequestCard({ request, onResolved }: MatchingRequestCard
     <article className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-black text-slate-800">{request.student_name}</p>
+          <RequestKindTag kind="matching" />
+          <p className="text-sm font-black text-slate-800 mt-1.5">{request.student_name}</p>
           <p className="text-xs text-slate-500 mt-0.5">
             Slot {request.slot_no} &middot; {DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]}{' '}
             {formatTimeRange(request.requested_start_time, request.requested_end_time)}

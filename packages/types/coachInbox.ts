@@ -1,5 +1,5 @@
 import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS } from './matching';
-import { IncomingRescheduleProposalGroup, SESSION_BOOKING_REQUEST_STATUS, SessionBookingRequest } from './session';
+import { IncomingRescheduleProposalGroup, RESCHEDULE_PROPOSAL_STATUS, SESSION_BOOKING_REQUEST_STATUS, SessionBookingRequest } from './session';
 
 /**
  * ----------------------------------------------
@@ -12,7 +12,7 @@ import { IncomingRescheduleProposalGroup, SESSION_BOOKING_REQUEST_STATUS, Sessio
  *   - booking: 未消化チケットによる自由日時の新規予約リクエスト(com_t_session_booking_request)
  *   - reschedule_proposal: 生徒がキャンセル時に提案した振替候補
  *     (com_t_session_reschedule_proposal, proposed_by_role=1のみ。コーチ発の候補提案は
- *     生徒側で応答するため、この一覧には含めない)
+ *     生徒側で応答するため、この一覧には含めない)。pending・応答済み(承諾/却下)の両方を含む
  */
 
 export interface IncomingSessionBookingRequestItem extends SessionBookingRequest {
@@ -32,7 +32,8 @@ export type GetIncomingRequestsForCoachResult =
 
 /**
  * 種類を問わず「未対応（応答待ち）」かどうかを判定する。reschedule_proposalは
- * pending中のものしか取得しない設計のため常にtrue（getIncomingRescheduleProposalGroupsForCoachCore参照）。
+ * グループ内に1件でもpending中の候補があれば未対応とみなす（いずれか1件でも承諾/一括却下
+ * されればグループ全体が解決済みとなり、残りのpending候補も自動でdeclined化されるため）。
  */
 export function isPendingCoachIncomingRequest(item: CoachIncomingRequestItem): boolean {
   switch (item.kind) {
@@ -41,6 +42,6 @@ export function isPendingCoachIncomingRequest(item: CoachIncomingRequestItem): b
     case 'booking':
       return item.data.status === SESSION_BOOKING_REQUEST_STATUS.PENDING;
     case 'reschedule_proposal':
-      return true;
+      return item.data.candidates.some((c) => c.status === RESCHEDULE_PROPOSAL_STATUS.PENDING);
   }
 }

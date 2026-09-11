@@ -340,8 +340,11 @@ export async function getMyRescheduleProposalGroupsCore(): Promise<
 }
 
 /**
- * コーチ宛の、未回答(pending)かつ未失効の振替候補一覧を取得する（生徒がキャンセル時に
- * 提案したもののみ。proposed_by_role=STUDENT）。コーチ側の申請一覧画面用。
+ * コーチ宛の振替候補一覧を取得する（生徒がキャンセル時に提案したもののみ。
+ * proposed_by_role=STUDENT）。コーチ側の申請一覧画面のPending/History両方の元データとして使う。
+ * 「未失効のpending」または「応答済み(accepted/declined)」を対象とし、応答されないまま
+ * 期限切れになっただけの行（status=pendingのままexpires_at超過）は対象外とする
+ * （応答不要のまま自然消滅した扱いのため、Historyにも出さない設計）。
  */
 export async function getIncomingRescheduleProposalsForCoachCore(): Promise<GetMyRescheduleProposalsResult> {
   const ctx = await getLogContext();
@@ -356,8 +359,7 @@ export async function getIncomingRescheduleProposalsForCoachCore(): Promise<GetM
       .select(RESCHEDULE_PROPOSAL_ROW_COLUMNS)
       .eq('coach_id', user.id)
       .eq('proposed_by_role', PROPOSED_BY_ROLE.STUDENT)
-      .eq('status', RESCHEDULE_PROPOSAL_STATUS.PENDING)
-      .gt('expires_at', new Date().toISOString())
+      .or(`status.neq.${RESCHEDULE_PROPOSAL_STATUS.PENDING},expires_at.gt.${new Date().toISOString()}`)
       .order('proposed_start_datetime', { ascending: true });
 
     if (error) {
@@ -374,7 +376,8 @@ export async function getIncomingRescheduleProposalsForCoachCore(): Promise<GetM
 
 /**
  * ログイン中コーチ宛の、生徒がキャンセル時に提案した振替候補を、キャンセル(セッション)単位で
- * グルーピングし、生徒名・元セッションの開始日時を結合して取得する（申請一覧画面用）。
+ * グルーピングし、生徒名・元セッションの開始日時を結合して取得する（申請一覧画面用。
+ * pending/応答済みの両方を含むため、呼び出し側でPending/Historyへの振り分けを行う）。
  */
 export async function getIncomingRescheduleProposalGroupsForCoachCore(): Promise<
   { success: true; groups: IncomingRescheduleProposalGroup[] } | { success: false; errorCode: SessionActionErrorCode }

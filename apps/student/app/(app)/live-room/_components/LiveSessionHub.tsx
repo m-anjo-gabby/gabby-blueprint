@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
 import { getMyPastSessions, withdrawSessionBookingRequest } from '@/actions/sessionAction';
 import {
   MyRescheduleProposalGroup,
@@ -26,6 +27,7 @@ import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSe
 import { RescheduleProposalDialog } from './RescheduleProposalDialog';
 
 const JOINABLE_WINDOW_MS = 48 * 60 * 60 * 1000;
+const HISTORY_PAGE_SIZE = 10;
 // 結果画面への導線を出す(=call_logが記録されている想定の)確定ステータス、変更履歴タブの対象は
 // packages/types/session.tsで共通定義したものを使う（コーチ側のLive Sessionsカードとも共有）
 const RESULT_LINKABLE_STATUSES = new Set<number>(SESSION_RESULT_STATUSES);
@@ -92,6 +94,11 @@ export function LiveSessionHub({
   const [activeTab, setActiveTab] = useState('upcoming');
   const displayedTab = activeTab === 'upcoming' && !showUpcomingTab ? 'completed' : activeTab;
 
+  // 実施済み・変更履歴は契約が長く続くほど件数が増え続けるため、最初はHISTORY_PAGE_SIZE件だけ
+  // 表示し、ボタン押下で追加表示する。契約(ticket)を切り替えたら表示件数もリセットする
+  const completedReveal = useIncrementalReveal(completedSessions, HISTORY_PAGE_SIZE);
+  const historyReveal = useIncrementalReveal(changeHistorySessions, HISTORY_PAGE_SIZE);
+
   const invalidateSelectedPastSessions = () => {
     if (!selectedTicketId) return;
     setPastSessionsByTicket((prev) => {
@@ -99,6 +106,12 @@ export function LiveSessionHub({
       delete next[selectedTicketId];
       return next;
     });
+  };
+
+  const handleTicketChange = (ticketId: string) => {
+    setSelectedTicketId(ticketId);
+    completedReveal.reset();
+    historyReveal.reset();
   };
 
   const handleResolved = (sessionId: string, patch: Partial<SessionListItem>) => {
@@ -157,7 +170,7 @@ export function LiveSessionHub({
             <Label className="text-[11px] text-slate-400">契約</Label>
             <select
               value={selectedTicketId ?? ''}
-              onChange={(e) => setSelectedTicketId(e.target.value)}
+              onChange={(e) => handleTicketChange(e.target.value)}
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               {contracts.map((c) => (
@@ -301,26 +314,33 @@ export function LiveSessionHub({
                 <p className="text-sm font-bold text-slate-500">実施済みのセッションはありません</p>
               </div>
             ) : (
-              completedSessions.map((session) => (
-                <Link
-                  key={session.session_id}
-                  href={`/live-room/sessions/${session.session_id}/result`}
-                  className="flex items-center justify-between gap-3 px-3.5 py-3 bg-white rounded-[20px] border border-slate-100 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all"
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-black text-slate-700 truncate">{session.counterpart_name} コーチ</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {formatDateTimeByZone(session.start_datetime, timezone, false)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${SESSION_STATUS_BADGE[session.status].className}`}>
-                      {SESSION_STATUS_BADGE[session.status].label}
-                    </span>
-                    <FileText size={14} className="text-slate-300" />
-                  </div>
-                </Link>
-              ))
+              <>
+                {completedReveal.visibleItems.map((session) => (
+                  <Link
+                    key={session.session_id}
+                    href={`/live-room/sessions/${session.session_id}/result`}
+                    className="flex items-center justify-between gap-3 px-3.5 py-3 bg-white rounded-[20px] border border-slate-100 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-slate-700 truncate">{session.counterpart_name} コーチ</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {formatDateTimeByZone(session.start_datetime, timezone, false)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${SESSION_STATUS_BADGE[session.status].className}`}>
+                        {SESSION_STATUS_BADGE[session.status].label}
+                      </span>
+                      <FileText size={14} className="text-slate-300" />
+                    </div>
+                  </Link>
+                ))}
+                {completedReveal.hasMore && (
+                  <Button type="button" size="sm" variant="outline" className="w-full" onClick={completedReveal.showMore}>
+                    さらに{completedReveal.remainingCount}件を表示
+                  </Button>
+                )}
+              </>
             )}
           </TabsContent>
 
@@ -335,30 +355,37 @@ export function LiveSessionHub({
                 <p className="text-sm font-bold text-slate-500">変更履歴はありません</p>
               </div>
             ) : (
-              changeHistorySessions.map((session) => {
-                const badge = SESSION_STATUS_BADGE[session.status];
-                return (
-                  <div
-                    key={session.session_id}
-                    className="flex flex-col gap-1.5 px-3.5 py-3 bg-white rounded-[20px] border border-slate-100 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs font-black text-slate-700 truncate">{session.counterpart_name} コーチ</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          {formatDateTimeByZone(session.start_datetime, timezone, false)}
-                        </p>
+              <>
+                {historyReveal.visibleItems.map((session) => {
+                  const badge = SESSION_STATUS_BADGE[session.status];
+                  return (
+                    <div
+                      key={session.session_id}
+                      className="flex flex-col gap-1.5 px-3.5 py-3 bg-white rounded-[20px] border border-slate-100 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-black text-slate-700 truncate">{session.counterpart_name} コーチ</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            {formatDateTimeByZone(session.start_datetime, timezone, false)}
+                          </p>
+                        </div>
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
+                          {badge.label}
+                        </span>
                       </div>
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
-                        {badge.label}
-                      </span>
+                      {session.cancel_reason && (
+                        <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">{session.cancel_reason}</p>
+                      )}
                     </div>
-                    {session.cancel_reason && (
-                      <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">{session.cancel_reason}</p>
-                    )}
-                  </div>
-                );
-              })
+                  );
+                })}
+                {historyReveal.hasMore && (
+                  <Button type="button" size="sm" variant="outline" className="w-full" onClick={historyReveal.showMore}>
+                    さらに{historyReveal.remainingCount}件を表示
+                  </Button>
+                )}
+              </>
             )}
           </TabsContent>
         </Tabs>

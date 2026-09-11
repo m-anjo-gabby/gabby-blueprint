@@ -14,11 +14,12 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { formatDateEn } from '@gabby/lib/date/dateEn';
+import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { approveSessionBookingRequest, rejectSessionBookingRequest } from '@/actions/sessionAction';
 import { SESSION_BOOKING_REQUEST_STATUS } from '@gabby/types/session';
 import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { RequestKindTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {
   [SESSION_BOOKING_REQUEST_STATUS.PENDING]: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -29,7 +30,7 @@ const STATUS_BADGE: Record<number, { label: string; className: string }> = {
 
 interface BookingRequestCardProps {
   request: IncomingSessionBookingRequestItem;
-  onResolved: (requestId: string) => void;
+  onResolved: (requestId: string, patch: Partial<IncomingSessionBookingRequestItem>) => void;
 }
 
 export function BookingRequestCard({ request, onResolved }: BookingRequestCardProps) {
@@ -47,7 +48,7 @@ export function BookingRequestCard({ request, onResolved }: BookingRequestCardPr
   const handleApprove = async () => {
     const ok = await showConfirm(
       'Approve this booking request?',
-      `This will book a new session with ${request.student_name} on ${formatDateEn(request.requested_start_datetime, timezone)}.`,
+      `This will book a new session with ${request.student_name} on ${formatDateTimeEn(request.requested_start_datetime, timezone)}.`,
       { variant: 'info', confirmText: 'Approve', cancelText: 'Cancel' }
     );
     if (!ok) return;
@@ -59,7 +60,7 @@ export function BookingRequestCard({ request, onResolved }: BookingRequestCardPr
         showToast(result.message, 'error');
         return;
       }
-      onResolved(request.request_id);
+      onResolved(request.request_id, { status: SESSION_BOOKING_REQUEST_STATUS.APPROVED });
       showToast('Request approved. The session has been booked.', 'success');
     } finally {
       setIsApproving(false);
@@ -74,7 +75,7 @@ export function BookingRequestCard({ request, onResolved }: BookingRequestCardPr
         showToast(result.message, 'error');
         return;
       }
-      onResolved(request.request_id);
+      onResolved(request.request_id, { status: SESSION_BOOKING_REQUEST_STATUS.REJECTED, reject_reason: rejectReason.trim() || null });
       setShowRejectDialog(false);
       setRejectReason('');
       showToast('Request rejected.', 'success');
@@ -87,12 +88,15 @@ export function BookingRequestCard({ request, onResolved }: BookingRequestCardPr
     <article className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-black text-slate-800">{request.student_name}</p>
-          <p className="text-xs text-slate-500 mt-0.5">New session booking request</p>
-          <p className="text-[11px] font-bold text-slate-600 mt-1">{formatDateEn(request.requested_start_datetime, timezone)}</p>
+          <RequestKindTag kind="booking" />
+          <p className="text-sm font-black text-slate-800 mt-1.5">{request.student_name}</p>
+          <p className="text-[11px] font-bold text-slate-600 mt-1">{formatDateTimeEn(request.requested_start_datetime, timezone)}</p>
           <p className="text-[10px] text-slate-400 mt-1">Requested {formatDateEn(request.insert_date, timezone)}</p>
           {request.reason && (
-            <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 mt-1.5">{request.reason}</p>
+            <div className="rounded-xl border border-slate-100 bg-slate-50 px-2.5 py-2 mt-1.5">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Reason</p>
+              <p className="text-xs text-slate-600 whitespace-pre-wrap">{request.reason}</p>
+            </div>
           )}
         </div>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>

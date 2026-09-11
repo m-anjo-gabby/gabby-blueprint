@@ -47,6 +47,9 @@ COMMENT ON COLUMN public.com_t_session_reschedule_proposal.resulting_session_id 
 
 CREATE INDEX idx_session_reschedule_proposal_session ON public.com_t_session_reschedule_proposal (session_id);
 CREATE INDEX idx_session_reschedule_proposal_student_status ON public.com_t_session_reschedule_proposal (student_id, status);
+-- コーチ側の申請一覧(getIncomingRescheduleProposalsForCoachCore)はcoach_id+statusで絞り込むため、
+-- com_t_matching_request/com_t_session_booking_requestと同様にこちらにも必要 (2026-09-12 追加)
+CREATE INDEX idx_session_reschedule_proposal_coach_status ON public.com_t_session_reschedule_proposal (coach_id, status);
 
 ---------------------------------------------
 -- 行レベルセキュリティ (RLS)

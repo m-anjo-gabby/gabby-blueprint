@@ -1,11 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { MatchingRequestCard } from './MatchingRequestCard';
 import { BookingRequestCard } from './BookingRequestCard';
 import { RescheduleProposalRequestCard } from './RescheduleProposalRequestCard';
-import { CoachIncomingRequestItem, isPendingCoachIncomingRequest } from '@gabby/types/coachInbox';
+import { CoachIncomingRequestItem, IncomingSessionBookingRequestItem, isPendingCoachIncomingRequest } from '@gabby/types/coachInbox';
 import { IncomingMatchingRequestItem } from '@gabby/types/matching';
+import { IncomingRescheduleProposalGroup } from '@gabby/types/session';
+import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
+
+const HISTORY_PAGE_SIZE = 10;
 
 interface MatchingRequestsViewProps {
   initialRequests: CoachIncomingRequestItem[];
@@ -20,12 +25,16 @@ export function MatchingRequestsView({ initialRequests }: MatchingRequestsViewPr
     );
   };
 
-  const handleBookingResolved = (requestId: string) => {
-    setRequests((prev) => prev.filter((item) => !(item.kind === 'booking' && item.data.request_id === requestId)));
+  const handleBookingResolved = (requestId: string, patch: Partial<IncomingSessionBookingRequestItem>) => {
+    setRequests((prev) =>
+      prev.map((item) => (item.kind === 'booking' && item.data.request_id === requestId ? { ...item, data: { ...item.data, ...patch } } : item))
+    );
   };
 
-  const handleProposalResolved = (sessionId: string) => {
-    setRequests((prev) => prev.filter((item) => !(item.kind === 'reschedule_proposal' && item.data.session_id === sessionId)));
+  const handleProposalResolved = (sessionId: string, patch: Partial<IncomingRescheduleProposalGroup>) => {
+    setRequests((prev) =>
+      prev.map((item) => (item.kind === 'reschedule_proposal' && item.data.session_id === sessionId ? { ...item, data: { ...item.data, ...patch } } : item))
+    );
   };
 
   const { pending, history } = useMemo(() => {
@@ -33,6 +42,10 @@ export function MatchingRequestsView({ initialRequests }: MatchingRequestsViewPr
     const history = requests.filter((r) => !isPendingCoachIncomingRequest(r));
     return { pending, history };
   }, [requests]);
+
+  // Historyは承認・拒否等が積み重なり件数が増え続けるため、最初はHISTORY_PAGE_SIZE件だけ
+  // 表示し、ボタン押下で追加表示する
+  const historyReveal = useIncrementalReveal(history, HISTORY_PAGE_SIZE);
 
   const renderItem = (item: CoachIncomingRequestItem) => {
     switch (item.kind) {
@@ -69,8 +82,13 @@ export function MatchingRequestsView({ initialRequests }: MatchingRequestsViewPr
 
       {history.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">History</h2>
-          <div className="space-y-3">{history.map(renderItem)}</div>
+          <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">History ({history.length})</h2>
+          <div className="space-y-3">{historyReveal.visibleItems.map(renderItem)}</div>
+          {historyReveal.hasMore && (
+            <Button type="button" variant="outline" className="w-full" onClick={historyReveal.showMore}>
+              Show {historyReveal.remainingCount} more
+            </Button>
+          )}
         </section>
       )}
     </div>

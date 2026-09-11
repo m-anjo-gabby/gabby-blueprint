@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { DayOfWeek } from '@gabby/types/coachAvailability';
 import {
@@ -39,6 +40,8 @@ function toSessionListItem(session: CoachSessionListItem, studentId: string, stu
     status_note: session.status_note,
   };
 }
+
+const HISTORY_PAGE_SIZE = 10;
 
 function formatContractDate(iso: string, timezone: string): string {
   return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: timezone }).format(new Date(iso));
@@ -90,6 +93,17 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
   const showUpcomingTab = upcomingSessions.length > 0;
   const [activeTab, setActiveTab] = useState('upcoming');
   const displayedTab = activeTab === 'upcoming' && !showUpcomingTab ? 'completed' : activeTab;
+
+  // Completed・Changesは契約が長く続くほど件数が増え続けるため、最初はHISTORY_PAGE_SIZE件だけ
+  // 表示し、ボタン押下で追加表示する。契約(ticket)を切り替えたら表示件数もリセットする
+  const completedReveal = useIncrementalReveal(completedSessions, HISTORY_PAGE_SIZE);
+  const historyReveal = useIncrementalReveal(historySessions, HISTORY_PAGE_SIZE);
+
+  const handleTicketChange = (ticketId: string) => {
+    setSelectedTicketId(ticketId);
+    completedReveal.reset();
+    historyReveal.reset();
+  };
 
   const handleResolved = (sessionId: string, patch: Partial<SessionListItem>) => {
     if (!selectedTicketId) return;
@@ -196,7 +210,7 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
             <Label className="text-[10px] text-slate-400">Contract</Label>
             <select
               value={selectedTicketId ?? ''}
-              onChange={(e) => setSelectedTicketId(e.target.value)}
+              onChange={(e) => handleTicketChange(e.target.value)}
               className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               {contracts.map((c) => (
@@ -256,29 +270,43 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
                   </TabsContent>
                 )}
 
-                <TabsContent value="completed">
+                <TabsContent value="completed" className="space-y-2">
                   {completedSessions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 text-center">
                       <CalendarClock size={22} className="text-slate-300 mb-2" />
                       <p className="text-xs font-semibold text-slate-400">No completed sessions yet</p>
                     </div>
                   ) : (
-                    <ul className="space-y-2 max-h-96 overflow-y-auto">
-                      {completedSessions.map(renderSessionRow)}
-                    </ul>
+                    <>
+                      <ul className="space-y-2 max-h-96 overflow-y-auto">
+                        {completedReveal.visibleItems.map(renderSessionRow)}
+                      </ul>
+                      {completedReveal.hasMore && (
+                        <Button type="button" size="sm" variant="outline" className="w-full" onClick={completedReveal.showMore}>
+                          Show {completedReveal.remainingCount} more
+                        </Button>
+                      )}
+                    </>
                   )}
                 </TabsContent>
 
-                <TabsContent value="history">
+                <TabsContent value="history" className="space-y-2">
                   {historySessions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 text-center">
                       <CalendarClock size={22} className="text-slate-300 mb-2" />
                       <p className="text-xs font-semibold text-slate-400">No changes yet</p>
                     </div>
                   ) : (
-                    <ul className="space-y-2 max-h-96 overflow-y-auto">
-                      {historySessions.map(renderSessionRow)}
-                    </ul>
+                    <>
+                      <ul className="space-y-2 max-h-96 overflow-y-auto">
+                        {historyReveal.visibleItems.map(renderSessionRow)}
+                      </ul>
+                      {historyReveal.hasMore && (
+                        <Button type="button" size="sm" variant="outline" className="w-full" onClick={historyReveal.showMore}>
+                          Show {historyReveal.remainingCount} more
+                        </Button>
+                      )}
+                    </>
                   )}
                 </TabsContent>
               </>

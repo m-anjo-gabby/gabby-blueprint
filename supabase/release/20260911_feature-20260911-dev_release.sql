@@ -3,6 +3,7 @@
 -- 対象ブランチ: feature/20260911-dev
 -- 作成日: 2026-09-11
 -- 更新日: 2026-09-12（20260912_feature-20260911-dev_hotfix_release.sql を本ファイルに統合）
+-- 更新日: 2026-09-12（com_t_session_reschedule_proposalへのcoach_idインデックス追加）
 --
 -- 【内容】
 --   生徒・コーチの個別セッション予約管理を全面的に見直す。
@@ -79,6 +80,12 @@
 --        INSERT）をブロックしていた。Wブッキング防止の対象を「有効な予約枠
 --        （status=1）」のみに限定する。fn_generate_sessions_for_schedule()は常に
 --        status=1の行しか作らないため、本来の冪等性担保という目的は損なわれない。
+--   12. [追加] com_t_session_reschedule_proposal に (coach_id, status) の
+--       インデックスを追加する。
+--      - コーチ側の申請一覧(getIncomingRescheduleProposalsForCoachCore)がcoach_id +
+--        statusで絞り込むクエリに変わったが、com_t_matching_request /
+--        com_t_session_booking_requestには元々coach_id系インデックスがある一方、
+--        このテーブルにはsession_id・(student_id, status)しか無く欠けていたため追加する。
 --
 --   通知種別(SESSION_BOOKING_REQUESTED/SESSION_BOOKING_APPROVED/
 --   SESSION_BOOKING_REJECTED/SESSION_RESCHEDULE_PROPOSED_BY_STUDENT/
@@ -851,3 +858,9 @@ GRANT EXECUTE ON FUNCTION public.admin_book_session_direct(uuid, timestamptz, ti
 ---------------------------------------------
 DROP INDEX IF EXISTS public.uq_session_schedule_datetime;
 CREATE UNIQUE INDEX uq_session_schedule_datetime ON public.com_t_session (schedule_id, start_datetime) WHERE status = 1;
+
+
+---------------------------------------------
+-- 12. [追加] com_t_session_reschedule_proposal に (coach_id, status) のインデックスを追加する
+---------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_session_reschedule_proposal_coach_status ON public.com_t_session_reschedule_proposal (coach_id, status);
