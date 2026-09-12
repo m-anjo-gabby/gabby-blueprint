@@ -14,7 +14,7 @@ import { HomeworkComposer } from './HomeworkComposer';
 interface Props {
   studentId: string;
   session: SessionResultSummary;
-  homework: SessionHomeworkEntry[];
+  homework: SessionHomeworkEntry | null;
   checklist: SessionHomeworkChecklistItem[];
 }
 
@@ -87,9 +87,7 @@ export function SessionResult({ studentId, session, homework, checklist }: Props
       </Section>
 
       <Section label="Homework" icon={BookOpen}>
-        <div className="max-w-2xl">
-          <HomeworkComposer sessionId={session.session_id} initialEntries={homework} initialChecklist={checklist} />
-        </div>
+        <HomeworkComposer sessionId={session.session_id} initialHomework={homework} initialChecklist={checklist} />
       </Section>
 
       <Section label="Training">
@@ -141,33 +139,31 @@ export function SessionResult({ studentId, session, homework, checklist }: Props
       </Section>
 
       <Section label="Other" icon={MessageCircle}>
-        <div className="max-w-2xl">
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-800">In-call Chat History</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              {session.chat_log.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No chat messages were sent during this call.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {session.chat_log.map((entry) => (
-                    <li key={entry.chat_id} className={`text-xs ${entry.sender_role === 'coach' ? 'text-right' : 'text-left'}`}>
-                      <p className="font-bold text-slate-400 text-[10px] capitalize">{entry.sender_role}</p>
-                      <p
-                        className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${
-                          entry.sender_role === 'coach' ? 'bg-indigo-50 text-indigo-700' : 'bg-rose-50 text-rose-700'
-                        }`}
-                      >
-                        {entry.message}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="rounded-2xl border-slate-200 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-slate-800">In-call Chat History</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {session.chat_log.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No chat messages were sent during this call.</p>
+            ) : (
+              <ul className="space-y-2">
+                {session.chat_log.map((entry) => (
+                  <li key={entry.chat_id} className={`text-xs ${entry.sender_role === 'coach' ? 'text-right' : 'text-left'}`}>
+                    <p className="font-bold text-slate-400 text-[10px] capitalize">{entry.sender_role}</p>
+                    <p
+                      className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${
+                        entry.sender_role === 'coach' ? 'bg-indigo-50 text-indigo-700' : 'bg-rose-50 text-rose-700'
+                      }`}
+                    >
+                      {entry.message}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </Section>
     </div>
   );

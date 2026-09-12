@@ -12,16 +12,17 @@ import { SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types
 const logger = createLogger('student');
 
 /**
- * 対象セッションの宿題一覧を取得する（生徒本人向け、閲覧のみ。投稿はコーチのみのため本アプリには持たない）
+ * 対象セッションの宿題本体（フォローアップコメント含む）を取得する（生徒本人向け、閲覧のみ。
+ * 投稿はコーチのみのため本アプリには持たない）。未投稿の場合はnullを返す。
  */
-export async function getSessionHomework(sessionId: string): Promise<SessionHomeworkEntry[]> {
+export async function getSessionHomework(sessionId: string): Promise<SessionHomeworkEntry | null> {
   const result = await getSessionHomeworkCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('student:get_session_homework_failed', result.errorCode, ctx);
-    return [];
+    return null;
   }
-  return result.entries;
+  return result.homework;
 }
 
 /**

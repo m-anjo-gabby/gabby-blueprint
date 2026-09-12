@@ -87,4 +87,10 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
     title: "You've been matched with a new student",
     body: `Live sessions with ${String(payload.student_name ?? 'a student')} are now scheduled.`,
   }),
+  HOMEWORK_POSTED: () => ({
+    // 実際にはstudent_id宛にのみ送られる通知のため、コーチが受け取ることは想定していない
+    // （Record<NotificationType, ...>を満たすための型安全用エントリ）。
+    title: 'Homework posted',
+    body: 'The student was notified about this homework.',
+  }),
 };

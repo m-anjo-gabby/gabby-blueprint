@@ -962,3 +962,348 @@ FOR UPDATE TO authenticated USING (
 -- 生徒が更新できる列を is_done/done_at/update_date のみに制限する（item_text/item_no/session_idの改ざんを防止）
 REVOKE UPDATE ON public.com_t_session_homework_checklist_item FROM authenticated, anon;
 GRANT UPDATE (is_done, done_at, update_date) ON public.com_t_session_homework_checklist_item TO authenticated;
+
+
+-- =========================================================================
+-- 14. 宿題モデルの親子正規化 + フォローアップコメント + 投稿通知 (2026-09-12 追加)
+-- =========================================================================
+-- 【背景】
+-- 「宿題の指示・説明（必須）＋チェックリスト（任意）を1セットで発信し、以降の連絡は
+-- フォローアップコメントとして明確に区別したい」という要望、および「コーチが宿題を
+-- 投稿/追記した際に生徒へ通知したい」という要望を受け、宿題を以下の親子構造に再設計する。
+--   com_t_session_homework（宿題本体、1セッション1件）
+--     ├─ com_t_session_homework_checklist_item（チェックリスト、homework_id直下）
+--     ├─ com_t_session_homework_comment（フォローアップコメント、新設）
+--     └─ com_t_session_homework_attachment（添付、本体/コメントいずれかに紐づく）
+-- 宿題管理機能はdev環境のみへの反映でステージング/本番は未反映のため、既存テストデータの
+-- 互換性は考慮せずDROP TABLE→再CREATEで置き換える（本セクション適用によりcom_t_session_homework
+-- 配下の既存テストデータは全て破棄される）。詳細は各テーブルのDDL（table/com_t_session_homework*.sql）
+-- のコメントを参照。
+-- =========================================================================
+
+-- 依存関係の末端（子）から順にDROPする
+DROP TABLE IF EXISTS public.com_t_session_homework_attachment CASCADE;
+DROP TABLE IF EXISTS public.com_t_session_homework_checklist_item CASCADE;
+DROP TABLE IF EXISTS public.com_t_session_homework CASCADE;
+
+-- ---------------------------------------------
+-- 14-1. com_t_session_homework（宿題本体、1セッション1件に再定義）
+-- ---------------------------------------------
+CREATE TABLE public.com_t_session_homework (
+    homework_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id uuid NOT NULL UNIQUE REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
+    coach_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    student_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    homework_text text NOT NULL,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_session_homework_text_not_blank CHECK (btrim(homework_text) <> '')
+);
+
+COMMENT ON TABLE public.com_t_session_homework IS 'セッション単位の宿題本体（1セッション1件、コーチのみ投稿、追記専用・生徒も閲覧可）。チェックリスト・フォローアップコメントの親';
+COMMENT ON COLUMN public.com_t_session_homework.homework_id IS '宿題ID';
+COMMENT ON COLUMN public.com_t_session_homework.session_id IS '対象の個別レッスンセッション (com_t_session)。UNIQUE制約により1セッション1件';
+COMMENT ON COLUMN public.com_t_session_homework.coach_id IS '投稿したコーチのユーザID（com_t_session.coach_idと一致することをRLSで検証）';
+COMMENT ON COLUMN public.com_t_session_homework.student_id IS '対象の生徒のユーザID（非正規化。com_t_session.student_idと一致することをRLSで検証）';
+COMMENT ON COLUMN public.com_t_session_homework.homework_text IS '宿題本文（自由メッセージ）';
+COMMENT ON COLUMN public.com_t_session_homework.insert_date IS '登録日時';
+
+CREATE INDEX idx_session_homework_session ON public.com_t_session_homework (session_id, insert_date DESC);
+CREATE INDEX idx_session_homework_student ON public.com_t_session_homework (student_id, insert_date DESC);
+
+ALTER TABLE public.com_t_session_homework ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Coach and student can view session homework" ON public.com_t_session_homework
+FOR SELECT TO authenticated USING (
+    coach_id = auth.uid()
+    OR student_id = auth.uid()
+    OR public.get_jwt_user_type() = '0'
+);
+
+CREATE POLICY "Coaches can post homework for their own sessions" ON public.com_t_session_homework
+FOR INSERT TO authenticated WITH CHECK (
+    coach_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.com_t_session s
+      WHERE s.session_id = com_t_session_homework.session_id
+        AND s.coach_id = auth.uid()
+        AND s.student_id = com_t_session_homework.student_id
+    )
+);
+
+-- ---------------------------------------------
+-- 14-2. com_t_session_homework_comment（フォローアップコメント、新設）
+-- ---------------------------------------------
+CREATE TABLE public.com_t_session_homework_comment (
+    comment_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    homework_id uuid NOT NULL REFERENCES public.com_t_session_homework(homework_id) ON DELETE CASCADE,
+    coach_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    comment_text text NOT NULL,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_session_homework_comment_text_not_blank CHECK (btrim(comment_text) <> '')
+);
+
+COMMENT ON TABLE public.com_t_session_homework_comment IS '宿題本体投稿後のフォローアップコメント（コーチのみ投稿、追記専用・生徒も閲覧可）';
+COMMENT ON COLUMN public.com_t_session_homework_comment.comment_id IS 'コメントID';
+COMMENT ON COLUMN public.com_t_session_homework_comment.homework_id IS '対象の宿題本体 (com_t_session_homework)';
+COMMENT ON COLUMN public.com_t_session_homework_comment.coach_id IS '投稿したコーチのユーザID（対象宿題のcoach_idと一致することをRLSで検証）';
+COMMENT ON COLUMN public.com_t_session_homework_comment.comment_text IS 'コメント本文（自由メッセージ）';
+COMMENT ON COLUMN public.com_t_session_homework_comment.insert_date IS '登録日時';
+
+CREATE INDEX idx_session_homework_comment_homework ON public.com_t_session_homework_comment (homework_id, insert_date DESC);
+
+ALTER TABLE public.com_t_session_homework_comment ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Coach and student can view homework comments" ON public.com_t_session_homework_comment
+FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_comment.homework_id
+        AND (h.coach_id = auth.uid() OR h.student_id = auth.uid())
+    )
+    OR public.get_jwt_user_type() = '0'
+);
+
+CREATE POLICY "Coaches can post comments on their own homework posts" ON public.com_t_session_homework_comment
+FOR INSERT TO authenticated WITH CHECK (
+    coach_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_comment.homework_id
+        AND h.coach_id = auth.uid()
+    )
+);
+
+-- ---------------------------------------------
+-- 14-3. com_t_session_homework_checklist_item（チェックリスト、homework_id直下に再変更）
+-- ---------------------------------------------
+CREATE TABLE public.com_t_session_homework_checklist_item (
+    checklist_item_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    homework_id uuid NOT NULL REFERENCES public.com_t_session_homework(homework_id) ON DELETE CASCADE,
+    item_no smallint NOT NULL,
+    item_text text NOT NULL,
+    is_done boolean NOT NULL DEFAULT false,
+    done_at timestamp with time zone,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_homework_checklist_item_no CHECK (item_no BETWEEN 1 AND 5),
+    CONSTRAINT chk_homework_checklist_item_text_not_blank CHECK (btrim(item_text) <> ''),
+    CONSTRAINT chk_homework_checklist_done_at CHECK ((is_done AND done_at IS NOT NULL) OR (NOT is_done AND done_at IS NULL)),
+    CONSTRAINT uq_homework_checklist_item_no UNIQUE (homework_id, item_no)
+);
+
+COMMENT ON TABLE public.com_t_session_homework_checklist_item IS '宿題本体単位のチェックリスト項目（コーチが宿題本体作成時に最大5件まで自由記述で一括登録、生徒がON/OFFで完了操作。本体作成後の追加は不可）';
+COMMENT ON COLUMN public.com_t_session_homework_checklist_item.checklist_item_id IS 'チェックリスト項目ID';
+COMMENT ON COLUMN public.com_t_session_homework_checklist_item.homework_id IS '対象の宿題本体 (com_t_session_homework)';
+COMMENT ON COLUMN public.com_t_session_homework_checklist_item.item_no IS '表示順（1〜5、追加した順に採番。既存項目の欠番は詰めない）';
+COMMENT ON COLUMN public.com_t_session_homework_checklist_item.item_text IS '項目本文（追加時のみ設定、以後不変。修正したい場合は削除ではなく新規追加で対応する運用とする）';
+COMMENT ON COLUMN public.com_t_session_homework_checklist_item.is_done IS '完了フラグ（生徒本人のみ更新可能）';
+COMMENT ON COLUMN public.com_t_session_homework_checklist_item.done_at IS '完了操作日時（is_done=falseに戻すとNULLに戻る）';
+
+CREATE INDEX idx_homework_checklist_item_homework ON public.com_t_session_homework_checklist_item (homework_id, item_no);
+
+ALTER TABLE public.com_t_session_homework_checklist_item ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Coach and student can view homework checklist items" ON public.com_t_session_homework_checklist_item
+FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_checklist_item.homework_id
+        AND (h.coach_id = auth.uid() OR h.student_id = auth.uid())
+    )
+    OR public.get_jwt_user_type() = '0'
+);
+
+-- 「対象宿題に既存項目が1件もない場合のみ」に制限し、宿題本体作成時の一括登録のみを許可する
+-- （同一INSERT文内の複数行は互いに見えないため、作成時の複数件登録は妨げない。以後の追加は
+-- DBレベルで拒否し、連絡はcom_t_session_homework_commentで行う運用とする。2026-09-12更新）
+CREATE POLICY "Coaches can add checklist items to their own sessions" ON public.com_t_session_homework_checklist_item
+FOR INSERT TO authenticated WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_checklist_item.homework_id
+        AND h.coach_id = auth.uid()
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM public.com_t_session_homework_checklist_item existing
+      WHERE existing.homework_id = com_t_session_homework_checklist_item.homework_id
+    )
+);
+
+CREATE POLICY "Students can update done status of their own checklist items" ON public.com_t_session_homework_checklist_item
+FOR UPDATE TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_checklist_item.homework_id
+        AND h.student_id = auth.uid()
+    )
+) WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_checklist_item.homework_id
+        AND h.student_id = auth.uid()
+    )
+);
+
+REVOKE UPDATE ON public.com_t_session_homework_checklist_item FROM authenticated, anon;
+GRANT UPDATE (is_done, done_at, update_date) ON public.com_t_session_homework_checklist_item TO authenticated;
+
+-- ---------------------------------------------
+-- 14-4. com_t_session_homework_attachment（添付、本体/コメント両対応に拡張）
+-- ---------------------------------------------
+CREATE TABLE public.com_t_session_homework_attachment (
+    homework_attachment_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    homework_id uuid REFERENCES public.com_t_session_homework(homework_id) ON DELETE CASCADE,
+    comment_id uuid REFERENCES public.com_t_session_homework_comment(comment_id) ON DELETE CASCADE,
+    file_path text NOT NULL,
+    file_name text NOT NULL,
+    file_type text NOT NULL,
+    file_size bigint NOT NULL DEFAULT 0,
+    created_at timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_session_homework_attachment_owner CHECK (
+        (homework_id IS NOT NULL AND comment_id IS NULL) OR (homework_id IS NULL AND comment_id IS NOT NULL)
+    )
+);
+
+COMMENT ON TABLE public.com_t_session_homework_attachment IS '宿題添付ファイル（宿題本体・フォローアップコメントのどちらか一方に紐づく）';
+COMMENT ON COLUMN public.com_t_session_homework_attachment.homework_attachment_id IS '添付ファイルID';
+COMMENT ON COLUMN public.com_t_session_homework_attachment.homework_id IS '宿題本体ID (com_t_session_homework)。宿題本体への添付の場合のみ設定';
+COMMENT ON COLUMN public.com_t_session_homework_attachment.comment_id IS 'フォローアップコメントID (com_t_session_homework_comment)。コメントへの添付の場合のみ設定';
+COMMENT ON COLUMN public.com_t_session_homework_attachment.file_path IS 'Storage上のパス ("homework"バケット)';
+COMMENT ON COLUMN public.com_t_session_homework_attachment.file_name IS '元のファイル名';
+COMMENT ON COLUMN public.com_t_session_homework_attachment.file_type IS 'MIMEタイプ';
+COMMENT ON COLUMN public.com_t_session_homework_attachment.file_size IS 'ファイルサイズ (バイト)';
+COMMENT ON COLUMN public.com_t_session_homework_attachment.created_at IS 'アップロード日時';
+
+CREATE INDEX idx_session_homework_attachment_homework ON public.com_t_session_homework_attachment (homework_id) WHERE homework_id IS NOT NULL;
+CREATE INDEX idx_session_homework_attachment_comment ON public.com_t_session_homework_attachment (comment_id) WHERE comment_id IS NOT NULL;
+
+ALTER TABLE public.com_t_session_homework_attachment ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Coach and student can view homework attachments" ON public.com_t_session_homework_attachment
+FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_attachment.homework_id
+        AND (h.coach_id = auth.uid() OR h.student_id = auth.uid())
+    )
+    OR EXISTS (
+      SELECT 1 FROM public.com_t_session_homework_comment c
+      JOIN public.com_t_session_homework h ON h.homework_id = c.homework_id
+      WHERE c.comment_id = com_t_session_homework_attachment.comment_id
+        AND (h.coach_id = auth.uid() OR h.student_id = auth.uid())
+    )
+    OR public.get_jwt_user_type() = '0'
+);
+
+CREATE POLICY "Coaches can attach files to their own homework posts" ON public.com_t_session_homework_attachment
+FOR INSERT TO authenticated WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_attachment.homework_id
+        AND h.coach_id = auth.uid()
+    )
+    OR EXISTS (
+      SELECT 1 FROM public.com_t_session_homework_comment c
+      JOIN public.com_t_session_homework h ON h.homework_id = c.homework_id
+      WHERE c.comment_id = com_t_session_homework_attachment.comment_id
+        AND c.coach_id = auth.uid()
+        AND h.coach_id = auth.uid()
+    )
+);
+
+-- ---------------------------------------------
+-- 14-5. 宿題投稿・フォローアップコメント通知（HOMEWORK_POSTED、com_t_notification）
+-- ---------------------------------------------
+CREATE OR REPLACE FUNCTION public.notify_session_homework_posted()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_coach_name TEXT;
+BEGIN
+  SELECT user_name INTO v_coach_name
+  FROM public.com_m_user
+  WHERE id = NEW.coach_id;
+
+  INSERT INTO public.com_t_notification (
+    user_id, notification_type, dedup_key, payload, link_path, occurred_at
+  )
+  VALUES (
+    NEW.student_id,
+    'HOMEWORK_POSTED',
+    NEW.session_id::text,
+    jsonb_build_object(
+      'session_id', NEW.session_id,
+      'coach_id', NEW.coach_id,
+      'coach_name', v_coach_name,
+      'preview', LEFT(NEW.homework_text, 100)
+    ),
+    '/live-room/sessions/' || NEW.session_id || '/result',
+    NEW.insert_date
+  )
+  ON CONFLICT (user_id, notification_type, dedup_key) DO UPDATE SET
+    payload = EXCLUDED.payload,
+    occurred_at = EXCLUDED.occurred_at,
+    is_read = FALSE,
+    read_at = NULL,
+    update_date = NOW();
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS on_session_homework_insert_notify ON public.com_t_session_homework;
+CREATE TRIGGER on_session_homework_insert_notify
+AFTER INSERT ON public.com_t_session_homework
+FOR EACH ROW EXECUTE PROCEDURE public.notify_session_homework_posted();
+
+REVOKE EXECUTE ON FUNCTION public.notify_session_homework_posted() FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.notify_session_homework_comment_posted()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_session_id UUID;
+  v_student_id UUID;
+  v_coach_name TEXT;
+BEGIN
+  SELECT h.session_id, h.student_id, u.user_name
+  INTO v_session_id, v_student_id, v_coach_name
+  FROM public.com_t_session_homework h
+  JOIN public.com_m_user u ON u.id = NEW.coach_id
+  WHERE h.homework_id = NEW.homework_id;
+
+  INSERT INTO public.com_t_notification (
+    user_id, notification_type, dedup_key, payload, link_path, occurred_at
+  )
+  VALUES (
+    v_student_id,
+    'HOMEWORK_POSTED',
+    v_session_id::text,
+    jsonb_build_object(
+      'session_id', v_session_id,
+      'coach_id', NEW.coach_id,
+      'coach_name', v_coach_name,
+      'preview', LEFT(NEW.comment_text, 100)
+    ),
+    '/live-room/sessions/' || v_session_id || '/result',
+    NEW.insert_date
+  )
+  ON CONFLICT (user_id, notification_type, dedup_key) DO UPDATE SET
+    payload = EXCLUDED.payload,
+    occurred_at = EXCLUDED.occurred_at,
+    is_read = FALSE,
+    read_at = NULL,
+    update_date = NOW();
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS on_session_homework_comment_insert_notify ON public.com_t_session_homework_comment;
+CREATE TRIGGER on_session_homework_comment_insert_notify
+AFTER INSERT ON public.com_t_session_homework_comment
+FOR EACH ROW EXECUTE PROCEDURE public.notify_session_homework_comment_posted();
+
+REVOKE EXECUTE ON FUNCTION public.notify_session_homework_comment_posted() FROM PUBLIC, anon, authenticated;

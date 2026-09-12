@@ -82,6 +82,10 @@ export const NOTIFICATION_TYPES = {
     icon: 'Users',
     badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   },
+  HOMEWORK_POSTED: {
+    icon: 'ClipboardList',
+    badgeClass: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
@@ -188,5 +192,9 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
   MATCHING_ASSIGNED_TO_COACH: (payload) => ({
     title: '新しい生徒とマッチングしました',
     body: `${String(payload.student_name ?? '生徒')}さんとのライブセッションが予約されました。`,
+  }),
+  HOMEWORK_POSTED: (payload) => ({
+    title: `${String(payload.coach_name ?? 'コーチ')}から宿題が届いています`,
+    body: String(payload.preview ?? '宿題の内容をご確認ください'),
   }),
 };
