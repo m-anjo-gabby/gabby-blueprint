@@ -25,7 +25,12 @@ import type { CoachSessionListItem, LiveSessionShortfallItem, StudentLiveSession
 import { getStudentSessionsByTicket } from '@/actions/studentAction';
 import { SessionActionDialog, SessionActionTarget } from '../../../calendar/_components/SessionActionDialog';
 
-function toSessionListItem(session: CoachSessionListItem, studentId: string, studentName: string): SessionListItem {
+function toSessionListItem(
+  session: CoachSessionListItem,
+  studentId: string,
+  studentName: string,
+  studentTimezone: string
+): SessionListItem {
   return {
     session_id: session.session_id,
     schedule_id: session.schedule_id,
@@ -35,6 +40,7 @@ function toSessionListItem(session: CoachSessionListItem, studentId: string, stu
     viewer_role: 'coach',
     counterpart_id: studentId,
     counterpart_name: studentName,
+    counterpart_timezone: studentTimezone,
     rescheduled_from: session.rescheduled_from,
     cancel_reason: session.cancel_reason,
     status_note: session.status_note,
@@ -50,13 +56,22 @@ function formatContractDate(iso: string, timezone: string): string {
 interface Props {
   studentId: string;
   studentName: string;
+  studentTimezone: string;
   contracts: StudentLiveSessionContractSummary[];
   initialTicketId: string | null;
   initialSessions: CoachSessionListItem[];
   shortfalls: LiveSessionShortfallItem[];
 }
 
-export function LiveSessionHistoryCard({ studentId, studentName, contracts, initialTicketId, initialSessions, shortfalls }: Props) {
+export function LiveSessionHistoryCard({
+  studentId,
+  studentName,
+  studentTimezone,
+  contracts,
+  initialTicketId,
+  initialSessions,
+  shortfalls,
+}: Props) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const myId = useUserStore((state) => state.user?.id);
   const router = useRouter();
@@ -173,7 +188,7 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
               size="sm"
               variant="outline"
               className="text-rose-600 border-rose-200 hover:bg-rose-50"
-              onClick={() => setActionTarget({ session: toSessionListItem(session, studentId, studentName), mode: 'cancel' })}
+              onClick={() => setActionTarget({ session: toSessionListItem(session, studentId, studentName, studentTimezone), mode: 'cancel' })}
             >
               <X size={13} />
               Cancel
@@ -187,7 +202,7 @@ export function LiveSessionHistoryCard({ studentId, studentName, contracts, init
               size="sm"
               variant="outline"
               className="text-amber-700 border-amber-200 hover:bg-amber-50"
-              onClick={() => setActionTarget({ session: toSessionListItem(session, studentId, studentName), mode: 'resolve' })}
+              onClick={() => setActionTarget({ session: toSessionListItem(session, studentId, studentName, studentTimezone), mode: 'resolve' })}
             >
               <CheckCircle2 size={13} />
               Resolve

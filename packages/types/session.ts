@@ -72,6 +72,7 @@ export interface SessionListItem {
   viewer_role: SessionViewerRole; // ログイン中ユーザーがこのセッションにおいて生徒/コーチのどちらか
   counterpart_id: string;
   counterpart_name: string;
+  counterpart_timezone: string;
   rescheduled_from: string | null;
   cancel_reason: string | null;
   status_note: string | null;

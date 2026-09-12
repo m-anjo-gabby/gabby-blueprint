@@ -95,9 +95,10 @@ async function toSessionListItems(
 
   const { data: counterparts } = await supabase
     .from('com_m_user')
-    .select('id, user_name')
+    .select('id, user_name, timezone')
     .in('id', Array.from(counterpartIds));
   const nameById = new Map((counterparts ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+  const timezoneById = new Map((counterparts ?? []).map((c) => [c.id, c.timezone ?? 'Asia/Tokyo']));
 
   return rows.map((s) => {
     const isStudent = s.student_id === userId;
@@ -111,6 +112,7 @@ async function toSessionListItems(
       viewer_role: isStudent ? 'student' : 'coach',
       counterpart_id: counterpartId,
       counterpart_name: nameById.get(counterpartId) ?? '(Unknown)',
+      counterpart_timezone: timezoneById.get(counterpartId) ?? 'Asia/Tokyo',
       rescheduled_from: s.rescheduled_from,
       cancel_reason: s.cancel_reason,
       status_note: s.status_note,

@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { generateLessonStartTimeOptions } from '@gabby/lib/date/date';
+import { generateLessonStartTimeOptions, formatDateTimeByZone } from '@gabby/lib/date/date';
+import { CounterpartLocalTime } from '@gabby/lib/components/common/CounterpartLocalTime';
 import { createSessionBookingRequest, checkSessionConflict } from '@/actions/sessionAction';
 import { BookableTicketSlot } from '@gabby/types/matching';
 import { SESSION_BOOKING_REQUEST_STATUS, SessionBookingRequest } from '@gabby/types/session';
@@ -199,7 +200,21 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
           </div>
           <div className="space-y-1.5">
             <Label>コーチへの一言（任意）</Label>
-            <Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="例：この時間帯でお願いできますか？" />
+            <Textarea
+              rows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Would this time work for you?"
+            />
+            {selectedSlot && newStartTime && (
+              <CounterpartLocalTime
+                datetime={`${newDate}T${newStartTime}:00`}
+                timezone={selectedSlot.coach_timezone}
+                label="コーチの現地時間"
+                cautionText="コーチにとって深夜早朝の時間帯です"
+                format={(datetime, timezone) => formatDateTimeByZone(datetime, timezone, false)}
+              />
+            )}
           </div>
         </div>
 

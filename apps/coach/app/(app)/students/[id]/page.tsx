@@ -45,6 +45,7 @@ export default async function StudentOverviewPage({
         <LiveSessionHistoryCard
           studentId={id}
           studentName={overview.profile.user_name}
+          studentTimezone={overview.profile.timezone}
           contracts={contracts}
           initialTicketId={initialContract?.ticket_id ?? null}
           initialSessions={initialSessions}
