@@ -1,5 +1,5 @@
 // apps/coach/lib/navigation.ts
-import { LayoutDashboard, MessageCircle, Calendar, CalendarClock, UserCheck, GraduationCap, LucideIcon } from 'lucide-react';
+import { LayoutDashboard, MessageCircle, Calendar, CalendarClock, CalendarRange, UserCheck, GraduationCap, LucideIcon } from 'lucide-react';
 
 // ============================================================
 // 型定義（admin アプリと同一構造。今後の画面追加に備えて group にも対応）
@@ -63,6 +63,12 @@ export const COACH_NAV_CONFIG: readonly NavItem[] = [
     label: 'Requests',
     href: '/matching-requests',
     icon: UserCheck,
+    requiredRoles: [],
+  },
+  {
+    label: 'Monthly Report',
+    href: '/monthly-reports',
+    icon: CalendarRange,
     requiredRoles: [],
   },
 ] as const;

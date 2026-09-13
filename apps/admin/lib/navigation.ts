@@ -1,7 +1,7 @@
 // apps/admin/lib/navigation.ts
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, Video,
+  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, CalendarRange, Video,
 } from 'lucide-react';
 
 // ============================================================
@@ -89,6 +89,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     label: 'カレンダーイベント管理',
     href: '/calendar-events',
     icon: CalendarDays,
+    requiredRoles: ['admin'],
+  },
+  {
+    label: '月次コーチングレポート',
+    href: '/monthly-reports',
+    icon: CalendarRange,
     requiredRoles: ['admin'],
   },
   {

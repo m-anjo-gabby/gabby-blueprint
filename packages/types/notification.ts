@@ -86,6 +86,14 @@ export const NOTIFICATION_TYPES = {
     icon: 'ClipboardList',
     badgeClass: 'bg-indigo-50 text-indigo-600 border-indigo-100',
   },
+  COACH_REPORT_APPROVED: {
+    icon: 'CalendarCheck',
+    badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  },
+  COACH_REPORT_APPROVAL_REVOKED: {
+    icon: 'CalendarX',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
@@ -197,4 +205,20 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
     title: `${String(payload.coach_name ?? 'コーチ')}から宿題が届いています`,
     body: String(payload.preview ?? '宿題の内容をご確認ください'),
   }),
+  COACH_REPORT_APPROVED: (payload) => ({
+    title: '月次コーチングレポートが承認されました',
+    body: `${formatReportMonthJa(payload.report_month)}分のレポートが承認されました。`,
+  }),
+  COACH_REPORT_APPROVAL_REVOKED: (payload) => ({
+    title: '月次コーチングレポートの承認が取り消されました',
+    body: `${formatReportMonthJa(payload.report_month)}分のレポートの承認が取り消されました。`,
+  }),
 };
+
+/** payload.report_month ("YYYY-MM-DD"等) を "YYYY年M月" 表記へ変換する（通知本文用） */
+function formatReportMonthJa(reportMonth: unknown): string {
+  const s = String(reportMonth ?? '');
+  const match = /^(\d{4})-(\d{2})/.exec(s);
+  if (!match) return s;
+  return `${match[1]}年${Number(match[2])}月`;
+}

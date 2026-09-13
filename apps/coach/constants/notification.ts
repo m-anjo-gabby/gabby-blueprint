@@ -93,4 +93,21 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
     title: 'Homework posted',
     body: 'The student was notified about this homework.',
   }),
+  COACH_REPORT_APPROVED: (payload) => ({
+    title: 'Monthly report approved',
+    body: `Your monthly coaching report for ${formatReportMonthEn(payload.report_month)} was approved.`,
+  }),
+  COACH_REPORT_APPROVAL_REVOKED: (payload) => ({
+    title: 'Monthly report approval revoked',
+    body: `Approval for your ${formatReportMonthEn(payload.report_month)} monthly coaching report was revoked.`,
+  }),
 };
+
+/** Formats payload.report_month ("YYYY-MM-DD" etc.) as "Month YYYY" for notification body text */
+function formatReportMonthEn(reportMonth: unknown): string {
+  const s = String(reportMonth ?? '');
+  const match = /^(\d{4})-(\d{2})/.exec(s);
+  if (!match) return s;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1));
+  return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
+}

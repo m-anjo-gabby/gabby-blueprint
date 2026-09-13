@@ -2,6 +2,8 @@
 -- 本番リリース作業スクリプト
 -- 対象ブランチ: feature/20260911-dev
 -- 作成日: 2026-09-11
+-- 更新日: 2026-09-13（月次コーチングレポート機能を追加。以下の【内容】とは別機能のため、
+--          詳細はファイル末尾の「15. 月次コーチングレポート機能」セクションのコメントを参照）
 -- 更新日: 2026-09-12（20260912_feature-20260911-dev_hotfix_release.sql を本ファイルに統合）
 -- 更新日: 2026-09-12（com_t_session_reschedule_proposalへのcoach_idインデックス追加）
 -- 更新日: 2026-09-11（宿題チェックリスト機能を追加。以下の【内容】とは別機能のため、
@@ -1307,3 +1309,325 @@ AFTER INSERT ON public.com_t_session_homework_comment
 FOR EACH ROW EXECUTE PROCEDURE public.notify_session_homework_comment_posted();
 
 REVOKE EXECUTE ON FUNCTION public.notify_session_homework_comment_posted() FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- 15. 月次コーチングレポート機能 (2026-09-13 追加)
+---------------------------------------------
+-- コーチ毎・月次のライブセッション実施状況（Monthly Coaching Report）をコーチ・アドミン双方の
+-- 画面から確認できるようにし、アドミンが月次の稼働を承認/承認取消しできるようにする。
+-- 対応ファイル: table/com_t_coach_monthly_report_approval.sql,
+--   function/get_coach_monthly_active_students.sql, function/get_coach_monthly_sessions.sql,
+--   function/approve_coach_monthly_report.sql, function/revoke_coach_monthly_report_approval.sql
+---------------------------------------------
+
+---------------------------------------------
+-- DDL: com_t_coach_monthly_report_approval (コーチ月次コーチングレポート承認) (2026-09-13 追加)
+---------------------------------------------
+-- 【背景】
+-- コーチ毎・月次のライブセッション実施状況（Monthly Coaching Report）をアドミンが確認し、
+-- その月のコーチの稼働を確定させるための承認記録。コーチ側から申請する概念は無く、
+-- アドミンが一方的に「承認」または「承認取消し」（承認後に誤りへ気付いた場合の取消しのみ）を
+-- 行うシンプルな2状態モデル（1:未承認 2:承認済み）とする。差し戻し履歴は保持せず、
+-- (coach_id, report_month) に対して常に最新状態の1行のみを保持する。
+--
+-- 承認時点のセッション集計値は session_count_snapshot にJSONBで固定保存する。これにより、
+-- 承認後に過去分セッションの終了処理漏れが事後解決される等でカウントが変動しても、
+-- 承認済み表示（当時の数値）は影響を受けない。承認取消し時は次の承認まで意味を持たないため
+-- NULLに戻す。
+--
+-- 【書き込み経路】
+-- 本テーブルへの直接書き込みはRLSで許可しない。承認/承認取消しは
+-- function/approve_coach_monthly_report.sql / function/revoke_coach_monthly_report_approval.sql
+-- （いずれもSECURITY DEFINER、管理者専用）経由のみとする。
+---------------------------------------------
+CREATE TABLE public.com_t_coach_monthly_report_approval (
+    approval_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    coach_id uuid NOT NULL REFERENCES public.com_m_user(id),
+    report_month date NOT NULL, -- 対象月の1日 (例: 2026-09-01)
+    status smallint NOT NULL DEFAULT 1, -- 1:未承認 2:承認済み
+    session_count_snapshot jsonb DEFAULT NULL, -- 承認時点の集計 {"total": n, "by_student": [{"student_id":"...", "count": n}]}
+    approved_by uuid REFERENCES public.com_m_user(id),
+    approved_at timestamp with time zone,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    UNIQUE (coach_id, report_month),
+    CONSTRAINT chk_report_approval_status CHECK (status IN (1, 2))
+);
+
+COMMENT ON TABLE public.com_t_coach_monthly_report_approval IS 'コーチ月次コーチングレポートの承認状態（アドミンが承認/承認取消しを行う。コーチからの申請概念は無い）';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.approval_id IS '承認レコードID';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.coach_id IS '対象コーチのユーザID';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.report_month IS '対象年月（その月の1日で表現、例: 2026-09-01）';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.status IS 'ステータス 1:未承認 2:承認済み';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.session_count_snapshot IS '承認時点のセッション集計スナップショット（承認取消し時にNULLへ戻す）';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.approved_by IS '承認を行った管理者のユーザID';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.approved_at IS '承認日時';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.update_date IS '更新日時';
+
+CREATE INDEX idx_coach_monthly_report_approval_coach ON public.com_t_coach_monthly_report_approval (coach_id, report_month);
+
+---------------------------------------------
+-- 行レベルセキュリティ (RLS)
+---------------------------------------------
+ALTER TABLE public.com_t_coach_monthly_report_approval ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Coach and admin can view monthly report approval" ON public.com_t_coach_monthly_report_approval;
+
+-- [参照] コーチ本人・管理者のみ閲覧可能。書き込みはSECURITY DEFINER関数経由のみとし、
+-- authenticatedロールへのINSERT/UPDATE/DELETE権限は付与しない。
+CREATE POLICY "Coach and admin can view monthly report approval" ON public.com_t_coach_monthly_report_approval
+FOR SELECT TO authenticated USING (
+    coach_id = auth.uid()
+    OR public.get_jwt_user_type() = '0'
+);
+
+---------------------------------------------
+-- 月次コーチングレポート: コーチ担当の有効契約生徒一覧RPC (2026-09-13 追加)
+-- 前提: table/com_m_coach_student_relationship.sql, table/com_t_user_license.sql,
+--       table/com_m_contract.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- 月次コーチングレポートの縦軸（対象生徒）を決定する。「有効契約を持つ生徒」とは、
+-- 対象月(p_report_month)の期間内のいずれかの時点で、ライセンス(status=1)・契約(status=1)
+-- がともに有効だった生徒を指す。過去月を参照するケースがあるため、現在時刻基準
+-- (now() between start/end) ではなく、対象月の範囲と契約期間が重なるかどうかで判定する
+-- （getStudentOverviewCoreの「現在有効な契約」判定を月範囲版に一般化したもの）。
+-- 担当関係(com_m_coach_student_relationship)はstatus不問（is_activeを問わない）で対象とする。
+-- コーチ交代直後で当月分の実績が残っているケースを取りこぼさないため。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_coach_monthly_active_students(p_coach_id uuid, p_report_month date)
+RETURNS TABLE(student_id uuid, user_name text, icon_path text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month_start date := date_trunc('month', p_report_month)::date;
+    v_month_end date := (date_trunc('month', p_report_month) + interval '1 month' - interval '1 day')::date;
+BEGIN
+    IF auth.uid() <> p_coach_id AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to view this coach''s monthly report';
+    END IF;
+
+    RETURN QUERY
+    SELECT DISTINCT u.id, u.user_name, u.icon_path
+    FROM public.com_m_coach_student_relationship r
+    JOIN public.com_m_user u ON u.id = r.student_id
+    WHERE r.coach_id = p_coach_id
+      AND EXISTS (
+          SELECT 1
+          FROM public.com_t_user_license l
+          JOIN public.com_m_contract c ON c.contract_id = l.contract_id
+          WHERE l.user_id = r.student_id
+            AND l.status = 1
+            AND c.status = 1
+            AND l.start_date <= (v_month_end + 1)::timestamptz
+            AND l.end_date >= v_month_start::timestamptz
+      )
+    ORDER BY u.user_name;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_active_students(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_monthly_active_students(uuid, date) TO authenticated;
+
+---------------------------------------------
+-- 月次コーチングレポート: 対象月セッション一覧RPC (2026-09-13 追加)
+-- 前提: table/com_t_session.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- 月次コーチングレポートのグリッド描画・要注意セル判定・詳細モーダル表示の唯一のデータ源。
+-- カウント規則(counts_toward_total)・注意色判定(is_unresolved/is_attention)は、このRPCが
+-- 単一の実装箇所となる（呼び出し側TypeScript・承認RPCのいずれもここで計算済みの値をそのまま使う）。
+--
+-- 【カウント規則】
+-- completed(2) / early_ended(7) / no_show(6) / 生徒都合12h以内キャンセル(status=3かつ
+-- ticket_refunded=false) をコーチの稼働実績としてカウントする。
+-- cancelled_by_admin(10)はアドミン代理操作のため常に対象外。コーチキャンセル(4)・
+-- 生徒都合12h以上前キャンセル(status=3かつticket_refunded=true)・振替元(5)・
+-- ライセンス無効化(8)・コーチ交代(9)もカウントしない。
+--
+-- 【注意色】
+-- is_unresolved: 終了処理が行われていない枠（status=1かつ終了予定時刻を過ぎている）
+-- is_attention: 12h以内キャンセル・No show・早期終了を含む枠（is_unresolvedとは別の注意色）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_coach_monthly_sessions(p_coach_id uuid, p_report_month date)
+RETURNS TABLE(
+    session_id uuid,
+    student_id uuid,
+    start_datetime timestamptz,
+    end_datetime timestamptz,
+    status smallint,
+    status_note text,
+    ticket_refunded boolean,
+    counts_toward_total boolean,
+    is_unresolved boolean,
+    is_attention boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month_start date := date_trunc('month', p_report_month)::date;
+    v_month_end date := (date_trunc('month', p_report_month) + interval '1 month' - interval '1 day')::date;
+BEGIN
+    IF auth.uid() <> p_coach_id AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to view this coach''s monthly report';
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        s.session_id,
+        s.student_id,
+        s.start_datetime,
+        s.end_datetime,
+        s.status,
+        s.status_note,
+        s.ticket_refunded,
+        (s.status IN (2, 6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS counts_toward_total,
+        (s.status = 1 AND s.end_datetime < NOW()) AS is_unresolved,
+        (s.status IN (6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS is_attention
+    FROM public.com_t_session s
+    WHERE s.coach_id = p_coach_id
+      AND s.start_datetime >= v_month_start::timestamptz
+      AND s.start_datetime < (v_month_end + 1)::timestamptz
+    ORDER BY s.student_id, s.start_datetime;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) TO authenticated;
+
+---------------------------------------------
+-- 月次コーチングレポート承認RPC (2026-09-13 追加)
+-- 前提: table/com_t_coach_monthly_report_approval.sql, function/get_coach_monthly_sessions.sql
+--       の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- アドミンが対象コーチ・対象月の稼働を確認した上で承認する。コーチからの申請フローは無く、
+-- アドミンの一方的な操作のみで確定する。承認時点のセッション集計（get_coach_monthly_sessionsの
+-- counts_toward_totalを生徒別に集計したもの）をJSONBスナップショットとして固定保存し、
+-- 事後のデータ変動（終了処理漏れの遅延解決等）から承認済み表示を保護する。
+--
+-- 【呼び出し元】
+-- apps/adminはcreateAdminClient()(service_role)経由で呼ぶため、本関数内でauth.uid()は
+-- 取得できない（NULLになる）。そのため承認者IDはp_approved_byとして明示的に受け取る
+-- （adminContractAction.tsのperformed_by: resolvePerformedBy(ctx.userId)と同じ理由）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.approve_coach_monthly_report(
+    p_coach_id uuid,
+    p_report_month date,
+    p_approved_by uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_snapshot jsonb;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to approve this monthly report';
+    END IF;
+
+    SELECT jsonb_build_object(
+        'total', COALESCE(SUM((counts_toward_total)::int), 0),
+        'by_student', COALESCE(
+            (SELECT jsonb_agg(jsonb_build_object('student_id', student_id, 'count', cnt))
+             FROM (
+                 SELECT student_id, SUM((counts_toward_total)::int) AS cnt
+                 FROM public.get_coach_monthly_sessions(p_coach_id, v_month)
+                 GROUP BY student_id
+             ) per_student),
+            '[]'::jsonb
+        )
+    )
+    INTO v_snapshot
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month);
+
+    INSERT INTO public.com_t_coach_monthly_report_approval (
+        coach_id, report_month, status, session_count_snapshot, approved_by, approved_at, update_date
+    ) VALUES (
+        p_coach_id, v_month, 2, v_snapshot, p_approved_by, NOW(), NOW()
+    )
+    ON CONFLICT (coach_id, report_month) DO UPDATE
+    SET status = 2,
+        session_count_snapshot = v_snapshot,
+        approved_by = p_approved_by,
+        approved_at = NOW(),
+        update_date = NOW();
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVED',
+        jsonb_build_object('report_month', v_month),
+        '/monthly-reports'
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) TO authenticated;
+
+---------------------------------------------
+-- 月次コーチングレポート承認取消しRPC (2026-09-13 追加)
+-- 前提: table/com_t_coach_monthly_report_approval.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- アドミンが承認後に誤りへ気付いた場合に、承認を取り消して未承認状態へ戻す。
+-- コーチへの差し戻し（再申請を促す）フローではなく、単純な承認取消しのみ。
+-- 取消し後は再度approve_coach_monthly_reportで承認し直すことを想定するため、
+-- 承認時点のスナップショットはNULLへ戻す（再承認時に最新値で作り直される）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.revoke_coach_monthly_report_approval(
+    p_coach_id uuid,
+    p_report_month date
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_approval RECORD;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to revoke this monthly report approval';
+    END IF;
+
+    SELECT * INTO v_approval
+    FROM public.com_t_coach_monthly_report_approval
+    WHERE coach_id = p_coach_id AND report_month = v_month
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_approval.status <> 2 THEN
+        RAISE EXCEPTION 'this monthly report is not approved';
+    END IF;
+
+    UPDATE public.com_t_coach_monthly_report_approval
+    SET status = 1,
+        session_count_snapshot = NULL,
+        approved_by = NULL,
+        approved_at = NULL,
+        update_date = NOW()
+    WHERE coach_id = p_coach_id AND report_month = v_month;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVAL_REVOKED',
+        jsonb_build_object('report_month', v_month),
+        '/monthly-reports'
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) TO authenticated;
