@@ -43,7 +43,10 @@ export async function approveMonthlyReport(
 
   if (!result.success) {
     logger.error('admin:approve_monthly_report_failed', result.errorCode, ctx);
-    return { success: false, message: '承認に失敗しました。' };
+    const message = result.errorCode === 'unresolved_sessions_exist'
+      ? '終了処理未実施のセッションが残っているため承認できません。先に該当セッションの終了処理を完了してください。'
+      : '承認に失敗しました。';
+    return { success: false, message };
   }
 
   revalidatePath('/monthly-reports');

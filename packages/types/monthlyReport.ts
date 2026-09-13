@@ -15,6 +15,7 @@ export type MonthlyReportErrorCode =
   | 'forbidden'
   | 'invalid_input'
   | 'not_actionable'
+  | 'unresolved_sessions_exist'
   | 'unexpected_error';
 
 export const MONTHLY_REPORT_APPROVAL_STATUS = {
@@ -57,7 +58,12 @@ export interface MonthlyReportApproval {
 export interface CoachMonthlyReport {
   report_month: string; // "YYYY-MM-01"
   students: MonthlyReportStudentRow[];
-  grand_total: number; // 対象月・対象コーチの総カウント数（生徒横断の合計）
+  grand_total: number; // 対象月・対象コーチの総カウント数（生徒横断の合計 = completed_count + late_cancel_count + no_show_count）
+  completed_count: number; // 完了(status=2)+早期終了(status=7)の件数（内訳表示上は「完了」として1つにまとめる）
+  late_cancel_count: number; // 生徒都合12時間以内キャンセル(status=3かつticket_refunded=false)の件数
+  no_show_count: number; // 生徒No show(status=6)の件数
+  unresolved_count: number; // 終了処理未実施(is_unresolved=true)の件数。1件でもあれば承認不可
+  coach_timezone: string; // 日毎の集計に使用したコーチのIANAタイムゾーン名(com_m_user.timezone)。UI上の注意書き表示用
   approval: MonthlyReportApproval | null; // 未承認のまま一度も操作されていない場合はnull
 }
 

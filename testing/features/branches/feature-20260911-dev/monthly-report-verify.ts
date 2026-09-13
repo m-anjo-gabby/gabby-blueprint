@@ -122,10 +122,13 @@ type SessionRow = {
   check("当月分: 生徒都合キャンセル(12h以内)が1件、counts_toward_total=true・is_attention=true", cancelledByStudent.length === 1 && cancelledByStudent[0]?.counts_toward_total === true && cancelledByStudent[0]?.is_attention === true, JSON.stringify(cancelledByStudent));
 
   const cancelledByCoach = sessions.filter((s) => s.status === 4);
-  check("当月分: コーチ都合キャンセルが1件、counts_toward_total=false・is_attention=false", cancelledByCoach.length === 1 && cancelledByCoach[0]?.counts_toward_total === false && cancelledByCoach[0]?.is_attention === false, JSON.stringify(cancelledByCoach));
+  check("当月分: コーチ都合キャンセルは実績・要対応のいずれでもないため一覧に含まれない", cancelledByCoach.length === 0, JSON.stringify(cancelledByCoach));
 
   const cancelledByAdmin = sessions.filter((s) => s.status === 10);
-  check("当月分: アドミン代理キャンセルが1件、counts_toward_total=false・is_attention=false", cancelledByAdmin.length === 1 && cancelledByAdmin[0]?.counts_toward_total === false && cancelledByAdmin[0]?.is_attention === false, JSON.stringify(cancelledByAdmin));
+  check("当月分: アドミン代理キャンセルは実績・要対応のいずれでもないため一覧に含まれない", cancelledByAdmin.length === 0, JSON.stringify(cancelledByAdmin));
+
+  const futureScheduled = sessions.filter((s) => s.status === 1);
+  check("当月分: まだ実施されていない予定(status=scheduledかつ終了予定前)は一覧に含まれない", futureScheduled.length === 0, JSON.stringify(futureScheduled));
 }
 
 // ---------------------------------------------------------------------------
@@ -141,18 +144,39 @@ type SessionRow = {
 }
 
 // ---------------------------------------------------------------------------
-// 4. 承認・承認取消し
+// 4. 終了処理未実施セッションによる承認ブロック（前月分は未処理セッションを含む）
 // ---------------------------------------------------------------------------
 {
   const { error } = await adminClient.rpc("approve_coach_monthly_report", { p_coach_id: coachId, p_report_month: reportMonthPrev, p_approved_by: adminUserId });
-  check("承認: アドミンJWTでapprove_coach_monthly_reportが成功する", !error, error?.message);
+  check(
+    "承認ブロック: 未処理セッションが残る月はunresolved sessionエラーで承認できない",
+    !!error && error.message.includes("unresolved session"),
+    error?.message
+  );
+}
+{
+  const { data } = await admin
+    .from("com_t_coach_monthly_report_approval")
+    .select("status")
+    .eq("coach_id", coachId)
+    .eq("report_month", reportMonthPrev)
+    .maybeSingle();
+  check("承認ブロック: 承認試行が拒否された結果、承認レコードは作成されない(またはstatus=1のまま)", !data || data.status === 1, JSON.stringify(data));
+}
+
+// ---------------------------------------------------------------------------
+// 5. 承認・承認取消し（当月分は未処理セッションを含まないため正常に承認できる）
+// ---------------------------------------------------------------------------
+{
+  const { error } = await adminClient.rpc("approve_coach_monthly_report", { p_coach_id: coachId, p_report_month: reportMonthCurrent, p_approved_by: adminUserId });
+  check("承認: 未処理セッションが無い月はアドミンJWTでapprove_coach_monthly_reportが成功する", !error, error?.message);
 }
 {
   const { data } = await admin
     .from("com_t_coach_monthly_report_approval")
     .select("*")
     .eq("coach_id", coachId)
-    .eq("report_month", reportMonthPrev)
+    .eq("report_month", reportMonthCurrent)
     .single();
   check("承認: statusが承認済み(2)になっている", data?.status === 2, `status=${data?.status}`);
   check("承認: session_count_snapshotが保存されている", !!data?.session_count_snapshot?.total || data?.session_count_snapshot?.total === 0, JSON.stringify(data?.session_count_snapshot));
@@ -162,7 +186,7 @@ type SessionRow = {
   check("承認: コーチへCOACH_REPORT_APPROVED通知が届いている", (notifications?.length ?? 0) >= 1, `count=${notifications?.length ?? 0}`);
 }
 {
-  const { error } = await adminClient.rpc("revoke_coach_monthly_report_approval", { p_coach_id: coachId, p_report_month: reportMonthPrev });
+  const { error } = await adminClient.rpc("revoke_coach_monthly_report_approval", { p_coach_id: coachId, p_report_month: reportMonthCurrent });
   check("承認取消し: アドミンJWTでrevoke_coach_monthly_report_approvalが成功する", !error, error?.message);
 }
 {
@@ -170,7 +194,7 @@ type SessionRow = {
     .from("com_t_coach_monthly_report_approval")
     .select("*")
     .eq("coach_id", coachId)
-    .eq("report_month", reportMonthPrev)
+    .eq("report_month", reportMonthCurrent)
     .single();
   check("承認取消し: statusが未承認(1)に戻っている", data?.status === 1, `status=${data?.status}`);
   check(
@@ -183,7 +207,7 @@ type SessionRow = {
   check("承認取消し: コーチへCOACH_REPORT_APPROVAL_REVOKED通知が届いている", (notifications?.length ?? 0) >= 1, `count=${notifications?.length ?? 0}`);
 }
 {
-  const { error } = await adminClient.rpc("revoke_coach_monthly_report_approval", { p_coach_id: coachId, p_report_month: reportMonthPrev });
+  const { error } = await adminClient.rpc("revoke_coach_monthly_report_approval", { p_coach_id: coachId, p_report_month: reportMonthCurrent });
   check("承認取消し: 既に未承認の状態で再度取消しを呼ぶと失敗する", !!error && error.message.includes("not approved"), error?.message);
 }
 
@@ -201,7 +225,9 @@ const log = writeResultLog({
   checks,
 });
 
-console.log(`\n最終状態: 前月分(${reportMonthPrev})は未承認に戻した状態で終了しています。ブラウザで承認操作をお試しいただけます。`);
+console.log(
+  `\n最終状態: 前月分(${reportMonthPrev})は未処理セッションが残るため未承認のまま、当月分(${reportMonthCurrent})も未承認に戻した状態で終了しています。ブラウザで承認操作をお試しいただけます（前月分は承認ブロックの確認、当月分は正常な承認/取消しの確認に使えます）。`
+);
 
 if (!log.ok) {
   console.error(`\nNG: ${log.failed}件の不整合`);

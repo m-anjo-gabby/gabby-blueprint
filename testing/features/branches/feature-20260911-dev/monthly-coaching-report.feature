@@ -26,7 +26,7 @@ Feature: 月次コーチングレポート データ主体テスト（feature/20
     When コーチ自身のJWTでget_coach_monthly_active_students(前月)を呼び出す
     Then 対象生徒が1名、一覧に含まれること
 
-  Scenario: 12時間以内キャンセルはカウント対象・コーチ都合キャンセル/アドミン代理キャンセルは対象外（当月分）
+  Scenario: 12時間以内キャンセルはカウント対象・コーチ都合キャンセル/アドミン代理キャンセルは一覧から除外（当月分）
     Given 開始まで12時間未満の未来セッションが1件、開始まで12時間以上先の未来セッションが2件
         （後者はそれぞれコーチキャンセル用・アドミン代理キャンセル用）予定されている
     When 生徒自身のJWTで直前セッションをcancel_session（候補提案なし）でキャンセルする
@@ -36,9 +36,18 @@ Feature: 月次コーチングレポート データ主体テスト（feature/20
     When アドミンのJWTで残るセッションをcancel_session(p_admin_refund_ticket=true)でキャンセルする
     Then そのセッションはstatus=cancelled_by_adminになること
     When コーチ自身のJWTでget_coach_monthly_sessions(当月)を呼び出す
-    Then 12時間以内キャンセルのみcounts_toward_total=true・is_attention=trueであること
-    And コーチキャンセル・アドミン代理キャンセルはいずれもcounts_toward_total=false・
-        is_attention=falseであること
+    Then 12時間以内キャンセルのみcounts_toward_total=true・is_attention=trueで一覧に含まれること
+    And コーチキャンセル・アドミン代理キャンセルは実績・要対応のいずれでもないため
+        一覧に含まれないこと
+
+  Scenario: 実績でも要対応でもないセッションは一覧から除外される（当月分）
+    Given 終了予定時刻がまだ先の通常の予定(status=scheduled)が1件ある
+    When コーチ自身のJWTでget_coach_monthly_sessions(当月)を呼び出す
+    Then 返却された一覧にそのセッションが含まれないこと（実績ではないため表示対象外）
+    Note: 本レポートに表示される行は「実施済みセッションが前提」で、未処理(is_unresolved)・
+        完了(early_ended含む)・12時間以内のキャンセル・No showの4種類のみに限られる。
+        12h以上前の通常キャンセル・コーチキャンセル・アドミン代理キャンセル・振替済みの
+        旧セッション・ライセンス無効化/コーチ交代による自動キャンセルはいずれも対象外。
 
   Scenario: 権限チェック（本人・管理者以外は閲覧/承認/承認取消しできない）
     When 別のコーチ自身のJWTで、対象コーチのget_coach_monthly_sessionsを呼び出す
@@ -46,8 +55,13 @@ Feature: 月次コーチングレポート データ主体テスト（feature/20
     When 対象コーチ自身のJWTでapprove_coach_monthly_reportを呼び出す
     Then "not authorized"エラーになること（承認は管理者専用）
 
-  Scenario: 月次承認・承認取消し（前月分、スナップショット固定・通知・差し戻しではなく取消しのみ）
-    Given 前月分がまだ未承認である
+  Scenario: 終了処理未実施セッションが残る月は承認できない（前月分）
+    Given 前月分に終了処理未実施(is_unresolved=true)のセッションが1件残っている
+    When アドミンのJWTでapprove_coach_monthly_reportを呼び出す
+    Then "unresolved session"を含むエラーで拒否され、承認レコードが作成/更新されないこと
+
+  Scenario: 月次承認・承認取消し（当月分、スナップショット固定・通知・差し戻しではなく取消しのみ）
+    Given 当月分は未処理セッションを含まず、まだ未承認である
     When アドミンのJWTでapprove_coach_monthly_reportを呼び出す
     Then com_t_coach_monthly_report_approvalがstatus=承認済みになり、
         session_count_snapshotに集計値が保存されていること

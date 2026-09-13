@@ -12,6 +12,7 @@ const MONTHLY_REPORT_ERROR_MESSAGES_EN: Record<MonthlyReportErrorCode, string> =
   forbidden: 'You are not allowed to view this report.',
   invalid_input: 'Please check the month you selected.',
   not_actionable: 'This action is no longer available.',
+  unresolved_sessions_exist: 'Some sessions still need to be finalized before this report can be approved.',
   unexpected_error: 'An unexpected error occurred.',
 };
 

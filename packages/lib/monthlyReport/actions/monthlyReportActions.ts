@@ -15,12 +15,12 @@ import {
   MonthlyReportStudentRow,
   RevokeCoachMonthlyReportApprovalResult,
 } from '@gabby/types/monthlyReport';
-import { SessionStatus } from '@gabby/types/session';
+import { SESSION_STATUS, SessionStatus } from '@gabby/types/session';
 
 const logger = createLogger('common');
 
-/** レポート・グリッドの日付集計は日本時間の暦日を基準とする（他の日付ユーティリティの既定タイムゾーンに合わせる） */
-const REPORT_TIME_ZONE = 'Asia/Tokyo';
+/** コーチのtimezoneが未設定(通常は発生しない、com_m_user.timezoneはNOT NULL DEFAULT)の場合のフォールバック */
+const DEFAULT_TIME_ZONE = 'Asia/Tokyo';
 
 // x-user-idヘッダーが取得できない特殊な文脈('system')ではUUID型カラムへの挿入に失敗するため、
 // 有効なUUID形式の場合のみapproved_byに設定する（adminContractAction.tsのresolvePerformedByと同型）
@@ -43,6 +43,7 @@ function normalizeReportMonth(reportMonth: string): string {
 function classifyMonthlyReportRpcError(message: string | undefined): MonthlyReportErrorCode {
   if (!message) return 'unexpected_error';
   if (message.includes('not authorized')) return 'forbidden';
+  if (message.includes('unresolved session')) return 'unresolved_sessions_exist';
   if (message.includes('not approved')) return 'not_actionable';
   return 'unexpected_error';
 }
@@ -61,7 +62,7 @@ async function buildMonthlyReport(
   const ctx = await getLogContext();
   const reportMonth = normalizeReportMonth(reportMonthInput);
 
-  const [studentsResult, sessionsResult, approvalResult] = await Promise.all([
+  const [studentsResult, sessionsResult, approvalResult, coachResult] = await Promise.all([
     supabase.rpc('get_coach_monthly_active_students', { p_coach_id: coachId, p_report_month: reportMonth }),
     supabase.rpc('get_coach_monthly_sessions', { p_coach_id: coachId, p_report_month: reportMonth }),
     supabase
@@ -70,16 +71,19 @@ async function buildMonthlyReport(
       .eq('coach_id', coachId)
       .eq('report_month', reportMonth)
       .maybeSingle(),
+    supabase.from('com_m_user').select('timezone').eq('id', coachId).maybeSingle(),
   ]);
 
-  if (studentsResult.error || sessionsResult.error || approvalResult.error) {
-    const message = studentsResult.error?.message ?? sessionsResult.error?.message ?? approvalResult.error?.message;
+  if (studentsResult.error || sessionsResult.error || approvalResult.error || coachResult.error) {
+    const message = studentsResult.error?.message ?? sessionsResult.error?.message ?? approvalResult.error?.message ?? coachResult.error?.message;
     logger.error('monthlyReport:build_failed', message ?? 'unknown', { ...ctx, payload: { coachId, reportMonth } });
     if (message?.includes('not authorized')) {
       return { success: false, errorCode: 'forbidden' };
     }
     return { success: false, errorCode: 'unexpected_error' };
   }
+
+  const coachTimezone = (coachResult.data as { timezone: string } | null)?.timezone || DEFAULT_TIME_ZONE;
 
   const students = (studentsResult.data ?? []) as { student_id: string; user_name: string; icon_path: string | null }[];
   const sessions = (sessionsResult.data ?? []) as {
@@ -118,7 +122,7 @@ async function buildMonthlyReport(
     const sessionsByDate: Record<string, MonthlyReportSession[]> = {};
     let monthTotal = 0;
     for (const session of studentSessions) {
-      const dateKey = toIsoDateInZone(session.start_datetime, REPORT_TIME_ZONE);
+      const dateKey = toIsoDateInZone(session.start_datetime, coachTimezone);
       (sessionsByDate[dateKey] ??= []).push(session);
       if (session.counts_toward_total) monthTotal += 1;
     }
@@ -132,6 +136,11 @@ async function buildMonthlyReport(
   });
 
   const grandTotal = studentRows.reduce((sum, row) => sum + row.month_total, 0);
+  // 内訳表示用の3区分（完了には早期終了を含める。completed_count+late_cancel_count+no_show_count===grand_totalとなる）
+  const completedCount = sessions.filter((s) => s.status === SESSION_STATUS.COMPLETED || s.status === SESSION_STATUS.EARLY_ENDED).length;
+  const lateCancelCount = sessions.filter((s) => s.status === SESSION_STATUS.CANCELLED_BY_STUDENT && s.ticket_refunded === false).length;
+  const noShowCount = sessions.filter((s) => s.status === SESSION_STATUS.NO_SHOW).length;
+  const unresolvedCount = sessions.filter((s) => s.is_unresolved).length;
 
   const approvalRow = approvalResult.data as {
     status: number;
@@ -153,6 +162,11 @@ async function buildMonthlyReport(
     report_month: reportMonth,
     students: studentRows,
     grand_total: grandTotal,
+    completed_count: completedCount,
+    late_cancel_count: lateCancelCount,
+    no_show_count: noShowCount,
+    unresolved_count: unresolvedCount,
+    coach_timezone: coachTimezone,
     approval,
   };
 

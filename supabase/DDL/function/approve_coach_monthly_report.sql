@@ -13,6 +13,13 @@
 -- apps/adminはcreateAdminClient()(service_role)経由で呼ぶため、本関数内でauth.uid()は
 -- 取得できない（NULLになる）。そのため承認者IDはp_approved_byとして明示的に受け取る
 -- （adminContractAction.tsのperformed_by: resolvePerformedBy(ctx.userId)と同じ理由）。
+--
+-- 【終了処理未実施セッションの承認ブロック (2026-09-13 追加)】
+-- 終了処理未実施(is_unresolved=true)のセッションが1件でも残っている月は、実績が確定して
+-- いない（completed/no_show等に確定していない）とみなし、承認自体を拒否する。
+-- 画面側（apps/admin ApprovalControlBar）でも同条件で承認ボタンを無効化しているが、
+-- 画面表示後にコーチ側の操作で状態が変わる競合を防ぐため、本RPC側でも同じ判定を行う
+-- （フロント側のチェックはUXのため、こちらが正の防御線）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.approve_coach_monthly_report(
     p_coach_id uuid,
@@ -27,9 +34,18 @@ AS $$
 DECLARE
     v_month date := date_trunc('month', p_report_month)::date;
     v_snapshot jsonb;
+    v_unresolved_count integer;
 BEGIN
     IF public.get_jwt_user_type() <> '0' THEN
         RAISE EXCEPTION 'not authorized to approve this monthly report';
+    END IF;
+
+    SELECT COUNT(*) INTO v_unresolved_count
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month) s
+    WHERE s.is_unresolved;
+
+    IF v_unresolved_count > 0 THEN
+        RAISE EXCEPTION 'cannot approve while % unresolved session(s) remain for this month', v_unresolved_count;
     END IF;
 
     SELECT jsonb_build_object(

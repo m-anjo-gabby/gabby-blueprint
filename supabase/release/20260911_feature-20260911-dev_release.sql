@@ -2,6 +2,18 @@
 -- 本番リリース作業スクリプト
 -- 対象ブランチ: feature/20260911-dev
 -- 作成日: 2026-09-11
+-- 更新日: 2026-09-13（月次コーチングレポート: 一覧の対象行を「実績としてカウントする、または
+--          要対応(終了処理未実施)」の行のみに絞り込むよう一般化。詳細はファイル末尾の
+--          「19. 月次コーチングレポート: 対象行の絞り込みを一般化」セクションのコメントを参照）
+-- 更新日: 2026-09-13（月次コーチングレポート: 未来の予定(未実施)セッションを一覧から除外する
+--          よう修正。詳細はファイル末尾の「18. 月次コーチングレポート: 未来の予定セッションの
+--          除外」セクションのコメントを参照）
+-- 更新日: 2026-09-13（月次コーチングレポート: 終了処理未実施セッションが残る月の承認を拒否
+--          するよう修正。詳細はファイル末尾の「17. 月次コーチングレポート: 終了処理未実施
+--          セッションの承認ブロック」セクションのコメントを参照）
+-- 更新日: 2026-09-13（月次コーチングレポートの月範囲判定をコーチのタイムゾーン基準に修正。
+--          詳細はファイル末尾の「16. 月次コーチングレポート: 月範囲判定のタイムゾーン修正」
+--          セクションのコメントを参照）
 -- 更新日: 2026-09-13（月次コーチングレポート機能を追加。以下の【内容】とは別機能のため、
 --          詳細はファイル末尾の「15. 月次コーチングレポート機能」セクションのコメントを参照）
 -- 更新日: 2026-09-12（20260912_feature-20260911-dev_hotfix_release.sql を本ファイルに統合）
@@ -1631,3 +1643,347 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) TO authenticated;
+
+---------------------------------------------
+-- 16. 月次コーチングレポート: 月範囲判定のタイムゾーン修正 (2026-09-13 追加)
+---------------------------------------------
+-- 【背景】
+-- 「コーチの当月における稼働実績」を測る指標であるにもかかわらず、月の境界判定が
+-- UTC基準になっていた（初版のバグ）。get_coach_monthly_active_students/
+-- get_coach_monthly_sessionsの月範囲をコーチ自身のタイムゾーン(com_m_user.timezone)基準に
+-- 修正する。タイムゾーンはクライアントからパラメータで受け取らず、本関数が呼び出しの都度
+-- com_m_userから直接参照する（呼び出し側が任意の値を詐称して境界を操作することを防ぐため）。
+-- 承認済み月はcom_t_coach_monthly_report_approval.session_count_snapshotに固定保存される
+-- ため、承認後のタイムゾーン変更は既に承認済みの集計を遡って変えない（影響があるとしても
+-- 未承認の月の月境界付近のみ。アドミンが承認前にグリッドを目視確認することが最後の防波堤）。
+-- 対応ファイル: function/get_coach_monthly_active_students.sql, function/get_coach_monthly_sessions.sql
+-- （いずれもシグネチャ変更は無いためCREATE OR REPLACEのみ、DROP FUNCTIONは不要）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_coach_monthly_active_students(p_coach_id uuid, p_report_month date)
+RETURNS TABLE(student_id uuid, user_name text, icon_path text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coach_timezone text;
+    v_month_start_utc timestamptz;
+    v_month_end_utc timestamptz;
+BEGIN
+    IF auth.uid() <> p_coach_id AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to view this coach''s monthly report';
+    END IF;
+
+    SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
+    IF v_coach_timezone IS NULL THEN
+        v_coach_timezone := 'Asia/Tokyo';
+    END IF;
+
+    v_month_start_utc := date_trunc('month', p_report_month::timestamp) AT TIME ZONE v_coach_timezone;
+    v_month_end_utc := (date_trunc('month', p_report_month::timestamp) + interval '1 month') AT TIME ZONE v_coach_timezone;
+
+    RETURN QUERY
+    SELECT DISTINCT u.id, u.user_name, u.icon_path
+    FROM public.com_m_coach_student_relationship r
+    JOIN public.com_m_user u ON u.id = r.student_id
+    WHERE r.coach_id = p_coach_id
+      AND EXISTS (
+          SELECT 1
+          FROM public.com_t_user_license l
+          JOIN public.com_m_contract c ON c.contract_id = l.contract_id
+          WHERE l.user_id = r.student_id
+            AND l.status = 1
+            AND c.status = 1
+            AND l.start_date <= v_month_end_utc
+            AND l.end_date >= v_month_start_utc
+      )
+    ORDER BY u.user_name;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_active_students(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_monthly_active_students(uuid, date) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.get_coach_monthly_sessions(p_coach_id uuid, p_report_month date)
+RETURNS TABLE(
+    session_id uuid,
+    student_id uuid,
+    start_datetime timestamptz,
+    end_datetime timestamptz,
+    status smallint,
+    status_note text,
+    ticket_refunded boolean,
+    counts_toward_total boolean,
+    is_unresolved boolean,
+    is_attention boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coach_timezone text;
+    v_month_start_utc timestamptz;
+    v_month_end_utc timestamptz;
+BEGIN
+    IF auth.uid() <> p_coach_id AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to view this coach''s monthly report';
+    END IF;
+
+    SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
+    IF v_coach_timezone IS NULL THEN
+        v_coach_timezone := 'Asia/Tokyo';
+    END IF;
+
+    v_month_start_utc := date_trunc('month', p_report_month::timestamp) AT TIME ZONE v_coach_timezone;
+    v_month_end_utc := (date_trunc('month', p_report_month::timestamp) + interval '1 month') AT TIME ZONE v_coach_timezone;
+
+    RETURN QUERY
+    SELECT
+        s.session_id,
+        s.student_id,
+        s.start_datetime,
+        s.end_datetime,
+        s.status,
+        s.status_note,
+        s.ticket_refunded,
+        (s.status IN (2, 6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS counts_toward_total,
+        (s.status = 1 AND s.end_datetime < NOW()) AS is_unresolved,
+        (s.status IN (6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS is_attention
+    FROM public.com_t_session s
+    WHERE s.coach_id = p_coach_id
+      AND s.start_datetime >= v_month_start_utc
+      AND s.start_datetime < v_month_end_utc
+    ORDER BY s.student_id, s.start_datetime;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) TO authenticated;
+
+---------------------------------------------
+-- 17. 月次コーチングレポート: 終了処理未実施セッションの承認ブロック (2026-09-13 追加)
+---------------------------------------------
+-- 【背景】
+-- 終了処理未実施(is_unresolved=true)のセッションが残る月は実績が確定していないため、
+-- アドミンが承認できないようにする。画面側（apps/admin ApprovalControlBar）でも同条件で
+-- 承認ボタンを無効化するが、表示後の競合を防ぐためRPC側でも同じ判定を正の防御線として行う。
+-- 対応ファイル: function/approve_coach_monthly_report.sql
+-- （シグネチャ変更は無いためCREATE OR REPLACEのみ、DROP FUNCTIONは不要）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.approve_coach_monthly_report(
+    p_coach_id uuid,
+    p_report_month date,
+    p_approved_by uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_snapshot jsonb;
+    v_unresolved_count integer;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to approve this monthly report';
+    END IF;
+
+    SELECT COUNT(*) INTO v_unresolved_count
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month) s
+    WHERE s.is_unresolved;
+
+    IF v_unresolved_count > 0 THEN
+        RAISE EXCEPTION 'cannot approve while % unresolved session(s) remain for this month', v_unresolved_count;
+    END IF;
+
+    SELECT jsonb_build_object(
+        'total', COALESCE(SUM((counts_toward_total)::int), 0),
+        'by_student', COALESCE(
+            (SELECT jsonb_agg(jsonb_build_object('student_id', student_id, 'count', cnt))
+             FROM (
+                 SELECT student_id, SUM((counts_toward_total)::int) AS cnt
+                 FROM public.get_coach_monthly_sessions(p_coach_id, v_month)
+                 GROUP BY student_id
+             ) per_student),
+            '[]'::jsonb
+        )
+    )
+    INTO v_snapshot
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month);
+
+    INSERT INTO public.com_t_coach_monthly_report_approval (
+        coach_id, report_month, status, session_count_snapshot, approved_by, approved_at, update_date
+    ) VALUES (
+        p_coach_id, v_month, 2, v_snapshot, p_approved_by, NOW(), NOW()
+    )
+    ON CONFLICT (coach_id, report_month) DO UPDATE
+    SET status = 2,
+        session_count_snapshot = v_snapshot,
+        approved_by = p_approved_by,
+        approved_at = NOW(),
+        update_date = NOW();
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVED',
+        jsonb_build_object('report_month', v_month),
+        '/monthly-reports'
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) TO authenticated;
+
+---------------------------------------------
+-- 18. 月次コーチングレポート: 未来の予定セッションの除外 (2026-09-13 追加)
+---------------------------------------------
+-- 【背景】
+-- get_coach_monthly_sessionsが、まだ実施されていない通常の予定(status=1で終了予定時刻を
+-- 過ぎていない行)まで返していたため、グリッド上に「実績ではない件数」が表示され紛らわしい
+-- というフィードバックを受けて修正する。カウント(counts_toward_total)・注意色(is_attention)
+-- には元々影響しない（いずれも元々false）が、行自体を結果から除外する。
+-- status=1で終了予定時刻を過ぎている行（is_unresolved=true、要対応）は除外しない。
+-- 対応ファイル: function/get_coach_monthly_sessions.sql
+-- （シグネチャ変更は無いためCREATE OR REPLACEのみ、DROP FUNCTIONは不要）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_coach_monthly_sessions(p_coach_id uuid, p_report_month date)
+RETURNS TABLE(
+    session_id uuid,
+    student_id uuid,
+    start_datetime timestamptz,
+    end_datetime timestamptz,
+    status smallint,
+    status_note text,
+    ticket_refunded boolean,
+    counts_toward_total boolean,
+    is_unresolved boolean,
+    is_attention boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coach_timezone text;
+    v_month_start_utc timestamptz;
+    v_month_end_utc timestamptz;
+BEGIN
+    IF auth.uid() <> p_coach_id AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to view this coach''s monthly report';
+    END IF;
+
+    SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
+    IF v_coach_timezone IS NULL THEN
+        v_coach_timezone := 'Asia/Tokyo';
+    END IF;
+
+    v_month_start_utc := date_trunc('month', p_report_month::timestamp) AT TIME ZONE v_coach_timezone;
+    v_month_end_utc := (date_trunc('month', p_report_month::timestamp) + interval '1 month') AT TIME ZONE v_coach_timezone;
+
+    RETURN QUERY
+    SELECT
+        s.session_id,
+        s.student_id,
+        s.start_datetime,
+        s.end_datetime,
+        s.status,
+        s.status_note,
+        s.ticket_refunded,
+        (s.status IN (2, 6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS counts_toward_total,
+        (s.status = 1 AND s.end_datetime < NOW()) AS is_unresolved,
+        (s.status IN (6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS is_attention
+    FROM public.com_t_session s
+    WHERE s.coach_id = p_coach_id
+      AND s.start_datetime >= v_month_start_utc
+      AND s.start_datetime < v_month_end_utc
+      AND (s.status <> 1 OR s.end_datetime < NOW())
+    ORDER BY s.student_id, s.start_datetime;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) TO authenticated;
+
+---------------------------------------------
+-- 19. 月次コーチングレポート: 対象行の絞り込みを一般化 (2026-09-13 追加)
+---------------------------------------------
+-- 【背景】
+-- 実コーチアカウント(タイムゾーンがAsia/Tokyo以外、America/Vancouver)での確認により、
+-- 12h以上前の通常キャンセル(ticket_refunded=true)・コーチキャンセル・アドミン代理
+-- キャンセル・振替済みの旧セッション等、実績としてカウントされない行がグリッド上に
+-- 件数として表示され、「集計対象外なのに数字が出ている」「未来の日付に数字が出ている」
+-- という混乱を招くことが判明した（前回の「18.」で対応した未来の予定セッションの除外と
+-- 同種の問題）。整理した結果、本レポートに表示すべき行は「実施済みセッションが前提」で、
+-- 未処理(is_unresolved)・完了(early_ended含む)・12時間以内キャンセル・No showの4種類の
+-- みであるべきと結論づけ、対象行の絞り込み条件を
+-- 「counts_toward_total=true（実績としてカウントする） または is_unresolved=true
+-- （終了処理未実施、要対応）」に一般化する（is_attention=trueの行は必ず
+-- counts_toward_total=trueの部分集合であるため、この条件のみで要対応・カウント対象の
+-- 全パターンを包含する）。
+-- 対応ファイル: function/get_coach_monthly_sessions.sql
+-- （シグネチャ変更は無いためCREATE OR REPLACEのみ、DROP FUNCTIONは不要）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_coach_monthly_sessions(p_coach_id uuid, p_report_month date)
+RETURNS TABLE(
+    session_id uuid,
+    student_id uuid,
+    start_datetime timestamptz,
+    end_datetime timestamptz,
+    status smallint,
+    status_note text,
+    ticket_refunded boolean,
+    counts_toward_total boolean,
+    is_unresolved boolean,
+    is_attention boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coach_timezone text;
+    v_month_start_utc timestamptz;
+    v_month_end_utc timestamptz;
+BEGIN
+    IF auth.uid() <> p_coach_id AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to view this coach''s monthly report';
+    END IF;
+
+    SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
+    IF v_coach_timezone IS NULL THEN
+        v_coach_timezone := 'Asia/Tokyo';
+    END IF;
+
+    v_month_start_utc := date_trunc('month', p_report_month::timestamp) AT TIME ZONE v_coach_timezone;
+    v_month_end_utc := (date_trunc('month', p_report_month::timestamp) + interval '1 month') AT TIME ZONE v_coach_timezone;
+
+    RETURN QUERY
+    SELECT
+        s.session_id,
+        s.student_id,
+        s.start_datetime,
+        s.end_datetime,
+        s.status,
+        s.status_note,
+        s.ticket_refunded,
+        (s.status IN (2, 6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS counts_toward_total,
+        (s.status = 1 AND s.end_datetime < NOW()) AS is_unresolved,
+        (s.status IN (6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS is_attention
+    FROM public.com_t_session s
+    WHERE s.coach_id = p_coach_id
+      AND s.start_datetime >= v_month_start_utc
+      AND s.start_datetime < v_month_end_utc
+      AND (
+          (s.status IN (2, 6, 7) OR (s.status = 3 AND s.ticket_refunded = false))
+          OR (s.status = 1 AND s.end_datetime < NOW())
+      )
+    ORDER BY s.student_id, s.start_datetime;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) TO authenticated;

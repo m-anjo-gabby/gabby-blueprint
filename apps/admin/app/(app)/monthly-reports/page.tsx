@@ -2,6 +2,7 @@ import { getCoachesForMonthlyReport, getCoachMonthlyReportForAdmin } from '@/act
 import { CoachMonthSelector } from './_components/CoachMonthSelector';
 import { ApprovalControlBar } from './_components/ApprovalControlBar';
 import { MonthlyReportGrid } from './_components/MonthlyReportGrid';
+import { ExportCsvButton } from './_components/ExportCsvButton';
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -19,6 +20,7 @@ export default async function AdminMonthlyReportsPage({
   const yearMonth = params.month || currentYearMonth();
 
   const result = coachId ? await getCoachMonthlyReportForAdmin(coachId, yearMonth) : null;
+  const coachName = coaches.find((c) => c.id === coachId)?.user_name ?? '';
 
   return (
     <div className="space-y-6">
@@ -45,8 +47,16 @@ export default async function AdminMonthlyReportsPage({
             coachId={coachId}
             reportMonth={yearMonth}
             grandTotal={result.report.grand_total}
+            completedCount={result.report.completed_count}
+            lateCancelCount={result.report.late_cancel_count}
+            noShowCount={result.report.no_show_count}
+            unresolvedCount={result.report.unresolved_count}
+            coachTimezone={result.report.coach_timezone}
             approval={result.report.approval}
           />
+          <div className="flex justify-end">
+            <ExportCsvButton report={result.report} coachName={coachName} />
+          </div>
           <MonthlyReportGrid report={result.report} />
         </>
       )}

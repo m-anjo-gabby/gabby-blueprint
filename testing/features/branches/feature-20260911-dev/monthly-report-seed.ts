@@ -329,6 +329,9 @@ const reportMonthCurrent = toReportMonthString(TODAY);
 const sessionWithin12h = await seedSessionRowAt({ scheduleId, ticketId, studentId, coachId, startMs: Date.now() + 6 * HOUR_MS, durationMinutes: 25 });
 const sessionCoachCancel = await seedSessionRowAt({ scheduleId, ticketId, studentId, coachId, startMs: Date.now() + 10 * 24 * HOUR_MS, durationMinutes: 25 });
 const sessionAdminCancel = await seedSessionRowAt({ scheduleId, ticketId, studentId, coachId, startMs: Date.now() + 12 * 24 * HOUR_MS, durationMinutes: 25 });
+// まだ実施されていない通常の予定(status=1のまま、意図的にどのRPCも呼ばない)。
+// get_coach_monthly_sessionsの一覧から除外されることを確認するためのデータ。
+const sessionFutureScheduled = await seedSessionRowAt({ scheduleId, ticketId, studentId, coachId, startMs: Date.now() + 8 * 24 * HOUR_MS, durationMinutes: 25 });
 
 // 生徒本人の実JWTで12時間以内キャンセル(ticket_refunded=falseになる想定)
 {
@@ -361,7 +364,7 @@ const sessionAdminCancel = await seedSessionRowAt({ scheduleId, ticketId, studen
   if (error) throw error;
 }
 
-console.log("当月分投入完了:", { reportMonthCurrent, sessionWithin12h, sessionCoachCancel, sessionAdminCancel });
+console.log("当月分投入完了:", { reportMonthCurrent, sessionWithin12h, sessionCoachCancel, sessionAdminCancel, sessionFutureScheduled: `${sessionFutureScheduled}(未実施のまま)` });
 
 // ---------------------------------------------------------------------------
 // サインアウト(後始末: セッション自体は破棄されるだけで、投入したDBデータは残す)
@@ -383,7 +386,7 @@ console.log(
       adminUserId,
       reportMonthPrev,
       reportMonthCurrent,
-      sessions: { sessionCompleted, sessionNoShow, sessionEarlyEnded, sessionUnresolved, sessionWithin12h, sessionCoachCancel, sessionAdminCancel },
+      sessions: { sessionCompleted, sessionNoShow, sessionEarlyEnded, sessionUnresolved, sessionWithin12h, sessionCoachCancel, sessionAdminCancel, sessionFutureScheduled },
     },
     null,
     2

@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { MonthPickerPopover } from './MonthPickerPopover';
 
 /** Adds/subtracts whole months to a "YYYY-MM" string, returning a new "YYYY-MM" string */
 function shiftMonth(yearMonth: string, delta: number): string {
@@ -37,9 +38,14 @@ export function MonthSelector({ currentMonth }: { currentMonth: string }) {
       >
         <ChevronLeft size={16} />
       </button>
-      <span className="min-w-[9rem] text-center text-sm font-bold text-slate-800">
-        {formatMonthLabel(currentMonth)}
-      </span>
+      <MonthPickerPopover currentMonth={currentMonth} onSelect={navigateTo}>
+        <button
+          type="button"
+          className="min-w-[9rem] text-center text-sm font-bold text-slate-800 rounded-md px-2 py-1 hover:bg-slate-100 transition-colors"
+        >
+          {formatMonthLabel(currentMonth)}
+        </button>
+      </MonthPickerPopover>
       <button
         type="button"
         onClick={() => navigateTo(shiftMonth(currentMonth, 1))}
