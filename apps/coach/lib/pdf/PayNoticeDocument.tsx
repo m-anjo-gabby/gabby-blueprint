@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
   totalLabel: { flex: 2, fontSize: 12, fontWeight: 700, color: '#000000' },
   totalValue: { flex: 1, fontSize: 12, fontWeight: 700, textAlign: 'right', color: '#000000' },
   footer: { marginTop: 30, fontSize: 8, color: '#666666' },
+  footerLine: { marginTop: 4, fontSize: 8, color: '#666666' },
 });
 
 function formatCurrency(amount: number, currencyCode: string): string {
@@ -125,6 +126,9 @@ export function PayNoticeDocument(data: PayNoticeData) {
 
         <Text style={styles.footer}>
           This notice reflects the session record approved by {data.companyName} for the period stated above.
+        </Text>
+        <Text style={styles.footerLine}>
+          This document contains confidential payment information intended solely for the named contractor.
         </Text>
       </Page>
     </Document>

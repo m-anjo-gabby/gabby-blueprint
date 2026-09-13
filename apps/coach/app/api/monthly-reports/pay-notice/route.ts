@@ -55,7 +55,13 @@ export async function GET(request: NextRequest) {
 
   // Issue Dateはダウンロード時刻ではなく、アドミンが承認した日時とする（再ダウンロードしても
   // 常に同じ内容になるように、承認時点の事実を表示する）。
-  const issueDateLabel = approval.approved_at ? approval.approved_at.slice(0, 10) : '';
+  // Periodが自然言語表記("August 2026")のため、書類内の日付表記を統一する目的でISO形式
+  // ("2026-09-13")ではなく同じ自然言語表記("September 13, 2026")にフォーマットする。
+  const issueDateLabel = approval.approved_at
+    ? new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(
+        new Date(approval.approved_at)
+      )
+    : '';
 
   const [year, month] = result.report.report_month.split('-').map(Number);
   const periodLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
