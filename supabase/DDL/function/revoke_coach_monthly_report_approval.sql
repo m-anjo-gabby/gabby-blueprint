@@ -6,7 +6,8 @@
 -- アドミンが承認後に誤りへ気付いた場合に、承認を取り消して未承認状態へ戻す。
 -- コーチへの差し戻し（再申請を促す）フローではなく、単純な承認取消しのみ。
 -- 取消し後は再度approve_coach_monthly_reportで承認し直すことを想定するため、
--- 承認時点のスナップショットはNULLへ戻す（再承認時に最新値で作り直される）。
+-- 承認時点のスナップショット（セッション集計・単価とも）はNULLへ戻す
+-- （再承認時に最新値で作り直される）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.revoke_coach_monthly_report_approval(
     p_coach_id uuid,
@@ -37,6 +38,8 @@ BEGIN
     UPDATE public.com_t_coach_monthly_report_approval
     SET status = 1,
         session_count_snapshot = NULL,
+        rate_amount = NULL,
+        rate_currency = NULL,
         approved_by = NULL,
         approved_at = NULL,
         update_date = NOW()

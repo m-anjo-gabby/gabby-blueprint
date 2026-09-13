@@ -1,7 +1,7 @@
 // apps/admin/lib/navigation.ts
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, CalendarRange, Video,
+  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, CalendarRange, Video, DollarSign,
 } from 'lucide-react';
 
 // ============================================================
@@ -95,6 +95,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     label: '月次コーチングレポート',
     href: '/monthly-reports',
     icon: CalendarRange,
+    requiredRoles: ['admin'],
+  },
+  {
+    label: '支払い設定',
+    href: '/payment-settings',
+    icon: DollarSign,
     requiredRoles: ['admin'],
   },
   {

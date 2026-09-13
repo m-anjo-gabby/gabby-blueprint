@@ -2,6 +2,12 @@
 -- 本番リリース作業スクリプト
 -- 対象ブランチ: feature/20260911-dev
 -- 作成日: 2026-09-11
+-- 更新日: 2026-09-13（会社ロゴをapps/coach/public直参照からSupabase Storage
+--          ("company-logo"バケット)参照へ変更。詳細はファイル末尾の「21. 会社ロゴの
+--          Storage移行」セクションのコメントを参照）
+-- 更新日: 2026-09-13（コーチ向け月次支払通知書(PDF)機能を追加。会社情報・セッション単価の
+--          マスタを新設し、承認時に単価をスナップショット保存する。詳細はファイル末尾の
+--          「20. コーチ向け月次支払通知書(PDF)機能」セクションのコメントを参照）
 -- 更新日: 2026-09-13（月次コーチングレポート: 一覧の対象行を「実績としてカウントする、または
 --          要対応(終了処理未実施)」の行のみに絞り込むよう一般化。詳細はファイル末尾の
 --          「19. 月次コーチングレポート: 対象行の絞り込みを一般化」セクションのコメントを参照）
@@ -1987,3 +1993,271 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) TO authenticated;
+
+---------------------------------------------
+-- 20. コーチ向け月次支払通知書(PDF)機能 (2026-09-13 追加)
+---------------------------------------------
+-- 会社情報・セッション単価のマスタを新設し、承認時に単価をスナップショット保存した上で、
+-- コーチ自身が承認済み月の支払通知書PDFをダウンロードできるようにする。
+-- 対応ファイル: table/com_m_company_profile.sql, table/com_m_session_pay_rate.sql,
+--   table/com_t_coach_monthly_report_approval.sql(ALTER), function/approve_coach_monthly_report.sql,
+--   function/revoke_coach_monthly_report_approval.sql, DML/com_m_company_profile.sql,
+--   DML/com_m_session_pay_rate.sql
+---------------------------------------------
+
+---------------------------------------------
+-- DDL: com_m_company_profile (会社情報マスタ) (2026-09-13 追加)
+---------------------------------------------
+CREATE TABLE public.com_m_company_profile (
+    company_profile_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_name text NOT NULL,
+    address text NOT NULL,
+    logo_path text,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_company_profile IS '会社情報マスタ（コーチ向け月次支払通知書PDFに使用。運用上は常に1行のみ）';
+COMMENT ON COLUMN public.com_m_company_profile.company_profile_id IS '会社情報ID';
+COMMENT ON COLUMN public.com_m_company_profile.company_name IS '会社名（例: Gabby Academy Co., Ltd.）';
+COMMENT ON COLUMN public.com_m_company_profile.address IS '住所（PDF印字用、複数行は改行区切り）';
+COMMENT ON COLUMN public.com_m_company_profile.logo_path IS 'ロゴ画像のパス（apps/coach/public配下の相対パス、例: /logo-01.png）';
+COMMENT ON COLUMN public.com_m_company_profile.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_company_profile.update_date IS '更新日時';
+
+ALTER TABLE public.com_m_company_profile ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage company profile" ON public.com_m_company_profile;
+
+CREATE POLICY "Admins can manage company profile" ON public.com_m_company_profile
+FOR ALL TO authenticated
+USING (public.get_jwt_user_type() = '0')
+WITH CHECK (public.get_jwt_user_type() = '0');
+
+---------------------------------------------
+-- DDL: com_m_session_pay_rate (セッション単価マスタ) (2026-09-13 追加)
+---------------------------------------------
+CREATE TABLE public.com_m_session_pay_rate (
+    session_pay_rate_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    rate_amount numeric(10, 2) NOT NULL,
+    currency_code text NOT NULL,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_session_pay_rate_positive CHECK (rate_amount >= 0)
+);
+
+COMMENT ON TABLE public.com_m_session_pay_rate IS 'セッション単価マスタ（全コーチ共通、現在値のみ保持。コーチ向け月次支払通知書PDFの支払額算出に使用）';
+COMMENT ON COLUMN public.com_m_session_pay_rate.session_pay_rate_id IS '単価ID';
+COMMENT ON COLUMN public.com_m_session_pay_rate.rate_amount IS '1セッションあたりの支払単価';
+COMMENT ON COLUMN public.com_m_session_pay_rate.currency_code IS '通貨コード（例: CAD, USD, JPY）';
+COMMENT ON COLUMN public.com_m_session_pay_rate.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_session_pay_rate.update_date IS '更新日時';
+
+ALTER TABLE public.com_m_session_pay_rate ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage session pay rate" ON public.com_m_session_pay_rate;
+
+CREATE POLICY "Admins can manage session pay rate" ON public.com_m_session_pay_rate
+FOR ALL TO authenticated
+USING (public.get_jwt_user_type() = '0')
+WITH CHECK (public.get_jwt_user_type() = '0');
+
+---------------------------------------------
+-- DML: 初期データ投入（冪等、固定IDでのUPSERT）
+---------------------------------------------
+INSERT INTO public.com_m_company_profile (company_profile_id, company_name, address, logo_path) VALUES
+  (
+    '00000000-0000-0000-0000-000000000001',
+    'Gabby Academy Co., Ltd.',
+    '2-25-2F, Kandasudacho, Chiyoda-ku' || E'\n' || 'Tokyo Japan 101-0041',
+    '/logo-01.png'
+  )
+ON CONFLICT (company_profile_id) DO UPDATE SET
+  company_name = EXCLUDED.company_name,
+  address = EXCLUDED.address,
+  logo_path = EXCLUDED.logo_path,
+  update_date = NOW();
+
+INSERT INTO public.com_m_session_pay_rate (session_pay_rate_id, rate_amount, currency_code) VALUES
+  ('00000000-0000-0000-0000-000000000001', 15.00, 'CAD')
+ON CONFLICT (session_pay_rate_id) DO UPDATE SET
+  rate_amount = EXCLUDED.rate_amount,
+  currency_code = EXCLUDED.currency_code,
+  update_date = NOW();
+
+---------------------------------------------
+-- 追加パッチ: 支払通知書PDF向け単価スナップショット (2026-09-13 追加)
+---------------------------------------------
+ALTER TABLE public.com_t_coach_monthly_report_approval
+  ADD COLUMN IF NOT EXISTS rate_amount numeric(10, 2) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS rate_currency text DEFAULT NULL;
+
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.rate_amount IS '承認時点のセッション単価スナップショット（com_m_session_pay_rateより。承認取消し時にNULLへ戻す）';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.rate_currency IS '承認時点の通貨コードスナップショット（例: CAD）';
+
+---------------------------------------------
+-- approve_coach_monthly_report / revoke_coach_monthly_report_approval の更新
+-- （単価スナップショットの保存/クリアを追加。シグネチャ変更は無いためCREATE OR REPLACEのみ）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.approve_coach_monthly_report(
+    p_coach_id uuid,
+    p_report_month date,
+    p_approved_by uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_snapshot jsonb;
+    v_unresolved_count integer;
+    v_rate_amount numeric(10, 2);
+    v_rate_currency text;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to approve this monthly report';
+    END IF;
+
+    SELECT COUNT(*) INTO v_unresolved_count
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month) s
+    WHERE s.is_unresolved;
+
+    IF v_unresolved_count > 0 THEN
+        RAISE EXCEPTION 'cannot approve while % unresolved session(s) remain for this month', v_unresolved_count;
+    END IF;
+
+    SELECT jsonb_build_object(
+        'total', COALESCE(SUM((counts_toward_total)::int), 0),
+        'by_student', COALESCE(
+            (SELECT jsonb_agg(jsonb_build_object('student_id', student_id, 'count', cnt))
+             FROM (
+                 SELECT student_id, SUM((counts_toward_total)::int) AS cnt
+                 FROM public.get_coach_monthly_sessions(p_coach_id, v_month)
+                 GROUP BY student_id
+             ) per_student),
+            '[]'::jsonb
+        )
+    )
+    INTO v_snapshot
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month);
+
+    SELECT rate_amount, currency_code INTO v_rate_amount, v_rate_currency
+    FROM public.com_m_session_pay_rate
+    ORDER BY update_date DESC
+    LIMIT 1;
+
+    INSERT INTO public.com_t_coach_monthly_report_approval (
+        coach_id, report_month, status, session_count_snapshot, rate_amount, rate_currency, approved_by, approved_at, update_date
+    ) VALUES (
+        p_coach_id, v_month, 2, v_snapshot, v_rate_amount, v_rate_currency, p_approved_by, NOW(), NOW()
+    )
+    ON CONFLICT (coach_id, report_month) DO UPDATE
+    SET status = 2,
+        session_count_snapshot = v_snapshot,
+        rate_amount = v_rate_amount,
+        rate_currency = v_rate_currency,
+        approved_by = p_approved_by,
+        approved_at = NOW(),
+        update_date = NOW();
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVED',
+        jsonb_build_object('report_month', v_month),
+        '/monthly-reports'
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.revoke_coach_monthly_report_approval(
+    p_coach_id uuid,
+    p_report_month date
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_approval RECORD;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to revoke this monthly report approval';
+    END IF;
+
+    SELECT * INTO v_approval
+    FROM public.com_t_coach_monthly_report_approval
+    WHERE coach_id = p_coach_id AND report_month = v_month
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_approval.status <> 2 THEN
+        RAISE EXCEPTION 'this monthly report is not approved';
+    END IF;
+
+    UPDATE public.com_t_coach_monthly_report_approval
+    SET status = 1,
+        session_count_snapshot = NULL,
+        rate_amount = NULL,
+        rate_currency = NULL,
+        approved_by = NULL,
+        approved_at = NULL,
+        update_date = NOW()
+    WHERE coach_id = p_coach_id AND report_month = v_month;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVAL_REVOKED',
+        jsonb_build_object('report_month', v_month),
+        '/monthly-reports'
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) TO authenticated;
+
+---------------------------------------------
+-- 21. 会社ロゴのStorage移行 (2026-09-13 追加)
+---------------------------------------------
+-- 【背景】
+-- com_m_company_profile.logo_pathがapps/coach/public配下の相対パス("/logo-01.png")を
+-- 直接参照する方式では、アドミンが実際にロゴ画像を差し替えることができない
+-- （テキスト欄で任意の文字列を入力できても、対応する画像ファイルは無いため）。
+-- 会社情報マスタを新設した趣旨（アドミンが実データを管理できること）に合わせ、
+-- 新規Storageバケット"company-logo"(Public運用、country-flagバケットと同方針)へ移行し、
+-- logo_pathはバケット内の相対パス（例: logo-01.png）を保持する形に変更する。
+-- 既存のapps/coach/public/logo-01.pngの内容をバケットへアップロード済み。
+-- 対応ファイル: storage/company_logo_bucket.sql, DML/com_m_company_profile.sql(更新)
+---------------------------------------------
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'company-logo',
+  'company-logo',
+  true,
+  2097152,
+  ARRAY['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+INSERT INTO public.com_m_company_profile (company_profile_id, company_name, address, logo_path) VALUES
+  (
+    '00000000-0000-0000-0000-000000000001',
+    'Gabby Academy Co., Ltd.',
+    '2-25-2F, Kandasudacho, Chiyoda-ku' || E'\n' || 'Tokyo Japan 101-0041',
+    'logo-01.png'
+  )
+ON CONFLICT (company_profile_id) DO UPDATE SET
+  logo_path = EXCLUDED.logo_path,
+  update_date = NOW();

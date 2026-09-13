@@ -60,3 +60,20 @@ FOR SELECT TO authenticated USING (
     coach_id = auth.uid()
     OR public.get_jwt_user_type() = '0'
 );
+
+---------------------------------------------
+-- 追加パッチ: 支払通知書PDF向け単価スナップショット (2026-09-13 追加)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- コーチ向け月次支払通知書(PDF)の支払額(単価 × 総セッション数)を、承認後の単価マスタ
+-- (com_m_session_pay_rate)改定から保護するため、承認時点の単価・通貨をセッション集計と
+-- 同様にこのテーブルへ固定保存する。承認取消し時はsession_count_snapshotと同じく
+-- NULLへ戻す（再承認時に最新のマスタ値で作り直される）。
+---------------------------------------------
+ALTER TABLE public.com_t_coach_monthly_report_approval
+  ADD COLUMN IF NOT EXISTS rate_amount numeric(10, 2) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS rate_currency text DEFAULT NULL;
+
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.rate_amount IS '承認時点のセッション単価スナップショット（com_m_session_pay_rateより。承認取消し時にNULLへ戻す）';
+COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.rate_currency IS '承認時点の通貨コードスナップショット（例: CAD）';

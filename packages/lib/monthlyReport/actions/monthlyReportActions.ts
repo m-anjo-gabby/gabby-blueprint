@@ -67,7 +67,7 @@ async function buildMonthlyReport(
     supabase.rpc('get_coach_monthly_sessions', { p_coach_id: coachId, p_report_month: reportMonth }),
     supabase
       .from('com_t_coach_monthly_report_approval')
-      .select('status, session_count_snapshot, approved_by, approved_at')
+      .select('status, session_count_snapshot, rate_amount, rate_currency, approved_by, approved_at')
       .eq('coach_id', coachId)
       .eq('report_month', reportMonth)
       .maybeSingle(),
@@ -145,6 +145,8 @@ async function buildMonthlyReport(
   const approvalRow = approvalResult.data as {
     status: number;
     session_count_snapshot: MonthlyReportApproval['session_count_snapshot'];
+    rate_amount: number | null;
+    rate_currency: string | null;
     approved_by: string | null;
     approved_at: string | null;
   } | null;
@@ -153,6 +155,8 @@ async function buildMonthlyReport(
     ? {
         status: approvalRow.status as MonthlyReportApproval['status'],
         session_count_snapshot: approvalRow.session_count_snapshot,
+        rate_amount: approvalRow.rate_amount,
+        rate_currency: approvalRow.rate_currency,
         approved_by: approvalRow.approved_by,
         approved_at: approvalRow.approved_at,
       }

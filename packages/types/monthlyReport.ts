@@ -51,8 +51,26 @@ export interface MonthlyReportStudentRow {
 export interface MonthlyReportApproval {
   status: MonthlyReportApprovalStatus;
   session_count_snapshot: { total: number; by_student: { student_id: string; count: number }[] } | null;
+  rate_amount: number | null; // 承認時点のセッション単価スナップショット（com_m_session_pay_rateより）
+  rate_currency: string | null; // 承認時点の通貨コードスナップショット（例: CAD）
   approved_by: string | null;
   approved_at: string | null;
+}
+
+/** 会社ロゴ画像を保存するStorageバケット名（Public運用） */
+export const COMPANY_LOGO_BUCKET = 'company-logo';
+
+/** 会社情報マスタ(com_m_company_profile)の表示用型 */
+export interface CompanyProfile {
+  company_name: string;
+  address: string;
+  logo_path: string | null; // company-logoバケット内の相対パス（例: "logo-01.png"）
+}
+
+/** セッション単価マスタ(com_m_session_pay_rate)の表示用型 */
+export interface SessionPayRate {
+  rate_amount: number;
+  currency_code: string;
 }
 
 export interface CoachMonthlyReport {

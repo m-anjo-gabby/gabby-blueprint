@@ -181,6 +181,11 @@ type SessionRow = {
   check("承認: statusが承認済み(2)になっている", data?.status === 2, `status=${data?.status}`);
   check("承認: session_count_snapshotが保存されている", !!data?.session_count_snapshot?.total || data?.session_count_snapshot?.total === 0, JSON.stringify(data?.session_count_snapshot));
   check("承認: approved_by/approved_atが設定されている", data?.approved_by === adminUserId && !!data?.approved_at, JSON.stringify({ approved_by: data?.approved_by, approved_at: data?.approved_at }));
+  check(
+    "承認: rate_amount/rate_currencyが単価マスタの値でスナップショットされている",
+    typeof data?.rate_amount === "number" && data.rate_amount > 0 && typeof data?.rate_currency === "string" && data.rate_currency.length > 0,
+    JSON.stringify({ rate_amount: data?.rate_amount, rate_currency: data?.rate_currency })
+  );
 
   const { data: notifications } = await admin.from("com_t_notification").select("*").eq("user_id", coachId).eq("notification_type", "COACH_REPORT_APPROVED");
   check("承認: コーチへCOACH_REPORT_APPROVED通知が届いている", (notifications?.length ?? 0) >= 1, `count=${notifications?.length ?? 0}`);
@@ -198,9 +203,19 @@ type SessionRow = {
     .single();
   check("承認取消し: statusが未承認(1)に戻っている", data?.status === 1, `status=${data?.status}`);
   check(
-    "承認取消し: session_count_snapshot/approved_by/approved_atがNULLに戻っている",
-    data?.session_count_snapshot === null && data?.approved_by === null && data?.approved_at === null,
-    JSON.stringify({ snapshot: data?.session_count_snapshot, approved_by: data?.approved_by, approved_at: data?.approved_at })
+    "承認取消し: session_count_snapshot/rate_amount/rate_currency/approved_by/approved_atがNULLに戻っている",
+    data?.session_count_snapshot === null &&
+      data?.rate_amount === null &&
+      data?.rate_currency === null &&
+      data?.approved_by === null &&
+      data?.approved_at === null,
+    JSON.stringify({
+      snapshot: data?.session_count_snapshot,
+      rate_amount: data?.rate_amount,
+      rate_currency: data?.rate_currency,
+      approved_by: data?.approved_by,
+      approved_at: data?.approved_at,
+    })
   );
 
   const { data: notifications } = await admin.from("com_t_notification").select("*").eq("user_id", coachId).eq("notification_type", "COACH_REPORT_APPROVAL_REVOKED");

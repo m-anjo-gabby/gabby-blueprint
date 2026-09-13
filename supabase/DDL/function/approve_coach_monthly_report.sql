@@ -1,7 +1,7 @@
 ---------------------------------------------
 -- 月次コーチングレポート承認RPC (2026-09-13 追加)
--- 前提: table/com_t_coach_monthly_report_approval.sql, function/get_coach_monthly_sessions.sql
---       の作成が完了していること。
+-- 前提: table/com_t_coach_monthly_report_approval.sql, function/get_coach_monthly_sessions.sql,
+--       table/com_m_session_pay_rate.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
 -- アドミンが対象コーチ・対象月の稼働を確認した上で承認する。コーチからの申請フローは無く、
@@ -20,6 +20,12 @@
 -- 画面側（apps/admin ApprovalControlBar）でも同条件で承認ボタンを無効化しているが、
 -- 画面表示後にコーチ側の操作で状態が変わる競合を防ぐため、本RPC側でも同じ判定を行う
 -- （フロント側のチェックはUXのため、こちらが正の防御線）。
+--
+-- 【支払通知書PDF向け単価スナップショット (2026-09-13 追加)】
+-- コーチ向け月次支払通知書(PDF)の支払額(単価×総セッション数)を、承認後の単価マスタ改定
+-- から保護するため、承認時点のcom_m_session_pay_rateの値をrate_amount/rate_currencyへ
+-- 固定保存する。単価マスタは管理者のみ参照可能（RLS）だが、本関数はSECURITY DEFINERの
+-- ためRLSを経由せず直接参照できる。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.approve_coach_monthly_report(
     p_coach_id uuid,
@@ -35,6 +41,8 @@ DECLARE
     v_month date := date_trunc('month', p_report_month)::date;
     v_snapshot jsonb;
     v_unresolved_count integer;
+    v_rate_amount numeric(10, 2);
+    v_rate_currency text;
 BEGIN
     IF public.get_jwt_user_type() <> '0' THEN
         RAISE EXCEPTION 'not authorized to approve this monthly report';
@@ -63,14 +71,21 @@ BEGIN
     INTO v_snapshot
     FROM public.get_coach_monthly_sessions(p_coach_id, v_month);
 
+    SELECT rate_amount, currency_code INTO v_rate_amount, v_rate_currency
+    FROM public.com_m_session_pay_rate
+    ORDER BY update_date DESC
+    LIMIT 1;
+
     INSERT INTO public.com_t_coach_monthly_report_approval (
-        coach_id, report_month, status, session_count_snapshot, approved_by, approved_at, update_date
+        coach_id, report_month, status, session_count_snapshot, rate_amount, rate_currency, approved_by, approved_at, update_date
     ) VALUES (
-        p_coach_id, v_month, 2, v_snapshot, p_approved_by, NOW(), NOW()
+        p_coach_id, v_month, 2, v_snapshot, v_rate_amount, v_rate_currency, p_approved_by, NOW(), NOW()
     )
     ON CONFLICT (coach_id, report_month) DO UPDATE
     SET status = 2,
         session_count_snapshot = v_snapshot,
+        rate_amount = v_rate_amount,
+        rate_currency = v_rate_currency,
         approved_by = p_approved_by,
         approved_at = NOW(),
         update_date = NOW();

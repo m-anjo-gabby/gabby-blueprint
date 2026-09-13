@@ -1,4 +1,4 @@
-import { CalendarCheck, TriangleAlert } from 'lucide-react';
+import { CalendarCheck, Download, TriangleAlert } from 'lucide-react';
 import { CoachMonthlyReport } from '@gabby/types/monthlyReport';
 
 export function SummaryCard({ report }: { report: CoachMonthlyReport }) {
@@ -31,6 +31,16 @@ export function SummaryCard({ report }: { report: CoachMonthlyReport }) {
             (Completed {report.completed_count} &middot; Late cancel {report.late_cancel_count} &middot; No-show {report.no_show_count})
           </span>
         </span>
+
+        {isApproved && (
+          <a
+            href={`/api/monthly-reports/pay-notice?month=${report.report_month}`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <Download size={14} />
+            Download Pay Notice (PDF)
+          </a>
+        )}
       </div>
 
       {hasUnresolved && (
