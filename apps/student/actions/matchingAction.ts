@@ -2,8 +2,10 @@
 
 import {
   getMyLiveSessionTicketsCore,
+  getMyLiveSessionContractsCore,
   getMySlotStatusCore,
   getCoachBrowseListCore,
+  getMyBookableTicketsCore,
   createMatchingRequestCore,
   cancelMatchingRequestCore,
 } from '@gabby/lib/matching/actions/matchingActions';
@@ -11,8 +13,10 @@ import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
+  BookableTicketSlot,
   CoachBrowseItem,
   CreateMatchingRequestInput,
+  LiveSessionContractSummary,
   LiveSessionTicketSummary,
   MatchingRequestErrorCode,
   SlotStatusItem,
@@ -82,6 +86,34 @@ export async function getCountryList(): Promise<CountryMaster[]> {
     return [];
   }
   return result.countries;
+}
+
+/**
+ * ライブセッションチケット付き契約の一覧(現在有効・過去満了分の両方)を取得する
+ * （ライブセッションハブの契約切替用）
+ */
+export async function getMyLiveSessionContracts(): Promise<LiveSessionContractSummary[]> {
+  const result = await getMyLiveSessionContractsCore();
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_my_contracts_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.contracts;
+}
+
+/**
+ * 未割当チケット(キャンセル等でticket_refunded=trueとなった枠)により再予約可能な
+ * 定期スケジュール(コマ)の一覧を取得する
+ */
+export async function getMyBookableTickets(): Promise<BookableTicketSlot[]> {
+  const result = await getMyBookableTicketsCore();
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_my_bookable_tickets_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.slots;
 }
 
 /**

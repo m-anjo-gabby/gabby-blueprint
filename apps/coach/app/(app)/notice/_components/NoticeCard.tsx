@@ -8,7 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { formatZonedDate } from '@gabby/lib/date/date';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
 import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
@@ -141,7 +141,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
 
           {/* Published date */}
           <p className="text-[11px] text-slate-400 mt-1 font-bold">
-            {formatZonedDate(notice.published_at, timezone)}
+            {formatDateEn(notice.published_at, timezone)}
           </p>
         </div>
 

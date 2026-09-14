@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { addCoachStudentNote } from '@/actions/studentAction';
 import type { CoachStudentNote } from '@gabby/types/coachStudent';
 
@@ -46,7 +46,10 @@ export function CoachNotesCard({ studentId, initialNotes }: Props) {
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-bold text-slate-800">Coach Notes</CardTitle>
+        <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+          <StickyNote size={14} className="text-slate-400" />
+          Coach Notes
+        </CardTitle>
         <p className="text-[11px] text-slate-400">Private notes only visible to you. Newest first.</p>
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
@@ -75,7 +78,7 @@ export function CoachNotesCard({ studentId, initialNotes }: Props) {
             {notes.map((note) => (
               <li key={note.note_id} className="px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60">
                 <p className="text-xs text-slate-700 whitespace-pre-wrap">{note.note_text}</p>
-                <p className="text-[10px] text-slate-400 mt-1.5">{formatDateTimeByZone(note.insert_date, timezone, false)}</p>
+                <p className="text-[10px] text-slate-400 mt-1.5">{formatDateTimeEn(note.insert_date, timezone)}</p>
               </li>
             ))}
           </ul>

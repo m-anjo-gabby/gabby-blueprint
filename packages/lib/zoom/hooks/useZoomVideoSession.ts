@@ -36,6 +36,9 @@ interface UseZoomVideoSessionResult {
   isReceivingScreenShare: boolean;
   /** ホスト（コーチ）によってセッションが終了させられたか（時間切れの強制終了等）。leave/次のjoinでリセットされる */
   wasEndedByHost: boolean;
+  /** Zoom Video SDKの通話インスタンス単位ID（client.getSessionInfo().sessionId）。join成功後に確定し、leaveでnullに戻る。
+   *  sessionName(topic)とは異なり再接続のたびに変わりうる値で、入退室ログ記録の相関/デバッグ用途にのみ使う */
+  zoomSessionId: string | null;
   chatMessages: LiveSessionChatMessage[];
   errorMessage: string | null;
   /**
@@ -92,6 +95,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isReceivingScreenShare, setIsReceivingScreenShare] = useState(false);
   const [wasEndedByHost, setWasEndedByHost] = useState(false);
+  const [zoomSessionId, setZoomSessionId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<LiveSessionChatMessage[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -208,6 +212,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
 
         const currentUser = client.getCurrentUserInfo();
         selfUserIdRef.current = currentUser.userId;
+        setZoomSessionId(client.getSessionInfo().sessionId ?? null);
         const stream = client.getMediaStream();
 
         setIsBlurSupported(stream.isSupportVirtualBackground());
@@ -260,6 +265,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       setIsPeerConnected(false);
       setIsScreenSharing(false);
       setIsReceivingScreenShare(false);
+      setZoomSessionId(null);
     }
   }, []);
 
@@ -376,6 +382,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
     isScreenSharing,
     isReceivingScreenShare,
     wasEndedByHost,
+    zoomSessionId,
     chatMessages,
     errorMessage,
     join,

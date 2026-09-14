@@ -1,16 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Eye, Loader2 } from 'lucide-react';
-import { AvatarCropUploader } from '@gabby/lib/components/common/AvatarCropUploader';
-import { VideoUploader } from '@gabby/lib/components/common/VideoUploader';
-import { TimezoneSelector } from '@gabby/lib/components/common/TimezoneSelector';
-import { CoachProfileDialog } from '@gabby/lib/components/common/CoachProfileDialog';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVideoUrl';
 import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
@@ -19,7 +9,6 @@ import {
   removeProfileIcon,
   updateMyTimezone,
   updateMyCoachProfile,
-  updateMyCoachZoomSettings,
   uploadCoachIntroVideo,
   removeCoachIntroVideo,
 } from '@/actions/coachProfileAction';
@@ -28,6 +17,10 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { CountryMaster } from '@gabby/types/country';
 import { CoachProfileFormValues, CoachProfileRecord } from '@gabby/types/coachProfile';
+import { getCoachProfileCompleteness } from '../_lib/profileCompleteness';
+import { AccountSummaryCard } from './AccountSummaryCard';
+import { PublicProfileForm } from './PublicProfileForm';
+import { LivePreviewPanel } from './LivePreviewPanel';
 
 interface ProfileViewProps {
   userName: string;
@@ -92,10 +85,7 @@ export function ProfileView({
   // Gabby Coach Since はアカウント作成日から自動設定される読み取り専用項目のため、フォームとは別に保持する
   const [coachSince, setCoachSince] = useState(initialCoachProfile?.coach_since ?? null);
   const [introVideoPath, setIntroVideoPath] = useState(initialCoachProfile?.intro_video_path ?? null);
-  const [zoomMeetingUrl, setZoomMeetingUrl] = useState(initialCoachProfile?.zoom_meeting_url ?? '');
   const [isSavingCoachProfile, setIsSavingCoachProfile] = useState(false);
-  const [isSavingZoomSettings, setIsSavingZoomSettings] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
   const { showToast } = useToast();
@@ -185,20 +175,10 @@ export function ProfileView({
     }
   };
 
-  const handleSaveZoomSettings = async () => {
-    setIsSavingZoomSettings(true);
-    try {
-      const result = await updateMyCoachZoomSettings({ zoom_meeting_url: zoomMeetingUrl || null });
-      if (!result.success) {
-        showToast(result.message, 'error');
-        return;
-      }
-      setZoomMeetingUrl(result.profile.zoom_meeting_url ?? '');
-      showToast('Live session settings updated successfully', 'success');
-    } finally {
-      setIsSavingZoomSettings(false);
-    }
-  };
+  const completionPercent = useMemo(
+    () => getCoachProfileCompleteness(coachProfileForm, !!introVideoPath),
+    [coachProfileForm, introVideoPath]
+  );
 
   const previewData = {
     userName,
@@ -215,208 +195,50 @@ export function ProfileView({
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Information</CardTitle>
-          <CardDescription>You can update your icon image here. Your name cannot be changed.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <AvatarCropUploader
-            currentImageUrl={getProfileIconUrl(iconPath)}
-            onUpload={handleUpload}
-            onRemove={handleRemove}
+    <div className="flex flex-col gap-6">
+      <AccountSummaryCard
+        userName={userName}
+        clientName={clientName}
+        userTypeLabel={userTypeLabel}
+        iconUrl={getProfileIconUrl(iconPath)}
+        onUploadIcon={handleUpload}
+        onRemoveIcon={handleRemove}
+        timezone={timezone}
+        timezones={timezones}
+        onTimezoneChange={handleTimezoneChange}
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
+        <PublicProfileForm
+          countries={countries}
+          form={coachProfileForm}
+          onFieldChange={handleCoachProfileFieldChange}
+          coachSinceLabel={formatCoachSinceLabel(coachSince)}
+          introVideoUrl={getCoachIntroVideoUrl(introVideoPath)}
+          introVideoPath={introVideoPath}
+          onUploadIntroVideo={handleUploadIntroVideo}
+          onRemoveIntroVideo={handleRemoveIntroVideo}
+          onSave={handleSaveCoachProfile}
+          isSaving={isSavingCoachProfile}
+          completionPercent={completionPercent}
+        />
+
+        <div className="lg:sticky lg:top-6">
+          <LivePreviewPanel
+            data={previewData}
             labels={{
-              modalTitle: 'Adjust Icon Image',
-              cancelLabel: 'Cancel',
-              applyLabel: 'Save',
-              uploadingLabel: 'Saving...',
-              removeLabel: 'Remove Image',
-              invalidFileLabel: 'Please select a PNG, JPEG, or WebP image up to 5MB.',
+              closeLabel: 'Close',
+              coachSince: 'Gabby Coach Since',
+              education: 'Education',
+              qualifications: 'Qualifications',
+              englishTeaching: 'English Teaching',
+              jobExperience: 'Job Experience',
+              personalIntroduction: 'Personal Introduction',
+              introVideo: 'Introduction Video',
             }}
           />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Name</Label>
-              <Input value={userName} disabled />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Affiliation</Label>
-              <Input value={clientName ?? '-'} disabled />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Role</Label>
-              <Input value={userTypeLabel} disabled />
-            </div>
-            <div className="space-y-1.5">
-              <TimezoneSelector
-                value={timezone}
-                timezones={timezones}
-                onChange={handleTimezoneChange}
-                displayField="display_name_en"
-                labels={{ label: 'Timezone', currentTimeLabel: 'Current time' }}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle>Public Coach Profile</CardTitle>
-            <CardDescription>
-              These details are shown to students when they choose a coach. Fill them in to help students get to know you.
-            </CardDescription>
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(true)}>
-            <Eye size={14} /> Preview
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Nationality</Label>
-              <select
-                value={coachProfileForm.country_code ?? ''}
-                onChange={(e) => handleCoachProfileFieldChange('country_code', e.target.value || null)}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
-              >
-                <option value="">(Not set)</option>
-                {countries.map((country) => (
-                  <option key={country.country_code} value={country.country_code}>
-                    {country.name_en}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Gabby Coach Since</Label>
-              <Input value={formatCoachSinceLabel(coachSince) ?? '-'} disabled />
-            </div>
-            <div className="space-y-1.5">
-              <Label>English Teaching (years)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={60}
-                value={coachProfileForm.teaching_years ?? ''}
-                onChange={(e) =>
-                  handleCoachProfileFieldChange('teaching_years', e.target.value === '' ? null : Number(e.target.value))
-                }
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Education</Label>
-            <Textarea
-              rows={2}
-              value={coachProfileForm.education ?? ''}
-              onChange={(e) => handleCoachProfileFieldChange('education', e.target.value || null)}
-              placeholder="e.g. University of Alberta - Bachelor of Science in Nursing"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Qualifications</Label>
-            <Textarea
-              rows={2}
-              value={coachProfileForm.qualifications ?? ''}
-              onChange={(e) => handleCoachProfileFieldChange('qualifications', e.target.value || null)}
-              placeholder="e.g. TESOL Certificate"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Job Experience</Label>
-            <Textarea
-              rows={2}
-              value={coachProfileForm.job_experience ?? ''}
-              onChange={(e) => handleCoachProfileFieldChange('job_experience', e.target.value || null)}
-              placeholder="e.g. Professional communication & medical vocabulary"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Personal Introduction</Label>
-            <Textarea
-              rows={5}
-              value={coachProfileForm.introduction ?? ''}
-              onChange={(e) => handleCoachProfileFieldChange('introduction', e.target.value || null)}
-              placeholder="Tell students a bit about yourself and your teaching style."
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Introduction Video</Label>
-            <VideoUploader
-              currentVideoUrl={getCoachIntroVideoUrl(introVideoPath)}
-              onUpload={handleUploadIntroVideo}
-              onRemove={handleRemoveIntroVideo}
-              labels={{
-                emptyLabel: 'No video uploaded',
-                uploadLabel: introVideoPath ? 'Replace Video' : 'Upload Video',
-                uploadingLabel: 'Uploading...',
-                removeLabel: 'Remove Video',
-                invalidFileLabel: 'Please select an MP4, WebM, or MOV video up to 100MB.',
-              }}
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="button" onClick={handleSaveCoachProfile} disabled={isSavingCoachProfile}>
-              {isSavingCoachProfile && <Loader2 size={14} className="animate-spin" />}
-              Save Public Profile
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Live Session Settings</CardTitle>
-          <CardDescription>
-            This link is used for your 1-on-1 live sessions with matched students. It is not shown on your public profile.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-1.5">
-            <Label>Zoom Meeting URL</Label>
-            <Input
-              type="url"
-              value={zoomMeetingUrl}
-              onChange={(e) => setZoomMeetingUrl(e.target.value)}
-              placeholder="https://zoom.us/j/xxxxxxxxxx"
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="button" onClick={handleSaveZoomSettings} disabled={isSavingZoomSettings}>
-              {isSavingZoomSettings && <Loader2 size={14} className="animate-spin" />}
-              Save Live Session Settings
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {showPreview && (
-        <CoachProfileDialog
-          data={previewData}
-          labels={{
-            closeLabel: 'Close',
-            coachSince: 'Gabby Coach Since',
-            education: 'Education',
-            qualifications: 'Qualifications',
-            englishTeaching: 'English Teaching',
-            jobExperience: 'Job Experience',
-            personalIntroduction: 'Personal Introduction',
-            introVideo: 'Introduction Video',
-          }}
-          onClose={() => setShowPreview(false)}
-        />
-      )}
-    </>
+        </div>
+      </div>
+    </div>
   );
 }

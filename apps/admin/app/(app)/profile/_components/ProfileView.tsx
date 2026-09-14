@@ -81,6 +81,8 @@ export function ProfileView({ userName, clientName, userTypeLabel, initialIconPa
             uploadingLabel: '保存中...',
             removeLabel: '画像を削除',
             invalidFileLabel: 'PNG・JPEG・WebP形式、5MB以下の画像を選択してください。',
+            removeConfirmTitle: 'アイコン画像を削除しますか？',
+            removeConfirmMessage: '削除すると元に戻せません。',
           }}
         />
 

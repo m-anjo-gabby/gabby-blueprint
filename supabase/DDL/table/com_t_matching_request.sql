@@ -102,3 +102,32 @@ WITH CHECK (student_id = auth.uid() AND status = 4);
 
 -- 承認/否認（status: 1→2, 1→3）は approve_matching_request() / reject_matching_request()
 -- （SECURITY DEFINER）からのみ実行可能。コーチによる直接UPDATEは許可しない。
+
+---------------------------------------------
+-- 追加パッチ: コーチ交代によるリクエスト終了ステータス追加 (2026-09-08)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 契約途中でのコーチ交代（アドミンのライブセッション管理画面から実行）は、承認済み
+-- (status=2)のリクエストを終了させ、同じ(ticket_id, slot_no)に対して生徒が新しいコーチへ
+-- 再度リクエストできるようにする必要がある。既存のstatus=4(cancelled)は「一度も
+-- 成立しなかった申請を生徒が取り消した」ことを表す値のため、「一度承認されて稼働した後、
+-- 運用都合で終了した」ケースに流用すると、過去の記録から両者を区別できなくなり監査上
+-- 好ましくない。そのため専用の値を新設する。
+ALTER TABLE public.com_t_matching_request DROP CONSTRAINT IF EXISTS chk_matching_request_status;
+ALTER TABLE public.com_t_matching_request ADD CONSTRAINT chk_matching_request_status CHECK (status IN (1, 2, 3, 4, 5));
+
+ALTER TABLE public.com_t_matching_request DROP CONSTRAINT IF EXISTS chk_matching_request_status_fields;
+ALTER TABLE public.com_t_matching_request ADD CONSTRAINT chk_matching_request_status_fields CHECK (
+    (status = 1 AND responded_by IS NULL AND responded_at IS NULL AND reject_reason IS NULL)
+    OR
+    (status = 2 AND responded_by IS NOT NULL AND responded_at IS NOT NULL)
+    OR
+    (status = 3 AND responded_by IS NOT NULL AND responded_at IS NOT NULL AND reject_reason IS NOT NULL)
+    OR
+    (status = 4)
+    OR
+    (status = 5 AND responded_by IS NOT NULL AND responded_at IS NOT NULL)
+);
+
+COMMENT ON COLUMN public.com_t_matching_request.status IS 'ステータス 1:pending(承認待ち) 2:approved(承認) 3:rejected(否認) 4:cancelled(生徒による取消) 5:ended(コーチ交代等によりアドミンが終了)';

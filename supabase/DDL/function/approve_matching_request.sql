@@ -22,6 +22,10 @@
 -- (coach_id, day_of_week)単位のトランザクションアドバイザリロックを取得し、同一コーチ×
 -- 同一曜日への承認処理を直列化する（コミット/ロールバックで自動解放。本関数内で取得する
 -- ロックは常にこの1本のみのため、デッドロックの起こりようがない）。
+--
+-- 【通知 (2026-09-09追加)】
+-- 承認完了時、生徒へマッチング成立を通知する(MATCHING_APPROVED)。コーチは自ら承認操作を
+-- 行っているため通知不要。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
 RETURNS uuid
@@ -36,6 +40,7 @@ DECLARE
     v_start_date date;
     v_coach_timezone text;
     v_schedule_id uuid;
+    v_coach_name text;
 BEGIN
     SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -94,6 +99,16 @@ BEGIN
     WHERE request_id = p_request_id;
 
     PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id);
+
+    -- 生徒へ、マッチング成立を通知する（コーチは自ら承認操作を行ったため通知不要）
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        v_request.student_id,
+        'MATCHING_APPROVED',
+        jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id),
+        '/live-room'
+    );
 
     RETURN v_schedule_id;
 END;

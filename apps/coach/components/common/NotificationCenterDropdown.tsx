@@ -17,7 +17,7 @@ import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
-import { formatZonedDate } from '@gabby/lib/date/date';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
 import { NOTIFICATION_TYPES, NotificationType } from '@gabby/types/notification';
@@ -244,7 +244,7 @@ export function NotificationCenterDropdown() {
                             </p>
 
                             <p className="text-[10px] text-slate-400 mt-1 font-bold">
-                              {formatZonedDate(notice.published_at, timezone)}
+                              {formatDateEn(notice.published_at, timezone)}
                             </p>
                           </div>
                         </button>
@@ -337,7 +337,7 @@ export function NotificationCenterDropdown() {
                                 {text.body}
                               </p>
                               <p className="text-[10px] text-slate-400 mt-1 font-bold">
-                                {formatZonedDate(notification.occurred_at, timezone)}
+                                {formatDateEn(notification.occurred_at, timezone)}
                               </p>
                             </div>
                           </button>

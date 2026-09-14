@@ -116,3 +116,56 @@ CREATE POLICY "Coaches can view contracts of their students' licenses" ON public
 FOR SELECT TO authenticated USING (
     public.is_coach_of_contract_license(com_m_contract.contract_id)
 );
+
+---------------------------------------------
+-- 追加パッチ: 契約作成のプラン一本化、プラン英語名・ダイアログプラクティス対応 (2026-09-08)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+-- 前提: table/com_m_contract_plan.sql / DML/com_m_contract_plan.sql の同日パッチが
+--       適用済みであること。
+---------------------------------------------
+-- 【背景】
+-- これまで契約作成時は「契約タイプ（Blueprintのみ/ライブセッション付き）」と
+-- 「プラン」を別々に選択する必要があり、後者は前者がライブセッション付きの場合のみ
+-- 表示される煩雑なUIになっていた。今後はプラン選択のみで契約タイプ・週回数・
+-- チケット数・ダイアログプラクティス提供有無が一意に決まるよう一本化し、
+-- plan_id を必須参照に変更する。選択したプランの値は契約側にコピーされ、
+-- 期間・数値・名称は契約ごとに個別調整できるハイブリッド方式を維持する
+-- （weekly_frequency/total_sessionsで既に採用している方式と同じ）。
+ALTER TABLE public.com_m_contract
+  ADD COLUMN IF NOT EXISTS plan_name_en text,
+  ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
+
+-- 既存契約（本パッチ適用時点では本番はBlueprintのみ契約=contract_type 1、plan_id NULLの
+-- みが存在する想定）を対応するプランマスタ行へ紐付ける。contract_type=2でplan_idが
+-- 未設定の個別交渉契約が万一存在する場合はこのUPDATEの対象外となり、後続のNOT NULL化で
+-- 意図的にエラーとして検出される（該当契約へ手動でplan_idを設定してから再実行すること）。
+UPDATE public.com_m_contract c
+SET plan_id = p.plan_id,
+    plan_name_en = p.plan_name_en
+FROM public.com_m_contract_plan p
+WHERE c.plan_id IS NULL AND c.contract_type = 1 AND p.plan_code = 'BLUEPRINT_ONLY';
+
+-- 既にplan_idが設定済みの契約（開発環境で検証中のLive契約等）は、プランマスタの正しい
+-- 英語名をそのまま引き継ぐ（日本語名の暫定コピーより優先する）
+UPDATE public.com_m_contract c
+SET plan_name_en = p.plan_name_en
+FROM public.com_m_contract_plan p
+WHERE c.plan_id = p.plan_id AND c.plan_name_en IS NULL;
+
+-- 上記2つのUPDATEでも埋まらなかった行（plan_idが未設定のまま残っているcontract_type=2の
+-- 個別交渉契約が万一存在する場合）だけ、最終フォールバックとして日本語名を暫定コピーする。
+-- そのような行が存在する場合、直後のNOT NULL化(plan_id)は意図的に失敗するため、
+-- 事前に以下で該当契約の有無を確認し、あれば先にplan_idを手動設定してから本パッチを
+-- 実行すること: SELECT contract_id, contract_type, plan_name FROM com_m_contract WHERE plan_id IS NULL;
+UPDATE public.com_m_contract SET plan_name_en = plan_name WHERE plan_name_en IS NULL;
+ALTER TABLE public.com_m_contract ALTER COLUMN plan_name_en SET NOT NULL;
+ALTER TABLE public.com_m_contract ALTER COLUMN plan_id SET NOT NULL;
+
+COMMENT ON COLUMN public.com_m_contract.plan_name_en IS 'プラン名称（表示・制御用、英語。coachアプリでの表示用）';
+COMMENT ON COLUMN public.com_m_contract.plan_id IS '契約プランマスタ参照（com_m_contract_plan）。契約作成時は必須選択で、他の実値カラムはここからのコピーを起点に個別調整する';
+COMMENT ON COLUMN public.com_m_contract.has_dialogue_practice IS 'ダイアログプラクティスの提供有無（自主トレ・コーチとのセッション両方での利用可否に使う）。プラン選択時にマスタ値をコピー、契約側で上書き可';
+
+ALTER TABLE public.com_m_contract DROP CONSTRAINT IF EXISTS chk_contract_dialogue_requires_coach;
+ALTER TABLE public.com_m_contract ADD CONSTRAINT chk_contract_dialogue_requires_coach CHECK (
+    NOT has_dialogue_practice OR contract_type = 2
+);

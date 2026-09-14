@@ -5,6 +5,11 @@
 -- 【背景】
 -- コーチがマッチングリクエストを否認する唯一の入口。否認理由の入力を必須とする。
 -- com_t_matching_request への直接UPDATEはRLSで許可していないため、必ず本関数を通す。
+--
+-- 【通知 (2026-09-09追加)】
+-- 否認完了時、生徒へ通知する(MATCHING_REJECTED)。否認理由(p_reason)はコーチが
+-- 生徒への配慮なく入力する場合もあるため、通知本文にはそのまま転記せず、
+-- 柔らかい定型文のみとする（理由の詳細は生徒がアプリ側の変更履歴等で別途確認する想定）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.reject_matching_request(p_request_id uuid, p_reason text)
 RETURNS void
@@ -14,6 +19,7 @@ SET search_path = public
 AS $$
 DECLARE
     v_request RECORD;
+    v_coach_name text;
 BEGIN
     IF p_reason IS NULL OR length(trim(p_reason)) = 0 THEN
         RAISE EXCEPTION 'reject_reason is required';
@@ -35,6 +41,15 @@ BEGIN
     UPDATE public.com_t_matching_request
     SET status = 3, reject_reason = p_reason, responded_by = auth.uid(), responded_at = NOW(), update_date = NOW()
     WHERE request_id = p_request_id;
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        v_request.student_id,
+        'MATCHING_REJECTED',
+        jsonb_build_object('coach_name', v_coach_name),
+        '/coach-matching'
+    );
 END;
 $$;
 

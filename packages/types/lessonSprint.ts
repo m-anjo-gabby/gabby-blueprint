@@ -27,6 +27,8 @@ export interface LessonSprintContentSummary {
 /** Lesson Sprint結果登録用の入力ペイロード */
 export interface CreateLessonSprintResultInput {
   student_id: string;
+  /** 実施したライブセッション (com_t_session.session_id)。単独実施（外部Zoom等）の場合はnull */
+  session_id: string | null;
   sprint_type: string;
   content_id: string;
   question_type: SprintQuestionType;
@@ -43,6 +45,8 @@ export interface CreateLessonSprintResultInput {
 /** Student Overview画面のLesson Sprint履歴一覧に表示する簡易レコード（教材名を含む） */
 export interface LessonSprintHistoryListItem {
   lesson_sprint_id: string;
+  /** 実施したライブセッション。単独実施の場合はnull（セッション準備/実施ハブで「前回の実施」を絞り込む際に使用） */
+  session_id: string | null;
   content_id: string;
   content_name: string;
   content_name_en: string | null;
@@ -60,6 +64,7 @@ export interface LessonSprintRecord {
   lesson_sprint_id: string;
   coach_id: string;
   student_id: string;
+  session_id: string | null;
   sprint_type: string;
   content_id: string;
   question_type: string;

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, Plus, X as XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,20 +15,37 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { generateLessonStartTimeOptions } from '@gabby/lib/date/date';
-import { cancelSession, rescheduleSession } from '@/actions/sessionAction';
-import { getMyAvailability } from '@/actions/availabilityAction';
-import { CoachAvailabilitySlot } from '@gabby/types/coachAvailability';
-import { SessionListItem } from '@gabby/types/session';
+import { cancelSession, resolveStaleSession } from '@/actions/sessionAction';
+import { SESSION_STATUS, SessionListItem, SessionStatus } from '@gabby/types/session';
+import type { ProposedSlotInput } from '@gabby/types/session';
+
+// セッション枠は30分単位（実施自体は25分）のため、提案時間も同じ粒度に揃える。
+// 一日全体を対象にするのは、コーチが今回限りの候補として通常のAvailability外の
+// 時間も提案できるようにするため（Availability自体はこの一覧の生成に使わない）。
+const PROPOSED_TIME_OPTIONS = generateLessonStartTimeOptions('00:00', '23:59');
 
 export interface SessionActionTarget {
   session: SessionListItem;
-  mode: 'cancel' | 'reschedule';
+  mode: 'cancel' | 'resolve';
 }
+
+const RESOLVE_STATUS_OPTIONS: { value: SessionStatus; label: string }[] = [
+  { value: SESSION_STATUS.COMPLETED, label: 'Completed (conducted outside the app)' },
+  { value: SESSION_STATUS.EARLY_ENDED, label: 'Ended early' },
+  { value: SESSION_STATUS.NO_SHOW, label: 'No-show' },
+];
+
+const MAX_PROPOSED_SLOTS = 3;
 
 interface SessionActionDialogProps {
   target: SessionActionTarget | null;
   onClose: () => void;
   onResolved: (sessionId: string, patch: Partial<SessionListItem>) => void;
+}
+
+interface ProposedSlotDraft {
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
 }
 
 function tomorrowIsoDate(): string {
@@ -37,64 +54,72 @@ function tomorrowIsoDate(): string {
   return d.toISOString().slice(0, 10);
 }
 
-function localDayOfWeek(dateStr: string): number {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d).getDay();
-}
-
 export function SessionActionDialog({ target, onClose, onResolved }: SessionActionDialogProps) {
   const [reason, setReason] = useState('');
-  const [availability, setAvailability] = useState<CoachAvailabilitySlot[]>([]);
-  const [newDate, setNewDate] = useState(tomorrowIsoDate());
-  const [newStartTime, setNewStartTime] = useState<string | null>(null);
+  const [proposedSlots, setProposedSlots] = useState<ProposedSlotDraft[]>([]);
+  const [resolvedStatus, setResolvedStatus] = useState<SessionStatus>(SESSION_STATUS.COMPLETED);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
-    if (target?.mode === 'reschedule') {
-      setNewDate(tomorrowIsoDate());
-      setNewStartTime(null);
-      getMyAvailability().then(setAvailability);
-    }
     setReason('');
+    setProposedSlots([]);
+    if (target?.mode === 'resolve') {
+      setResolvedStatus(SESSION_STATUS.COMPLETED);
+    }
   }, [target]);
 
-  const startTimeOptions = useMemo(() => {
-    if (!target || target.mode !== 'reschedule') return [];
-    const dow = localDayOfWeek(newDate);
-    return availability
-      .filter((a) => a.day_of_week === dow)
-      .flatMap((a) => generateLessonStartTimeOptions(a.start_time, a.end_time));
-  }, [target, availability, newDate]);
+  const addProposedSlot = () => {
+    setProposedSlots((prev) => (prev.length >= MAX_PROPOSED_SLOTS ? prev : [...prev, { date: tomorrowIsoDate(), time: '' }]));
+  };
+
+  const updateProposedSlot = (index: number, patch: Partial<ProposedSlotDraft>) => {
+    setProposedSlots((prev) => prev.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)));
+  };
+
+  const removeProposedSlot = (index: number) => {
+    setProposedSlots((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleCancel = async () => {
     if (!target) return;
     setIsSubmitting(true);
     try {
-      const result = await cancelSession(target.session.session_id, reason);
+      const validSlots = proposedSlots.filter((s) => s.date && s.time);
+      const duration = new Date(target.session.end_datetime).getTime() - new Date(target.session.start_datetime).getTime();
+      const proposedSlotInputs: ProposedSlotInput[] = validSlots.map((s) => {
+        const start = new Date(`${s.date}T${s.time}:00`);
+        const end = new Date(start.getTime() + duration);
+        return { start_datetime: start.toISOString(), end_datetime: end.toISOString() };
+      });
+
+      const result = await cancelSession(target.session.session_id, reason, proposedSlotInputs);
       if (!result.success) {
         showToast(result.message, 'error');
         return;
       }
       onResolved(target.session.session_id, { status: 4, cancel_reason: reason || null });
-      showToast('Session cancelled.', 'success');
+      showToast(
+        proposedSlotInputs.length > 0 ? 'Session cancelled. Your proposed times were sent to the student.' : 'Session cancelled.',
+        'success'
+      );
       onClose();
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleReschedule = async () => {
-    if (!target || !newStartTime) return;
+  const handleResolve = async () => {
+    if (!target || !reason.trim()) return;
     setIsSubmitting(true);
     try {
-      const result = await rescheduleSession(target.session.session_id, newDate, newStartTime, reason);
+      const result = await resolveStaleSession(target.session.session_id, resolvedStatus, reason);
       if (!result.success) {
         showToast(result.message, 'error');
         return;
       }
-      onResolved(target.session.session_id, { status: 5, cancel_reason: reason || null });
-      showToast('Session rescheduled. The calendar will refresh shortly.', 'success');
+      onResolved(target.session.session_id, { status: resolvedStatus });
+      showToast('Session resolved.', 'success');
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -109,13 +134,71 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
             <DialogHeader>
               <DialogTitle>Cancel Session</DialogTitle>
               <DialogDescription>
-                Cancel your lesson with {target.session.counterpart_name}. This does not consume the student&apos;s session ticket.
+                Cancel your lesson with {target.session.counterpart_name}.
               </DialogDescription>
             </DialogHeader>
+            <p className="text-xs rounded-lg px-3 py-2 border text-emerald-700 bg-emerald-50 border-emerald-100">
+              As the coach, the student&apos;s ticket is always refunded. Booking a new time is up to the
+              student — you can optionally suggest times below, but the choice is theirs.
+            </p>
             <div className="space-y-1.5">
               <Label>Reason (optional)</Label>
               <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. I'm unable to make this time." />
             </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Propose alternative times (optional, up to {MAX_PROPOSED_SLOTS})</Label>
+                {proposedSlots.length < MAX_PROPOSED_SLOTS && (
+                  <Button type="button" size="sm" variant="outline" onClick={addProposedSlot}>
+                    <Plus size={13} />
+                    Add time
+                  </Button>
+                )}
+              </div>
+              {proposedSlots.length === 0 ? (
+                <p className="text-[11px] text-slate-400">
+                  These don&apos;t have to be within your usual availability — offer any time that works for you this once.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {proposedSlots.map((slot, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        min={tomorrowIsoDate()}
+                        value={slot.date}
+                        onChange={(e) => updateProposedSlot(index, { date: e.target.value })}
+                        className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+                      />
+                      <select
+                        value={slot.time}
+                        onChange={(e) => updateProposedSlot(index, { time: e.target.value })}
+                        className="flex h-9 w-28 rounded-md border border-input bg-transparent px-2 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+                      >
+                        <option value="" disabled>
+                          Time
+                        </option>
+                        {PROPOSED_TIME_OPTIONS.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => removeProposedSlot(index)}
+                        className="shrink-0 text-slate-400 hover:text-rose-500 transition-colors p-1"
+                        title="Remove"
+                      >
+                        <XIcon size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Back
@@ -128,61 +211,43 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
           </>
         )}
 
-        {target?.mode === 'reschedule' && (
+        {target?.mode === 'resolve' && (
           <>
             <DialogHeader>
-              <DialogTitle>Reschedule Session</DialogTitle>
+              <DialogTitle>Resolve Session</DialogTitle>
               <DialogDescription>
-                Move your lesson with {target.session.counterpart_name} to a new date and time within your availability.
+                This session with {target.session.counterpart_name} is past its scheduled end time but still shows as
+                scheduled (e.g. it was conducted outside the app, or the End Session button was never pressed). Record
+                what actually happened.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>New date</Label>
-                <input
-                  type="date"
-                  min={tomorrowIsoDate()}
-                  value={newDate}
-                  onChange={(e) => {
-                    setNewDate(e.target.value);
-                    setNewStartTime(null);
-                  }}
+                <Label>Outcome</Label>
+                <select
+                  value={resolvedStatus}
+                  onChange={(e) => setResolvedStatus(Number(e.target.value) as SessionStatus)}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>New start time</Label>
-                {startTimeOptions.length === 0 ? (
-                  <p className="text-xs text-rose-600">You have no declared availability on this day.</p>
-                ) : (
-                  <select
-                    value={newStartTime ?? ''}
-                    onChange={(e) => setNewStartTime(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
-                  >
-                    <option value="" disabled>
-                      Select a time
+                >
+                  {RESOLVE_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
-                    {startTimeOptions.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                  ))}
+                </select>
               </div>
               <div className="space-y-1.5">
-                <Label>Reason (optional)</Label>
-                <Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
+                <Label>Reason (required)</Label>
+                <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Conducted the lesson over a direct Zoom call instead." />
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Back
               </Button>
-              <Button type="button" onClick={handleReschedule} disabled={isSubmitting || !newStartTime}>
+              <Button type="button" onClick={handleResolve} disabled={isSubmitting || !reason.trim()}>
                 {isSubmitting && <Loader2 size={14} className="animate-spin" />}
-                Reschedule
+                Resolve
               </Button>
             </DialogFooter>
           </>

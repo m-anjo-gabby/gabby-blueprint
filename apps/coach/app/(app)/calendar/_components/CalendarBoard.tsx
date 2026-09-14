@@ -19,7 +19,7 @@ import { getMySessions } from '@/actions/sessionAction';
 import { getMyCalendarEvents } from '@/actions/calendarEventAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { SessionListItem, SESSION_STATUS } from '@gabby/types/session';
+import { SessionListItem, SESSION_STATUS, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
 import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
@@ -55,7 +55,9 @@ export function CalendarBoard() {
         getMySessions(rangeStart.toISOString(), rangeEnd.toISOString()),
         getMyCalendarEvents(rangeStart.toISOString(), rangeEnd.toISOString()),
       ]);
-      setSessions(sessionData);
+      // キャンセル済み・振替元・ライセンス無効化による自動キャンセルはカレンダーに出さない
+      // （振替後の新しいコマや、別の生徒の予約が同じ枠に入るケースがありノイズになるため）
+      setSessions(sessionData.filter((s) => !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status)));
       setEvents(eventData);
     } finally {
       setIsLoading(false);

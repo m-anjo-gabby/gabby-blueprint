@@ -23,8 +23,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Users, UserPlus, Trash2, Loader2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
-import { getLicenseAssignmentUsers, assignLicenseToUser, removeLicenseFromUser } from '@/actions/adminContractAction'
+import { Users, UserPlus, Ban, Loader2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
+import { getLicenseAssignmentUsers, assignLicenseToUser, invalidateUserLicense } from '@/actions/adminContractAction'
 import { useToast } from '@gabby/lib/hooks/useToast'
 import { LicenseUserItem, ContractDetail } from '@gabby/types/contract'
 import { startOfDay } from 'date-fns'
@@ -80,17 +80,17 @@ export function ContractLicenseDialog({ contract, children }: Props) {
   // --- ハンドラー ---
 
   /**
-   * ライセンス解除
+   * ライセンス無効化
    */
-  const handleRemove = async (userId: string) => {
+  const handleInvalidate = async (licenseId: string) => {
     setLoading(true)
     try {
-      const res = await removeLicenseFromUser(contract.contract_id, userId)
+      const res = await invalidateUserLicense(licenseId)
       if (res.success) {
-        showToast('ライセンスを解除しました', 'success')
+        showToast('ライセンスを無効化しました', 'success')
         await loadData()
       } else {
-        showToast(res.message || '解除に失敗しました', 'error')
+        showToast(res.message || '無効化に失敗しました', 'error')
         setLoading(false)
       }
     } catch {
@@ -266,12 +266,23 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {assignedUsers.map(user => (
-                      <div key={user.id} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm group">
+                    {assignedUsers.map(user => {
+                      const isInvalidated = user.license_status === 0;
+                      return (
+                      <div key={user.id} className={`flex items-center justify-between p-3 border rounded-xl group ${isInvalidated ? 'bg-slate-50 opacity-60' : 'bg-white shadow-sm'}`}>
                         <div className="flex items-center gap-3 overflow-hidden">
-                          <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                          {isInvalidated ? (
+                            <Ban size={16} className="text-slate-400 shrink-0" />
+                          ) : (
+                            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                          )}
                           <div className="overflow-hidden">
-                            <p className="text-sm font-bold text-slate-800 truncate">{user.user_name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-bold text-slate-800 truncate">{user.user_name}</p>
+                              {isInvalidated && (
+                                <span className="shrink-0 text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">無効化済み</span>
+                              )}
+                            </div>
                             <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
                           </div>
                           {contract.contract_type === 2 && user.ticket && (
@@ -281,12 +292,12 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                           )}
                         </div>
 
-                        {/* 解除確認ダイアログ（有効契約時のみ） */}
-                        {!isExpired && (
+                        {/* 無効化確認ダイアログ（有効契約かつ未無効化の場合のみ） */}
+                        {!isExpired && user.license_id && !isInvalidated && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm" disabled={loading} className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors">
-                                <Trash2 size={16} />
+                                <Ban size={16} />
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
@@ -295,18 +306,19 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                                   <AlertCircle size={32} />
                                 </div>
                                 <div className="text-center space-y-2">
-                                  <AlertDialogTitle className="text-xl font-black text-slate-800">ライセンス解除の確認</AlertDialogTitle>
+                                  <AlertDialogTitle className="text-xl font-black text-slate-800">ライセンス無効化の確認</AlertDialogTitle>
                                   <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
-                                    {user.user_name} さんのライセンスを解除します。<br />
-                                    解除後は即座にシステムへのアクセスができなくなります。<br />
+                                    {user.user_name} さんのライセンスを無効化します。<br />
+                                    即座にシステムへのアクセスができなくなり、未実施の今後のセッションもキャンセルされます。<br />
+                                    実施済みのセッション履歴・チャット・宿題は削除されず残ります。チケット消化数も元に戻りません。<br />
                                     この操作を実行してもよろしいですか？
                                   </AlertDialogDescription>
                                 </div>
                               </AlertDialogHeader>
                               <AlertDialogFooter className="flex gap-3 sm:justify-center mt-6">
                                 <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">キャンセル</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleRemove(user.id)}
+                                <AlertDialogAction
+                                  onClick={() => handleInvalidate(user.license_id!)}
                                   className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 border-none"
                                 >
                                   実行する
@@ -316,7 +328,8 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                           </AlertDialog>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </ScrollArea>

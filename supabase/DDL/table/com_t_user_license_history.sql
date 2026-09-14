@@ -50,3 +50,15 @@ FOR SELECT TO authenticated USING (
         WHERE client_id = public.get_jwt_client_id()
     )
 );
+
+---------------------------------------------
+-- 追加パッチ: ダイアログプラクティス利用可否のスナップショット追加 (2026-09-08)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+-- 前提: table/com_t_user_license.sql の同日パッチ（has_dialogue_practice追加）が適用済みであること。
+---------------------------------------------
+-- 「いつからこの生徒はダイアログプラクティスが利用可能になったか」を後から追跡できるよう、
+-- 割当/更新/解除のたびにcom_t_user_license.has_dialogue_practiceの値をスナップショットする。
+ALTER TABLE public.com_t_user_license_history
+  ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.com_t_user_license_history.has_dialogue_practice IS '記録時点でのダイアログプラクティス利用可否';

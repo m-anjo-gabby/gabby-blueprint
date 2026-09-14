@@ -17,14 +17,17 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getMySessions } from '@/actions/sessionAction';
 import { getMyCalendarEvents } from '@/actions/calendarEventAction';
+import { getMyBookableTickets } from '@/actions/matchingAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { SessionListItem, SESSION_STATUS } from '@gabby/types/session';
+import { SessionListItem, SESSION_STATUS, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
 import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
+import { BookableTicketSlot } from '@gabby/types/matching';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from './SessionActionDialog';
 import { DayDetailDrawer } from './DayDetailDrawer';
+import { BookMakeupSessionDialog } from './BookMakeupSessionDialog';
 
 const WEEKDAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
 const MAX_VISIBLE_CHIPS = 2;
@@ -44,6 +47,8 @@ export function CalendarBoard() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
+  const [bookableSlots, setBookableSlots] = useState<BookableTicketSlot[]>([]);
+  const [bookMakeupDate, setBookMakeupDate] = useState<string | null>(null);
 
   const loadMonth = useCallback(async () => {
     setIsLoading(true);
@@ -55,16 +60,26 @@ export function CalendarBoard() {
         getMySessions(rangeStart.toISOString(), rangeEnd.toISOString()),
         getMyCalendarEvents(rangeStart.toISOString(), rangeEnd.toISOString()),
       ]);
-      setSessions(sessionData);
+      // キャンセル済み・振替元・ライセンス無効化による自動キャンセルはカレンダーに出さない
+      // （振替後の新しいコマや、別の生徒の予約が同じ枠に入るケースがありノイズになるため）
+      setSessions(sessionData.filter((s) => !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status)));
       setEvents(eventData);
     } finally {
       setIsLoading(false);
     }
   }, [currentMonth]);
 
+  const loadBookableSlots = useCallback(async () => {
+    setBookableSlots(await getMyBookableTickets());
+  }, []);
+
   useEffect(() => {
     loadMonth();
   }, [loadMonth]);
+
+  useEffect(() => {
+    loadBookableSlots();
+  }, [loadBookableSlots]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();
@@ -187,12 +202,25 @@ export function CalendarBoard() {
         date={selectedDate}
         items={selectedItems}
         timezone={timezone}
+        hasBookableTickets={bookableSlots.length > 0}
         onClose={() => setSelectedDate(null)}
         onActionRequested={setActionTarget}
         onParticipationChanged={handleParticipationChanged}
+        onBookMakeupRequested={setBookMakeupDate}
       />
 
       <SessionActionDialog target={actionTarget} onClose={() => setActionTarget(null)} onResolved={handleResolved} />
+
+      <BookMakeupSessionDialog
+        open={!!bookMakeupDate}
+        slots={bookableSlots}
+        initialDate={bookMakeupDate}
+        onClose={() => setBookMakeupDate(null)}
+        onBooked={() => {
+          loadMonth();
+          loadBookableSlots();
+        }}
+      />
     </div>
   );
 }

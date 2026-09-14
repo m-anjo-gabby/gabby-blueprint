@@ -47,3 +47,22 @@ FOR SELECT TO authenticated USING (
           AND u.client_id = public.get_jwt_client_id()
     )
 );
+
+---------------------------------------------
+-- 追加パッチ: 担当コーチへの閲覧許可 (2026-09-06)
+---------------------------------------------
+-- 【背景】
+-- セッション準備/実施ハブで、コーチがレッスン前に生徒の自主トレ状況（直近1週間の
+-- 実施日数・問題数）を確認できるようにする。self_t_sprint（回答内容・個別スコアを
+-- 含む生ログ）ではなく、日次の件数のみを持つ本サマリーテーブルに限定してコーチへ
+-- 開示することで、生徒の自主トレの詳細な解答内容までは見せない（最小権限）。
+---------------------------------------------
+DROP POLICY IF EXISTS "Coaches can view their assigned students' sprint summaries" ON public.self_t_sprint_summary;
+CREATE POLICY "Coaches can view their assigned students' sprint summaries" ON public.self_t_sprint_summary
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.student_id = public.self_t_sprint_summary.user_id
+          AND r.coach_id = auth.uid()
+    )
+);

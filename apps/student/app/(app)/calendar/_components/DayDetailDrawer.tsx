@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, RotateCcw, X } from 'lucide-react';
+import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, RotateCcw, Ticket, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -83,9 +83,11 @@ interface DayDetailDrawerProps {
   date: string | null; // YYYY-MM-DD
   items: CalendarItem[];
   timezone: string;
+  hasBookableTickets: boolean;
   onClose: () => void;
   onActionRequested: (target: SessionActionTarget) => void;
   onParticipationChanged: (calendarEventId: string, isJoined: boolean) => void;
+  onBookMakeupRequested: (date: string) => void;
 }
 
 function formatTimeInZone(iso: string, timezone: string): string {
@@ -259,7 +261,16 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
   );
 }
 
-export function DayDetailDrawer({ date, items, timezone, onClose, onActionRequested, onParticipationChanged }: DayDetailDrawerProps) {
+export function DayDetailDrawer({
+  date,
+  items,
+  timezone,
+  hasBookableTickets,
+  onClose,
+  onActionRequested,
+  onParticipationChanged,
+  onBookMakeupRequested,
+}: DayDetailDrawerProps) {
   const sorted = items.slice().sort((a, b) => a.data.start_datetime.localeCompare(b.data.start_datetime));
 
   return (
@@ -272,6 +283,19 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
         </DrawerHeader>
 
         <div className="px-4 pb-6 overflow-y-auto space-y-3">
+          {hasBookableTickets && date && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              onClick={() => onBookMakeupRequested(date)}
+            >
+              <Ticket size={13} />
+              未割当のチケットをこの日で予約する
+            </Button>
+          )}
+
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <CalendarClock size={20} className="text-slate-300 mb-2" />

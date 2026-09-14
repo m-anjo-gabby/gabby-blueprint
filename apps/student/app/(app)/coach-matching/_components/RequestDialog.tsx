@@ -50,7 +50,7 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coach?.user_id]);
 
-  // コーチの対応可能時間ブロックを、25分レッスンの開始候補（30分刻み）に展開し、
+  // コーチの対応可能時間ブロックを、25分セッションの開始候補（30分刻み）に展開し、
   // それぞれ生徒のタイムゾーンでの表示曜日・時刻に変換してカレンダーのセルとする
   const cells = useMemo<AvailabilityCell[]>(() => {
     if (!coach) return [];
@@ -151,7 +151,7 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
             <DialogHeader>
               <DialogTitle>{coach.user_name} にリクエスト</DialogTitle>
               <DialogDescription>
-                カレンダーから希望のレッスン開始時刻を選択してください（1レッスン25分）。時刻はあなたのタイムゾーンで表示しています。
+                カレンダーから希望のセッション開始時刻を選択してください（1セッション25分）。時刻はあなたのタイムゾーンで表示しています。
               </DialogDescription>
             </DialogHeader>
 

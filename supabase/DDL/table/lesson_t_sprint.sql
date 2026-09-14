@@ -66,3 +66,39 @@ CREATE POLICY "Students can view their own lesson sprints" ON public.lesson_t_sp
 FOR SELECT TO authenticated USING (
     student_id = auth.uid()
 );
+
+---------------------------------------------
+-- 追加パッチ: ライブセッションへの紐づけ (2026-09-06)
+---------------------------------------------
+-- 【背景】
+-- コーチがライブセッション（Zoom Video SDK通話）中に実施したLesson Sprintを、
+-- その実施回(com_t_session)に紐づけて管理できるようにする（セッション準備/実施
+-- ハブ画面からの起動、レッスン結果画面でのスプリント実施状況表示に使用）。
+-- アプリ内Zoomが利用できず外部Zoom等で代替実施したケースのケアとして、
+-- session_idはNULL許容（＝ライブセッションと無関係な単独実施も引き続き可能）とする。
+---------------------------------------------
+ALTER TABLE public.lesson_t_sprint
+  ADD COLUMN IF NOT EXISTS session_id uuid REFERENCES public.com_t_session(session_id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.lesson_t_sprint.session_id IS '実施したライブセッション (com_t_session)。NULL許容（単独実施・外部Zoom実施等はNULL）';
+
+CREATE INDEX IF NOT EXISTS idx_lesson_t_sprint_session ON public.lesson_t_sprint (session_id, insert_date);
+
+-- INSERT/UPDATE時、session_idを指定する場合は「そのコーチ自身が担当し、かつ対象のstudent_idと
+-- 一致するセッションであること」を検証する（他コーチ・他生徒のセッションへの誤紐づけ/なりすまし防止）。
+DROP POLICY IF EXISTS "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint;
+CREATE POLICY "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint
+FOR ALL TO authenticated
+USING (coach_id = auth.uid() OR public.get_jwt_user_type() = '0')
+WITH CHECK (
+    coach_id = auth.uid()
+    AND (
+      session_id IS NULL
+      OR EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.session_id = lesson_t_sprint.session_id
+          AND s.coach_id = auth.uid()
+          AND s.student_id = lesson_t_sprint.student_id
+      )
+    )
+);
