@@ -23,6 +23,10 @@
 -- 【通知】
 -- 生徒へMATCHING_APPROVED、コーチへMATCHING_ASSIGNED_TO_COACHをそれぞれ通知する
 -- （どちらも自ら操作していないため、双方に通知が必要）。
+--
+-- 【target_sessionsの確定 (2026-09-14追加)】
+-- approve_matching_requestと同様、com_m_lesson_schedule.target_sessionsをここで確定する
+-- （table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_match_student_with_coach(
     p_ticket_id uuid,
@@ -47,6 +51,9 @@ DECLARE
     v_request_id uuid;
     v_coach_name text;
     v_student_name text;
+    v_ticket_total_sessions smallint;
+    v_ticket_weekly_frequency smallint;
+    v_target_sessions smallint;
 BEGIN
     IF public.get_jwt_user_type() <> '0' THEN
         RAISE EXCEPTION 'not authorized to perform admin matching';
@@ -57,9 +64,10 @@ BEGIN
         RAISE EXCEPTION 'ticket % not found', p_ticket_id;
     END IF;
 
-    -- 対象チケットに紐づくライセンス期間を取得（Session生成範囲の基準）
-    SELECT l.start_date::date, l.end_date::date
-    INTO v_license_start, v_license_end
+    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)と、target_sessions算出用の
+    -- total_sessions/weekly_frequencyを取得
+    SELECT l.start_date::date, l.end_date::date, t.total_sessions, t.weekly_frequency
+    INTO v_license_start, v_license_end, v_ticket_total_sessions, v_ticket_weekly_frequency
     FROM public.com_t_user_session_ticket t
     JOIN public.com_t_user_license l ON l.license_id = t.license_id
     WHERE t.ticket_id = p_ticket_id;
@@ -69,6 +77,11 @@ BEGIN
     END IF;
 
     v_start_date := GREATEST(v_license_start, CURRENT_DATE);
+
+    -- このコマ(slot_no)が契約上持つべき目標セッション数（approve_matching_requestと同じ算出式。
+    -- table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
+    v_target_sessions := (v_ticket_total_sessions / v_ticket_weekly_frequency)
+        + CASE WHEN p_slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
 
     -- 同一コーチ×同一曜日への処理を直列化し、重複チェックのレース条件を防ぐ
     -- （approve_matching_requestと同じロック）
@@ -95,10 +108,10 @@ BEGIN
 
     INSERT INTO public.com_m_lesson_schedule (
         ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
-        coach_timezone, status, start_date, end_date, source_request_id
+        coach_timezone, status, start_date, end_date, source_request_id, target_sessions
     ) VALUES (
         p_ticket_id, v_student_id, p_coach_id, p_slot_no, p_day_of_week, p_start_time, p_end_time,
-        v_coach_timezone, 1, v_start_date, v_license_end, v_request_id
+        v_coach_timezone, 1, v_start_date, v_license_end, v_request_id, v_target_sessions
     )
     RETURNING schedule_id INTO v_schedule_id;
 

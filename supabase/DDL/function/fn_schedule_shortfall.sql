@@ -9,8 +9,15 @@
 -- com_t_sessionの件数=actualの差分）を、チケット返還ルール対応のためSQL側に
 -- 一本化する。以後、TS側・RPC側どちらもこの関数を唯一の真実源として使う。
 --
--- expected: schedule.start_date〜end_date（両端含む）の間に、対象曜日(day_of_week)
--- が出現する回数（TS版countWeekdayOccurrencesと同じ、コーチのローカル日付基準）。
+-- expected (2026-09-14変更): schedule.target_sessions（このコマが契約上持つべき目標
+-- セッション数。承認時にtotal_sessions/weekly_frequencyの均等割りで確定、table/
+-- com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）をそのまま返す。
+-- 変更前はstart_date〜end_date間の対象曜日(day_of_week)の出現回数（暦週の数え上げ）を
+-- expectedとしていたが、これはfn_generate_sessions_for_schedule()が実際に生成する回数の
+-- 再計算にすぎず、マッチング承認が契約開始から遅れて生成本数が契約上の目標を
+-- 恒久的に下回るケースを検知できなかった（expected自体が実績と同じロジックで
+-- 導出されるため乖離が生じ得ない）。target_sessionsを契約上のエンタイトルメントを表す
+-- 唯一の真実源とすることで、この乖離を正しくshortfallとして検知できるようにする。
 --
 -- actual: com_t_session側で「その週の枠が消化済み扱い」となる行数。
 --   - status IN (1,2,6,7): scheduled/completed/no_show/early_ended はいずれも
@@ -41,8 +48,7 @@ SET search_path = public
 AS $$
 DECLARE
     v_schedule RECORD;
-    v_cursor_date date;
-    v_expected integer := 0;
+    v_expected integer;
     v_actual integer;
 BEGIN
     SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
@@ -50,13 +56,7 @@ BEGIN
         RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
     END IF;
 
-    v_cursor_date := v_schedule.start_date
-        + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
-
-    WHILE v_cursor_date <= v_schedule.end_date LOOP
-        v_expected := v_expected + 1;
-        v_cursor_date := v_cursor_date + 7;
-    END LOOP;
+    v_expected := v_schedule.target_sessions;
 
     SELECT COUNT(*) INTO v_actual
     FROM public.com_t_session s

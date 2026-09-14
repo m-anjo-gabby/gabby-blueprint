@@ -2,6 +2,11 @@
 -- 本番リリース作業スクリプト
 -- 対象ブランチ: feature/20260911-dev
 -- 作成日: 2026-09-11
+-- 更新日: 2026-09-14（コマ別セッション目標数(target_sessions)を追加。マッチング承認が
+--          契約開始から遅れると、そのコマの生成本数が契約上のtotal_sessions/
+--          weekly_frequency均等割り値を恒久的に下回り、かつ不足自体も検知できなかった
+--          問題に対応する。詳細はファイル末尾の「23. コマ別セッション目標数
+--          (target_sessions)の追加」セクションのコメントを参照）
 -- 更新日: 2026-09-14（コーチ「申請一覧」画面のHistoryをmatching/booking/reschedule_proposalの
 --          3タブに分割し、各タブをinsert_dateカーソルでページング取得する方式に変更した
 --          （旧: 3種類を1画面にマージし全件を一括取得後、クライアント側で表示件数だけ絞る方式）。
@@ -2287,3 +2292,357 @@ ON CONFLICT (company_profile_id) DO UPDATE SET
 CREATE INDEX IF NOT EXISTS idx_matching_request_coach_insert_date ON public.com_t_matching_request (coach_id, insert_date DESC);
 CREATE INDEX IF NOT EXISTS idx_session_booking_request_coach_insert_date ON public.com_t_session_booking_request (coach_id, insert_date DESC);
 CREATE INDEX IF NOT EXISTS idx_session_reschedule_proposal_coach_insert_date ON public.com_t_session_reschedule_proposal (coach_id, insert_date DESC);
+
+
+---------------------------------------------
+-- 23. コマ別セッション目標数(target_sessions)の追加 (2026-09-14 追加)
+---------------------------------------------
+-- 【背景】
+-- fn_generate_sessions_for_schedule()は承認日時(GREATEST(license_start, CURRENT_DATE))から
+-- ライセンス終了日までの間に対象曜日が出現する回数だけセッションを生成しており、
+-- 契約上のtotal_sessions/weekly_frequency（例: 週2回24セッションなら1コマ12）を
+-- 目標値として意識していなかった。そのため、マッチング承認が契約開始から遅れるほど
+-- そのコマの生成本数が恒久的に目標を下回り、かつfn_schedule_shortfall()の期待値も
+-- 同じ暦週計算で導出していたため乖離自体を検知できなかった（コーチ生徒概要画面で
+-- 週2回契約・1コマ目のみマッチング済みのケースで、本来12であるべきTotalが11と
+-- 表示される事象として顕在化）。契約上のエンタイトルメントをcom_m_lesson_schedule.
+-- target_sessionsとして承認時に確定・保持し、以後の生成上限・不足判定の唯一の
+-- 真実源とする。
+--
+-- 【端数の配分】
+-- total_sessions / weekly_frequency の商をbaseとし、余りはslot_no昇順(1コマ目から順)に
+-- 1つずつ多く配分する（例: 週3回25セッションなら1コマ目9・2コマ目8・3コマ目8）。
+--
+-- 【契約終了日を超える不足の扱い】
+-- end_date到達時点でtarget_sessionsに満たない場合でも自動延長はしない。不足は
+-- fn_schedule_shortfall()のshortfallとして可視化するのみとし、埋めるかどうかは
+-- コーチ・アドミンの運用判断（既存のcreate_session_booking_request等）に委ねる。
+--
+-- 【変更対象】
+--   1. com_m_lesson_schedule.target_sessions カラムを追加（既存行は一括バックフィル）
+--   2. approve_matching_request() / admin_match_student_with_coach()
+--      承認時にtarget_sessionsを算出しcom_m_lesson_schedule作成時に確定する
+--   3. fn_generate_sessions_for_schedule()
+--      生成件数がtarget_sessionsに達したら（end_date未到達でも）打ち切る
+--   4. fn_schedule_shortfall()
+--      expected_sessionsを暦週の数え上げからtarget_sessionsの参照に変更
+--
+-- 呼び出し元（packages/lib/coachStudent/actions/coachStudentActions.ts の
+-- computeStudentContractSessionSummary/fetchOwnScheduleShortfalls、
+-- packages/lib/matching/actions/matchingActions.ts の getMyBookableTicketsCore）は
+-- RPCの返り値の意味が是正されるのみで、TypeScript側の変更は不要。
+---------------------------------------------
+ALTER TABLE public.com_m_lesson_schedule
+  ADD COLUMN IF NOT EXISTS target_sessions smallint;
+
+-- 既存行を、対象チケットのtotal_sessions/weekly_frequencyから同じ端数配分ルールで一括バックフィルする
+UPDATE public.com_m_lesson_schedule s
+SET target_sessions = (t.total_sessions / t.weekly_frequency)
+    + CASE WHEN s.slot_no <= (t.total_sessions % t.weekly_frequency) THEN 1 ELSE 0 END
+FROM public.com_t_user_session_ticket t
+WHERE s.ticket_id = t.ticket_id AND s.target_sessions IS NULL;
+
+ALTER TABLE public.com_m_lesson_schedule ALTER COLUMN target_sessions SET NOT NULL;
+
+ALTER TABLE public.com_m_lesson_schedule DROP CONSTRAINT IF EXISTS chk_lesson_schedule_target_sessions;
+ALTER TABLE public.com_m_lesson_schedule ADD CONSTRAINT chk_lesson_schedule_target_sessions CHECK (target_sessions >= 1);
+
+COMMENT ON COLUMN public.com_m_lesson_schedule.target_sessions IS 'このコマ(slot_no)が契約上持つべき目標セッション数。承認時にtotal_sessions/weekly_frequencyの均等割り(余りはslot_no昇順に配分)で確定し、以後は不変。fn_generate_sessions_for_schedule()の生成上限、fn_schedule_shortfall()の期待値として使う唯一の真実源。';
+
+CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_request RECORD;
+    v_license_start date;
+    v_license_end date;
+    v_start_date date;
+    v_coach_timezone text;
+    v_schedule_id uuid;
+    v_coach_name text;
+    v_ticket_total_sessions smallint;
+    v_ticket_weekly_frequency smallint;
+    v_target_sessions smallint;
+BEGIN
+    SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'matching request % not found', p_request_id;
+    END IF;
+
+    IF v_request.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to approve this request';
+    END IF;
+
+    IF v_request.status <> 1 THEN
+        RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
+    END IF;
+
+    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)と、target_sessions算出用の
+    -- total_sessions/weekly_frequencyを取得
+    SELECT l.start_date::date, l.end_date::date, t.total_sessions, t.weekly_frequency
+    INTO v_license_start, v_license_end, v_ticket_total_sessions, v_ticket_weekly_frequency
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE t.ticket_id = v_request.ticket_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'license not found for ticket %', v_request.ticket_id;
+    END IF;
+
+    v_start_date := GREATEST(v_license_start, CURRENT_DATE);
+
+    -- このコマ(slot_no)が契約上持つべき目標セッション数。商をbaseとし、余りはslot_no昇順に
+    -- 1つずつ多く配分する（table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
+    v_target_sessions := (v_ticket_total_sessions / v_ticket_weekly_frequency)
+        + CASE WHEN v_request.slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
+
+    -- 同一コーチ×同一曜日への承認を直列化し、重複チェックのレース条件を防ぐ
+    PERFORM pg_advisory_xact_lock(hashtextextended(v_request.coach_id::text || ':' || v_request.requested_day_of_week::text, 0));
+
+    IF public.check_coach_schedule_conflict(
+        v_request.coach_id, v_request.requested_day_of_week,
+        v_request.requested_start_time, v_request.requested_end_time,
+        v_start_date, v_license_end
+    ) THEN
+        RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', v_request.coach_id;
+    END IF;
+
+    -- day_of_week/start_time/end_timeの解釈基準として、承認時点のコーチtimezoneを固定保持する
+    -- （以後コーチがプロフィールのtimezoneを変更しても、この契約の意味は変わらない）
+    SELECT timezone INTO v_coach_timezone FROM public.com_m_user WHERE id = v_request.coach_id;
+    v_coach_timezone := COALESCE(v_coach_timezone, 'Asia/Tokyo');
+
+    INSERT INTO public.com_m_lesson_schedule (
+        ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
+        coach_timezone, status, start_date, end_date, source_request_id, target_sessions
+    ) VALUES (
+        v_request.ticket_id, v_request.student_id, v_request.coach_id, v_request.slot_no,
+        v_request.requested_day_of_week, v_request.requested_start_time, v_request.requested_end_time,
+        v_coach_timezone, 1, v_start_date, v_license_end, v_request.request_id, v_target_sessions
+    )
+    RETURNING schedule_id INTO v_schedule_id;
+
+    UPDATE public.com_t_matching_request
+    SET status = 2, responded_by = auth.uid(), responded_at = NOW(), update_date = NOW()
+    WHERE request_id = p_request_id;
+
+    PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id);
+
+    -- 生徒へ、マッチング成立を通知する（コーチは自ら承認操作を行ったため通知不要）
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        v_request.student_id,
+        'MATCHING_APPROVED',
+        jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id),
+        '/live-room'
+    );
+
+    RETURN v_schedule_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_matching_request(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_matching_request(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.admin_match_student_with_coach(
+    p_ticket_id uuid,
+    p_coach_id uuid,
+    p_slot_no smallint,
+    p_day_of_week smallint,
+    p_start_time time,
+    p_end_time time
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_student_id uuid;
+    v_license_start date;
+    v_license_end date;
+    v_start_date date;
+    v_coach_timezone text;
+    v_schedule_id uuid;
+    v_request_id uuid;
+    v_coach_name text;
+    v_student_name text;
+    v_ticket_total_sessions smallint;
+    v_ticket_weekly_frequency smallint;
+    v_target_sessions smallint;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to perform admin matching';
+    END IF;
+
+    SELECT user_id INTO v_student_id FROM public.com_t_user_session_ticket WHERE ticket_id = p_ticket_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'ticket % not found', p_ticket_id;
+    END IF;
+
+    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)と、target_sessions算出用の
+    -- total_sessions/weekly_frequencyを取得
+    SELECT l.start_date::date, l.end_date::date, t.total_sessions, t.weekly_frequency
+    INTO v_license_start, v_license_end, v_ticket_total_sessions, v_ticket_weekly_frequency
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE t.ticket_id = p_ticket_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'license not found for ticket %', p_ticket_id;
+    END IF;
+
+    v_start_date := GREATEST(v_license_start, CURRENT_DATE);
+
+    -- このコマ(slot_no)が契約上持つべき目標セッション数（approve_matching_requestと同じ算出式。
+    -- table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
+    v_target_sessions := (v_ticket_total_sessions / v_ticket_weekly_frequency)
+        + CASE WHEN p_slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
+
+    -- 同一コーチ×同一曜日への処理を直列化し、重複チェックのレース条件を防ぐ
+    -- （approve_matching_requestと同じロック）
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_coach_id::text || ':' || p_day_of_week::text, 0));
+
+    IF public.check_coach_schedule_conflict(
+        p_coach_id, p_day_of_week, p_start_time, p_end_time, v_start_date, v_license_end
+    ) THEN
+        RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', p_coach_id;
+    END IF;
+
+    SELECT timezone INTO v_coach_timezone FROM public.com_m_user WHERE id = p_coach_id;
+    v_coach_timezone := COALESCE(v_coach_timezone, 'Asia/Tokyo');
+
+    -- 生徒の申請・コーチの承認を経ずに、承認済みのリクエストを直接作成する
+    INSERT INTO public.com_t_matching_request (
+        ticket_id, student_id, coach_id, slot_no, requested_day_of_week, requested_start_time, requested_end_time,
+        status, responded_by, responded_at
+    ) VALUES (
+        p_ticket_id, v_student_id, p_coach_id, p_slot_no, p_day_of_week, p_start_time, p_end_time,
+        2, auth.uid(), NOW()
+    )
+    RETURNING request_id INTO v_request_id;
+
+    INSERT INTO public.com_m_lesson_schedule (
+        ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
+        coach_timezone, status, start_date, end_date, source_request_id, target_sessions
+    ) VALUES (
+        p_ticket_id, v_student_id, p_coach_id, p_slot_no, p_day_of_week, p_start_time, p_end_time,
+        v_coach_timezone, 1, v_start_date, v_license_end, v_request_id, v_target_sessions
+    )
+    RETURNING schedule_id INTO v_schedule_id;
+
+    PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id);
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = p_coach_id;
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_student_id;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES
+        (v_student_id, 'MATCHING_APPROVED', jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id), '/live-room'),
+        (p_coach_id, 'MATCHING_ASSIGNED_TO_COACH', jsonb_build_object('student_name', v_student_name, 'schedule_id', v_schedule_id), '/students/' || v_student_id);
+
+    RETURN v_schedule_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_match_student_with_coach(uuid, uuid, smallint, smallint, time, time) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_match_student_with_coach(uuid, uuid, smallint, smallint, time, time) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.fn_generate_sessions_for_schedule(p_schedule_id uuid)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_coach_tz text;
+    v_cursor_date date;
+    v_start_ts timestamptz;
+    v_end_ts timestamptz;
+    v_generated_count integer := 0;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    -- com_m_user.timezoneはライブ参照しない（上記【タイムゾーン変換】コメント参照）
+    v_coach_tz := v_schedule.coach_timezone;
+
+    -- start_date以降で最初にday_of_weekと一致する日付を求める
+    v_cursor_date := v_schedule.start_date
+        + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
+
+    WHILE v_cursor_date <= v_schedule.end_date AND v_generated_count < v_schedule.target_sessions LOOP
+        -- 当該日・当該コーチのBLOCK例外（時間帯重複）が無いことを確認
+        IF NOT EXISTS (
+            SELECT 1 FROM public.com_t_coach_availability_exception e
+            WHERE e.coach_id = v_schedule.coach_id
+              AND e.exception_date = v_cursor_date
+              AND e.exception_type = 'BLOCK'
+              AND e.start_time < v_schedule.end_time
+              AND e.end_time > v_schedule.start_time
+        ) THEN
+            v_start_ts := (v_cursor_date + v_schedule.start_time) AT TIME ZONE v_coach_tz;
+            v_end_ts := (v_cursor_date + v_schedule.end_time) AT TIME ZONE v_coach_tz;
+
+            INSERT INTO public.com_t_session (
+                schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status
+            ) VALUES (
+                v_schedule.schedule_id, v_schedule.ticket_id, v_schedule.student_id, v_schedule.coach_id,
+                v_start_ts, v_end_ts, 1
+            )
+            ON CONFLICT (schedule_id, start_datetime) DO NOTHING;
+
+            IF FOUND THEN
+                v_generated_count := v_generated_count + 1;
+            END IF;
+        END IF;
+
+        v_cursor_date := v_cursor_date + 7;
+    END LOOP;
+
+    RETURN v_generated_count;
+END;
+$$;
+
+-- 内部処理専用（approve_matching_request経由以外での直接実行は想定しない）
+REVOKE EXECUTE ON FUNCTION public.fn_generate_sessions_for_schedule(uuid) FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.fn_schedule_shortfall(p_schedule_id uuid)
+RETURNS TABLE(expected_sessions integer, actual_sessions integer, shortfall integer)
+LANGUAGE plpgsql
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_expected integer;
+    v_actual integer;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    v_expected := v_schedule.target_sessions;
+
+    SELECT COUNT(*) INTO v_actual
+    FROM public.com_t_session s
+    WHERE s.schedule_id = p_schedule_id
+      AND (
+        s.status IN (1, 2, 6, 7)
+        OR (s.status IN (3, 4, 10) AND s.ticket_refunded = false)
+      );
+
+    RETURN QUERY SELECT v_expected, v_actual, GREATEST(v_expected - v_actual, 0);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) TO authenticated;

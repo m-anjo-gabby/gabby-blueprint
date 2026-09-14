@@ -114,3 +114,42 @@ BEGIN
 END $$;
 
 COMMENT ON COLUMN public.com_m_lesson_schedule.coach_timezone IS 'day_of_week/start_time/end_timeの解釈に使うIANAタイムゾーン（承認時点のcom_m_user.timezoneをスナップショットし、以後のコーチ側timezone変更の影響を受けない）';
+
+---------------------------------------------
+-- 追加パッチ: コマ別セッション目標数(target_sessions)の追加 (2026-09-14)
+-- 既存環境に対しては、このブロックのみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- fn_generate_sessions_for_schedule()は承認日時(GREATEST(license_start, CURRENT_DATE))から
+-- ライセンス終了日までの間に対象曜日が出現する回数だけセッションを生成しており、
+-- 契約上のtotal_sessions/weekly_frequency（例: 週2回24セッションなら1コマ12）を
+-- 目標値として意識していなかった。そのため、マッチング承認が契約開始から遅れるほど
+-- そのコマの生成本数が恒久的に目標を下回り、かつfn_schedule_shortfall()の期待値も
+-- 同じ暦週計算で導出していたため乖離自体を検知できなかった。契約上のエンタイトルメントを
+-- 本カラムとして承認時に確定・保持し、以後の生成上限・不足判定の唯一の真実源とする。
+--
+-- 【端数の配分】
+-- total_sessions / weekly_frequency の商をbaseとし、余りはslot_no昇順(1コマ目から順)に
+-- 1つずつ多く配分する（例: 週3回25セッションなら1コマ目9・2コマ目8・3コマ目8）。
+--
+-- 【契約終了日を超える不足の扱い】
+-- end_date到達時点でtarget_sessionsに満たない場合でも自動延長はしない。不足は
+-- fn_schedule_shortfall()のshortfallとして可視化するのみとし、埋めるかどうかは
+-- コーチ・アドミンの運用判断（既存のcreate_session_booking_request等）に委ねる。
+---------------------------------------------
+ALTER TABLE public.com_m_lesson_schedule
+  ADD COLUMN IF NOT EXISTS target_sessions smallint;
+
+-- 既存行を、対象チケットのtotal_sessions/weekly_frequencyから同じ端数配分ルールで一括バックフィルする
+UPDATE public.com_m_lesson_schedule s
+SET target_sessions = (t.total_sessions / t.weekly_frequency)
+    + CASE WHEN s.slot_no <= (t.total_sessions % t.weekly_frequency) THEN 1 ELSE 0 END
+FROM public.com_t_user_session_ticket t
+WHERE s.ticket_id = t.ticket_id AND s.target_sessions IS NULL;
+
+ALTER TABLE public.com_m_lesson_schedule ALTER COLUMN target_sessions SET NOT NULL;
+
+ALTER TABLE public.com_m_lesson_schedule DROP CONSTRAINT IF EXISTS chk_lesson_schedule_target_sessions;
+ALTER TABLE public.com_m_lesson_schedule ADD CONSTRAINT chk_lesson_schedule_target_sessions CHECK (target_sessions >= 1);
+
+COMMENT ON COLUMN public.com_m_lesson_schedule.target_sessions IS 'このコマ(slot_no)が契約上持つべき目標セッション数。承認時にtotal_sessions/weekly_frequencyの均等割り(余りはslot_no昇順に配分)で確定し、以後は不変。fn_generate_sessions_for_schedule()の生成上限、fn_schedule_shortfall()の期待値として使う唯一の真実源。';

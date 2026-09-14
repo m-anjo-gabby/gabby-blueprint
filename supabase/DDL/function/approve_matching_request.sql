@@ -26,6 +26,13 @@
 -- 【通知 (2026-09-09追加)】
 -- 承認完了時、生徒へマッチング成立を通知する(MATCHING_APPROVED)。コーチは自ら承認操作を
 -- 行っているため通知不要。
+--
+-- 【target_sessionsの確定 (2026-09-14追加)】
+-- com_m_lesson_schedule.target_sessions（このコマが契約上持つべき目標セッション数）を、
+-- 対象チケットのtotal_sessions/weekly_frequencyから算出しここで確定する（table/
+-- com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。承認が契約開始から遅れても
+-- 目標値自体は変わらないため、fn_generate_sessions_for_schedule()の生成上限、
+-- fn_schedule_shortfall()の期待値が正しく契約のエンタイトルメントを反映するようになる。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
 RETURNS uuid
@@ -41,6 +48,9 @@ DECLARE
     v_coach_timezone text;
     v_schedule_id uuid;
     v_coach_name text;
+    v_ticket_total_sessions smallint;
+    v_ticket_weekly_frequency smallint;
+    v_target_sessions smallint;
 BEGIN
     SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -55,9 +65,10 @@ BEGIN
         RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
     END IF;
 
-    -- 対象チケットに紐づくライセンス期間を取得（Session生成範囲の基準）
-    SELECT l.start_date::date, l.end_date::date
-    INTO v_license_start, v_license_end
+    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)と、target_sessions算出用の
+    -- total_sessions/weekly_frequencyを取得
+    SELECT l.start_date::date, l.end_date::date, t.total_sessions, t.weekly_frequency
+    INTO v_license_start, v_license_end, v_ticket_total_sessions, v_ticket_weekly_frequency
     FROM public.com_t_user_session_ticket t
     JOIN public.com_t_user_license l ON l.license_id = t.license_id
     WHERE t.ticket_id = v_request.ticket_id;
@@ -67,6 +78,11 @@ BEGIN
     END IF;
 
     v_start_date := GREATEST(v_license_start, CURRENT_DATE);
+
+    -- このコマ(slot_no)が契約上持つべき目標セッション数。商をbaseとし、余りはslot_no昇順に
+    -- 1つずつ多く配分する（table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
+    v_target_sessions := (v_ticket_total_sessions / v_ticket_weekly_frequency)
+        + CASE WHEN v_request.slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
 
     -- 同一コーチ×同一曜日への承認を直列化し、重複チェックのレース条件を防ぐ
     PERFORM pg_advisory_xact_lock(hashtextextended(v_request.coach_id::text || ':' || v_request.requested_day_of_week::text, 0));
@@ -86,11 +102,11 @@ BEGIN
 
     INSERT INTO public.com_m_lesson_schedule (
         ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
-        coach_timezone, status, start_date, end_date, source_request_id
+        coach_timezone, status, start_date, end_date, source_request_id, target_sessions
     ) VALUES (
         v_request.ticket_id, v_request.student_id, v_request.coach_id, v_request.slot_no,
         v_request.requested_day_of_week, v_request.requested_start_time, v_request.requested_end_time,
-        v_coach_timezone, 1, v_start_date, v_license_end, v_request.request_id
+        v_coach_timezone, 1, v_start_date, v_license_end, v_request.request_id, v_target_sessions
     )
     RETURNING schedule_id INTO v_schedule_id;
 

@@ -24,6 +24,13 @@
 -- 【冪等性】
 -- com_t_session (schedule_id, start_datetime) にUNIQUE制約があるため、
 -- 再実行しても重複は作成されない（ON CONFLICT DO NOTHING）。
+--
+-- 【生成上限 (2026-09-14追加)】
+-- 生成件数がschedule.target_sessions（このコマが契約上持つべき目標セッション数）に
+-- 達したら、end_dateに達していなくてもそこで打ち切る。end_date到達時点で
+-- target_sessionsに満たない場合（マッチング承認が遅れた、BLOCK例外で欠番が出た等）でも
+-- end_dateを超えて延長はしない。その不足はfn_schedule_shortfall()のshortfallとして
+-- 可視化するのみとし、埋めるかどうかはコーチ・アドミンの運用判断に委ねる。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_generate_sessions_for_schedule(p_schedule_id uuid)
 RETURNS integer
@@ -51,7 +58,7 @@ BEGIN
     v_cursor_date := v_schedule.start_date
         + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
 
-    WHILE v_cursor_date <= v_schedule.end_date LOOP
+    WHILE v_cursor_date <= v_schedule.end_date AND v_generated_count < v_schedule.target_sessions LOOP
         -- 当該日・当該コーチのBLOCK例外（時間帯重複）が無いことを確認
         IF NOT EXISTS (
             SELECT 1 FROM public.com_t_coach_availability_exception e
