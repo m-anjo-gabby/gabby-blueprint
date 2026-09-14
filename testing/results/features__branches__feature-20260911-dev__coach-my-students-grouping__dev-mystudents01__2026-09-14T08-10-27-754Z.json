@@ -1,0 +1,84 @@
+{
+  "scenario": "features/branches/feature-20260911-dev/coach-my-students-grouping.feature",
+  "env": "dev",
+  "tag": "mystudents01",
+  "executedAt": "2026-09-14T08:10:27.754Z",
+  "gitCommit": "caf79fb3",
+  "gitBranch": "feature/20260911-dev",
+  "totalChecks": 14,
+  "passed": 14,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "前提: 生徒Cのライセンスがstatus=0(停止)になっている",
+      "ok": true,
+      "detail": "status=0"
+    },
+    {
+      "name": "前提: 生徒Cの紐づくscheduleが全てstatus=9(terminated)になっている",
+      "ok": true,
+      "detail": "[{\"status\":9}]"
+    },
+    {
+      "name": "relationship: コーチ自身のJWTで3名分の担当関係を参照できる",
+      "ok": true,
+      "detail": "[{\"student_id\":\"76cd94cc-0f3f-419f-b854-fb5a7a5dc3d9\",\"is_active\":true},{\"student_id\":\"9db5d53f-c3bd-48cc-af40-71974ec3b9aa\",\"is_active\":true},{\"student_id\":\"c91cf5d2-d351-43df-8df4-82ac220ec104\",\"is_active\":false}]"
+    },
+    {
+      "name": "relationship: 生徒A(単純な現役契約)はis_active=true",
+      "ok": true,
+      "detail": "actual=true"
+    },
+    {
+      "name": "relationship: 生徒B(旧契約終了+新契約稼働中)はis_active=true",
+      "ok": true,
+      "detail": "actual=true"
+    },
+    {
+      "name": "relationship: 生徒C(invalidate_user_licenseで解除済み)はis_active=falseに自動的に切り替わっている",
+      "ok": true,
+      "detail": "actual=false"
+    },
+    {
+      "name": "license: コーチ自身のJWTでライセンス一覧を参照できる(生徒A:1件, 生徒B:2件, 生徒C:1件=計4件)",
+      "ok": true,
+      "detail": "[{\"user_id\":\"76cd94cc-0f3f-419f-b854-fb5a7a5dc3d9\",\"start_date\":\"2026-08-15T08:10:16.873+00:00\",\"end_date\":\"2026-11-13T08:10:16.873+00:00\",\"status\":1,\"com_m_contract\":{\"plan_name\":\"スピーキング強化\",\"plan_name_en\":\"Standard\"}},{\"user_id\":\"9db5d53f-c3bd-48cc-af40-71974ec3b9aa\",\"start_date\":\"2026-05-17T08:10:16.873+00:00\",\"end_date\":\"2026-09-04T08:10:16.873+00:00\",\"status\":1,\"com_m_contract\":{\"plan_name\":\"スピーキング強化\",\"plan_name_en\":\"Standard\"}},{\"user_id\":\"9db5d53f-c3bd-48cc-af40-71974ec3b9aa\",\"start_date\":\"2026-09-05T08:10:16.873+00:00\",\"end_date\":\"2026-12-03T08:10:16.873+00:00\",\"status\":1,\"com_m_contract\":{\"plan_name\":\"ビジネス英語プロ\",\"plan_name_en\":\"Business Pro (Dialogue)\"}},{\"user_id\":\"c91cf5d2-d351-43df-8df4-82ac220ec104\",\"start_date\":\"2026-08-15T08:10:16.873+00:00\",\"end_date\":\"2026-11-13T08:10:16.873+00:00\",\"status\":0,\"com_m_contract\":{\"plan_name\":\"スピーキング強化\",\"plan_name_en\":\"Standard\"}}]"
+    },
+    {
+      "name": "latest_contract: 生徒Aの最新契約はプラン'Standard'",
+      "ok": true,
+      "detail": "{\"plan_name_en\":\"Standard\",\"start_date\":\"2026-08-15T08:10:16.873+00:00\",\"end_date\":\"2026-11-13T08:10:16.873+00:00\",\"is_current\":true,\"_end\":\"2026-11-13T08:10:16.873+00:00\"}"
+    },
+    {
+      "name": "latest_contract: 生徒Aの最新契約はis_current=true",
+      "ok": true,
+      "detail": "{\"plan_name_en\":\"Standard\",\"start_date\":\"2026-08-15T08:10:16.873+00:00\",\"end_date\":\"2026-11-13T08:10:16.873+00:00\",\"is_current\":true,\"_end\":\"2026-11-13T08:10:16.873+00:00\"}"
+    },
+    {
+      "name": "latest_contract: 生徒Bの最新契約は終了日がより新しい新契約(プラン'Business Pro (Dialogue)')が選ばれる(旧契約'Standard'は選ばれない)",
+      "ok": true,
+      "detail": "{\"plan_name_en\":\"Business Pro (Dialogue)\",\"start_date\":\"2026-09-05T08:10:16.873+00:00\",\"end_date\":\"2026-12-03T08:10:16.873+00:00\",\"is_current\":true,\"_end\":\"2026-12-03T08:10:16.873+00:00\"}"
+    },
+    {
+      "name": "latest_contract: 生徒Bの最新契約(新契約)はis_current=true",
+      "ok": true,
+      "detail": "{\"plan_name_en\":\"Business Pro (Dialogue)\",\"start_date\":\"2026-09-05T08:10:16.873+00:00\",\"end_date\":\"2026-12-03T08:10:16.873+00:00\",\"is_current\":true,\"_end\":\"2026-12-03T08:10:16.873+00:00\"}"
+    },
+    {
+      "name": "latest_contract: 生徒Cの最新契約はis_current=false(契約期間(end_date)は未来でもstatus=0のため現役扱いにならない)",
+      "ok": true,
+      "detail": "{\"plan_name_en\":\"Standard\",\"start_date\":\"2026-08-15T08:10:16.873+00:00\",\"end_date\":\"2026-11-13T08:10:16.873+00:00\",\"is_current\":false,\"_end\":\"2026-11-13T08:10:16.873+00:00\"}"
+    },
+    {
+      "name": "latest_contract: 生徒Cの契約期間(end_date)自体はまだ現在日時より先である(期間切れによる終了ではないことの確認)",
+      "ok": true,
+      "detail": "{\"plan_name_en\":\"Standard\",\"start_date\":\"2026-08-15T08:10:16.873+00:00\",\"end_date\":\"2026-11-13T08:10:16.873+00:00\",\"is_current\":false,\"_end\":\"2026-11-13T08:10:16.873+00:00\"}"
+    },
+    {
+      "name": "グルーピング: アクティブ生徒グループ=[生徒A, 生徒B]、過去生徒グループ=[生徒C]",
+      "ok": true,
+      "detail": "{\"activeGroup\":[\"76cd94cc-0f3f-419f-b854-fb5a7a5dc3d9\",\"9db5d53f-c3bd-48cc-af40-71974ec3b9aa\"],\"pastGroup\":[\"c91cf5d2-d351-43df-8df4-82ac220ec104\"]}"
+    }
+  ]
+}

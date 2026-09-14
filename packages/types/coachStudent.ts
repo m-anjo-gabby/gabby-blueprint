@@ -29,6 +29,11 @@ export interface AssignedStudentSummary extends StudentSprintProgress {
   icon_path: string | null;
   /** 現在このコーチと有効な(status=1)週次レッスン枠の数 */
   active_slot_count: number;
+  /** 現役の担当関係か（true=アクティブ生徒、false=過去に担当していた生徒）。
+   * com_m_coach_student_relationship.is_activeをそのまま反映する */
+  is_active: boolean;
+  /** 直近の契約情報（現在有効・終了済みを問わず最新のもの）。一度も契約したことがなければnull */
+  latest_contract: StudentLatestContractSummary | null;
 }
 
 /** 生徒が現在保有する有効契約の概要（ヘッダー表示用） */
@@ -37,6 +42,33 @@ export interface StudentActiveContract {
   plan_name_en: string;
   start_date: string; // UTC ISO文字列
   end_date: string; // UTC ISO文字列
+}
+
+/** 生徒一覧カード表示用の直近契約サマリー（現在有効・終了済みを問わず最新の1件） */
+export interface StudentLatestContractSummary extends StudentActiveContract {
+  /** 現在日時が契約期間内かつstatus=有効かどうか（true=現役契約、false=終了/停止済み契約） */
+  is_current: boolean;
+}
+
+/**
+ * active_contractに対応する契約(チケット)のセッション消化状況サマリー。
+ * 週2回契約等で他コーチと分担している場合、他コーチ担当枠の未消化はこのコーチ自身では
+ * 予約できない（book_makeup_sessionはcom_m_lesson_schedule.coach_idで予約先コーチが
+ * 固定されるため）。行動につながらない数字を合算して見せると誤解を招くため、自分の担当分は
+ * 内訳（予約済み/消化済み/未予約）を出し、他コーチ分はtotal_sessionsからの残差として
+ * 合計件数のみを出す。
+ */
+export interface StudentContractSessionSummary {
+  /** 契約(チケット)全体のセッション総数 */
+  total_sessions: number;
+  /** 自分が担当する枠のうち、まだ実施していない予約済みセッション数 */
+  own_scheduled: number;
+  /** 自分が担当する枠のうち、消化済み扱いのセッション数（completed/no_show/early_ended/返還なしキャンセル） */
+  own_consumed: number;
+  /** 自分が担当する枠のうち、まだ予約されていない枠数 */
+  own_unbooked: number;
+  /** 他コーチが担当する枠の合計数（total_sessions - own_*の合計の残差）。分担が無ければ0 */
+  other_coach_sessions: number;
 }
 
 /** Student Overview画面のヘッダー・基本情報 */
@@ -48,6 +80,8 @@ export interface StudentOverviewProfile {
   sprint_progress: StudentSprintProgress;
   /** 現在有効な契約（status=1かつ現在日時が期間内のライセンス）。無い場合はnull */
   active_contract: StudentActiveContract | null;
+  /** active_contractのセッション消化状況サマリー。active_contractが無い場合はnull */
+  session_summary: StudentContractSessionSummary | null;
 }
 
 /** Student Overview画面のライブセッション履歴1件分 */

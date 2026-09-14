@@ -7,6 +7,7 @@ import { CalendarClock, CheckCircle2, ChevronRight, Loader2, TriangleAlert, User
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SESSION_STATUS_BADGE } from '@/constants/session';
 import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
@@ -80,6 +81,10 @@ export function LiveSessionHistoryCard({
     initialTicketId ? { [initialTicketId]: initialSessions } : {}
   );
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
+  // 他コーチと分担している契約(週2回等)では、デフォルトは自分の担当分のみを表示する。
+  // 他コーチ担当枠は自分では操作できない（book_makeup_sessionは予約先コーチが
+  // スケジュール側で固定される）ため、必要な時だけ明示的にONにする設計とする。
+  const [showOtherCoach, setShowOtherCoach] = useState(false);
 
   useEffect(() => {
     if (!selectedTicketId || sessionsByTicket[selectedTicketId]) return;
@@ -90,11 +95,13 @@ export function LiveSessionHistoryCard({
 
   const sessions = selectedTicketId ? sessionsByTicket[selectedTicketId] : undefined;
   const isLoading = selectedTicketId !== null && sessions === undefined;
+  const hasOtherCoachSessions = (sessions ?? []).some((s) => s.coach_id !== myId);
 
-  // 担当外セッション（別コーチが担当）は、実施予定・実施結果があるものだけを参照可能にし、
-  // キャンセル・振替等の管理系ステータスは表示しない（参照価値が無いため）
+  // 担当外セッション（別コーチが担当）は、トグルONの時だけ、実施予定・実施結果がある
+  // ものに限定して参照可能にする（キャンセル・振替等の管理系ステータスは参照価値が無いため
+  // 常に除外）。デフォルト(OFF)は自分の担当分のみを表示する。
   const visibleSessions = (sessions ?? []).filter(
-    (s) => s.coach_id === myId || !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status)
+    (s) => s.coach_id === myId || (showOtherCoach && !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status))
   );
   const now = new Date();
   const upcomingSessions = visibleSessions.filter(
@@ -116,6 +123,12 @@ export function LiveSessionHistoryCard({
 
   const handleTicketChange = (ticketId: string) => {
     setSelectedTicketId(ticketId);
+    completedReveal.reset();
+    historyReveal.reset();
+  };
+
+  const handleToggleOtherCoach = (checked: boolean) => {
+    setShowOtherCoach(checked);
     completedReveal.reset();
     historyReveal.reset();
   };
@@ -220,6 +233,14 @@ export function LiveSessionHistoryCard({
           <Video size={14} className="text-indigo-500" />
           Live Sessions
         </CardTitle>
+        {hasOtherCoachSessions && (
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="show-other-coach" className="text-[10px] font-semibold text-slate-400">
+              Show sessions from other coach
+            </Label>
+            <Switch id="show-other-coach" checked={showOtherCoach} onCheckedChange={handleToggleOtherCoach} />
+          </div>
+        )}
         {contracts.length > 1 && (
           <div className="space-y-1.5">
             <Label className="text-[10px] text-slate-400">Contract</Label>
