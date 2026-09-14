@@ -9,7 +9,7 @@ import { formatZonedDateJapanese, formatDateTimeByZone } from '@gabby/lib/date/d
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { SESSION_STATUS } from '@gabby/types/session';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { CalendarEventItem, CalendarEventMessageItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import {
@@ -305,7 +305,7 @@ export function DayDetailDrawer({
             sorted.map((item) => {
               if (item.kind === 'session') {
                 const session = item.data;
-                const badge = SESSION_STATUS_BADGE[session.status];
+                const badge = getSessionStatusBadge(session);
                 const isFuture = new Date(session.start_datetime) > new Date();
                 const canAct = session.status === SESSION_STATUS.SCHEDULED && isFuture;
                 return (

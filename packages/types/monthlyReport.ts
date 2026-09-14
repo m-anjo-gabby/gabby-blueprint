@@ -1,4 +1,4 @@
-import { SessionStatus } from './session';
+import { SessionStatus, CompletionResult, CancelCategory } from './session';
 
 /**
  * ----------------------------------------------
@@ -31,6 +31,8 @@ export interface MonthlyReportSession {
   start_datetime: string; // UTC ISO文字列
   end_datetime: string;
   status: SessionStatus;
+  completion_result: CompletionResult | null;
+  cancel_category: CancelCategory | null;
   status_note: string | null;
   ticket_refunded: boolean | null;
   counts_toward_total: boolean;

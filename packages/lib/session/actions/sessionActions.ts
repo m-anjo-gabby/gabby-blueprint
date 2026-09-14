@@ -33,6 +33,8 @@ import {
   SessionRescheduleProposalGroup,
   SessionSprintSummaryEntry,
   SessionStatus,
+  CompletionResult,
+  CancelCategory,
 } from '@gabby/types/session';
 
 const logger = createLogger('common');
@@ -47,7 +49,7 @@ function classifyRpcError(message: string | undefined): SessionActionErrorCode {
   if (message.includes('not authorized')) return 'unauthorized';
   if (message.includes('not found') || message.includes('no pending proposals')) return 'not_found';
   if (message.includes('reason required')) return 'reason_required';
-  if (message.includes('invalid resolved status')) return 'invalid_input';
+  if (message.includes('invalid completion result')) return 'invalid_input';
   if (
     message.includes('not scheduled')
     || message.includes('already started')
@@ -74,6 +76,8 @@ type SessionRow = {
   start_datetime: string;
   end_datetime: string;
   status: SessionStatus;
+  completion_result: CompletionResult | null;
+  cancel_category: CancelCategory | null;
   rescheduled_from: string | null;
   cancel_reason: string | null;
   status_note: string | null;
@@ -111,6 +115,8 @@ async function toSessionListItems(
       start_datetime: s.start_datetime,
       end_datetime: s.end_datetime,
       status: s.status,
+      completion_result: s.completion_result,
+      cancel_category: s.cancel_category,
       viewer_role: isStudent ? 'student' : 'coach',
       counterpart_id: counterpartId,
       counterpart_name: nameById.get(counterpartId) ?? '(Unknown)',
@@ -122,7 +128,8 @@ async function toSessionListItems(
   });
 }
 
-const SESSION_ROW_COLUMNS = 'session_id, schedule_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note';
+const SESSION_ROW_COLUMNS =
+  'session_id, schedule_id, student_id, coach_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note';
 
 /**
  * ログイン中ユーザー（生徒/コーチいずれか）の、指定期間内のセッション一覧を取得する（ポータル共通、
@@ -830,9 +837,14 @@ export async function finalizeSessionCore(sessionId: string, reason?: string): P
       return { success: false, errorCode: classifyRpcError(error?.message) };
     }
 
-    const row = data[0] as { new_status: number; overlap_seconds: number };
-    logger.info('session:finalize_success', 'Session finalized', { ...ctx, userId: user.id, payload: { sessionId, status: row.new_status } });
-    return { success: true, status: row.new_status as SessionStatus, overlapSeconds: row.overlap_seconds };
+    const row = data[0] as { new_status: number; completion_result: number; overlap_seconds: number };
+    logger.info('session:finalize_success', 'Session finalized', { ...ctx, userId: user.id, payload: { sessionId, completionResult: row.completion_result } });
+    return {
+      success: true,
+      status: row.new_status as SessionStatus,
+      completionResult: row.completion_result as CompletionResult,
+      overlapSeconds: row.overlap_seconds,
+    };
   } catch (err) {
     logger.error('session:finalize_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
@@ -845,7 +857,7 @@ export async function finalizeSessionCore(sessionId: string, reason?: string): P
  */
 export async function resolveStaleSessionCore(
   sessionId: string,
-  resolvedStatus: number,
+  completionResult: CompletionResult,
   reason: string
 ): Promise<ResolveStaleSessionResult> {
   const ctx = await getLogContext();
@@ -862,16 +874,16 @@ export async function resolveStaleSessionCore(
 
     const { error } = await supabase.rpc('resolve_stale_session', {
       p_session_id: sessionId,
-      p_resolved_status: resolvedStatus,
+      p_completion_result: completionResult,
       p_reason: trimmed,
     });
 
     if (error) {
-      logger.error('session:resolve_stale_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId, resolvedStatus } });
+      logger.error('session:resolve_stale_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId, completionResult } });
       return { success: false, errorCode: classifyRpcError(error.message) };
     }
 
-    logger.info('session:resolve_stale_success', 'Stale session resolved', { ...ctx, userId: user.id, payload: { sessionId, resolvedStatus } });
+    logger.info('session:resolve_stale_success', 'Stale session resolved', { ...ctx, userId: user.id, payload: { sessionId, completionResult } });
     return { success: true };
   } catch (err) {
     logger.error('session:resolve_stale_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
@@ -893,7 +905,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
 
     const { data: session, error: sessionError } = await supabase
       .from('com_t_session')
-      .select('session_id, student_id, coach_id, start_datetime, end_datetime, status, status_note')
+      .select('session_id, student_id, coach_id, start_datetime, end_datetime, status, completion_result, status_note')
       .eq('session_id', sessionId)
       .maybeSingle();
 
@@ -987,6 +999,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         start_datetime: session.start_datetime,
         end_datetime: session.end_datetime,
         status: session.status,
+        completion_result: session.completion_result,
         status_note: session.status_note,
         counterpart_name: counterpart?.user_name ?? '(Unknown)',
         counterpart_icon_path: counterpart?.icon_path ?? null,

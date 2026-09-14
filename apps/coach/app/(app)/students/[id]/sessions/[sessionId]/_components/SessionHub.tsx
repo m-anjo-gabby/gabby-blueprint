@@ -21,7 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { Section } from '@/components/common/Section';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { hasCoachJoinedSessions } from '@/actions/sessionAction';
@@ -65,7 +65,7 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
   // セットする（timezoneも仮値のAsia/Tokyoになる）。その仮値でセッション日時を表示すると、
   // 実際のコーチのタイムゾーンに切り替わった瞬間にちらつくため、確定するまでは表示しない。
   const isTimezoneReady = !!user && user.user_id !== 0;
-  const badge = SESSION_STATUS_BADGE[session.status];
+  const badge = getSessionStatusBadge(session);
   const { endLesson, endingSessionId, reasonDialogOpen, closeReasonDialog, submitReason, notActionableSessionId } = useEndLesson();
   // 別タブで先にEnd Session済みだった場合、このタブでのEnd SessionクリックはRPC側の
   // 二重確定防止チェックで拒否される。そのエラーを検知したら、リフレッシュせずとも

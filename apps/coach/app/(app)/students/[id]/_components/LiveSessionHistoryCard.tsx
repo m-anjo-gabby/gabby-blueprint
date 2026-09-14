@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
@@ -20,7 +20,7 @@ import {
   SessionListItem,
   SESSION_NON_ACTIONABLE_STATUSES,
   SESSION_RESULT_STATUSES,
-  SESSION_CHANGE_HISTORY_STATUSES,
+  isSelfInitiatedCancel,
 } from '@gabby/types/session';
 import type { CoachSessionListItem, LiveSessionShortfallItem, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 import { getStudentSessionsByTicket } from '@/actions/studentAction';
@@ -38,6 +38,8 @@ function toSessionListItem(
     start_datetime: session.start_datetime,
     end_datetime: session.end_datetime,
     status: session.status,
+    completion_result: session.completion_result,
+    cancel_category: session.cancel_category,
     viewer_role: 'coach',
     counterpart_id: studentId,
     counterpart_name: studentName,
@@ -108,9 +110,11 @@ export function LiveSessionHistoryCard({
     (s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) > now
   );
   const completedSessions = visibleSessions.filter((s) => SESSION_RESULT_STATUSES.includes(s.status));
-  // change-historyのステータス群はすべてSESSION_NON_ACTIONABLE_STATUSESの部分集合のため、
+  // 変更履歴タブは生徒・コーチ本人起因のキャンセルのみを対象とする（ライセンス無効化・
+  // コーチ交代・アドミン代理操作は運用都合の内部処理のため対象外）。isSelfInitiatedCancelは
+  // status===CANCELLEDを前提とするため、これもSESSION_NON_ACTIONABLE_STATUSESの部分集合であり、
   // visibleSessionsに残っている時点で必ず自分自身が担当したセッションである
-  const historySessions = visibleSessions.filter((s) => SESSION_CHANGE_HISTORY_STATUSES.includes(s.status));
+  const historySessions = visibleSessions.filter((s) => isSelfInitiatedCancel(s));
 
   const showUpcomingTab = upcomingSessions.length > 0;
   const [activeTab, setActiveTab] = useState('upcoming');
@@ -147,7 +151,7 @@ export function LiveSessionHistoryCard({
   };
 
   const renderSessionRow = (session: CoachSessionListItem) => {
-    const badge = SESSION_STATUS_BADGE[session.status];
+    const badge = getSessionStatusBadge(session);
     const isOwn = session.coach_id === myId;
     const isFuture = new Date(session.start_datetime) > now;
     const isPastEnd = new Date(session.end_datetime) < now;

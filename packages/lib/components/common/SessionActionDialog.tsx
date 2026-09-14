@@ -9,7 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import { useUserStore } from '../../stores/useUserStore';
 import { generateLessonStartTimeOptions } from '../../date/date';
 import { CounterpartLocalTime } from './CounterpartLocalTime';
-import { SESSION_STATUS, SessionListItem, SessionStatus, ProposedSlotInput } from '@gabby/types/session';
+import { SESSION_STATUS, CANCEL_CATEGORY, COMPLETION_RESULT, SessionListItem, CompletionResult, ProposedSlotInput } from '@gabby/types/session';
 
 /**
  * ----------------------------------------------
@@ -169,7 +169,7 @@ export interface SessionActionDialogActions {
   /** 期限超過セッションの手動解決（コーチのみ使用。生徒側では渡さない） */
   resolveStaleSession?: (
     sessionId: string,
-    resolvedStatus: SessionStatus,
+    completionResult: CompletionResult,
     reason: string
   ) => Promise<{ success: true } | { success: false; message: string }>;
 }
@@ -199,7 +199,7 @@ export interface SessionActionDialogResolveLabels {
   title: string;
   description: (counterpartName: string) => string;
   outcomeLabel: string;
-  statusOptions: { value: SessionStatus; label: string }[];
+  statusOptions: { value: CompletionResult; label: string }[];
   reasonLabel: string;
   reasonPlaceholder: string;
   backButton: string;
@@ -235,7 +235,7 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
   const currentUserId = useUserStore((state) => state.user?.id);
   const [reason, setReason] = useState('');
   const [proposedSlots, setProposedSlots] = useState<ProposedSlotDraft[]>([]);
-  const [resolvedStatus, setResolvedStatus] = useState<SessionStatus>(SESSION_STATUS.COMPLETED);
+  const [resolvedCompletionResult, setResolvedCompletionResult] = useState<CompletionResult>(COMPLETION_RESULT.NORMAL);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
@@ -243,14 +243,14 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     setReason('');
     setProposedSlots([]);
     if (target?.mode === 'resolve') {
-      setResolvedStatus(SESSION_STATUS.COMPLETED);
+      setResolvedCompletionResult(COMPLETION_RESULT.NORMAL);
     }
   }, [target]);
 
   const isCoachViewer = target?.session.viewer_role === 'coach';
   const coachId = target ? (isCoachViewer ? currentUserId : target.session.counterpart_id) : undefined;
   const studentId = target ? (isCoachViewer ? target.session.counterpart_id : currentUserId) : undefined;
-  const cancelStatus = isCoachViewer ? SESSION_STATUS.CANCELLED_BY_COACH : SESSION_STATUS.CANCELLED_BY_STUDENT;
+  const cancelCategory = isCoachViewer ? CANCEL_CATEGORY.COACH : CANCEL_CATEGORY.STUDENT;
 
   const addProposedSlot = () => {
     setProposedSlots((prev) =>
@@ -310,7 +310,7 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
         showToast(result.message, 'error');
         return;
       }
-      onResolved(target.session.session_id, { status: cancelStatus, cancel_reason: reason || null });
+      onResolved(target.session.session_id, { status: SESSION_STATUS.CANCELLED, cancel_category: cancelCategory, cancel_reason: reason || null });
       showToast(labels.cancel.successToast(proposedSlotInputs.length > 0), 'success');
       onClose();
     } finally {
@@ -322,12 +322,12 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     if (!target || !reason.trim() || !actions.resolveStaleSession || !labels.resolve) return;
     setIsSubmitting(true);
     try {
-      const result = await actions.resolveStaleSession(target.session.session_id, resolvedStatus, reason);
+      const result = await actions.resolveStaleSession(target.session.session_id, resolvedCompletionResult, reason);
       if (!result.success) {
         showToast(result.message, 'error');
         return;
       }
-      onResolved(target.session.session_id, { status: resolvedStatus });
+      onResolved(target.session.session_id, { status: SESSION_STATUS.COMPLETED, completion_result: resolvedCompletionResult });
       showToast(labels.resolve.successToast, 'success');
       onClose();
     } finally {
@@ -452,8 +452,8 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
               <div className="space-y-1.5">
                 <Label>{labels.resolve.outcomeLabel}</Label>
                 <select
-                  value={resolvedStatus}
-                  onChange={(e) => setResolvedStatus(Number(e.target.value) as SessionStatus)}
+                  value={resolvedCompletionResult}
+                  onChange={(e) => setResolvedCompletionResult(Number(e.target.value) as CompletionResult)}
                   className={cn(INPUT_CLASS, 'w-full')}
                 >
                   {labels.resolve.statusOptions.map((opt) => (

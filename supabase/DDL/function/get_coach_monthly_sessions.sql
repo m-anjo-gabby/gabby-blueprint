@@ -8,15 +8,22 @@
 -- 単一の実装箇所となる（呼び出し側TypeScript・承認RPCのいずれもここで計算済みの値をそのまま使う）。
 --
 -- 【カウント規則】
--- completed(2) / early_ended(7) / no_show(6) / 生徒都合12h以内キャンセル(status=3かつ
--- ticket_refunded=false) をコーチの稼働実績としてカウントする。
--- cancelled_by_admin(10)はアドミン代理操作のため常に対象外。コーチキャンセル(4)・
--- 生徒都合12h以上前キャンセル(status=3かつticket_refunded=true)・振替元(5)・
--- ライセンス無効化(8)・コーチ交代(9)もカウントしない。
+-- completed(status=2、内訳(completion_result)問わず) / 生徒都合12h以内キャンセル
+-- (status=3かつcancel_category=1(student)かつticket_refunded=false) をコーチの
+-- 稼働実績としてカウントする。コーチキャンセル(cancel_category=2)・生徒都合12h以上前
+-- キャンセル(ticket_refunded=true)・アドミン代理キャンセル(cancel_category=3)・
+-- ライセンス無効化(cancel_category=4)・コーチ交代(cancel_category=5)はカウントしない。
 --
 -- 【注意色】
 -- is_unresolved: 終了処理が行われていない枠（status=1かつ終了予定時刻を過ぎている）
 -- is_attention: 12h以内キャンセル・No show・早期終了を含む枠（is_unresolvedとは別の注意色）
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- 旧status値(6,7,8,9,10)を撤廃しstatus=2(completed)/3(cancelled)に統合したことに伴い、
+-- completion_result/cancel_categoryを新設の出力列として追加する（呼び出し側TypeScriptが
+-- No Show/Early Ended等の内訳ラベルを表示するために必要。table/com_t_session.sqlの
+-- ステータス簡素化パッチ参照）。RETURNS TABLEの列追加のため、CREATE OR REPLACEの前に
+-- DROP FUNCTIONで旧シグネチャを明示的に削除する。
 --
 -- 【対象行の絞り込み (2026-09-13 追加、同日中に一般化)】
 -- 本レポートは「今月のコーチ稼働実績」を見る画面であり、実績・要対応のいずれでもない行
@@ -39,6 +46,8 @@
 -- session_count_snapshotに固定保存されるため、承認後のタイムゾーン変更は既に承認済みの
 -- 集計を遡って変えない（影響があるとしても未承認の月の月境界付近のみ）。
 ---------------------------------------------
+DROP FUNCTION IF EXISTS public.get_coach_monthly_sessions(uuid, date);
+
 CREATE OR REPLACE FUNCTION public.get_coach_monthly_sessions(p_coach_id uuid, p_report_month date)
 RETURNS TABLE(
     session_id uuid,
@@ -46,6 +55,8 @@ RETURNS TABLE(
     start_datetime timestamptz,
     end_datetime timestamptz,
     status smallint,
+    completion_result smallint,
+    cancel_category smallint,
     status_note text,
     ticket_refunded boolean,
     counts_toward_total boolean,
@@ -80,17 +91,19 @@ BEGIN
         s.start_datetime,
         s.end_datetime,
         s.status,
+        s.completion_result,
+        s.cancel_category,
         s.status_note,
         s.ticket_refunded,
-        (s.status IN (2, 6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS counts_toward_total,
+        (s.status = 2 OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS counts_toward_total,
         (s.status = 1 AND s.end_datetime < NOW()) AS is_unresolved,
-        (s.status IN (6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) AS is_attention
+        ((s.status = 2 AND s.completion_result IN (2, 3)) OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS is_attention
     FROM public.com_t_session s
     WHERE s.coach_id = p_coach_id
       AND s.start_datetime >= v_month_start_utc
       AND s.start_datetime < v_month_end_utc
       AND (
-          (s.status IN (2, 6, 7) OR (s.status = 3 AND s.ticket_refunded = false)) -- counts_toward_total
+          (s.status = 2 OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) -- counts_toward_total
           OR (s.status = 1 AND s.end_datetime < NOW()) -- is_unresolved
       )
     ORDER BY s.student_id, s.start_datetime;

@@ -49,6 +49,11 @@ DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb);
 -- 管理者が明示的に指定した値でそのまま確定させる（12時間ルール等は適用しない）。
 -- ステータスは専用のcancelled_by_admin(10)を用い、通知は生徒・コーチ双方へ、
 -- どちらが原因かを特定しない中立的な文言で送る。
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- statusは常に3(cancelled)を確定し、起因（生徒/コーチ/アドミン代理）はcancel_category
+-- (1/2/3)に分離する（table/com_t_session.sqlのステータス簡素化パッチ参照）。
+-- 返還有無(ticket_refunded)の算出ロジック自体は変更しない。
 CREATE OR REPLACE FUNCTION public.cancel_session(
     p_session_id uuid,
     p_reason text DEFAULT NULL,
@@ -62,7 +67,7 @@ SET search_path = public
 AS $$
 DECLARE
     v_session RECORD;
-    v_new_status smallint;
+    v_cancel_category smallint;
     v_refunded boolean;
     v_is_coach boolean;
     v_is_admin_proxy boolean;
@@ -102,18 +107,18 @@ BEGIN
         IF p_admin_refund_ticket IS NULL THEN
             RAISE EXCEPTION 'p_admin_refund_ticket is required for an admin-initiated cancellation';
         END IF;
-        v_new_status := 10;
+        v_cancel_category := 3; -- admin
         v_refunded := p_admin_refund_ticket;
     ELSIF v_session.student_id = auth.uid() THEN
-        v_new_status := 3;
+        v_cancel_category := 1; -- student
         v_refunded := (v_session.start_datetime - NOW()) >= interval '12 hours';
     ELSE
-        v_new_status := 4;
+        v_cancel_category := 2; -- coach
         v_refunded := true;
     END IF;
 
     UPDATE public.com_t_session
-    SET status = v_new_status, cancel_reason = p_reason, cancelled_by = auth.uid(),
+    SET status = 3, cancel_category = v_cancel_category, cancel_reason = p_reason, cancelled_by = auth.uid(),
         ticket_refunded = v_refunded, update_date = NOW()
     WHERE session_id = p_session_id;
 

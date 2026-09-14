@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, BookOpen, Info, LogIn, LogOut, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Section } from '@/components/common/Section';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { SessionResultSummary } from '@gabby/types/session';
@@ -20,7 +20,7 @@ interface Props {
 
 export function SessionResult({ studentId, session, homework, checklist }: Props) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
-  const badge = SESSION_STATUS_BADGE[session.status];
+  const badge = getSessionStatusBadge(session);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-8">

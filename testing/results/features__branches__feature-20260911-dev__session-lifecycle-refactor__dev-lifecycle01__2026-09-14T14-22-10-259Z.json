@@ -1,0 +1,234 @@
+{
+  "scenario": "features/branches/feature-20260911-dev/session-lifecycle-refactor.feature",
+  "env": "dev",
+  "tag": "lifecycle01",
+  "executedAt": "2026-09-14T14:22:10.259Z",
+  "gitCommit": "3b92b9fd",
+  "gitBranch": "feature/20260911-dev",
+  "totalChecks": 46,
+  "passed": 46,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "SA: target_sessionsが週3回25セッションを9/8/8に均等割り(余りはslot_no昇順)している",
+      "ok": true,
+      "detail": "[9,8,8]"
+    },
+    {
+      "name": "SA: slot_no=1の生成済みセッション数がtarget_sessions(9)と一致(ライセンス期間が長くても超過生成しない)",
+      "ok": true,
+      "detail": "generated=9"
+    },
+    {
+      "name": "SA: slot_no=1のfn_schedule_shortfallはexpected=actual=9, shortfall=0",
+      "ok": true,
+      "detail": "{\"expected_sessions\":9,\"actual_sessions\":9,\"shortfall\":0}"
+    },
+    {
+      "name": "SA: slot_no=2の生成済みセッション数がtarget_sessions(8)と一致(ライセンス期間が長くても超過生成しない)",
+      "ok": true,
+      "detail": "generated=8"
+    },
+    {
+      "name": "SA: slot_no=2のfn_schedule_shortfallはexpected=actual=8, shortfall=0",
+      "ok": true,
+      "detail": "{\"expected_sessions\":8,\"actual_sessions\":8,\"shortfall\":0}"
+    },
+    {
+      "name": "SA: slot_no=3の生成済みセッション数がtarget_sessions(8)と一致(ライセンス期間が長くても超過生成しない)",
+      "ok": true,
+      "detail": "generated=8"
+    },
+    {
+      "name": "SA: slot_no=3のfn_schedule_shortfallはexpected=actual=8, shortfall=0",
+      "ok": true,
+      "detail": "{\"expected_sessions\":8,\"actual_sessions\":8,\"shortfall\":0}"
+    },
+    {
+      "name": "SB: target_sessionsは週2回24セッションの1コマ分=12(マッチングタイミングに関わらず不変)",
+      "ok": true,
+      "detail": "target_sessions=12"
+    },
+    {
+      "name": "SB: ライセンス残り10日という短い期間のため、実際に生成されたのは2回のみ",
+      "ok": true,
+      "detail": "generated=2"
+    },
+    {
+      "name": "SB: fn_schedule_shortfallがexpected=12, actual=2, shortfall=10を正しく検知する(旧実装なら暦週計算でexpectedも2になり検知できなかった)",
+      "ok": true,
+      "detail": "{\"expected_sessions\":12,\"actual_sessions\":2,\"shortfall\":10}"
+    },
+    {
+      "name": "finalize_session: 30分重複 → completion_result=1(normal)、statusは常に2(completed)",
+      "ok": true,
+      "detail": "{\"new_status\":2,\"completion_result\":1,\"overlap_seconds\":1800,\"student_joined\":true}"
+    },
+    {
+      "name": "finalize_session: 10分重複でreason未指定だとreason_required相当のエラーになる",
+      "ok": true,
+      "detail": "reason required for early-ended session"
+    },
+    {
+      "name": "finalize_session: reason指定で completion_result=2(early_ended)",
+      "ok": true,
+      "detail": "{\"new_status\":2,\"completion_result\":2,\"overlap_seconds\":600,\"student_joined\":true}"
+    },
+    {
+      "name": "finalize_session: early_endedのstatus_noteに理由が記録される",
+      "ok": true,
+      "detail": "QA早期終了理由"
+    },
+    {
+      "name": "finalize_session: 生徒の入室記録なし → completion_result=3(no_show)",
+      "ok": true,
+      "detail": "{\"new_status\":2,\"completion_result\":3,\"overlap_seconds\":0,\"student_joined\":false}"
+    },
+    {
+      "name": "resolve_stale_session: reason空文字だとエラーになる",
+      "ok": true,
+      "detail": "reason required to resolve a stale session"
+    },
+    {
+      "name": "resolve_stale_session: completion_result=1(normal)で解決できる",
+      "ok": true
+    },
+    {
+      "name": "resolve_stale_session: normal解決後、status=2/completion_result=1/status_noteに理由が記録される(resolve_stale_sessionは内訳によらず常にreasonを記録する)",
+      "ok": true,
+      "detail": "{\"status\":2,\"completion_result\":1,\"status_note\":\"QAアプリ外実施(normal)\"}"
+    },
+    {
+      "name": "resolve_stale_session: completion_result=2(early_ended)で解決できる",
+      "ok": true
+    },
+    {
+      "name": "used_sessions: normal(completion_result=1)の2件分のみ加算され、early_ended/no_showは加算されない(合計2)",
+      "ok": true,
+      "detail": "used_sessions=2"
+    },
+    {
+      "name": "monthly: normalはcompletion_result=1, counts_toward_total=true, is_attention=false",
+      "ok": true,
+      "detail": "{\"session_id\":\"63b7bf10-c047-4b12-8ce9-bcb78a82e0b5\",\"student_id\":\"8434ac1c-1e72-412b-8862-693cd9dd48ae\",\"start_datetime\":\"2026-09-18T01:00:00+00:00\",\"end_datetime\":\"2026-09-18T01:30:00+00:00\",\"status\":2,\"completion_result\":1,\"cancel_category\":null,\"status_note\":null,\"ticket_refunded\":null,\"counts_toward_total\":true,\"is_unresolved\":false,\"is_attention\":false}"
+    },
+    {
+      "name": "monthly: early_endedはcompletion_result=2, counts_toward_total=true, is_attention=true",
+      "ok": true,
+      "detail": "{\"session_id\":\"5f926c35-023b-40d1-b1c6-c18d093e1719\",\"student_id\":\"8434ac1c-1e72-412b-8862-693cd9dd48ae\",\"start_datetime\":\"2026-09-25T01:00:00+00:00\",\"end_datetime\":\"2026-09-25T01:30:00+00:00\",\"status\":2,\"completion_result\":2,\"cancel_category\":null,\"status_note\":\"QA早期終了理由\",\"ticket_refunded\":null,\"counts_toward_total\":true,\"is_unresolved\":false,\"is_attention\":true}"
+    },
+    {
+      "name": "monthly: no_showはcompletion_result=3, counts_toward_total=true, is_attention=true",
+      "ok": true,
+      "detail": "{\"session_id\":\"df26993d-6f86-46b6-a273-620b1d359e93\",\"student_id\":\"8434ac1c-1e72-412b-8862-693cd9dd48ae\",\"start_datetime\":\"2026-10-02T01:00:00+00:00\",\"end_datetime\":\"2026-10-02T01:30:00+00:00\",\"status\":2,\"completion_result\":3,\"cancel_category\":null,\"status_note\":null,\"ticket_refunded\":null,\"counts_toward_total\":true,\"is_unresolved\":false,\"is_attention\":true}"
+    },
+    {
+      "name": "cancel_session: 生徒本人・12時間以上前キャンセルが成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: 12時間以上前は cancel_category=1(student), ticket_refunded=true",
+      "ok": true,
+      "detail": "{\"status\":3,\"cancel_category\":1,\"ticket_refunded\":true}"
+    },
+    {
+      "name": "cancel_session: 生徒本人・12時間未満キャンセルが成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: 12時間未満は cancel_category=1(student), ticket_refunded=false(返還なし)",
+      "ok": true,
+      "detail": "{\"status\":3,\"cancel_category\":1,\"ticket_refunded\":false}"
+    },
+    {
+      "name": "cancel_session: コーチキャンセルが成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: コーチキャンセルは cancel_category=2(coach), ticket_refunded=true(時間帯を問わず)",
+      "ok": true,
+      "detail": "{\"status\":3,\"cancel_category\":2,\"ticket_refunded\":true}"
+    },
+    {
+      "name": "admin_reschedule_session: アドミンによる日時変更が成功する",
+      "ok": true
+    },
+    {
+      "name": "admin_reschedule_session: 旧セッション行は status=3, cancel_category=3(admin)",
+      "ok": true,
+      "detail": "{\"status\":3,\"cancel_category\":3,\"cancel_reason\":\"QAアドミン日時変更\"}"
+    },
+    {
+      "name": "admin_reschedule_session: 新セッション行は status=1 かつ rescheduled_fromで旧行を参照する",
+      "ok": true,
+      "detail": "{\"status\":1,\"rescheduled_from\":\"e003dd9c-8635-4cf9-84a7-af8cfaf787e7\"}"
+    },
+    {
+      "name": "cancel_session: アドミン代理・返還ありが成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: アドミン代理は cancel_category=3(admin)、返還可否は明示指定どおりtrue",
+      "ok": true,
+      "detail": "{\"status\":3,\"cancel_category\":3,\"ticket_refunded\":true}"
+    },
+    {
+      "name": "cancel_session: アドミン代理・返還なしが成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: アドミン代理は cancel_category=3(admin)、返還可否は明示指定どおりfalse",
+      "ok": true,
+      "detail": "{\"status\":3,\"cancel_category\":3,\"ticket_refunded\":false}"
+    },
+    {
+      "name": "fn_schedule_shortfall: 複数キャンセル種別が混在する状況でも、RPCのactualが独立再現した集計値と一致する",
+      "ok": true,
+      "detail": "rpc=10, recomputed=10"
+    },
+    {
+      "name": "monthly: 生徒都合12時間以内キャンセル(返還なし)は counts_toward_total=true, is_attention=true (コーチの稼働実績としてカウント)",
+      "ok": true,
+      "detail": "{\"session_id\":\"07ff4805-3b3c-4c46-972a-bb0d3eaa6b86\",\"student_id\":\"8d404c3e-d733-44bb-ac49-fbab57d7c897\",\"start_datetime\":\"2026-09-14T20:21:50.507+00:00\",\"end_datetime\":\"2026-09-14T20:51:50.507+00:00\",\"status\":3,\"completion_result\":null,\"cancel_category\":1,\"status_note\":null,\"ticket_refunded\":false,\"counts_toward_total\":true,\"is_unresolved\":false,\"is_attention\":true}"
+    },
+    {
+      "name": "monthly: 生徒都合12時間以上前キャンセル(返還あり)は counts_toward_total=false (コーチの稼働実績にカウントしない)",
+      "ok": true,
+      "detail": "\"(対象月の一覧に含まれない=対象外として正しい)\""
+    },
+    {
+      "name": "release_lesson_schedule_slot: コーチ交代操作が成功する",
+      "ok": true
+    },
+    {
+      "name": "release_lesson_schedule_slot: スケジュールが status=9(terminated) になる",
+      "ok": true,
+      "detail": "status=9"
+    },
+    {
+      "name": "release_lesson_schedule_slot: 未実施だった12件全てが status=3, cancel_category=5(coach_reassigned) になる",
+      "ok": true,
+      "detail": "[{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null}]"
+    },
+    {
+      "name": "invalidate_user_license: ライセンス無効化操作が成功する",
+      "ok": true
+    },
+    {
+      "name": "invalidate_user_license: ライセンスが status=0(停止) になる",
+      "ok": true,
+      "detail": "status=0"
+    },
+    {
+      "name": "invalidate_user_license: 紐づくスケジュールが status=9(terminated) になる",
+      "ok": true,
+      "detail": "status=9"
+    },
+    {
+      "name": "invalidate_user_license: 未実施だった12件全てが status=3, cancel_category=4(license_ended) になる",
+      "ok": true,
+      "detail": "[{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null}]"
+    }
+  ]
+}

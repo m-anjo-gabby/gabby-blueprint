@@ -72,4 +72,64 @@
     直接叩いて確認してから判定ロジックを書く。Postgresの生のSQLSTATEとPostgREST層が返す
     エラーコードは別物であることを前提にする。
 
+### KJ-2026-0914-01 RPC存在確認(preflight)だけでは関数「本体」の不具合を検出できない
+
+- **該当シナリオ**: `testing/features/branches/feature-20260911-dev/session-lifecycle-refactor-seed.ts`
+- **事象**: `assertReleaseApplied`でのpreflightは全RPC「存在」を確認しOKだったにも関わらず、
+  `admin_match_student_with_coach`（内部で`fn_generate_sessions_for_schedule`を呼ぶ）の
+  実行が `42P10 (no unique or exclusion constraint matching the ON CONFLICT specification)`
+  で必ず失敗した。
+- **原因**: 2026-09-12の「Wブッキング防止の一意制約を有効な予約枠のみに限定」パッチで
+  `uq_session_schedule_datetime`を`WHERE status = 1`の部分一意インデックスに変更した際、
+  `fn_generate_sessions_for_schedule()`内の`ON CONFLICT (schedule_id, start_datetime)`に
+  同じWHERE句を追記し忘れていた。部分一意インデックスをON CONFLICTの推論対象にするには
+  INSERT側にも同一のWHERE句が必須というPostgresの仕様により、実際の重複有無に関わらず
+  常にエラーになる。2026-09-12以降、本関数を経由するセッション生成が全件失敗する状態が
+  続いていたが、それ以降どのテストシナリオもこの経路(実際のセッション生成)を
+  通していなかったため発覚しなかった。
+- **対処**: `ON CONFLICT (schedule_id, start_datetime) WHERE status = 1 DO NOTHING`に修正し、
+  リリースSQLに追加パッチとして追記した。
+- **判断基準への反映**:
+  - **`assertReleaseApplied`（ダミー引数でのRPC呼び出し）は「関数が存在し、シグネチャが
+    一致している」ことしか保証しない。関数本体のロジック不具合（今回のようなON CONFLICT
+    とインデックスの不一致、CHECK制約の考慮漏れ等)は検出できない。** KJ-2026-0904-01でも
+    同様の教訓（CHECK制約変更はRPC存在確認だけでは検出できない）が既出だったが、
+    今回は「一意インデックスをWHERE句付きに変更したら、それを参照する全てのON CONFLICT節を
+    洗い出して追従させる」という横断的な確認が必要なケースだった。
+  - **一意インデックスをpartial(WHERE句付き)に変更するリリースでは、そのインデックスを
+    ON CONFLICTの対象にしている全関数を`grep`等で洗い出し、WHERE句を同期させること。**
+    今回は該当が1関数のみだったが、対象が複数ある場合は見落としやすい。
+  - データ主体テストは「新機能が正しく動くか」だけでなく、「普段テストされていない
+    既存の経路が生きているか」も検出できる。今回のように、しばらく誰も通していない
+    コードパスをテストで初めて実行すると、無関係な既存の不具合が見つかることがある
+    （テスト対象外だからと無視せず、発見した時点で報告・修正すること）。
+
+---
+
+### KJ-2026-0914-02 com_t_session.ticket_idはcom_t_user_session_ticketへのFKにCASCADEが無い
+
+- **該当シナリオ**: `testing/features/branches/feature-20260911-dev/session-lifecycle-refactor-cleanup.ts`
+- **事象**: テストデータ削除処理で、`com_t_user_license`を削除(CASCADEでticket/scheduleまで
+  連鎖する想定)しようとしたところ、`update or delete on table "com_t_user_session_ticket"
+  violates foreign key constraint "com_t_session_ticket_id_fkey" on table "com_t_session"`
+  (23503)で失敗した。
+- **原因**: `com_m_lesson_schedule.ticket_id`は`ON DELETE CASCADE`だが、`com_t_session.ticket_id`
+  （集計用の非正規化参照）には`ON DELETE CASCADE`が設定されていない。ticket削除時、
+  schedule経由のCASCADEでsession行も連鎖削除される「はず」と考えたが、
+  `com_t_session.ticket_id`からticketへの直接のFK制約は独立して評価されるため、
+  session側にまだ行が残っている限りticket削除は拒否される。
+- **対処**: `com_t_user_license`を削除する前に、対象ticket_idに紐づく`com_t_session`行を
+  明示的に削除する一手順を追加した（schedule_id経由のCASCADEに任せず、ticket_id経由で
+  直接削除する）。
+- **判断基準への反映**:
+  - **「主キーAがテーブルBにCASCADEで伝播するはず」という前提を置く前に、削除対象の
+    子テーブルが複数の経路(直接のFKと、別テーブル経由の間接的な参照)を持っていないか
+    DDLで確認すること。** 今回はcom_t_sessionがschedule_id経由(間接、CASCADEあり)と
+    ticket_id経由(直接、CASCADE無し)の両方でticketに関連しており、片方だけ確認して
+    「連鎖するはず」と判断したのが誤りだった。
+  - テストデータ削除スクリプトを書く際は、DDLの`REFERENCES ... ON DELETE`を
+    テーブルごとに全て`grep`し、CASCADE/RESTRICT(デフォルト)を一覧化してから
+    削除順序を設計すること。「よく使うテーブルの主要な1本のFKだけ見て判断する」と
+    今回のような見落としが起きる。
+
 <!-- 新しい事例はこの下に追記していく -->

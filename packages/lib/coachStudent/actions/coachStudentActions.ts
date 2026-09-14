@@ -21,7 +21,7 @@ import {
   StudentLatestContractSummary,
   StudentContractSessionSummary,
 } from '@gabby/types/coachStudent';
-import { SESSION_STATUS, SESSION_RESULT_STATUSES, SessionStatus } from '@gabby/types/session';
+import { SESSION_STATUS, SESSION_RESULT_STATUSES } from '@gabby/types/session';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
 import { clampLevel, computeStage, getForcedLevels } from '../../sprint/stageProgression';
@@ -392,7 +392,7 @@ export async function getStudentSessionsByTicketCore(studentId: string, ticketId
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note, coach_id')
+      .select('session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id')
       .eq('student_id', studentId)
       .eq('ticket_id', ticketId)
       .order('start_datetime', { ascending: false });
@@ -595,13 +595,8 @@ async function computeStudentContractSessionSummary(
   }
 
   // fn_schedule_shortfall()の「actual(消化済み扱い)」判定と揃える: 返還なしキャンセルは
-  // 再予約不可のセッション枠消化として完了扱いに含める
-  const NON_REFUNDED_CANCEL_STATUSES: readonly SessionStatus[] = [
-    SESSION_STATUS.CANCELLED_BY_STUDENT,
-    SESSION_STATUS.CANCELLED_BY_COACH,
-    SESSION_STATUS.CANCELLED_BY_ADMIN,
-  ];
-
+  // 再予約不可のセッション枠消化として完了扱いに含める（status=CANCELLEDの1値に
+  // 統合されたため、起因(cancel_category)を問わずticket_refunded=falseのみで判定できる）
   let ownScheduled = 0;
   let ownConsumed = 0;
   for (const session of sessions ?? []) {
@@ -609,7 +604,7 @@ async function computeStudentContractSessionSummary(
       ownScheduled += 1;
     } else if (
       SESSION_RESULT_STATUSES.includes(session.status) ||
-      (NON_REFUNDED_CANCEL_STATUSES.includes(session.status) && session.ticket_refunded === false)
+      (session.status === SESSION_STATUS.CANCELLED && session.ticket_refunded === false)
     ) {
       ownConsumed += 1;
     }

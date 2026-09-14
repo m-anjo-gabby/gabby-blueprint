@@ -1,4 +1,4 @@
-import { SESSION_STATUS } from '@gabby/types/session';
+import { COMPLETION_RESULT } from '@gabby/types/session';
 import type { SessionActionDialogLabels } from '@gabby/lib/components/common/SessionActionDialog';
 
 /** English labels for the shared session cancel/resolve dialog (Coach portal). */
@@ -34,9 +34,9 @@ export const COACH_SESSION_ACTION_LABELS: SessionActionDialogLabels = {
       `This session with ${counterpartName} is past its scheduled end time but still shows as scheduled (e.g. it was conducted outside the app, or the End Session button was never pressed). Record what actually happened.`,
     outcomeLabel: 'Outcome',
     statusOptions: [
-      { value: SESSION_STATUS.COMPLETED, label: 'Completed (conducted outside the app)' },
-      { value: SESSION_STATUS.EARLY_ENDED, label: 'Ended early' },
-      { value: SESSION_STATUS.NO_SHOW, label: 'No-show' },
+      { value: COMPLETION_RESULT.NORMAL, label: 'Completed (conducted outside the app)' },
+      { value: COMPLETION_RESULT.EARLY_ENDED, label: 'Ended early' },
+      { value: COMPLETION_RESULT.NO_SHOW, label: 'No-show' },
     ],
     reasonLabel: 'Reason (required)',
     reasonPlaceholder: 'e.g. Conducted the lesson over a direct Zoom call instead.',

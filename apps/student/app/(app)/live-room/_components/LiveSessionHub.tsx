@@ -18,20 +18,20 @@ import {
   SessionBookingRequest,
   SessionListItem,
   SESSION_RESULT_STATUSES,
-  SESSION_CHANGE_HISTORY_STATUSES,
+  isSelfInitiatedCancel,
 } from '@gabby/types/session';
 import { BookableTicketSlot, LiveSessionContractSummary } from '@gabby/types/matching';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
 import { RescheduleProposalDialog } from './RescheduleProposalDialog';
 
 const JOINABLE_WINDOW_MS = 48 * 60 * 60 * 1000;
 const HISTORY_PAGE_SIZE = 10;
-// 結果画面への導線を出す(=call_logが記録されている想定の)確定ステータス、変更履歴タブの対象は
-// packages/types/session.tsで共通定義したものを使う（コーチ側のLive Sessionsカードとも共有）
+// 結果画面への導線を出す(=call_logが記録されている想定の)確定ステータスは
+// packages/types/session.tsで共通定義したものを使う（コーチ側のLive Sessionsカードとも共有）。
+// 変更履歴タブの対象（生徒・コーチ本人起因のキャンセルのみ）はisSelfInitiatedCancelで判定する。
 const RESULT_LINKABLE_STATUSES = new Set<number>(SESSION_RESULT_STATUSES);
-const CHANGE_HISTORY_STATUSES = new Set<number>(SESSION_CHANGE_HISTORY_STATUSES);
 
 function isJoinableSoon(startDatetime: string): boolean {
   return new Date(startDatetime).getTime() - Date.now() <= JOINABLE_WINDOW_MS;
@@ -86,7 +86,7 @@ export function LiveSessionHub({
   const pastSessions = selectedTicketId ? pastSessionsByTicket[selectedTicketId] : undefined;
   const isLoadingPast = selectedTicketId !== null && pastSessions === undefined;
   const completedSessions = (pastSessions ?? []).filter((s) => RESULT_LINKABLE_STATUSES.has(s.status));
-  const changeHistorySessions = (pastSessions ?? []).filter((s) => CHANGE_HISTORY_STATUSES.has(s.status));
+  const changeHistorySessions = (pastSessions ?? []).filter((s) => isSelfInitiatedCancel(s));
 
   // 今後の予定が無い契約(過去契約など)では「今後の予定」タブ自体を出さない。
   // タブが消えた際に選択中タブが宙に浮かないよう、表示用の値は都度導出する（stateにしない）
@@ -328,8 +328,8 @@ export function LiveSessionHub({
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${SESSION_STATUS_BADGE[session.status].className}`}>
-                        {SESSION_STATUS_BADGE[session.status].label}
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${getSessionStatusBadge(session).className}`}>
+                        {getSessionStatusBadge(session).label}
                       </span>
                       <FileText size={14} className="text-slate-300" />
                     </div>
@@ -357,7 +357,7 @@ export function LiveSessionHub({
             ) : (
               <>
                 {historyReveal.visibleItems.map((session) => {
-                  const badge = SESSION_STATUS_BADGE[session.status];
+                  const badge = getSessionStatusBadge(session);
                   return (
                     <div
                       key={session.session_id}

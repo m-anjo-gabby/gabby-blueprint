@@ -12,6 +12,11 @@
 -- 分岐が担っていた「Availability・12時間ルールを免除し、ダブルブッキングのみ
 -- チェックして即時に新規行を作る」という挙動を、アドミン専用の本関数として維持する。
 -- 呼び出しはget_jwt_user_type()='0'（管理者）のみ許可する。
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- 置き換えられた旧セッション行は、旧status=5(rescheduled)ではなくstatus=3(cancelled)、
+-- cancel_category=3(admin)として記録する（table/com_t_session.sqlのステータス
+-- 簡素化パッチ参照）。置き換え先の新しい行はrescheduled_fromで引き続き参照できる。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_reschedule_session(
     p_session_id uuid,
@@ -64,7 +69,7 @@ BEGIN
     RETURNING session_id INTO v_new_session_id;
 
     UPDATE public.com_t_session
-    SET status = 5, cancel_reason = p_reason, cancelled_by = auth.uid(), update_date = NOW()
+    SET status = 3, cancel_category = 3, cancel_reason = p_reason, cancelled_by = auth.uid(), update_date = NOW()
     WHERE session_id = p_session_id;
 
     INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)

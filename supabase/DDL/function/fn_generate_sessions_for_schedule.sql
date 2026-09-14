@@ -31,6 +31,17 @@
 -- target_sessionsに満たない場合（マッチング承認が遅れた、BLOCK例外で欠番が出た等）でも
 -- end_dateを超えて延長はしない。その不足はfn_schedule_shortfall()のshortfallとして
 -- 可視化するのみとし、埋めるかどうかはコーチ・アドミンの運用判断に委ねる。
+--
+-- 【不具合修正: ON CONFLICT対象と一意インデックスの不一致 (2026-09-14)】
+-- 2026-09-12の「Wブッキング防止の一意制約を有効な予約枠のみに限定」パッチで
+-- uq_session_schedule_datetimeを「WHERE status = 1」の部分一意インデックスに変更した際、
+-- 本関数のON CONFLICT (schedule_id, start_datetime)にも同じWHERE句を追記する必要が
+-- あったが漏れていた。部分一意インデックスをON CONFLICTの推論対象にするには、
+-- INSERT側のON CONFLICT節にも同一のWHERE句を明示する必要があり(Postgresの仕様)、
+-- 一致しない場合は実際の重複有無に関わらず常にエラー(42P10: no unique or
+-- exclusion constraint matching the ON CONFLICT specification)になる。これにより
+-- 2026-09-12以降、本関数を経由するセッション生成(マッチング承認・アドミン直接
+-- マッチングいずれも)が全件失敗する状態になっていた。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_generate_sessions_for_schedule(p_schedule_id uuid)
 RETURNS integer
@@ -77,7 +88,7 @@ BEGIN
                 v_schedule.schedule_id, v_schedule.ticket_id, v_schedule.student_id, v_schedule.coach_id,
                 v_start_ts, v_end_ts, 1
             )
-            ON CONFLICT (schedule_id, start_datetime) DO NOTHING;
+            ON CONFLICT (schedule_id, start_datetime) WHERE status = 1 DO NOTHING;
 
             IF FOUND THEN
                 v_generated_count := v_generated_count + 1;

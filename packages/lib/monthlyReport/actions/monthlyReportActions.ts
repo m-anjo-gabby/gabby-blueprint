@@ -15,7 +15,7 @@ import {
   MonthlyReportStudentRow,
   RevokeCoachMonthlyReportApprovalResult,
 } from '@gabby/types/monthlyReport';
-import { SESSION_STATUS, SessionStatus } from '@gabby/types/session';
+import { SESSION_STATUS, COMPLETION_RESULT, CANCEL_CATEGORY, SessionStatus, CompletionResult, CancelCategory } from '@gabby/types/session';
 
 const logger = createLogger('common');
 
@@ -92,6 +92,8 @@ async function buildMonthlyReport(
     start_datetime: string;
     end_datetime: string;
     status: SessionStatus;
+    completion_result: CompletionResult | null;
+    cancel_category: CancelCategory | null;
     status_note: string | null;
     ticket_refunded: boolean | null;
     counts_toward_total: boolean;
@@ -108,6 +110,8 @@ async function buildMonthlyReport(
       start_datetime: s.start_datetime,
       end_datetime: s.end_datetime,
       status: s.status,
+      completion_result: s.completion_result,
+      cancel_category: s.cancel_category,
       status_note: s.status_note,
       ticket_refunded: s.ticket_refunded,
       counts_toward_total: s.counts_toward_total,
@@ -137,9 +141,9 @@ async function buildMonthlyReport(
 
   const grandTotal = studentRows.reduce((sum, row) => sum + row.month_total, 0);
   // 内訳表示用の3区分（完了には早期終了を含める。completed_count+late_cancel_count+no_show_count===grand_totalとなる）
-  const completedCount = sessions.filter((s) => s.status === SESSION_STATUS.COMPLETED || s.status === SESSION_STATUS.EARLY_ENDED).length;
-  const lateCancelCount = sessions.filter((s) => s.status === SESSION_STATUS.CANCELLED_BY_STUDENT && s.ticket_refunded === false).length;
-  const noShowCount = sessions.filter((s) => s.status === SESSION_STATUS.NO_SHOW).length;
+  const completedCount = sessions.filter((s) => s.status === SESSION_STATUS.COMPLETED && s.completion_result !== COMPLETION_RESULT.NO_SHOW).length;
+  const lateCancelCount = sessions.filter((s) => s.status === SESSION_STATUS.CANCELLED && s.cancel_category === CANCEL_CATEGORY.STUDENT && s.ticket_refunded === false).length;
+  const noShowCount = sessions.filter((s) => s.status === SESSION_STATUS.COMPLETED && s.completion_result === COMPLETION_RESULT.NO_SHOW).length;
   const unresolvedCount = sessions.filter((s) => s.is_unresolved).length;
 
   const approvalRow = approvalResult.data as {

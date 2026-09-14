@@ -22,11 +22,11 @@ import { getMyCalendarEvents } from '@/actions/calendarEventAction';
 import { getMyBookableTickets } from '@/actions/matchingAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { SessionListItem, SESSION_STATUS, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
+import { SessionListItem, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
 import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import { BookableTicketSlot } from '@gabby/types/matching';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from './SessionActionDialog';
 import { DayDetailDrawer } from './DayDetailDrawer';
 import { BookMakeupSessionDialog } from './BookMakeupSessionDialog';
@@ -36,7 +36,7 @@ const MAX_VISIBLE_CHIPS = 2;
 
 function getChipInfo(item: CalendarItem): { label: string; className: string } {
   if (item.kind === 'session') {
-    return { label: item.data.counterpart_name, className: SESSION_STATUS_BADGE[item.data.status].className };
+    return { label: item.data.counterpart_name, className: getSessionStatusBadge(item.data).className };
   }
   return { label: item.data.title, className: CALENDAR_EVENT_TYPES[item.data.event_type].badgeClass };
 }
@@ -121,10 +121,6 @@ export function CalendarBoard() {
 
   const handleResolved = (sessionId: string, patch: Partial<SessionListItem>) => {
     setSessions((prev) => prev.map((s) => (s.session_id === sessionId ? { ...s, ...patch } : s)));
-    // 振替は新しいセッション行が生成されるため、正確な反映のため月データを再取得する
-    if (patch.status === SESSION_STATUS.RESCHEDULED) {
-      loadMonth();
-    }
   };
 
   const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {

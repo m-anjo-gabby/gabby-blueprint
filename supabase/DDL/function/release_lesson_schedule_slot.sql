@@ -22,6 +22,11 @@
 -- チケット(com_t_user_session_ticket)自体には一切触れない。コーチに依存しない
 -- used_sessions/total_sessionsの消化実績は、新しいコーチとのマッチング成立後もそのまま
 -- 引き継がれる。
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- 対象セッションは旧status=9(cancelled_coach_reassigned)ではなくstatus=3(cancelled)、
+-- cancel_category=5(coach_reassigned)として記録する（table/com_t_session.sqlの
+-- ステータス簡素化パッチ参照）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.release_lesson_schedule_slot(p_schedule_id uuid)
 RETURNS void
@@ -59,7 +64,8 @@ BEGIN
 
     -- 3. まだ実施されていない未来のセッションのみキャンセルする（過去の記録は変更しない）
     UPDATE public.com_t_session
-    SET status = 9,
+    SET status = 3,
+        cancel_category = 5, -- coach_reassigned
         cancel_reason = 'コーチ交代のため',
         cancelled_by = auth.uid(),
         update_date = NOW()

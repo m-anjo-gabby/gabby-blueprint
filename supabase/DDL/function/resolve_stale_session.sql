@@ -10,8 +10,17 @@
 -- finalize_session側の自動判定ロジックは再利用せず、コーチの申告
 -- （p_resolved_status）をそのまま理由付きで記録する。
 -- バッチ処理(pg_cron等)は導入せず、本RPCへのコーチの明示操作のみを解決経路とする。
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- statusは常に2(completed)を確定し、コーチが申告する内訳はp_completion_result
+-- (1:normal/2:early_ended/3:no_show)として受け取る（旧: p_resolved_statusに
+-- 2/6/7のstatus値を直接渡す方式だった。table/com_t_session.sqlのステータス
+-- 簡素化パッチ参照）。パラメータの意味が変わるため、CREATE OR REPLACEの前に
+-- DROP FUNCTIONで旧シグネチャを明示的に削除する。
 ---------------------------------------------
-CREATE OR REPLACE FUNCTION public.resolve_stale_session(p_session_id uuid, p_resolved_status smallint, p_reason text)
+DROP FUNCTION IF EXISTS public.resolve_stale_session(uuid, smallint, text);
+
+CREATE OR REPLACE FUNCTION public.resolve_stale_session(p_session_id uuid, p_completion_result smallint, p_reason text)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -21,8 +30,8 @@ DECLARE
     v_session RECORD;
     v_ticket RECORD;
 BEGIN
-    IF p_resolved_status NOT IN (2, 6, 7) THEN
-        RAISE EXCEPTION 'invalid resolved status %', p_resolved_status;
+    IF p_completion_result NOT IN (1, 2, 3) THEN
+        RAISE EXCEPTION 'invalid completion result %', p_completion_result;
     END IF;
     IF p_reason IS NULL OR btrim(p_reason) = '' THEN
         RAISE EXCEPTION 'reason required to resolve a stale session';
@@ -46,10 +55,10 @@ BEGIN
     END IF;
 
     UPDATE public.com_t_session
-    SET status = p_resolved_status, status_note = p_reason, update_date = NOW()
+    SET status = 2, completion_result = p_completion_result, status_note = p_reason, update_date = NOW()
     WHERE session_id = p_session_id;
 
-    IF p_resolved_status = 2 THEN
+    IF p_completion_result = 1 THEN
         UPDATE public.com_t_user_session_ticket
         SET used_sessions = used_sessions + 1, update_date = NOW()
         WHERE ticket_id = v_session.ticket_id

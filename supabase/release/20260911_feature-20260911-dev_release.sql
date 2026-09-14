@@ -2,6 +2,15 @@
 -- 本番リリース作業スクリプト
 -- 対象ブランチ: feature/20260911-dev
 -- 作成日: 2026-09-11
+-- 更新日: 2026-09-14（不具合修正: fn_generate_sessions_for_schedule()のON CONFLICT対象が
+--          2026-09-12のパッチで部分一意インデックス化されたuq_session_schedule_datetimeと
+--          一致しなくなっており、本関数を経由するセッション生成が全件失敗する状態だった。
+--          データ主体テスト中に発見。詳細はファイル末尾の「25. ON CONFLICT対象と
+--          一意インデックスの不一致修正」セクションのコメントを参照）
+-- 更新日: 2026-09-14（com_t_session.statusを1〜10からscheduled/completed/cancelledの
+--          3値に簡素化し、完了時の内訳(completion_result)・キャンセルの起因
+--          (cancel_category)を直交する列に分離。詳細はファイル末尾の「24. セッション
+--          ステータスの簡素化」セクションのコメントを参照）
 -- 更新日: 2026-09-14（コマ別セッション目標数(target_sessions)を追加。マッチング承認が
 --          契約開始から遅れると、そのコマの生成本数が契約上のtotal_sessions/
 --          weekly_frequency均等割り値を恒久的に下回り、かつ不足自体も検知できなかった
@@ -2295,6 +2304,647 @@ CREATE INDEX IF NOT EXISTS idx_session_reschedule_proposal_coach_insert_date ON 
 
 
 ---------------------------------------------
+-- 24. セッションステータスの簡素化 (2026-09-14 追加)
+---------------------------------------------
+-- 【背景】
+-- com_t_session.statusが1〜10まで増殖し、「完了時の内訳」（completed/no_show/
+-- early_ended）と「キャンセルの起因」（student/coach/license_ended/coach_reassigned/
+-- admin/旧reschedule）が同じ列にフラットに混在していた。実際には以下の2軸に分解できる。
+--   1. 完了時の内訳: コーチがビデオ通話可能な状態で臨んだという点でどれも
+--      「完了(completed)」であり、月次コーチング報酬の対象判定
+--      (get_coach_monthly_sessions)でも既に3つとも同じ扱いだった
+--      （実態が先行し、statusの設計が追いついていなかった）。
+--   2. キャンセルの起因: 返還有無は既存のticket_refundedで表現できるが、
+--      「誰が/なぜ」（生徒本人/コーチ本人/ライセンス無効化/コーチ交代/アドミン代理）は
+--      月次コーチングレポートの内訳表示等で個別のラベルが必要なため、新設の
+--      cancel_categoryで表現する（cancelled_by(実行者user_id)だけでは、
+--      ライセンス無効化・コーチ交代・アドミン代理キャンセルがいずれも運用者側の
+--      user_idになり互いに区別できないため）。
+-- ライブセッション機能・コーチ機能はまだ本番運用しておらず、既存データは開発・
+-- 検証用のみのため、旧status値の意味的な後方互換は取らずクリーンに移行する。
+--
+-- 【廃止するstatus値の移行先】
+--   2:completed, 6:no_show, 7:early_ended
+--     → status=2, completion_result=1(normal)/3(no_show)/2(early_ended)
+--   3:cancelled_by_student → status=3, cancel_category=1(student)
+--   4:cancelled_by_coach → status=3, cancel_category=2(coach)
+--   5:rescheduled（admin_reschedule_session由来。旧振替概念自体は廃止済みだが、
+--     rescheduled_fromで他行から参照されている可能性がありDELETEはFK違反の
+--     リスクがあるため、他のadmin起因キャンセルと同様に統合する）
+--     → status=3, cancel_category=3(admin)
+--   8:cancelled_license_ended → status=3, cancel_category=4(license_ended)
+--   9:cancelled_coach_reassigned → status=3, cancel_category=5(coach_reassigned)
+--   10:cancelled_by_admin → status=3, cancel_category=3(admin)
+--
+-- 【変更対象】
+--   1. com_t_session.completion_result / cancel_category カラムを追加（既存行は
+--      上記マッピングで一括移行し、statusを1/2/3に集約。CHECK制約も締め直す）
+--   2. finalize_session() / resolve_stale_session()
+--      statusは常に2(completed)を確定し、内訳はcompletion_resultに書く
+--      （used_sessions加算は従来どおりcompletion_result=1(normal)の場合のみ）。
+--      いずれも戻り値・パラメータの意味が変わるためDROP FUNCTION IF EXISTS後に再作成。
+--   3. cancel_session()
+--      statusは常に3(cancelled)を確定し、起因はcancel_categoryに書く。
+--   4. admin_reschedule_session() / release_lesson_schedule_slot() /
+--      invalidate_user_license()
+--      旧5/9/8のstatus直書きを、status=3 + 対応するcancel_categoryに変更。
+--   5. fn_schedule_shortfall() / get_coach_monthly_sessions()
+--      actual/counts_toward_total/is_attentionの判定式を新しいstatus値に追従。
+--      get_coach_monthly_sessionsはcompletion_result/cancel_categoryを新設の
+--      出力列として追加するためDROP FUNCTION IF EXISTS後に再作成。
+--
+-- 呼び出し元のTypeScript（packages/types/session.ts, packages/types/monthlyReport.ts,
+-- packages/lib/session/actions/sessionActions.ts,
+-- packages/lib/coachStudent/actions/coachStudentActions.ts,
+-- packages/lib/monthlyReport/actions/monthlyReportActions.ts,
+-- packages/lib/components/common/SessionActionDialog.tsx、および
+-- apps/{admin,coach,student}側のステータスラベル・バッジ・変更履歴フィルタ）は
+-- 本SQLの対象外（別途アプリケーションコードを更新済み）。
+---------------------------------------------
+ALTER TABLE public.com_t_session
+  ADD COLUMN IF NOT EXISTS completion_result smallint,
+  ADD COLUMN IF NOT EXISTS cancel_category smallint;
+
+UPDATE public.com_t_session
+SET completion_result = CASE status WHEN 2 THEN 1 WHEN 7 THEN 2 WHEN 6 THEN 3 END
+WHERE status IN (2, 6, 7);
+
+UPDATE public.com_t_session
+SET cancel_category = CASE status
+    WHEN 3 THEN 1   -- student
+    WHEN 4 THEN 2   -- coach
+    WHEN 5 THEN 3   -- admin (旧reschedule。admin_reschedule_session由来)
+    WHEN 10 THEN 3  -- admin
+    WHEN 8 THEN 4   -- license_ended
+    WHEN 9 THEN 5   -- coach_reassigned
+END
+WHERE status IN (3, 4, 5, 8, 9, 10);
+
+UPDATE public.com_t_session SET status = 2 WHERE status IN (6, 7);
+UPDATE public.com_t_session SET status = 3 WHERE status IN (4, 5, 8, 9, 10);
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3));
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_completion_result;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_completion_result CHECK (
+    (status = 2 AND completion_result IN (1, 2, 3)) OR (status <> 2 AND completion_result IS NULL)
+);
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_cancel_category;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_cancel_category CHECK (
+    (status = 3 AND cancel_category IN (1, 2, 3, 4, 5)) OR (status <> 3 AND cancel_category IS NULL)
+);
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed(内訳はcompletion_result参照) 3:cancelled(起因はcancel_category、返還有無はticket_refundedを参照)';
+COMMENT ON COLUMN public.com_t_session.completion_result IS 'status=2(completed)の内訳。1:normal(正常終了、20分以上) 2:early_ended(早期終了、20分未満だが生徒入室あり。理由はstatus_note) 3:no_show(生徒欠席、入室記録なし)。status<>2の行では常にNULL。';
+COMMENT ON COLUMN public.com_t_session.cancel_category IS 'status=3(cancelled)の起因。1:student(生徒本人) 2:coach(コーチ本人) 3:admin(アドミン代理操作・旧reschedule含む) 4:license_ended(ライセンス無効化による自動キャンセル) 5:coach_reassigned(コーチ交代による自動キャンセル)。status<>3の行では常にNULL。返還有無はticket_refundedを別途参照。';
+
+DROP FUNCTION IF EXISTS public.finalize_session(uuid, text);
+
+CREATE OR REPLACE FUNCTION public.finalize_session(p_session_id uuid, p_early_end_reason text DEFAULT NULL)
+RETURNS TABLE(new_status smallint, completion_result smallint, overlap_seconds integer, student_joined boolean)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_overlap_seconds numeric;
+    v_student_joined boolean;
+    v_completion_result smallint;
+    v_ticket RECORD;
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_session.coach_id <> auth.uid() THEN
+        RAISE EXCEPTION 'not authorized to finalize this session';
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    SELECT COALESCE(SUM(GREATEST(0,
+             EXTRACT(EPOCH FROM (LEAST(c.left_end, s.left_end) - GREATEST(c.joined_at, s.joined_at)))
+           )), 0)
+      INTO v_overlap_seconds
+      FROM (SELECT joined_at, COALESCE(left_at, NOW()) AS left_end
+              FROM public.com_t_session_call_log
+              WHERE session_id = p_session_id AND role = 'coach') c
+      CROSS JOIN (SELECT joined_at, COALESCE(left_at, NOW()) AS left_end
+                    FROM public.com_t_session_call_log
+                    WHERE session_id = p_session_id AND role = 'student') s;
+
+    SELECT EXISTS(
+      SELECT 1 FROM public.com_t_session_call_log WHERE session_id = p_session_id AND role = 'student'
+    ) INTO v_student_joined;
+
+    IF v_overlap_seconds >= 1200 THEN -- 20分
+        v_completion_result := 1; -- normal
+    ELSIF v_student_joined THEN
+        IF p_early_end_reason IS NULL OR btrim(p_early_end_reason) = '' THEN
+            RAISE EXCEPTION 'reason required for early-ended session';
+        END IF;
+        v_completion_result := 2; -- early_ended
+    ELSE
+        v_completion_result := 3; -- no_show
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = 2, completion_result = v_completion_result,
+        status_note = CASE WHEN v_completion_result = 2 THEN p_early_end_reason ELSE NULL END,
+        update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    IF v_completion_result = 1 THEN
+        UPDATE public.com_t_user_session_ticket
+        SET used_sessions = used_sessions + 1, update_date = NOW()
+        WHERE ticket_id = v_session.ticket_id
+        RETURNING used_sessions, total_sessions, contract_id, user_id INTO v_ticket;
+
+        IF FOUND THEN
+            INSERT INTO public.com_t_user_session_ticket_history
+                (ticket_id, contract_id, user_id, action, sessions_delta, used_sessions_after, total_sessions, note, performed_by)
+            VALUES
+                (v_session.ticket_id, v_ticket.contract_id, v_ticket.user_id, 'consumed', -1, v_ticket.used_sessions, v_ticket.total_sessions, NULL, auth.uid());
+        END IF;
+    END IF;
+
+    RETURN QUERY SELECT 2::smallint, v_completion_result, v_overlap_seconds::integer, v_student_joined;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.finalize_session(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.finalize_session(uuid, text) TO authenticated;
+
+DROP FUNCTION IF EXISTS public.resolve_stale_session(uuid, smallint, text);
+
+CREATE OR REPLACE FUNCTION public.resolve_stale_session(p_session_id uuid, p_completion_result smallint, p_reason text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_ticket RECORD;
+BEGIN
+    IF p_completion_result NOT IN (1, 2, 3) THEN
+        RAISE EXCEPTION 'invalid completion result %', p_completion_result;
+    END IF;
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'reason required to resolve a stale session';
+    END IF;
+
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_session.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to resolve this session';
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.end_datetime > NOW() THEN
+        RAISE EXCEPTION 'cannot resolve a session before its end time';
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = 2, completion_result = p_completion_result, status_note = p_reason, update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    IF p_completion_result = 1 THEN
+        UPDATE public.com_t_user_session_ticket
+        SET used_sessions = used_sessions + 1, update_date = NOW()
+        WHERE ticket_id = v_session.ticket_id
+        RETURNING used_sessions, total_sessions, contract_id, user_id INTO v_ticket;
+
+        IF FOUND THEN
+            INSERT INTO public.com_t_user_session_ticket_history
+                (ticket_id, contract_id, user_id, action, sessions_delta, used_sessions_after, total_sessions, note, performed_by)
+            VALUES
+                (v_session.ticket_id, v_ticket.contract_id, v_ticket.user_id, 'consumed', -1, v_ticket.used_sessions, v_ticket.total_sessions, p_reason, auth.uid());
+        END IF;
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.resolve_stale_session(uuid, smallint, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.resolve_stale_session(uuid, smallint, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.cancel_session(
+    p_session_id uuid,
+    p_reason text DEFAULT NULL,
+    p_proposed_slots jsonb DEFAULT NULL,
+    p_admin_refund_ticket boolean DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_cancel_category smallint;
+    v_refunded boolean;
+    v_is_coach boolean;
+    v_is_admin_proxy boolean;
+    v_coach_name text;
+    v_student_name text;
+    v_slot jsonb;
+    v_slot_start timestamptz;
+    v_slot_end timestamptz;
+    v_proposed_by_role smallint;
+    v_coach_conflict boolean;
+    v_student_conflict boolean;
+    v_proposal_count integer := 0;
+    v_proposal_validity_hours CONSTANT integer := 24; -- 変更する場合はここを直接編集すること
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    v_is_admin_proxy := (v_session.student_id <> auth.uid() AND v_session.coach_id <> auth.uid());
+
+    IF v_is_admin_proxy AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to cancel this session';
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime <= NOW() THEN
+        RAISE EXCEPTION 'cannot cancel a session that has already started';
+    END IF;
+
+    v_is_coach := (v_session.coach_id = auth.uid());
+
+    IF v_is_admin_proxy THEN
+        IF p_admin_refund_ticket IS NULL THEN
+            RAISE EXCEPTION 'p_admin_refund_ticket is required for an admin-initiated cancellation';
+        END IF;
+        v_cancel_category := 3; -- admin
+        v_refunded := p_admin_refund_ticket;
+    ELSIF v_session.student_id = auth.uid() THEN
+        v_cancel_category := 1; -- student
+        v_refunded := (v_session.start_datetime - NOW()) >= interval '12 hours';
+    ELSE
+        v_cancel_category := 2; -- coach
+        v_refunded := true;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = 3, cancel_category = v_cancel_category, cancel_reason = p_reason, cancelled_by = auth.uid(),
+        ticket_refunded = v_refunded, update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_session.coach_id;
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_session.student_id;
+
+    IF NOT v_is_admin_proxy AND p_proposed_slots IS NOT NULL THEN
+        v_proposed_by_role := CASE WHEN v_is_coach THEN 2 ELSE 1 END;
+        v_proposal_count := jsonb_array_length(p_proposed_slots);
+        IF v_proposal_count > 3 THEN
+            RAISE EXCEPTION 'cannot propose more than 3 alternative times';
+        END IF;
+
+        FOR v_slot IN SELECT * FROM jsonb_array_elements(p_proposed_slots) LOOP
+            v_slot_start := (v_slot->>'start_datetime')::timestamptz;
+            v_slot_end := (v_slot->>'end_datetime')::timestamptz;
+
+            IF v_slot_start <= NOW() THEN
+                RAISE EXCEPTION 'proposed time must be in the future';
+            END IF;
+            IF v_slot_end <= v_slot_start THEN
+                RAISE EXCEPTION 'invalid proposed time range';
+            END IF;
+
+            SELECT coach_conflict, student_conflict INTO v_coach_conflict, v_student_conflict
+            FROM public.check_session_conflict(v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end, p_session_id);
+            IF v_coach_conflict THEN RAISE EXCEPTION 'coach already has a session at this time'; END IF;
+            IF v_student_conflict THEN RAISE EXCEPTION 'student already has a session at this time'; END IF;
+
+            INSERT INTO public.com_t_session_reschedule_proposal (
+                session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime,
+                proposed_by_role, expires_at
+            ) VALUES (
+                p_session_id, v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end,
+                v_proposed_by_role, NOW() + (v_proposal_validity_hours || ' hours')::interval
+            );
+        END LOOP;
+    END IF;
+
+    IF v_is_admin_proxy THEN
+        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+        VALUES
+            (v_session.student_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/live-room'),
+            (v_session.coach_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/students/' || v_session.student_id);
+    ELSIF v_is_coach THEN
+        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+        VALUES (
+            v_session.student_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED' ELSE 'SESSION_CANCELLED_BY_COACH' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'coach_name', v_coach_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            '/live-room'
+        );
+    ELSE
+        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+        VALUES (
+            v_session.coach_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT' ELSE 'SESSION_CANCELLED_BY_STUDENT' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'student_name', v_student_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            '/students/' || v_session.student_id
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.admin_reschedule_session(
+    p_session_id uuid,
+    p_new_start_datetime timestamptz,
+    p_new_end_datetime timestamptz,
+    p_reason text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_coach_conflict boolean;
+    v_student_conflict boolean;
+    v_new_session_id uuid;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to reschedule this session';
+    END IF;
+
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF p_new_end_datetime <= p_new_start_datetime THEN
+        RAISE EXCEPTION 'invalid proposed time range';
+    END IF;
+    IF p_new_start_datetime <= NOW() THEN
+        RAISE EXCEPTION 'new start datetime must be in the future';
+    END IF;
+
+    SELECT coach_conflict, student_conflict INTO v_coach_conflict, v_student_conflict
+    FROM public.check_session_conflict(v_session.coach_id, v_session.student_id, p_new_start_datetime, p_new_end_datetime, p_session_id);
+    IF v_coach_conflict THEN RAISE EXCEPTION 'coach already has a session at this time'; END IF;
+    IF v_student_conflict THEN RAISE EXCEPTION 'student already has a session at this time'; END IF;
+
+    INSERT INTO public.com_t_session (
+        schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from
+    ) VALUES (
+        v_session.schedule_id, v_session.ticket_id, v_session.student_id, v_session.coach_id,
+        p_new_start_datetime, p_new_end_datetime, 1, p_session_id
+    )
+    RETURNING session_id INTO v_new_session_id;
+
+    UPDATE public.com_t_session
+    SET status = 3, cancel_category = 3, cancel_reason = p_reason, cancelled_by = auth.uid(), update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES
+        (v_session.student_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'new_session_id', v_new_session_id, 'session_start_datetime', p_new_start_datetime), '/live-room'),
+        (v_session.coach_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'new_session_id', v_new_session_id, 'session_start_datetime', p_new_start_datetime), '/students/' || v_session.student_id);
+
+    RETURN v_new_session_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_reschedule_session(uuid, timestamptz, timestamptz, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_reschedule_session(uuid, timestamptz, timestamptz, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.release_lesson_schedule_slot(p_schedule_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to release a lesson schedule slot';
+    END IF;
+
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'schedule % not found', p_schedule_id;
+    END IF;
+
+    IF v_schedule.status <> 1 THEN
+        RAISE EXCEPTION 'schedule % is not active (status=%)', p_schedule_id, v_schedule.status;
+    END IF;
+
+    UPDATE public.com_m_lesson_schedule
+    SET status = 9, update_date = NOW()
+    WHERE schedule_id = p_schedule_id;
+
+    IF v_schedule.source_request_id IS NOT NULL THEN
+        UPDATE public.com_t_matching_request
+        SET status = 5, update_date = NOW()
+        WHERE request_id = v_schedule.source_request_id AND status = 2;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = 3,
+        cancel_category = 5, -- coach_reassigned
+        cancel_reason = 'コーチ交代のため',
+        cancelled_by = auth.uid(),
+        update_date = NOW()
+    WHERE schedule_id = p_schedule_id AND status = 1;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.release_lesson_schedule_slot(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.release_lesson_schedule_slot(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.invalidate_user_license(p_license_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_license RECORD;
+    v_ticket_id uuid;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to invalidate a license';
+    END IF;
+
+    SELECT * INTO v_license FROM public.com_t_user_license WHERE license_id = p_license_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'license % not found', p_license_id;
+    END IF;
+
+    IF v_license.status <> 1 THEN
+        RAISE EXCEPTION 'license % is not active (status=%)', p_license_id, v_license.status;
+    END IF;
+
+    UPDATE public.com_t_user_license
+    SET status = 0, update_date = NOW()
+    WHERE license_id = p_license_id;
+
+    SELECT ticket_id INTO v_ticket_id
+    FROM public.com_t_user_session_ticket
+    WHERE license_id = p_license_id;
+
+    IF v_ticket_id IS NOT NULL THEN
+        UPDATE public.com_m_lesson_schedule
+        SET status = 9, update_date = NOW()
+        WHERE ticket_id = v_ticket_id AND status = 1;
+
+        UPDATE public.com_t_session
+        SET status = 3,
+            cancel_category = 4, -- license_ended
+            cancel_reason = 'ライセンス無効化のため',
+            cancelled_by = auth.uid(),
+            update_date = NOW()
+        WHERE ticket_id = v_ticket_id AND status = 1;
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.invalidate_user_license(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.invalidate_user_license(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.fn_schedule_shortfall(p_schedule_id uuid)
+RETURNS TABLE(expected_sessions integer, actual_sessions integer, shortfall integer)
+LANGUAGE plpgsql
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_expected integer;
+    v_actual integer;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    v_expected := v_schedule.target_sessions;
+
+    SELECT COUNT(*) INTO v_actual
+    FROM public.com_t_session s
+    WHERE s.schedule_id = p_schedule_id
+      AND (
+        s.status IN (1, 2)
+        OR (s.status = 3 AND s.ticket_refunded = false)
+      );
+
+    RETURN QUERY SELECT v_expected, v_actual, GREATEST(v_expected - v_actual, 0);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) TO authenticated;
+
+DROP FUNCTION IF EXISTS public.get_coach_monthly_sessions(uuid, date);
+
+CREATE OR REPLACE FUNCTION public.get_coach_monthly_sessions(p_coach_id uuid, p_report_month date)
+RETURNS TABLE(
+    session_id uuid,
+    student_id uuid,
+    start_datetime timestamptz,
+    end_datetime timestamptz,
+    status smallint,
+    completion_result smallint,
+    cancel_category smallint,
+    status_note text,
+    ticket_refunded boolean,
+    counts_toward_total boolean,
+    is_unresolved boolean,
+    is_attention boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coach_timezone text;
+    v_month_start_utc timestamptz;
+    v_month_end_utc timestamptz;
+BEGIN
+    IF auth.uid() <> p_coach_id AND public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to view this coach''s monthly report';
+    END IF;
+
+    SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
+    IF v_coach_timezone IS NULL THEN
+        v_coach_timezone := 'Asia/Tokyo';
+    END IF;
+
+    v_month_start_utc := date_trunc('month', p_report_month::timestamp) AT TIME ZONE v_coach_timezone;
+    v_month_end_utc := (date_trunc('month', p_report_month::timestamp) + interval '1 month') AT TIME ZONE v_coach_timezone;
+
+    RETURN QUERY
+    SELECT
+        s.session_id,
+        s.student_id,
+        s.start_datetime,
+        s.end_datetime,
+        s.status,
+        s.completion_result,
+        s.cancel_category,
+        s.status_note,
+        s.ticket_refunded,
+        (s.status = 2 OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS counts_toward_total,
+        (s.status = 1 AND s.end_datetime < NOW()) AS is_unresolved,
+        ((s.status = 2 AND s.completion_result IN (2, 3)) OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS is_attention
+    FROM public.com_t_session s
+    WHERE s.coach_id = p_coach_id
+      AND s.start_datetime >= v_month_start_utc
+      AND s.start_datetime < v_month_end_utc
+      AND (
+          (s.status = 2 OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false))
+          OR (s.status = 1 AND s.end_datetime < NOW())
+      )
+    ORDER BY s.student_id, s.start_datetime;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) TO authenticated;
+
+
+---------------------------------------------
 -- 23. コマ別セッション目標数(target_sessions)の追加 (2026-09-14 追加)
 ---------------------------------------------
 -- 【背景】
@@ -2646,3 +3296,76 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.fn_schedule_shortfall(uuid) TO authenticated;
+
+
+---------------------------------------------
+-- 25. ON CONFLICT対象と一意インデックスの不一致修正 (2026-09-14 追加)
+---------------------------------------------
+-- 【背景】
+-- 2026-09-12の「Wブッキング防止の一意制約を有効な予約枠のみに限定」パッチで
+-- uq_session_schedule_datetimeを「WHERE status = 1」の部分一意インデックスに変更した際、
+-- fn_generate_sessions_for_schedule()のON CONFLICT (schedule_id, start_datetime)にも
+-- 同じWHERE句を追記する必要があったが漏れていた。部分一意インデックスをON CONFLICTの
+-- 推論対象にするには、INSERT側のON CONFLICT節にも同一のWHERE句を明示する必要があり
+-- (Postgresの仕様)、一致しない場合は実際の重複有無に関わらず常にエラー(42P10: no unique
+-- or exclusion constraint matching the ON CONFLICT specification)になる。これにより
+-- 2026-09-12以降、本関数を経由するセッション生成(マッチング承認・アドミン直接マッチング
+-- いずれも)が全件失敗する状態になっていた。本リリースのデータ主体テスト中に発見。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_generate_sessions_for_schedule(p_schedule_id uuid)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_coach_tz text;
+    v_cursor_date date;
+    v_start_ts timestamptz;
+    v_end_ts timestamptz;
+    v_generated_count integer := 0;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    v_coach_tz := v_schedule.coach_timezone;
+
+    v_cursor_date := v_schedule.start_date
+        + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
+
+    WHILE v_cursor_date <= v_schedule.end_date AND v_generated_count < v_schedule.target_sessions LOOP
+        IF NOT EXISTS (
+            SELECT 1 FROM public.com_t_coach_availability_exception e
+            WHERE e.coach_id = v_schedule.coach_id
+              AND e.exception_date = v_cursor_date
+              AND e.exception_type = 'BLOCK'
+              AND e.start_time < v_schedule.end_time
+              AND e.end_time > v_schedule.start_time
+        ) THEN
+            v_start_ts := (v_cursor_date + v_schedule.start_time) AT TIME ZONE v_coach_tz;
+            v_end_ts := (v_cursor_date + v_schedule.end_time) AT TIME ZONE v_coach_tz;
+
+            INSERT INTO public.com_t_session (
+                schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status
+            ) VALUES (
+                v_schedule.schedule_id, v_schedule.ticket_id, v_schedule.student_id, v_schedule.coach_id,
+                v_start_ts, v_end_ts, 1
+            )
+            ON CONFLICT (schedule_id, start_datetime) WHERE status = 1 DO NOTHING;
+
+            IF FOUND THEN
+                v_generated_count := v_generated_count + 1;
+            END IF;
+        END IF;
+
+        v_cursor_date := v_cursor_date + 7;
+    END LOOP;
+
+    RETURN v_generated_count;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_generate_sessions_for_schedule(uuid) FROM PUBLIC, anon, authenticated;

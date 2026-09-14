@@ -21,9 +21,19 @@
 -- これはcom_t_user_session_ticket.sql / com_t_user_session_ticket_history.sql の
 -- コメントで「将来実装する予約管理機能がセッション実施完了時に加算する」と
 -- 想定されていた処理そのものであり、本関数がその実装にあたる。
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- statusは常に2(completed)を確定し、正常終了/早期終了/no_showの内訳はcompletion_result
+-- (1/2/3)に分離する（table/com_t_session.sqlのステータス簡素化パッチ参照）。
+-- used_sessionsの加算は、従来どおり正常終了(completion_result=1)の場合のみ行う
+-- （早期終了・no_showはコーチが対応した実績としてはカウントするが、チケットは
+-- 消化させない、という既存仕様を維持）。RETURNS TABLEにcompletion_resultを追加する
+-- 戻り値の型変更のため、CREATE OR REPLACEの前にDROP FUNCTIONで旧シグネチャを削除する。
 ---------------------------------------------
+DROP FUNCTION IF EXISTS public.finalize_session(uuid, text);
+
 CREATE OR REPLACE FUNCTION public.finalize_session(p_session_id uuid, p_early_end_reason text DEFAULT NULL)
-RETURNS TABLE(new_status smallint, overlap_seconds integer, student_joined boolean)
+RETURNS TABLE(new_status smallint, completion_result smallint, overlap_seconds integer, student_joined boolean)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -32,7 +42,7 @@ DECLARE
     v_session RECORD;
     v_overlap_seconds numeric;
     v_student_joined boolean;
-    v_new_status smallint;
+    v_completion_result smallint;
     v_ticket RECORD;
 BEGIN
     SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
@@ -66,23 +76,23 @@ BEGIN
     ) INTO v_student_joined;
 
     IF v_overlap_seconds >= 1200 THEN -- 20分
-        v_new_status := 2; -- completed
+        v_completion_result := 1; -- normal
     ELSIF v_student_joined THEN
         IF p_early_end_reason IS NULL OR btrim(p_early_end_reason) = '' THEN
             RAISE EXCEPTION 'reason required for early-ended session';
         END IF;
-        v_new_status := 7; -- early_ended
+        v_completion_result := 2; -- early_ended
     ELSE
-        v_new_status := 6; -- no_show
+        v_completion_result := 3; -- no_show
     END IF;
 
     UPDATE public.com_t_session
-    SET status = v_new_status,
-        status_note = CASE WHEN v_new_status = 7 THEN p_early_end_reason ELSE NULL END,
+    SET status = 2, completion_result = v_completion_result,
+        status_note = CASE WHEN v_completion_result = 2 THEN p_early_end_reason ELSE NULL END,
         update_date = NOW()
     WHERE session_id = p_session_id;
 
-    IF v_new_status = 2 THEN
+    IF v_completion_result = 1 THEN
         UPDATE public.com_t_user_session_ticket
         SET used_sessions = used_sessions + 1, update_date = NOW()
         WHERE ticket_id = v_session.ticket_id
@@ -96,7 +106,7 @@ BEGIN
         END IF;
     END IF;
 
-    RETURN QUERY SELECT v_new_status, v_overlap_seconds::integer, v_student_joined;
+    RETURN QUERY SELECT 2::smallint, v_completion_result, v_overlap_seconds::integer, v_student_joined;
 END;
 $$;
 

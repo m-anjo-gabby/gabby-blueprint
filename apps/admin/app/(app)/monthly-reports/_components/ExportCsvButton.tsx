@@ -3,7 +3,7 @@
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CoachMonthlyReport } from '@gabby/types/monthlyReport';
-import { SESSION_STATUS } from '@gabby/types/session';
+import { SESSION_STATUS, COMPLETION_RESULT, CANCEL_CATEGORY } from '@gabby/types/session';
 
 /** ファイル名に使えない文字をアンダースコアへ置き換える */
 function sanitizeForFilename(value: string): string {
@@ -16,9 +16,9 @@ function studentBreakdown(sessionsByDate: CoachMonthlyReport['students'][number]
   let noShow = 0;
   for (const sessions of Object.values(sessionsByDate)) {
     for (const s of sessions) {
-      if (s.status === SESSION_STATUS.COMPLETED || s.status === SESSION_STATUS.EARLY_ENDED) completed += 1;
-      else if (s.status === SESSION_STATUS.CANCELLED_BY_STUDENT && s.ticket_refunded === false) lateCancel += 1;
-      else if (s.status === SESSION_STATUS.NO_SHOW) noShow += 1;
+      if (s.status === SESSION_STATUS.COMPLETED && s.completion_result !== COMPLETION_RESULT.NO_SHOW) completed += 1;
+      else if (s.status === SESSION_STATUS.CANCELLED && s.cancel_category === CANCEL_CATEGORY.STUDENT && s.ticket_refunded === false) lateCancel += 1;
+      else if (s.status === SESSION_STATUS.COMPLETED && s.completion_result === COMPLETION_RESULT.NO_SHOW) noShow += 1;
     }
   }
   return { completed, lateCancel, noShow };

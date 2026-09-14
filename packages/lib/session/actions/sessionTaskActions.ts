@@ -51,7 +51,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
         .from('com_t_session')
         .select('session_id, student_id, start_datetime, status, com_t_session_homework(homework_id)')
         .eq('coach_id', user.id)
-        .in('status', [SESSION_STATUS.COMPLETED, SESSION_STATUS.NO_SHOW, SESSION_STATUS.EARLY_ENDED])
+        .eq('status', SESSION_STATUS.COMPLETED)
         .gte('end_datetime', lookbackIso)
         .order('start_datetime', { ascending: false }),
       supabase

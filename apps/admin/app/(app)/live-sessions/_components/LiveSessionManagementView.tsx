@@ -45,7 +45,7 @@ import {
   bookMakeupSessionAsAdmin,
   matchStudentWithCoachAsAdmin,
 } from '@/actions/adminLiveSessionAction';
-import { ADMIN_SESSION_STATUS_BADGE, ADMIN_SCHEDULE_STATUS_LABEL } from '@/constants/session';
+import { getAdminSessionStatusBadge, ADMIN_SCHEDULE_STATUS_LABEL } from '@/constants/session';
 import {
   SESSION_STATUS,
   SESSION_NON_ACTIONABLE_STATUSES,
@@ -326,8 +326,8 @@ export function LiveSessionManagementView({ clients }: Props) {
   const now = new Date();
   const upcomingSessions = sessions.filter((s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) > now);
   const completedSessions = sessions.filter((s) => SESSION_RESULT_STATUSES.includes(s.status));
-  // アドミンの変更履歴タブは監査目的のため、コーチ/生徒向けの狭い集合ではなく
-  // ライセンス無効化・コーチ交代・アドミン代理キャンセルも含む広い集合を使う
+  // アドミンの変更履歴タブは監査目的のため、コーチ/生徒向けの狭い集合（本人操作の
+  // キャンセルのみ）ではなく、起因(cancel_category)を問わず全てのキャンセル済みを見せる
   const changeHistorySessions = sessions.filter((s) => SESSION_NON_ACTIONABLE_STATUSES.includes(s.status));
 
   const renderSessionList = (list: CoachSessionListItem[], disableActions: boolean) => {
@@ -337,7 +337,7 @@ export function LiveSessionManagementView({ clients }: Props) {
     return (
       <ul className="space-y-1.5 max-h-96 overflow-y-auto">
         {list.map((session) => {
-          const badge = ADMIN_SESSION_STATUS_BADGE[session.status];
+          const badge = getAdminSessionStatusBadge(session);
           const isScheduled = session.status === SESSION_STATUS.SCHEDULED;
           return (
             <li

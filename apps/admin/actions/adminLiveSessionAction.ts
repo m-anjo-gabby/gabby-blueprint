@@ -184,7 +184,7 @@ export async function getSessionsForTicket(ticketId: string): Promise<CoachSessi
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note, coach_id')
+      .select('session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id')
       .eq('ticket_id', ticketId)
       .order('start_datetime', { ascending: false });
 

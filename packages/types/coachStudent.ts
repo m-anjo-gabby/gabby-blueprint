@@ -1,4 +1,4 @@
-import { SessionStatus } from './session';
+import { SessionStatus, CompletionResult, CancelCategory } from './session';
 import type { SprintQuestionType } from './sprint';
 
 /**
@@ -125,6 +125,8 @@ export interface CoachSessionListItem {
   start_datetime: string;
   end_datetime: string;
   status: SessionStatus;
+  completion_result: CompletionResult | null;
+  cancel_category: CancelCategory | null;
   rescheduled_from: string | null;
   cancel_reason: string | null;
   status_note: string | null;

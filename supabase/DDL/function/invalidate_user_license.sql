@@ -18,6 +18,11 @@
 --      （実施済み・不参加・早期終了等の過去の記録は一切変更しない）
 -- 契約自体（com_m_contract）や生徒アカウント自体には触れない。生徒に他の有効ライセンスが
 -- あれば、そちらへの影響もない（本関数は指定されたライセンス1件のみを対象にする）。
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- 対象セッションは旧status=8(cancelled_license_ended)ではなくstatus=3(cancelled)、
+-- cancel_category=4(license_ended)として記録する（table/com_t_session.sqlの
+-- ステータス簡素化パッチ参照）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.invalidate_user_license(p_license_id uuid)
 RETURNS void
@@ -61,7 +66,8 @@ BEGIN
 
         -- 3. まだ実施されていない未来のセッションのみキャンセルする（過去の記録は変更しない）
         UPDATE public.com_t_session
-        SET status = 8, -- cancelled_license_ended
+        SET status = 3,
+            cancel_category = 4, -- license_ended
             cancel_reason = 'ライセンス無効化のため',
             cancelled_by = auth.uid(),
             update_date = NOW()

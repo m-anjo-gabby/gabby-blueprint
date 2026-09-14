@@ -20,6 +20,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
   CoachSessionTasksSummary,
+  CompletionResult,
   IncomingRescheduleProposalGroup,
   ProposedSlotInput,
   SessionActionErrorCode,
@@ -87,7 +88,7 @@ export async function finalizeSession(
   sessionId: string,
   reason?: string
 ): Promise<
-  | { success: true; status: SessionStatus; overlapSeconds: number }
+  | { success: true; status: SessionStatus; completionResult: CompletionResult; overlapSeconds: number }
   | { success: false; errorCode: SessionActionErrorCode; message: string }
 > {
   const ctx = await getLogContext();
@@ -99,21 +100,21 @@ export async function finalizeSession(
   }
 
   logger.info('coach:finalize_session_success', 'Session finalized', ctx);
-  return { success: true, status: result.status, overlapSeconds: result.overlapSeconds };
+  return { success: true, status: result.status, completionResult: result.completionResult, overlapSeconds: result.overlapSeconds };
 }
 
 /**
  * Manually resolves a session stuck in "scheduled" past its end time (e.g. the coach
  * crashed before pressing End Lesson, or the lesson was conducted outside the app).
- * `resolvedStatus` must be one of completed(2)/no_show(6)/early_ended(7); a reason is mandatory.
+ * `completionResult` must be one of normal(1)/early_ended(2)/no_show(3); a reason is mandatory.
  */
 export async function resolveStaleSession(
   sessionId: string,
-  resolvedStatus: SessionStatus,
+  completionResult: CompletionResult,
   reason: string
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await resolveStaleSessionCore(sessionId, resolvedStatus, reason);
+  const result = await resolveStaleSessionCore(sessionId, completionResult, reason);
 
   if (!result.success) {
     logger.error('coach:resolve_stale_session_failed', result.errorCode, ctx);
