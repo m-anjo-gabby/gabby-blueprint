@@ -1,10 +1,18 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { getIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
+import { getPendingIncomingRequestsForCoach, getMatchingRequestHistoryPage } from '@/actions/matchingRequestAction';
+import { getBookingRequestHistoryPage, getRescheduleProposalHistoryPage } from '@/actions/sessionAction';
 import { MatchingRequestsView } from './_components/MatchingRequestsView';
 
+const HISTORY_PAGE_SIZE = 10;
+
 export default async function MatchingRequestsPage() {
-  const requests = await getIncomingRequestsForCoach();
+  const [pendingRequests, matchingHistory, bookingHistory, rescheduleHistory] = await Promise.all([
+    getPendingIncomingRequestsForCoach(),
+    getMatchingRequestHistoryPage(null, HISTORY_PAGE_SIZE),
+    getBookingRequestHistoryPage(null, HISTORY_PAGE_SIZE),
+    getRescheduleProposalHistoryPage(null, HISTORY_PAGE_SIZE),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -21,7 +29,12 @@ export default async function MatchingRequestsPage() {
       </div>
 
       <div className="max-w-2xl mx-auto">
-        <MatchingRequestsView initialRequests={requests} />
+        <MatchingRequestsView
+          initialPendingRequests={pendingRequests}
+          initialMatchingHistory={matchingHistory}
+          initialBookingHistory={bookingHistory}
+          initialRescheduleHistory={rescheduleHistory}
+        />
       </div>
     </div>
   );

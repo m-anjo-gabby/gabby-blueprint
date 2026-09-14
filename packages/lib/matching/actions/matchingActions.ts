@@ -671,10 +671,25 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
   }
 }
 
+/** insert_dateで取得した行にstudent_nameを結合する（コーチ宛マッチングリクエスト系クエリの共通処理） */
+async function attachStudentNames(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  requests: Omit<IncomingMatchingRequestItem, 'student_name'>[]
+): Promise<IncomingMatchingRequestItem[]> {
+  if (requests.length === 0) return [];
+  const studentIds = Array.from(new Set(requests.map((r) => r.student_id)));
+  const { data: students } = await supabase.from('com_m_user').select('id, user_name').in('id', studentIds);
+  const studentNameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
+  return requests.map((r) => ({ ...r, student_name: studentNameById.get(r.student_id) ?? '(Unknown)' }));
+}
+
 /**
- * ログイン中コーチ宛の受信マッチングリクエスト一覧を取得する（ポータル共通）
+ * ログイン中コーチ宛の、未対応(pending)のマッチングリクエストのみを取得する。
+ * Pending Requestsパネル・サイドバーの件数バッジ等、常時参照される軽量な用途向け
+ * （statusで絞り込むため、対象は常に少数に収まる。既存の(coach_id, status)
+ * インデックスを利用できる）。History一覧はgetMatchingRequestHistoryPageAsCoachCoreを使うこと。
  */
-export async function getIncomingRequestsAsCoachCore(): Promise<
+export async function getPendingIncomingRequestsAsCoachCore(): Promise<
   { success: true; requests: IncomingMatchingRequestItem[] } | { success: false; errorCode: MatchingRequestErrorCode }
 > {
   const ctx = await getLogContext();
@@ -688,29 +703,62 @@ export async function getIncomingRequestsAsCoachCore(): Promise<
       .from('com_t_matching_request')
       .select('*')
       .eq('coach_id', user.id)
-      .order('insert_date', { ascending: false })
-      .limit(100);
+      .eq('status', MATCHING_REQUEST_STATUS.PENDING)
+      .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('matching:get_incoming_requests_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_pending_incoming_requests_failed', error.message, { ...ctx, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (!requests || requests.length === 0) {
-      return { success: true, requests: [] };
+
+    return { success: true, requests: await attachStudentNames(supabase, requests ?? []) };
+  } catch (err) {
+    logger.error('matching:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中コーチ宛のマッチングリクエスト履歴を、insert_dateカーソルでページング取得する
+ * （申請一覧画面のHistoryタブ用）。コーチの稼働年数が伸びるほど件数が増え続けるため、
+ * 1回のリクエストでは全件取得せず、cursor(直前ページ最終行のinsert_date)より古い行を
+ * limit件だけ返す。nextCursorがnullなら以降のページは存在しない。
+ */
+export async function getMatchingRequestHistoryPageAsCoachCore(
+  cursor: string | null,
+  limit: number
+): Promise<
+  | { success: true; items: IncomingMatchingRequestItem[]; nextCursor: string | null }
+  | { success: false; errorCode: MatchingRequestErrorCode }
+> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    let query = supabase
+      .from('com_t_matching_request')
+      .select('*')
+      .eq('coach_id', user.id)
+      .order('insert_date', { ascending: false })
+      .limit(limit + 1);
+    if (cursor) query = query.lt('insert_date', cursor);
+
+    const { data: rows, error } = await query;
+    if (error) {
+      logger.error('matching:get_request_history_page_failed', error.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const studentIds = Array.from(new Set(requests.map((r) => r.student_id)));
-    const { data: students } = await supabase.from('com_m_user').select('id, user_name').in('id', studentIds);
-    const studentNameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
+    const hasMore = (rows?.length ?? 0) > limit;
+    const page = (rows ?? []).slice(0, limit);
+    const nextCursor = hasMore ? (page[page.length - 1]?.insert_date ?? null) : null;
 
-    const items: IncomingMatchingRequestItem[] = requests.map((r) => ({
-      ...r,
-      student_name: studentNameById.get(r.student_id) ?? '(Unknown)',
-    }));
-
-    return { success: true, requests: items };
+    return { success: true, items: await attachStudentNames(supabase, page), nextCursor };
   } catch (err) {
-    logger.error('matching:get_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_request_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

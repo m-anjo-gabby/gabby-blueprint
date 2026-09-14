@@ -49,6 +49,9 @@ COMMENT ON COLUMN public.com_t_session_booking_request.resulting_session_id IS '
 CREATE INDEX idx_session_booking_request_schedule ON public.com_t_session_booking_request (schedule_id);
 CREATE INDEX idx_session_booking_request_coach_status ON public.com_t_session_booking_request (coach_id, status);
 CREATE INDEX idx_session_booking_request_student_status ON public.com_t_session_booking_request (student_id, status);
+-- コーチ側「申請一覧」画面のHistoryタブ(getBookingRequestHistoryPageForCoachCore)は
+-- coach_id絞り込み + insert_date降順のカーソルページングのため必要 (2026-09-14 追加)
+CREATE INDEX idx_session_booking_request_coach_insert_date ON public.com_t_session_booking_request (coach_id, insert_date DESC);
 
 ---------------------------------------------
 -- 行レベルセキュリティ (RLS)

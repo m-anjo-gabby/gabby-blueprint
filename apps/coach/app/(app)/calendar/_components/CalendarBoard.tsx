@@ -51,9 +51,11 @@ function isItemPast(item: CalendarItem): boolean {
 interface CalendarBoardProps {
   /** 併設のPending Requestsパネルでホバーされたリクエストに対応する日付 (YYYY-MM-DD) */
   highlightedDate?: string | null;
+  /** 値が変わるたびに当月データを再取得する（Pending Requests承認によるセッション変化をカレンダーに反映するため） */
+  reloadToken?: number;
 }
 
-export function CalendarBoard({ highlightedDate }: CalendarBoardProps = {}) {
+export function CalendarBoard({ highlightedDate, reloadToken }: CalendarBoardProps = {}) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
@@ -83,7 +85,8 @@ export function CalendarBoard({ highlightedDate }: CalendarBoardProps = {}) {
 
   useEffect(() => {
     loadMonth();
-  }, [loadMonth]);
+    // reloadTokenは値そのものに意味はなく、変化を検知して再取得するためだけのトリガー
+  }, [loadMonth, reloadToken]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();

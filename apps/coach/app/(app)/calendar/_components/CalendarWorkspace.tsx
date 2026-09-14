@@ -15,11 +15,16 @@ interface CalendarWorkspaceProps {
  */
 export function CalendarWorkspace({ initialRequests }: CalendarWorkspaceProps) {
   const [highlightedDate, setHighlightedDate] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
-      <CalendarBoard highlightedDate={highlightedDate} />
-      <PendingRequestsPanel initialRequests={initialRequests} onDateHover={setHighlightedDate} />
+      <CalendarBoard highlightedDate={highlightedDate} reloadToken={reloadToken} />
+      <PendingRequestsPanel
+        initialRequests={initialRequests}
+        onDateHover={setHighlightedDate}
+        onSessionsChanged={() => setReloadToken((t) => t + 1)}
+      />
     </div>
   );
 }

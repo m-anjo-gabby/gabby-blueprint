@@ -3,11 +3,12 @@
 import {
   approveMatchingRequestCore,
   rejectMatchingRequestCore,
+  getMatchingRequestHistoryPageAsCoachCore,
 } from '@gabby/lib/matching/actions/matchingActions';
-import { getIncomingRequestsForCoachCore } from '@gabby/lib/coachInbox/actions/coachInboxActions';
+import { getPendingIncomingRequestsForCoachCore } from '@gabby/lib/coachInbox/actions/coachInboxActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { MatchingRequestErrorCode } from '@gabby/types/matching';
+import { IncomingMatchingRequestItem, MatchingRequestErrorCode } from '@gabby/types/matching';
 import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
 
 const logger = createLogger('coach');
@@ -24,18 +25,39 @@ const MATCHING_ERROR_MESSAGES_EN: Record<MatchingRequestErrorCode, string> = {
 };
 
 /**
- * Fetches all incoming requests addressed to the current coach — fixed-slot matching
- * requests, free-time session booking requests, and reschedule candidates a student
- * proposed when cancelling — merged into one list for the requests inbox.
+ * Fetches all *pending* incoming requests addressed to the current coach — fixed-slot
+ * matching requests, free-time session booking requests, and reschedule candidates a
+ * student proposed when cancelling — merged into one list. Lightweight (status-filtered)
+ * query intended for surfaces that render on every page load (Calendar's pending panel,
+ * the sidebar badge, the dashboard). For the full request history, use
+ * getMatchingRequestHistoryPage / getBookingRequestHistoryPage / getRescheduleProposalHistoryPage instead.
  */
-export async function getIncomingRequestsForCoach(): Promise<CoachIncomingRequestItem[]> {
-  const result = await getIncomingRequestsForCoachCore();
+export async function getPendingIncomingRequestsForCoach(): Promise<CoachIncomingRequestItem[]> {
+  const result = await getPendingIncomingRequestsForCoachCore();
   if (!result.success) {
     const ctx = await getLogContext();
-    logger.error('coach:get_incoming_requests_failed', result.errorCode, ctx);
+    logger.error('coach:get_pending_incoming_requests_failed', result.errorCode, ctx);
     return [];
   }
   return result.requests;
+}
+
+/**
+ * Fetches one page of the coach's matching request history, ordered newest-first.
+ * Pass the previous page's `nextCursor` to fetch the next page; a null `nextCursor`
+ * in the result means there is no more history.
+ */
+export async function getMatchingRequestHistoryPage(
+  cursor: string | null,
+  limit: number
+): Promise<{ items: IncomingMatchingRequestItem[]; nextCursor: string | null }> {
+  const result = await getMatchingRequestHistoryPageAsCoachCore(cursor, limit);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_matching_request_history_page_failed', result.errorCode, ctx);
+    return { items: [], nextCursor: null };
+  }
+  return { items: result.items, nextCursor: result.nextCursor };
 }
 
 /**

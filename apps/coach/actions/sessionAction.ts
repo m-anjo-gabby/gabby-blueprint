@@ -11,6 +11,8 @@ import {
   rejectSessionBookingRequestCore,
   acceptRescheduleProposalCore,
   declineRescheduleProposalsCore,
+  getBookingRequestHistoryPageForCoachCore,
+  getRescheduleProposalHistoryPageForCoachCore,
 } from '@gabby/lib/session/actions/sessionActions';
 import { getCoachSessionTasksCore } from '@gabby/lib/session/actions/sessionTaskActions';
 import { getSessionCallLogPresenceCore } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
@@ -18,12 +20,14 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
   CoachSessionTasksSummary,
+  IncomingRescheduleProposalGroup,
   ProposedSlotInput,
   SessionActionErrorCode,
   SessionListItem,
   SessionResultSummary,
   SessionStatus,
 } from '@gabby/types/session';
+import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
 
 const logger = createLogger('coach');
 
@@ -261,4 +265,40 @@ export async function declineRescheduleProposals(
 
   logger.info('coach:decline_reschedule_proposals_success', 'Reschedule proposals declined', ctx);
   return { success: true };
+}
+
+/**
+ * Fetches one page of the coach's session booking request history, ordered newest-first.
+ * Pass the previous page's `nextCursor` to fetch the next page; a null `nextCursor`
+ * in the result means there is no more history.
+ */
+export async function getBookingRequestHistoryPage(
+  cursor: string | null,
+  limit: number
+): Promise<{ items: IncomingSessionBookingRequestItem[]; nextCursor: string | null }> {
+  const result = await getBookingRequestHistoryPageForCoachCore(cursor, limit);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_booking_request_history_page_failed', result.errorCode, ctx);
+    return { items: [], nextCursor: null };
+  }
+  return { items: result.items, nextCursor: result.nextCursor };
+}
+
+/**
+ * Fetches one page of the coach's reschedule proposal history (grouped by the
+ * cancelled session), ordered newest-first. Pass the previous page's `nextCursor`
+ * to fetch the next page; a null `nextCursor` in the result means there is no more history.
+ */
+export async function getRescheduleProposalHistoryPage(
+  cursor: string | null,
+  limit: number
+): Promise<{ items: IncomingRescheduleProposalGroup[]; nextCursor: string | null }> {
+  const result = await getRescheduleProposalHistoryPageForCoachCore(cursor, limit);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_reschedule_proposal_history_page_failed', result.errorCode, ctx);
+    return { items: [], nextCursor: null };
+  }
+  return { items: result.items, nextCursor: result.nextCursor };
 }

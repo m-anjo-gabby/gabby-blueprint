@@ -1,42 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { MatchingRequestCard } from '@/components/requests/MatchingRequestCard';
 import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
 import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';
-import { CoachIncomingRequestItem, IncomingSessionBookingRequestItem, isPendingCoachIncomingRequest } from '@gabby/types/coachInbox';
-import { IncomingMatchingRequestItem } from '@gabby/types/matching';
-import { IncomingRescheduleProposalGroup } from '@gabby/types/session';
+import { useCoachPendingRequests } from '@/hooks/useCoachPendingRequests';
+import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
 
 interface PendingRequestsPanelProps {
   initialRequests: CoachIncomingRequestItem[];
   onDateHover?: (date: string | null) => void;
+  /** 承認によりセッションが新規作成・変更された時に呼ばれる（併設カレンダーの再取得トリガー用） */
+  onSessionsChanged?: () => void;
 }
 
-export function PendingRequestsPanel({ initialRequests, onDateHover }: PendingRequestsPanelProps) {
-  const [requests, setRequests] = useState<CoachIncomingRequestItem[]>(initialRequests);
-
-  const handleMatchingResolved = (requestId: string, patch: Partial<IncomingMatchingRequestItem>) => {
-    setRequests((prev) =>
-      prev.map((item) => (item.kind === 'matching' && item.data.request_id === requestId ? { ...item, data: { ...item.data, ...patch } } : item))
-    );
-  };
-
-  const handleBookingResolved = (requestId: string, patch: Partial<IncomingSessionBookingRequestItem>) => {
-    setRequests((prev) =>
-      prev.map((item) => (item.kind === 'booking' && item.data.request_id === requestId ? { ...item, data: { ...item.data, ...patch } } : item))
-    );
-  };
-
-  const handleProposalResolved = (sessionId: string, patch: Partial<IncomingRescheduleProposalGroup>) => {
-    setRequests((prev) =>
-      prev.map((item) => (item.kind === 'reschedule_proposal' && item.data.session_id === sessionId ? { ...item, data: { ...item.data, ...patch } } : item))
-    );
-  };
-
-  const pending = useMemo(() => requests.filter(isPendingCoachIncomingRequest), [requests]);
+export function PendingRequestsPanel({ initialRequests, onDateHover, onSessionsChanged }: PendingRequestsPanelProps) {
+  const { pending, handleMatchingResolved, handleBookingResolved, handleProposalResolved } = useCoachPendingRequests(
+    initialRequests,
+    onSessionsChanged
+  );
 
   const renderItem = (item: CoachIncomingRequestItem) => {
     switch (item.kind) {

@@ -1,8 +1,7 @@
 import { CalendarClock } from 'lucide-react';
 import { getMyProfile } from '@/actions/coachProfileAction';
-import { getIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
+import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
 import { Section } from '@/components/common/Section';
-import { isPendingCoachIncomingRequest } from '@gabby/types/coachInbox';
 import DashboardHeader from './_components/DashboardHeader';
 import AttentionStrip from './_components/AttentionStrip';
 import TodaysSessionsPanel from './_components/TodaysSessionsPanel';
@@ -19,14 +18,14 @@ function getGreeting(timeZone: string): string {
 }
 
 export default async function Page() {
-  const [profile, incomingRequests] = await Promise.all([
+  const [profile, pendingRequests] = await Promise.all([
     getMyProfile(),
-    getIncomingRequestsForCoach(),
+    getPendingIncomingRequestsForCoach(),
   ]);
 
   const timezone = profile?.timezone || 'Asia/Tokyo';
   const firstName = profile?.user_name?.split(' ')[0] || 'Coach';
-  const pendingRequestCount = incomingRequests.filter(isPendingCoachIncomingRequest).length;
+  const pendingRequestCount = pendingRequests.length;
   const dateLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: timezone }).format(new Date());
 
   return (

@@ -4,6 +4,7 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { groupRescheduleProposals } from '../rescheduleProposalUtils';
+import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
 import {
   AcceptRescheduleProposalResult,
   ApproveSessionBookingRequestResult,
@@ -29,6 +30,7 @@ import {
   SessionChatMessageEntry,
   SessionListItem,
   SessionRescheduleProposal,
+  SessionRescheduleProposalGroup,
   SessionSprintSummaryEntry,
   SessionStatus,
 } from '@gabby/types/session';
@@ -341,14 +343,37 @@ export async function getMyRescheduleProposalGroupsCore(): Promise<
   }
 }
 
+/** 振替候補グループに生徒名・元セッションの開始日時を結合する（コーチ宛振替候補系クエリの共通処理） */
+async function enrichRescheduleProposalGroups(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  groups: SessionRescheduleProposalGroup[]
+): Promise<IncomingRescheduleProposalGroup[]> {
+  if (groups.length === 0) return [];
+  const studentIds = Array.from(new Set(groups.map((g) => g.student_id)));
+  const sessionIds = groups.map((g) => g.session_id);
+  const [{ data: students }, { data: sessions }] = await Promise.all([
+    supabase.from('com_m_user').select('id, user_name').in('id', studentIds),
+    supabase.from('com_t_session').select('session_id, start_datetime').in('session_id', sessionIds),
+  ]);
+  const nameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
+  const startById = new Map((sessions ?? []).map((s) => [s.session_id, s.start_datetime]));
+
+  return groups.map((g) => ({
+    ...g,
+    student_name: nameById.get(g.student_id) ?? '(Unknown)',
+    original_session_start_datetime: startById.get(g.session_id) ?? g.insert_date,
+  }));
+}
+
 /**
- * コーチ宛の振替候補一覧を取得する（生徒がキャンセル時に提案したもののみ。
- * proposed_by_role=STUDENT）。コーチ側の申請一覧画面のPending/History両方の元データとして使う。
- * 「未失効のpending」または「応答済み(accepted/declined)」を対象とし、応答されないまま
- * 期限切れになっただけの行（status=pendingのままexpires_at超過）は対象外とする
- * （応答不要のまま自然消滅した扱いのため、Historyにも出さない設計）。
+ * ログイン中コーチ宛の、未対応(pending・未失効)の振替候補のみを、キャンセル(セッション)単位で
+ * グルーピングして取得する。Pending Requestsパネル・サイドバーの件数バッジ等、常時参照される
+ * 軽量な用途向け（既存の(coach_id, status)インデックスを利用できる）。
+ * History一覧はgetRescheduleProposalHistoryPageForCoachCoreを使うこと。
  */
-export async function getIncomingRescheduleProposalsForCoachCore(): Promise<GetMyRescheduleProposalsResult> {
+export async function getPendingIncomingRescheduleProposalGroupsForCoachCore(): Promise<
+  { success: true; groups: IncomingRescheduleProposalGroup[] } | { success: false; errorCode: SessionActionErrorCode }
+> {
   const ctx = await getLogContext();
 
   try {
@@ -361,57 +386,75 @@ export async function getIncomingRescheduleProposalsForCoachCore(): Promise<GetM
       .select(RESCHEDULE_PROPOSAL_ROW_COLUMNS)
       .eq('coach_id', user.id)
       .eq('proposed_by_role', PROPOSED_BY_ROLE.STUDENT)
-      .or(`status.neq.${RESCHEDULE_PROPOSAL_STATUS.PENDING},expires_at.gt.${new Date().toISOString()}`)
+      .eq('status', RESCHEDULE_PROPOSAL_STATUS.PENDING)
+      .gt('expires_at', new Date().toISOString())
       .order('proposed_start_datetime', { ascending: true });
 
     if (error) {
-      logger.error('session:get_incoming_reschedule_proposals_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('session:get_pending_incoming_reschedule_proposal_groups_failed', error.message, { ...ctx, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return { success: true, proposals: (data ?? []) as SessionRescheduleProposal[] };
+    const groups = groupRescheduleProposals((data ?? []) as SessionRescheduleProposal[]);
+    return { success: true, groups: await enrichRescheduleProposalGroups(supabase, groups) };
   } catch (err) {
-    logger.error('session:get_incoming_reschedule_proposals_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:get_pending_incoming_reschedule_proposal_groups_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
+// 振替候補は1回のキャンセルにつき最大3件までしか提案できないため、この倍率だけ多めに行を
+// 取得してからグルーピングすれば、pageSize件分のグループがページ境界で分断されることを
+// 実用上ほぼ避けられる（同一グループの候補は同時期にまとめて作成されるためinsert_dateが近接する）。
+const RESCHEDULE_GROUP_FETCH_MULTIPLIER = 3;
+
 /**
- * ログイン中コーチ宛の、生徒がキャンセル時に提案した振替候補を、キャンセル(セッション)単位で
- * グルーピングし、生徒名・元セッションの開始日時を結合して取得する（申請一覧画面用。
- * pending/応答済みの両方を含むため、呼び出し側でPending/Historyへの振り分けを行う）。
+ * ログイン中コーチ宛の振替候補履歴を、セッション単位のグループでページング取得する
+ * （申請一覧画面のHistoryタブ用）。グループ化はアプリケーション側で行うため、生の行を
+ * pageSize×3件多めに取得し、グルーピング後の先頭pageSize件をこのページ分として返す。
  */
-export async function getIncomingRescheduleProposalGroupsForCoachCore(): Promise<
-  { success: true; groups: IncomingRescheduleProposalGroup[] } | { success: false; errorCode: SessionActionErrorCode }
+export async function getRescheduleProposalHistoryPageForCoachCore(
+  cursor: string | null,
+  limit: number
+): Promise<
+  | { success: true; items: IncomingRescheduleProposalGroup[]; nextCursor: string | null }
+  | { success: false; errorCode: SessionActionErrorCode }
 > {
-  const result = await getIncomingRescheduleProposalsForCoachCore();
-  if (!result.success) return result;
-
-  const groups = groupRescheduleProposals(result.proposals);
-  if (groups.length === 0) return { success: true, groups: [] };
-
   const ctx = await getLogContext();
+
   try {
     const supabase = await createServerClient();
-    const studentIds = Array.from(new Set(groups.map((g) => g.student_id)));
-    const sessionIds = groups.map((g) => g.session_id);
-    const [{ data: students }, { data: sessions }] = await Promise.all([
-      supabase.from('com_m_user').select('id, user_name').in('id', studentIds),
-      supabase.from('com_t_session').select('session_id, start_datetime').in('session_id', sessionIds),
-    ]);
-    const nameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
-    const startById = new Map((sessions ?? []).map((s) => [s.session_id, s.start_datetime]));
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    return {
-      success: true,
-      groups: groups.map((g) => ({
-        ...g,
-        student_name: nameById.get(g.student_id) ?? '(Unknown)',
-        original_session_start_datetime: startById.get(g.session_id) ?? g.insert_date,
-      })),
-    };
+    const fetchLimit = limit * RESCHEDULE_GROUP_FETCH_MULTIPLIER;
+    let query = supabase
+      .from('com_t_session_reschedule_proposal')
+      .select(RESCHEDULE_PROPOSAL_ROW_COLUMNS)
+      .eq('coach_id', user.id)
+      .eq('proposed_by_role', PROPOSED_BY_ROLE.STUDENT)
+      .or(`status.neq.${RESCHEDULE_PROPOSAL_STATUS.PENDING},expires_at.gt.${new Date().toISOString()}`)
+      .order('insert_date', { ascending: false })
+      .limit(fetchLimit + 1);
+    if (cursor) query = query.lt('insert_date', cursor);
+
+    const { data, error } = await query;
+    if (error) {
+      logger.error('session:get_reschedule_proposal_history_page_failed', error.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const rows = (data ?? []) as SessionRescheduleProposal[];
+    const allGroups = groupRescheduleProposals(rows).sort((a, b) => b.insert_date.localeCompare(a.insert_date));
+    // 取得したバッファを使い切っている場合、グループ数がlimit以下でもその先にまだ行が
+    // 残っている可能性があるため保守的にhasMore=trueとする（次ページ取得時に0件で収束する）
+    const hasMore = allGroups.length > limit || rows.length > fetchLimit;
+    const page = allGroups.slice(0, limit);
+    const nextCursor = hasMore && page.length > 0 ? page[page.length - 1].insert_date : null;
+
+    return { success: true, items: await enrichRescheduleProposalGroups(supabase, page), nextCursor };
   } catch (err) {
-    logger.error('session:get_incoming_reschedule_proposal_groups_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:get_reschedule_proposal_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -671,11 +714,26 @@ export async function getMyBookingRequestsCore(): Promise<
   }
 }
 
+/** SessionBookingRequestの行にstudent_nameを結合する（コーチ宛予約リクエスト系クエリの共通処理） */
+async function attachBookingRequestStudentNames(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  requests: SessionBookingRequest[]
+): Promise<IncomingSessionBookingRequestItem[]> {
+  if (requests.length === 0) return [];
+  const studentIds = Array.from(new Set(requests.map((r) => r.student_id)));
+  const { data: students } = await supabase.from('com_m_user').select('id, user_name').in('id', studentIds);
+  const nameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
+  return requests.map((r) => ({ ...r, student_name: nameById.get(r.student_id) ?? '(Unknown)' }));
+}
+
 /**
- * ログイン中コーチ宛の、未消化チケットによる予約リクエスト一覧を取得する（申請一覧画面用）。
+ * ログイン中コーチ宛の、未対応(pending)の予約リクエストのみを取得する。
+ * Pending Requestsパネル・サイドバーの件数バッジ等、常時参照される軽量な用途向け
+ * （既存の(coach_id, status)インデックスを利用できる）。
+ * History一覧はgetBookingRequestHistoryPageForCoachCoreを使うこと。
  */
-export async function getIncomingBookingRequestsForCoachCore(): Promise<
-  { success: true; requests: SessionBookingRequest[] } | { success: false; errorCode: SessionActionErrorCode }
+export async function getPendingIncomingBookingRequestsForCoachCore(): Promise<
+  { success: true; requests: IncomingSessionBookingRequestItem[] } | { success: false; errorCode: SessionActionErrorCode }
 > {
   const ctx = await getLogContext();
 
@@ -688,16 +746,61 @@ export async function getIncomingBookingRequestsForCoachCore(): Promise<
       .from('com_t_session_booking_request')
       .select(BOOKING_REQUEST_ROW_COLUMNS)
       .eq('coach_id', user.id)
+      .eq('status', SESSION_BOOKING_REQUEST_STATUS.PENDING)
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('session:get_incoming_booking_requests_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('session:get_pending_incoming_booking_requests_failed', error.message, { ...ctx, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return { success: true, requests: (data ?? []) as SessionBookingRequest[] };
+    return { success: true, requests: await attachBookingRequestStudentNames(supabase, (data ?? []) as SessionBookingRequest[]) };
   } catch (err) {
-    logger.error('session:get_incoming_booking_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:get_pending_incoming_booking_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中コーチ宛の予約リクエスト履歴を、insert_dateカーソルでページング取得する
+ * （申請一覧画面のHistoryタブ用。matching側のgetMatchingRequestHistoryPageAsCoachCoreと同じ方式）。
+ */
+export async function getBookingRequestHistoryPageForCoachCore(
+  cursor: string | null,
+  limit: number
+): Promise<
+  | { success: true; items: IncomingSessionBookingRequestItem[]; nextCursor: string | null }
+  | { success: false; errorCode: SessionActionErrorCode }
+> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    let query = supabase
+      .from('com_t_session_booking_request')
+      .select(BOOKING_REQUEST_ROW_COLUMNS)
+      .eq('coach_id', user.id)
+      .order('insert_date', { ascending: false })
+      .limit(limit + 1);
+    if (cursor) query = query.lt('insert_date', cursor);
+
+    const { data, error } = await query;
+    if (error) {
+      logger.error('session:get_booking_request_history_page_failed', error.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const rows = (data ?? []) as SessionBookingRequest[];
+    const hasMore = rows.length > limit;
+    const page = rows.slice(0, limit);
+    const nextCursor = hasMore ? (page[page.length - 1]?.insert_date ?? null) : null;
+
+    return { success: true, items: await attachBookingRequestStudentNames(supabase, page), nextCursor };
+  } catch (err) {
+    logger.error('session:get_booking_request_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

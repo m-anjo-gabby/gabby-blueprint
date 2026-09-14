@@ -2,6 +2,14 @@
 -- 本番リリース作業スクリプト
 -- 対象ブランチ: feature/20260911-dev
 -- 作成日: 2026-09-11
+-- 更新日: 2026-09-14（コーチ「申請一覧」画面のHistoryをmatching/booking/reschedule_proposalの
+--          3タブに分割し、各タブをinsert_dateカーソルでページング取得する方式に変更した
+--          （旧: 3種類を1画面にマージし全件を一括取得後、クライアント側で表示件数だけ絞る方式）。
+--          あわせてPending Requestsパネル・サイドバー未処理件数バッジ用に、status=pendingのみを
+--          取得する軽量クエリを新設した。coach_id絞り込みは既存の(coach_id, status)インデックスで
+--          足りるが、History側のinsert_date降順カーソルページングを支えるインデックスが
+--          3テーブルとも無かったため追加する。詳細はファイル末尾の「22. コーチ申請履歴の
+--          ページング用インデックス追加」セクションのコメントを参照）
 -- 更新日: 2026-09-13（会社ロゴをapps/coach/public直参照からSupabase Storage
 --          ("company-logo"バケット)参照へ変更。詳細はファイル末尾の「21. 会社ロゴの
 --          Storage移行」セクションのコメントを参照）
@@ -2261,3 +2269,21 @@ INSERT INTO public.com_m_company_profile (company_profile_id, company_name, addr
 ON CONFLICT (company_profile_id) DO UPDATE SET
   logo_path = EXCLUDED.logo_path,
   update_date = NOW();
+
+
+---------------------------------------------
+-- 22. コーチ申請履歴のページング用インデックス追加 (2026-09-14 追加)
+---------------------------------------------
+-- 【背景】
+-- コーチ「申請一覧」画面のHistoryを、matching/booking/reschedule_proposalの3タブに分割し、
+-- 各タブをinsert_dateカーソル（coach_id絞り込み + insert_date降順 + LIMIT）でページング
+-- 取得する方式に変更した（詳細はapps/coach側の変更を参照。本SQLの対象外）。
+-- 3テーブルとも既存インデックスは(coach_id, status)のみで、statusを問わず全件を対象に
+-- insert_date降順でページングするこのクエリ形状には最適化されていなかったため、
+-- (coach_id, insert_date DESC)の複合インデックスを追加する。
+-- Pending Requestsパネル・サイドバーの未処理件数バッジ用に新設したstatus=pendingのみの
+-- 軽量クエリは、既存の(coach_id, status)インデックスで引き続き足りるため対象外。
+---------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_matching_request_coach_insert_date ON public.com_t_matching_request (coach_id, insert_date DESC);
+CREATE INDEX IF NOT EXISTS idx_session_booking_request_coach_insert_date ON public.com_t_session_booking_request (coach_id, insert_date DESC);
+CREATE INDEX IF NOT EXISTS idx_session_reschedule_proposal_coach_insert_date ON public.com_t_session_reschedule_proposal (coach_id, insert_date DESC);

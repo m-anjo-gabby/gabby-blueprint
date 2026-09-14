@@ -1,9 +1,9 @@
 import { CalendarWorkspace } from './_components/CalendarWorkspace';
 import { ScheduleTabs } from '@/components/common/ScheduleTabs';
-import { getIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
+import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
 
 export default async function CalendarPage() {
-  const requests = await getIncomingRequestsForCoach();
+  const requests = await getPendingIncomingRequestsForCoach();
 
   return (
     <div className="space-y-6">
