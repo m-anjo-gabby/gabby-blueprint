@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFirstLiveSessionOccurrence } from '@gabby/lib/date/date';
+import { getFirstLiveSessionOccurrence, toIsoDateInZone } from '@gabby/lib/date/date';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
@@ -37,9 +37,11 @@ function formatTimeRange(startTime: string, endTime: string): string {
 interface MatchingRequestCardProps {
   request: IncomingMatchingRequestItem;
   onResolved: (requestId: string, patch: Partial<IncomingMatchingRequestItem>) => void;
+  /** カレンダーと並べて表示する場合、対応する日付をホバー時にハイライトするためのコールバック */
+  onDateHover?: (date: string | null) => void;
 }
 
-export function MatchingRequestCard({ request, onResolved }: MatchingRequestCardProps) {
+export function MatchingRequestCard({ request, onResolved, onDateHover }: MatchingRequestCardProps) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -103,7 +105,11 @@ export function MatchingRequestCard({ request, onResolved }: MatchingRequestCard
   };
 
   return (
-    <article className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+    <article
+      className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3"
+      onMouseEnter={() => firstSession && onDateHover?.(toIsoDateInZone(firstSession.instant, timezone))}
+      onMouseLeave={() => onDateHover?.(null)}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <RequestKindTag kind="matching" />

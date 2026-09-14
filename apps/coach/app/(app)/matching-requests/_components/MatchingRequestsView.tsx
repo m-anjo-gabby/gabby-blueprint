@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { MatchingRequestCard } from './MatchingRequestCard';
-import { BookingRequestCard } from './BookingRequestCard';
-import { RescheduleProposalRequestCard } from './RescheduleProposalRequestCard';
+import { MatchingRequestCard } from '@/components/requests/MatchingRequestCard';
+import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
+import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';
 import { CoachIncomingRequestItem, IncomingSessionBookingRequestItem, isPendingCoachIncomingRequest } from '@gabby/types/coachInbox';
 import { IncomingMatchingRequestItem } from '@gabby/types/matching';
 import { IncomingRescheduleProposalGroup } from '@gabby/types/session';

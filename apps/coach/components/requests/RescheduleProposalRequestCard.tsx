@@ -5,6 +5,7 @@ import { Loader2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
 import { IncomingRescheduleProposalGroup, RESCHEDULE_PROPOSAL_STATUS } from '@gabby/types/session';
@@ -13,9 +14,11 @@ import { RequestKindTag } from './RequestKindTag';
 interface RescheduleProposalRequestCardProps {
   group: IncomingRescheduleProposalGroup;
   onResolved: (sessionId: string, patch: Partial<IncomingRescheduleProposalGroup>) => void;
+  /** カレンダーと並べて表示する場合、候補日をホバー時にハイライトするためのコールバック */
+  onDateHover?: (date: string | null) => void;
 }
 
-export function RescheduleProposalRequestCard({ group, onResolved }: RescheduleProposalRequestCardProps) {
+export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }: RescheduleProposalRequestCardProps) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
   const [respondingProposalId, setRespondingProposalId] = useState<string | null>(null);
   const [isDeclining, setIsDeclining] = useState(false);
@@ -98,7 +101,12 @@ export function RescheduleProposalRequestCard({ group, onResolved }: RescheduleP
         <>
           <div className="space-y-2">
             {pendingCandidates.map((candidate) => (
-              <div key={candidate.proposal_id} className="flex items-center justify-between gap-2 bg-slate-50 rounded-lg border border-slate-100 px-3 py-2">
+              <div
+                key={candidate.proposal_id}
+                className="flex items-center justify-between gap-2 bg-slate-50 rounded-lg border border-slate-100 px-3 py-2"
+                onMouseEnter={() => onDateHover?.(toIsoDateInZone(candidate.proposed_start_datetime, timezone))}
+                onMouseLeave={() => onDateHover?.(null)}
+              >
                 <span className="text-xs font-semibold text-slate-700">{formatDateTimeEn(candidate.proposed_start_datetime, timezone)}</span>
                 <Button type="button" size="sm" className="h-7 px-2.5 text-[11px]" disabled={isBusy} onClick={() => handleAccept(candidate.proposal_id)}>
                   {respondingProposalId === candidate.proposal_id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
