@@ -4,10 +4,13 @@ import { LessonSprintResult } from './_components/LessonSprintResult';
 
 export default async function LessonSprintResultPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; sprintId: string }>;
+  searchParams: Promise<{ session_id?: string }>;
 }) {
   const { id, sprintId } = await params;
+  const { session_id: sessionId } = await searchParams;
   const [result, contents] = await Promise.all([
     getLessonSprintResult(sprintId),
     getAvailableSprintContents(),
@@ -25,6 +28,7 @@ export default async function LessonSprintResultPage({
       record={result.record}
       questions={result.questions}
       content={content}
+      sessionId={sessionId ?? null}
     />
   );
 }

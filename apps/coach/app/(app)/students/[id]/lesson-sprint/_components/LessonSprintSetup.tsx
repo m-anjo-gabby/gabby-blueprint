@@ -17,6 +17,8 @@ import { StudentSnapshotPanel } from './StudentSnapshotPanel';
 
 interface Props {
   studentId: string;
+  /** 実施中のライブセッション。ハブ経由でない単独実施の場合はnull */
+  sessionId: string | null;
   profile: StudentOverviewProfile;
   lessonSprints: LessonSprintHistoryListItem[];
   contents: LessonSprintContentSummary[];
@@ -26,7 +28,7 @@ interface Props {
 const sortedTypes = Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no);
 const sortedTimes = Object.values(SPRINT_TIME_OPTIONS).sort((a, b) => a.seq_no - b.seq_no);
 
-export function LessonSprintSetup({ studentId, profile, lessonSprints, contents, onStart }: Props) {
+export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints, contents, onStart }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
   const { setConfig, setContentName, setContentMetadata } = useLessonSprintStore();
@@ -133,7 +135,7 @@ export function LessonSprintSetup({ studentId, profile, lessonSprints, contents,
         <div className="shrink-0 w-full px-6 pt-5 pb-3 border-b border-slate-100/60 bg-white relative z-10">
           <div className="flex items-center justify-between h-10">
             <button
-              onClick={() => router.push(`/students/${studentId}`)}
+              onClick={() => router.push(sessionId ? `/students/${studentId}/sessions/${sessionId}` : `/students/${studentId}`)}
               className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200/80 active:scale-95 cursor-pointer transition-all shrink-0"
             >
               <ChevronLeft size={16} strokeWidth={2.5} />

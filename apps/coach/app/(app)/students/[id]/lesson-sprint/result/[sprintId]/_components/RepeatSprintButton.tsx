@@ -14,9 +14,11 @@ interface Props {
   studentId: string;
   record: LessonSprintRecord;
   content: LessonSprintContentSummary | undefined;
+  /** 現在ハブのセッション文脈内にいるかどうか（URLの?session_id=。record.session_idとは別物）。 */
+  sessionId: string | null;
 }
 
-export function RepeatSprintButton({ studentId, record, content }: Props) {
+export function RepeatSprintButton({ studentId, record, content, sessionId }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
   const { setConfig, setContentName, setContentMetadata, startSession } = useLessonSprintStore();
@@ -45,9 +47,10 @@ export function RepeatSprintButton({ studentId, record, content }: Props) {
     setContentMetadata(content?.metadata?.sprint ?? null);
     startSession(result.questions);
 
-    // 元の実施がライブセッションに紐づいていた場合は、Repeat後もそのセッションへの
-    // 紐づけを引き継ぐ（セッション終了後にRepeatした場合はsession_idが無くても問題ない）。
-    const query = record.session_id ? `?session_id=${record.session_id}` : '';
+    // 「今まさにハブのセッション文脈内にいるか」で判断する（record.session_idという、この
+    // 記録がたまたま過去のどのセッションに属していたかとは別物）。受講生概要のスプリント履歴
+    // から開いた過去記録をRepeatした場合は、その場ではハブの文脈にいないため単独実施として扱う。
+    const query = sessionId ? `?session_id=${sessionId}` : '';
     router.push(`/students/${studentId}/lesson-sprint${query}`);
   };
 

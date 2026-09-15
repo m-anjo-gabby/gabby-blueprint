@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Zap, Timer } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Zap, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { tokenizeWordsWithPunctuation, formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
@@ -19,12 +19,20 @@ interface Props {
   record: LessonSprintRecord;
   questions: SprintQuestion[];
   content: LessonSprintContentSummary | undefined;
+  /**
+   * URLの?session_id=。ハブ発のLive Sprintをちょうど完走してこの結果画面に遷移してきた
+   * 場合のみ渡ってくる（LessonSprintApp.handleComplete参照）。受講生概要のスプリント履歴や
+   * ハブのPrepセクションから過去の記録を振り返る目的で開いた場合は、その実施が
+   * record.session_idを持っていてもnullのまま＝表示・導線を一切変えない。
+   */
+  sessionId: string | null;
 }
 
-export function LessonSprintResult({ studentId, record, questions, content }: Props) {
+export function LessonSprintResult({ studentId, record, questions, content, sessionId }: Props) {
   const timezone = useTimezone();
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const isQuestionBased = record.question_type === '0' || record.question_type === '6';
+  const isImmersive = !!sessionId;
 
   const scoredItems = record.answered_history.filter((h) => !h.is_skipped && typeof h.score === 'number');
   const averageScore = scoredItems.length > 0
@@ -33,15 +41,20 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
 
   const formattedDate = formatDateTimeEn(record.insert_date, timezone);
 
-  // このスプリントがライブセッションに紐づいていれば、そのセッション結果画面に戻る方が文脈的に自然
+  // ハブ発の実施を完走した直後（isImmersive）は、セッションハブへ戻る一本道の導線にする
+  // （コーチからの「通話中はなるべく画面を行き来したくない」という要望を受けた設計。詳細は
+  // SessionHub.tsxのコメント参照）。それ以外（履歴からの参照）は、このスプリントがライブ
+  // セッションに紐づいていれば、そのセッション結果画面に戻る方が文脈的に自然
   // （受講生概要の全履歴一覧から開いた場合も、セッションに属する実施であればそちらへ戻す）。
   // 紐づきが無い(単独実施)場合のみ受講生概要に戻る。
-  const backHref = record.session_id
-    ? `/students/${studentId}/sessions/${record.session_id}/result`
-    : `/students/${studentId}`;
-  const backLabel = record.session_id ? 'Back to Session Result' : 'Back to Overview';
+  const backHref = isImmersive
+    ? `/students/${studentId}/sessions/${sessionId}`
+    : record.session_id
+      ? `/students/${studentId}/sessions/${record.session_id}/result`
+      : `/students/${studentId}`;
+  const backLabel = isImmersive ? 'Back to Hub' : record.session_id ? 'Back to Session Result' : 'Back to Overview';
 
-  return (
+  const body = (
     <div className="flex flex-col lg:h-full max-w-7xl mx-auto w-full pb-6 lg:pb-0">
       {/* ────────────── Header area: navigation + screen title ────────────── */}
       <div className="space-y-1 pb-6 shrink-0">
@@ -97,14 +110,25 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
 
           {/* 次のアクション: メモの長さ等でペインが縦に伸びても常に見えるよう、左ペイン下端にsticky固定する */}
           <div className="lg:sticky lg:bottom-0 lg:bg-white lg:border-t lg:border-slate-100 lg:pt-3 space-y-2">
-            <RepeatSprintButton studentId={studentId} record={record} content={content} />
+            <RepeatSprintButton studentId={studentId} record={record} content={content} sessionId={sessionId} />
             <Link
-              href={`/students/${studentId}/lesson-sprint${record.session_id ? `?session_id=${record.session_id}` : ''}`}
+              href={`/students/${studentId}/lesson-sprint${sessionId ? `?session_id=${sessionId}` : ''}`}
               className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shrink-0"
             >
               <Zap size={14} className="fill-current text-amber-300" />
               Start Another Live Sprint
             </Link>
+            {/* 没入表示時のみ: ボタン群と並べて同じ「Back to Hub」を重複表示すると紛らわしいため、
+                ここでは「これ以上スプリントを続けない場合の締めくくり」という文脈の文言にする */}
+            {isImmersive && (
+              <Link
+                href={backHref}
+                className="w-full flex items-center justify-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors py-1"
+              >
+                Done for now — back to Hub
+                <ArrowRight size={12} />
+              </Link>
+            )}
           </div>
         </div>
 
@@ -189,6 +213,16 @@ export function LessonSprintResult({ studentId, record, questions, content }: Pr
           })}
         </div>
       </div>
+    </div>
+  );
+
+  if (!isImmersive) return body;
+
+  // ハブ発の実施を完走した直後は、Header/Sidebarを覆う固定オーバーレイで表示し、通話中の
+  // 画面遷移を最小限にする（Setup/Player画面（LessonSprintApp.tsx）と同じ手法で統一）。
+  return (
+    <div className="fixed inset-0 z-40 w-full h-full bg-slate-50 overflow-y-auto p-4 md:p-6">
+      {body}
     </div>
   );
 }
