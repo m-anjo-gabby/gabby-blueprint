@@ -16,13 +16,14 @@ Feature: 個別セッション予約管理リニューアル データ主体テ�
     And 全QAアカウントは環境変数 QA_LIVE_SESSION_TEST_PASSWORD に設定された共通パスワードでサインインできる
     And 対象環境に新規RPC(check_session_conflict/create_session_booking_request/
         approve_slot_proposal/reject_slot_proposal/
-        withdraw_session_booking_request/
-        admin_reschedule_session/admin_book_session_direct)が反映済みである
+        withdraw_session_booking_request/admin_book_session_direct)が反映済みである
         （preflightチェック済み）
     And 旧RPC(reschedule_session/book_makeup_session/decline_session_reschedule_proposal/
         approve_session_booking_request/reject_session_booking_request/
-        accept_session_reschedule_proposal/decline_session_reschedule_proposals)
-        が削除済みである（42883 undefined_functionで確認、2026-09-15スロット提案統合により追加）
+        accept_session_reschedule_proposal/decline_session_reschedule_proposals/
+        admin_reschedule_session)
+        が削除済みである（42883 undefined_functionで確認、2026-09-15スロット提案統合・
+        アドミン振替廃止により追加）
 
   Scenario: QA生徒1 - コーチキャンセル時の振替候補提案（コーチ→生徒）と自動失効
     Given QA生徒1にCoachA担当の週1回契約があり、未来のセッションが1件予定されている
@@ -73,10 +74,13 @@ Feature: 個別セッション予約管理リニューアル データ主体テ�
         （20260912ホットフィックス適用前は uq_session_schedule_datetime の一意制約違反で
         ここが失敗していた）
 
-  Scenario: QA生徒5 - アドミン代理操作（承認ステップなしの即時反映）
+  Scenario: QA生徒5 - アドミン代理操作（承認ステップなしの即時反映、日時変更は「キャンセル＋予約」に統一）
     Given QA生徒5にCoachA担当の週1回契約があり、未来のセッションが1件予定されている
-    When アドミンがそのセッションを別日時へ直接変更する(admin_reschedule_session)
-    Then 元のセッションがstatus=rescheduled、新しい日時のセッションがstatus=scheduledで
-        rescheduled_fromに元セッションを参照していること
+    When アドミンがそのセッションをキャンセルする(cancel_session、p_as_admin=true・返還あり)
+    Then 元のセッションがstatus=cancelled, cancel_category=admin になること
+    When アドミンが未割当に戻った枠へ別日時で直接予約する(admin_book_session_direct)
+    Then 新しい日時のセッションがstatus=scheduledで作成されること
+        (admin_reschedule_sessionは2026-09-15に廃止。生徒・コーチと同じ「キャンセル＋予約」の
+        2操作に統一した)
     When アドミンが未消化枠に対して自由な日時で直接予約する(admin_book_session_direct)
     Then 承認ステップを経ずに即座にcom_t_sessionへ新規行(status=scheduled)が作成されること

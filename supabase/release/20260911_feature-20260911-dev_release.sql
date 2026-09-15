@@ -2,6 +2,11 @@
 -- 本番リリース作業スクリプト
 -- 対象ブランチ: feature/20260911-dev
 -- 作成日: 2026-09-11
+-- 更新日: 2026-09-15（アドミンの振替(admin_reschedule_session)を廃止: 生徒・コーチ向けの
+--          「振替」概念を廃止したのと同じく、アドミン専用の日時変更RPCも廃止し、
+--          cancel_session(p_as_admin=true)＋admin_book_session_directの「キャンセル＋予約」の
+--          2操作に統一した（マッチング〜予約管理ドメインの再整理の一環）。詳細はファイル末尾の
+--          「31. アドミンの振替(admin_reschedule_session)の廃止」セクションのコメントを参照）
 -- 更新日: 2026-09-15（スロット提案の統合: com_t_session_reschedule_proposal（キャンセル時の
 --          振替候補、双方向・24時間期限）とcom_t_session_booking_request（生徒の自由予約
 --          リクエスト、生徒のみ・無期限）を、同一概念（相手の承認/承諾を要する日時提案）として
@@ -6417,3 +6422,27 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) TO authenticated;
+
+-- =========================================================================
+-- 31. アドミンの振替(admin_reschedule_session)の廃止 (2026-09-15 追加)
+-- =========================================================================
+-- 【背景】
+-- 生徒・コーチ向けの「振替」という独立概念は既に廃止し、cancel_session()+
+-- create_session_booking_request()/approve_slot_proposal()の2ステップ（＝キャンセル＋予約）に
+-- 置き換えていたが、アドミン専用の日時変更RPC(admin_reschedule_session)だけは、承認ステップを
+-- 挟まず1回のRPC呼び出しで完結する「即時振替」として残っていた。マッチング〜予約管理ドメイン
+-- 全体を「キャンセルと予約だけ」のシンプルな構成に揃えるため、本関数を廃止する。
+--
+-- アドミンが日時を変更したい場合は、今後は以下の2操作で行う。
+--   1. cancel_session(p_session_id, p_reason, NULL, p_admin_refund_ticket=true, p_as_admin=true)
+--      で対象セッションをキャンセルし、チケットを未割当に戻す（cancel_category=3(admin)）。
+--   2. admin_book_session_direct(p_schedule_id, p_new_start_datetime, p_new_end_datetime, p_reason)
+--      で、未割当に戻った同一スケジュール枠へ新しい日時で予約し直す。
+-- admin_reschedule_session()が単一トランザクションで行っていた「旧行キャンセル＋新行作成」を
+-- 2回の独立したRPC呼び出しに分割するため、新旧セッション行を紐づけるrescheduled_fromの
+-- 自動設定は行われなくなる（旧行のcancel_reasonで経緯を追跡する）。
+-- apps/admin側は、UI上の「振替」ボタン・RescheduleSessionDialogを削除し、
+-- rescheduleSessionAsAdmin()サーバーアクションも削除済み（詳細はapps/admin/actions/
+-- adminLiveSessionAction.ts, apps/admin/app/(app)/live-sessions/_components/を参照）。
+-- =========================================================================
+DROP FUNCTION IF EXISTS public.admin_reschedule_session(uuid, timestamptz, timestamptz, text);

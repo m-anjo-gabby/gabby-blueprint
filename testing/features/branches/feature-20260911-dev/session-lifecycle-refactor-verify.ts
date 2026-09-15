@@ -1,7 +1,9 @@
 /**
  * session-lifecycle-refactor-seed.ts で投入したデータに対し、実際の業務RPC（finalize_session /
- * resolve_stale_session / cancel_session / admin_reschedule_session / release_lesson_schedule_slot /
+ * resolve_stale_session / cancel_session / admin_book_session_direct / release_lesson_schedule_slot /
  * invalidate_user_license）を該当ロールの実JWTで呼び出し(When)、結果(Then)を検証する。
+ * （admin_reschedule_sessionは2026-09-15に廃止。アドミンの日時変更もcancel_session+
+ * admin_book_session_directの「キャンセル＋予約」の2操作に統一された）
  *
  * 使い方:
  *   QA_LIVE_SESSION_TEST_PASSWORD='***' pnpm exec tsx testing/features/branches/feature-20260911-dev/session-lifecycle-refactor-verify.ts --env=dev --tag=lifecycle01
@@ -219,7 +221,7 @@ const scPastEarlySessionId = scPast[1].session_id;
 }
 
 // ===========================================================================
-// 4. cancel_category: cancel_session / admin_reschedule_session (生徒SD)
+// 4. cancel_category: cancel_session / admin_book_session_direct (生徒SD)
 // ===========================================================================
 console.log("\n--- 4. cancel_category (生徒SD) ---");
 const sdSchedule = await getSchedule(coachId, sdId);
@@ -264,34 +266,46 @@ const sdStudentCancelNear = nearSession.session_id;
   check("cancel_session: コーチキャンセルは cancel_category=2(coach), ticket_refunded=true(時間帯を問わず)", row?.status === 3 && row?.cancel_category === 2 && row?.ticket_refunded === true, JSON.stringify(row));
 }
 
-// 4-4. admin_reschedule_session → 旧行はcancel_category=3(admin)、新行はstatus=1でrescheduled_fromを持つ
+// 4-4. アドミンの日時変更は「キャンセル(返還あり)＋予約」の2操作に統一された(admin_reschedule_session廃止、2026-09-15)。
+// cancel_session(p_as_admin=true)で旧行をcancel_category=3(admin)にし、admin_book_session_directで新規行を作る。
+// rescheduled_fromでの旧行参照は、単一RPCで完結するadmin_reschedule_sessionだけが持っていた挙動のため、
+// 2操作化後は生じない（新規予約はrescheduled_from=NULLになる。旧行のcancel_reasonで経緯を追跡する）。
 {
   const original = sdSessions!.find((s) => s.session_id === sdAdminReschedule)!;
   const newStart = new Date(new Date(original.start_datetime).getTime() + 60 * 60 * 1000);
   const newEnd = new Date(newStart.getTime() + 30 * 60 * 1000);
-  const { data: newSessionId, error } = await adminClient.rpc("admin_reschedule_session", {
+
+  const { error: cancelErr } = await adminClient.rpc("cancel_session", {
     p_session_id: sdAdminReschedule,
-    p_new_start_datetime: newStart.toISOString(),
-    p_new_end_datetime: newEnd.toISOString(),
-    p_reason: "QAアドミン日時変更",
+    p_reason: "QAアドミン日時変更(キャンセル側)",
+    p_admin_refund_ticket: true,
+    p_as_admin: true,
   });
-  check("admin_reschedule_session: アドミンによる日時変更が成功する", !error, error?.message);
+  check("cancel_session(アドミン代理): 日時変更のためのキャンセルが成功する", !cancelErr, cancelErr?.message);
 
   const { data: oldRow } = await admin.from("com_t_session").select("status, cancel_category, cancel_reason").eq("session_id", sdAdminReschedule).single();
-  check("admin_reschedule_session: 旧セッション行は status=3, cancel_category=3(admin)", oldRow?.status === 3 && oldRow?.cancel_category === 3, JSON.stringify(oldRow));
+  check("cancel_session(アドミン代理): 旧セッション行は status=3, cancel_category=3(admin)", oldRow?.status === 3 && oldRow?.cancel_category === 3, JSON.stringify(oldRow));
 
-  const { data: newRow } = await admin.from("com_t_session").select("status, rescheduled_from").eq("session_id", newSessionId as string).single();
-  check("admin_reschedule_session: 新セッション行は status=1 かつ rescheduled_fromで旧行を参照する", newRow?.status === 1 && newRow?.rescheduled_from === sdAdminReschedule, JSON.stringify(newRow));
+  const { data: newSessionId, error: bookErr } = await adminClient.rpc("admin_book_session_direct", {
+    p_schedule_id: sdSchedule.schedule_id,
+    p_start_datetime: newStart.toISOString(),
+    p_end_datetime: newEnd.toISOString(),
+    p_reason: "QAアドミン日時変更(予約側)",
+  });
+  check("admin_book_session_direct: 日時変更のための新規予約が成功する", !bookErr, bookErr?.message);
+
+  const { data: newRow } = await admin.from("com_t_session").select("status, schedule_id").eq("session_id", newSessionId as string).single();
+  check("admin_book_session_direct: 新セッション行は status=1 で同一スケジュール枠に作成される", newRow?.status === 1 && newRow?.schedule_id === sdSchedule.schedule_id, JSON.stringify(newRow));
 }
 
 // 4-5. アドミン代理キャンセル: 返還あり/なしを明示指定
 {
-  const { error: errTrue } = await adminClient.rpc("cancel_session", { p_session_id: sdAdminCancelRefundTrue, p_reason: "QAアドミン代理(返還あり)", p_admin_refund_ticket: true });
+  const { error: errTrue } = await adminClient.rpc("cancel_session", { p_session_id: sdAdminCancelRefundTrue, p_reason: "QAアドミン代理(返還あり)", p_admin_refund_ticket: true, p_as_admin: true });
   check("cancel_session: アドミン代理・返還ありが成功する", !errTrue, errTrue?.message);
   const { data: rowTrue } = await admin.from("com_t_session").select("status, cancel_category, ticket_refunded").eq("session_id", sdAdminCancelRefundTrue).single();
   check("cancel_session: アドミン代理は cancel_category=3(admin)、返還可否は明示指定どおりtrue", rowTrue?.status === 3 && rowTrue?.cancel_category === 3 && rowTrue?.ticket_refunded === true, JSON.stringify(rowTrue));
 
-  const { error: errFalse } = await adminClient.rpc("cancel_session", { p_session_id: sdAdminCancelRefundFalse, p_reason: "QAアドミン代理(返還なし)", p_admin_refund_ticket: false });
+  const { error: errFalse } = await adminClient.rpc("cancel_session", { p_session_id: sdAdminCancelRefundFalse, p_reason: "QAアドミン代理(返還なし)", p_admin_refund_ticket: false, p_as_admin: true });
   check("cancel_session: アドミン代理・返還なしが成功する", !errFalse, errFalse?.message);
   const { data: rowFalse } = await admin.from("com_t_session").select("status, cancel_category, ticket_refunded").eq("session_id", sdAdminCancelRefundFalse).single();
   check("cancel_session: アドミン代理は cancel_category=3(admin)、返還可否は明示指定どおりfalse", rowFalse?.status === 3 && rowFalse?.cancel_category === 3 && rowFalse?.ticket_refunded === false, JSON.stringify(rowFalse));

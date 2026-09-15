@@ -32,7 +32,6 @@ import {
 } from '@/actions/adminLiveSessionAction';
 import { getAdminSessionStatusBadge, ADMIN_SCHEDULE_STATUS_LABEL } from '@/constants/session';
 import { CancelSessionDialog } from './dialogs/CancelSessionDialog';
-import { RescheduleSessionDialog } from './dialogs/RescheduleSessionDialog';
 import { BookSessionDialog } from './dialogs/BookSessionDialog';
 import { MatchCoachDialog } from './dialogs/MatchCoachDialog';
 import {
@@ -80,7 +79,6 @@ export function LiveSessionManagementView({ clients }: Props) {
 
   // 各ダイアログのトリガー状態（フォーム状態・送信処理は各ダイアログコンポーネント自身が持つ）
   const [cancelTarget, setCancelTarget] = useState<CoachSessionListItem | null>(null);
-  const [rescheduleTarget, setRescheduleTarget] = useState<CoachSessionListItem | null>(null);
   const [bookTarget, setBookTarget] = useState<AdminScheduleSlotSummary | null>(null);
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
   const [matchSlotNo, setMatchSlotNo] = useState(1);
@@ -204,26 +202,15 @@ export function LiveSessionManagementView({ clients }: Props) {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {isScheduled && !disableActions && (
-                  <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-[11px] text-slate-500 hover:text-indigo-600"
-                      onClick={() => setRescheduleTarget(session)}
-                    >
-                      振替
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-[11px] text-slate-500 hover:text-rose-600"
-                      onClick={() => setCancelTarget(session)}
-                    >
-                      キャンセル
-                    </Button>
-                  </>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-[11px] text-slate-500 hover:text-rose-600"
+                    onClick={() => setCancelTarget(session)}
+                  >
+                    キャンセル
+                  </Button>
                 )}
                 <Badge variant="outline" className={`${badge.className} text-[10px] font-bold`}>
                   {badge.label}
@@ -464,6 +451,9 @@ export function LiveSessionManagementView({ clients }: Props) {
 
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">セッション一覧</p>
+                    <p className="text-[10px] text-slate-400">
+                      ※ 日時を変更する場合は、キャンセル（チケット返還あり）後、上部の定期スケジュール枠から改めて予約してください
+                    </p>
                     {sessions.length === 0 ? (
                       <p className="text-xs text-slate-400">セッションはまだありません</p>
                     ) : (
@@ -496,11 +486,6 @@ export function LiveSessionManagementView({ clients }: Props) {
         target={cancelTarget}
         onClose={() => setCancelTarget(null)}
         onCancelled={() => loadTicketDetail(selectedTicketId)}
-      />
-      <RescheduleSessionDialog
-        target={rescheduleTarget}
-        onClose={() => setRescheduleTarget(null)}
-        onRescheduled={() => loadTicketDetail(selectedTicketId)}
       />
       <BookSessionDialog
         target={bookTarget}

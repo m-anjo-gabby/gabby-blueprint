@@ -13,7 +13,7 @@
  */
 import { loadTestEnv, resolveTestEnvFromArgs } from "../../../helpers/env.ts";
 import { createAdminClient, signInAsRole } from "../../../helpers/auth.ts";
-import { assertReleaseApplied } from "../../../helpers/preflight.ts";
+import { assertReleaseApplied, assertRpcRemoved } from "../../../helpers/preflight.ts";
 import { addDays } from "../../../helpers/dates.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -41,12 +41,19 @@ await assertReleaseApplied(admin, [
   { name: "finalize_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "resolve_stale_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000", p_completion_result: 1, p_reason: "preflight" } },
   { name: "cancel_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
-  { name: "admin_reschedule_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000", p_new_start_datetime: TODAY.toISOString(), p_new_end_datetime: TODAY.toISOString() } },
+  { name: "admin_book_session_direct", dummyArgs: { p_schedule_id: "00000000-0000-0000-0000-000000000000", p_start_datetime: TODAY.toISOString(), p_end_datetime: TODAY.toISOString() } },
   { name: "release_lesson_schedule_slot", dummyArgs: { p_schedule_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "invalidate_user_license", dummyArgs: { p_license_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "get_coach_monthly_sessions", dummyArgs: { p_coach_id: "00000000-0000-0000-0000-000000000000", p_report_month: "2020-01-01" } },
 ]);
 console.log("Preflight OK: 対象RPCはすべて反映済みです。");
+
+// アドミンの振替(admin_reschedule_session)は生徒・コーチと同じ「キャンセル＋予約」の
+// 2操作に統一するため廃止した(2026-09-15)。
+await assertRpcRemoved(admin, [
+  { name: "admin_reschedule_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000", p_new_start_datetime: TODAY.toISOString(), p_new_end_datetime: TODAY.toISOString() } },
+]);
+console.log("Preflight OK: admin_reschedule_sessionは削除済みです。");
 
 // resolve_stale_sessionの新シグネチャ(p_completion_result)が反映されているかも別途確認する
 // （旧p_resolved_statusのままだとPGRST202でここに到達しない=assertReleaseAppliedで検出済みのはずだが、
@@ -297,9 +304,9 @@ const scPastEarlySessionId = await seedDirectSession({ scheduleId: scSchedule, t
 console.log("生徒SC投入完了:", { scTicketId, scSchedule, scNormalSessionId, scEarlyEndedSessionId, scNoShowSessionId, scPastNormalSessionId, scPastEarlySessionId });
 
 // ---------------------------------------------------------------------------
-// 生徒SD: cancel_session(cancel_category)・admin_reschedule_sessionの検証
+// 生徒SD: cancel_session(cancel_category)・admin_book_session_direct(アドミン日時変更の代替)の検証
 // ---------------------------------------------------------------------------
-console.log("\n--- 生徒SD: cancel_session(student/coach/admin)・admin_reschedule_session ---");
+console.log("\n--- 生徒SD: cancel_session(student/coach/admin)・admin_book_session_direct ---");
 const sdId = await ensureUser(`${TAG}-lifecycle-student-sd@gabby-qa-test.example`, "1", `QA生徒SD（cancel_category・${TAG}）`, clientId);
 const sdStart = addDays(TODAY, -30);
 const sdEnd = addDays(TODAY, 335);

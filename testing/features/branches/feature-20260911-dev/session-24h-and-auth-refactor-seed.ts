@@ -46,7 +46,7 @@ await assertReleaseApplied(admin, [
   { name: "reject_matching_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000", p_reason: "preflight" } },
   { name: "approve_matching_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "admin_match_student_with_coach", dummyArgs: { p_ticket_id: "00000000-0000-0000-0000-000000000000", p_coach_id: "00000000-0000-0000-0000-000000000000", p_slot_no: 1, p_day_of_week: 1, p_start_time: "10:00", p_end_time: "10:30" } },
-  { name: "admin_reschedule_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000", p_new_start_datetime: TODAY.toISOString(), p_new_end_datetime: TODAY.toISOString() } },
+  { name: "admin_book_session_direct", dummyArgs: { p_schedule_id: "00000000-0000-0000-0000-000000000000", p_start_datetime: TODAY.toISOString(), p_end_datetime: TODAY.toISOString() } },
   { name: "release_lesson_schedule_slot", dummyArgs: { p_schedule_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "invalidate_user_license", dummyArgs: { p_license_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "get_coach_monthly_sessions", dummyArgs: { p_coach_id: "00000000-0000-0000-0000-000000000000", p_report_month: "2020-01-01" } },
@@ -62,6 +62,8 @@ await assertRpcRemoved(admin, [
   { name: "reject_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "accept_session_reschedule_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "decline_session_reschedule_proposals", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
+  // アドミンの振替も生徒・コーチと同じ「キャンセル＋予約」の2操作に統一したため廃止(2026-09-15)
+  { name: "admin_reschedule_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000", p_new_start_datetime: TODAY.toISOString(), p_new_end_datetime: TODAY.toISOString() } },
 ]);
 console.log("Preflight OK: 廃止されたRPCはすべて削除済みです。");
 
@@ -282,7 +284,7 @@ const { ticketId: t3TicketId } = await createContractLicenseTicket({ clientId, u
 console.log("生徒T3投入完了(未マッチング。verify.tsでadmin_match_student_with_coachを実行):", { t3TicketId });
 
 // ---------------------------------------------------------------------------
-// 生徒T4: admin_reschedule_session/release_lesson_schedule_slot/invalidate_user_licenseの
+// 生徒T4: admin_book_session_direct/release_lesson_schedule_slot/invalidate_user_licenseの
 // アドミン専用チェック(コーチは拒否される)検証用
 // ---------------------------------------------------------------------------
 console.log("\n--- 生徒T4: アドミン専用RPCの権限チェック ---");

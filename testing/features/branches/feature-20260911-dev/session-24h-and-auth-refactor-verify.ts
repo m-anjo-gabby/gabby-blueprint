@@ -444,10 +444,13 @@ console.log("\n--- 9. admin_match_student_with_coach 24時間ルール対象外 
 }
 
 // ===========================================================================
-// 10. admin_reschedule_session / release_lesson_schedule_slot / invalidate_user_license:
+// 10. admin_book_session_direct / release_lesson_schedule_slot / invalidate_user_license:
 //     アドミン専用(コーチは拒否される)
 // ===========================================================================
-console.log("\n--- 10. アドミン専用RPC(admin_reschedule_session/release_lesson_schedule_slot/invalidate_user_license) ---");
+// アドミンの日時変更は「キャンセル(返還あり)＋予約」の2操作に統一された(admin_reschedule_session廃止、
+// 2026-09-15)。まずcancel_sessionで枠を未割当に戻してから、admin_book_session_directの
+// 権限チェック(アドミン専用・コーチ拒否)と通知を検証する。
+console.log("\n--- 10. アドミン専用RPC(admin_book_session_direct/release_lesson_schedule_slot/invalidate_user_license) ---");
 const t4Schedule = await getSchedule(coach1Id, t4Id);
 {
   const t4Sessions = await listScheduledSessions(t4Schedule.schedule_id);
@@ -456,15 +459,23 @@ const t4Schedule = await getSchedule(coach1Id, t4Id);
   const newStart = new Date(new Date(target.start_datetime).getTime() + 60 * 60 * 1000);
   const newEnd = new Date(newStart.getTime() + 30 * 60 * 1000);
 
-  const { error: wrongRoleErr } = await coach1Client.rpc("admin_reschedule_session", { p_session_id: target.session_id, p_new_start_datetime: newStart.toISOString(), p_new_end_datetime: newEnd.toISOString() });
-  check("admin_reschedule_session: 担当コーチC1は権限エラーになる(アドミン専用)", isAuthError(wrongRoleErr?.message), wrongRoleErr?.message);
+  const { error: cancelErr } = await adminClient.rpc("cancel_session", {
+    p_session_id: target.session_id,
+    p_reason: "QAアドミン日時変更(キャンセル側)",
+    p_admin_refund_ticket: true,
+    p_as_admin: true,
+  });
+  if (cancelErr) throw cancelErr;
+
+  const { error: wrongRoleErr } = await coach1Client.rpc("admin_book_session_direct", { p_schedule_id: t4Schedule.schedule_id, p_start_datetime: newStart.toISOString(), p_end_datetime: newEnd.toISOString() });
+  check("admin_book_session_direct: 担当コーチC1は権限エラーになる(アドミン専用)", isAuthError(wrongRoleErr?.message), wrongRoleErr?.message);
 
   const beforeIso = new Date(Date.now() - 60_000).toISOString();
-  const { error } = await adminClient.rpc("admin_reschedule_session", { p_session_id: target.session_id, p_new_start_datetime: newStart.toISOString(), p_new_end_datetime: newEnd.toISOString(), p_reason: "QAアドミン日時変更" });
-  check("admin_reschedule_session: アドミンは成功する", !error, error?.message);
+  const { error } = await adminClient.rpc("admin_book_session_direct", { p_schedule_id: t4Schedule.schedule_id, p_start_datetime: newStart.toISOString(), p_end_datetime: newEnd.toISOString(), p_reason: "QAアドミン日時変更(予約側)" });
+  check("admin_book_session_direct: アドミンは成功する", !error, error?.message);
   const notifiedStudent = await hasNotification(t4Id, "SESSION_UPDATED_BY_ADMIN", beforeIso);
   const notifiedCoach = await hasNotification(coach1Id, "SESSION_UPDATED_BY_ADMIN", beforeIso);
-  check("admin_reschedule_session: 生徒・コーチ双方へSESSION_UPDATED_BY_ADMIN通知が作成される(fn_notify 2回)", notifiedStudent && notifiedCoach);
+  check("admin_book_session_direct: 生徒・コーチ双方へSESSION_UPDATED_BY_ADMIN通知が作成される(fn_notify 2回)", notifiedStudent && notifiedCoach);
 }
 {
   const { error: wrongRoleErr } = await coach1Client.rpc("release_lesson_schedule_slot", { p_schedule_id: t4Schedule.schedule_id });

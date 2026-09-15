@@ -360,6 +360,7 @@ const sessionFutureScheduled = await seedSessionRowAt({ scheduleId, ticketId, st
     p_reason: "QA自動テスト: アドミン代理キャンセル(集計対象外確認)",
     p_proposed_slots: null,
     p_admin_refund_ticket: true,
+    p_as_admin: true,
   });
   if (error) throw error;
 }

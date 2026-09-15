@@ -7,8 +7,10 @@
 # 関連実装: supabase/DDL/table/{com_m_lesson_schedule,com_t_session}.sql
 #          supabase/DDL/function/{approve_matching_request,admin_match_student_with_coach,
 #          fn_generate_sessions_for_schedule,fn_schedule_shortfall,finalize_session,
-#          resolve_stale_session,cancel_session,admin_reschedule_session,
+#          resolve_stale_session,cancel_session,admin_book_session_direct,
 #          release_lesson_schedule_slot,invalidate_user_license,get_coach_monthly_sessions}.sql
+#          admin_reschedule_sessionは2026-09-15に廃止（アドミンの日時変更もcancel_session+
+#          admin_book_session_directの「キャンセル＋予約」の2操作に統一）。
 # 備考: admin_match_student_with_coachは生成起点日をGREATEST(license_start, CURRENT_DATE)に
 #      クランプするため、過去日付のセッションは生成できない(KJ-2026-0910-01)。本シナリオでも
 #      「過去の完了実績」はservice_role直接INSERT(status=1)+resolve_stale_session RPCの
@@ -77,11 +79,12 @@ Feature: セッションライフサイクル刷新（target_sessions / status�
     When アドミンのJWTでp_admin_refund_ticket=true/falseを明示指定してそれぞれキャンセルする
     Then いずれもcancel_category=3(admin)になり、ticket_refundedは明示指定どおりの値になること
 
-  Scenario: admin_reschedule_sessionは旧セッションをcancelled(admin起因)にし、新セッションをrescheduled_fromで関連付ける
+  Scenario: アドミンの日時変更は「キャンセル＋予約」の2操作に統一されている(admin_reschedule_session廃止)
     Given QA生徒SDに予定セッションがある
-    When アドミンのJWTでadmin_reschedule_sessionを新しい日時で呼び出す
+    When アドミンのJWTでcancel_session(p_as_admin=true, 返還あり)を呼び出す
     Then 旧セッションはstatus=3(cancelled), cancel_category=3(admin)になること
-    And 新セッションはstatus=1(scheduled)で、rescheduled_fromに旧セッションIDを持つこと
+    When 続けてアドミンのJWTで同一スケジュール枠へadmin_book_session_directを新しい日時で呼び出す
+    Then 新セッションはstatus=1(scheduled)で、同一スケジュール枠に作成されること
 
   Scenario: 複数のキャンセル種別が混在してもfn_schedule_shortfallの集計式(status/ticket_refundedベース)が独立検証と一致する
     Then fn_schedule_shortfallのactual値は、TS側で独立に再現した集計(status IN(scheduled,completed)

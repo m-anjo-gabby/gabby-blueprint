@@ -15,12 +15,14 @@
 #          fn_consume_session_ticket,create_session_booking_request,approve_slot_proposal,
 #          reject_slot_proposal,withdraw_session_booking_request,cancel_session,
 #          approve_matching_request,admin_match_student_with_coach,reject_matching_request,
-#          admin_book_session_direct,admin_reschedule_session,resolve_stale_session,
+#          admin_book_session_direct,resolve_stale_session,
 #          release_lesson_schedule_slot,invalidate_user_license,check_session_conflict,
 #          get_coach_monthly_sessions,get_coach_monthly_active_students,
 #          fn_generate_sessions_for_schedule}.sql
 #          supabase/DDL/table/com_t_session_slot_proposal.sql
 # 備考: テストデータは検証完了後に削除する運用とする（-cleanup.tsを参照。ユーザーからの明示指示）。
+#      admin_reschedule_sessionは2026-09-15に廃止（アドミンの日時変更もcancel_session+
+#      admin_book_session_directの「キャンセル＋予約」の2操作に統一。Scenario 10で検証）。
 
 Feature: 24時間ルール・権限共通化 データ主体テスト（feature/20260911-dev）
 
@@ -114,11 +116,13 @@ Feature: 24時間ルール・権限共通化 データ主体テスト（feature/
     When 担当コーチC1のJWTでadmin_match_student_with_coachを呼び出そうとする(コーチはこのRPCを使えない)
     Then 権限エラーになること
 
-  Scenario: admin_reschedule_session / release_lesson_schedule_slot / invalidate_user_licenseはアドミン専用で、コーチは拒否される
+  Scenario: admin_book_session_direct / release_lesson_schedule_slot / invalidate_user_licenseはアドミン専用で、コーチは拒否される
     Given QA生徒T4がC1に専属コーチマッチング済みで予定セッションがある
-    When 担当コーチC1のJWTでadmin_reschedule_sessionを呼ぼうとする
+    When アドミンのJWTでcancel_session(p_as_admin=true, 返還あり)を呼び、枠を未割当に戻す
+        (アドミンの日時変更は「キャンセル＋予約」の2操作に統一。admin_reschedule_sessionは廃止)
+    When 担当コーチC1のJWTでadmin_book_session_directを呼ぼうとする
     Then 権限エラーになること
-    When アドミンのJWTでadmin_reschedule_sessionを呼ぶ
+    When アドミンのJWTでadmin_book_session_directを呼ぶ
     Then 成功し、生徒・コーチ双方へSESSION_UPDATED_BY_ADMIN通知が作成されること
     When 担当コーチC1のJWTでrelease_lesson_schedule_slotを呼ぼうとする
     Then 権限エラーになること

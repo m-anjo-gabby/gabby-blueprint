@@ -81,7 +81,9 @@ for (const student of students ?? []) {
     if (accepted[0]) {
       const newSession = sessions.find((s) => s.session_id === accepted[0].resulting_session_id);
       check("生徒1: 承諾した候補の日時でセッションが新規作成されている", !!newSession && newSession.status === 1, `resulting_session_id=${accepted[0].resulting_session_id}`);
-      check("生徒1: 新規セッションのrescheduled_fromが元セッションを参照", newSession?.rescheduled_from === accepted[0].session_id);
+      // proposalsOf()はcom_t_session_slot_proposalを列エイリアスなしで取得するため、
+      // 実カラム名source_session_idを参照する(session_idというカラムは存在しない)。
+      check("生徒1: 新規セッションのrescheduled_fromが元セッションを参照", newSession?.rescheduled_from === accepted[0].source_session_id);
     }
   }
 
@@ -128,8 +130,10 @@ for (const student of students ?? []) {
     const req = bookingRequests[0];
     check("生徒4: そのリクエストが承認済み", req?.status === 2, `status=${req?.status}`);
 
-    const cancelledSessions = sessions.filter((s) => s.status === 4);
-    check("生徒4: 元セッションがcancelled_by_coachになっている", cancelledSessions.length === 1, `actual=${cancelledSessions.length}`);
+    // 旧ステータス値4(cancelled_by_coach)はステータス簡素化(2026-09-14)により廃止済み。
+    // 現行はstatus=3(cancelled)+cancel_category=2(coach)の組で判定する。
+    const cancelledSessions = sessions.filter((s) => s.status === 3 && s.cancel_category === 2);
+    check("生徒4: 元セッションがcancelled(coach起因)になっている", cancelledSessions.length === 1, `actual=${cancelledSessions.length}`);
 
     if (req && cancelledSessions[0]) {
       check(
@@ -147,14 +151,13 @@ for (const student of students ?? []) {
   }
 
   if (student.user_name?.includes("QA生徒5")) {
-    const rescheduledOld = sessions.filter((s) => s.status === 5);
+    // アドミンの日時変更は「キャンセル＋予約」の2操作に統一された(admin_reschedule_session廃止、2026-09-15)。
+    // 旧statusの値5(rescheduled)は既に廃止済み(ステータス簡素化パッチ)のため、
+    // 日時変更のためのキャンセルはcancel_category=3(admin)を持つcancelled(status=3)行として現れる。
+    const cancelledByAdmin = sessions.filter((s) => s.status === 3 && s.cancel_category === 3);
     const scheduled = sessions.filter((s) => s.status === 1);
-    check("生徒5: 元セッションがrescheduled(5)になっている", rescheduledOld.length === 1, `actual=${rescheduledOld.length}`);
-    check("生徒5: アドミン代理変更後・直接予約後のscheduledセッションが2件", scheduled.length === 2, `actual=${scheduled.length}`);
-    if (rescheduledOld[0]) {
-      const successor = sessions.find((s) => s.rescheduled_from === rescheduledOld[0].session_id);
-      check("生徒5: 後継セッションがrescheduled_fromで元セッションを参照", !!successor && successor.status === 1);
-    }
+    check("生徒5: 日時変更のためキャンセルした元セッションがcancel_category=3(admin)になっている", cancelledByAdmin.length === 1, `actual=${cancelledByAdmin.length}`);
+    check("生徒5: アドミン代理の再予約(キャンセル＋予約)・直接予約後のscheduledセッションが2件", scheduled.length === 2, `actual=${scheduled.length}`);
   }
 }
 

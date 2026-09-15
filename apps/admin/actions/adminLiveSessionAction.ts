@@ -299,41 +299,17 @@ export async function cancelSessionAsAdmin(sessionId: string, refundTicket: bool
 }
 
 /**
- * セッションの日時変更（アドミン代理操作）。生徒・コーチ向けの「振替」概念は廃止した
- * （cancel_session+create_session_booking_request/approve_slot_proposalの
- * 2ステップに置き換え）が、アドミンは既に関係者間で調整済みの内容を即時反映すればよいため、
- * 管理者専用のadmin_reschedule_session RPCを使う（Availability・12時間ルールは適用せず、
- * ダブルブッキングのみチェックする）。
- */
-export async function rescheduleSessionAsAdmin(sessionId: string, newStartIso: string, newEndIso: string, reason?: string): Promise<AdminSessionActionResult> {
-  const ctx = await getLogContext();
-  try {
-    const supabase = await createServerClient();
-    const { error } = await supabase.rpc('admin_reschedule_session', {
-      p_session_id: sessionId,
-      p_new_start_datetime: newStartIso,
-      p_new_end_datetime: newEndIso,
-      p_reason: reason || null,
-    });
-
-    if (error) {
-      logger.error('liveSession:reschedule_as_admin_failed', error.message, { ...ctx, payload: { sessionId, newStartIso, newEndIso } });
-      return { success: false, message: error.message };
-    }
-
-    revalidatePath('/live-sessions');
-    return { success: true };
-  } catch (err) {
-    logger.error('liveSession:reschedule_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { sessionId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
-  }
-}
-
-/**
  * 未消化チケットの新規予約（アドミン代理操作）。生徒向けの新規予約は承認制になった
  * （create_session_booking_request+approve_slot_proposalの2ステップ）が、
  * アドミンは既に関係者間で調整済みの内容を即時反映すればよいため、管理者専用の
  * admin_book_session_direct RPCを使う（承認ステップを挟まず即座にセッション行を作る）。
+ *
+ * 【振替の廃止 (2026-09-15追加)】
+ * 生徒・コーチ向けの「振替」概念を廃止したのと同様、アドミン専用のadmin_reschedule_session
+ * （日時変更を1回のRPCで完結させる専用関数）も廃止した。日時を変更したい場合は、
+ * cancelSessionAsAdmin（返還あり）でチケットを未割当に戻してから、本関数で改めて
+ * 予約するという「キャンセル＋予約」の2操作に統一する（生徒・コーチと同じ操作の型に揃え、
+ * 管理者専用の特殊経路を極力減らす）。
  */
 export async function bookMakeupSessionAsAdmin(scheduleId: string, startIso: string, endIso: string): Promise<AdminSessionActionResult> {
   const ctx = await getLogContext();

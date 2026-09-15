@@ -56,15 +56,6 @@ await assertReleaseApplied(admin, [
   { name: "reject_slot_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000", p_reason: null } },
   { name: "withdraw_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
   {
-    name: "admin_reschedule_session",
-    dummyArgs: {
-      p_session_id: "00000000-0000-0000-0000-000000000000",
-      p_new_start_datetime: "2026-01-01T00:00:00Z",
-      p_new_end_datetime: "2026-01-01T00:30:00Z",
-      p_reason: null,
-    },
-  },
-  {
     name: "admin_book_session_direct",
     dummyArgs: {
       p_schedule_id: "00000000-0000-0000-0000-000000000000",
@@ -85,6 +76,16 @@ await assertRpcRemoved(admin, [
   { name: "reject_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "accept_session_reschedule_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "decline_session_reschedule_proposals", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
+  // アドミンの振替も生徒・コーチと同じ「キャンセル＋予約」の2操作に統一したため廃止(2026-09-15)
+  {
+    name: "admin_reschedule_session",
+    dummyArgs: {
+      p_session_id: "00000000-0000-0000-0000-000000000000",
+      p_new_start_datetime: "2026-01-01T00:00:00Z",
+      p_new_end_datetime: "2026-01-01T00:30:00Z",
+      p_reason: null,
+    },
+  },
 ]);
 console.log("preflight OK: 旧RPCはすべて削除済み");
 
@@ -261,6 +262,10 @@ async function seedSchedule(params: {
       status: 1,
       start_date: toDateOnlyString(params.startDate),
       end_date: toDateOnlyString(params.endDate),
+      // target_sessions(2026-09-14追加、NOT NULL)は本シナリオでは検証対象外のため、
+      // fn_generate_sessions_for_schedule/fn_schedule_shortfallの上限に引っかからない
+      // 十分大きな固定値を設定する（正確な均等割り値はsession-lifecycle-refactor-seed.tsで検証済み）。
+      target_sessions: 999,
     })
     .select("schedule_id")
     .single();
@@ -561,12 +566,22 @@ async function seedStudent5() {
   const scheduleId = await seedSchedule({ ticketId, studentId, coachId: coachAId, slotNo: 1, dayOfWeek: addDays(TODAY, 13).getUTCDay(), startDate: contractStart, endDate: contractEnd });
   const sessionId = await seedSessionRow({ scheduleId, ticketId, studentId, coachId: coachAId, date: addDays(TODAY, 13) });
 
-  const rescheduleSlot = slot(addDays(TODAY, 16), 11, 0);
-  const { data: rescheduledSessionId, error: rescheduleErr } = await adminClient.rpc("admin_reschedule_session", {
+  // アドミンの日時変更も生徒・コーチと同じ「キャンセル＋予約」の2操作に統一された
+  // (admin_reschedule_sessionは2026-09-15に廃止)
+  const { error: rescheduleCancelErr } = await adminClient.rpc("cancel_session", {
     p_session_id: sessionId,
-    p_new_start_datetime: rescheduleSlot.start_datetime,
-    p_new_end_datetime: rescheduleSlot.end_datetime,
-    p_reason: "QA自動テスト: アドミン代理の日時変更",
+    p_reason: "QA自動テスト: アドミン代理の日時変更(キャンセル側)",
+    p_admin_refund_ticket: true,
+    p_as_admin: true,
+  });
+  if (rescheduleCancelErr) throw rescheduleCancelErr;
+
+  const rescheduleSlot = slot(addDays(TODAY, 16), 11, 0);
+  const { data: rescheduledSessionId, error: rescheduleErr } = await adminClient.rpc("admin_book_session_direct", {
+    p_schedule_id: scheduleId,
+    p_start_datetime: rescheduleSlot.start_datetime,
+    p_end_datetime: rescheduleSlot.end_datetime,
+    p_reason: "QA自動テスト: アドミン代理の日時変更(予約側)",
   });
   if (rescheduleErr) throw rescheduleErr;
 
