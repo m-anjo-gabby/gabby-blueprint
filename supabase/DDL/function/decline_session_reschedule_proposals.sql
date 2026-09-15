@@ -9,6 +9,9 @@
 -- （旧 decline_session_reschedule_proposal(uuid) は廃止。DROPはcancel_session.sql参照）。
 -- 却下しなくても回答期限(24時間)経過で自動的にexpired化されるため必須の操作ではないが、
 -- 応答者が「今回はいずれも無理」と意思表示できるようにするための任意アクション。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.decline_session_reschedule_proposals(p_session_id uuid)
 RETURNS void
@@ -30,9 +33,7 @@ BEGIN
 
     -- 提案者と逆側（proposed_by_role=2:コーチ提案なら生徒、1:生徒提案ならコーチ）のみ却下できる
     v_responder_id := CASE WHEN v_any.proposed_by_role = 2 THEN v_any.student_id ELSE v_any.coach_id END;
-    IF v_responder_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to respond to this proposal';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(v_responder_id, 'not authorized to respond to this proposal');
 
     UPDATE public.com_t_session_reschedule_proposal
     SET status = 3, responded_at = NOW(), update_date = NOW()

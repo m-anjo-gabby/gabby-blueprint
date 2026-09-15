@@ -45,6 +45,9 @@
 -- 変更した場合」のみに限定するため。承認済み月はcom_t_coach_monthly_report_approval.
 -- session_count_snapshotに固定保存されるため、承認後のタイムゾーン変更は既に承認済みの
 -- 集計を遡って変えない（影響があるとしても未承認の月の月境界付近のみ）。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.get_coach_monthly_sessions(uuid, date);
 
@@ -72,9 +75,7 @@ DECLARE
     v_month_start_utc timestamptz;
     v_month_end_utc timestamptz;
 BEGIN
-    IF auth.uid() <> p_coach_id AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to view this coach''s monthly report';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(p_coach_id, 'not authorized to view this coach''s monthly report');
 
     SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
     IF v_coach_timezone IS NULL THEN

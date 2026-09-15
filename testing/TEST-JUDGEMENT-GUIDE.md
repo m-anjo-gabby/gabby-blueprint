@@ -132,4 +132,34 @@
     削除順序を設計すること。「よく使うテーブルの主要な1本のFKだけ見て判断する」と
     今回のような見落としが起きる。
 
+### KJ-2026-0915-01 com_t_session_booking_request.resulting_session_idはcom_t_sessionへのFKにCASCADEが無い
+
+- **該当シナリオ**: `testing/features/branches/feature-20260911-dev/session-24h-and-auth-refactor-cleanup.ts`
+- **事象**: テストデータ削除処理で、`com_t_session`をticket_id経由で一括削除しようとしたところ、
+  `update or delete on table "com_t_session" violates foreign key constraint
+  "com_t_session_booking_request_resulting_session_id_fkey" on table
+  "com_t_session_booking_request"` (23503) で失敗した。
+- **原因**: `com_t_session_booking_request`は`schedule_id`/`student_id`/`coach_id`への
+  FKはいずれも`ON DELETE CASCADE`だが、承認時に確定した新セッションを指す
+  `resulting_session_id`（`com_t_session`への参照）だけは非CASCADEになっている
+  （KJ-2026-0914-02の`com_t_session.ticket_id`と同種のパターンが、今度は
+  `com_t_session_booking_request`側から`com_t_session`を指す向きで発生していた）。
+  削除スクリプトが`com_t_session_booking_request`の削除を`com_t_session`削除の**後**に
+  置いていたため、まだ残っている`resulting_session_id`参照がFK違反になった。
+- **対処**: `com_t_session_booking_request`の削除を`com_t_session`削除より**前**に
+  移動した（`com_t_session_reschedule_proposal`は`session_id`が`ON DELETE CASCADE`のため
+  この問題は起きない。`resulting_session_id`という同名カラムを持つが、CASCADE対象の
+  `session_id`経由で行ごと連鎖削除されるため実害が出なかった）。
+- **判断基準への反映**:
+  - **「〜_id」という名前の列が同じテーブルに複数ある場合、片方だけCASCADEでもう片方が
+    非CASCADEという非対称なケースがあり得る。** 削除順序を設計する際は、テーブル単位で
+    「CASCADEされるか」を一括判断せず、**列単位**でDDLの`REFERENCES ... ON DELETE`を
+    確認すること（KJ-2026-0914-02の教訓の延長）。
+  - 「申請/リクエスト系テーブル(status管理、pending→resolved)」が、確定後に生成された
+    実体（今回は`com_t_session`）を`resulting_*_id`のような形で後から参照するパターンは
+    このドメインで複数箇所に存在する(`com_t_session_booking_request`,
+    `com_t_session_reschedule_proposal`, `com_t_matching_request`→`com_m_lesson_schedule`等)。
+    新しいテストシナリオでテストデータ削除スクリプトを書く際は、対象ドメインの「申請系」
+    テーブルすべてについて`resulting_*_id`相当のカラムのCASCADE有無を個別に確認すること。
+
 <!-- 新しい事例はこの下に追記していく -->

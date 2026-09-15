@@ -44,6 +44,12 @@
 -- コーチキャンセル時は生徒へ、生徒キャンセル時はコーチへ、それぞれcom_t_notificationに
 -- 通知を作成する。既存の通知(TRAINING_*/CHAT_NEW_MESSAGE)と異なりトリガーではなく、
 -- 本関数(SECURITY DEFINER)内で直接INSERTする（本関数自身が状態変更の唯一の発生源のため）。
+-- 通知INSERTはfn_notify()を使う（前提: function/fn_notify.sql）。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- 「コーチ・生徒どちらでもなければアドミン代理」の判定＋権限チェックは
+-- fn_assert_dual_actor_or_admin()に集約する（前提: function/fn_assert_dual_actor_or_admin.sql）。
+-- 戻り値のis_admin_proxyを後続のチケット返還ルール・通知分岐にそのまま使う。
 ---------------------------------------------
 -- 旧シグネチャからの変更のため、先に古い関数を明示的に削除する
 -- （デフォルト引数を持つ新シグネチャと共存させるとPostgres側でオーバーロードの曖昧性が生じるため）。
@@ -96,11 +102,7 @@ BEGIN
         RAISE EXCEPTION 'session % not found', p_session_id;
     END IF;
 
-    v_is_admin_proxy := (v_session.student_id <> auth.uid() AND v_session.coach_id <> auth.uid());
-
-    IF v_is_admin_proxy AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to cancel this session';
-    END IF;
+    v_is_admin_proxy := public.fn_assert_dual_actor_or_admin(v_session.student_id, v_session.coach_id, 'not authorized to cancel this session');
 
     IF v_session.status <> 1 THEN
         RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
@@ -169,13 +171,10 @@ BEGIN
     END IF;
 
     IF v_is_admin_proxy THEN
-        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-        VALUES
-            (v_session.student_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/live-room'),
-            (v_session.coach_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/students/' || v_session.student_id);
+        PERFORM public.fn_notify(v_session.student_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/live-room');
+        PERFORM public.fn_notify(v_session.coach_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/students/' || v_session.student_id);
     ELSIF v_is_coach THEN
-        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-        VALUES (
+        PERFORM public.fn_notify(
             v_session.student_id,
             CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED' ELSE 'SESSION_CANCELLED_BY_COACH' END,
             jsonb_build_object(
@@ -187,8 +186,7 @@ BEGIN
             '/live-room'
         );
     ELSE
-        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-        VALUES (
+        PERFORM public.fn_notify(
             v_session.coach_id,
             CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT' ELSE 'SESSION_CANCELLED_BY_STUDENT' END,
             jsonb_build_object(

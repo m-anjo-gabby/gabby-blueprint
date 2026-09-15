@@ -3,7 +3,9 @@
 -- 前提: table/com_t_matching_request.sql, table/com_m_lesson_schedule.sql,
 --       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql,
 --       function/fn_generate_sessions_for_schedule.sql,
---       function/check_coach_schedule_conflict.sql の作成が完了していること。
+--       function/check_coach_schedule_conflict.sql,
+--       function/fn_assert_actor_or_admin.sql, function/fn_notify.sql の作成が
+--       完了していること。
 ---------------------------------------------
 -- 【背景】
 -- コーチがマッチングリクエストを承認する唯一の入口。
@@ -33,6 +35,11 @@
 -- com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。承認が契約開始から遅れても
 -- 目標値自体は変わらないため、fn_generate_sessions_for_schedule()の生成上限、
 -- fn_schedule_shortfall()の期待値が正しく契約のエンタイトルメントを反映するようになる。
+--
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()にそれぞれ集約する
+-- （複数のRPCに渡ってコピー&ペーストされていたパターンの共通化。詳細は各関数の
+-- ファイル自身のコメント参照）。
 --
 -- 【24時間ルールの適用 (2026-09-15追加)】
 -- 生徒の個別予約・振替候補と同様、コーチ自身の承認によるマッチング成立でも、承認した
@@ -65,9 +72,7 @@ BEGIN
         RAISE EXCEPTION 'matching request % not found', p_request_id;
     END IF;
 
-    IF v_request.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to approve this request';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(v_request.coach_id, 'not authorized to approve this request');
 
     IF v_request.status <> 1 THEN
         RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
@@ -133,8 +138,7 @@ BEGIN
 
     -- 生徒へ、マッチング成立を通知する（コーチは自ら承認操作を行ったため通知不要）
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
-    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-    VALUES (
+    PERFORM public.fn_notify(
         v_request.student_id,
         'MATCHING_APPROVED',
         jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id),

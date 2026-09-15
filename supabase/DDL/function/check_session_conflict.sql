@@ -14,6 +14,10 @@
 --
 -- 呼び出し者は対象のコーチ・生徒本人、または管理者のみに限定する
 -- （無関係の第三者が他人の予定の有無を探索できないようにするため）。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_dual_actor_or_admin()を使う（前提: function/fn_assert_dual_actor_or_admin.sql）。
+-- 戻り値（アドミン代理かどうか）は本関数では使わないため破棄する。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.check_session_conflict(
     p_coach_id uuid,
@@ -28,9 +32,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-    IF auth.uid() NOT IN (p_coach_id, p_student_id) AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to check this schedule';
-    END IF;
+    PERFORM public.fn_assert_dual_actor_or_admin(p_coach_id, p_student_id, 'not authorized to check this schedule');
 
     RETURN QUERY SELECT
         EXISTS (

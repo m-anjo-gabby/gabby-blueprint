@@ -15,6 +15,9 @@
 -- 【月範囲判定 (2026-09-13 コーチのタイムゾーン基準に修正)】
 -- get_coach_monthly_sessions.sqlと同じ理由・同じ方式で、月の境界をUTCではなくコーチ自身の
 -- タイムゾーン(com_m_user.timezone、呼び出しの都度DBから直接参照)を基準に判定する。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_coach_monthly_active_students(p_coach_id uuid, p_report_month date)
 RETURNS TABLE(student_id uuid, user_name text, icon_path text)
@@ -27,9 +30,7 @@ DECLARE
     v_month_start_utc timestamptz;
     v_month_end_utc timestamptz;
 BEGIN
-    IF auth.uid() <> p_coach_id AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to view this coach''s monthly report';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(p_coach_id, 'not authorized to view this coach''s monthly report');
 
     SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
     IF v_coach_timezone IS NULL THEN

@@ -22,6 +22,10 @@
 -- ルールになってしまうため。24時間ルールは「提案した時点で妥当な時間を指定したか」を
 -- 検証するものであり、相手の応答速度を制約するものではない、という整理とする
 -- （approve_session_booking_request()と同じ考え方）。
+--
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
+-- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.accept_session_reschedule_proposal(p_proposal_id uuid)
 RETURNS uuid
@@ -36,6 +40,7 @@ DECLARE
     v_new_session_id uuid;
     v_coach_conflict boolean;
     v_student_conflict boolean;
+    v_counterpart_name text;
 BEGIN
     SELECT * INTO v_proposal FROM public.com_t_session_reschedule_proposal WHERE proposal_id = p_proposal_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -44,9 +49,7 @@ BEGIN
 
     -- 提案者と逆側（proposed_by_role=2:コーチ提案なら生徒、1:生徒提案ならコーチ）のみ承諾できる
     v_responder_id := CASE WHEN v_proposal.proposed_by_role = 2 THEN v_proposal.student_id ELSE v_proposal.coach_id END;
-    IF v_responder_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to respond to this proposal';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(v_responder_id, 'not authorized to respond to this proposal');
 
     IF v_proposal.status = 4 OR (v_proposal.status = 1 AND v_proposal.expires_at <= NOW()) THEN
         UPDATE public.com_t_session_reschedule_proposal SET status = 4, update_date = NOW() WHERE proposal_id = p_proposal_id AND status = 1;
@@ -88,29 +91,29 @@ BEGIN
 
     -- 承諾したのが生徒ならコーチへ、コーチならば生徒へ通知する
     IF v_responder_id = v_session.student_id THEN
-        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-        SELECT
+        SELECT user_name INTO v_counterpart_name FROM public.com_m_user WHERE id = v_session.student_id;
+        PERFORM public.fn_notify(
             v_session.coach_id,
             'SESSION_BOOKED_BY_STUDENT',
             jsonb_build_object(
                 'session_id', v_new_session_id,
-                'student_name', u.user_name,
+                'student_name', v_counterpart_name,
                 'session_start_datetime', v_proposal.proposed_start_datetime
             ),
             '/students/' || v_session.student_id
-        FROM public.com_m_user u WHERE u.id = v_session.student_id;
+        );
     ELSE
-        INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-        SELECT
+        SELECT user_name INTO v_counterpart_name FROM public.com_m_user WHERE id = v_session.coach_id;
+        PERFORM public.fn_notify(
             v_session.student_id,
             'SESSION_BOOKING_APPROVED',
             jsonb_build_object(
                 'session_id', v_new_session_id,
-                'coach_name', u.user_name,
+                'coach_name', v_counterpart_name,
                 'session_start_datetime', v_proposal.proposed_start_datetime
             ),
             '/live-room'
-        FROM public.com_m_user u WHERE u.id = v_session.coach_id;
+        );
     END IF;
 
     RETURN v_new_session_id;

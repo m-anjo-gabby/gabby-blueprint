@@ -11,6 +11,10 @@
 -- 「Availabilityを免除し、ダブルブッキングのみチェックして即時にセッション行を作る」という
 -- 挙動を、アドミン専用の本関数として維持する。呼び出しはget_jwt_user_type()='0'（管理者）
 -- のみ許可する。
+--
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
+-- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_book_session_direct(
     p_schedule_id uuid,
@@ -29,9 +33,7 @@ DECLARE
     v_student_conflict boolean;
     v_new_session_id uuid;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to book a session for this schedule';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to book a session for this schedule');
 
     SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -62,10 +64,8 @@ BEGIN
     )
     RETURNING session_id INTO v_new_session_id;
 
-    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-    VALUES
-        (v_schedule.student_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', v_new_session_id, 'session_start_datetime', p_start_datetime), '/live-room'),
-        (v_schedule.coach_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', v_new_session_id, 'session_start_datetime', p_start_datetime), '/students/' || v_schedule.student_id);
+    PERFORM public.fn_notify(v_schedule.student_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', v_new_session_id, 'session_start_datetime', p_start_datetime), '/live-room');
+    PERFORM public.fn_notify(v_schedule.coach_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', v_new_session_id, 'session_start_datetime', p_start_datetime), '/students/' || v_schedule.student_id);
 
     RETURN v_new_session_id;
 END;

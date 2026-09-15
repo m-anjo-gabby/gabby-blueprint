@@ -27,6 +27,9 @@
 -- 対象セッションは旧status=9(cancelled_coach_reassigned)ではなくstatus=3(cancelled)、
 -- cancel_category=5(coach_reassigned)として記録する（table/com_t_session.sqlの
 -- ステータス簡素化パッチ参照）。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.release_lesson_schedule_slot(p_schedule_id uuid)
 RETURNS void
@@ -37,9 +40,7 @@ AS $$
 DECLARE
     v_schedule RECORD;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to release a lesson schedule slot';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to release a lesson schedule slot');
 
     SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
     IF NOT FOUND THEN

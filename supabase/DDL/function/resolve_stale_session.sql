@@ -17,6 +17,9 @@
 -- 2/6/7のstatus値を直接渡す方式だった。table/com_t_session.sqlのステータス
 -- 簡素化パッチ参照）。パラメータの意味が変わるため、CREATE OR REPLACEの前に
 -- DROP FUNCTIONで旧シグネチャを明示的に削除する。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.resolve_stale_session(uuid, smallint, text);
 
@@ -42,9 +45,7 @@ BEGIN
         RAISE EXCEPTION 'session % not found', p_session_id;
     END IF;
 
-    IF v_session.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to resolve this session';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(v_session.coach_id, 'not authorized to resolve this session');
 
     IF v_session.status <> 1 THEN
         RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;

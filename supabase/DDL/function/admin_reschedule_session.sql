@@ -17,6 +17,10 @@
 -- 置き換えられた旧セッション行は、旧status=5(rescheduled)ではなくstatus=3(cancelled)、
 -- cancel_category=3(admin)として記録する（table/com_t_session.sqlのステータス
 -- 簡素化パッチ参照）。置き換え先の新しい行はrescheduled_fromで引き続き参照できる。
+--
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
+-- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_reschedule_session(
     p_session_id uuid,
@@ -35,9 +39,7 @@ DECLARE
     v_student_conflict boolean;
     v_new_session_id uuid;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to reschedule this session';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to reschedule this session');
 
     SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -72,10 +74,8 @@ BEGIN
     SET status = 3, cancel_category = 3, cancel_reason = p_reason, cancelled_by = auth.uid(), update_date = NOW()
     WHERE session_id = p_session_id;
 
-    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-    VALUES
-        (v_session.student_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'new_session_id', v_new_session_id, 'session_start_datetime', p_new_start_datetime), '/live-room'),
-        (v_session.coach_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'new_session_id', v_new_session_id, 'session_start_datetime', p_new_start_datetime), '/students/' || v_session.student_id);
+    PERFORM public.fn_notify(v_session.student_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'new_session_id', v_new_session_id, 'session_start_datetime', p_new_start_datetime), '/live-room');
+    PERFORM public.fn_notify(v_session.coach_id, 'SESSION_UPDATED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'new_session_id', v_new_session_id, 'session_start_datetime', p_new_start_datetime), '/students/' || v_session.student_id);
 
     RETURN v_new_session_id;
 END;

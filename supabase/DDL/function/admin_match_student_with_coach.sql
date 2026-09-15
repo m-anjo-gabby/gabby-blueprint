@@ -28,6 +28,10 @@
 -- approve_matching_requestと同様、com_m_lesson_schedule.target_sessionsをここで確定する
 -- （table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。
 --
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
+-- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
+--
 -- 【24時間ルールの対象外 (2026-09-15追加)】
 -- 生徒の個別予約・振替候補・通常のマッチング承認(approve_matching_request)には
 -- 「開始24時間以内は不可」ルールを適用するが、本関数はアドミンが人間同士で既に
@@ -62,9 +66,7 @@ DECLARE
     v_ticket_weekly_frequency smallint;
     v_target_sessions smallint;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to perform admin matching';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to perform admin matching');
 
     SELECT user_id INTO v_student_id FROM public.com_t_user_session_ticket WHERE ticket_id = p_ticket_id;
     IF NOT FOUND THEN
@@ -127,10 +129,8 @@ BEGIN
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = p_coach_id;
     SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_student_id;
 
-    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-    VALUES
-        (v_student_id, 'MATCHING_APPROVED', jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id), '/live-room'),
-        (p_coach_id, 'MATCHING_ASSIGNED_TO_COACH', jsonb_build_object('student_name', v_student_name, 'schedule_id', v_schedule_id), '/students/' || v_student_id);
+    PERFORM public.fn_notify(v_student_id, 'MATCHING_APPROVED', jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id), '/live-room');
+    PERFORM public.fn_notify(p_coach_id, 'MATCHING_ASSIGNED_TO_COACH', jsonb_build_object('student_name', v_student_name, 'schedule_id', v_schedule_id), '/students/' || v_student_id);
 
     RETURN v_schedule_id;
 END;

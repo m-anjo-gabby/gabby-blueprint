@@ -22,6 +22,11 @@
 -- 【24時間ルール (2026-09-15追加)】
 -- 生徒による個別予約は、開始24時間以内は不可（翌日以降のみ予約可能）。アドミンの
 -- 代理予約(admin_book_session_direct)はこのルールの対象外（未来であればいつでも可能）。
+--
+-- 【権限チェック・通知の共通化について (2026-09-15追加)】
+-- 通知INSERTはfn_notify()を使う（前提: function/fn_notify.sql）。権限チェックは
+-- 意図的にfn_assert_actor_or_admin()を使わず素のIF文のままとする。本関数にはアドミンの
+-- 代理実行を許可しない（アドミンはadmin_book_session_direct()という別の専用RPCを使う）ため。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.create_session_booking_request(
     p_schedule_id uuid,
@@ -41,6 +46,7 @@ DECLARE
     v_coach_conflict boolean;
     v_student_conflict boolean;
     v_request_id uuid;
+    v_student_name text;
 BEGIN
     SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -84,17 +90,17 @@ BEGIN
     )
     RETURNING request_id INTO v_request_id;
 
-    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-    SELECT
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_schedule.student_id;
+    PERFORM public.fn_notify(
         v_schedule.coach_id,
         'SESSION_BOOKING_REQUESTED',
         jsonb_build_object(
             'request_id', v_request_id,
-            'student_name', u.user_name,
+            'student_name', v_student_name,
             'requested_start_datetime', p_start_datetime
         ),
         '/students/' || v_schedule.student_id
-    FROM public.com_m_user u WHERE u.id = v_schedule.student_id;
+    );
 
     RETURN v_request_id;
 END;

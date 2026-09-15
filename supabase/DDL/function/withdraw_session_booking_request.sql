@@ -5,6 +5,9 @@
 -- 【背景】
 -- コーチの応答を待たずに、生徒が自分のpending中のリクエストを取り下げたい場合の経路。
 -- 取り下げてもチケットは未割当のまま残り、別日時で再度リクエストできる。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.withdraw_session_booking_request(p_request_id uuid)
 RETURNS void
@@ -20,9 +23,7 @@ BEGIN
         RAISE EXCEPTION 'booking request % not found', p_request_id;
     END IF;
 
-    IF v_request.student_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to withdraw this booking request';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(v_request.student_id, 'not authorized to withdraw this booking request');
 
     IF v_request.status <> 1 THEN
         RAISE EXCEPTION 'this booking request is no longer pending (status=%)', v_request.status;

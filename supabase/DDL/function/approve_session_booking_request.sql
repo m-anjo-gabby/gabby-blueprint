@@ -15,6 +15,10 @@
 -- 通らなくなり、「相手が即応答しない限り成立しない」という不合理なルールになって
 -- しまうため。24時間ルールは「申請・提案した時点で妥当な時間を指定したか」を
 -- 検証するものであり、相手の応答速度を制約するものではない、という整理とする。
+--
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
+-- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.approve_session_booking_request(p_request_id uuid)
 RETURNS uuid
@@ -28,15 +32,14 @@ DECLARE
     v_coach_conflict boolean;
     v_student_conflict boolean;
     v_new_session_id uuid;
+    v_coach_name text;
 BEGIN
     SELECT * INTO v_request FROM public.com_t_session_booking_request WHERE request_id = p_request_id FOR UPDATE;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'booking request % not found', p_request_id;
     END IF;
 
-    IF v_request.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to respond to this booking request';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(v_request.coach_id, 'not authorized to respond to this booking request');
 
     IF v_request.status <> 1 THEN
         RAISE EXCEPTION 'this booking request is no longer pending (status=%)', v_request.status;
@@ -64,18 +67,18 @@ BEGIN
     SET status = 2, responded_at = NOW(), resulting_session_id = v_new_session_id, update_date = NOW()
     WHERE request_id = p_request_id;
 
-    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-    SELECT
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
+    PERFORM public.fn_notify(
         v_request.student_id,
         'SESSION_BOOKING_APPROVED',
         jsonb_build_object(
             'request_id', p_request_id,
             'session_id', v_new_session_id,
-            'coach_name', u.user_name,
+            'coach_name', v_coach_name,
             'session_start_datetime', v_request.requested_start_datetime
         ),
         '/live-room'
-    FROM public.com_m_user u WHERE u.id = v_request.coach_id;
+    );
 
     RETURN v_new_session_id;
 END;

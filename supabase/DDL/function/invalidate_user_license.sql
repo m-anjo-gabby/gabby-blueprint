@@ -23,6 +23,9 @@
 -- 対象セッションは旧status=8(cancelled_license_ended)ではなくstatus=3(cancelled)、
 -- cancel_category=4(license_ended)として記録する（table/com_t_session.sqlの
 -- ステータス簡素化パッチ参照）。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.invalidate_user_license(p_license_id uuid)
 RETURNS void
@@ -34,9 +37,7 @@ DECLARE
     v_license RECORD;
     v_ticket_id uuid;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to invalidate a license';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to invalidate a license');
 
     SELECT * INTO v_license FROM public.com_t_user_license WHERE license_id = p_license_id FOR UPDATE;
     IF NOT FOUND THEN
