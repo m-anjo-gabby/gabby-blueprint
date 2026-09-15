@@ -38,7 +38,7 @@ export function LessonSprintCard({ studentId, history }: Props) {
               return (
                 <li key={record.lesson_sprint_id}>
                   <Link
-                    href={`/students/${studentId}/lesson-sprint/result/${record.lesson_sprint_id}`}
+                    href={`/students/${studentId}/lesson-sprint/result/${record.lesson_sprint_id}?back=${encodeURIComponent(`/students/${studentId}`)}&back_label=${encodeURIComponent('Back to Overview')}`}
                     className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-100/80 hover:border-slate-200 transition-colors"
                   >
                     <div className="min-w-0">

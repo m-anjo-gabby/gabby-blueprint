@@ -7,10 +7,10 @@ export default async function LessonSprintResultPage({
   searchParams,
 }: {
   params: Promise<{ id: string; sprintId: string }>;
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<{ session_id?: string; back?: string; back_label?: string }>;
 }) {
   const { id, sprintId } = await params;
-  const { session_id: sessionId } = await searchParams;
+  const { session_id: sessionId, back, back_label: backLabel } = await searchParams;
   const [result, contents] = await Promise.all([
     getLessonSprintResult(sprintId),
     getAvailableSprintContents(),
@@ -29,6 +29,8 @@ export default async function LessonSprintResultPage({
       questions={result.questions}
       content={content}
       sessionId={sessionId ?? null}
+      backHref={back ? decodeURIComponent(back) : null}
+      backLabel={backLabel ? decodeURIComponent(backLabel) : null}
     />
   );
 }

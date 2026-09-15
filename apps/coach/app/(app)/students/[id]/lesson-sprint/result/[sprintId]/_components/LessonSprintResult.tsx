@@ -26,9 +26,19 @@ interface Props {
    * record.session_idを持っていてもnullのまま＝表示・導線を一切変えない。
    */
   sessionId: string | null;
+  /**
+   * URLの?back=/?back_label=。この結果画面へ実際に遷移してきた元の画面（生徒概要／
+   * ライブセッション結果画面／セッションハブのPrepセクション等）を呼び出し側から明示的に
+   * 引き継ぐ。両方揃っている場合のみ使用し、無ければrecord.session_idに基づく推測に
+   * フォールバックする（すべてのリンク元を更新し切れていない場合の保険）。
+   * 没入表示（isImmersive）の場合は、ライブセッション中のハブへ戻る導線に一切影響を
+   * 与えないよう、これらのパラメータは無視する。
+   */
+  backHref: string | null;
+  backLabel: string | null;
 }
 
-export function LessonSprintResult({ studentId, record, questions, content, sessionId }: Props) {
+export function LessonSprintResult({ studentId, record, questions, content, sessionId, backHref: backHrefParam, backLabel: backLabelParam }: Props) {
   const timezone = useTimezone();
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const isQuestionBased = record.question_type === '0' || record.question_type === '6';
@@ -43,16 +53,17 @@ export function LessonSprintResult({ studentId, record, questions, content, sess
 
   // ハブ発の実施を完走した直後（isImmersive）は、セッションハブへ戻る一本道の導線にする
   // （コーチからの「通話中はなるべく画面を行き来したくない」という要望を受けた設計。詳細は
-  // SessionHub.tsxのコメント参照）。それ以外（履歴からの参照）は、このスプリントがライブ
-  // セッションに紐づいていれば、そのセッション結果画面に戻る方が文脈的に自然
-  // （受講生概要の全履歴一覧から開いた場合も、セッションに属する実施であればそちらへ戻す）。
-  // 紐づきが無い(単独実施)場合のみ受講生概要に戻る。
+  // SessionHub.tsxのコメント参照）。ここは呼び出し元に関わらず常に固定で、backHref/backLabel
+  // パラメータの影響を受けない。
+  // それ以外（履歴からの参照）は、実際に遷移してきた画面（back）が分かっていればそこへ戻す。
+  // 分からない場合のみ、このスプリントがライブセッションに紐づいていればそのセッション結果
+  // 画面、紐づきが無い(単独実施)場合は受講生概要に戻る、という推測にフォールバックする。
   const backHref = isImmersive
     ? `/students/${studentId}/sessions/${sessionId}`
-    : record.session_id
-      ? `/students/${studentId}/sessions/${record.session_id}/result`
-      : `/students/${studentId}`;
-  const backLabel = isImmersive ? 'Back to Hub' : record.session_id ? 'Back to Session Result' : 'Back to Overview';
+    : backHrefParam ?? (record.session_id ? `/students/${studentId}/sessions/${record.session_id}/result` : `/students/${studentId}`);
+  const backLabel = isImmersive
+    ? 'Back to Hub'
+    : backLabelParam ?? (record.session_id ? 'Back to Session Result' : 'Back to Overview');
 
   const body = (
     <div className="flex flex-col lg:h-full max-w-7xl mx-auto w-full pb-6 lg:pb-0">
@@ -108,19 +119,21 @@ export function LessonSprintResult({ studentId, record, questions, content, sess
 
           <SessionNoteCard lessonSprintId={record.lesson_sprint_id} initialNote={record.session_note} />
 
-          {/* 次のアクション: メモの長さ等でペインが縦に伸びても常に見えるよう、左ペイン下端にsticky固定する */}
-          <div className="lg:sticky lg:bottom-0 lg:bg-white lg:border-t lg:border-slate-100 lg:pt-3 space-y-2">
-            <RepeatSprintButton studentId={studentId} record={record} content={content} sessionId={sessionId} />
-            <Link
-              href={`/students/${studentId}/lesson-sprint${sessionId ? `?session_id=${sessionId}` : ''}`}
-              className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shrink-0"
-            >
-              <Zap size={14} className="fill-current text-amber-300" />
-              Start Another Live Sprint
-            </Link>
-            {/* 没入表示時のみ: ボタン群と並べて同じ「Back to Hub」を重複表示すると紛らわしいため、
-                ここでは「これ以上スプリントを続けない場合の締めくくり」という文脈の文言にする */}
-            {isImmersive && (
+          {/* 次のアクション（Repeat/Start Another）は、今まさにハブのセッション文脈内にいる
+              （＝通話中に続けてもう1本実施しうる）場合にのみ意味を持つ。履歴からの参照時は
+              非表示にする（コーチからのフィードバックを受けて追加）。 */}
+          {isImmersive && (
+            <div className="lg:sticky lg:bottom-0 lg:bg-white lg:border-t lg:border-slate-100 lg:pt-3 space-y-2">
+              <RepeatSprintButton studentId={studentId} record={record} content={content} sessionId={sessionId} />
+              <Link
+                href={`/students/${studentId}/lesson-sprint?session_id=${sessionId}`}
+                className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shrink-0"
+              >
+                <Zap size={14} className="fill-current text-amber-300" />
+                Start Another Live Sprint
+              </Link>
+              {/* ボタン群と並べて同じ「Back to Hub」を重複表示すると紛らわしいため、
+                  ここでは「これ以上スプリントを続けない場合の締めくくり」という文脈の文言にする */}
               <Link
                 href={backHref}
                 className="w-full flex items-center justify-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors py-1"
@@ -128,8 +141,8 @@ export function LessonSprintResult({ studentId, record, questions, content, sess
                 Done for now — back to Hub
                 <ArrowRight size={12} />
               </Link>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Right pane: scrollable answer history */}
