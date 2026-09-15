@@ -31,6 +31,15 @@
 -- 今後時間数を変更したい場合はこの1箇所を書き換えるだけでよい（発行済みの提案には
 -- 遡って影響しない）。
 --
+-- 【24時間ルール (2026-09-15追加)】
+-- 提案する候補の開始時刻も、生徒の個別予約と同じ「開始24時間以上先」ルールの対象とする
+-- （アドミン代理キャンセルではそもそも候補提案不可のため、本ルールは常に生徒・コーチ
+-- 本人の提案にのみ適用される）。検証するのは提案時点のみで、承諾側
+-- (accept_session_reschedule_proposal)では再検証しない。提案の有効期限(最大24時間)の
+-- 間に猶予が24時間を切ることはあり得るが、承諾側で再検証すると相手が即応答しない限り
+-- 成立しない不合理なルールになるため、意図的に行わない
+-- （approve_session_booking_request()と同じ考え方）。
+--
 -- 【通知 (2026-09-07追加、2026-09-11双方向化)】
 -- コーチキャンセル時は生徒へ、生徒キャンセル時はコーチへ、それぞれcom_t_notificationに
 -- 通知を作成する。既存の通知(TRAINING_*/CHAT_NEW_MESSAGE)と異なりトリガーではなく、
@@ -137,8 +146,8 @@ BEGIN
             v_slot_start := (v_slot->>'start_datetime')::timestamptz;
             v_slot_end := (v_slot->>'end_datetime')::timestamptz;
 
-            IF v_slot_start <= NOW() THEN
-                RAISE EXCEPTION 'proposed time must be in the future';
+            IF v_slot_start < NOW() + interval '24 hours' THEN
+                RAISE EXCEPTION 'proposed time must be at least 24 hours from now';
             END IF;
             IF v_slot_end <= v_slot_start THEN
                 RAISE EXCEPTION 'invalid proposed time range';

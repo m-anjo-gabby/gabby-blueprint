@@ -42,8 +42,24 @@
 -- exclusion constraint matching the ON CONFLICT specification)になる。これにより
 -- 2026-09-12以降、本関数を経由するセッション生成(マッチング承認・アドミン直接
 -- マッチングいずれも)が全件失敗する状態になっていた。
+--
+-- 【p_min_start_datetime追加: 24時間ルールのマッチング申請への適用 (2026-09-15)】
+-- 生徒・コーチ向けの新規予約(create_session_booking_request)・振替候補
+-- (cancel_session/accept_session_reschedule_proposal)には「開始24時間以内の予約不可」
+-- ルールがあるが、マッチング承認時に自動生成される初回セッションにはこれが未適用だった
+-- （曜日パターンの都合で、承認したその日のうちに開始してしまう回が生成され得る）。
+-- 呼び出し元(approve_matching_request)が生成範囲の下限としてp_min_start_datetimeを
+-- 渡せるようにし、これを下回る回はカウントせずスキップして次週に進める（BLOCK例外と
+-- 同様、欠番として扱いfn_schedule_shortfall()のshortfallに反映させる。end_dateを超えた
+-- 延長はしない、という既存方針を踏襲）。アドミン代理マッチング(admin_match_student_with_coach)
+-- はこのルールの対象外のため、NULL（デフォルト、下限なし）のまま呼び出す。
 ---------------------------------------------
-CREATE OR REPLACE FUNCTION public.fn_generate_sessions_for_schedule(p_schedule_id uuid)
+DROP FUNCTION IF EXISTS public.fn_generate_sessions_for_schedule(uuid);
+
+CREATE OR REPLACE FUNCTION public.fn_generate_sessions_for_schedule(
+    p_schedule_id uuid,
+    p_min_start_datetime timestamptz DEFAULT NULL
+)
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -70,6 +86,15 @@ BEGIN
         + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
 
     WHILE v_cursor_date <= v_schedule.end_date AND v_generated_count < v_schedule.target_sessions LOOP
+        v_start_ts := (v_cursor_date + v_schedule.start_time) AT TIME ZONE v_coach_tz;
+        v_end_ts := (v_cursor_date + v_schedule.end_time) AT TIME ZONE v_coach_tz;
+
+        -- 24時間ルールの下限を下回る回は欠番としてスキップする（上記コメント参照）
+        IF p_min_start_datetime IS NOT NULL AND v_start_ts < p_min_start_datetime THEN
+            v_cursor_date := v_cursor_date + 7;
+            CONTINUE;
+        END IF;
+
         -- 当該日・当該コーチのBLOCK例外（時間帯重複）が無いことを確認
         IF NOT EXISTS (
             SELECT 1 FROM public.com_t_coach_availability_exception e
@@ -79,9 +104,6 @@ BEGIN
               AND e.start_time < v_schedule.end_time
               AND e.end_time > v_schedule.start_time
         ) THEN
-            v_start_ts := (v_cursor_date + v_schedule.start_time) AT TIME ZONE v_coach_tz;
-            v_end_ts := (v_cursor_date + v_schedule.end_time) AT TIME ZONE v_coach_tz;
-
             INSERT INTO public.com_t_session (
                 schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status
             ) VALUES (
@@ -102,5 +124,6 @@ BEGIN
 END;
 $$;
 
--- 内部処理専用（approve_matching_request経由以外での直接実行は想定しない）
-REVOKE EXECUTE ON FUNCTION public.fn_generate_sessions_for_schedule(uuid) FROM PUBLIC, anon, authenticated;
+-- 内部処理専用（approve_matching_request/admin_match_student_with_coach経由以外での
+-- 直接実行は想定しない）
+REVOKE EXECUTE ON FUNCTION public.fn_generate_sessions_for_schedule(uuid, timestamptz) FROM PUBLIC, anon, authenticated;

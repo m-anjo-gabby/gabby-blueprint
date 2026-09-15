@@ -18,6 +18,10 @@
 -- コーチ選択を受け付けず、スケジュール(コマ)IDのみを受け取る。
 -- shortfall(未割当チケット数)のチェックでは、既にpending中の他リクエストも
 -- 暫定的に消費済みとみなし、同一コマへの過剰リクエストを防止する。
+--
+-- 【24時間ルール (2026-09-15追加)】
+-- 生徒による個別予約は、開始24時間以内は不可（翌日以降のみ予約可能）。アドミンの
+-- 代理予約(admin_book_session_direct)はこのルールの対象外（未来であればいつでも可能）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.create_session_booking_request(
     p_schedule_id uuid,
@@ -54,8 +58,8 @@ BEGIN
     IF p_end_datetime <= p_start_datetime THEN
         RAISE EXCEPTION 'invalid proposed time range';
     END IF;
-    IF p_start_datetime <= NOW() THEN
-        RAISE EXCEPTION 'new start datetime must be in the future';
+    IF p_start_datetime < NOW() + interval '24 hours' THEN
+        RAISE EXCEPTION 'requested start datetime must be at least 24 hours from now';
     END IF;
 
     SELECT shortfall INTO v_shortfall FROM public.fn_schedule_shortfall(p_schedule_id);

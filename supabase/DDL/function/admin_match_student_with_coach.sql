@@ -27,6 +27,13 @@
 -- 【target_sessionsの確定 (2026-09-14追加)】
 -- approve_matching_requestと同様、com_m_lesson_schedule.target_sessionsをここで確定する
 -- （table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。
+--
+-- 【24時間ルールの対象外 (2026-09-15追加)】
+-- 生徒の個別予約・振替候補・通常のマッチング承認(approve_matching_request)には
+-- 「開始24時間以内は不可」ルールを適用するが、本関数はアドミンが人間同士で既に
+-- 調整済みの内容を即時反映するための専用ルートのため対象外とする。そのため
+-- fn_generate_sessions_for_schedule()呼び出し時にp_min_start_datetimeを渡さない
+-- （デフォルトのNULL=下限なしのまま呼ぶ）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_match_student_with_coach(
     p_ticket_id uuid,

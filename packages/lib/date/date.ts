@@ -327,3 +327,19 @@ export const getFirstLiveSessionOccurrence = (
 
   return { instant, day_of_week: targetDayOfWeek, start_time: `${h}:${m}` };
 };
+
+/**
+ * 個別予約リクエスト・キャンセル時の振替候補提案について、「開始◯時間以上先」を
+ * 求めるDB側ルール(create_session_booking_request/cancel_session等のRPC参照)と揃えた
+ * 最低リードタイム(時間)。UI側は申請・提案の入力中にインラインで参考表示するための
+ * ソフトチェックとして使う（最終的な整合性は常にRPC側で担保する）。DB側の値を変更する
+ * 場合は、この値もあわせて更新すること。
+ */
+export const MIN_SESSION_BOOKING_LEAD_HOURS = 24;
+
+/** 指定日時が、現在時刻からhours時間以上先かどうかを判定する */
+export const isAtLeastHoursFromNow = (datetime: string | Date, hours: number): boolean => {
+  const target = typeof datetime === 'string' ? new Date(datetime) : datetime;
+  if (isNaN(target.getTime())) return false;
+  return target.getTime() - Date.now() >= hours * 60 * 60 * 1000;
+};

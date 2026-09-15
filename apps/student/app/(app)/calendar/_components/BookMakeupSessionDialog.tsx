@@ -15,7 +15,12 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { generateLessonStartTimeOptions, formatDateTimeByZone } from '@gabby/lib/date/date';
+import {
+  generateLessonStartTimeOptions,
+  formatDateTimeByZone,
+  isAtLeastHoursFromNow,
+  MIN_SESSION_BOOKING_LEAD_HOURS,
+} from '@gabby/lib/date/date';
 import { CounterpartLocalTime } from '@gabby/lib/components/common/CounterpartLocalTime';
 import { createSessionBookingRequest, checkSessionConflict } from '@/actions/sessionAction';
 import { BookableTicketSlot } from '@gabby/types/matching';
@@ -85,9 +90,17 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
     setConflictMessage(null);
     if (!selectedSlot || !newStartTime || !currentUserId || !duration) return;
 
+    const start = new Date(`${newDate}T${newStartTime}:00`);
+
+    // サーバー側(create_session_booking_request)の「開始24時間以上先」ルールのソフトチェック。
+    // 最終的な整合性は常にRPC側で担保するため、ここでは参考表示のみ。
+    if (!isAtLeastHoursFromNow(start, MIN_SESSION_BOOKING_LEAD_HOURS)) {
+      setConflictMessage(`開始${MIN_SESSION_BOOKING_LEAD_HOURS}時間以内の予約はできません。翌日以降の日時を選択してください。`);
+      return;
+    }
+
     let cancelled = false;
     setIsChecking(true);
-    const start = new Date(`${newDate}T${newStartTime}:00`);
     const end = new Date(start.getTime() + duration);
     checkSessionConflict(selectedSlot.coach_id, currentUserId, start.toISOString(), end.toISOString()).then((result) => {
       if (cancelled) return;

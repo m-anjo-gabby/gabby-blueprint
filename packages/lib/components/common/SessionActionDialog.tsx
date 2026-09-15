@@ -7,7 +7,7 @@ import { Loader2, Plus, X as XIcon } from 'lucide-react';
 import { cn } from '../../utils';
 import { useToast } from '../../hooks/useToast';
 import { useUserStore } from '../../stores/useUserStore';
-import { generateLessonStartTimeOptions } from '../../date/date';
+import { generateLessonStartTimeOptions, isAtLeastHoursFromNow, MIN_SESSION_BOOKING_LEAD_HOURS } from '../../date/date';
 import { CounterpartLocalTime } from './CounterpartLocalTime';
 import { SESSION_STATUS, CANCEL_CATEGORY, COMPLETION_RESULT, SessionListItem, CompletionResult, ProposedSlotInput } from '@gabby/types/session';
 
@@ -188,6 +188,8 @@ export interface SessionActionDialogCancelLabels {
   removeSlotLabel: string;
   checkingText: string;
   conflictMessages: { coach: string; student: string };
+  /** 候補の開始時刻が24時間以内(MIN_SESSION_BOOKING_LEAD_HOURS)の場合のインラインメッセージ */
+  tooSoonMessage: string;
   backButton: string;
   submitButton: string;
   successToast: (hasProposals: boolean) => string;
@@ -284,7 +286,18 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
   const updateProposedSlot = (index: number, patch: Partial<Pick<ProposedSlotDraft, 'date' | 'time'>>) => {
     setProposedSlots((prev) => prev.map((slot, i) => (i === index ? { ...slot, ...patch, conflictMessage: null } : slot)));
     const merged = { ...proposedSlots[index], ...patch };
-    if (merged.date && merged.time) checkSlotConflict(index, merged.date, merged.time);
+    if (!merged.date || !merged.time) return;
+
+    // サーバー側(cancel_session)の「開始24時間以上先」ルールのソフトチェック。
+    // 最終的な整合性は常にRPC側で担保するため、ここでは参考表示のみ。無効な場合は
+    // ダブルブッキングチェック(ネットワーク呼び出し)を省略する。
+    const start = new Date(`${merged.date}T${merged.time}:00`);
+    if (!isAtLeastHoursFromNow(start, MIN_SESSION_BOOKING_LEAD_HOURS)) {
+      setProposedSlots((prev) => prev.map((s, i) => (i === index ? { ...s, conflictMessage: labels.cancel.tooSoonMessage } : s)));
+      return;
+    }
+
+    checkSlotConflict(index, merged.date, merged.time);
   };
 
   const removeProposedSlot = (index: number) => {

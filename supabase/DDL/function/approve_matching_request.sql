@@ -33,6 +33,13 @@
 -- com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。承認が契約開始から遅れても
 -- 目標値自体は変わらないため、fn_generate_sessions_for_schedule()の生成上限、
 -- fn_schedule_shortfall()の期待値が正しく契約のエンタイトルメントを反映するようになる。
+--
+-- 【24時間ルールの適用 (2026-09-15追加)】
+-- 生徒の個別予約・振替候補と同様、コーチ自身の承認によるマッチング成立でも、承認した
+-- その日のうちに開始してしまう初回セッションが生成され得る（曜日パターンの都合）。
+-- コーチ本人の承認には24時間ルールを適用し、下限を下回る回はfn_generate_sessions_for_schedule()側で
+-- 欠番としてスキップさせる。アドミンが本関数を代理承認する場合（get_jwt_user_type()='0'）は、
+-- admin_match_student_with_coach()と同様このルールの対象外とする。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
 RETURNS uuid
@@ -51,6 +58,7 @@ DECLARE
     v_ticket_total_sessions smallint;
     v_ticket_weekly_frequency smallint;
     v_target_sessions smallint;
+    v_min_start_datetime timestamptz;
 BEGIN
     SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -114,7 +122,14 @@ BEGIN
     SET status = 2, responded_by = auth.uid(), responded_at = NOW(), update_date = NOW()
     WHERE request_id = p_request_id;
 
-    PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id);
+    -- アドミン代理承認は24時間ルールの対象外（admin_match_student_with_coach()と同様）
+    IF public.get_jwt_user_type() = '0' THEN
+        v_min_start_datetime := NULL;
+    ELSE
+        v_min_start_datetime := NOW() + interval '24 hours';
+    END IF;
+
+    PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id, v_min_start_datetime);
 
     -- 生徒へ、マッチング成立を通知する（コーチは自ら承認操作を行ったため通知不要）
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;

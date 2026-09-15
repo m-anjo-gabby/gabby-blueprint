@@ -25,6 +25,7 @@ export const STUDENT_SESSION_ACTION_LABELS: SessionActionDialogLabels = {
       coach: 'コーチが同じ時間帯に別のセッションの予定があります。',
       student: 'ご自身が同じ時間帯に別のセッションの予定があります。',
     },
+    tooSoonMessage: '開始24時間以内の日時は指定できません。翌日以降の日時を選択してください。',
     backButton: '戻る',
     submitButton: 'キャンセルする',
     successToast: (hasProposals) =>

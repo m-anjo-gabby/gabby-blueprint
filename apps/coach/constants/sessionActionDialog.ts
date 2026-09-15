@@ -22,6 +22,7 @@ export const COACH_SESSION_ACTION_LABELS: SessionActionDialogLabels = {
       coach: 'You already have another session at this time.',
       student: 'The student already has another session at this time.',
     },
+    tooSoonMessage: 'This time is less than 24 hours away. Please choose a time from tomorrow onward.',
     backButton: 'Back',
     submitButton: 'Cancel Session',
     successToast: (hasProposals) => (hasProposals ? 'Session cancelled. Your proposed times were sent to the student.' : 'Session cancelled.'),
