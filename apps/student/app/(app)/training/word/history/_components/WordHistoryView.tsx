@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Calendar, BookOpen, MessageSquareText, ArrowLeft, ArrowRight, ChevronDown, Library, Mic, Loader2, Home } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,7 +22,7 @@ interface GroupedWordHistory {
 export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, targetMonth }) => {
   const router = useRouter();
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
 
   // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算等）はSprint履歴画面と共通のためフック化
   const { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange, goToMonth, isPending } = useMonthNavigator({

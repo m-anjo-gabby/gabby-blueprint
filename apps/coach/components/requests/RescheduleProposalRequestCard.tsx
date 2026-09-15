@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
 import { IncomingRescheduleProposalGroup, RESCHEDULE_PROPOSAL_STATUS } from '@gabby/types/session';
 import { RequestKindTag } from './RequestKindTag';
@@ -19,7 +19,7 @@ interface RescheduleProposalRequestCardProps {
 }
 
 export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }: RescheduleProposalRequestCardProps) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const [respondingProposalId, setRespondingProposalId] = useState<string | null>(null);
   const [isDeclining, setIsDeclining] = useState(false);
   const { showToast } = useToast();
@@ -37,7 +37,7 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
         showToast(result.message, 'error');
         return;
       }
-      // サーバー側(accept_session_reschedule_proposal RPC)は承諾した候補以外のpending候補を
+      // サーバー側(approve_slot_proposal RPC)は承諾した候補以外のpending候補を
       // 自動でdeclined化するため、ここでも同じ結果をローカルに反映してHistoryへ即時反映する
       const resolvedCandidates = group.candidates.map((c) =>
         c.proposal_id === proposalId

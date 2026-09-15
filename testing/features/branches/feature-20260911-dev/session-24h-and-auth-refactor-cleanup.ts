@@ -9,11 +9,12 @@
  * 共有フィクスチャであるqa-admin@gabby-qa-test.exampleアカウントは削除しない。
  *
  * 削除順序（session-lifecycle-refactor-cleanup.tsをベースに、本シナリオ固有のFK
- * (com_t_session_booking_request.resulting_session_id、非CASCADE)への対応を追加）:
+ * (com_t_session_slot_proposal.resulting_session_id、非CASCADE)への対応を追加）:
  *   1. com_t_user_session_ticket_history
- *   2. com_t_session_booking_request (resulting_session_idがcom_t_sessionへの非CASCADE FKの
- *      ため、com_t_sessionより先に削除する必要がある。KJ-2026-0915-01参照)
- *   3. com_t_session (ticket_id経由で明示削除。CASCADEでcall_log/reschedule_proposalも連鎖)
+ *   2. com_t_session_slot_proposal (resulting_session_idがcom_t_sessionへの非CASCADE FKの
+ *      ため、com_t_sessionより先に削除する必要がある。KJ-2026-0915-01参照。統合後は
+ *      振替候補・自由予約リクエスト両方がこのテーブルに含まれる)
+ *   3. com_t_session (ticket_id経由で明示削除。CASCADEでcall_logも連鎖)
  *   4. com_t_user_license (CASCADE: ticket→schedule→matching_requestまで連鎖)
  *   5. com_m_coach_student_relationship
  *   6. com_m_contract
@@ -79,16 +80,17 @@ console.log(`対象クライアント特定: clientId=${clientId}, 対象ユー�
   console.log(`1. com_t_user_session_ticket_history削除: ${count ?? 0}件`);
 }
 
-// 2. 予約リクエスト(com_t_session_booking_request)を先に削除する。
+// 2. 候補提案・予約リクエスト(com_t_session_slot_proposal)を先に削除する。
 //    resulting_session_id が com_t_session への非CASCADE FKのため、com_t_sessionより
 //    先に消さないと「update or delete on table "com_t_session" violates foreign key
-//    constraint "com_t_session_booking_request_resulting_session_id_fkey"」で失敗する
-//    (KJ-2026-0915-01。schedule_id/student_id/coach_idへのFKはCASCADEだが、
-//    resulting_session_idだけ非CASCADEのため、com_t_session側からの連鎖に任せられない)。
+//    constraint "com_t_session_slot_proposal_resulting_session_id_fkey"」で失敗する
+//    (KJ-2026-0915-01。schedule_id/student_id/coach_id、振替候補のsource_session_idへの
+//    FKはCASCADEだが、resulting_session_idだけ非CASCADEのため、com_t_session側からの
+//    連鎖に任せられない)。
 {
-  const { error, count } = await admin.from("com_t_session_booking_request").delete({ count: "exact" }).in("student_id", userIds);
+  const { error, count } = await admin.from("com_t_session_slot_proposal").delete({ count: "exact" }).in("student_id", userIds);
   if (error) throw error;
-  console.log(`2. com_t_session_booking_request削除: ${count ?? 0}件`);
+  console.log(`2. com_t_session_slot_proposal削除: ${count ?? 0}件`);
 }
 
 // 3. セッション実体（ticket_id経由の直接FKにCASCADEが無いため明示削除。KJ-2026-0914-02参照）
@@ -99,7 +101,7 @@ console.log(`対象クライアント特定: clientId=${clientId}, 対象ユー�
   if (ticketIds.length > 0) {
     const { error, count } = await admin.from("com_t_session").delete({ count: "exact" }).in("ticket_id", ticketIds);
     if (error) throw error;
-    console.log(`3. com_t_session削除(連鎖でcall_log/reschedule_proposalも削除): ${count ?? 0}件`);
+    console.log(`3. com_t_session削除(連鎖でcall_logも削除): ${count ?? 0}件`);
   } else {
     console.log("3. com_t_session削除: 対象チケットなし(0件)");
   }

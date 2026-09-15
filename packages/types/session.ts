@@ -111,23 +111,29 @@ export interface ProposedSlotInput {
   end_datetime: string;
 }
 
-// com_t_session_reschedule_proposal.status
+// com_t_session_slot_proposal.status のうち、振替候補(source_session_id IS NOT NULL)が
+// 取り得る値のサブセット（2026-09-15、com_t_session_reschedule_proposalとの統合により
+// EXPIREDの値が4→5に変更。DBのchk_slot_proposal_withdraw_scope制約により振替候補は
+// WITHDRAWN(4)を取らない）
 export const RESCHEDULE_PROPOSAL_STATUS = {
   PENDING: 1,
   ACCEPTED: 2,
   DECLINED: 3,
-  EXPIRED: 4,
+  EXPIRED: 5,
 } as const;
 export type RescheduleProposalStatus = typeof RESCHEDULE_PROPOSAL_STATUS[keyof typeof RESCHEDULE_PROPOSAL_STATUS];
 
-// com_t_session_reschedule_proposal.proposed_by_role
+// com_t_session_slot_proposal.proposed_by_role
 export const PROPOSED_BY_ROLE = {
   STUDENT: 1,
   COACH: 2,
 } as const;
 export type ProposedByRole = typeof PROPOSED_BY_ROLE[keyof typeof PROPOSED_BY_ROLE];
 
-/** com_t_session_reschedule_proposal 1行分。キャンセル時に相手方へ提案された候補（コーチ・生徒いずれの提案も含む） */
+/** com_t_session_slot_proposalのうち振替候補(source_session_id IS NOT NULL)の1行分。
+ * キャンセル時に相手方へ提案された候補（コーチ・生徒いずれの提案も含む）。
+ * session_id/proposal_idはDB上はそれぞれsource_session_id/proposal_idだが、
+ * 呼び出し側(sessionActions.ts)がSELECT時にエイリアスして旧来の名前のまま返す。 */
 export interface SessionRescheduleProposal {
   proposal_id: string;
   session_id: string;
@@ -177,7 +183,8 @@ export type DeclineRescheduleProposalResult =
   | { success: true }
   | { success: false; errorCode: SessionActionErrorCode };
 
-// com_t_session_booking_request.status
+// com_t_session_slot_proposal.status のうち、自由予約リクエスト(source_session_id IS NULL)が
+// 取り得る値のサブセット（2026-09-15、com_t_session_booking_requestとの統合。値自体は不変）
 export const SESSION_BOOKING_REQUEST_STATUS = {
   PENDING: 1,
   APPROVED: 2,
@@ -186,7 +193,11 @@ export const SESSION_BOOKING_REQUEST_STATUS = {
 } as const;
 export type SessionBookingRequestStatus = typeof SESSION_BOOKING_REQUEST_STATUS[keyof typeof SESSION_BOOKING_REQUEST_STATUS];
 
-/** com_t_session_booking_request 1行分。未消化チケットによる自由日時の新規予約リクエスト */
+/** com_t_session_slot_proposalのうち自由予約リクエスト(source_session_id IS NULL)の1行分。
+ * 未消化チケットによる自由日時の新規予約リクエスト。request_id/requested_start_datetime/
+ * requested_end_datetimeはDB上はそれぞれproposal_id/proposed_start_datetime/
+ * proposed_end_datetimeだが、呼び出し側(sessionActions.ts)がSELECT時にエイリアスして
+ * 旧来の名前のまま返す。 */
 export interface SessionBookingRequest {
   request_id: string;
   schedule_id: string;

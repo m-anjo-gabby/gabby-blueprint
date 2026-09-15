@@ -18,7 +18,7 @@ const logger = createLogger('common');
  * 伸びても件数は増え続けない）。統合された全履歴（Pending+History）が必要な場合は
  * 各申請一覧画面がgetMatchingRequestHistoryPageAsCoachCore等の個別ページングAPIを使うこと。
  *   - matching: 専属コーチ固定枠への申請 (com_t_matching_request)
- *   - booking: 未消化チケットによる自由日時の新規予約リクエスト (com_t_session_booking_request)
+ *   - booking: 未消化チケットによる自由日時の新規予約リクエスト (com_t_session_slot_proposal、source_session_id IS NULL)
  *   - reschedule_proposal: 生徒がキャンセル時に提案した振替候補 (proposed_by_role=STUDENTのみ)
  */
 export async function getPendingIncomingRequestsForCoachCore(): Promise<GetIncomingRequestsForCoachResult> {

@@ -1,6 +1,6 @@
 ---------------------------------------------
 -- 個別セッションのキャンセルRPC (2026-08-15 追加, Phase3)
--- 前提: table/com_t_session.sql, table/com_t_session_reschedule_proposal.sql,
+-- 前提: table/com_t_session.sql, table/com_t_session_slot_proposal.sql,
 --       function/check_session_conflict.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
@@ -24,21 +24,26 @@
 -- Availability(com_m_coach_availability)のチェックは行わない
 -- （一回限りの特別な時間として明示的に提案するものであるため）。提案時点で
 -- ダブルブッキングになっていないかはcheck_session_conflict()で事前チェックする
--- （承諾時の再チェックと合わせた二段構え）。提案者はcom_t_session_reschedule_proposal.
--- proposed_by_roleに記録し、accept_session_reschedule_proposal/
--- decline_session_reschedule_proposalsが「提案者と逆側のみ応答可」の判定に使う。
+-- （承諾時の再チェックと合わせた二段構え）。提案者はcom_t_session_slot_proposal.
+-- proposed_by_roleに記録し、approve_slot_proposal/reject_slot_proposalが
+-- 「提案者と逆側のみ応答可」の判定に使う。
 -- 回答期限(24時間、2026-09-11に48時間から短縮)は v_proposal_validity_hours で一元管理する。
 -- 今後時間数を変更したい場合はこの1箇所を書き換えるだけでよい（発行済みの提案には
 -- 遡って影響しない）。
+--
+-- 【スロット提案の統合 (2026-09-15追加)】
+-- 書き込み先をcom_t_session_reschedule_proposalからcom_t_session_slot_proposalへ変更する
+-- （生徒の自由予約リクエストと統合した単一テーブル。詳細はtable/com_t_session_slot_proposal.sqlの
+-- コメント参照）。本関数が作成する行は「キャンセル起因の振替候補」を表すため、
+-- schedule_id=v_session.schedule_id・source_session_id=p_session_idを設定する。
 --
 -- 【24時間ルール (2026-09-15追加)】
 -- 提案する候補の開始時刻も、生徒の個別予約と同じ「開始24時間以上先」ルールの対象とする
 -- （アドミン代理キャンセルではそもそも候補提案不可のため、本ルールは常に生徒・コーチ
 -- 本人の提案にのみ適用される）。検証するのは提案時点のみで、承諾側
--- (accept_session_reschedule_proposal)では再検証しない。提案の有効期限(最大24時間)の
+-- (approve_slot_proposal)では再検証しない。提案の有効期限(最大24時間)の
 -- 間に猶予が24時間を切ることはあり得るが、承諾側で再検証すると相手が即応答しない限り
--- 成立しない不合理なルールになるため、意図的に行わない
--- （approve_session_booking_request()と同じ考え方）。
+-- 成立しない不合理なルールになるため、意図的に行わない。
 --
 -- 【通知 (2026-09-07追加、2026-09-11双方向化)】
 -- コーチキャンセル時は生徒へ、生徒キャンセル時はコーチへ、それぞれcom_t_notificationに
@@ -47,23 +52,36 @@
 -- 通知INSERTはfn_notify()を使う（前提: function/fn_notify.sql）。
 --
 -- 【権限チェックの共通化 (2026-09-15追加)】
--- 「コーチ・生徒どちらでもなければアドミン代理」の判定＋権限チェックは
--- fn_assert_dual_actor_or_admin()に集約する（前提: function/fn_assert_dual_actor_or_admin.sql）。
--- 戻り値のis_admin_proxyを後続のチケット返還ルール・通知分岐にそのまま使う。
+-- 権限チェック自体（実際に当事者本人か／実際にアドミンか）はfn_assert_actor_or_admin()に
+-- 委ねる（前提: function/fn_assert_actor_or_admin.sql）。ただし「これはアドミン代理操作か」
+-- という判定は、後述の【admin-proxy判定の明示化】の通りp_as_adminで明示する。
+--
+-- 【admin-proxy判定の明示化 (2026-09-15追加)】
+-- 従来はv_is_admin_proxyを「auth.uid()が生徒ともコーチとも一致しない」という消去法で
+-- 推測していた。通常はこれで問題ないが、将来的にアドミンアカウントが同一セッションの
+-- 生徒/コーチ本人を兼ねるような想定外のデータ状態が生じた場合、消去法だと誤って
+-- 自己申告フロー（12時間ルール等）に流れてしまう。呼び出し元（アドミン代理操作専用の
+-- cancelSessionAsAdmin）は元々「今からアドミン代理として呼ぶ」ことを認識しているため、
+-- その意図をp_as_adminという明示パラメータで渡してもらい、本関数側はその申告が
+-- 実際にアドミンロールを持つ呼び出し者によるものかをfn_assert_actor_or_admin(NULL, ...)で
+-- 検証する、という構成に変更する。p_as_admin=falseの場合は、消去法によるアドミン救済を
+-- 一切行わず、当事者本人（生徒またはコーチ）であることを厳密に要求する
+-- （他の管理者専用RPC群(admin_book_session_direct等)と同じ「呼び出し方自体で意図を示す」
+-- 設計思想に揃える）。
 ---------------------------------------------
 -- 旧シグネチャからの変更のため、先に古い関数を明示的に削除する
 -- （デフォルト引数を持つ新シグネチャと共存させるとPostgres側でオーバーロードの曖昧性が生じるため）。
 DROP FUNCTION IF EXISTS public.cancel_session(uuid, text);
 DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb);
+DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb, boolean);
 
--- 【アドミン代理キャンセル対応 (2026-09-09追加)】
--- 生徒キャンセル(3)・コーチキャンセル(4)はいずれもauth.uid()が本人と一致することを
+-- 【アドミン代理キャンセル対応 (2026-09-09追加、2026-09-15にp_as_admin明示化)】
+-- 生徒キャンセル(1)・コーチキャンセル(2)はいずれもauth.uid()が本人と一致することを
 -- 前提に返還ルール・通知内容を決めているため、管理者自身のauth.uid()（どちらとも
--- 一致しない）で呼び出すと誤判定してしまう。p_admin_refund_ticketが指定された場合のみ、
--- 呼び出し者を「生徒でもコーチでもない＝アドミン代理操作」とみなし、返還可否を
--- 管理者が明示的に指定した値でそのまま確定させる（12時間ルール等は適用しない）。
--- ステータスは専用のcancelled_by_admin(10)を用い、通知は生徒・コーチ双方へ、
--- どちらが原因かを特定しない中立的な文言で送る。
+-- 一致しない）で呼び出すと誤判定してしまう。p_as_admin=trueを明示した場合のみ、
+-- アドミン代理操作とみなし、返還可否を管理者が明示的に指定した値(p_admin_refund_ticket)で
+-- そのまま確定させる（12時間ルール等は適用しない）。起因はcancel_category=3(admin)を用い、
+-- 通知は生徒・コーチ双方へ、どちらが原因かを特定しない中立的な文言で送る。
 --
 -- 【ステータス簡素化 (2026-09-14変更)】
 -- statusは常に3(cancelled)を確定し、起因（生徒/コーチ/アドミン代理）はcancel_category
@@ -73,7 +91,8 @@ CREATE OR REPLACE FUNCTION public.cancel_session(
     p_session_id uuid,
     p_reason text DEFAULT NULL,
     p_proposed_slots jsonb DEFAULT NULL,
-    p_admin_refund_ticket boolean DEFAULT NULL
+    p_admin_refund_ticket boolean DEFAULT NULL,
+    p_as_admin boolean DEFAULT false
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -102,7 +121,19 @@ BEGIN
         RAISE EXCEPTION 'session % not found', p_session_id;
     END IF;
 
-    v_is_admin_proxy := public.fn_assert_dual_actor_or_admin(v_session.student_id, v_session.coach_id, 'not authorized to cancel this session');
+    v_is_admin_proxy := p_as_admin;
+
+    IF v_is_admin_proxy THEN
+        -- p_as_admin=trueを名乗った場合、実際にアドミンロールであることを検証する
+        -- （当事者本人と一致するかどうかは問わない）
+        PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to cancel this session');
+    ELSE
+        -- p_as_admin=falseの場合は、消去法によるアドミン救済を行わず、当事者本人
+        -- （生徒またはコーチ）であることを厳密に要求する
+        IF auth.uid() IS DISTINCT FROM v_session.student_id AND auth.uid() IS DISTINCT FROM v_session.coach_id THEN
+            RAISE EXCEPTION 'not authorized to cancel this session';
+        END IF;
+    END IF;
 
     IF v_session.status <> 1 THEN
         RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
@@ -160,12 +191,12 @@ BEGIN
             IF v_coach_conflict THEN RAISE EXCEPTION 'coach already has a session at this time'; END IF;
             IF v_student_conflict THEN RAISE EXCEPTION 'student already has a session at this time'; END IF;
 
-            INSERT INTO public.com_t_session_reschedule_proposal (
-                session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime,
-                proposed_by_role, expires_at
+            INSERT INTO public.com_t_session_slot_proposal (
+                schedule_id, source_session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime,
+                proposed_by_role, status, expires_at
             ) VALUES (
-                p_session_id, v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end,
-                v_proposed_by_role, NOW() + (v_proposal_validity_hours || ' hours')::interval
+                v_session.schedule_id, p_session_id, v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end,
+                v_proposed_by_role, 1, NOW() + (v_proposal_validity_hours || ' hours')::interval
             );
         END LOOP;
     END IF;
@@ -201,5 +232,5 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) TO authenticated;

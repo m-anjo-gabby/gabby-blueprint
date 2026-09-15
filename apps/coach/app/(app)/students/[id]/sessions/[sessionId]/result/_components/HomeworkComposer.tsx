@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
@@ -234,7 +234,7 @@ function PostedHomework({
   checklist: SessionHomeworkChecklistItem[];
 }) {
   const { showToast } = useToast();
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const [commentText, setCommentText] = useState('');
   const [pendingAttachments, setPendingAttachments] = useState<PendingHomeworkAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);

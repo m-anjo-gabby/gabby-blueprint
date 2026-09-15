@@ -20,7 +20,7 @@ import {
   Rocket,
 } from 'lucide-react';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
@@ -59,7 +59,7 @@ function SectionHeading({ icon: Icon, iconClassName, title }: { icon: typeof Boo
  * セクションは優先度順（サマリー→宿題→トレーニング→チャット履歴）に並べる。
  */
 export function StudentSessionResult({ session, homework, checklist: initialChecklist }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const { showToast } = useToast();
   const [checklist, setChecklist] = useState(initialChecklist);
   const [showCallLog, setShowCallLog] = useState(false);

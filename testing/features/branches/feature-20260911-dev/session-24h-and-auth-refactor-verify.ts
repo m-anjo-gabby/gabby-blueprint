@@ -121,47 +121,47 @@ let bookingRequestId1: string;
 }
 
 // ===========================================================================
-// 2. approve_session_booking_request: 承認時に24時間を再チェックしない + 権限チェック
+// 2. approve_slot_proposal(旧approve_session_booking_request): 承認時に24時間を再チェックしない + 権限チェック
 // ===========================================================================
-console.log("\n--- 2. approve_session_booking_request: 承認時は24hを再チェックしない ---");
+console.log("\n--- 2. approve_slot_proposal(旧approve_session_booking_request): 承認時は24hを再チェックしない ---");
 {
-  // データ準備として、リクエストのrequested_start_datetimeを開始2時間後まで迫らせる
+  // データ準備として、リクエストのproposed_start_datetimeを開始2時間後まで迫らせる
   // (「作成時点では24h以上先だったが、コーチの承認が遅れて猶予が減った」状況の再現)
   const nearStart = hours(2);
   const nearEnd = hours(2.5);
-  const { error: updErr } = await admin.from("com_t_session_booking_request").update({ requested_start_datetime: nearStart.toISOString(), requested_end_datetime: nearEnd.toISOString() }).eq("request_id", bookingRequestId1);
+  const { error: updErr } = await admin.from("com_t_session_slot_proposal").update({ proposed_start_datetime: nearStart.toISOString(), proposed_end_datetime: nearEnd.toISOString() }).eq("proposal_id", bookingRequestId1);
   if (updErr) throw updErr;
 
-  const { error: wrongCoachErr } = await coach2Client.rpc("approve_session_booking_request", { p_request_id: bookingRequestId1 });
-  check("approve_session_booking_request: 無関係コーチC2は権限エラーになる", isAuthError(wrongCoachErr?.message), wrongCoachErr?.message);
+  const { error: wrongCoachErr } = await coach2Client.rpc("approve_slot_proposal", { p_proposal_id: bookingRequestId1 });
+  check("approve_slot_proposal: 無関係コーチC2は権限エラーになる", isAuthError(wrongCoachErr?.message), wrongCoachErr?.message);
 
   const beforeIso = new Date(Date.now() - 60_000).toISOString();
-  const { data: newSessionId, error } = await coach1Client.rpc("approve_session_booking_request", { p_request_id: bookingRequestId1 });
-  check("approve_session_booking_request: 開始2時間後でも担当コーチC1なら24hエラーにならず成功する(意図的に非再検証)", !error, error?.message);
+  const { data: newSessionId, error } = await coach1Client.rpc("approve_slot_proposal", { p_proposal_id: bookingRequestId1 });
+  check("approve_slot_proposal: 開始2時間後でも担当コーチC1なら24hエラーにならず成功する(意図的に非再検証)", !error, error?.message);
   const { data: sessionRow } = await admin.from("com_t_session").select("status").eq("session_id", newSessionId as string).maybeSingle();
-  check("approve_session_booking_request: 承認によりcom_t_sessionが確定(status=1)する", sessionRow?.status === 1, JSON.stringify(sessionRow));
+  check("approve_slot_proposal: 承認によりcom_t_sessionが確定(status=1)する", sessionRow?.status === 1, JSON.stringify(sessionRow));
   const notified = await hasNotification(t1Id, "SESSION_BOOKING_APPROVED", beforeIso);
-  check("approve_session_booking_request: 生徒へSESSION_BOOKING_APPROVED通知が作成される(fn_notify)", notified);
+  check("approve_slot_proposal: 生徒へSESSION_BOOKING_APPROVED通知が作成される(fn_notify)", notified);
 }
 
 // ===========================================================================
-// 3. reject_session_booking_request / withdraw_session_booking_request: 権限チェック
+// 3. reject_slot_proposal(旧reject_session_booking_request) / withdraw_session_booking_request: 権限チェック
 // ===========================================================================
-console.log("\n--- 3. reject_session_booking_request / withdraw_session_booking_request 権限チェック ---");
+console.log("\n--- 3. reject_slot_proposal / withdraw_session_booking_request 権限チェック ---");
 {
   const start = hours(28);
   const end = hours(28.5);
   const { data: reqId, error: createErr } = await t1Client.rpc("create_session_booking_request", { p_schedule_id: t1Schedule.schedule_id, p_start_datetime: start.toISOString(), p_end_datetime: end.toISOString() });
   if (createErr) throw createErr;
 
-  const { error: wrongCoachErr } = await coach2Client.rpc("reject_session_booking_request", { p_request_id: reqId as string, p_reason: "QA却下(不正)" });
-  check("reject_session_booking_request: 無関係コーチC2は権限エラーになる", isAuthError(wrongCoachErr?.message), wrongCoachErr?.message);
+  const { error: wrongCoachErr } = await coach2Client.rpc("reject_slot_proposal", { p_proposal_id: reqId as string, p_reason: "QA却下(不正)" });
+  check("reject_slot_proposal: 無関係コーチC2は権限エラーになる", isAuthError(wrongCoachErr?.message), wrongCoachErr?.message);
 
   const beforeIso = new Date(Date.now() - 60_000).toISOString();
-  const { error } = await coach1Client.rpc("reject_session_booking_request", { p_request_id: reqId as string, p_reason: "QA却下(正当)" });
-  check("reject_session_booking_request: 担当コーチC1は成功する", !error, error?.message);
+  const { error } = await coach1Client.rpc("reject_slot_proposal", { p_proposal_id: reqId as string, p_reason: "QA却下(正当)" });
+  check("reject_slot_proposal: 担当コーチC1は成功する", !error, error?.message);
   const notified = await hasNotification(t1Id, "SESSION_BOOKING_REJECTED", beforeIso);
-  check("reject_session_booking_request: 生徒へSESSION_BOOKING_REJECTED通知が作成される", notified);
+  check("reject_slot_proposal: 生徒へSESSION_BOOKING_REJECTED通知が作成される", notified);
 }
 {
   const start = hours(29);
@@ -209,30 +209,30 @@ let proposalId: string;
   });
   check("cancel_session: 振替候補が開始32時間後だと成功する", !error, error?.message);
 
-  const { data: proposalRow, error: pErr } = await admin.from("com_t_session_reschedule_proposal").select("proposal_id, proposed_start_datetime").eq("session_id", target.session_id).eq("status", 1).single();
+  const { data: proposalRow, error: pErr } = await admin.from("com_t_session_slot_proposal").select("proposal_id, proposed_start_datetime").eq("source_session_id", target.session_id).eq("status", 1).single();
   if (pErr) throw pErr;
   proposalId = proposalRow.proposal_id as string;
-  check("cancel_session: com_t_session_reschedule_proposalに候補が記録される", new Date(proposalRow.proposed_start_datetime).getTime() === proposedStart.getTime());
+  check("cancel_session: com_t_session_slot_proposalに候補が記録される", new Date(proposalRow.proposed_start_datetime).getTime() === proposedStart.getTime());
 }
 
 {
-  // 4-3. accept_session_reschedule_proposalは承諾時に24hを再チェックしない + 権限チェック
+  // 4-3. approve_slot_proposal(旧accept_session_reschedule_proposal)は承諾時に24hを再チェックしない + 権限チェック
   const nearStart = hours(3);
   const nearEnd = hours(3.5);
-  const { error: updErr } = await admin.from("com_t_session_reschedule_proposal").update({ proposed_start_datetime: nearStart.toISOString(), proposed_end_datetime: nearEnd.toISOString() }).eq("proposal_id", proposalId);
+  const { error: updErr } = await admin.from("com_t_session_slot_proposal").update({ proposed_start_datetime: nearStart.toISOString(), proposed_end_datetime: nearEnd.toISOString() }).eq("proposal_id", proposalId);
   if (updErr) throw updErr;
 
-  const { error: wrongCoachErr } = await coach2Client.rpc("accept_session_reschedule_proposal", { p_proposal_id: proposalId });
-  check("accept_session_reschedule_proposal: 無関係コーチC2は権限エラーになる", isAuthError(wrongCoachErr?.message), wrongCoachErr?.message);
+  const { error: wrongCoachErr } = await coach2Client.rpc("approve_slot_proposal", { p_proposal_id: proposalId });
+  check("approve_slot_proposal: 無関係コーチC2は権限エラーになる", isAuthError(wrongCoachErr?.message), wrongCoachErr?.message);
 
-  const { data: newSessionId, error } = await coach1Client.rpc("accept_session_reschedule_proposal", { p_proposal_id: proposalId });
-  check("accept_session_reschedule_proposal: 開始3時間後でも担当コーチC1なら24hエラーにならず成功する(意図的に非再検証)", !error, error?.message);
+  const { data: newSessionId, error } = await coach1Client.rpc("approve_slot_proposal", { p_proposal_id: proposalId });
+  check("approve_slot_proposal: 開始3時間後でも担当コーチC1なら24hエラーにならず成功する(意図的に非再検証)", !error, error?.message);
   const { data: newSessionRow } = await admin.from("com_t_session").select("status").eq("session_id", newSessionId as string).maybeSingle();
-  check("accept_session_reschedule_proposal: 承諾により新セッションが確定(status=1)する", newSessionRow?.status === 1, JSON.stringify(newSessionRow));
+  check("approve_slot_proposal: 承諾により新セッションが確定(status=1)する", newSessionRow?.status === 1, JSON.stringify(newSessionRow));
 }
 
 {
-  // 4-4. decline_session_reschedule_proposals: コーチ提案 → 応答者は生徒。無関係コーチは拒否、生徒本人は成功
+  // 4-4. reject_slot_proposal(旧decline_session_reschedule_proposals): コーチ提案 → 応答者は生徒。無関係コーチは拒否、生徒本人は成功
   const target = t1SessionsForProposals[2];
   const proposedStart = hours(33);
   const proposedEnd = hours(33.5);
@@ -243,11 +243,19 @@ let proposalId: string;
   });
   if (proposeErr) throw proposeErr;
 
-  const { error: wrongCoachErr } = await coach2Client.rpc("decline_session_reschedule_proposals", { p_session_id: target.session_id });
-  check("decline_session_reschedule_proposals: 無関係コーチC2は権限エラーになる", isAuthError(wrongCoachErr?.message), wrongCoachErr?.message);
+  const { data: declineProposal, error: declineLookupErr } = await admin
+    .from("com_t_session_slot_proposal")
+    .select("proposal_id")
+    .eq("source_session_id", target.session_id)
+    .eq("status", 1)
+    .single();
+  if (declineLookupErr) throw declineLookupErr;
 
-  const { error } = await t1Client.rpc("decline_session_reschedule_proposals", { p_session_id: target.session_id });
-  check("decline_session_reschedule_proposals: 提案の応答者である生徒本人は成功する", !error, error?.message);
+  const { error: wrongCoachErr } = await coach2Client.rpc("reject_slot_proposal", { p_proposal_id: declineProposal.proposal_id });
+  check("reject_slot_proposal: 無関係コーチC2は権限エラーになる", isAuthError(wrongCoachErr?.message), wrongCoachErr?.message);
+
+  const { error } = await t1Client.rpc("reject_slot_proposal", { p_proposal_id: declineProposal.proposal_id });
+  check("reject_slot_proposal: 提案の応答者である生徒本人は成功する", !error, error?.message);
 }
 
 // ===========================================================================
@@ -277,7 +285,7 @@ if (remaining.length < 3) throw new Error(`cancel_session 3-way検証用の予�
 }
 {
   const beforeIso = new Date(Date.now() - 60_000).toISOString();
-  const { error } = await adminClient.rpc("cancel_session", { p_session_id: remaining[2].session_id, p_reason: "QAアドミン代理キャンセル", p_admin_refund_ticket: true });
+  const { error } = await adminClient.rpc("cancel_session", { p_session_id: remaining[2].session_id, p_reason: "QAアドミン代理キャンセル", p_admin_refund_ticket: true, p_as_admin: true });
   check("cancel_session: アドミン代理(p_admin_refund_ticket指定)は成功する", !error, error?.message);
   const { data: row } = await admin.from("com_t_session").select("cancel_category, ticket_refunded").eq("session_id", remaining[2].session_id).single();
   check("cancel_session: アドミン代理キャンセルはcancel_category=3(admin)、返還可否は明示指定どおり", row?.cancel_category === 3 && row?.ticket_refunded === true, JSON.stringify(row));

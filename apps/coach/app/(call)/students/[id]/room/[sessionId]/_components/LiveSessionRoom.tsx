@@ -27,7 +27,7 @@ import {
 import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
 import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
 import { useLiveSessionPresence } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionPresence';
-import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
+import { useLiveSessionRoomOrchestration } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionRoomOrchestration';
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { UserAvatar } from '@/components/common/UserAvatar';
@@ -71,11 +71,7 @@ export function LiveSessionRoom({ access, studentId }: Props) {
   const { isStudentPresent, trackSelf, untrackSelf } = useLiveSessionPresence(access.sessionName);
 
   const [phase, setPhase] = useState<RoomPhase>('preview');
-  const [isTimeWarningVisible, setIsTimeWarningVisible] = useState(false);
   const [wasTimeLimitReached, setWasTimeLimitReached] = useState(false);
-  const sessionStartRequested = useRef(false);
-  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const endTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isSelfViewVisible, setIsSelfViewVisible] = useState(true);
   const [isChatVisible, setIsChatVisible] = useState(true);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -96,14 +92,20 @@ export function LiveSessionRoom({ access, studentId }: Props) {
 
   // 通話ルーム内の「退室」ボタンとは別に、コーチの外側画面（ダッシュボード/生徒詳細）に
   // 配置する「レッスン終了」ボタンでのcompleted/no_show/early_ended自動判定の基礎データとするため、
-  // 入退室のたびにcom_t_session_call_logへ1行記録する。callLogIdRefは自分の未クローズ行を追跡する。
-  const callLogIdRef = useRef<string | null>(null);
-  const recordLeaveIfNeeded = () => {
-    const id = callLogIdRef.current;
-    if (!id) return;
-    callLogIdRef.current = null;
-    void recordCallLeave(id);
-  };
+  // 入退室のたびにcom_t_session_call_logへ1行記録する（実際の記録・30分タイマーは
+  // useLiveSessionRoomOrchestrationに集約。生徒側の在室(isStudentPresent)を待ってから
+  // タイマーを開始する点のみコーチ側固有のため、canStartTimerで明示する）。
+  const { isTimeWarningVisible, clearSessionTimers, recordLeaveIfNeeded } = useLiveSessionRoomOrchestration({
+    sessionId: access.sessionId,
+    isJoined,
+    zoomSessionId,
+    chatMessages,
+    canStartTimer: isJoined && isStudentPresent,
+    onTimeLimitReached: () => void handleTimeLimitReached(),
+    recordCallJoin,
+    recordCallLeave,
+    recordChatMessage,
+  });
 
   useEffect(() => {
     if (!('locks' in navigator)) {
@@ -156,53 +158,6 @@ export function LiveSessionRoom({ access, studentId }: Props) {
     if (!isJoined) return;
     trackSelf('coach');
   }, [isJoined, trackSelf]);
-
-  // Zoom Video SDKへの入室が確定した時点で、com_t_session_call_logに入室記録を残す
-  // （joined_atはRPC側でNOW()により確定するため、ここではsession_id/zoomSessionIdのみ渡す）。
-  useEffect(() => {
-    if (!isJoined || !zoomSessionId || callLogIdRef.current) return;
-    recordCallJoin(access.sessionId, zoomSessionId).then((callLogId) => {
-      callLogIdRef.current = callLogId;
-    });
-  }, [isJoined, zoomSessionId, access.sessionId]);
-
-  // Zoom Video SDK's in-call chat has no persistence of its own, so only the message we actually
-  // sent (chat-on-message echoes to both sides, hence the isSelf check) is saved to com_t_session_chat.
-  // A ref tracks how many messages have already been persisted to avoid double-saving on re-render.
-  const persistedChatCountRef = useRef(0);
-  useEffect(() => {
-    const newMessages = chatMessages.slice(persistedChatCountRef.current);
-    if (newMessages.length === 0) return;
-    persistedChatCountRef.current = chatMessages.length;
-    for (const msg of newMessages) {
-      if (msg.isSelf) {
-        void recordChatMessage(access.sessionId, msg.message);
-      }
-    }
-  }, [chatMessages, access.sessionId]);
-
-  const clearSessionTimers = () => {
-    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
-    if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
-    warningTimeoutRef.current = null;
-    endTimeoutRef.current = null;
-  };
-
-  // 生徒の入室（＝実質的なレッスン開始）を検知したタイミングを起点に、残り時間の警告と自動終了を仕込む
-  useEffect(() => {
-    if (!isJoined || !isStudentPresent || sessionStartRequested.current) return;
-    sessionStartRequested.current = true;
-
-    warningTimeoutRef.current = setTimeout(() => {
-      setIsTimeWarningVisible(true);
-    }, LIVE_SESSION_WARNING_AFTER_MS);
-
-    endTimeoutRef.current = setTimeout(() => {
-      handleTimeLimitReached();
-    }, LIVE_SESSION_END_AFTER_MS);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isJoined, isStudentPresent]);
 
   useEffect(() => {
     return () => {

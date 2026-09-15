@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight, Video } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { SessionListItem } from '@gabby/types/session';
 
@@ -22,7 +22,7 @@ interface NextSessionCardProps {
  * 予約管理(振替・キャンセル等)は持たず、ライブセッションハブへの導線のみを担う。
  */
 export const NextSessionCard = ({ session }: NextSessionCardProps) => {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const href = isJoinableSoon(session.start_datetime) ? `/live-room/${session.session_id}` : '/live-room';
 
   return (

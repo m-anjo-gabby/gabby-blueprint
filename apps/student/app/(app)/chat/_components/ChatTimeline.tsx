@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Loader2, User as UserIcon, Users as UsersIcon } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useChatRealtimeMessages } from '@gabby/lib/chat/realtime/useChatRealtimeMessages';
 import { getChatMessages } from '@gabby/lib/chat/actions/messageActions';
@@ -67,7 +68,7 @@ function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null
 export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, isMember, members }: ChatTimelineProps) {
   const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
   const currentUserId = useUserStore((state) => state.user?.id);
-  const timeZone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timeZone = useTimezone();
   const markRoomAsRead = useChatStore((state) => state.markRoomAsRead);
   const applyIncomingMessage = useChatStore((state) => state.applyIncomingMessage);
 

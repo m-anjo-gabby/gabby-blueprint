@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Section } from '@/components/common/Section';
 import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import { HomeworkComposer } from './HomeworkComposer';
@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function SessionResult({ studentId, session, homework, checklist }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const badge = getSessionStatusBadge(session);
 
   return (

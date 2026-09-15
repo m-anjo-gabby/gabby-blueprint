@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { tokenizeWordsWithPunctuation, formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { LESSON_SPRINT_SCORE_META } from '@gabby/types/lessonSprint';
 import type { LessonSprintRecord, LessonSprintContentSummary } from '@gabby/types/lessonSprint';
@@ -22,7 +22,7 @@ interface Props {
 }
 
 export function LessonSprintResult({ studentId, record, questions, content }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const isQuestionBased = record.question_type === '0' || record.question_type === '6';
 

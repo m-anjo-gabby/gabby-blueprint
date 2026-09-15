@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { getMySessions } from '@/actions/sessionAction';
 import { getMyCalendarEvents } from '@/actions/calendarEventAction';
 import { getMyBookableTickets } from '@/actions/matchingAction';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { SessionListItem, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
 import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
@@ -52,7 +52,7 @@ function isItemPast(item: CalendarItem): boolean {
 }
 
 export function CalendarBoard() {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [events, setEvents] = useState<CalendarEventItem[]>([]);

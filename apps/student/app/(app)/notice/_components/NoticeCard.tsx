@@ -7,7 +7,7 @@ import { ChevronDown, Paperclip, Download, ExternalLink, Eye, Loader2 } from 'lu
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
@@ -29,7 +29,7 @@ interface NoticeCardProps {
 }
 
 export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen = false, onRead }: NoticeCardProps) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const [localIsOpen, setLocalIsOpen] = useState(defaultOpen);
   const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
 

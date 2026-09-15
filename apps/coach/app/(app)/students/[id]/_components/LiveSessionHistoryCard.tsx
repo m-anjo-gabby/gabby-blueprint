@@ -14,6 +14,7 @@ import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { DayOfWeek } from '@gabby/types/coachAvailability';
 import {
   SESSION_STATUS,
@@ -75,7 +76,7 @@ export function LiveSessionHistoryCard({
   initialSessions,
   shortfalls,
 }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const myId = useUserStore((state) => state.user?.id);
   const router = useRouter();
   const [selectedTicketId, setSelectedTicketId] = useState(initialTicketId);

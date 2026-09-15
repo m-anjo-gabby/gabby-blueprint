@@ -2,6 +2,22 @@
 -- 本番リリース作業スクリプト
 -- 対象ブランチ: feature/20260911-dev
 -- 作成日: 2026-09-11
+-- 更新日: 2026-09-15（スロット提案の統合: com_t_session_reschedule_proposal（キャンセル時の
+--          振替候補、双方向・24時間期限）とcom_t_session_booking_request（生徒の自由予約
+--          リクエスト、生徒のみ・無期限）を、同一概念（相手の承認/承諾を要する日時提案）として
+--          com_t_session_slot_proposalへ一本化した。承認/却下RPCもapprove_slot_proposal/
+--          reject_slot_proposalへ統合する（旧approve_session_booking_request/
+--          reject_session_booking_request/accept_session_reschedule_proposal/
+--          decline_session_reschedule_proposalsは削除）。作成側(create_session_booking_request/
+--          cancel_session)とwithdraw_session_booking_requestはRPC名・シグネチャを変更せず、
+--          内部の書き込み先テーブルのみ変更する。開発中のためデータ移行は行わず、旧テーブルは
+--          そのままDROPする（本番未リリース）。詳細はファイル末尾の「30. スロット提案の統合」
+--          セクションのコメントを参照）
+-- 更新日: 2026-09-15（cancel_session(): admin-proxy判定の明示化。従来「auth.uid()が生徒とも
+--          コーチとも一致しない」という消去法でアドミン代理操作を推測していたのを、呼び出し元が
+--          明示的に渡す新パラメータp_as_admin（アドミン代理操作専用のcancelSessionAsAdminのみ
+--          trueを渡す）に切り替えた。挙動は変更していない。詳細はファイル末尾の
+--          「29. cancel_session: admin-proxy判定の明示化」セクションのコメントを参照）
 -- 更新日: 2026-09-15（マッチング成立処理・一括キャンセル処理・チケット消費処理の共通化:
 --          approve_matching_request()とadmin_match_student_with_coach()でほぼ丸ごと
 --          重複していたマッチング成立ロジックをfn_commit_matching_schedule()に、
@@ -5685,3 +5701,719 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.resolve_stale_session(uuid, smallint, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.resolve_stale_session(uuid, smallint, text) TO authenticated;
+
+
+---------------------------------------------
+-- 29. cancel_session: admin-proxy判定の明示化 (2026-09-15 追加)
+---------------------------------------------
+-- 【背景】
+-- 従来はv_is_admin_proxyを「auth.uid()が生徒ともコーチとも一致しない」という消去法で
+-- 推測していた。通常はこれで問題ないが、将来的にアドミンアカウントが同一セッションの
+-- 生徒/コーチ本人を兼ねるような想定外のデータ状態が生じた場合、消去法だと誤って
+-- 自己申告フロー（12時間ルール等）に流れてしまう。呼び出し元（アドミン代理操作専用の
+-- cancelSessionAsAdmin）は元々「今からアドミン代理として呼ぶ」ことを認識しているため、
+-- その意図を新パラメータp_as_adminで明示してもらい、本関数側はその申告が実際に
+-- アドミンロールを持つ呼び出し者によるものかをfn_assert_actor_or_admin(NULL, ...)で
+-- 検証する、という構成に変更する。p_as_admin=falseの場合は、消去法によるアドミン救済を
+-- 一切行わず、当事者本人（生徒またはコーチ）であることを厳密に要求する
+-- （他の管理者専用RPC群(admin_book_session_direct等)と同じ「呼び出し方自体で意図を示す」
+-- 設計思想に揃える）。挙動は変更しない
+-- （既存の唯一の呼び出し元cancelSessionAsAdminは、本パッチとあわせてp_as_admin: trueを
+-- 明示的に渡すよう更新済み。apps/admin/actions/adminLiveSessionAction.ts参照）。
+--
+-- シグネチャに引数を追加するため、CREATE OR REPLACEの前にDROP FUNCTIONで旧シグネチャを
+-- 明示的に削除する。
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb, boolean);
+
+CREATE OR REPLACE FUNCTION public.cancel_session(
+    p_session_id uuid,
+    p_reason text DEFAULT NULL,
+    p_proposed_slots jsonb DEFAULT NULL,
+    p_admin_refund_ticket boolean DEFAULT NULL,
+    p_as_admin boolean DEFAULT false
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_cancel_category smallint;
+    v_refunded boolean;
+    v_is_coach boolean;
+    v_is_admin_proxy boolean;
+    v_coach_name text;
+    v_student_name text;
+    v_slot jsonb;
+    v_slot_start timestamptz;
+    v_slot_end timestamptz;
+    v_proposed_by_role smallint;
+    v_coach_conflict boolean;
+    v_student_conflict boolean;
+    v_proposal_count integer := 0;
+    v_proposal_validity_hours CONSTANT integer := 24; -- 変更する場合はここを直接編集すること
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    v_is_admin_proxy := p_as_admin;
+
+    IF v_is_admin_proxy THEN
+        -- p_as_admin=trueを名乗った場合、実際にアドミンロールであることを検証する
+        -- （当事者本人と一致するかどうかは問わない）
+        PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to cancel this session');
+    ELSE
+        -- p_as_admin=falseの場合は、消去法によるアドミン救済を行わず、当事者本人
+        -- （生徒またはコーチ）であることを厳密に要求する
+        IF auth.uid() IS DISTINCT FROM v_session.student_id AND auth.uid() IS DISTINCT FROM v_session.coach_id THEN
+            RAISE EXCEPTION 'not authorized to cancel this session';
+        END IF;
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime <= NOW() THEN
+        RAISE EXCEPTION 'cannot cancel a session that has already started';
+    END IF;
+
+    v_is_coach := (v_session.coach_id = auth.uid());
+
+    IF v_is_admin_proxy THEN
+        IF p_admin_refund_ticket IS NULL THEN
+            RAISE EXCEPTION 'p_admin_refund_ticket is required for an admin-initiated cancellation';
+        END IF;
+        v_cancel_category := 3; -- admin
+        v_refunded := p_admin_refund_ticket;
+    ELSIF v_session.student_id = auth.uid() THEN
+        v_cancel_category := 1; -- student
+        v_refunded := (v_session.start_datetime - NOW()) >= interval '12 hours';
+    ELSE
+        v_cancel_category := 2; -- coach
+        v_refunded := true;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = 3, cancel_category = v_cancel_category, cancel_reason = p_reason, cancelled_by = auth.uid(),
+        ticket_refunded = v_refunded, update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_session.coach_id;
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_session.student_id;
+
+    -- 候補提案（コーチ・生徒いずれのキャンセルでも共通。アドミン代理操作では提案不可）
+    IF NOT v_is_admin_proxy AND p_proposed_slots IS NOT NULL THEN
+        v_proposed_by_role := CASE WHEN v_is_coach THEN 2 ELSE 1 END;
+        v_proposal_count := jsonb_array_length(p_proposed_slots);
+        IF v_proposal_count > 3 THEN
+            RAISE EXCEPTION 'cannot propose more than 3 alternative times';
+        END IF;
+
+        FOR v_slot IN SELECT * FROM jsonb_array_elements(p_proposed_slots) LOOP
+            v_slot_start := (v_slot->>'start_datetime')::timestamptz;
+            v_slot_end := (v_slot->>'end_datetime')::timestamptz;
+
+            IF v_slot_start < NOW() + interval '24 hours' THEN
+                RAISE EXCEPTION 'proposed time must be at least 24 hours from now';
+            END IF;
+            IF v_slot_end <= v_slot_start THEN
+                RAISE EXCEPTION 'invalid proposed time range';
+            END IF;
+
+            SELECT coach_conflict, student_conflict INTO v_coach_conflict, v_student_conflict
+            FROM public.check_session_conflict(v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end, p_session_id);
+            IF v_coach_conflict THEN RAISE EXCEPTION 'coach already has a session at this time'; END IF;
+            IF v_student_conflict THEN RAISE EXCEPTION 'student already has a session at this time'; END IF;
+
+            INSERT INTO public.com_t_session_reschedule_proposal (
+                session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime,
+                proposed_by_role, expires_at
+            ) VALUES (
+                p_session_id, v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end,
+                v_proposed_by_role, NOW() + (v_proposal_validity_hours || ' hours')::interval
+            );
+        END LOOP;
+    END IF;
+
+    IF v_is_admin_proxy THEN
+        PERFORM public.fn_notify(v_session.student_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/live-room');
+        PERFORM public.fn_notify(v_session.coach_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/students/' || v_session.student_id);
+    ELSIF v_is_coach THEN
+        PERFORM public.fn_notify(
+            v_session.student_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED' ELSE 'SESSION_CANCELLED_BY_COACH' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'coach_name', v_coach_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            '/live-room'
+        );
+    ELSE
+        PERFORM public.fn_notify(
+            v_session.coach_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT' ELSE 'SESSION_CANCELLED_BY_STUDENT' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'student_name', v_student_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            '/students/' || v_session.student_id
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) TO authenticated;
+
+-- =========================================================================
+-- 30. スロット提案の統合 (2026-09-15 追加)
+-- =========================================================================
+-- 【背景】
+-- 「相手の承認/承諾を要する日時を提案する」という同一の概念を、発生タイミングの違い
+-- （キャンセル直後のその場提案か、後から自発的に行う自由予約リクエストか）だけで
+-- 別テーブル・別RPC群・別UI導線に分けていたcom_t_session_reschedule_proposal
+-- （コーチ・生徒どちらからでも提案可、特定のキャンセル済みセッションに紐づく、
+-- 24時間で自動失効）とcom_t_session_booking_request（生徒のみ提案可、特定の
+-- コマ(schedule_id)に紐づく、無期限）を、com_t_session_slot_proposalへ統合する。
+-- 承認/却下RPCもapprove_slot_proposal()/reject_slot_proposal()へ一本化する
+-- （旧approve_session_booking_request/reject_session_booking_request/
+-- accept_session_reschedule_proposal/decline_session_reschedule_proposalsは削除）。
+-- 作成側(create_session_booking_request()/cancel_session())とwithdraw_session_booking_request()は
+-- RPC名・シグネチャを変更せず、内部の書き込み/参照先テーブルのみ変更する。
+-- 開発中のためデータ移行は行わず、旧テーブルはそのままDROPする（本番未リリース）。
+-- withdraw（提案者による取り下げ）は現状どおり自由予約リクエストのみに限定し、
+-- 振替候補には適用しない（chk_slot_proposal_withdraw_scope制約で機械的に担保する）。
+-- 詳細は table/com_t_session_slot_proposal.sql, function/approve_slot_proposal.sql,
+-- function/reject_slot_proposal.sql のコメントを参照。
+-- =========================================================================
+
+---------------------------------------------
+-- 30-1. com_t_session_slot_proposal テーブルを新規作成する
+---------------------------------------------
+CREATE TABLE public.com_t_session_slot_proposal (
+    proposal_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    schedule_id uuid NOT NULL REFERENCES public.com_m_lesson_schedule(schedule_id) ON DELETE CASCADE,
+    source_session_id uuid REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
+    student_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    coach_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    proposed_start_datetime timestamp with time zone NOT NULL,
+    proposed_end_datetime timestamp with time zone NOT NULL,
+    proposed_by_role smallint NOT NULL, -- 1:生徒が提案 2:コーチが提案
+    status smallint NOT NULL DEFAULT 1, -- 1:pending 2:accepted 3:declined 4:withdrawn 5:expired
+    expires_at timestamp with time zone, -- 振替候補のみ設定。自由予約リクエストはNULL(無期限)
+    reason text DEFAULT NULL, -- 生徒が自由予約リクエスト作成時に任意で添えるメモ
+    reject_reason text DEFAULT NULL, -- 却下時に任意で添える理由
+    responded_at timestamp with time zone,
+    resulting_session_id uuid REFERENCES public.com_t_session(session_id), -- accepted時に新規作成されたセッション（非CASCADE。テストデータ削除時の順序に注意）
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_slot_proposal_time_range CHECK (proposed_end_datetime > proposed_start_datetime),
+    CONSTRAINT chk_slot_proposal_role CHECK (proposed_by_role IN (1, 2)),
+    CONSTRAINT chk_slot_proposal_status CHECK (status IN (1, 2, 3, 4, 5)),
+    -- 自由予約リクエスト(source_session_id IS NULL)は必ず生徒発信。個別予約は生徒のみ可能という
+    -- 仕様（コーチは自由予約リクエストを作成できない）をDB側でも機械的に担保する。
+    CONSTRAINT chk_slot_proposal_booking_role CHECK (source_session_id IS NOT NULL OR proposed_by_role = 1),
+    -- withdrawn(4)は自由予約リクエストのみが取り得る状態（振替候補は取り下げ不可の仕様。
+    -- 提案者が任意に取り下げられるのは自由予約リクエストのみで、キャンセル時の振替候補は
+    -- 相手の応答か回答期限切れを待つのみ、という現行仕様を維持する）。
+    CONSTRAINT chk_slot_proposal_withdraw_scope CHECK (status <> 4 OR source_session_id IS NULL)
+);
+
+COMMENT ON TABLE public.com_t_session_slot_proposal IS 'セッション日時の候補提案（キャンセル時の振替候補・自由予約リクエストを統合）。相手の承認/承諾を要する日時提案という同一概念の唯一の実体';
+COMMENT ON COLUMN public.com_t_session_slot_proposal.schedule_id IS '対象の定期スケジュール（コマ。com_m_lesson_schedule）';
+COMMENT ON COLUMN public.com_t_session_slot_proposal.source_session_id IS 'キャンセル起因の場合のみ設定される、提案元のキャンセル済みセッション。NULLなら自由予約リクエスト（特定セッションのキャンセルに紐づかない単発の新規予約希望）';
+COMMENT ON COLUMN public.com_t_session_slot_proposal.proposed_by_role IS '提案者 1:生徒が提案（コーチが応答） 2:コーチが提案（生徒が応答）。自由予約リクエストは常に1固定';
+COMMENT ON COLUMN public.com_t_session_slot_proposal.status IS 'ステータス 1:pending(未回答) 2:accepted(承諾/承認済み) 3:declined(却下、または他候補の承諾により自動不採用) 4:withdrawn(提案者本人による取り下げ。自由予約リクエストのみ) 5:expired(回答期限切れ。振替候補のみ)';
+COMMENT ON COLUMN public.com_t_session_slot_proposal.expires_at IS '回答期限。振替候補は提案(cancel_session)実行時に決定した固定値（後から定数を変更しても発行済みの提案には遡って影響しない）。自由予約リクエストはNULL(無期限)';
+COMMENT ON COLUMN public.com_t_session_slot_proposal.reason IS '生徒が自由予約リクエスト作成時に任意で添えるメモ（コーチへの一言）。振替候補では未使用';
+COMMENT ON COLUMN public.com_t_session_slot_proposal.reject_reason IS '却下時に任意で添える理由（現状は自由予約リクエストの却下でのみ使用）';
+COMMENT ON COLUMN public.com_t_session_slot_proposal.resulting_session_id IS '承諾/承認により新規作成されたcom_t_session行（status=2以外はNULL）';
+
+CREATE INDEX idx_slot_proposal_schedule ON public.com_t_session_slot_proposal (schedule_id);
+CREATE INDEX idx_slot_proposal_source_session ON public.com_t_session_slot_proposal (source_session_id);
+CREATE INDEX idx_slot_proposal_student_status ON public.com_t_session_slot_proposal (student_id, status);
+CREATE INDEX idx_slot_proposal_coach_status ON public.com_t_session_slot_proposal (coach_id, status);
+-- コーチ側「申請一覧」画面のHistoryタブ(cursor-basedページング)用
+CREATE INDEX idx_slot_proposal_coach_insert_date ON public.com_t_session_slot_proposal (coach_id, insert_date DESC);
+
+ALTER TABLE public.com_t_session_slot_proposal ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Involved users can view slot proposals" ON public.com_t_session_slot_proposal;
+
+-- [参照] 対象の生徒本人・対象コーチ本人・管理者のみ閲覧可能。
+-- 書き込み(作成・承認・却下・取下げ)はすべてSECURITY DEFINER関数経由のみとし、
+-- authenticatedロールへのINSERT/UPDATE権限は一切付与しない。
+CREATE POLICY "Involved users can view slot proposals" ON public.com_t_session_slot_proposal
+FOR SELECT TO authenticated USING (
+    student_id = auth.uid()
+    OR coach_id = auth.uid()
+    OR public.get_jwt_user_type() = '0'
+);
+
+---------------------------------------------
+-- 30-2. 旧テーブルを削除する（開発中のためデータ移行は行わない）
+---------------------------------------------
+DROP TABLE IF EXISTS public.com_t_session_reschedule_proposal;
+DROP TABLE IF EXISTS public.com_t_session_booking_request;
+
+---------------------------------------------
+-- 30-3. approve_slot_proposal() / reject_slot_proposal() を新規作成する
+--       (approve_session_booking_request/accept_session_reschedule_proposal、
+--        reject_session_booking_request/decline_session_reschedule_proposalsを統合)
+---------------------------------------------
+-- 【応答者の一般化】
+-- 「相手が提案した候補日時を、応答する側が承諾/承認してセッションを確定する」処理は、
+-- 振替候補・自由予約リクエストのいずれでも本質的に同一だった（「応答できるのは提案者と
+-- 逆側のみ」「対象がpendingであること」「コーチ・生徒それぞれの二重予約チェック」
+-- 「com_t_session新規作成」という骨格が完全に一致）。proposed_by_role（1:生徒提案
+-- 2:コーチ提案）を使い、応答者を「提案者と逆側」として一般化する。自由予約リクエストは
+-- proposed_by_role=1固定（DB制約chk_slot_proposal_booking_roleで保証）のため、この式は
+-- 常に「コーチが応答」になり、旧approve_session_booking_requestの挙動と自然に一致する。
+--
+-- 【有効期限】expires_atが設定されている場合（振替候補）のみ期限切れ判定を行う。
+-- 【同一キャンセル起因の他候補の自動不採用】source_session_idが設定されている場合のみ、
+--   同じキャンセルに紐づく他のpending候補を自動的に不採用(declined)にする。
+-- 【通知】応答した側と逆（＝提案者）へ通知する。生徒が応答した場合はコーチへ
+--   SESSION_BOOKED_BY_STUDENT、コーチが応答した場合は生徒へSESSION_BOOKING_APPROVEDを送る。
+--
+-- 却下(reject_slot_proposal)の粒度は振替候補と自由予約リクエストで異なる（旧仕様を踏襲）。
+--   - 振替候補(source_session_id IS NOT NULL): 同一キャンセルに紐づくpendingな候補は
+--     「いずれか1つを選ぶ」ための選択肢のため、まとめて却下する。通知は行わない（旧仕様）。
+--   - 自由予約リクエスト(source_session_id IS NULL): この1件のみを却下し、理由(p_reason)を
+--     記録、生徒へSESSION_BOOKING_REJECTED通知を送る。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.approve_slot_proposal(p_proposal_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_proposal RECORD;
+    v_schedule RECORD;
+    v_responder_id uuid;
+    v_new_session_id uuid;
+    v_coach_conflict boolean;
+    v_student_conflict boolean;
+    v_counterpart_name text;
+BEGIN
+    SELECT * INTO v_proposal FROM public.com_t_session_slot_proposal WHERE proposal_id = p_proposal_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'proposal % not found', p_proposal_id;
+    END IF;
+
+    -- 提案者と逆側（proposed_by_role=2:コーチ提案なら生徒、1:生徒提案ならコーチ）のみ応答できる
+    v_responder_id := CASE WHEN v_proposal.proposed_by_role = 2 THEN v_proposal.student_id ELSE v_proposal.coach_id END;
+    PERFORM public.fn_assert_actor_or_admin(v_responder_id, 'not authorized to respond to this proposal');
+
+    IF v_proposal.status = 1 AND v_proposal.expires_at IS NOT NULL AND v_proposal.expires_at <= NOW() THEN
+        UPDATE public.com_t_session_slot_proposal SET status = 5, update_date = NOW() WHERE proposal_id = p_proposal_id AND status = 1;
+        RAISE EXCEPTION 'this proposal has expired';
+    END IF;
+
+    IF v_proposal.status <> 1 THEN
+        RAISE EXCEPTION 'this proposal is no longer pending (status=%)', v_proposal.status;
+    END IF;
+
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = v_proposal.schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', v_proposal.schedule_id;
+    END IF;
+
+    -- 提案から応答までに時間が空くことを考慮し、二重予約チェックは改めて必ず行う
+    SELECT coach_conflict, student_conflict INTO v_coach_conflict, v_student_conflict
+    FROM public.check_session_conflict(v_proposal.coach_id, v_proposal.student_id, v_proposal.proposed_start_datetime, v_proposal.proposed_end_datetime, v_proposal.source_session_id);
+    IF v_coach_conflict THEN RAISE EXCEPTION 'coach already has a session at this time'; END IF;
+    IF v_student_conflict THEN RAISE EXCEPTION 'student already has a session at this time'; END IF;
+
+    INSERT INTO public.com_t_session (
+        schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status, rescheduled_from
+    ) VALUES (
+        v_proposal.schedule_id, v_schedule.ticket_id, v_proposal.student_id, v_proposal.coach_id,
+        v_proposal.proposed_start_datetime, v_proposal.proposed_end_datetime, 1, v_proposal.source_session_id
+    )
+    RETURNING session_id INTO v_new_session_id;
+
+    UPDATE public.com_t_session_slot_proposal
+    SET status = 2, responded_at = NOW(), resulting_session_id = v_new_session_id, update_date = NOW()
+    WHERE proposal_id = p_proposal_id;
+
+    IF v_proposal.source_session_id IS NOT NULL THEN
+        UPDATE public.com_t_session_slot_proposal
+        SET status = 3, responded_at = NOW(), update_date = NOW()
+        WHERE source_session_id = v_proposal.source_session_id
+          AND proposal_id <> p_proposal_id
+          AND status = 1;
+    END IF;
+
+    IF v_responder_id = v_proposal.student_id THEN
+        SELECT user_name INTO v_counterpart_name FROM public.com_m_user WHERE id = v_proposal.student_id;
+        PERFORM public.fn_notify(
+            v_proposal.coach_id,
+            'SESSION_BOOKED_BY_STUDENT',
+            jsonb_build_object('session_id', v_new_session_id, 'student_name', v_counterpart_name, 'session_start_datetime', v_proposal.proposed_start_datetime),
+            '/students/' || v_proposal.student_id
+        );
+    ELSE
+        SELECT user_name INTO v_counterpart_name FROM public.com_m_user WHERE id = v_proposal.coach_id;
+        PERFORM public.fn_notify(
+            v_proposal.student_id,
+            'SESSION_BOOKING_APPROVED',
+            jsonb_build_object('session_id', v_new_session_id, 'coach_name', v_counterpart_name, 'session_start_datetime', v_proposal.proposed_start_datetime),
+            '/live-room'
+        );
+    END IF;
+
+    RETURN v_new_session_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_slot_proposal(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_slot_proposal(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.reject_slot_proposal(p_proposal_id uuid, p_reason text DEFAULT NULL)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_proposal RECORD;
+    v_responder_id uuid;
+    v_coach_name text;
+BEGIN
+    SELECT * INTO v_proposal FROM public.com_t_session_slot_proposal WHERE proposal_id = p_proposal_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'proposal % not found', p_proposal_id;
+    END IF;
+
+    v_responder_id := CASE WHEN v_proposal.proposed_by_role = 2 THEN v_proposal.student_id ELSE v_proposal.coach_id END;
+    PERFORM public.fn_assert_actor_or_admin(v_responder_id, 'not authorized to respond to this proposal');
+
+    IF v_proposal.status <> 1 THEN
+        RAISE EXCEPTION 'this proposal is no longer pending (status=%)', v_proposal.status;
+    END IF;
+
+    IF v_proposal.source_session_id IS NOT NULL THEN
+        UPDATE public.com_t_session_slot_proposal
+        SET status = 3, responded_at = NOW(), update_date = NOW()
+        WHERE source_session_id = v_proposal.source_session_id AND status = 1;
+    ELSE
+        UPDATE public.com_t_session_slot_proposal
+        SET status = 3, reject_reason = p_reason, responded_at = NOW(), update_date = NOW()
+        WHERE proposal_id = p_proposal_id;
+
+        SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_proposal.coach_id;
+        PERFORM public.fn_notify(
+            v_proposal.student_id,
+            'SESSION_BOOKING_REJECTED',
+            jsonb_build_object('coach_name', v_coach_name, 'reject_reason', p_reason, 'requested_start_datetime', v_proposal.proposed_start_datetime),
+            '/live-room'
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.reject_slot_proposal(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reject_slot_proposal(uuid, text) TO authenticated;
+
+---------------------------------------------
+-- 30-4. 旧RPCを削除する
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.approve_session_booking_request(uuid);
+DROP FUNCTION IF EXISTS public.reject_session_booking_request(uuid, text);
+DROP FUNCTION IF EXISTS public.accept_session_reschedule_proposal(uuid);
+DROP FUNCTION IF EXISTS public.decline_session_reschedule_proposals(uuid);
+
+---------------------------------------------
+-- 30-5. create_session_booking_request() を更新する
+--       (書き込み先をcom_t_session_booking_requestからcom_t_session_slot_proposalへ変更。
+--        schedule_id必須・source_session_id=NULL・proposed_by_role=1(生徒)固定・
+--        expires_at=NULL(無期限)で挿入する。RPC名・シグネチャは変更しない)
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.create_session_booking_request(
+    p_schedule_id uuid,
+    p_start_datetime timestamptz,
+    p_end_datetime timestamptz,
+    p_reason text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_shortfall integer;
+    v_pending_count integer;
+    v_coach_conflict boolean;
+    v_student_conflict boolean;
+    v_request_id uuid;
+    v_student_name text;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    IF v_schedule.student_id <> auth.uid() THEN
+        RAISE EXCEPTION 'not authorized to request a booking for this schedule';
+    END IF;
+
+    IF v_schedule.status <> 1 THEN
+        RAISE EXCEPTION 'lesson schedule % is not active (status=%)', p_schedule_id, v_schedule.status;
+    END IF;
+
+    IF p_end_datetime <= p_start_datetime THEN
+        RAISE EXCEPTION 'invalid proposed time range';
+    END IF;
+    IF p_start_datetime < NOW() + interval '24 hours' THEN
+        RAISE EXCEPTION 'requested start datetime must be at least 24 hours from now';
+    END IF;
+
+    SELECT shortfall INTO v_shortfall FROM public.fn_schedule_shortfall(p_schedule_id);
+
+    SELECT COUNT(*) INTO v_pending_count
+    FROM public.com_t_session_slot_proposal r
+    WHERE r.schedule_id = p_schedule_id AND r.status = 1 AND r.source_session_id IS NULL;
+
+    IF v_shortfall - v_pending_count <= 0 THEN
+        RAISE EXCEPTION 'no unassigned ticket available for this schedule';
+    END IF;
+
+    SELECT coach_conflict, student_conflict INTO v_coach_conflict, v_student_conflict
+    FROM public.check_session_conflict(v_schedule.coach_id, v_schedule.student_id, p_start_datetime, p_end_datetime);
+    IF v_coach_conflict THEN RAISE EXCEPTION 'coach already has a session at this time'; END IF;
+    IF v_student_conflict THEN RAISE EXCEPTION 'student already has a session at this time'; END IF;
+
+    INSERT INTO public.com_t_session_slot_proposal (
+        schedule_id, source_session_id, student_id, coach_id, proposed_start_datetime, proposed_end_datetime,
+        proposed_by_role, status, expires_at, reason
+    ) VALUES (
+        p_schedule_id, NULL, v_schedule.student_id, v_schedule.coach_id, p_start_datetime, p_end_datetime,
+        1, 1, NULL, NULLIF(BTRIM(p_reason), '')
+    )
+    RETURNING proposal_id INTO v_request_id;
+
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_schedule.student_id;
+    PERFORM public.fn_notify(
+        v_schedule.coach_id,
+        'SESSION_BOOKING_REQUESTED',
+        jsonb_build_object(
+            'request_id', v_request_id,
+            'student_name', v_student_name,
+            'requested_start_datetime', p_start_datetime
+        ),
+        '/students/' || v_schedule.student_id
+    );
+
+    RETURN v_request_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.create_session_booking_request(uuid, timestamptz, timestamptz, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_session_booking_request(uuid, timestamptz, timestamptz, text) TO authenticated;
+
+---------------------------------------------
+-- 30-6. withdraw_session_booking_request() を更新する
+--       (対象テーブルをcom_t_session_slot_proposalへ変更。withdrawは自由予約リクエスト
+--        (source_session_id IS NULL)のみに適用し、振替候補には適用しない旨を明示的にも
+--        ガードする(DB制約chk_slot_proposal_withdraw_scopeでも機械的に担保済み))
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.withdraw_session_booking_request(p_request_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_request RECORD;
+BEGIN
+    SELECT * INTO v_request FROM public.com_t_session_slot_proposal WHERE proposal_id = p_request_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'booking request % not found', p_request_id;
+    END IF;
+
+    IF v_request.source_session_id IS NOT NULL THEN
+        RAISE EXCEPTION 'reschedule proposals cannot be withdrawn; wait for a response or expiry';
+    END IF;
+
+    PERFORM public.fn_assert_actor_or_admin(v_request.student_id, 'not authorized to withdraw this booking request');
+
+    IF v_request.status <> 1 THEN
+        RAISE EXCEPTION 'this booking request is no longer pending (status=%)', v_request.status;
+    END IF;
+
+    UPDATE public.com_t_session_slot_proposal
+    SET status = 4, responded_at = NOW(), update_date = NOW()
+    WHERE proposal_id = p_request_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.withdraw_session_booking_request(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.withdraw_session_booking_request(uuid) TO authenticated;
+
+---------------------------------------------
+-- 30-7. cancel_session() を更新する
+--       (振替候補提案のINSERT先をcom_t_session_reschedule_proposalからcom_t_session_slot_proposal
+--        へ変更。schedule_id=v_session.schedule_id・source_session_id=p_session_idを設定する。
+--        シグネチャ(uuid, text, jsonb, boolean, boolean)は「29. cancel_session: admin-proxy判定の
+--        明示化」から変更しないため、DROP FUNCTIONは不要)
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.cancel_session(
+    p_session_id uuid,
+    p_reason text DEFAULT NULL,
+    p_proposed_slots jsonb DEFAULT NULL,
+    p_admin_refund_ticket boolean DEFAULT NULL,
+    p_as_admin boolean DEFAULT false
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_cancel_category smallint;
+    v_refunded boolean;
+    v_is_coach boolean;
+    v_is_admin_proxy boolean;
+    v_coach_name text;
+    v_student_name text;
+    v_slot jsonb;
+    v_slot_start timestamptz;
+    v_slot_end timestamptz;
+    v_proposed_by_role smallint;
+    v_coach_conflict boolean;
+    v_student_conflict boolean;
+    v_proposal_count integer := 0;
+    v_proposal_validity_hours CONSTANT integer := 24; -- 変更する場合はここを直接編集すること
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    v_is_admin_proxy := p_as_admin;
+
+    IF v_is_admin_proxy THEN
+        -- p_as_admin=trueを名乗った場合、実際にアドミンロールであることを検証する
+        -- （当事者本人と一致するかどうかは問わない）
+        PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to cancel this session');
+    ELSE
+        -- p_as_admin=falseの場合は、消去法によるアドミン救済を行わず、当事者本人
+        -- （生徒またはコーチ）であることを厳密に要求する
+        IF auth.uid() IS DISTINCT FROM v_session.student_id AND auth.uid() IS DISTINCT FROM v_session.coach_id THEN
+            RAISE EXCEPTION 'not authorized to cancel this session';
+        END IF;
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime <= NOW() THEN
+        RAISE EXCEPTION 'cannot cancel a session that has already started';
+    END IF;
+
+    v_is_coach := (v_session.coach_id = auth.uid());
+
+    IF v_is_admin_proxy THEN
+        IF p_admin_refund_ticket IS NULL THEN
+            RAISE EXCEPTION 'p_admin_refund_ticket is required for an admin-initiated cancellation';
+        END IF;
+        v_cancel_category := 3; -- admin
+        v_refunded := p_admin_refund_ticket;
+    ELSIF v_session.student_id = auth.uid() THEN
+        v_cancel_category := 1; -- student
+        v_refunded := (v_session.start_datetime - NOW()) >= interval '12 hours';
+    ELSE
+        v_cancel_category := 2; -- coach
+        v_refunded := true;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = 3, cancel_category = v_cancel_category, cancel_reason = p_reason, cancelled_by = auth.uid(),
+        ticket_refunded = v_refunded, update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_session.coach_id;
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_session.student_id;
+
+    -- 候補提案（コーチ・生徒いずれのキャンセルでも共通。アドミン代理操作では提案不可）
+    IF NOT v_is_admin_proxy AND p_proposed_slots IS NOT NULL THEN
+        v_proposed_by_role := CASE WHEN v_is_coach THEN 2 ELSE 1 END;
+        v_proposal_count := jsonb_array_length(p_proposed_slots);
+        IF v_proposal_count > 3 THEN
+            RAISE EXCEPTION 'cannot propose more than 3 alternative times';
+        END IF;
+
+        FOR v_slot IN SELECT * FROM jsonb_array_elements(p_proposed_slots) LOOP
+            v_slot_start := (v_slot->>'start_datetime')::timestamptz;
+            v_slot_end := (v_slot->>'end_datetime')::timestamptz;
+
+            IF v_slot_start < NOW() + interval '24 hours' THEN
+                RAISE EXCEPTION 'proposed time must be at least 24 hours from now';
+            END IF;
+            IF v_slot_end <= v_slot_start THEN
+                RAISE EXCEPTION 'invalid proposed time range';
+            END IF;
+
+            SELECT coach_conflict, student_conflict INTO v_coach_conflict, v_student_conflict
+            FROM public.check_session_conflict(v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end, p_session_id);
+            IF v_coach_conflict THEN RAISE EXCEPTION 'coach already has a session at this time'; END IF;
+            IF v_student_conflict THEN RAISE EXCEPTION 'student already has a session at this time'; END IF;
+
+            INSERT INTO public.com_t_session_slot_proposal (
+                schedule_id, source_session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime,
+                proposed_by_role, status, expires_at
+            ) VALUES (
+                v_session.schedule_id, p_session_id, v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end,
+                v_proposed_by_role, 1, NOW() + (v_proposal_validity_hours || ' hours')::interval
+            );
+        END LOOP;
+    END IF;
+
+    IF v_is_admin_proxy THEN
+        PERFORM public.fn_notify(v_session.student_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/live-room');
+        PERFORM public.fn_notify(v_session.coach_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/students/' || v_session.student_id);
+    ELSIF v_is_coach THEN
+        PERFORM public.fn_notify(
+            v_session.student_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED' ELSE 'SESSION_CANCELLED_BY_COACH' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'coach_name', v_coach_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            '/live-room'
+        );
+    ELSE
+        PERFORM public.fn_notify(
+            v_session.coach_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT' ELSE 'SESSION_CANCELLED_BY_STUDENT' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'student_name', v_student_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            '/students/' || v_session.student_id
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) TO authenticated;

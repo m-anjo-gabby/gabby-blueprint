@@ -15,7 +15,7 @@ import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { CountryMaster } from '@gabby/types/country';
 import { LiveSessionTicketSummary } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
 
 interface CoachMatchingViewProps {
@@ -36,7 +36,7 @@ function formatTimeRange(startTime: string, endTime: string): string {
 }
 
 export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: CoachMatchingViewProps) {
-  const studentTimezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const studentTimezone = useTimezone();
   const [slots, setSlots] = useState<SlotStatusItem[]>(initialSlots);
   const [cancellingSlotNo, setCancellingSlotNo] = useState<number | null>(null);
   const [requestTarget, setRequestTarget] = useState<CoachBrowseItem | null>(null);

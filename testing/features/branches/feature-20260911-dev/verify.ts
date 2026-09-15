@@ -45,11 +45,11 @@ async function sessionsOf(studentId: string) {
   return data ?? [];
 }
 async function proposalsOf(studentId: string) {
-  const { data } = await admin.from("com_t_session_reschedule_proposal").select("*").eq("student_id", studentId).order("proposed_start_datetime");
+  const { data } = await admin.from("com_t_session_slot_proposal").select("*").eq("student_id", studentId).not("source_session_id", "is", null).order("proposed_start_datetime");
   return data ?? [];
 }
 async function bookingRequestsOf(studentId: string) {
-  const { data } = await admin.from("com_t_session_booking_request").select("*").eq("student_id", studentId).order("requested_start_datetime");
+  const { data } = await admin.from("com_t_session_slot_proposal").select("*").eq("student_id", studentId).is("source_session_id", null).order("proposed_start_datetime");
   return data ?? [];
 }
 async function notificationsOf(userId: string, notificationType: string) {
@@ -112,7 +112,7 @@ for (const student of students ?? []) {
       const newSession = sessions.find((s) => s.session_id === approved[0].resulting_session_id);
       check(
         "生徒3: 承認されたリクエストの日時でセッションが作成されている",
-        !!newSession && newSession.status === 1 && newSession.start_datetime === approved[0].requested_start_datetime,
+        !!newSession && newSession.status === 1 && newSession.start_datetime === approved[0].proposed_start_datetime,
         `resulting_session_id=${approved[0].resulting_session_id}`
       );
     }

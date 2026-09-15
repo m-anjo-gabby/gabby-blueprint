@@ -15,12 +15,14 @@ Feature: 個別セッション予約管理リニューアル データ主体テ�
     And 代理操作用アドミン "qa-admin@gabby-qa-test.example" でサインインできる
     And 全QAアカウントは環境変数 QA_LIVE_SESSION_TEST_PASSWORD に設定された共通パスワードでサインインできる
     And 対象環境に新規RPC(check_session_conflict/create_session_booking_request/
-        approve_session_booking_request/reject_session_booking_request/
-        withdraw_session_booking_request/decline_session_reschedule_proposals/
+        approve_slot_proposal/reject_slot_proposal/
+        withdraw_session_booking_request/
         admin_reschedule_session/admin_book_session_direct)が反映済みである
         （preflightチェック済み）
-    And 旧RPC(reschedule_session/book_makeup_session/decline_session_reschedule_proposal)
-        が削除済みである（42883 undefined_functionで確認）
+    And 旧RPC(reschedule_session/book_makeup_session/decline_session_reschedule_proposal/
+        approve_session_booking_request/reject_session_booking_request/
+        accept_session_reschedule_proposal/decline_session_reschedule_proposals)
+        が削除済みである（42883 undefined_functionで確認、2026-09-15スロット提案統合により追加）
 
   Scenario: QA生徒1 - コーチキャンセル時の振替候補提案（コーチ→生徒）と自動失効
     Given QA生徒1にCoachA担当の週1回契約があり、未来のセッションが1件予定されている
@@ -36,21 +38,22 @@ Feature: 個別セッション予約管理リニューアル データ主体テ�
     When 生徒がそのうち1件目をキャンセルし、候補時間を2件提案する
     Then コーチ側の申請一覧(getIncomingRescheduleProposalGroupsForCoachCore)に
         1グループ・2候補が生徒名・元セッション日時付きで表示されること
-    When CoachAが候補をいずれも却下する(decline_session_reschedule_proposals)
+    When CoachAが候補をいずれも却下する(reject_slot_proposal、旧decline_session_reschedule_proposals)
     Then 両方の候補がdeclinedになっていること
     When 生徒が2件目のセッションをキャンセルし、候補時間を1件提案する
-    And CoachAがその候補を承諾する(accept_session_reschedule_proposal)
+    And CoachAがその候補を承諾する(approve_slot_proposal、旧accept_session_reschedule_proposal)
     Then 承諾した日時でcom_t_sessionに新規行(status=scheduled)が作成されていること
     And 生徒への通知(SESSION_BOOKING_APPROVED)が作成されていること
 
   Scenario: QA生徒3 - 未消化セッションの自由日時予約リクエスト（承認制）
     Given QA生徒3にCoachA担当の週1回契約があり、CoachAキャンセルにより未消化枠が1件ある
     When 生徒がAvailabilityに縛られない自由な日時で予約をリクエストする(create_session_booking_request)
-    Then com_t_session_booking_requestにpending行が作成され、コーチへ通知(SESSION_BOOKING_REQUESTED)が届くこと
-    When CoachAがそのリクエストを承認する(approve_session_booking_request)
+    Then com_t_session_slot_proposal（旧com_t_session_booking_request、source_session_id=NULL）に
+        pending行が作成され、コーチへ通知(SESSION_BOOKING_REQUESTED)が届くこと
+    When CoachAがそのリクエストを承認する(approve_slot_proposal、旧approve_session_booking_request)
     Then リクエストがapproved、com_t_sessionに新規行(status=scheduled)が作成されていること
     When 生徒がさらに1件、自由な日時で予約をリクエストする
-    And CoachAがそのリクエストを却下する(reject_session_booking_request)
+    And CoachAがそのリクエストを却下する(reject_slot_proposal、旧reject_session_booking_request)
     Then リクエストがrejectedになり、チケットは未消化のまま新規セッション行が作られないこと
     When 生徒がさらに1件、自由な日時で予約をリクエストし、コーチの応答前に取り下げる(withdraw_session_booking_request)
     Then リクエストがwithdrawnになっていること

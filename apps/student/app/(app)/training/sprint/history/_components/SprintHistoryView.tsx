@@ -6,7 +6,7 @@ import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, Chev
 import { cn } from "@/lib/utils";
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { resolveSprintHasLevel } from '@gabby/lib';
@@ -61,7 +61,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   const focusId = searchParams.get('focus');
 
   // 🌍 ユーザーマスタからタイムゾーンを取得（未設定時は Asia/Tokyo にフォールバック）
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
 
   // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定等）はWord履歴画面と共通のためフック化
   const { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange, goToMonth, isPending } = useMonthNavigator({

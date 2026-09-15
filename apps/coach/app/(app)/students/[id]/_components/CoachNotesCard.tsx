@@ -5,7 +5,7 @@ import { Loader2, StickyNote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { addCoachStudentNote } from '@/actions/studentAction';
@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function CoachNotesCard({ studentId, initialNotes }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const [notes, setNotes] = useState<CoachStudentNote[]>(initialNotes);
   const [draft, setDraft] = useState('');
   const [isSaving, setIsSaving] = useState(false);

@@ -1,19 +1,25 @@
 # 対象ブランチ: feature/20260911-dev
-# 目的: 本セッションで実装した以下2件のデータ主体テスト。
+# 目的: 本セッションで実装した以下3件のデータ主体テスト。
 #   1. 24時間ルール（生徒の個別予約・振替候補提案・マッチング承認は開始24時間以上先のみ可、
 #      アドミン代理操作は対象外）。承認/承諾側では意図的に再チェックしない設計の検証を含む。
 #   2. 権限チェック・通知INSERTの共通ヘルパー化（fn_assert_actor_or_admin/
 #      fn_assert_dual_actor_or_admin/fn_notify）による18関数のリファクタが、
 #      挙動（正当な呼び出しの成功・不正な呼び出しの拒否・通知内容）を変えていないことの回帰確認。
+#   3. スロット提案の統合（com_t_session_reschedule_proposal + com_t_session_booking_request
+#      → com_t_session_slot_proposal、承認/却下RPCをapprove_slot_proposal/reject_slot_proposalへ
+#      一本化）が、旧approve_session_booking_request/accept_session_reschedule_proposal/
+#      reject_session_booking_request/decline_session_reschedule_proposalsと同じ挙動を
+#      維持していることの回帰確認（本ファイルのScenario 2/3/4/5でRPC名を更新して検証）。
 # 関連実装: supabase/DDL/function/{fn_assert_actor_or_admin,fn_assert_dual_actor_or_admin,
-#          fn_notify,create_session_booking_request,approve_session_booking_request,
-#          reject_session_booking_request,withdraw_session_booking_request,cancel_session,
-#          accept_session_reschedule_proposal,decline_session_reschedule_proposals,
+#          fn_notify,fn_commit_matching_schedule,fn_cancel_future_sessions,
+#          fn_consume_session_ticket,create_session_booking_request,approve_slot_proposal,
+#          reject_slot_proposal,withdraw_session_booking_request,cancel_session,
 #          approve_matching_request,admin_match_student_with_coach,reject_matching_request,
 #          admin_book_session_direct,admin_reschedule_session,resolve_stale_session,
 #          release_lesson_schedule_slot,invalidate_user_license,check_session_conflict,
 #          get_coach_monthly_sessions,get_coach_monthly_active_students,
 #          fn_generate_sessions_for_schedule}.sql
+#          supabase/DDL/table/com_t_session_slot_proposal.sql
 # 備考: テストデータは検証完了後に削除する運用とする（-cleanup.tsを参照。ユーザーからの明示指示）。
 
 Feature: 24時間ルール・権限共通化 データ主体テスト（feature/20260911-dev）
@@ -30,7 +36,7 @@ Feature: 24時間ルール・権限共通化 データ主体テスト（feature/
     When 生徒T1のJWTで開始30時間後の予約リクエストを作成する
     Then 成功し、コーチへSESSION_BOOKING_REQUESTED通知が作成されること
 
-  Scenario: approve_session_booking_requestは承認時に24時間を再チェックしない
+  Scenario: approve_slot_proposal(旧approve_session_booking_request)は承認時に24時間を再チェックしない
     Given 生徒T1が作成した予約リクエスト(作成時は開始24時間以上先)がある
     And そのリクエストのrequested_start_datetimeが(データ準備として)開始24時間未満まで迫っている
     When 無関係コーチC2のJWTで承認しようとする
@@ -38,7 +44,7 @@ Feature: 24時間ルール・権限共通化 データ主体テスト（feature/
     When 担当コーチC1のJWTで承認する
     Then 24時間未満でもエラーにならず成功し、セッションが確定しSESSION_BOOKING_APPROVED通知が生徒へ作成されること
 
-  Scenario: reject_session_booking_request / withdraw_session_booking_requestの権限チェック
+  Scenario: reject_slot_proposal(旧reject_session_booking_request) / withdraw_session_booking_requestの権限チェック
     Given 生徒T1が作成した予約リクエストがある
     When 無関係コーチC2のJWTで却下しようとする
     Then 権限エラーになること
@@ -55,7 +61,7 @@ Feature: 24時間ルール・権限共通化 データ主体テスト（feature/
     When 生徒T1のJWTで、開始10時間後を振替候補としてキャンセルする
     Then 24時間ルール違反のエラーになること
 
-  Scenario: accept_session_reschedule_proposalは承諾時に24時間を再チェックしない
+  Scenario: approve_slot_proposal(旧accept_session_reschedule_proposal)は承諾時に24時間を再チェックしない
     Given 生徒T1が提案した振替候補(提案時は開始24時間以上先)がある
     And その候補のproposed_start_datetimeが(データ準備として)開始24時間未満まで迫っている
     When 無関係コーチC2のJWTで承諾しようとする
@@ -63,7 +69,7 @@ Feature: 24時間ルール・権限共通化 データ主体テスト（feature/
     When 担当コーチC1のJWTで承諾する
     Then 24時間未満でもエラーにならず成功し、新セッションが確定すること
 
-  Scenario: decline_session_reschedule_proposalsの権限チェック
+  Scenario: reject_slot_proposal(旧decline_session_reschedule_proposals)の権限チェック
     Given コーチC1が生徒T1へ提案した振替候補がある
     When 無関係コーチC2のJWTで却下しようとする
     Then 権限エラーになること

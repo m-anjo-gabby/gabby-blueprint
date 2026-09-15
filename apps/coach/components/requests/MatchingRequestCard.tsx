@@ -16,7 +16,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getFirstLiveSessionOccurrence, toIsoDateInZone } from '@gabby/lib/date/date';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
 import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
@@ -42,7 +42,7 @@ interface MatchingRequestCardProps {
 }
 
 export function MatchingRequestCard({ request, onResolved, onDateHover }: MatchingRequestCardProps) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);

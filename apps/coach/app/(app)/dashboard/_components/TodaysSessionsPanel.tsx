@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, CalendarCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getMySessions } from '@/actions/sessionAction';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { SessionListItem, SESSION_STATUS } from '@gabby/types/session';
 import { LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
@@ -23,7 +23,7 @@ function formatSessionTimeLabel(startIso: string, endIso: string, timeZone: stri
 }
 
 export default function TodaysSessionsPanel() {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const [next24hSessions, setNext24hSessions] = useState<SessionListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

@@ -12,7 +12,7 @@
  */
 import { loadTestEnv, resolveTestEnvFromArgs } from "../../../helpers/env.ts";
 import { createAdminClient, signInAsRole } from "../../../helpers/auth.ts";
-import { assertReleaseApplied } from "../../../helpers/preflight.ts";
+import { assertReleaseApplied, assertRpcRemoved } from "../../../helpers/preflight.ts";
 import { addDays } from "../../../helpers/dates.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -38,12 +38,10 @@ console.log(`\n=== feature/20260911-dev 24時間ルール・権限共通化②�
 // ---------------------------------------------------------------------------
 await assertReleaseApplied(admin, [
   { name: "create_session_booking_request", dummyArgs: { p_schedule_id: "00000000-0000-0000-0000-000000000000", p_start_datetime: TODAY.toISOString(), p_end_datetime: TODAY.toISOString() } },
-  { name: "approve_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
-  { name: "reject_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
+  { name: "approve_slot_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000" } },
+  { name: "reject_slot_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "withdraw_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "cancel_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
-  { name: "accept_session_reschedule_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000" } },
-  { name: "decline_session_reschedule_proposals", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "check_session_conflict", dummyArgs: { p_coach_id: "00000000-0000-0000-0000-000000000000", p_student_id: "00000000-0000-0000-0000-000000000000", p_start_datetime: TODAY.toISOString(), p_end_datetime: TODAY.toISOString() } },
   { name: "reject_matching_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000", p_reason: "preflight" } },
   { name: "approve_matching_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
@@ -55,6 +53,17 @@ await assertReleaseApplied(admin, [
   { name: "get_coach_monthly_active_students", dummyArgs: { p_coach_id: "00000000-0000-0000-0000-000000000000", p_report_month: "2020-01-01" } },
 ]);
 console.log("Preflight OK: 対象RPCはすべて反映済みです。");
+
+// スロット提案統合(com_t_session_reschedule_proposal+com_t_session_booking_request→
+// com_t_session_slot_proposal)により廃止されたRPCが、本当に削除されているかも確認する
+// （KJ-2026-0912-01: 42883だけでなくPGRST202も見る必要がある。assertRpcRemovedはその対応済み）
+await assertRpcRemoved(admin, [
+  { name: "approve_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
+  { name: "reject_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
+  { name: "accept_session_reschedule_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000" } },
+  { name: "decline_session_reschedule_proposals", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
+]);
+console.log("Preflight OK: 廃止されたRPCはすべて削除済みです。");
 
 // ---------------------------------------------------------------------------
 // 共通ヘルパー（session-lifecycle-refactor-seed.tsと同等のもの）

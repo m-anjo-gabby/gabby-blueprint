@@ -16,7 +16,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { approveSessionBookingRequest, rejectSessionBookingRequest } from '@/actions/sessionAction';
 import { SESSION_BOOKING_REQUEST_STATUS } from '@gabby/types/session';
 import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
@@ -37,7 +37,7 @@ interface BookingRequestCardProps {
 }
 
 export function BookingRequestCard({ request, onResolved, onDateHover }: BookingRequestCardProps) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);

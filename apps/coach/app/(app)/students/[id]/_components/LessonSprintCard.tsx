@@ -5,7 +5,7 @@ import { Zap, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 
@@ -15,7 +15,7 @@ interface Props {
 }
 
 export function LessonSprintCard({ studentId, history }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
 
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">

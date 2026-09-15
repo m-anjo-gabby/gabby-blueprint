@@ -59,6 +59,7 @@ function classifyRpcError(message: string | undefined): SessionActionErrorCode {
     || message.includes('is not active')
     || message.includes('no longer pending')
     || message.includes('has expired')
+    || message.includes('cannot be withdrawn')
   ) {
     return 'not_actionable';
   }
@@ -286,7 +287,10 @@ export async function cancelSessionCore(
   }
 }
 
-const RESCHEDULE_PROPOSAL_ROW_COLUMNS = 'proposal_id, session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime, status, proposed_by_role, expires_at, insert_date';
+// com_t_session_slot_proposal（振替候補・自由予約リクエスト統合テーブル。2026-09-15）のうち
+// 振替候補(source_session_id IS NOT NULL)を対象とする列。DBのsource_session_idを
+// session_idという旧来の名前でエイリアスし、SessionRescheduleProposal型の形をそのまま維持する。
+const RESCHEDULE_PROPOSAL_ROW_COLUMNS = 'proposal_id, session_id:source_session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime, status, proposed_by_role, expires_at, insert_date';
 
 /**
  * ログイン中の生徒宛の、未回答(pending)かつ未失効の振替候補一覧を取得する
@@ -303,8 +307,9 @@ export async function getMyRescheduleProposalsCore(): Promise<GetMyReschedulePro
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
-      .from('com_t_session_reschedule_proposal')
+      .from('com_t_session_slot_proposal')
       .select(RESCHEDULE_PROPOSAL_ROW_COLUMNS)
+      .not('source_session_id', 'is', null)
       .eq('student_id', user.id)
       .eq('proposed_by_role', PROPOSED_BY_ROLE.COACH)
       .eq('status', RESCHEDULE_PROPOSAL_STATUS.PENDING)
@@ -389,8 +394,9 @@ export async function getPendingIncomingRescheduleProposalGroupsForCoachCore(): 
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
-      .from('com_t_session_reschedule_proposal')
+      .from('com_t_session_slot_proposal')
       .select(RESCHEDULE_PROPOSAL_ROW_COLUMNS)
+      .not('source_session_id', 'is', null)
       .eq('coach_id', user.id)
       .eq('proposed_by_role', PROPOSED_BY_ROLE.STUDENT)
       .eq('status', RESCHEDULE_PROPOSAL_STATUS.PENDING)
@@ -436,8 +442,9 @@ export async function getRescheduleProposalHistoryPageForCoachCore(
 
     const fetchLimit = limit * RESCHEDULE_GROUP_FETCH_MULTIPLIER;
     let query = supabase
-      .from('com_t_session_reschedule_proposal')
+      .from('com_t_session_slot_proposal')
       .select(RESCHEDULE_PROPOSAL_ROW_COLUMNS)
+      .not('source_session_id', 'is', null)
       .eq('coach_id', user.id)
       .eq('proposed_by_role', PROPOSED_BY_ROLE.STUDENT)
       .or(`status.neq.${RESCHEDULE_PROPOSAL_STATUS.PENDING},expires_at.gt.${new Date().toISOString()}`)
@@ -467,8 +474,9 @@ export async function getRescheduleProposalHistoryPageForCoachCore(
 }
 
 /**
- * コーチ提案の振替候補を生徒が承諾する。DB側の accept_session_reschedule_proposal RPC
- * （SECURITY DEFINER）を呼び出す。Availabilityチェックは行われず、二重予約チェックのみ行われる。
+ * コーチ提案の振替候補を生徒が承諾する。DB側の approve_slot_proposal RPC（SECURITY DEFINER、
+ * 2026-09-15にapprove_session_booking_requestと統合）を呼び出す。Availabilityチェックは
+ * 行われず、二重予約チェックのみ行われる。
  */
 export async function acceptRescheduleProposalCore(proposalId: string): Promise<AcceptRescheduleProposalResult> {
   const ctx = await getLogContext();
@@ -478,7 +486,7 @@ export async function acceptRescheduleProposalCore(proposalId: string): Promise<
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data, error } = await supabase.rpc('accept_session_reschedule_proposal', { p_proposal_id: proposalId });
+    const { data, error } = await supabase.rpc('approve_slot_proposal', { p_proposal_id: proposalId });
 
     if (error || !data) {
       logger.error('session:accept_reschedule_proposal_failed', error?.message ?? 'No session_id returned', { ...ctx, userId: user.id, payload: { proposalId } });
@@ -495,9 +503,12 @@ export async function acceptRescheduleProposalCore(proposalId: string): Promise<
 
 /**
  * 振替候補を一括却下する（応答者本人。生徒提案ならコーチが、コーチ提案なら生徒が呼ぶ）。
- * DB側の decline_session_reschedule_proposals RPC（SECURITY DEFINER）を呼び出す。
- * 候補は「いずれか1つを選んで承諾する」ための選択肢のため、却下は候補単位ではなく
- * 同一キャンセル(session_id)にまとめて対する操作とする。
+ * DB側の reject_slot_proposal RPC（SECURITY DEFINER、2026-09-15に
+ * reject_session_booking_requestと統合）を呼び出す。候補は「いずれか1つを選んで承諾する」
+ * ための選択肢のため、却下は候補単位ではなく同一キャンセル(session_id)にまとめて対する
+ * 操作とする。reject_slot_proposalは対象1件のproposal_idを受け取り、同じキャンセル
+ * (source_session_id)に紐づく他のpending候補もあわせて却下するため、呼び出し前に
+ * このセッションに紐づく候補を1件だけ探して渡す。
  */
 export async function declineRescheduleProposalsCore(sessionId: string): Promise<DeclineRescheduleProposalResult> {
   const ctx = await getLogContext();
@@ -507,7 +518,23 @@ export async function declineRescheduleProposalsCore(sessionId: string): Promise
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { error } = await supabase.rpc('decline_session_reschedule_proposals', { p_session_id: sessionId });
+    const { data: anyProposal, error: lookupError } = await supabase
+      .from('com_t_session_slot_proposal')
+      .select('proposal_id')
+      .eq('source_session_id', sessionId)
+      .eq('status', RESCHEDULE_PROPOSAL_STATUS.PENDING)
+      .limit(1)
+      .maybeSingle();
+
+    if (lookupError) {
+      logger.error('session:decline_reschedule_proposals_lookup_failed', lookupError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!anyProposal) {
+      return { success: false, errorCode: 'not_found' };
+    }
+
+    const { error } = await supabase.rpc('reject_slot_proposal', { p_proposal_id: anyProposal.proposal_id });
 
     if (error) {
       logger.error('session:decline_reschedule_proposals_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId } });
@@ -567,7 +594,7 @@ export async function checkSessionConflictCore(
  * 未消化チケット（未割当／キャンセルで返還されたもの）を使い、自由な日時で新規予約を
  * リクエストする（生徒本人のみ）。DB側の create_session_booking_request RPC
  * （SECURITY DEFINER）を呼び出す。即時確定ではなく、担当コーチの承認を待つ
- * pending行(com_t_session_booking_request)を作成するのみ。
+ * pending行(com_t_session_slot_proposal)を作成するのみ。
  */
 export async function createSessionBookingRequestCore(
   scheduleId: string,
@@ -603,8 +630,9 @@ export async function createSessionBookingRequestCore(
 }
 
 /**
- * 予約リクエストを担当コーチが承認する。DB側の approve_session_booking_request RPC
- * （SECURITY DEFINER）を呼び出す。承認によりcom_t_sessionへ新規行が作成される。
+ * 予約リクエストを担当コーチが承認する。DB側の approve_slot_proposal RPC（SECURITY DEFINER、
+ * 2026-09-15にaccept_session_reschedule_proposalと統合）を呼び出す。承認によりcom_t_sessionへ
+ * 新規行が作成される。
  */
 export async function approveSessionBookingRequestCore(requestId: string): Promise<ApproveSessionBookingRequestResult> {
   const ctx = await getLogContext();
@@ -614,7 +642,7 @@ export async function approveSessionBookingRequestCore(requestId: string): Promi
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data, error } = await supabase.rpc('approve_session_booking_request', { p_request_id: requestId });
+    const { data, error } = await supabase.rpc('approve_slot_proposal', { p_proposal_id: requestId });
 
     if (error || !data) {
       logger.error('session:approve_booking_request_failed', error?.message ?? 'No session_id returned', { ...ctx, userId: user.id, payload: { requestId } });
@@ -630,8 +658,9 @@ export async function approveSessionBookingRequestCore(requestId: string): Promi
 }
 
 /**
- * 予約リクエストを担当コーチが却下する。DB側の reject_session_booking_request RPC
- * （SECURITY DEFINER）を呼び出す。却下してもチケットは未割当のまま残る。
+ * 予約リクエストを担当コーチが却下する。DB側の reject_slot_proposal RPC（SECURITY DEFINER、
+ * 2026-09-15にdecline_session_reschedule_proposalsと統合）を呼び出す。却下してもチケットは
+ * 未割当のまま残る。
  */
 export async function rejectSessionBookingRequestCore(requestId: string, reason?: string): Promise<RespondSessionBookingRequestResult> {
   const ctx = await getLogContext();
@@ -641,8 +670,8 @@ export async function rejectSessionBookingRequestCore(requestId: string, reason?
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { error } = await supabase.rpc('reject_session_booking_request', {
-      p_request_id: requestId,
+    const { error } = await supabase.rpc('reject_slot_proposal', {
+      p_proposal_id: requestId,
       p_reason: reason?.trim() || null,
     });
 
@@ -686,7 +715,11 @@ export async function withdrawSessionBookingRequestCore(requestId: string): Prom
   }
 }
 
-const BOOKING_REQUEST_ROW_COLUMNS = 'request_id, schedule_id, student_id, coach_id, requested_start_datetime, requested_end_datetime, reason, status, reject_reason, insert_date';
+// com_t_session_slot_proposal（振替候補・自由予約リクエスト統合テーブル。2026-09-15）のうち
+// 自由予約リクエスト(source_session_id IS NULL)を対象とする列。DBのproposal_id/
+// proposed_start_datetime/proposed_end_datetimeを旧来の名前でエイリアスし、
+// SessionBookingRequest型の形をそのまま維持する。
+const BOOKING_REQUEST_ROW_COLUMNS = 'request_id:proposal_id, schedule_id, student_id, coach_id, requested_start_datetime:proposed_start_datetime, requested_end_datetime:proposed_end_datetime, reason, status, reject_reason, insert_date';
 
 /**
  * ログイン中生徒本人の、未消化チケットによる予約リクエスト一覧を取得する（pending中のものを
@@ -703,8 +736,9 @@ export async function getMyBookingRequestsCore(): Promise<
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
-      .from('com_t_session_booking_request')
+      .from('com_t_session_slot_proposal')
       .select(BOOKING_REQUEST_ROW_COLUMNS)
+      .is('source_session_id', null)
       .eq('student_id', user.id)
       .eq('status', SESSION_BOOKING_REQUEST_STATUS.PENDING)
       .order('insert_date', { ascending: false });
@@ -750,8 +784,9 @@ export async function getPendingIncomingBookingRequestsForCoachCore(): Promise<
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
-      .from('com_t_session_booking_request')
+      .from('com_t_session_slot_proposal')
       .select(BOOKING_REQUEST_ROW_COLUMNS)
+      .is('source_session_id', null)
       .eq('coach_id', user.id)
       .eq('status', SESSION_BOOKING_REQUEST_STATUS.PENDING)
       .order('insert_date', { ascending: false });
@@ -787,8 +822,9 @@ export async function getBookingRequestHistoryPageForCoachCore(
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     let query = supabase
-      .from('com_t_session_booking_request')
+      .from('com_t_session_slot_proposal')
       .select(BOOKING_REQUEST_ROW_COLUMNS)
+      .is('source_session_id', null)
       .eq('coach_id', user.id)
       .order('insert_date', { ascending: false })
       .limit(limit + 1);

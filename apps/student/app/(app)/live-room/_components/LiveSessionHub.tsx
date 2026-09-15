@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
 import { getMyPastSessions, withdrawSessionBookingRequest } from '@/actions/sessionAction';
@@ -60,7 +60,7 @@ export function LiveSessionHub({
   pendingProposalGroups: initialPendingProposalGroups,
   myBookingRequests: initialMyBookingRequests,
 }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const router = useRouter();
   const { showToast } = useToast();
   const [upcomingSessions, setUpcomingSessions] = useState(initialUpcoming);

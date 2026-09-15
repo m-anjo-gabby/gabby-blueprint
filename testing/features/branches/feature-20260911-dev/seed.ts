@@ -52,10 +52,9 @@ await assertReleaseApplied(admin, [
       p_reason: null,
     },
   },
-  { name: "approve_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
-  { name: "reject_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000", p_reason: null } },
+  { name: "approve_slot_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000" } },
+  { name: "reject_slot_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000", p_reason: null } },
   { name: "withdraw_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
-  { name: "decline_session_reschedule_proposals", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
   {
     name: "admin_reschedule_session",
     dummyArgs: {
@@ -81,6 +80,11 @@ await assertRpcRemoved(admin, [
   { name: "reschedule_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000", p_new_date: "2026-01-01", p_new_start_time: "10:00:00", p_reason: "x" } },
   { name: "book_makeup_session", dummyArgs: { p_schedule_id: "00000000-0000-0000-0000-000000000000", p_new_date: "2026-01-01", p_new_start_time: "10:00:00" } },
   { name: "decline_session_reschedule_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000" } },
+  // スロット提案統合(2026-09-15)により廃止
+  { name: "approve_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
+  { name: "reject_session_booking_request", dummyArgs: { p_request_id: "00000000-0000-0000-0000-000000000000" } },
+  { name: "accept_session_reschedule_proposal", dummyArgs: { p_proposal_id: "00000000-0000-0000-0000-000000000000" } },
+  { name: "decline_session_reschedule_proposals", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
 ]);
 console.log("preflight OK: 旧RPCはすべて削除済み");
 
@@ -291,9 +295,9 @@ function slot(date: Date, hour: number, minute: number, durationMinutes = 30) {
 
 async function getProposalsForSession(sessionId: string) {
   const { data, error } = await admin
-    .from("com_t_session_reschedule_proposal")
+    .from("com_t_session_slot_proposal")
     .select("*")
-    .eq("session_id", sessionId)
+    .eq("source_session_id", sessionId)
     .order("proposed_start_datetime", { ascending: true });
   if (error) throw error;
   return data ?? [];
@@ -336,7 +340,7 @@ async function seedStudent1() {
   if (proposals.length !== 2) throw new Error(`候補が2件生成されていません(actual=${proposals.length})`);
 
   const acceptTarget = proposals[0];
-  const { data: newSessionId, error: acceptErr } = await studentClient.rpc("accept_session_reschedule_proposal", { p_proposal_id: acceptTarget.proposal_id });
+  const { data: newSessionId, error: acceptErr } = await studentClient.rpc("approve_slot_proposal", { p_proposal_id: acceptTarget.proposal_id });
   if (acceptErr) throw acceptErr;
 
   console.log("QA生徒1 投入完了:", { studentId, ticketId, scheduleId, sessionId, proposedAt: proposedAt.toISOString(), acceptedProposalId: acceptTarget.proposal_id, newSessionId });
@@ -376,7 +380,7 @@ async function seedStudent2() {
   const proposalsA = await getProposalsForSession(sessionA);
   if (proposalsA.length !== 2) throw new Error(`sessionAの候補が2件生成されていません(actual=${proposalsA.length})`);
   {
-    const { error } = await coachAClient.rpc("decline_session_reschedule_proposals", { p_session_id: sessionA });
+    const { error } = await coachAClient.rpc("reject_slot_proposal", { p_proposal_id: proposalsA[0].proposal_id });
     if (error) throw error;
   }
 
@@ -392,7 +396,7 @@ async function seedStudent2() {
   }
   const proposalsB = await getProposalsForSession(sessionB);
   if (proposalsB.length !== 1) throw new Error(`sessionBの候補が1件生成されていません(actual=${proposalsB.length})`);
-  const { data: newSessionId, error: acceptErr } = await coachAClient.rpc("accept_session_reschedule_proposal", { p_proposal_id: proposalsB[0].proposal_id });
+  const { data: newSessionId, error: acceptErr } = await coachAClient.rpc("approve_slot_proposal", { p_proposal_id: proposalsB[0].proposal_id });
   if (acceptErr) throw acceptErr;
 
   console.log("QA生徒2 投入完了:", { studentId, ticketId, scheduleId, sessionA, sessionB, declinedProposalIds: proposalsA.map((p) => p.proposal_id), acceptedProposalId: proposalsB[0].proposal_id, newSessionId });
@@ -436,7 +440,7 @@ async function seedStudent3() {
     p_reason: "QA自動テスト: 承認されるリクエスト",
   });
   if (req1Err) throw req1Err;
-  const { data: approvedSessionId, error: approveErr } = await coachAClient.rpc("approve_session_booking_request", { p_request_id: req1Id });
+  const { data: approvedSessionId, error: approveErr } = await coachAClient.rpc("approve_slot_proposal", { p_proposal_id: req1Id });
   if (approveErr) throw approveErr;
 
   // 却下されるリクエスト
@@ -449,7 +453,7 @@ async function seedStudent3() {
   });
   if (req2Err) throw req2Err;
   {
-    const { error } = await coachAClient.rpc("reject_session_booking_request", { p_request_id: req2Id, p_reason: "QA自動テスト: この時間は対応不可" });
+    const { error } = await coachAClient.rpc("reject_slot_proposal", { p_proposal_id: req2Id, p_reason: "QA自動テスト: この時間は対応不可" });
     if (error) throw error;
   }
 
@@ -532,7 +536,7 @@ async function seedStudent4() {
   if (req4Err) throw req4Err;
 
   // Step C: 承認時にunique制約違反にならず成功するはず（20260912ホットフィックスの本丸）
-  const { data: newSessionId, error: approveErr } = await coachAClient.rpc("approve_session_booking_request", { p_request_id: req4Id });
+  const { data: newSessionId, error: approveErr } = await coachAClient.rpc("approve_slot_proposal", { p_proposal_id: req4Id });
   if (approveErr) throw approveErr;
 
   console.log("QA生徒4 投入完了:", { studentId, ticketId, scheduleId, sessionId, req4Id, newSessionId });

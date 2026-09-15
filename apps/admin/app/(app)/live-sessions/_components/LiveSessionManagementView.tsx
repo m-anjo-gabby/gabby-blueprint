@@ -8,16 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +22,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { generateLessonStartTimeOptions } from '@gabby/lib/date/date';
 import {
   getClientStudents,
   getStudentLiveSessionContractsForAdmin,
@@ -40,12 +29,12 @@ import {
   getSessionsForTicket,
   releaseLessonScheduleSlot,
   getCoachesForMatching,
-  cancelSessionAsAdmin,
-  rescheduleSessionAsAdmin,
-  bookMakeupSessionAsAdmin,
-  matchStudentWithCoachAsAdmin,
 } from '@/actions/adminLiveSessionAction';
 import { getAdminSessionStatusBadge, ADMIN_SCHEDULE_STATUS_LABEL } from '@/constants/session';
+import { CancelSessionDialog } from './dialogs/CancelSessionDialog';
+import { RescheduleSessionDialog } from './dialogs/RescheduleSessionDialog';
+import { BookSessionDialog } from './dialogs/BookSessionDialog';
+import { MatchCoachDialog } from './dialogs/MatchCoachDialog';
 import {
   SESSION_STATUS,
   SESSION_NON_ACTIONABLE_STATUSES,
@@ -56,10 +45,6 @@ import type { AdminStudentSummary, AdminScheduleSlotSummary, AdminCoachSummary, 
 import type { CoachSessionListItem } from '@gabby/types/coachStudent';
 
 const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
-// セッションは30分単位の枠のため、時間選択もこの粒度に揃える
-const TIME_OPTIONS = generateLessonStartTimeOptions('00:00', '23:59');
-// レッスン自体の実施時間（枠は30分だが実施は25分。マッチング申請時と同じ前提）
-const LESSON_DURATION_MINUTES = 25;
 
 function formatContractDate(iso: string): string {
   return format(new Date(iso), 'yyyy/MM/dd', { locale: ja });
@@ -67,14 +52,6 @@ function formatContractDate(iso: string): string {
 
 function formatSessionDateTime(iso: string): string {
   return format(new Date(iso), 'yyyy/MM/dd (E) HH:mm', { locale: ja });
-}
-
-function addMinutesToTime(time: string, minutes: number): string {
-  const [h, m] = time.split(':').map(Number);
-  const total = h * 60 + m + minutes;
-  const hh = Math.floor(total / 60).toString().padStart(2, '0');
-  const mm = (total % 60).toString().padStart(2, '0');
-  return `${hh}:${mm}`;
 }
 
 interface Props {
@@ -101,32 +78,12 @@ export function LiveSessionManagementView({ clients }: Props) {
   const [coaches, setCoaches] = useState<AdminCoachSummary[]>([]);
   const [sessionTab, setSessionTab] = useState('upcoming');
 
-  // キャンセルダイアログ
+  // 各ダイアログのトリガー状態（フォーム状態・送信処理は各ダイアログコンポーネント自身が持つ）
   const [cancelTarget, setCancelTarget] = useState<CoachSessionListItem | null>(null);
-  const [cancelRefund, setCancelRefund] = useState(true);
-  const [cancelReason, setCancelReason] = useState('');
-  const [isCancelling, setIsCancelling] = useState(false);
-
-  // 振替ダイアログ
   const [rescheduleTarget, setRescheduleTarget] = useState<CoachSessionListItem | null>(null);
-  const [rescheduleDate, setRescheduleDate] = useState('');
-  const [rescheduleTime, setRescheduleTime] = useState('');
-  const [rescheduleReason, setRescheduleReason] = useState('');
-  const [isRescheduling, setIsRescheduling] = useState(false);
-
-  // 未割当チケットの予約ダイアログ
   const [bookTarget, setBookTarget] = useState<AdminScheduleSlotSummary | null>(null);
-  const [bookDate, setBookDate] = useState('');
-  const [bookTime, setBookTime] = useState('');
-  const [isBooking, setIsBooking] = useState(false);
-
-  // 直接マッチングダイアログ
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
-  const [matchCoachId, setMatchCoachId] = useState('');
-  const [matchSlotNo, setMatchSlotNo] = useState('1');
-  const [matchDayOfWeek, setMatchDayOfWeek] = useState('1');
-  const [matchStartTime, setMatchStartTime] = useState('');
-  const [isMatching, setIsMatching] = useState(false);
+  const [matchSlotNo, setMatchSlotNo] = useState(1);
 
   useEffect(() => {
     getCoachesForMatching().then(setCoaches);
@@ -206,112 +163,9 @@ export function LiveSessionManagementView({ clients }: Props) {
     }
   };
 
-  const handleCancel = async () => {
-    if (!cancelTarget) return;
-    setIsCancelling(true);
-    try {
-      const result = await cancelSessionAsAdmin(cancelTarget.session_id, cancelRefund, cancelReason || undefined);
-      if (result.success) {
-        showToast('セッションをキャンセルしました', 'success');
-        setCancelTarget(null);
-        setCancelRefund(true);
-        setCancelReason('');
-        await loadTicketDetail(selectedTicketId);
-      } else {
-        showToast(result.message, 'error');
-      }
-    } finally {
-      setIsCancelling(false);
-    }
-  };
-
-  const handleReschedule = async () => {
-    if (!rescheduleTarget || !rescheduleDate || !rescheduleTime) return;
-    setIsRescheduling(true);
-    try {
-      const duration = new Date(rescheduleTarget.end_datetime).getTime() - new Date(rescheduleTarget.start_datetime).getTime();
-      const newStart = new Date(`${rescheduleDate}T${rescheduleTime}:00`);
-      const newEnd = new Date(newStart.getTime() + duration);
-      const result = await rescheduleSessionAsAdmin(
-        rescheduleTarget.session_id,
-        newStart.toISOString(),
-        newEnd.toISOString(),
-        rescheduleReason || undefined
-      );
-      if (result.success) {
-        showToast('セッションを振替しました', 'success');
-        setRescheduleTarget(null);
-        setRescheduleDate('');
-        setRescheduleTime('');
-        setRescheduleReason('');
-        await loadTicketDetail(selectedTicketId);
-      } else {
-        showToast(result.message, 'error');
-      }
-    } finally {
-      setIsRescheduling(false);
-    }
-  };
-
-  const handleBook = async () => {
-    if (!bookTarget || !bookDate || !bookTime) return;
-    setIsBooking(true);
-    try {
-      const [startH, startM, startS] = bookTarget.start_time.split(':').map(Number);
-      const [endH, endM, endS] = bookTarget.end_time.split(':').map(Number);
-      const duration = ((endH * 60 + endM) * 60 + (endS ?? 0)) * 1000 - ((startH * 60 + startM) * 60 + (startS ?? 0)) * 1000;
-      const newStart = new Date(`${bookDate}T${bookTime}:00`);
-      const newEnd = new Date(newStart.getTime() + duration);
-      const result = await bookMakeupSessionAsAdmin(bookTarget.schedule_id, newStart.toISOString(), newEnd.toISOString());
-      if (result.success) {
-        showToast('セッションを予約しました', 'success');
-        setBookTarget(null);
-        setBookDate('');
-        setBookTime('');
-        await loadTicketDetail(selectedTicketId);
-      } else {
-        showToast(result.message, 'error');
-      }
-    } finally {
-      setIsBooking(false);
-    }
-  };
-
-  const resetMatchDialog = () => {
-    setIsMatchDialogOpen(false);
-    setMatchCoachId('');
-    setMatchSlotNo('1');
-    setMatchDayOfWeek('1');
-    setMatchStartTime('');
-  };
-
   const openMatchDialog = (slotNo: number) => {
-    setMatchSlotNo(String(slotNo));
+    setMatchSlotNo(slotNo);
     setIsMatchDialogOpen(true);
-  };
-
-  const handleMatch = async () => {
-    if (!matchCoachId || !matchStartTime) return;
-    setIsMatching(true);
-    try {
-      const result = await matchStudentWithCoachAsAdmin({
-        ticketId: selectedTicketId,
-        coachId: matchCoachId,
-        slotNo: Number(matchSlotNo),
-        dayOfWeek: Number(matchDayOfWeek),
-        startTime: matchStartTime,
-        endTime: addMinutesToTime(matchStartTime, LESSON_DURATION_MINUTES),
-      });
-      if (result.success) {
-        showToast('マッチングが成立しました。セッションが予約されました', 'success');
-        resetMatchDialog();
-        await loadTicketDetail(selectedTicketId);
-      } else {
-        showToast(result.message, 'error');
-      }
-    } finally {
-      setIsMatching(false);
-    }
   };
 
   const selectedContract = contracts.find((c) => c.ticket_id === selectedTicketId) ?? null;
@@ -638,203 +492,29 @@ export function LiveSessionManagementView({ clients }: Props) {
         </Card>
       )}
 
-      {/* --- キャンセルダイアログ（アドミン代理操作） --- */}
-      <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
-        <DialogContent className="rounded-3xl">
-          <DialogHeader>
-            <DialogTitle>セッションのキャンセル（代理操作）</DialogTitle>
-            <DialogDescription>
-              {cancelTarget && formatSessionDateTime(cancelTarget.start_datetime)} のセッションをキャンセルします。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5">
-              <Checkbox id="cancel-refund" checked={cancelRefund} onCheckedChange={(v) => setCancelRefund(v === true)} />
-              <Label htmlFor="cancel-refund" className="text-xs font-semibold text-slate-600 cursor-pointer">
-                チケットを返還する（未割当扱いに戻し、再予約可能にする）
-              </Label>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">理由（任意・内部メモ）</Label>
-              <Textarea rows={3} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="例: 顧客都合によりサポート窓口経由で調整" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setCancelTarget(null)} disabled={isCancelling}>
-              閉じる
-            </Button>
-            <Button type="button" onClick={handleCancel} disabled={isCancelling} className="bg-rose-600 hover:bg-rose-700">
-              {isCancelling && <Loader2 size={14} className="animate-spin" />}
-              キャンセルする
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* --- 振替ダイアログ（アドミン代理操作） --- */}
-      <Dialog open={!!rescheduleTarget} onOpenChange={(open) => !open && setRescheduleTarget(null)}>
-        <DialogContent className="rounded-3xl">
-          <DialogHeader>
-            <DialogTitle>セッションの振替（代理操作）</DialogTitle>
-            <DialogDescription>
-              {rescheduleTarget && formatSessionDateTime(rescheduleTarget.start_datetime)} のセッションを振替します。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">新しい日付</Label>
-              <input
-                type="date"
-                value={rescheduleDate}
-                onChange={(e) => setRescheduleDate(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">新しい開始時刻</Label>
-              <select
-                value={rescheduleTime}
-                onChange={(e) => setRescheduleTime(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="" disabled>時刻</option>
-                {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">理由（任意・内部メモ）</Label>
-            <Textarea rows={2} value={rescheduleReason} onChange={(e) => setRescheduleReason(e.target.value)} />
-          </div>
-          <p className="text-[10px] text-slate-400">※ 新しい時刻はコーチの空き時間・重複が自動チェックされます</p>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setRescheduleTarget(null)} disabled={isRescheduling}>
-              閉じる
-            </Button>
-            <Button type="button" onClick={handleReschedule} disabled={isRescheduling || !rescheduleDate || !rescheduleTime}>
-              {isRescheduling && <Loader2 size={14} className="animate-spin" />}
-              振替する
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* --- 未割当チケットの予約ダイアログ（アドミン代理操作） --- */}
-      <Dialog open={!!bookTarget} onOpenChange={(open) => !open && setBookTarget(null)}>
-        <DialogContent className="rounded-3xl">
-          <DialogHeader>
-            <DialogTitle>セッションの予約（代理操作）</DialogTitle>
-            <DialogDescription>
-              {bookTarget && `第${bookTarget.slot_no}枠（担当: ${bookTarget.coach_name}）の未割当チケットで新規セッションを予約します。`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">日付</Label>
-              <input
-                type="date"
-                value={bookDate}
-                onChange={(e) => setBookDate(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">開始時刻</Label>
-              <select
-                value={bookTime}
-                onChange={(e) => setBookTime(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="" disabled>時刻</option>
-                {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-400">※ コーチの空き時間内である必要があります</p>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setBookTarget(null)} disabled={isBooking}>
-              閉じる
-            </Button>
-            <Button type="button" onClick={handleBook} disabled={isBooking || !bookDate || !bookTime}>
-              {isBooking && <Loader2 size={14} className="animate-spin" />}
-              予約する
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* --- 直接マッチングダイアログ（アドミン代理操作） --- */}
-      <Dialog open={isMatchDialogOpen} onOpenChange={(open) => !open && resetMatchDialog()}>
-        <DialogContent className="rounded-3xl">
-          <DialogHeader>
-            <DialogTitle>コーチと直接マッチング</DialogTitle>
-            <DialogDescription>
-              生徒のリクエスト・コーチの承認を経ずに、その場でマッチングを成立させます（セッションも自動で予約されます）。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">コーチ</Label>
-              <SearchableSelect
-                options={coaches.map((c) => ({ value: c.id, label: c.user_name }))}
-                value={matchCoachId}
-                onChange={setMatchCoachId}
-                placeholder="コーチを選択"
-                searchPlaceholder="コーチ名で検索..."
-                className="bg-white"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">枠番号</Label>
-                <input
-                  type="number"
-                  min={1}
-                  value={matchSlotNo}
-                  onChange={(e) => setMatchSlotNo(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">曜日</Label>
-                <select
-                  value={matchDayOfWeek}
-                  onChange={(e) => setMatchDayOfWeek(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  {DAY_LABELS_JA.map((label, i) => (
-                    <option key={i} value={i}>{label}曜</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">開始時刻</Label>
-                <select
-                  value={matchStartTime}
-                  onChange={(e) => setMatchStartTime(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="" disabled>時刻</option>
-                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-            </div>
-            <p className="text-[10px] text-slate-400 leading-relaxed">
-              ※ 枠番号は週n回契約のうち何コマ目かを表します（既存の枠と重複する番号は使用できません）。<br />
-              ※ コーチの空き時間・既存の予定との重複は自動でチェックされます。
-            </p>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={resetMatchDialog} disabled={isMatching}>
-              閉じる
-            </Button>
-            <Button type="button" onClick={handleMatch} disabled={isMatching || !matchCoachId || !matchStartTime}>
-              {isMatching && <Loader2 size={14} className="animate-spin" />}
-              マッチングを成立させる
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CancelSessionDialog
+        target={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onCancelled={() => loadTicketDetail(selectedTicketId)}
+      />
+      <RescheduleSessionDialog
+        target={rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
+        onRescheduled={() => loadTicketDetail(selectedTicketId)}
+      />
+      <BookSessionDialog
+        target={bookTarget}
+        onClose={() => setBookTarget(null)}
+        onBooked={() => loadTicketDetail(selectedTicketId)}
+      />
+      <MatchCoachDialog
+        open={isMatchDialogOpen}
+        initialSlotNo={matchSlotNo}
+        ticketId={selectedTicketId}
+        coaches={coaches}
+        onClose={() => setIsMatchDialogOpen(false)}
+        onMatched={() => loadTicketDetail(selectedTicketId)}
+      />
     </div>
   );
 }
