@@ -20,6 +20,11 @@
 --
 -- 【権限チェックの共通化 (2026-09-15追加)】
 -- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
+--
+-- 【チケット消費処理の共通化 (2026-09-15追加)】
+-- 「used_sessions加算＋com_t_user_session_ticket_historyへの履歴記録」のペアは、
+-- finalize_session()と同一処理だったため、fn_consume_session_ticket()に切り出した
+-- （前提: function/fn_consume_session_ticket.sql）。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.resolve_stale_session(uuid, smallint, text);
 
@@ -31,7 +36,6 @@ SET search_path = public
 AS $$
 DECLARE
     v_session RECORD;
-    v_ticket RECORD;
 BEGIN
     IF p_completion_result NOT IN (1, 2, 3) THEN
         RAISE EXCEPTION 'invalid completion result %', p_completion_result;
@@ -60,17 +64,7 @@ BEGIN
     WHERE session_id = p_session_id;
 
     IF p_completion_result = 1 THEN
-        UPDATE public.com_t_user_session_ticket
-        SET used_sessions = used_sessions + 1, update_date = NOW()
-        WHERE ticket_id = v_session.ticket_id
-        RETURNING used_sessions, total_sessions, contract_id, user_id INTO v_ticket;
-
-        IF FOUND THEN
-            INSERT INTO public.com_t_user_session_ticket_history
-                (ticket_id, contract_id, user_id, action, sessions_delta, used_sessions_after, total_sessions, note, performed_by)
-            VALUES
-                (v_session.ticket_id, v_ticket.contract_id, v_ticket.user_id, 'consumed', -1, v_ticket.used_sessions, v_ticket.total_sessions, p_reason, auth.uid());
-        END IF;
+        PERFORM public.fn_consume_session_ticket(v_session.ticket_id, p_reason);
     END IF;
 END;
 $$;

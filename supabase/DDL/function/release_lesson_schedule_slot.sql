@@ -30,6 +30,11 @@
 --
 -- 【権限チェックの共通化 (2026-09-15追加)】
 -- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
+--
+-- 【一括キャンセル処理の共通化 (2026-09-15追加)】
+-- 「未実施の未来のscheduledセッションのみをキャンセルする」部分は、invalidate_user_license()と
+-- 同一のUPDATE文だったため、fn_cancel_future_sessions()に切り出した
+-- （前提: function/fn_cancel_future_sessions.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.release_lesson_schedule_slot(p_schedule_id uuid)
 RETURNS void
@@ -64,13 +69,7 @@ BEGIN
     END IF;
 
     -- 3. まだ実施されていない未来のセッションのみキャンセルする（過去の記録は変更しない）
-    UPDATE public.com_t_session
-    SET status = 3,
-        cancel_category = 5, -- coach_reassigned
-        cancel_reason = 'コーチ交代のため',
-        cancelled_by = auth.uid(),
-        update_date = NOW()
-    WHERE schedule_id = p_schedule_id AND status = 1;
+    PERFORM public.fn_cancel_future_sessions(p_schedule_id, NULL, 5, 'コーチ交代のため'); -- 5=coach_reassigned
 END;
 $$;
 

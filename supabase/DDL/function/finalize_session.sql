@@ -29,6 +29,11 @@
 -- （早期終了・no_showはコーチが対応した実績としてはカウントするが、チケットは
 -- 消化させない、という既存仕様を維持）。RETURNS TABLEにcompletion_resultを追加する
 -- 戻り値の型変更のため、CREATE OR REPLACEの前にDROP FUNCTIONで旧シグネチャを削除する。
+--
+-- 【チケット消費処理の共通化 (2026-09-15追加)】
+-- 「used_sessions加算＋com_t_user_session_ticket_historyへの履歴記録」のペアは、
+-- resolve_stale_session()と同一処理だったため、fn_consume_session_ticket()に切り出した
+-- （前提: function/fn_consume_session_ticket.sql）。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.finalize_session(uuid, text);
 
@@ -43,7 +48,6 @@ DECLARE
     v_overlap_seconds numeric;
     v_student_joined boolean;
     v_completion_result smallint;
-    v_ticket RECORD;
 BEGIN
     SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -93,17 +97,7 @@ BEGIN
     WHERE session_id = p_session_id;
 
     IF v_completion_result = 1 THEN
-        UPDATE public.com_t_user_session_ticket
-        SET used_sessions = used_sessions + 1, update_date = NOW()
-        WHERE ticket_id = v_session.ticket_id
-        RETURNING used_sessions, total_sessions, contract_id, user_id INTO v_ticket;
-
-        IF FOUND THEN
-            INSERT INTO public.com_t_user_session_ticket_history
-                (ticket_id, contract_id, user_id, action, sessions_delta, used_sessions_after, total_sessions, note, performed_by)
-            VALUES
-                (v_session.ticket_id, v_ticket.contract_id, v_ticket.user_id, 'consumed', -1, v_ticket.used_sessions, v_ticket.total_sessions, NULL, auth.uid());
-        END IF;
+        PERFORM public.fn_consume_session_ticket(v_session.ticket_id);
     END IF;
 
     RETURN QUERY SELECT 2::smallint, v_completion_result, v_overlap_seconds::integer, v_student_joined;

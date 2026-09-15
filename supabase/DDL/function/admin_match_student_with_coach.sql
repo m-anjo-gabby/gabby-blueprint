@@ -32,11 +32,18 @@
 -- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
 -- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
 --
+-- 【マッチング成立処理の共通化 (2026-09-15追加)】
+-- target_sessions算出〜アドバイザリロック〜空き状況チェック〜com_m_lesson_schedule作成〜
+-- com_t_session一括生成は、approve_matching_request()とほぼ丸ごと重複していたため
+-- fn_commit_matching_schedule()に切り出した。本関数は「承認済みのリクエストを
+-- 生徒の申請・コーチの承認を経ずに直接作成する」責務のみを担い、成立処理そのものは
+-- 同ヘルパーに委譲する（詳細はfunction/fn_commit_matching_schedule.sql参照）。
+--
 -- 【24時間ルールの対象外 (2026-09-15追加)】
 -- 生徒の個別予約・振替候補・通常のマッチング承認(approve_matching_request)には
 -- 「開始24時間以内は不可」ルールを適用するが、本関数はアドミンが人間同士で既に
 -- 調整済みの内容を即時反映するための専用ルートのため対象外とする。そのため
--- fn_generate_sessions_for_schedule()呼び出し時にp_min_start_datetimeを渡さない
+-- fn_commit_matching_schedule()呼び出し時にp_min_start_datetimeを渡さない
 -- （デフォルトのNULL=下限なしのまま呼ぶ）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_match_student_with_coach(
@@ -54,17 +61,10 @@ SET search_path = public
 AS $$
 DECLARE
     v_student_id uuid;
-    v_license_start date;
-    v_license_end date;
-    v_start_date date;
-    v_coach_timezone text;
     v_schedule_id uuid;
     v_request_id uuid;
     v_coach_name text;
     v_student_name text;
-    v_ticket_total_sessions smallint;
-    v_ticket_weekly_frequency smallint;
-    v_target_sessions smallint;
 BEGIN
     PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to perform admin matching');
 
@@ -72,38 +72,6 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'ticket % not found', p_ticket_id;
     END IF;
-
-    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)と、target_sessions算出用の
-    -- total_sessions/weekly_frequencyを取得
-    SELECT l.start_date::date, l.end_date::date, t.total_sessions, t.weekly_frequency
-    INTO v_license_start, v_license_end, v_ticket_total_sessions, v_ticket_weekly_frequency
-    FROM public.com_t_user_session_ticket t
-    JOIN public.com_t_user_license l ON l.license_id = t.license_id
-    WHERE t.ticket_id = p_ticket_id;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'license not found for ticket %', p_ticket_id;
-    END IF;
-
-    v_start_date := GREATEST(v_license_start, CURRENT_DATE);
-
-    -- このコマ(slot_no)が契約上持つべき目標セッション数（approve_matching_requestと同じ算出式。
-    -- table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
-    v_target_sessions := (v_ticket_total_sessions / v_ticket_weekly_frequency)
-        + CASE WHEN p_slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
-
-    -- 同一コーチ×同一曜日への処理を直列化し、重複チェックのレース条件を防ぐ
-    -- （approve_matching_requestと同じロック）
-    PERFORM pg_advisory_xact_lock(hashtextextended(p_coach_id::text || ':' || p_day_of_week::text, 0));
-
-    IF public.check_coach_schedule_conflict(
-        p_coach_id, p_day_of_week, p_start_time, p_end_time, v_start_date, v_license_end
-    ) THEN
-        RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', p_coach_id;
-    END IF;
-
-    SELECT timezone INTO v_coach_timezone FROM public.com_m_user WHERE id = p_coach_id;
-    v_coach_timezone := COALESCE(v_coach_timezone, 'Asia/Tokyo');
 
     -- 生徒の申請・コーチの承認を経ずに、承認済みのリクエストを直接作成する
     INSERT INTO public.com_t_matching_request (
@@ -115,16 +83,10 @@ BEGIN
     )
     RETURNING request_id INTO v_request_id;
 
-    INSERT INTO public.com_m_lesson_schedule (
-        ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
-        coach_timezone, status, start_date, end_date, source_request_id, target_sessions
-    ) VALUES (
-        p_ticket_id, v_student_id, p_coach_id, p_slot_no, p_day_of_week, p_start_time, p_end_time,
-        v_coach_timezone, 1, v_start_date, v_license_end, v_request_id, v_target_sessions
-    )
-    RETURNING schedule_id INTO v_schedule_id;
-
-    PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id);
+    v_schedule_id := public.fn_commit_matching_schedule(
+        v_request_id, p_ticket_id, v_student_id, p_coach_id,
+        p_slot_no, p_day_of_week, p_start_time, p_end_time
+    );
 
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = p_coach_id;
     SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_student_id;
