@@ -11,6 +11,7 @@ import {
   GetLessonSprintContentsResult,
   GetLessonSprintDetailResult,
   GetLessonSprintHistoryResult,
+  GetLessonSprintHistoryPageResult,
   GetLessonSprintQuestionsResult,
   LessonSprintHistoryItem,
   LessonSprintHistoryListItem,
@@ -240,8 +241,36 @@ export async function createLessonSprintResultCore(
   }
 }
 
+const LESSON_SPRINT_HISTORY_SELECT =
+  'lesson_sprint_id, session_id, content_id, question_type, difficulty_level, time_limit_sec, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)';
+
+function mapLessonSprintHistoryRow(row: any): LessonSprintHistoryListItem {
+  const history = (row.answered_history as LessonSprintHistoryItem[]) ?? [];
+  const scored = history.filter((h) => typeof h.score === 'number');
+  const averageScore = scored.length > 0
+    ? Math.round((scored.reduce((sum, h) => sum + (h.score ?? 0), 0) / scored.length) * 10) / 10
+    : null;
+  const contentJoin = Array.isArray(row.com_m_contents) ? row.com_m_contents[0] : row.com_m_contents;
+
+  return {
+    lesson_sprint_id: row.lesson_sprint_id,
+    session_id: row.session_id,
+    content_id: row.content_id,
+    content_name: contentJoin?.content_name ?? '(Unknown)',
+    content_name_en: contentJoin?.content_name_en ?? null,
+    question_type: row.question_type,
+    difficulty_level: row.difficulty_level,
+    time_limit_sec: row.time_limit_sec,
+    total_answered: row.total_answered,
+    total_evaluated: row.total_evaluated,
+    average_score: averageScore,
+    insert_date: row.insert_date,
+  };
+}
+
 /**
- * 指定生徒との、自分（コーチ）のLesson Sprint実施履歴を取得する（新しい順・直近20件）
+ * 指定生徒との、自分（コーチ）のLesson Sprint実施履歴を取得する（新しい順・直近10件）。
+ * 受講生概要画面のカード用で、全件は別画面（getLessonSprintHistoryPageCore）で参照する。
  */
 export async function getLessonSprintHistoryCore(studentId: string): Promise<GetLessonSprintHistoryResult> {
   const ctx = await getLogContext();
@@ -253,44 +282,64 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
 
     const { data, error } = await supabase
       .from('lesson_t_sprint')
-      .select('lesson_sprint_id, session_id, content_id, question_type, difficulty_level, time_limit_sec, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)')
+      .select(LESSON_SPRINT_HISTORY_SELECT)
       .eq('coach_id', user.id)
       .eq('student_id', studentId)
       .order('insert_date', { ascending: false })
-      .limit(20);
+      .limit(10);
 
     if (error) {
       logger.error('lessonSprint:get_history_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const records: LessonSprintHistoryListItem[] = (data ?? []).map((row: any) => {
-      const history = (row.answered_history as LessonSprintHistoryItem[]) ?? [];
-      const scored = history.filter((h) => typeof h.score === 'number');
-      const averageScore = scored.length > 0
-        ? Math.round((scored.reduce((sum, h) => sum + (h.score ?? 0), 0) / scored.length) * 10) / 10
-        : null;
-      const contentJoin = Array.isArray(row.com_m_contents) ? row.com_m_contents[0] : row.com_m_contents;
-
-      return {
-        lesson_sprint_id: row.lesson_sprint_id,
-        session_id: row.session_id,
-        content_id: row.content_id,
-        content_name: contentJoin?.content_name ?? '(Unknown)',
-        content_name_en: contentJoin?.content_name_en ?? null,
-        question_type: row.question_type,
-        difficulty_level: row.difficulty_level,
-        time_limit_sec: row.time_limit_sec,
-        total_answered: row.total_answered,
-        total_evaluated: row.total_evaluated,
-        average_score: averageScore,
-        insert_date: row.insert_date,
-      };
-    });
-
-    return { success: true, records };
+    return { success: true, records: (data ?? []).map(mapLessonSprintHistoryRow) };
   } catch (err) {
     logger.error('lessonSprint:get_history_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定生徒との、自分（コーチ）のLesson Sprint実施履歴を、insert_dateカーソルでページング
+ * 取得する（履歴一覧画面用）。数年継続している生徒では実施回数が1000件を超えることもあるため、
+ * 全件取得はせず、cursor(直前ページ最終行のinsert_date)より古い行をlimit件だけ返す。
+ * nextCursorがnullなら以降のページは存在しない。
+ */
+export async function getLessonSprintHistoryPageCore(
+  studentId: string,
+  cursor: string | null,
+  limit: number
+): Promise<GetLessonSprintHistoryPageResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    let query = supabase
+      .from('lesson_t_sprint')
+      .select(LESSON_SPRINT_HISTORY_SELECT)
+      .eq('coach_id', user.id)
+      .eq('student_id', studentId)
+      .order('insert_date', { ascending: false })
+      .limit(limit + 1);
+    if (cursor) query = query.lt('insert_date', cursor);
+
+    const { data: rows, error } = await query;
+    if (error) {
+      logger.error('lessonSprint:get_history_page_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const hasMore = (rows?.length ?? 0) > limit;
+    const page = (rows ?? []).slice(0, limit);
+    const nextCursor = hasMore ? (page[page.length - 1]?.insert_date ?? null) : null;
+
+    return { success: true, items: page.map(mapLessonSprintHistoryRow), nextCursor };
+  } catch (err) {
+    logger.error('lessonSprint:get_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

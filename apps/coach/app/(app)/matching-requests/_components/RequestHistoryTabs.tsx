@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { HistoryList } from './HistoryList';
+import { HistoryList } from '@/components/common/HistoryList';
 import { MatchingRequestCard } from '@/components/requests/MatchingRequestCard';
 import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
 import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';

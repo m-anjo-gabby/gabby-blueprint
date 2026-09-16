@@ -10,14 +10,16 @@ interface HistoryListProps<T> {
   pageSize: number;
   fetchPage: (cursor: string | null, limit: number) => Promise<{ items: T[]; nextCursor: string | null }>;
   getKey: (item: T) => string;
-  renderItem: (item: T) => React.ReactNode;
+  /** indexとitemsは、月見出しの挿入など「前後のアイテムとの関係」に応じた描画が必要な場合にのみ使用する */
+  renderItem: (item: T, index: number, items: T[]) => React.ReactNode;
   emptyLabel: string;
 }
 
 /**
- * insert_dateカーソルでページング取得する履歴一覧の共通UI。matching/booking/reschedule_proposal
- * の3タブ全てで同じ「初期表示分はサーバーから、以降はボタン押下でサーバーへ再取得」の
- * 挙動を共有する（コーチの稼働年数が伸びても初期ロード・各追加ロードのサイズは一定に保たれる）。
+ * insert_dateカーソルでページング取得する履歴一覧の共通UI。matching/booking/reschedule_proposal・
+ * Lesson Sprint履歴など、複数の履歴一覧で同じ「初期表示分はサーバーから、以降はボタン押下で
+ * サーバーへ再取得」の挙動を共有する（コーチの稼働年数が伸びても初期ロード・各追加ロードの
+ * サイズは一定に保たれる）。
  */
 export function HistoryList<T>({ initialItems, initialCursor, pageSize, fetchPage, getKey, renderItem, emptyLabel }: HistoryListProps<T>) {
   const [items, setItems] = useState<T[]>(initialItems);
@@ -41,8 +43,8 @@ export function HistoryList<T>({ initialItems, initialCursor, pageSize, fetchPag
 
   return (
     <div className="space-y-3">
-      {items.map((item) => (
-        <div key={getKey(item)}>{renderItem(item)}</div>
+      {items.map((item, index) => (
+        <div key={getKey(item)}>{renderItem(item, index, items)}</div>
       ))}
       {cursor && (
         <Button type="button" variant="outline" className="w-full" onClick={handleShowMore} disabled={isLoading}>
