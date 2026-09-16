@@ -371,7 +371,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
 
     const { data: tickets, error: ticketError } = await supabase
       .from('com_t_user_session_ticket')
-      .select('ticket_id, license_id, weekly_frequency')
+      .select('ticket_id, license_id, contract_id, weekly_frequency')
       .eq('user_id', studentId);
 
     if (ticketError) {
@@ -392,7 +392,18 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
       return { success: false, errorCode: 'unexpected_error' };
     }
 
+    const { data: contractRows, error: contractError } = await supabase
+      .from('com_m_contract')
+      .select('contract_id, plan_name_en')
+      .in('contract_id', tickets.map((t) => t.contract_id));
+
+    if (contractError) {
+      logger.error('coachStudent:get_student_contracts_plan_failed', contractError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
     const licenseById = new Map((licenses ?? []).map((l) => [l.license_id, l]));
+    const planNameByContractId = new Map((contractRows ?? []).map((c) => [c.contract_id, c.plan_name_en]));
     const now = new Date();
 
     const contracts = tickets
@@ -407,6 +418,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
           end_date: license.end_date,
           is_current: isCurrent,
           weekly_frequency: t.weekly_frequency,
+          plan_name_en: planNameByContractId.get(t.contract_id) ?? '(Unknown plan)',
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null)

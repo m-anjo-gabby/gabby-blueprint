@@ -1,50 +1,25 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Loader2, StickyNote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { addCoachStudentNote } from '@/actions/studentAction';
 import type { CoachStudentNote } from '@gabby/types/coachStudent';
+import { CoachNoteEntry } from './CoachNoteEntry';
+
+const COACH_NOTES_CARD_LIMIT = 5;
 
 interface Props {
   studentId: string;
+  /** 表示対象のメモ一覧。直近5件に絞る等のスコープ判断は呼び出し側(page.tsx)で行う */
   initialNotes: CoachStudentNote[];
 }
 
-const NOTE_TRUNCATE_LENGTH = 160;
-
-function NoteListItem({ note, timezone }: { note: CoachStudentNote; timezone: string }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const isLong = note.note_text.length > NOTE_TRUNCATE_LENGTH;
-
-  return (
-    <li className="px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60">
-      <p className={`text-xs text-slate-700 whitespace-pre-wrap ${!isExpanded && isLong ? 'line-clamp-3' : ''}`}>
-        {note.note_text}
-      </p>
-      <div className="flex items-center justify-between mt-1.5">
-        <p className="text-[10px] text-slate-400">{formatDateTimeEn(note.insert_date, timezone)}</p>
-        {isLong && (
-          <button
-            type="button"
-            onClick={() => setIsExpanded((prev) => !prev)}
-            className="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            {isExpanded ? 'Show less' : 'Show more'}
-          </button>
-        )}
-      </div>
-    </li>
-  );
-}
-
 export function CoachNotesCard({ studentId, initialNotes }: Props) {
-  const timezone = useTimezone();
   const [notes, setNotes] = useState<CoachStudentNote[]>(initialNotes);
   const [draft, setDraft] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -62,7 +37,7 @@ export function CoachNotesCard({ studentId, initialNotes }: Props) {
         showToast(result.message, 'error');
         return;
       }
-      setNotes((prev) => [result.note, ...prev]);
+      setNotes((prev) => [result.note, ...prev].slice(0, COACH_NOTES_CARD_LIMIT));
       setDraft('');
       showToast('Note saved.', 'success');
     } finally {
@@ -72,12 +47,20 @@ export function CoachNotesCard({ studentId, initialNotes }: Props) {
 
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-          <StickyNote size={14} className="text-slate-400" />
-          Coach Notes
-        </CardTitle>
-        <p className="text-[11px] text-slate-400">Private notes only visible to you. Newest first.</p>
+      <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+        <div>
+          <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <StickyNote size={14} className="text-slate-400" />
+            Coach Notes
+          </CardTitle>
+          <p className="text-[11px] text-slate-400">Private notes only visible to you. Newest first.</p>
+        </div>
+        <Link
+          href={`/students/${studentId}/coach-notes`}
+          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors shrink-0"
+        >
+          View all notes
+        </Link>
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
         <div className="space-y-2">
@@ -101,9 +84,11 @@ export function CoachNotesCard({ studentId, initialNotes }: Props) {
             <p className="text-xs font-semibold text-slate-400">No notes yet</p>
           </div>
         ) : (
-          <ul className="space-y-2.5 max-h-96 overflow-y-auto">
+          <ul className="space-y-2 max-h-96 overflow-y-auto">
             {notes.map((note) => (
-              <NoteListItem key={note.note_id} note={note} timezone={timezone} />
+              <li key={note.note_id}>
+                <CoachNoteEntry note={note} />
+              </li>
             ))}
           </ul>
         )}

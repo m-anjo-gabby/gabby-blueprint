@@ -6,8 +6,7 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 import { TrainingReportContractRow } from '../../_components/TrainingReportContractRow';
-import { TrainingReportDialog } from '../../_components/TrainingReportDialog';
-import { contractPeriodLabel } from '../../_components/TrainingReportCard';
+import { contractSummaryLabel } from '../../_components/TrainingReportCard';
 
 interface Props {
   studentId: string;
@@ -19,7 +18,6 @@ export function TrainingReportHistoryList({ studentId, contracts, initialReports
   const timezone = useTimezone();
   const myId = useUserStore((state) => state.user?.id);
   const [reports, setReports] = useState<ContractTrainingReport[]>(initialReports);
-  const [dialogTarget, setDialogTarget] = useState<{ ticketId: string; report: ContractTrainingReport | null } | null>(null);
 
   const reportsByTicket = useMemo(() => {
     const map = new Map<string, ContractTrainingReport[]>();
@@ -41,8 +39,6 @@ export function TrainingReportHistoryList({ studentId, contracts, initialReports
     });
   };
 
-  const activeContract = dialogTarget ? contracts.find((c) => c.ticket_id === dialogTarget.ticketId) : null;
-
   if (contracts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -53,32 +49,18 @@ export function TrainingReportHistoryList({ studentId, contracts, initialReports
   }
 
   return (
-    <>
-      <ul className="space-y-2.5">
-        {contracts.map((contract) => (
-          <TrainingReportContractRow
-            key={contract.ticket_id}
-            contract={contract}
-            contractLabel={contractPeriodLabel(contract, timezone)}
-            reports={reportsByTicket.get(contract.ticket_id) ?? []}
-            myId={myId}
-            onOpen={(report) => setDialogTarget({ ticketId: contract.ticket_id, report })}
-          />
-        ))}
-      </ul>
-
-      {dialogTarget && activeContract && (
-        <TrainingReportDialog
-          open
-          onOpenChange={(open) => !open && setDialogTarget(null)}
+    <ul className="space-y-2.5">
+      {contracts.map((contract) => (
+        <TrainingReportContractRow
+          key={contract.ticket_id}
           studentId={studentId}
-          ticketId={dialogTarget.ticketId}
-          contractLabel={contractPeriodLabel(activeContract, timezone)}
-          report={dialogTarget.report}
-          isMine={dialogTarget.report ? dialogTarget.report.coach_id === myId : true}
+          contract={contract}
+          contractLabel={contractSummaryLabel(contract, timezone)}
+          reports={reportsByTicket.get(contract.ticket_id) ?? []}
+          myId={myId}
           onSaved={handleSaved}
         />
-      )}
-    </>
+      ))}
+    </ul>
   );
 }

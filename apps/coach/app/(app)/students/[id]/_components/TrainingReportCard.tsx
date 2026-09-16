@@ -9,24 +9,22 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 import { TrainingReportContractRow } from './TrainingReportContractRow';
-import { TrainingReportDialog } from './TrainingReportDialog';
 
 interface Props {
   studentId: string;
-  /** 表示対象の契約一覧。直近1年分に絞る等のスコープ判断は呼び出し側(page.tsx)で行う */
+  /** 表示対象の契約一覧。直近5件に絞る等のスコープ判断は呼び出し側(page.tsx)で行う */
   contracts: StudentLiveSessionContractSummary[];
   initialReports: ContractTrainingReport[];
 }
 
-export function contractPeriodLabel(contract: StudentLiveSessionContractSummary, timezone: string): string {
-  return `${formatDateEn(contract.start_date, timezone)} – ${formatDateEn(contract.end_date, timezone)}`;
+export function contractSummaryLabel(contract: StudentLiveSessionContractSummary, timezone: string): string {
+  return `${contract.plan_name_en} · ${formatDateEn(contract.start_date, timezone)} – ${formatDateEn(contract.end_date, timezone)}`;
 }
 
 export function TrainingReportCard({ studentId, contracts, initialReports }: Props) {
   const timezone = useTimezone();
   const myId = useUserStore((state) => state.user?.id);
   const [reports, setReports] = useState<ContractTrainingReport[]>(initialReports);
-  const [dialogTarget, setDialogTarget] = useState<{ ticketId: string; report: ContractTrainingReport | null } | null>(null);
 
   const reportsByTicket = useMemo(() => {
     const map = new Map<string, ContractTrainingReport[]>();
@@ -48,18 +46,24 @@ export function TrainingReportCard({ studentId, contracts, initialReports }: Pro
     });
   };
 
-  const activeContract = dialogTarget ? contracts.find((c) => c.ticket_id === dialogTarget.ticketId) : null;
-
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-          <FileText size={14} className="text-slate-400" />
-          Training Reports
-        </CardTitle>
-        <p className="text-[11px] text-slate-400">Visible to coaches assigned to this student. Locked once finalized.</p>
+      <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+        <div>
+          <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <FileText size={14} className="text-slate-400" />
+            Training Reports
+          </CardTitle>
+          <p className="text-[11px] text-slate-400">Visible to coaches assigned to this student. Locked once finalized.</p>
+        </div>
+        <Link
+          href={`/students/${studentId}/training-reports`}
+          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors shrink-0"
+        >
+          View all reports
+        </Link>
       </CardHeader>
-      <CardContent className="space-y-4 pt-2">
+      <CardContent className="pt-2">
         {contracts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <FileText size={22} className="text-slate-300 mb-2" />
@@ -70,38 +74,17 @@ export function TrainingReportCard({ studentId, contracts, initialReports }: Pro
             {contracts.map((contract) => (
               <TrainingReportContractRow
                 key={contract.ticket_id}
+                studentId={studentId}
                 contract={contract}
-                contractLabel={contractPeriodLabel(contract, timezone)}
+                contractLabel={contractSummaryLabel(contract, timezone)}
                 reports={reportsByTicket.get(contract.ticket_id) ?? []}
                 myId={myId}
-                onOpen={(report) => setDialogTarget({ ticketId: contract.ticket_id, report })}
+                onSaved={handleSaved}
               />
             ))}
           </ul>
         )}
-
-        <div className="flex justify-end">
-          <Link
-            href={`/students/${studentId}/training-reports`}
-            className="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            View all reports →
-          </Link>
-        </div>
       </CardContent>
-
-      {dialogTarget && activeContract && (
-        <TrainingReportDialog
-          open
-          onOpenChange={(open) => !open && setDialogTarget(null)}
-          studentId={studentId}
-          ticketId={dialogTarget.ticketId}
-          contractLabel={contractPeriodLabel(activeContract, timezone)}
-          report={dialogTarget.report}
-          isMine={dialogTarget.report ? dialogTarget.report.coach_id === myId : true}
-          onSaved={handleSaved}
-        />
-      )}
     </Card>
   );
 }

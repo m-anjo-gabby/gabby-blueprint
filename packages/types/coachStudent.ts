@@ -119,6 +119,8 @@ export interface StudentLiveSessionContractSummary {
   /** 週あたりのライブセッション回数（=定期スケジュール枠の数）。アドミンのライブセッション
    * 管理画面で、枠数分のプレースホルダーを表示するために使う。 */
   weekly_frequency: number;
+  /** プラン名（英語表記）。coachアプリのUI言語（英語）に合わせてplan_name_enのみを保持する */
+  plan_name_en: string;
 }
 
 /**

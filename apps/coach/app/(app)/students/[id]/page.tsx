@@ -40,10 +40,13 @@ export default async function StudentOverviewPage({
   const initialContract = contracts.find((c) => c.is_current) ?? contracts[0] ?? null;
   const initialSessions = initialContract ? await getStudentSessionsByTicket(id, initialContract.ticket_id) : [];
 
-  // Training Reportsカードは直近1年分の契約のみを表示し、それより古い分はtraining-reports一覧ページへ誘導する
-  const oneYearAgo = new Date();
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  const recentContracts = contracts.filter((c) => c.is_current || new Date(c.start_date) >= oneYearAgo);
+  // Training Reportsカードは直近5件の契約のみを表示し、それより古い分はtraining-reports一覧ページへ誘導する
+  // (contractsはstart_date降順のため先頭5件で足りる)
+  const recentContracts = contracts.slice(0, 5);
+
+  // Coach Notesカードも同様に直近5件のみを表示し、それより古い分はcoach-notes一覧ページへ誘導する
+  // (notesはinsert_date降順のため先頭5件で足りる)
+  const recentNotes = notes.slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -60,7 +63,7 @@ export default async function StudentOverviewPage({
           shortfalls={sessionShortfalls}
         />
         <LessonSprintCard studentId={id} history={lessonSprints} />
-        <CoachNotesCard studentId={id} initialNotes={notes} />
+        <CoachNotesCard studentId={id} initialNotes={recentNotes} />
         <TrainingReportCard studentId={id} contracts={recentContracts} initialReports={trainingReports} />
       </div>
     </div>
