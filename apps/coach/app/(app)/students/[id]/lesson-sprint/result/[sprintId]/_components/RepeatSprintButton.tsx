@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, RotateCcw } from 'lucide-react';
 import { resolveCoachContentName } from '@gabby/lib';
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
+import { withLiveSessionParam } from '@/lib/liveSession/context';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import type { LessonSprintRecord, LessonSprintContentSummary } from '@gabby/types/lessonSprint';
@@ -50,8 +51,7 @@ export function RepeatSprintButton({ studentId, record, content, sessionId }: Pr
     // 「今まさにハブのセッション文脈内にいるか」で判断する（record.session_idという、この
     // 記録がたまたま過去のどのセッションに属していたかとは別物）。受講生概要のスプリント履歴
     // から開いた過去記録をRepeatした場合は、その場ではハブの文脈にいないため単独実施として扱う。
-    const query = sessionId ? `?session_id=${sessionId}` : '';
-    router.push(`/students/${studentId}/lesson-sprint${query}`);
+    router.push(withLiveSessionParam(`/students/${studentId}/lesson-sprint`, sessionId));
   };
 
   return (

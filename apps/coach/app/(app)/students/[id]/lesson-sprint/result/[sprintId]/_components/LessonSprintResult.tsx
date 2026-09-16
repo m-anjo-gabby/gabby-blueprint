@@ -7,6 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { tokenizeWordsWithPunctuation, formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { ImmersiveShell } from '@/components/common/ImmersiveShell';
+import { isLiveSessionContext, buildLiveSessionHubHref, withLiveSessionParam } from '@/lib/liveSession/context';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { LESSON_SPRINT_SCORE_META } from '@gabby/types/lessonSprint';
 import type { LessonSprintRecord, LessonSprintContentSummary } from '@gabby/types/lessonSprint';
@@ -20,17 +22,20 @@ interface Props {
   questions: SprintQuestion[];
   content: LessonSprintContentSummary | undefined;
   /**
-   * URLの?session_id=。ハブ発のLive Sprintをちょうど完走してこの結果画面に遷移してきた
-   * 場合のみ渡ってくる（LessonSprintApp.handleComplete参照）。受講生概要のスプリント履歴や
-   * ハブのPrepセクションから過去の記録を振り返る目的で開いた場合は、その実施が
-   * record.session_idを持っていてもnullのまま＝表示・導線を一切変えない。
+   * URLの?session_id=。「今まさにセッションハブ（常時没入表示）から遷移してきたか」を表す。
+   * ハブ発のLive Sprintをちょうど完走した直後（LessonSprintApp.handleComplete参照）、および
+   * ハブのPrepセクションから過去の記録を振り返る目的で開いた場合の両方で渡ってくる（ハブは
+   * 常時没入のため、ハブ発の遷移は行き先も常に没入表示で揃える）。record.session_id
+   * （この実施記録が実際に属していたセッション。過去の別セッションのこともある）とは別物で、
+   * こちらは常に現在ハブで開いているセッションのIDになる点に注意。受講生概要のスプリント履歴
+   * （Hubを経由しない単独の参照）から開いた場合のみnullのまま＝表示・導線を一切変えない。
    */
   sessionId: string | null;
   /**
-   * URLの?back=/?back_label=。この結果画面へ実際に遷移してきた元の画面（生徒概要／
-   * ライブセッション結果画面／セッションハブのPrepセクション等）を呼び出し側から明示的に
-   * 引き継ぐ。両方揃っている場合のみ使用し、無ければrecord.session_idに基づく推測に
-   * フォールバックする（すべてのリンク元を更新し切れていない場合の保険）。
+   * URLの?back=/?back_label=。この結果画面へ実際に遷移してきた元の画面（受講生概要の
+   * スプリント履歴／ライブセッション結果画面等、ハブを経由しない参照時のみ使用）を
+   * 呼び出し側から明示的に引き継ぐ。両方揃っている場合のみ使用し、無ければrecord.session_id
+   * に基づく推測にフォールバックする（すべてのリンク元を更新し切れていない場合の保険）。
    * 没入表示（isImmersive）の場合は、ライブセッション中のハブへ戻る導線に一切影響を
    * 与えないよう、これらのパラメータは無視する。
    */
@@ -42,7 +47,7 @@ export function LessonSprintResult({ studentId, record, questions, content, sess
   const timezone = useTimezone();
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const isQuestionBased = record.question_type === '0' || record.question_type === '6';
-  const isImmersive = !!sessionId;
+  const isImmersive = isLiveSessionContext(sessionId);
 
   const scoredItems = record.answered_history.filter((h) => !h.is_skipped && typeof h.score === 'number');
   const averageScore = scoredItems.length > 0
@@ -51,15 +56,16 @@ export function LessonSprintResult({ studentId, record, questions, content, sess
 
   const formattedDate = formatDateTimeEn(record.insert_date, timezone);
 
-  // ハブ発の実施を完走した直後（isImmersive）は、セッションハブへ戻る一本道の導線にする
-  // （コーチからの「通話中はなるべく画面を行き来したくない」という要望を受けた設計。詳細は
-  // SessionHub.tsxのコメント参照）。ここは呼び出し元に関わらず常に固定で、backHref/backLabel
-  // パラメータの影響を受けない。
-  // それ以外（履歴からの参照）は、実際に遷移してきた画面（back）が分かっていればそこへ戻す。
+  // ハブ発（isImmersive。完走直後／Prepセクションからの過去記録参照のいずれも含む）は、
+  // セッションハブへ戻る一本道の導線にする（コーチからの「通話中はなるべく画面を行き来
+  // したくない」という要望を受けた設計。詳細はSessionHub.tsxのコメント参照）。ここは
+  // 呼び出し元に関わらず常に固定で、backHref/backLabelパラメータの影響を受けない。
+  // それ以外（ハブを経由しない履歴からの参照）は、実際に遷移してきた画面（back）が
+  // 分かっていればそこへ戻す。
   // 分からない場合のみ、このスプリントがライブセッションに紐づいていればそのセッション結果
   // 画面、紐づきが無い(単独実施)場合は受講生概要に戻る、という推測にフォールバックする。
   const backHref = isImmersive
-    ? `/students/${studentId}/sessions/${sessionId}`
+    ? buildLiveSessionHubHref(studentId, sessionId)
     : backHrefParam ?? (record.session_id ? `/students/${studentId}/sessions/${record.session_id}/result` : `/students/${studentId}`);
   const backLabel = isImmersive
     ? 'Back to Hub'
@@ -126,7 +132,7 @@ export function LessonSprintResult({ studentId, record, questions, content, sess
             <div className="lg:sticky lg:bottom-0 lg:bg-white lg:border-t lg:border-slate-100 lg:pt-3 space-y-2">
               <RepeatSprintButton studentId={studentId} record={record} content={content} sessionId={sessionId} />
               <Link
-                href={`/students/${studentId}/lesson-sprint?session_id=${sessionId}`}
+                href={withLiveSessionParam(`/students/${studentId}/lesson-sprint`, sessionId)}
                 className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shrink-0"
               >
                 <Zap size={14} className="fill-current text-amber-300" />
@@ -229,13 +235,11 @@ export function LessonSprintResult({ studentId, record, questions, content, sess
     </div>
   );
 
-  if (!isImmersive) return body;
-
   // ハブ発の実施を完走した直後は、Header/Sidebarを覆う固定オーバーレイで表示し、通話中の
   // 画面遷移を最小限にする（Setup/Player画面（LessonSprintApp.tsx）と同じ手法で統一）。
   return (
-    <div className="fixed inset-0 z-40 w-full h-full bg-slate-50 overflow-y-auto p-4 md:p-6">
+    <ImmersiveShell active={isImmersive} className="overflow-y-auto p-4 md:p-6">
       {body}
-    </div>
+    </ImmersiveShell>
   );
 }
