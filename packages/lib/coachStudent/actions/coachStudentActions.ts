@@ -20,6 +20,7 @@ import {
   StudentSprintProgress,
   StudentLatestContractSummary,
   StudentContractSessionSummary,
+  StudentNextSessionSummary,
 } from '@gabby/types/coachStudent';
 import { SESSION_STATUS, SESSION_RESULT_STATUSES } from '@gabby/types/session';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
@@ -109,6 +110,43 @@ async function getLatestContractsByStudentIds(
 }
 
 /**
+ * 指定した現役生徒ID群それぞれについて、次に実施可能な（status=scheduled かつ終了予定時刻が
+ * 未来の）セッションを1件ずつ取得する。生徒一覧カードの「Next Live Session」表示用。
+ * 過去に担当していた生徒（is_active=false）は呼び出し側で対象から除外すること
+ * （担当関係を終えた生徒に新規セッションが発生することは無く、問い合わせても無駄になるため）。
+ */
+async function getUpcomingSessionsByStudentIds(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  coachId: string,
+  activeStudentIds: string[]
+): Promise<{ data: Map<string, StudentNextSessionSummary> | null; error: string | null }> {
+  if (activeStudentIds.length === 0) {
+    return { data: new Map(), error: null };
+  }
+
+  const { data: sessions, error } = await supabase
+    .from('com_t_session')
+    .select('session_id, student_id, start_datetime')
+    .eq('coach_id', coachId)
+    .in('student_id', activeStudentIds)
+    .eq('status', SESSION_STATUS.SCHEDULED)
+    .gt('end_datetime', new Date().toISOString())
+    .order('start_datetime', { ascending: true });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  // start_datetime昇順のため、生徒ごとに最初に出現した行が最も近い次回セッションになる
+  const nextByStudent = new Map<string, StudentNextSessionSummary>();
+  for (const session of sessions ?? []) {
+    if (nextByStudent.has(session.student_id)) continue;
+    nextByStudent.set(session.student_id, { session_id: session.session_id, start_datetime: session.start_datetime });
+  }
+  return { data: nextByStudent, error: null };
+}
+
+/**
  * ログイン中コーチに紐づく生徒の一覧を取得する（コーチ向け、現在・過去の担当関係を両方含む）
  * ダッシュボードの担当生徒プレビューおよび生徒一覧画面で使用する。
  */
@@ -135,12 +173,15 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
     const studentIds = relationships.map((r) => r.student_id);
     const isActiveByStudent = new Map(relationships.map((r) => [r.student_id, r.is_active]));
+    // 過去生徒には新規セッションが発生しないため、次回セッションの問い合わせは現役生徒のみに絞る
+    const activeStudentIds = relationships.filter((r) => r.is_active).map((r) => r.student_id);
 
     const [
       { data: users, error: userError },
       { data: progress, error: progressError },
       { data: schedules, error: scheduleError },
       { data: latestContractByStudent, error: contractError },
+      { data: nextSessionByStudent, error: nextSessionError },
     ] = await Promise.all([
       supabase.from('com_m_user').select('id, user_name, icon_path').in('id', studentIds),
       supabase
@@ -154,12 +195,13 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
         .eq('status', 1)
         .in('student_id', studentIds),
       getLatestContractsByStudentIds(supabase, studentIds),
+      getUpcomingSessionsByStudentIds(supabase, user.id, activeStudentIds),
     ]);
 
-    if (userError || progressError || scheduleError || contractError) {
+    if (userError || progressError || scheduleError || contractError || nextSessionError) {
       logger.error(
         'coachStudent:get_assigned_students_join_failed',
-        userError?.message ?? progressError?.message ?? scheduleError?.message ?? contractError ?? 'unknown',
+        userError?.message ?? progressError?.message ?? scheduleError?.message ?? contractError ?? nextSessionError ?? 'unknown',
         { ...ctx, userId: user.id }
       );
       return { success: false, errorCode: 'unexpected_error' };
@@ -187,6 +229,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
         active_slot_count: slotCountByStudent.get(studentId) ?? 0,
         is_active: isActiveByStudent.get(studentId) ?? false,
         latest_contract: latestContractByStudent?.get(studentId) ?? null,
+        next_session: nextSessionByStudent?.get(studentId) ?? null,
       };
     });
 

@@ -1,8 +1,11 @@
+'use client';
+
 import Link from 'next/link';
-import { ChevronRight, BadgeCheck, BadgeX } from 'lucide-react';
+import { ChevronRight, BadgeCheck, BadgeX, CalendarClock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { UserAvatar } from '@/components/common/UserAvatar';
-import { formatDateEn } from '@gabby/lib/date/dateEn';
+import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { AssignedStudentSummary } from '@gabby/types/coachStudent';
 
 interface Props {
@@ -10,8 +13,9 @@ interface Props {
 }
 
 export function StudentCard({ student }: Props) {
-  const { latest_contract } = student;
+  const { latest_contract, next_session } = student;
   const isCurrent = latest_contract?.is_current ?? false;
+  const timezone = useTimezone();
 
   return (
     <Link href={`/students/${student.student_id}`}>
@@ -58,6 +62,13 @@ export function StudentCard({ student }: Props) {
               <p className="mt-1.5 text-xs text-slate-400">No contract yet</p>
             )}
           </div>
+
+          {next_session && (
+            <div className="mt-2.5 flex items-center gap-1.5 px-3.5 text-[11px] font-semibold text-indigo-600">
+              <CalendarClock size={12} className="shrink-0" />
+              <span className="truncate">Next: {formatDateTimeEn(next_session.start_datetime, timezone)}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>

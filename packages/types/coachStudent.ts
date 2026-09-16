@@ -34,6 +34,8 @@ export interface AssignedStudentSummary extends StudentSprintProgress {
   is_active: boolean;
   /** 直近の契約情報（現在有効・終了済みを問わず最新のもの）。一度も契約したことがなければnull */
   latest_contract: StudentLatestContractSummary | null;
+  /** 次に実施可能なライブセッション（現役生徒のみ算出。過去生徒は常にnull、予約が無い場合もnull） */
+  next_session: StudentNextSessionSummary | null;
 }
 
 /** 生徒が現在保有する有効契約の概要（ヘッダー表示用） */
@@ -48,6 +50,12 @@ export interface StudentActiveContract {
 export interface StudentLatestContractSummary extends StudentActiveContract {
   /** 現在日時が契約期間内かつstatus=有効かどうか（true=現役契約、false=終了/停止済み契約） */
   is_current: boolean;
+}
+
+/** 生徒一覧カード表示用の、次に実施可能なライブセッションの概要（無ければnull） */
+export interface StudentNextSessionSummary {
+  session_id: string;
+  start_datetime: string; // UTC ISO文字列
 }
 
 /**
