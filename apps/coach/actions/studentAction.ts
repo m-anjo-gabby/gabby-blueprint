@@ -10,6 +10,9 @@ import {
   getStudentNotesCore,
   getSelfTrainingWeekSummaryCore,
   addCoachStudentNoteCore,
+  getContractTrainingReportsCore,
+  saveContractTrainingReportDraftCore,
+  finalizeContractTrainingReportCore,
   updateStudentSprintLevelCore,
   forceStageUpStudentCore,
 } from '@gabby/lib/coachStudent/actions/coachStudentActions';
@@ -23,6 +26,7 @@ import {
   StudentLiveSessionContractSummary,
   CoachSessionListItem,
   CoachStudentNote,
+  ContractTrainingReport,
   CoachStudentErrorCode,
   StudentSprintProgress,
   SelfTrainingWeekSummary,
@@ -35,6 +39,7 @@ const COACH_STUDENT_ERROR_MESSAGES_EN: Record<CoachStudentErrorCode, string> = {
   unauthorized: 'Your session has expired. Please sign in again.',
   forbidden: 'You do not have access to this student.',
   invalid_input: 'Please enter a note before saving.',
+  already_finalized: 'This report has already been finalized and can no longer be edited.',
   unexpected_error: 'An unexpected error occurred.',
 };
 
@@ -171,6 +176,53 @@ export async function addCoachStudentNote(
     return { success: false, message: COACH_STUDENT_ERROR_MESSAGES_EN[result.errorCode] };
   }
   return { success: true, note: result.note };
+}
+
+/**
+ * Fetches every training report visible to the logged-in coach for this student
+ * (own drafts + finalized reports from any coach assigned to this student).
+ */
+export async function getContractTrainingReports(studentId: string): Promise<ContractTrainingReport[]> {
+  const result = await getContractTrainingReportsCore(studentId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_contract_training_reports_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.reports;
+}
+
+/**
+ * Saves (creates or updates) the logged-in coach's own draft training report comment
+ * for the given contract (ticket)
+ */
+export async function saveContractTrainingReportDraft(
+  ticketId: string,
+  studentId: string,
+  commentText: string
+): Promise<{ success: true; report: ContractTrainingReport } | { success: false; message: string }> {
+  const result = await saveContractTrainingReportDraftCore(ticketId, studentId, commentText);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:save_contract_training_report_draft_failed', result.errorCode, ctx);
+    return { success: false, message: COACH_STUDENT_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+  return { success: true, report: result.report };
+}
+
+/**
+ * Finalizes the logged-in coach's own training report. Once finalized it can no longer be edited.
+ */
+export async function finalizeContractTrainingReport(
+  reportId: string
+): Promise<{ success: true; report: ContractTrainingReport } | { success: false; message: string }> {
+  const result = await finalizeContractTrainingReportCore(reportId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:finalize_contract_training_report_failed', result.errorCode, ctx);
+    return { success: false, message: COACH_STUDENT_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+  return { success: true, report: result.report };
 }
 
 type UpdateSprintProgressActionResult =

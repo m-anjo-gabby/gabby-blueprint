@@ -11,6 +11,7 @@ export type CoachStudentErrorCode =
   | 'unauthorized'
   | 'forbidden'
   | 'invalid_input'
+  | 'already_finalized'
   | 'unexpected_error';
 
 /** 生徒のスプリント進捗（student_m_sprint_progressのエンティティ相当） */
@@ -185,6 +186,32 @@ export interface CoachStudentNote {
   insert_date: string;
 }
 
+// com_t_contract_training_report.status（1:draft 2:finalized）
+export const TRAINING_REPORT_STATUS = {
+  DRAFT: 1,
+  FINALIZED: 2,
+} as const;
+export type TrainingReportStatus = typeof TRAINING_REPORT_STATUS[keyof typeof TRAINING_REPORT_STATUS];
+
+/**
+ * 契約(ticket)単位のトレーニングレポート・コーチコメント (com_t_contract_training_report)。
+ * 週2回契約等で分担している場合、同一ticket_idに対して分担コーチそれぞれの行が並びうる
+ * （単独コーチ運用時は実質「契約に1件」）。draft中は自分の行のみ取得できる
+ * （他コーチの下書きはRLSで不可視）。
+ */
+export interface ContractTrainingReport {
+  report_id: string;
+  ticket_id: string;
+  student_id: string;
+  coach_id: string;
+  coach_name: string;
+  comment_text: string;
+  status: TrainingReportStatus;
+  finalized_at: string | null;
+  insert_date: string;
+  update_date: string;
+}
+
 export type GetAssignedStudentsResult =
   | { success: true; students: AssignedStudentSummary[] }
   | { success: false; errorCode: CoachStudentErrorCode };
@@ -220,6 +247,18 @@ export type GetSelfTrainingWeekSummaryResult =
 
 export type AddCoachStudentNoteResult =
   | { success: true; note: CoachStudentNote }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+export type GetContractTrainingReportsResult =
+  | { success: true; reports: ContractTrainingReport[] }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+export type SaveContractTrainingReportDraftResult =
+  | { success: true; report: ContractTrainingReport }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+export type FinalizeContractTrainingReportResult =
+  | { success: true; report: ContractTrainingReport }
   | { success: false; errorCode: CoachStudentErrorCode };
 
 /**

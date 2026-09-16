@@ -6,6 +6,7 @@ import { getLogContext } from '../../logger/context';
 import {
   AssignedStudentSummary,
   CoachStudentNote,
+  ContractTrainingReport,
   GetAssignedStudentsResult,
   GetStudentOverviewResult,
   GetStudentUpcomingSessionResult,
@@ -16,11 +17,15 @@ import {
   GetStudentNotesResult,
   GetSelfTrainingWeekSummaryResult,
   AddCoachStudentNoteResult,
+  GetContractTrainingReportsResult,
+  SaveContractTrainingReportDraftResult,
+  FinalizeContractTrainingReportResult,
   UpdateStudentSprintProgressResult,
   StudentSprintProgress,
   StudentLatestContractSummary,
   StudentContractSessionSummary,
   StudentNextSessionSummary,
+  TRAINING_REPORT_STATUS,
 } from '@gabby/types/coachStudent';
 import { SESSION_STATUS, SESSION_RESULT_STATUSES } from '@gabby/types/session';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
@@ -29,6 +34,7 @@ import { clampLevel, computeStage, getForcedLevels } from '../../sprint/stagePro
 
 const logger = createLogger('common');
 const MAX_NOTE_LENGTH = 4000;
+const MAX_TRAINING_REPORT_LENGTH = 8000;
 
 /** StudentSprintProgress(dbKey命名) <-> StageLevels(SprintQuestionTypeキー) の相互変換 */
 function toStageLevels(progress: StudentSprintProgress): StageLevels {
@@ -772,6 +778,165 @@ export async function addCoachStudentNoteCore(studentId: string, noteText: strin
     return { success: true, note: data as CoachStudentNote };
   } catch (err) {
     logger.error('coachStudent:add_note_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+const TRAINING_REPORT_SELECT = 'report_id, ticket_id, student_id, coach_id, comment_text, status, finalized_at, insert_date, update_date';
+
+/** coach_idの並びに対応するuser_nameを解決し、ContractTrainingReport[]へ変換する（見つからない場合は'(Unknown)'） */
+async function attachCoachNames(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  rows: Omit<ContractTrainingReport, 'coach_name'>[]
+): Promise<ContractTrainingReport[]> {
+  if (rows.length === 0) return [];
+
+  const coachIds = Array.from(new Set(rows.map((r) => r.coach_id)));
+  const { data: coaches } = await supabase.from('com_m_user').select('id, user_name').in('id', coachIds);
+  const nameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+
+  return rows.map((r) => ({ ...r, coach_name: nameById.get(r.coach_id) ?? '(Unknown)' }));
+}
+
+/**
+ * 指定生徒について、自分から参照可能なトレーニングレポートを全件取得する（新しい順）。
+ * RLSにより、自分が記入した行(draft/finalizedいずれも)と、他コーチのfinalized済みの行のみが
+ * 返る（他コーチのdraftは不可視）。契約(ticket)単位の表示への組み立てはUI側で行う。
+ */
+export async function getContractTrainingReportsCore(studentId: string): Promise<GetContractTrainingReportsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_contract_training_report')
+      .select(TRAINING_REPORT_SELECT)
+      .eq('student_id', studentId)
+      .order('insert_date', { ascending: false });
+
+    if (error) {
+      logger.error('coachStudent:get_training_reports_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const reports = await attachCoachNames(supabase, (data ?? []) as Omit<ContractTrainingReport, 'coach_name'>[]);
+    return { success: true, reports };
+  } catch (err) {
+    logger.error('coachStudent:get_training_reports_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定契約(ticket)について、自分(コーチ)のトレーニングレポートの下書きを保存する。
+ * 既存のdraft行があれば本文を更新、なければ新規作成する（UNIQUE(ticket_id, coach_id)）。
+ * すでにfinalized済みの行がある場合はRLSの更新ポリシー(status=1のみ)により更新が
+ * 素通りせず0件更新となるため、その場合はalready_finalizedを返す。
+ */
+export async function saveContractTrainingReportDraftCore(
+  ticketId: string,
+  studentId: string,
+  commentText: string
+): Promise<SaveContractTrainingReportDraftResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const trimmed = commentText.trim();
+    if (!trimmed || trimmed.length > MAX_TRAINING_REPORT_LENGTH) {
+      return { success: false, errorCode: 'invalid_input' };
+    }
+
+    // 現役の担当関係が必要（コーチ交代後の過去コーチは新規に下書きを始められない）
+    const { data: relationship } = await supabase
+      .from('com_m_coach_student_relationship')
+      .select('relationship_id')
+      .eq('coach_id', user.id)
+      .eq('student_id', studentId)
+      .eq('is_active', true)
+      .limit(1);
+    if (!relationship || relationship.length === 0) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    const { data: existing } = await supabase
+      .from('com_t_contract_training_report')
+      .select('report_id, status')
+      .eq('ticket_id', ticketId)
+      .eq('coach_id', user.id)
+      .maybeSingle();
+
+    if (existing && existing.status !== TRAINING_REPORT_STATUS.DRAFT) {
+      return { success: false, errorCode: 'already_finalized' };
+    }
+
+    const { data, error } = existing
+      ? await supabase
+          .from('com_t_contract_training_report')
+          .update({ comment_text: trimmed, update_date: new Date().toISOString() })
+          .eq('report_id', existing.report_id)
+          .select(TRAINING_REPORT_SELECT)
+          .single()
+      : await supabase
+          .from('com_t_contract_training_report')
+          .insert({ ticket_id: ticketId, student_id: studentId, coach_id: user.id, comment_text: trimmed })
+          .select(TRAINING_REPORT_SELECT)
+          .single();
+
+    if (error || !data) {
+      logger.error('coachStudent:save_training_report_draft_failed', error?.message ?? 'No row returned', { ...ctx, userId: user.id, payload: { ticketId, studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const [report] = await attachCoachNames(supabase, [data as Omit<ContractTrainingReport, 'coach_name'>]);
+    logger.info('coachStudent:save_training_report_draft_success', 'Training report draft saved', { ...ctx, userId: user.id });
+    return { success: true, report };
+  } catch (err) {
+    logger.error('coachStudent:save_training_report_draft_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 自分(コーチ)のトレーニングレポートを確定(finalized)する。確定後は編集不可になる。
+ * RLSの更新ポリシー(status=1のみ更新可)により、すでに確定済みの行や他コーチの行に対しては
+ * 0件更新となるため、その場合はalready_finalizedを返す。
+ */
+export async function finalizeContractTrainingReportCore(reportId: string): Promise<FinalizeContractTrainingReportResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_contract_training_report')
+      .update({ status: TRAINING_REPORT_STATUS.FINALIZED, finalized_at: new Date().toISOString(), update_date: new Date().toISOString() })
+      .eq('report_id', reportId)
+      .select(TRAINING_REPORT_SELECT)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('coachStudent:finalize_training_report_failed', error.message, { ...ctx, userId: user.id, payload: { reportId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!data) {
+      // RLSにより対象外(他コーチの行/既に確定済み/存在しない)だった
+      return { success: false, errorCode: 'already_finalized' };
+    }
+
+    const [report] = await attachCoachNames(supabase, [data as Omit<ContractTrainingReport, 'coach_name'>]);
+    logger.info('coachStudent:finalize_training_report_success', 'Training report finalized', { ...ctx, userId: user.id });
+    return { success: true, report };
+  } catch (err) {
+    logger.error('coachStudent:finalize_training_report_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

@@ -16,6 +16,33 @@ interface Props {
   initialNotes: CoachStudentNote[];
 }
 
+const NOTE_TRUNCATE_LENGTH = 160;
+
+function NoteListItem({ note, timezone }: { note: CoachStudentNote; timezone: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLong = note.note_text.length > NOTE_TRUNCATE_LENGTH;
+
+  return (
+    <li className="px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60">
+      <p className={`text-xs text-slate-700 whitespace-pre-wrap ${!isExpanded && isLong ? 'line-clamp-3' : ''}`}>
+        {note.note_text}
+      </p>
+      <div className="flex items-center justify-between mt-1.5">
+        <p className="text-[10px] text-slate-400">{formatDateTimeEn(note.insert_date, timezone)}</p>
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            {isExpanded ? 'Show less' : 'Show more'}
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
 export function CoachNotesCard({ studentId, initialNotes }: Props) {
   const timezone = useTimezone();
   const [notes, setNotes] = useState<CoachStudentNote[]>(initialNotes);
@@ -76,10 +103,7 @@ export function CoachNotesCard({ studentId, initialNotes }: Props) {
         ) : (
           <ul className="space-y-2.5 max-h-96 overflow-y-auto">
             {notes.map((note) => (
-              <li key={note.note_id} className="px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60">
-                <p className="text-xs text-slate-700 whitespace-pre-wrap">{note.note_text}</p>
-                <p className="text-[10px] text-slate-400 mt-1.5">{formatDateTimeEn(note.insert_date, timezone)}</p>
-              </li>
+              <NoteListItem key={note.note_id} note={note} timezone={timezone} />
             ))}
           </ul>
         )}

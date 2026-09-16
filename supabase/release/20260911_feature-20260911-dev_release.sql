@@ -6446,3 +6446,86 @@ GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, bool
 -- adminLiveSessionAction.ts, apps/admin/app/(app)/live-sessions/_components/を参照）。
 -- =========================================================================
 DROP FUNCTION IF EXISTS public.admin_reschedule_session(uuid, timestamptz, timestamptz, text);
+
+-- =========================================================================
+-- 32. 契約単位トレーニングレポート・コーチコメント (com_t_contract_training_report) (2026-09-16 追加)
+-- =========================================================================
+-- 【背景】
+-- Student Overview画面（コーチ向け）で、契約(ticket)ごとのトレーニング完了時に作成する
+-- レポートへ載せるコーチコメントの入力欄を、既存のCoach Notesカードの隣に追加する。
+-- Coach Notes（コーチ自分専用・追記型履歴）とは異なり、本機能は
+--   (1) 契約(ticket_id)×コーチ(coach_id)で1件（週2回契約等の分担時は分担コーチごとに1件）
+--   (2) 一時保存(draft)→確定(finalized)の一方向遷移で、確定後は編集不可
+--   (3) 確定済みのものは同じ生徒を担当している他コーチからも参照可能（ドラフト中は本人のみ）
+-- という性質を持つ。詳細背景はsupabase/DDL/table/com_t_contract_training_report.sqlを参照。
+--
+-- 更新（下書き編集・確定）はいずれも単一テーブルへの単純な列更新のため、RPC化せず
+-- 直接UPDATE + RLSのUSING句(status=1のみ更新可)で「確定後編集不可」を実現する。
+-- =========================================================================
+CREATE TABLE public.com_t_contract_training_report (
+    report_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_id uuid NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE CASCADE,
+    student_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    coach_id uuid NOT NULL REFERENCES public.com_m_user(id),
+    comment_text text NOT NULL DEFAULT '',
+    status smallint NOT NULL DEFAULT 1, -- 1:draft(一時保存) 2:finalized(確定・以後編集不可)
+    finalized_at timestamp with time zone,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    UNIQUE (ticket_id, coach_id),
+    CONSTRAINT chk_training_report_status CHECK (status IN (1, 2))
+);
+
+COMMENT ON TABLE public.com_t_contract_training_report IS '契約(ticket)単位のトレーニングレポート・コーチコメント（ticket×coachで1件、draft→finalizedの一方向遷移）';
+COMMENT ON COLUMN public.com_t_contract_training_report.report_id IS 'レポートID';
+COMMENT ON COLUMN public.com_t_contract_training_report.ticket_id IS '対象の契約(ライブセッションチケット)ID';
+COMMENT ON COLUMN public.com_t_contract_training_report.student_id IS '対象の生徒のユーザID（集計用の非正規化参照）';
+COMMENT ON COLUMN public.com_t_contract_training_report.coach_id IS '記入したコーチのユーザID';
+COMMENT ON COLUMN public.com_t_contract_training_report.comment_text IS 'コメント本文';
+COMMENT ON COLUMN public.com_t_contract_training_report.status IS 'ステータス 1:draft(一時保存) 2:finalized(確定・以後編集不可)';
+COMMENT ON COLUMN public.com_t_contract_training_report.finalized_at IS '確定日時（status=finalizedになった時刻）';
+COMMENT ON COLUMN public.com_t_contract_training_report.insert_date IS '登録日時（下書き作成日時）';
+COMMENT ON COLUMN public.com_t_contract_training_report.update_date IS '更新日時';
+
+CREATE INDEX idx_contract_training_report_student ON public.com_t_contract_training_report (student_id);
+CREATE INDEX idx_contract_training_report_coach ON public.com_t_contract_training_report (coach_id);
+
+ALTER TABLE public.com_t_contract_training_report ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Coaches can view training reports of their students" ON public.com_t_contract_training_report;
+DROP POLICY IF EXISTS "Coaches can create their own draft training reports" ON public.com_t_contract_training_report;
+DROP POLICY IF EXISTS "Coaches can update their own draft training reports" ON public.com_t_contract_training_report;
+
+CREATE POLICY "Coaches can view training reports of their students" ON public.com_t_contract_training_report
+FOR SELECT TO authenticated USING (
+    coach_id = auth.uid()
+    OR (
+        status = 2
+        AND EXISTS (
+            SELECT 1 FROM public.com_m_coach_student_relationship r
+            WHERE r.coach_id = auth.uid() AND r.student_id = com_t_contract_training_report.student_id
+        )
+    )
+    OR public.get_jwt_user_type() = '0'
+);
+
+CREATE POLICY "Coaches can create their own draft training reports" ON public.com_t_contract_training_report
+FOR INSERT TO authenticated WITH CHECK (
+    coach_id = auth.uid()
+    AND EXISTS (
+        SELECT 1 FROM public.com_m_coach_student_relationship r
+        WHERE r.coach_id = auth.uid() AND r.student_id = com_t_contract_training_report.student_id AND r.is_active = true
+    )
+    AND EXISTS (
+        SELECT 1 FROM public.com_t_user_session_ticket t
+        WHERE t.ticket_id = com_t_contract_training_report.ticket_id AND t.user_id = com_t_contract_training_report.student_id
+    )
+);
+
+CREATE POLICY "Coaches can update their own draft training reports" ON public.com_t_contract_training_report
+FOR UPDATE TO authenticated USING (
+    coach_id = auth.uid() AND status = 1
+) WITH CHECK (
+    coach_id = auth.uid()
+);

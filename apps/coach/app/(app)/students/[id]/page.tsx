@@ -6,11 +6,13 @@ import {
   getStudentUpcomingSession,
   getStudentLiveSessionShortfalls,
   getStudentNotes,
+  getContractTrainingReports,
 } from '@/actions/studentAction';
 import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
 import { StudentOverviewHeader } from './_components/StudentOverviewHeader';
 import { LiveSessionHistoryCard } from './_components/LiveSessionHistoryCard';
 import { CoachNotesCard } from './_components/CoachNotesCard';
+import { TrainingReportCard } from './_components/TrainingReportCard';
 import { LessonSprintCard } from './_components/LessonSprintCard';
 
 export default async function StudentOverviewPage({
@@ -25,17 +27,23 @@ export default async function StudentOverviewPage({
     notFound();
   }
 
-  const [contracts, upcomingSession, sessionShortfalls, notes, lessonSprints] = await Promise.all([
+  const [contracts, upcomingSession, sessionShortfalls, notes, lessonSprints, trainingReports] = await Promise.all([
     getStudentLiveSessionContracts(id),
     getStudentUpcomingSession(id),
     getStudentLiveSessionShortfalls(id),
     getStudentNotes(id),
     getLessonSprintHistory(id),
+    getContractTrainingReports(id),
   ]);
 
   // 現在有効な契約を優先し、無ければ直近の過去契約(contractsはstart_date降順)を初期選択とする
   const initialContract = contracts.find((c) => c.is_current) ?? contracts[0] ?? null;
   const initialSessions = initialContract ? await getStudentSessionsByTicket(id, initialContract.ticket_id) : [];
+
+  // Training Reportsカードは直近1年分の契約のみを表示し、それより古い分はtraining-reports一覧ページへ誘導する
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const recentContracts = contracts.filter((c) => c.is_current || new Date(c.start_date) >= oneYearAgo);
 
   return (
     <div className="space-y-6">
@@ -52,9 +60,8 @@ export default async function StudentOverviewPage({
           shortfalls={sessionShortfalls}
         />
         <LessonSprintCard studentId={id} history={lessonSprints} />
-        <div className="lg:col-span-2">
-          <CoachNotesCard studentId={id} initialNotes={notes} />
-        </div>
+        <CoachNotesCard studentId={id} initialNotes={notes} />
+        <TrainingReportCard studentId={id} contracts={recentContracts} initialReports={trainingReports} />
       </div>
     </div>
   );

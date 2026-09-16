@@ -202,4 +202,35 @@
     `grep -rn "cancel_session.*p_admin_refund_ticket" testing/`のように対象パターンで
     横断検索し、ヒットした全ファイルを機械的にチェックすること。
 
+### KJ-2026-0916-01 com_m_lesson_scheduleへの直接INSERTは、2026-09-14以降target_sessions(NOT NULL)の指定が必須
+
+- **該当シナリオ**: `testing/features/branches/feature-20260911-dev/training-report-comment-seed.ts`
+- **事象**: `my-students-grouping-seed.ts`の`seedSchedule`をそのまま流用してcom_m_lesson_scheduleへ
+  直接INSERTしたところ、`null value in column "target_sessions" of relation
+  "com_m_lesson_schedule" violates not-null constraint` (23502)で失敗した。
+- **原因**: `supabase/DDL/table/com_m_lesson_schedule.sql`の「コマ別セッション目標数
+  (target_sessions)の追加 (2026-09-14)」パッチで、このカラムがNOT NULLになった。既存の
+  `my-students-grouping-seed.ts`・`session-24h-and-auth-refactor-seed.ts`等が書かれた時点では
+  このカラムが無かった（またはNULL許容だった）ため、当時は素通りしていた。target_sessionsは
+  「total_sessions/weekly_frequencyの均等割り、余りはslot_no昇順に配分」という計算値で、
+  `admin_match_student_with_coach`等のRPC経由の生成では自動計算されるが、テストスクリプトで
+  `com_m_lesson_schedule`に直接INSERTする場合は自分で計算して渡す必要がある。
+- **対処**: `seedSchedule`ヘルパーに`plan: Plan`引数を追加し、
+  `Math.floor(total_sessions/weekly_frequency) + (slot_no <= total_sessions%weekly_frequency ? 1 : 0)`
+  でtarget_sessionsを計算してINSERTに含めるよう修正した。
+- **判断基準への反映**:
+  - **`com_m_lesson_schedule`へ直接INSERTするテストスクリプトを新規に書く／既存のものを
+    今後再実行する際は、必ずtarget_sessionsを計算して渡すこと。** 素直に本物のRPC
+    (`admin_match_student_with_coach`等)経由で生成する場合は対応不要（RPC側で自動計算される）。
+  - **既存の`my-students-grouping-seed.ts`・`session-24h-and-auth-refactor-seed.ts`等、
+    2026-09-14より前に書かれた`com_m_lesson_schedule`直接INSERT系のseedスクリプトは、
+    今後再実行すると同じ23502エラーで失敗する可能性が高い。** これらを再実行する機会があれば、
+    本シナリオと同様の修正を先に行うこと（`grep -rln "from(\"com_m_lesson_schedule\")\\s*$\|insert({" testing/features/`
+    等でcom_m_lesson_scheduleへの直接INSERT箇所を横断的に洗い出せる）。
+  - スキーマにNOT NULL列を追加するDDLパッチは、既存のテストスクリプトの「実行が壊れる」形で
+    影響することがある。RPC存在確認(preflight)の対象外（RPCを経由しない直接INSERT）である
+    ため、事前に気づく手段が無い。DDLパッチのコミット時に「このテーブルに直接INSERTしている
+    testing配下のスクリプトが無いか」もざっと確認するのが理想だが、現実的には「他シナリオの
+    再実行時に初めて発覚し、その都度本ファイルに追記して共有する」運用で蓄積していく。
+
 <!-- 新しい事例はこの下に追記していく -->

@@ -26,6 +26,7 @@ const LESSON_SPRINT_ERROR_MESSAGES_EN: Record<CoachStudentErrorCode, string> = {
   unauthorized: 'Your session has expired. Please sign in again.',
   forbidden: 'You do not have access to this student.',
   invalid_input: 'Please check your input and try again.',
+  already_finalized: 'This has already been finalized and can no longer be edited.',
   unexpected_error: 'An unexpected error occurred.',
 };
 
