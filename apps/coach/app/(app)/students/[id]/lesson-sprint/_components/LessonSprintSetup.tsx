@@ -34,21 +34,22 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
   const { setConfig, setContentName, setContentMetadata } = useLessonSprintStore();
 
   // 初期値は直近の実施条件を踏襲する。前回コンテンツが現在の一覧に無ければ先頭コンテンツにフォールバック。
+  // ただし制限時間だけは例外で、前回値を引き継がずQuestion Typeに応じたRecommended値を初期値にする
+  // （「Repeat Same Settings」から遷移した場合はこのSetup画面自体を経由せず、ストアに前回の
+  // 制限時間をそのまま設定してPlayerへ直行するため、ここでの初期値変更の影響を受けない。
+  // RepeatSprintButton.tsx参照）。
   const lastSession = lessonSprints[0];
   const hasLastContent = !!lastSession && contents.some((c) => c.content_id === lastSession.content_id);
+  const initialQuestionType: SprintQuestionType = hasLastContent ? (lastSession.question_type as SprintQuestionType) : '0';
 
   const [contentId, setContentId] = useState<string>(
     hasLastContent ? lastSession.content_id : (contents[0]?.content_id ?? '')
   );
-  const [questionType, setQuestionType] = useState<SprintQuestionType>(
-    hasLastContent ? (lastSession.question_type as SprintQuestionType) : '0'
-  );
+  const [questionType, setQuestionType] = useState<SprintQuestionType>(initialQuestionType);
   const [level, setLevel] = useState<string>(
     hasLastContent ? String(lastSession.difficulty_level) : String(QUESTION_TYPES['0'].minLevel)
   );
-  const [timeLimitSec, setTimeLimitSec] = useState<number>(
-    hasLastContent ? lastSession.time_limit_sec : QUESTION_TYPES['0'].recommendedTimeSec
-  );
+  const [timeLimitSec, setTimeLimitSec] = useState<number>(QUESTION_TYPES[initialQuestionType].recommendedTimeSec);
   const [isLoading, setIsLoading] = useState(false);
 
   const selectedContent = useMemo(() => contents.find((c) => c.content_id === contentId), [contents, contentId]);

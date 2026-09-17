@@ -8,6 +8,7 @@ import { tokenizeWordsWithPunctuation, formatSprintLevelLabel, resolveCoachConte
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { ImmersiveShell } from '@/components/common/ImmersiveShell';
+import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
 import { isLiveSessionContext, buildLiveSessionHubHref, withLiveSessionParam } from '@/lib/liveSession/context';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { LESSON_SPRINT_SCORE_META } from '@gabby/types/lessonSprint';
@@ -18,6 +19,8 @@ import { RepeatSprintButton } from './RepeatSprintButton';
 
 interface Props {
   studentId: string;
+  studentName: string;
+  studentIconPath: string | null;
   record: LessonSprintRecord;
   questions: SprintQuestion[];
   content: LessonSprintContentSummary | undefined;
@@ -43,7 +46,7 @@ interface Props {
   backLabel: string | null;
 }
 
-export function LessonSprintResult({ studentId, record, questions, content, sessionId, backHref: backHrefParam, backLabel: backLabelParam }: Props) {
+export function LessonSprintResult({ studentId, studentName, studentIconPath, record, questions, content, sessionId, backHref: backHrefParam, backLabel: backLabelParam }: Props) {
   const timezone = useTimezone();
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const isQuestionBased = record.question_type === '0' || record.question_type === '6';
@@ -71,19 +74,23 @@ export function LessonSprintResult({ studentId, record, questions, content, sess
     ? 'Back to Hub'
     : backLabelParam ?? (record.session_id ? 'Back to Session Result' : 'Back to Overview');
 
-  const body = (
+  // ハブ発（isImmersive）は共通のImmersiveHeaderが「戻る」導線とタイトル相当の情報を担うため、
+  // 本文側の個別ナビゲーション見出し（Back link + h1）は非没入時のみ表示する
+  // （非没入時はHeader/Sidebar付きの通常ページ内であり、そちらには画面名の案内が無いため必要）。
+  const mainContent = (
     <div className="flex flex-col lg:h-full max-w-7xl mx-auto w-full pb-6 lg:pb-0">
-      {/* ────────────── Header area: navigation + screen title ────────────── */}
-      <div className="space-y-1 pb-6 shrink-0">
-        <Link
-          href={backHref}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
-        >
-          <ArrowLeft size={14} />
-          {backLabel}
-        </Link>
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight">Live Sprint Result</h1>
-      </div>
+      {!isImmersive && (
+        <div className="space-y-1 pb-6 shrink-0">
+          <Link
+            href={backHref}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <ArrowLeft size={14} />
+            {backLabel}
+          </Link>
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">Live Sprint Result</h1>
+        </div>
+      )}
 
       {/* ────────────── Main content: two-pane layout. On lg+, each pane scrolls independently within a fixed-height row. ────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-6 lg:flex-1 lg:min-h-0 lg:items-stretch">
@@ -237,9 +244,30 @@ export function LessonSprintResult({ studentId, record, questions, content, sess
 
   // ハブ発の実施を完走した直後は、Header/Sidebarを覆う固定オーバーレイで表示し、通話中の
   // 画面遷移を最小限にする（Setup/Player画面（LessonSprintApp.tsx）と同じ手法で統一）。
-  return (
-    <ImmersiveShell active={isImmersive} className="overflow-y-auto p-4 md:p-6">
-      {body}
-    </ImmersiveShell>
-  );
+  // その際、SessionHubと同じ共通ImmersiveHeaderを載せて生徒コンテキスト・画面名を常時可視化する
+  // （詳細はSessionHub.tsxのコメント参照）。Setup/Player（LessonSprintApp.tsx）は既に自前の
+  // アプリ風ヘッダーを内包した独立カードのため対象外。
+  if (isImmersive) {
+    return (
+      <ImmersiveShell active className="flex flex-col">
+        <ImmersiveHeader
+          studentName={studentName}
+          studentIconPath={studentIconPath}
+          title="Live Sprint Result"
+          backHref={backHref}
+          backLabel={backLabel}
+          info={
+            averageScore !== null ? (
+              <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1 whitespace-nowrap">
+                Avg {averageScore}/5
+              </span>
+            ) : undefined
+          }
+        />
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">{mainContent}</div>
+      </ImmersiveShell>
+    );
+  }
+
+  return mainContent;
 }

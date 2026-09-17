@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft,
   ArrowRight,
   BadgeCheck,
   CheckCircle2,
@@ -19,9 +18,9 @@ import {
   Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserAvatar } from '@/components/common/UserAvatar';
 import { Section } from '@/components/common/Section';
 import { ImmersiveShell } from '@/components/common/ImmersiveShell';
+import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
 import { withLiveSessionParam } from '@/lib/liveSession/context';
 import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
@@ -126,36 +125,40 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
   };
 
   return (
-    <ImmersiveShell active className="overflow-y-auto p-4 md:p-6">
-      <div className="max-w-5xl mx-auto space-y-8 pb-8">
-        <div className="max-w-2xl">
-          <Link
-            href={`/students/${studentId}`}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors mb-2"
-          >
-            <ArrowLeft size={14} />
-            Back to Overview
-          </Link>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">Session Hub</h1>
-          <p className="text-[13px] text-slate-500 mt-1">
+    <ImmersiveShell active className="flex flex-col">
+      <ImmersiveHeader
+        studentName={session.counterpart_name}
+        studentIconPath={session.counterpart_icon_path}
+        title="Session Hub"
+        backHref={`/students/${studentId}`}
+        backLabel="Back to Overview"
+        info={
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
+              {badge.label}
+            </span>
+            {isTimezoneReady && (
+              <span className="hidden md:inline text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                {formatDateTimeEn(session.start_datetime, timezone)} – {formatDateTimeEn(session.end_datetime, timezone)}
+              </span>
+            )}
+          </div>
+        }
+      />
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
+        <div className="max-w-5xl mx-auto space-y-8 pb-8">
+          <p className="text-[13px] text-slate-500 max-w-2xl">
             Prep for this session, then click Start Live Session below to begin the call — it opens in a separate
             tab (or window), so you can keep this page open for training (e.g. Live Sprint) and prep info.
           </p>
-        </div>
 
-        <Section label="Session Info" icon={Info}>
+          <Section label="Session Info" icon={Info}>
           <Card className="rounded-2xl border-slate-200 shadow-sm">
             <CardContent className="pt-5 space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <UserAvatar userName={session.counterpart_name} iconPath={session.counterpart_icon_path} size={48} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-slate-800 truncate">{session.counterpart_name}</p>
-                    <span className={`inline-flex text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border mt-1 ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                  </div>
-                </div>
+                <span className={`inline-flex text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
+                  {badge.label}
+                </span>
                 {isActionable && hasCoachJoined && (
                   <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-emerald-50 text-emerald-700 border-emerald-200">
                     <BadgeCheck size={11} />
@@ -361,9 +364,10 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
             </CardContent>
           </Card>
         </Section>
-  
-        <EndLessonReasonDialog open={reasonDialogOpen} onClose={closeReasonDialog} onSubmit={submitReason} />
       </div>
+      </div>
+
+      <EndLessonReasonDialog open={reasonDialogOpen} onClose={closeReasonDialog} onSubmit={submitReason} />
     </ImmersiveShell>
   );
 }
