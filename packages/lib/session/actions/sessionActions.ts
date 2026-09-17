@@ -139,6 +139,9 @@ const SESSION_ROW_COLUMNS =
  * coach_id/student_idの絞り込みを明示的に行う（RLSは「担当外だが担当関係のある生徒のセッション」も
  * コーチに開示するよう別途拡張されているため、それに引きずられてこの画面（自分の予定表）に
  * 他コーチのセッションが混ざらないよう、ここでは常に「自分が直接の当事者」のみに限定する）。
+ * 期間指定はstart_datetimeではなくend_datetime/start_datetimeによる区間重複判定で行う
+ * （[start_datetime, end_datetime)が[startIso, endIso)と重なる行を取得）。開始基準だと、
+ * 実施中（start_datetimeが期間開始より前だがend_datetimeはまだ先）のセッションが取りこぼされるため。
  */
 export async function getMySessionsCore(
   startIso: string,
@@ -155,7 +158,7 @@ export async function getMySessionsCore(
       .from('com_t_session')
       .select(SESSION_ROW_COLUMNS)
       .or(`coach_id.eq.${user.id},student_id.eq.${user.id}`)
-      .gte('start_datetime', startIso)
+      .gt('end_datetime', startIso)
       .lt('start_datetime', endIso)
       .order('start_datetime', { ascending: true });
 

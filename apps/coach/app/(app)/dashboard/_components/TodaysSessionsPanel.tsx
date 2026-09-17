@@ -32,10 +32,10 @@ export default function TodaysSessionsPanel() {
     (async () => {
       setIsLoading(true);
       const now = new Date();
-      // 実施中（開始済みだがまだEnd Session前）のセッションも表示したいので、下限は
-      // nowではなくLIVE_SESSION_END_AFTER_MS分だけ過去に広げる。この定数はVideo SDKの
-      // 最大通話時間の猶予（SessionHubのisPastActionWindowと同じ基準）で、通話が
-      // 押して終了間際でも取りこぼさないための余裕を兼ねる。
+      // 実施中（開始済みだがまだEnd Session前）のセッションはgetMySessionsCore側の区間重複判定
+      // （end_datetime基準）で取りこぼされずに取得できる。ここでの下限の広げ幅は、終了直後の
+      // セッションもLIVE_SESSION_END_AFTER_MS分だけ猶予を持って表示し続けるためのもの
+      // （SessionHubのisPastActionWindowと同じ基準）。
       const rangeStart = new Date(now.getTime() - LIVE_SESSION_END_AFTER_MS);
       const rangeEnd = new Date(now.getTime() + WINDOW_MS);
       const data = await getMySessions(rangeStart.toISOString(), rangeEnd.toISOString());
