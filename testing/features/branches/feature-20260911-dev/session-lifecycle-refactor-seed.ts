@@ -39,7 +39,7 @@ await assertReleaseApplied(admin, [
   { name: "admin_match_student_with_coach", dummyArgs: { p_ticket_id: "00000000-0000-0000-0000-000000000000", p_coach_id: "00000000-0000-0000-0000-000000000000", p_slot_no: 1, p_day_of_week: 1, p_start_time: "10:00", p_end_time: "10:30" } },
   { name: "fn_schedule_shortfall", dummyArgs: { p_schedule_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "finalize_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
-  { name: "resolve_stale_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000", p_completion_result: 1, p_reason: "preflight" } },
+  { name: "resolve_stale_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000", p_resolution: 1, p_reason: "preflight" } },
   { name: "cancel_session", dummyArgs: { p_session_id: "00000000-0000-0000-0000-000000000000" } },
   { name: "admin_book_session_direct", dummyArgs: { p_schedule_id: "00000000-0000-0000-0000-000000000000", p_start_datetime: TODAY.toISOString(), p_end_datetime: TODAY.toISOString() } },
   { name: "release_lesson_schedule_slot", dummyArgs: { p_schedule_id: "00000000-0000-0000-0000-000000000000" } },
@@ -55,20 +55,22 @@ await assertRpcRemoved(admin, [
 ]);
 console.log("Preflight OK: admin_reschedule_sessionは削除済みです。");
 
-// resolve_stale_sessionの新シグネチャ(p_completion_result)が反映されているかも別途確認する
-// （旧p_resolved_statusのままだとPGRST202でここに到達しない=assertReleaseAppliedで検出済みのはずだが、
-// 型名一致まではPostgRESTのスキーマキャッシュ次第のため、念のため明示的な軽い動作確認を残す）
+// resolve_stale_sessionの現行シグネチャ(p_resolution)が反映されているかも別途確認する
+// （2026-09-17: コーチ自身の無断欠席(coach_no_show=4)対応追加に伴い、p_completion_result→
+// p_resolutionへ引数名変更。旧p_completion_resultのままだとPGRST202でここに到達しない
+// =assertReleaseAppliedで検出済みのはずだが、型名一致まではPostgRESTのスキーマキャッシュ
+// 次第のため、念のため明示的な軽い動作確認を残す）
 {
   const { error } = await admin.rpc("resolve_stale_session", {
     p_session_id: "00000000-0000-0000-0000-000000000000",
-    p_completion_result: 99, // 業務的に無効な値。'invalid completion result'で失敗すれば新シグネチャで受理されている証拠
+    p_resolution: 99, // 業務的に無効な値。'invalid resolution'で失敗すれば新シグネチャで受理されている証拠
     p_reason: "preflight-signature-check",
   });
   if (error?.code === "PGRST202") {
-    throw new Error("resolve_stale_session が旧シグネチャ(p_resolved_status)のままのようです。リリースSQLの適用状況を確認してください。");
+    throw new Error("resolve_stale_session が旧シグネチャ(p_completion_result)のままのようです。リリースSQLの適用状況を確認してください。");
   }
 }
-console.log("Preflight OK: resolve_stale_session は新シグネチャ(p_completion_result)で受理されています。");
+console.log("Preflight OK: resolve_stale_session は現行シグネチャ(p_resolution)で受理されています。");
 
 // ---------------------------------------------------------------------------
 // 共通ヘルパー

@@ -1,0 +1,42 @@
+{
+  "scenario": "features/branches/feature-20260911-dev/session-24h-and-auth-refactor-retry-fncancelfuturesessions",
+  "env": "staging",
+  "tag": "stg0917",
+  "executedAt": "2026-09-17T11:16:35.707Z",
+  "gitCommit": "f3cbeab4",
+  "gitBranch": "feature/20260918-dev",
+  "totalChecks": 6,
+  "passed": 6,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "release_lesson_schedule_slot: 担当コーチC1は権限エラーになる(アドミン専用)",
+      "ok": true,
+      "detail": "not authorized to release a lesson schedule slot"
+    },
+    {
+      "name": "release_lesson_schedule_slot: アドミンは成功する",
+      "ok": true
+    },
+    {
+      "name": "release_lesson_schedule_slot: スケジュールがstatus=9(terminated)になる",
+      "ok": true,
+      "detail": "status=9"
+    },
+    {
+      "name": "invalidate_user_license: 担当コーチC1は権限エラーになる(アドミン専用)",
+      "ok": true,
+      "detail": "not authorized to invalidate a license"
+    },
+    {
+      "name": "invalidate_user_license: アドミンは成功する",
+      "ok": true
+    },
+    {
+      "name": "invalidate_user_license: ライセンスがstatus=0(停止)になる",
+      "ok": true,
+      "detail": "status=0"
+    }
+  ]
+}

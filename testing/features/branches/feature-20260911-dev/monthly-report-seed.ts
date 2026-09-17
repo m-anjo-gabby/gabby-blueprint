@@ -190,6 +190,9 @@ async function seedSchedule(params: { ticketId: string; studentId: string; coach
       status: 1,
       start_date: toDateOnlyString(params.startDate),
       end_date: toDateOnlyString(params.endDate),
+      // target_sessions(2026-09-14追加、NOT NULL)は本シナリオ(月次コーチングレポート)では
+      // 検証対象外のため、十分大きな固定値を設定する(KJ-2026-0916-01参照)。
+      target_sessions: 999,
     })
     .select("schedule_id")
     .single();
@@ -303,16 +306,20 @@ const sessionEarlyEnded = await seedSessionRow({ scheduleId, ticketId, studentId
 const sessionUnresolved = await seedSessionRow({ scheduleId, ticketId, studentId, coachId, date: unresolvedDay, hour: 10, minute: 0 });
 
 // resolve_stale_session はコーチ本人の実JWTで呼ぶ(CLAUDE.md 6章: service_roleでのRPC呼び出し禁止)
+// 引数名・値は当初p_resolved_status(2/6/7)だったが、その後p_completion_result(1/2/3)→
+// 2026-09-17にp_resolution(1/2/3/4)へ2段階で変更されている。値の意味は
+// 1=normal(完了)/2=early_ended(早期終了)/3=no_show の対応関係で変わっていない
+// (KJ-2026-0916-01・session-lifecycle-refactor-seed.tsの修正と同種の追従漏れ)。
 {
-  const { error } = await coachClient.rpc("resolve_stale_session", { p_session_id: sessionCompleted, p_resolved_status: 2, p_reason: "QA自動テスト: 完了扱いへ解決" });
+  const { error } = await coachClient.rpc("resolve_stale_session", { p_session_id: sessionCompleted, p_resolution: 1, p_reason: "QA自動テスト: 完了扱いへ解決" });
   if (error) throw error;
 }
 {
-  const { error } = await coachClient.rpc("resolve_stale_session", { p_session_id: sessionNoShow, p_resolved_status: 6, p_reason: "QA自動テスト: No show扱いへ解決" });
+  const { error } = await coachClient.rpc("resolve_stale_session", { p_session_id: sessionNoShow, p_resolution: 3, p_reason: "QA自動テスト: No show扱いへ解決" });
   if (error) throw error;
 }
 {
-  const { error } = await coachClient.rpc("resolve_stale_session", { p_session_id: sessionEarlyEnded, p_resolved_status: 7, p_reason: "QA自動テスト: 早期終了扱いへ解決" });
+  const { error } = await coachClient.rpc("resolve_stale_session", { p_session_id: sessionEarlyEnded, p_resolution: 2, p_reason: "QA自動テスト: 早期終了扱いへ解決" });
   if (error) throw error;
 }
 // sessionUnresolved は意図的に resolve_stale_session を呼ばず、status=1のまま(終了処理漏れ)残す
