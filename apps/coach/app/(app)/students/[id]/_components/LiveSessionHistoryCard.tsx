@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarClock, CheckCircle2, ChevronRight, Loader2, TriangleAlert, User, Video, X } from 'lucide-react';
+import { CalendarClock, ChevronRight, Loader2, TriangleAlert, User, Video, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -107,9 +107,15 @@ export function LiveSessionHistoryCard({
     (s) => s.coach_id === myId || (showOtherCoach && !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status))
   );
   const now = new Date();
-  const upcomingSessions = visibleSessions.filter(
-    (s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) > now
-  );
+  // 終了予定時刻を過ぎてもEnd Session/Resolveされず残っているセッション（要対応）も、ここに
+  // 含めて表示する（以前はend_datetime > nowで除外しており、その間どのタブにも出現しない
+  // 抜け穴になっていた）。対応自体はこの行をクリックして遷移するSession Hubに一本化する。
+  // サーバー側は履歴タブ（Completed/Changes）向けに開始日時の降順で返すが、このタブは
+  // 「次に対応すべきものから」見たいため昇順に並べ替える（結果として、過去日時のまま残る
+  // 未対応セッションが自動的に先頭に来る）。
+  const scheduledSessions = visibleSessions
+    .filter((s) => s.status === SESSION_STATUS.SCHEDULED)
+    .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime));
   const completedSessions = visibleSessions.filter((s) => SESSION_RESULT_STATUSES.includes(s.status));
   // 変更履歴タブは生徒・コーチ本人起因のキャンセルのみを対象とする（ライセンス無効化・
   // コーチ交代・アドミン代理操作は運用都合の内部処理のため対象外）。isSelfInitiatedCancelは
@@ -117,9 +123,9 @@ export function LiveSessionHistoryCard({
   // visibleSessionsに残っている時点で必ず自分自身が担当したセッションである
   const historySessions = visibleSessions.filter((s) => isSelfInitiatedCancel(s));
 
-  const showUpcomingTab = upcomingSessions.length > 0;
-  const [activeTab, setActiveTab] = useState('upcoming');
-  const displayedTab = activeTab === 'upcoming' && !showUpcomingTab ? 'completed' : activeTab;
+  const showScheduledTab = scheduledSessions.length > 0;
+  const [activeTab, setActiveTab] = useState('scheduled');
+  const displayedTab = activeTab === 'scheduled' && !showScheduledTab ? 'completed' : activeTab;
 
   // Completed・Changesは契約が長く続くほど件数が増え続けるため、最初はHISTORY_PAGE_SIZE件だけ
   // 表示し、ボタン押下で追加表示する。契約(ticket)を切り替えたら表示件数もリセットする
@@ -155,9 +161,9 @@ export function LiveSessionHistoryCard({
     const badge = getSessionStatusBadge(session);
     const isOwn = session.coach_id === myId;
     const isFuture = new Date(session.start_datetime) > now;
-    const isPastEnd = new Date(session.end_datetime) < now;
     const canAct = isOwn && session.status === SESSION_STATUS.SCHEDULED && isFuture;
-    const canResolve = isOwn && session.status === SESSION_STATUS.SCHEDULED && isPastEnd;
+    // バッジが「Action Needed」になる条件（getSessionStatusBadge参照）と揃える
+    const needsAction = isOwn && session.status === SESSION_STATUS.SCHEDULED && new Date(session.end_datetime) < now;
     // キャンセル・振替済み（Changesタブ対象）は実施されていないため、Hub/結果画面への
     // 導線を出さない（押しても実質何も無い画面に遷移してしまうため）
     const isLinkable = isOwn && !SESSION_NON_ACTIONABLE_STATUSES.includes(session.status);
@@ -165,40 +171,50 @@ export function LiveSessionHistoryCard({
       ? `/students/${studentId}/sessions/${session.session_id}`
       : `/students/${studentId}/sessions/${session.session_id}/result`;
 
-    const content = (
-      <div className="flex items-center justify-between gap-3 -m-1 p-1 rounded-lg transition-colors">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold text-slate-700 truncate">
-            {formatDateTimeEn(session.start_datetime, timezone)}
-          </span>
-          {!isOwn && (
-            <span className="flex items-center gap-1 shrink-0 text-[10px] font-bold text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md">
-              <User size={10} />
-              {session.coach_name}
-            </span>
-          )}
-        </div>
-        <span className="flex items-center gap-1.5 shrink-0">
-          <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
-            {badge.label}
-          </span>
-          {isLinkable && <ChevronRight size={14} className="text-slate-300" />}
-        </span>
-      </div>
-    );
+    // 行全体をタップ領域にする（以前は日時部分だけがLinkでCancelボタンの領域はタップしても
+    // 反応しなかった）。<a>の中に<button>をネストするのは無効なHTMLになるため、Linkでは
+    // なくli自体にonClick/onKeyDownでナビゲーションさせ、Cancelボタン側でstopPropagationして
+    // 行の遷移を止める。キーボード操作（Tab+Enter/Space）にも対応する。
+    const handleRowActivate = () => {
+      if (isLinkable) router.push(href);
+    };
 
     return (
       <li
         key={session.session_id}
-        className="flex flex-col gap-2 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60"
-      >
-        {isLinkable ? (
-          <Link href={href} className="hover:bg-slate-100/80 -m-1 p-1 rounded-lg transition-colors">
-            {content}
-          </Link>
-        ) : (
-          content
+        role={isLinkable ? 'link' : undefined}
+        tabIndex={isLinkable ? 0 : undefined}
+        onClick={handleRowActivate}
+        onKeyDown={(e) => {
+          if (isLinkable && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            handleRowActivate();
+          }
+        }}
+        className={cn(
+          'flex flex-col gap-2 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60 transition-colors',
+          isLinkable && 'cursor-pointer hover:bg-slate-100/80'
         )}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-semibold text-slate-700 truncate">
+              {formatDateTimeEn(session.start_datetime, timezone)}
+            </span>
+            {!isOwn && (
+              <span className="flex items-center gap-1 shrink-0 text-[10px] font-bold text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md">
+                <User size={10} />
+                {session.coach_name}
+              </span>
+            )}
+          </div>
+          <span className="flex items-center gap-1.5 shrink-0">
+            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
+              {badge.label}
+            </span>
+            {isLinkable && <ChevronRight size={14} className="text-slate-300" />}
+          </span>
+        </div>
         {canAct && (
           <div className="flex items-center gap-2">
             <Button
@@ -206,27 +222,17 @@ export function LiveSessionHistoryCard({
               size="sm"
               variant="outline"
               className="text-rose-600 border-rose-200 hover:bg-rose-50"
-              onClick={() => setActionTarget({ session: toSessionListItem(session, studentId, studentName, studentTimezone), mode: 'cancel' })}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActionTarget({ session: toSessionListItem(session, studentId, studentName, studentTimezone), mode: 'cancel' });
+              }}
             >
               <X size={13} />
               Cancel
             </Button>
           </div>
         )}
-        {canResolve && (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="text-amber-700 border-amber-200 hover:bg-amber-50"
-              onClick={() => setActionTarget({ session: toSessionListItem(session, studentId, studentName, studentTimezone), mode: 'resolve' })}
-            >
-              <CheckCircle2 size={13} />
-              Resolve
-            </Button>
-          </div>
-        )}
+        {needsAction && <p className="text-[11px] font-semibold text-red-600 pl-1">Needs your action — tap to open the Hub.</p>}
       </li>
     );
   };
@@ -291,8 +297,8 @@ export function LiveSessionHistoryCard({
           </div>
         ) : (
           <Tabs value={displayedTab} onValueChange={setActiveTab} className="space-y-2">
-            <TabsList className={showUpcomingTab ? 'grid w-full grid-cols-3' : 'grid w-full grid-cols-2'}>
-              {showUpcomingTab && <TabsTrigger value="upcoming">Upcoming</TabsTrigger>}
+            <TabsList className={showScheduledTab ? 'grid w-full grid-cols-3' : 'grid w-full grid-cols-2'}>
+              {showScheduledTab && <TabsTrigger value="scheduled">Scheduled</TabsTrigger>}
               <TabsTrigger value="completed">Completed</TabsTrigger>
               <TabsTrigger value="history">Changes</TabsTrigger>
             </TabsList>
@@ -303,10 +309,10 @@ export function LiveSessionHistoryCard({
               </div>
             ) : (
               <>
-                {showUpcomingTab && (
-                  <TabsContent value="upcoming">
+                {showScheduledTab && (
+                  <TabsContent value="scheduled">
                     <ul className="space-y-2 max-h-96 overflow-y-auto">
-                      {upcomingSessions.map(renderSessionRow)}
+                      {scheduledSessions.map(renderSessionRow)}
                     </ul>
                   </TabsContent>
                 )}

@@ -1,0 +1,83 @@
+{
+  "scenario": "coach-no-show-resolution.feature",
+  "env": "dev",
+  "tag": "noshow02",
+  "executedAt": "2026-09-17T08:48:05.170Z",
+  "gitCommit": "79cf3219",
+  "gitBranch": "feature/20260911-dev",
+  "totalChecks": 14,
+  "passed": 11,
+  "failed": 3,
+  "ok": false,
+  "checks": [
+    {
+      "name": "NS: 解決前のused_sessionsは0",
+      "ok": true,
+      "detail": "used_sessions=0"
+    },
+    {
+      "name": "NS: 解決前はactual_sessions===expected_sessions(生成上限まで埋まっており空き枠が無い)。この前提が無いと後続の「shortfall+1」検証が意味を持たない",
+      "ok": true,
+      "detail": "{\"expected_sessions\":12,\"actual_sessions\":12,\"shortfall\":0}"
+    },
+    {
+      "name": "NS: 無関係コーチによるcoach_no_show解決は権限エラーで拒否される",
+      "ok": true,
+      "detail": "not authorized to resolve this session"
+    },
+    {
+      "name": "NS: コーチ本人によるcoach_no_show(4)解決が成功する",
+      "ok": true
+    },
+    {
+      "name": "NS: status=cancelled(3)/cancel_category=coach(2)/ticket_refunded=true/completion_result=NULLになる(生徒都合のno_showには絶対にならない)",
+      "ok": true,
+      "detail": "{\"status\":3,\"cancel_category\":2,\"ticket_refunded\":true,\"completion_result\":null,\"cancel_reason\":\"テスト: 完全に失念し、生徒に何の連絡も無いままセッション時間を過ぎてしまった\",\"cancelled_by\":\"653800c1-f7ef-4691-88f6-cde3a80ffe12\"}"
+    },
+    {
+      "name": "NS: cancelled_byがコーチ自身のIDになる",
+      "ok": true,
+      "detail": "cancelled_by=653800c1-f7ef-4691-88f6-cde3a80ffe12"
+    },
+    {
+      "name": "NS: cancel_reasonに入力した理由がそのまま記録される",
+      "ok": true,
+      "detail": "テスト: 完全に失念し、生徒に何の連絡も無いままセッション時間を過ぎてしまった"
+    },
+    {
+      "name": "NS: used_sessionsが解決前後で変化しない(生徒のチケットが消費されない)",
+      "ok": true,
+      "detail": "before=0, after=0"
+    },
+    {
+      "name": "NS: fn_schedule_shortfallがactual_sessions -1 / shortfall +1になる(未割当に戻り再予約可能になる)",
+      "ok": true,
+      "detail": "before={\"expected_sessions\":12,\"actual_sessions\":12,\"shortfall\":0}, after={\"expected_sessions\":12,\"actual_sessions\":11,\"shortfall\":1}"
+    },
+    {
+      "name": "NS: 生徒宛にSESSION_CANCELLED_BY_COACHの通知が作成される",
+      "ok": true,
+      "detail": "{\"payload\":{\"coach_name\":\"QAコーチ（無断欠席解決・noshow02）\",\"session_id\":\"5ef52b0c-f11a-4bda-89c8-528a745925e9\",\"proposal_count\":0,\"session_start_datetime\":\"2026-09-15T08:47:53.45+00:00\"},\"link_path\":\"/live-room\"}"
+    },
+    {
+      "name": "NS: 通知payloadのcoach_nameがコーチ名になっている(生徒が誰の欠席か分かる)",
+      "ok": true,
+      "detail": "{\"coach_name\":\"QAコーチ（無断欠席解決・noshow02）\",\"session_id\":\"5ef52b0c-f11a-4bda-89c8-528a745925e9\",\"proposal_count\":0,\"session_start_datetime\":\"2026-09-15T08:47:53.45+00:00\"}"
+    },
+    {
+      "name": "NM: コーチ本人によるnormal(1)解決が新引数名(p_resolution)でも成功する",
+      "ok": false,
+      "detail": "function public.fn_consume_session_ticket(uuid, text) does not exist"
+    },
+    {
+      "name": "NM: status=completed(2)/completion_result=normal(1)になる",
+      "ok": false,
+      "detail": "{\"status\":1,\"completion_result\":null}"
+    },
+    {
+      "name": "NM: normal解決はused_sessionsが1増える(通常完了はチケットを消費する既存仕様が引数名変更後も変わっていない)",
+      "ok": false,
+      "detail": "before=0, after=0"
+    }
+  ]
+}

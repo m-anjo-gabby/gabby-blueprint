@@ -173,11 +173,13 @@ const scPastEarlySessionId = scPast[1].session_id;
 }
 
 // 3-4. resolve_stale_session: normal / early_ended
+// 2026-09-17: コーチ自身の無断欠席(coach_no_show=4)対応の追加に伴い、引数名を
+// p_completion_result → p_resolution に変更（値の意味は1-3まで変わらない）。
 {
-  const { error: emptyReasonError } = await coachClient.rpc("resolve_stale_session", { p_session_id: scPastEarlySessionId, p_completion_result: 2, p_reason: "" });
+  const { error: emptyReasonError } = await coachClient.rpc("resolve_stale_session", { p_session_id: scPastEarlySessionId, p_resolution: 2, p_reason: "" });
   check("resolve_stale_session: reason空文字だとエラーになる", !!emptyReasonError, emptyReasonError?.message);
 
-  const { error: normalErr } = await coachClient.rpc("resolve_stale_session", { p_session_id: scPastNormalSessionId, p_completion_result: 1, p_reason: "QAアプリ外実施(normal)" });
+  const { error: normalErr } = await coachClient.rpc("resolve_stale_session", { p_session_id: scPastNormalSessionId, p_resolution: 1, p_reason: "QAアプリ外実施(normal)" });
   check("resolve_stale_session: completion_result=1(normal)で解決できる", !normalErr, normalErr?.message);
   const { data: normalRow } = await admin.from("com_t_session").select("status, completion_result, status_note").eq("session_id", scPastNormalSessionId).single();
   check(
@@ -186,7 +188,7 @@ const scPastEarlySessionId = scPast[1].session_id;
     JSON.stringify(normalRow)
   );
 
-  const { error: earlyErr } = await coachClient.rpc("resolve_stale_session", { p_session_id: scPastEarlySessionId, p_completion_result: 2, p_reason: "QAアプリ外実施(early_ended)" });
+  const { error: earlyErr } = await coachClient.rpc("resolve_stale_session", { p_session_id: scPastEarlySessionId, p_resolution: 2, p_reason: "QAアプリ外実施(early_ended)" });
   check("resolve_stale_session: completion_result=2(early_ended)で解決できる", !earlyErr, earlyErr?.message);
 }
 

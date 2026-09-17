@@ -23,6 +23,20 @@ export const COMPLETION_RESULT = {
 } as const;
 export type CompletionResult = typeof COMPLETION_RESULT[keyof typeof COMPLETION_RESULT];
 
+/**
+ * resolve_stale_session RPCへ渡す「期限超過セッションの解決方法」。1〜3はCOMPLETION_RESULTと
+ * 値を共有し、そのままcompletion_resultカラムに入る。COACH_NO_SHOW(4)のみ例外で、コーチ自身の
+ * 無断欠席を意味し、DB上はcompletion_resultではなくstatus=CANCELLED/cancel_category=COACH
+ * （コーチキャンセルと同義。チケットは常に返還される）として記録される。
+ */
+export const STALE_SESSION_RESOLUTION = {
+  NORMAL: COMPLETION_RESULT.NORMAL,
+  EARLY_ENDED: COMPLETION_RESULT.EARLY_ENDED,
+  NO_SHOW: COMPLETION_RESULT.NO_SHOW,
+  COACH_NO_SHOW: 4,
+} as const;
+export type StaleSessionResolution = typeof STALE_SESSION_RESOLUTION[keyof typeof STALE_SESSION_RESOLUTION];
+
 // com_t_session.cancel_category（status=CANCELLEDの起因。status<>CANCELLEDの行では常にNULL）
 export const CANCEL_CATEGORY = {
   STUDENT: 1,

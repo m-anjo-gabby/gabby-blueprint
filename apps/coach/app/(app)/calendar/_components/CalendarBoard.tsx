@@ -8,11 +8,8 @@ import {
   endOfMonth,
   startOfWeek,
   endOfWeek,
-  startOfToday,
   eachDayOfInterval,
   isSameMonth,
-  isToday,
-  isBefore,
   format,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -114,6 +111,9 @@ export function CalendarBoard({ highlightedDate, reloadToken }: CalendarBoardPro
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 
+  // コーチのタイムゾーンでの「今日」（ブラウザのローカル時刻ではなく、コーチ本人のタイムゾーン基準で判定する）
+  const todayKey = toIsoDateInZone(new Date(), timezone);
+
   const handleResolved = (sessionId: string, patch: Partial<SessionListItem>) => {
     setSessions((prev) => prev.map((s) => (s.session_id === sessionId ? { ...s, ...patch } : s)));
   };
@@ -180,9 +180,9 @@ export function CalendarBoard({ highlightedDate, reloadToken }: CalendarBoardPro
                     <span
                       className={cn(
                         'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
-                        isToday(day)
+                        key === todayKey
                           ? 'bg-indigo-600 text-white'
-                          : isSameMonth(day, currentMonth) && !isBefore(day, startOfToday())
+                          : isSameMonth(day, currentMonth) && key >= todayKey
                             ? 'text-slate-700'
                             : 'text-slate-400'
                       )}

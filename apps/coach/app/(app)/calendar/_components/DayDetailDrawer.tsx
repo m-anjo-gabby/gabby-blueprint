@@ -340,16 +340,13 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
 
                     {canResolve && (
                       <div className="flex items-center gap-2 pt-1">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="text-amber-700 border-amber-200 hover:bg-amber-50"
-                          onClick={() => onActionRequested({ session, mode: 'resolve' })}
+                        <Link
+                          href={`/students/${session.counterpart_id}/sessions/${session.session_id}`}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-600 transition-colors"
                         >
                           <CheckCircle2 size={13} />
-                          Resolve
-                        </Button>
+                          Go to Session Hub to resolve
+                        </Link>
                       </div>
                     )}
 

@@ -21,6 +21,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import {
   CoachSessionTasksSummary,
   CompletionResult,
+  StaleSessionResolution,
   IncomingRescheduleProposalGroup,
   ProposedSlotInput,
   SessionActionErrorCode,
@@ -106,15 +107,17 @@ export async function finalizeSession(
 /**
  * Manually resolves a session stuck in "scheduled" past its end time (e.g. the coach
  * crashed before pressing End Lesson, or the lesson was conducted outside the app).
- * `completionResult` must be one of normal(1)/early_ended(2)/no_show(3); a reason is mandatory.
+ * `resolution` must be one of normal(1)/early_ended(2)/no_show(3)/coach_no_show(4); a reason is
+ * mandatory. coach_no_show(4) is handled specially by the RPC as a coach-initiated cancellation
+ * (ticket always refunded, student notified) rather than a completed outcome.
  */
 export async function resolveStaleSession(
   sessionId: string,
-  completionResult: CompletionResult,
+  resolution: StaleSessionResolution,
   reason: string
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await resolveStaleSessionCore(sessionId, completionResult, reason);
+  const result = await resolveStaleSessionCore(sessionId, resolution, reason);
 
   if (!result.success) {
     logger.error('coach:resolve_stale_session_failed', result.errorCode, ctx);

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
   BadgeCheck,
@@ -12,6 +13,7 @@ import {
   Info,
   Loader2,
   MessageCircle,
+  PhoneOff,
   TrendingUp,
   TriangleAlert,
   Video,
@@ -28,8 +30,10 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { hasCoachJoinedSessions } from '@/actions/sessionAction';
 import { useEndLesson } from '@/hooks/useEndLesson';
 import { EndLessonReasonDialog } from '@/components/session/EndLessonReasonDialog';
+import { SessionActionDialog, type SessionActionTarget } from '../../../../../calendar/_components/SessionActionDialog';
+import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
-import { SESSION_STATUS, type SessionResultSummary } from '@gabby/types/session';
+import { SESSION_STATUS, type SessionListItem, type SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 import type { SelfTrainingWeekSummary } from '@gabby/types/coachStudent';
@@ -69,6 +73,7 @@ interface Props {
  * ?session_id=の有無）とは独立しており、混同しないこと（apps/coach/lib/liveSession/context.ts参照）。
  */
 export function SessionHub({ studentId, session, recentHomework, recentSprints, selfTrainingSummary }: Props) {
+  const router = useRouter();
   const user = useUserStore((state) => state.user);
   const timezone = user?.timezone || 'Asia/Tokyo';
   // UserStoreInitializerはDBからのプロフィール取得が完了するまでuser_id: 0の仮ユーザーを
@@ -77,6 +82,11 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
   const isTimezoneReady = !!user && user.user_id !== 0;
   const badge = getSessionStatusBadge(session);
   const { endLesson, endingSessionId, reasonDialogOpen, closeReasonDialog, submitReason, notActionableSessionId } = useEndLesson();
+  // 別タブ（通話ルーム）で通話が終了した瞬間にこのハブタブへ知らせてもらい、End Session忘れを防ぐ
+  const { hasEnded: hasCallEndedElsewhere } = useLiveSessionEndSignal(session.session_id);
+  // 期限超過セッションの手動解決（アプリ外実施等、call_logが無いケースの唯一のセーフティネット）。
+  // カレンダー・生徒概要のどちらから来てもここに一本化し、解決後は宿題投稿へ自然に繋がる結果画面へ遷移させる。
+  const [resolveTarget, setResolveTarget] = useState<SessionActionTarget | null>(null);
   // 別タブで先にEnd Session済みだった場合、このタブでのEnd SessionクリックはRPC側の
   // 二重確定防止チェックで拒否される。そのエラーを検知したら、リフレッシュせずとも
   // このタブも「既に確定済み」の読み取り専用表示へ切り替える。
@@ -94,6 +104,18 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
       cancelled = true;
     };
   }, [isActionable, session.session_id]);
+
+  const handleResolved = (_sessionId: string, patch: Partial<SessionListItem>) => {
+    // コーチ無断欠席(coach_no_show)はキャンセル扱いになり、実施されていないセッションのため
+    // 宿題投稿を促す結果画面に遷移するのは適切でない。それ以外（normal/early_ended/no_show）は
+    // 従来通り、解決直後の宿題投稿に自然に繋がるよう結果画面へ遷移する
+    // （このハブ画面はSCHEDULED専用のため、いずれの場合もこのハブには戻らない）。
+    if (patch.status === SESSION_STATUS.CANCELLED) {
+      router.push(`/students/${studentId}`);
+    } else {
+      router.push(`/students/${studentId}/sessions/${session.session_id}/result`);
+    }
+  };
 
   // 終了予定時刻超過の警告は時間経過で状態が変わるため、画面を開いたまま放置されても
   // 最新状態を保てるよう定期的に「今」を更新する（この用途にのみ使う。ボタンの有効/無効の
@@ -166,7 +188,14 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
                   </span>
                 )}
               </div>
-  
+
+              {isActionable && hasCallEndedElsewhere && (
+                <div className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">
+                  <PhoneOff size={13} className="shrink-0" />
+                  The call ended in the other tab. Press End Session below to record the outcome.
+                </div>
+              )}
+
               {/* 誤ったセッションを操作してしまうことを防ぐため、日時は強調して表示する */}
               <div className="rounded-xl bg-slate-50/80 border border-slate-100 px-4 py-3">
                 {isTimezoneReady ? (
@@ -184,7 +213,7 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
                     <div className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
                       <TriangleAlert size={13} className="shrink-0" />
                       This session’s scheduled end time has passed. Please press End Session once you’re done
-                      {!hasCoachJoined && ' (or use Resolve from the Live Sessions list on the student overview if the call didn’t happen)'}.
+                      {!hasCoachJoined && ' (or Resolve Manually below if the call didn’t happen through the app)'}.
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
@@ -211,6 +240,36 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
                       {endingSessionId === session.session_id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                       End Session
                     </button>
+                    {!hasCoachJoined && isPastScheduledEnd && (
+                      <button
+                        onClick={() =>
+                          setResolveTarget({
+                            mode: 'resolve',
+                            session: {
+                              session_id: session.session_id,
+                              schedule_id: '',
+                              start_datetime: session.start_datetime,
+                              end_datetime: session.end_datetime,
+                              status: session.status,
+                              completion_result: session.completion_result,
+                              cancel_category: null,
+                              viewer_role: 'coach',
+                              counterpart_id: studentId,
+                              counterpart_name: session.counterpart_name,
+                              counterpart_timezone: timezone,
+                              rescheduled_from: null,
+                              cancel_reason: null,
+                              status_note: session.status_note,
+                            } satisfies SessionListItem,
+                          })
+                        }
+                        title="Use this if the lesson happened outside the app (e.g. a direct Zoom call), or if you crashed before pressing End Session"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors px-4 py-2.5 rounded-full"
+                      >
+                        <TriangleAlert size={14} />
+                        Resolve Manually
+                      </button>
+                    )}
                   </div>
                   {isPastActionWindow ? (
                     <p className="flex items-center gap-1 text-[11px] text-slate-400">
@@ -368,6 +427,7 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
       </div>
 
       <EndLessonReasonDialog open={reasonDialogOpen} onClose={closeReasonDialog} onSubmit={submitReason} />
+      <SessionActionDialog target={resolveTarget} onClose={() => setResolveTarget(null)} onResolved={handleResolved} />
     </ImmersiveShell>
   );
 }

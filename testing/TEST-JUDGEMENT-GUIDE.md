@@ -233,4 +233,46 @@
     testing配下のスクリプトが無いか」もざっと確認するのが理想だが、現実的には「他シナリオの
     再実行時に初めて発覚し、その都度本ファイルに追記して共有する」運用で蓄積していく。
 
+### KJ-2026-0917-01 fn_consume_session_ticket()がdev環境に未反映で、resolve_stale_sessionのnormal(1)解決がPostgres 42883で失敗する
+
+- **該当シナリオ**: `testing/features/branches/feature-20260911-dev/coach-no-show-resolution-verify.ts`
+  （シナリオ2: normal(1)解決の回帰確認。coach_no_show(4)のメイン検証自体は11/11 OK）
+- **事象**: `resolve_stale_session(p_session_id, p_resolution=1, p_reason)`をコーチ本人のJWTで
+  呼び出すと、`function public.fn_consume_session_ticket(uuid, text) does not exist`で失敗した。
+  RPC自体(`resolve_stale_session`)はpreflight(`assertReleaseApplied`)でOKと判定されていたが、
+  その内部からPERFORMしている`fn_consume_session_ticket`が原因だった。
+- **原因**: `fn_consume_session_ticket(p_ticket_id uuid, p_note text DEFAULT NULL)`は
+  `supabase/DDL/function/fn_consume_session_ticket.sql`・リリースSQL(セクション28
+  「マッチング成立処理・一括キャンセル処理・チケット消費処理の共通化」)の両方に正しく
+  存在するが、dev環境には**そもそも作成されていなかった**（1引数版が別途存在するのでもなく、
+  完全に未反映）。診断のため`createAdminClient()`から直接1引数・2引数の両方で叩いたところ、
+  どちらも`PGRST202`（PostgRESTのスキーマキャッシュ上に見つからない＝関数が存在しない）で
+  一致した。`resolve_stale_session`・`fn_schedule_shortfall`等、本関数を直接呼ばない他のRPCの
+  preflightは正常に通っていたため、このギャップは今回のように`fn_consume_session_ticket`を
+  実際に経由するテスト（normalでのチケット消費）を通すまで発覚しなかった。
+- **対処**: 本ファイル発見時点では未対処。ユーザーへ、`supabase/release/`の
+  `fn_consume_session_ticket`定義(uuid, text DEFAULT NULL)をdev環境へ適用するよう報告した。
+  なお本セッションで実装した新機能(coach_no_show=4分岐)はこの関数を呼ばない経路(status=3の
+  分岐でRETURNする)のため影響を受けておらず、11/11 OKで検証済み。normal(1)側の回帰確認3件
+  のみNGとして切り分けて報告した。
+- **判断基準への反映**:
+  - **`assertReleaseApplied`のpreflightリストには、対象シナリオが呼ぶRPCが「内部で
+    PERFORMする別のSECURITY DEFINER関数」も含めること。** 今回は`resolve_stale_session`
+    自体の存在確認はOKだったが、その内部が依存する`fn_consume_session_ticket`は
+    チェック対象に入れていなかった。RPCの実装を`grep`等で確認し、`PERFORM public\.\w+\(`
+    のような内部呼び出しがあれば、それも独立したpreflightチェック項目に加えるべきだった
+    （KJ-2026-0914-01の「関数本体の不具合はpreflightでは検出できない」と同種だが、
+    今回は「呼び出し先の別関数が丸ごと存在しない」という、より単純だが見落としやすいケース）。
+  - **内部専用ヘルパー関数（`REVOKE ... FROM PUBLIC, anon, authenticated`されたもの）も、
+    service_roleクライアントからは直接`.rpc()`で疎通確認できる。** authenticated等への
+    実行権限が絞られていても、それは「アプリのユーザーから直接叩かせない」ためのアクセス
+    制御であり、service_role（テストの疎通確認用）はこの制約を受けない。今回のように
+    「対象RPCが正常経路の一部としてしか呼ばれない内部関数」を疑う場合、ダミー引数で
+    直接叩いて`PGRST202`かどうかを見るのが手軽な切り分け方法。
+  - **通常完了(completion_result=normal)を経由するテストケースは、コーチ無断欠席や
+    no_show等の「チケットを消費しない」分岐だけでなく、必ず1つは含めること。**
+    使用実績のあるチケット消費(`fn_consume_session_ticket`)は、正常完了パスでしか
+    通らない実行経路であるため、そこを避けたテスト設計だと今回のような欠落に
+    最後まで気づけない。
+
 <!-- 新しい事例はこの下に追記していく -->

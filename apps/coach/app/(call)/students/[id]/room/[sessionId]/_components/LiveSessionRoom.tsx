@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import {
   ArrowRight,
   CheckCircle2,
@@ -28,6 +27,7 @@ import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
 import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
 import { useLiveSessionPresence } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionPresence';
 import { useLiveSessionRoomOrchestration } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionRoomOrchestration';
+import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { UserAvatar } from '@/components/common/UserAvatar';
@@ -36,7 +36,6 @@ import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
   access: LiveSessionRoomAccess;
-  studentId: string;
 }
 
 type RoomPhase = 'preview' | 'in-call' | 'ended';
@@ -46,7 +45,7 @@ type LockStatus = 'checking' | 'granted' | 'denied';
 // （生徒A/生徒Bを問わず、コーチアカウント単位で共有する）
 const COACH_LIVE_SESSION_LOCK_NAME = 'gabby-coach-live-session-room';
 
-export function LiveSessionRoom({ access, studentId }: Props) {
+export function LiveSessionRoom({ access }: Props) {
   const preview = useZoomDevicePreview();
   const {
     isJoined,
@@ -69,6 +68,8 @@ export function LiveSessionRoom({ access, studentId }: Props) {
     sendChatMessage,
   } = useZoomVideoSession();
   const { isStudentPresent, trackSelf, untrackSelf } = useLiveSessionPresence(access.sessionName);
+  // ハブタブ側にこのセッションが没入表示されている場合、通話終了を即座に伝えてEnd Session忘れを防ぐ
+  const { notifyEnded } = useLiveSessionEndSignal(access.sessionId);
 
   const [phase, setPhase] = useState<RoomPhase>('preview');
   const [wasTimeLimitReached, setWasTimeLimitReached] = useState(false);
@@ -184,6 +185,7 @@ export function LiveSessionRoom({ access, studentId }: Props) {
     await leave(true);
     releaseLockRef.current?.();
     releaseLockRef.current = null;
+    notifyEnded();
     setWasTimeLimitReached(true);
     setPhase('ended');
   };
@@ -209,6 +211,7 @@ export function LiveSessionRoom({ access, studentId }: Props) {
     // （このタブ自体は「閉じてください」の案内画面のまま残るため、ここではまだ遷移しない）
     releaseLockRef.current?.();
     releaseLockRef.current = null;
+    notifyEnded();
     setPhase('ended');
   };
 
@@ -275,25 +278,17 @@ export function LiveSessionRoom({ access, studentId }: Props) {
               : 'You can close this tab now.'}
           </p>
           <p className="text-xs text-slate-500">
-            Don&apos;t forget to press <span className="font-bold">End Session</span> to record this session&apos;s outcome.
+            Switch back to the <span className="font-bold">Session Hub</span> tab and press{' '}
+            <span className="font-bold">End Session</span> to record this session&apos;s outcome.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/students/${studentId}/sessions/${access.sessionId}`}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
-          >
-            Go to Session Hub
-            <ArrowRight size={14} />
-          </Link>
-          <button
-            onClick={() => window.close()}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors px-4 py-2 rounded-full"
-          >
-            <X size={14} />
-            Close Tab
-          </button>
-        </div>
+        <button
+          onClick={() => window.close()}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
+        >
+          <X size={14} />
+          Close Tab
+        </button>
         <p className="text-[10px] text-slate-400 max-w-xs">
           If you&apos;re done for now, you can close this tab manually.
         </p>

@@ -9,7 +9,15 @@ import { useToast } from '../../hooks/useToast';
 import { useUserStore } from '../../stores/useUserStore';
 import { generateLessonStartTimeOptions, isAtLeastHoursFromNow, MIN_SESSION_BOOKING_LEAD_HOURS } from '../../date/date';
 import { CounterpartLocalTime } from './CounterpartLocalTime';
-import { SESSION_STATUS, CANCEL_CATEGORY, COMPLETION_RESULT, SessionListItem, CompletionResult, ProposedSlotInput } from '@gabby/types/session';
+import {
+  SESSION_STATUS,
+  CANCEL_CATEGORY,
+  STALE_SESSION_RESOLUTION,
+  SessionListItem,
+  CompletionResult,
+  StaleSessionResolution,
+  ProposedSlotInput,
+} from '@gabby/types/session';
 
 /**
  * ----------------------------------------------
@@ -169,7 +177,7 @@ export interface SessionActionDialogActions {
   /** 期限超過セッションの手動解決（コーチのみ使用。生徒側では渡さない） */
   resolveStaleSession?: (
     sessionId: string,
-    completionResult: CompletionResult,
+    resolution: StaleSessionResolution,
     reason: string
   ) => Promise<{ success: true } | { success: false; message: string }>;
 }
@@ -201,7 +209,7 @@ export interface SessionActionDialogResolveLabels {
   title: string;
   description: (counterpartName: string) => string;
   outcomeLabel: string;
-  statusOptions: { value: CompletionResult; label: string }[];
+  statusOptions: { value: StaleSessionResolution; label: string }[];
   reasonLabel: string;
   reasonPlaceholder: string;
   backButton: string;
@@ -237,7 +245,7 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
   const currentUserId = useUserStore((state) => state.user?.id);
   const [reason, setReason] = useState('');
   const [proposedSlots, setProposedSlots] = useState<ProposedSlotDraft[]>([]);
-  const [resolvedCompletionResult, setResolvedCompletionResult] = useState<CompletionResult>(COMPLETION_RESULT.NORMAL);
+  const [resolvedResolution, setResolvedResolution] = useState<StaleSessionResolution>(STALE_SESSION_RESOLUTION.NORMAL);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
@@ -245,7 +253,7 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     setReason('');
     setProposedSlots([]);
     if (target?.mode === 'resolve') {
-      setResolvedCompletionResult(COMPLETION_RESULT.NORMAL);
+      setResolvedResolution(STALE_SESSION_RESOLUTION.NORMAL);
     }
   }, [target]);
 
@@ -335,12 +343,18 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     if (!target || !reason.trim() || !actions.resolveStaleSession || !labels.resolve) return;
     setIsSubmitting(true);
     try {
-      const result = await actions.resolveStaleSession(target.session.session_id, resolvedCompletionResult, reason);
+      const result = await actions.resolveStaleSession(target.session.session_id, resolvedResolution, reason);
       if (!result.success) {
         showToast(result.message, 'error');
         return;
       }
-      onResolved(target.session.session_id, { status: SESSION_STATUS.COMPLETED, completion_result: resolvedCompletionResult });
+      // COACH_NO_SHOW(4)はRPC側で「完了」ではなくコーチキャンセル相当（チケット返還）として
+      // 記録されるため、completion_resultではなくstatus=CANCELLED/cancel_category=COACHを反映する
+      const patch =
+        resolvedResolution === STALE_SESSION_RESOLUTION.COACH_NO_SHOW
+          ? { status: SESSION_STATUS.CANCELLED, cancel_category: CANCEL_CATEGORY.COACH, completion_result: null }
+          : { status: SESSION_STATUS.COMPLETED, completion_result: resolvedResolution as CompletionResult };
+      onResolved(target.session.session_id, patch);
       showToast(labels.resolve.successToast, 'success');
       onClose();
     } finally {
@@ -465,8 +479,8 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
               <div className="space-y-1.5">
                 <Label>{labels.resolve.outcomeLabel}</Label>
                 <select
-                  value={resolvedCompletionResult}
-                  onChange={(e) => setResolvedCompletionResult(Number(e.target.value) as CompletionResult)}
+                  value={resolvedResolution}
+                  onChange={(e) => setResolvedResolution(Number(e.target.value) as StaleSessionResolution)}
                   className={cn(INPUT_CLASS, 'w-full')}
                 >
                   {labels.resolve.statusOptions.map((opt) => (

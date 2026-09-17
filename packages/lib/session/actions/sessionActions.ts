@@ -34,6 +34,7 @@ import {
   SessionSprintSummaryEntry,
   SessionStatus,
   CompletionResult,
+  StaleSessionResolution,
   CancelCategory,
 } from '@gabby/types/session';
 
@@ -890,10 +891,12 @@ export async function finalizeSessionCore(sessionId: string, reason?: string): P
 /**
  * 予定終了時刻を過ぎてもscheduledのまま残ったセッションを、コーチが理由付きで手動解決する
  * （resolve_stale_session RPC呼び出し）。アプリ外Zoom等で代替実施したケース等の唯一の解決経路。
+ * resolutionにSTALE_SESSION_RESOLUTION.COACH_NO_SHOW(4)を渡した場合のみ、完了扱いではなく
+ * コーチキャンセル相当（チケット返還・生徒へ通知）としてRPC側で処理される。
  */
 export async function resolveStaleSessionCore(
   sessionId: string,
-  completionResult: CompletionResult,
+  resolution: StaleSessionResolution,
   reason: string
 ): Promise<ResolveStaleSessionResult> {
   const ctx = await getLogContext();
@@ -910,16 +913,16 @@ export async function resolveStaleSessionCore(
 
     const { error } = await supabase.rpc('resolve_stale_session', {
       p_session_id: sessionId,
-      p_completion_result: completionResult,
+      p_resolution: resolution,
       p_reason: trimmed,
     });
 
     if (error) {
-      logger.error('session:resolve_stale_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId, completionResult } });
+      logger.error('session:resolve_stale_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId, resolution } });
       return { success: false, errorCode: classifyRpcError(error.message) };
     }
 
-    logger.info('session:resolve_stale_success', 'Stale session resolved', { ...ctx, userId: user.id, payload: { sessionId, completionResult } });
+    logger.info('session:resolve_stale_success', 'Stale session resolved', { ...ctx, userId: user.id, payload: { sessionId, resolution } });
     return { success: true };
   } catch (err) {
     logger.error('session:resolve_stale_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
