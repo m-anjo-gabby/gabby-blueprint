@@ -5539,7 +5539,10 @@ BEGIN
         WHERE request_id = v_schedule.source_request_id AND status = 2;
     END IF;
 
-    PERFORM public.fn_cancel_future_sessions(p_schedule_id, NULL, 5, 'コーチ交代のため'); -- 5=coach_reassigned
+    -- p_cancel_category(smallint)へ整数リテラルを渡すと、この呼び出し経路(PERFORMでの
+    -- 位置引数呼び出し)ではinteger→smallintの暗黙変換が働かず42883になる(要::smallintキャスト。
+    -- 2026-09-17のstaging検証で発覚。詳細はtesting/TEST-JUDGEMENT-GUIDE.md KJ-2026-0917-05参照)。
+    PERFORM public.fn_cancel_future_sessions(p_schedule_id, NULL, 5::smallint, 'コーチ交代のため'); -- 5=coach_reassigned
 END;
 $$;
 
@@ -5581,7 +5584,10 @@ BEGIN
         SET status = 9, update_date = NOW()
         WHERE ticket_id = v_ticket_id AND status = 1;
 
-        PERFORM public.fn_cancel_future_sessions(NULL, v_ticket_id, 4, 'ライセンス無効化のため'); -- 4=license_ended
+        -- p_cancel_category(smallint)へのinteger→smallint暗黙変換がこの呼び出し経路では
+        -- 働かないため::smallintキャストが必要(release_lesson_schedule_slotと同種。
+        -- testing/TEST-JUDGEMENT-GUIDE.md KJ-2026-0917-05参照)。
+        PERFORM public.fn_cancel_future_sessions(NULL, v_ticket_id, 4::smallint, 'ライセンス無効化のため'); -- 4=license_ended
     END IF;
 END;
 $$;
@@ -6619,3 +6625,91 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.resolve_stale_session(uuid, smallint, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.resolve_stale_session(uuid, smallint, text) TO authenticated;
+
+-- =========================================================================
+-- 34. リリース反映チェック(本リリース適用後、対象環境のSQL Editorで実行して確認する)
+-- =========================================================================
+-- 【背景】2026-09-17のstaging検証で、本リリース内で定義したfn_cancel_future_sessions
+-- (release_lesson_schedule_slot/invalidate_user_licenseが内部でPERFORMする非公開ヘルパー)
+-- のみがstaging環境に反映されておらず、他の関数群(前後の定義)は正常に反映されていた、
+-- という「ファイル中の一部だけが適用漏れになる」事象が発生した(testing/TEST-JUDGEMENT-GUIDE.md
+-- KJ-2026-0917-02参照)。SQL Editorでの手動適用時にコピー範囲がずれる等、ファイル全体を
+-- 一括実行しても原理上は防げるが、部分適用や再実行のたびに毎回目視で全関数を確認するのは
+-- 現実的ではないため、本ファイルが最終的に要求する関数の状態を機械的に列挙し、
+-- to_regprocedure()(存在すればoid、無ければNULLを返す。存在しない場合に例外を投げない)で
+-- 一括検証できるクエリをここに追加する。
+--
+-- 【メンテナンス方針】このクエリは本ファイル中のCREATE OR REPLACE FUNCTION / DROP FUNCTION
+-- (REVOKE EXECUTE ON FUNCTIONの引数リストと対応)を目視+grepで機械的に洗い出して作成した
+-- ものであり、以後このリリースファイルに関数定義を追加/変更/削除した場合は、このクエリの
+-- VALUES一覧も追従して更新すること(更新を怠ると「反映済み」の誤判定を招く)。
+--
+-- 【使い方】適用直後に実行し、status='MISSING'/'STILL PRESENT(要確認)'の行が0件であることを
+-- 確認する。
+--   - 「1. 最終的に存在すべき関数」…本リリースの最後の変更内容で存在すべき関数名+引数型。
+--     引数の型まで一致した完全なシグネチャで比較するため、PostgRESTのスキーマキャッシュが
+--     「関数名は一致するが引数名/型が不一致で見つからない」と判定するケース
+--     (KJ-2026-0912-01)も検出できる。
+--   - 「2. 完全に廃止された関数」…新シグネチャへの置き換えではなく、機能自体が廃止され
+--     どの引数の組み合わせでも存在しないはずの関数。存在してしまっている場合は
+--     DROP FUNCTIONの適用漏れ。
+-- =========================================================================
+
+-- 1. 最終的に存在すべき関数 (name(引数型) → to_regprocedureで存在確認)
+WITH expected(sig) AS (
+  VALUES
+    ('public.check_session_conflict(uuid, uuid, timestamptz, timestamptz, uuid)'),
+    ('public.cancel_session(uuid, text, jsonb, boolean, boolean)'),
+    ('public.create_session_booking_request(uuid, timestamptz, timestamptz, text)'),
+    ('public.notify_session_homework_posted()'),
+    ('public.notify_session_homework_comment_posted()'),
+    ('public.approve_coach_monthly_report(uuid, date, uuid)'),
+    ('public.revoke_coach_monthly_report_approval(uuid, date)'),
+    ('public.fn_schedule_shortfall(uuid)'),
+    ('public.fn_generate_sessions_for_schedule(uuid, timestamptz)'),
+    ('public.fn_assert_actor_or_admin(uuid, text)'),
+    ('public.fn_assert_dual_actor_or_admin(uuid, uuid, text)'),
+    ('public.fn_notify(uuid, text, jsonb, text)'),
+    ('public.reject_matching_request(uuid, text)'),
+    ('public.admin_book_session_direct(uuid, timestamptz, timestamptz, text)'),
+    ('public.get_coach_monthly_sessions(uuid, date)'),
+    ('public.get_coach_monthly_active_students(uuid, date)'),
+    ('public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, timestamptz)'),
+    ('public.fn_cancel_future_sessions(uuid, uuid, smallint, text)'),
+    ('public.fn_consume_session_ticket(uuid, text)'),
+    ('public.approve_matching_request(uuid)'),
+    ('public.admin_match_student_with_coach(uuid, uuid, smallint, smallint, time, time)'),
+    ('public.release_lesson_schedule_slot(uuid)'),
+    ('public.invalidate_user_license(uuid)'),
+    ('public.finalize_session(uuid, text)'),
+    ('public.approve_slot_proposal(uuid)'),
+    ('public.reject_slot_proposal(uuid, text)'),
+    ('public.withdraw_session_booking_request(uuid)'),
+    ('public.resolve_stale_session(uuid, smallint, text)')
+)
+SELECT
+  sig AS expected_signature,
+  CASE WHEN to_regprocedure(sig) IS NOT NULL THEN 'OK' ELSE 'MISSING' END AS status
+FROM expected
+ORDER BY status DESC, expected_signature;
+
+-- 2. 完全に廃止された関数 (どの引数の組み合わせでも存在しないはず)
+WITH removed(name) AS (
+  VALUES
+    ('reschedule_session'),
+    ('book_makeup_session'),
+    ('decline_session_reschedule_proposal'),
+    ('decline_session_reschedule_proposals'),
+    ('approve_session_booking_request'),
+    ('reject_session_booking_request'),
+    ('accept_session_reschedule_proposal'),
+    ('admin_reschedule_session')
+)
+SELECT
+  name AS removed_function_name,
+  CASE WHEN EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.pronamespace = 'public'::regnamespace AND p.proname = removed.name
+  ) THEN 'STILL PRESENT (要確認)' ELSE 'OK' END AS status
+FROM removed
+ORDER BY status DESC, removed_function_name;

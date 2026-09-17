@@ -1,0 +1,47 @@
+{
+  "scenario": "features/branches/feature-20260911-dev/session-lifecycle-refactor-retry-fncancelfuturesessions",
+  "env": "staging",
+  "tag": "stg0917",
+  "executedAt": "2026-09-17T11:15:36.274Z",
+  "gitCommit": "f3cbeab4",
+  "gitBranch": "feature/20260918-dev",
+  "totalChecks": 7,
+  "passed": 7,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "release_lesson_schedule_slot: コーチ交代操作が成功する",
+      "ok": true
+    },
+    {
+      "name": "release_lesson_schedule_slot: スケジュールが status=9(terminated) になる",
+      "ok": true,
+      "detail": "status=9"
+    },
+    {
+      "name": "release_lesson_schedule_slot: 未実施だった12件全てが status=3, cancel_category=5(coach_reassigned) になる",
+      "ok": true,
+      "detail": "[{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":5,\"ticket_refunded\":null}]"
+    },
+    {
+      "name": "invalidate_user_license: ライセンス無効化操作が成功する",
+      "ok": true
+    },
+    {
+      "name": "invalidate_user_license: ライセンスが status=0(停止) になる",
+      "ok": true,
+      "detail": "status=0"
+    },
+    {
+      "name": "invalidate_user_license: 紐づくスケジュールが status=9(terminated) になる",
+      "ok": true,
+      "detail": "status=9"
+    },
+    {
+      "name": "invalidate_user_license: 未実施だった12件全てが status=3, cancel_category=4(license_ended) になる",
+      "ok": true,
+      "detail": "[{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null},{\"status\":3,\"cancel_category\":4,\"ticket_refunded\":null}]"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "scenario": "features/branches/feature-20260911-dev/session-lifecycle-refactor-retry-fncancelfuturesessions",
+  "env": "staging",
+  "tag": "stg0917",
+  "executedAt": "2026-09-17T11:00:08.721Z",
+  "gitCommit": "f3cbeab4",
+  "gitBranch": "feature/20260918-dev",
+  "totalChecks": 7,
+  "passed": 0,
+  "failed": 7,
+  "ok": false,
+  "checks": [
+    {
+      "name": "release_lesson_schedule_slot: コーチ交代操作が成功する",
+      "ok": false,
+      "detail": "function public.fn_cancel_future_sessions(uuid, unknown, integer, unknown) does not exist"
+    },
+    {
+      "name": "release_lesson_schedule_slot: スケジュールが status=9(terminated) になる",
+      "ok": false,
+      "detail": "status=1"
+    },
+    {
+      "name": "release_lesson_schedule_slot: 未実施だった12件全てが status=3, cancel_category=5(coach_reassigned) になる",
+      "ok": false,
+      "detail": "[]"
+    },
+    {
+      "name": "invalidate_user_license: ライセンス無効化操作が成功する",
+      "ok": false,
+      "detail": "function public.fn_cancel_future_sessions(unknown, uuid, integer, unknown) does not exist"
+    },
+    {
+      "name": "invalidate_user_license: ライセンスが status=0(停止) になる",
+      "ok": false,
+      "detail": "status=1"
+    },
+    {
+      "name": "invalidate_user_license: 紐づくスケジュールが status=9(terminated) になる",
+      "ok": false,
+      "detail": "status=1"
+    },
+    {
+      "name": "invalidate_user_license: 未実施だった12件全てが status=3, cancel_category=4(license_ended) になる",
+      "ok": false,
+      "detail": "[]"
+    }
+  ]
+}

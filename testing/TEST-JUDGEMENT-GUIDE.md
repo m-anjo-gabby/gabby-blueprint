@@ -275,4 +275,168 @@
     通らない実行経路であるため、そこを避けたテスト設計だと今回のような欠落に
     最後まで気づけない。
 
+### KJ-2026-0917-02 staging環境でfn_cancel_future_sessionsが未反映(release_lesson_schedule_slot/invalidate_user_licenseが内部で失敗)
+
+- **該当シナリオ**: `testing/features/branches/feature-20260911-dev/session-lifecycle-refactor-verify.ts`
+  （4節: release_lesson_schedule_slot、5節: invalidate_user_license）、
+  `session-24h-and-auth-refactor-verify.ts`（アドミン専用RPC権限チェック節）、
+  `my-students-grouping-verify.ts`（生徒Cの契約解除〜グルーピング判定）
+- **事象**: featureブランチのstagingマージ・リリーススクリプト適用完了後、上記3シナリオで
+  `release_lesson_schedule_slot`・`invalidate_user_license`の呼び出しが
+  `function public.fn_cancel_future_sessions(uuid, unknown, integer, unknown) does not exist`
+  で失敗した。RPC自体（外側の関数）は正常に呼べており、`assertReleaseApplied`のpreflightも
+  OKだった。dev環境（2026-09-14検証済み・`dev-lifecycle01`結果ログでOK）では同じ経路が
+  正常に動作しているため、staging固有の未反映と判明した。
+- **原因**: `supabase/release/20260911_feature-20260911-dev_release.sql`内で
+  `fn_cancel_future_sessions(uuid, uuid, smallint, text)`はCREATE OR REPLACEとして
+  正しく定義されており（`release_lesson_schedule_slot`・`invalidate_user_license`より前の
+  セクション）、それより後方のセクション（33.resolve_stale_sessionのp_resolution変更等）は
+  staging側で正常に反映されていた。にもかかわらずこの一関数だけが欠落していたことから、
+  リリーススクリプトの実行時にこの関数定義部分のみが（手動でのSQL適用時のコピー範囲の
+  誤り等により）スキップされたと推測される。KJ-2026-0917-01（dev環境で
+  `fn_consume_session_ticket`が欠落）と同種・同時期の「PERFORM先の内部関数が丸ごと
+  未反映」パターンだが、今回はdevでは正常でstagingでのみ欠落していた点が異なる。
+- **対処**: 本ファイル発見時点では未対処（DDL適用はユーザー確認の上で実施する必要があるため、
+  ユーザーへ報告のみ行った）。影響を受けた3シナリオのうち、この関数を経由しない検証項目は
+  全てstagingでも合格した（session-lifecycle-refactor 36/43、session-24h-and-auth-refactor
+  49/53、coach-my-students-grouping 11/17。NG件数は全てこの一つの原因に起因することを
+  個別に確認済み）。
+- **判断基準への反映**:
+  - **「dev環境で合格済み」の検証項目がstagingで新たに失敗した場合、まずstaging固有の
+    リリース未反映を疑うこと。** 特に内部PERFORM関数（`fn_cancel_future_sessions`・
+    `fn_consume_session_ticket`等の非公開ヘルパー）は、外側のRPCのpreflight
+    (`assertReleaseApplied`)だけでは検出できないため、実行時エラーで初めて発覚する
+    (KJ-2026-0917-01と同じ制約)。
+  - 同一の内部ヘルパー関数を複数の異なるシナリオ(seedやverify)が共有している場合、
+    1つのシナリオで失敗が確認できたら、そのヘルパーに依存する他の全シナリオも
+    同じ原因で失敗する可能性が高い。`grep -rn "<ヘルパー関数名>" testing/features/`で
+    横断的に影響範囲を洗い出し、都度「未知の新しい不整合」として個別調査するのではなく
+    「既知の原因(X)によるNG」として一括で報告すること。
+  - **DDLの再適用（欠落した関数の再作成）は、テストスクリプトから自動で行わず、
+    必ずユーザーに報告して判断を委ねること。** staging環境のスキーマ変更はテストデータの
+    投入・削除とは異なり、影響範囲が広く元に戻しづらいため。
+
+### KJ-2026-0917-03 resolve_stale_sessionの引数名2段階変更に、複数の既存テストスクリプトが追従していなかった
+
+- **該当シナリオ**: `testing/features/branches/feature-20260911-dev/session-lifecycle-refactor-seed.ts`
+  （preflightの自己確認ブロックのみ）、`testing/features/branches/feature-20260911-dev/monthly-report-seed.ts`
+  （実際のRPC呼び出し3箇所）
+- **事象**: feature-20260911-devのstaging検証(②)を実施した際、上記2ファイルで
+  `resolve_stale_session`呼び出しがPGRST202（該当シグネチャなし）で失敗した。
+  `session-lifecycle-refactor-seed.ts`は`p_completion_result`という2026-09-14時点の
+  シグネチャのままpreflightチェックしていた。`monthly-report-seed.ts`はさらに古い
+  `p_resolved_status`（値も2/6/7という独自の旧採番）のままRPCを実際に呼び出していた。
+  一方、同じ関数を呼ぶ`session-lifecycle-refactor-verify.ts`・`coach-no-show-resolution-seed.ts`
+  は既に現行シグネチャ`p_resolution`（KJ-2026-0917-01のタイトルにもある2026-09-17の
+  coach_no_show=4対応）に追従済みだった。
+- **原因**: `resolve_stale_session`の引数名は開発期間中に
+  `p_resolved_status`(値2/6/7,旧採番) → `p_completion_result`(値1/2/3) →
+  `p_resolution`(値1/2/3/4, 2026-09-17)と2段階で変更されているが、それぞれの変更時点で
+  「その時点までに書かれた全テストスクリプトを横断的に洗い出して更新する」ところまでは
+  実施されておらず、変更後に一度も再実行されていなかったスクリプトが古いシグネチャのまま
+  取り残されていた。KJ-2026-0915-02と全く同種の教訓（引数変更時の横断的な洗い出し漏れ）が、
+  同じ関数の2回目の変更でも再発した。
+- **対処**: 3箇所とも現行シグネチャ`p_resolution`に更新した。値の意味(1=normal/2=early_ended/
+  3=no_show)は3世代を通じて変わっていないため、`monthly-report-seed.ts`の旧値
+  (2→1, 6→3, 7→2)もこの対応表でそのまま置き換えた。修正後、`tsc --noEmit`・`eslint`を
+  実行しエラー無しを確認してから再実行し、両シナリオとも意図した検証まで到達した。
+- **判断基準への反映**:
+  - **KJ-2026-0915-02の教訓（RPC引数変更時は`grep`で全テストスクリプトを横断確認する）は
+    「変更した直後の1回」だけでなく、**同じ関数が将来再度変更される度に毎回実行する
+    必要がある。** 過去に一度対応済みのスクリプトがあっても、「その後長期間再実行されて
+    いない別のスクリプト」は次の変更に追従していない可能性を常に疑うこと。
+  - 複数世代にわたって引数名・値の採番が変わっている関数を修正する際は、
+    「今回の変更前のシグネチャ」だけでなく「さらに前の世代のシグネチャ」で書かれた
+    スクリプトが残っていないか（`grep`のパターンを現行の1世代前だけでなく、
+    分かっている全世代分について確認する）。
+  - 値の意味（1=normal等）が世代を通じて不変であることをDDL側のコメントで確認できた場合、
+    旧シグネチャの値をそのまま現行シグネチャの対応する引数名に置き換えるだけで良い
+    （業務ロジックの再設計は不要）。
+
+### KJ-2026-0917-04 サンドボックスの削除禁止により、seedスクリプトの再実行で孤立データが残る
+
+- **該当シナリオ**: `testing/features/branches/feature-20260911-dev/my-students-grouping-seed.ts`、
+  `testing/features/branches/feature-20260911-dev/monthly-report-seed.ts`
+  （いずれもKJ-2026-0917-03・target_sessions NOT NULL制約への追従修正の再実行時）
+- **事象**: スクリプト側のバグを修正して同じ`--tag`で再実行する際、修正前の実行で既に
+  コミットされていた契約/ライセンス/チケット/スケジュール/セッション行（後続のRPC呼び出しで
+  失敗する前に直接INSERTされた分）を削除してからやり直そうとしたところ、削除スクリプトの
+  実行がClaude Codeのサンドボックス（auto mode classifier）に「Modify Shared Resources」として
+  ブロックされた。削除を諦めてそのまま再実行した結果、`monthly-report-seed.ts`のケースでは
+  前回失敗時に直接INSERT済みだった4件の「未処理セッション(status=1)」が孤立して残り、
+  verify.tsの「前月分の未処理セッションは1件のはず」という検証が実際には5件検出してNGに
+  なった（RPCの集計自体は正しく、孤立データによる誤検知）。
+- **原因**: このプロジェクトのsandbox環境は、shell/chatでの承認有無に関わらずDELETE系の
+  操作を一律でブロックする（既知の制約。ユーザーmemory「sandbox_blocks_destructive_db_scripts」
+  参照）。再実行前のクリーンアップという用途であっても例外にはならない。
+- **対処**: 削除の代替手段を探さず（回避を試みることは指示で禁止されている）、孤立データが
+  残ることを許容してそのまま再実行し、検証結果に現れたNGについては原因（自分自身の以前の
+  失敗した実行が残した孤立行であり、当該機能のバグではない）をユーザーへ明示的に報告した。
+- **判断基準への反映**:
+  - **seedスクリプトがRPC呼び出し失敗で中断した場合、それより前に直接INSERTされた行
+    （契約・ライセンス・チケット・スケジュール・セッション等）はサンドボックス制約により
+    削除できないことを前提に対応する。** 「削除して綺麗にやり直す」という選択肢は
+    このプロジェクトでは基本的に取れない。
+  - 対応方針は2択：(1)そのまま再実行し、孤立データによる誤検知が疑われるNGが出たら
+    「件数が期待より多い」等の症状から孤立データの混入を疑い、実際にDBを確認して
+    原因を切り分けた上でユーザーに報告する。(2)可能であればseedスクリプト自体を
+    「実行前に同一tagの既存データを検出したら再利用する」冪等設計に直す
+    （CONVENTIONS.md 5章の本来の方針）。今回は時間的制約から(1)を選んだが、
+    同じscenarioを何度も再実行する見込みがある場合は(2)への改修を検討する価値がある。
+  - **verify.tsで「件数がちょうどN件のはず」という検証がNGになった場合、値が
+    「期待より多い」パターンは孤立データ混入を、「期待より少ない/0」パターンは
+    機能自体の不具合を疑うという切り分けの初手にできる。**
+
+### KJ-2026-0917-05 PL/pgSQLのPERFORM(位置引数)では、整数リテラルがsmallintパラメータへ暗黙変換されない
+
+- **該当シナリオ**: `supabase/release/20260911_feature-20260911-dev_release.sql`の
+  `release_lesson_schedule_slot`・`invalidate_user_license`(いずれも内部で
+  `fn_cancel_future_sessions(uuid, uuid, smallint, text)`をPERFORM)
+- **事象**: KJ-2026-0917-02でfn_cancel_future_sessions自体をstagingに反映した後も、
+  `release_lesson_schedule_slot`/`invalidate_user_license`経由での呼び出しが
+  `function public.fn_cancel_future_sessions(uuid, unknown, integer, unknown) does not exist`
+  で失敗し続けた。fn_cancel_future_sessionsを直接RPCで呼ぶと成功し、`pg_get_functiondef`で
+  関数本体・重複オーバーロードの有無を確認しても問題無かったため、当初はコネクション
+  プーラー(Supavisor/PgBouncer)側の古いプランキャッシュを疑ったが、Supabase Studioの
+  SQL EditorからPostgRESTのプールを経由せず直接`SELECT public.fn_cancel_future_sessions(...,
+  5, 'test')`を実行しても同じ42883で失敗し、プーラー起因ではなく決定的なSQL上の型解決の
+  問題であることが確定した。
+- **原因**: `PERFORM public.fn_cancel_future_sessions(p_schedule_id, NULL, 5, '...')`のように、
+  関数呼び出しの引数に裸の整数リテラル(`5`)を渡すと、そのリテラルはPostgresの型解決上
+  `integer`として確定してしまう。int4→int2(smallint)のキャストは`pg_cast`上
+  `castcontext='a'`(assignment、INSERT/UPDATE等での列代入時のみ自動適用)であり、
+  関数呼び出しの引数マッチングで使われる「implicit」カテゴリには含まれないため、
+  他に一致するオーバーロードが無くても関数解決自体が失敗し「function ... does not exist」
+  になる。`NULL`や文字列リテラルは型未確定("unknown")として扱われ、どの型にも
+  自由に適合できるため問題にならないが、数値リテラルは`unknown`にならないという非対称性が
+  原因。dev環境では2026-09-14の検証時点でこの2箇所がなぜ成功していたか不明(当時の
+  fn_cancel_future_sessionsの実際の型がsmallintではなくintegerだった可能性がある)だが、
+  現在のリリースSQL(DDL上のマスタ定義はsmallint)を新規に適用する環境では必ず再現する。
+- **対処**: `release_lesson_schedule_slot`・`invalidate_user_license`内の該当PERFORM文で、
+  整数リテラルに明示的に`::smallint`キャストを追加した(`5::smallint`, `4::smallint`)。
+  リリースSQL本体を修正した上で、ユーザーにstaging環境へ修正後の
+  `CREATE OR REPLACE FUNCTION`を再適用してもらった。同種のパターン(smallint引数を持つ
+  他の関数: `resolve_stale_session`・`fn_commit_matching_schedule`・
+  `admin_match_student_with_coach`)についても`grep`で本リリースファイル内の内部PERFORM
+  呼び出しを横断確認したが、該当する裸の整数リテラル渡しは他に無かった。
+- **判断基準への反映**:
+  - **PL/pgSQL内から他の関数をPERFORM/SELECTで呼ぶ際、smallint型の引数に対して裸の整数
+    リテラル(`5`等)を渡すコードは書かないこと。** 必ず`5::smallint`のように明示キャストする。
+    文字列リテラルやNULLは型未確定のため問題にならないが、数値リテラルは`integer`に
+    確定してしまうため、smallint/bigint等int4以外の数値型パラメータに渡す際は常に
+    明示キャストを付ける習慣にする。
+  - **「関数は存在するのに"does not exist"で失敗する」場合、コネクションプールの
+    古いキャッシュを疑う前に、まず引数の型を1つずつ確認すること。** 特に数値リテラルが
+    絡む場合はint4→smallint/int4→bigint等の暗黙変換不可パターンを最初に疑うべきで、
+    プーラー再起動待ちのような時間のかかる切り分けは、SQL Editorで同じ呼び出しを
+    直接実行して再現するかを確認した後(=プーラー起因ではないと確定した後)に限定すべき
+    だった。
+  - `assertReleaseApplied`のpreflightチェック(ダミー引数でのRPC呼び出し)は、
+    PostgREST経由の名前付き引数呼び出しであるため、このバグを検出できない
+    (KJ-2026-0917-02のfn_cancel_future_sessions自体の存在確認と同様に、内部の
+    位置引数呼び出しに特有の問題は外側からのRPC疎通確認では検出不可能)。この種の
+    バグは実際にその内部経路を通すテストケース(今回のように生徒SE/SFで
+    release_lesson_schedule_slot/invalidate_user_licenseを実際に実行する検証)を
+    用意して初めて発見できる。
+
 <!-- 新しい事例はこの下に追記していく -->
