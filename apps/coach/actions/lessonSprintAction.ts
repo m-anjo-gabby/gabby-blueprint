@@ -5,6 +5,7 @@ import {
   getLessonSprintQuestionsCore,
   createLessonSprintResultCore,
   getLessonSprintHistoryCore,
+  getLessonSprintHistoryPageCore,
   getLessonSprintResultCore,
   updateLessonSprintSessionNoteCore,
 } from '@gabby/lib/coachStudent/actions/lessonSprintActions';
@@ -25,6 +26,7 @@ const LESSON_SPRINT_ERROR_MESSAGES_EN: Record<CoachStudentErrorCode, string> = {
   unauthorized: 'Your session has expired. Please sign in again.',
   forbidden: 'You do not have access to this student.',
   invalid_input: 'Please check your input and try again.',
+  already_finalized: 'This has already been finalized and can no longer be edited.',
   unexpected_error: 'An unexpected error occurred.',
 };
 
@@ -84,6 +86,25 @@ export async function getLessonSprintHistory(studentId: string): Promise<LessonS
     return [];
   }
   return result.records;
+}
+
+/**
+ * Fetches one page of this coach's Lesson Sprint history with the given student,
+ * ordered newest-first. Pass the previous page's `nextCursor` to fetch the next page;
+ * a null `nextCursor` means there are no more pages.
+ */
+export async function getLessonSprintHistoryPage(
+  studentId: string,
+  cursor: string | null,
+  limit: number
+): Promise<{ items: LessonSprintHistoryListItem[]; nextCursor: string | null }> {
+  const result = await getLessonSprintHistoryPageCore(studentId, cursor, limit);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_lesson_sprint_history_page_failed', result.errorCode, ctx);
+    return { items: [], nextCursor: null };
+  }
+  return { items: result.items, nextCursor: result.nextCursor };
 }
 
 /**

@@ -7,7 +7,7 @@ import { Loader2, Save, RotateCcw, Globe } from 'lucide-react';
 import { addAvailability, deleteAvailability } from '@/actions/availabilityAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { CoachAvailabilitySlot, DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
@@ -97,7 +97,7 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
   const [isSaving, setIsSaving] = useState(false);
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const timezoneLabel = useMemo(
     () => timezones.find((tz) => tz.timezone === timezone)?.display_name_en ?? timezone,
     [timezones, timezone]

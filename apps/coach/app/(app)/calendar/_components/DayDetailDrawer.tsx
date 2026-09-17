@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { SESSION_STATUS, SessionStatus } from '@gabby/types/session';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { SESSION_STATUS } from '@gabby/types/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { CalendarEventItem, CalendarEventMessageItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CALENDAR_EVENT_TYPE_LABEL_EN } from '@/constants/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
@@ -299,14 +299,12 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
             sorted.map((item) => {
               if (item.kind === 'session') {
                 const session = item.data;
-                const badge = SESSION_STATUS_BADGE[session.status];
+                const badge = getSessionStatusBadge(session);
                 const isFuture = new Date(session.start_datetime) > new Date();
                 const isPastEnd = new Date(session.end_datetime) < new Date();
                 const canAct = session.status === SESSION_STATUS.SCHEDULED && isFuture;
                 const canResolve = session.status === SESSION_STATUS.SCHEDULED && isPastEnd;
-                const hasResult = (
-                  [SESSION_STATUS.COMPLETED, SESSION_STATUS.NO_SHOW, SESSION_STATUS.EARLY_ENDED] as SessionStatus[]
-                ).includes(session.status);
+                const hasResult = session.status === SESSION_STATUS.COMPLETED;
                 return (
                   <article key={getCalendarItemKey(item)} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
@@ -342,16 +340,13 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
 
                     {canResolve && (
                       <div className="flex items-center gap-2 pt-1">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="text-amber-700 border-amber-200 hover:bg-amber-50"
-                          onClick={() => onActionRequested({ session, mode: 'resolve' })}
+                        <Link
+                          href={`/students/${session.counterpart_id}/sessions/${session.session_id}`}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-600 transition-colors"
                         >
                           <CheckCircle2 size={13} />
-                          Resolve
-                        </Button>
+                          Go to Session Hub to resolve
+                        </Link>
                       </div>
                     )}
 

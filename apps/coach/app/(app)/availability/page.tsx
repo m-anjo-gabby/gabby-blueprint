@@ -1,6 +1,7 @@
 import { getMyAvailability } from '@/actions/availabilityAction';
 import { getTimezoneList } from '@/actions/coachProfileAction';
 import { AvailabilityView } from './_components/AvailabilityView';
+import { ScheduleTabs } from '@/components/common/ScheduleTabs';
 
 export default async function AvailabilityPage() {
   const [slots, timezones] = await Promise.all([getMyAvailability(), getTimezoneList()]);
@@ -14,7 +15,9 @@ export default async function AvailabilityPage() {
         </p>
       </div>
 
-      <div className="max-w-4xl mx-auto">
+      <ScheduleTabs active="availability" />
+
+      <div className="max-w-4xl">
         <AvailabilityView initialSlots={slots} timezones={timezones} />
       </div>
     </div>

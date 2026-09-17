@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 
@@ -35,7 +35,7 @@ interface MonitorUserListProps {
 export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHistory, sprintHistory }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   
   const currentView = searchParams.get('view') || 'overview';
   const userIds = searchParams.get('userIds');

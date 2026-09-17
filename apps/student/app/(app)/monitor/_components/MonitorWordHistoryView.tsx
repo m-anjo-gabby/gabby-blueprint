@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 
@@ -47,7 +47,7 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
   const searchParams = useSearchParams();
   
   // 💡 管理者の設定タイムゾーンを取得（デフォルトは Asia/Tokyo）
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
 
   const [localStart, setLocalStart] = useState<string>(startDate);
   const [localEnd, setLocalEnd] = useState<string>(endDate);

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MessageCircle, User as UserIcon, Users as UsersIcon } from 'lucide-react';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { getChatMessagePreviewText } from '@gabby/lib/chat/formatChatPreview';
 import { formatMessageHeaderTime } from '@gabby/lib/chat/messageGrouping';
@@ -50,7 +51,7 @@ export function ChatRoomList() {
   const isLoading = useChatStore((state) => state.isLoading);
   const fetchRooms = useChatStore((state) => state.fetchRooms);
   const currentUserId = useUserStore((state) => state.user?.id);
-  const timeZone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timeZone = useTimezone();
 
   const [clientFilter, setClientFilter] = useState('');
 

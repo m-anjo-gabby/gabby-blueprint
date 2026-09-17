@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Sparkles, Flame, MessageCircle, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { NotificationItem, NOTIFICATION_TYPES, NOTIFICATION_MESSAGE_BUILDERS, NotificationType } from '@gabby/types/notification';
 
@@ -15,7 +15,7 @@ interface NotificationCardProps {
 }
 
 export function NotificationCard({ notification, onOpen }: NotificationCardProps) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
 
   const meta = NOTIFICATION_TYPES[notification.notification_type as NotificationType];
   const Icon = NOTIFICATION_ICONS[meta?.icon as keyof typeof NOTIFICATION_ICONS] ?? Bell;

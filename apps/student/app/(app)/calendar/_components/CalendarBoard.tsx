@@ -8,9 +8,11 @@ import {
   endOfMonth,
   startOfWeek,
   endOfWeek,
+  startOfToday,
   eachDayOfInterval,
   isSameMonth,
   isToday,
+  isBefore,
   format,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -18,13 +20,13 @@ import { cn } from '@/lib/utils';
 import { getMySessions } from '@/actions/sessionAction';
 import { getMyCalendarEvents } from '@/actions/calendarEventAction';
 import { getMyBookableTickets } from '@/actions/matchingAction';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { SessionListItem, SESSION_STATUS, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
+import { SessionListItem, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
 import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import { BookableTicketSlot } from '@gabby/types/matching';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from './SessionActionDialog';
 import { DayDetailDrawer } from './DayDetailDrawer';
 import { BookMakeupSessionDialog } from './BookMakeupSessionDialog';
@@ -34,13 +36,23 @@ const MAX_VISIBLE_CHIPS = 2;
 
 function getChipInfo(item: CalendarItem): { label: string; className: string } {
   if (item.kind === 'session') {
-    return { label: item.data.counterpart_name, className: SESSION_STATUS_BADGE[item.data.status].className };
+    return { label: item.data.counterpart_name, className: getSessionStatusBadge(item.data).className };
   }
   return { label: item.data.title, className: CALENDAR_EVENT_TYPES[item.data.event_type].badgeClass };
 }
 
+/**
+ * 終了時刻(終了時刻を持たないお知らせ系イベントは開始時刻)が既に過ぎているかどうか。
+ * status上は"Scheduled"のまま(結果未入力)でも実際は終了済みのケースがあるため、
+ * ステータス色だけに頼らず時刻で過去判定する。
+ */
+function isItemPast(item: CalendarItem): boolean {
+  const cutoff = item.kind === 'session' ? item.data.end_datetime : (item.data.end_datetime ?? item.data.start_datetime);
+  return new Date(cutoff) < new Date();
+}
+
 export function CalendarBoard() {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [events, setEvents] = useState<CalendarEventItem[]>([]);
@@ -109,10 +121,6 @@ export function CalendarBoard() {
 
   const handleResolved = (sessionId: string, patch: Partial<SessionListItem>) => {
     setSessions((prev) => prev.map((s) => (s.session_id === sessionId ? { ...s, ...patch } : s)));
-    // 振替は新しいセッション行が生成されるため、正確な反映のため月データを再取得する
-    if (patch.status === SESSION_STATUS.RESCHEDULED) {
-      loadMonth();
-    }
   };
 
   const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {
@@ -168,20 +176,34 @@ export function CalendarBoard() {
                   className={cn(
                     'min-h-16 sm:min-h-19 rounded-lg flex flex-col items-stretch p-1 gap-0.5 text-left transition-colors relative',
                     !isSameMonth(day, currentMonth) && 'opacity-40',
-                    isSelected ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'hover:bg-slate-100',
-                    isToday(day) && !isSelected && 'ring-1 ring-indigo-300'
+                    isSelected ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'hover:bg-slate-100'
                   )}
                 >
-                  <span className={cn('text-[11px] font-bold px-0.5 text-center', isSameMonth(day, currentMonth) ? 'text-slate-700' : 'text-slate-400')}>
-                    {day.getDate()}
-                  </span>
+                  <div className="flex justify-center px-0.5">
+                    <span
+                      className={cn(
+                        'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
+                        isToday(day)
+                          ? 'bg-indigo-600 text-white'
+                          : isSameMonth(day, currentMonth) && !isBefore(day, startOfToday())
+                            ? 'text-slate-700'
+                            : 'text-slate-400'
+                      )}
+                    >
+                      {day.getDate()}
+                    </span>
+                  </div>
                   <div className="space-y-0.5 min-w-0">
                     {dayItems.slice(0, MAX_VISIBLE_CHIPS).map((item) => {
                       const chip = getChipInfo(item);
                       return (
                         <span
                           key={getCalendarItemKey(item)}
-                          className={cn('block text-[8px] font-bold px-1 py-0.5 rounded border truncate leading-tight', chip.className)}
+                          className={cn(
+                            'block text-[8px] font-bold px-1 py-0.5 rounded border truncate leading-tight',
+                            chip.className,
+                            isItemPast(item) && 'grayscale opacity-60'
+                          )}
                         >
                           {chip.label}
                         </span>
@@ -216,7 +238,7 @@ export function CalendarBoard() {
         slots={bookableSlots}
         initialDate={bookMakeupDate}
         onClose={() => setBookMakeupDate(null)}
-        onBooked={() => {
+        onRequested={() => {
           loadMonth();
           loadBookableSlots();
         }}

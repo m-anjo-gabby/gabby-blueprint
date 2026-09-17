@@ -38,6 +38,10 @@ export const NOTIFICATION_TYPES = {
     icon: 'CalendarClock',
     badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
   },
+  SESSION_RESCHEDULE_PROPOSED_BY_STUDENT: {
+    icon: 'CalendarClock',
+    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
   SESSION_CANCELLED_BY_STUDENT: {
     icon: 'CalendarX',
     badgeClass: 'bg-rose-50 text-rose-600 border-rose-100',
@@ -50,6 +54,22 @@ export const NOTIFICATION_TYPES = {
     icon: 'CalendarX',
     badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
   },
+  SESSION_UPDATED_BY_ADMIN: {
+    icon: 'CalendarClock',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
+  SESSION_BOOKING_REQUESTED: {
+    icon: 'CalendarClock',
+    badgeClass: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+  },
+  SESSION_BOOKING_APPROVED: {
+    icon: 'CalendarCheck',
+    badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  },
+  SESSION_BOOKING_REJECTED: {
+    icon: 'CalendarX',
+    badgeClass: 'bg-rose-50 text-rose-600 border-rose-100',
+  },
   MATCHING_APPROVED: {
     icon: 'UserCheck',
     badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
@@ -61,6 +81,18 @@ export const NOTIFICATION_TYPES = {
   MATCHING_ASSIGNED_TO_COACH: {
     icon: 'Users',
     badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  },
+  HOMEWORK_POSTED: {
+    icon: 'ClipboardList',
+    badgeClass: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+  },
+  COACH_REPORT_APPROVED: {
+    icon: 'CalendarCheck',
+    badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  },
+  COACH_REPORT_APPROVAL_REVOKED: {
+    icon: 'CalendarX',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
   },
 } as const;
 
@@ -122,6 +154,13 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
       body: `${String(payload.coach_name ?? 'コーチ')}からキャンセルの振替候補（${count}件）が届いています。ライブセッション画面でご確認ください。`,
     };
   },
+  SESSION_RESCHEDULE_PROPOSED_BY_STUDENT: (payload) => {
+    const count = Number(payload.proposal_count ?? 0);
+    return {
+      title: '振替候補の提案が届いています',
+      body: `${String(payload.student_name ?? '生徒')}からキャンセルの振替候補（${count}件）が届いています。申請一覧でご確認ください。`,
+    };
+  },
   SESSION_CANCELLED_BY_STUDENT: (payload) => ({
     title: 'セッションがキャンセルされました',
     body: `${String(payload.student_name ?? '生徒')}が予定していたセッションをキャンセルしました。`,
@@ -133,6 +172,22 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
   SESSION_CANCELLED_BY_ADMIN: () => ({
     title: 'セッションがキャンセルされました',
     body: '予定されていたセッションがキャンセルされました。詳しくはカレンダーをご確認ください。',
+  }),
+  SESSION_UPDATED_BY_ADMIN: () => ({
+    title: 'セッションが更新されました',
+    body: '管理者により予定が更新されました。詳しくはカレンダーをご確認ください。',
+  }),
+  SESSION_BOOKING_REQUESTED: (payload) => ({
+    title: '予約リクエストが届いています',
+    body: `${String(payload.student_name ?? '生徒')}からセッションの予約リクエストが届いています。申請一覧でご確認ください。`,
+  }),
+  SESSION_BOOKING_APPROVED: (payload) => ({
+    title: '予約が承認されました',
+    body: `${String(payload.coach_name ?? 'コーチ')}がセッションの予約を承認しました。`,
+  }),
+  SESSION_BOOKING_REJECTED: (payload) => ({
+    title: '予約リクエストについて',
+    body: `${String(payload.coach_name ?? 'コーチ')}は今回のリクエストを受け付けられませんでした。他の日時でお試しください。`,
   }),
   MATCHING_APPROVED: (payload) => ({
     title: 'マッチングが成立しました！',
@@ -146,4 +201,24 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
     title: '新しい生徒とマッチングしました',
     body: `${String(payload.student_name ?? '生徒')}さんとのライブセッションが予約されました。`,
   }),
+  HOMEWORK_POSTED: (payload) => ({
+    title: `${String(payload.coach_name ?? 'コーチ')}から宿題が届いています`,
+    body: String(payload.preview ?? '宿題の内容をご確認ください'),
+  }),
+  COACH_REPORT_APPROVED: (payload) => ({
+    title: '月次コーチングレポートが承認されました',
+    body: `${formatReportMonthJa(payload.report_month)}分のレポートが承認されました。`,
+  }),
+  COACH_REPORT_APPROVAL_REVOKED: (payload) => ({
+    title: '月次コーチングレポートの承認が取り消されました',
+    body: `${formatReportMonthJa(payload.report_month)}分のレポートの承認が取り消されました。`,
+  }),
 };
+
+/** payload.report_month ("YYYY-MM-DD"等) を "YYYY年M月" 表記へ変換する（通知本文用） */
+function formatReportMonthJa(reportMonth: unknown): string {
+  const s = String(reportMonth ?? '');
+  const match = /^(\d{4})-(\d{2})/.exec(s);
+  if (!match) return s;
+  return `${match[1]}年${Number(match[2])}月`;
+}

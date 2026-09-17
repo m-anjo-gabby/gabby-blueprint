@@ -192,3 +192,97 @@ ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
 ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
 
 COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed 3:cancelled_by_student 4:cancelled_by_coach 5:rescheduled(振替元、後継行はrescheduled_fromで参照) 6:no_show 7:early_ended(早期終了、status_noteに理由) 8:cancelled_license_ended(ライセンス無効化による自動キャンセル) 9:cancelled_coach_reassigned(コーチ交代による自動キャンセル) 10:cancelled_by_admin(アドミンによる代理キャンセル。ticket_refundedは管理者が明示的に指定)';
+
+---------------------------------------------
+-- 追加パッチ: Wブッキング防止の一意制約を有効な予約枠のみに限定 (2026-09-12)
+-- 既存環境に対しては、このDROP INDEX/CREATE INDEX文のみをSupabase SQL Editor等で
+-- 実行してください。
+---------------------------------------------
+-- 【背景】
+-- uq_session_schedule_datetime は元々fn_generate_sessions_for_schedule()の冪等性
+-- 担保用（同一スケジュール・同一開始日時の重複生成防止）として、ステータスを問わず
+-- 全行を対象とした一意制約だった。これにより、あるschedule_id・start_datetimeの
+-- 組み合わせで一度でもキャンセル(3/4/10)・振替元(5)等の行が存在すると、その後
+-- 同じ日時への新規予約（accept_session_reschedule_proposal/
+-- approve_session_booking_request/admin_reschedule_session/
+-- admin_book_session_direct、いずれもcom_t_sessionへのINSERT）がunique制約違反で
+-- 失敗してしまう不具合があった（Wブッキング防止の対象が「有効な予約枠」ではなく
+-- 過去の行も含めた全行になっていたため）。fn_generate_sessions_for_schedule()は
+-- 常にstatus=1の行しか作らないため、対象をstatus=1の行に限定した部分一意インデックス
+-- に変更しても、本来の冪等性担保という目的は損なわれない。
+---------------------------------------------
+DROP INDEX IF EXISTS public.uq_session_schedule_datetime;
+CREATE UNIQUE INDEX uq_session_schedule_datetime ON public.com_t_session (schedule_id, start_datetime) WHERE status = 1;
+
+---------------------------------------------
+-- 追加パッチ: ステータスの簡素化 (scheduled/completed/cancelledの3値化) (2026-09-14)
+-- 既存環境に対しては、このブロックのみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- statusが1〜10まで増殖し、「完了時の内訳」（completed/no_show/early_ended）と
+-- 「キャンセルの起因」（student/coach/license_ended/coach_reassigned/admin/
+-- 旧reschedule）が同じ列にフラットに混在していた。実際には以下の2軸に分解できる。
+--   1. 完了時の内訳: コーチがビデオ通話可能な状態で臨んだという点でどれも
+--      「完了(completed)」であり、月次コーチング報酬の対象判定
+--      (get_coach_monthly_sessions)でも既に3つとも同じ扱いだった
+--      （実態が先行し、statusの設計が追いついていなかった）。
+--   2. キャンセルの起因: 返還有無は既存のticket_refundedで表現できるが、
+--      「誰が/なぜ」（生徒本人/コーチ本人/ライセンス無効化/コーチ交代/アドミン代理）は
+--      月次コーチングレポートの内訳表示等で個別のラベルが必要なため、新設の
+--      cancel_categoryで表現する（cancelled_by(実行者user_id)だけでは、
+--      ライセンス無効化・コーチ交代・アドミン代理キャンセルがいずれも運用者側の
+--      user_idになり互いに区別できないため）。
+-- ライブセッション機能・コーチ機能はまだ本番運用しておらず、既存データは開発・
+-- 検証用のみのため、旧status値の意味的な後方互換は取らずクリーンに移行する。
+--
+-- 【廃止するstatus値の移行先】
+--   2:completed, 6:no_show, 7:early_ended
+--     → status=2, completion_result=1(normal)/3(no_show)/2(early_ended)
+--   3:cancelled_by_student → status=3, cancel_category=1(student)
+--   4:cancelled_by_coach → status=3, cancel_category=2(coach)
+--   5:rescheduled（admin_reschedule_session由来。旧振替概念自体は廃止済みだが、
+--     rescheduled_fromで他行から参照されている可能性がありDELETEはFK違反の
+--     リスクがあるため、他のadmin起因キャンセルと同様に統合する）
+--     → status=3, cancel_category=3(admin)
+--   8:cancelled_license_ended → status=3, cancel_category=4(license_ended)
+--   9:cancelled_coach_reassigned → status=3, cancel_category=5(coach_reassigned)
+--   10:cancelled_by_admin → status=3, cancel_category=3(admin)
+---------------------------------------------
+ALTER TABLE public.com_t_session
+  ADD COLUMN IF NOT EXISTS completion_result smallint,
+  ADD COLUMN IF NOT EXISTS cancel_category smallint;
+
+UPDATE public.com_t_session
+SET completion_result = CASE status WHEN 2 THEN 1 WHEN 7 THEN 2 WHEN 6 THEN 3 END
+WHERE status IN (2, 6, 7);
+
+UPDATE public.com_t_session
+SET cancel_category = CASE status
+    WHEN 3 THEN 1   -- student
+    WHEN 4 THEN 2   -- coach
+    WHEN 5 THEN 3   -- admin (旧reschedule。admin_reschedule_session由来)
+    WHEN 10 THEN 3  -- admin
+    WHEN 8 THEN 4   -- license_ended
+    WHEN 9 THEN 5   -- coach_reassigned
+END
+WHERE status IN (3, 4, 5, 8, 9, 10);
+
+UPDATE public.com_t_session SET status = 2 WHERE status IN (6, 7);
+UPDATE public.com_t_session SET status = 3 WHERE status IN (4, 5, 8, 9, 10);
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_status;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_status CHECK (status IN (1, 2, 3));
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_completion_result;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_completion_result CHECK (
+    (status = 2 AND completion_result IN (1, 2, 3)) OR (status <> 2 AND completion_result IS NULL)
+);
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_cancel_category;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_cancel_category CHECK (
+    (status = 3 AND cancel_category IN (1, 2, 3, 4, 5)) OR (status <> 3 AND cancel_category IS NULL)
+);
+
+COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed(内訳はcompletion_result参照) 3:cancelled(起因はcancel_category、返還有無はticket_refundedを参照)';
+COMMENT ON COLUMN public.com_t_session.completion_result IS 'status=2(completed)の内訳。1:normal(正常終了、20分以上) 2:early_ended(早期終了、20分未満だが生徒入室あり。理由はstatus_note) 3:no_show(生徒欠席、入室記録なし)。status<>2の行では常にNULL。';
+COMMENT ON COLUMN public.com_t_session.cancel_category IS 'status=3(cancelled)の起因。1:student(生徒本人) 2:coach(コーチ本人) 3:admin(アドミン代理操作・旧reschedule含む) 4:license_ended(ライセンス無効化による自動キャンセル) 5:coach_reassigned(コーチ交代による自動キャンセル)。status<>3の行では常にNULL。返還有無はticket_refundedを別途参照。';

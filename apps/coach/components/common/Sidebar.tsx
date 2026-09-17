@@ -10,6 +10,7 @@ import {
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
+import { useRequestsStore } from '@/stores/useRequestsStore';
 import { COACH_NAV_CONFIG, type NavItem, type NavLeaf, type NavGroup } from '@/lib/navigation';
 
 // ============================================================
@@ -191,10 +192,13 @@ export default function Sidebar() {
   const closeMobileSidebar = useSidebarStore((state) => state.close);
   const totalUnreadCount = useChatStore((state) => state.totalUnreadCount);
   const fetchChatRooms = useChatStore((state) => state.fetchRooms);
+  const pendingRequestCount = useRequestsStore((state) => state.pendingCount);
+  const fetchRequests = useRequestsStore((state) => state.fetchRequests);
 
   useEffect(() => {
     fetchChatRooms();
-  }, [fetchChatRooms]);
+    fetchRequests();
+  }, [fetchChatRooms, fetchRequests]);
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
@@ -252,7 +256,7 @@ export default function Sidebar() {
                 isCollapsed={isCollapsed}
                 isActive={pathname.startsWith(item.href)}
                 onClick={closeMobileSidebar}
-                badge={item.href === '/chat' ? totalUnreadCount : undefined}
+                badge={item.href === '/chat' ? totalUnreadCount : item.href === '/calendar' ? pendingRequestCount : undefined}
               />
             );
           })}

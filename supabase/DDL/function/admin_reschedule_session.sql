@@ -1,0 +1,11 @@
+---------------------------------------------
+-- 【廃止 (2026-09-15)】本関数は削除した。
+---------------------------------------------
+-- 生徒・コーチ向けの「振替」概念を廃止したのと同様、アドミン専用の日時変更RPCも廃止する。
+-- アドミンが日時を変更したい場合は、cancel_session()（p_as_admin=true、p_admin_refund_ticket=true）で
+-- チケットを未割当に戻してから、admin_book_session_direct()で改めて予約する
+-- 「キャンセル＋予約」の2操作に統一する（生徒・コーチと同じ操作の型に揃え、管理者専用の
+-- 特殊経路を極力減らす。マッチング〜予約管理ドメイン全体の再整理の一環）。
+-- 正本は function/admin_book_session_direct.sql, function/cancel_session.sql を参照。
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.admin_reschedule_session(uuid, timestamptz, timestamptz, text);

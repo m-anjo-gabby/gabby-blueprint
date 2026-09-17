@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, RotateCcw, Ticket, X } from 'lucide-react';
+import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, Ticket, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -9,7 +9,7 @@ import { formatZonedDateJapanese, formatDateTimeByZone } from '@gabby/lib/date/d
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { SESSION_STATUS } from '@gabby/types/session';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { CalendarEventItem, CalendarEventMessageItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import {
@@ -292,7 +292,7 @@ export function DayDetailDrawer({
               onClick={() => onBookMakeupRequested(date)}
             >
               <Ticket size={13} />
-              未割当のチケットをこの日で予約する
+              この日で未予約のセッションをリクエストする
             </Button>
           )}
 
@@ -305,7 +305,7 @@ export function DayDetailDrawer({
             sorted.map((item) => {
               if (item.kind === 'session') {
                 const session = item.data;
-                const badge = SESSION_STATUS_BADGE[session.status];
+                const badge = getSessionStatusBadge(session);
                 const isFuture = new Date(session.start_datetime) > new Date();
                 const canAct = session.status === SESSION_STATUS.SCHEDULED && isFuture;
                 return (
@@ -328,10 +328,6 @@ export function DayDetailDrawer({
 
                     {canAct && (
                       <div className="flex items-center gap-2 pt-1">
-                        <Button type="button" size="sm" variant="outline" onClick={() => onActionRequested({ session, mode: 'reschedule' })}>
-                          <RotateCcw size={13} />
-                          振替
-                        </Button>
                         <Button
                           type="button"
                           size="sm"

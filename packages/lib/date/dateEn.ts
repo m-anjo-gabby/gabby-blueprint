@@ -28,6 +28,12 @@ const TIME_OPTIONS_EN: Intl.DateTimeFormatOptions = {
   hour12: true,
 };
 
+/** 年月のみの表示スタイル（履歴一覧のグループ見出し等で使用）。現在の見本: "September 2026" */
+const MONTH_YEAR_OPTIONS_EN: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'long',
+};
+
 /** コーチアプリのデフォルトタイムゾーン（プロフィール未設定時のみ使用する最終フォールバック） */
 const DEFAULT_TIMEZONE_EN = 'America/New_York';
 
@@ -55,4 +61,14 @@ export function formatDateTimeEn(input: DateInput, timeZone: string = DEFAULT_TI
   const date = toValidDate(input);
   if (!date) return '';
   return new Intl.DateTimeFormat(LOCALE_EN, { ...DATE_OPTIONS_EN, ...TIME_OPTIONS_EN, timeZone }).format(date);
+}
+
+/**
+ * 年月のみを英語圏向け表記で返す。例: "September 2026"
+ * 長期間にわたる履歴一覧を年月でグルーピングする際の見出しに使う。
+ */
+export function formatMonthYearEn(input: DateInput, timeZone: string = DEFAULT_TIMEZONE_EN): string {
+  const date = toValidDate(input);
+  if (!date) return '';
+  return new Intl.DateTimeFormat(LOCALE_EN, { ...MONTH_YEAR_OPTIONS_EN, timeZone }).format(date);
 }

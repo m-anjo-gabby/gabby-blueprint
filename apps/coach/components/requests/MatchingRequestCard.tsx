@@ -14,13 +14,14 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFirstLiveSessionOccurrence } from '@gabby/lib/date/date';
+import { getFirstLiveSessionOccurrence, toIsoDateInZone } from '@gabby/lib/date/date';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
 import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
+import { RequestKindTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {
   [MATCHING_REQUEST_STATUS.PENDING]: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -36,10 +37,12 @@ function formatTimeRange(startTime: string, endTime: string): string {
 interface MatchingRequestCardProps {
   request: IncomingMatchingRequestItem;
   onResolved: (requestId: string, patch: Partial<IncomingMatchingRequestItem>) => void;
+  /** カレンダーと並べて表示する場合、対応する日付をホバー時にハイライトするためのコールバック */
+  onDateHover?: (date: string | null) => void;
 }
 
-export function MatchingRequestCard({ request, onResolved }: MatchingRequestCardProps) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+export function MatchingRequestCard({ request, onResolved, onDateHover }: MatchingRequestCardProps) {
+  const timezone = useTimezone();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -102,10 +105,15 @@ export function MatchingRequestCard({ request, onResolved }: MatchingRequestCard
   };
 
   return (
-    <article className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+    <article
+      className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3"
+      onMouseEnter={() => firstSession && onDateHover?.(toIsoDateInZone(firstSession.instant, timezone))}
+      onMouseLeave={() => onDateHover?.(null)}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-black text-slate-800">{request.student_name}</p>
+          <RequestKindTag kind="matching" />
+          <p className="text-sm font-black text-slate-800 mt-1.5">{request.student_name}</p>
           <p className="text-xs text-slate-500 mt-0.5">
             Slot {request.slot_no} &middot; {DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]}{' '}
             {formatTimeRange(request.requested_start_time, request.requested_end_time)}

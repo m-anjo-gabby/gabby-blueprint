@@ -82,6 +82,33 @@ export const toIsoDateInZone = (date: Date | string | number, timeZone: string):
   return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 };
 
+export type TimeOfDayCategory = 'morning' | 'day' | 'evening' | 'night';
+
+/** 指定タイムゾーンでの時刻(0-23時)を取得する */
+export const getHourInZone = (dateString: string, timeZone: string): number => {
+  try {
+    return Number(
+      new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', hourCycle: 'h23' }).format(new Date(dateString))
+    );
+  } catch {
+    return new Date(dateString).getHours();
+  }
+};
+
+/**
+ * 時刻(0-23時)から朝/昼/夕/夜のカテゴリを判定する（相手のタイムゾーンでの時間帯をアイコンで
+ * 直感的に示すための分類。予約・キャンセル振替候補の日時選択画面で使用）
+ */
+export const getTimeOfDayCategory = (hour: number): TimeOfDayCategory => {
+  if (hour >= 5 && hour < 8) return 'morning';
+  if (hour >= 8 && hour < 17) return 'day';
+  if (hour >= 17 && hour < 21) return 'evening';
+  return 'night';
+};
+
+/** 相手にとって非常識な時間帯（0:00-6:59）かどうかを判定する */
+export const isInconsiderateHour = (hour: number): boolean => hour < 7;
+
 /**
  * 指定されたタイムゾーンに基づき、年月を (YYYY-MM) 形式で取得します。
  */
@@ -299,4 +326,20 @@ export const getFirstLiveSessionOccurrence = (
   const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
 
   return { instant, day_of_week: targetDayOfWeek, start_time: `${h}:${m}` };
+};
+
+/**
+ * 個別予約リクエスト・キャンセル時の振替候補提案について、「開始◯時間以上先」を
+ * 求めるDB側ルール(create_session_booking_request/cancel_session等のRPC参照)と揃えた
+ * 最低リードタイム(時間)。UI側は申請・提案の入力中にインラインで参考表示するための
+ * ソフトチェックとして使う（最終的な整合性は常にRPC側で担保する）。DB側の値を変更する
+ * 場合は、この値もあわせて更新すること。
+ */
+export const MIN_SESSION_BOOKING_LEAD_HOURS = 24;
+
+/** 指定日時が、現在時刻からhours時間以上先かどうかを判定する */
+export const isAtLeastHoursFromNow = (datetime: string | Date, hours: number): boolean => {
+  const target = typeof datetime === 'string' ? new Date(datetime) : datetime;
+  if (isNaN(target.getTime())) return false;
+  return target.getTime() - Date.now() >= hours * 60 * 60 * 1000;
 };

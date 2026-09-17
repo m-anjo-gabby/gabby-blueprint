@@ -6,6 +6,13 @@ import {
   finalizeSessionCore,
   resolveStaleSessionCore,
   getSessionResultSummaryCore,
+  checkSessionConflictCore,
+  approveSessionBookingRequestCore,
+  rejectSessionBookingRequestCore,
+  acceptRescheduleProposalCore,
+  declineRescheduleProposalsCore,
+  getBookingRequestHistoryPageForCoachCore,
+  getRescheduleProposalHistoryPageForCoachCore,
 } from '@gabby/lib/session/actions/sessionActions';
 import { getCoachSessionTasksCore } from '@gabby/lib/session/actions/sessionTaskActions';
 import { getSessionCallLogPresenceCore } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
@@ -13,21 +20,24 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
   CoachSessionTasksSummary,
+  CompletionResult,
+  StaleSessionResolution,
+  IncomingRescheduleProposalGroup,
   ProposedSlotInput,
   SessionActionErrorCode,
   SessionListItem,
   SessionResultSummary,
   SessionStatus,
 } from '@gabby/types/session';
+import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
 
 const logger = createLogger('coach');
 
 const SESSION_ERROR_MESSAGES_EN: Record<SessionActionErrorCode, string> = {
   unauthorized: 'Your session has expired. Please sign in again.',
   invalid_input: 'Please check the date and time you selected.',
-  not_found: 'This session could not be found.',
-  not_actionable: 'This session can no longer be changed (it may have already started or been resolved).',
-  slot_unavailable: 'The selected time is outside your declared availability.',
+  not_found: 'This could not be found.',
+  not_actionable: 'This can no longer be changed (it may have already started or been resolved).',
   schedule_conflict: 'The selected time conflicts with another scheduled session.',
   reason_required: 'Please provide a reason.',
   no_ticket_available: 'No unassigned ticket is available to book.',
@@ -79,7 +89,7 @@ export async function finalizeSession(
   sessionId: string,
   reason?: string
 ): Promise<
-  | { success: true; status: SessionStatus; overlapSeconds: number }
+  | { success: true; status: SessionStatus; completionResult: CompletionResult; overlapSeconds: number }
   | { success: false; errorCode: SessionActionErrorCode; message: string }
 > {
   const ctx = await getLogContext();
@@ -91,21 +101,23 @@ export async function finalizeSession(
   }
 
   logger.info('coach:finalize_session_success', 'Session finalized', ctx);
-  return { success: true, status: result.status, overlapSeconds: result.overlapSeconds };
+  return { success: true, status: result.status, completionResult: result.completionResult, overlapSeconds: result.overlapSeconds };
 }
 
 /**
  * Manually resolves a session stuck in "scheduled" past its end time (e.g. the coach
  * crashed before pressing End Lesson, or the lesson was conducted outside the app).
- * `resolvedStatus` must be one of completed(2)/no_show(6)/early_ended(7); a reason is mandatory.
+ * `resolution` must be one of normal(1)/early_ended(2)/no_show(3)/coach_no_show(4); a reason is
+ * mandatory. coach_no_show(4) is handled specially by the RPC as a coach-initiated cancellation
+ * (ticket always refunded, student notified) rather than a completed outcome.
  */
 export async function resolveStaleSession(
   sessionId: string,
-  resolvedStatus: SessionStatus,
+  resolution: StaleSessionResolution,
   reason: string
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await resolveStaleSessionCore(sessionId, resolvedStatus, reason);
+  const result = await resolveStaleSessionCore(sessionId, resolution, reason);
 
   if (!result.success) {
     logger.error('coach:resolve_stale_session_failed', result.errorCode, ctx);
@@ -161,4 +173,136 @@ export async function getMySessionTasks(): Promise<CoachSessionTasksSummary> {
     return EMPTY_SESSION_TASKS;
   }
   return result.tasks;
+}
+
+/**
+ * Checks whether the coach or the student already has a scheduled session at the given
+ * time (used for inline validation while picking a proposed alternative time).
+ */
+export async function checkSessionConflict(
+  coachId: string,
+  studentId: string,
+  startIso: string,
+  endIso: string,
+  excludeSessionId?: string
+): Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await checkSessionConflictCore(coachId, studentId, startIso, endIso, excludeSessionId);
+
+  if (!result.success) {
+    logger.error('coach:check_session_conflict_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+
+  return { success: true, coachConflict: result.coachConflict, studentConflict: result.studentConflict };
+}
+
+/**
+ * Approves a student's session booking request, creating the confirmed session.
+ */
+export async function approveSessionBookingRequest(
+  requestId: string
+): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await approveSessionBookingRequestCore(requestId);
+
+  if (!result.success) {
+    logger.error('coach:approve_booking_request_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+
+  logger.info('coach:approve_booking_request_success', 'Session booking request approved', ctx);
+  return { success: true, newSessionId: result.newSessionId };
+}
+
+/**
+ * Rejects a student's session booking request. The ticket stays unassigned.
+ */
+export async function rejectSessionBookingRequest(
+  requestId: string,
+  reason?: string
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await rejectSessionBookingRequestCore(requestId, reason);
+
+  if (!result.success) {
+    logger.error('coach:reject_booking_request_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+
+  logger.info('coach:reject_booking_request_success', 'Session booking request rejected', ctx);
+  return { success: true };
+}
+
+/**
+ * Accepts one of the candidate times a student proposed when cancelling a session.
+ */
+export async function acceptRescheduleProposal(
+  proposalId: string
+): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await acceptRescheduleProposalCore(proposalId);
+
+  if (!result.success) {
+    logger.error('coach:accept_reschedule_proposal_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+
+  logger.info('coach:accept_reschedule_proposal_success', 'Reschedule proposal accepted', ctx);
+  return { success: true, newSessionId: result.newSessionId };
+}
+
+/**
+ * Declines all candidate times a student proposed for one cancelled session at once
+ * (candidates are mutually exclusive choices, so rejection applies to the whole group).
+ */
+export async function declineRescheduleProposals(
+  sessionId: string
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await declineRescheduleProposalsCore(sessionId);
+
+  if (!result.success) {
+    logger.error('coach:decline_reschedule_proposals_failed', result.errorCode, ctx);
+    return { success: false, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+
+  logger.info('coach:decline_reschedule_proposals_success', 'Reschedule proposals declined', ctx);
+  return { success: true };
+}
+
+/**
+ * Fetches one page of the coach's session booking request history, ordered newest-first.
+ * Pass the previous page's `nextCursor` to fetch the next page; a null `nextCursor`
+ * in the result means there is no more history.
+ */
+export async function getBookingRequestHistoryPage(
+  cursor: string | null,
+  limit: number
+): Promise<{ items: IncomingSessionBookingRequestItem[]; nextCursor: string | null }> {
+  const result = await getBookingRequestHistoryPageForCoachCore(cursor, limit);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_booking_request_history_page_failed', result.errorCode, ctx);
+    return { items: [], nextCursor: null };
+  }
+  return { items: result.items, nextCursor: result.nextCursor };
+}
+
+/**
+ * Fetches one page of the coach's reschedule proposal history (grouped by the
+ * cancelled session), ordered newest-first. Pass the previous page's `nextCursor`
+ * to fetch the next page; a null `nextCursor` in the result means there is no more history.
+ */
+export async function getRescheduleProposalHistoryPage(
+  cursor: string | null,
+  limit: number
+): Promise<{ items: IncomingRescheduleProposalGroup[]; nextCursor: string | null }> {
+  const result = await getRescheduleProposalHistoryPageForCoachCore(cursor, limit);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_reschedule_proposal_history_page_failed', result.errorCode, ctx);
+    return { items: [], nextCursor: null };
+  }
+  return { items: result.items, nextCursor: result.nextCursor };
 }

@@ -67,6 +67,9 @@ CREATE UNIQUE INDEX uq_matching_request_active_slot ON public.com_t_matching_req
 
 CREATE INDEX idx_matching_request_student ON public.com_t_matching_request (student_id, status);
 CREATE INDEX idx_matching_request_coach ON public.com_t_matching_request (coach_id, status);
+-- コーチ側「申請一覧」画面のHistoryタブ(getMatchingRequestHistoryPageAsCoachCore)は
+-- coach_id絞り込み + insert_date降順のカーソルページングのため必要 (2026-09-14 追加)
+CREATE INDEX idx_matching_request_coach_insert_date ON public.com_t_matching_request (coach_id, insert_date DESC);
 
 ---------------------------------------------
 -- 行レベルセキュリティ (RLS)

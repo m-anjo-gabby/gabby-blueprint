@@ -7,7 +7,7 @@ import { ChevronLeft, Trophy, CheckCircle2, ArrowRight, PlayCircle, SkipForward,
 import { cn } from "@/lib/utils";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { formatZonedDate } from '@gabby/lib/date/date';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { setAudioSessionPlayback, getFeedbackConfig } from '@gabby/lib';
 import type { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
 import type { SprintHistoryItem } from '@/actions/sprintAction';
@@ -63,7 +63,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   // 🆕 スコアタップ時のドリル同様の発話フィードバック表示（旧データはanalysis無しのためタップ不可）
   const [feedbackTarget, setFeedbackTarget] = useState<{ feedback: FeedbackConfig; analysis: AnalysisResult } | null>(null);
  
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
  
   const toggleJa = (key: string) => {
     setJaVisibleMap(prev => ({ ...prev, [key]: !prev[key] }));
