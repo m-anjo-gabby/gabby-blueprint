@@ -12,8 +12,8 @@
 
 | ロール | 画面 | パス | 主なコンポーネント |
 |---|---|---|---|
-| 生徒 | カレンダー | apps/student `/calendar` | `BookMakeupSessionDialog.tsx`（個別予約リクエストの作成） |
-| 生徒 | ライブルーム | apps/student `/live-room` | `LiveSessionHub.tsx`（セッションキャンセル）、`RescheduleProposalDialog.tsx`（振替候補への応答） |
+| 生徒 | カレンダー | apps/student `/calendar` | `BookMakeupSessionDialog.tsx`（個別予約リクエストの作成）、`DayDetailDrawer.tsx` + `SessionActionDialog.tsx`（セッションキャンセル・振替候補の提案）。画面仕様: [docs/screens/student/calendar.md](../../../../docs/screens/student/calendar.md) |
+| 生徒 | ライブルーム | apps/student `/live-room` | `LiveSessionHub.tsx`（カレンダー画面と同じ`SessionActionDialog`・`BookMakeupSessionDialog`を内包し、セッションキャンセル・予約リクエスト作成・取り下げ・過去セッション閲覧が可能）、`RescheduleProposalDialog.tsx`（振替候補への応答）。画面仕様: [docs/screens/student/live-room/hub.md](../../../../docs/screens/student/live-room/hub.md) |
 | コーチ | カレンダー（保留中パネル） | apps/coach `/calendar` | `PendingRequestsPanel.tsx` |
 | コーチ | 申請一覧 | apps/coach `/matching-requests` | `BookingRequestCard.tsx`（予約リクエスト）、`RescheduleProposalRequestCard.tsx`（振替候補） |
 
@@ -40,7 +40,8 @@
 ## フローB: 振替候補提案（キャンセル起因）
 
 1. 生徒またはコーチが既存セッションをキャンセルする際、代替候補を最大3件、
-   開始24時間以上先の日時で同時に提案できる（`cancelSession`の候補提案オプション）
+   開始24時間以上先の日時で同時に提案できる（`cancelSession`の候補提案オプション）。
+   生徒がキャンセルする場合の操作画面はカレンダー（`/calendar`）
 2. 提案者と逆側の当事者に候補が表示される。回答期限は提案から24時間
 3. 相手が応答する
    - 3a. いずれか1件を承諾（アクション: `acceptRescheduleProposal`）→ 新規セッション作成、

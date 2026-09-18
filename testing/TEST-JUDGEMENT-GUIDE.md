@@ -446,3 +446,59 @@
     用意して初めて発見できる。
 
 <!-- 新しい事例はこの下に追記していく -->
+
+### KJ-2026-0918-01 生徒のセッションキャンセルは「ライブルーム」ではなく「カレンダー」画面が実体
+
+- **該当仕様書**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`（画面仕様書
+  `docs/screens/student/calendar.md`作成のため実装を確認中に発覚）
+- **事象**: 上記E2E仕様書の「関与ロール・画面」表で、生徒のセッションキャンセル操作を
+  `apps/student/app/(app)/live-room/_components/LiveSessionHub.tsx`が担うと記載していたが、
+  実際にセッションキャンセルのダイアログ（`SessionActionDialog.tsx`、実体は
+  `packages/lib/components/common/SessionActionDialog.tsx`）を開く導線は
+  `apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`（カレンダー画面の
+  日別詳細ドロワー）にあり、ライブルーム画面には無かった。
+- **原因**: `cancelSession(`という文字列でのgrep一致だけを見て「呼び出し箇所がある画面」と
+  即断したが、実際には`LiveSessionHub.tsx`は`cancelSession`を呼んでおらず、
+  `withdrawSessionBookingRequest(`（予約リクエストの取り下げ）にマッチしていただけだった。
+  複数の関数名をOR条件でgrepした結果、どのパターンにマッチしたかを確認せずに
+  「セッションキャンセル」の実装場所として扱ってしまった。
+- **対処**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`の該当箇所を
+  修正（生徒のキャンセル操作画面をカレンダーに訂正、ライブルームは「予約リクエストの取り下げ・
+  振替候補への応答・過去セッション閲覧」に訂正）。
+- **判断基準への反映**:
+  - **複数の関数名をOR条件でgrepした場合、どの行がどのパターンにマッチしたかを個別に
+    確認してから結論を書くこと。** 「ファイルXがヒットした＝関数Yを呼んでいる」と決めつけず、
+    該当関数名単体で再grepして実際の呼び出し箇所を確認する。
+  - **画面仕様書（`docs/screens/`）を作るために実装を読み直す作業は、既存のE2E仕様書の
+    「関与ロール・画面」記述の裏取り・誤り発見の機会にもなる。** 今回のように、後から
+    別目的でコードを読み直したタイミングで齟齬が見つかることがあるため、関連する仕様書が
+    無いかを都度確認し、見つかった齟齬はその場で仕様書側も修正する。
+
+### KJ-2026-0918-02 ライブルーム画面はキャンセル・振替候補提案の「サブセット」ではなく、カレンダー画面とほぼ同じ操作一式を提供している
+
+- **該当仕様書**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`（画面仕様書
+  `docs/screens/student/live-room/hub.md`作成のため実装を確認中に発覚。KJ-2026-0918-01の続報）
+- **事象**: KJ-2026-0918-01でライブルーム画面の役割を「予約リクエストの取り下げ・振替候補への
+  応答・過去セッション閲覧」と訂正したが、これも不完全だった。実際には
+  `apps/student/app/(app)/live-room/_components/LiveSessionHub.tsx`はカレンダー画面
+  （`apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`等）と同じ
+  `SessionActionDialog`（セッションキャンセル＋振替候補提案）・`BookMakeupSessionDialog`
+  （個別予約リクエストの新規作成）を直接インポートして使っており、今後の予定カードから
+  「キャンセル」、未消化枠バナーから「予約リクエスト作成」も行える。つまりライブルーム画面は
+  カレンダー画面の機能の一部だけを持つのではなく、ほぼ同じ操作一式（＋振替候補への応答、
+  ＋取り下げ、＋過去セッション閲覧）を提供している。
+- **原因**: KJ-2026-0918-01の修正時点では、grepでヒットした関数呼び出し（
+  `withdrawSessionBookingRequest`, `acceptRescheduleProposal`, `declineRescheduleProposals`）
+  だけを見て「この画面が持つ機能はこれで全部」と判断してしまい、同じファイルが他にどの
+  共有コンポーネントをimportしているか（＝`SessionActionDialog`・`BookMakeupSessionDialog`も
+  同じ画面内で使われている）まで確認していなかった。
+- **対処**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`のライブルーム行を
+  再度修正し、カレンダー画面と同じダイアログ一式を内包している旨を明記した。
+- **判断基準への反映**:
+  - **「この画面はどの機能を持つか」を確認する際は、grepでヒットした関数呼び出しの列挙だけで
+    終わらせず、そのファイルのimport文全体（特に共有コンポーネント・共有ダイアログ）まで
+    確認すること。** 関数呼び出しの網羅的なgrepは「その画面固有の処理」は拾えるが、
+    「他の画面と共用しているダイアログ経由の機能」を見落としやすい。
+  - **同じ訂正対象に2回連続で修正が入るケースは、最初の修正が「表面的な事象の解消」に
+    留まり、根本（確認方法そのものの甘さ）を直していなかった兆候。** 訂正時は「この確認方法で
+    本当に全体像が分かるか」を一段掘り下げて自問する。
