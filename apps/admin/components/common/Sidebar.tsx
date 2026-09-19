@@ -7,6 +7,7 @@ import {
   X, ChevronRight,
   PanelLeftClose, PanelLeftOpen, ChevronDown,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
@@ -29,6 +30,8 @@ interface LeafItemProps {
 
 function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge }: LeafItemProps) {
   const Icon = item.icon;
+  const t = useTranslations('nav');
+  const label = t(item.label);
   const hasBadge = Boolean(badge && badge > 0);
   return (
     <li className="list-none group relative">
@@ -69,7 +72,7 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
             ${isCollapsed ? 'max-w-0 opacity-0 ml-0' : isChild ? 'max-w-36 opacity-100 ml-0' : 'max-w-40 opacity-100 ml-3'}
           `}>
             <span className={`text-sm font-bold whitespace-nowrap ${isChild ? 'text-[13px]' : ''}`}>
-              {item.label}
+              {label}
             </span>
           </span>
         </div>
@@ -79,7 +82,7 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
       {/* 折りたたみ時のツールチップ */}
       {isCollapsed && (
         <div className="fixed left-20 ml-2 top-auto group-hover:-translate-y-10 px-3 py-2 bg-slate-800 text-white text-[11px] font-bold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-[100] border border-slate-700 shadow-2xl">
-          {item.label}
+          {label}
           <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-800 rotate-45 border-l border-b border-slate-700" />
         </div>
       )}
@@ -98,6 +101,8 @@ interface GroupItemProps {
 
 function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupItemProps) {
   const Icon = item.icon;
+  const t = useTranslations('nav');
+  const groupLabel = t(item.label);
   const isAnyChildActive = item.children.some((child) => currentPathname.startsWith(child.href));
   const [isOpen, setIsOpen] = useState(isAnyChildActive);
 
@@ -110,14 +115,14 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
             flex justify-center items-center w-full rounded-xl py-3 transition-all duration-200
             ${isAnyChildActive ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-500 hover:text-white'}
           `}
-          title={item.label}
+          title={groupLabel}
         >
           <Icon size={18} className={isAnyChildActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'} />
         </button>
         {/* ホバーで子メニューをフライアウト表示 */}
         <div className="fixed left-20 ml-2 top-auto -translate-y-8 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 z-[100]">
           <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-2 min-w-[160px]">
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-2 pb-1.5">{item.label}</p>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-2 pb-1.5">{groupLabel}</p>
             {item.children.map((child) => (
               <Link
                 key={child.href}
@@ -129,7 +134,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
                 `}
               >
                 <child.icon size={13} />
-                {child.label}
+                {t(child.label)}
               </Link>
             ))}
           </div>
@@ -150,7 +155,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
       >
         <div className="flex items-center gap-3">
           <Icon size={18} className={isAnyChildActive ? 'text-indigo-400' : 'text-slate-500'} />
-          <span className="whitespace-nowrap overflow-hidden text-sm font-bold">{item.label}</span>
+          <span className="whitespace-nowrap overflow-hidden text-sm font-bold">{groupLabel}</span>
         </div>
         <ChevronDown
           size={14}
@@ -188,6 +193,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const tCommon = useTranslations('common');
   const pathname = usePathname();
   const user = useUserStore((state) => state.user);
   const userRoles: string[] = user?.app_metadata?.roles || [];
@@ -229,7 +235,7 @@ export default function Sidebar() {
           <button
             onClick={closeMobileSidebar}
             className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 transition-colors"
-            aria-label="メニューを閉じる"
+            aria-label={tCommon('closeMenu')}
           >
             <X size={20} />
           </button>
@@ -267,7 +273,7 @@ export default function Sidebar() {
           <button
             onClick={toggleCollapse}
             className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors"
-            aria-label={isCollapsed ? 'メニューを開く' : 'メニューを閉じる'}
+            aria-label={isCollapsed ? tCommon('openMenu') : tCommon('closeMenu')}
           >
             {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
           </button>

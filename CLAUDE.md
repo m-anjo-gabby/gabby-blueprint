@@ -44,22 +44,31 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
 # 5. モノレポ構造と アプリ別 UI 言語方針
 
 本プロジェクトは Turborepo / pnpm Workspaces によるモノレポ構成です。
-アプリごとにターゲット層が異なり、UI言語が固定されているため、**多言語化ライブラリ（i18n）は使用せず、各アプリ内で直接言語を定義**します。
+アプリごとにターゲット層が異なり、UI言語の扱い方針もアプリ単位で異なります。
 
 | ディレクトリ | 対象ユーザー | UI基本言語 | 開発方針・備考 |
 | :--- | :--- | :--- | :--- |
-| `apps/admin` | システム管理者 / 運営 | **日本語 (Japanese)** | 運営効率を最優先し、直感的な日本語UIで設計する。 |
-| `apps/coach` | 英語コーチ・指導者 | **英語 (English)** | グローバルなコーチ陣に対応するため、UI表示・ラベル・エラーメッセージ等は全て英語表記で統一する。 |
-| `apps/student` | 学習者 (生徒) | **日本語 (Japanese)** | 学習のハードルを下げるため、操作ガイドやシステムUIは日本語で提示する（※英語学習コンテンツ本文を除く）。 |
+| `apps/admin` | システム管理者 / 運営 | **日本語 / 英語（next-intl による多言語対応）** | 日本人運営スタッフと英語ネイティブスタッフの双方が利用するため、`next-intl` を導入しCookieベース（URLプレフィックスなし）でロケールを切り替える。 |
+| `apps/coach` | 英語コーチ・指導者 | **英語 (English)** | グローバルなコーチ陣に対応するため、UI表示・ラベル・エラーメッセージ等は全て英語表記で統一する（i18nライブラリ未導入、現状維持）。 |
+| `apps/student` | 学習者 (生徒) | **日本語 (Japanese)** | 学習のハードルを下げるため、操作ガイドやシステムUIは日本語で提示する（i18nライブラリ未導入、現状維持）（※英語学習コンテンツ本文を除く）。 |
 
 ### 実装ルール
-1. **テキストの直接記述 (No i18n Libraries):**
-   - 多言語切り替えライブラリ（`next-intl` や `react-i18next` 等）は導入しません。
-   - `apps/admin` および `apps/student` のコンポーネント内テキストは原則日本語で記述します。
-   - `apps/coach` のコンポーネント内テキストは全て英語で記述します。
+
+1. **`apps/admin`: next-intl による多言語対応**
+   - ロケール判定は Cookie（`NEXT_LOCALE`）ベースで行い、URLパスにロケールプレフィックス（`/ja/...` `/en/...`）は付与しない。既存の認証・RBACルーティング（`apps/admin/proxy.ts`）はこの方式では変更不要。
+   - リクエストごとのロケール解決・メッセージ読み込みは `apps/admin/i18n/request.ts`（`getRequestConfig`）に集約する。
+   - 翻訳文言は `apps/admin/messages/{ja,en}.json` に、機能・画面単位の名前空間（`common` / `nav` / `login` / `dashboard` / `users` 等、`app/(app)/<dir>` のディレクトリ名に対応）で追加する。新規画面を対応させる際は同じ命名規則を踏襲する。
+   - Client Component では `useTranslations()` / `useLocale()`、Server Component では `next-intl/server` の `getTranslations()` / `getLocale()` を使用する。
+   - Zodバリデーションメッセージ等、コンポーネント外（モジュールスコープ）で定義していたスキーマは `createXxxSchema(t)` のようなファクトリ関数に変換し、コンポーネント内で `useMemo` して生成する（`UserFormDialog.tsx` を参照）。
+   - DBから取得する動的な文字列（例: `com_m_role.role_name` などロール表示名、`USER_TYPE_MAP`/`getUserTypeLabel` 等 `packages/types` 由来の列挙ラベル）は翻訳カタログの対象外（`packages/types` は coach/student からも参照されるため変更しない。別途対応が必要な既知の課題）。
+   - `apps/admin` 以外（`coach`/`student`）は本ルールの対象外。将来的に展開する場合は改めて計画する。
+
+2. **`apps/coach` / `apps/student`: テキストの直接記述 (No i18n Libraries)**
+   - 多言語切り替えライブラリは導入しません。
+   - コンポーネント内テキストは各アプリの基本言語（英語 / 日本語）で直接記述します。
    - アプリ内でテキストを分離したい場合は、`constants/dictionary.ts` 等の定数オブジェクトで管理します。
 
-2. **Shared Components (`packages/ui`):**
+3. **Shared Components (`packages/ui`):**
    - 共通UIコンポーネントには特定の言語をハードコードせず、必ず `children` や `props`（例: `label`, `placeholder`, `confirmText`）経由で渡す設計（コンポジションパターン）を徹底します。
 
 # 6. データ主体テスト・dev環境接続時の注意

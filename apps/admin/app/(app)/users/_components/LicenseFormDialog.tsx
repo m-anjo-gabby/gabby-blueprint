@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,6 +27,8 @@ interface Props {
 }
 
 export function LicenseFormDialog({ user, children }: Props) {
+  const t = useTranslations('users.license');
+  const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('list');
   const [loading, setLoading] = useState(false);
@@ -107,16 +110,16 @@ export function LicenseFormDialog({ user, children }: Props) {
     try {
       if (editingLicense) {
         await updateUserLicense(editingLicense.license_id, { start_date: startDate, end_date: endDate, note });
-        showToast("ライセンス情報を更新しました", "success");
+        showToast(t('toastUpdated'), "success");
       } else {
         await assignLicenseToUser(selectedContractId, user.id, startDate, endDate);
-        showToast("ライセンスを割当しました", "success");
+        showToast(t('toastAssigned'), "success");
       }
       setActiveTab('list');
       await loadData();
       resetForm();
     } catch {
-      showToast("処理に失敗しました", "error");
+      showToast(t('toastFailed'), "error");
     } finally {
       setLoading(false);
     }
@@ -126,7 +129,7 @@ export function LicenseFormDialog({ user, children }: Props) {
     setLoading(true);
     try {
       await invalidateUserLicense(licenseId);
-      showToast("ライセンスを無効化しました", "success");
+      showToast(t('toastInvalidated'), "success");
       await loadData();
     } finally {
       setLoading(false);
@@ -153,15 +156,15 @@ export function LicenseFormDialog({ user, children }: Props) {
       <DialogContent className="max-w-md p-0 shadow-2xl border-none [&>button]:text-white [&>button]:opacity-70 max-h-[90vh] flex flex-col rounded-xl overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
-            <RefreshCcw size={18} className="text-emerald-400" /> ライセンス管理
+            <RefreshCcw size={18} className="text-emerald-400" /> {t('title')}
           </DialogTitle>
           <p className="text-slate-400 text-[11px] font-bold mt-1">{user.user_name} / {user.client_name}</p>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6 flex flex-col flex-1 overflow-hidden">
           <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="list" className="gap-2" onClick={resetForm}><ClipboardList size={14}/>一覧・履歴</TabsTrigger>
-            <TabsTrigger value="form" className="gap-2">{editingLicense ? '編集モード' : '新規割当'}</TabsTrigger>
+            <TabsTrigger value="list" className="gap-2" onClick={resetForm}><ClipboardList size={14}/>{t('tabHistory')}</TabsTrigger>
+            <TabsTrigger value="form" className="gap-2">{editingLicense ? t('tabEdit') : t('tabNew')}</TabsTrigger>
           </TabsList>
 
           <div className="flex-1 overflow-y-auto min-h-[380px]">
@@ -180,11 +183,11 @@ export function LicenseFormDialog({ user, children }: Props) {
                           <div className="flex items-center gap-2">
                             <p className="text-xs font-black">{l.plan_name}</p>
                             {l.is_removed ? (
-                              <span className="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">解除済み</span>
+                              <span className="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">{t('removed')}</span>
                             ) : isInvalidated ? (
-                              <span className="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">無効化済み</span>
+                              <span className="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">{t('invalidated')}</span>
                             ) : isPast && (
-                              <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">終了</span>
+                              <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{t('ended')}</span>
                             )}
                           </div>
                           <p className={`text-[10px] font-bold mt-0.5 ${isInactive ? 'text-slate-400' : 'text-slate-500'}`}>{l.start_date} ～ {l.end_date}</p>
@@ -198,16 +201,14 @@ export function LicenseFormDialog({ user, children }: Props) {
                               </AlertDialogTrigger>
                               <AlertDialogContent className="rounded-3xl p-8">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>ライセンスを無効化しますか？</AlertDialogTitle>
+                                  <AlertDialogTitle>{t('confirmInvalidateTitle')}</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    即座にシステム利用が不可となり、未実施の今後のセッションもキャンセルされます。
-                                    実施済みのセッション履歴・チャット・宿題は削除されず残ります。チケット消化数も元に戻りません。
-                                    本当によろしいですか？
+                                    {t('confirmInvalidateBody')}
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleInvalidate(l.license_id)} className="bg-rose-500">無効化する</AlertDialogAction>
+                                  <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleInvalidate(l.license_id)} className="bg-rose-500">{t('confirmInvalidateAction')}</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
@@ -216,28 +217,28 @@ export function LicenseFormDialog({ user, children }: Props) {
                       </div>
                     );
                   })}
-                  {licenses.length === 0 && <p className="text-center text-xs text-slate-400 py-20">ライセンスの履歴はありません</p>}
+                  {licenses.length === 0 && <p className="text-center text-xs text-slate-400 py-20">{t('noHistory')}</p>}
                 </TabsContent>
 
                 <TabsContent value="form" className="mt-0 space-y-5">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      契約プラン {editingLicense && <span className="text-amber-500">(変更不可)</span>}
+                      {t('planLabel')} {editingLicense && <span className="text-amber-500">{t('notEditable')}</span>}
                     </label>
-                    
+
                     {availableContracts.length > 0 ? (
-                      <Select 
-                        onValueChange={setSelectedContractId} 
+                      <Select
+                        onValueChange={setSelectedContractId}
                         value={selectedContractId}
                         disabled={!!editingLicense}
                       >
                         <SelectTrigger className={`rounded-xl h-12 font-bold ${editingLicense ? 'bg-slate-50 opacity-80 cursor-not-allowed' : ''}`}>
-                          <SelectValue placeholder="契約プランを選択" />
+                          <SelectValue placeholder={t('selectPlanPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableContracts.map((c) => (
                             <SelectItem key={c.contract_id} value={c.contract_id}>
-                              {c.plan_name} (残:{c.remaining_licenses})
+                              {c.plan_name} {t('remaining', { count: c.remaining_licenses })}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -245,7 +246,7 @@ export function LicenseFormDialog({ user, children }: Props) {
                     ) : (
                       // 割当可能なプランが0件の場合のメッセージ表示
                       <div className="h-12 w-full rounded-xl border border-dashed border-slate-200 flex items-center justify-center text-xs text-slate-400 font-medium bg-slate-50">
-                        割当可能な契約プランがありません
+                        {t('noAssignablePlans')}
                       </div>
                     )}
                   </div>
@@ -270,30 +271,30 @@ export function LicenseFormDialog({ user, children }: Props) {
                   </div>
                   {selectedContract && !editingLicense && (
                     <p className="text-[10px] text-slate-400 font-medium">
-                      契約期間: {selectedContract.start_date} ～ {selectedContract.end_date}
+                      {t('contractPeriod', { start: selectedContract.start_date, end: selectedContract.end_date })}
                     </p>
                   )}
 
-                  <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="備考（変更理由など）" className="rounded-xl" />
+                  <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('notePlaceholder')} className="rounded-xl" />
 
                   {isFormInvalid && (
                     <p className="text-[10px] text-rose-500 font-bold flex items-center gap-1 bg-rose-50 p-2 rounded-lg">
                       <AlertCircle size={12} />
                       {isOutOfContractRange
-                        ? 'ライセンス期間は契約期間内で指定してください'
-                        : '契約プラン・日付は必須です（終了日は開始日以降）'}
+                        ? t('errorOutOfRange')
+                        : t('errorRequired')}
                     </p>
                   )}
 
-                  <Button 
-                    className="w-full h-12 rounded-xl font-black bg-slate-900" 
-                    onClick={handleSave} 
+                  <Button
+                    className="w-full h-12 rounded-xl font-black bg-slate-900"
+                    onClick={handleSave}
                     // 【重要】割当可能なプランがない場合はボタンを無効化
                     disabled={Boolean(loading || isFormInvalid || (!editingLicense && availableContracts.length === 0))}
                   >
-                    {availableContracts.length === 0 
-                      ? '割当可能なプランなし' 
-                      : (editingLicense ? '更新を保存' : 'ライセンスを割当')
+                    {availableContracts.length === 0
+                      ? t('noAssignableButton')
+                      : (editingLicense ? t('saveUpdate') : t('assign'))
                     }
                   </Button>
                 </TabsContent>

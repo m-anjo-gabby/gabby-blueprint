@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -23,55 +24,61 @@ import { SearchableSelect } from '@/components/common/SearchableSelect';
 // --- スキーマ定義 ---
 // 解決策: rolesを非オプショナル（必ず配列）として定義。
 // zodResolverの型不一致を防ぐため、このスキーマから推論した型をFormValuesとして使用します。
-const userSchema = z.object({
-  email: z.string().email({ message: "有効なメールアドレスを入力してください" }),
-  user_name: z.string().min(1, '名前は必須です'),
-  client_id: z.string().min(1, '所属顧客を選択してください'),
-  user_type: z.string().min(1, 'タイプは必須です'),
-  roles: z.array(z.string()), // 必須配列として定義（初期値で[]をセット）
-  contract_id: z.string().optional(), // 一旦optionalにしておき、superRefineで条件付き必須にする
-  // 新規作成時の作成方法（招待メール送信 / 即時作成=Auto Confirm）。編集時は未使用。
-  creation_mode: z.enum(['invite', 'direct']),
-  password: z.string().optional(),
-  confirm_password: z.string().optional(),
-}).superRefine((data, ctx) => {
-  // 生徒(user_type === '1')の場合、contract_idが'none'であってはならない
-  if (data.user_type === '1' && data.contract_id === 'none') {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: '生徒には初期ライセンスの割当が必須です。',
-      path: ['contract_id'],
-    });
-  }
+// エラーメッセージは next-intl の翻訳に依存するため、useTranslations の結果を受け取る
+// ファクトリ関数としてコンポーネント内から生成する。
+type FormT = ReturnType<typeof useTranslations<'users.form'>>;
 
-  // 即時作成モードの場合のみ、パスワードの入力・強度・一致を検証する
-  if (data.creation_mode === 'direct') {
-    if (!data.password || data.password.length < 8) {
+function createUserSchema(t: FormT) {
+  return z.object({
+    email: z.string().email({ message: t('errors.invalidEmail') }),
+    user_name: z.string().min(1, t('errors.nameRequired')),
+    client_id: z.string().min(1, t('errors.clientRequired')),
+    user_type: z.string().min(1, t('errors.userTypeRequired')),
+    roles: z.array(z.string()), // 必須配列として定義（初期値で[]をセット）
+    contract_id: z.string().optional(), // 一旦optionalにしておき、superRefineで条件付き必須にする
+    // 新規作成時の作成方法（招待メール送信 / 即時作成=Auto Confirm）。編集時は未使用。
+    creation_mode: z.enum(['invite', 'direct']),
+    password: z.string().optional(),
+    confirm_password: z.string().optional(),
+  }).superRefine((data, ctx) => {
+    // 生徒(user_type === '1')の場合、contract_idが'none'であってはならない
+    if (data.user_type === '1' && data.contract_id === 'none') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'パスワードは8文字以上で入力してください。',
-        path: ['password'],
-      });
-    } else if (!/[a-zA-Z]/.test(data.password) || !/[0-9]/.test(data.password)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'パスワードには英字と数字を両方含めてください。',
-        path: ['password'],
+        message: t('errors.licenseRequiredForStudent'),
+        path: ['contract_id'],
       });
     }
 
-    if (data.password !== data.confirm_password) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'パスワードが一致しません。',
-        path: ['confirm_password'],
-      });
+    // 即時作成モードの場合のみ、パスワードの入力・強度・一致を検証する
+    if (data.creation_mode === 'direct') {
+      if (!data.password || data.password.length < 8) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t('errors.passwordTooShort'),
+          path: ['password'],
+        });
+      } else if (!/[a-zA-Z]/.test(data.password) || !/[0-9]/.test(data.password)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t('errors.passwordComplexity'),
+          path: ['password'],
+        });
+      }
+
+      if (data.password !== data.confirm_password) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t('errors.passwordMismatch'),
+          path: ['confirm_password'],
+        });
+      }
     }
-  }
-});
+  });
+}
 
 // Zodから推論した型をそのまま使うことで、useForm(resolver)との型不一致を解消
-type UserFormValues = z.infer<typeof userSchema>;
+type UserFormValues = z.infer<ReturnType<typeof createUserSchema>>;
 
 interface UserFormDialogProps {
   mode?: 'create' | 'edit';
@@ -92,6 +99,9 @@ const DEFAULT_VALUES: UserFormValues = {
 };
 
 export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogProps) {
+  const t = useTranslations('users.form');
+  const tCommon = useTranslations('common');
+  const userSchema = useMemo(() => createUserSchema(t), [t]);
   const [open, setOpen] = useState<boolean>(false);
   const [isConfirming, setIsConfirming] = useState<boolean>(false);
   const [isResending, setIsResending] = useState(false);
@@ -183,16 +193,16 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
         // --- 編集モード ---
         const result = await updateUser(initialData.id, values);
         if (result.success) {
-          showToast("ユーザー情報を更新しました", "success");
+          showToast(t('toastUpdated'), "success");
           handleClose();
         } else {
-          setServerError(result.message || "更新に失敗しました");
+          setServerError(result.message || t('toastUpdateFailed'));
         }
       } else if (values.creation_mode === 'direct') {
         // --- 新規登録モード（即時作成 / Auto Confirm） ---
         const result: CreateUserResponse = await createUserDirect({ ...values, password: values.password || '' });
         if (result.success) {
-          showToast("ユーザーを作成しました（確認メールは送信されません）", "success");
+          showToast(t('toastCreatedDirect'), "success");
           handleClose();
         } else {
           if (result.errorType === 'email_exists') {
@@ -200,24 +210,24 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
           } else if (result.errorType === 'weak_password') {
             form.setError('password', { type: 'manual', message: result.message ?? "" });
           }
-          setServerError(result.message || "作成に失敗しました");
+          setServerError(result.message || t('toastCreateFailed'));
         }
       } else {
         // --- 新規登録モード（招待メール送信） ---
         const result: CreateUserResponse = await createUser(values);
         if (result.success) {
-          showToast("ユーザーを招待しました", "success");
+          showToast(t('toastInvited'), "success");
           handleClose();
         } else {
           // 重複エラーなどの個別ハンドリング
           if (result.errorType === 'email_exists') {
             form.setError('email', { type: 'manual', message: result.message ?? "" });
           }
-          setServerError(result.message || "登録に失敗しました");
+          setServerError(result.message || t('toastRegisterFailed'));
         }
       }
     } catch (error) {
-      setServerError("システムエラーが発生しました。");
+      setServerError(tCommon('systemError'));
     }
   };
 
@@ -230,9 +240,9 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
     try {
       setIsResending(true);
       await resendInvite(email);
-      showToast("招待メールを再送しました", "success");
+      showToast(t('toastResendSuccess'), "success");
     } catch (error) {
-      showToast("再送に失敗しました", "error");
+      showToast(t('toastResendFailed'), "error");
     } finally {
       setIsResending(false);
     }
@@ -263,12 +273,12 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
           const data = await getClientsFilter();
           setClients(data);
         } catch (error) {
-          showToast("顧客リストの取得に失敗しました", "error");
+          showToast(t('toastClientFetchFailed'), "error");
         } finally {
           setIsLoadingClients(false);
         }
       }
-      
+
       // ロールマスタの取得
       if (roleMaster.length === 0) {
         setIsLoadingRoles(true);
@@ -276,7 +286,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
           const data = await getRoles();
           setRoleMaster(data);
         } catch (error) {
-          showToast("ロールマスタの取得に失敗しました", "error");
+          showToast(t('toastRoleFetchFailed'), "error");
         } finally {
           setIsLoadingRoles(false);
         }
@@ -291,11 +301,11 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none transition-all active:scale-95">
-            <PlusCircle size={16} /> 新規登録
+            <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
-            <Edit size={14} /> 編集
+            <Edit size={14} /> {t('editButton')}
           </Button>
         )}
       </DialogTrigger>
@@ -304,11 +314,11 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
         <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認</>
+              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> 新規ユーザー登録</>
+              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> ユーザー基本情報編集</>
+              <><Edit size={18} className="text-indigo-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -321,13 +331,13 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                     {/* --- ID表示エリア（編集モード時のみ） --- */}
                     {mode === 'edit' && initialData?.id && (
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ユーザーID (UUID)</label>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('idLabel')}</label>
                         <div className="group relative flex items-center">
                           <code className="flex-1 bg-slate-50 text-slate-500 text-[10px] font-mono px-3 py-2 rounded-lg border border-slate-100 truncate">{initialData.id}</code>
                           <Button type="button" variant="ghost" className="ml-2 h-8 px-2 text-slate-400 hover:text-indigo-600 transition-colors"
                             onClick={() => {
                               navigator.clipboard.writeText(initialData.id);
-                              showToast("IDをコピーしました", "success");
+                              showToast(t('idCopied'), "success");
                             }}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
@@ -340,23 +350,23 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                     {mode === 'create' && !isConfirming && (
                       <FormField control={form.control} name="creation_mode" render={({ field }) => (
                         <FormItem className="space-y-1.5">
-                          <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">作成方法</FormLabel>
+                          <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('creationModeLabel')}</FormLabel>
                           <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
                             <button
                               type="button"
                               onClick={() => field.onChange('invite')}
                               className={`flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg text-left transition-all ${field.value === 'invite' ? 'bg-white shadow-sm border border-slate-200' : 'text-slate-500 hover:bg-white/60 border border-transparent'}`}
                             >
-                              <span className="text-xs font-bold flex items-center gap-1.5 text-slate-700"><Mail size={12} className="text-indigo-500" /> 招待メールを送信</span>
-                              <span className="text-[10px] text-slate-400 leading-snug">本登録リンクをメールで送付します</span>
+                              <span className="text-xs font-bold flex items-center gap-1.5 text-slate-700"><Mail size={12} className="text-indigo-500" /> {t('creationModeInvite')}</span>
+                              <span className="text-[10px] text-slate-400 leading-snug">{t('creationModeInviteDesc')}</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => field.onChange('direct')}
                               className={`flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg text-left transition-all ${field.value === 'direct' ? 'bg-white shadow-sm border border-slate-200' : 'text-slate-500 hover:bg-white/60 border border-transparent'}`}
                             >
-                              <span className="text-xs font-bold flex items-center gap-1.5 text-slate-700"><ShieldCheck size={12} className="text-emerald-500" /> 即時作成</span>
-                              <span className="text-[10px] text-slate-400 leading-snug">確認メール無しでその場で有効化します</span>
+                              <span className="text-xs font-bold flex items-center gap-1.5 text-slate-700"><ShieldCheck size={12} className="text-emerald-500" /> {t('creationModeDirect')}</span>
+                              <span className="text-[10px] text-slate-400 leading-snug">{t('creationModeDirectDesc')}</span>
                             </button>
                           </div>
                         </FormItem>
@@ -365,7 +375,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
 
                     <FormField control={form.control} name="email" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">メールアドレス</FormLabel>
+                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('emailLabel')}</FormLabel>
                         {isConfirming ? (
                           <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                         ) : (
@@ -377,11 +387,11 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
 
                     <FormField control={form.control} name="user_name" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">氏名</FormLabel>
+                      <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('nameLabel')}</FormLabel>
                       {isConfirming ? (
                         <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                       ) : (
-                        <FormControl><Input {...field} disabled={isInvitingUser} className="rounded-xl border-slate-200 h-11" placeholder="山田 太郎" /></FormControl>
+                        <FormControl><Input {...field} disabled={isInvitingUser} className="rounded-xl border-slate-200 h-11" placeholder={t('namePlaceholder')} /></FormControl>
                       )}
                       <FormMessage />
                     </FormItem>
@@ -390,10 +400,10 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                     <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="client_id" render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">所属顧客</FormLabel>
+                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('clientLabel')}</FormLabel>
                         {isConfirming ? (
                           <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-bold">
-                            {clients.find((c) => c.client_id === field.value)?.client_name || '未選択'}
+                            {clients.find((c) => c.client_id === field.value)?.client_name || t('unselected')}
                           </div>
                         ) : (
                           <FormControl>
@@ -401,8 +411,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                               options={clients.map(c => ({ value: c.client_id, label: c.client_name }))}
                               value={field.value}
                               onChange={field.onChange}
-                              placeholder={isLoadingClients ? "読込中..." : "顧客を選択"}
-                              searchPlaceholder="顧客名で検索..."
+                              placeholder={isLoadingClients ? tCommon('loading') : t('clientPlaceholder')}
+                              searchPlaceholder={t('clientSearchPlaceholder')}
                               disabled={isLoadingClients || isInvitingUser}
                             />
                           </FormControl>
@@ -413,7 +423,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
 
                     <FormField control={form.control} name="user_type" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ユーザー種別</FormLabel>
+                        <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('userTypeLabel')}</FormLabel>
                         {isConfirming ? (
                           <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-center font-bold">
                             {getUserTypeLabel(field.value)}
@@ -453,22 +463,22 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       <div className="grid grid-cols-2 gap-4">
                         <FormField control={form.control} name="password" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">パスワード</FormLabel>
+                            <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('passwordLabel')}</FormLabel>
                             {isConfirming ? (
                               <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700 tracking-widest">●●●●●●●●</div>
                             ) : (
-                              <FormControl><Input {...field} type="password" autoComplete="new-password" className="rounded-xl border-slate-200 h-11" placeholder="8文字以上、英数混在" /></FormControl>
+                              <FormControl><Input {...field} type="password" autoComplete="new-password" className="rounded-xl border-slate-200 h-11" placeholder={t('passwordPlaceholder')} /></FormControl>
                             )}
                             <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={form.control} name="confirm_password" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">パスワード（確認用）</FormLabel>
+                            <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('confirmPasswordLabel')}</FormLabel>
                             {isConfirming ? (
                               <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700 tracking-widest">●●●●●●●●</div>
                             ) : (
-                              <FormControl><Input {...field} type="password" autoComplete="new-password" className="rounded-xl border-slate-200 h-11" placeholder="もう一度入力してください" /></FormControl>
+                              <FormControl><Input {...field} type="password" autoComplete="new-password" className="rounded-xl border-slate-200 h-11" placeholder={t('confirmPasswordPlaceholder')} /></FormControl>
                             )}
                             <FormMessage />
                           </FormItem>
@@ -480,28 +490,28 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                     {mode === 'create' && watchUserType === '1' && (
                       <FormField control={form.control} name="contract_id" render={({ field, fieldState }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">初期ライセンス</FormLabel>
+                          <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('initialLicenseLabel')}</FormLabel>
                           {isConfirming ? (
                             <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                              {availableContracts.find(c => c.contract_id === field.value)?.plan_name || '割り当てなし'}
+                              {availableContracts.find(c => c.contract_id === field.value)?.plan_name || t('noLicenseAssigned')}
                             </div>
                           ) : (
-                            <Select 
-                              onValueChange={field.onChange} 
-                              value={field.value} 
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
                               disabled={isInvitingUser || availableContracts.length === 0}
                             >
                               <FormControl>
                                 <SelectTrigger className={`rounded-xl h-11 ${fieldState.error ? 'border-rose-500' : ''}`}>
-                                  <SelectValue placeholder={isLoadingContracts 
-                                    ? "読込中..." 
-                                    : (availableContracts.length === 0 ? "割当可能なライセンスがありません" : "ライセンスを選択してください") } />
+                                  <SelectValue placeholder={isLoadingContracts
+                                    ? tCommon('loading')
+                                    : (availableContracts.length === 0 ? t('noAssignableLicense') : t('selectLicensePlaceholder')) } />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                                 {availableContracts.map((c) => (
                                   <SelectItem key={c.contract_id} value={c.contract_id}>
-                                    {c.plan_name} (残:{c.remaining_licenses})
+                                    {c.plan_name} {t('remainingLicenses', { count: c.remaining_licenses })}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -522,10 +532,10 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                           <div className="flex items-center gap-2">
                             <Shield size={14} className="text-indigo-500" />
                             <FormLabel className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
-                              {watchUserType === '0' ? '管理者ロール設定' : '権限・属性設定'}
+                              {watchUserType === '0' ? t('adminRoleSectionTitle') : t('permissionSectionTitle')}
                             </FormLabel>
                           </div>
-                          
+
                           {isConfirming || isInvitingUser ? (
                             <div className="flex flex-wrap gap-2">
                               {form.getValues('roles').length > 0 ? (
@@ -535,7 +545,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-[11px] text-slate-400 italic">ロール設定なし</span>
+                                <span className="text-[11px] text-slate-400 italic">{t('noRolesSet')}</span>
                               )}
                             </div>
                           ) : (
@@ -582,18 +592,18 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                         </div>
                       )}
                       <div className="flex gap-3">
-                        <Button type="button" variant="ghost" className="flex-1 text-slate-400 h-12 rounded-xl" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>戻る</Button>
+                        <Button type="button" variant="ghost" className="flex-1 text-slate-400 h-12 rounded-xl" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>{tCommon('back')}</Button>
                         <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white shadow-lg h-12 rounded-xl font-bold" disabled={isSubmitting}>
-                          {isSubmitting ? <Loader2 className="animate-spin" /> : (mode === 'create' && watchCreationMode === 'direct' ? "アカウントを作成する" : "確定して保存")}
+                          {isSubmitting ? <Loader2 className="animate-spin" /> : (mode === 'create' && watchCreationMode === 'direct' ? t('createAccount') : t('confirmSave'))}
                         </Button>
                       </div>
                     </div>
                   ) : ( // 確認画面ではない場合
                     <div className="flex flex-col gap-3">
                       {!isInvitingUser && ( // 招待中のユーザーでなければ「確認画面へ進む」を表示
-                        <Button 
-                          type="button" 
-                          className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl shadow-md font-bold gap-2" 
+                        <Button
+                          type="button"
+                          className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl shadow-md font-bold gap-2"
                           onClick={async () => {
                             const isValid = await form.trigger();
                             if (isValid) {
@@ -602,12 +612,12 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                             }
                           }}
                         >
-                          確認画面へ進む
+                          {t('proceedToConfirm')}
                         </Button>
                       )}
                       {mode === 'edit' && isInvitingUser && ( // 編集モードかつ招待中のユーザーの場合のみ再送ボタンを表示
                         <Button type="button" variant="outline" className="w-full text-xs h-10 rounded-xl border-dashed border-slate-300 text-slate-500" disabled={isResending} onClick={handleResendInvite}>
-                          {isResending ? <Loader2 className="animate-spin" size={14} /> : <Mail size={14} />} 招待メールを再送する
+                          {isResending ? <Loader2 className="animate-spin" size={14} /> : <Mail size={14} />} {t('resendInvite')}
                         </Button>
                       )}
                     </div>

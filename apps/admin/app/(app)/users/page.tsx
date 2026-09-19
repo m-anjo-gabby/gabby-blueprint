@@ -1,9 +1,9 @@
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { getUsers } from '@/actions/adminUserAction';
 import { UserFormDialog } from './_components/UserFormDialog';
 import { UserBulkImportDialog } from './_components/UserBulkImportDialog';
 import { UserDataTable } from './_components/user-data-table';
-import { columns } from './_components/columns';
 import { Loader2 } from 'lucide-react';
 
 export default async function AdminUsersPage({
@@ -11,6 +11,8 @@ export default async function AdminUsersPage({
 }: {
   searchParams: Promise<{ q?: string; page?: string; userType?: string }>;
 }) {
+  const t = await getTranslations('users.page');
+
   // 1. searchParamsをawaitして検索クエリとページ番号を取得
   const params = await searchParams;
   const searchQuery = params.q || "";
@@ -28,12 +30,12 @@ export default async function AdminUsersPage({
     <div className="space-y-6" suppressHydrationWarning>
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">ユーザー管理</h1>
+          <h1 className="text-xl font-bold text-slate-800">{t('title')}</h1>
           <p className="text-xs text-slate-500 mt-1">
-            各テナントに所属するユーザーアカウントの作成・編集および権限管理を行います
+            {t('subtitle')}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           {/* 一括登録（CSVインポート） */}
           <UserBulkImportDialog />
@@ -51,12 +53,11 @@ export default async function AdminUsersPage({
       <Suspense fallback={
         <div className="h-96 flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
-          <p className="text-xs font-medium text-slate-400">ユーザーデータを読み込み中...</p>
+          <p className="text-xs font-medium text-slate-400">{t('loading')}</p>
         </div>
       }>
-        <UserDataTable 
-          columns={columns}
-          data={userData.users} 
+        <UserDataTable
+          data={userData.users}
           pageCount={pageCount}
           totalCount={userData.totalCount}
         />

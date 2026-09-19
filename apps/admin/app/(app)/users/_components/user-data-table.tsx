@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import {
-  ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useTranslations } from "next-intl";
 import {
   Table,
   TableBody,
@@ -20,24 +20,26 @@ import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import UserTypeFilter from "./UserTypeFilter";
+import { createColumns } from "./columns";
+import type { UserRecord } from "@gabby/types/user";
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
+interface DataTableProps {
+  data: UserRecord[];
   pageCount: number;
   totalCount?: number;
 }
 
-export function UserDataTable<TData, TValue>({
-  columns,
+export function UserDataTable({
   data,
   pageCount,
   totalCount = 0,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = React.useState(searchParams?.get("q") || "");
+  const t = useTranslations('users.table');
+  const columns = React.useMemo(() => createColumns(t), [t]);
 
   const table = useReactTable({
     data,
@@ -76,7 +78,7 @@ export function UserDataTable<TData, TValue>({
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
-              placeholder="検索語句を入力..."
+              placeholder={t('searchPlaceholder')}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearchTrigger(searchValue)}
@@ -89,7 +91,7 @@ export function UserDataTable<TData, TValue>({
             )}
           </div>
           <Button onClick={() => handleSearchTrigger(searchValue)} variant="secondary" size="sm" className="h-9 px-4 bg-white border border-slate-200 shadow-sm font-medium">
-            検索
+            {t('searchButton')}
           </Button>
 
           {/* 区分フィルタ（管理者・生徒・コーチ） */}
@@ -99,7 +101,10 @@ export function UserDataTable<TData, TValue>({
         <div className="flex items-center gap-4">
           {totalCount > 0 && (
             <div className="hidden md:block text-[13px] text-slate-500 font-medium">
-              全 <span className="text-slate-900">{totalCount}</span> 件
+              {t.rich('totalCount', {
+                count: totalCount,
+                styled: (chunks) => <span className="text-slate-900">{chunks}</span>,
+              })}
             </div>
           )}
           <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-sm">
@@ -143,7 +148,7 @@ export function UserDataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  データが見つかりませんでした。
+                  {t('noData')}
                 </TableCell>
               </TableRow>
             )}
