@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { Loader2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
 import { IncomingRescheduleProposalGroup, RESCHEDULE_PROPOSAL_STATUS } from '@gabby/types/session';
+import { cn } from '@/lib/utils';
 import { RequestKindTag } from './RequestKindTag';
 
 interface RescheduleProposalRequestCardProps {
@@ -20,9 +22,11 @@ interface RescheduleProposalRequestCardProps {
 
 export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }: RescheduleProposalRequestCardProps) {
   const timezone = useTimezone();
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
   const [respondingProposalId, setRespondingProposalId] = useState<string | null>(null);
   const [isDeclining, setIsDeclining] = useState(false);
   const { showToast } = useToast();
+  const { showConfirm } = useConfirm();
 
   const isBusy = respondingProposalId !== null || isDeclining;
   const pendingCandidates = group.candidates.filter((c) => c.status === RESCHEDULE_PROPOSAL_STATUS.PENDING);
@@ -54,6 +58,13 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
   };
 
   const handleDeclineAll = async () => {
+    const ok = await showConfirm(
+      'Decline all proposed times?',
+      `This will decline all ${pendingCandidates.length} time${pendingCandidates.length > 1 ? 's' : ''} ${group.student_name} proposed. They'll need to propose new times.`,
+      { variant: 'danger', confirmText: 'Decline all', cancelText: 'Cancel' }
+    );
+    if (!ok) return;
+
     setIsDeclining(true);
     try {
       const result = await declineRescheduleProposals(group.session_id);
@@ -99,24 +110,44 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
 
       {isPending ? (
         <>
-          <div className="space-y-2">
-            {pendingCandidates.map((candidate) => (
-              <div
-                key={candidate.proposal_id}
-                className="flex items-center justify-between gap-2 bg-slate-50 rounded-lg border border-slate-100 px-3 py-2"
-                onMouseEnter={() => onDateHover?.(toIsoDateInZone(candidate.proposed_start_datetime, timezone))}
-                onMouseLeave={() => onDateHover?.(null)}
-              >
-                <span className="text-xs font-semibold text-slate-700">{formatDateTimeEn(candidate.proposed_start_datetime, timezone)}</span>
-                <Button type="button" size="sm" className="h-7 px-2.5 text-[11px]" disabled={isBusy} onClick={() => handleAccept(candidate.proposal_id)}>
-                  {respondingProposalId === candidate.proposal_id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                  Book this time
-                </Button>
-              </div>
-            ))}
+          <div className="space-y-2" role="radiogroup" aria-label="Proposed times">
+            {pendingCandidates.map((candidate) => {
+              const isSelected = selectedProposalId === candidate.proposal_id;
+              return (
+                <label
+                  key={candidate.proposal_id}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors',
+                    isSelected ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
+                  )}
+                  onMouseEnter={() => onDateHover?.(toIsoDateInZone(candidate.proposed_start_datetime, timezone))}
+                  onMouseLeave={() => onDateHover?.(null)}
+                >
+                  <input
+                    type="radio"
+                    name={`reschedule-proposal-${group.session_id}`}
+                    className="h-3.5 w-3.5 accent-indigo-600"
+                    checked={isSelected}
+                    disabled={isBusy}
+                    onChange={() => setSelectedProposalId(candidate.proposal_id)}
+                  />
+                  <span className="text-xs font-semibold text-slate-700">{formatDateTimeEn(candidate.proposed_start_datetime, timezone)}</span>
+                </label>
+              );
+            })}
           </div>
 
-          <div className="pt-1">
+          <div className="flex items-center gap-2 pt-1">
+            <Button
+              type="button"
+              size="sm"
+              className="h-7 px-2.5 text-[11px]"
+              disabled={isBusy || !selectedProposalId}
+              onClick={() => selectedProposalId && handleAccept(selectedProposalId)}
+            >
+              {respondingProposalId ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+              Book selected time
+            </Button>
             <Button
               type="button"
               size="sm"
