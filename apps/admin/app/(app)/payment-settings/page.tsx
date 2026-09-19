@@ -17,7 +17,7 @@ export default async function PaymentSettingsPage() {
       <div>
         <h1 className="text-xl font-bold text-slate-800">支払い設定</h1>
         <p className="text-xs text-slate-500 mt-1">
-          コーチ向け月次支払通知書(PDF)に使用する会社情報・セッション単価を管理します。
+          コーチ向け月次支払通知書・請求書(INVOICE)(PDF)に使用する会社情報・セッション単価を管理します。
         </p>
       </div>
 

@@ -3,6 +3,7 @@ import { CoachMonthSelector } from './_components/CoachMonthSelector';
 import { ApprovalControlBar } from './_components/ApprovalControlBar';
 import { MonthlyReportGrid } from './_components/MonthlyReportGrid';
 import { ExportCsvButton } from './_components/ExportCsvButton';
+import { InvoiceDownloadButton } from './_components/InvoiceDownloadButton';
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -54,7 +55,10 @@ export default async function AdminMonthlyReportsPage({
             coachTimezone={result.report.coach_timezone}
             approval={result.report.approval}
           />
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            {result.report.approval?.status === 2 && (
+              <InvoiceDownloadButton coachId={coachId} reportMonth={result.report.report_month} />
+            )}
             <ExportCsvButton report={result.report} coachName={coachName} />
           </div>
           <MonthlyReportGrid report={result.report} />

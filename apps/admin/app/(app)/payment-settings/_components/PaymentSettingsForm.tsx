@@ -28,7 +28,11 @@ export function PaymentSettingsForm({
 
   const handleSaveCompany = async () => {
     setIsSavingCompany(true);
-    const result = await updateCompanyProfile({ company_name: companyProfile.company_name, address: companyProfile.address });
+    const result = await updateCompanyProfile({
+      company_name: companyProfile.company_name,
+      address: companyProfile.address,
+      tax_registration_number: companyProfile.tax_registration_number,
+    });
     setIsSavingCompany(false);
     showToast(result.success ? '会社情報を更新しました' : result.message, result.success ? 'success' : 'error');
   };
@@ -63,7 +67,10 @@ export function PaymentSettingsForm({
     <div className="space-y-6 max-w-xl">
       <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
         <h2 className="text-sm font-bold text-slate-800">会社情報</h2>
-        <p className="text-xs text-slate-500">コーチ向け月次支払通知書(PDF)に印字されます。</p>
+        <p className="text-xs text-slate-500">
+          コーチ向け月次支払通知書・請求書(INVOICE)(いずれもPDF)に印字されます。コーチとの
+          業務委託契約主体（バンクーバー法人）の情報を設定してください。
+        </p>
 
         <div className="space-y-1.5">
           <Label htmlFor="company_name">会社名</Label>
@@ -82,6 +89,19 @@ export function PaymentSettingsForm({
             value={companyProfile.address}
             onChange={(e) => setCompanyProfile({ ...companyProfile, address: e.target.value })}
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="tax_registration_number">税務登録番号（任意）</Label>
+          <Input
+            id="tax_registration_number"
+            value={companyProfile.tax_registration_number ?? ''}
+            onChange={(e) => setCompanyProfile({ ...companyProfile, tax_registration_number: e.target.value })}
+            placeholder="例: カナダGST/HST登録番号（未登録の場合は空欄）"
+          />
+          <p className="text-[11px] text-slate-400">
+            設定した場合のみ請求書(INVOICE)に印字されます。記載要否は税務専門家にご確認ください。
+          </p>
         </div>
 
         <Button onClick={handleSaveCompany} disabled={isSavingCompany}>

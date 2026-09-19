@@ -1,16 +1,9 @@
 import path from 'node:path';
 import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer';
 
-// コーチ名・会社住所等に日本語が含まれる場合の文字化け対策。Helvetica等の標準14フォントは
-// 日本語グリフを持たないため、Noto Sans JP(静的ウェイト、Latin/日本語の両方をカバー)を
-// 明示的に登録して全体のfontFamilyとする。
-// 【2026-09-13追記1】当初は可変フォント(1ファイル)を使用していたが、fontWeight指定による
-// Bold表現が効かず、全体的に薄いグレーに見える問題が発生したため、Regular/Boldの
-// 静的ウェイトを別ファイルとして登録する方式に変更した。
-// 【2026-09-13追記2】Regular(400)ウェイトはHelvetica等のUIフォントに比べてストローク幅が
-// 細く、色をどれだけ濃くしても「薄い」と感じられたため、通常テキスト側もMedium(500)へ
-// 差し替えた（fontWeight: 400としてMediumの字形を登録し、通常/太字の見た目のギャップは
-// Medium対Boldの太さの差で表現する）。
+// コーチ名・会社住所等に日本語が含まれる場合の文字化け対策。詳細はapps/coach/lib/pdf/
+// PayNoticeDocument.tsxの同名処理のコメントを参照（本コンポーネントもコーチ向け支払通知書と
+// 同じ理由・同じフォントファイルを使用する）。
 Font.register({
   family: 'NotoSansJP',
   fonts: [
@@ -19,13 +12,15 @@ Font.register({
   ],
 });
 
-export interface PayNoticeData {
+export interface InvoiceData {
+  invoiceNumber: string;
   companyName: string;
   companyAddress: string;
+  taxRegistrationNumber: string | null; // 設定されている場合のみ印字（任意項目）
   logoSrc: string | null; // ローカルファイルパス、またはURL（Supabase Storageの公開URL等）
   contractorName: string;
   periodLabel: string; // e.g. "September 2026"
-  issueDateLabel: string; // e.g. "2026-09-13"（アドミンの承認日）
+  issueDateLabel: string; // e.g. "September 13, 2026"（アドミンの承認日。支払通知書と同じ値）
   currencyCode: string;
   totalSessions: number;
   completedCount: number;
@@ -45,6 +40,7 @@ const styles = StyleSheet.create({
   companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 12, fontWeight: 700, marginBottom: 2, color: '#000000' },
   companyAddress: { fontSize: 9, color: '#666666', lineHeight: 1.4 },
+  companyTaxNumber: { fontSize: 9, color: '#666666', marginTop: 2 },
   title: { fontSize: 16, fontWeight: 700, marginBottom: 20, textAlign: 'center', color: '#000000' },
   fieldRow: { flexDirection: 'row', marginBottom: 8 },
   fieldLabel: { width: 180, color: '#666666' },
@@ -61,6 +57,7 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: 'row', paddingTop: 10, marginTop: 4, borderTopWidth: 1, borderTopColor: '#666666' },
   totalLabel: { flex: 2, fontSize: 12, fontWeight: 700, color: '#000000' },
   totalValue: { flex: 1, fontSize: 12, fontWeight: 700, textAlign: 'right', color: '#000000' },
+  paidBadge: { fontSize: 10, fontWeight: 700, color: '#0a7a3d', marginTop: 4 },
   footer: { marginTop: 30, fontSize: 8, color: '#666666' },
   footerLine: { marginTop: 4, fontSize: 8, color: '#666666' },
 });
@@ -69,7 +66,13 @@ function formatCurrency(amount: number, currencyCode: string): string {
   return `${currencyCode} ${amount.toFixed(2)}`;
 }
 
-export function PayNoticeDocument(data: PayNoticeData) {
+/**
+ * アドミン向け請求書(INVOICE)PDF。会計記録用に、承認済み月次コーチングレポートの支払実績を
+ * 正式な書面として残すためのもの（コーチ向け支払通知書PayNoticeDocumentと同じ集計データを
+ * 使い、フォーマットのみ異なる）。支払済みの実績証明として発行するため、支払条件(Payment
+ * Terms)・振込先は記載しない。
+ */
+export function InvoiceDocument(data: InvoiceData) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -87,13 +90,20 @@ export function PayNoticeDocument(data: PayNoticeData) {
                 {line}
               </Text>
             ))}
+            {data.taxRegistrationNumber && (
+              <Text style={styles.companyTaxNumber}>Tax Registration No. {data.taxRegistrationNumber}</Text>
+            )}
           </View>
         </View>
 
-        <Text style={styles.title}>Monthly Coaching Pay Notice</Text>
+        <Text style={styles.title}>INVOICE</Text>
 
         <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>Name of Contractor</Text>
+          <Text style={styles.fieldLabel}>Invoice Number</Text>
+          <Text style={styles.fieldValue}>{data.invoiceNumber}</Text>
+        </View>
+        <View style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Bill To</Text>
           <Text style={styles.fieldValue}>{data.contractorName}</Text>
         </View>
         <View style={styles.fieldRow}>
@@ -132,15 +142,17 @@ export function PayNoticeDocument(data: PayNoticeData) {
         </View>
 
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total Monthly Earnings</Text>
+          <Text style={styles.totalLabel}>Total Amount</Text>
           <Text style={styles.totalValue}>{formatCurrency(data.totalEarnings, data.currencyCode)}</Text>
         </View>
+        <Text style={styles.paidBadge}>PAID</Text>
 
         <Text style={styles.footer}>
-          This notice reflects the session record approved by {data.companyName} for the period stated above.
+          This invoice reflects the session record approved by {data.companyName} for the period stated above, and
+          confirms that the amount above has been paid to the named contractor.
         </Text>
         <Text style={styles.footerLine}>
-          This document contains confidential payment information intended solely for the named contractor.
+          This document contains confidential payment information and is retained for accounting record purposes.
         </Text>
       </Page>
     </Document>
