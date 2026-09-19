@@ -23,7 +23,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Section } from '@/components/common/Section';
 import { ImmersiveShell } from '@/components/common/ImmersiveShell';
 import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
-import { withLiveSessionParam } from '@/lib/liveSession/context';
+import { withLiveSessionParam, buildLiveSessionHubHref } from '@/lib/liveSession/context';
+import { LessonSprintHistoryRow } from '../../../_components/LessonSprintHistoryRow';
 import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -353,18 +354,13 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
                   <ul className="space-y-2">
                     {recentSprints.map((entry) => (
                       <li key={entry.lesson_sprint_id}>
-                        <Link
-                          href={withLiveSessionParam(`/students/${studentId}/lesson-sprint/result/${entry.lesson_sprint_id}`, session.session_id)}
-                          className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-100/80 hover:border-slate-200 transition-colors"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-700 truncate">{entry.content_name}</p>
-                            <p className="text-[11px] text-slate-400">{formatDateTimeEn(entry.insert_date, timezone)}</p>
-                          </div>
-                          <span className="shrink-0 text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1">
-                            {entry.average_score !== null ? `${entry.average_score}/5` : '—'}
-                          </span>
-                        </Link>
+                        <LessonSprintHistoryRow
+                          studentId={studentId}
+                          record={entry}
+                          backHref={buildLiveSessionHubHref(studentId, session.session_id)}
+                          backLabel="Back to Session Hub"
+                          liveSessionId={session.session_id}
+                        />
                       </li>
                     ))}
                   </ul>
