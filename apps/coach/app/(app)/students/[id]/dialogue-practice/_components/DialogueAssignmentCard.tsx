@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
 import type { DialogueAssignmentSummary, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
 import { DialogueSessionRow } from './DialogueSessionRow';
@@ -19,9 +20,19 @@ interface Props {
 export function DialogueAssignmentCard({ assignment, onUnassign, onProgressChange }: Props) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isUnassigning, setIsUnassigning] = useState(false);
+  const { showConfirm } = useConfirm();
+
+  // 進捗（完了セッション）が既にあるセットは、記録を失わせないよう解除不可とする
+  const canUnassign = assignment.completed_session_count === 0;
 
   const handleUnassignClick = async () => {
-    if (!confirm(`Unassign "${assignment.content_name}" from this student?`)) return;
+    if (!canUnassign) return;
+    const ok = await showConfirm(
+      'Unassign this set?',
+      `This removes "${assignment.content_name}" from this student. This cannot be undone.`,
+      { variant: 'danger', confirmText: 'Unassign', cancelText: 'Cancel' }
+    );
+    if (!ok) return;
     setIsUnassigning(true);
     try {
       await onUnassign();
@@ -56,7 +67,14 @@ export function DialogueAssignmentCard({ assignment, onUnassign, onProgressChang
               <p className="text-[11px] text-slate-400 mt-0.5">Assigned {assignment.assigned_date}</p>
             </div>
           </button>
-          <Button type="button" size="sm" variant="ghost" onClick={handleUnassignClick} disabled={isUnassigning}>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={handleUnassignClick}
+            disabled={isUnassigning || !canUnassign}
+            title={canUnassign ? undefined : 'Sets with recorded progress cannot be unassigned'}
+          >
             {isUnassigning ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
           </Button>
         </div>

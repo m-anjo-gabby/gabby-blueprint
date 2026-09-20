@@ -9,7 +9,7 @@ import {
   getContractTrainingReports,
 } from '@/actions/studentAction';
 import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
-import { getStudentDialogueAssignments } from '@/actions/dialogueAction';
+import { getStudentDialogueAssignments, getAvailableDialogueContents } from '@/actions/dialogueAction';
 import { StudentOverviewHeader } from './_components/StudentOverviewHeader';
 import { LiveSessionHistoryCard } from './_components/LiveSessionHistoryCard';
 import { CoachNotesCard } from './_components/CoachNotesCard';
@@ -29,7 +29,7 @@ export default async function StudentOverviewPage({
     notFound();
   }
 
-  const [contracts, upcomingSession, sessionShortfalls, notes, lessonSprints, trainingReports, dialogueAssignments] = await Promise.all([
+  const [contracts, upcomingSession, sessionShortfalls, notes, lessonSprints, trainingReports, dialogueAssignments, dialogueContents] = await Promise.all([
     getStudentLiveSessionContracts(id),
     getStudentUpcomingSession(id),
     getStudentLiveSessionShortfalls(id),
@@ -37,6 +37,7 @@ export default async function StudentOverviewPage({
     getLessonSprintHistory(id),
     getContractTrainingReports(id),
     getStudentDialogueAssignments(id),
+    getAvailableDialogueContents(),
   ]);
 
   // 現在有効な契約を優先し、無ければ直近の過去契約(contractsはstart_date降順)を初期選択とする
@@ -66,7 +67,7 @@ export default async function StudentOverviewPage({
           shortfalls={sessionShortfalls}
         />
         <LessonSprintCard studentId={id} history={lessonSprints} />
-        <DialoguePracticeCard studentId={id} assignments={dialogueAssignments} />
+        <DialoguePracticeCard studentId={id} assignments={dialogueAssignments} availableContents={dialogueContents} />
         <CoachNotesCard studentId={id} initialNotes={recentNotes} />
         <TrainingReportCard studentId={id} contracts={recentContracts} initialReports={trainingReports} />
       </div>

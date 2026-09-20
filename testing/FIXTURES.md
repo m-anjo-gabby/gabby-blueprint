@@ -28,9 +28,9 @@
 
 | アカウント | ロール(user_type) | メール | 主な用途 |
 |---|---|---|---|
-| QA生徒01 | student(1) | `qa-student-01@gabby-qa-test.example` | 生徒の基本フロー（カレンダー閲覧、予約、キャンセル等）の土台 |
-| QAコーチCA01 | coach(2) | `qa-coach-ca-01@gabby-qa-test.example` | カナダ人コーチペルソナ（下記参照） |
-| QAコーチUS01 | coach(2) | `qa-coach-us-01@gabby-qa-test.example` | アメリカ人コーチペルソナ（下記参照） |
+| QA生徒01 | student(1) | `qa-student-01@gabby-qa-test.example` | 生徒の基本フロー（カレンダー閲覧、予約、キャンセル等）の土台。`testing/features/fixtures/seed-fixed-accounts.ts`で投入済み（dev環境）。QAコーチCA01との担当関係（週1回契約・月曜18:00バンクーバー時間）も同スクリプトで確立 |
+| QAコーチCA01 | coach(2) | `qa-coach-ca-01@gabby-qa-test.example` | カナダ人コーチペルソナ（下記参照）。`testing/features/fixtures/seed-fixed-accounts.ts`で投入済み（dev環境） |
+| QAコーチUS01 | coach(2) | `qa-coach-us-01@gabby-qa-test.example` | アメリカ人コーチペルソナ（下記参照）。**未投入**（投入スクリプト未対応。必要になった時点で`seed-fixed-accounts.ts`に追加する） |
 | QAアドミン | admin(0) | `qa-admin@gabby-qa-test.example` | 既存の共有フィクスチャをそのまま採用（`testing/features/branches/feature-20260904-dev/seed.ts`で作成済み・テナントに紐づかない） |
 
 ## テナント（`com_m_client`）

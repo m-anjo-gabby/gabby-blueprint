@@ -65,6 +65,9 @@ export async function unassignDialogueContent(
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('coach:unassign_dialogue_content_failed', result.errorCode, ctx);
+    if (result.errorCode === 'invalid_input') {
+      return { success: false, message: 'This set already has completed sessions and cannot be unassigned.' };
+    }
     return { success: false, message: DIALOGUE_ERROR_MESSAGES_EN[result.errorCode] };
   }
   return { success: true };

@@ -1,19 +1,32 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { MessagesSquare } from 'lucide-react';
+import { MessagesSquare, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
+import type { DialogueAssignmentSummary, DialogueContentSummary } from '@gabby/types/dialogue';
+import { useDialoguePracticeAssignments } from '../_hooks/useDialoguePracticeAssignments';
+import { AssignDialogueDialog } from './AssignDialogueDialog';
 
 interface Props {
   studentId: string;
   assignments: DialogueAssignmentSummary[];
+  availableContents: DialogueContentSummary[];
 }
 
-export function DialoguePracticeCard({ studentId, assignments }: Props) {
+export function DialoguePracticeCard({ studentId, assignments: initialAssignments, availableContents }: Props) {
+  const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
+  const { assignments, assignedContentIds, handleAssigned } = useDialoguePracticeAssignments(studentId, initialAssignments);
+
+  const onAssigned = async () => {
+    setAssignDialogOpen(false);
+    await handleAssigned();
+  };
+
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -21,12 +34,18 @@ export function DialoguePracticeCard({ studentId, assignments }: Props) {
           <MessagesSquare size={14} className="text-slate-400" />
           Dialogue Practice
         </CardTitle>
-        <Link
-          href={`/students/${studentId}/dialogue-practice`}
-          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
-        >
-          Manage
-        </Link>
+        <div className="flex items-center gap-3">
+          <Button type="button" size="sm" onClick={() => setAssignDialogOpen(true)}>
+            <Plus size={14} />
+            Assign
+          </Button>
+          <Link
+            href={`/students/${studentId}/dialogue-practice`}
+            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+          >
+            Manage
+          </Link>
+        </div>
       </CardHeader>
       <CardContent className="pt-2">
         {assignments.length === 0 ? (
@@ -58,6 +77,15 @@ export function DialoguePracticeCard({ studentId, assignments }: Props) {
           </ul>
         )}
       </CardContent>
+
+      <AssignDialogueDialog
+        open={isAssignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        studentId={studentId}
+        availableContents={availableContents}
+        assignedContentIds={assignedContentIds}
+        onAssigned={onAssigned}
+      />
     </Card>
   );
 }

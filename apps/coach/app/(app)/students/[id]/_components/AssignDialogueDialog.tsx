@@ -27,6 +27,10 @@ interface Props {
 
 const CATEGORY_ORDER: DialogueCategory[] = [1, 2, 3, 4];
 
+// タブ切替時に中身の件数差でダイアログの高さがガタつかないよう、
+// 一覧エリアは常に同じ高さを確保する（中身が少ない場合は余白になるだけでよい）
+const LIST_AREA_HEIGHT = 'h-[26rem]';
+
 export function AssignDialogueDialog({
   open,
   onOpenChange,
@@ -64,7 +68,7 @@ export function AssignDialogueDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Assign a Dialogue Practice set</DialogTitle>
           <DialogDescription>Sets already assigned to this student are hidden from the list below.</DialogDescription>
@@ -84,17 +88,17 @@ export function AssignDialogueDialog({
               (content) => !assignedContentIds.has(content.content_id)
             );
             return (
-              <TabsContent key={c} value={String(c)} className="max-h-96 overflow-y-auto space-y-1.5 mt-3">
+              <TabsContent key={c} value={String(c)} className={`${LIST_AREA_HEIGHT} overflow-y-auto space-y-1.5 mt-3 pr-1`}>
                 {contents.length === 0 ? (
                   <p className="text-xs text-slate-400 text-center py-8">No unassigned sets in this category.</p>
                 ) : (
                   contents.map((content) => (
                     <div
                       key={content.content_id}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2"
+                      className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2"
                     >
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-slate-800 truncate">{content.content_name}</p>
+                        <p className="text-xs font-semibold text-slate-800 break-words">{content.content_name}</p>
                         <p className="text-[11px] text-slate-400">
                           {content.session_count} session{content.session_count === 1 ? '' : 's'}
                         </p>
@@ -103,6 +107,7 @@ export function AssignDialogueDialog({
                         type="button"
                         size="sm"
                         variant="outline"
+                        className="shrink-0"
                         disabled={assigningContentId === content.content_id}
                         onClick={() => handleAssign(content.content_id)}
                       >

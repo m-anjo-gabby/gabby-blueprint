@@ -54,6 +54,7 @@
 | [students/lesson-sprint.md](coach/students/lesson-sprint.md) | `/students/[id]/lesson-sprint` | Live Sprintの設定〜実施 | ✅ |
 | [students/lesson-sprint-history.md](coach/students/lesson-sprint-history.md) | `/students/[id]/lesson-sprint/history` | Live Sprint実施履歴（月別） | ✅ |
 | [students/lesson-sprint-result.md](coach/students/lesson-sprint-result.md) | `/students/[id]/lesson-sprint/result/[sprintId]` | Live Sprint結果詳細 | ✅ |
+| [students/dialogue-practice.md](coach/students/dialogue-practice.md) | `/students/[id]/dialogue-practice` | ダイアログプラクティス教材の割当・セッション進捗管理 | ✅ |
 | [students/session-detail.md](coach/students/session-detail.md) | `/students/[id]/sessions/[sessionId]` | セッションハブ（通話開始・終了処理・要確認事項あり） | ✅ |
 | [students/session-result.md](coach/students/session-result.md) | `/students/[id]/sessions/[sessionId]/result` | セッション結果・宿題投稿 | ✅ |
 

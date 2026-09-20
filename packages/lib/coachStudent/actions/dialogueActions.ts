@@ -168,7 +168,10 @@ export async function assignDialogueContentCore(
 }
 
 /**
- * 割り当て済みのダイアログ教材セットを解除する（論理削除。再割当は別途assignDialogueContentCoreで可能）
+ * 割り当て済みのダイアログ教材セットを解除する（論理削除。再割当は別途assignDialogueContentCoreで可能）。
+ * 完了済みセッションが1件でもある場合は、進捗記録を失わせないよう解除を拒否する
+ * （UI側でも解除ボタンをdisabledにしているが、直接呼び出し・競合更新への防御として
+ * サーバー側でも同じ条件を再検証する）。
  */
 export async function unassignDialogueContentCore(assignmentId: string): Promise<UnassignDialogueContentResult> {
   const ctx = await getLogContext();
@@ -193,6 +196,21 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
     }
     if (!(await hasCoachStudentRelationship(supabase, user.id, assignment.student_id))) {
       return { success: false, errorCode: 'forbidden' };
+    }
+
+    const { data: completedProgress, error: progressCheckError } = await supabase
+      .from('com_t_dialogue_session_progress')
+      .select('progress_id')
+      .eq('assignment_id', assignmentId)
+      .eq('is_completed', true)
+      .limit(1);
+
+    if (progressCheckError) {
+      logger.error('dialogue:unassign_progress_check_failed', progressCheckError.message, { ...ctx, userId: user.id, payload: { assignmentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (completedProgress && completedProgress.length > 0) {
+      return { success: false, errorCode: 'invalid_input' };
     }
 
     const { error } = await supabase
