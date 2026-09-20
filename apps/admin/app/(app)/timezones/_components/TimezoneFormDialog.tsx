@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
@@ -19,14 +20,18 @@ import { TimezoneMaster } from '@gabby/types/timezone';
  * timezone は主キー（IANAタイムゾーン名）。IANA形式としての妥当性はDB側のトリガーで最終検証する。
  * 表示順(sort_no)は Input type="number" から文字列として受け取り、送信時に数値変換する。
  */
-const timezoneSchema = z.object({
-  timezone: z.string().min(1, 'IANAタイムゾーン名は必須です'),
-  display_name_ja: z.string().min(1, '表示名称（日本語）は必須です'),
-  display_name_en: z.string().min(1, '表示名称（英語）は必須です'),
-  sort_no: z.string().min(1, '表示順を入力してください'),
-});
+type FormT = ReturnType<typeof useTranslations<'timezones.form'>>;
 
-type TimezoneFormValues = z.infer<typeof timezoneSchema>;
+function createTimezoneSchema(t: FormT) {
+  return z.object({
+    timezone: z.string().min(1, t('errors.ianaRequired')),
+    display_name_ja: z.string().min(1, t('errors.nameJaRequired')),
+    display_name_en: z.string().min(1, t('errors.nameEnRequired')),
+    sort_no: z.string().min(1, t('errors.sortNoRequired')),
+  });
+}
+
+type TimezoneFormValues = z.infer<ReturnType<typeof createTimezoneSchema>>;
 
 interface TimezoneFormDialogProps {
   mode?: 'create' | 'edit';
@@ -44,6 +49,8 @@ const DEFAULT_VALUES: TimezoneFormValues = {
  * タイムゾーンマスタ登録・編集用ダイアログコンポーネント
  */
 export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFormDialogProps) {
+  const t = useTranslations('timezones.form');
+  const timezoneSchema = useMemo(() => createTimezoneSchema(t), [t]);
   // --- States ---
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -85,14 +92,14 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
       const result = await upsertTimezone(payload);
 
       if (result.success) {
-        showToast(mode === 'create' ? "タイムゾーンを登録しました" : "タイムゾーンを更新しました", "success");
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
         setOpen(false);
         setIsConfirming(false);
       } else {
-        setServerError(result.message || "処理に失敗しました");
+        setServerError(result.message || t('toastGenericFailed'));
       }
     } catch (error) {
-      setServerError("システムエラーが発生しました");
+      setServerError(t('toastSystemError'));
     }
   };
 
@@ -111,11 +118,11 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
-            <PlusCircle size={16} /> 新規登録
+            <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
-            <Edit size={14} /> 編集
+            <Edit size={14} /> {t('editButton')}
           </Button>
         )}
       </DialogTrigger>
@@ -127,11 +134,11 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認</>
+              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> 新規タイムゾーンの登録</>
+              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> タイムゾーン情報の編集</>
+              <><Edit size={18} className="text-indigo-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -142,19 +149,19 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
             {/* --- IANAタイムゾーン名（主キー） --- */}
             <FormField control={form.control} name="timezone" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">IANAタイムゾーン名</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('ianaLabel')}</FormLabel>
                 {isConfirming || mode === 'edit' ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono text-slate-700">
                     {field.value}
                   </div>
                 ) : (
                   <FormControl>
-                    <Input {...field} placeholder="例: Asia/Tokyo" className="bg-white rounded-xl border-slate-200 font-mono" />
+                    <Input {...field} placeholder={t('ianaPlaceholder')} className="bg-white rounded-xl border-slate-200 font-mono" />
                   </FormControl>
                 )}
                 {!isConfirming && mode === 'create' && (
                   <FormDescription className="text-[11px] text-slate-400">
-                    PostgreSQLのIANAタイムゾーンデータベースに存在する名称のみ登録できます。登録後は変更できません。
+                    {t('ianaHint')}
                   </FormDescription>
                 )}
                 <FormMessage />
@@ -164,14 +171,14 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
             {/* --- 表示名称（日本語） --- */}
             <FormField control={form.control} name="display_name_ja" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">表示名称（日本語）</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameJaLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                     {field.value}
                   </div>
                 ) : (
                   <FormControl>
-                    <Input {...field} placeholder="例: 日本（東京）" className="bg-white rounded-xl border-slate-200" />
+                    <Input {...field} placeholder={t('nameJaPlaceholder')} className="bg-white rounded-xl border-slate-200" />
                   </FormControl>
                 )}
                 <FormMessage />
@@ -181,14 +188,14 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
             {/* --- 表示名称（英語） --- */}
             <FormField control={form.control} name="display_name_en" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">表示名称（英語）</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameEnLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                     {field.value}
                   </div>
                 ) : (
                   <FormControl>
-                    <Input {...field} placeholder="例: Japan (Tokyo)" className="bg-white rounded-xl border-slate-200" />
+                    <Input {...field} placeholder={t('nameEnPlaceholder')} className="bg-white rounded-xl border-slate-200" />
                   </FormControl>
                 )}
                 <FormMessage />
@@ -198,7 +205,7 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
             {/* --- 表示順 --- */}
             <FormField control={form.control} name="sort_no" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">表示順</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('sortNoLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
                     {field.value}
@@ -217,7 +224,7 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
               {isConfirming ? (
                 <div className="space-y-4">
                   <p className="text-sm font-bold text-center text-slate-800">
-                    この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？
+                    {t('confirmQuestion', { action: mode === 'create' ? t('actionCreate') : t('actionUpdate') })}
                   </p>
                   {serverError && (
                     <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
@@ -232,14 +239,14 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
                       onClick={() => setIsConfirming(false)}
                       disabled={isSubmitting}
                     >
-                      いいえ
+                      {t('no')}
                     </Button>
                     <Button
                       type="submit"
                       className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg"
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? "処理中..." : "はい、確定します"}
+                      {isSubmitting ? t('processing') : t('yesConfirm')}
                     </Button>
                   </div>
                 </div>
@@ -252,7 +259,7 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
                     if (isValid) setIsConfirming(true);
                   }}
                 >
-                  {mode === 'create' ? '登録内容を確認する' : '編集内容を確認する'}
+                  {mode === 'create' ? t('confirmCreateButton') : t('confirmEditButton')}
                 </Button>
               )}
             </div>

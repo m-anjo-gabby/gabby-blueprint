@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { getContents } from '@/actions/adminContentAction';
 import { ContentDataTable } from './_components/ContentDataTable';
 import { ContentFormDialog } from './_components/ContentFormDialog';
@@ -10,6 +11,7 @@ export default async function AdminContentsPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string }>;
 }) {
+  const t = await getTranslations('contents.page');
   // 1. Next.js 15 の仕様に基づき searchParams を await する
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
@@ -27,18 +29,18 @@ export default async function AdminContentsPage({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">教材管理</h1>
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t('title')}</h1>
           <p className="text-[13px] text-slate-500 mt-1">
-            教材の基本情報と、公開範囲および表示順を管理します。
+            {t('description')}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           {/* タグ管理への導線 */}
           <Button variant="outline" asChild>
             <Link href="/contents/tags">
               <Tag className="mr-2 h-4 w-4" />
-              タグ管理
+              {t('tagManagementButton')}
             </Link>
           </Button>
           {/* 教材マスタそのものを新規作成するダイアログ */}

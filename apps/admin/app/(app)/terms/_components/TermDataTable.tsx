@@ -32,7 +32,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { formatToJstDate } from "@gabby/lib/date/date";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { deleteTerm } from "@/actions/adminTermAction";
 import { useToast } from "@gabby/lib/hooks/useToast";
@@ -58,6 +58,9 @@ export function TermDataTable({
   pageCount,
   totalCount,
 }: TermDataTableProps) {
+  const t = useTranslations('terms.table');
+  const tCommon = useTranslations('terms.common');
+  const tGlobalCommon = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -74,13 +77,13 @@ export function TermDataTable({
     try {
       const result = await deleteTerm(deletingTerm.term_id);
       if (result.success) {
-        showToast("規約を削除しました", "success");
+        showToast(t('toastDeleted'), "success");
         router.refresh();
       } else {
-        showToast(result.message || "削除に失敗しました", "error");
+        showToast(result.message || t('toastDeleteFailed'), "error");
       }
     } catch (error) {
-      showToast("予期せぬエラーが発生しました", "error");
+      showToast(t('toastUnexpectedError'), "error");
     } finally {
       setIsDeleting(false);
       setDeletingTerm(null);
@@ -91,7 +94,7 @@ export function TermDataTable({
   const columns = React.useMemo<ColumnDef<any>[]>(() => [
     {
       accessorKey: "term_type",
-      header: "規約種別",
+      header: t('termTypeHeader'),
       cell: ({ row }) => {
         const type = row.original.term_type;
         const isTerms = type === "TERMS";
@@ -101,7 +104,7 @@ export function TermDataTable({
               {isTerms ? <ShieldCheck size={14} /> : <FileText size={14} />}
             </div>
             <span className="text-sm font-bold text-slate-900">
-              {isTerms ? "利用規約" : "プライバシーポリシー"}
+              {isTerms ? tCommon('termTypeTerms') : tCommon('termTypePrivacy')}
             </span>
           </div>
         );
@@ -109,7 +112,7 @@ export function TermDataTable({
     },
     {
       accessorKey: "version_name",
-      header: "バージョン",
+      header: t('versionHeader'),
       cell: ({ row }) => (
         <span className="text-sm font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
           {row.original.version_name}
@@ -118,7 +121,7 @@ export function TermDataTable({
     },
     {
       accessorKey: "status",
-      header: "ステータス",
+      header: t('statusHeader'),
       cell: ({ row }) => {
         const term = row.original;
         const now = new Date();
@@ -128,7 +131,7 @@ export function TermDataTable({
         if (pubDate > now) {
           return (
             <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 font-bold text-[10px] px-2">
-              公開前
+              {t('statusUpcoming')}
             </Badge>
           );
         }
@@ -137,7 +140,7 @@ export function TermDataTable({
         if (term.is_current) {
           return (
             <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 font-bold text-[10px] px-2 shadow-sm">
-              公開中
+              {t('statusPublished')}
             </Badge>
           );
         }
@@ -145,14 +148,14 @@ export function TermDataTable({
         // 3. それ以外（過去の版）
         return (
           <Badge variant="outline" className="bg-slate-50 text-slate-400 border-slate-100 font-medium text-[10px] px-2">
-            公開終了
+            {t('statusEnded')}
           </Badge>
         );
       },
     },
     {
     accessorKey: "published_date",
-    header: "公開開始日 (JST)",
+    header: t('publishedDateHeader'),
     cell: ({ row }) => (
       <span className="text-slate-500 text-[12px] font-medium font-mono">
         {row.original.published_date}
@@ -163,7 +166,7 @@ export function TermDataTable({
       id: "actions",
       header: () => (
         <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          操作
+          {t('actionsHeader')}
         </div>
       ),
       cell: ({ row }) => {
@@ -179,7 +182,7 @@ export function TermDataTable({
               size="sm"
               className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
               asChild
-              title="規約を編集"
+              title={t('editTooltip')}
             >
               <Link href={`/terms/${term.term_id}/edit`}>
                 <Edit size={16} />
@@ -192,7 +195,7 @@ export function TermDataTable({
                 size="sm"
                 className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                 onClick={() => setDeletingTerm(term)}
-                title="規約を削除"
+                title={t('deleteTooltip')}
               >
                 <Trash2 size={16} />
               </Button>
@@ -201,7 +204,7 @@ export function TermDataTable({
         );
       },
     },
-  ], [setDeletingTerm]);
+  ], [setDeletingTerm, t, tCommon]);
 
   const table = useReactTable({
     data,
@@ -230,7 +233,7 @@ export function TermDataTable({
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
-              placeholder="バージョン名で検索..."
+              placeholder={t('searchPlaceholder')}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearchTrigger(searchValue)}
@@ -243,13 +246,16 @@ export function TermDataTable({
             )}
           </div>
           <Button onClick={() => handleSearchTrigger(searchValue)} variant="secondary" size="sm" className="h-9 px-4 bg-white border border-slate-200 shadow-sm font-bold text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">
-            検索
+            {t('searchButton')}
           </Button>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden md:block text-[13px] text-slate-500 font-medium">
-            全 <span className="text-slate-900 font-bold">{totalCount}</span> 件
+            {t.rich('totalCount', {
+              count: totalCount,
+              styled: (chunks) => <span className="text-slate-900 font-bold">{chunks}</span>,
+            })}
           </div>
           <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
             <Button variant="ghost" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage <= 1} className="h-8 w-8 p-0 rounded-lg">
@@ -272,7 +278,7 @@ export function TermDataTable({
           <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
             <div className="bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3 border">
               <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm font-bold text-slate-700">削除しています...</span>
+              <span className="text-sm font-bold text-slate-700">{t('deletingOverlay')}</span>
             </div>
           </div>
         )}
@@ -303,7 +309,7 @@ export function TermDataTable({
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  規約データが見つかりませんでした。
+                  {t('noData')}
                 </TableCell>
               </TableRow>
             )}
@@ -319,18 +325,21 @@ export function TermDataTable({
               <Trash2 size={28} />
             </div>
             <AlertDialogTitle className="text-center text-xl font-black text-slate-800 tracking-tight">
-              規約を削除しますか？
+              {t('deleteDialogTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center text-slate-500 font-bold text-sm leading-relaxed">
-              {deletingTerm?.term_type === "TERMS" ? "利用規約" : "プライバシーポリシー"} のバージョン「{deletingTerm?.version_name}」を完全に削除します。<br />
-              この操作は取り消すことができません。
+              {t.rich('deleteDialogBody', {
+                termType: deletingTerm?.term_type === "TERMS" ? tCommon('termTypeTerms') : tCommon('termTypePrivacy'),
+                version: deletingTerm?.version_name,
+                bold: (chunks) => <>{chunks}</>,
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 flex gap-3 sm:justify-center">
             <AlertDialogCancel className="flex-1 h-12 rounded-2xl font-bold text-slate-400 border-none bg-slate-50 hover:bg-slate-100 transition-all" disabled={isDeleting}>
-              キャンセル
+              {tGlobalCommon('cancel')}
             </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
                 handleDelete();
@@ -338,7 +347,7 @@ export function TermDataTable({
               className="flex-1 h-12 rounded-2xl font-black bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 border-none transition-all active:scale-[0.98]"
               disabled={isDeleting}
             >
-              {isDeleting ? "削除中..." : "はい、削除します"}
+              {isDeleting ? t('deleteConfirming') : t('deleteConfirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

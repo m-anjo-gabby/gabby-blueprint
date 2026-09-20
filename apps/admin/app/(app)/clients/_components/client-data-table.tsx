@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import {
-  ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Table,
   TableBody,
@@ -19,26 +19,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { createColumns } from "./columns";
+import type { ClientRecord } from "@gabby/types/client";
 
-interface ClientDataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
+interface ClientDataTableProps {
+  data: ClientRecord[];
   pageCount: number;
   totalCount?: number;
 }
 
-export function ClientDataTable<TData, TValue>({
-  columns,
+export function ClientDataTable({
   data,
   pageCount,
   totalCount = 0,
-}: ClientDataTableProps<TData, TValue>) {
+}: ClientDataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslations('clients.table');
+  const locale = useLocale();
 
   // 1. 検索キーワードのローカル状態（Inputの表示用）
   const [searchValue, setSearchValue] = React.useState(searchParams.get("q") || "");
+  const columns = React.useMemo(() => createColumns(t, locale), [t, locale]);
 
   const table = useReactTable({
     data,
@@ -90,7 +93,7 @@ export function ClientDataTable<TData, TValue>({
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
-              placeholder="顧客名、コードで検索..."
+              placeholder={t('searchPlaceholder')}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={(e) => {
@@ -115,7 +118,7 @@ export function ClientDataTable<TData, TValue>({
             size="sm" 
             className="h-9 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 shadow-sm shrink-0 font-medium"
           >
-            検索
+            {t('searchButton')}
           </Button>
         </div>
 
@@ -123,7 +126,10 @@ export function ClientDataTable<TData, TValue>({
         <div className="flex items-center gap-4">
           {totalCount > 0 && (
             <div className="hidden md:block text-[13px] text-slate-500 whitespace-nowrap font-medium">
-              全 <span className="text-slate-900">{totalCount}</span> 件
+              {t.rich('totalCount', {
+                count: totalCount,
+                styled: (chunks) => <span className="text-slate-900">{chunks}</span>,
+              })}
             </div>
           )}
           
@@ -188,7 +194,7 @@ export function ClientDataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  顧客データが見つかりませんでした。
+                  {t('noData')}
                 </TableCell>
               </TableRow>
             )}

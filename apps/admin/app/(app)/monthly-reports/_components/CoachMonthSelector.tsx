@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AdminCoachSummary } from '@gabby/types/adminLiveSession';
 import { MonthPickerPopover } from './MonthPickerPopover';
@@ -9,11 +10,6 @@ function shiftMonth(yearMonth: string, delta: number): string {
   const [year, month] = yearMonth.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1 + delta, 1));
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
-function formatMonthLabelJa(yearMonth: string): string {
-  const [year, month] = yearMonth.split('-').map(Number);
-  return `${year}年${month}月`;
 }
 
 export function CoachMonthSelector({
@@ -25,6 +21,8 @@ export function CoachMonthSelector({
   currentCoachId: string;
   currentMonth: string;
 }) {
+  const t = useTranslations('monthlyReports');
+  const tMonths = useTranslations('monthlyReports.monthPicker.months');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -56,7 +54,7 @@ export function CoachMonthSelector({
           type="button"
           onClick={() => updateParams({ month: shiftMonth(currentMonth, -1) })}
           className="p-1.5 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
-          aria-label="前月"
+          aria-label={t('coachSelector.prevMonth')}
         >
           <ChevronLeft size={16} />
         </button>
@@ -65,14 +63,17 @@ export function CoachMonthSelector({
             type="button"
             className="min-w-[6rem] text-center text-sm font-bold text-slate-800 rounded-md px-2 py-1 hover:bg-slate-100 transition-colors"
           >
-            {formatMonthLabelJa(currentMonth)}
+            {(() => {
+              const [year, month] = currentMonth.split('-').map(Number);
+              return t('monthLabel', { year, month: tMonths(`m${month}`) });
+            })()}
           </button>
         </MonthPickerPopover>
         <button
           type="button"
           onClick={() => updateParams({ month: shiftMonth(currentMonth, 1) })}
           className="p-1.5 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
-          aria-label="翌月"
+          aria-label={t('coachSelector.nextMonth')}
         >
           <ChevronRight size={16} />
         </button>

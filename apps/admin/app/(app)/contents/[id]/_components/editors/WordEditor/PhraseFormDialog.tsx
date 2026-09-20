@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -19,15 +20,19 @@ import { PhraseRecord, WORD_STATUS, WordStatus, PHRASE_TYPES, PhraseType } from 
 /**
  * フレーズバリデーションスキーマ
  */
-const phraseSchema = z.object({
-  phrase_en: z.string().min(1, '英文は必須です'),
-  phrase_ja: z.string().min(1, '和訳は必須です'),
-  phrase_type: z.string().min(1, '種別を選択してください'),
-  seq_no: z.string().min(1, '表示順を入力してください'),
-  status: z.string().min(1, 'ステータスを選択してください'),
-});
+type FormT = ReturnType<typeof useTranslations<'contents.editor.word.phraseFormDialog'>>;
 
-type PhraseFormValues = z.infer<typeof phraseSchema>;
+function createPhraseSchema(t: FormT) {
+  return z.object({
+    phrase_en: z.string().min(1, t('errors.phraseEnRequired')),
+    phrase_ja: z.string().min(1, t('errors.phraseJaRequired')),
+    phrase_type: z.string().min(1, t('errors.typeRequired')),
+    seq_no: z.string().min(1, t('errors.seqRequired')),
+    status: z.string().min(1, t('errors.statusRequired')),
+  });
+}
+
+type PhraseFormValues = z.infer<ReturnType<typeof createPhraseSchema>>;
 
 interface PhraseFormDialogProps {
   mode?: 'create' | 'edit';
@@ -41,6 +46,8 @@ interface PhraseFormDialogProps {
  * ダークヘッダーUIとフォーカス制御を最適化済み
  */
 export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSuccess }: PhraseFormDialogProps) {
+  const t = useTranslations('contents.editor.word.phraseFormDialog');
+  const phraseSchema = useMemo(() => createPhraseSchema(t), [t]);
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -83,15 +90,15 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
       const result = await upsertPhrase(payload);
 
       if (result.success) {
-        showToast(`フレーズを${mode === 'create' ? '登録' : '更新'}しました`, "success");
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
         setOpen(false);
         onSuccess?.();
       } else {
-        setIsConfirming(false); 
-        setServerError(result.message || "エラーが発生しました");
+        setIsConfirming(false);
+        setServerError(result.message || t('toastError'));
       }
     } catch (error) {
-      setServerError("システムエラーが発生しました");
+      setServerError(t('systemError'));
     }
   };
 
@@ -107,7 +114,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-xs gap-1.5 h-8 px-4 border-none shadow-sm">
-            <PlusCircle size={14} /> フレーズ追加
+            <PlusCircle size={14} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all">
@@ -132,7 +139,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? <CheckCircle2 size={18} className="text-emerald-400" /> : <MessageSquare size={18} className="text-indigo-400" />}
-            {isConfirming ? "内容の確認" : mode === 'create' ? "新規フレーズの登録" : "フレーズの編集"}
+            {isConfirming ? t('confirmTitle') : mode === 'create' ? t('createTitle') : t('editTitle')}
           </DialogTitle>
         </DialogHeader>
 
@@ -149,14 +156,14 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
             {/* 英文入力エリア */}
             <FormField control={form.control} name="phrase_en" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">英文 (English)</FormLabel>
+                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('phraseEnLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-base font-bold text-slate-800 border border-slate-100 min-h-[40px] leading-relaxed">
                     {field.value}
                   </div>
                 ) : (
                   <FormControl>
-                    <Textarea {...field} placeholder="英文を入力してください..." className="rounded-xl border-slate-200 min-h-[80px] resize-none font-medium focus-visible:ring-indigo-500" />
+                    <Textarea {...field} placeholder={t('phraseEnPlaceholder')} className="rounded-xl border-slate-200 min-h-[80px] resize-none font-medium focus-visible:ring-indigo-500" />
                   </FormControl>
                 )}
                 <FormMessage />
@@ -166,14 +173,14 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
             {/* 和訳入力エリア */}
             <FormField control={form.control} name="phrase_ja" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">和訳 (Japanese)</FormLabel>
+                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('phraseJaLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100">
                     {field.value}
                   </div>
                 ) : (
                   <FormControl>
-                    <Input {...field} placeholder="日本語訳を入力してください..." className="rounded-xl border-slate-200 focus-visible:ring-indigo-500" />
+                    <Input {...field} placeholder={t('phraseJaPlaceholder')} className="rounded-xl border-slate-200 focus-visible:ring-indigo-500" />
                   </FormControl>
                 )}
                 <FormMessage />
@@ -184,7 +191,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
               {/* 種別選択 */}
               <FormField control={form.control} name="phrase_type" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">種別</FormLabel>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('typeLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-2 bg-slate-50 rounded-lg text-xs font-bold border border-slate-100 text-center">
                       {PHRASE_TYPES[Number(field.value) as PhraseType]?.label}
@@ -209,7 +216,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
               {/* 表示順入力 */}
               <FormField control={form.control} name="seq_no" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">表示順</FormLabel>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('seqLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-2 bg-slate-50 rounded-lg text-xs font-bold border border-slate-100 text-center">
                       {field.value}
@@ -225,7 +232,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
               {/* ステータス選択 */}
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">公開設定</FormLabel>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('statusLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-2 bg-slate-50 rounded-lg text-xs font-bold border border-slate-100 text-center">
                       {WORD_STATUS[field.value as WordStatus]?.label}
@@ -252,28 +259,28 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
             <div className="pt-4 border-t border-slate-100">
               {isConfirming ? (
                 <div className="flex gap-3">
-                  <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400 hover:bg-slate-50" 
+                  <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400 hover:bg-slate-50"
                     onClick={() => {
                       setServerError(null)
                       setIsConfirming(false)
                     }}
                   >
-                    戻る
+                    {t('backButton')}
                   </Button>
                   <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-[0.98]">
-                    確定して保存
+                    {t('confirmSaveButton')}
                   </Button>
                 </div>
               ) : (
-                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md transition-all active:scale-[0.99]" 
-                  onClick={async () => { 
+                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md transition-all active:scale-[0.99]"
+                  onClick={async () => {
                       if (await form.trigger()) {
                         setServerError(null)
                         setIsConfirming(true)
-                      } 
+                      }
                     }}
                 >
-                  入力内容を確認する
+                  {t('confirmDetailsButton')}
                 </Button>
               )}
             </div>

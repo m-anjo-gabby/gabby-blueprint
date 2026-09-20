@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -20,13 +21,17 @@ import { ContentTag, TAG_TYPES, TagType } from '@gabby/types/content';
  * tag_id は UUID として DB 側で自動生成されるため、フロントのバリデーションからは除外。
  * 表示順(seq_no)は Input type="number" から文字列として受け取り、送信時に数値変換する。
  */
-const tagSchema = z.object({
-  tag_name: z.string().min(1, 'タグ名称は必須です'),
-  tag_type: z.string().min(1, 'タイプを選択してください'),
-  seq_no: z.string().min(1, '表示順を入力してください'),
-});
+type FormT = ReturnType<typeof useTranslations<'contents.tags.formDialog'>>;
 
-type TagFormValues = z.infer<typeof tagSchema>;
+function createTagSchema(t: FormT) {
+  return z.object({
+    tag_name: z.string().min(1, t('errors.nameRequired')),
+    tag_type: z.string().min(1, t('errors.typeRequired')),
+    seq_no: z.string().min(1, t('errors.seqRequired')),
+  });
+}
+
+type TagFormValues = z.infer<ReturnType<typeof createTagSchema>>;
 
 interface TagFormDialogProps {
   mode?: 'create' | 'edit';
@@ -43,6 +48,8 @@ const DEFAULT_VALUES: TagFormValues = {
  * コンテンツタグ登録・編集用ダイアログコンポーネント
  */
 export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogProps) {
+  const t = useTranslations('contents.tags.formDialog');
+  const tagSchema = useMemo(() => createTagSchema(t), [t]);
   // --- States ---
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -87,14 +94,14 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
       const result = await upsertTag(payload);
 
       if (result.success) {
-        showToast(mode === 'create' ? "タグを登録しました" : "タグを更新しました", "success");
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
         setOpen(false);
         setIsConfirming(false);
       } else {
-        setServerError(result.message || "処理に失敗しました");
+        setServerError(result.message || t('serverErrorDefault'));
       }
     } catch (error) {
-      setServerError("システムエラーが発生しました");
+      setServerError(t('systemError'));
     }
   };
 
@@ -113,27 +120,27 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
-            <PlusCircle size={16} /> 新規登録
+            <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
-            <Edit size={14} /> 編集
+            <Edit size={14} /> {t('editButton')}
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent 
+      <DialogContent
         className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100"
       >
         {/* ダークヘッダー: 他の管理画面ダイアログと統一したネガティブマージン設定 */}
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認</>
+              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> 新規タグの登録</>
+              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> タグ情報の編集</>
+              <><Edit size={18} className="text-indigo-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -152,14 +159,14 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
             {/* --- タグ名称 --- */}
             <FormField control={form.control} name="tag_name" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">タグ名称</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                     {field.value}
                   </div>
                 ) : (
                   <FormControl>
-                    <Input {...field} placeholder="業界名、スキル名など" className="bg-white rounded-xl border-slate-200" />
+                    <Input {...field} placeholder={t('namePlaceholder')} className="bg-white rounded-xl border-slate-200" />
                   </FormControl>
                 )}
                 <FormMessage />
@@ -170,7 +177,7 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
               {/* --- タイプ --- */}
               <FormField control={form.control} name="tag_type" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">タイプ</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('typeLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
                       {TAG_TYPES[field.value as TagType]?.label || field.value}
@@ -197,7 +204,7 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
               {/* --- 表示順 --- */}
               <FormField control={form.control} name="seq_no" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">表示順</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('seqLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
                       {field.value}
@@ -216,7 +223,7 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
               {isConfirming ? (
                 <div className="space-y-4">
                   <p className="text-sm font-bold text-center text-slate-800">
-                    この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？
+                    {t('confirmQuestion', { action: mode === 'create' ? t('actionCreate') : t('actionUpdate') })}
                   </p>
                   {serverError && (
                     <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
@@ -224,34 +231,34 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
                     </Alert>
                   )}
                   <div className="flex gap-3">
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      className="flex-1 rounded-xl font-bold text-slate-400" 
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="flex-1 rounded-xl font-bold text-slate-400"
                       onClick={() => setIsConfirming(false)}
                       disabled={isSubmitting}
                     >
-                      いいえ
+                      {t('noButton')}
                     </Button>
-                    <Button 
-                      type="submit" 
-                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg" 
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg"
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? "処理中..." : "はい、確定します"}
+                      {isSubmitting ? t('processing') : t('confirmButton')}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <Button 
-                  type="button" 
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md" 
+                <Button
+                  type="button"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md"
                   onClick={async () => {
                     const isValid = await form.trigger();
                     if (isValid) setIsConfirming(true);
                   }}
                 >
-                  {mode === 'create' ? '登録内容を確認する' : '編集内容を確認する'}
+                  {mode === 'create' ? t('confirmCreateButton') : t('confirmEditButton')}
                 </Button>
               )}
             </div>

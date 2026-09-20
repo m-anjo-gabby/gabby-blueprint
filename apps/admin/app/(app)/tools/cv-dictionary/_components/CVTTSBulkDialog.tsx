@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ interface CVTTSBulkDialogProps {
 // ============================================================
 
 export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) {
+  const t = useTranslations('tools.cvDictionary.ttsBulkDialog');
   const [open, setOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
@@ -82,11 +84,11 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
       const entries = await getAllCVDictionaryEntries();
       setRawEntries(entries ?? []);
     } catch {
-      showToast('データの取得に失敗しました。', 'error');
+      showToast(t('toastFetchFailed'), 'error');
     } finally {
       setIsLoadingData(false);
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   // ----------------------------------------------------------
   // ダイアログ開閉
@@ -169,7 +171,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
 
     if (errorCount === 0) {
       setStatus('completed');
-      showToast(`${successCount}件の音声を生成しました。`, 'success');
+      showToast(t('toastGenerated', { count: successCount }), 'success');
       triggerRefresh();
       setTimeout(() => {
         setOpen(false);
@@ -199,7 +201,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
               <Zap className="text-amber-400" size={24} fill="currentColor" />
               BULK AUDIO GENERATOR
             </DialogTitle>
-            <p className="text-xs text-slate-400 mt-1 font-medium">CV辞書 全エントリの一括音声生成</p>
+            <p className="text-xs text-slate-400 mt-1 font-medium">{t('subtitle')}</p>
           </DialogHeader>
 
           <div className="p-8 space-y-8 bg-white flex-1 overflow-y-auto">
@@ -319,7 +321,10 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
                       <div className="space-y-1">
                         <p className="text-xs font-black uppercase tracking-tight">Final Confirmation</p>
                         <p className="text-[11px] font-medium leading-relaxed opacity-90">
-                          <span className="font-bold underline">{filteredEntries.length}</span> 件の音声ファイルを生成します。既存の音声は上書きされます。
+                          {t.rich('confirmBody', {
+                            count: filteredEntries.length,
+                            bold: (chunks) => <span className="font-bold underline">{chunks}</span>,
+                          })}
                         </p>
                       </div>
                     </div>
@@ -349,10 +354,10 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-rose-600">
-              <AlertCircle size={20} /> 処理完了（エラーあり）
+              <AlertCircle size={20} /> {t('errorDialogTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription className="pt-4 space-y-3">
-              <p className="font-bold text-slate-900">一括生成が完了しましたが、一部にエラーがありました。</p>
+              <p className="font-bold text-slate-900">{t('errorDialogBody')}</p>
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 grid grid-cols-2 gap-4 text-center">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">Success</p>

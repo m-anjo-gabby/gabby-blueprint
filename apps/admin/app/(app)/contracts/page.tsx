@@ -1,9 +1,9 @@
 // src/app/(app)/admin/contracts/page.tsx
 import Link from 'next/link';
 import { Settings } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { getContracts } from '@/actions/adminContractAction';
 import { ContractDataTable } from './_components/contract-data-table';
-import { columns } from './_components/columns';
 import { ContractFormDialog } from './_components/ContractFormDialog';
 
 export default async function AdminContractsPage({
@@ -11,6 +11,7 @@ export default async function AdminContractsPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string }>;
 }) {
+  const t = await getTranslations('contracts.page');
   // 1. Next.js 15 の仕様に基づき searchParams を await する
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
@@ -27,27 +28,26 @@ export default async function AdminContractsPage({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">契約管理</h1>
+          <h1 className="text-xl font-bold text-slate-800">{t('title')}</h1>
           <p className="text-xs text-slate-500 mt-1">
-            顧客ごとの利用プラン、期間、およびライセンス発行上限数を管理します
+            {t('subtitle')}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <Link
             href="/contracts/plans"
             className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
           >
-            <Settings size={14} /> プランマスタ管理
+            <Settings size={14} /> {t('plansLink')}
           </Link>
           <ContractFormDialog mode="create" />
         </div>
       </div>
 
       {/* 4. 共通化した DataTable に必要なプロパティをすべて渡す */}
-      <ContractDataTable 
-        columns={columns} 
-        data={contracts || []} 
+      <ContractDataTable
+        data={contracts || []}
         pageCount={pageCount}
         totalCount={totalCount}
       />

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { updateTerm } from "@/actions/adminTermAction";
@@ -17,6 +18,7 @@ interface TermEditorProps {
 }
 
 export function TermEditor({ termId, termType, initialVersion, initialContent, storagePath }: TermEditorProps) {
+  const t = useTranslations('terms.editor');
   const [content, setContent] = React.useState(initialContent);
   const [currentStoragePath, setCurrentStoragePath] = React.useState(storagePath);
   
@@ -35,12 +37,12 @@ export function TermEditor({ termId, termType, initialVersion, initialContent, s
       if (result.success && result.newPath) {
         setCurrentStoragePath(result.newPath);
         setBaseContent(content);
-        showToast('規約を更新しました', 'success');
+        showToast(t('toastUpdated'), 'success');
       } else {
         throw new Error(result.message);
       }
     } catch (error) {
-      showToast(error instanceof Error ? error.message : '保存に失敗しました', 'error')
+      showToast(error instanceof Error ? error.message : t('toastSaveFailed'), 'error')
     } finally {
       setIsSaving(false);
     }
@@ -60,26 +62,26 @@ export function TermEditor({ termId, termType, initialVersion, initialContent, s
               onClick={() => setViewMode("edit")}
               className="h-8 gap-2 text-xs font-bold"
             >
-              <FileEdit size={14} /> 編集
+              <FileEdit size={14} /> {t('editTab')}
             </Button>
-            <Button 
-              variant={viewMode === "preview" ? "secondary" : "ghost"} 
-              size="sm" 
+            <Button
+              variant={viewMode === "preview" ? "secondary" : "ghost"}
+              size="sm"
               onClick={() => setViewMode("preview")}
               className="h-8 gap-2 text-xs font-bold"
             >
-              <Eye size={14} /> プレビュー
+              <Eye size={14} /> {t('previewTab')}
             </Button>
           </div>
         </div>
 
-        <Button 
-          onClick={handleSave} 
+        <Button
+          onClick={handleSave}
           disabled={isSaving || !hasChanges}
           className="h-9 px-6 bg-indigo-600 hover:bg-indigo-700 font-bold rounded-xl transition-all"
         >
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          保存する
+          {t('saveButton')}
         </Button>
       </div>
 
@@ -90,7 +92,7 @@ export function TermEditor({ termId, termType, initialVersion, initialContent, s
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="w-full h-full p-6 font-mono text-sm border-none focus-visible:ring-0 resize-none leading-relaxed"
-            placeholder="Markdown形式で入力してください..."
+            placeholder={t('contentPlaceholder')}
           />
         ) : (
           <TermViewer 

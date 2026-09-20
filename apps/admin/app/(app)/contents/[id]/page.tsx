@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getContentById } from '@/actions/adminContentAction';
 import { WordEditor } from './_components/editors/WordEditor';
 import { SprintEditor } from './_components/editors/SprintEditor';
@@ -15,6 +16,7 @@ export default async function ContentDetailPage({ params, searchParams }: Props)
   // params と searchParams を await して取り出す
   const { id: contentId } = await params;
   const { wordId, type } = await searchParams;
+  const t = await getTranslations('contents.editor.detailPage');
 
   // DBからコンテンツ基本情報を取得
   const content = await getContentById(contentId);
@@ -45,7 +47,7 @@ export default async function ContentDetailPage({ params, searchParams }: Props)
           />
         ) : (
           <div className="flex items-center justify-center h-full text-slate-400">
-            このコンテンツタイプのエディタは準備中です
+            {t('notReady')}
           </div>
         )}
       </main>

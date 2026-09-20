@@ -1,11 +1,13 @@
 import { Bot } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import AIPlaygroundTabs from './_components/AIPlaygroundTabs';
 
 /**
  * AI Playground メインページ
  * packages/lib/ai の検証用UI（Gemini Chat / 英文翻訳）
  */
-export default function AIPlaygroundPage() {
+export default async function AIPlaygroundPage() {
+  const t = await getTranslations('tools.aiPlayground.page');
   return (
     <div className="space-y-10 pb-16">
       <header className="flex flex-col gap-2">
@@ -18,7 +20,7 @@ export default function AIPlaygroundPage() {
               AI Playground
             </h1>
             <p className="text-sm font-medium text-slate-500">
-              Gemini APIを利用したAI機能（チャット・翻訳）の検証ツールです。
+              {t('subtitle')}
             </p>
           </div>
         </div>

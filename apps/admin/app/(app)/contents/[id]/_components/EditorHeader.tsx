@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, BookOpen, Layers, CheckCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ interface ContentHeaderProps {
 }
 
 export function EditorHeader({ content }: ContentHeaderProps) {
+  const t = useTranslations('contents.editor.header');
   const typeLabel = CONTENT_TYPES[content.content_type]?.label || 'Unknown';
 
   return (
@@ -21,7 +23,7 @@ export function EditorHeader({ content }: ContentHeaderProps) {
         <Button variant="ghost" size="sm" asChild className="text-slate-500 hover:text-slate-900 -ml-2">
           <Link href="/contents">
             <ChevronLeft size={20} className="mr-1" />
-            一覧へ戻る
+            {t('backButton')}
           </Link>
         </Button>
 
@@ -64,7 +66,7 @@ export function EditorHeader({ content }: ContentHeaderProps) {
                 className="h-8 px-4 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 font-bold gap-2 transition-all shadow-sm"
               >
                 <Zap size={14} fill="currentColor" />
-                一括音声生成
+                {t('bulkAudioButton')}
               </Button>
             </TTSBulkDialog>
           </>

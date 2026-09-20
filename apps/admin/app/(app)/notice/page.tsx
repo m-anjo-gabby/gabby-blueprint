@@ -1,4 +1,5 @@
 // apps/admin/app/(app)/notice/page.tsx
+import { getTranslations } from 'next-intl/server';
 import { getNotices } from "@/actions/adminNoticeAction";
 import { NoticeDataTable } from "./_components/NoticeDataTable";
 
@@ -7,6 +8,7 @@ export default async function NoticePage({
 }: {
   searchParams: Promise<{ page?: string; q?: string; type?: string }>;
 }) {
+  const t = await getTranslations('notice.page');
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
   const searchQuery = params.q || "";
@@ -26,9 +28,9 @@ export default async function NoticePage({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">お知らせ管理</h1>
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t('title')}</h1>
           <p className="text-[13px] text-slate-500 mt-1">
-            アプリ内でお知らせする通知・キャンペーン・メンテナンス情報の管理を行います。
+            {t('subtitle')}
           </p>
         </div>
       </div>

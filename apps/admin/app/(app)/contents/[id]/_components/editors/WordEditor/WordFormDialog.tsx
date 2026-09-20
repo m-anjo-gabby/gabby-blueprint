@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -18,14 +19,18 @@ import { WordRecord, WORD_STATUS, WordStatus } from '@gabby/types/word';
 /**
  * バリデーションスキーマ
  */
-const wordSchema = z.object({
-  word_en: z.string().min(1, '英語表記は必須です'),
-  word_ja: z.string().min(1, '日本語表記は必須です'),
-  frequency_rank: z.string().optional(),
-  status: z.string().min(1, 'ステータスを選択してください'),
-});
+type FormT = ReturnType<typeof useTranslations<'contents.editor.word.wordFormDialog'>>;
 
-type WordFormValues = z.infer<typeof wordSchema>;
+function createWordSchema(t: FormT) {
+  return z.object({
+    word_en: z.string().min(1, t('errors.wordEnRequired')),
+    word_ja: z.string().min(1, t('errors.wordJaRequired')),
+    frequency_rank: z.string().optional(),
+    status: z.string().min(1, t('errors.statusRequired')),
+  });
+}
+
+type WordFormValues = z.infer<ReturnType<typeof createWordSchema>>;
 
 interface WordFormDialogProps {
   mode?: 'create' | 'edit';
@@ -35,6 +40,8 @@ interface WordFormDialogProps {
 }
 
 export function WordFormDialog({ mode = 'create', initialData, contentId, onSuccess }: WordFormDialogProps) {
+  const t = useTranslations('contents.editor.word.wordFormDialog');
+  const wordSchema = useMemo(() => createWordSchema(t), [t]);
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -80,14 +87,14 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
       const result = await upsertWord(payload);
 
       if (result.success) {
-        showToast(mode === 'create' ? "単語を登録しました" : "単語を更新しました", "success");
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
         setOpen(false);
         onSuccess?.();
       } else {
-        setServerError(result.message || "処理に失敗しました");
+        setServerError(result.message || t('serverErrorDefault'));
       }
     } catch (error) {
-      setServerError("システムエラーが発生しました");
+      setServerError(t('systemError'));
     }
   };
 
@@ -106,7 +113,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none shrink-0 h-8">
-            <PlusCircle size={16} /> 単語追加
+            <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50">
@@ -129,11 +136,11 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認</>
+              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> 単語の新規登録</>
+              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
             ) : (
-              <><Languages size={18} className="text-indigo-400" /> 単語情報の編集</>
+              <><Languages size={18} className="text-indigo-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -157,11 +164,11 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
             {/* 日本語表記 */}
             <FormField control={form.control} name="word_ja" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">日本語訳</FormLabel>
+                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('japaneseLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100">{field.value}</div>
                 ) : (
-                  <FormControl><Input {...field} placeholder="例、見本" className="rounded-xl border-slate-200" /></FormControl>
+                  <FormControl><Input {...field} placeholder={t('japanesePlaceholder')} className="rounded-xl border-slate-200" /></FormControl>
                 )}
                 <FormMessage />
               </FormItem>
@@ -171,7 +178,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
               {/* ステータス */}
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ステータス</FormLabel>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('statusLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm font-bold border border-slate-100">
                       {WORD_STATUS[field.value as WordStatus]?.label}
@@ -213,16 +220,16 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
                   <p className="text-xs font-bold text-center text-slate-400 uppercase tracking-tighter">Please confirm the details above</p>
                   {serverError && <Alert variant="destructive" className="text-xs py-2">{serverError}</Alert>}
                   <div className="flex gap-3">
-                    <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>戻る</Button>
+                    <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>{t('backButton')}</Button>
                     <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold" disabled={isSubmitting}>
-                      {isSubmitting ? "保存中..." : "確定する"}
+                      {isSubmitting ? t('saving') : t('confirmButton')}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11" 
+                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11"
                   onClick={async () => { if (await form.trigger()) setIsConfirming(true); }}>
-                  内容を確認する
+                  {t('confirmDetailsButton')}
                 </Button>
               )}
             </div>

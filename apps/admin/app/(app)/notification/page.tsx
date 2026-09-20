@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Bell, BellOff } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
@@ -9,6 +10,7 @@ import { NotificationItem } from '@gabby/types/notification';
 import { NotificationCard } from './_components/NotificationCard';
 
 export default function NotificationPage() {
+  const t = useTranslations('notification');
   const { notifications, isLoading, fetchNotifications, markAsRead } = useNotificationStore();
   const router = useRouter();
 
@@ -30,14 +32,14 @@ export default function NotificationPage() {
     <div className="space-y-6 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">通知</h1>
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t('title')}</h1>
           <p className="text-[13px] text-slate-500 mt-1">
-            システムから届いた通知の一覧です。
+            {t('subtitle')}
           </p>
         </div>
         <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 flex items-center gap-1.5 shrink-0">
           <Bell size={10} />
-          {notifications.length} <span className="opacity-60 ml-0.5">Items</span>
+          {notifications.length} <span className="opacity-60 ml-0.5">{t('itemsLabel')}</span>
         </div>
       </div>
 
@@ -65,7 +67,7 @@ export default function NotificationPage() {
               <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
                 <BellOff size={22} />
               </div>
-              <p className="text-sm font-bold text-slate-500">現在通知はありません</p>
+              <p className="text-sm font-bold text-slate-500">{t('empty')}</p>
             </motion.div>
           ) : (
             <motion.div

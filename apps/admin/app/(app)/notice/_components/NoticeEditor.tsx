@@ -3,6 +3,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { 
   Save, 
@@ -73,6 +74,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
+  const t = useTranslations('notice.editor');
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -170,17 +172,17 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
   // 保存処理
   const handleSave = async () => {
     if (!title.trim()) {
-      showToast('タイトルを入力してください', 'error');
+      showToast(t('errorTitleRequired'), 'error');
       return;
     }
 
     if (!publishedAtJst) {
-      showToast('公開開始日時を入力してください', 'error');
+      showToast(t('errorPublishDateRequired'), 'error');
       return;
     }
 
     if (targetType === 'CLIENT' && !clientId) {
-      showToast('対象顧客を選択してください', 'error');
+      showToast(t('errorClientRequired'), 'error');
       return;
     }
 
@@ -195,7 +197,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           fileFormData.append('file', att.file);
           const res = await uploadNoticeFile(noticeId, fileFormData);
           if (!res.success || !res.attachment) {
-            showToast(res.message || `${att.name} のアップロードに失敗しました`, 'error');
+            showToast(res.message || t('errorUploadFailed', { name: att.name }), 'error');
             setIsSaving(false);
             return;
           }
@@ -240,13 +242,13 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
       }
 
       if (res.success) {
-        showToast(isEdit ? 'お知らせを更新しました' : 'お知らせを作成しました', 'success');
+        showToast(isEdit ? t('toastUpdated') : t('toastCreated'), 'success');
         router.push('/notice');
       } else {
-        showToast(res.message || '保存に失敗しました', 'error');
+        showToast(res.message || t('toastSaveFailed'), 'error');
       }
     } catch (error) {
-      showToast('保存中にエラーが発生しました', 'error');
+      showToast(t('toastSaveError'), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -265,10 +267,10 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           </Link>
           <div>
             <h1 className="text-base font-black text-slate-900 tracking-tight">
-              {isEdit ? 'お知らせの編集' : '新規お知らせ作成'}
+              {isEdit ? t('editTitle') : t('createTitle')}
             </h1>
             <p className="text-[11px] font-bold text-slate-400">
-              {isEdit ? `ID: ${initialData?.notice_id}` : 'メタ情報とMarkdown本文を入力して保存します'}
+              {isEdit ? t('editIdLabel', { id: initialData?.notice_id ?? '' }) : t('createHint')}
             </p>
           </div>
         </div>
@@ -281,7 +283,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
             className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
           >
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isEdit ? '更新を保存する' : '登録する'}
+            {isEdit ? t('saveUpdate') : t('saveCreate')}
           </Button>
         </div>
       </div>
@@ -294,12 +296,12 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           
           {/* タイトル */}
           <div className="space-y-2">
-            <Label className="text-xs font-black text-slate-700">タイトル <span className="text-rose-500">*</span></Label>
+            <Label className="text-xs font-black text-slate-700">{t('titleLabel')} <span className="text-rose-500">*</span></Label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="例: 【重要】システムメンテナンスのお知らせ"
+              placeholder={t('titlePlaceholder')}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
             />
           </div>
@@ -307,7 +309,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           {/* 種別 & 配信対象 */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-xs font-black text-slate-700">お知らせ種別</Label>
+              <Label className="text-xs font-black text-slate-700">{t('typeLabel')}</Label>
               <select
                 value={noticeType}
                 onChange={(e) => setNoticeType(e.target.value as NoticeType)}
@@ -320,15 +322,15 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-black text-slate-700">配信対象</Label>
+              <Label className="text-xs font-black text-slate-700">{t('targetLabel')}</Label>
               <select
                 value={targetType}
                 onChange={(e) => setTargetType(e.target.value as NoticeTargetType)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
               >
-                <option value="ALL">生徒全体配信 (ALL)</option>
-                <option value="CLIENT">顧客指定 (CLIENT)</option>
-                <option value="COACH">コーチ一括配信 (COACH)</option>
+                <option value="ALL">{t('targetAllOption')}</option>
+                <option value="CLIENT">{t('targetClientOption')}</option>
+                <option value="COACH">{t('targetCoachOption')}</option>
               </select>
             </div>
           </div>
@@ -337,14 +339,14 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           {targetType === 'CLIENT' && (
             <div className="space-y-2 bg-indigo-50/50 p-3.5 rounded-xl border border-indigo-100">
               <Label className="text-xs font-black text-indigo-900 flex items-center gap-1.5">
-                <Building2 size={14} className="text-indigo-600" /> 対象顧客を選択 <span className="text-rose-500">*</span>
+                <Building2 size={14} className="text-indigo-600" /> {t('selectClientLabel')} <span className="text-rose-500">*</span>
               </Label>
               <select
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-all"
               >
-                <option value="">-- 顧客を選択してください --</option>
+                <option value="">{t('selectClientPlaceholder')}</option>
                 {clientOptions.map((c) => (
                   <option key={c.client_id} value={c.client_id}>{c.client_name}</option>
                 ))}
@@ -354,10 +356,10 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
 
           {/* 公開期間 (JST) */}
           <div className="space-y-3 pt-2 border-t border-slate-100">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">公開期間設定 (JST)</h3>
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('publishPeriodTitle')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold text-slate-600">公開開始日 (JST) <span className="text-rose-500">*</span></Label>
+                <Label className="text-[11px] font-bold text-slate-600">{t('publishStartLabel')} <span className="text-rose-500">*</span></Label>
                 <input
                   type="date"
                   value={publishedAtJst}
@@ -368,14 +370,14 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[11px] font-bold text-slate-600">公開終了日 (JST)</Label>
+                  <Label className="text-[11px] font-bold text-slate-600">{t('publishEndLabel')}</Label>
                   {expiredAtJst && (
                     <button
                       type="button"
                       onClick={() => setExpiredAtJst('')}
                       className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5"
                     >
-                      <RotateCcw size={10} /> クリア (無期限)
+                      <RotateCcw size={10} /> {t('clearLabel')}
                     </button>
                   )}
                 </div>
@@ -393,26 +395,26 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                       type="button"
                       onClick={() => setExpiredAtJst('')}
                       className="absolute right-2 p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/60 transition-colors"
-                      title="無期限にする (クリア)"
+                      title={t('clearTitle')}
                     >
                       <X size={14} />
                     </button>
                   )}
                 </div>
-                <p className="text-[10px] text-slate-400">※未入力で無期限表示</p>
+                <p className="text-[10px] text-slate-400">{t('noExpiryHint')}</p>
               </div>
             </div>
           </div>
 
           {/* 各種コントロールフラグ */}
           <div className="space-y-3 pt-2 border-t border-slate-100">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">フラグ・表示制御</h3>
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('flagsTitle')}</h3>
             <div className="space-y-3 bg-slate-50/70 p-4 rounded-xl border border-slate-100">
               {/* 公開フラグ */}
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-xs font-black text-slate-800 cursor-pointer">公開ステータス (is_published)</Label>
-                  <p className="text-[10px] text-slate-500">ONで公開状態、OFFで下書き保存となります</p>
+                  <Label className="text-xs font-black text-slate-800 cursor-pointer">{t('publishedFlagLabel')}</Label>
+                  <p className="text-[10px] text-slate-500">{t('publishedFlagHint')}</p>
                 </div>
                 <Switch
                   checked={isPublished}
@@ -423,8 +425,8 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
               {/* 重要フラグ */}
               <div className="flex items-center justify-between border-t border-slate-200/60 pt-3">
                 <div>
-                  <Label className="text-xs font-black text-slate-800 cursor-pointer">重要お知らせ (is_important)</Label>
-                  <p className="text-[10px] text-slate-500">「重要」バッジを赤色で強調表示します</p>
+                  <Label className="text-xs font-black text-slate-800 cursor-pointer">{t('importantFlagLabel')}</Label>
+                  <p className="text-[10px] text-slate-500">{t('importantFlagHint')}</p>
                 </div>
                 <Switch
                   checked={isImportant}
@@ -435,8 +437,8 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
               {/* ポップアップ表示フラグ */}
               <div className="flex items-center justify-between border-t border-slate-200/60 pt-3">
                 <div>
-                  <Label className="text-xs font-black text-slate-800 cursor-pointer">ポップアップ表示 (show_dialog)</Label>
-                  <p className="text-[10px] text-slate-500">ユーザーログイン時にダイアログで全画面自動ポップアップします</p>
+                  <Label className="text-xs font-black text-slate-800 cursor-pointer">{t('dialogFlagLabel')}</Label>
+                  <p className="text-[10px] text-slate-500">{t('dialogFlagHint')}</p>
                 </div>
                 <Switch
                   checked={showDialog}
@@ -450,11 +452,11 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           <div className="space-y-3 pt-2 border-t border-slate-100">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                <Paperclip size={14} /> 添付ファイル
+                <Paperclip size={14} /> {t('attachmentsTitle')}
               </h3>
               <label className="cursor-pointer h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
                 {isUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                追加
+                {t('addButton')}
                 <input
                   type="file"
                   multiple
@@ -467,7 +469,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
 
             {attachments.length === 0 ? (
               <div className="text-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 text-xs text-slate-400 font-bold">
-                添付ファイルはありません
+                {t('noAttachments')}
               </div>
             ) : (
               <div className="space-y-2">
@@ -483,7 +485,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                           <p className="font-bold text-slate-700 truncate">{att.name}</p>
                           {att.file && (
                             <span className="text-[9px] bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold px-1.5 py-0.2 rounded-md shrink-0">
-                              新規
+                              {t('newBadge')}
                             </span>
                           )}
                         </div>
@@ -494,7 +496,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                       type="button"
                       onClick={() => handleRemoveAttachment(att)}
                       className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                      title="削除"
+                      title={t('removeTooltip')}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -511,7 +513,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           <div className="flex items-center justify-between px-6 py-3 border-b bg-slate-50/80 shrink-0">
             <div className="flex items-center gap-2">
               <FileText size={16} className="text-slate-500" />
-              <span className="text-xs font-black text-slate-800">お知らせ本文 (Markdown対応)</span>
+              <span className="text-xs font-black text-slate-800">{t('contentTitle')}</span>
             </div>
 
             <div className="flex items-center gap-1 bg-white border rounded-xl p-1 shadow-sm">
@@ -521,7 +523,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                 onClick={() => setViewMode('edit')}
                 className="h-7 gap-1.5 text-[11px] font-bold rounded-lg"
               >
-                <FileEdit size={13} /> 編集
+                <FileEdit size={13} /> {t('editTab')}
               </Button>
               <Button
                 variant={viewMode === 'preview' ? 'secondary' : 'ghost'}
@@ -529,7 +531,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                 onClick={() => setViewMode('preview')}
                 className="h-7 gap-1.5 text-[11px] font-bold rounded-lg"
               >
-                <Eye size={13} /> プレビュー
+                <Eye size={13} /> {t('previewTab')}
               </Button>
             </div>
           </div>
@@ -541,7 +543,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="w-full h-full p-6 font-mono text-xs sm:text-sm border-none focus-visible:ring-0 resize-none leading-relaxed text-slate-800"
-                placeholder="お知らせの本文をMarkdown形式で入力してください...&#10;&#10;## 見出し&#10;本文テキストです。"
+                placeholder={t('contentPlaceholder')}
               />
             ) : (
               <TermViewer

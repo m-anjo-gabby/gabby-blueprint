@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Loader2, Trash2, UserPlus, Users as UsersIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,7 +22,6 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
-const ALL_CLIENTS_OPTION = { value: '', label: 'すべての顧客（絞り込みなし）' };
 const MIN_GROUP_ROOM_MEMBERS = 2;
 
 interface ManageGroupParticipantsDialogProps {
@@ -31,6 +31,9 @@ interface ManageGroupParticipantsDialogProps {
 }
 
 export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: ManageGroupParticipantsDialogProps) {
+  const t = useTranslations('chat.manageParticipantsDialog');
+  const tCommon = useTranslations('chat.common');
+  const ALL_CLIENTS_OPTION = { value: '', label: tCommon('allClientsOption') };
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const [open, setOpen] = useState(false);
@@ -61,7 +64,7 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
       if (usersRes.success) {
         setCandidateUsers(usersRes.data);
       } else {
-        showToast(usersRes.error || 'ユーザー一覧の取得に失敗しました', 'error');
+        showToast(usersRes.error || t('toastUsersFetchFailed'), 'error');
       }
       setClients(clientsRes);
     } finally {
@@ -85,7 +88,7 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
 
   const addUserOptions = addableUsers.map((u) => ({
     value: u.id,
-    label: `${u.user_name || '（名称未設定）'}${u.client_id ? ` - ${clientNameById.get(u.client_id) || '（顧客不明）'}` : ''}`,
+    label: `${u.user_name || tCommon('unnamed')}${u.client_id ? ` - ${clientNameById.get(u.client_id) || tCommon('unknownClient')}` : ''}`,
   }));
 
   const handleAdd = async () => {
@@ -94,7 +97,7 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
     try {
       const res = await addChatRoomMember({ roomId, userId: addUserId });
       if (!res.success || !res.member) {
-        showToast(res.error || '参加者の追加に失敗しました', 'error');
+        showToast(res.error || t('toastAddFailed'), 'error');
         return;
       }
       setCurrentMembers((prev) => [...prev, res.member!]);
@@ -107,13 +110,13 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
 
   const handleRemove = async (member: ChatRoomMemberSummary) => {
     if (currentMembers.length <= MIN_GROUP_ROOM_MEMBERS) {
-      showToast(`グループの参加者は最低${MIN_GROUP_ROOM_MEMBERS}名必要です`, 'error');
+      showToast(t('minMembersError', { min: MIN_GROUP_ROOM_MEMBERS }), 'error');
       return;
     }
 
     const ok = await showConfirm(
-      '参加者を削除',
-      `${member.user_name || '（名称未設定）'}さんをこのグループから削除しますか？`,
+      t('removeConfirmTitle'),
+      t('removeConfirmBody', { name: member.user_name || tCommon('unnamed') }),
       { variant: 'danger', isModal: true }
     );
     if (!ok) return;
@@ -122,7 +125,7 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
     try {
       const res = await removeChatRoomMember({ roomId, userId: member.user_id });
       if (!res.success) {
-        showToast(res.error || '参加者の削除に失敗しました', 'error');
+        showToast(res.error || t('toastRemoveFailed'), 'error');
         return;
       }
       setCurrentMembers((prev) => prev.filter((m) => m.user_id !== member.user_id));
@@ -143,18 +146,18 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
         className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors shrink-0"
       >
         <UsersIcon size={13} />
-        参加者を管理
+        {t('button')}
       </button>
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>参加者を管理</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-600 block">
-              現在の参加者（{currentMembers.length}名）
+              {t('currentMembersLabel', { count: currentMembers.length })}
             </label>
             <div className="max-h-[240px] overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
               {currentMembers.map((member) => {
@@ -172,7 +175,7 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-800 truncate">
-                        {member.user_name || '（名称未設定）'}
+                        {member.user_name || tCommon('unnamed')}
                       </p>
                       <p className="text-[11px] text-slate-400">{getUserTypeLabel(member.user_type)}</p>
                     </div>
@@ -181,8 +184,8 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
                       disabled={isPending || currentMembers.length <= MIN_GROUP_ROOM_MEMBERS}
                       title={
                         currentMembers.length <= MIN_GROUP_ROOM_MEMBERS
-                          ? `グループの参加者は最低${MIN_GROUP_ROOM_MEMBERS}名必要です`
-                          : '削除する'
+                          ? t('minMembersError', { min: MIN_GROUP_ROOM_MEMBERS })
+                          : t('deleteTooltip')
                       }
                       className="p-1.5 rounded-md text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-300"
                     >
@@ -195,7 +198,7 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
           </div>
 
           <div className="space-y-2 pt-1 border-t border-slate-100">
-            <label className="text-xs font-bold text-slate-600 block pt-3">参加者を追加</label>
+            <label className="text-xs font-bold text-slate-600 block pt-3">{t('addSectionLabel')}</label>
 
             <Tabs
               value={addUserType}
@@ -222,8 +225,8 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
                   setAddClientId(clientId);
                   setAddUserId('');
                 }}
-                placeholder="顧客で絞り込み（任意）"
-                searchPlaceholder="顧客名で検索..."
+                placeholder={tCommon('clientFilterPlaceholder')}
+                searchPlaceholder={tCommon('clientSearchPlaceholder')}
                 disabled={isLoadingCandidates}
               />
             )}
@@ -234,15 +237,15 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
                   options={addUserOptions}
                   value={addUserId}
                   onChange={setAddUserId}
-                  placeholder={addUserType ? '参加者を選択してください' : '先にユーザー種別を選択してください'}
-                  searchPlaceholder="名前で検索..."
-                  emptyMessage="追加できるユーザーが見つかりません。"
+                  placeholder={addUserType ? t('addPlaceholder') : t('addPlaceholderNoType')}
+                  searchPlaceholder={tCommon('nameSearchPlaceholder')}
+                  emptyMessage={t('addEmptyMessage')}
                   disabled={isLoadingCandidates || !addUserType}
                 />
               </div>
               <Button onClick={handleAdd} disabled={!addUserId || isAdding} className="gap-1.5 shrink-0">
                 {isAdding ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
-                追加
+                {t('addButton')}
               </Button>
             </div>
           </div>

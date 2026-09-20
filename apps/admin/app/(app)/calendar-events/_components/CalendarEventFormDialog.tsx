@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
@@ -29,46 +30,44 @@ import { CalendarEventCoachPicker } from './CalendarEventCoachPicker';
 const EVENT_TYPE_KEYS = Object.keys(CALENDAR_EVENT_TYPES) as [CalendarEventType, ...CalendarEventType[]];
 const TARGET_TYPE_KEYS: [CalendarEventTargetType, ...CalendarEventTargetType[]] = ['ALL', 'CLIENT', 'COACH'];
 
-const TARGET_TYPE_LABEL: Record<CalendarEventTargetType, string> = {
-  ALL: '生徒全体',
-  CLIENT: '顧客指定',
-  COACH: 'コーチ全体',
-};
+type FormT = ReturnType<typeof useTranslations<'calendarEvents.formDialog'>>;
 
-const calendarEventSchema = z
-  .object({
-    event_type: z.enum(EVENT_TYPE_KEYS),
-    title: z.string().min(1, 'タイトルは必須です'),
-    description: z.string().optional(),
-    start_date: z.string().min(1, '開始日は必須です'),
-    start_time: z.string().min(1, '開始時刻は必須です'),
-    has_end: z.boolean(),
-    end_date: z.string().optional(),
-    end_time: z.string().optional(),
-    location_url: z.string().url('URLの形式が正しくありません').optional().or(z.literal('')),
-    target_type: z.enum(TARGET_TYPE_KEYS),
-    client_id: z.string().optional(),
-    rsvp_enabled: z.boolean(),
-    is_published: z.boolean(),
-    coach_ids: z.array(z.string()),
-  })
-  .refine((v) => !v.has_end || (!!v.end_date && !!v.end_time), {
-    message: '終了日時を入力してください',
-    path: ['end_date'],
-  })
-  .refine((v) => v.target_type !== 'CLIENT' || !!v.client_id, {
-    message: '対象顧客を選択してください',
-    path: ['client_id'],
-  })
-  .refine(
-    (v) => {
-      if (!v.has_end || !v.end_date || !v.end_time) return true;
-      return `${v.end_date}T${v.end_time}` > `${v.start_date}T${v.start_time}`;
-    },
-    { message: '終了日時は開始日時より後にしてください', path: ['end_date'] }
-  );
+function createCalendarEventSchema(t: FormT) {
+  return z
+    .object({
+      event_type: z.enum(EVENT_TYPE_KEYS),
+      title: z.string().min(1, t('errors.titleRequired')),
+      description: z.string().optional(),
+      start_date: z.string().min(1, t('errors.startDateRequired')),
+      start_time: z.string().min(1, t('errors.startTimeRequired')),
+      has_end: z.boolean(),
+      end_date: z.string().optional(),
+      end_time: z.string().optional(),
+      location_url: z.string().url(t('errors.urlInvalid')).optional().or(z.literal('')),
+      target_type: z.enum(TARGET_TYPE_KEYS),
+      client_id: z.string().optional(),
+      rsvp_enabled: z.boolean(),
+      is_published: z.boolean(),
+      coach_ids: z.array(z.string()),
+    })
+    .refine((v) => !v.has_end || (!!v.end_date && !!v.end_time), {
+      message: t('errors.endDateTimeRequired'),
+      path: ['end_date'],
+    })
+    .refine((v) => v.target_type !== 'CLIENT' || !!v.client_id, {
+      message: t('errors.clientRequired'),
+      path: ['client_id'],
+    })
+    .refine(
+      (v) => {
+        if (!v.has_end || !v.end_date || !v.end_time) return true;
+        return `${v.end_date}T${v.end_time}` > `${v.start_date}T${v.start_time}`;
+      },
+      { message: t('errors.endAfterStart'), path: ['end_date'] }
+    );
+}
 
-type CalendarEventFormValues = z.infer<typeof calendarEventSchema>;
+type CalendarEventFormValues = z.infer<ReturnType<typeof createCalendarEventSchema>>;
 
 interface CalendarEventFormDialogProps {
   mode?: 'create' | 'edit';
@@ -110,6 +109,13 @@ const DEFAULT_VALUES: CalendarEventFormValues = {
  * カレンダーイベント（グループセッション・メンテナンス等）登録・編集用ダイアログ
  */
 export function CalendarEventFormDialog({ mode = 'create', initialData }: CalendarEventFormDialogProps) {
+  const t = useTranslations('calendarEvents.formDialog');
+  const calendarEventSchema = useMemo(() => createCalendarEventSchema(t), [t]);
+  const TARGET_TYPE_LABEL: Record<CalendarEventTargetType, string> = {
+    ALL: t('targetAll'),
+    CLIENT: t('targetClient'),
+    COACH: t('targetCoach'),
+  };
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -177,14 +183,14 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
       const result = await upsertCalendarEvent(payload);
 
       if (result.success) {
-        showToast(mode === 'create' ? 'カレンダーイベントを登録しました' : 'カレンダーイベントを更新しました', 'success');
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         setIsConfirming(false);
       } else {
-        setServerError(result.message || '処理に失敗しました');
+        setServerError(result.message || t('toastGenericFailed'));
       }
     } catch (error) {
-      setServerError('システムエラーが発生しました');
+      setServerError(t('toastSystemError'));
     }
   };
 
@@ -200,11 +206,11 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
-            <PlusCircle size={16} /> 新規登録
+            <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
-            <Edit size={14} /> 編集
+            <Edit size={14} /> {t('editButton')}
           </Button>
         )}
       </DialogTrigger>
@@ -214,15 +220,15 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
               <>
-                <CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認
+                <CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}
               </>
             ) : mode === 'create' ? (
               <>
-                <PlusCircle size={18} className="text-indigo-400" /> 新規カレンダーイベントの登録
+                <PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}
               </>
             ) : (
               <>
-                <Edit size={18} className="text-indigo-400" /> カレンダーイベントの編集
+                <Edit size={18} className="text-indigo-400" /> {t('editTitle')}
               </>
             )}
           </DialogTitle>
@@ -236,7 +242,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
               name="event_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">イベント種別</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('eventTypeLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                       {CALENDAR_EVENT_TYPES[field.value].label}
@@ -268,12 +274,12 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">タイトル</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('titleLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                   ) : (
                     <FormControl>
-                      <Input {...field} placeholder="例: 8月度 グループセッション" className="bg-white rounded-xl border-slate-200" />
+                      <Input {...field} placeholder={t('titlePlaceholder')} className="bg-white rounded-xl border-slate-200" />
                     </FormControl>
                   )}
                   <FormMessage />
@@ -287,10 +293,10 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">説明（任意）</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('descriptionLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 whitespace-pre-wrap">
-                      {field.value || '（なし）'}
+                      {field.value || t('none')}
                     </div>
                   ) : (
                     <FormControl>
@@ -309,7 +315,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 name="start_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">開始日</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('startDateLabel')}</FormLabel>
                     {isConfirming ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
                     ) : (
@@ -326,7 +332,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 name="start_time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">開始時刻</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('startTimeLabel')}</FormLabel>
                     {isConfirming ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
                     ) : (
@@ -347,7 +353,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 name="has_end"
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-xl border-2 border-slate-100 p-3">
-                    <FormLabel className="text-xs font-bold text-slate-600">終了日時を設定する</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-600">{t('hasEndLabel')}</FormLabel>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
@@ -363,7 +369,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                   name="end_date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">終了日</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('endDateLabel')}</FormLabel>
                       {isConfirming ? (
                         <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
                       ) : (
@@ -380,7 +386,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                   name="end_time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">終了時刻</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('endTimeLabel')}</FormLabel>
                       {isConfirming ? (
                         <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
                       ) : (
@@ -401,17 +407,17 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
               name="location_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">参加URL（任意）</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('locationUrlLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono text-slate-700 break-all">
-                      {field.value || '（なし）'}
+                      {field.value || t('none')}
                     </div>
                   ) : (
                     <FormControl>
-                      <Input {...field} placeholder="例: https://zoom.us/j/..." className="bg-white rounded-xl border-slate-200 font-mono" />
+                      <Input {...field} placeholder={t('locationUrlPlaceholder')} className="bg-white rounded-xl border-slate-200 font-mono" />
                     </FormControl>
                   )}
-                  <FormDescription className="text-[11px] text-slate-400">主にグループセッションのZoom URL等を想定しています。</FormDescription>
+                  <FormDescription className="text-[11px] text-slate-400">{t('locationUrlHint')}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -425,9 +431,9 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-xl border-2 border-slate-100 p-3">
                     <div>
-                      <FormLabel className="text-xs font-bold text-slate-600">参加確認を有効にする</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-600">{t('rsvpLabel')}</FormLabel>
                       <FormDescription className="text-[11px] text-slate-400">
-                        オンの場合、生徒/コーチがこのイベントに参加登録・キャンセルできるようになります。
+                        {t('rsvpHint')}
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -439,9 +445,9 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
             )}
             {isConfirming && (
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">参加確認</p>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{t('rsvpLabel')}</p>
                 <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                  {form.getValues('rsvp_enabled') ? '有効' : '無効'}
+                  {form.getValues('rsvp_enabled') ? t('rsvpEnabled') : t('rsvpDisabled')}
                 </div>
               </div>
             )}
@@ -452,7 +458,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
               name="target_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">配信対象</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('targetTypeLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                       {TARGET_TYPE_LABEL[field.value]}
@@ -484,7 +490,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 name="client_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">対象顧客</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('targetClientLabel')}</FormLabel>
                     {isConfirming ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                         {clients.find((c) => c.client_id === field.value)?.client_name ?? field.value}
@@ -493,7 +499,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                            <SelectValue placeholder="顧客を選択" />
+                            <SelectValue placeholder={t('targetClientPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -518,12 +524,12 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 name="coach_ids"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">担当コーチ（任意・複数選択可）</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('coachesLabel')}</FormLabel>
                     {isConfirming ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                         {field.value.length > 0
-                          ? field.value.map((id) => coaches.find((c) => c.coach_id === id)?.user_name || '(名称未設定)').join(', ')
-                          : '（未設定）'}
+                          ? field.value.map((id) => coaches.find((c) => c.coach_id === id)?.user_name || t('coachesUnnamed')).join(', ')
+                          : t('coachesNotSet')}
                       </div>
                     ) : (
                       <FormControl>
@@ -531,7 +537,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                       </FormControl>
                     )}
                     <FormDescription className="text-[11px] text-slate-400">
-                      登録すると自動的にコーチアプリのカレンダーにこのイベントが表示されます。
+                      {t('coachesHint')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -547,8 +553,8 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-xl border-2 border-slate-100 p-3">
                     <div>
-                      <FormLabel className="text-xs font-bold text-slate-600">公開する</FormLabel>
-                      <FormDescription className="text-[11px] text-slate-400">オフの場合は下書きとして保存され、生徒/コーチには表示されません。</FormDescription>
+                      <FormLabel className="text-xs font-bold text-slate-600">{t('publishLabel')}</FormLabel>
+                      <FormDescription className="text-[11px] text-slate-400">{t('publishHint')}</FormDescription>
                     </div>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -559,7 +565,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
             )}
             {isConfirming && (
               <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                {form.getValues('is_published') ? '公開する' : '下書き（非公開）'}
+                {form.getValues('is_published') ? t('publishLabel') : t('publishDraft')}
               </div>
             )}
 
@@ -568,7 +574,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
               {isConfirming ? (
                 <div className="space-y-4">
                   <p className="text-sm font-bold text-center text-slate-800">
-                    この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？
+                    {t('confirmQuestion', { action: mode === 'create' ? t('actionCreate') : t('actionUpdate') })}
                   </p>
                   {serverError && (
                     <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
@@ -584,10 +590,10 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                       onClick={() => setIsConfirming(false)}
                       disabled={isSubmitting}
                     >
-                      いいえ
+                      {t('no')}
                     </Button>
                     <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg" disabled={isSubmitting}>
-                      {isSubmitting ? '処理中...' : 'はい、確定します'}
+                      {isSubmitting ? t('processing') : t('yesConfirm')}
                     </Button>
                   </div>
                 </div>
@@ -600,7 +606,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                     if (isValid) setIsConfirming(true);
                   }}
                 >
-                  {mode === 'create' ? '登録内容を確認する' : '編集内容を確認する'}
+                  {mode === 'create' ? t('confirmCreateButton') : t('confirmEditButton')}
                 </Button>
               )}
             </div>

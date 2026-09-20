@@ -7,6 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useTranslations } from "next-intl";
 import {
   Table,
   TableBody,
@@ -54,6 +55,7 @@ export function ContentDataTable({
   pageCount,
   totalCount,
 }: ContentDataTableProps) {
+  const t = useTranslations("contents.dataTable");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -65,7 +67,7 @@ export function ContentDataTable({
   const columns = React.useMemo<ColumnDef<Content>[]>(() => [
     {
       accessorKey: "content_name",
-      header: "教材 / ラベル",
+      header: t('nameHeader'),
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5 py-1">
           <span className="text-sm font-bold text-slate-900 leading-tight">
@@ -84,7 +86,7 @@ export function ContentDataTable({
     },
     {
       accessorKey: "content_type",
-      header: "種別",
+      header: t('typeHeader'),
       cell: ({ row }) => {
         const type = row.original.content_type;
         const config = {
@@ -103,7 +105,7 @@ export function ContentDataTable({
     },
     {
       accessorKey: "content_scope",
-      header: "公開範囲",
+      header: t('scopeHeader'),
       cell: ({ row }) => {
         const content = row.original;
         const scope = content.content_scope as keyof typeof CONTENT_SCOPES;
@@ -138,7 +140,7 @@ export function ContentDataTable({
                   {/* 下段：クライアント名またはエラーメッセージ */}
                   <div className="flex items-center gap-1.5 pl-1 transition-colors">
                     {isAlert ? (
-                      <span className="text-[10px] font-bold text-rose-400 italic">公開先を設定してください</span>
+                      <span className="text-[10px] font-bold text-rose-400 italic">{t('accessAlertHint')}</span>
                     ) : (
                       <div className="flex items-center gap-1.5 text-slate-500 group-hover/access:text-amber-700">
                         <Building2 size={10} className="text-slate-300 group-hover/access:text-amber-400 shrink-0" />
@@ -189,7 +191,7 @@ export function ContentDataTable({
     },
     {
       id: "tags",
-      header: "タグ",
+      header: t('tagsHeader'),
       cell: ({ row }) => {
         // row.original は Content 型
         const content = row.original;
@@ -205,19 +207,19 @@ export function ContentDataTable({
     },
     {
       id: "actions",
-      header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">操作</div>,
+      header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('actionsHeader')}</div>,
       cell: ({ row }) => (
         <div className="flex justify-end items-center gap-2 px-2">
           {/* 教材基本情報の編集モーダル */}
           <ContentFormDialog mode="edit" initialData={row.original} />
 
           {/* 詳細（単語エディタ等）画面へ */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             asChild
             className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-            title="エディタを起動"
+            title={t('editorButtonTitle')}
           >
             <Link 
               href={
@@ -232,7 +234,7 @@ export function ContentDataTable({
         </div>
       ),
     },
-  ], []);
+  ], [t]);
 
   const table = useReactTable({
     data,
@@ -265,7 +267,7 @@ export function ContentDataTable({
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
-              placeholder="教材名、ラベルで検索..."
+              placeholder={t('searchPlaceholder')}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearchTrigger(searchValue)}
@@ -278,13 +280,16 @@ export function ContentDataTable({
             )}
           </div>
           <Button onClick={() => handleSearchTrigger(searchValue)} variant="secondary" size="sm" className="h-9 px-4 bg-white border border-slate-200 shadow-sm font-bold text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">
-            検索
+            {t('searchButton')}
           </Button>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden md:block text-[13px] text-slate-500 font-medium">
-            全 <span className="text-slate-900 font-bold">{totalCount}</span> 件
+            {t.rich('totalCount', {
+              count: totalCount,
+              styled: (chunks) => <span className="text-slate-900 font-bold">{chunks}</span>,
+            })}
           </div>
           <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
             <Button variant="ghost" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage <= 1} className="h-8 w-8 p-0 rounded-lg">
@@ -328,7 +333,7 @@ export function ContentDataTable({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  教材データが見つかりませんでした。
+                  {t('noData')}
                 </TableCell>
               </TableRow>
             )}

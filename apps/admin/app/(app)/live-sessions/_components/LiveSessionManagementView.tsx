@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
+import { ja, enUS } from 'date-fns/locale';
+import { useLocale, useTranslations } from 'next-intl';
 import { Loader2, RefreshCcw, Users, Video, UserPlus, CalendarClock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -30,7 +31,7 @@ import {
   releaseLessonScheduleSlot,
   getCoachesForMatching,
 } from '@/actions/adminLiveSessionAction';
-import { getAdminSessionStatusBadge, ADMIN_SCHEDULE_STATUS_LABEL } from '@/constants/session';
+import { getAdminSessionStatusBadge, getAdminScheduleStatusLabel } from '@/constants/session';
 import { CancelSessionDialog } from './dialogs/CancelSessionDialog';
 import { BookSessionDialog } from './dialogs/BookSessionDialog';
 import { MatchCoachDialog } from './dialogs/MatchCoachDialog';
@@ -43,14 +44,14 @@ import type { ClientOption } from '@gabby/types/client';
 import type { AdminStudentSummary, AdminScheduleSlotSummary, AdminCoachSummary, AdminContractSummary } from '@gabby/types/adminLiveSession';
 import type { CoachSessionListItem } from '@gabby/types/coachStudent';
 
-const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
-function formatContractDate(iso: string): string {
-  return format(new Date(iso), 'yyyy/MM/dd', { locale: ja });
+function formatContractDate(iso: string, locale: string): string {
+  return format(new Date(iso), 'yyyy/MM/dd', { locale: locale === 'en' ? enUS : ja });
 }
 
-function formatSessionDateTime(iso: string): string {
-  return format(new Date(iso), 'yyyy/MM/dd (E) HH:mm', { locale: ja });
+function formatSessionDateTime(iso: string, locale: string): string {
+  return format(new Date(iso), 'yyyy/MM/dd (E) HH:mm', { locale: locale === 'en' ? enUS : ja });
 }
 
 interface Props {
@@ -58,6 +59,11 @@ interface Props {
 }
 
 export function LiveSessionManagementView({ clients }: Props) {
+  const t = useTranslations('liveSessions.view');
+  const tDay = useTranslations('liveSessions.day');
+  const tStatus = useTranslations('liveSessions.status');
+  const tScheduleStatus = useTranslations('liveSessions.scheduleStatus');
+  const locale = useLocale();
   const { showToast } = useToast();
 
   const [selectedClientId, setSelectedClientId] = useState('');
@@ -101,10 +107,10 @@ export function LiveSessionManagementView({ clients }: Props) {
     setIsLoadingStudents(true);
     getClientStudents(selectedClientId).then((result) => {
       setStudents(result.success ? result.students : []);
-      if (!result.success) showToast('生徒一覧の取得に失敗しました', 'error');
+      if (!result.success) showToast(t('toastStudentsFetchFailed'), 'error');
       setIsLoadingStudents(false);
     });
-  }, [selectedClientId, showToast]);
+  }, [selectedClientId, showToast, t]);
 
   // 生徒が変わったら契約・以降の選択状態をリセットして再取得
   useEffect(() => {
@@ -130,7 +136,7 @@ export function LiveSessionManagementView({ clients }: Props) {
       getSessionsForTicket(ticketId),
     ]);
     setSlots(slotsResult.success ? slotsResult.slots : []);
-    if (!slotsResult.success) showToast('スケジュール枠の取得に失敗しました', 'error');
+    if (!slotsResult.success) showToast(t('toastSlotsFetchFailed'), 'error');
     setSessions(sessionsResult);
     setIsLoadingDetail(false);
   };
@@ -151,10 +157,10 @@ export function LiveSessionManagementView({ clients }: Props) {
     try {
       const result = await releaseLessonScheduleSlot(scheduleId);
       if (result.success) {
-        showToast('担当コーチの枠を終了しました。生徒は新しいコーチへ再度リクエストできます', 'success');
+        showToast(t('toastReleaseSuccess'), 'success');
         await loadTicketDetail(selectedTicketId);
       } else {
-        showToast(result.message || '処理に失敗しました', 'error');
+        showToast(result.message || t('toastReleaseFailed'), 'error');
       }
     } finally {
       setReleasingScheduleId(null);
@@ -184,12 +190,12 @@ export function LiveSessionManagementView({ clients }: Props) {
 
   const renderSessionList = (list: CoachSessionListItem[], disableActions: boolean) => {
     if (list.length === 0) {
-      return <p className="text-xs text-slate-400 py-4">該当するセッションはありません</p>;
+      return <p className="text-xs text-slate-400 py-4">{t('noSessionsInList')}</p>;
     }
     return (
       <ul className="space-y-1.5 max-h-96 overflow-y-auto">
         {list.map((session) => {
-          const badge = getAdminSessionStatusBadge(session);
+          const badge = getAdminSessionStatusBadge(session, tStatus);
           const isScheduled = session.status === SESSION_STATUS.SCHEDULED;
           return (
             <li
@@ -197,8 +203,8 @@ export function LiveSessionManagementView({ clients }: Props) {
               className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-slate-100 bg-white"
             >
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-700">{formatSessionDateTime(session.start_datetime)}</p>
-                <p className="text-[11px] text-slate-400">担当: {session.coach_name}</p>
+                <p className="text-xs font-semibold text-slate-700">{formatSessionDateTime(session.start_datetime, locale)}</p>
+                <p className="text-[11px] text-slate-400">{t('assignedCoachInline', { name: session.coach_name })}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {isScheduled && !disableActions && (
@@ -209,7 +215,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                     className="h-7 px-2 text-[11px] text-slate-500 hover:text-rose-600"
                     onClick={() => setCancelTarget(session)}
                   >
-                    キャンセル
+                    {t('cancelButton')}
                   </Button>
                 )}
                 <Badge variant="outline" className={`${badge.className} text-[10px] font-bold`}>
@@ -229,30 +235,30 @@ export function LiveSessionManagementView({ clients }: Props) {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <Users size={14} className="text-indigo-500" />
-            対象の選択
+            {t('cardTitleSelect')}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">顧客</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('clientLabel')}</Label>
               <SearchableSelect
                 options={clients.map((c) => ({ value: c.client_id, label: c.client_name }))}
                 value={selectedClientId}
                 onChange={setSelectedClientId}
-                placeholder="顧客を選択"
-                searchPlaceholder="顧客名で検索..."
+                placeholder={t('clientPlaceholder')}
+                searchPlaceholder={t('clientSearchPlaceholder')}
                 className="bg-white"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">生徒</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('studentLabel')}</Label>
               <SearchableSelect
-                options={students.map((s) => ({ value: s.id, label: `${s.user_name}（${s.email}）` }))}
+                options={students.map((s) => ({ value: s.id, label: t('studentOptionLabel', { name: s.user_name, email: s.email }) }))}
                 value={selectedStudentId}
                 onChange={setSelectedStudentId}
-                placeholder={isLoadingStudents ? '読み込み中...' : '生徒を選択'}
-                searchPlaceholder="生徒名・メールで検索..."
+                placeholder={isLoadingStudents ? t('studentPlaceholderLoading') : t('studentPlaceholder')}
+                searchPlaceholder={t('studentSearchPlaceholder')}
                 disabled={!selectedClientId || isLoadingStudents}
                 className="bg-white"
               />
@@ -262,23 +268,23 @@ export function LiveSessionManagementView({ clients }: Props) {
           <div className="hidden sm:block w-px bg-slate-200" />
 
           <div className="border-t sm:border-t-0 border-slate-200 pt-4 sm:pt-0 flex-1 space-y-1.5">
-            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">契約</Label>
+            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('contractLabel')}</Label>
             {!selectedStudentId ? (
               <>
                 <select disabled value="" className="flex h-9 w-full rounded-md border border-input bg-slate-50 px-3 text-sm text-slate-400 shadow-sm cursor-not-allowed">
-                  <option value="">生徒を選択してください</option>
+                  <option value="">{t('selectStudentFirst')}</option>
                 </select>
                 <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 px-3 py-2.5 min-h-13 flex items-center">
-                  <p className="text-xs text-slate-300">生徒を選択すると契約プランの情報が表示されます</p>
+                  <p className="text-xs text-slate-300">{t('selectStudentHint')}</p>
                 </div>
               </>
             ) : isLoadingContracts ? (
               <div className="flex items-center gap-2 text-xs text-slate-400 h-9">
                 <Loader2 size={14} className="animate-spin" />
-                契約を確認しています...
+                {t('checkingContracts')}
               </div>
             ) : contracts.length === 0 ? (
-              <p className="text-xs text-slate-400">この生徒はライブセッション付き契約を保有していません</p>
+              <p className="text-xs text-slate-400">{t('noLiveSessionContract')}</p>
             ) : (
               <>
                 <select
@@ -288,8 +294,8 @@ export function LiveSessionManagementView({ clients }: Props) {
                 >
                   {contracts.map((c) => (
                     <option key={c.ticket_id} value={c.ticket_id}>
-                      {c.is_current ? '現在の契約 ' : '過去の契約（参照のみ） '}
-                      {formatContractDate(c.start_date)} 〜 {formatContractDate(c.end_date)}
+                      {c.is_current ? t('contractCurrent') : t('contractPast')}
+                      {t('contractDateRange', { start: formatContractDate(c.start_date, locale), end: formatContractDate(c.end_date, locale) })}
                     </option>
                   ))}
                 </select>
@@ -297,8 +303,8 @@ export function LiveSessionManagementView({ clients }: Props) {
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5 space-y-1 min-h-13">
                     <p className="text-xs font-bold text-slate-700">{selectedContract.plan_name}</p>
                     <div className="flex items-center gap-3 text-[11px] text-slate-500">
-                      <span>週{selectedContract.weekly_frequency}回</span>
-                      <span>{selectedContract.used_sessions}/{selectedContract.total_sessions}回消化</span>
+                      <span>{t('weeklyFrequency', { count: selectedContract.weekly_frequency })}</span>
+                      <span>{t('usedSessions', { used: selectedContract.used_sessions, total: selectedContract.total_sessions })}</span>
                     </div>
                   </div>
                 )}
@@ -313,10 +319,10 @@ export function LiveSessionManagementView({ clients }: Props) {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
               <Video size={14} className="text-indigo-500" />
-              ライブセッション予約状況
+              {t('reservationCardTitle')}
               {isPastContract && (
                 <Badge variant="outline" className="bg-slate-100 text-slate-500 border-slate-200 text-[10px] font-bold">
-                  過去契約（参照のみ）
+                  {t('pastContractBadge')}
                 </Badge>
               )}
             </CardTitle>
@@ -331,13 +337,13 @@ export function LiveSessionManagementView({ clients }: Props) {
               ) : (
                 <>
                   <div className="space-y-2">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">定期スケジュール枠</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('regularScheduleTitle')}</p>
                     {slots.length === 0 && unassignedSlotNos.length === 0 ? (
-                      <p className="text-xs text-slate-400">まだマッチングが成立していません</p>
+                      <p className="text-xs text-slate-400">{t('noMatchingYet')}</p>
                     ) : (
                       <div className="space-y-2">
                         {slots.map((slot) => {
-                          const statusInfo = ADMIN_SCHEDULE_STATUS_LABEL[slot.status] ?? { label: '不明', className: 'bg-slate-100 text-slate-500 border-slate-200' };
+                          const statusInfo = getAdminScheduleStatusLabel(slot.status, tScheduleStatus);
                           const isActive = slot.status === 1;
                           return (
                             <div
@@ -347,18 +353,18 @@ export function LiveSessionManagementView({ clients }: Props) {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-xs font-bold text-slate-700">
-                                    第{slot.slot_no}枠: {DAY_LABELS_JA[slot.day_of_week]}曜 {slot.start_time.slice(0, 5)}〜{slot.end_time.slice(0, 5)}
+                                    {t('slotLabel', { slotNo: slot.slot_no, day: tDay(DAY_KEYS[slot.day_of_week]), start: slot.start_time.slice(0, 5), end: slot.end_time.slice(0, 5) })}
                                   </span>
                                   <Badge variant="outline" className={`${statusInfo.className} text-[10px] font-bold`}>
                                     {statusInfo.label}
                                   </Badge>
                                   {isActive && slot.shortfall > 0 && (
                                     <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-100 text-[10px] font-bold">
-                                      未割当 {slot.shortfall}枠
+                                      {t('unassignedShortfall', { count: slot.shortfall })}
                                     </Badge>
                                   )}
                                 </div>
-                                <p className="text-[11px] text-slate-400 mt-0.5">担当コーチ: {slot.coach_name}</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">{t('assignedCoach', { name: slot.coach_name })}</p>
                               </div>
                               {isActive && !isPastContract && (
                                 <div className="flex items-center gap-2 shrink-0">
@@ -371,7 +377,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                                       onClick={() => setBookTarget(slot)}
                                     >
                                       <CalendarClock size={13} />
-                                      セッションを予約
+                                      {t('bookSessionButton')}
                                     </Button>
                                   )}
                                   <AlertDialog>
@@ -388,28 +394,31 @@ export function LiveSessionManagementView({ clients }: Props) {
                                         ) : (
                                           <RefreshCcw size={13} />
                                         )}
-                                        コーチ交代
+                                        {t('reassignCoachButton')}
                                       </Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
                                       <AlertDialogHeader className="space-y-3">
-                                        <AlertDialogTitle className="text-lg font-black text-slate-800">担当コーチの交代</AlertDialogTitle>
+                                        <AlertDialogTitle className="text-lg font-black text-slate-800">{t('reassignDialogTitle')}</AlertDialogTitle>
                                         <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
-                                          第{slot.slot_no}枠（{DAY_LABELS_JA[slot.day_of_week]}曜 {slot.start_time.slice(0, 5)}〜{slot.end_time.slice(0, 5)}、担当: {slot.coach_name}）の担当を終了します。<br />
-                                          まだ実施されていない今後のセッションはキャンセルされます（実施済みのセッション結果・チャット・宿題は削除されません）。<br />
-                                          終了後、生徒は同じ枠に対して新しいコーチへ改めてリクエストできるようになります（または下の「直接マッチング」でその場で割り当てられます）。<br />
-                                          この操作を実行してもよろしいですか？
+                                          {t('reassignDialogBody', {
+                                            slotNo: slot.slot_no,
+                                            day: tDay(DAY_KEYS[slot.day_of_week]),
+                                            start: slot.start_time.slice(0, 5),
+                                            end: slot.end_time.slice(0, 5),
+                                            coach: slot.coach_name,
+                                          })}
                                         </AlertDialogDescription>
                                       </AlertDialogHeader>
                                       <AlertDialogFooter className="flex gap-3 sm:justify-center mt-6">
                                         <AlertDialogCancel className="flex-1 h-11 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">
-                                          キャンセル
+                                          {t('cancelButton')}
                                         </AlertDialogCancel>
                                         <AlertDialogAction
                                           onClick={() => handleReleaseSlot(slot.schedule_id)}
                                           className="flex-1 h-11 rounded-2xl bg-amber-600 text-white font-bold hover:bg-amber-700 border-none"
                                         >
-                                          実行する
+                                          {t('executeButton')}
                                         </AlertDialogAction>
                                       </AlertDialogFooter>
                                     </AlertDialogContent>
@@ -426,12 +435,12 @@ export function LiveSessionManagementView({ clients }: Props) {
                           >
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-bold text-slate-400">第{slotNo}枠</span>
+                                <span className="text-xs font-bold text-slate-400">{t('unassignedSlotLabel', { slotNo })}</span>
                                 <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-100 text-[10px] font-bold">
-                                  未割当
+                                  {t('unassignedBadge')}
                                 </Badge>
                               </div>
-                              <p className="text-[11px] text-slate-400 mt-0.5">まだコーチが割り当てられていません</p>
+                              <p className="text-[11px] text-slate-400 mt-0.5">{t('unassignedHint')}</p>
                             </div>
                             <Button
                               type="button"
@@ -441,7 +450,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                               onClick={() => openMatchDialog(slotNo)}
                             >
                               <UserPlus size={13} />
-                              直接マッチング
+                              {t('directMatchButton')}
                             </Button>
                           </div>
                         ))}
@@ -450,18 +459,18 @@ export function LiveSessionManagementView({ clients }: Props) {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">セッション一覧</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('sessionListTitle')}</p>
                     <p className="text-[10px] text-slate-400">
-                      ※ 日時を変更する場合は、キャンセル（チケット返還あり）後、上部の定期スケジュール枠から改めて予約してください
+                      {t('sessionListHint')}
                     </p>
                     {sessions.length === 0 ? (
-                      <p className="text-xs text-slate-400">セッションはまだありません</p>
+                      <p className="text-xs text-slate-400">{t('noSessionsYet')}</p>
                     ) : (
                       <Tabs value={sessionTab} onValueChange={setSessionTab}>
                         <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="upcoming">今後の予定</TabsTrigger>
-                          <TabsTrigger value="completed">実施済み</TabsTrigger>
-                          <TabsTrigger value="changes">変更履歴</TabsTrigger>
+                          <TabsTrigger value="upcoming">{t('tabUpcoming')}</TabsTrigger>
+                          <TabsTrigger value="completed">{t('tabCompleted')}</TabsTrigger>
+                          <TabsTrigger value="changes">{t('tabChanges')}</TabsTrigger>
                         </TabsList>
                         <TabsContent value="upcoming">
                           {renderSessionList(upcomingSessions, isPastContract)}

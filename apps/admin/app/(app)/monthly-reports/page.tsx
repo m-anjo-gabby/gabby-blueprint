@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { getCoachesForMonthlyReport, getCoachMonthlyReportForAdmin } from '@/actions/adminMonthlyReportAction';
 import { CoachMonthSelector } from './_components/CoachMonthSelector';
 import { ApprovalControlBar } from './_components/ApprovalControlBar';
@@ -15,6 +16,7 @@ export default async function AdminMonthlyReportsPage({
 }: {
   searchParams: Promise<{ coachId?: string; month?: string }>;
 }) {
+  const t = await getTranslations('monthlyReports.page');
   const params = await searchParams;
   const coaches = await getCoachesForMonthlyReport();
   const coachId = params.coachId || coaches[0]?.id || '';
@@ -26,9 +28,9 @@ export default async function AdminMonthlyReportsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">月次コーチングレポート</h1>
+        <h1 className="text-xl font-bold text-slate-800">{t('title')}</h1>
         <p className="text-xs text-slate-500 mt-1">
-          コーチ毎・月毎のライブセッション実施状況を確認し、稼働を承認します。
+          {t('subtitle')}
         </p>
       </div>
 
@@ -36,7 +38,7 @@ export default async function AdminMonthlyReportsPage({
 
       {!coachId ? (
         <div className="rounded-lg border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400">
-          コーチが登録されていません。
+          {t('noCoaches')}
         </div>
       ) : !result?.success ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,7 @@ interface WordListProps {
 }
 
 export function WordList({ contentId }: WordListProps) {
+  const t = useTranslations('contents.editor.word.wordList');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -39,11 +41,11 @@ export function WordList({ contentId }: WordListProps) {
       const data = await getWordsByContentId(contentId);
       setWords(data);
     } catch (error) {
-      showToast("単語の取得に失敗しました", "error");
+      showToast(t('fetchFailed'), "error");
     } finally {
       setIsLoading(false);
     }
-  }, [contentId, showToast]);
+  }, [contentId, showToast, t]);
 
   useEffect(() => {
     fetchWords();
@@ -88,7 +90,7 @@ export function WordList({ contentId }: WordListProps) {
       const result = await deleteWord(wordId);
       
       if (result.success) {
-        showToast("単語を削除しました", "success");
+        showToast(t('deleted'), "success");
 
         // アクション側で revalidatePath されていますが、
         // クライアントサイドの state を即時更新するために fetchWords を呼びます
@@ -99,11 +101,11 @@ export function WordList({ contentId }: WordListProps) {
           router.push(pathname);
         }
       } else {
-        showToast(result.message || "削除に失敗しました", "error");
+        showToast(result.message || t('deleteFailed'), "error");
       }
     } catch (error) {
       console.error("Delete Error:", error);
-      showToast("システムエラーが発生しました", "error");
+      showToast(t('systemError'), "error");
     }
   };
 
@@ -193,22 +195,25 @@ export function WordList({ contentId }: WordListProps) {
                               <AlertCircle size={32} />
                             </div>
                             <div className="text-center space-y-2">
-                              <AlertDialogTitle className="text-xl font-black text-slate-800">単語削除の確認</AlertDialogTitle>
+                              <AlertDialogTitle className="text-xl font-black text-slate-800">{t('deleteDialogTitle')}</AlertDialogTitle>
                               <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
-                                <span className="font-bold text-slate-900">「{word.word_en}」</span>を削除しますか？<br />
-                                この操作により、紐づく例文もすべて削除されます。
+                                {t.rich('deleteDialogBody', {
+                                  word: word.word_en,
+                                  bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
+                                })}<br />
+                                {t('deleteDialogHint')}
                               </AlertDialogDescription>
                             </div>
                           </AlertDialogHeader>
                           <AlertDialogFooter className="flex gap-3 mt-6">
                             <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-slate-100 font-bold text-slate-500">
-                              キャンセル
+                              {t('cancelButton')}
                             </AlertDialogCancel>
-                            <AlertDialogAction 
+                            <AlertDialogAction
                               onClick={() => handleDelete(word.word_id)}
                               className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg"
                             >
-                              削除する
+                              {t('deleteConfirmButton')}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function ContentTagDialog({ content }: Props) {
+  const t = useTranslations('contents.tagDialog')
   const [open, setOpen] = useState(false)
   const [isAddMode, setIsAddMode] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -39,11 +41,11 @@ export function ContentTagDialog({ content }: Props) {
       setAssignedTags(data.assignedTags)
       setUnassignedTags(data.unassignedTags)
     } catch (error) {
-      showToast('タグデータの取得に失敗しました', 'error')
+      showToast(t('toastFetchFailed'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [content.content_id, showToast])
+  }, [content.content_id, showToast, t])
 
   useEffect(() => {
     if (open) {
@@ -59,10 +61,10 @@ export function ContentTagDialog({ content }: Props) {
       const res = await assignTag(content.content_id, tagId)
       if (res.success) {
         await loadData() // 一覧を再読込
-        showToast('タグを追加しました', 'success')
+        showToast(t('toastAdded'), 'success')
       }
     } catch {
-      showToast('タグの追加に失敗しました', 'error')
+      showToast(t('toastAddFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -75,10 +77,10 @@ export function ContentTagDialog({ content }: Props) {
       const res = await removeTag(content.content_id, tagId)
       if (res.success) {
         await loadData()
-        showToast('タグを解除しました', 'success')
+        showToast(t('toastRemoved'), 'success')
       }
     } catch {
-      showToast('タグの解除に失敗しました', 'error')
+      showToast(t('toastRemoveFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -105,7 +107,7 @@ export function ContentTagDialog({ content }: Props) {
               variant="ghost"
               size="sm"
               className="h-5 w-5 p-0 text-indigo-500 bg-indigo-50/50 border border-indigo-100 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 rounded-full transition-all duration-200 shadow-sm ml-1"
-              title="タグを編集"
+              title={t('editTagsTitle')}
             >
               <Plus size={12} strokeWidth={3} />
             </Button>
@@ -118,7 +120,7 @@ export function ContentTagDialog({ content }: Props) {
             className="h-7 px-2 text-[10px] border-dashed border-slate-300 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 rounded-lg transition-all group/btn"
           >
             <TagIcon size={10} className="mr-1.5" />
-            <span className="font-bold mr-1.5">未設定</span>
+            <span className="font-bold mr-1.5">{t('unsetLabel')}</span>
             {/* プラスアイコン */}
             <Plus 
               size={12} 
@@ -133,7 +135,7 @@ export function ContentTagDialog({ content }: Props) {
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Hash className="text-indigo-400" size={20} />
-            {isAddMode ? 'タグを追加' : '設定中のタグ'}
+            {isAddMode ? t('addModeTitle') : t('listModeTitle')}
           </DialogTitle>
         </DialogHeader>
 
@@ -149,27 +151,27 @@ export function ContentTagDialog({ content }: Props) {
                 onClick={() => setIsAddMode(false)} 
                 className="h-8 text-slate-500 hover:text-indigo-600 p-0 font-bold"
               >
-                <ArrowLeft size={16} className="mr-1" /> 戻る
+                <ArrowLeft size={16} className="mr-1" /> {t('backButton')}
               </Button>
-              
+
               <ScrollArea className="h-[350px] pr-4">
                 {unassignedTags.length === 0 ? (
                   /* 全タグ割当済み、またはマスタが空の場合のエンプティステート */
                   <div className="text-center py-20 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                     <CheckCircle2 className="mx-auto text-emerald-400 mb-2" size={32} />
                     <p className="text-sm text-slate-500 font-bold px-4">
-                      追加できるタグがありません
+                      {t('emptyUnassignedTitle')}
                     </p>
                     <p className="text-[10px] text-slate-400 mt-1 px-6 leading-relaxed">
-                      すべてのタグが設定済みか、<br />
-                      タグ自体が登録されていません。
+                      {t('emptyUnassignedBody1')}<br />
+                      {t('emptyUnassignedBody2')}
                     </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-2">
                     {unassignedTags.map(tag => (
-                      <div 
-                        key={tag.tag_id} 
+                      <div
+                        key={tag.tag_id}
                         className="flex items-center justify-between p-3 border rounded-xl hover:border-indigo-200 transition-colors bg-slate-50/50 group"
                       >
                         <div>
@@ -178,13 +180,13 @@ export function ContentTagDialog({ content }: Props) {
                             {tag.tag_type}
                           </Badge>
                         </div>
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleAdd(tag.tag_id)} 
-                          disabled={loading} 
+                        <Button
+                          size="sm"
+                          onClick={() => handleAdd(tag.tag_id)}
+                          disabled={loading}
                           className="bg-indigo-600 hover:bg-indigo-700 h-8 rounded-lg shadow-sm font-bold"
                         >
-                          追加
+                          {t('addButtonLabel')}
                         </Button>
                       </div>
                     ))}
@@ -198,7 +200,7 @@ export function ContentTagDialog({ content }: Props) {
               <div className="flex justify-between items-center">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Current Tags</p>
                 <Button size="sm" onClick={() => setIsAddMode(true)} className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 rounded-lg shadow-md transition-all active:scale-95 h-8">
-                  <Plus size={14} /> タグを追加
+                  <Plus size={14} /> {t('addTagButton')}
                 </Button>
               </div>
 
@@ -206,7 +208,7 @@ export function ContentTagDialog({ content }: Props) {
                 {assignedTags.length === 0 ? (
                   <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                     <TagIcon className="mx-auto text-slate-300 mb-2" size={32} />
-                    <p className="text-sm text-slate-400 font-medium">タグが設定されていません</p>
+                    <p className="text-sm text-slate-400 font-medium">{t('emptyAssigned')}</p>
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -230,7 +232,7 @@ export function ContentTagDialog({ content }: Props) {
         </div>
 
         <DialogFooter className="p-4 bg-slate-50 border-t flex justify-center">
-           <p className="text-[10px] text-slate-400 font-medium italic">※ タグは教材の検索・分類に使用されます</p>
+           <p className="text-[10px] text-slate-400 font-medium italic">{t('footerHint')}</p>
         </DialogFooter>
       </DialogContent>
     </Dialog>

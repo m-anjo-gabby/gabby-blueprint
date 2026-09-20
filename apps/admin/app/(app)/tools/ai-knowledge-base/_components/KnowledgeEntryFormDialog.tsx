@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -14,15 +15,19 @@ import { Alert } from '@/components/ui/alert';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { saveKnowledgeEntryAction, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
 import { PlusCircle, Edit, Sparkles, Loader2 } from 'lucide-react';
-import { KNOWLEDGE_SOURCE_TYPE_OPTIONS } from '../_lib/knowledgeSourceTypes';
+import { getKnowledgeSourceTypeOptions } from '../_lib/knowledgeSourceTypes';
 
-const entrySchema = z.object({
-  sourceType: z.string().min(1, '区分を選択してください'),
-  title: z.string().min(1, 'タイトルは必須です'),
-  body: z.string().min(1, '本文は必須です'),
-});
+type FormT = ReturnType<typeof useTranslations<'tools.aiKnowledgeBase.formDialog'>>;
 
-type EntryFormValues = z.infer<typeof entrySchema>;
+function createEntrySchema(t: FormT) {
+  return z.object({
+    sourceType: z.string().min(1, t('errors.sourceTypeRequired')),
+    title: z.string().min(1, t('errors.titleRequired')),
+    body: z.string().min(1, t('errors.bodyRequired')),
+  });
+}
+
+type EntryFormValues = z.infer<ReturnType<typeof createEntrySchema>>;
 
 interface KnowledgeEntryFormDialogProps {
   mode?: 'create' | 'edit';
@@ -35,6 +40,10 @@ export function KnowledgeEntryFormDialog({
   initialData,
   onSuccess,
 }: KnowledgeEntryFormDialogProps) {
+  const t = useTranslations('tools.aiKnowledgeBase.formDialog');
+  const tSourceTypes = useTranslations('tools.aiKnowledgeBase.sourceTypes');
+  const sourceTypeOptions = useMemo(() => getKnowledgeSourceTypeOptions(tSourceTypes), [tSourceTypes]);
+  const entrySchema = useMemo(() => createEntrySchema(t), [t]);
   const [open, setOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -63,14 +72,14 @@ export function KnowledgeEntryFormDialog({
       });
 
       if (result.success) {
-        showToast(mode === 'create' ? 'ナレッジを登録しました' : 'ナレッジを更新しました', 'success');
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         onSuccess?.();
       } else {
-        setServerError(result.message || '処理に失敗しました');
+        setServerError(result.message || t('toastGenericFailed'));
       }
     } catch {
-      setServerError('システムエラーが発生しました');
+      setServerError(t('toastSystemError'));
     }
   };
 
@@ -85,7 +94,7 @@ export function KnowledgeEntryFormDialog({
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-1.5 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none shrink-0 h-9 text-xs">
-            <PlusCircle size={14} /> 新規ナレッジ登録
+            <PlusCircle size={14} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50">
@@ -100,7 +109,7 @@ export function KnowledgeEntryFormDialog({
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             <Sparkles size={18} className="text-indigo-400" />
-            {mode === 'create' ? 'ナレッジの新規登録' : 'ナレッジの編集'}
+            {mode === 'create' ? t('createTitle') : t('editTitle')}
           </DialogTitle>
         </DialogHeader>
 
@@ -112,15 +121,15 @@ export function KnowledgeEntryFormDialog({
                 name="sourceType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">区分</FormLabel>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('typeLabel')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="rounded-xl border-slate-200">
-                          <SelectValue placeholder="選択..." />
+                          <SelectValue placeholder={t('typePlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {KNOWLEDGE_SOURCE_TYPE_OPTIONS.map((o) => (
+                        {sourceTypeOptions.map((o) => (
                           <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                         ))}
                       </SelectContent>
@@ -135,9 +144,9 @@ export function KnowledgeEntryFormDialog({
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">タイトル</FormLabel>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('titleLabel')}</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="例: パスワードを忘れた場合" className="rounded-xl border-slate-200 font-bold" />
+                      <Input {...field} placeholder={t('titlePlaceholder')} className="rounded-xl border-slate-200 font-bold" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -150,11 +159,11 @@ export function KnowledgeEntryFormDialog({
               name="body"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">本文</FormLabel>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('bodyLabel')}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
-                      placeholder="AIが検索・回答の根拠として使う本文を入力してください"
+                      placeholder={t('bodyPlaceholder')}
                       className="min-h-[220px] rounded-xl border-slate-200 resize-y leading-relaxed"
                     />
                   </FormControl>
@@ -164,7 +173,7 @@ export function KnowledgeEntryFormDialog({
             />
 
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              保存すると本文からEmbeddingが自動生成され、AIチャットのRAG検索対象になります。
+              {t('embeddingHint')}
             </p>
 
             {serverError && <Alert variant="destructive" className="text-xs py-2">{serverError}</Alert>}
@@ -176,7 +185,7 @@ export function KnowledgeEntryFormDialog({
                 disabled={isSubmitting}
               >
                 {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                {isSubmitting ? '保存中（Embedding生成）...' : '保存する'}
+                {isSubmitting ? t('savingButton') : t('saveButton')}
               </Button>
             </div>
           </form>

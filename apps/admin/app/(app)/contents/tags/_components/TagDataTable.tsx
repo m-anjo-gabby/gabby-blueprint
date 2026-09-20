@@ -9,6 +9,7 @@ import {
   getFilteredRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { useTranslations } from 'next-intl';
 import {
   Table,
   TableBody,
@@ -56,6 +57,7 @@ const typeColors: Record<TagType, string> = {
 };
 
 export function TagDataTable({ data }: TagTableProps) {
+  const t = useTranslations('contents.tags.table');
   const { showToast } = useToast();
   const [globalFilter, setGlobalFilter] = React.useState('');
 
@@ -65,9 +67,9 @@ export function TagDataTable({ data }: TagTableProps) {
   const handleDelete = async (id: string) => {
     const result = await deleteTag(id);
     if (result.success) {
-      showToast("タグを削除しました", "success");
+      showToast(t('toastDeleted'), "success");
     } else {
-      showToast("削除に失敗しました", "error");
+      showToast(t('toastDeleteFailed'), "error");
     }
   };
 
@@ -82,7 +84,7 @@ export function TagDataTable({ data }: TagTableProps) {
     },
     {
       accessorKey: "tag_type",
-      header: "タイプ",
+      header: t('typeHeader'),
       cell: ({ row }) => (
         <Badge variant="outline" className={`${typeColors[row.original.tag_type]} font-bold`}>
           {TAG_TYPES[row.original.tag_type].label}
@@ -91,21 +93,21 @@ export function TagDataTable({ data }: TagTableProps) {
     },
     {
       accessorKey: "tag_name",
-      header: "表示名称",
+      header: t('nameHeader'),
       cell: ({ row }) => <span className="font-bold text-slate-700">{row.original.tag_name}</span>,
     },
     {
       accessorKey: "tag_id",
-      header: "タグID",
+      header: t('idHeader'),
       cell: ({ row }) => <span className="text-[10px] text-slate-400 font-mono">{row.original.tag_id}</span>,
     },
     {
       id: "actions",
-      header: () => <div className="text-right">操作</div>,
+      header: () => <div className="text-right">{t('actionsHeader')}</div>,
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
           <TagFormDialog mode="edit" initialData={row.original} />
-          
+
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50">
@@ -114,19 +116,22 @@ export function TagDataTable({ data }: TagTableProps) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle className="font-black">タグの削除</AlertDialogTitle>
+                <AlertDialogTitle className="font-black">{t('deleteDialogTitle')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  タグ「<span className="font-bold text-slate-900">{row.original.tag_name}</span>」を削除してもよろしいですか？<br />
-                  この操作は取り消せません。
+                  {t.rich('deleteDialogBody', {
+                    name: row.original.tag_name,
+                    bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
+                  })}<br />
+                  {t('deleteDialogHint')}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-xl font-bold">キャンセル</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={() => handleDelete(row.original.tag_id)} 
+                <AlertDialogCancel className="rounded-xl font-bold">{t('cancelButton')}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => handleDelete(row.original.tag_id)}
                   className="bg-rose-600 hover:bg-rose-700 rounded-xl font-bold"
                 >
-                  削除する
+                  {t('deleteConfirmButton')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -134,7 +139,7 @@ export function TagDataTable({ data }: TagTableProps) {
         </div>
       ),
     },
-  ], []);
+  ], [t]);
 
   const table = useReactTable({
     data,
@@ -163,7 +168,7 @@ export function TagDataTable({ data }: TagTableProps) {
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
-              placeholder="タグ名、IDで検索..."
+              placeholder={t('searchPlaceholder')}
               value={globalFilter ?? ""}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="pl-10 pr-10 h-9 bg-white border-slate-200 focus-visible:ring-1 focus-visible:ring-slate-400 shadow-sm"
@@ -183,7 +188,10 @@ export function TagDataTable({ data }: TagTableProps) {
         {/* 右側：ページネーション操作系 */}
         <div className="flex items-center gap-4">
           <div className="hidden md:block text-[13px] text-slate-500 whitespace-nowrap font-medium">
-            全 <span className="text-slate-900">{table.getFilteredRowModel().rows.length}</span> 件
+            {t.rich('totalCount', {
+              count: table.getFilteredRowModel().rows.length,
+              styled: (chunks) => <span className="text-slate-900">{chunks}</span>,
+            })}
           </div>
           
           <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-sm">
@@ -247,7 +255,7 @@ export function TagDataTable({ data }: TagTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  タグデータが見つかりませんでした。
+                  {t('noData')}
                 </TableCell>
               </TableRow>
             )}
