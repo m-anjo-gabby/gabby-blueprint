@@ -8,6 +8,7 @@ export const CONTENT_TYPES = {
   0: { label: '単語帳', value: 0 },
   1: { label: 'ビデオ', value: 1 },
   2: { label: 'スプリント', value: 2 },
+  3: { label: 'ダイアログプラクティス', value: 3 },
 } as const;
 
 // タグ種別
