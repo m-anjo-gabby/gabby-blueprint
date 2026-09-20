@@ -1594,6 +1594,9 @@
         "notReady": "The editor for this content type is coming soon"
       },
       "word": {
+        "index": {
+          "emptyState": "Select a word to manage phrases"
+        },
         "wordList": {
           "fetchFailed": "Failed to fetch words",
           "deleted": "Word deleted",
@@ -1643,6 +1646,18 @@
           "confirmDeletePhrase": "Delete “{preview}”? This action cannot be undone.",
           "cancelButton": "Cancel",
           "deleteConfirmButton": "Delete"
+        },
+        "ttsDialog": {
+          "toastManualMode": "Switched to manual edit mode.",
+          "toastAutoMode": "Switched to auto mode. Settings synced.",
+          "toastReset": "All settings have been reset.",
+          "toastSaved": "Audio saved successfully.",
+          "toastSaveFailed": "Failed to save audio.",
+          "toastError": "An error occurred."
+        },
+        "ttsBulkDialog": {
+          "toastFetchFailed": "Failed to fetch phrases.",
+          "toastCompleted": "Successfully generated {count} audio files."
         },
         "phraseFormDialog": {
           "createButton": "Add Phrase",

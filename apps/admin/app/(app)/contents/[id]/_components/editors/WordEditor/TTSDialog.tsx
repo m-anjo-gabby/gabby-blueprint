@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ const DEFAULT_PARAMS: TTSParameters = {
 };
 
 export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
+  const t = useTranslations('contents.editor.word.ttsDialog');
   const [open, setOpen] = useState(false);
   const [params, setParams] = useState<TTSParameters>(DEFAULT_PARAMS);
   const [ssml, setSsml] = useState(phrase.tts_ssml || '');
@@ -101,7 +103,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     } else {
       // Auto -> Manual はそのまま移行
       setSsmlMode('manual');
-      showToast("Switched to manual edit mode.", "info");
+      showToast(t('toastManualMode'), "info");
     }
   };
 
@@ -111,7 +113,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     const resetSsml = rebuildSSML(params, adjustments);
     setSsml(resetSsml);
     setShowModeAlert(false);
-    showToast("Switched to auto mode. Settings synced.", "success");
+    showToast(t('toastAutoMode'), "success");
   };
 
   const handleReset = () => {
@@ -126,7 +128,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
       ipa: '' 
     })));
     setSsmlMode('auto');
-    showToast("All settings have been reset.", "info");
+    showToast(t('toastReset'), "info");
   };
 
   const handleSave = async () => {
@@ -147,14 +149,14 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
       // phrase_id, ssml に加え、現在のモードも保存
       const result = await save(phrase.phrase_id, phrase.word_id, ssml, ssmlMode, adjustmentData, phrase.audio_path);
       if (result.success) {
-        showToast("Audio saved successfully.", "success");
+        showToast(t('toastSaved'), "success");
         onUpdate();
         setOpen(false);
       } else {
-        showToast(result.message || "Failed to save audio.", "error");
+        showToast(result.message || t('toastSaveFailed'), "error");
       }
     } catch (e) {
-      showToast("An error occurred.", "error");
+      showToast(t('toastError'), "error");
     } finally {
       setIsProcessing(false);
       setShowSaveAlert(false);

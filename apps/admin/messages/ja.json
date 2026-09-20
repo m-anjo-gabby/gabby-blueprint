@@ -1594,6 +1594,9 @@
         "notReady": "このコンテンツタイプのエディタは準備中です"
       },
       "word": {
+        "index": {
+          "emptyState": "単語を選択するとフレーズを管理できます"
+        },
         "wordList": {
           "fetchFailed": "単語の取得に失敗しました",
           "deleted": "単語を削除しました",
@@ -1643,6 +1646,18 @@
           "confirmDeletePhrase": "「{preview}」を削除しますか？この操作は取り消せません。",
           "cancelButton": "キャンセル",
           "deleteConfirmButton": "削除する"
+        },
+        "ttsDialog": {
+          "toastManualMode": "手動編集モードに切り替えました",
+          "toastAutoMode": "自動モードに切り替え、設定を同期しました",
+          "toastReset": "すべての設定をリセットしました",
+          "toastSaved": "音声を保存しました",
+          "toastSaveFailed": "音声の保存に失敗しました",
+          "toastError": "エラーが発生しました"
+        },
+        "ttsBulkDialog": {
+          "toastFetchFailed": "フレーズの取得に失敗しました",
+          "toastCompleted": "{count}件の音声を生成しました"
         },
         "phraseFormDialog": {
           "createButton": "フレーズ追加",
