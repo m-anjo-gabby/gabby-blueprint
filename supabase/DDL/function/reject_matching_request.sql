@@ -10,6 +10,10 @@
 -- 否認完了時、生徒へ通知する(MATCHING_REJECTED)。否認理由(p_reason)はコーチが
 -- 生徒への配慮なく入力する場合もあるため、通知本文にはそのまま転記せず、
 -- 柔らかい定型文のみとする（理由の詳細は生徒がアプリ側の変更履歴等で別途確認する想定）。
+--
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
+-- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.reject_matching_request(p_request_id uuid, p_reason text)
 RETURNS void
@@ -30,9 +34,7 @@ BEGIN
         RAISE EXCEPTION 'matching request % not found', p_request_id;
     END IF;
 
-    IF v_request.coach_id <> auth.uid() AND public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to reject this request';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(v_request.coach_id, 'not authorized to reject this request');
 
     IF v_request.status <> 1 THEN
         RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
@@ -43,8 +45,7 @@ BEGIN
     WHERE request_id = p_request_id;
 
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
-    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
-    VALUES (
+    PERFORM public.fn_notify(
         v_request.student_id,
         'MATCHING_REJECTED',
         jsonb_build_object('coach_name', v_coach_name),

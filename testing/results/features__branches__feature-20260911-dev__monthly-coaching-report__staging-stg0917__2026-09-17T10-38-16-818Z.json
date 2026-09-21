@@ -1,0 +1,140 @@
+{
+  "scenario": "features/branches/feature-20260911-dev/monthly-coaching-report.feature",
+  "env": "staging",
+  "tag": "stg0917",
+  "executedAt": "2026-09-17T10:38:16.818Z",
+  "gitCommit": "f3cbeab4",
+  "gitBranch": "feature/20260918-dev",
+  "totalChecks": 26,
+  "passed": 25,
+  "failed": 1,
+  "ok": false,
+  "checks": [
+    {
+      "name": "前月分: get_coach_monthly_sessionsがコーチ自身のJWTで成功する",
+      "ok": true
+    },
+    {
+      "name": "前月分: 完了/No show/早期終了の3件が揃っている",
+      "ok": true,
+      "detail": "actual=3"
+    },
+    {
+      "name": "前月分: 3件すべてcounts_toward_total=true",
+      "ok": true,
+      "detail": "[{\"status\":2,\"counts_toward_total\":true},{\"status\":2,\"counts_toward_total\":true},{\"status\":2,\"counts_toward_total\":true}]"
+    },
+    {
+      "name": "前月分: No show・早期終了の2件がis_attention=true(完了は含まれない)",
+      "ok": true,
+      "detail": "actual=2"
+    },
+    {
+      "name": "前月分: 未処理セッションが1件、is_unresolved=trueかつcounts_toward_total=false",
+      "ok": false,
+      "detail": "[{\"session_id\":\"b20d8370-f0f6-42ce-9900-583256502bd8\",\"student_id\":\"5079380d-19f5-4b1f-ad0d-00d510d60f9a\",\"start_datetime\":\"2026-08-05T01:00:00+00:00\",\"end_datetime\":\"2026-08-05T01:30:00+00:00\",\"status\":1,\"completion_result\":null,\"cancel_category\":null,\"status_note\":null,\"ticket_refunded\":null,\"counts_toward_total\":false,\"is_unresolved\":true,\"is_attention\":false},{\"session_id\":\"cd1e3794-2723-4e38-a80b-03759982d968\",\"student_id\":\"5079380d-19f5-4b1f-ad0d-00d510d60f9a\",\"start_datetime\":\"2026-08-05T02:00:00+00:00\",\"end_datetime\":\"2026-08-05T02:30:00+00:00\",\"status\":1,\"completion_result\":null,\"cancel_category\":null,\"status_note\":null,\"ticket_refunded\":null,\"counts_toward_total\":false,\"is_unresolved\":true,\"is_attention\":false},{\"session_id\":\"d56da151-10f5-4e38-83a9-134c0ccfec03\",\"student_id\":\"5079380d-19f5-4b1f-ad0d-00d510d60f9a\",\"start_datetime\":\"2026-08-05T03:00:00+00:00\",\"end_datetime\":\"2026-08-05T03:30:00+00:00\",\"status\":1,\"completion_result\":null,\"cancel_category\":null,\"status_note\":null,\"ticket_refunded\":null,\"counts_toward_total\":false,\"is_unresolved\":true,\"is_attention\":false},{\"session_id\":\"783afd3e-5a4b-47d2-8c85-e42839907da6\",\"student_id\":\"5079380d-19f5-4b1f-ad0d-00d510d60f9a\",\"start_datetime\":\"2026-08-12T01:00:00+00:00\",\"end_datetime\":\"2026-08-12T01:30:00+00:00\",\"status\":1,\"completion_result\":null,\"cancel_category\":null,\"status_note\":null,\"ticket_refunded\":null,\"counts_toward_total\":false,\"is_unresolved\":true,\"is_attention\":false},{\"session_id\":\"ed5db12a-bb7e-4dda-850a-e8cfde33d306\",\"student_id\":\"5079380d-19f5-4b1f-ad0d-00d510d60f9a\",\"start_datetime\":\"2026-08-12T01:00:00+00:00\",\"end_datetime\":\"2026-08-12T01:30:00+00:00\",\"status\":1,\"completion_result\":null,\"cancel_category\":null,\"status_note\":null,\"ticket_refunded\":null,\"counts_toward_total\":false,\"is_unresolved\":true,\"is_attention\":false}]"
+    },
+    {
+      "name": "前月分: get_coach_monthly_active_studentsにQA生徒が含まれる",
+      "ok": true,
+      "detail": "[{\"student_id\":\"5079380d-19f5-4b1f-ad0d-00d510d60f9a\",\"user_name\":\"QA生徒（月次レポート・stg0917）\",\"icon_path\":null}]"
+    },
+    {
+      "name": "当月分: get_coach_monthly_sessionsが成功する",
+      "ok": true
+    },
+    {
+      "name": "当月分: 生徒都合キャンセル(12h以内)が1件、counts_toward_total=true・is_attention=true",
+      "ok": true,
+      "detail": "[{\"session_id\":\"037c96c6-9450-4df7-89d4-3802ee554934\",\"student_id\":\"5079380d-19f5-4b1f-ad0d-00d510d60f9a\",\"start_datetime\":\"2026-09-17T16:38:02.027+00:00\",\"end_datetime\":\"2026-09-17T17:03:02.027+00:00\",\"status\":3,\"completion_result\":null,\"cancel_category\":1,\"status_note\":null,\"ticket_refunded\":false,\"counts_toward_total\":true,\"is_unresolved\":false,\"is_attention\":true}]"
+    },
+    {
+      "name": "当月分: コーチ都合キャンセルは実績・要対応のいずれでもないため一覧に含まれない",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "当月分: アドミン代理キャンセルは実績・要対応のいずれでもないため一覧に含まれない",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "当月分: まだ実施されていない予定(status=scheduledかつ終了予定前)は一覧に含まれない",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "権限: 他コーチによる閲覧は not authorized で失敗する",
+      "ok": true,
+      "detail": "not authorized to view this coach's monthly report"
+    },
+    {
+      "name": "権限: コーチ本人による承認は not authorized で失敗する(承認は管理者専用)",
+      "ok": true,
+      "detail": "not authorized to approve this monthly report"
+    },
+    {
+      "name": "承認ブロック: 未処理セッションが残る月はunresolved sessionエラーで承認できない",
+      "ok": true,
+      "detail": "cannot approve while 5 unresolved session(s) remain for this month"
+    },
+    {
+      "name": "承認ブロック: 承認試行が拒否された結果、承認レコードは作成されない(またはstatus=1のまま)",
+      "ok": true,
+      "detail": "null"
+    },
+    {
+      "name": "承認: 未処理セッションが無い月はアドミンJWTでapprove_coach_monthly_reportが成功する",
+      "ok": true
+    },
+    {
+      "name": "承認: statusが承認済み(2)になっている",
+      "ok": true,
+      "detail": "status=2"
+    },
+    {
+      "name": "承認: session_count_snapshotが保存されている",
+      "ok": true,
+      "detail": "{\"total\":1,\"by_student\":[{\"count\":1,\"student_id\":\"5079380d-19f5-4b1f-ad0d-00d510d60f9a\"}]}"
+    },
+    {
+      "name": "承認: approved_by/approved_atが設定されている",
+      "ok": true,
+      "detail": "{\"approved_by\":\"56f96e38-d0d0-40ce-a26a-085fe2338aa4\",\"approved_at\":\"2026-09-17T10:38:16.213756+00:00\"}"
+    },
+    {
+      "name": "承認: rate_amount/rate_currencyが単価マスタの値でスナップショットされている",
+      "ok": true,
+      "detail": "{\"rate_amount\":15,\"rate_currency\":\"CAD\"}"
+    },
+    {
+      "name": "承認: コーチへCOACH_REPORT_APPROVED通知が届いている",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "承認取消し: アドミンJWTでrevoke_coach_monthly_report_approvalが成功する",
+      "ok": true
+    },
+    {
+      "name": "承認取消し: statusが未承認(1)に戻っている",
+      "ok": true,
+      "detail": "status=1"
+    },
+    {
+      "name": "承認取消し: session_count_snapshot/rate_amount/rate_currency/approved_by/approved_atがNULLに戻っている",
+      "ok": true,
+      "detail": "{\"snapshot\":null,\"rate_amount\":null,\"rate_currency\":null,\"approved_by\":null,\"approved_at\":null}"
+    },
+    {
+      "name": "承認取消し: コーチへCOACH_REPORT_APPROVAL_REVOKED通知が届いている",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "承認取消し: 既に未承認の状態で再度取消しを呼ぶと失敗する",
+      "ok": true,
+      "detail": "this monthly report is not approved"
+    }
+  ]
+}

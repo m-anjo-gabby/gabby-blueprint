@@ -18,6 +18,19 @@
 --      （実施済み・不参加・早期終了等の過去の記録は一切変更しない）
 -- 契約自体（com_m_contract）や生徒アカウント自体には触れない。生徒に他の有効ライセンスが
 -- あれば、そちらへの影響もない（本関数は指定されたライセンス1件のみを対象にする）。
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- 対象セッションは旧status=8(cancelled_license_ended)ではなくstatus=3(cancelled)、
+-- cancel_category=4(license_ended)として記録する（table/com_t_session.sqlの
+-- ステータス簡素化パッチ参照）。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
+--
+-- 【一括キャンセル処理の共通化 (2026-09-15追加)】
+-- 「未実施の未来のscheduledセッションのみをキャンセルする」部分は、release_lesson_schedule_slot()と
+-- 同一のUPDATE文だったため、fn_cancel_future_sessions()に切り出した
+-- （前提: function/fn_cancel_future_sessions.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.invalidate_user_license(p_license_id uuid)
 RETURNS void
@@ -29,9 +42,7 @@ DECLARE
     v_license RECORD;
     v_ticket_id uuid;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to invalidate a license';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to invalidate a license');
 
     SELECT * INTO v_license FROM public.com_t_user_license WHERE license_id = p_license_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -60,12 +71,7 @@ BEGIN
         WHERE ticket_id = v_ticket_id AND status = 1;
 
         -- 3. まだ実施されていない未来のセッションのみキャンセルする（過去の記録は変更しない）
-        UPDATE public.com_t_session
-        SET status = 8, -- cancelled_license_ended
-            cancel_reason = 'ライセンス無効化のため',
-            cancelled_by = auth.uid(),
-            update_date = NOW()
-        WHERE ticket_id = v_ticket_id AND status = 1; -- scheduledのみ対象
+        PERFORM public.fn_cancel_future_sessions(NULL, v_ticket_id, 4, 'ライセンス無効化のため'); -- 4=license_ended
     END IF;
 END;
 $$;

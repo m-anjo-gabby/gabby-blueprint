@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
@@ -20,7 +20,7 @@ interface Props {
 const TYPE_ORDER = Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no);
 
 export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const { sprint_progress } = profile;
   const recentSprints = lessonSprints.slice(0, 3);
 

@@ -30,6 +30,10 @@ repomix-output.xml
 .env.test.local
 .env.production.local
 
+# Staging環境向け（自動テスト用途）: シークレットを含むためコミット禁止
+.env.staging
+.env.staging.local
+
 # Github
 .github
 

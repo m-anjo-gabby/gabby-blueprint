@@ -34,6 +34,13 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
     title: 'Reschedule proposal sent',
     body: 'Your proposed reschedule times were sent to the student.',
   }),
+  SESSION_RESCHEDULE_PROPOSED_BY_STUDENT: (payload) => {
+    const count = Number(payload.proposal_count ?? 0);
+    return {
+      title: 'Reschedule candidates received',
+      body: `${String(payload.student_name ?? 'A student')} proposed ${count} candidate time(s) for a cancelled session. Check the requests page.`,
+    };
+  },
   SESSION_CANCELLED_BY_STUDENT: (payload) => ({
     title: 'Session cancelled',
     body: `${String(payload.student_name ?? 'A student')} cancelled a scheduled session.`,
@@ -45,6 +52,24 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
   SESSION_CANCELLED_BY_ADMIN: () => ({
     title: 'Session cancelled',
     body: 'A scheduled session was cancelled. Check your calendar for details.',
+  }),
+  SESSION_UPDATED_BY_ADMIN: () => ({
+    title: 'Session updated',
+    body: 'An administrator updated a scheduled session. Check your calendar for details.',
+  }),
+  SESSION_BOOKING_REQUESTED: (payload) => ({
+    title: 'Booking request received',
+    body: `${String(payload.student_name ?? 'A student')} requested a new session booking. Check the requests page.`,
+  }),
+  SESSION_BOOKING_APPROVED: () => ({
+    // Sent only to the student; included here for Record<NotificationType, ...> type-safety.
+    title: 'Booking approved',
+    body: 'Your session booking request was approved.',
+  }),
+  SESSION_BOOKING_REJECTED: () => ({
+    // Sent only to the student; included here for Record<NotificationType, ...> type-safety.
+    title: 'About your booking request',
+    body: 'This booking request was not accepted this time.',
   }),
   MATCHING_APPROVED: (payload) => ({
     // 実際にはstudent_id宛にのみ送られる通知のため、コーチが受け取ることは想定していない
@@ -62,4 +87,27 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
     title: "You've been matched with a new student",
     body: `Live sessions with ${String(payload.student_name ?? 'a student')} are now scheduled.`,
   }),
+  HOMEWORK_POSTED: () => ({
+    // 実際にはstudent_id宛にのみ送られる通知のため、コーチが受け取ることは想定していない
+    // （Record<NotificationType, ...>を満たすための型安全用エントリ）。
+    title: 'Homework posted',
+    body: 'The student was notified about this homework.',
+  }),
+  COACH_REPORT_APPROVED: (payload) => ({
+    title: 'Monthly report approved',
+    body: `Your monthly coaching report for ${formatReportMonthEn(payload.report_month)} was approved.`,
+  }),
+  COACH_REPORT_APPROVAL_REVOKED: (payload) => ({
+    title: 'Monthly report approval revoked',
+    body: `Approval for your ${formatReportMonthEn(payload.report_month)} monthly coaching report was revoked.`,
+  }),
 };
+
+/** Formats payload.report_month ("YYYY-MM-DD" etc.) as "Month YYYY" for notification body text */
+function formatReportMonthEn(reportMonth: unknown): string {
+  const s = String(reportMonth ?? '');
+  const match = /^(\d{4})-(\d{2})/.exec(s);
+  if (!match) return s;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1));
+  return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
+}

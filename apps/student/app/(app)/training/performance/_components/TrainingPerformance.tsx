@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, BarChart3, BookOpen, Zap, ArrowRight, CalendarDays, ArrowLeft, HelpCircle, Loader2, Mic } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
@@ -21,7 +21,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
   const [showTooltip, setShowTooltip] = useState(false);
   const [showSprintTooltip, setShowSprintTooltip] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
 
   // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定・ペンディング状態）は
   // 単語履歴・スプリント履歴画面と共通のためフック化

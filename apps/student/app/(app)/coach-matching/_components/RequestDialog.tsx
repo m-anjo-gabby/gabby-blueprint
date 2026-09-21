@@ -25,7 +25,7 @@ import {
   getFirstLiveSessionOccurrence,
   formatZonedDate,
 } from '@gabby/lib/date/date';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { CoachAvailabilityCalendar, AvailabilityCell } from './CoachAvailabilityCalendar';
 
 interface RequestDialogProps {
@@ -37,7 +37,7 @@ interface RequestDialogProps {
 }
 
 export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequested }: RequestDialogProps) {
-  const studentTimezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const studentTimezone = useTimezone();
   const [selectedSlotNo, setSelectedSlotNo] = useState<number | null>(unmatchedSlots[0]?.slot_no ?? null);
   const [selectedCell, setSelectedCell] = useState<AvailabilityCell | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

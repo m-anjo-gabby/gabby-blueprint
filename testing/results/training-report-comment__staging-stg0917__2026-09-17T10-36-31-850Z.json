@@ -1,0 +1,116 @@
+{
+  "scenario": "training-report-comment",
+  "env": "staging",
+  "tag": "stg0917",
+  "executedAt": "2026-09-17T10:36:31.850Z",
+  "gitCommit": "f3cbeab4",
+  "gitBranch": "feature/20260918-dev",
+  "totalChecks": 23,
+  "passed": 23,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "1-1. コーチAが生徒Aの新規ドラフトを作成できる",
+      "ok": true
+    },
+    {
+      "name": "1-2. コーチAが自分のドラフトを取得できる",
+      "ok": true
+    },
+    {
+      "name": "1-3. コーチAがdraft状態のコメントを編集できる",
+      "ok": true
+    },
+    {
+      "name": "1-4. コーチAがレポートを確定(finalized)できる",
+      "ok": true
+    },
+    {
+      "name": "1-5. 確定後はコーチA自身でも編集できない(RLSで0件更新)",
+      "ok": true,
+      "detail": "更新が想定通り0件でブロックされた"
+    },
+    {
+      "name": "1-6. 無関係コーチは生徒Aの確定済みレポートを参照できない",
+      "ok": true,
+      "detail": "RLSにより0件"
+    },
+    {
+      "name": "1-7. 無関係コーチは生徒Aに新規ドラフトを作成できない(RLS INSERT拒否)",
+      "ok": true,
+      "detail": "new row violates row-level security policy for table \"com_t_contract_training_report\""
+    },
+    {
+      "name": "2-1. 生徒Bの契約4件中、直近1年以内は現在契約+8か月前の2件になっている",
+      "ok": true,
+      "detail": "total=4, within1yr=2, outside1yr=2"
+    },
+    {
+      "name": "2-2. コーチAが生徒Bの現在契約にドラフトを作成できる",
+      "ok": true
+    },
+    {
+      "name": "2-3. 上記を確定できる",
+      "ok": true
+    },
+    {
+      "name": "2-4. コーチAが2年超前の契約にも新規レポートを作成できる(現役の担当関係があるため)",
+      "ok": true
+    },
+    {
+      "name": "2-5. 上記を確定できる",
+      "ok": true
+    },
+    {
+      "name": "2-6. コーチAから見える生徒Bのレポートが2件(現在契約+25か月前)になっている",
+      "ok": true,
+      "detail": "件数=2"
+    },
+    {
+      "name": "3-1. コーチAが生徒Dにドラフトを作成できる",
+      "ok": true
+    },
+    {
+      "name": "3-2. コーチBはコーチAのドラフト(未確定)を参照できない",
+      "ok": true,
+      "detail": "取得件数=0"
+    },
+    {
+      "name": "3-3. コーチBも同じticketに自分のドラフトを作成できる(UNIQUE(ticket_id,coach_id))",
+      "ok": true
+    },
+    {
+      "name": "3-4. コーチAはコーチBのドラフト(未確定)を参照できない",
+      "ok": true,
+      "detail": "取得件数=1"
+    },
+    {
+      "name": "3-5. コーチBが自分のレポートを確定できる",
+      "ok": true
+    },
+    {
+      "name": "3-6. コーチBが確定した後は、コーチAから参照できる",
+      "ok": true
+    },
+    {
+      "name": "3-7. コーチAはコーチBの確定済みレポートを編集できない",
+      "ok": true,
+      "detail": "想定通り0件"
+    },
+    {
+      "name": "3-8. コーチAも自分のレポートを確定できる",
+      "ok": true
+    },
+    {
+      "name": "4-1. (前提確認) コーチA⇔生徒Eの担当関係がis_active=falseになっている",
+      "ok": true,
+      "detail": "is_active=false"
+    },
+    {
+      "name": "4-2. 現役の担当関係が無いコーチは新規ドラフトを作成できない(RLS INSERT拒否)",
+      "ok": true,
+      "detail": "new row violates row-level security policy for table \"com_t_contract_training_report\""
+    }
+  ]
+}

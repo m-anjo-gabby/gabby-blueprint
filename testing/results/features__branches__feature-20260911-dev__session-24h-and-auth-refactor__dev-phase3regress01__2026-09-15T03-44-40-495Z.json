@@ -1,0 +1,256 @@
+{
+  "scenario": "features/branches/feature-20260911-dev/session-24h-and-auth-refactor.feature",
+  "env": "dev",
+  "tag": "phase3regress01",
+  "executedAt": "2026-09-15T03:44:40.495Z",
+  "gitCommit": "c0cd1fad",
+  "gitBranch": "feature/20260911-dev",
+  "totalChecks": 54,
+  "passed": 54,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "create_session_booking_request: 開始10時間後は24時間ルール違反で拒否される",
+      "ok": true,
+      "detail": "requested start datetime must be at least 24 hours from now"
+    },
+    {
+      "name": "create_session_booking_request: 開始30時間後は成功する",
+      "ok": true
+    },
+    {
+      "name": "create_session_booking_request: 担当コーチへSESSION_BOOKING_REQUESTED通知が作成される(fn_notify)",
+      "ok": true
+    },
+    {
+      "name": "approve_session_booking_request: 無関係コーチC2は権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to respond to this booking request"
+    },
+    {
+      "name": "approve_session_booking_request: 開始2時間後でも担当コーチC1なら24hエラーにならず成功する(意図的に非再検証)",
+      "ok": true
+    },
+    {
+      "name": "approve_session_booking_request: 承認によりcom_t_sessionが確定(status=1)する",
+      "ok": true,
+      "detail": "{\"status\":1}"
+    },
+    {
+      "name": "approve_session_booking_request: 生徒へSESSION_BOOKING_APPROVED通知が作成される(fn_notify)",
+      "ok": true
+    },
+    {
+      "name": "reject_session_booking_request: 無関係コーチC2は権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to respond to this booking request"
+    },
+    {
+      "name": "reject_session_booking_request: 担当コーチC1は成功する",
+      "ok": true
+    },
+    {
+      "name": "reject_session_booking_request: 生徒へSESSION_BOOKING_REJECTED通知が作成される",
+      "ok": true
+    },
+    {
+      "name": "withdraw_session_booking_request: 担当コーチ(生徒本人でない)は権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to withdraw this booking request"
+    },
+    {
+      "name": "withdraw_session_booking_request: 生徒本人は成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: 振替候補が開始10時間後だと24時間ルール違反で拒否される",
+      "ok": true,
+      "detail": "proposed time must be at least 24 hours from now"
+    },
+    {
+      "name": "cancel_session: 振替候補が開始32時間後だと成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: com_t_session_reschedule_proposalに候補が記録される",
+      "ok": true
+    },
+    {
+      "name": "accept_session_reschedule_proposal: 無関係コーチC2は権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to respond to this proposal"
+    },
+    {
+      "name": "accept_session_reschedule_proposal: 開始3時間後でも担当コーチC1なら24hエラーにならず成功する(意図的に非再検証)",
+      "ok": true
+    },
+    {
+      "name": "accept_session_reschedule_proposal: 承諾により新セッションが確定(status=1)する",
+      "ok": true,
+      "detail": "{\"status\":1}"
+    },
+    {
+      "name": "decline_session_reschedule_proposals: 無関係コーチC2は権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to respond to this proposal"
+    },
+    {
+      "name": "decline_session_reschedule_proposals: 提案の応答者である生徒本人は成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: 無関係コーチC2はキャンセルできず権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to cancel this session"
+    },
+    {
+      "name": "cancel_session: 生徒本人は成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: 生徒本人キャンセルはcancel_category=1(student)",
+      "ok": true,
+      "detail": "{\"cancel_category\":1}"
+    },
+    {
+      "name": "cancel_session: 担当コーチ本人は成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: コーチ本人キャンセルはcancel_category=2(coach)",
+      "ok": true,
+      "detail": "{\"cancel_category\":2}"
+    },
+    {
+      "name": "cancel_session: アドミン代理(p_admin_refund_ticket指定)は成功する",
+      "ok": true
+    },
+    {
+      "name": "cancel_session: アドミン代理キャンセルはcancel_category=3(admin)、返還可否は明示指定どおり",
+      "ok": true,
+      "detail": "{\"cancel_category\":3,\"ticket_refunded\":true}"
+    },
+    {
+      "name": "cancel_session: アドミン代理キャンセルは生徒・コーチ双方へSESSION_CANCELLED_BY_ADMIN通知が作成される(fn_notify 2回)",
+      "ok": true
+    },
+    {
+      "name": "check_session_conflict: 生徒本人は成功する",
+      "ok": true
+    },
+    {
+      "name": "check_session_conflict: 無関係コーチC2は権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to check this schedule"
+    },
+    {
+      "name": "check_session_conflict: アドミンは成功する",
+      "ok": true
+    },
+    {
+      "name": "reject_matching_request: 無関係コーチC2は権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to reject this request"
+    },
+    {
+      "name": "reject_matching_request: 担当コーチC1は理由付きで成功する",
+      "ok": true
+    },
+    {
+      "name": "reject_matching_request: 生徒へMATCHING_REJECTED通知が作成される",
+      "ok": true
+    },
+    {
+      "name": "approve_matching_request: 担当コーチC1による承認が成功する",
+      "ok": true
+    },
+    {
+      "name": "approve_matching_request: 生成されたセッションが1件以上ある",
+      "ok": true,
+      "detail": "count=12"
+    },
+    {
+      "name": "approve_matching_request: 生成されたセッションに開始24時間未満のものが1件も無い(当日分はスキップされ翌週分から生成される)",
+      "ok": true,
+      "detail": "tooSoon=[]"
+    },
+    {
+      "name": "admin_match_student_with_coach: コーチ本人は権限エラーになる(このRPCはアドミン専用)",
+      "ok": true,
+      "detail": "not authorized to perform admin matching"
+    },
+    {
+      "name": "admin_match_student_with_coach: アドミンは成功する",
+      "ok": true
+    },
+    {
+      "name": "admin_match_student_with_coach: アドミンは24時間ルールの対象外のため、開始24時間未満のセッションも実際に生成される",
+      "ok": true,
+      "detail": "generated=12, withinNext24h=1"
+    },
+    {
+      "name": "admin_reschedule_session: 担当コーチC1は権限エラーになる(アドミン専用)",
+      "ok": true,
+      "detail": "not authorized to reschedule this session"
+    },
+    {
+      "name": "admin_reschedule_session: アドミンは成功する",
+      "ok": true
+    },
+    {
+      "name": "admin_reschedule_session: 生徒・コーチ双方へSESSION_UPDATED_BY_ADMIN通知が作成される(fn_notify 2回)",
+      "ok": true
+    },
+    {
+      "name": "release_lesson_schedule_slot: 担当コーチC1は権限エラーになる(アドミン専用)",
+      "ok": true,
+      "detail": "not authorized to release a lesson schedule slot"
+    },
+    {
+      "name": "release_lesson_schedule_slot: アドミンは成功する",
+      "ok": true
+    },
+    {
+      "name": "release_lesson_schedule_slot: スケジュールがstatus=9(terminated)になる",
+      "ok": true,
+      "detail": "status=9"
+    },
+    {
+      "name": "invalidate_user_license: 担当コーチC1は権限エラーになる(アドミン専用)",
+      "ok": true,
+      "detail": "not authorized to invalidate a license"
+    },
+    {
+      "name": "invalidate_user_license: アドミンは成功する",
+      "ok": true
+    },
+    {
+      "name": "invalidate_user_license: ライセンスがstatus=0(停止)になる",
+      "ok": true,
+      "detail": "status=0"
+    },
+    {
+      "name": "get_coach_monthly_sessions: コーチ本人は成功する",
+      "ok": true
+    },
+    {
+      "name": "get_coach_monthly_sessions: 無関係コーチC2は権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to view this coach's monthly report"
+    },
+    {
+      "name": "get_coach_monthly_sessions: アドミンは成功する",
+      "ok": true
+    },
+    {
+      "name": "get_coach_monthly_active_students: コーチ本人は成功する",
+      "ok": true
+    },
+    {
+      "name": "get_coach_monthly_active_students: 無関係コーチC2は権限エラーになる",
+      "ok": true,
+      "detail": "not authorized to view this coach's monthly report"
+    }
+  ]
+}

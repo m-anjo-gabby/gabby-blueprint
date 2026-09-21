@@ -4,22 +4,23 @@ import Link from 'next/link';
 import { ArrowLeft, BookOpen, Info, LogIn, LogOut, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Section } from '@/components/common/Section';
-import { SESSION_STATUS_BADGE } from '@/constants/session';
+import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { SessionResultSummary } from '@gabby/types/session';
-import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import type { SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import { HomeworkComposer } from './HomeworkComposer';
 
 interface Props {
   studentId: string;
   session: SessionResultSummary;
-  homework: SessionHomeworkEntry[];
+  homework: SessionHomeworkEntry | null;
+  checklist: SessionHomeworkChecklistItem[];
 }
 
-export function SessionResult({ studentId, session, homework }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
-  const badge = SESSION_STATUS_BADGE[session.status];
+export function SessionResult({ studentId, session, homework, checklist }: Props) {
+  const timezone = useTimezone();
+  const badge = getSessionStatusBadge(session);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-8">
@@ -86,9 +87,7 @@ export function SessionResult({ studentId, session, homework }: Props) {
       </Section>
 
       <Section label="Homework" icon={BookOpen}>
-        <div className="max-w-2xl">
-          <HomeworkComposer sessionId={session.session_id} initialEntries={homework} />
-        </div>
+        <HomeworkComposer sessionId={session.session_id} initialHomework={homework} initialChecklist={checklist} />
       </Section>
 
       <Section label="Training">
@@ -105,7 +104,7 @@ export function SessionResult({ studentId, session, homework }: Props) {
                   {session.sprint_log.map((entry) => (
                     <li key={entry.lesson_sprint_id}>
                       <Link
-                        href={`/students/${studentId}/lesson-sprint/result/${entry.lesson_sprint_id}`}
+                        href={`/students/${studentId}/lesson-sprint/result/${entry.lesson_sprint_id}?back=${encodeURIComponent(`/students/${studentId}/sessions/${session.session_id}/result`)}&back_label=${encodeURIComponent('Back to Session Result')}`}
                         className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-100/80 hover:border-slate-200 transition-colors"
                       >
                         <div className="min-w-0">
@@ -140,33 +139,31 @@ export function SessionResult({ studentId, session, homework }: Props) {
       </Section>
 
       <Section label="Other" icon={MessageCircle}>
-        <div className="max-w-2xl">
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-800">In-call Chat History</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              {session.chat_log.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No chat messages were sent during this call.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {session.chat_log.map((entry) => (
-                    <li key={entry.chat_id} className={`text-xs ${entry.sender_role === 'coach' ? 'text-right' : 'text-left'}`}>
-                      <p className="font-bold text-slate-400 text-[10px] capitalize">{entry.sender_role}</p>
-                      <p
-                        className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${
-                          entry.sender_role === 'coach' ? 'bg-indigo-50 text-indigo-700' : 'bg-rose-50 text-rose-700'
-                        }`}
-                      >
-                        {entry.message}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="rounded-2xl border-slate-200 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-slate-800">In-call Chat History</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {session.chat_log.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No chat messages were sent during this call.</p>
+            ) : (
+              <ul className="space-y-2">
+                {session.chat_log.map((entry) => (
+                  <li key={entry.chat_id} className={`text-xs ${entry.sender_role === 'coach' ? 'text-right' : 'text-left'}`}>
+                    <p className="font-bold text-slate-400 text-[10px] capitalize">{entry.sender_role}</p>
+                    <p
+                      className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${
+                        entry.sender_role === 'coach' ? 'bg-indigo-50 text-indigo-700' : 'bg-rose-50 text-rose-700'
+                      }`}
+                    >
+                      {entry.message}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </Section>
     </div>
   );

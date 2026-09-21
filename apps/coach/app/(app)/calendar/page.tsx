@@ -1,6 +1,10 @@
-import { CalendarBoard } from './_components/CalendarBoard';
+import { CalendarWorkspace } from './_components/CalendarWorkspace';
+import { ScheduleTabs } from '@/components/common/ScheduleTabs';
+import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
 
-export default function CalendarPage() {
+export default async function CalendarPage() {
+  const requests = await getPendingIncomingRequestsForCoach();
+
   return (
     <div className="space-y-6">
       <div className="max-w-2xl">
@@ -10,8 +14,10 @@ export default function CalendarPage() {
         </p>
       </div>
 
-      <div className="max-w-2xl mx-auto">
-        <CalendarBoard />
+      <ScheduleTabs active="calendar" />
+
+      <div className="max-w-5xl">
+        <CalendarWorkspace initialRequests={requests} />
       </div>
     </div>
   );

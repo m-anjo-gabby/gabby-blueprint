@@ -107,6 +107,11 @@ export type GetLessonSprintHistoryResult =
   | { success: true; records: LessonSprintHistoryListItem[] }
   | { success: false; errorCode: CoachStudentErrorCode };
 
+/** 生徒×コーチのLesson Sprint実施履歴を、insert_dateカーソルでページング取得した結果（履歴一覧画面用） */
+export type GetLessonSprintHistoryPageResult =
+  | { success: true; items: LessonSprintHistoryListItem[]; nextCursor: string | null }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
 export type GetLessonSprintDetailResult =
   | { success: true; record: LessonSprintRecord; questions: SprintQuestion[] }
   | { success: false; errorCode: CoachStudentErrorCode };

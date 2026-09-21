@@ -22,6 +22,19 @@
 -- チケット(com_t_user_session_ticket)自体には一切触れない。コーチに依存しない
 -- used_sessions/total_sessionsの消化実績は、新しいコーチとのマッチング成立後もそのまま
 -- 引き継がれる。
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- 対象セッションは旧status=9(cancelled_coach_reassigned)ではなくstatus=3(cancelled)、
+-- cancel_category=5(coach_reassigned)として記録する（table/com_t_session.sqlの
+-- ステータス簡素化パッチ参照）。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
+--
+-- 【一括キャンセル処理の共通化 (2026-09-15追加)】
+-- 「未実施の未来のscheduledセッションのみをキャンセルする」部分は、invalidate_user_license()と
+-- 同一のUPDATE文だったため、fn_cancel_future_sessions()に切り出した
+-- （前提: function/fn_cancel_future_sessions.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.release_lesson_schedule_slot(p_schedule_id uuid)
 RETURNS void
@@ -32,9 +45,7 @@ AS $$
 DECLARE
     v_schedule RECORD;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
-        RAISE EXCEPTION 'not authorized to release a lesson schedule slot';
-    END IF;
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to release a lesson schedule slot');
 
     SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -58,12 +69,7 @@ BEGIN
     END IF;
 
     -- 3. まだ実施されていない未来のセッションのみキャンセルする（過去の記録は変更しない）
-    UPDATE public.com_t_session
-    SET status = 9,
-        cancel_reason = 'コーチ交代のため',
-        cancelled_by = auth.uid(),
-        update_date = NOW()
-    WHERE schedule_id = p_schedule_id AND status = 1;
+    PERFORM public.fn_cancel_future_sessions(p_schedule_id, NULL, 5, 'コーチ交代のため'); -- 5=coach_reassigned
 END;
 $$;
 

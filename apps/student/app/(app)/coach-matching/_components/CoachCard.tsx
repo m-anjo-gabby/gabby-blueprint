@@ -6,7 +6,7 @@ import { CoachBrowseItem } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { CountryMaster } from '@gabby/types/country';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVideoUrl';
@@ -43,7 +43,7 @@ function formatCoachSinceLabel(dateStr: string | null): string | null {
 }
 
 export function CoachCard({ coach, countries, onRequest, selectedDays, selectedTimeBuckets }: CoachCardProps) {
-  const studentTimezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const studentTimezone = useTimezone();
   const [showPreview, setShowPreview] = useState(false);
   const [showAllSlots, setShowAllSlots] = useState(false);
 

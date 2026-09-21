@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, BadgeCheck, BadgeX } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
-import type { StudentOverviewProfile, StudentSessionHistoryItem } from '@gabby/types/coachStudent';
+import type { StudentContractSessionSummary, StudentOverviewProfile, StudentSessionHistoryItem } from '@gabby/types/coachStudent';
 import { SprintProgressRadar } from './SprintProgressRadar';
 import { TodaysLessonPanel } from './TodaysLessonPanel';
 
@@ -13,6 +13,44 @@ interface Props {
 
 function formatContractPeriod(startDate: string, endDate: string, timezone: string): string {
   return `${formatDateEn(startDate, timezone)} – ${formatDateEn(endDate, timezone)}`;
+}
+
+/**
+ * サマリーは「自分の担当分」のみで完結させる（Total = own_scheduled + own_consumed +
+ * own_unbooked）。ここにtotal_sessions（契約全体、他コーチ分を含む）を使ってしまうと、
+ * 自分の内訳3つの合計と一致しない数字になり、「自分の生徒で未予約が無いか」を直感的に
+ * リマインドするという目的から外れて混乱を招く。他コーチ担当分は行動につながらない
+ * （book_makeup_sessionはスケジュールのcoach_idで予約先コーチが固定されるため、自分では
+ * 予約できない）ため、主要4指標には含めず、件数のみのサブテキストとして分けて出す。
+ */
+function ContractSessionSummaryStats({ summary }: { summary: StudentContractSessionSummary }) {
+  const ownTotal = summary.own_scheduled + summary.own_consumed + summary.own_unbooked;
+  const stats: { label: string; value: number }[] = [
+    { label: 'Total', value: ownTotal },
+    { label: 'Scheduled', value: summary.own_scheduled },
+    { label: 'Completed', value: summary.own_consumed },
+    { label: 'Unbooked', value: summary.own_unbooked },
+  ];
+
+  return (
+    <div className="mt-2 pt-2 border-t border-emerald-100/80">
+      <div className="grid grid-cols-4 gap-1.5">
+        {stats.map((s) => (
+          <div key={s.label} className="text-center">
+            <p className={`text-sm font-bold ${s.label === 'Unbooked' && s.value > 0 ? 'text-amber-600' : 'text-emerald-700'}`}>
+              {s.value}
+            </p>
+            <p className="text-[9px] font-semibold text-emerald-500/70 uppercase tracking-wide">{s.label}</p>
+          </div>
+        ))}
+      </div>
+      {summary.other_coach_sessions > 0 && (
+        <p className="mt-1.5 text-[10px] text-emerald-600/70">
+          + {summary.other_coach_sessions} session{summary.other_coach_sessions === 1 ? '' : 's'} handled by another coach
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function StudentOverviewHeader({ profile, upcomingSession }: Props) {
@@ -54,6 +92,7 @@ export function StudentOverviewHeader({ profile, upcomingSession }: Props) {
                       {formatContractPeriod(active_contract.start_date, active_contract.end_date, profile.timezone)}
                     </p>
                   </div>
+                  {profile.session_summary && <ContractSessionSummaryStats summary={profile.session_summary} />}
                 </div>
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">

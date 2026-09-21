@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight, CalendarClock, SquareArrowOutUpRight } from 'lucide-react';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { StudentSessionHistoryItem } from '@gabby/types/coachStudent';
 
 interface Props {
@@ -21,7 +21,7 @@ interface Props {
  * 重複を廃止した（このパネルの役目は「次のセッションを開く」ことだけに絞る）。
  */
 export function TodaysLessonPanel({ studentId, upcomingSession }: Props) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
 
   return (
     <div className="space-y-2">

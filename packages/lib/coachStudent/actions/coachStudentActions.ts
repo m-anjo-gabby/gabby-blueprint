@@ -6,6 +6,7 @@ import { getLogContext } from '../../logger/context';
 import {
   AssignedStudentSummary,
   CoachStudentNote,
+  ContractTrainingReport,
   GetAssignedStudentsResult,
   GetStudentOverviewResult,
   GetStudentUpcomingSessionResult,
@@ -16,16 +17,24 @@ import {
   GetStudentNotesResult,
   GetSelfTrainingWeekSummaryResult,
   AddCoachStudentNoteResult,
+  GetContractTrainingReportsResult,
+  SaveContractTrainingReportDraftResult,
+  FinalizeContractTrainingReportResult,
   UpdateStudentSprintProgressResult,
   StudentSprintProgress,
+  StudentLatestContractSummary,
+  StudentContractSessionSummary,
+  StudentNextSessionSummary,
+  TRAINING_REPORT_STATUS,
 } from '@gabby/types/coachStudent';
-import { SESSION_STATUS } from '@gabby/types/session';
+import { SESSION_STATUS, SESSION_RESULT_STATUSES } from '@gabby/types/session';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
 import { clampLevel, computeStage, getForcedLevels } from '../../sprint/stageProgression';
 
 const logger = createLogger('common');
 const MAX_NOTE_LENGTH = 4000;
+const MAX_TRAINING_REPORT_LENGTH = 8000;
 
 /** StudentSprintProgress(dbKey命名) <-> StageLevels(SprintQuestionTypeキー) の相互変換 */
 function toStageLevels(progress: StudentSprintProgress): StageLevels {
@@ -56,8 +65,95 @@ export async function hasCoachStudentRelationship(
   return Boolean(data && data.length > 0);
 }
 
+type ContractJoinRow = { plan_name: string; plan_name_en: string } | { plan_name: string; plan_name_en: string }[] | null;
+
 /**
- * ログイン中コーチに現在アクティブに割り当てられている生徒の一覧を取得する（コーチ向け）
+ * 指定した生徒ID群それぞれについて、現在有効・終了済みを問わず最新の契約(ライセンス)1件を取得する。
+ * 生徒一覧カードの「直近の契約」表示用。com_t_user_licenseのstatus(0:停止)で絞り込まないのは、
+ * 途中解約されたライセンスも「その生徒が最後に持っていた契約」として表示したいため
+ * （is_currentで現役/終了済みを区別する）。
+ */
+async function getLatestContractsByStudentIds(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  studentIds: string[]
+): Promise<{ data: Map<string, StudentLatestContractSummary> | null; error: string | null }> {
+  const { data: licenses, error } = await supabase
+    .from('com_t_user_license')
+    .select('user_id, start_date, end_date, status, com_m_contract(plan_name, plan_name_en)')
+    .in('user_id', studentIds);
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  const nowIso = new Date().toISOString();
+  const latestByStudent = new Map<string, StudentLatestContractSummary & { _end: string }>();
+
+  for (const license of licenses ?? []) {
+    const contractJoin = license.com_m_contract as ContractJoinRow;
+    const contract = Array.isArray(contractJoin) ? contractJoin[0] : contractJoin;
+    if (!contract) continue;
+
+    const current = latestByStudent.get(license.user_id);
+    if (current && current._end >= license.end_date) continue;
+
+    latestByStudent.set(license.user_id, {
+      plan_name: contract.plan_name,
+      plan_name_en: contract.plan_name_en,
+      start_date: license.start_date,
+      end_date: license.end_date,
+      is_current: license.status === 1 && license.start_date <= nowIso && nowIso <= license.end_date,
+      _end: license.end_date,
+    });
+  }
+
+  const result = new Map<string, StudentLatestContractSummary>();
+  for (const [studentId, contract] of latestByStudent) {
+    const { _end: _discard, ...summary } = contract;
+    result.set(studentId, summary);
+  }
+  return { data: result, error: null };
+}
+
+/**
+ * 指定した現役生徒ID群それぞれについて、次に実施可能な（status=scheduled かつ終了予定時刻が
+ * 未来の）セッションを1件ずつ取得する。生徒一覧カードの「Next Live Session」表示用。
+ * 過去に担当していた生徒（is_active=false）は呼び出し側で対象から除外すること
+ * （担当関係を終えた生徒に新規セッションが発生することは無く、問い合わせても無駄になるため）。
+ */
+async function getUpcomingSessionsByStudentIds(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  coachId: string,
+  activeStudentIds: string[]
+): Promise<{ data: Map<string, StudentNextSessionSummary> | null; error: string | null }> {
+  if (activeStudentIds.length === 0) {
+    return { data: new Map(), error: null };
+  }
+
+  const { data: sessions, error } = await supabase
+    .from('com_t_session')
+    .select('session_id, student_id, start_datetime')
+    .eq('coach_id', coachId)
+    .in('student_id', activeStudentIds)
+    .eq('status', SESSION_STATUS.SCHEDULED)
+    .gt('end_datetime', new Date().toISOString())
+    .order('start_datetime', { ascending: true });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  // start_datetime昇順のため、生徒ごとに最初に出現した行が最も近い次回セッションになる
+  const nextByStudent = new Map<string, StudentNextSessionSummary>();
+  for (const session of sessions ?? []) {
+    if (nextByStudent.has(session.student_id)) continue;
+    nextByStudent.set(session.student_id, { session_id: session.session_id, start_datetime: session.start_datetime });
+  }
+  return { data: nextByStudent, error: null };
+}
+
+/**
+ * ログイン中コーチに紐づく生徒の一覧を取得する（コーチ向け、現在・過去の担当関係を両方含む）
  * ダッシュボードの担当生徒プレビューおよび生徒一覧画面で使用する。
  */
 export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResult> {
@@ -70,9 +166,8 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
     const { data: relationships, error } = await supabase
       .from('com_m_coach_student_relationship')
-      .select('student_id')
-      .eq('coach_id', user.id)
-      .eq('is_active', true);
+      .select('student_id, is_active')
+      .eq('coach_id', user.id);
 
     if (error) {
       logger.error('coachStudent:get_assigned_students_failed', error.message, { ...ctx, userId: user.id });
@@ -83,8 +178,17 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
     }
 
     const studentIds = relationships.map((r) => r.student_id);
+    const isActiveByStudent = new Map(relationships.map((r) => [r.student_id, r.is_active]));
+    // 過去生徒には新規セッションが発生しないため、次回セッションの問い合わせは現役生徒のみに絞る
+    const activeStudentIds = relationships.filter((r) => r.is_active).map((r) => r.student_id);
 
-    const [{ data: users, error: userError }, { data: progress, error: progressError }, { data: schedules, error: scheduleError }] = await Promise.all([
+    const [
+      { data: users, error: userError },
+      { data: progress, error: progressError },
+      { data: schedules, error: scheduleError },
+      { data: latestContractByStudent, error: contractError },
+      { data: nextSessionByStudent, error: nextSessionError },
+    ] = await Promise.all([
       supabase.from('com_m_user').select('id, user_name, icon_path').in('id', studentIds),
       supabase
         .from('student_m_sprint_progress')
@@ -96,12 +200,14 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
         .eq('coach_id', user.id)
         .eq('status', 1)
         .in('student_id', studentIds),
+      getLatestContractsByStudentIds(supabase, studentIds),
+      getUpcomingSessionsByStudentIds(supabase, user.id, activeStudentIds),
     ]);
 
-    if (userError || progressError || scheduleError) {
+    if (userError || progressError || scheduleError || contractError || nextSessionError) {
       logger.error(
         'coachStudent:get_assigned_students_join_failed',
-        userError?.message ?? progressError?.message ?? scheduleError?.message ?? 'unknown',
+        userError?.message ?? progressError?.message ?? scheduleError?.message ?? contractError ?? nextSessionError ?? 'unknown',
         { ...ctx, userId: user.id }
       );
       return { success: false, errorCode: 'unexpected_error' };
@@ -114,23 +220,31 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
       slotCountByStudent.set(s.student_id, (slotCountByStudent.get(s.student_id) ?? 0) + 1);
     }
 
-    const students: AssignedStudentSummary[] = studentIds
-      .map((studentId) => {
-        const u = userById.get(studentId);
-        const p = progressByStudent.get(studentId);
-        return {
-          student_id: studentId,
-          user_name: u?.user_name ?? '(Unknown)',
-          icon_path: u?.icon_path ?? null,
-          stage: p?.stage ?? 0,
-          level_speed: p?.level_speed ?? 0,
-          level_structure: p?.level_structure ?? 0,
-          level_builders: p?.level_builders ?? 0,
-          level_mastery: p?.level_mastery ?? 0,
-          active_slot_count: slotCountByStudent.get(studentId) ?? 0,
-        };
-      })
-      .sort((a, b) => a.user_name.localeCompare(b.user_name));
+    const students: AssignedStudentSummary[] = studentIds.map((studentId) => {
+      const u = userById.get(studentId);
+      const p = progressByStudent.get(studentId);
+      return {
+        student_id: studentId,
+        user_name: u?.user_name ?? '(Unknown)',
+        icon_path: u?.icon_path ?? null,
+        stage: p?.stage ?? 0,
+        level_speed: p?.level_speed ?? 0,
+        level_structure: p?.level_structure ?? 0,
+        level_builders: p?.level_builders ?? 0,
+        level_mastery: p?.level_mastery ?? 0,
+        active_slot_count: slotCountByStudent.get(studentId) ?? 0,
+        is_active: isActiveByStudent.get(studentId) ?? false,
+        latest_contract: latestContractByStudent?.get(studentId) ?? null,
+        next_session: nextSessionByStudent?.get(studentId) ?? null,
+      };
+    });
+
+    // アクティブ生徒は名前順、過去生徒は直近の契約終了日が新しい順（直近であればケアが必要な可能性が高いため）
+    students.sort((a, b) => {
+      if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+      if (a.is_active) return a.user_name.localeCompare(b.user_name);
+      return (b.latest_contract?.end_date ?? '').localeCompare(a.latest_contract?.end_date ?? '');
+    });
 
     return { success: true, students };
   } catch (err) {
@@ -170,7 +284,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
         .maybeSingle(),
       supabase
         .from('com_t_user_license')
-        .select('start_date, end_date, com_m_contract!inner(plan_name, plan_name_en, status)')
+        .select('license_id, start_date, end_date, com_m_contract!inner(plan_name, plan_name_en, status)')
         .eq('user_id', studentId)
         .eq('status', 1)
         .eq('com_m_contract.status', 1)
@@ -199,6 +313,11 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
         : license.com_m_contract
       : null;
 
+    const sessionSummary =
+      license && contract
+        ? await computeStudentContractSessionSummary(supabase, user.id, studentId, license.license_id, ctx)
+        : null;
+
     return {
       success: true,
       profile: {
@@ -222,6 +341,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
                 end_date: license.end_date,
               }
             : null,
+        session_summary: sessionSummary,
       },
     };
   } catch (err) {
@@ -251,7 +371,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
 
     const { data: tickets, error: ticketError } = await supabase
       .from('com_t_user_session_ticket')
-      .select('ticket_id, license_id, weekly_frequency')
+      .select('ticket_id, license_id, contract_id, weekly_frequency')
       .eq('user_id', studentId);
 
     if (ticketError) {
@@ -272,7 +392,18 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
       return { success: false, errorCode: 'unexpected_error' };
     }
 
+    const { data: contractRows, error: contractError } = await supabase
+      .from('com_m_contract')
+      .select('contract_id, plan_name_en')
+      .in('contract_id', tickets.map((t) => t.contract_id));
+
+    if (contractError) {
+      logger.error('coachStudent:get_student_contracts_plan_failed', contractError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
     const licenseById = new Map((licenses ?? []).map((l) => [l.license_id, l]));
+    const planNameByContractId = new Map((contractRows ?? []).map((c) => [c.contract_id, c.plan_name_en]));
     const now = new Date();
 
     const contracts = tickets
@@ -287,6 +418,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
           end_date: license.end_date,
           is_current: isCurrent,
           weekly_frequency: t.weekly_frequency,
+          plan_name_en: planNameByContractId.get(t.contract_id) ?? '(Unknown plan)',
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null)
@@ -321,7 +453,7 @@ export async function getStudentSessionsByTicketCore(studentId: string, ticketId
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note, coach_id')
+      .select('session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id')
       .eq('student_id', studentId)
       .eq('ticket_id', ticketId)
       .order('start_datetime', { ascending: false });
@@ -395,9 +527,65 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
  * チケット）を検知する。マッチング申請が契約期間の途中（ライセンス開始日より後）に承認された場合や、
  * 生徒キャンセル(12時間以上前)・コーチキャンセルによりticket_refunded=trueとなった場合に発生する。
  * expected/actual/shortfallの算出はDB側のfn_schedule_shortfall()を唯一の真実源とし、
- * book_makeup_session RPCの予約可否判定と齟齬が生じないようにする。
+ * create_session_booking_request RPCの予約可否判定と齟齬が生じないようにする。
  */
 type ScheduleShortfallRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
+
+/**
+ * 指定コーチ・生徒の現在稼働中(status=1)スケジュールについて、fn_schedule_shortfall()を
+ * スケジュール単位で呼び出す内部ヘルパー。com_m_lesson_scheduleのRLSがcoach_id=自分限定の
+ * ため、他コーチのスケジュールは対象にできない（＝自分の担当分しか正確な期待値を計算できない）。
+ * Live Sessionsカードの警告表示(getStudentLiveSessionShortfallsCore)と、Student Overview
+ * ヘッダーの契約サマリー(getStudentOverviewCore内のown_unbooked集計)の両方から使う。
+ */
+async function fetchOwnScheduleShortfalls(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  coachId: string,
+  studentId: string,
+  ctx: Awaited<ReturnType<typeof getLogContext>>
+): Promise<{ shortfalls: LiveSessionShortfallItem[] } | { errorMessage: string }> {
+  const { data: schedules, error: scheduleError } = await supabase
+    .from('com_m_lesson_schedule')
+    .select('schedule_id, day_of_week, start_time')
+    .eq('coach_id', coachId)
+    .eq('student_id', studentId)
+    .eq('status', 1);
+
+  if (scheduleError) {
+    return { errorMessage: scheduleError.message };
+  }
+  if (!schedules || schedules.length === 0) {
+    return { shortfalls: [] };
+  }
+
+  const results = await Promise.all(
+    schedules.map((schedule) =>
+      supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single()
+    )
+  );
+
+  const shortfalls: LiveSessionShortfallItem[] = [];
+  schedules.forEach((schedule, index) => {
+    const { error } = results[index];
+    const data = results[index].data as ScheduleShortfallRow | null;
+    if (error || !data) {
+      logger.error('coachStudent:get_session_shortfalls_rpc_failed', error?.message ?? 'No row returned', { ...ctx, userId: coachId, payload: { studentId, scheduleId: schedule.schedule_id } });
+      return;
+    }
+    if (data.shortfall > 0) {
+      shortfalls.push({
+        schedule_id: schedule.schedule_id,
+        day_of_week: schedule.day_of_week,
+        start_time: schedule.start_time,
+        expected_sessions: data.expected_sessions,
+        actual_sessions: data.actual_sessions,
+        shortfall: data.shortfall,
+      });
+    }
+  });
+
+  return { shortfalls };
+}
 
 export async function getStudentLiveSessionShortfallsCore(studentId: string): Promise<GetStudentLiveSessionShortfallsResult> {
   const ctx = await getLogContext();
@@ -407,52 +595,92 @@ export async function getStudentLiveSessionShortfallsCore(studentId: string): Pr
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data: schedules, error: scheduleError } = await supabase
-      .from('com_m_lesson_schedule')
-      .select('schedule_id, day_of_week, start_time')
-      .eq('coach_id', user.id)
-      .eq('student_id', studentId)
-      .eq('status', 1);
-
-    if (scheduleError) {
-      logger.error('coachStudent:get_session_shortfalls_schedule_failed', scheduleError.message, { ...ctx, userId: user.id, payload: { studentId } });
+    const result = await fetchOwnScheduleShortfalls(supabase, user.id, studentId, ctx);
+    if ('errorMessage' in result) {
+      logger.error('coachStudent:get_session_shortfalls_schedule_failed', result.errorMessage, { ...ctx, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (!schedules || schedules.length === 0) {
-      return { success: true, shortfalls: [] };
-    }
 
-    const results = await Promise.all(
-      schedules.map((schedule) =>
-        supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single()
-      )
-    );
-
-    const shortfalls: LiveSessionShortfallItem[] = [];
-    schedules.forEach((schedule, index) => {
-      const { error } = results[index];
-      const data = results[index].data as ScheduleShortfallRow | null;
-      if (error || !data) {
-        logger.error('coachStudent:get_session_shortfalls_rpc_failed', error?.message ?? 'No row returned', { ...ctx, userId: user.id, payload: { studentId, scheduleId: schedule.schedule_id } });
-        return;
-      }
-      if (data.shortfall > 0) {
-        shortfalls.push({
-          schedule_id: schedule.schedule_id,
-          day_of_week: schedule.day_of_week,
-          start_time: schedule.start_time,
-          expected_sessions: data.expected_sessions,
-          actual_sessions: data.actual_sessions,
-          shortfall: data.shortfall,
-        });
-      }
-    });
-
-    return { success: true, shortfalls };
+    return { success: true, shortfalls: result.shortfalls };
   } catch (err) {
     logger.error('coachStudent:get_session_shortfalls_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
+}
+
+/**
+ * active_contractに対応するチケットのセッション消化状況サマリーを算出する
+ * （Student Overviewヘッダー用）。com_t_user_session_ticket.total_sessions/used_sessionsは
+ * 担当関係のあるコーチなら誰でも参照できるRLS（2026-09-03追加）、com_t_sessionも担当外を
+ * 含めて参照できるRLS（2026-09-08拡張）のため、消化済み・予約済みの集計自体はticket_id単位で
+ * 全コーチ分をまとめて取得できる。一方com_m_lesson_scheduleは自分の行しか読めないため、
+ * 「未予約数」は自分の担当分しか正確に計算できない。そのため他コーチ分は内訳を出さず、
+ * total_sessionsからの残差（合計件数のみ）として扱う。
+ */
+async function computeStudentContractSessionSummary(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  coachId: string,
+  studentId: string,
+  licenseId: string,
+  ctx: Awaited<ReturnType<typeof getLogContext>>
+): Promise<StudentContractSessionSummary | null> {
+  const { data: ticket, error: ticketError } = await supabase
+    .from('com_t_user_session_ticket')
+    .select('ticket_id, total_sessions')
+    .eq('license_id', licenseId)
+    .maybeSingle();
+
+  if (ticketError || !ticket) {
+    if (ticketError) {
+      logger.error('coachStudent:get_overview_ticket_failed', ticketError.message, { ...ctx, userId: coachId, payload: { studentId, licenseId } });
+    }
+    return null;
+  }
+
+  const [{ data: sessions, error: sessionsError }, shortfallResult] = await Promise.all([
+    supabase
+      .from('com_t_session')
+      .select('status, ticket_refunded')
+      .eq('ticket_id', ticket.ticket_id)
+      .eq('coach_id', coachId),
+    fetchOwnScheduleShortfalls(supabase, coachId, studentId, ctx),
+  ]);
+
+  if (sessionsError) {
+    logger.error('coachStudent:get_overview_sessions_failed', sessionsError.message, { ...ctx, userId: coachId, payload: { studentId, ticketId: ticket.ticket_id } });
+    return null;
+  }
+  if ('errorMessage' in shortfallResult) {
+    logger.error('coachStudent:get_overview_shortfall_failed', shortfallResult.errorMessage, { ...ctx, userId: coachId, payload: { studentId, ticketId: ticket.ticket_id } });
+    return null;
+  }
+
+  // fn_schedule_shortfall()の「actual(消化済み扱い)」判定と揃える: 返還なしキャンセルは
+  // 再予約不可のセッション枠消化として完了扱いに含める（status=CANCELLEDの1値に
+  // 統合されたため、起因(cancel_category)を問わずticket_refunded=falseのみで判定できる）
+  let ownScheduled = 0;
+  let ownConsumed = 0;
+  for (const session of sessions ?? []) {
+    if (session.status === SESSION_STATUS.SCHEDULED) {
+      ownScheduled += 1;
+    } else if (
+      SESSION_RESULT_STATUSES.includes(session.status) ||
+      (session.status === SESSION_STATUS.CANCELLED && session.ticket_refunded === false)
+    ) {
+      ownConsumed += 1;
+    }
+  }
+
+  const ownUnbooked = shortfallResult.shortfalls.reduce((sum, s) => sum + s.shortfall, 0);
+  const otherCoachSessions = Math.max(0, ticket.total_sessions - ownScheduled - ownConsumed - ownUnbooked);
+
+  return {
+    total_sessions: ticket.total_sessions,
+    own_scheduled: ownScheduled,
+    own_consumed: ownConsumed,
+    own_unbooked: ownUnbooked,
+    other_coach_sessions: otherCoachSessions,
+  };
 }
 
 /**
@@ -562,6 +790,165 @@ export async function addCoachStudentNoteCore(studentId: string, noteText: strin
     return { success: true, note: data as CoachStudentNote };
   } catch (err) {
     logger.error('coachStudent:add_note_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+const TRAINING_REPORT_SELECT = 'report_id, ticket_id, student_id, coach_id, comment_text, status, finalized_at, insert_date, update_date';
+
+/** coach_idの並びに対応するuser_nameを解決し、ContractTrainingReport[]へ変換する（見つからない場合は'(Unknown)'） */
+async function attachCoachNames(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  rows: Omit<ContractTrainingReport, 'coach_name'>[]
+): Promise<ContractTrainingReport[]> {
+  if (rows.length === 0) return [];
+
+  const coachIds = Array.from(new Set(rows.map((r) => r.coach_id)));
+  const { data: coaches } = await supabase.from('com_m_user').select('id, user_name').in('id', coachIds);
+  const nameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+
+  return rows.map((r) => ({ ...r, coach_name: nameById.get(r.coach_id) ?? '(Unknown)' }));
+}
+
+/**
+ * 指定生徒について、自分から参照可能なトレーニングレポートを全件取得する（新しい順）。
+ * RLSにより、自分が記入した行(draft/finalizedいずれも)と、他コーチのfinalized済みの行のみが
+ * 返る（他コーチのdraftは不可視）。契約(ticket)単位の表示への組み立てはUI側で行う。
+ */
+export async function getContractTrainingReportsCore(studentId: string): Promise<GetContractTrainingReportsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_contract_training_report')
+      .select(TRAINING_REPORT_SELECT)
+      .eq('student_id', studentId)
+      .order('insert_date', { ascending: false });
+
+    if (error) {
+      logger.error('coachStudent:get_training_reports_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const reports = await attachCoachNames(supabase, (data ?? []) as Omit<ContractTrainingReport, 'coach_name'>[]);
+    return { success: true, reports };
+  } catch (err) {
+    logger.error('coachStudent:get_training_reports_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定契約(ticket)について、自分(コーチ)のトレーニングレポートの下書きを保存する。
+ * 既存のdraft行があれば本文を更新、なければ新規作成する（UNIQUE(ticket_id, coach_id)）。
+ * すでにfinalized済みの行がある場合はRLSの更新ポリシー(status=1のみ)により更新が
+ * 素通りせず0件更新となるため、その場合はalready_finalizedを返す。
+ */
+export async function saveContractTrainingReportDraftCore(
+  ticketId: string,
+  studentId: string,
+  commentText: string
+): Promise<SaveContractTrainingReportDraftResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const trimmed = commentText.trim();
+    if (!trimmed || trimmed.length > MAX_TRAINING_REPORT_LENGTH) {
+      return { success: false, errorCode: 'invalid_input' };
+    }
+
+    // 現役の担当関係が必要（コーチ交代後の過去コーチは新規に下書きを始められない）
+    const { data: relationship } = await supabase
+      .from('com_m_coach_student_relationship')
+      .select('relationship_id')
+      .eq('coach_id', user.id)
+      .eq('student_id', studentId)
+      .eq('is_active', true)
+      .limit(1);
+    if (!relationship || relationship.length === 0) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    const { data: existing } = await supabase
+      .from('com_t_contract_training_report')
+      .select('report_id, status')
+      .eq('ticket_id', ticketId)
+      .eq('coach_id', user.id)
+      .maybeSingle();
+
+    if (existing && existing.status !== TRAINING_REPORT_STATUS.DRAFT) {
+      return { success: false, errorCode: 'already_finalized' };
+    }
+
+    const { data, error } = existing
+      ? await supabase
+          .from('com_t_contract_training_report')
+          .update({ comment_text: trimmed, update_date: new Date().toISOString() })
+          .eq('report_id', existing.report_id)
+          .select(TRAINING_REPORT_SELECT)
+          .single()
+      : await supabase
+          .from('com_t_contract_training_report')
+          .insert({ ticket_id: ticketId, student_id: studentId, coach_id: user.id, comment_text: trimmed })
+          .select(TRAINING_REPORT_SELECT)
+          .single();
+
+    if (error || !data) {
+      logger.error('coachStudent:save_training_report_draft_failed', error?.message ?? 'No row returned', { ...ctx, userId: user.id, payload: { ticketId, studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const [report] = await attachCoachNames(supabase, [data as Omit<ContractTrainingReport, 'coach_name'>]);
+    logger.info('coachStudent:save_training_report_draft_success', 'Training report draft saved', { ...ctx, userId: user.id });
+    return { success: true, report };
+  } catch (err) {
+    logger.error('coachStudent:save_training_report_draft_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 自分(コーチ)のトレーニングレポートを確定(finalized)する。確定後は編集不可になる。
+ * RLSの更新ポリシー(status=1のみ更新可)により、すでに確定済みの行や他コーチの行に対しては
+ * 0件更新となるため、その場合はalready_finalizedを返す。
+ */
+export async function finalizeContractTrainingReportCore(reportId: string): Promise<FinalizeContractTrainingReportResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_contract_training_report')
+      .update({ status: TRAINING_REPORT_STATUS.FINALIZED, finalized_at: new Date().toISOString(), update_date: new Date().toISOString() })
+      .eq('report_id', reportId)
+      .select(TRAINING_REPORT_SELECT)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('coachStudent:finalize_training_report_failed', error.message, { ...ctx, userId: user.id, payload: { reportId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!data) {
+      // RLSにより対象外(他コーチの行/既に確定済み/存在しない)だった
+      return { success: false, errorCode: 'already_finalized' };
+    }
+
+    const [report] = await attachCoachNames(supabase, [data as Omit<ContractTrainingReport, 'coach_name'>]);
+    logger.info('coachStudent:finalize_training_report_success', 'Training report finalized', { ...ctx, userId: user.id });
+    return { success: true, report };
+  } catch (err) {
+    logger.error('coachStudent:finalize_training_report_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

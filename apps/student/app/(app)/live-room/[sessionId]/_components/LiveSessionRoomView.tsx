@@ -26,7 +26,7 @@ import {
 import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
 import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
 import { useLiveSessionPresence } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionPresence';
-import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
+import { useLiveSessionRoomOrchestration } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionRoomOrchestration';
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
@@ -68,7 +68,6 @@ export function LiveSessionRoomView({ access }: Props) {
   const [phase, setPhase] = useState<RoomPhase>('preview');
   const [isSelfViewVisible, setIsSelfViewVisible] = useState(true);
   const [isChatVisible, setIsChatVisible] = useState(true);
-  const [isTimeWarningVisible, setIsTimeWarningVisible] = useState(false);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const selfVideoRef = useRef<HTMLDivElement>(null);
   const peerVideoRef = useRef<HTMLDivElement>(null);
@@ -77,22 +76,22 @@ export function LiveSessionRoomView({ access }: Props) {
   const [chatInput, setChatInput] = useState('');
   const previewRequested = useRef(false);
   const joinRequested = useRef(false);
-  const sessionTimersStarted = useRef(false);
-  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const endTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialDeviceStateRef = useRef({ micOn: true, cameraOn: true, blurOn: false });
   const peerIconUrl = getProfileIconUrl(access.peerIconPath);
   const { isFullscreen, toggleFullscreen } = useFullscreen(roomContainerRef);
   const { showConfirm } = useConfirm();
 
-  // コーチ側のルームと同様、入退室のたびにcom_t_session_call_logへ記録する
-  const callLogIdRef = useRef<string | null>(null);
-  const recordLeaveIfNeeded = () => {
-    const id = callLogIdRef.current;
-    if (!id) return;
-    callLogIdRef.current = null;
-    void recordCallLeave(id);
-  };
+  const { isTimeWarningVisible, clearSessionTimers, recordLeaveIfNeeded } = useLiveSessionRoomOrchestration({
+    sessionId: access.sessionId,
+    isJoined,
+    zoomSessionId,
+    chatMessages,
+    canStartTimer: isJoined,
+    onTimeLimitReached: () => void handleTimeLimitReached(),
+    recordCallJoin,
+    recordCallLeave,
+    recordChatMessage,
+  });
 
   useEffect(() => {
     if (phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
@@ -120,54 +119,6 @@ export function LiveSessionRoomView({ access }: Props) {
     if (!isJoined) return;
     trackSelf('student');
   }, [isJoined, trackSelf]);
-
-  // Zoom Video SDKへの入室が確定した時点で、com_t_session_call_logに入室記録を残す
-  useEffect(() => {
-    if (!isJoined || !zoomSessionId || callLogIdRef.current) return;
-    recordCallJoin(access.sessionId, zoomSessionId).then((callLogId) => {
-      callLogIdRef.current = callLogId;
-    });
-  }, [isJoined, zoomSessionId, access.sessionId]);
-
-  // Zoom Video SDKのin-callチャットは永続化機能を持たないため、自分が送信したメッセージのみ
-  // （chat-on-messageは送受信双方にエコーされるためisSelfで判定）com_t_session_chatへ保存する。
-  // 二重保存防止のため保存済み件数をrefで追跡し、新規追加分のみ処理する。
-  const persistedChatCountRef = useRef(0);
-  useEffect(() => {
-    const newMessages = chatMessages.slice(persistedChatCountRef.current);
-    if (newMessages.length === 0) return;
-    persistedChatCountRef.current = chatMessages.length;
-    for (const msg of newMessages) {
-      if (msg.isSelf) {
-        void recordChatMessage(access.sessionId, msg.message);
-      }
-    }
-  }, [chatMessages, access.sessionId]);
-
-  const clearSessionTimers = () => {
-    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
-    if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
-    warningTimeoutRef.current = null;
-    endTimeoutRef.current = null;
-  };
-
-  // 自分の入室（＝セッション開始）を起点に、残り時間の警告と自動終了を仕込む。
-  // コーチ側が制限時間到達時に全員を強制終了させるが、その通知が何らかの理由で届かない場合の保険として
-  // 自分自身でも独立して制限時間を計測する。
-  useEffect(() => {
-    if (!isJoined || sessionTimersStarted.current) return;
-    sessionTimersStarted.current = true;
-
-    warningTimeoutRef.current = setTimeout(() => {
-      setIsTimeWarningVisible(true);
-    }, LIVE_SESSION_WARNING_AFTER_MS);
-
-    endTimeoutRef.current = setTimeout(() => {
-      handleTimeLimitReached();
-    }, LIVE_SESSION_END_AFTER_MS);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isJoined]);
 
   // コーチ側が（制限時間到達 or 手動操作で）通話を終了させた場合、専用の終了画面へ遷移する
   useEffect(() => {

@@ -184,7 +184,7 @@ export async function getSessionsForTicket(ticketId: string): Promise<CoachSessi
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note, coach_id')
+      .select('session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id')
       .eq('ticket_id', ticketId)
       .order('start_datetime', { ascending: false });
 
@@ -282,6 +282,7 @@ export async function cancelSessionAsAdmin(sessionId: string, refundTicket: bool
       p_reason: reason || null,
       p_proposed_slots: null,
       p_admin_refund_ticket: refundTicket,
+      p_as_admin: true,
     });
 
     if (error) {
@@ -298,48 +299,30 @@ export async function cancelSessionAsAdmin(sessionId: string, refundTicket: bool
 }
 
 /**
- * セッションの振替（アドミン代理操作）。生徒本人が行うのと同じreschedule_session RPCを使う。
+ * 未消化チケットの新規予約（アドミン代理操作）。生徒向けの新規予約は承認制になった
+ * （create_session_booking_request+approve_slot_proposalの2ステップ）が、
+ * アドミンは既に関係者間で調整済みの内容を即時反映すればよいため、管理者専用の
+ * admin_book_session_direct RPCを使う（承認ステップを挟まず即座にセッション行を作る）。
+ *
+ * 【振替の廃止 (2026-09-15追加)】
+ * 生徒・コーチ向けの「振替」概念を廃止したのと同様、アドミン専用のadmin_reschedule_session
+ * （日時変更を1回のRPCで完結させる専用関数）も廃止した。日時を変更したい場合は、
+ * cancelSessionAsAdmin（返還あり）でチケットを未割当に戻してから、本関数で改めて
+ * 予約するという「キャンセル＋予約」の2操作に統一する（生徒・コーチと同じ操作の型に揃え、
+ * 管理者専用の特殊経路を極力減らす）。
  */
-export async function rescheduleSessionAsAdmin(sessionId: string, newDate: string, newStartTime: string, reason?: string): Promise<AdminSessionActionResult> {
+export async function bookMakeupSessionAsAdmin(scheduleId: string, startIso: string, endIso: string): Promise<AdminSessionActionResult> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { error } = await supabase.rpc('reschedule_session', {
-      p_session_id: sessionId,
-      p_new_date: newDate,
-      p_new_start_time: newStartTime,
-      p_reason: reason || null,
-    });
-
-    if (error) {
-      logger.error('liveSession:reschedule_as_admin_failed', error.message, { ...ctx, payload: { sessionId, newDate, newStartTime } });
-      return { success: false, message: error.message };
-    }
-
-    revalidatePath('/live-sessions');
-    return { success: true };
-  } catch (err) {
-    logger.error('liveSession:reschedule_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { sessionId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
-  }
-}
-
-/**
- * 未割当チケットの新規予約（アドミン代理操作）。生徒本人が行うのと同じ
- * book_makeup_session RPCを使う。
- */
-export async function bookMakeupSessionAsAdmin(scheduleId: string, newDate: string, newStartTime: string): Promise<AdminSessionActionResult> {
-  const ctx = await getLogContext();
-  try {
-    const supabase = await createServerClient();
-    const { error } = await supabase.rpc('book_makeup_session', {
+    const { error } = await supabase.rpc('admin_book_session_direct', {
       p_schedule_id: scheduleId,
-      p_new_date: newDate,
-      p_new_start_time: newStartTime,
+      p_start_datetime: startIso,
+      p_end_datetime: endIso,
     });
 
     if (error) {
-      logger.error('liveSession:book_makeup_as_admin_failed', error.message, { ...ctx, payload: { scheduleId, newDate, newStartTime } });
+      logger.error('liveSession:book_makeup_as_admin_failed', error.message, { ...ctx, payload: { scheduleId, startIso, endIso } });
       return { success: false, message: error.message };
     }
 
