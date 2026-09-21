@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ExternalLink, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -99,8 +99,21 @@ export function AssignDialogueDialog({
                     >
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-slate-800 break-words">{content.content_name}</p>
-                        <p className="text-[11px] text-slate-400">
-                          {content.session_count} session{content.session_count === 1 ? '' : 's'}
+                        <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                          <span>
+                            {content.session_count} session{content.session_count === 1 ? '' : 's'}
+                          </span>
+                          {content.session1_coach_slides_link && (
+                            <a
+                              href={content.session1_coach_slides_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-0.5 text-indigo-600 hover:text-indigo-700 font-medium"
+                            >
+                              <ExternalLink size={10} />
+                              Session 1
+                            </a>
+                          )}
                         </p>
                       </div>
                       <Button

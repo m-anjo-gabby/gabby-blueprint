@@ -59,7 +59,7 @@ export async function getAvailableDialogueContentsCore(): Promise<GetAvailableDi
 
     const { data: sessions, error: sessionsError } = await supabase
       .from('com_m_dialogue_session')
-      .select('content_id')
+      .select('content_id, session_no, coach_slides_link')
       .in('content_id', contentIds)
       .eq('delete_flg', '0');
 
@@ -69,8 +69,12 @@ export async function getAvailableDialogueContentsCore(): Promise<GetAvailableDi
     }
 
     const sessionCountByContent = new Map<string, number>();
+    const session1LinkByContent = new Map<string, string | null>();
     (sessions ?? []).forEach((s) => {
       sessionCountByContent.set(s.content_id, (sessionCountByContent.get(s.content_id) ?? 0) + 1);
+      if (s.session_no === 1) {
+        session1LinkByContent.set(s.content_id, s.coach_slides_link);
+      }
     });
 
     const result: DialogueContentSummary[] = contents.map((c) => ({
@@ -79,6 +83,7 @@ export async function getAvailableDialogueContentsCore(): Promise<GetAvailableDi
       content_name_en: c.content_name_en,
       category_id: c.category_id as DialogueCategory,
       session_count: sessionCountByContent.get(c.content_id) ?? 0,
+      session1_coach_slides_link: session1LinkByContent.get(c.content_id) ?? null,
     }));
 
     return { success: true, contents: result };

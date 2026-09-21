@@ -66,6 +66,8 @@ export interface DialogueContentSummary {
   content_name_en: string | null;
   category_id: DialogueCategory;
   session_count: number;
+  /** アサイン前に教材内容を確認できるよう、Session 1のコーチ用スライドリンクを併せて返す */
+  session1_coach_slides_link: string | null;
 }
 
 /** 割当済みセット内の1セッション分の表示用ビュー（教材情報＋進捗を合成済み） */

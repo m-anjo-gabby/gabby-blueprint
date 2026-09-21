@@ -33,8 +33,11 @@
 - カテゴリタブ（Beginner / Intermediate / Advanced / Corpus）で教材セットを絞り込む。
   一覧エリアは常に同じ高さを確保しており、カテゴリごとの件数差でダイアログの高さがガタつかない
   （4件しか無いカテゴリでも、20件あるカテゴリと同じ枠の高さで、余白またはスクロールになる）
-- 各行に教材名（省略せず折り返し表示）・セッション数・「Assign」ボタンを表示。
-  **この生徒に既に割り当て済みの教材は一覧から除外される**
+- 各行に教材名（省略せず折り返し表示）・セッション数・（Session 1のコーチ用スライドリンクが
+  登録されている場合のみ）「Session 1」参考リンク・「Assign」ボタンを表示。参考リンクは
+  新しいタブでGoogle Slidesを開き、割り当てる前に教材内容を確認できる
+  （Session 1にリンクが無い教材では表示されない）
+- **この生徒に既に割り当て済みの教材は一覧から除外される**
 - Corpusタブは、コーチが担当する生徒のテナントに紐づく専用教材のみが表示される
   （テナントに紐づく専用教材が無ければ「No unassigned sets in this category.」）
 - 「Assign」を押すと即座に割り当てられ、ダイアログが閉じてカード一覧に反映される
@@ -54,7 +57,7 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 状態アイコン | 緑のチェック付き円（完了）／灰色の円アウトライン（未完了） | 表示のみ |
+| 完了バッジ | 完了時のみ「Session n」の隣に緑の「Completed」バッジを表示（未完了時はバッジ無し） | 表示のみ |
 | 「Complete」／「Cancel」ボタン | 未完了時は黒背景の「Complete」、完了時は枠線のみの「Cancel」（取消アイコン付き）に切り替わる | クリックで完了状態を即時トグルする。完了にした瞬間の日付が「Completed yyyy-mm-dd」として記録され、取消すると消える。**この操作はメモの未保存の下書きを巻き込まない**（メモは最後に保存された内容のまま維持される） |
 | Coach Slides / Student Slides リンク | リンクが登録されているセッションのみ | 新しいタブでGoogle Slidesを開く |
 | メモ欄（テキストエリア） | 常時 | 自由入力。**入力しただけでは保存されない** |
@@ -63,9 +66,11 @@
 ## 生徒概要カードとの関係
 
 生徒概要画面（`/students/[id]`）のDialogue Practiceカードにも「+ Assign」ボタンがあり、
-この画面に遷移しなくても、その場で同じ教材選択ダイアログを開いて割り当てられる
+この画面に遷移しなくても、その場で同じ教材選択ダイアログを開いて割り当てられる。
+さらに、カード上の未完了セット行をクリックするとダイアログが開き、セッション単位の完了操作・
+メモ編集もこの画面に遷移せず行える（`DialogueSessionRow`をそのまま共有しているため、挙動は
+この管理画面の展開カードと同一）。**割当解除（Unassign）のみ、この管理画面でしか行えない**
 （詳細は [生徒概要の仕様書](overview.md) のDialogue Practiceカードの節を参照）。
-割当後のセッション単位の完了操作・メモ編集・削除は、この管理画面でのみ行える。
 
 ## 状態
 
@@ -86,6 +91,10 @@
   （未着手セッションはレコード自体が存在せず、UI側で「未完了」として扱う）。
 - 割当解除の「進捗があるとdisabled」は、UI側の制御に加えてサーバーアクション側でも同条件を
   再検証している（直接呼び出し・競合更新への防御）。
+- 教材選択ダイアログの「Session 1」参考リンクは、`getAvailableDialogueContentsCore`が
+  `com_m_dialogue_session`から`session_no=1`のコーチ用スライドリンクを教材ごとに1件だけ
+  集計して返している（`DialogueContentSummary.session1_coach_slides_link`）。生徒用スライドは
+  対象外。
 
 ## 実装参照（エンジニア向け）
 
@@ -94,7 +103,8 @@
 - `apps/coach/app/(app)/students/[id]/dialogue-practice/_components/DialogueAssignmentCard.tsx`
 - `apps/coach/app/(app)/students/[id]/dialogue-practice/_components/DialogueSessionRow.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/AssignDialogueDialog.tsx`（生徒概要カードと共有）
-- `apps/coach/app/(app)/students/[id]/_components/DialoguePracticeCard.tsx`（生徒概要カード側）
+- `apps/coach/app/(app)/students/[id]/_components/DialoguePracticeCard.tsx`（生徒概要カード側。
+  `DialogueSessionRow`をこのディレクトリ外から直接importして共有している）
 - `apps/coach/app/(app)/students/[id]/_hooks/useDialoguePracticeAssignments.ts`
   （割当一覧の状態管理・更新ロジック。管理画面と生徒概要カードで共有）
 - サーバーアクション: `getAvailableDialogueContents`, `assignDialogueContent`,

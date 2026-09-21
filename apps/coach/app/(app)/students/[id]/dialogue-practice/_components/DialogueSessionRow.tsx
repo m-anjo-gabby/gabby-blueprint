@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, CheckCircle2, Circle, ExternalLink, Loader2, RotateCcw } from 'lucide-react';
+import { Check, ExternalLink, Loader2, RotateCcw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { DialogueAssignmentSessionView, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
@@ -54,12 +55,10 @@ export function DialogueSessionRow({ assignmentId, session, onProgressChange }: 
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            {session.is_completed ? (
-              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-            ) : (
-              <Circle size={14} className="text-slate-300 shrink-0" />
-            )}
             <p className="text-xs font-bold text-slate-700">Session {session.session_no}</p>
+            {session.is_completed && (
+              <Badge className="text-[10px] px-1.5 py-0 shrink-0 bg-emerald-600 hover:bg-emerald-600">Completed</Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {isSaving && <Loader2 size={12} className="animate-spin text-slate-400" />}

@@ -91,11 +91,21 @@
 |---|---|---|
 | 「+ Assign」ボタン | 常時 | 教材選択ダイアログをその場で開く（下記参照。このカードから遷移せずに割当が完結する） |
 | 「Manage」リンク | 常時 | Dialogue Practice管理画面（`/students/[id]/dialogue-practice`）へ遷移 |
-| 割当セット行 | 教材名・カテゴリバッジ・進捗バー（完了セッション数/全セッション数） | 表示のみ（セッション単位の完了操作・メモ編集・割当解除は管理画面でのみ行える） |
+| 割当セット行 | **未完了のセットのみ**表示（教材名・カテゴリバッジ・進捗バー） | クリックでセッション詳細ダイアログ（下記）を開く |
+
+割当自体は1件以上あるが、すべて全セッション完了済みの場合は割当セット行が0件になり、
+「All assigned sets are completed」と表示される（完了済みセットの内容は「Manage」から確認する）。
 
 「+ Assign」から開く教材選択ダイアログの挙動（カテゴリタブ・既割当教材の除外等）は、
 管理画面と全く同じもの（コンポーネントを共有）。詳細は
 [Dialogue Practice管理画面の仕様書](dialogue-practice.md) を参照。
+
+### セッション詳細ダイアログ
+
+割当セット行をクリックすると開く。教材名・カテゴリバッジ・進捗（「n/m sessions completed」）を
+ヘッダーに表示し、その下にセット内の全セッション行が並ぶ。この行は管理画面の展開カードと
+同じ`DialogueSessionRow`を共有しており、完了/取消の切り替え・スライドリンク・メモ入力と保存は
+管理画面と全く同じ挙動。**割当解除（Unassign）はこのダイアログには無く、管理画面でのみ行える**。
 
 ## Coach Notes カード
 
@@ -120,6 +130,7 @@
 | Live Sessionsカードが空 | 「No live session contracts yet」 | この生徒に契約が1件も無い場合 |
 | Live Sprintカードが空 | 「No lesson sprints yet」 | Live Sprint実施記録が1件も無い場合 |
 | Dialogue Practiceカードが空 | 「No dialogue sets assigned yet」 | ダイアログプラクティス教材が1件も割り当てられていない場合 |
+| Dialogue Practiceカードの割当セット行が0件 | 「All assigned sets are completed」 | 割当は1件以上あるが、いずれも全セッション完了済みの場合 |
 | Coach Notesカードが空 | 「No notes yet」 | メモが1件も無い場合 |
 | Training Reportsカードが空 | 「No contracts yet」 | 契約が1件も無い場合 |
 | 生徒が見つからない/担当関係が無い | 404ページ | 指定した生徒IDに対して自分が一度も担当関係を持ったことが無い場合 |
@@ -144,7 +155,8 @@
 - `apps/coach/app/(app)/students/[id]/_components/LessonSprintCard.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/LessonSprintHistoryRow.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/DialoguePracticeCard.tsx`（詳細は
-  [Dialogue Practice管理画面の仕様書](dialogue-practice.md) を参照）
+  [Dialogue Practice管理画面の仕様書](dialogue-practice.md) を参照。セッション詳細ダイアログは
+  `dialogue-practice/_components/DialogueSessionRow.tsx`を共有）
 - `apps/coach/app/(app)/students/[id]/_components/CoachNotesCard.tsx` / `CoachNoteEntry.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/TrainingReportCard.tsx` /
   `TrainingReportContractRow.tsx` / `TrainingReportEntry.tsx`
