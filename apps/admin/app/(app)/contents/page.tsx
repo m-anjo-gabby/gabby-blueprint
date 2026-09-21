@@ -9,18 +9,19 @@ import { Tag } from 'lucide-react';
 export default async function AdminContentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; type?: string }>;
 }) {
   const t = await getTranslations('contents.page');
   // 1. Next.js 15 の仕様に基づき searchParams を await する
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
   const searchQuery = params.q || "";
+  const contentType = params.type !== undefined && params.type !== "" ? Number(params.type) : undefined;
   const pageSize = 10;
 
   // 2. サーバーアクションから「教材データ」と「総件数」を取得
   // getContents は種別順(content_type)・表示順(seq_no)でソート済み
-  const { contents, totalCount } = await getContents(currentPage, pageSize, searchQuery);
+  const { contents, totalCount } = await getContents(currentPage, pageSize, searchQuery, contentType);
 
   // 3. 全ページ数を計算
   const pageCount = Math.ceil(totalCount / pageSize);

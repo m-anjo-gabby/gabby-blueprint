@@ -12,7 +12,7 @@ const logger = createLogger('admin');
 /**
  * 教材一覧取得（サーバーサイドページネーション）
  */
-export async function getContents(page: number = 1, limit: number = 10, searchQuery?: string) {
+export async function getContents(page: number = 1, limit: number = 10, searchQuery?: string, contentType?: number) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -48,10 +48,14 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
       query = query.or(`content_name.ilike.%${searchQuery}%,content_label.ilike.%${searchQuery}%`);
     }
 
+    if (contentType !== undefined) {
+      query = query.eq('content_type', contentType);
+    }
+
     const { data, count, error } = await query;
 
     if (error) {
-      logger.error('content:get_contents_failed', error.message, { ...ctx, payload: { page, limit, searchQuery } });
+      logger.error('content:get_contents_failed', error.message, { ...ctx, payload: { page, limit, searchQuery, contentType } });
       throw new Error(error.message);
     }
 
@@ -66,7 +70,7 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, limit, searchQuery } });
+    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, limit, searchQuery, contentType } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

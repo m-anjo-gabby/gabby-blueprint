@@ -5,9 +5,9 @@
 - アプリ: `admin`
 - パス: `/contents/[id]`（スプリント教材の場合は`?type=<問題種別>`が付与される）
 - 対象ロール: システム管理者
-- 目的: 個別の教材の中身（単語帳教材の単語・フレーズ・音声、またはスプリント教材の問題・音声）を
-  編集する。教材の基本情報（名称・公開範囲等）はこの画面では扱わず、一覧画面（`/contents`）の
-  編集ダイアログで行う。
+- 目的: 個別の教材の中身（単語帳教材の単語・フレーズ・音声、スプリント教材の問題・音声、または
+  ダイアログ教材のセッション明細）を編集する。教材の基本情報（名称・公開範囲・セット分類等）は
+  この画面では扱わず、一覧画面（`/contents`）の編集ダイアログで行う。
 - 教材種別が「ビデオ」の場合、専用エディタは未実装で「このコンテンツタイプのエディタは準備中です」
   という案内のみが表示される。
 
@@ -24,6 +24,10 @@
 3. **スプリント教材（種別=スプリント）の場合**: 上部フィルタツールバー＋問題一覧
    - ツールバー: 問題種別・レベルの絞り込み、一括音声作成、CSV(TSV)一括登録、新規追加
    - 問題一覧: 選択中の種別・レベルに該当する問題をカード形式で表示
+4. **ダイアログ教材（種別=ダイアログ）の場合**: 上部ツールバー＋セッション一覧
+   - ツールバー: セッション件数バッジ、「セッション追加」ボタン
+   - セッション一覧: セット配下の各セッション（セッション番号順）を、コーチ用/生徒用スライド
+     リンクと管理メモを添えてカード形式で表示
 
 ## 単語帳教材の編集
 
@@ -97,14 +101,37 @@
 - 問題登録ダイアログでは、グループ内に複数の設問をまとめて追加・編集できる
   （Question・Answer(Yes)は必須、その他は種別により任意）。
 
+## ダイアログ教材の編集
+
+### セッション一覧
+
+| 要素 | 表示条件・内容 | 操作した時の挙動 |
+|---|---|---|
+| セッション件数バッジ | 常時表示 | 表示のみ |
+| セッションカード | セッション番号、コーチ用スライド（タイトル・リンク）、生徒用スライド（タイトル・リンク）、管理メモ（設定時のみ） | スライドリンクは新規タブで開く外部リンク |
+| 編集アイコン | 各セッションカード | セッション登録ダイアログが編集モードで開く |
+| 削除アイコン | 各セッションカード | 確認ダイアログを経て論理削除する（取り消せない操作として案内） |
+| 「セッション追加」ボタン | 常時表示 | セッション登録ダイアログを開く（セッション番号は既存最大値+1が初期値） |
+
+### セッション登録ダイアログ
+
+- 入力項目: セッション番号（必須、数値）、コーチ用スライド（表示タイトル・URL、いずれも任意）、
+  生徒用スライド（表示タイトル・URL、いずれも任意）、教材制作・運用メモ（管理者向け、任意）。
+- 同一教材内でセッション番号が重複する場合は保存時にエラーメッセージを表示する
+  （DB側のUNIQUE制約`(content_id, session_no)`による）。
+- コーチ用スライド・生徒用スライドのリンクは、コーチアプリの生徒別ダイアログプラクティス画面
+  （`apps/coach`の`/students/[id]/dialogue-practice`）で生徒に表示される。
+
 ## 状態
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
 | 教材が存在しない | 404（Not Found） | 指定したcontent_idが存在しない場合 |
 | 単語未選択 | 右ペインに「単語を選択するとフレーズを管理できます」の案内（ja/en切替対応） | 単語帳教材で、URLに`wordId`が無い場合 |
-| 一覧読み込み中 | スピナー表示 | 単語・フレーズ・問題の取得中 |
+| 一覧読み込み中 | スピナー表示 | 単語・フレーズ・問題・セッションの取得中 |
 | 単語帳一覧が空 | 「フレーズが登録されていません」等の空状態表示 | 対象データが0件の場合 |
+| セッション一覧が空 | 「セッションが登録されていません」の空状態表示 | ダイアログ教材でセッションが0件の場合 |
+| セッション番号の重複 | 保存時にエラーメッセージを表示（ダイアログは閉じない） | 同一教材内で既存のセッション番号と重複した場合 |
 | 一括登録・一括音声生成でエラー発生 | エラー一覧、または成功/エラー件数を通知するダイアログ | CSV/TSVの内容不備、または音声生成の一部失敗 |
 
 ## 実装参照（エンジニア向け）
@@ -117,6 +144,11 @@
 - `apps/admin/app/(app)/contents/[id]/_components/editors/SprintEditor/`
   （`index.tsx`, `SprintQuestionList.tsx`, `SprintQuestionFormDialog.tsx`, `SprintTTSDialog.tsx`,
   `SprintTTSBulkDialog.tsx`, `SprintBulkImportDialog.tsx`）
+- `apps/admin/app/(app)/contents/[id]/_components/editors/DialogueEditor/`
+  （`index.tsx`, `DialogueSessionList.tsx`, `DialogueSessionFormDialog.tsx`）
+- `apps/admin/actions/adminDialogueAction.ts`
+  （`getDialogueSessions`, `upsertDialogueSession`, `deleteDialogueSession`。RPCではなく
+  `com_m_dialogue_session`への直接CRUD。論理削除）
 - `apps/admin/actions/adminContentAction.ts`（`getContentById`）
 - `apps/admin/actions/adminWordAction.ts`（`getWordsByContentId`, `upsertWord`, `deleteWord`,
   `getPhrasesByWordId`, `upsertPhrase`, `deletePhrase`, `bulkUpsertWordsAndPhrases`）
@@ -127,3 +159,5 @@
 - `packages/lib/azure/ssml.ts`（SSML生成ロジック）
 - `packages/types/word.ts`, `packages/types/sprint.ts`（`WORD_STATUS`, `PHRASE_TYPES`,
   `QUESTION_TYPES`, `SPRINT_TYPES`の正本）
+- `packages/types/dialogue.ts`（`DialogueSession`（`com_m_dialogue_session`のDBレコード型）の正本。
+  コーチアプリのダイアログプラクティス機能と共有）

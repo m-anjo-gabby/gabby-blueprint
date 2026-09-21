@@ -19,15 +19,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ChevronLeft, 
   ChevronRight, 
   Search, 
   X, 
-  Layers, 
-  Video, 
-  MessageSquare, 
-  Globe, 
+  Layers,
+  Video,
+  MessageSquare,
+  MessagesSquare,
+  Globe,
   Lock,
   ExternalLink,
   Plus,
@@ -62,6 +64,7 @@ export function ContentDataTable({
   const [searchValue, setSearchValue] = React.useState(searchParams.get("q") || "");
 
   const currentPage = Number(searchParams.get("page")) || 1;
+  const currentType = searchParams.get("type") || "all";
 
   // --- カラム定義 ---
   const columns = React.useMemo<ColumnDef<Content>[]>(() => [
@@ -93,6 +96,7 @@ export function ContentDataTable({
           0: { icon: <MessageSquare size={12} />, className: "bg-blue-50 text-blue-600 border-blue-100" },
           1: { icon: <Video size={12} />, className: "bg-purple-50 text-purple-600 border-purple-100" },
           2: { icon: <Layers size={12} />, className: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+          3: { icon: <MessagesSquare size={12} />, className: "bg-cyan-50 text-cyan-600 border-cyan-100" },
         }[type] || { icon: null, className: "" };
 
         return (
@@ -259,11 +263,22 @@ export function ContentDataTable({
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const handleTypeFilterChange = (type: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (type === "all") {
+      params.delete("type");
+    } else {
+      params.set("type", type);
+    }
+    params.set("page", "1");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   return (
     <div className="space-y-0">
       {/* コントロールパネル */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-slate-50/80 rounded-t-lg border-x border-t border-slate-200">
-        <div className="flex items-center gap-2 w-full max-w-md">
+        <div className="flex items-center gap-2 w-full max-w-2xl">
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
@@ -282,6 +297,18 @@ export function ContentDataTable({
           <Button onClick={() => handleSearchTrigger(searchValue)} variant="secondary" size="sm" className="h-9 px-4 bg-white border border-slate-200 shadow-sm font-bold text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">
             {t('searchButton')}
           </Button>
+
+          <Select value={currentType} onValueChange={handleTypeFilterChange}>
+            <SelectTrigger className="h-9 w-40 bg-white border-slate-200 shadow-sm rounded-xl font-bold text-slate-600 shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('typeFilterAllOption')}</SelectItem>
+              {Object.entries(CONTENT_TYPES).map(([val, info]) => (
+                <SelectItem key={val} value={val}>{info.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center gap-4">

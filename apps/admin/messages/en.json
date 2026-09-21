@@ -1446,6 +1446,7 @@
       "accessAlertHint": "Please set a target for this content to be published to",
       "searchPlaceholder": "Search by content name or label...",
       "searchButton": "Search",
+      "typeFilterAllOption": "All Types",
       "totalCount": "<styled>{count}</styled> total",
       "noData": "No content data found.",
       "editorButtonTitle": "Launch editor"
@@ -1473,6 +1474,12 @@
       "sprintHasLevelYes": "Enabled",
       "sprintHasLevelNo": "Disabled (fixed at Level 1)",
       "sprintSupportLabel": "Question types to enable",
+      "dialogueCategoryLabel": "Set Category",
+      "dialogueCategoryUnselected": "Not selected",
+      "dialogueCategoryPlaceholder": "Please select",
+      "dialogueCategoryNoneOption": "Please select",
+      "dialogueCategoryDescription": "Beginner/Intermediate/Advanced sets are published commonly; Corpus sets are published to specific clients only.",
+      "scopeAutoFromDialogueCategoryHint": "Automatically set based on the selected set category",
       "cefrLabel": "CEFR Level",
       "cefrUnset": "Not set",
       "cefrNoneOption": "None",
@@ -1497,7 +1504,8 @@
         "difficultyRequired": "Please enter the difficulty level",
         "sprintTypeRequired": "Please select a sprint type",
         "sprintThemeRequired": "Please enter a theme for the Corpus Sprint",
-        "sprintSupportRequired": "Please enable at least one question type"
+        "sprintSupportRequired": "Please enable at least one question type",
+        "dialogueCategoryRequired": "Please select a set category"
       }
     },
     "accessDialog": {
@@ -1785,6 +1793,43 @@
         "ttsBulkDialog": {
           "toastCompleted": "Bulk audio generation completed",
           "toastPartialError": "{count} items failed to generate"
+        }
+      },
+      "dialogue": {
+        "index": {
+          "sessionCount": "{count} sessions",
+          "loading": "Loading sessions..."
+        },
+        "sessionList": {
+          "emptyState": "No sessions registered",
+          "coachSlidesLabel": "Coach Slides",
+          "studentSlidesLabel": "Student Slides",
+          "deleted": "Session deleted",
+          "deleteFailed": "Failed to delete",
+          "deleteDialogTitle": "Delete this session?",
+          "deleteDialogHint": "This action cannot be undone.",
+          "cancelButton": "Cancel",
+          "deleteConfirmButton": "Delete"
+        },
+        "sessionFormDialog": {
+          "createButton": "Add Session",
+          "createTitle": "Register New Session",
+          "editTitle": "Edit Session",
+          "sessionNoLabel": "Session No.",
+          "coachSlidesSectionLabel": "Coach Slides",
+          "studentSlidesSectionLabel": "Student Slides",
+          "titlePlaceholder": "Display title",
+          "linkPlaceholder": "https://docs.google.com/presentation/...",
+          "adminNotesLabel": "Production / Operations Notes (admin only)",
+          "cancelButton": "Cancel",
+          "processing": "Processing...",
+          "confirmSaveButton": "Confirm and Save",
+          "toastCreated": "Session registered",
+          "toastUpdated": "Session updated",
+          "toastError": "An error occurred",
+          "errors": {
+            "sessionNoRequired": "Please enter a session number"
+          }
         }
       }
     }

@@ -8,7 +8,7 @@ export const CONTENT_TYPES = {
   0: { label: '単語帳', value: 0 },
   1: { label: 'ビデオ', value: 1 },
   2: { label: 'スプリント', value: 2 },
-  3: { label: 'ダイアログプラクティス', value: 3 },
+  3: { label: 'ダイアログ', value: 3 },
 } as const;
 
 // タグ種別
@@ -129,6 +129,8 @@ export interface ContentRecord {
   seq_no: number;
   difficulty_level: number;
   recommend: number;
+  // セット分類ID（現状ダイアログプラクティス content_type=3 のみで使用。1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）
+  category_id: number | null;
   metadata: ContentMetadata;
   delete_flg: '0' | '1';
   insert_date: string;

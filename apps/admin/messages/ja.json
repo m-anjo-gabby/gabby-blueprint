@@ -1446,6 +1446,7 @@
       "accessAlertHint": "公開先を設定してください",
       "searchPlaceholder": "教材名、ラベルで検索...",
       "searchButton": "検索",
+      "typeFilterAllOption": "すべての種別",
       "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "教材データが見つかりませんでした。",
       "editorButtonTitle": "エディタを起動"
@@ -1473,6 +1474,12 @@
       "sprintHasLevelYes": "あり",
       "sprintHasLevelNo": "なし (レベル1固定)",
       "sprintSupportLabel": "有効にする問題種別",
+      "dialogueCategoryLabel": "セット分類",
+      "dialogueCategoryUnselected": "未選択",
+      "dialogueCategoryPlaceholder": "選択してください",
+      "dialogueCategoryNoneOption": "選択してください",
+      "dialogueCategoryDescription": "Beginner/Intermediate/Advancedは共通公開、Corpusはクライアント限定公開の教材になります。",
+      "scopeAutoFromDialogueCategoryHint": "セット分類の選択に応じて自動設定されます",
       "cefrLabel": "CEFR レベル",
       "cefrUnset": "未設定",
       "cefrNoneOption": "選択なし",
@@ -1497,7 +1504,8 @@
         "difficultyRequired": "難易度を入力してください",
         "sprintTypeRequired": "スプリント種別を選択してください",
         "sprintThemeRequired": "コーパススプリントの場合はテーマを入力してください",
-        "sprintSupportRequired": "少なくとも1つの問題種別を有効にしてください"
+        "sprintSupportRequired": "少なくとも1つの問題種別を有効にしてください",
+        "dialogueCategoryRequired": "セット分類を選択してください"
       }
     },
     "accessDialog": {
@@ -1785,6 +1793,43 @@
         "ttsBulkDialog": {
           "toastCompleted": "一括音声生成が完了しました",
           "toastPartialError": "{count}件の生成に失敗しました"
+        }
+      },
+      "dialogue": {
+        "index": {
+          "sessionCount": "{count}セッション",
+          "loading": "セッションを読み込み中..."
+        },
+        "sessionList": {
+          "emptyState": "セッションが登録されていません",
+          "coachSlidesLabel": "コーチ用スライド",
+          "studentSlidesLabel": "生徒用スライド",
+          "deleted": "セッションを削除しました",
+          "deleteFailed": "削除に失敗しました",
+          "deleteDialogTitle": "セッションを削除しますか？",
+          "deleteDialogHint": "この操作は取り消せません。",
+          "cancelButton": "キャンセル",
+          "deleteConfirmButton": "削除する"
+        },
+        "sessionFormDialog": {
+          "createButton": "セッション追加",
+          "createTitle": "新規セッションの登録",
+          "editTitle": "セッションの編集",
+          "sessionNoLabel": "セッション番号",
+          "coachSlidesSectionLabel": "コーチ用スライド",
+          "studentSlidesSectionLabel": "生徒用スライド",
+          "titlePlaceholder": "表示タイトル",
+          "linkPlaceholder": "https://docs.google.com/presentation/...",
+          "adminNotesLabel": "教材制作・運用メモ（管理者向け）",
+          "cancelButton": "キャンセル",
+          "processing": "処理中...",
+          "confirmSaveButton": "確定して保存",
+          "toastCreated": "セッションを登録しました",
+          "toastUpdated": "セッションを更新しました",
+          "toastError": "エラーが発生しました",
+          "errors": {
+            "sessionNoRequired": "セッション番号を入力してください"
+          }
         }
       }
     }

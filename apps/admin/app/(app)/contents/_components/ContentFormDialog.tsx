@@ -17,6 +17,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType, CEFR_CONFIG } from '@gabby/types/content';
 import { QUESTION_TYPES, SPRINT_TYPES } from '@gabby/types/sprint';
+import { DIALOGUE_CATEGORIES, DialogueCategory } from '@gabby/types/dialogue';
 import { upsertContent } from '@/actions/adminContentAction';
 import { useRouter } from 'next/navigation';
 
@@ -45,9 +46,23 @@ function createContentSchema(t: FormT) {
     sprint_support_builders: z.boolean(),
     sprint_support_structure: z.boolean(),
     sprint_support_mastery: z.boolean(),
+
+    // ダイアログプラクティス用のセット分類（content_type=3のみで使用）
+    dialogue_category: z.string().optional(),
   });
 
   return contentSchema.superRefine((data, ctx) => {
+    // 教材種別が「ダイアログプラクティス (3)」の場合のバリデーション
+    if (data.content_type === '3') {
+      if (!data.dialogue_category || data.dialogue_category === 'none') {
+        ctx.addIssue({
+          code: 'custom',
+          message: t('errors.dialogueCategoryRequired'),
+          path: ['dialogue_category'],
+        });
+      }
+    }
+
     // 教材種別が「スプリント (2)」の場合のバリデーション
     if (data.content_type === '2') {
       if (!data.sprint_type || data.sprint_type === 'none') {
@@ -106,6 +121,7 @@ const DEFAULT_VALUES: ContentFormValues = {
   sprint_support_builders: false,
   sprint_support_structure: false,
   sprint_support_mastery: false,
+  dialogue_category: 'none',
 };
 
 export function ContentFormDialog({ mode = 'create', initialData }: ContentFormDialogProps) {
@@ -139,6 +155,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       sprint_support_builders: sprintMeta?.supported_types?.builders ?? false,
       sprint_support_structure: sprintMeta?.supported_types?.structure ?? false,
       sprint_support_mastery: sprintMeta?.supported_types?.mastery ?? false,
+      dialogue_category: data.category_id ? String(data.category_id) : 'none',
     };
   };
 
@@ -150,13 +167,26 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
   const { isSubmitting } = form.formState;
   const currentContentType = form.watch('content_type');
   const currentSprintType = form.watch('sprint_type');
+  const currentDialogueCategory = form.watch('dialogue_category');
 
   // 種別が変わったときにスプリント用の値をリセット・制御するためのEffect
   useEffect(() => {
     if (currentContentType !== '2') {
       form.setValue('sprint_type', 'none');
     }
+    if (currentContentType !== '3') {
+      form.setValue('dialogue_category', 'none');
+    }
   }, [currentContentType, form]);
+
+  // ダイアログプラクティスは、セット分類ID(1-3:Beginner/Intermediate/Advanced ⇔ 4:Corpus)に
+  // 公開範囲(共通/限定)が一意に対応するため、分類の選択に応じて自動でセットする
+  // （DB側のchk_com_m_contents_category_scope制約と整合させるため）
+  useEffect(() => {
+    if (currentContentType !== '3') return;
+    if (!currentDialogueCategory || currentDialogueCategory === 'none') return;
+    form.setValue('content_scope', currentDialogueCategory === '4' ? '1' : '0');
+  }, [currentContentType, currentDialogueCategory, form]);
 
   const onSubmit = async (values: ContentFormValues) => {
     setServerError(null);
@@ -199,11 +229,16 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         }
       }
 
+      const isDialogue = values.content_type === '3';
+
       const payload: Partial<Content> = {
         content_name: values.content_name,
         content_name_en: values.content_name_en?.trim() || null,
         content_type: Number(values.content_type) as ContentType,
         content_scope: Number(values.content_scope) as ContentScope,
+        category_id: isDialogue && values.dialogue_category && values.dialogue_category !== 'none'
+          ? Number(values.dialogue_category)
+          : null,
         content_label: values.content_label,
         seq_no: Number(values.seq_no),
         difficulty_level: Number(values.difficulty_level || 1),
@@ -329,11 +364,11 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                   </FormItem>
                 )} />
 
-                {/* 公開範囲 */}
+                {/* 公開範囲（ダイアログプラクティスはセット分類から自動決定するため編集不可） */}
                 <FormField control={form.control} name="content_scope" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('scopeLabel')}</FormLabel>
-                    {isConfirming ? (
+                    {isConfirming || currentContentType === '3' ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
                         {CONTENT_SCOPES[Number(field.value) as ContentScope]?.label}
                       </div>
@@ -347,9 +382,50 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                         </SelectContent>
                       </Select>
                     )}
+                    {currentContentType === '3' && !isConfirming && (
+                      <FormDescription className="text-[11px] text-slate-400">
+                        {t('scopeAutoFromDialogueCategoryHint')}
+                      </FormDescription>
+                    )}
                   </FormItem>
                 )} />
               </div>
+
+              {/* --- ダイアログプラクティス選択時のみ表示する特化セクション --- */}
+              {currentContentType === '3' && (
+                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80 space-y-4">
+                  <FormField control={form.control} name="dialogue_category" render={({ field }) => (
+                    <FormItem className="w-full">
+                      <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">{t('dialogueCategoryLabel')}</FormLabel>
+                      {isConfirming ? (
+                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-medium">
+                          {field.value && field.value !== 'none'
+                            ? DIALOGUE_CATEGORIES[Number(field.value) as DialogueCategory]?.label
+                            : t('dialogueCategoryUnselected')}
+                        </div>
+                      ) : (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500">
+                              <SelectValue placeholder={t('dialogueCategoryPlaceholder')} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">{t('dialogueCategoryNoneOption')}</SelectItem>
+                            {Object.values(DIALOGUE_CATEGORIES).map((category) => (
+                              <SelectItem key={category.value} value={String(category.value)}>{category.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <FormDescription className="text-[11px] text-slate-400">
+                        {t('dialogueCategoryDescription')}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+              )}
 
               {/* --- スプリント選択時のみ表示する特化セクション --- */}
               {currentContentType === '2' && (
