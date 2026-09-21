@@ -654,3 +654,77 @@ INSERT INTO public.com_m_dialogue_session (dialogue_session_id, content_id, sess
 ON CONFLICT (dialogue_session_id) DO UPDATE SET coach_slides_title = EXCLUDED.coach_slides_title, coach_slides_link = EXCLUDED.coach_slides_link, student_slides_title = EXCLUDED.student_slides_title, student_slides_link = EXCLUDED.student_slides_link, admin_notes = EXCLUDED.admin_notes, delete_flg = EXCLUDED.delete_flg, update_date = NOW();
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】セッションハブ/結果画面へのダイアログプラクティス組み込み
+-- 追加日: 2026-09-21
+--
+-- 【内容】
+--   セッションハブ（コーチ）にダイアログプラクティスの割当・進捗操作パネルを追加し、
+--   セッション結果画面にはそのセッション中に開いた教材の履歴（Dialog Practice History）を
+--   追加する。Google Slidesを別タブで開く方式のため「完了したか」はアプリ側から検知できず、
+--   セッションハブでコーチがスライドリンクをクリックした時点の「オープンの事実」のみを
+--   com_t_session_dialogue_logに記録する（重複・誤クリックも含めそのまま記録し、上書き・
+--   重複排除はしない）。
+--
+--   1. com_t_session_dialogue_log を新規作成
+--      - session_id・assignment_id・dialogue_session_idを保持する追記専用の履歴テーブル。
+--
+-- 対応ファイル: DDL/table/com_t_session_dialogue_log.sql
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 1. com_t_session_dialogue_log の新規作成
+---------------------------------------------
+CREATE TABLE IF NOT EXISTS public.com_t_session_dialogue_log (
+  log_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
+  assignment_id uuid NOT NULL REFERENCES public.com_t_dialogue_assignment(assignment_id) ON DELETE CASCADE,
+  dialogue_session_id uuid NOT NULL REFERENCES public.com_m_dialogue_session(dialogue_session_id),
+  opened_by_coach_id uuid NOT NULL REFERENCES public.com_m_user(id),
+  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_t_session_dialogue_log IS 'ライブセッション中にコーチがダイアログプラクティス教材のスライドリンクを開いた履歴（オープンの事実のみを記録。完了の意味は持たない）';
+COMMENT ON COLUMN public.com_t_session_dialogue_log.log_id IS 'ログID';
+COMMENT ON COLUMN public.com_t_session_dialogue_log.session_id IS '対象のライブセッションID (com_t_session.session_id)';
+COMMENT ON COLUMN public.com_t_session_dialogue_log.assignment_id IS '対象の割当ID (com_t_dialogue_assignment.assignment_id)';
+COMMENT ON COLUMN public.com_t_session_dialogue_log.dialogue_session_id IS '開かれたセッション明細ID (com_m_dialogue_session.dialogue_session_id)';
+COMMENT ON COLUMN public.com_t_session_dialogue_log.opened_by_coach_id IS 'リンクを開いたコーチのユーザーID';
+COMMENT ON COLUMN public.com_t_session_dialogue_log.insert_date IS 'オープン日時（=登録日時。更新は行わないためupdate_dateは持たない）';
+
+CREATE INDEX IF NOT EXISTS idx_session_dialogue_log_session
+  ON public.com_t_session_dialogue_log (session_id, insert_date);
+
+ALTER TABLE public.com_t_session_dialogue_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Coaches can manage session dialogue logs they created" ON public.com_t_session_dialogue_log;
+DROP POLICY IF EXISTS "Students can view their own session dialogue logs" ON public.com_t_session_dialogue_log;
+
+CREATE POLICY "Coaches can manage session dialogue logs they created" ON public.com_t_session_dialogue_log
+FOR ALL TO authenticated
+USING (
+    opened_by_coach_id = auth.uid() OR public.get_jwt_user_type() = '0'
+) WITH CHECK (
+    opened_by_coach_id = auth.uid()
+    AND EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        JOIN public.com_t_dialogue_assignment a ON a.assignment_id = com_t_session_dialogue_log.assignment_id
+        WHERE s.session_id = com_t_session_dialogue_log.session_id
+          AND s.coach_id = auth.uid()
+          AND s.student_id = a.student_id
+    )
+);
+
+CREATE POLICY "Students can view their own session dialogue logs" ON public.com_t_session_dialogue_log
+FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM public.com_t_session s
+        WHERE s.session_id = com_t_session_dialogue_log.session_id
+          AND s.student_id = auth.uid()
+    )
+);
+
+COMMIT;

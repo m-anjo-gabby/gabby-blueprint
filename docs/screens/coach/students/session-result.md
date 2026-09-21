@@ -56,8 +56,16 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | Live Sprint History | このセッション中に実施したLive Sprintの一覧（無ければ「No Live Sprint was run in this session.」） | 行をクリックするとLive Sprint結果画面へ遷移する（戻り先はこのセッション結果画面） |
-| Dialog Practice History | 常時表示だが「Soon」バッジ付きで無効 | 未実装機能のプレースホルダー |
+| Dialog Practice History | このセッション中にセッションハブでコーチが開いた教材リンクの履歴（教材名・Session番号・オープン日時。無ければ「No Dialogue Practice material was opened in this session.」） | 表示のみ（行のクリックによる遷移は無い） |
 | In-call Chat History | 通話中のチャットメッセージ一覧（コーチ発言は右寄せ、生徒発言は左寄せ）。無ければ「No chat messages were sent during this call.」 | 操作なし（閲覧のみ） |
+
+**Dialog Practice Historyは「開いた」事実の記録であり、「完了した」ことを保証するものではない。**
+ダイアログプラクティス教材はGoogle Slidesを別タブで開く方式のため、実際に何を行ったかをアプリ側
+から検知することはできない。そのため、セッションハブでコーチがCoach Slides/Student Slidesリンクを
+クリックした時点をそのまま1行として記録しており（`com_t_session_dialogue_log`）、誤って別教材を
+開いた・同じ教材を開き直した場合も重複排除せずそのまま複数行として残る。教材が「完了したか」は
+Dialogue Practiceカード側の進捗（`com_t_dialogue_session_progress`）が別途管理しており、本履歴とは
+連動しない。
 
 ## 状態
 
@@ -93,3 +101,6 @@
   `addHomeworkComment`（`apps/coach/actions/sessionHomeworkAction.ts`）,
   `uploadSessionHomeworkAttachment`, `getSessionHomeworkAttachmentUrl`
   （`packages/lib/sessionHomework/actions/homeworkAttachmentActions.ts`）
+- DB: `com_t_session_dialogue_log`（Dialog Practice Historyの記録元。追記専用、
+  `session_id`・`assignment_id`・`dialogue_session_id`を保持。登録元は
+  [セッションハブ](session-detail.md)の`logSessionDialogueOpen`アクション）

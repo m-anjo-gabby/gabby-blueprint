@@ -68,7 +68,7 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | Live Sprintカード「Start」ボタン | セッションが操作可能（実施予定かつ猶予期間内）な間のみ表示 | このセッションに紐づくLive Sprint実施画面（`?session_id=`付き）へ遷移する |
-| Dialog Practiceカード | 常時表示だが「Soon」バッジ付きで無効 | 未実装機能のプレースホルダー |
+| Dialog Practiceカード | 生徒概要画面のDialogue Practiceパネル（`DialoguePracticeCard`）と同一コンポーネント。ただし「Manage」リンクは無い | 「+ Assign」で教材選択ダイアログをその場で開ける。未完了セット行をクリックするとセッション詳細ダイアログが開き、完了操作・メモ編集ができる（詳細は[生徒概要の仕様書](overview.md)のDialogue Practiceカードの節、[Dialogue Practice管理画面の仕様書](dialogue-practice.md)を参照）。**このハブでのみ**、セッション詳細ダイアログでCoach Slides/Student Slidesリンクを開くと、その事実（オープンイベント）がこのライブセッションに紐づけて記録され、セッション結果画面のDialog Practice Historyに反映される |
 
 ## Prep・Self-Training：表示要素・操作
 
@@ -97,10 +97,16 @@
   （実体は `packages/lib/components/common/SessionActionDialog.tsx`、`mode: 'resolve'`）
 - 共通コンポーネント: `apps/coach/components/common/ImmersiveShell.tsx`,
   `apps/coach/components/common/ImmersiveHeader.tsx`, `apps/coach/components/common/Section.tsx`
+- Dialog Practiceカード: `apps/coach/app/(app)/students/[id]/_components/DialoguePracticeCard.tsx`
+  （生徒概要画面と共有。詳細は[Dialogue Practice管理画面の仕様書](dialogue-practice.md)参照）
 - 関連RPC: `finalize_session`, `resolve_stale_session`
 - サーバーアクション: `getSessionResultSummary`（`apps/coach/actions/sessionAction.ts`）,
   `getRecentSessionHomework`（`apps/coach/actions/sessionHomeworkAction.ts`）,
   `getLessonSprintHistory`（`apps/coach/actions/lessonSprintAction.ts`）,
   `getSelfTrainingWeekSummary`（`apps/coach/actions/studentAction.ts`）,
   `finalizeSession`, `resolveStaleSession`, `hasCoachJoinedSessions`
-  （`apps/coach/actions/sessionAction.ts`）
+  （`apps/coach/actions/sessionAction.ts`）,
+  `getStudentDialogueAssignments`, `getAvailableDialogueContents`, `logSessionDialogueOpen`
+  （`apps/coach/actions/dialogueAction.ts`）
+- DB: `com_t_session_dialogue_log`（このハブでスライドリンクを開いた事実を記録する追記専用の
+  履歴テーブル。詳細は[セッション結果画面の仕様書](session-result.md)を参照）

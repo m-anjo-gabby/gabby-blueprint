@@ -110,6 +110,16 @@ export interface UpdateDialogueSessionProgressInput {
   notes: string | null;
 }
 
+/**
+ * ライブセッション中にコーチが教材のスライドリンクを開いた事実を記録する入力ペイロード
+ * (com_t_session_dialogue_log)。完了を意味するものではなく、オープンイベントの記録のみ。
+ */
+export interface LogSessionDialogueOpenInput {
+  session_id: string;
+  assignment_id: string;
+  dialogue_session_id: string;
+}
+
 export type GetAvailableDialogueContentsResult =
   | { success: true; contents: DialogueContentSummary[] }
   | { success: false; errorCode: CoachStudentErrorCode };
@@ -127,5 +137,9 @@ export type GetStudentDialogueAssignmentsResult =
   | { success: false; errorCode: CoachStudentErrorCode };
 
 export type UpdateDialogueSessionProgressResult =
+  | { success: true }
+  | { success: false; errorCode: CoachStudentErrorCode };
+
+export type LogSessionDialogueOpenResult =
   | { success: true }
   | { success: false; errorCode: CoachStudentErrorCode };

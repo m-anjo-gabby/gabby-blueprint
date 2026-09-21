@@ -117,17 +117,25 @@ export function SessionResult({ studentId, session, homework, checklist }: Props
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-slate-200 border-dashed shadow-sm bg-slate-50/40">
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-500 flex items-center gap-1.5">
-                Dialog Practice History
-                <span className="text-[9px] font-black uppercase tracking-wide text-slate-400 bg-white border border-slate-200 rounded-full px-1.5 py-0.5">
-                  Soon
-                </span>
-              </CardTitle>
+              <CardTitle className="text-sm font-bold text-slate-800">Dialog Practice History</CardTitle>
             </CardHeader>
             <CardContent className="pt-2">
-              <p className="text-xs text-slate-400 italic">Coming soon.</p>
+              {session.dialogue_log.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">No Dialogue Practice material was opened in this session.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {session.dialogue_log.map((entry) => (
+                    <li key={entry.log_id} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
+                      <p className="text-[10px] font-bold text-slate-400">{formatDateTimeEn(entry.insert_date, timezone)}</p>
+                      <p className="text-xs text-slate-700 font-semibold mt-0.5">
+                        {entry.content_name} · Session {entry.session_no}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -14,6 +14,8 @@ import {
   GetStudentDialogueAssignmentsResult,
   UpdateDialogueSessionProgressInput,
   UpdateDialogueSessionProgressResult,
+  LogSessionDialogueOpenInput,
+  LogSessionDialogueOpenResult,
 } from '@gabby/types/dialogue';
 
 const logger = createLogger('common');
@@ -421,6 +423,59 @@ export async function updateDialogueSessionProgressCore(
     return { success: true };
   } catch (err) {
     logger.error('dialogue:update_progress_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * セッションハブでコーチが教材のスライドリンクを開いた事実を1行記録する（com_t_session_dialogue_log）。
+ * Google Slidesを別タブで開く方式のため実際に何を行ったかまでは検知できず、あくまで
+ * 「このセッション中にこの教材を開いた」というオープンイベントの記録に留める（完了状態は
+ * updateDialogueSessionProgressCoreが別途管理する）。誤クリック・開き直し等も含めてそのまま
+ * 追記するため、重複排除や更新は行わない。
+ */
+export async function logSessionDialogueOpenCore(input: LogSessionDialogueOpenInput): Promise<LogSessionDialogueOpenResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: assignment, error: assignmentError } = await supabase
+      .from('com_t_dialogue_assignment')
+      .select('assignment_id, student_id')
+      .eq('assignment_id', input.assignment_id)
+      .maybeSingle();
+
+    if (assignmentError) {
+      logger.error('dialogue:log_open_assignment_lookup_failed', assignmentError.message, { ...ctx, userId: user.id, payload: input });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!assignment) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+    if (!(await hasCoachStudentRelationship(supabase, user.id, assignment.student_id))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    const { error } = await supabase
+      .from('com_t_session_dialogue_log')
+      .insert({
+        session_id: input.session_id,
+        assignment_id: input.assignment_id,
+        dialogue_session_id: input.dialogue_session_id,
+        opened_by_coach_id: user.id,
+      });
+
+    if (error) {
+      logger.error('dialogue:log_open_failed', error.message, { ...ctx, userId: user.id, payload: input });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true };
+  } catch (err) {
+    logger.error('dialogue:log_open_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

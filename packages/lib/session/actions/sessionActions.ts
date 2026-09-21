@@ -28,6 +28,7 @@ import {
   SessionBookingRequest,
   SessionCallLogEntry,
   SessionChatMessageEntry,
+  SessionDialogueLogEntry,
   SessionListItem,
   SessionRescheduleProposal,
   SessionRescheduleProposalGroup,
@@ -973,6 +974,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
       { data: callLogRows, error: callLogError },
       { data: chatRows, error: chatError },
       { data: sprintRows, error: sprintError },
+      { data: dialogueLogRows, error: dialogueLogError },
     ] = await Promise.all([
       supabase.from('com_m_user').select('user_name, icon_path').eq('id', counterpartId).maybeSingle(),
       supabase
@@ -990,6 +992,11 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         .select('lesson_sprint_id, question_type, difficulty_level, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)')
         .eq('session_id', sessionId)
         .order('insert_date', { ascending: true }),
+      supabase
+        .from('com_t_session_dialogue_log')
+        .select('log_id, insert_date, com_m_dialogue_session(session_no), com_t_dialogue_assignment(com_m_contents(content_name, content_name_en))')
+        .eq('session_id', sessionId)
+        .order('insert_date', { ascending: true }),
     ]);
 
     if (callLogError) {
@@ -1002,6 +1009,10 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
     }
     if (sprintError) {
       logger.error('session:get_result_summary_sprint_failed', sprintError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (dialogueLogError) {
+      logger.error('session:get_result_summary_dialogue_log_failed', dialogueLogError.message, { ...ctx, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -1040,6 +1051,22 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
       };
     });
 
+    const dialogueLog: SessionDialogueLogEntry[] = (dialogueLogRows ?? []).map((r) => {
+      const dialogueSessionJoin = Array.isArray(r.com_m_dialogue_session) ? r.com_m_dialogue_session[0] : r.com_m_dialogue_session;
+      const assignmentJoin = Array.isArray(r.com_t_dialogue_assignment) ? r.com_t_dialogue_assignment[0] : r.com_t_dialogue_assignment;
+      const contentJoin = assignmentJoin
+        ? (Array.isArray(assignmentJoin.com_m_contents) ? assignmentJoin.com_m_contents[0] : assignmentJoin.com_m_contents)
+        : null;
+
+      return {
+        log_id: r.log_id,
+        content_name: contentJoin?.content_name ?? '(Unknown)',
+        content_name_en: contentJoin?.content_name_en ?? null,
+        session_no: dialogueSessionJoin?.session_no ?? 0,
+        insert_date: r.insert_date,
+      };
+    });
+
     return {
       success: true,
       session: {
@@ -1053,6 +1080,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         counterpart_icon_path: counterpart?.icon_path ?? null,
         call_log: callLog,
         chat_log: chatLog,
+        dialogue_log: dialogueLog,
         sprint_log: sprintLog,
       },
     };

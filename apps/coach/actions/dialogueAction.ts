@@ -6,6 +6,7 @@ import {
   unassignDialogueContentCore,
   getStudentDialogueAssignmentsCore,
   updateDialogueSessionProgressCore,
+  logSessionDialogueOpenCore,
 } from '@gabby/lib/coachStudent/actions/dialogueActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -13,6 +14,7 @@ import {
   DialogueAssignmentSummary,
   DialogueContentSummary,
   UpdateDialogueSessionProgressInput,
+  LogSessionDialogueOpenInput,
 } from '@gabby/types/dialogue';
 import { CoachStudentErrorCode } from '@gabby/types/coachStudent';
 
@@ -96,6 +98,22 @@ export async function updateDialogueSessionProgress(
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('coach:update_dialogue_session_progress_failed', result.errorCode, ctx);
+    return { success: false, message: DIALOGUE_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+  return { success: true };
+}
+
+/**
+ * Records that a coach opened a Dialogue Practice material's slide link during a live session.
+ * Best-effort logging only — callers should not block the slide link on this.
+ */
+export async function logSessionDialogueOpen(
+  input: LogSessionDialogueOpenInput
+): Promise<{ success: true } | { success: false; message: string }> {
+  const result = await logSessionDialogueOpenCore(input);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:log_session_dialogue_open_failed', result.errorCode, ctx);
     return { success: false, message: DIALOGUE_ERROR_MESSAGES_EN[result.errorCode] };
   }
   return { success: true };

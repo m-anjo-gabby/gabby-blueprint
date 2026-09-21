@@ -11,9 +11,14 @@ interface Props {
   assignmentId: string;
   session: DialogueAssignmentSessionView;
   onProgressChange: (input: UpdateDialogueSessionProgressInput) => Promise<void>;
+  /**
+   * ライブセッション中の文脈（セッションハブ）でのみ渡す。スライドリンクをクリックした時点の
+   * 「オープンの事実」を記録するためのフィードバック用フック（完了とは別概念）。
+   */
+  onSlidesOpen?: () => void;
 }
 
-export function DialogueSessionRow({ assignmentId, session, onProgressChange }: Props) {
+export function DialogueSessionRow({ assignmentId, session, onProgressChange, onSlidesOpen }: Props) {
   const [notesDraft, setNotesDraft] = useState(session.notes ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -88,6 +93,7 @@ export function DialogueSessionRow({ assignmentId, session, onProgressChange }: 
               href={session.coach_slides_link}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={onSlidesOpen}
               className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium"
             >
               <ExternalLink size={11} />
@@ -99,6 +105,7 @@ export function DialogueSessionRow({ assignmentId, session, onProgressChange }: 
               href={session.student_slides_link}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={onSlidesOpen}
               className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium"
             >
               <ExternalLink size={11} />

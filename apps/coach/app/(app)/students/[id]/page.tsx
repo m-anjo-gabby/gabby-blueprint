@@ -67,7 +67,12 @@ export default async function StudentOverviewPage({
           shortfalls={sessionShortfalls}
         />
         <LessonSprintCard studentId={id} history={lessonSprints} />
-        <DialoguePracticeCard studentId={id} assignments={dialogueAssignments} availableContents={dialogueContents} />
+        <DialoguePracticeCard
+          studentId={id}
+          assignments={dialogueAssignments}
+          availableContents={dialogueContents}
+          manageHref={`/students/${id}/dialogue-practice`}
+        />
         <CoachNotesCard studentId={id} initialNotes={recentNotes} />
         <TrainingReportCard studentId={id} contracts={recentContracts} initialReports={trainingReports} />
       </div>

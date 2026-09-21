@@ -156,7 +156,8 @@
 - `apps/coach/app/(app)/students/[id]/_components/LessonSprintHistoryRow.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/DialoguePracticeCard.tsx`（詳細は
   [Dialogue Practice管理画面の仕様書](dialogue-practice.md) を参照。セッション詳細ダイアログは
-  `dialogue-practice/_components/DialogueSessionRow.tsx`を共有）
+  `dialogue-practice/_components/DialogueSessionRow.tsx`を共有。[セッションハブ](session-detail.md)
+  にも同じコンポーネントが埋め込まれている）
 - `apps/coach/app/(app)/students/[id]/_components/CoachNotesCard.tsx` / `CoachNoteEntry.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/TrainingReportCard.tsx` /
   `TrainingReportContractRow.tsx` / `TrainingReportEntry.tsx`

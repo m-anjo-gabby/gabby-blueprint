@@ -103,13 +103,18 @@
 - `apps/coach/app/(app)/students/[id]/dialogue-practice/_components/DialogueAssignmentCard.tsx`
 - `apps/coach/app/(app)/students/[id]/dialogue-practice/_components/DialogueSessionRow.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/AssignDialogueDialog.tsx`（生徒概要カードと共有）
-- `apps/coach/app/(app)/students/[id]/_components/DialoguePracticeCard.tsx`（生徒概要カード側。
-  `DialogueSessionRow`をこのディレクトリ外から直接importして共有している）
+- `apps/coach/app/(app)/students/[id]/_components/DialoguePracticeCard.tsx`（`DialogueSessionRow`を
+  このディレクトリ外から直接importして共有している。生徒概要画面（`manageHref`指定、Manageリンクあり）
+  と[セッションハブ](session-detail.md)（`liveSessionId`指定、Manageリンク無し・スライドオープンを
+  ログする）の2箇所から使われる汎用コンポーネント）
 - `apps/coach/app/(app)/students/[id]/_hooks/useDialoguePracticeAssignments.ts`
-  （割当一覧の状態管理・更新ロジック。管理画面と生徒概要カードで共有）
+  （割当一覧の状態管理・更新ロジック。管理画面・生徒概要カード・セッションハブで共有）
 - サーバーアクション: `getAvailableDialogueContents`, `assignDialogueContent`,
-  `unassignDialogueContent`, `getStudentDialogueAssignments`, `updateDialogueSessionProgress`
+  `unassignDialogueContent`, `getStudentDialogueAssignments`, `updateDialogueSessionProgress`,
+  `logSessionDialogueOpen`（セッションハブでのみ使用。詳細は[セッション結果画面の仕様書](session-result.md)
+  のDialog Practice History節を参照）
   （`apps/coach/actions/dialogueAction.ts` → Core実装は
   `packages/lib/coachStudent/actions/dialogueActions.ts`）
 - DB: `com_m_contents`（`content_type=3`）, `com_m_dialogue_session`,
-  `com_t_dialogue_assignment`, `com_t_dialogue_session_progress`
+  `com_t_dialogue_assignment`, `com_t_dialogue_session_progress`, `com_t_session_dialogue_log`
+  （セッションハブでのスライドオープン履歴。セッション結果画面のDialog Practice History用）

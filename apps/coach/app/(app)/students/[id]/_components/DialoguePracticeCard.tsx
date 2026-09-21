@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { logSessionDialogueOpen } from '@/actions/dialogueAction';
 import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
 import type { DialogueAssignmentSummary, DialogueContentSummary } from '@gabby/types/dialogue';
 import { useDialoguePracticeAssignments } from '../_hooks/useDialoguePracticeAssignments';
@@ -18,9 +19,22 @@ interface Props {
   studentId: string;
   assignments: DialogueAssignmentSummary[];
   availableContents: DialogueContentSummary[];
+  /** Dialogue Practice管理画面への遷移先。省略時は「Manage」リンク自体を表示しない（セッションハブ埋め込み時） */
+  manageHref?: string;
+  /**
+   * ライブセッション実施中のコンテキストで表示する場合、そのセッションID。指定時のみ、
+   * セッション詳細ダイアログでスライドリンクを開いた事実をこのセッションに紐づけて記録する。
+   */
+  liveSessionId?: string;
 }
 
-export function DialoguePracticeCard({ studentId, assignments: initialAssignments, availableContents }: Props) {
+export function DialoguePracticeCard({
+  studentId,
+  assignments: initialAssignments,
+  availableContents,
+  manageHref,
+  liveSessionId,
+}: Props) {
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const { assignments, assignedContentIds, handleAssigned, handleProgressChange } = useDialoguePracticeAssignments(
@@ -49,12 +63,11 @@ export function DialoguePracticeCard({ studentId, assignments: initialAssignment
             <Plus size={14} />
             Assign
           </Button>
-          <Link
-            href={`/students/${studentId}/dialogue-practice`}
-            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
-          >
-            Manage
-          </Link>
+          {manageHref && (
+            <Link href={manageHref} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+              Manage
+            </Link>
+          )}
         </div>
       </CardHeader>
       <CardContent className="pt-2">
@@ -130,6 +143,17 @@ export function DialoguePracticeCard({ studentId, assignments: initialAssignment
                     assignmentId={selectedAssignment.assignment_id}
                     session={session}
                     onProgressChange={handleProgressChange}
+                    onSlidesOpen={
+                      liveSessionId
+                        ? () => {
+                            logSessionDialogueOpen({
+                              session_id: liveSessionId,
+                              assignment_id: selectedAssignment.assignment_id,
+                              dialogue_session_id: session.dialogue_session_id,
+                            }).catch(() => {});
+                          }
+                        : undefined
+                    }
                   />
                 ))}
               </div>
