@@ -286,7 +286,7 @@ export async function deleteContractPlan(planId: string) {
 /**
  * 契約情報の一覧取得（ページネーション・検索対応）
  */
-export async function getContracts(page: number = 1, limit: number = 10, searchQuery?: string) {
+export async function getContracts(page: number = 1, limit: number = 10, searchQuery?: string, clientId?: string) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -301,12 +301,16 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
       query = query.ilike('client_name', `%${searchQuery}%`);
     }
 
+    if (clientId) {
+      query = query.eq('client_id', clientId);
+    }
+
     const { data: contracts, count, error } = await query
       .order('insert_date', { ascending: false })
       .range(from, to);
 
     if (error) {
-      logger.error('contract:get_contracts_failed', error.message, { ...ctx, payload: { page, limit, searchQuery } });
+      logger.error('contract:get_contracts_failed', error.message, { ...ctx, payload: { page, limit, searchQuery, clientId } });
       throw new Error(error.message);
     }
 
@@ -321,7 +325,7 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, limit, searchQuery } });
+    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, limit, searchQuery, clientId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

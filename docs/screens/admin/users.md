@@ -16,8 +16,8 @@
 ## 画面の構成
 
 1. **ヘッダー** — 画面タイトル、説明文、「一括登録」ボタン、「新規登録」ボタン
-2. **ユーザー一覧テーブル** — 検索欄、区分フィルタ（管理者・生徒・コーチ）、ページネーション、
-   一覧表（1ページ10件）
+2. **ユーザー一覧テーブル** — 検索欄、区分フィルタ（管理者・生徒・コーチ）、顧客フィルタ、
+   ページネーション、一覧表（1ページ10件）
 3. **ユーザー登録・編集ダイアログ**
 4. **ライセンス管理ダイアログ**（生徒のみ、一覧の「ライセンス」欄から開く）
 5. **ステージ・レベル管理ダイアログ**（生徒のみ、一覧の「ステージ」ボタンから開く）
@@ -30,6 +30,7 @@
 |---|---|---|
 | 検索欄 | 常時表示 | キーワード検索。Enterまたは「検索」ボタンで実行し、1ページ目に戻る |
 | 区分フィルタ | 常時表示 | 「すべての区分」「生徒」「コーチ」「管理者」を切り替えて絞り込む |
+| 顧客フィルタ | 常時表示 | 検索式セレクトで顧客を選択して絞り込む（未選択時は「すべての顧客」で全件対象）。選択すると1ページ目に戻る |
 | 一覧の「ユーザー」列 | 氏名・メールアドレス | 表示のみ |
 | 一覧のステータスバッジ | ログイン実績あり:「アクティブ」／招待確認済み・未ログイン:「招待確認済」／招待メール未送信・送信失敗:「送信失敗」（ツールチップにエラー内容）／それ以外:「招待中」 | 表示のみ |
 | 一覧の「所属顧客」列 | 顧客名。未所属なら「未所属」 | 表示のみ |
@@ -110,6 +111,8 @@
 - `apps/admin/app/(app)/users/_components/user-data-table.tsx`
 - `apps/admin/app/(app)/users/_components/columns.tsx`
 - `apps/admin/app/(app)/users/_components/UserTypeFilter.tsx`
+- `apps/admin/components/common/ClientFilter.tsx`（顧客フィルタ。`contracts`一覧とも共用する共通
+  コンポーネント。URLクエリパラメータ`clientId`と同期）
 - `apps/admin/app/(app)/users/_components/UserFormDialog.tsx`
 - `apps/admin/app/(app)/users/_components/LicenseFormDialog.tsx`
 - `apps/admin/app/(app)/users/_components/SprintProgressFormDialog.tsx`
@@ -125,6 +128,4 @@
 - `apps/admin/actions/adminImpersonationAction.ts`（`startImpersonation`。監査ログ:
   `com_t_admin_impersonation_log`）
 - 対象テーブル: `com_m_user`
-- 気づき: `apps/admin/app/(app)/users/_components/ClientFilter.tsx` というコンポーネントが
-  存在するが、現在この画面のどこからも import・使用されていない（デッドコード）。一覧に
-  顧客での絞り込みUIは実際には存在しない
+- `apps/admin/actions/adminClientAction.ts`（`getClientsFilter`。顧客フィルタの選択肢取得）

@@ -20,18 +20,22 @@ import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { createColumns } from "./columns";
+import { ClientFilter } from "@/components/common/ClientFilter";
 import type { ContractDetail } from "@gabby/types/contract";
+import type { ClientOption } from "@gabby/types/client";
 
 interface ContractDataTableProps {
   data: ContractDetail[];
   pageCount: number;
   totalCount?: number;
+  clients: ClientOption[];
 }
 
 export function ContractDataTable({
   data,
   pageCount,
   totalCount = 0,
+  clients,
 }: ContractDataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -88,7 +92,7 @@ export function ContractDataTable({
       {/* 検索・ページネーションパネル */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-slate-50/80 rounded-t-lg border-x border-t border-slate-200">
         
-        <div className="flex items-center gap-2 w-full max-w-md">
+        <div className="flex items-center gap-2 w-full max-w-2xl">
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
@@ -110,14 +114,17 @@ export function ContractDataTable({
               </button>
             )}
           </div>
-          <Button 
+          <Button
             onClick={() => handleSearchTrigger(searchValue)}
-            variant="secondary" 
-            size="sm" 
+            variant="secondary"
+            size="sm"
             className="h-9 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 shadow-sm shrink-0 font-medium"
           >
             {tDataTable('searchButton')}
           </Button>
+
+          {/* 顧客フィルタ */}
+          <ClientFilter clients={clients} />
         </div>
 
         <div className="flex items-center gap-4">

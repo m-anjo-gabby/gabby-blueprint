@@ -3,23 +3,28 @@ import Link from 'next/link';
 import { Settings } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { getContracts } from '@/actions/adminContractAction';
+import { getClientsFilter } from '@/actions/adminClientAction';
 import { ContractDataTable } from './_components/contract-data-table';
 import { ContractFormDialog } from './_components/ContractFormDialog';
 
 export default async function AdminContractsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; clientId?: string }>;
 }) {
   const t = await getTranslations('contracts.page');
   // 1. Next.js 15 の仕様に基づき searchParams を await する
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
   const searchQuery = params.q || "";
+  const clientId = params.clientId || "";
   const pageSize = 10;
 
-  // 2. サーバーアクションから「データ」と「総件数」を取得
-  const { contracts, totalCount } = await getContracts(currentPage, pageSize, searchQuery);
+  // 2. サーバーアクションから「データ」「総件数」「顧客フィルタ選択肢」を取得
+  const [{ contracts, totalCount }, clients] = await Promise.all([
+    getContracts(currentPage, pageSize, searchQuery, clientId),
+    getClientsFilter(),
+  ]);
 
   // 3. 全ページ数を計算
   const pageCount = Math.ceil(totalCount / pageSize);
@@ -50,6 +55,7 @@ export default async function AdminContractsPage({
         data={contracts || []}
         pageCount={pageCount}
         totalCount={totalCount}
+        clients={clients}
       />
     </div>
   );

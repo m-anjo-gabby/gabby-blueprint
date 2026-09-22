@@ -73,7 +73,7 @@
 | [profile.md](admin/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
 | [profile-password.md](admin/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |
 | [timezones.md](admin/timezones.md) | `/timezones` | タイムゾーンマスタ管理 | ✅ |
-| [users.md](admin/users.md) | `/users` | ユーザーCRUD・ライセンス・代理ログイン（要確認事項あり） | ✅ |
+| [users.md](admin/users.md) | `/users` | ユーザーCRUD・ライセンス・代理ログイン | ✅ |
 | [calendar-events/list.md](admin/calendar-events/list.md) | `/calendar-events` | 共有カレンダーイベントの登録・編集・削除 | ✅ |
 | [calendar-events/participants.md](admin/calendar-events/participants.md) | `/calendar-events/[id]/participants` | イベント参加者(RSVP)確認・アナウンス配信 | ✅ |
 | [chat/list.md](admin/chat/list.md) | `/chat` | 管理者用チャットルーム一覧（査閲モード有） | ✅ |

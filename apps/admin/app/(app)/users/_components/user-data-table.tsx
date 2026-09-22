@@ -20,19 +20,23 @@ import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import UserTypeFilter from "./UserTypeFilter";
+import { ClientFilter } from "@/components/common/ClientFilter";
 import { createColumns } from "./columns";
 import type { UserRecord } from "@gabby/types/user";
+import type { ClientOption } from "@gabby/types/client";
 
 interface DataTableProps {
   data: UserRecord[];
   pageCount: number;
   totalCount?: number;
+  clients: ClientOption[];
 }
 
 export function UserDataTable({
   data,
   pageCount,
   totalCount = 0,
+  clients,
 }: DataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -96,6 +100,9 @@ export function UserDataTable({
 
           {/* 区分フィルタ（管理者・生徒・コーチ） */}
           <UserTypeFilter />
+
+          {/* 顧客フィルタ */}
+          <ClientFilter clients={clients} />
         </div>
 
         <div className="flex items-center gap-4">

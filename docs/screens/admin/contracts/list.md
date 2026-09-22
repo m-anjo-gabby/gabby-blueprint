@@ -16,7 +16,7 @@
 ## 画面の構成
 
 1. **ヘッダー** — 画面タイトル、説明文、「プランマスタ管理」リンク、「新規登録」ボタン
-2. **契約一覧テーブル** — 検索欄、ページネーション、契約の一覧表（1ページ10件）
+2. **契約一覧テーブル** — 検索欄、顧客フィルタ、ページネーション、契約の一覧表（1ページ10件）
 3. **ライセンス割当ダイアログ**（一覧の「ライセンス利用状況」欄から開く）
 
 ## 表示要素・操作
@@ -24,6 +24,7 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | 検索欄 | 常時表示 | 顧客名の部分一致で検索。Enterまたは「検索」ボタンで実行し、1ページ目に戻る |
+| 顧客フィルタ | 常時表示 | 検索式セレクトで顧客を選択して絞り込む（未選択時は「すべての顧客」で全件対象）。選択すると1ページ目に戻る |
 | 「プランマスタ管理」リンク | 常時表示 | `/contracts/plans` へ遷移 |
 | 「新規登録」ボタン | 常時表示 | 契約登録ダイアログを開く |
 | 一覧の「顧客名」列 | 契約に紐づく顧客名。紐付けが取れない場合は「未紐付け」 | 表示のみ |
@@ -90,7 +91,10 @@
 - `apps/admin/app/(app)/contracts/_components/ContractFormDialog.tsx`
 - `apps/admin/app/(app)/contracts/_components/ContractLicenseDialog.tsx`
 - `apps/admin/app/(app)/contracts/_components/DeleteContractDialog.tsx`
-- `apps/admin/actions/adminContractAction.ts`（`getContracts`, `createContract`, `updateContract`,
-  `deleteContract`, `purgeContractWithHistory`, `getLicenseAssignmentUsers`,
-  `assignLicenseToUser`, `invalidateUserLicense`, `getContractPlans`）
+- `apps/admin/components/common/ClientFilter.tsx`（顧客フィルタ。`users`一覧とも共用する共通
+  コンポーネント。URLクエリパラメータ`clientId`と同期）
+- `apps/admin/actions/adminContractAction.ts`（`getContracts`（`clientId`引数で絞り込み対応）,
+  `createContract`, `updateContract`, `deleteContract`, `purgeContractWithHistory`,
+  `getLicenseAssignmentUsers`, `assignLicenseToUser`, `invalidateUserLicense`, `getContractPlans`）
+- `apps/admin/actions/adminClientAction.ts`（`getClientsFilter`。顧客フィルタの選択肢取得）
 - 対象テーブル・ビュー: `vw_contract_details` ほか契約・ライセンス関連テーブル

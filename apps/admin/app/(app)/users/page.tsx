@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { getUsers } from '@/actions/adminUserAction';
+import { getClientsFilter } from '@/actions/adminClientAction';
 import { UserFormDialog } from './_components/UserFormDialog';
 import { UserBulkImportDialog } from './_components/UserBulkImportDialog';
 import { UserDataTable } from './_components/user-data-table';
@@ -9,7 +10,7 @@ import { Loader2 } from 'lucide-react';
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; userType?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; userType?: string; clientId?: string }>;
 }) {
   const t = await getTranslations('users.page');
 
@@ -18,10 +19,14 @@ export default async function AdminUsersPage({
   const searchQuery = params.q || "";
   const currentPage = Number(params.page) || 1;
   const userType = params.userType || "";
+  const clientId = params.clientId || "";
   const pageSize = 10;
 
-  // 2. ユーザデータ取得
-  const userData = await getUsers(currentPage, pageSize, searchQuery, undefined, userType);
+  // 2. ユーザデータ・顧客フィルタ選択肢を取得
+  const [userData, clients] = await Promise.all([
+    getUsers(currentPage, pageSize, searchQuery, clientId, userType),
+    getClientsFilter(),
+  ]);
 
   // 3. 全ページ数を計算
   const pageCount = Math.ceil(userData.totalCount / pageSize);
@@ -60,6 +65,7 @@ export default async function AdminUsersPage({
           data={userData.users}
           pageCount={pageCount}
           totalCount={userData.totalCount}
+          clients={clients}
         />
       </Suspense>
     </div>

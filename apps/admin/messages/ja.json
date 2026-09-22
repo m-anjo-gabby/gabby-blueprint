@@ -21,6 +21,11 @@
       "japanese": "日本語",
       "english": "English",
       "switchLabel": "言語切替"
+    },
+    "clientFilter": {
+      "allClients": "すべての顧客",
+      "searchPlaceholder": "顧客名で検索...",
+      "emptyMessage": "見つかりませんでした。"
     }
   },
   "nav": {

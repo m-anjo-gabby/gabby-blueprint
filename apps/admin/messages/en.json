@@ -21,6 +21,11 @@
       "japanese": "日本語",
       "english": "English",
       "switchLabel": "Switch language"
+    },
+    "clientFilter": {
+      "allClients": "All clients",
+      "searchPlaceholder": "Search by client name...",
+      "emptyMessage": "No results found."
     }
   },
   "nav": {
