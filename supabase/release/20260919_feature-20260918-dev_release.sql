@@ -16,8 +16,24 @@
 --      - 本テーブルはコーチ向け月次支払通知書・請求書PDFにのみ使用するため、契約実態に
 --        合わせて名義を是正する（支払通知書側の表示もこれに伴い変更される）。
 --
+--   3. 生徒モニタリング画面（apps/student /monitor）の対象生徒判定を、NOW()基準の
+--      「現在activeな契約」から「表示中の対象期間にライセンスが重なっているか」に変更。
+--      - get_monitor_user_list に _start_date/_end_date（DATE, 両方省略可）を追加。
+--        指定時は対象期間との重なりでユーザーを判定し、未指定時は従来通りNOW()基準の
+--        挙動を維持する（後方互換）。シグネチャ変更のためDROP FUNCTION IF EXISTSで
+--        旧シグネチャ(BOOLEAN)を削除してから再作成する。
+--      - get_monitor_sprint_history / get_monitor_sprint_drill_history は内部で
+--        get_monitor_user_list を呼び出して対象ユーザーを絞り込んでいたため、実績データ
+--        自体もアクティブ契約者のみに絞られていた。それぞれの _start_date/_end_date を
+--        get_monitor_user_list にも渡すよう修正（シグネチャは変更なし）。
+--      - これにより、前期のみ契約し後期は契約していない生徒についても、前期の年月を
+--        表示している間は一覧・絞り込み・実績（単語ドリル/スプリント）すべてに表示される。
+--
 -- 対応ファイル: DDL/table/com_m_company_profile.sql（末尾の追加パッチ節）,
---   DML/com_m_company_profile.sql
+--   DML/com_m_company_profile.sql,
+--   DDL/function/get_monitor_user_list.sql,
+--   DDL/function/get_monitor_sprint_history.sql,
+--   DDL/function/get_monitor_sprint_drill_history.sql
 --
 -- 【実行方法】
 --   Supabase Studio > SQL Editor に本ファイルの内容をそのまま貼り付けて実行してください。
@@ -726,5 +742,342 @@ FOR SELECT TO authenticated USING (
           AND s.student_id = auth.uid()
     )
 );
+
+---------------------------------------------
+-- 3. 生徒モニタリング画面: 対象生徒判定を private.get_monitor_target_users に一本化
+---------------------------------------------
+-- 【2026-09-22 抜本改修】当初は各RPCが個別に「対象生徒とは何か」を判定しており、
+-- 単語ドリル履歴だけライセンス状態を見ていない・当月/来月の判定にNOW()基準とperiod基準が
+-- 混在する等、仕様の一貫性が崩れていた。対象生徒の判定ロジックを private スキーマの
+-- 内部共通ヘルパー get_monitor_target_users に一本化し、受講生一覧・単語ドリル履歴・
+-- スプリント履歴・スプリントドリル履歴の4つのRPCすべてがこれを利用する構成に変更する。
+--
+-- 【対象生徒の定義（4RPC共通）】
+--   1. 指定クライアントに所属する受講生（user_type に '1' を含む）
+--   2. デモユーザーではない
+--   3. _include_monitor = FALSE の場合、モニターロールを持たない
+--   4. status = 1（有効）のライセンスを持ち、そのライセンス期間が対象期間と重なっている
+--      （停止・満了ステータス、または期間が重ならないライセンスは対象外）
+-- _start_date/_end_date は4RPCすべてで必須パラメータとし、NOW()基準のフォールバックは廃止。
+
+---------------------------------------------
+-- 3-0. get_monitor_target_users（新規: 内部共通ヘルパー）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION private.get_monitor_target_users(
+    _client_id UUID,
+    _start_date DATE,
+    _end_date DATE,
+    _include_monitor BOOLEAN DEFAULT FALSE
+)
+RETURNS TABLE (
+    user_id UUID,
+    contract_id UUID,
+    license_id UUID,
+    license_status SMALLINT,
+    license_start_date TIMESTAMPTZ,
+    license_end_date TIMESTAMPTZ,
+    plan_name TEXT
+)
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $$
+    SELECT DISTINCT ON (u.id)
+      u.id AS user_id,
+      l.contract_id,
+      l.license_id,
+      l.status AS license_status,
+      l.start_date AS license_start_date,
+      l.end_date AS license_end_date,
+      con.plan_name
+    FROM public.com_m_user u
+    INNER JOIN public.com_t_user_license l
+      ON l.user_id = u.id
+     AND l.status = 1 -- 💡 有効なライセンスのみを対象とする（停止・満了は日付が重なっていても除外）
+     AND l.start_date < (_end_date + 1)::timestamptz -- 対象期間の終了日いっぱいまでを含める
+     AND l.end_date >= _start_date::timestamptz
+    LEFT JOIN public.com_m_contract con ON con.contract_id = l.contract_id
+    WHERE u.client_id = _client_id
+      AND u.user_type ~ '1'
+      -- 💡 デモユーザーはどんな時でも絶対に含めない
+      AND NOT EXISTS (
+        SELECT 1 FROM public.com_t_user_role r
+        WHERE r.user_id = u.id AND r.role_id = 'demo_user'
+      )
+      -- 💡 モニターロールの切り替えロジック
+      AND (
+        _include_monitor = TRUE -- ONならモニターロールの人も通過させる
+        OR
+        NOT EXISTS ( -- OFFならモニターロールの人も弾く（通常表示）
+          SELECT 1 FROM public.com_t_user_role r
+          WHERE r.user_id = u.id AND r.role_id = 'monitor'
+        )
+      )
+    ORDER BY
+      u.id,
+      -- 対象期間内での重なりが最大のライセンスを代表として採用
+      LEAST(l.end_date, (_end_date + 1)::timestamptz) - GREATEST(l.start_date, _start_date::timestamptz) DESC,
+      l.end_date DESC;
+$$;
+
+-- 🚨 内部ヘルパーのため外部公開しない（SECURITY DEFINER関数の内部からのみ呼び出される）
+REVOKE ALL ON FUNCTION private.get_monitor_target_users(UUID, DATE, DATE, BOOLEAN) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- 3-1. get_monitor_user_list（対象生徒判定を private.get_monitor_target_users に集約）
+---------------------------------------------
+-- _start_date/_end_date は必須パラメータとし（省略時のNOW()基準フォールバックは廃止）、
+-- 常に「対象期間とライセンス期間が重なっているか」で統一する。呼び出し漏れ・分岐の複雑化を
+-- 避けるため、省略した場合はPostgREST層で明確にエラーとなる。
+--
+-- 【2026-09-22 追加修正】招待中・承認待ちユーザー（com_t_invitation、本登録未完了＝ライセンス
+-- 未発行）を対象から除外した。招待は一度も本登録・ライセンス発行されていないため、
+-- 「対象期間に有効な生徒」の定義に本質的に当てはまらない。従来は対象期間を無視して常に
+-- 結果に含めていたため、招待リンクが失効済み（expires_at < NOW()）で二度と本登録されない
+-- 招待までもが、過去・当月・未来のどの対象期間を見ても一覧に出続けてしまっていた。
+
+-- 🚨 シグネチャ変更のため、旧シグネチャを明示的に削除してから再作成する
+DROP FUNCTION IF EXISTS public.get_monitor_user_list(BOOLEAN);
+DROP FUNCTION IF EXISTS public.get_monitor_user_list(BOOLEAN, DATE, DATE);
+
+CREATE OR REPLACE FUNCTION public.get_monitor_user_list(
+    _start_date DATE,
+    _end_date DATE,
+    _include_monitor BOOLEAN DEFAULT FALSE
+)
+RETURNS SETOF private.vw_user_list
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    _client_id := public.get_jwt_client_id();
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    -- =============================================================
+    -- 対象期間に有効な契約を持っていた本登録済みユーザー
+    -- （招待中・承認待ちユーザーは com_t_invitation にのみ存在しライセンス未発行のため、
+    --   「対象期間に有効な生徒」には該当しない＝本関数の対象外とする）
+    -- =============================================================
+    SELECT
+      u.id AS id,
+      u.user_id AS user_id,
+      u.user_name AS user_name,
+      u.user_type AS user_type,
+      u.client_id AS client_id,
+      c.client_name AS client_name,
+      au.email AS email,
+      au.last_sign_in_at AS last_sign_in_at,
+      au.confirmed_at AS confirmed_at,
+      r.roles AS roles,
+      t.contract_id AS contract_id,
+      t.license_id AS license_id,
+      t.license_status AS license_status,
+      t.license_start_date AS license_start_date,
+      t.license_end_date AS license_end_date,
+      t.plan_name AS plan_name,
+      NULL::timestamptz AS mail_sent_at,
+      NULL::text AS last_mail_error,
+      CASE
+        WHEN t.license_start_date > NOW() THEN 'future'
+        WHEN t.license_end_date < NOW() THEN 'expired'
+        ELSE 'active'
+      END AS license_state,
+      u.insert_date AS insert_date
+    FROM
+      private.get_monitor_target_users(_client_id, _start_date, _end_date, _include_monitor) t
+      INNER JOIN public.com_m_user u ON u.id = t.user_id
+      INNER JOIN auth.users au ON u.id = au.id
+      LEFT JOIN public.com_m_client c ON u.client_id = c.client_id
+      LEFT JOIN LATERAL (
+        SELECT array_agg(role_id) AS roles
+        FROM public.com_t_user_role
+        WHERE user_id = u.id
+      ) r ON true
+
+    ORDER BY insert_date DESC;
+END;
+$$;
+
+-- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+ALTER FUNCTION public.get_monitor_user_list(DATE, DATE, BOOLEAN) OWNER TO postgres;
+REVOKE EXECUTE ON FUNCTION public.get_monitor_user_list(DATE, DATE, BOOLEAN) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_monitor_user_list(DATE, DATE, BOOLEAN) TO authenticated;
+
+---------------------------------------------
+-- 3-2. get_monitor_word_history（対象生徒判定を private.get_monitor_target_users に集約）
+---------------------------------------------
+-- 従来はライセンス状態を一切見ず client_id の一致のみで絞り込んでいたため、対象期間に
+-- 有効な契約を持っていない生徒の履歴も表示され得た。他のモニターRPCと同じ
+-- 「対象期間に有効な契約を持っていた生徒」の定義に揃える。
+CREATE OR REPLACE FUNCTION public.get_monitor_word_history(
+    _start_date DATE,
+    _end_date DATE,
+    _user_ids UUID[] DEFAULT NULL,
+    _include_monitor BOOLEAN DEFAULT FALSE
+)
+RETURNS SETOF JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    _client_id := public.get_jwt_client_id();
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    WITH target_users AS (
+        SELECT t.user_id FROM private.get_monitor_target_users(_client_id, _start_date, _end_date, _include_monitor) t
+    )
+    SELECT jsonb_build_object(
+        'summary_id', w.summary_id,
+        'content_id', w.content_id,
+        'user_id', w.user_id,
+        'training_date', w.training_date,
+        'word_count', w.word_count,
+        'phrase_count', w.phrase_count,
+        'assessment_count', w.assessment_count,
+        'update_date', w.update_date,
+        'content_name', c.content_name,
+        'user_name', u.user_name
+    )
+    FROM public.self_t_word_summary w
+    INNER JOIN target_users tu ON tu.user_id = w.user_id
+    INNER JOIN public.com_m_user u ON u.id = w.user_id
+    LEFT JOIN public.com_m_contents c ON c.content_id = w.content_id
+    WHERE w.training_date BETWEEN _start_date AND _end_date
+      AND (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR w.user_id = ANY(_user_ids))
+    ORDER BY w.training_date DESC;
+END;
+$$;
+
+-- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+ALTER FUNCTION public.get_monitor_word_history(DATE, DATE, UUID[], BOOLEAN) OWNER TO postgres;
+REVOKE EXECUTE ON FUNCTION public.get_monitor_word_history(DATE, DATE, UUID[], BOOLEAN) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_monitor_word_history(DATE, DATE, UUID[], BOOLEAN) TO authenticated;
+
+---------------------------------------------
+-- 3-3. get_monitor_sprint_history（対象生徒判定を private.get_monitor_target_users に集約）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_monitor_sprint_history(
+    _start_date TIMESTAMP WITH TIME ZONE,
+    _end_date TIMESTAMP WITH TIME ZONE,
+    _user_ids UUID[] DEFAULT NULL,
+    _include_monitor BOOLEAN DEFAULT FALSE
+)
+RETURNS SETOF JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    _client_id := public.get_jwt_client_id();
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    WITH target_users AS (
+        SELECT t.user_id FROM private.get_monitor_target_users(_client_id, _start_date::date, _end_date::date, _include_monitor) t
+        WHERE (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR t.user_id = ANY(_user_ids))
+    )
+    SELECT jsonb_build_object(
+        'self_sprint_id', s.self_sprint_id,
+        'user_id', s.user_id,
+        'sprint_type', s.sprint_type,
+        'content_id', s.content_id,
+        'question_type', s.question_type,
+        'answer_type', s.answer_type,
+        'difficulty_level', s.difficulty_level,
+        'time_limit_sec', s.time_limit_sec,
+        'total_answered', s.total_answered,
+        'total_assessments', s.total_assessments,
+        'insert_date', s.insert_date,
+        'content_name', c.content_name,
+        'user_name', u.user_name,
+        'email', au.email
+    )
+    FROM public.self_t_sprint s
+    INNER JOIN target_users tu ON tu.user_id = s.user_id
+    INNER JOIN public.com_m_user u ON u.id = s.user_id
+    INNER JOIN auth.users au ON au.id = u.id
+    LEFT JOIN public.com_m_contents c ON c.content_id = s.content_id
+    WHERE s.insert_date BETWEEN _start_date AND _end_date
+    ORDER BY s.insert_date DESC;
+END;
+$$;
+
+-- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+ALTER FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) OWNER TO postgres;
+REVOKE EXECUTE ON FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN) TO authenticated;
+
+---------------------------------------------
+-- 3-4. get_monitor_sprint_drill_history（対象生徒判定を private.get_monitor_target_users に集約）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_monitor_sprint_drill_history(
+    _start_date DATE,
+    _end_date DATE,
+    _user_ids UUID[] DEFAULT NULL,
+    _include_monitor BOOLEAN DEFAULT FALSE
+)
+RETURNS SETOF JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _client_id UUID;
+BEGIN
+    _client_id := public.get_jwt_client_id();
+    IF _client_id IS NULL THEN
+        RAISE EXCEPTION 'Client ID not found in JWT.';
+    END IF;
+
+    RETURN QUERY
+    WITH target_users AS (
+        SELECT t.user_id FROM private.get_monitor_target_users(_client_id, _start_date, _end_date, _include_monitor) t
+        WHERE (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR t.user_id = ANY(_user_ids))
+    )
+    SELECT jsonb_build_object(
+        'summary_id', d.summary_id,
+        'user_id', d.user_id,
+        'content_id', d.content_id,
+        'training_date', d.training_date,
+        'question_count', d.question_count,
+        'assessment_count', d.assessment_count,
+        'speed_count', d.speed_count,
+        'structure_count', d.structure_count,
+        'builders_count', d.builders_count,
+        'mastery_count', d.mastery_count,
+        'content_name', c.content_name,
+        'user_name', u.user_name,
+        'email', au.email
+    )
+    FROM public.self_t_sprint_summary d
+    INNER JOIN target_users tu ON tu.user_id = d.user_id
+    INNER JOIN public.com_m_user u ON u.id = d.user_id
+    INNER JOIN auth.users au ON au.id = u.id
+    LEFT JOIN public.com_m_contents c ON c.content_id = d.content_id
+    WHERE d.training_date BETWEEN _start_date AND _end_date
+    ORDER BY d.training_date DESC;
+END;
+$$;
+
+-- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+ALTER FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) OWNER TO postgres;
+REVOKE EXECUTE ON FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) TO authenticated;
 
 COMMIT;

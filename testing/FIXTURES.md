@@ -29,6 +29,7 @@
 | アカウント | ロール(user_type) | メール | 主な用途 |
 |---|---|---|---|
 | QA生徒01 | student(1) | `qa-student-01@gabby-qa-test.example` | 生徒の基本フロー（カレンダー閲覧、予約、キャンセル等）の土台。`testing/features/fixtures/seed-fixed-accounts.ts`で投入済み（dev環境）。QAコーチCA01との担当関係（週1回契約・月曜18:00バンクーバー時間）も同スクリプトで確立 |
+| QA生徒02（モニター） | student(1)、`com_t_user_role`に`role_id='monitor'`を付与 | `qa-student-02@gabby-qa-test.example` | 生徒モニタリング画面（`/monitor`）の横断閲覧検証用。QA生徒01と同じ【QA固定】クライアントに所属させ、QA生徒01を「対象生徒」として閲覧できる状態にする。有効なライセンスも必要（`/monitor`アクセスには`is_licensed=true`も要る）。**未投入**（投入スクリプト未対応。必要になった時点で`seed-fixed-accounts.ts`に追加する） |
 | QAコーチCA01 | coach(2) | `qa-coach-ca-01@gabby-qa-test.example` | カナダ人コーチペルソナ（下記参照）。`testing/features/fixtures/seed-fixed-accounts.ts`で投入済み（dev環境） |
 | QAコーチUS01 | coach(2) | `qa-coach-us-01@gabby-qa-test.example` | アメリカ人コーチペルソナ（下記参照）。**未投入**（投入スクリプト未対応。必要になった時点で`seed-fixed-accounts.ts`に追加する） |
 | QAアドミン | admin(0) | `qa-admin@gabby-qa-test.example` | 既存の共有フィクスチャをそのまま採用（`testing/features/branches/feature-20260904-dev/seed.ts`で作成済み・テナントに紐づかない） |
