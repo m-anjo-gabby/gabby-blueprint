@@ -25,6 +25,7 @@
 | [live-room/call-room.md](student/live-room/call-room.md) | `/live-room/[sessionId]` | ビデオ通話画面（Zoom Video SDK） | ✅ |
 | [live-room/session-result.md](student/live-room/session-result.md) | `/live-room/sessions/[sessionId]/result` | セッション結果・宿題・Live Sprint実績 | ✅ |
 | [monitor.md](student/monitor.md) | `/monitor` | 同一契約先ユーザー横断モニタリング | ✅ |
+| [training/dialogue-practice.md](student/training/dialogue-practice.md) | `/training/dialogue/[assignmentId]` | 割当済みダイアログ教材の進捗確認・教材リンク（読み取り専用） | ✅ |
 | [training/performance.md](student/training/performance.md) | `/training/performance` | 月間トレーニング成果ダッシュボード | ✅ |
 | [training/sprint-history.md](student/training/sprint-history.md) | `/training/sprint/history` | スプリント履歴 | ✅ |
 | [training/sprint-play.md](student/training/sprint-play.md) | `/training/sprint/play` | スプリント実施画面 | ✅ |

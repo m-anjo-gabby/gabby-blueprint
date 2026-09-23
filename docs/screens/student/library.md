@@ -5,8 +5,9 @@
 - アプリ: `student`
 - パス: `/library`
 - 対象ロール: 生徒
-- 目的: 利用可能な教材（単語帳・ビデオ・スプリント）を検索・種別タブで絞り込みながら一覧し、
-  学習を開始する。お気に入り登録もここから行える。
+- 目的: 利用可能な教材（単語帳・ビデオ・スプリント・ダイアログ）を検索・種別タブで絞り込みながら
+  一覧し、学習を開始する。お気に入り登録もここから行える。**ダイアログのみ、コーチに割り当てられた
+  セットだけが一覧に表示される**（他種別はテナント等に基づくRLSの可視範囲がそのまま一覧に出る）。
 
 ## この画面に来る経路
 
@@ -14,7 +15,7 @@
 
 ## 画面の構成
 
-1. **ヘッダー** — 戻るボタン、画面タイトル「Library」、件数表示、検索バー、種別タブ
+1. **ヘッダー** — 戻るボタン、画面タイトル「Library」、件数表示、検索バー、種別タブ（横スクロール）
 2. **教材一覧** — 検索・タブ条件に一致する教材のカード一覧
 
 ## 表示要素・操作
@@ -24,8 +25,8 @@
 | 件数バッジ | 常時表示 | 現在の絞り込み条件に一致する教材数を表示 |
 | 検索欄 | 常時表示 | 入力文字列を教材名に含む教材のみに絞り込む |
 | クリア（×）ボタン | 検索文字列またはタブ・タグ絞り込みが設定されている場合のみ表示 | 検索文字列・種別タブ・タグの絞り込みをすべてリセットする |
-| 種別タブ（All／単語帳／ビデオ／スプリント） | 常時表示。各タブに該当件数を表示 | タップで該当種別の教材のみに絞り込む |
-| 教材カード | 絞り込み条件に一致する教材ごとに表示。種別アイコン・CEFRバッジ・教材名・説明文（長い場合は「Read more」で展開可）・タグ・お気に入り（星）ボタンを表示 | 星アイコンで即座にお気に入りの追加／解除を切り替える（トースト通知あり、失敗時は元の状態に戻す）。「Start Training」ボタンで当該教材の学習画面へ遷移 |
+| 種別タブ（すべて／単語帳／ビデオ／スプリント／ダイアログ） | 常時表示。種別アイコン・ラベル・該当件数を表示する横スクロールpill形式（種別が増えても折り返さず1行のまま増やせる）。スクロール可能な場合のみ端にフェード表示、選択中タブは自動的に中央付近へスクロールする | タップで該当種別の教材のみに絞り込む |
+| 教材カード | 絞り込み条件に一致する教材ごとに表示。種別アイコン・CEFRバッジ・教材名・説明文（長い場合は「Read more」で展開可）・タグ・お気に入り（星）ボタンを表示 | 星アイコンで即座にお気に入りの追加／解除を切り替える（トースト通知あり、失敗時は元の状態に戻す）。「Start Training」ボタンで学習画面へ遷移（ダイアログのみ、[ダイアログ専用画面](training/dialogue-practice.md)へ遷移し、他種別は各トレーニング画面へ遷移する） |
 | 該当教材が0件の場合 | 検索・絞り込み条件に一致する教材が無い場合 | 「No materials found」 |
 
 ## 状態
@@ -34,10 +35,23 @@
 |---|---|---|
 | 読み込み中 | スケルトン（グレーのプレースホルダー）を3件分表示 | 教材一覧の初回取得中 |
 
+## 補足（設計上の注意点）
+
+- ダイアログ（`content_type=3`）は、他種別のようなcom_m_contents単体のRLS可視範囲ではなく、
+  自身への割当（`com_t_dialogue_assignment`）を起点に取得している。コーチが割り当てていない
+  ダイアログ教材は、たとえRLS上アクセス可能でもこの一覧には出ない
+  （[コーチ側のDialogue Practice管理画面](../coach/students/dialogue-practice.md)を参照）。
+- お気に入りタブ（`/favorites`）も本画面と同じ取得ロジック（`getAllContent`）を再利用しているため、
+  ダイアログの「割当済みのみ」ルールはお気に入り側にも自動的に及ぶ。
+
 ## 実装参照（エンジニア向け）
 
 - `apps/student/app/(app)/library/page.tsx`
 - 共通カード: `apps/student/components/common/ContentCard.tsx`
 - 教材種別・タブ定義: `packages/types/content.ts`（`CONTENT_TYPES`, `LIBRALY_TABS`）
-- 関連アクション: `toggleContentFavorite`（`apps/student/actions/contentAction.ts`）
+- 種別ごとのアイコン・配色: `packages/lib/content/ui.ts`（`getContentTypeConfig`）
+- 教材種別ごとの遷移先解決: `packages/lib/navigation/student-path.ts`（`getTrainingPath`）
+- 関連アクション: `getAllContent`, `toggleContentFavorite`（`apps/student/actions/contentAction.ts`）、
+  `getMyDialogueAssignments`（`apps/student/actions/dialogueAction.ts` → Core実装は
+  `packages/lib/coachStudent/actions/dialogueActions.ts`の`getMyDialogueAssignmentsCore`）
 - 状態管理: `apps/student/stores/useContentStore.ts`
