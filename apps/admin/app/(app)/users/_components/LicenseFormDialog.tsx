@@ -226,13 +226,20 @@ export function LicenseFormDialog({ user, children }: Props) {
                       {t('planLabel')} {editingLicense && <span className="text-amber-500">{t('notEditable')}</span>}
                     </label>
 
-                    {availableContracts.length > 0 ? (
+                    {editingLicense ? (
+                      // 編集時はプラン変更不可のため、Selectではなく現在の割当プラン名を表示する
+                      // （getActiveContractsByClientは重複期間の契約を除外する仕様上、編集中の
+                      // ライセンス自身の契約もavailableContractsから外れるため、Select用の
+                      // 分岐をそのまま使うと常に「割当可能な契約プランがありません」になってしまう）
+                      <div className="h-12 w-full rounded-xl border border-slate-200 flex items-center px-4 text-xs font-bold text-slate-600 bg-slate-50">
+                        {editingLicense.plan_name}
+                      </div>
+                    ) : availableContracts.length > 0 ? (
                       <Select
                         onValueChange={setSelectedContractId}
                         value={selectedContractId}
-                        disabled={!!editingLicense}
                       >
-                        <SelectTrigger className={`rounded-xl h-12 font-bold ${editingLicense ? 'bg-slate-50 opacity-80 cursor-not-allowed' : ''}`}>
+                        <SelectTrigger className="rounded-xl h-12 font-bold">
                           <SelectValue placeholder={t('selectPlanPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -244,7 +251,7 @@ export function LicenseFormDialog({ user, children }: Props) {
                         </SelectContent>
                       </Select>
                     ) : (
-                      // 割当可能なプランが0件の場合のメッセージ表示
+                      // 割当可能なプランが0件の場合のメッセージ表示（新規割当時のみ）
                       <div className="h-12 w-full rounded-xl border border-dashed border-slate-200 flex items-center justify-center text-xs text-slate-400 font-medium bg-slate-50">
                         {t('noAssignablePlans')}
                       </div>
@@ -274,6 +281,11 @@ export function LicenseFormDialog({ user, children }: Props) {
                       {t('contractPeriod', { start: selectedContract.start_date, end: selectedContract.end_date })}
                     </p>
                   )}
+                  {editingLicense && (
+                    <p className="text-[10px] text-amber-600 font-medium">
+                      {t('editPeriodHint')}
+                    </p>
+                  )}
 
                   <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('notePlaceholder')} className="rounded-xl" />
 
@@ -289,12 +301,12 @@ export function LicenseFormDialog({ user, children }: Props) {
                   <Button
                     className="w-full h-12 rounded-xl font-black bg-slate-900"
                     onClick={handleSave}
-                    // 【重要】割当可能なプランがない場合はボタンを無効化
+                    // 【重要】新規割当時、割当可能なプランがない場合はボタンを無効化
                     disabled={Boolean(loading || isFormInvalid || (!editingLicense && availableContracts.length === 0))}
                   >
-                    {availableContracts.length === 0
-                      ? t('noAssignableButton')
-                      : (editingLicense ? t('saveUpdate') : t('assign'))
+                    {editingLicense
+                      ? t('saveUpdate')
+                      : (availableContracts.length === 0 ? t('noAssignableButton') : t('assign'))
                     }
                   </Button>
                 </TabsContent>

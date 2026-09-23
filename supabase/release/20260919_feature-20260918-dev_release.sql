@@ -1081,3 +1081,69 @@ REVOKE EXECUTE ON FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, U
 GRANT EXECUTE ON FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】契約ユーザーライセンス管理の見直し
+-- 追加日: 2026-09-23
+--
+-- 【内容】
+--   「有効なライセンスは生徒に対して1件のみ」というルールを、これまでアプリ側の
+--   事前チェック（check-then-insert）のみに頼っていた状態から、DB側の排他制約
+--   (EXCLUDE constraint)による最終防衛線を追加して強化する。複数管理者による
+--   同時操作等のレースコンディションでも、期間の重なる有効(status=1)ライセンスを
+--   二重登録できないことをDBレベルで保証する。
+--   契約更新に伴う次タームライセンスの前倒し登録（期間が重ならない複数ライセンスの
+--   事前登録）自体は引き続き許容する運用のため、業務フロー・アプリ側の重複判定
+--   ロジックへの変更はない（アプリケーションコード側は
+--   apps/admin/actions/adminContractAction.ts の updateUserLicense/
+--   assignLicenseToUser/bulkAssignLicenses に排他制約違反(23P01)発生時の
+--   フレンドリーなエラーメッセージ返却のみ追加）。
+--
+--   なお、個別の生徒に対するライセンス期限の延長（契約の終了日を超える延長を含む）は
+--   既存のライセンス編集機能(updateUserLicense)で元々対応可能だったため、DB変更は
+--   不要（アプリ側のみ、編集時に契約期間内チェックを行わないよう修正。詳細は
+--   adminContractAction.ts の updateUserLicense 冒頭コメント参照）。
+--
+-- 対応ファイル: DDL/table/com_t_user_license.sql（末尾の追加パッチ節）
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 1. com_t_user_license: 同一ユーザーへの重複した有効ライセンス防止（排他制約）
+---------------------------------------------
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- 適用前に、既に重複が存在しないかを確認する（通常はアプリ側の検証により存在しないはず）
+DO $$
+DECLARE
+  v_conflict_count integer;
+BEGIN
+  SELECT COUNT(*) INTO v_conflict_count
+  FROM public.com_t_user_license a
+  JOIN public.com_t_user_license b
+    ON a.user_id = b.user_id
+   AND a.license_id < b.license_id
+   AND a.status = 1 AND b.status = 1
+   AND tstzrange(a.start_date, a.end_date, '[]') && tstzrange(b.start_date, b.end_date, '[]');
+
+  IF v_conflict_count > 0 THEN
+    RAISE EXCEPTION '期間が重なる有効ライセンスが%組見つかりました。制約追加前に解消してください。', v_conflict_count;
+  END IF;
+END $$;
+
+ALTER TABLE public.com_t_user_license
+  DROP CONSTRAINT IF EXISTS excl_user_license_active_overlap;
+
+ALTER TABLE public.com_t_user_license
+  ADD CONSTRAINT excl_user_license_active_overlap
+  EXCLUDE USING gist (
+    user_id WITH =,
+    tstzrange(start_date, end_date, '[]') WITH &&
+  )
+  WHERE (status = 1);
+
+COMMENT ON CONSTRAINT excl_user_license_active_overlap ON public.com_t_user_license IS
+  '同一ユーザーに対し、期間が重なる有効(status=1)ライセンスを同時に複数登録できないようにするDB側の最終防衛線（アプリ側のfindOverlappingLicenseと二重の防御。無効化済み(status=0)は対象外）';
+
+COMMIT;

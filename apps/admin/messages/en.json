@@ -179,6 +179,7 @@
       "remaining": "(remaining: {count})",
       "noAssignablePlans": "No contract plans available to assign",
       "contractPeriod": "Contract period: {start} – {end}",
+      "editPeriodHint": "As an individual accommodation, you may extend beyond the contract period. Please record the reason in the notes field.",
       "notePlaceholder": "Notes (reason for change, etc.)",
       "errorOutOfRange": "The license period must be within the contract period",
       "errorRequired": "Contract plan and dates are required (end date must be on or after the start date)",

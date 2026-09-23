@@ -157,7 +157,12 @@ export function ContractLicenseDialog({ contract, children }: Props) {
         {children}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button]:focus-visible:ring-0 [&>button]:outline-none">
+      {/*
+        max-w-lg: ユーザー行(アイコン+氏名/メール+チケット数+無効化ボタン)を横一列に収めるため、
+        既定のmax-w-mdより広くする。左右の最低限マージンはcomponents/ui/dialog.tsx側の
+        w-[calc(100%-2rem)]で共通対応済み。
+      */}
+      <DialogContent className="max-w-lg p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button]:focus-visible:ring-0 [&>button]:outline-none">
         {/* ヘッダーエリア */}
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="flex items-center justify-between">
@@ -211,11 +216,11 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                   /* --- ユーザーリスト --- */
                   <div className="space-y-2.5">
                     {unassignedUsers.map((user) => (
-                      <div 
-                        key={user.id} 
+                      <div
+                        key={user.id}
                         className="flex items-center justify-between p-3 border border-slate-100 rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-all bg-slate-50/50 group"
                       >
-                        <div className="overflow-hidden pr-2">
+                        <div className="min-w-0 flex-1 overflow-hidden pr-2">
                           <p className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-900 transition-colors">
                             {user.user_name}
                           </p>
@@ -223,15 +228,15 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                             {user.email}
                           </p>
                         </div>
-                        
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleAdd(user.id)} 
+
+                        <Button
+                          size="sm"
+                          onClick={() => handleAdd(user.id)}
                           disabled={loading || isLicenseFull}
                           className={`
-                            h-8 px-4 rounded-xl font-bold transition-all active:scale-95
-                            ${isLicenseFull 
-                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                            h-8 px-4 rounded-xl font-bold transition-all active:scale-95 shrink-0
+                            ${isLicenseFull
+                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                               : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100'
                             }
                           `}
@@ -272,13 +277,13 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                       const isInvalidated = user.license_status === 0;
                       return (
                       <div key={user.id} className={`flex items-center justify-between p-3 border rounded-xl group ${isInvalidated ? 'bg-slate-50 opacity-60' : 'bg-white shadow-sm'}`}>
-                        <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
                           {isInvalidated ? (
                             <Ban size={16} className="text-slate-400 shrink-0" />
                           ) : (
                             <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
                           )}
-                          <div className="overflow-hidden">
+                          <div className="overflow-hidden min-w-0">
                             <div className="flex items-center gap-1.5">
                               <p className="text-sm font-bold text-slate-800 truncate">{user.user_name}</p>
                               {isInvalidated && (
@@ -298,7 +303,7 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                         {!isExpired && user.license_id && !isInvalidated && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" disabled={loading} className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors">
+                              <Button variant="ghost" size="sm" disabled={loading} className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors shrink-0">
                                 <Ban size={16} />
                               </Button>
                             </AlertDialogTrigger>

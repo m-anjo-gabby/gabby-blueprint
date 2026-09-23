@@ -179,6 +179,7 @@
       "remaining": "(残:{count})",
       "noAssignablePlans": "割当可能な契約プランがありません",
       "contractPeriod": "契約期間: {start} ～ {end}",
+      "editPeriodHint": "個別対応として、契約期間を超える延長も可能です。変更理由は備考欄に記録してください。",
       "notePlaceholder": "備考（変更理由など）",
       "errorOutOfRange": "ライセンス期間は契約期間内で指定してください",
       "errorRequired": "契約プラン・日付は必須です（終了日は開始日以降）",
