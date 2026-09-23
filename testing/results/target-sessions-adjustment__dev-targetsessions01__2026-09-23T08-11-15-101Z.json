@@ -1,0 +1,78 @@
+{
+  "scenario": "target-sessions-adjustment.feature",
+  "env": "dev",
+  "tag": "targetsessions01",
+  "executedAt": "2026-09-23T08:11:15.101Z",
+  "gitCommit": "9ad44909",
+  "gitBranch": "feature/20260918-dev",
+  "totalChecks": 13,
+  "passed": 13,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "シナリオ1: アドミンが現在値+3、理由付きでtarget_sessionsを引き上げられる",
+      "ok": true
+    },
+    {
+      "name": "シナリオ1補足: com_m_lesson_schedule.target_sessionsが実際に新しい値になっている",
+      "ok": true,
+      "detail": "expected=15, actual=15"
+    },
+    {
+      "name": "シナリオ2: target_sessions引き上げ後、fn_schedule_shortfallのshortfallが引き上げ分(+3)だけ増加している",
+      "ok": true,
+      "detail": "before=0, after=3"
+    },
+    {
+      "name": "シナリオ3: target_sessions引き上げはcom_t_sessionを自動生成しない(件数が変化しない)",
+      "ok": true,
+      "detail": "before=12, after=12"
+    },
+    {
+      "name": "シナリオ4: 現在値と同じ値を指定すると拒否される",
+      "ok": true,
+      "detail": "P0001 new target_sessions (12) must be greater than current (12)"
+    },
+    {
+      "name": "シナリオ5: 現在値未満の値を指定すると拒否される",
+      "ok": true,
+      "detail": "P0001 new target_sessions (11) must be greater than current (12)"
+    },
+    {
+      "name": "シナリオ6: 理由を空文字で指定すると拒否される",
+      "ok": true,
+      "detail": "P0001 reason is required"
+    },
+    {
+      "name": "シナリオ7: 理由を空白のみで指定すると拒否される(btrimによる前後空白除去)",
+      "ok": true,
+      "detail": "P0001 reason is required"
+    },
+    {
+      "name": "シナリオ4〜7補足: いずれも拒否され、生徒TBのtarget_sessionsは変更されていない",
+      "ok": true,
+      "detail": "expected(unchanged)=12, actual=12"
+    },
+    {
+      "name": "シナリオ8: 一時停止(paused)の枠に対しては拒否される",
+      "ok": true,
+      "detail": "P0001 cannot adjust target_sessions on a non-active schedule slot"
+    },
+    {
+      "name": "シナリオ9: 生徒本人のJWTでは拒否される",
+      "ok": true,
+      "detail": "P0001 not authorized to adjust target sessions"
+    },
+    {
+      "name": "シナリオ10: コーチ本人のJWTでは拒否される",
+      "ok": true,
+      "detail": "P0001 not authorized to adjust target sessions"
+    },
+    {
+      "name": "シナリオ11: 存在しないschedule_idを指定すると拒否される",
+      "ok": true,
+      "detail": "P0001 lesson schedule 00000000-0000-0000-0000-000000000000 not found"
+    }
+  ]
+}

@@ -1147,3 +1147,72 @@ COMMENT ON CONSTRAINT excl_user_license_active_overlap ON public.com_t_user_lice
   '同一ユーザーに対し、期間が重なる有効(status=1)ライセンスを同時に複数登録できないようにするDB側の最終防衛線（アプリ側のfindOverlappingLicenseと二重の防御。無効化済み(status=0)は対象外）';
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】ライブセッション管理: 定期スケジュール枠のtarget_sessions個別調整
+-- 追加日: 2026-09-23
+--
+-- 【内容】
+--   com_m_lesson_schedule.target_sessions（コマ別セッション目標数）は承認時に確定後
+--   不変という前提だったが、admin_adjust_schedule_target_sessions()を新設し、
+--   正当な理由がある追加予約を、契約全体のtotal_sessionsを変更せずに特定の1枠のみ
+--   個別に引き上げられるようにする（あくまで契約上の想定を超える例外措置。DB側の
+--   履歴テーブルは追加せず、直近のライセンス個別延長の前例を踏襲する）。
+--
+-- 対応ファイル: DDL/function/admin_adjust_schedule_target_sessions.sql（新規）,
+--   DDL/table/com_m_lesson_schedule.sql（target_sessionsのCOMMENT更新）
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 1. com_m_lesson_schedule.target_sessions: 不変前提のコメントを更新
+---------------------------------------------
+COMMENT ON COLUMN public.com_m_lesson_schedule.target_sessions IS 'このコマ(slot_no)が契約上持つべき目標セッション数。承認時にtotal_sessions/weekly_frequencyの均等割り(余りはslot_no昇順に配分)で確定し、以後は不変。fn_generate_sessions_for_schedule()の生成上限、fn_schedule_shortfall()の期待値として使う唯一の真実源。正当な理由がある追加予約の例外措置として、admin_adjust_schedule_target_sessions()経由でtotal_sessionsを変更せずに個別枠のみ引き上げ可能（詳細は同関数のコメント参照）。';
+
+---------------------------------------------
+-- 2. admin_adjust_schedule_target_sessions: アドミンによるtarget_sessions個別引き上げRPC
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_adjust_schedule_target_sessions(
+    p_schedule_id uuid,
+    p_new_target_sessions smallint,
+    p_reason text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+BEGIN
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to adjust target sessions');
+
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'reason is required';
+    END IF;
+
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    IF v_schedule.status <> 1 THEN
+        RAISE EXCEPTION 'cannot adjust target_sessions on a non-active schedule slot';
+    END IF;
+
+    IF p_new_target_sessions <= v_schedule.target_sessions THEN
+        RAISE EXCEPTION 'new target_sessions (%) must be greater than current (%)', p_new_target_sessions, v_schedule.target_sessions;
+    END IF;
+
+    UPDATE public.com_m_lesson_schedule
+    SET target_sessions = p_new_target_sessions,
+        update_date = NOW()
+    WHERE schedule_id = p_schedule_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_adjust_schedule_target_sessions(uuid, smallint, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_adjust_schedule_target_sessions(uuid, smallint, text) TO authenticated;
+
+COMMIT;

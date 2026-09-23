@@ -24,6 +24,7 @@
 3. **セッションキャンセルダイアログ**（代理操作）
 4. **セッション予約ダイアログ**（代理操作）
 5. **コーチ直接マッチングダイアログ**（代理操作）
+6. **セッション数個別調整ダイアログ**
 
 ## 表示要素・操作
 
@@ -32,8 +33,9 @@
 | 顧客セレクト | 常時表示（検索式） | 選択すると生徒セレクトの選択肢が読み込まれ、生徒・契約以降の選択状態はリセットされる |
 | 生徒セレクト | 顧客を選択済みの場合のみ活性 | 選択すると、その生徒が保有するライブセッション付き契約（現在・過去とも）が読み込まれる。現在有効な契約があれば自動選択、無ければ一覧の先頭を自動選択する |
 | 契約（チケット）セレクト | 生徒が1件以上のライブセッション付き契約を保有する場合のみ表示 | 「現在の契約」または「過去の契約（参照のみ）」のラベル付きで契約期間を表示。選択するとその契約の定期スケジュール枠・セッション一覧が読み込まれる |
-| 定期スケジュール枠の一覧 | 稼働中・一時停止・終了済みの枠を全て表示（「第n枠: 曜日 開始〜終了」「担当コーチ」「ステータスバッジ」） | 稼働中の枠にセッション未割当がある場合は「未割当n枠」バッジも表示 |
+| 定期スケジュール枠の一覧 | 稼働中・一時停止・終了済みの枠を全て表示（「第n枠: 曜日 開始〜終了」「担当コーチ」「総セッション数」「ステータスバッジ」）。セクション冒頭に「全n枠中 稼働n枠・未割当n枠」のサマリーを表示 | 稼働中の枠にセッション未割当がある場合は「未割当n件」バッジも表示 |
 | 「セッションを予約」ボタン | 稼働中の枠に未割当のチケット枠（`shortfall`）がある場合のみ表示（過去契約では非表示） | セッション予約ダイアログを開く |
+| 「セッション数を調整」ボタン | 稼働中の枠に表示（過去契約では非表示） | セッション数個別調整ダイアログを開く |
 | 「コーチ交代」ボタン | 稼働中の枠に表示（過去契約では非表示） | 確認ダイアログの上で、その枠の担当を終了する |
 | 未割当枠（週n回契約でまだマッチングが成立していない枠番号）の「直接マッチング」ボタン | 過去契約では非表示 | コーチ直接マッチングダイアログを、対象の枠番号で開く |
 | セッション一覧タブ（今後の予定／実施済み／変更履歴） | 契約を選択している場合に表示 | 各タブでそのカテゴリのセッションを一覧表示。「変更履歴」タブは、原因を問わず全てのキャンセル済みセッションを表示する（監査目的のため、本人操作のキャンセルのみに絞る生徒・コーチ側の一覧より広い） |
@@ -70,6 +72,18 @@
 - コーチの空き時間・既存の予定との重複はサーバー側で自動チェックされる。重複する場合は
   「このコーチは指定の時間帯に既に別の予定があります」等のエラーが表示される
 
+## セッション数個別調整ダイアログ
+
+- 対象は稼働中の定期スケジュール枠のみ（過去契約・一時停止・終了済みの枠では操作不可）
+- 入力項目: 新しい総セッション数（現在値より大きい値のみ）、理由（必須・内部メモ）
+- `com_m_lesson_schedule.target_sessions`（コマ別の総セッション数）のみを引き上げる。
+  契約全体の総セッション数（`total_sessions`）は変更しない、あくまで正当な理由がある
+  追加予約の例外措置
+- 実行しても新しいセッションが自動生成されるわけではない。引き上げにより
+  「未割当n件」（shortfall）が増えるため、既存の「セッションを予約」または
+  「直接マッチング」から管理者が個別に日時を指定して追加予約する
+- 変更理由の履歴はDBには保持されない（アプリケーションログにのみ記録）
+
 ## 担当コーチ交代（確認ダイアログ）
 
 - 対象の枠を終了させる操作。実行すると、まだ実施されていない今後のセッションはキャンセルされるが、
@@ -95,13 +109,14 @@
 - `apps/admin/app/(app)/live-sessions/_components/dialogs/CancelSessionDialog.tsx`
 - `apps/admin/app/(app)/live-sessions/_components/dialogs/BookSessionDialog.tsx`
 - `apps/admin/app/(app)/live-sessions/_components/dialogs/MatchCoachDialog.tsx`
+- `apps/admin/app/(app)/live-sessions/_components/dialogs/AdjustTargetSessionsDialog.tsx`
 - `apps/admin/actions/adminLiveSessionAction.ts`（`getClientStudents`,
   `getStudentLiveSessionContractsForAdmin`, `getScheduleSlotsForTicket`, `getSessionsForTicket`,
   `releaseLessonScheduleSlot`, `getCoachesForMatching`, `cancelSessionAsAdmin`,
-  `bookMakeupSessionAsAdmin`, `matchStudentWithCoachAsAdmin`）
+  `bookMakeupSessionAsAdmin`, `matchStudentWithCoachAsAdmin`, `adjustTargetSessionsAsAdmin`）
 - 関連RPC: `cancel_session`（`p_as_admin: true`, `p_admin_refund_ticket`で返還可否を明示指定）,
   `admin_book_session_direct`, `admin_match_student_with_coach`, `release_lesson_schedule_slot`,
-  `fn_schedule_shortfall`
+  `fn_schedule_shortfall`, `admin_adjust_schedule_target_sessions`
 - 実装上の注意（コード中コメントより）: これらの代理操作RPCは`auth.uid()`/`get_jwt_user_type()`で
   認可判定するため、`service_role`（`createAdminClient`）ではなく管理者自身の認証済みセッション
   （`createServerClient`）で呼び出す必要がある

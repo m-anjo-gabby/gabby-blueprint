@@ -55,6 +55,22 @@ false: 返還なし（消化済み扱い）。生徒都合キャンセルは開�
 `source_session_id`がNULLなら自由予約リクエスト、設定されていれば振替候補
 （キャンセルされたセッションを起因とする提案）。
 
+## com_m_lesson_schedule.status（定期スケジュール枠）
+
+| 値 | 意味 |
+|---|---|
+| 1 | active（稼働中） |
+| 0 | paused（一時停止） |
+| 9 | terminated（終了済み。`release_lesson_schedule_slot`等によるコーチ交代・終了で遷移） |
+
+### target_sessions（コマ別セッション目標数）
+
+このコマ(slot_no)が契約上持つべき目標セッション数。承認時に`total_sessions/weekly_frequency`の
+均等割り（余りはslot_no昇順に配分）で確定し、以後は不変が原則。`fn_schedule_shortfall()`の
+期待値、`fn_generate_sessions_for_schedule()`の生成上限として使う唯一の真実源。管理者が
+`admin_adjust_schedule_target_sessions()`で個別枠のみ引き上げ可能（契約全体の`total_sessions`は
+変更しない、正当な理由がある追加予約向けの例外措置。引き上げのみ許可、稼働中の枠のみ対象）。
+
 ## com_t_matching_request.status（初回マッチング申請）
 
 | 値 | 意味 |

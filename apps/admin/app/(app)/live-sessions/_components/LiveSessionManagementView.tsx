@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { ja, enUS } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
-import { Loader2, RefreshCcw, Users, Video, UserPlus, CalendarClock } from 'lucide-react';
+import { Loader2, RefreshCcw, Users, Video, UserPlus, CalendarClock, ListPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ import { getAdminSessionStatusBadge, getAdminScheduleStatusLabel } from '@/const
 import { CancelSessionDialog } from './dialogs/CancelSessionDialog';
 import { BookSessionDialog } from './dialogs/BookSessionDialog';
 import { MatchCoachDialog } from './dialogs/MatchCoachDialog';
+import { AdjustTargetSessionsDialog } from './dialogs/AdjustTargetSessionsDialog';
 import {
   SESSION_STATUS,
   SESSION_NON_ACTIONABLE_STATUSES,
@@ -86,6 +87,7 @@ export function LiveSessionManagementView({ clients }: Props) {
   // 各ダイアログのトリガー状態（フォーム状態・送信処理は各ダイアログコンポーネント自身が持つ）
   const [cancelTarget, setCancelTarget] = useState<CoachSessionListItem | null>(null);
   const [bookTarget, setBookTarget] = useState<AdminScheduleSlotSummary | null>(null);
+  const [adjustTarget, setAdjustTarget] = useState<AdminScheduleSlotSummary | null>(null);
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
   const [matchSlotNo, setMatchSlotNo] = useState(1);
 
@@ -110,7 +112,11 @@ export function LiveSessionManagementView({ clients }: Props) {
       if (!result.success) showToast(t('toastStudentsFetchFailed'), 'error');
       setIsLoadingStudents(false);
     });
-  }, [selectedClientId, showToast, t]);
+    // showToast/tはrevalidatePath後のルート再フェッチで参照が変わりうるため依存から除外する
+    // （selectedClientId自体が変わっていないのに顧客選択後の状態がリセットされる不具合を防ぐ。
+    // 他の2つのuseEffectと同じくトリガーは対象IDの変化のみとする）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClientId]);
 
   // 生徒が変わったら契約・以降の選択状態をリセットして再取得
   useEffect(() => {
@@ -304,7 +310,6 @@ export function LiveSessionManagementView({ clients }: Props) {
                     <p className="text-xs font-bold text-slate-700">{selectedContract.plan_name}</p>
                     <div className="flex items-center gap-3 text-[11px] text-slate-500">
                       <span>{t('weeklyFrequency', { count: selectedContract.weekly_frequency })}</span>
-                      <span>{t('usedSessions', { used: selectedContract.used_sessions, total: selectedContract.total_sessions })}</span>
                     </div>
                   </div>
                 )}
@@ -338,6 +343,15 @@ export function LiveSessionManagementView({ clients }: Props) {
                 <>
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('regularScheduleTitle')}</p>
+                    {selectedContract && (
+                      <p className="text-[11px] text-slate-500">
+                        {t('slotSummary', {
+                          total: selectedContract.weekly_frequency,
+                          active: activeSlotNos.size,
+                          unassigned: unassignedSlotNos.length,
+                        })}
+                      </p>
+                    )}
                     {slots.length === 0 && unassignedSlotNos.length === 0 ? (
                       <p className="text-xs text-slate-400">{t('noMatchingYet')}</p>
                     ) : (
@@ -365,6 +379,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                                   )}
                                 </div>
                                 <p className="text-[11px] text-slate-400 mt-0.5">{t('assignedCoach', { name: slot.coach_name })}</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">{t('targetSessionsLabel', { count: slot.target_sessions })}</p>
                               </div>
                               {isActive && !isPastContract && (
                                 <div className="flex items-center gap-2 shrink-0">
@@ -380,6 +395,16 @@ export function LiveSessionManagementView({ clients }: Props) {
                                       {t('bookSessionButton')}
                                     </Button>
                                   )}
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                                    onClick={() => setAdjustTarget(slot)}
+                                  >
+                                    <ListPlus size={13} />
+                                    {t('adjustTargetSessionsButton')}
+                                  </Button>
                                   <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                       <Button
@@ -500,6 +525,11 @@ export function LiveSessionManagementView({ clients }: Props) {
         target={bookTarget}
         onClose={() => setBookTarget(null)}
         onBooked={() => loadTicketDetail(selectedTicketId)}
+      />
+      <AdjustTargetSessionsDialog
+        target={adjustTarget}
+        onClose={() => setAdjustTarget(null)}
+        onAdjusted={() => loadTicketDetail(selectedTicketId)}
       />
       <MatchCoachDialog
         open={isMatchDialogOpen}

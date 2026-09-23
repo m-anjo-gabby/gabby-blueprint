@@ -578,15 +578,17 @@
       "contractPast": "過去の契約（参照のみ） ",
       "contractDateRange": "{start} 〜 {end}",
       "weeklyFrequency": "週{count}回",
-      "usedSessions": "{used}/{total}回消化",
       "reservationCardTitle": "ライブセッション予約状況",
       "pastContractBadge": "過去契約（参照のみ）",
       "regularScheduleTitle": "定期スケジュール枠",
+      "slotSummary": "全{total}枠中 稼働{active}枠・未割当{unassigned}枠",
       "noMatchingYet": "まだマッチングが成立していません",
       "slotLabel": "第{slotNo}枠: {day} {start}〜{end}",
-      "unassignedShortfall": "未割当 {count}枠",
+      "unassignedShortfall": "未割当 {count}件",
       "assignedCoach": "担当コーチ: {name}",
+      "targetSessionsLabel": "総セッション数: {count}",
       "bookSessionButton": "セッションを予約",
+      "adjustTargetSessionsButton": "セッション数を調整",
       "reassignCoachButton": "コーチ交代",
       "reassignDialogTitle": "担当コーチの交代",
       "reassignDialogBody": "第{slotNo}枠（{day} {start}〜{end}、担当: {coach}）の担当を終了します。まだ実施されていない今後のセッションはキャンセルされます（実施済みのセッション結果・チャット・宿題は削除されません）。終了後、生徒は同じ枠に対して新しいコーチへ改めてリクエストできるようになります（または下の「直接マッチング」でその場で割り当てられます）。この操作を実行してもよろしいですか？",
@@ -645,6 +647,17 @@
       "close": "閉じる",
       "confirmButton": "マッチングを成立させる",
       "toastSuccess": "マッチングが成立しました。セッションが予約されました"
+    },
+    "adjustTargetSessionsDialog": {
+      "title": "セッション数の個別調整",
+      "description": "第{slotNo}枠（担当: {coach}）の総セッション数を個別に引き上げます。契約全体の総セッション数は変更されません。正当な理由がある追加予約の例外措置としてのみ使用してください。",
+      "currentLabel": "現在の総セッション数",
+      "newValueLabel": "新しい総セッション数",
+      "reasonLabel": "理由（必須・内部メモ）",
+      "reasonPlaceholder": "例: 顧客との合意により追加の振替枠を認めるため",
+      "close": "閉じる",
+      "confirmButton": "変更する",
+      "toastSuccess": "総セッション数を変更しました"
     }
   },
   "monthlyReports": {

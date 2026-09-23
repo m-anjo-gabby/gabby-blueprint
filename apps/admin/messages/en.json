@@ -578,15 +578,17 @@
       "contractPast": "Past contract (view only) ",
       "contractDateRange": "{start} – {end}",
       "weeklyFrequency": "{count}x/week",
-      "usedSessions": "{used}/{total} used",
       "reservationCardTitle": "Live Session Bookings",
       "pastContractBadge": "Past contract (view only)",
       "regularScheduleTitle": "Recurring Schedule Slots",
+      "slotSummary": "{active} of {total} slots active, {unassigned} unassigned",
       "noMatchingYet": "No match has been made yet",
       "slotLabel": "Slot {slotNo}: {day} {start}–{end}",
       "unassignedShortfall": "{count} unassigned",
       "assignedCoach": "Coach: {name}",
+      "targetSessionsLabel": "Total sessions: {count}",
       "bookSessionButton": "Book session",
+      "adjustTargetSessionsButton": "Adjust sessions",
       "reassignCoachButton": "Reassign coach",
       "reassignDialogTitle": "Reassign Coach",
       "reassignDialogBody": "This will end the coach's assignment to slot {slotNo} ({day} {start}–{end}, coach: {coach}). Any upcoming sessions that haven't happened yet will be cancelled (completed session results, chats, and homework will not be deleted). After this, the student will be able to request a new coach for the same slot (or you can assign one immediately below using \"Direct Match\"). Are you sure you want to proceed?",
@@ -645,6 +647,17 @@
       "close": "Close",
       "confirmButton": "Complete match",
       "toastSuccess": "Match completed. The session has been booked"
+    },
+    "adjustTargetSessionsDialog": {
+      "title": "Adjust Session Count",
+      "description": "This will raise the total session count for slot {slotNo} (coach: {coach}). The contract's overall total session count is not changed. Use this only as an exception for legitimately approved extra bookings.",
+      "currentLabel": "Current total sessions",
+      "newValueLabel": "New total sessions",
+      "reasonLabel": "Reason (required, internal note)",
+      "reasonPlaceholder": "e.g. Extra makeup slot approved with the client",
+      "close": "Close",
+      "confirmButton": "Apply",
+      "toastSuccess": "Total session count updated"
     }
   },
   "monthlyReports": {
