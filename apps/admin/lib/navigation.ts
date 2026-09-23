@@ -2,6 +2,7 @@
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
   Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, CalendarRange, Video, DollarSign,
+  Settings, LifeBuoy,
 } from 'lucide-react';
 
 // ============================================================
@@ -22,6 +23,8 @@ export interface NavGroup {
   icon: LucideIcon;
   requiredRoles: readonly string[]; // グループ自体を表示する最低権限（子の union）
   children: readonly NavLeaf[];
+  /** true の場合、初期表示時にアコーディオンを開いた状態にする */
+  defaultOpen?: boolean;
 }
 
 export type NavItem = NavLeaf | NavGroup;
@@ -51,27 +54,9 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     requiredRoles: ['admin'],
   },
   {
-    label: 'liveSessions',
-    href: '/live-sessions',
-    icon: Video,
-    requiredRoles: ['admin'],
-  },
-  {
     label: 'users',
     href: '/users',
     icon: Users,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: 'terms',
-    href: '/terms',
-    icon: ShieldCheck,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: 'timezones',
-    href: '/timezones',
-    icon: Globe,
     requiredRoles: ['admin'],
   },
   {
@@ -81,34 +66,69 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     requiredRoles: ['admin', 'content_manager'],
   },
   {
-    label: 'notice',
-    href: '/notice',
-    icon: Bell,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: 'calendarEvents',
-    href: '/calendar-events',
-    icon: CalendarDays,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: 'monthlyReports',
-    href: '/monthly-reports',
-    icon: CalendarRange,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: 'paymentSettings',
-    href: '/payment-settings',
-    icon: DollarSign,
-    requiredRoles: ['admin'],
-  },
-  {
     label: 'chat',
     href: '/chat',
     icon: MessageCircle,
     requiredRoles: [],
+  },
+  {
+    label: 'liveSessions',
+    href: '/live-sessions',
+    icon: Video,
+    requiredRoles: ['admin'],
+  },
+  {
+    type: 'group',
+    label: 'support',
+    icon: LifeBuoy,
+    requiredRoles: ['admin'],
+    defaultOpen: true,
+    children: [
+      {
+        label: 'notice',
+        href: '/notice',
+        icon: Bell,
+        requiredRoles: ['admin'],
+      },
+      {
+        label: 'calendarEvents',
+        href: '/calendar-events',
+        icon: CalendarDays,
+        requiredRoles: ['admin'],
+      },
+      {
+        label: 'monthlyReports',
+        href: '/monthly-reports',
+        icon: CalendarRange,
+        requiredRoles: ['admin'],
+      },
+    ],
+  },
+  {
+    type: 'group',
+    label: 'systemSettings',
+    icon: Settings,
+    requiredRoles: ['admin'],
+    children: [
+      {
+        label: 'terms',
+        href: '/terms',
+        icon: ShieldCheck,
+        requiredRoles: ['admin'],
+      },
+      {
+        label: 'timezones',
+        href: '/timezones',
+        icon: Globe,
+        requiredRoles: ['admin'],
+      },
+      {
+        label: 'paymentSettings',
+        href: '/payment-settings',
+        icon: DollarSign,
+        requiredRoles: ['admin'],
+      },
+    ],
   },
   {
     type: 'group',

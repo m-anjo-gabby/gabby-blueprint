@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  X, ChevronRight,
-  PanelLeftClose, PanelLeftOpen, ChevronDown,
-} from 'lucide-react';
+import { X, PanelLeftClose, PanelLeftOpen, ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
@@ -35,6 +32,9 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
   const hasBadge = Boolean(badge && badge > 0);
   return (
     <li className="list-none group relative">
+      {isActive && !isCollapsed && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-indigo-600" />
+      )}
       <Link
         href={item.href}
         onClick={onClick}
@@ -42,10 +42,8 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
           flex items-center rounded-xl transition-all duration-200 text-sm font-bold
           ${isCollapsed ? 'justify-center py-3 px-0' : isChild ? 'justify-between px-3 py-2.5' : 'justify-between px-4 py-3'}
           ${isActive
-            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-            : isChild
-              ? 'hover:bg-slate-800/60 hover:text-white'
-              : 'hover:bg-slate-800 hover:text-white'
+            ? 'bg-indigo-50 text-indigo-700'
+            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
           }
         `}
       >
@@ -53,13 +51,13 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
           <span className="relative shrink-0">
             <Icon
               size={isChild ? 15 : 18}
-              className={isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}
+              className={isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'}
             />
             {hasBadge && (
               <span
                 className={`
                   absolute -top-1.5 -right-2 flex items-center justify-center rounded-full
-                  bg-rose-500 text-white font-black leading-none ring-2 ring-slate-900
+                  bg-rose-500 text-white font-black leading-none ring-2 ring-white
                   ${badge && badge > 9 ? 'min-w-3.25 h-3.25 px-1 text-[8px]' : 'w-3.25 h-3.25 text-[8px]'}
                 `}
               >
@@ -76,14 +74,13 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
             </span>
           </span>
         </div>
-        {isActive && !isCollapsed && <ChevronRight size={14} className="text-indigo-200" />}
       </Link>
 
       {/* 折りたたみ時のツールチップ */}
       {isCollapsed && (
-        <div className="fixed left-20 ml-2 top-auto group-hover:-translate-y-10 px-3 py-2 bg-slate-800 text-white text-[11px] font-bold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-[100] border border-slate-700 shadow-2xl">
+        <div className="fixed left-20 ml-2 top-auto group-hover:-translate-y-10 px-3 py-2 bg-white text-slate-700 text-[11px] font-bold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-100 border border-slate-200 shadow-xl">
           {label}
-          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-800 rotate-45 border-l border-b border-slate-700" />
+          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rotate-45 border-l border-b border-slate-200" />
         </div>
       )}
     </li>
@@ -104,25 +101,25 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
   const t = useTranslations('nav');
   const groupLabel = t(item.label);
   const isAnyChildActive = item.children.some((child) => currentPathname.startsWith(child.href));
-  const [isOpen, setIsOpen] = useState(isAnyChildActive);
+  const [isOpen, setIsOpen] = useState(isAnyChildActive || Boolean(item.defaultOpen));
 
   if (isCollapsed) {
-    // 折りたたみ時：アイコンのみ + ホバーでツールチップ代わりのミニメニュー
+    // 折りたたみ時：アイコンのみ + ホバーでフライアウトメニュー
     return (
       <li className="list-none group relative">
         <button
           className={`
             flex justify-center items-center w-full rounded-xl py-3 transition-all duration-200
-            ${isAnyChildActive ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-500 hover:text-white'}
+            ${isAnyChildActive ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-400 hover:text-slate-900'}
           `}
           title={groupLabel}
         >
-          <Icon size={18} className={isAnyChildActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'} />
+          <Icon size={18} className={isAnyChildActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'} />
         </button>
         {/* ホバーで子メニューをフライアウト表示 */}
-        <div className="fixed left-20 ml-2 top-auto -translate-y-8 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 z-[100]">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-2 min-w-[160px]">
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-2 pb-1.5">{groupLabel}</p>
+        <div className="fixed left-20 ml-2 top-auto -translate-y-8 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 z-100">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-2 min-w-40">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 pb-1.5">{groupLabel}</p>
             {item.children.map((child) => (
               <Link
                 key={child.href}
@@ -130,7 +127,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
                 onClick={onLinkClick}
                 className={`
                   flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors
-                  ${currentPathname.startsWith(child.href) ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}
+                  ${currentPathname.startsWith(child.href) ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}
                 `}
               >
                 <child.icon size={13} />
@@ -144,23 +141,26 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
   }
 
   return (
-    <li className="list-none">
+    <li className="list-none group">
       {/* グループヘッダー */}
       <button
         onClick={() => setIsOpen((v) => !v)}
         className={`
           flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 text-sm font-bold
-          ${isAnyChildActive ? 'text-indigo-400' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+          ${isAnyChildActive ? 'text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
         `}
       >
         <div className="flex items-center gap-3">
-          <Icon size={18} className={isAnyChildActive ? 'text-indigo-400' : 'text-slate-500'} />
+          <Icon size={18} className={isAnyChildActive ? 'text-indigo-600' : 'text-slate-400'} />
           <span className="whitespace-nowrap overflow-hidden text-sm font-bold">{groupLabel}</span>
         </div>
-        <ChevronDown
-          size={14}
-          className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${isAnyChildActive ? 'text-indigo-400' : 'text-slate-600'}`}
-        />
+        <span className={`flex items-center justify-center rounded-full p-1 transition-colors ${isOpen ? 'bg-slate-100' : 'group-hover:bg-slate-100'}`}>
+          <ChevronDown
+            size={18}
+            strokeWidth={2.5}
+            className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${isAnyChildActive ? 'text-indigo-600' : 'text-slate-400'}`}
+          />
+        </span>
       </button>
 
       {/* 子メニュー（アコーディオン） */}
@@ -170,7 +170,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
           ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
         `}
       >
-        <div className="ml-4 pl-4 border-l border-slate-700/60 space-y-0.5 py-1">
+        <div className="ml-4 pl-4 border-l border-slate-200 space-y-0.5 py-1">
           {item.children.map((child) => (
             <LeafItem
               key={child.href}
@@ -224,17 +224,17 @@ export default function Sidebar() {
 
       {/* サイドバー本体 */}
       <aside className={`
-        fixed inset-y-0 left-0 z-40 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 ease-in-out border-r border-slate-800
+        fixed inset-y-0 left-0 z-40 bg-white text-slate-600 flex flex-col transition-all duration-300 ease-in-out border-r border-slate-200
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:inset-auto
         ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
       `}>
 
         {/* 上部バー：モバイルの閉じるボタンのみ */}
-        <div className="h-16 px-4 border-b border-slate-800 shrink-0 flex items-center lg:hidden">
+        <div className="h-16 px-4 border-b border-slate-200 shrink-0 flex items-center lg:hidden">
           <button
             onClick={closeMobileSidebar}
-            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 transition-colors"
+            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
             aria-label={tCommon('closeMenu')}
           >
             <X size={20} />
@@ -269,10 +269,10 @@ export default function Sidebar() {
         </nav>
 
         {/* フッター：デスクトップの折りたたみボタンを常設表示 */}
-        <div className="hidden lg:flex items-center justify-center h-12 border-t border-slate-800 shrink-0">
+        <div className="hidden lg:flex items-center justify-center h-12 border-t border-slate-200 shrink-0">
           <button
             onClick={toggleCollapse}
-            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors"
+            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900 transition-colors"
             aria-label={isCollapsed ? tCommon('openMenu') : tCommon('closeMenu')}
           >
             {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
