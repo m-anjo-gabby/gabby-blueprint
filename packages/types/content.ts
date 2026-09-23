@@ -154,6 +154,9 @@ export interface ContentItem extends Omit<ContentRecord, 'metadata'> {
   is_favorite: boolean;
   // メタデータ（必要に応じて。基本はdisplay_tagsを優先）
   metadata: ContentMetadata;
+  // ダイアログ（content_type=3）のみ設定。自身への割当ID（com_t_dialogue_assignment.assignment_id）。
+  // 割当ベースで取得されるため、ダイアログ種別のアイテムには必ず値が入る
+  assignment_id?: string;
 }
 
 // お気に入りリスト用も共通の型を使用（一貫性を保つため）

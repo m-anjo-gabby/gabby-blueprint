@@ -8,6 +8,12 @@ import { ResumeContentResponse } from '@gabby/types/training';
  * 教材カードから Ready画面 (SprintSelect) へ、モードと種別を初期値として引き渡す
  */
 export const getTrainingPath = (content: ContentItem): string => {
+  // ダイアログ(content_type === 3) の場合
+  // 割当済みのみ一覧に含まれるため、assignment_id を起点に専用画面（進捗＋教材リンク）へ遷移する
+  if (content.content_type === 3) {
+    return `/training/dialogue/${content.assignment_id}`;
+  }
+
   // スプリント(content_type === 2) の場合
   if (content.content_type === 2) {
     const type = '0'; // 初期表示の質問タイプは '0' (Speed) 固定とする

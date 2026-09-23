@@ -2,6 +2,7 @@
 
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
+import type { LogEvent } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { hasCoachStudentRelationship } from './coachStudentActions';
 import {
@@ -239,19 +240,15 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
 
 /**
  * 指定生徒に割り当てられているダイアログ教材セットと、セッション別の進捗をまとめて取得する
+ * （コーチ用・生徒本人用の両方から呼ばれる共通処理。呼び出し元で認可チェック済みであること）
  */
-export async function getStudentDialogueAssignmentsCore(studentId: string): Promise<GetStudentDialogueAssignmentsResult> {
-  const ctx = await getLogContext();
-
+async function fetchDialogueAssignmentSummaries(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  studentId: string,
+  userId: string,
+  ctx: Partial<LogEvent>
+): Promise<GetStudentDialogueAssignmentsResult> {
   try {
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, errorCode: 'unauthorized' };
-
-    if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
-      return { success: false, errorCode: 'forbidden' };
-    }
-
     const { data: assignments, error: assignmentsError } = await supabase
       .from('com_t_dialogue_assignment')
       .select('assignment_id, content_id, assigned_by_coach_id, assigned_date, com_m_contents(content_name, content_name_en, category_id)')
@@ -260,7 +257,7 @@ export async function getStudentDialogueAssignmentsCore(studentId: string): Prom
       .order('assigned_date', { ascending: false });
 
     if (assignmentsError) {
-      logger.error('dialogue:get_assignments_failed', assignmentsError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('dialogue:get_assignments_failed', assignmentsError.message, { ...ctx, userId, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -279,7 +276,7 @@ export async function getStudentDialogueAssignmentsCore(studentId: string): Prom
       .order('session_no', { ascending: true });
 
     if (sessionsError) {
-      logger.error('dialogue:get_assignments_sessions_failed', sessionsError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('dialogue:get_assignments_sessions_failed', sessionsError.message, { ...ctx, userId, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -289,7 +286,7 @@ export async function getStudentDialogueAssignmentsCore(studentId: string): Prom
       .in('assignment_id', assignmentIds);
 
     if (progressError) {
-      logger.error('dialogue:get_assignments_progress_failed', progressError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('dialogue:get_assignments_progress_failed', progressError.message, { ...ctx, userId, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -345,6 +342,48 @@ export async function getStudentDialogueAssignmentsCore(studentId: string): Prom
     });
 
     return { success: true, assignments: result };
+  } catch (err) {
+    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 【コーチ用】指定生徒に割り当てられているダイアログ教材セットと、セッション別の進捗をまとめて取得する
+ */
+export async function getStudentDialogueAssignmentsCore(studentId: string): Promise<GetStudentDialogueAssignmentsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    return await fetchDialogueAssignmentSummaries(supabase, studentId, user.id, ctx);
+  } catch (err) {
+    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 【生徒本人用】自身に割り当てられているダイアログ教材セットと、セッション別の進捗をまとめて取得する。
+ * RLS（com_t_dialogue_assignment / com_t_dialogue_session_progressの「本人閲覧可」ポリシー）により
+ * 自分自身の行のみが返るため、コーチ用のような担当関係チェックは不要。
+ */
+export async function getMyDialogueAssignmentsCore(): Promise<GetStudentDialogueAssignmentsResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    return await fetchDialogueAssignmentSummaries(supabase, user.id, user.id, ctx);
   } catch (err) {
     logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
