@@ -32,10 +32,10 @@ export function DialogueSessionRow({ session }: Props) {
           className="inline-flex items-center gap-1.5 text-[13px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
         >
           <ExternalLink size={14} />
-          スライドを開く
+          教材を開く
         </a>
       ) : (
-        <p className="text-[11px] text-slate-300 italic">スライドは未登録です</p>
+        <p className="text-[11px] text-slate-300 italic">教材は未登録です</p>
       )}
     </div>
   );
