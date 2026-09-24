@@ -81,3 +81,6 @@ Feature: ライブセッション管理見直し データ主体テスト（feat
 # (13/13 OK。admin_adjust_schedule_target_sessions RPCの正常系(引き上げ成功・shortfall増加・
 #  セッション未生成)・異常系(現在値以下・理由空/空白・非稼働枠・生徒/コーチ本人権限・
 #  存在しないID)を全て確認。テストデータ(tag=targetsessions01)は削除済み)
+#
+# staging検証: testing/results/target-sessions-adjustment__staging-stg0924__2026-09-24T08-57-26-958Z.json
+# (13/13 OK。tag=stg0924。テストデータは cleanup.ts で削除済み)

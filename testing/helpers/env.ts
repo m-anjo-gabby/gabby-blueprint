@@ -12,6 +12,8 @@ const ENV_FILE_MAP: Record<TestEnv, string> = {
 
 const THIS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(THIS_DIR, "../..");
+// テスト専用の機微情報（QAアカウント共通パスワード等）。Git管理外。雛形は testing/.env.example
+const TESTING_ENV_FILE = "testing/.env.local";
 
 /**
  * dev/staging を指定してSupabase等の接続情報を process.env にロードする。
@@ -32,6 +34,12 @@ export function loadTestEnv(env: TestEnv): void {
   const result = dotenv.config({ path: envPath, override: true });
   if (result.error) {
     throw new Error(`envファイルの読み込みに失敗しました: ${relativePath}\n${result.error.message}`);
+  }
+
+  // シェルで明示的に渡した値を優先するため override しない
+  const testingEnvPath = path.join(REPO_ROOT, TESTING_ENV_FILE);
+  if (existsSync(testingEnvPath)) {
+    dotenv.config({ path: testingEnvPath, override: false, quiet: true });
   }
 
   const required = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SERVICE_ROLE_KEY"];
