@@ -408,9 +408,9 @@
     },
     "table": {
       "seqHeader": "SEQ",
-      "nameJaHeader": "Display Name (Japanese)",
-      "nameEnHeader": "Display Name (English)",
+      "nameHeader": "Display Name (English / Japanese)",
       "ianaHeader": "IANA Timezone Name",
+      "currentTimeHeader": "Current Local Time",
       "actionsHeader": "Actions",
       "deleteDialogTitle": "Delete Timezone",
       "deleteDialogBody": "Are you sure you want to delete \"<bold>{name}</bold>\"? This will not affect users who already have this timezone set, but it will no longer appear as an option.",

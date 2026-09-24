@@ -9,7 +9,7 @@ import {
   getFilteredRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   Table,
   TableBody,
@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { TimezoneFormDialog } from './TimezoneFormDialog';
+import { CurrentTimeCell } from './CurrentTimeCell';
 import { deleteTimezone } from '@/actions/adminTimezoneAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import {
@@ -50,6 +51,7 @@ interface TimezoneTableProps {
 export function TimezoneDataTable({ data }: TimezoneTableProps) {
   const t = useTranslations('timezones.table');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { showToast } = useToast();
   const [globalFilter, setGlobalFilter] = React.useState('');
 
@@ -75,19 +77,33 @@ export function TimezoneDataTable({ data }: TimezoneTableProps) {
       cell: ({ row }) => <span className="font-mono text-slate-500">{row.original.sort_no}</span>,
     },
     {
-      accessorKey: "display_name_ja",
-      header: t('nameJaHeader'),
-      cell: ({ row }) => <span className="font-bold text-slate-700">{row.original.display_name_ja}</span>,
-    },
-    {
-      accessorKey: "display_name_en",
-      header: t('nameEnHeader'),
-      cell: ({ row }) => <span className="text-slate-600">{row.original.display_name_en}</span>,
+      // 日英両方の名称をグローバル検索の対象にするため、両方を連結した値をアクセサにする
+      id: "display_name",
+      accessorFn: (row) => `${row.display_name_ja} ${row.display_name_en}`,
+      header: t('nameHeader'),
+      cell: ({ row }) => {
+        // 画面ロケールの名称を上段（太字）、もう一方を下段に表示
+        const [primary, secondary] = locale === 'en'
+          ? [row.original.display_name_en, row.original.display_name_ja]
+          : [row.original.display_name_ja, row.original.display_name_en];
+        return (
+          <div className="flex flex-col">
+            <span className="font-bold text-slate-700">{primary}</span>
+            <span className="text-xs text-slate-500">{secondary}</span>
+          </div>
+        );
+      },
     },
     {
       accessorKey: "timezone",
       header: t('ianaHeader'),
-      cell: ({ row }) => <span className="text-xs text-slate-400 font-mono">{row.original.timezone}</span>,
+      cell: ({ row }) => <span className="text-xs text-slate-500 font-mono">{row.original.timezone}</span>,
+    },
+    {
+      id: "current_time",
+      header: t('currentTimeHeader'),
+      enableGlobalFilter: false,
+      cell: ({ row }) => <CurrentTimeCell timezone={row.original.timezone} />,
     },
     {
       id: "actions",
@@ -126,7 +142,7 @@ export function TimezoneDataTable({ data }: TimezoneTableProps) {
         </div>
       ),
     },
-  ], [t, tCommon]);
+  ], [t, tCommon, locale]);
 
   const table = useReactTable({
     data,

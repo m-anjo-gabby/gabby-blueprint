@@ -408,9 +408,9 @@
     },
     "table": {
       "seqHeader": "SEQ",
-      "nameJaHeader": "表示名称（日本語）",
-      "nameEnHeader": "表示名称（英語）",
+      "nameHeader": "表示名称（日本語 / 英語）",
       "ianaHeader": "IANAタイムゾーン名",
+      "currentTimeHeader": "現地の現在日時",
       "actionsHeader": "操作",
       "deleteDialogTitle": "タイムゾーンの削除",
       "deleteDialogBody": "「<bold>{name}</bold>」を削除してもよろしいですか？ 既にこのタイムゾーンを設定しているユーザーには影響しませんが、選択肢からは表示されなくなります。",
