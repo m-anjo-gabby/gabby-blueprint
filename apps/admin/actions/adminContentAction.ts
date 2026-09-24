@@ -40,7 +40,11 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
       .eq('delete_flg', '0')
       .eq('access.delete_flg', '0')
       .order('content_type', { ascending: true })
+      // ダイアログ教材はセット分類ごとにseq_noを振り直しているため、分類単位でまとめて並べる（他種別はNULL）
+      .order('category_id', { ascending: true, nullsFirst: false })
       .order('seq_no', { ascending: true })
+      // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
+      .order('content_id', { ascending: true })
       .order('seq_no', { referencedTable: 'com_t_contents_tag_rel.com_m_contents_tag', ascending: true })
       .range(from, to);
 

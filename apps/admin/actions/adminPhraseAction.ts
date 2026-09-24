@@ -176,6 +176,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
         .eq('com_m_word.content_id', contentId)
         .order('word_id', { ascending: true })
         .order('seq_no', { ascending: true })
+        .order('phrase_id', { ascending: true }) // 同順位の並びを固定し、分割取得での重複・欠落を防ぐ
         .range(from, from + PAGE_SIZE - 1);
 
       if (error) {

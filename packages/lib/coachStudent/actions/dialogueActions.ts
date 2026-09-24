@@ -47,7 +47,8 @@ export async function getAvailableDialogueContentsCore(): Promise<GetAvailableDi
       .eq('content_type', 3)
       .eq('delete_flg', '0')
       .order('category_id', { ascending: true })
-      .order('seq_no', { ascending: true });
+      .order('seq_no', { ascending: true })
+      .order('content_id', { ascending: true }); // 同順位（seq_noの重複）の並びを固定する
 
     if (contentsError) {
       logger.error('dialogue:get_contents_failed', contentsError.message, { ...ctx, userId: user.id });

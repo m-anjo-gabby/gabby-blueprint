@@ -20,7 +20,7 @@ export default async function AdminContentsPage({
   const pageSize = 10;
 
   // 2. サーバーアクションから「教材データ」と「総件数」を取得
-  // getContents は種別順(content_type)・表示順(seq_no)でソート済み
+  // getContents は種別順(content_type)・セット分類順(category_id)・表示順(seq_no)でソート済み
   const { contents, totalCount } = await getContents(currentPage, pageSize, searchQuery, contentType);
 
   // 3. 全ページ数を計算

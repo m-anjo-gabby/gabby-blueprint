@@ -30,6 +30,7 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
     const { data, error, count } = await query
       .order('term_type', { ascending: true })
       .order('published_date', { ascending: false })
+      .order('term_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
 
     if (error) {
