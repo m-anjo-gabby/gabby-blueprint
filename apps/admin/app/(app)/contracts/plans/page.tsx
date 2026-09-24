@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { getContractPlans } from '@/actions/adminContractAction';
 import { ContractPlanDataTable } from './_components/ContractPlanDataTable';
 import { ContractPlanFormDialog } from './_components/ContractPlanFormDialog';
 
 export default async function ContractPlansPage() {
+  const t = await getTranslations('contracts.plansPage');
   const plans = await getContractPlans();
 
   return (
@@ -15,11 +17,11 @@ export default async function ContractPlansPage() {
             href="/contracts"
             className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
           >
-            <ChevronLeft size={14} /> 契約管理に戻る
+            <ChevronLeft size={14} /> {t('backToContracts')}
           </Link>
-          <h1 className="text-2xl font-bold tracking-tight">プランマスタ管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-xs text-slate-500 mt-1">
-            契約作成時に選択できるプランを管理します。プランを選ぶだけでコーチ有無・週回数・チケット数・ダイアログプラクティス提供有無が決まります
+            {t('subtitle')}
           </p>
         </div>
         <ContractPlanFormDialog />

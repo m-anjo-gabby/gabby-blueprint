@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -36,13 +37,14 @@ interface SprintQuestionListProps {
 }
 
 export function SprintQuestionList({ questions, type, onUpdate, contentId }: SprintQuestionListProps) {
+  const t = useTranslations('contents.editor.sprint.questionList');
   const { showToast } = useToast();
   const { play, isPlaying } = usePlayAudioSpeech();
   const isSpeed = type === '0';
   const isCueType = type === '4' || type === '5'; // 指示/Cueタイプ
   const isMastery = type === '6';
-  
-  const questionLabel = isCueType ? "指示 / Cue" : "Question";
+
+  const questionLabel = isCueType ? t('cueLabel') : "Question";
 
   // グループ化ロジック (Speed以外)
   const groupedQuestions = useMemo(() => {
@@ -60,10 +62,10 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
   const handleDelete = async (id: string) => {
     const res = await deleteSprintQuestion(id);
     if (res.success) {
-      showToast("削除しました", "success");
+      showToast(t('deleted'), "success");
       onUpdate();
     } else {
-      showToast(res.message || "削除に失敗しました", "error");
+      showToast(res.message || t('deleteFailed'), "error");
     }
   };
 
@@ -104,7 +106,7 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
           status === 1 ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"
         )}>
           {status === 1 ? <CheckCircle2 size={10} /> : <Music4 size={10} />}
-          {status === 1 ? "生成済" : "未生成"}
+          {status === 1 ? t('generatedLabel') : t('notGeneratedLabel')}
         </Badge>
         
         <SprintTTSDialog question={q} section={section} onUpdate={onUpdate}>
@@ -120,7 +122,7 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
         {groupedQuestions.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-20 border-2 border-dashed border-slate-200 rounded-[40px] bg-white/50 text-slate-400 gap-4">
             <div className="p-4 bg-white rounded-full shadow-sm"><Layout size={32} className="text-slate-200" /></div>
-            <p className="text-sm font-bold">問題が登録されていません</p>
+            <p className="text-sm font-bold">{t('emptyState')}</p>
           </div>
         ) : (
           groupedQuestions.map((group) => (
@@ -270,6 +272,7 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
 
 /* アクションボタン部分を共通化 */
 function SprintQuestionActionButtons({ q, type, onUpdate, handleDelete, contentId }: { q: SprintQuestion, type: SprintQuestionType, onUpdate: () => void, handleDelete: (id: string) => void, contentId: string }) {
+  const t = useTranslations('contents.editor.sprint.questionList');
   return (
     <>
       <SprintQuestionFormDialog 
@@ -292,18 +295,18 @@ function SprintQuestionActionButtons({ q, type, onUpdate, handleDelete, contentI
             <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle size={32} />
             </div>
-            <AlertDialogTitle className="text-center font-black">問題を削除しますか？</AlertDialogTitle>
+            <AlertDialogTitle className="text-center font-black">{t('deleteDialogTitle')}</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-xs">
-              この操作は取り消せません。
+              {t('deleteDialogHint')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex gap-2">
-            <AlertDialogCancel className="flex-1 rounded-2xl">キャンセル</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel className="flex-1 rounded-2xl">{t('cancelButton')}</AlertDialogCancel>
+            <AlertDialogAction
               onClick={() => handleDelete(q.question_id)}
               className="flex-1 bg-rose-500 hover:bg-rose-600 rounded-2xl font-bold"
             >
-              削除する
+              {t('deleteConfirmButton')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,6 +1,8 @@
 ---------------------------------------------
 -- 4. スプリントドリル履歴関数（新規追加）
 ---------------------------------------------
+-- 【2026-09-22 抜本改修】対象生徒の判定を private.get_monitor_target_users に一本化
+-- （get_monitor_sprint_history と同様。詳細はそちらのコメント参照）。
 CREATE OR REPLACE FUNCTION public.get_monitor_sprint_drill_history(
     _start_date DATE,
     _end_date DATE,
@@ -22,9 +24,8 @@ BEGIN
 
     RETURN QUERY
     WITH target_users AS (
-        SELECT tu.id, tu.user_name, tu.email
-        FROM public.get_monitor_user_list(_include_monitor) tu
-        WHERE (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR tu.id = ANY(_user_ids))
+        SELECT t.user_id FROM private.get_monitor_target_users(_client_id, _start_date, _end_date, _include_monitor) t
+        WHERE (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR t.user_id = ANY(_user_ids))
     )
     SELECT jsonb_build_object(
         'summary_id', d.summary_id,
@@ -39,10 +40,12 @@ BEGIN
         'mastery_count', d.mastery_count,
         'content_name', c.content_name,
         'user_name', u.user_name,
-        'email', u.email
+        'email', au.email
     )
     FROM public.self_t_sprint_summary d
-    INNER JOIN target_users u ON u.id = d.user_id
+    INNER JOIN target_users tu ON tu.user_id = d.user_id
+    INNER JOIN public.com_m_user u ON u.id = d.user_id
+    INNER JOIN auth.users au ON au.id = u.id
     LEFT JOIN public.com_m_contents c ON c.content_id = d.content_id
     WHERE d.training_date BETWEEN _start_date AND _end_date
     ORDER BY d.training_date DESC;

@@ -38,7 +38,11 @@ const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: 'NotoSansJP', color: '#000000' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   logo: { width: 120 },
-  companyBlock: { textAlign: 'right' },
+  // 会社名・住所各行(いずれも幅の異なる独立したText)を右端で揃えるため、textAlignではなく
+  // alignItems:'flex-end'で各子要素自体をコンテナ右端に個別配置する（textAlignは各Text
+  // 自身の描画幅の中で文字を右寄せするだけで、幅の異なる兄弟Text同士の右端は揃わないため
+  // 採用しなかった）。
+  companyBlock: { alignItems: 'flex-end' },
   companyName: { fontSize: 12, fontWeight: 700, marginBottom: 2, color: '#000000' },
   companyAddress: { fontSize: 9, color: '#666666', lineHeight: 1.4 },
   title: { fontSize: 16, fontWeight: 700, marginBottom: 20, textAlign: 'center', color: '#000000' },
@@ -74,7 +78,15 @@ export function PayNoticeDocument(data: PayNoticeData) {
           {data.logoSrc ? <Image src={data.logoSrc} style={styles.logo} /> : <View />}
           <View style={styles.companyBlock}>
             <Text style={styles.companyName}>{data.companyName}</Text>
-            <Text style={styles.companyAddress}>{data.companyAddress}</Text>
+            {/* 改行区切りの住所を1つのTextに\n込みで渡すと、react-pdf(Yoga)が複数行を
+                1つの描画幅として誤って計測し、companyBlockのalignItems:'flex-end'による
+                右端揃えが行単位で効かなくなる。行ごとに独立したTextに分割することで、
+                各行が個別にcompanyBlockの右端へ配置される。 */}
+            {data.companyAddress.split('\n').map((line, index) => (
+              <Text key={index} style={styles.companyAddress}>
+                {line}
+              </Text>
+            ))}
           </View>
         </View>
 

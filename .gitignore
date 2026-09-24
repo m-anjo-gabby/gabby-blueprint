@@ -34,6 +34,11 @@ repomix-output.xml
 .env.staging
 .env.staging.local
 
+# リリース作業用（supabase/release/run.mjs）: 接続情報・実行ログはコミット禁止
+supabase/release/env/.env.*
+!supabase/release/env/.env.example
+supabase/release/logs/
+
 # Github
 .github
 
@@ -71,5 +76,4 @@ temp_data/
 
 # Agents
 .agents
-CLAUDE.md
 

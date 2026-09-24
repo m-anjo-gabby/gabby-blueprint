@@ -1,6 +1,11 @@
 ---------------------------------------------
 -- 3. スプリント履歴関数（セキュリティ修正版）
 ---------------------------------------------
+-- 【2026-09-22 抜本改修】対象生徒の判定を private.get_monitor_target_users に一本化。
+-- 従来は get_monitor_user_list（表示用の付随情報まで結合する重い一覧関数）を対象生徒の
+-- 絞り込みだけの目的で呼び出していた。対象生徒の判定ロジック自体は private.get_monitor_target_users
+-- に集約されたため、本関数はそちらを直接呼び出す（余計なJOINを避け、判定ロジックの変更も
+-- 一箇所で完結する）。
 CREATE OR REPLACE FUNCTION public.get_monitor_sprint_history(
     _start_date TIMESTAMP WITH TIME ZONE,
     _end_date TIMESTAMP WITH TIME ZONE,
@@ -22,9 +27,8 @@ BEGIN
 
     RETURN QUERY
     WITH target_users AS (
-        SELECT tu.id, tu.user_name, tu.email
-        FROM public.get_monitor_user_list(_include_monitor) tu
-        WHERE (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR tu.id = ANY(_user_ids))
+        SELECT t.user_id FROM private.get_monitor_target_users(_client_id, _start_date::date, _end_date::date, _include_monitor) t
+        WHERE (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR t.user_id = ANY(_user_ids))
     )
     SELECT jsonb_build_object(
         'self_sprint_id', s.self_sprint_id,
@@ -40,10 +44,12 @@ BEGIN
         'insert_date', s.insert_date,
         'content_name', c.content_name,
         'user_name', u.user_name,
-        'email', u.email
+        'email', au.email
     )
     FROM public.self_t_sprint s
-    INNER JOIN target_users u ON u.id = s.user_id
+    INNER JOIN target_users tu ON tu.user_id = s.user_id
+    INNER JOIN public.com_m_user u ON u.id = s.user_id
+    INNER JOIN auth.users au ON au.id = u.id
     LEFT JOIN public.com_m_contents c ON c.content_id = s.content_id
     WHERE s.insert_date BETWEEN _start_date AND _end_date
     ORDER BY s.insert_date DESC;

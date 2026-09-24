@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,8 @@ interface Props {
  * （cancel_session RPCのp_admin_refund_ticketにそのまま渡る）。
  */
 export function CancelSessionDialog({ target, onClose, onCancelled }: Props) {
+  const t = useTranslations('liveSessions.cancelDialog');
+  const locale = useLocale();
   const { showToast } = useToast();
   const [refund, setRefund] = useState(true);
   const [reason, setReason] = useState('');
@@ -42,7 +45,7 @@ export function CancelSessionDialog({ target, onClose, onCancelled }: Props) {
     try {
       const result = await cancelSessionAsAdmin(target.session_id, refund, reason || undefined);
       if (result.success) {
-        showToast('セッションをキャンセルしました', 'success');
+        showToast(t('toastSuccess'), 'success');
         handleClose(false);
         await onCancelled();
       } else {
@@ -57,30 +60,30 @@ export function CancelSessionDialog({ target, onClose, onCancelled }: Props) {
     <Dialog open={!!target} onOpenChange={handleClose}>
       <DialogContent className="rounded-3xl">
         <DialogHeader>
-          <DialogTitle>セッションのキャンセル（代理操作）</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription>
-            {target && formatSessionDateTime(target.start_datetime)} のセッションをキャンセルします。
+            {t('description', { datetime: target ? formatSessionDateTime(target.start_datetime, locale) : '' })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5">
             <Checkbox id="cancel-refund" checked={refund} onCheckedChange={(v) => setRefund(v === true)} />
             <Label htmlFor="cancel-refund" className="text-xs font-semibold text-slate-600 cursor-pointer">
-              チケットを返還する（未割当扱いに戻し、再予約可能にする）
+              {t('refundLabel')}
             </Label>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">理由（任意・内部メモ）</Label>
-            <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="例: 顧客都合によりサポート窓口経由で調整" />
+            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('reasonLabel')}</Label>
+            <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('reasonPlaceholder')} />
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={isCancelling}>
-            閉じる
+            {t('close')}
           </Button>
           <Button type="button" onClick={handleCancel} disabled={isCancelling} className="bg-rose-600 hover:bg-rose-700">
             {isCancelling && <Loader2 size={14} className="animate-spin" />}
-            キャンセルする
+            {t('confirmButton')}
           </Button>
         </DialogFooter>
       </DialogContent>

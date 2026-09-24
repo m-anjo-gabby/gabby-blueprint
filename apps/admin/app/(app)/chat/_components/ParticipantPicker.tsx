@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { USER_TYPES, UserType, getUserTypeLabel } from '@gabby/types/user';
@@ -8,9 +9,6 @@ import { ChatTargetUser } from '@gabby/types/chat';
 import { ClientOption } from '@gabby/types/client';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
-
-// 顧客フィルターをリセットするための「すべての顧客」選択肢
-const ALL_CLIENTS_OPTION = { value: '', label: 'すべての顧客（絞り込みなし）' };
 
 export interface ParticipantSelection {
   userType: UserType | '';
@@ -30,6 +28,9 @@ interface ParticipantPickerProps {
 }
 
 export function ParticipantPicker({ label, users, clients, value, onChange, disabled }: ParticipantPickerProps) {
+  const t = useTranslations('chat.participantPicker');
+  const tCommon = useTranslations('chat.common');
+  const ALL_CLIENTS_OPTION = { value: '', label: tCommon('allClientsOption') };
   const clientNameById = useMemo(() => new Map(clients.map((c) => [c.client_id, c.client_name])), [clients]);
 
   const filteredUsers = useMemo(() => {
@@ -43,7 +44,7 @@ export function ParticipantPicker({ label, users, clients, value, onChange, disa
 
   const userOptions = filteredUsers.map((u) => ({
     value: u.id,
-    label: `${u.user_name || '（名称未設定）'}${u.client_id ? ` - ${clientNameById.get(u.client_id) || '（顧客不明）'}` : ''}`,
+    label: `${u.user_name || tCommon('unnamed')}${u.client_id ? ` - ${clientNameById.get(u.client_id) || tCommon('unknownClient')}` : ''}`,
   }));
 
   return (
@@ -68,8 +69,8 @@ export function ParticipantPicker({ label, users, clients, value, onChange, disa
           options={[ALL_CLIENTS_OPTION, ...clients.map((c) => ({ value: c.client_id, label: c.client_name }))]}
           value={value.clientId}
           onChange={(clientId) => onChange({ ...value, clientId, userId: '' })}
-          placeholder="顧客で絞り込み（任意）"
-          searchPlaceholder="顧客名で検索..."
+          placeholder={tCommon('clientFilterPlaceholder')}
+          searchPlaceholder={tCommon('clientSearchPlaceholder')}
           disabled={disabled}
         />
       )}
@@ -78,9 +79,9 @@ export function ParticipantPicker({ label, users, clients, value, onChange, disa
         options={userOptions}
         value={value.userId}
         onChange={(userId) => onChange({ ...value, userId })}
-        placeholder={value.userType ? '参加者を選択してください' : '先にユーザー種別を選択してください'}
-        searchPlaceholder="名前で検索..."
-        emptyMessage="該当するユーザーが見つかりません。"
+        placeholder={value.userType ? t('selectPlaceholder') : t('selectFirstTypePlaceholder')}
+        searchPlaceholder={tCommon('nameSearchPlaceholder')}
+        emptyMessage={tCommon('noMatchingUsers')}
         disabled={disabled || !value.userType}
       />
     </div>

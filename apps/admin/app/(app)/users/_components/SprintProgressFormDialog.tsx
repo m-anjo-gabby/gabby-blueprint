@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,8 @@ function levelLabel(questionType: SprintQuestionType, level: number): string {
 }
 
 export function SprintProgressFormDialog({ user, children }: Props) {
+  const t = useTranslations('users.sprint');
+  const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<StudentSprintProgress | null>(null);
@@ -104,7 +107,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
         delete next[questionType];
         return next;
       });
-      showToast(`${meta.label} を ${levelLabel(questionType, newLevel)} に変更しました`, 'success');
+      showToast(t('toastLevelChanged', { label: meta.label, level: levelLabel(questionType, newLevel) }), 'success');
     } finally {
       setSavingType(null);
     }
@@ -121,7 +124,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
       }
       setProgress(result.progress);
       setTargetStage(result.progress.stage);
-      showToast(`ステージを Stage ${result.progress.stage} に変更しました`, 'success');
+      showToast(t('toastStageChanged', { stage: result.progress.stage }), 'success');
     } finally {
       setIsSavingStage(false);
     }
@@ -133,7 +136,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
       <DialogContent className="max-w-md p-0 shadow-2xl border-none [&>button]:text-white [&>button]:opacity-70 max-h-[90vh] flex flex-col rounded-xl overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
-            <Rocket size={18} className="text-indigo-400" /> ステージ・レベル管理
+            <Rocket size={18} className="text-indigo-400" /> {t('title')}
           </DialogTitle>
           <p className="text-slate-400 text-[11px] font-bold mt-1">{user.user_name} / {user.client_name}</p>
         </DialogHeader>
@@ -146,8 +149,8 @@ export function SprintProgressFormDialog({ user, children }: Props) {
           ) : (
             <Tabs defaultValue="levels">
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="levels">問題種別ごと</TabsTrigger>
-                <TabsTrigger value="stage">ステージ</TabsTrigger>
+                <TabsTrigger value="levels">{t('tabLevels')}</TabsTrigger>
+                <TabsTrigger value="stage">{t('tabStage')}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="levels" className="mt-0 space-y-1">
@@ -166,7 +169,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                     >
                       <div>
                         <p className="text-sm font-semibold text-slate-700">{type.label}</p>
-                        <p className="text-xs text-slate-400">現在: {levelLabel(type.value, currentLevel)}</p>
+                        <p className="text-xs text-slate-400">{t('currentPrefix', { level: levelLabel(type.value, currentLevel) })}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Select
@@ -193,7 +196,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                           disabled={savingType !== null || selected === currentLevel}
                         >
                           {savingType === type.value && <Loader2 size={14} className="animate-spin" />}
-                          保存
+                          {tCommon('save')}
                         </Button>
                       </div>
                     </div>
@@ -203,11 +206,11 @@ export function SprintProgressFormDialog({ user, children }: Props) {
 
               <TabsContent value="stage" className="mt-0 space-y-4">
                 <p className="text-sm text-slate-600">
-                  現在のステージ: <span className="font-bold text-slate-800">Stage {progress.stage}</span>
+                  {t('currentStage', { stage: progress.stage })}
                 </p>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">目標ステージ</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('targetStageLabel')}</label>
                   <Select
                     value={targetStage !== null ? String(targetStage) : undefined}
                     onValueChange={(v) => setTargetStage(Number(v))}
@@ -219,7 +222,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                       {stageOptions.map((s) => (
                         <SelectItem key={s} value={String(s)}>
                           Stage {s}
-                          {s === progress.stage ? '（現在）' : ''}
+                          {s === progress.stage ? t('currentSuffix') : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -231,11 +234,10 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                     <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 space-y-2">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700">
                         <TriangleAlert size={13} />
-                        <span>到達条件を満たしていない種別があります</span>
+                        <span>{t('gapsWarningTitle')}</span>
                       </div>
                       <p className="text-xs text-amber-700">
-                        Stage {targetStage} へ強制的に到達させると、以下のレベルが必要な最小値まで引き上げられます。
-                        条件を満たしている種別は変更されません。
+                        {t('gapsWarningBody', { stage: targetStage ?? 0 })}
                       </p>
                       <ul className="text-xs text-amber-800 space-y-0.5">
                         {stageDiff.gaps.map((gap) => (
@@ -248,7 +250,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                     </div>
                   ) : (
                     <p className="text-xs font-semibold text-emerald-600">
-                      Stage {targetStage} の到達条件はすでに満たされています。
+                      {t('gapsSatisfied', { stage: targetStage ?? 0 })}
                     </p>
                   )
                 )}
@@ -257,10 +259,10 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                   <div className="rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-3 space-y-2">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700">
                       <TriangleAlert size={13} />
-                      <span>レベルがダウンします</span>
+                      <span>{t('downWarningTitle')}</span>
                     </div>
                     <p className="text-xs text-rose-700">
-                      Stage {targetStage} まで引き下げると、以下の問題種別のレベルが Stage {targetStage} ちょうどの基準値にリセットされます。
+                      {t('downWarningBody', { stage: targetStage ?? 0 })}
                     </p>
                     {stageDiff.resets.length > 0 ? (
                       <ul className="text-xs text-rose-800 space-y-0.5">
@@ -272,7 +274,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-xs text-rose-700">変更されるレベルはありません。</p>
+                      <p className="text-xs text-rose-700">{t('noChanges')}</p>
                     )}
                   </div>
                 )}
@@ -284,9 +286,9 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                   className="w-full"
                 >
                   {isSavingStage && <Loader2 size={14} className="animate-spin" />}
-                  {stageDiff?.direction === 'up' && 'ステージを強制的に上げる'}
-                  {stageDiff?.direction === 'down' && 'ステージを引き下げる'}
-                  {!stageDiff && '変更なし'}
+                  {stageDiff?.direction === 'up' && t('forceUp')}
+                  {stageDiff?.direction === 'down' && t('forceDown')}
+                  {!stageDiff && t('noChange')}
                 </Button>
               </TabsContent>
             </Tabs>

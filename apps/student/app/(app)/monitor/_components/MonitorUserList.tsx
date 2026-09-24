@@ -17,6 +17,7 @@ import {
   CalendarDays,
   ArrowLeft,
   ArrowRight,
+  ChevronDown,
   Download,
   Zap
 } from 'lucide-react';
@@ -25,6 +26,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
 import { logClientEvent } from '@gabby/lib/logger/actions';
+import { MonitorMonthPickerPopover } from './MonitorMonthPickerPopover';
 
 interface MonitorUserListProps {
   users: MonitorUser[];
@@ -51,34 +53,28 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
     return toIsoMonthInZone(new Date(), timezone);
   }, [qStart, timezone]);
 
-  // 💡 パラメータ変更の共通処理（replace & scroll: false による遷移最適化）
-  const updateQueryParams = (newMonthOffset: number) => {
+  // 💡 対象年月（"YYYY-MM"）を指定して遷移する共通処理（replace & scroll: false による遷移最適化）
+  const navigateToMonth = (yearMonthStr: string) => {
+    const [year, month] = yearMonthStr.split('-').map(Number);
     const params = new URLSearchParams(searchParams.toString());
-    
-    // 月の計算
-    if (newMonthOffset !== 0) {
-      const [year, month] = currentMonthStr.split('-').map(Number);
-      const targetDate = new Date(year, month - 1 + newMonthOffset, 1);
-      
-      const nextYear = targetDate.getFullYear();
-      const nextMonth = targetDate.getMonth();
-      const startStr = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-01`;
-      const endDay = new Date(Date.UTC(nextYear, nextMonth + 1, 0)).getDate();
-      const endStr = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
-      
-      params.set('startDate', startStr);
-      params.set('endDate', endStr);
-    }
 
+    const startStr = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDay = new Date(Date.UTC(year, month, 0)).getDate();
+    const endStr = `${year}-${String(month).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+
+    params.set('startDate', startStr);
+    params.set('endDate', endStr);
     params.set('view', currentView);
     if (userIds) params.set('userIds', userIds);
-    
+
     // 💡 pushではなくreplaceにすることで、ブラウザバックの履歴スタック詰まりを防止
     router.replace(`/monitor?${params.toString()}`, { scroll: false });
   };
 
   const handleMonthChange = (offset: number) => {
-    updateQueryParams(offset);
+    const [year, month] = currentMonthStr.split('-').map(Number);
+    const targetDate = new Date(year, month - 1 + offset, 1);
+    navigateToMonth(`${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`);
   };
 
   const [displayYear, displayMonth] = currentMonthStr.split('-');
@@ -234,15 +230,6 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
     }
   };
 
-  if (users.length === 0 && !includeMonitor) {
-    return (
-      <div className="bg-white rounded-[28px] border border-dashed border-slate-200/80 p-16 text-center max-w-xl mx-auto">
-        <User size={36} className="mx-auto text-slate-300 mb-3" />
-        <p className="text-sm font-bold text-slate-400">受講生が登録されていません</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4 animate-fade-in">
       
@@ -263,9 +250,16 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                 <ArrowLeft size={13} strokeWidth={3} />
               </button>
               
-              <span className="text-xs font-black tracking-tight text-slate-700 font-mono select-none min-w-[84px] text-center">
-                {displayYear}年 {parseInt(displayMonth)}月
-              </span>
+              <MonitorMonthPickerPopover currentMonth={currentMonthStr} onSelect={navigateToMonth}>
+                <button
+                  type="button"
+                  className="flex items-center justify-center gap-1 text-xs font-black tracking-tight text-slate-700 font-mono min-w-[84px] text-center rounded-lg px-1.5 py-0.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                  title="年月を選択"
+                >
+                  {displayYear}年 {parseInt(displayMonth)}月
+                  <ChevronDown size={11} strokeWidth={3} className="text-slate-400" />
+                </button>
+              </MonitorMonthPickerPopover>
 
               <button 
                 onClick={() => handleMonthChange(1)} 
@@ -296,7 +290,11 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
       {users.length === 0 ? (
         <div className="bg-white rounded-[28px] border border-dashed border-slate-200/80 p-16 text-center">
           <User size={36} className="mx-auto text-slate-300 mb-3" />
-          <p className="text-sm font-bold text-slate-400">該当するユーザーが見つかりません（モニターのみ登録されている可能性があります）</p>
+          <p className="text-sm font-bold text-slate-400">
+            {includeMonitor
+              ? 'この年月に該当する受講生が見つかりません'
+              : 'この年月に該当する受講生が見つかりません（モニター用アカウントのみ登録されている場合は「モニターを含める」をONにしてください）'}
+          </p>
         </div>
       ) : (
         <div className="bg-white border border-slate-200/60 rounded-[28px] shadow-sm overflow-hidden">

@@ -1,10 +1,13 @@
 // apps/admin/app/(app)/dashboard/_components/DashboardHeader.tsx
-export default function DashboardHeader() {
+import { getTranslations } from 'next-intl/server';
+
+export default async function DashboardHeader() {
+  const t = await getTranslations('dashboard');
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-800">ダッシュボード</h1>
+      <h1 className="text-xl font-bold text-slate-800">{t('title')}</h1>
       <p className="text-xs text-slate-500 mt-1">
-        主要機能の登録状況と、対応が必要な項目をまとめて確認できます
+        {t('subtitle')}
       </p>
     </div>
   );

@@ -17,7 +17,7 @@ export async function getCompanyProfile(): Promise<CompanyProfile | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('com_m_company_profile')
-    .select('company_name, address, logo_path')
+    .select('company_name, address, logo_path, tax_registration_number')
     .eq('company_profile_id', COMPANY_PROFILE_ID)
     .maybeSingle();
 
@@ -29,7 +29,7 @@ export async function getCompanyProfile(): Promise<CompanyProfile | null> {
 }
 
 export async function updateCompanyProfile(
-  input: Pick<CompanyProfile, 'company_name' | 'address'>
+  input: Pick<CompanyProfile, 'company_name' | 'address' | 'tax_registration_number'>
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const supabase = createAdminClient();
@@ -38,6 +38,7 @@ export async function updateCompanyProfile(
     .update({
       company_name: input.company_name,
       address: input.address,
+      tax_registration_number: input.tax_registration_number?.trim() || null,
       update_date: new Date().toISOString(),
     })
     .eq('company_profile_id', COMPANY_PROFILE_ID);

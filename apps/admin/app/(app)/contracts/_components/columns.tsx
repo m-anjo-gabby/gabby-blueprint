@@ -2,32 +2,37 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
+import type { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { format, isAfter, isBefore, startOfDay } from 'date-fns';
-import { ja } from 'date-fns/locale';
+import { ja, enUS } from 'date-fns/locale';
 import { ContractDetail } from '@gabby/types/contract';
 import { ContractFormDialog } from './ContractFormDialog';
 import { ContractLicenseDialog } from './ContractLicenseDialog';
 import { DeleteContractDialog } from './DeleteContractDialog';
 import { Eye, Pencil } from 'lucide-react';
 
-export const columns: ColumnDef<ContractDetail>[] = [
+type TableT = ReturnType<typeof useTranslations<'contracts.table'>>;
+
+export function createColumns(t: TableT, locale: string): ColumnDef<ContractDetail>[] {
+  const dateLocale = locale === 'en' ? enUS : ja;
+  return [
   {
     id: 'client_name',
     accessorKey: 'client_name',
-    header: '顧客名',
+    header: t('clientHeader'),
     filterFn: 'includesString',
     cell: ({ row }) => {
       return (
         <span className="font-medium text-slate-900">
-          {row.original.client_name || '未紐付け'}
+          {row.original.client_name || t('clientUnlinked')}
         </span>
       );
     },
   },
   {
     accessorKey: 'plan_name',
-    header: 'プラン',
+    header: t('planHeader'),
     cell: ({ row }) => {
       const contract = row.original;
       return (
@@ -38,11 +43,11 @@ export const columns: ColumnDef<ContractDetail>[] = [
           {contract.contract_type === 2 && (
             <div className="flex flex-wrap gap-1">
               <Badge className="w-fit bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-[10px] font-bold">
-                ライブ週{contract.weekly_frequency}回・全{contract.total_sessions}回
+                {t('liveBadge', { weekly: contract.weekly_frequency ?? 0, total: contract.total_sessions ?? 0 })}
               </Badge>
               {contract.has_dialogue_practice && (
                 <Badge className="w-fit bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100 text-[10px] font-bold">
-                  ダイアログプラクティス
+                  {t('dialoguePracticeBadge')}
                 </Badge>
               )}
             </div>
@@ -53,7 +58,7 @@ export const columns: ColumnDef<ContractDetail>[] = [
   },
   {
     id: 'license_usage',
-    header: 'ライセンス利用状況',
+    header: t('licenseUsageHeader'),
     cell: ({ row }) => {
       const contract = row.original;
       // "YYYY-MM-DD"（JSTの日付文字列）をそのままnew Date()に渡すとUTC 00:00として解釈され、
@@ -63,7 +68,7 @@ export const columns: ColumnDef<ContractDetail>[] = [
 
       // 契約終了フラグ（終了日を過ぎている場合は操作不可）
       const isExpired = isBefore(end, now);
-      
+
       const max = contract.max_licenses;
       // 無効化されたライセンスも「消化済み」として扱い続ける（枠は戻らない）ため、
       // 現在有効かどうか(current_active_count)ではなく、割当実績の総数
@@ -93,15 +98,15 @@ export const columns: ColumnDef<ContractDetail>[] = [
 
             {assigned > max && (
               <div className="text-[9px] text-rose-500 font-black animate-pulse leading-none">
-                ※ 超過
+                {t('overLimitLabel')}
               </div>
             )}
           </div>
 
           {/* 右側：ペンシルまたは参照ボタン（有効無効で切替表示） */}
           <div className={`flex items-center justify-center w-6 h-6 rounded-xl border transition-all duration-300
-            ${isExpired 
-              ? 'bg-slate-50 text-slate-400 border-slate-200 group-hover/usage:bg-indigo-50 group-hover/usage:text-indigo-600 group-hover/usage:border-indigo-200' 
+            ${isExpired
+              ? 'bg-slate-50 text-slate-400 border-slate-200 group-hover/usage:bg-indigo-50 group-hover/usage:text-indigo-600 group-hover/usage:border-indigo-200'
               : 'bg-indigo-50 text-indigo-500 border-indigo-100 shadow-sm group-hover/usage:bg-indigo-600 group-hover/usage:text-white group-hover/usage:border-indigo-600 group-hover/usage:shadow-md'
             }`}
           >
@@ -124,21 +129,21 @@ export const columns: ColumnDef<ContractDetail>[] = [
   },
   {
     id: 'period',
-    header: '契約期間',
+    header: t('periodHeader'),
     cell: ({ row }) => {
       const start = new Date(row.original.start_date);
       const end = new Date(row.original.end_date);
       return (
         <div className="text-[11px] leading-tight space-y-0.5">
-          <div className="text-slate-400">開始: {format(start, 'yyyy/MM/dd', { locale: ja })}</div>
-          <div className="text-slate-700 font-bold">終了: {format(end, 'yyyy/MM/dd', { locale: ja })}</div>
+          <div className="text-slate-400">{t('startLabel', { date: format(start, 'yyyy/MM/dd', { locale: dateLocale }) })}</div>
+          <div className="text-slate-700 font-bold">{t('endLabel', { date: format(end, 'yyyy/MM/dd', { locale: dateLocale }) })}</div>
         </div>
       );
     },
   },
   {
     accessorKey: 'status',
-    header: 'ステータス',
+    header: t('statusHeader'),
     cell: ({ row }) => {
       const status = row.getValue('status') as number;
       // "YYYY-MM-DD"（JSTの日付文字列）をそのままnew Date()に渡すとUTC 00:00として解釈され、
@@ -153,18 +158,18 @@ export const columns: ColumnDef<ContractDetail>[] = [
        * 1. DBステータスが「無効(0)」または「解約(9)」なら期間に関わらずそれを表示
        * 2. 「有効(1)」であっても現在日付が範囲外なら「開始待ち」または「期間終了」を表示
        */
-      if (status === 0) return <Badge variant="destructive">停止中</Badge>;
-      if (status === 9) return <Badge variant="outline" className="text-slate-400">解約済</Badge>;
+      if (status === 0) return <Badge variant="destructive">{t('statusInactive')}</Badge>;
+      if (status === 9) return <Badge variant="outline" className="text-slate-400">{t('statusCancelled')}</Badge>;
 
       if (isBefore(end, now)) {
-        return <Badge variant="secondary" className="bg-slate-200 text-slate-500">期間終了</Badge>;
-      }
-      
-      if (isAfter(start, now)) {
-        return <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50">開始待ち</Badge>;
+        return <Badge variant="secondary" className="bg-slate-200 text-slate-500">{t('statusEnded')}</Badge>;
       }
 
-      return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">稼働中</Badge>;
+      if (isAfter(start, now)) {
+        return <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50">{t('statusUpcoming')}</Badge>;
+      }
+
+      return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">{t('statusActive')}</Badge>;
     },
   },
   {
@@ -179,4 +184,5 @@ export const columns: ColumnDef<ContractDetail>[] = [
       </div>
     ),
   },
-];
+  ];
+}

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { addMonths, format } from 'date-fns'
+import { useTranslations } from 'next-intl'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
@@ -19,52 +20,45 @@ import { Alert } from '@/components/ui/alert'
 import { ContractDetail, ContractPlan } from '@gabby/types/contract'
 import { SearchableSelect } from '@/components/common/SearchableSelect'
 
-// --- 契約ステータスの選択肢 ---
-const CONTRACT_STATUS_OPTIONS = [
-  { value: 1, label: '有効', className: 'text-emerald-600' },
-  { value: 0, label: '無効', className: 'text-slate-500' },
-  { value: 9, label: '解約', className: 'text-rose-600' },
-] as const;
-
-function getContractStatusLabel(status: number): string {
-  return CONTRACT_STATUS_OPTIONS.find((s) => s.value === status)?.label ?? '不明';
-}
-
 // --- スキーマ定義 ---
 // 契約タイプ（コーチ有無）はプラン選択に完全に従属する構造的な属性のため、契約側の
 // 入力項目からは廃止した（サーバー側でplan_idからプランマスタのcontract_typeを取得する）。
-const contractSchema = z.object({
-  client_id: z.string().min(1, '顧客を選択してください'),
-  plan_id: z.string().min(1, 'プランを選択してください'),
-  plan_name: z.string().min(1, 'プラン名（日本語）は必須です'),
-  plan_name_en: z.string().min(1, 'プラン名（英語）は必須です'),
-  max_licenses: z.coerce.number().min(1, '1以上の数値を入力してください'),
-  start_date: z.string().min(1, '開始日は必須です'),
-  end_date: z.string().min(1, '終了日は必須です'),
-  status: z.coerce.number(),
-  note: z.string().nullable().optional(),
-  weekly_frequency: z.coerce.number().nullable().optional(),
-  total_sessions: z.coerce.number().nullable().optional(),
-  has_dialogue_practice: z.boolean(),
-}).refine((data) => {
-  // 開始日と終了日が両方存在する場合のみチェック
-  if (data.start_date && data.end_date) {
-    return new Date(data.start_date) <= new Date(data.end_date);
-  }
-  return true;
-}, {
-  message: "終了日は開始日以降の日付を入力してください",
-  path: ["end_date"], // エラーを end_date フィールドに紐付ける
-}).refine((data) => data.weekly_frequency == null || data.weekly_frequency >= 1, {
-  message: "週回数は1以上を入力してください",
-  path: ["weekly_frequency"],
-}).refine((data) => data.total_sessions == null || data.total_sessions >= 1, {
-  message: "チケット数は1以上を入力してください",
-  path: ["total_sessions"],
-});
+type FormT = ReturnType<typeof useTranslations<'contracts.formDialog'>>;
 
-type ContractFormInput = z.input<typeof contractSchema>
-type ContractFormOutput = z.output<typeof contractSchema>
+function createContractSchema(t: FormT) {
+  return z.object({
+    client_id: z.string().min(1, t('errors.clientRequired')),
+    plan_id: z.string().min(1, t('errors.planRequired')),
+    plan_name: z.string().min(1, t('errors.planNameRequired')),
+    plan_name_en: z.string().min(1, t('errors.planNameEnRequired')),
+    max_licenses: z.coerce.number().min(1, t('errors.maxLicensesInvalid')),
+    start_date: z.string().min(1, t('errors.startDateRequired')),
+    end_date: z.string().min(1, t('errors.endDateRequired')),
+    status: z.coerce.number(),
+    note: z.string().nullable().optional(),
+    weekly_frequency: z.coerce.number().nullable().optional(),
+    total_sessions: z.coerce.number().nullable().optional(),
+    has_dialogue_practice: z.boolean(),
+  }).refine((data) => {
+    // 開始日と終了日が両方存在する場合のみチェック
+    if (data.start_date && data.end_date) {
+      return new Date(data.start_date) <= new Date(data.end_date);
+    }
+    return true;
+  }, {
+    message: t('errors.endAfterStart'),
+    path: ["end_date"], // エラーを end_date フィールドに紐付ける
+  }).refine((data) => data.weekly_frequency == null || data.weekly_frequency >= 1, {
+    message: t('errors.weeklyFrequencyInvalid'),
+    path: ["weekly_frequency"],
+  }).refine((data) => data.total_sessions == null || data.total_sessions >= 1, {
+    message: t('errors.totalSessionsInvalid'),
+    path: ["total_sessions"],
+  });
+}
+
+type ContractFormInput = z.input<ReturnType<typeof createContractSchema>>
+type ContractFormOutput = z.output<ReturnType<typeof createContractSchema>>
 
 const DEFAULT_VALUES: ContractFormInput = {
   client_id: '',
@@ -91,6 +85,16 @@ interface ContractFormDialogProps {
  * 入力フォームと確認画面の2ステップ構成
  */
 export function ContractFormDialog({ mode = 'create', initialData }: ContractFormDialogProps) {
+  const t = useTranslations('contracts.formDialog')
+  const contractSchema = useMemo(() => createContractSchema(t), [t])
+  const CONTRACT_STATUS_OPTIONS = useMemo(() => [
+    { value: 1, label: t('statusActiveOption'), className: 'text-emerald-600' },
+    { value: 0, label: t('statusInactiveOption'), className: 'text-slate-500' },
+    { value: 9, label: t('statusCancelledOption'), className: 'text-rose-600' },
+  ] as const, [t])
+  const getContractStatusLabel = useCallback((status: number): string => {
+    return CONTRACT_STATUS_OPTIONS.find((s) => s.value === status)?.label ?? t('statusUnknownOption');
+  }, [CONTRACT_STATUS_OPTIONS, t])
   // --- States ---
   const [open, setOpen] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
@@ -188,13 +192,13 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
       }
 
       if (result.success) {
-        showToast(mode === 'create' ? '契約を登録しました' : '契約を更新しました', 'success')
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success')
         setOpen(false)
       } else {
-        setServerError(result.message || '予期せぬエラーが発生しました')
+        setServerError(result.message || t('toastUnexpectedError'))
       }
     } catch (error) {
-      setServerError('システムエラーが発生しました。')
+      setServerError(t('toastSystemError'))
     }
   }
 
@@ -203,11 +207,11 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
-            <PlusCircle size={16} /> 新規登録
+            <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
-            <Edit size={14} /> 編集
+            <Edit size={14} /> {t('editButton')}
           </Button>
         )}
       </DialogTrigger>
@@ -216,11 +220,11 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> 登録内容の確認</>
+              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> 新規契約の登録</>
+              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> 契約内容の編集</>
+              <><Edit size={18} className="text-indigo-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -236,13 +240,13 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    対象顧客
+                    {t('clientLabel')}
                   </FormLabel>
-                  
+
                   {isConfirming ? (
                     /* 確認モード：読み取り専用のスタイル */
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                      {clients.find((c) => c.client_id === (field.value as string))?.client_name || '未選択'}
+                      {clients.find((c) => c.client_id === (field.value as string))?.client_name || t('clientUnselected')}
                     </div>
                   ) : (
                     /* 入力モード：汎用検索セレクター */
@@ -251,8 +255,8 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                         options={clients.map(c => ({ value: c.client_id, label: c.client_name }))}
                         value={field.value as string}
                         onChange={field.onChange}
-                        placeholder="顧客を選択"
-                        searchPlaceholder="顧客名で検索..."
+                        placeholder={t('clientPlaceholder')}
+                        searchPlaceholder={t('clientSearchPlaceholder')}
                         // 編集モード時は顧客変更不可
                         disabled={mode === 'edit'} 
                         className="bg-white"
@@ -271,20 +275,20 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                 契約ごとに個別調整するためのものであり、値自体はプランマスタとは独立に保存される。 */}
             <FormField control={form.control} name="plan_id" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('planLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                    {selectedPlan?.plan_name ?? '不明なプラン'}
+                    {selectedPlan?.plan_name ?? t('planUnknown')}
                   </div>
                 ) : (
                   <Select onValueChange={handlePlanChange} value={field.value as string}>
                     <FormControl>
-                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder="プランを選択してください" /></SelectTrigger>
+                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder={t('planSelectPlaceholder')} /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {plans.map((plan) => (
                         <SelectItem key={plan.plan_id} value={plan.plan_id}>
-                          {plan.plan_name}{plan.contract_type === 1 ? '（コーチ無し）' : `（コーチ有り・週${plan.weekly_frequency}回）`}
+                          {plan.plan_name}{plan.contract_type === 1 ? t('planNoCoachSuffix') : t('planCoachSuffix', { weekly: plan.weekly_frequency ?? 0 })}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -300,9 +304,9 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="weekly_frequency" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">週回数</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('weeklyFrequencyLabel')}</FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">週{(field.value as number | null) ?? '-'}回</div>
+                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{t('weeklyFrequencyDisplay', { count: (field.value as number | null) ?? '-' })}</div>
                       ) : (
                         <FormControl>
                           <Input
@@ -321,9 +325,9 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
 
                   <FormField control={form.control} name="total_sessions" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">チケット数（回）</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('totalSessionsLabel')}</FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{(field.value as number | null) ?? '-'}回</div>
+                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{t('sessionsUnit', { count: (field.value as number | null) ?? '-' })}</div>
                       ) : (
                         <FormControl>
                           <Input
@@ -343,9 +347,9 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
 
                 <FormField control={form.control} name="has_dialogue_practice" render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2.5">
-                    <FormLabel className="text-xs font-bold text-slate-600">ダイアログプラクティスを提供する</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-600">{t('dialoguePracticeLabel')}</FormLabel>
                     {isConfirming ? (
-                      <span className={`text-xs font-bold ${field.value ? 'text-indigo-600' : 'text-slate-400'}`}>{field.value ? '有り' : '無し'}</span>
+                      <span className={`text-xs font-bold ${field.value ? 'text-indigo-600' : 'text-slate-400'}`}>{field.value ? t('dialoguePracticeYes') : t('dialoguePracticeNo')}</span>
                     ) : (
                       <FormControl>
                         <input
@@ -360,7 +364,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                 )} />
 
                 <p className="text-[10px] text-slate-400 leading-relaxed">
-                  ※ チケットは生徒への割当（ライセンス発行）時に個別に発行され、契約期間満了で失効します（繰越なし）
+                  {t('ticketHint')}
                 </p>
               </div>
             )}
@@ -369,7 +373,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="plan_name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン名（日本語）</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('planNameJaLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value as string}</div>
                   ) : (
@@ -387,7 +391,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
 
               <FormField control={form.control} name="plan_name_en" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン名（英語）</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('planNameEnLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value as string}</div>
                   ) : (
@@ -406,7 +410,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
 
             <FormField control={form.control} name="max_licenses" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">上限ライセンス数</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('maxLicensesLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{String(field.value ?? '')}</div>
                 ) : (
@@ -428,7 +432,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="start_date" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">開始日</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('startDateLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value as string}</div>
                   ) : (
@@ -439,7 +443,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
               )} />
               <FormField control={form.control} name="end_date" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">終了日</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('endDateLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value as string}</div>
                   ) : (
@@ -454,7 +458,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
             {mode === 'edit' && (
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">ステータス</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('statusLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                       {getContractStatusLabel(field.value as number)}
@@ -484,9 +488,9 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
             {/* --- 備考 --- */}
             <FormField control={form.control} name="note" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">備考 (管理メモ)</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('noteLabel')}</FormLabel>
                 {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-xs border-2 border-slate-100 min-h-[60px] whitespace-pre-wrap text-slate-600 leading-relaxed">{field.value || '-'}</div>
+                  <div className="p-3 bg-slate-50 rounded-xl text-xs border-2 border-slate-100 min-h-[60px] whitespace-pre-wrap text-slate-600 leading-relaxed">{field.value || t('noteEmpty')}</div>
                 ) : (
                   <FormControl><Textarea {...field} value={(field.value as string) ?? ''} className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]" /></FormControl>
                 )}
@@ -499,16 +503,16 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
             <div className="shrink-0 p-6 pt-4 border-t border-slate-100 bg-white">
               {isConfirming ? (
                 <div className="space-y-4">
-                  <p className="text-sm font-bold text-center text-slate-800">この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？</p>
+                  <p className="text-sm font-bold text-center text-slate-800">{t('confirmQuestion', { action: mode === 'create' ? t('actionCreate') : t('actionUpdate') })}</p>
                   {serverError && (
                     <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
                       <AlertCircle className="h-4 w-4" /> {serverError}
                     </Alert>
                   )}
                   <div className="flex gap-3">
-                    <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400" onClick={() => setIsConfirming(false)} disabled={form.formState.isSubmitting}>いいえ</Button>
+                    <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400" onClick={() => setIsConfirming(false)} disabled={form.formState.isSubmitting}>{t('no')}</Button>
                     <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg" disabled={form.formState.isSubmitting}>
-                      {form.formState.isSubmitting ? '処理中...' : 'はい、確定します'}
+                      {form.formState.isSubmitting ? t('processing') : t('yesConfirm')}
                     </Button>
                   </div>
                 </div>
@@ -521,7 +525,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                     if (isValid) setIsConfirming(true);
                   }}
                 >
-                  {mode === 'create' ? '登録内容を確認する' : '編集内容を確認する'}
+                  {mode === 'create' ? t('confirmCreateButton') : t('confirmEditButton')}
                 </Button>
               )}
             </div>

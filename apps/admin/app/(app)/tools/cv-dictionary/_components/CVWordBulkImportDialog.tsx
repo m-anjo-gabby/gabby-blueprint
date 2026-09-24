@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Papa from 'papaparse';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -55,6 +56,7 @@ interface CVWordBulkImportDialogProps {
 // ============================================================
 
 export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProps) {
+  const t = useTranslations('tools.cvDictionary.bulkImportDialog');
   const { showToast } = useToast();
   const triggerRefresh = useCVDictionaryStore((s) => s.triggerRefresh);
 
@@ -85,7 +87,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
         const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
 
         if (missing.length > 0) {
-          setLayoutError(`必須列が不足しています: ${missing.join(', ')}`);
+          setLayoutError(t('missingHeaders', { headers: missing.join(', ') }));
           setData([]);
           return;
         }
@@ -114,12 +116,12 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
 
   const validateRow = (row: Record<string, string>, index: number): string | null => {
     const lineNum = index + 2;
-    const prefix = `[${lineNum}行目]: `;
-    if (!row.word_en?.trim()) return `${prefix}word_en が空です`;
-    if (!row.part_of_speech?.trim()) return `${prefix}part_of_speech が空です`;
-    if (!row.word_ja?.trim()) return `${prefix}word_ja が空です`;
+    const prefix = t('rowErrorPrefix', { line: lineNum });
+    if (!row.word_en?.trim()) return `${prefix}${t('errorWordEnEmpty')}`;
+    if (!row.part_of_speech?.trim()) return `${prefix}${t('errorPosEmpty')}`;
+    if (!row.word_ja?.trim()) return `${prefix}${t('errorWordJaEmpty')}`;
     const stress = row.primary_stress_syllable?.trim();
-    if (stress && isNaN(Number(stress))) return `${prefix}primary_stress_syllable に数値以外が含まれています`;
+    if (stress && isNaN(Number(stress))) return `${prefix}${t('errorStressInvalid')}`;
     return null;
   };
 
@@ -145,15 +147,15 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
       );
 
       if (result.success) {
-        showToast(`${validRows.length}件を処理しました`, 'success');
+        showToast(t('toastImported', { count: validRows.length }), 'success');
         setHasCompleted(true);
         triggerRefresh();
         onSuccess?.();
       } else {
-        showToast(result.message || '保存中にエラーが発生しました', 'error');
+        showToast(result.message || t('toastSaveFailed'), 'error');
       }
     } catch {
-      showToast('システムエラーが発生しました', 'error');
+      showToast(t('toastSystemError'), 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -177,7 +179,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleReset(); setOpen(o); }}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-1.5 border-dashed border-slate-300 hover:bg-slate-50 font-bold h-8 text-xs">
-          <FileUp size={13} /> 一括登録
+          <FileUp size={13} /> {t('button')}
         </Button>
       </DialogTrigger>
 
@@ -190,15 +192,15 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
             <div className="space-y-1">
               <DialogTitle className="text-2xl font-black flex items-center gap-2">
                 <FileUp className="text-indigo-400" size={24} />
-                {hasCompleted ? 'インポート完了' : 'CV辞書 一括登録'}
+                {hasCompleted ? t('titleComplete') : t('titleNormal')}
               </DialogTitle>
               <p className="text-xs text-slate-400 font-medium">
-                TSV / CSV 形式。必須列: word_en, part_of_speech, word_ja
+                {t('subtitle')}
               </p>
             </div>
             <Button variant="outline" asChild className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white h-9 text-[11px] font-bold shrink-0">
               <a href="/templates/cv_dictionary_sample.tsv" download>
-                <Download size={14} className="mr-2 text-indigo-400" /> サンプルDL
+                <Download size={14} className="mr-2 text-indigo-400" /> {t('downloadSample')}
               </a>
             </Button>
           </div>
@@ -210,7 +212,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
             <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3 text-rose-600 animate-in fade-in slide-in-from-top-2">
               <AlertCircle className="shrink-0 mt-0.5" size={20} />
               <div className="space-y-1">
-                <p className="text-sm font-black">ファイル構造のエラー</p>
+                <p className="text-sm font-black">{t('layoutErrorTitle')}</p>
                 <p className="text-xs font-medium leading-relaxed opacity-80">{layoutError}</p>
               </div>
             </div>
@@ -234,8 +236,8 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                 <Upload className={cn('text-slate-300 transition-transform duration-500', isDragging && 'scale-125 text-indigo-500')} size={48} />
               </div>
               <div className="text-center space-y-2">
-                <p className="text-base font-black text-slate-700">TSV / CSV ファイルをここにドロップ</p>
-                <p className="text-xs text-slate-400 font-medium">またはクリックしてファイルを選択</p>
+                <p className="text-base font-black text-slate-700">{t('dropzoneTitle')}</p>
+                <p className="text-xs text-slate-400 font-medium">{t('dropzoneHint')}</p>
                 <p className="text-[11px] text-slate-300 font-mono mt-2">
                   {[...REQUIRED_HEADERS, ...OPTIONAL_HEADERS].join(' | ')}
                 </p>
@@ -258,7 +260,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                   { label: 'Valid', val: validCount, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                   {
                     label: errorItems.length > 0 ? 'Errors' : 'Status',
-                    val: errorItems.length > 0 ? `${errorItems.length}件` : 'Clear',
+                    val: errorItems.length > 0 ? t('errorCountSuffix', { count: errorItems.length }) : 'Clear',
                     color: errorItems.length > 0 ? 'text-rose-600' : 'text-emerald-600',
                     bg: errorItems.length > 0 ? 'bg-rose-50' : 'bg-emerald-50',
                   },
@@ -275,7 +277,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                 <div className="flex-1 flex flex-col gap-3 overflow-hidden">
                   <div className="flex items-center gap-2 text-rose-600 px-1">
                     <AlertCircle size={16} />
-                    <span className="text-sm font-black">エラーのある行のみ表示</span>
+                    <span className="text-sm font-black">{t('errorsOnlyLabel')}</span>
                   </div>
                   <div className="flex-1 overflow-auto border border-rose-100 rounded-2xl bg-white shadow-sm">
                     <Table>
@@ -289,8 +291,8 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                       <TableBody>
                         {errorItems.map((item, i) => (
                           <TableRow key={i} className="hover:bg-rose-50/30 border-rose-50">
-                            <TableCell className="font-black text-slate-800">{item.word_en || '(空)'}</TableCell>
-                            <TableCell className="text-slate-500 font-medium">{item.part_of_speech || '(空)'}</TableCell>
+                            <TableCell className="font-black text-slate-800">{item.word_en || t('emptyCell')}</TableCell>
+                            <TableCell className="text-slate-500 font-medium">{item.part_of_speech || t('emptyCell')}</TableCell>
                             <TableCell className="text-rose-500 text-xs font-bold italic">{item.error}</TableCell>
                           </TableRow>
                         ))}
@@ -305,10 +307,10 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                     <CheckCircle2 size={40} />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-xl font-black text-slate-800 tracking-tight">Ready for Import!</p>
+                    <p className="text-xl font-black text-slate-800 tracking-tight">{t('readyTitle')}</p>
                     <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
-                      {data.length}件のデータが正常に読み込まれました。<br />
-                      既存データはUpsert（上書き）されます。
+                      {t('readyBody', { count: data.length })}<br />
+                      {t('readyHint')}
                     </p>
                   </div>
                 </div>
@@ -326,7 +328,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
             disabled={isProcessing || data.length === 0}
             className="text-slate-400 hover:text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
           >
-            <RefreshCcw size={14} className="mr-2" /> リセット
+            <RefreshCcw size={14} className="mr-2" /> {t('reset')}
           </Button>
 
           <div className="flex gap-3">
@@ -336,7 +338,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
               onClick={() => setOpen(false)}
               disabled={isProcessing}
             >
-              {hasCompleted ? '閉じる' : 'キャンセル'}
+              {hasCompleted ? t('close') : t('cancel')}
             </Button>
 
             {!hasCompleted && (
@@ -349,7 +351,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                 {isProcessing ? (
                   <><Loader2 className="animate-spin mr-2" size={18} />Processing...</>
                 ) : (
-                  'インポートを開始'
+                  t('startImport')
                 )}
               </Button>
             )}

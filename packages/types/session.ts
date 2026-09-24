@@ -284,6 +284,19 @@ export interface SessionSprintSummaryEntry {
   insert_date: string; // UTC ISO文字列
 }
 
+/**
+ * com_t_session_dialogue_log 1行分（このセッション中にコーチがダイアログプラクティス教材の
+ * 教材リンクを開いた履歴。セッション結果画面のDialog Practice Historyで使用）。
+ * あくまで「開いた」事実の記録であり、完了したことを意味しない。
+ */
+export interface SessionDialogueLogEntry {
+  log_id: string;
+  content_name: string;
+  content_name_en: string | null;
+  session_no: number;
+  insert_date: string; // UTC ISO文字列（オープン日時）
+}
+
 /** レッスン結果画面のサマリー情報一式 */
 export interface SessionResultSummary {
   session_id: string;
@@ -297,6 +310,7 @@ export interface SessionResultSummary {
   call_log: SessionCallLogEntry[];
   chat_log: SessionChatMessageEntry[];
   sprint_log: SessionSprintSummaryEntry[];
+  dialogue_log: SessionDialogueLogEntry[];
 }
 
 export type GetSessionResultSummaryResult =

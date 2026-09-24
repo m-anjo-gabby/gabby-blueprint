@@ -28,6 +28,7 @@ import {
   SessionBookingRequest,
   SessionCallLogEntry,
   SessionChatMessageEntry,
+  SessionDialogueLogEntry,
   SessionListItem,
   SessionRescheduleProposal,
   SessionRescheduleProposalGroup,
@@ -66,7 +67,13 @@ function classifyRpcError(message: string | undefined): SessionActionErrorCode {
   }
   if (message.includes('already has a session')) return 'schedule_conflict';
   if (message.includes('no unassigned ticket available')) return 'no_ticket_available';
-  if (message.includes('cannot propose more than 3') || message.includes('invalid proposed time range')) return 'invalid_input';
+  if (
+    message.includes('cannot propose more than 3')
+    || message.includes('invalid proposed time range')
+    || message.includes('must be at least 24 hours from now')
+  ) {
+    return 'invalid_input';
+  }
   return 'unexpected_error';
 }
 
@@ -286,7 +293,7 @@ export async function cancelSessionCore(
     logger.info('session:cancel_success', 'Session cancelled', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('session:cancel_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:cancel_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { sessionId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -500,7 +507,7 @@ export async function acceptRescheduleProposalCore(proposalId: string): Promise<
     logger.info('session:accept_reschedule_proposal_success', 'Reschedule proposal accepted', { ...ctx, userId: user.id });
     return { success: true, newSessionId: data as string };
   } catch (err) {
-    logger.error('session:accept_reschedule_proposal_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:accept_reschedule_proposal_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { proposalId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -548,7 +555,7 @@ export async function declineRescheduleProposalsCore(sessionId: string): Promise
     logger.info('session:decline_reschedule_proposals_success', 'Reschedule proposals declined', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('session:decline_reschedule_proposals_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:decline_reschedule_proposals_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { sessionId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -628,7 +635,7 @@ export async function createSessionBookingRequestCore(
     logger.info('session:create_booking_request_success', 'Session booking requested', { ...ctx, userId: user.id, payload: { scheduleId } });
     return { success: true, requestId: data as string };
   } catch (err) {
-    logger.error('session:create_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:create_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { scheduleId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -656,7 +663,7 @@ export async function approveSessionBookingRequestCore(requestId: string): Promi
     logger.info('session:approve_booking_request_success', 'Session booking request approved', { ...ctx, userId: user.id });
     return { success: true, newSessionId: data as string };
   } catch (err) {
-    logger.error('session:approve_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:approve_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { requestId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -687,7 +694,7 @@ export async function rejectSessionBookingRequestCore(requestId: string, reason?
     logger.info('session:reject_booking_request_success', 'Session booking request rejected', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('session:reject_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:reject_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { requestId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -714,7 +721,7 @@ export async function withdrawSessionBookingRequestCore(requestId: string): Prom
     logger.info('session:withdraw_booking_request_success', 'Session booking request withdrawn', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('session:withdraw_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:withdraw_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { requestId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -886,7 +893,7 @@ export async function finalizeSessionCore(sessionId: string, reason?: string): P
       overlapSeconds: row.overlap_seconds,
     };
   } catch (err) {
-    logger.error('session:finalize_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:finalize_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { sessionId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -928,7 +935,7 @@ export async function resolveStaleSessionCore(
     logger.info('session:resolve_stale_success', 'Stale session resolved', { ...ctx, userId: user.id, payload: { sessionId, resolution } });
     return { success: true };
   } catch (err) {
-    logger.error('session:resolve_stale_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:resolve_stale_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { sessionId, resolution } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -967,6 +974,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
       { data: callLogRows, error: callLogError },
       { data: chatRows, error: chatError },
       { data: sprintRows, error: sprintError },
+      { data: dialogueLogRows, error: dialogueLogError },
     ] = await Promise.all([
       supabase.from('com_m_user').select('user_name, icon_path').eq('id', counterpartId).maybeSingle(),
       supabase
@@ -984,6 +992,11 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         .select('lesson_sprint_id, question_type, difficulty_level, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)')
         .eq('session_id', sessionId)
         .order('insert_date', { ascending: true }),
+      supabase
+        .from('com_t_session_dialogue_log')
+        .select('log_id, insert_date, com_m_dialogue_session(session_no), com_t_dialogue_assignment(com_m_contents(content_name, content_name_en))')
+        .eq('session_id', sessionId)
+        .order('insert_date', { ascending: true }),
     ]);
 
     if (callLogError) {
@@ -996,6 +1009,10 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
     }
     if (sprintError) {
       logger.error('session:get_result_summary_sprint_failed', sprintError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (dialogueLogError) {
+      logger.error('session:get_result_summary_dialogue_log_failed', dialogueLogError.message, { ...ctx, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -1034,6 +1051,22 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
       };
     });
 
+    const dialogueLog: SessionDialogueLogEntry[] = (dialogueLogRows ?? []).map((r) => {
+      const dialogueSessionJoin = Array.isArray(r.com_m_dialogue_session) ? r.com_m_dialogue_session[0] : r.com_m_dialogue_session;
+      const assignmentJoin = Array.isArray(r.com_t_dialogue_assignment) ? r.com_t_dialogue_assignment[0] : r.com_t_dialogue_assignment;
+      const contentJoin = assignmentJoin
+        ? (Array.isArray(assignmentJoin.com_m_contents) ? assignmentJoin.com_m_contents[0] : assignmentJoin.com_m_contents)
+        : null;
+
+      return {
+        log_id: r.log_id,
+        content_name: contentJoin?.content_name ?? '(Unknown)',
+        content_name_en: contentJoin?.content_name_en ?? null,
+        session_no: dialogueSessionJoin?.session_no ?? 0,
+        insert_date: r.insert_date,
+      };
+    });
+
     return {
       success: true,
       session: {
@@ -1047,11 +1080,12 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         counterpart_icon_path: counterpart?.icon_path ?? null,
         call_log: callLog,
         chat_log: chatLog,
+        dialogue_log: dialogueLog,
         sprint_log: sprintLog,
       },
     };
   } catch (err) {
-    logger.error('session:get_result_summary_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:get_result_summary_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { sessionId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

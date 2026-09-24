@@ -9,11 +9,13 @@ import {
   getContractTrainingReports,
 } from '@/actions/studentAction';
 import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
+import { getStudentDialogueAssignments, getAvailableDialogueContents } from '@/actions/dialogueAction';
 import { StudentOverviewHeader } from './_components/StudentOverviewHeader';
 import { LiveSessionHistoryCard } from './_components/LiveSessionHistoryCard';
 import { CoachNotesCard } from './_components/CoachNotesCard';
 import { TrainingReportCard } from './_components/TrainingReportCard';
 import { LessonSprintCard } from './_components/LessonSprintCard';
+import { DialoguePracticeCard } from './_components/DialoguePracticeCard';
 
 export default async function StudentOverviewPage({
   params,
@@ -27,13 +29,15 @@ export default async function StudentOverviewPage({
     notFound();
   }
 
-  const [contracts, upcomingSession, sessionShortfalls, notes, lessonSprints, trainingReports] = await Promise.all([
+  const [contracts, upcomingSession, sessionShortfalls, notes, lessonSprints, trainingReports, dialogueAssignments, dialogueContents] = await Promise.all([
     getStudentLiveSessionContracts(id),
     getStudentUpcomingSession(id),
     getStudentLiveSessionShortfalls(id),
     getStudentNotes(id),
     getLessonSprintHistory(id),
     getContractTrainingReports(id),
+    getStudentDialogueAssignments(id),
+    getAvailableDialogueContents(),
   ]);
 
   // 現在有効な契約を優先し、無ければ直近の過去契約(contractsはstart_date降順)を初期選択とする
@@ -63,6 +67,12 @@ export default async function StudentOverviewPage({
           shortfalls={sessionShortfalls}
         />
         <LessonSprintCard studentId={id} history={lessonSprints} />
+        <DialoguePracticeCard
+          studentId={id}
+          assignments={dialogueAssignments}
+          availableContents={dialogueContents}
+          manageHref={`/students/${id}/dialogue-practice`}
+        />
         <CoachNotesCard studentId={id} initialNotes={recentNotes} />
         <TrainingReportCard studentId={id} contracts={recentContracts} initialReports={trainingReports} />
       </div>

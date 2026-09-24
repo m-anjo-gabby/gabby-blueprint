@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -33,6 +34,7 @@ const DEFAULT_PARAMS: TTSParameters = {
 const SAMPLE_TEXT = "This is a sample sentence for sprint audio settings.";
 
 export function SprintTTSBulkDialog({ questions, type, level, onComplete, children }: SprintTTSBulkDialogProps) {
+  const t = useTranslations('contents.editor.sprint.ttsBulkDialog');
   const [open, setOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [targetMode, setTargetMode] = useState<'all' | 'missing'>('all');
@@ -132,11 +134,11 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
     setIsProcessing(false);
     if (errorCount === 0) {
       setStatus('completed');
-      showToast("一括音声生成が完了しました", "success");
+      showToast(t('toastCompleted'), "success");
       setTimeout(() => { setOpen(false); if (onComplete) onComplete(); }, 1500);
     } else {
       setStatus('error');
-      showToast(`${errorCount}件の生成に失敗しました`, "error");
+      showToast(t('toastPartialError', { count: errorCount }), "error");
     }
   };
 

@@ -3,6 +3,12 @@
 テスト実施中に得られた気づき・失敗事例を蓄積し、同じ種類のミスを繰り返さないためのファイル。
 新しい事例は本ファイル末尾に追記する。技術的な標準ルールは [CONVENTIONS.md](./CONVENTIONS.md) を参照。
 
+データ主体テスト（`testing/features/`）だけでなく、[`testing/e2e/specs/`](../e2e/README.md)の
+機能仕様書を使った作業中に見つかった「実装と仕様書の齟齬」「非自明な挙動」もここに記録してよい
+（`e2e/specs/`側は現状の仕様のみを保つ方針のため、経緯・気づきの蓄積先は本ファイルに一本化する）。
+その場合は「該当シナリオ」の代わりに「該当仕様書」として`testing/e2e/specs/`配下のパスを記載する。
+蓄積された内容のうち恒久的に反映すべきものは、次にその仕様書を更新するタイミングで反映する。
+
 ## 記入フォーマット
 
 ```
@@ -440,3 +446,177 @@
     用意して初めて発見できる。
 
 <!-- 新しい事例はこの下に追記していく -->
+
+### KJ-2026-0918-01 生徒のセッションキャンセルは「ライブルーム」ではなく「カレンダー」画面が実体
+
+- **該当仕様書**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`（画面仕様書
+  `docs/screens/student/calendar.md`作成のため実装を確認中に発覚）
+- **事象**: 上記E2E仕様書の「関与ロール・画面」表で、生徒のセッションキャンセル操作を
+  `apps/student/app/(app)/live-room/_components/LiveSessionHub.tsx`が担うと記載していたが、
+  実際にセッションキャンセルのダイアログ（`SessionActionDialog.tsx`、実体は
+  `packages/lib/components/common/SessionActionDialog.tsx`）を開く導線は
+  `apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`（カレンダー画面の
+  日別詳細ドロワー）にあり、ライブルーム画面には無かった。
+- **原因**: `cancelSession(`という文字列でのgrep一致だけを見て「呼び出し箇所がある画面」と
+  即断したが、実際には`LiveSessionHub.tsx`は`cancelSession`を呼んでおらず、
+  `withdrawSessionBookingRequest(`（予約リクエストの取り下げ）にマッチしていただけだった。
+  複数の関数名をOR条件でgrepした結果、どのパターンにマッチしたかを確認せずに
+  「セッションキャンセル」の実装場所として扱ってしまった。
+- **対処**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`の該当箇所を
+  修正（生徒のキャンセル操作画面をカレンダーに訂正、ライブルームは「予約リクエストの取り下げ・
+  振替候補への応答・過去セッション閲覧」に訂正）。
+- **判断基準への反映**:
+  - **複数の関数名をOR条件でgrepした場合、どの行がどのパターンにマッチしたかを個別に
+    確認してから結論を書くこと。** 「ファイルXがヒットした＝関数Yを呼んでいる」と決めつけず、
+    該当関数名単体で再grepして実際の呼び出し箇所を確認する。
+  - **画面仕様書（`docs/screens/`）を作るために実装を読み直す作業は、既存のE2E仕様書の
+    「関与ロール・画面」記述の裏取り・誤り発見の機会にもなる。** 今回のように、後から
+    別目的でコードを読み直したタイミングで齟齬が見つかることがあるため、関連する仕様書が
+    無いかを都度確認し、見つかった齟齬はその場で仕様書側も修正する。
+
+### KJ-2026-0918-02 ライブルーム画面はキャンセル・振替候補提案の「サブセット」ではなく、カレンダー画面とほぼ同じ操作一式を提供している
+
+- **該当仕様書**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`（画面仕様書
+  `docs/screens/student/live-room/hub.md`作成のため実装を確認中に発覚。KJ-2026-0918-01の続報）
+- **事象**: KJ-2026-0918-01でライブルーム画面の役割を「予約リクエストの取り下げ・振替候補への
+  応答・過去セッション閲覧」と訂正したが、これも不完全だった。実際には
+  `apps/student/app/(app)/live-room/_components/LiveSessionHub.tsx`はカレンダー画面
+  （`apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`等）と同じ
+  `SessionActionDialog`（セッションキャンセル＋振替候補提案）・`BookMakeupSessionDialog`
+  （個別予約リクエストの新規作成）を直接インポートして使っており、今後の予定カードから
+  「キャンセル」、未消化枠バナーから「予約リクエスト作成」も行える。つまりライブルーム画面は
+  カレンダー画面の機能の一部だけを持つのではなく、ほぼ同じ操作一式（＋振替候補への応答、
+  ＋取り下げ、＋過去セッション閲覧）を提供している。
+- **原因**: KJ-2026-0918-01の修正時点では、grepでヒットした関数呼び出し（
+  `withdrawSessionBookingRequest`, `acceptRescheduleProposal`, `declineRescheduleProposals`）
+  だけを見て「この画面が持つ機能はこれで全部」と判断してしまい、同じファイルが他にどの
+  共有コンポーネントをimportしているか（＝`SessionActionDialog`・`BookMakeupSessionDialog`も
+  同じ画面内で使われている）まで確認していなかった。
+- **対処**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`のライブルーム行を
+  再度修正し、カレンダー画面と同じダイアログ一式を内包している旨を明記した。
+- **判断基準への反映**:
+  - **「この画面はどの機能を持つか」を確認する際は、grepでヒットした関数呼び出しの列挙だけで
+    終わらせず、そのファイルのimport文全体（特に共有コンポーネント・共有ダイアログ）まで
+    確認すること。** 関数呼び出しの網羅的なgrepは「その画面固有の処理」は拾えるが、
+    「他の画面と共用しているダイアログ経由の機能」を見落としやすい。
+  - **同じ訂正対象に2回連続で修正が入るケースは、最初の修正が「表面的な事象の解消」に
+    留まり、根本（確認方法そのものの甘さ）を直していなかった兆候。** 訂正時は「この確認方法で
+    本当に全体像が分かるか」を一段掘り下げて自問する。
+
+### KJ-2026-0922-01 生徒モニタリング画面のアクセス制御主体を、RPCのデータ絞り込みと取り違えていた
+
+- **該当仕様書**: `docs/screens/student/monitor.md`（`testing/e2e/specs/monitoring/
+  student-monitor-dashboard.md`新規作成のため実装を確認中に発覚）
+- **事象**: `docs/screens/student/monitor.md`の「この画面に来る経路」節が、「閲覧権限を
+  持たない受講生には導線・データともに表示されない（`get_monitor_user_list`等のRPCが
+  クライアント単位でデータを絞り込む）」と記載していた。しかしこの記述は誤りで、実際に
+  画面へのアクセス可否を制御しているのは`apps/student/proxy.ts`のミドルウェア
+  （`com_t_user_role.role_id='monitor'`を持たないユーザーを`/monitor`アクセス時に
+  `/dashboard`へリダイレクトする処理）と、`apps/student/app/(app)/(main)/dashboard/page.tsx`の
+  `isMonitor`判定（ダッシュボード上の導線の出し分け）の2つである。`get_monitor_user_list`が
+  行っているのは同一クライアント内での「表示対象データ」の絞り込みであり、画面そのものへの
+  入室可否には関与しない（モニターロールを持たない同一クライアントの生徒がURLを直接叩いた
+  場合、この記述のままだと「RPCがクライアント単位で絞り込むから安全」と誤解し、実際には
+  ミドルウェアのガードが無ければ他生徒のデータが閲覧できてしまうリスクを見落とす）。
+- **原因**: この画面のRPC群（`get_monitor_user_list`等）が`get_jwt_client_id()`で
+  クライアント単位の絞り込みを行っている実装を見て、「クライアントが違えば見えない＝
+  アクセス制御はRPC側で完結している」と早合点した。実際にこの画面へのルーティング自体を
+  ガードしている`apps/student/proxy.ts`（ミドルウェア）を確認していなかった。
+- **対処**: `docs/screens/student/monitor.md`の当該記述を、実際のアクセス制御主体
+  （proxy.tsのリダイレクト＋ダッシュボードの導線出し分け）に修正し、RPCのクライアント絞り込みは
+  「画面に入った後のデータ絞り込み」である旨を明記した。あわせて
+  `testing/e2e/specs/monitoring/student-monitor-dashboard.md`を新規作成し、モニターロール
+  非保有の生徒による直接URLアクセスが拒否されることを異常系ケースとして明記した。
+- **判断基準への反映**:
+  - **「このデータは見えない」という実装（RLS・RPCのクライアント絞り込み等）を見つけても、
+    それが「この画面に入れない」ことの根拠とは限らない。** 同一クライアント内の別ロールが
+    URLを直接叩いた場合に何が起きるかは、データ層の絞り込みとは別に、ルーティング層
+    （middleware/proxy）のガードの有無を必ず確認すること。
+  - **権限まわりの画面仕様書を書く／レビューする際は、「導線が無い（UI上見えない）」と
+    「アクセスできない（サーバー側で拒否される）」を明確に書き分ける。** 片方しか確認せずに
+    書くと、この事例のように「実装は安全だが仕様書の説明が不正確」という乖離が生まれる。
+
+### KJ-2026-0923-01 排他制約(EXCLUDE)単体を検証するテストで、UNIQUE制約や被検証ユーザー自身の既存データと意図せず衝突した
+
+- **該当シナリオ**: `testing/features/branches/feature-20260918-dev/license-management-overhaul-verify.ts`
+  （`com_t_user_license.excl_user_license_active_overlap`排他制約の検証。契約ユーザーライセンス
+  管理の見直しで、「有効なライセンスは生徒に対して1件のみ」をDB側の排他制約で最終防衛する
+  ようにした対応）
+- **事象**: 1回目の実行で7件中3件がNGになった。
+  - シナリオ2・4: 「同一ユーザーの既存有効ライセンスと期間が重なる新規ライセンスがINSERT
+    できないこと」を確認するつもりが、検証対象のcontract_idとしてそのユーザーが既に
+    ライセンスを保有しているcontract_idをそのまま使ったため、`UNIQUE(user_id, contract_id)`
+    (23505)が先に発火し、排他制約(23P01)を検証できていなかった。
+  - シナリオ5: 「排他制約はuser_id単位で、他ユーザーの同一期間とは独立している」ことを
+    確認するつもりで生徒Bへ生徒Aと同じ期間のINSERTを試みたが、seedスクリプトが生徒Bにも
+    「生徒Aの現行タームと完全に同じ期間」のライセンスを既に割り当てていたため、実際には
+    「生徒B自身の既存有効ライセンスとの重複」を検出してしまい(23P01で失敗はしたが、
+    確認したい観点とは別物)、cross-user独立性の検証になっていなかった。
+- **原因**: 排他制約は`(user_id WITH =, tstzrange(...) WITH &&)`のANDで初めて発火するため、
+  「重複を意図的に起こす」テストでは、①対象ユーザーが未保有のcontract_id（UNIQUE制約との
+  混同を避ける）と、②被験者自身の他の既存ライセンスとは重ならない基準期間、の両方を
+  同時に満たす必要がある。「同じ期間を使い回せば検証がシンプルになる」という設計が、
+  かえって検証したい次元（排他制約単体）以外の制約・データと衝突する結果を招いた。
+- **対処**: seed側で生徒Bのライセンス期間を生徒Aとは無関係な期間（200〜260日後）に変更し、
+  verify側ではユーザーが未保有のcontract_id（もう一方の生徒のcontract_idを一時的な「予備枠」
+  として転用。com_t_user_licenseはcontract_idの所有者を検証しないためFK上問題なく使える）を
+  使うよう修正した。新しいtag(licenseoverhaul02)でseed→verifyをやり直し、7/7 OKを確認した。
+- **判断基準への反映**:
+  - **UNIQUE制約や別のCHECK/EXCLUDE制約と同じテーブルに同居する排他制約を検証する際は、
+    「検証したい制約以外の制約には絶対に触れない」ように、対象の主キー・外部キーの組み合わせを
+    意図的にずらして設計すること。** 同一user_id×同一contract_idの組み合わせを使い回すと、
+    UNIQUE制約が先に発火して排他制約側の検証にたどり着けない。
+  - **「AとBが同じ期間を持つ」ことを確認したいテストで、AとBの両方に同じ期間のデータを
+    seedしてしまうと、後続の検証操作がその期間で「seed時点で既に存在する自分自身の重複」を
+    誤検出することがある。** cross-entity（今回はcross-user）の独立性を確認したい場合は、
+    比較対象の基準データ（今回は生徒A）以外のseedデータ（生徒B）は意図的に無関係な値に
+    しておき、検証操作の中で初めてその基準データの値を使う設計にするべきだった。
+  - 排他制約の検証はauth.uid()に依存しないテーブル制約のため、service_role直接操作で
+    dev/staging適用後の実挙動をそのまま再現できる（実サインインJWTは不要。CLAUDE.md 6章の
+    「業務ロジックRPCは実サインインJWTを使う」制約は、auth.uid()に依存するSECURITY DEFINER
+    関数・RLSが対象であり、テーブル制約には及ばない）。
+
+### KJ-2026-0923-02 Next.jsのServer Action(revalidatePath使用)は、tsxからの直接importでは呼べない
+
+- **該当シナリオ**: 契約ユーザーライセンス管理の見直しで、`apps/admin/actions/adminContractAction.ts`の
+  `updateUserLicense()`から契約期間内チェックを削除し、個別編集時のみ契約終了日を超える延長を
+  許可する変更を検証する際（DB制約を伴わない純粋なサーバーアクションのロジック変更のため、
+  データ主体テストスクリプト(service_role直接操作)では再現できず、実際の関数呼び出しでの
+  確認が必要だった）
+- **事象**: `apps/admin`配下に一時スクリプトを置き、`updateUserLicense()`をtsxから直接importして
+  呼び出したところ、DB上のUPDATE自体（`com_t_user_license`のend_date変更、
+  `com_t_user_license_history`への履歴記録）は正しく実行されたにも関わらず、戻り値は
+  `{success: false, message: "予期せぬエラーが発生しました"}`になった。ログには
+  `Invariant: static generation store missing in revalidatePath /contracts`という内部エラーが
+  記録されていた。
+- **原因**: `updateUserLicense()`はtry блока内でDB更新後に`revalidatePath('/contracts')`を
+  呼んでおり、これは実際のNext.jsリクエスト処理中（App RouterのStatic Generation Store配下）
+  でのみ動作する。`next dev`のサーバーを経由せず、tsx等でモジュールをただimportして直接
+  呼び出す（=Next.jsのビルド・リクエストパイプラインを一切経由しない）と、この前提が
+  満たされずInvariantエラーで例外を投げる。DB書き込み自体は例外より前に完了して
+  コミット済みのため、「実際には成功しているのに戻り値だけ失敗扱いになる」という
+  紛らわしい結果になった。
+- **対処**: この一時スクリプトは「DB更新とバリデーションロジックが意図通り動くか」を
+  確認する目的だったため、DBの更新前後の値（end_dateが契約終了日を60日超えて実際に
+  更新されたこと）で目的を達成したと判断し、revalidatePathのエラー自体は「tsx直接呼び出し
+  特有の制約であり、実際にブラウザ経由でServer Actionとして呼ばれる本番相当の経路では
+  発生しない」ものとして報告した。検証後、このアプローチで作成された履歴データ
+  (`com_t_user_license_history`)がテストデータ削除スクリプトの想定外の場所に残ったため
+  （KJ-2026-0914-02と同種、cleanup.ts側に`com_t_user_license_history`の削除ステップを
+  追加してFK違反を解消した）、cleanup.tsを修正した。
+- **判断基準への反映**:
+  - **`revalidatePath`/`revalidateTag`等、Next.jsのリクエストスコープ（Static Generation
+    Store）に依存するAPIを呼んでいるServer Actionは、tsxからの直接importでは正しく
+    完走しない。** DB書き込みの検証だけが目的なら「戻り値のsuccessフラグ」ではなく
+    実際のDB状態（before/after）で判定すること。UIの実際の保存フロー全体（成功トースト表示等）
+    まで確認したい場合は、ブラウザ経由（Playwright等）で本物のリクエストとして実行する必要がある。
+  - **DB制約を伴わない、純粋なアプリケーションコード（Server Action）のロジック変更は、
+    data-drivenなservice_role直接操作テストでは検証できない。** 検証手段の優先順位は、
+    (1)実際にブラウザで操作する、(2)ブラウザ操作の手段が無い場合はtsxからの直接呼び出しで
+    DBのbefore/afterだけを見る（revalidatePath等のNext.js依存部分のエラーは無視してよいと
+    判断できる場合に限る）、の順。今回はこの環境にPlaywright/chromium-cliが導入されておらず
+    (1)が取れなかったため(2)で代替した。
+  - **アプリケーションコード経由でテストデータを操作すると、data-driven検証専用の直接INSERT
+    では発生しない副作用（`com_t_user_license_history`への履歴記録等）が生まれることがある。**
+    cleanup.tsを書く際は、対象機能が経由する可能性のある全てのテーブル（監査ログ・履歴テーブル
+    含む）をDDLの`REFERENCES`から洗い出しておくこと（KJ-2026-0914-02の教訓の延長）。

@@ -3,10 +3,12 @@
 
 import { useFormStatus } from 'react-dom';
 import { Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export function LoginButton() {
   // form action の進行状況を自動的に取得
   const { pending } = useFormStatus();
+  const t = useTranslations('login');
 
   return (
     <button
@@ -27,10 +29,10 @@ export function LoginButton() {
             <Loader2 className="w-4 h-4 animate-spin stroke-[3px]" />
             <div className="absolute inset-0 w-4 h-4 border-2 border-indigo-600/20 rounded-full animate-ping" />
           </div>
-          <span className="animate-pulse">認証中...</span>
+          <span className="animate-pulse">{t('submitting')}</span>
         </>
       ) : (
-        'ログイン'
+        t('submit')
       )}
     </button>
   );

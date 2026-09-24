@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPES, SprintQuestionType, SprintQuestion } from '@gabby/types/sprint';
 import { Content } from '@gabby/types/content';
@@ -22,6 +23,7 @@ interface SprintEditorProps {
 }
 
 export function SprintEditor({ contentId, initialType, content }: SprintEditorProps) {
+  const t = useTranslations('contents.editor.sprint.index');
   const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType || '0');
   const [selectedLevel, setSelectedLevel] = useState<string>('1');
   const [questions, setQuestions] = useState<SprintQuestion[]>([]);
@@ -170,7 +172,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
           >
             <Button variant="outline" className="border-indigo-100 text-indigo-600 font-bold h-10 rounded-xl gap-2 hover:bg-indigo-50">
               <Zap size={16} className="text-amber-500" fill="currentColor" />
-              一括音声作成
+              {t('bulkAudioButton')}
             </Button>
           </SprintTTSBulkDialog>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Send, Loader2, Bot, User, Trash2, BookOpenCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +19,7 @@ interface KnowledgeSourceRef {
 }
 
 export default function ChatPlayground() {
+  const t = useTranslations('tools.aiPlayground.chat');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sourcesByIndex, setSourcesByIndex] = useState<Record<number, KnowledgeSourceRef[]>>({});
   const [input, setInput] = useState('');
@@ -80,7 +82,7 @@ export default function ChatPlayground() {
       }
     } catch (err) {
       console.error('AI Chat Error:', err);
-      showToast('Geminiへのリクエストに失敗しました', 'error');
+      showToast(t('toastError'), 'error');
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
@@ -99,7 +101,7 @@ export default function ChatPlayground() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Switch checked={useKnowledgeBase} onCheckedChange={setUseKnowledgeBase} className="scale-90" />
-            <Label className="text-[11px] font-bold text-slate-500">ヘルプ記事を参照する（RAG）</Label>
+            <Label className="text-[11px] font-bold text-slate-500">{t('knowledgeBaseLabel')}</Label>
           </div>
           <Button
             variant="ghost"
@@ -108,7 +110,7 @@ export default function ChatPlayground() {
             onClick={handleClear}
             disabled={messages.length === 0 || isLoading}
           >
-            <Trash2 size={14} /> Clear
+            <Trash2 size={14} /> {t('clearButton')}
           </Button>
         </div>
       </div>
@@ -117,7 +119,7 @@ export default function ChatPlayground() {
         <div className="space-y-5">
           {messages.length === 0 && (
             <p className="text-sm text-slate-300 italic py-10 text-center">
-              質問を入力してヘルプアシスタントの回答を検証できます。
+              {t('emptyState')}
             </p>
           )}
           {messages.map((m, i) => (
@@ -172,7 +174,7 @@ export default function ChatPlayground() {
               handleSend();
             }
           }}
-          placeholder="質問を入力（Shift+Enterで改行）"
+          placeholder={t('inputPlaceholder')}
           className="min-h-[52px] max-h-40 resize-none rounded-2xl border-slate-200"
           disabled={isLoading}
         />

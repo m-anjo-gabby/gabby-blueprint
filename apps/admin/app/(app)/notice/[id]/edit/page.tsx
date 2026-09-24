@@ -1,4 +1,5 @@
 // apps/admin/app/(app)/notice/[id]/edit/page.tsx
+import { getTranslations } from 'next-intl/server';
 import { getNoticeById } from "@/actions/adminNoticeAction";
 import { NoticeEditor } from "../../_components/NoticeEditor";
 import { notFound } from "next/navigation";
@@ -8,6 +9,7 @@ export default async function NoticeEditPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getTranslations('notice.editor');
   const { id } = await params;
 
   let notice;
@@ -20,8 +22,8 @@ export default async function NoticeEditPage({
     console.error("Failed to load notice data:", error);
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] text-rose-600">
-        <p className="font-bold text-sm">お知らせデータの読み込みに失敗しました。</p>
-        <p className="text-xs text-slate-500 mt-2">時間をおいて再度お試しください。</p>
+        <p className="font-bold text-sm">{t('loadFailedTitle')}</p>
+        <p className="text-xs text-slate-500 mt-2">{t('loadFailedHint')}</p>
       </div>
     );
   }

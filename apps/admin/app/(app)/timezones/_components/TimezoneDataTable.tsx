@@ -9,6 +9,7 @@ import {
   getFilteredRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   Table,
   TableBody,
@@ -28,6 +29,7 @@ import {
 } from 'lucide-react';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { TimezoneFormDialog } from './TimezoneFormDialog';
+import { CurrentTimeCell } from './CurrentTimeCell';
 import { deleteTimezone } from '@/actions/adminTimezoneAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import {
@@ -47,6 +49,9 @@ interface TimezoneTableProps {
 }
 
 export function TimezoneDataTable({ data }: TimezoneTableProps) {
+  const t = useTranslations('timezones.table');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { showToast } = useToast();
   const [globalFilter, setGlobalFilter] = React.useState('');
 
@@ -56,9 +61,9 @@ export function TimezoneDataTable({ data }: TimezoneTableProps) {
   const handleDelete = async (timezone: string) => {
     const result = await deleteTimezone(timezone);
     if (result.success) {
-      showToast("タイムゾーンを削除しました", "success");
+      showToast(t('toastDeleted'), "success");
     } else {
-      showToast(result.message || "削除に失敗しました", "error");
+      showToast(result.message || t('toastDeleteFailed'), "error");
     }
   };
 
@@ -68,27 +73,41 @@ export function TimezoneDataTable({ data }: TimezoneTableProps) {
   const columns = React.useMemo<ColumnDef<TimezoneMaster>[]>(() => [
     {
       accessorKey: "sort_no",
-      header: "SEQ",
+      header: t('seqHeader'),
       cell: ({ row }) => <span className="font-mono text-slate-500">{row.original.sort_no}</span>,
     },
     {
-      accessorKey: "display_name_ja",
-      header: "表示名称（日本語）",
-      cell: ({ row }) => <span className="font-bold text-slate-700">{row.original.display_name_ja}</span>,
-    },
-    {
-      accessorKey: "display_name_en",
-      header: "表示名称（英語）",
-      cell: ({ row }) => <span className="text-slate-600">{row.original.display_name_en}</span>,
+      // 日英両方の名称をグローバル検索の対象にするため、両方を連結した値をアクセサにする
+      id: "display_name",
+      accessorFn: (row) => `${row.display_name_ja} ${row.display_name_en}`,
+      header: t('nameHeader'),
+      cell: ({ row }) => {
+        // 画面ロケールの名称を上段（太字）、もう一方を下段に表示
+        const [primary, secondary] = locale === 'en'
+          ? [row.original.display_name_en, row.original.display_name_ja]
+          : [row.original.display_name_ja, row.original.display_name_en];
+        return (
+          <div className="flex flex-col">
+            <span className="font-bold text-slate-700">{primary}</span>
+            <span className="text-xs text-slate-500">{secondary}</span>
+          </div>
+        );
+      },
     },
     {
       accessorKey: "timezone",
-      header: "IANAタイムゾーン名",
-      cell: ({ row }) => <span className="text-xs text-slate-400 font-mono">{row.original.timezone}</span>,
+      header: t('ianaHeader'),
+      cell: ({ row }) => <span className="text-xs text-slate-500 font-mono">{row.original.timezone}</span>,
+    },
+    {
+      id: "current_time",
+      header: t('currentTimeHeader'),
+      enableGlobalFilter: false,
+      cell: ({ row }) => <CurrentTimeCell timezone={row.original.timezone} />,
     },
     {
       id: "actions",
-      header: () => <div className="text-right">操作</div>,
+      header: () => <div className="text-right">{t('actionsHeader')}</div>,
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
           <TimezoneFormDialog mode="edit" initialData={row.original} />
@@ -101,19 +120,21 @@ export function TimezoneDataTable({ data }: TimezoneTableProps) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle className="font-black">タイムゾーンの削除</AlertDialogTitle>
+                <AlertDialogTitle className="font-black">{t('deleteDialogTitle')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  「<span className="font-bold text-slate-900">{row.original.display_name_ja}</span>」を削除してもよろしいですか？<br />
-                  既にこのタイムゾーンを設定しているユーザーには影響しませんが、選択肢からは表示されなくなります。
+                  {t.rich('deleteDialogBody', {
+                    name: row.original.display_name_ja,
+                    bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
+                  })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-xl font-bold">キャンセル</AlertDialogCancel>
+                <AlertDialogCancel className="rounded-xl font-bold">{tCommon('cancel')}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => handleDelete(row.original.timezone)}
                   className="bg-rose-600 hover:bg-rose-700 rounded-xl font-bold"
                 >
-                  削除する
+                  {t('deleteConfirm')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -121,7 +142,7 @@ export function TimezoneDataTable({ data }: TimezoneTableProps) {
         </div>
       ),
     },
-  ], []);
+  ], [t, tCommon, locale]);
 
   const table = useReactTable({
     data,
@@ -150,7 +171,7 @@ export function TimezoneDataTable({ data }: TimezoneTableProps) {
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
-              placeholder="タイムゾーン名、表示名称で検索..."
+              placeholder={t('searchPlaceholder')}
               value={globalFilter ?? ""}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="pl-10 pr-10 h-9 bg-white border-slate-200 focus-visible:ring-1 focus-visible:ring-slate-400 shadow-sm"
@@ -170,7 +191,10 @@ export function TimezoneDataTable({ data }: TimezoneTableProps) {
         {/* 右側：ページネーション操作系 */}
         <div className="flex items-center gap-4">
           <div className="hidden md:block text-[13px] text-slate-500 whitespace-nowrap font-medium">
-            全 <span className="text-slate-900">{table.getFilteredRowModel().rows.length}</span> 件
+            {t.rich('totalCount', {
+              count: table.getFilteredRowModel().rows.length,
+              styled: (chunks) => <span className="text-slate-900">{chunks}</span>,
+            })}
           </div>
 
           <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-sm">
@@ -234,7 +258,7 @@ export function TimezoneDataTable({ data }: TimezoneTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  タイムゾーンデータが見つかりませんでした。
+                  {t('noData')}
                 </TableCell>
               </TableRow>
             )}

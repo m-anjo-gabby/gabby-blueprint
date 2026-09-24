@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,8 @@ interface ProfileViewProps {
 }
 
 export function ProfileView({ userName, clientName, userTypeLabel, initialIconPath, initialTimezone, timezones }: ProfileViewProps) {
+  const t = useTranslations('profile.view');
+  const locale = useLocale();
   const [iconPath, setIconPath] = useState(initialIconPath);
   const [timezone, setTimezone] = useState(initialTimezone);
   const user = useUserStore((state) => state.user);
@@ -38,7 +41,7 @@ export function ProfileView({ userName, clientName, userTypeLabel, initialIconPa
     }
     setIconPath(result.iconPath);
     if (user) setUser({ ...user, icon_path: result.iconPath });
-    showToast('プロフィールアイコンを更新しました', 'success');
+    showToast(t('toastIconUpdated'), 'success');
   };
 
   const handleRemove = async () => {
@@ -49,7 +52,7 @@ export function ProfileView({ userName, clientName, userTypeLabel, initialIconPa
     }
     setIconPath(null);
     if (user) setUser({ ...user, icon_path: null });
-    showToast('プロフィールアイコンを削除しました', 'success');
+    showToast(t('toastIconRemoved'), 'success');
   };
 
   const handleTimezoneChange = async (next: string) => {
@@ -60,14 +63,14 @@ export function ProfileView({ userName, clientName, userTypeLabel, initialIconPa
     }
     setTimezone(result.timezone);
     if (user) setUser({ ...user, timezone: result.timezone });
-    showToast('タイムゾーンを更新しました', 'success');
+    showToast(t('toastTimezoneUpdated'), 'success');
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>アカウント情報</CardTitle>
-        <CardDescription>アイコン画像はここから変更できます。名前は変更できません。</CardDescription>
+        <CardTitle>{t('cardTitle')}</CardTitle>
+        <CardDescription>{t('cardDescription')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <AvatarCropUploader
@@ -75,28 +78,28 @@ export function ProfileView({ userName, clientName, userTypeLabel, initialIconPa
           onUpload={handleUpload}
           onRemove={handleRemove}
           labels={{
-            modalTitle: 'アイコン画像を調整',
-            cancelLabel: 'キャンセル',
-            applyLabel: '保存する',
-            uploadingLabel: '保存中...',
-            removeLabel: '画像を削除',
-            invalidFileLabel: 'PNG・JPEG・WebP形式、5MB以下の画像を選択してください。',
-            removeConfirmTitle: 'アイコン画像を削除しますか？',
-            removeConfirmMessage: '削除すると元に戻せません。',
+            modalTitle: t('uploader.modalTitle'),
+            cancelLabel: t('uploader.cancelLabel'),
+            applyLabel: t('uploader.applyLabel'),
+            uploadingLabel: t('uploader.uploadingLabel'),
+            removeLabel: t('uploader.removeLabel'),
+            invalidFileLabel: t('uploader.invalidFileLabel'),
+            removeConfirmTitle: t('uploader.removeConfirmTitle'),
+            removeConfirmMessage: t('uploader.removeConfirmMessage'),
           }}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>名前</Label>
+            <Label>{t('nameLabel')}</Label>
             <Input value={userName} disabled />
           </div>
           <div className="space-y-1.5">
-            <Label>所属</Label>
+            <Label>{t('affiliationLabel')}</Label>
             <Input value={clientName ?? '-'} disabled />
           </div>
           <div className="space-y-1.5">
-            <Label>権限区分</Label>
+            <Label>{t('roleTypeLabel')}</Label>
             <Input value={userTypeLabel} disabled />
           </div>
           <div className="space-y-1.5">
@@ -104,8 +107,8 @@ export function ProfileView({ userName, clientName, userTypeLabel, initialIconPa
               value={timezone}
               timezones={timezones}
               onChange={handleTimezoneChange}
-              displayField="display_name_ja"
-              labels={{ label: 'タイムゾーン', currentTimeLabel: '現在の日時' }}
+              displayField={locale === 'en' ? 'display_name_en' : 'display_name_ja'}
+              labels={{ label: t('timezoneLabel'), currentTimeLabel: t('currentTimeLabel') }}
             />
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { Library } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { getKnowledgeEntries } from '@/actions/aiKnowledgeBaseAction';
 import { KnowledgeEntryList } from './_components/KnowledgeEntryList';
 
@@ -18,6 +19,7 @@ interface AIKnowledgeBasePageProps {
  * ヘルプ記事等を登録すると、AIチャットのRAG検索対象になる（packages/lib/ai/retrieval）
  */
 export default async function AIKnowledgeBasePage({ searchParams }: AIKnowledgeBasePageProps) {
+  const t = await getTranslations('tools.aiKnowledgeBase.page');
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
   const searchQuery = params.q || '';
@@ -39,7 +41,7 @@ export default async function AIKnowledgeBasePage({ searchParams }: AIKnowledgeB
               AI Knowledge Base
             </h1>
             <p className="text-sm font-medium text-slate-500">
-              ヘルプ記事等を登録すると、AI Chatの回答がこのナレッジを参照するようになります（RAG）。
+              {t('subtitle')}
             </p>
           </div>
         </div>

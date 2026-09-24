@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Search, Trash2, AlertCircle, Library, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { deleteKnowledgeEntryAction, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
-import { KNOWLEDGE_SOURCE_TYPE_OPTIONS, getKnowledgeSourceTypeOption } from '../_lib/knowledgeSourceTypes';
+import { getKnowledgeSourceTypeOptions, getKnowledgeSourceTypeOption } from '../_lib/knowledgeSourceTypes';
 import { KnowledgeEntryFormDialog } from './KnowledgeEntryFormDialog';
 
 interface KnowledgeEntryListProps {
@@ -36,6 +37,9 @@ interface KnowledgeEntryListProps {
 }
 
 export function KnowledgeEntryList({ entries, pageCount, totalCount }: KnowledgeEntryListProps) {
+  const t = useTranslations('tools.aiKnowledgeBase.list');
+  const tSourceTypes = useTranslations('tools.aiKnowledgeBase.sourceTypes');
+  const sourceTypeOptions = useMemo(() => getKnowledgeSourceTypeOptions(tSourceTypes), [tSourceTypes]);
   const { showToast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -76,9 +80,9 @@ export function KnowledgeEntryList({ entries, pageCount, totalCount }: Knowledge
   const handleDelete = async (knowledgeId: string) => {
     const result = await deleteKnowledgeEntryAction(knowledgeId);
     if (result.success) {
-      showToast('ナレッジを削除しました', 'success');
+      showToast(t('toastDeleted'), 'success');
     } else {
-      showToast(result.message || '削除に失敗しました', 'error');
+      showToast(result.message || t('toastDeleteFailed'), 'error');
     }
   };
 
@@ -89,7 +93,7 @@ export function KnowledgeEntryList({ entries, pageCount, totalCount }: Knowledge
           <div className="relative flex-1 max-w-sm group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={14} />
             <Input
-              placeholder="タイトル・本文で検索..."
+              placeholder={t('searchPlaceholder')}
               className="pl-9 pr-8 h-9 bg-white border-slate-200 text-sm rounded-xl focus-visible:ring-indigo-500"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
@@ -107,11 +111,11 @@ export function KnowledgeEntryList({ entries, pageCount, totalCount }: Knowledge
 
           <Select value={sourceTypeFilter} onValueChange={handleSourceTypeChange}>
             <SelectTrigger className="h-9 w-44 rounded-xl border-slate-200 text-sm">
-              <SelectValue placeholder="区分で絞り込み" />
+              <SelectValue placeholder={t('filterPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">すべての区分</SelectItem>
-              {KNOWLEDGE_SOURCE_TYPE_OPTIONS.map((o) => (
+              <SelectItem value="all">{t('allTypes')}</SelectItem>
+              {sourceTypeOptions.map((o) => (
                 <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
               ))}
             </SelectContent>
@@ -125,13 +129,13 @@ export function KnowledgeEntryList({ entries, pageCount, totalCount }: Knowledge
         <div className="flex flex-col items-center justify-center py-16 text-slate-300 gap-3 bg-white rounded-2xl border border-slate-200">
           <Library size={32} />
           <p className="text-sm font-bold text-slate-400">
-            {totalCount === 0 ? 'ナレッジがまだ登録されていません' : '該当するナレッジが見つかりません'}
+            {totalCount === 0 ? t('emptyRegistered') : t('emptyFiltered')}
           </p>
         </div>
       ) : (
         <div className="grid gap-3">
           {entries.map((entry) => {
-            const typeOption = getKnowledgeSourceTypeOption(entry.source_type);
+            const typeOption = getKnowledgeSourceTypeOption(entry.source_type, tSourceTypes);
             const Icon = typeOption?.icon ?? Library;
 
             return (
@@ -150,7 +154,7 @@ export function KnowledgeEntryList({ entries, pageCount, totalCount }: Knowledge
                     </Badge>
                     {!entry.embedding_model && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-bold border-none bg-amber-50 text-amber-600">
-                        未Embedding
+                        {t('notEmbeddedBadge')}
                       </Badge>
                     )}
                   </div>
@@ -173,22 +177,24 @@ export function KnowledgeEntryList({ entries, pageCount, totalCount }: Knowledge
                           <AlertCircle size={32} />
                         </div>
                         <div className="text-center space-y-2">
-                          <AlertDialogTitle className="text-xl font-black text-slate-800">ナレッジ削除の確認</AlertDialogTitle>
+                          <AlertDialogTitle className="text-xl font-black text-slate-800">{t('deleteDialogTitle')}</AlertDialogTitle>
                           <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
-                            <span className="font-bold text-slate-900">「{entry.title}」</span>を削除しますか？<br />
-                            AIチャットの検索対象から除外されます。
+                            {t.rich('deleteDialogBody', {
+                              title: entry.title,
+                              bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
+                            })}
                           </AlertDialogDescription>
                         </div>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="flex gap-3 mt-6">
                         <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-slate-100 font-bold text-slate-500">
-                          キャンセル
+                          {t('cancel')}
                         </AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => handleDelete(entry.knowledge_id)}
                           className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg"
                         >
-                          削除する
+                          {t('deleteConfirm')}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -203,7 +209,10 @@ export function KnowledgeEntryList({ entries, pageCount, totalCount }: Knowledge
       {totalCount > 0 && (
         <div className="flex items-center justify-between px-1 pt-2">
           <div className="text-[13px] text-slate-500 font-medium">
-            全 <span className="text-slate-900 font-bold">{totalCount}</span> 件
+            {t.rich('totalCount', {
+              count: totalCount,
+              styled: (chunks) => <span className="text-slate-900 font-bold">{chunks}</span>,
+            })}
           </div>
           <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
             <Button

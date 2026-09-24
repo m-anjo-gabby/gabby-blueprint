@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { CoachMonthlyReport, MonthlyReportSession, MonthlyReportStudentRow } from '@gabby/types/monthlyReport';
 import { AttentionCellDetail, AttentionCellDialog } from './AttentionCellDialog';
 
@@ -26,6 +27,7 @@ function cellClassFor(sessions: MonthlyReportSession[]): string {
 }
 
 export function MonthlyReportGrid({ report }: { report: CoachMonthlyReport }) {
+  const t = useTranslations('monthlyReports.grid');
   const [detail, setDetail] = useState<AttentionCellDetail | null>(null);
   const days = Array.from({ length: daysInMonth(report.report_month) }, (_, i) => i + 1);
 
@@ -37,7 +39,7 @@ export function MonthlyReportGrid({ report }: { report: CoachMonthlyReport }) {
   if (report.students.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400">
-        対象月に有効契約を持つ生徒がいません。
+        {t('noStudents')}
       </div>
     );
   }
@@ -49,7 +51,7 @@ export function MonthlyReportGrid({ report }: { report: CoachMonthlyReport }) {
           <thead>
             <tr className="bg-slate-50 text-slate-500">
               <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 text-left font-semibold whitespace-nowrap">
-                生徒
+                {t('studentColumn')}
               </th>
               {days.map((day) => (
                 <th key={day} className="px-1.5 py-2 text-center font-semibold w-8">
@@ -57,7 +59,7 @@ export function MonthlyReportGrid({ report }: { report: CoachMonthlyReport }) {
                 </th>
               ))}
               <th className="sticky right-0 z-10 bg-slate-50 px-3 py-2 text-center font-semibold whitespace-nowrap">
-                合計
+                {t('totalColumn')}
               </th>
             </tr>
           </thead>

@@ -3,6 +3,7 @@ import { getSessionResultSummary } from '@/actions/sessionAction';
 import { getRecentSessionHomework } from '@/actions/sessionHomeworkAction';
 import { getSelfTrainingWeekSummary } from '@/actions/studentAction';
 import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
+import { getStudentDialogueAssignments, getAvailableDialogueContents } from '@/actions/dialogueAction';
 import { SessionHub } from './_components/SessionHub';
 
 /**
@@ -20,12 +21,15 @@ export default async function SessionHubPage({
 }) {
   const { id, sessionId } = await params;
 
-  const [sessionResult, recentHomework, lessonSprintHistory, selfTrainingSummary] = await Promise.all([
-    getSessionResultSummary(sessionId),
-    getRecentSessionHomework(id, sessionId),
-    getLessonSprintHistory(id),
-    getSelfTrainingWeekSummary(id),
-  ]);
+  const [sessionResult, recentHomework, lessonSprintHistory, selfTrainingSummary, dialogueAssignments, dialogueContents] =
+    await Promise.all([
+      getSessionResultSummary(sessionId),
+      getRecentSessionHomework(id, sessionId),
+      getLessonSprintHistory(id),
+      getSelfTrainingWeekSummary(id),
+      getStudentDialogueAssignments(id),
+      getAvailableDialogueContents(),
+    ]);
 
   if (!sessionResult.success) {
     notFound();
@@ -42,6 +46,8 @@ export default async function SessionHubPage({
       recentHomework={recentHomework}
       recentSprints={recentSprints}
       selfTrainingSummary={selfTrainingSummary}
+      dialogueAssignments={dialogueAssignments}
+      dialogueContents={dialogueContents}
     />
   );
 }

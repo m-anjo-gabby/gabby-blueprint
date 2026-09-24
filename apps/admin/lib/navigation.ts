@@ -2,6 +2,7 @@
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
   Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, CalendarRange, Video, DollarSign,
+  Settings, LifeBuoy,
 } from 'lucide-react';
 
 // ============================================================
@@ -22,6 +23,8 @@ export interface NavGroup {
   icon: LucideIcon;
   requiredRoles: readonly string[]; // グループ自体を表示する最低権限（子の union）
   children: readonly NavLeaf[];
+  /** true の場合、初期表示時にアコーディオンを開いた状態にする */
+  defaultOpen?: boolean;
 }
 
 export type NavItem = NavLeaf | NavGroup;
@@ -30,111 +33,129 @@ export type NavItem = NavLeaf | NavGroup;
 // ナビゲーション定義
 // ============================================================
 
+// label は "nav" 名前空間の翻訳キー（next-intl の useTranslations('nav') で解決する）
 export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
   {
-    label: 'ダッシュボード',
+    label: 'dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
     requiredRoles: [],
   },
   {
-    label: '顧客管理',
+    label: 'clients',
     href: '/clients',
     icon: Building2,
     requiredRoles: ['admin'],
   },
   {
-    label: '契約管理',
+    label: 'contracts',
     href: '/contracts',
     icon: FileSignature,
     requiredRoles: ['admin'],
   },
   {
-    label: 'ライブセッション管理',
-    href: '/live-sessions',
-    icon: Video,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: 'ユーザー管理',
+    label: 'users',
     href: '/users',
     icon: Users,
     requiredRoles: ['admin'],
   },
   {
-    label: '規約管理',
-    href: '/terms',
-    icon: ShieldCheck,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: 'タイムゾーン管理',
-    href: '/timezones',
-    icon: Globe,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: '教材管理',
+    label: 'contents',
     href: '/contents',
     icon: BookOpen,
     requiredRoles: ['admin', 'content_manager'],
   },
   {
-    label: 'お知らせ管理',
-    href: '/notice',
-    icon: Bell,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: 'カレンダーイベント管理',
-    href: '/calendar-events',
-    icon: CalendarDays,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: '月次コーチングレポート',
-    href: '/monthly-reports',
-    icon: CalendarRange,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: '支払い設定',
-    href: '/payment-settings',
-    icon: DollarSign,
-    requiredRoles: ['admin'],
-  },
-  {
-    label: 'チャット',
+    label: 'chat',
     href: '/chat',
     icon: MessageCircle,
     requiredRoles: [],
   },
   {
+    label: 'liveSessions',
+    href: '/live-sessions',
+    icon: Video,
+    requiredRoles: ['admin'],
+  },
+  {
     type: 'group',
-    label: 'Tools',
+    label: 'support',
+    icon: LifeBuoy,
+    requiredRoles: ['admin'],
+    defaultOpen: true,
+    children: [
+      {
+        label: 'notice',
+        href: '/notice',
+        icon: Bell,
+        requiredRoles: ['admin'],
+      },
+      {
+        label: 'calendarEvents',
+        href: '/calendar-events',
+        icon: CalendarDays,
+        requiredRoles: ['admin'],
+      },
+      {
+        label: 'monthlyReports',
+        href: '/monthly-reports',
+        icon: CalendarRange,
+        requiredRoles: ['admin'],
+      },
+    ],
+  },
+  {
+    type: 'group',
+    label: 'systemSettings',
+    icon: Settings,
+    requiredRoles: ['admin'],
+    children: [
+      {
+        label: 'terms',
+        href: '/terms',
+        icon: ShieldCheck,
+        requiredRoles: ['admin'],
+      },
+      {
+        label: 'timezones',
+        href: '/timezones',
+        icon: Globe,
+        requiredRoles: ['admin'],
+      },
+      {
+        label: 'paymentSettings',
+        href: '/payment-settings',
+        icon: DollarSign,
+        requiredRoles: ['admin'],
+      },
+    ],
+  },
+  {
+    type: 'group',
+    label: 'tools',
     icon: Wrench,
     requiredRoles: ['admin', 'content_manager'],
     children: [
       {
-        label: 'TTS Designer',
+        label: 'ttsDesigner',
         href: '/tools/tts-designer',
         icon: Speech,
         requiredRoles: ['admin', 'content_manager'],
       },
       {
-        label: 'CV Dictionary',
+        label: 'cvDictionary',
         href: '/tools/cv-dictionary',
         icon: BookOpenText,
         requiredRoles: ['admin', 'content_manager'],
       },
       {
-        label: 'AI Playground',
+        label: 'aiPlayground',
         href: '/tools/ai-playground',
         icon: Bot,
         requiredRoles: ['admin', 'content_manager'],
       },
       {
-        label: 'AI Knowledge Base',
+        label: 'aiKnowledgeBase',
         href: '/tools/ai-knowledge-base',
         icon: Library,
         requiredRoles: ['admin', 'content_manager'],

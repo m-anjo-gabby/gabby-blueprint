@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, X, BookOpen, ChevronLeft } from 'lucide-react';
+import { Search, X, BookOpen, ChevronLeft, LayoutGrid } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Components
@@ -19,6 +19,8 @@ import { LIBRALY_TABS } from '@gabby/types/content';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useContentStore } from '@/stores/useContentStore';
 import { getTrainingPath } from '@gabby/lib/navigation/student-path';
+import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import { cn } from '@/lib/utils';
 
 export default function LibraryPage() {
   const router = useRouter();
@@ -35,10 +37,35 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('All');
 
+  // --- 種別タブ：横スクロールのフェード表示制御 ---
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftFade, setShowLeftFade] = useState(false);
+  const [showRightFade, setShowRightFade] = useState(false);
+
+  const updateTabsFade = useCallback(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    setShowLeftFade(el.scrollLeft > 4);
+    setShowRightFade(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
   // --- Logic: データ取得（マウント時） ---
   useEffect(() => {
     fetchAllContents();
   }, [fetchAllContents]);
+
+  // タブの件数表示が変わって幅が変化した場合にもフェード状態を再計算
+  useEffect(() => {
+    updateTabsFade();
+    window.addEventListener('resize', updateTabsFade);
+    return () => window.removeEventListener('resize', updateTabsFade);
+  }, [updateTabsFade, allContents]);
+
+  // 選択中タブが横スクロール範囲外にある場合、中央に自動スクロールする
+  useEffect(() => {
+    const activeTab = tabsScrollRef.current?.querySelector<HTMLElement>('[data-state="active"]');
+    activeTab?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [selectedType]);
 
   // --- Logic: フィルタリングロジック ---
   const filteredList = useMemo(() => {
@@ -129,24 +156,50 @@ export default function LibraryPage() {
           )}
         </div>
 
-        {/* カテゴリタブ */}
+        {/* カテゴリタブ：教材種別の増加を見込み、固定グリッドではなく横スクロールpillで表現 */}
         <Tabs value={selectedType} onValueChange={setSelectedType} className="w-full">
-          <TabsList className="grid grid-cols-4 w-full h-12 bg-slate-100/50 rounded-2xl p-1.5 border border-slate-50">
-            {LIBRALY_TABS.map(tab => {
-              const count = allContents 
-                ? allContents.filter(c => tab.id === 'All' || String(c.content_type) === String(tab.id)).length 
-                : 0;
-              return (
-                <TabsTrigger 
-                  key={tab.label} 
-                  value={String(tab.id)} 
-                  className="rounded-xl font-black text-[10px] uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm"
-                >
-                  {tab.label} <span className="ml-1 opacity-50 text-[8px]">({count})</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+          <div className="relative -mx-1">
+            <TabsList
+              ref={tabsScrollRef}
+              onScroll={updateTabsFade}
+              className="flex h-auto w-full justify-start gap-2 overflow-x-auto scrollbar-none snap-x snap-proximity bg-transparent p-0 px-1"
+            >
+              {LIBRALY_TABS.map(tab => {
+                const isAll = tab.id === 'All';
+                const config = isAll ? null : getContentTypeConfig(Number(tab.id));
+                const Icon = config?.icon ?? LayoutGrid;
+                const count = allContents
+                  ? allContents.filter(c => tab.id === 'All' || String(c.content_type) === String(tab.id)).length
+                  : 0;
+                return (
+                  <TabsTrigger
+                    key={tab.label}
+                    value={String(tab.id)}
+                    className={cn(
+                      "group shrink-0 snap-start gap-1.5 whitespace-nowrap rounded-2xl border border-slate-100 bg-white px-4 h-11 font-black text-[11px] uppercase tracking-wider text-slate-500 shadow-none transition-all",
+                      "data-[state=active]:border-indigo-600 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md"
+                    )}
+                  >
+                    <Icon
+                      size={14}
+                      strokeWidth={2.5}
+                      className={cn(config ? config.theme.text : "text-slate-400", "shrink-0 transition-colors group-data-[state=active]:text-white")}
+                    />
+                    {tab.label}
+                    <span className="opacity-50 text-[9px] group-data-[state=active]:opacity-70">({count})</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+
+            {/* 続きがあることを示す端のフェード（スクロール可能な時のみ表示） */}
+            {showLeftFade && (
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-linear-to-r from-white to-transparent" />
+            )}
+            {showRightFade && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-white to-transparent" />
+            )}
+          </div>
         </Tabs>
       </header>
 

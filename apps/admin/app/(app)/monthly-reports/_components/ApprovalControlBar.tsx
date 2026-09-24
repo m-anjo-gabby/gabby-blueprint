@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { CalendarCheck, CalendarX, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,6 +41,9 @@ export function ApprovalControlBar({
   coachTimezone: string;
   approval: MonthlyReportApproval | null;
 }) {
+  const t = useTranslations('monthlyReports.approvalBar');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const router = useRouter();
   const { showToast } = useToast();
   const [isPending, setIsPending] = useState(false);
@@ -51,7 +55,7 @@ export function ApprovalControlBar({
     const result = await approveMonthlyReport(coachId, reportMonth);
     setIsPending(false);
     if (result.success) {
-      showToast('月次レポートを承認しました', 'success');
+      showToast(t('toastApproved'), 'success');
       router.refresh();
     } else {
       showToast(result.message, 'error');
@@ -63,7 +67,7 @@ export function ApprovalControlBar({
     const result = await revokeMonthlyReportApproval(coachId, reportMonth);
     setIsPending(false);
     if (result.success) {
-      showToast('承認を取り消しました', 'success');
+      showToast(t('toastRevoked'), 'success');
       router.refresh();
     } else {
       showToast(result.message, 'error');
@@ -76,31 +80,30 @@ export function ApprovalControlBar({
         {isApproved ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-100">
             <CalendarCheck size={14} />
-            承認済み
+            {t('approvedBadge')}
             {approval?.approved_at && (
               <span className="font-normal text-emerald-600">
-                （{new Date(approval.approved_at).toLocaleString('ja-JP')}）
+                {t('approvedAtFormatted', { datetime: new Date(approval.approved_at).toLocaleString(locale === 'en' ? 'en-US' : 'ja-JP') })}
               </span>
             )}
           </span>
         ) : (
           <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500 border border-slate-200">
-            未承認
+            {t('unapprovedBadge')}
           </span>
         )}
 
         <span className="text-sm text-slate-500">
-          総セッション数: <span className="font-bold text-slate-800">{grandTotal}</span>
+          {t('totalSessionsLabel')}<span className="font-bold text-slate-800">{grandTotal}</span>
           <span className="text-xs text-slate-400">
-            {' '}
-            （完了 {completedCount}・12時間以内キャンセル {lateCancelCount}・No Show {noShowCount}）
+            {t('breakdownLabel', { completed: completedCount, lateCancel: lateCancelCount, noShow: noShowCount })}
           </span>
         </span>
 
         {isBlockedByUnresolved ? (
-          <Button disabled title="終了処理未実施のセッションが残っているため承認できません">
+          <Button disabled title={t('approveBlockedTooltip')}>
             <CalendarCheck size={14} className="mr-1.5" />
-            承認する
+            {t('approveButton')}
           </Button>
         ) : (
           <AlertDialog>
@@ -113,32 +116,32 @@ export function ApprovalControlBar({
                 {isApproved ? (
                   <>
                     <CalendarX size={14} className="mr-1.5" />
-                    承認を取り消す
+                    {t('revokeButton')}
                   </>
                 ) : (
                   <>
                     <CalendarCheck size={14} className="mr-1.5" />
-                    承認する
+                    {t('approveButton')}
                   </>
                 )}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>{isApproved ? '承認を取り消しますか？' : 'この月の稼働を承認しますか？'}</AlertDialogTitle>
+                <AlertDialogTitle>{isApproved ? t('revokeConfirmTitle') : t('approveConfirmTitle')}</AlertDialogTitle>
                 <AlertDialogDescription>
                   {isApproved
-                    ? '承認を取り消すと未承認の状態に戻ります。コーチに通知が送られます。'
-                    : `承認するとコーチに通知が送られます。承認時点のセッション数（合計${grandTotal}件）が記録として保存されます。`}
+                    ? t('revokeConfirmBody')
+                    : t('approveConfirmBody', { count: grandTotal })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={isApproved ? handleRevoke : handleApprove}
                   className={isApproved ? 'bg-rose-600 hover:bg-rose-700' : ''}
                 >
-                  {isApproved ? '取り消す' : '承認する'}
+                  {isApproved ? t('confirmRevoke') : t('confirmApprove')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -149,12 +152,12 @@ export function ApprovalControlBar({
       {isBlockedByUnresolved && (
         <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-amber-700">
           <TriangleAlert size={14} />
-          終了処理未実施のセッションが{unresolvedCount}件あります。承認前に該当セッションの終了処理を完了してください。
+          {t('unresolvedWarning', { count: unresolvedCount })}
         </p>
       )}
 
       <p className="mt-2 text-[11px] text-slate-400">
-        ※セッション数はコーチのタイムゾーン（{coachTimezone}）を基準に日付を集計しています。
+        {t('timezoneNote', { timezone: coachTimezone })}
       </p>
     </div>
   );
