@@ -485,7 +485,6 @@
       "deleteConfirming": "削除中...",
       "deleteConfirm": "はい、削除します",
       "toastDeleted": "規約を削除しました",
-      "toastDeleteFailed": "削除に失敗しました",
       "toastUnexpectedError": "予期せぬエラーが発生しました"
     },
     "form": {
@@ -511,23 +510,41 @@
         "futureDateRequired": "公開日は本日以降の日付を指定してください"
       },
       "toastCreated": "規約を新規作成しました",
-      "toastCreateFailed": "作成に失敗しました",
-      "toastSystemError": "システムエラーが発生しました"
+      "toastSystemError": "システムエラーが発生しました",
+      "reagreementNotice": "新しいバージョンを作成すると、同意必須の場合は公開開始日以降に全ユーザーへ再同意を求めます。誤字修正などの軽微な修正は、既存バージョンの編集画面から行ってください（再同意は不要です）。"
     },
     "editPage": {
       "loadFailedTitle": "データの読み込みに失敗しました。",
       "loadFailedHint": "時間をおいて再度お試しください。",
       "backToList": "規約管理一覧に戻る",
       "editTitle": "規約編集: {version}",
-      "subtitle": "{termType} の文言を直接修正します。"
+      "subtitle": "{termType} の文言を修正します。保存するたびに修正履歴（リビジョン）として記録されます。"
     },
     "editor": {
       "editTab": "編集",
       "previewTab": "プレビュー",
-      "saveButton": "保存する",
+      "saveButton": "修正を保存",
       "contentPlaceholder": "Markdown形式で入力してください...",
-      "toastUpdated": "規約を更新しました",
-      "toastSaveFailed": "保存に失敗しました"
+      "toastUpdated": "規約を修正しました（リビジョン {no}）",
+      "historyTab": "修正履歴 ({count})",
+      "changeNoteLabel": "修正理由",
+      "changeNoteRequired": "必須",
+      "changeNoteOptional": "任意",
+      "changeNotePlaceholder": "例: 第5条の誤字を修正",
+      "silentUpdateNotice": "公開中の規約です。保存した修正は、ユーザーへの再同意なし（サイレント更新）で即時反映されます。料金改定・免責事項・個人情報の取扱いの変更など、再同意が必要な場合は一覧画面から新しいバージョンとして作成してください。",
+      "upcomingNotice": "公開前の規約です。保存した内容は公開開始日から表示されます。",
+      "revisionLabel": "リビジョン {no}",
+      "currentBadge": "現行",
+      "noChangeNote": "（修正理由なし）",
+      "unknownUser": "不明なユーザー",
+      "noRevisions": "本文が登録されていません。"
+    },
+    "errors": {
+      "DUPLICATE_VERSION": "この種別とバージョンの組み合わせは既に存在します",
+      "CHANGE_NOTE_REQUIRED": "公開済みの規約を修正する場合は、修正理由を入力してください",
+      "CONTENT_UNCHANGED": "現行の本文から変更されていません",
+      "PUBLISHED_NOT_DELETABLE": "公開済みの規約は削除できません",
+      "UNEXPECTED": "予期せぬエラーが発生しました"
     }
   },
   "liveSessions": {

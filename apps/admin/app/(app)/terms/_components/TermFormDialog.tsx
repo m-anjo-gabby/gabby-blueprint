@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { createTerm } from '@/actions/adminTermAction';
-import { PlusCircle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { PlusCircle, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 
 type FormT = ReturnType<typeof useTranslations<'terms.form'>>;
@@ -48,6 +48,7 @@ const DEFAULT_VALUES: TermFormValues = {
 export function TermFormDialog() {
   const t = useTranslations('terms.form');
   const tCommon = useTranslations('terms.common');
+  const tErrors = useTranslations('terms.errors');
   const termSchema = useMemo(() => createTermSchema(t), [t]);
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -74,9 +75,9 @@ export function TermFormDialog() {
         setOpen(false);
         form.reset();
       } else {
-        setServerError(result.message || t('toastCreateFailed'));
+        setServerError(tErrors(result.errorCode));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('toastSystemError'));
     }
   };
@@ -155,6 +156,11 @@ export function TermFormDialog() {
                   </FormItem>
                 )} />
               </div>
+
+              <p className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-600 bg-indigo-50/60 border border-indigo-100 rounded-xl px-3 py-2">
+                <Info size={14} className="mt-0.5 shrink-0 text-indigo-500" />
+                {t('reagreementNotice')}
+              </p>
 
               <FormField control={form.control} name="content" render={({ field }) => (
                 <FormItem className="flex-1 flex flex-col">

@@ -485,7 +485,6 @@
       "deleteConfirming": "Deleting...",
       "deleteConfirm": "Yes, delete",
       "toastDeleted": "Term deleted",
-      "toastDeleteFailed": "Failed to delete",
       "toastUnexpectedError": "An unexpected error occurred"
     },
     "form": {
@@ -511,23 +510,41 @@
         "futureDateRequired": "Please specify a publish date on or after today"
       },
       "toastCreated": "Term created",
-      "toastCreateFailed": "Failed to create",
-      "toastSystemError": "A system error occurred"
+      "toastSystemError": "A system error occurred",
+      "reagreementNotice": "Creating a new version asks all users to agree again from the publish date (if agreement is required). For minor fixes such as typos, edit the existing version instead (no re-agreement needed)."
     },
     "editPage": {
       "loadFailedTitle": "Failed to load data.",
       "loadFailedHint": "Please try again later.",
       "backToList": "Back to term list",
       "editTitle": "Edit Term: {version}",
-      "subtitle": "Directly edit the wording of the {termType}."
+      "subtitle": "Revise the wording of the {termType}. Each save is recorded as a new revision."
     },
     "editor": {
       "editTab": "Edit",
       "previewTab": "Preview",
-      "saveButton": "Save",
+      "saveButton": "Save revision",
       "contentPlaceholder": "Enter content in Markdown format...",
-      "toastUpdated": "Term updated",
-      "toastSaveFailed": "Failed to save"
+      "toastUpdated": "Term revised (revision {no})",
+      "historyTab": "History ({count})",
+      "changeNoteLabel": "Reason for change",
+      "changeNoteRequired": "Required",
+      "changeNoteOptional": "Optional",
+      "changeNotePlaceholder": "e.g. Fixed a typo in Article 5",
+      "silentUpdateNotice": "This term is published. Saved revisions take effect immediately without asking users to agree again (silent update). For changes that require re-agreement, such as pricing, disclaimers, or handling of personal information, create a new version from the list page.",
+      "upcomingNotice": "This term is not yet published. Saved content will be shown from the publish date.",
+      "revisionLabel": "Revision {no}",
+      "currentBadge": "Current",
+      "noChangeNote": "(No reason given)",
+      "unknownUser": "Unknown user",
+      "noRevisions": "No content has been registered."
+    },
+    "errors": {
+      "DUPLICATE_VERSION": "This combination of term type and version already exists",
+      "CHANGE_NOTE_REQUIRED": "Please enter a reason when revising a published term",
+      "CONTENT_UNCHANGED": "The content is unchanged from the current revision",
+      "PUBLISHED_NOT_DELETABLE": "Published terms cannot be deleted",
+      "UNEXPECTED": "An unexpected error occurred"
     }
   },
   "liveSessions": {

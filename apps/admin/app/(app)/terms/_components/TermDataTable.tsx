@@ -35,6 +35,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { deleteTerm } from "@/actions/adminTermAction";
+import type { TermListItem } from "@gabby/types/term";
 import { useToast } from "@gabby/lib/hooks/useToast";
 import {
   AlertDialog,
@@ -48,7 +49,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface TermDataTableProps {
-  data: any[];
+  data: TermListItem[];
   pageCount: number;
   totalCount: number;
 }
@@ -60,13 +61,14 @@ export function TermDataTable({
 }: TermDataTableProps) {
   const t = useTranslations('terms.table');
   const tCommon = useTranslations('terms.common');
+  const tErrors = useTranslations('terms.errors');
   const tGlobalCommon = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const [searchValue, setSearchValue] = React.useState(searchParams.get("q") || "");
-  const [deletingTerm, setDeletingTerm] = React.useState<any | null>(null);
+  const [deletingTerm, setDeletingTerm] = React.useState<TermListItem | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
   const currentPage = Number(searchParams.get("page")) || 1;
@@ -80,7 +82,7 @@ export function TermDataTable({
         showToast(t('toastDeleted'), "success");
         router.refresh();
       } else {
-        showToast(result.message || t('toastDeleteFailed'), "error");
+        showToast(tErrors(result.errorCode), "error");
       }
     } catch (error) {
       showToast(t('toastUnexpectedError'), "error");
@@ -91,7 +93,7 @@ export function TermDataTable({
   };
 
   // --- カラム定義 (ContentDataTable のスタイルに準拠) ---
-  const columns = React.useMemo<ColumnDef<any>[]>(() => [
+  const columns = React.useMemo<ColumnDef<TermListItem>[]>(() => [
     {
       accessorKey: "term_type",
       header: t('termTypeHeader'),
@@ -124,11 +126,9 @@ export function TermDataTable({
       header: t('statusHeader'),
       cell: ({ row }) => {
         const term = row.original;
-        const now = new Date();
-        const pubDate = new Date(term.published_date);
 
         // 1. 公開日時が未来
-        if (pubDate > now) {
+        if (term.is_upcoming) {
           return (
             <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 font-bold text-[10px] px-2">
               {t('statusUpcoming')}
@@ -171,9 +171,8 @@ export function TermDataTable({
       ),
       cell: ({ row }) => {
         const term = row.original;
-        const now = new Date();
-        const pubDate = new Date(term.published_date);
-        const isDeletable = pubDate > now;
+        // 公開前のみ削除可能（公開後は同意履歴の証跡となるため削除しない）
+        const isDeletable = term.is_upcoming;
 
         return (
           <div className="flex justify-end items-center px-2 gap-1">
@@ -330,7 +329,7 @@ export function TermDataTable({
             <AlertDialogDescription className="text-center text-slate-500 font-bold text-sm leading-relaxed">
               {t.rich('deleteDialogBody', {
                 termType: deletingTerm?.term_type === "TERMS" ? tCommon('termTypeTerms') : tCommon('termTypePrivacy'),
-                version: deletingTerm?.version_name,
+                version: deletingTerm?.version_name ?? '',
                 bold: (chunks) => <>{chunks}</>,
               })}
             </AlertDialogDescription>

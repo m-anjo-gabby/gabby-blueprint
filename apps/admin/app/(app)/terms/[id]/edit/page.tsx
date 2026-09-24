@@ -1,10 +1,11 @@
 // apps/admin/app/(app)/terms/[id]/edit/page.tsx
 import { getTranslations } from 'next-intl/server';
-import { getTermById, getTermContent } from "@/actions/adminTermAction";
+import { getTermDetail } from "@/actions/adminTermAction";
 import { TermEditor } from "./_components/TermEditor";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import type { TermDetail } from '@gabby/types/term';
 
 export default async function TermEditPage({
   params,
@@ -15,15 +16,10 @@ export default async function TermEditPage({
   const tCommon = await getTranslations('terms.common');
   const { id } = await params;
 
-  let term;
-  let content;
+  let term: TermDetail | null;
 
   try {
-    term = await getTermById(id);
-    if (!term) {
-      notFound(); // データが見つからない場合はNext.jsのnot-foundページを表示
-    }
-    content = await getTermContent(term.storage_path);
+    term = await getTermDetail(id);
   } catch (error) {
     // データ取得中にエラーが発生した場合
     console.error("Failed to load term data:", error);
@@ -35,7 +31,10 @@ export default async function TermEditPage({
     );
   }
 
-  // データが正常に取得できた場合のみJSXをレンダリング
+  if (!term) {
+    notFound(); // データが見つからない場合はNext.jsのnot-foundページを表示
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] space-y-4">
       <div className="flex flex-col">
@@ -56,13 +55,8 @@ export default async function TermEditPage({
         </p>
       </div>
 
-      <TermEditor 
-        termId={term.term_id}
-        termType={term.term_type}
-        initialVersion={term.version_name}
-        initialContent={content} 
-        storagePath={term.storage_path} 
-      />
+      {/* 保存後はリビジョン履歴が更新されるため、最新リビジョンIDをkeyにして編集状態を初期化する */}
+      <TermEditor key={term.revisions[0]?.revision_id ?? 'empty'} term={term} />
     </div>
   );
 }

@@ -1,13 +1,39 @@
 'use server';
 
-import { createAdminClient } from "@gabby/lib/supabase/admin";
+import { createServerClient } from "@gabby/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { formatToJstDate, getUtcRangeFromJstDate } from "@gabby/lib/date/date";
-// インポートパスを index.ts 参照へ修正し、getLogContext を追加
+import { formatToJstDate, formatToJstDateTime, getUtcRangeFromJstDate } from "@gabby/lib/date/date";
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import type { TermDetail, TermListItem, TermType } from '@gabby/types/term';
 
 const logger = createLogger('admin');
+
+/**
+ * 規約操作の失敗理由。画面側で翻訳カタログ（terms.errors.*）に変換して表示する。
+ */
+export type TermActionErrorCode =
+  | 'DUPLICATE_VERSION'
+  | 'CHANGE_NOTE_REQUIRED'
+  | 'CONTENT_UNCHANGED'
+  | 'PUBLISHED_NOT_DELETABLE'
+  | 'UNEXPECTED';
+
+export type TermActionResult =
+  | { success: true }
+  | { success: false; errorCode: TermActionErrorCode };
+
+/** RPCの例外メッセージ（DDL/function/add_term_revision.sql 等）を画面向けのエラーコードに変換する */
+function toErrorCode(message: string): TermActionErrorCode {
+  if (message.includes('change_note is required')) return 'CHANGE_NOTE_REQUIRED';
+  if (message.includes('content is unchanged')) return 'CONTENT_UNCHANGED';
+  return 'UNEXPECTED';
+}
+
+/** 多対一の埋め込み結果（型推論上は配列になる）を単一行として取り出す */
+function pickOne<T>(value: T | T[] | null): T | null {
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
 
 /**
  * 規約情報の一覧取得
@@ -15,51 +41,62 @@ const logger = createLogger('admin');
 export async function getTerms(page: number = 1, pageSize: number = 10, searchQuery?: string) {
   const ctx = await getLogContext();
   try {
-    const supabase = createAdminClient();
+    const supabase = await createServerClient();
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
+    const now = new Date();
+    const nowIso = now.toISOString();
 
     let query = supabase
       .from('com_m_terms')
-      .select('*', { count: 'exact' });
+      .select('term_id, term_type, version_name, is_required, published_date', { count: 'exact' });
 
     if (searchQuery) {
       query = query.ilike('version_name', `%${searchQuery}%`);
     }
 
-    const { data, error, count } = await query
-      .order('term_type', { ascending: true })
-      .order('published_date', { ascending: false })
-      .order('term_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
-      .range(from, to);
+    // 「公開中」判定はページ・検索条件に依存させず、全件から種別ごとに現在有効な最新版を求める
+    const [listResult, publishedResult] = await Promise.all([
+      query
+        .order('term_type', { ascending: true })
+        .order('published_date', { ascending: false })
+        .order('term_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
+        .range(from, to),
+      supabase
+        .from('com_m_terms')
+        .select('term_id, term_type')
+        .lte('published_date', nowIso)
+        .order('published_date', { ascending: false }),
+    ]);
 
+    const error = listResult.error ?? publishedResult.error;
     if (error) {
       logger.error('term:get_terms_failed', error.message, { ...ctx, payload: { page, pageSize, searchQuery } });
       throw error;
     }
 
-    const now = new Date();
-    const currentActiveIds = new Map();
-    const allDataForLogic = data || [];
-    
-    ["TERMS", "PRIVACY"].forEach(type => {
-      const latestActive = allDataForLogic.find(t => 
-        t.term_type === type && new Date(t.published_date) <= now
-      );
-      if (latestActive) {
-        currentActiveIds.set(type, latestActive.term_id);
+    const currentIds = new Set<string>();
+    const seenTypes = new Set<string>();
+    for (const term of publishedResult.data ?? []) {
+      if (!seenTypes.has(term.term_type)) {
+        seenTypes.add(term.term_type);
+        currentIds.add(term.term_id);
       }
-    });
+    }
 
-    const formattedTerms = allDataForLogic.map((term) => ({
-      ...term,
-      is_current: currentActiveIds.get(term.term_type) === term.term_id,
-      published_date: term.published_date ? formatToJstDate(term.published_date) : '',
+    const terms: TermListItem[] = (listResult.data ?? []).map((term) => ({
+      term_id: term.term_id,
+      term_type: term.term_type as TermType,
+      version_name: term.version_name,
+      is_required: term.is_required,
+      published_date: formatToJstDate(term.published_date),
+      is_upcoming: new Date(term.published_date) > now,
+      is_current: currentIds.has(term.term_id),
     }));
 
     return {
-      terms: formattedTerms,
-      totalCount: count || 0,
+      terms,
+      totalCount: listResult.count || 0,
     };
   } catch (error) {
     logger.error('term:get_terms_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, pageSize, searchQuery } });
@@ -68,168 +105,130 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
 }
 
 /**
- * 規約の削除
+ * 規約の削除（公開前のバージョンのみ。リビジョンはON DELETE CASCADEで削除される）
  */
-export async function deleteTerm(termId: string) {
+export async function deleteTerm(termId: string): Promise<TermActionResult> {
   const ctx = await getLogContext();
   try {
-    const supabase = createAdminClient();
+    const supabase = await createServerClient();
 
-    // 1. 削除前にStorageパスを取得しておく
-    const { data: term } = await supabase
+    const { data: deleted, error } = await supabase
       .from('com_m_terms')
-      .select('storage_path')
+      .delete()
       .eq('term_id', termId)
-      .single();
+      .gt('published_date', new Date().toISOString())
+      .select('term_id');
 
-    // 2. DBレコードを削除
-    const { error } = await supabase.from('com_m_terms').delete().eq('term_id', termId);
-    
     if (error) {
       logger.error('term:delete_term_failed', error.message, { ...ctx, payload: { termId } });
-      throw error;
+      return { success: false, errorCode: 'UNEXPECTED' };
     }
 
-    // 3. Storageからファイルを削除（レコード削除成功後）
-    if (term?.storage_path) {
-      const cleanPath = term.storage_path.startsWith('/') ? term.storage_path.substring(1) : term.storage_path;
-      await supabase.storage.from('terms').remove([cleanPath]);
+    if (!deleted || deleted.length === 0) {
+      logger.warn('term:delete_term_rejected', 'Term is already published or not found', { ...ctx, payload: { termId } });
+      return { success: false, errorCode: 'PUBLISHED_NOT_DELETABLE' };
     }
 
-    logger.info('term:delete_term_success', `Term deleted`, { 
-      ...ctx,
-      payload: { termId } 
-    });
+    logger.info('term:delete_term_success', `Term deleted`, { ...ctx, payload: { termId } });
 
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
     logger.error('term:delete_term_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, errorCode: 'UNEXPECTED' };
   }
 }
 
 /**
- * 規約の個別取得
+ * 編集画面用: 規約バージョンとリビジョン履歴（新しい順）の取得。存在しない場合は null。
  */
-export async function getTermById(termId: string) {
+export async function getTermDetail(termId: string): Promise<TermDetail | null> {
   const ctx = await getLogContext();
   try {
-    const supabase = createAdminClient();
+    const supabase = await createServerClient();
     const { data, error } = await supabase
       .from('com_m_terms')
-      .select('*')
+      .select(`
+        term_id,
+        term_type,
+        version_name,
+        published_date,
+        com_m_terms_revision (
+          revision_id,
+          revision_no,
+          content,
+          change_note,
+          insert_date,
+          com_m_user ( user_name )
+        )
+      `)
       .eq('term_id', termId)
-      .single();
+      .order('revision_no', { referencedTable: 'com_m_terms_revision', ascending: false })
+      .maybeSingle();
 
     if (error) {
-      logger.error('term:get_term_by_id_failed', error.message, { ...ctx, payload: { termId } });
+      logger.error('term:get_term_detail_failed', error.message, { ...ctx, payload: { termId } });
       throw error;
     }
-    return data;
+    if (!data) return null;
+
+    return {
+      term_id: data.term_id,
+      term_type: data.term_type as TermType,
+      version_name: data.version_name,
+      is_published: new Date(data.published_date) <= new Date(),
+      revisions: data.com_m_terms_revision.map((rev) => ({
+        revision_id: rev.revision_id,
+        revision_no: rev.revision_no,
+        content: rev.content,
+        change_note: rev.change_note,
+        insert_user_name: pickOne(rev.com_m_user)?.user_name ?? null,
+        insert_date: formatToJstDateTime(rev.insert_date),
+      })),
+    };
   } catch (error) {
-    logger.error('term:get_term_by_id_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
+    logger.error('term:get_term_detail_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
 
 /**
- * StorageからMarkdownの内容を取得
+ * 規約本文の修正（リビジョン追加 = サイレント更新。ユーザーへの再同意は求めない）
+ * 公開済みバージョンへの修正は修正理由（changeNote）が必須（RPC側でも検証）。
  */
-export async function getTermContent(storagePath: string) {
+export async function addTermRevision(
+  termId: string,
+  content: string,
+  changeNote: string
+): Promise<TermActionResult> {
   const ctx = await getLogContext();
   try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase.storage
-      .from('terms')
-      .download(storagePath);
+    const supabase = await createServerClient();
+    const { data: revisionNo, error } = await supabase.rpc('add_term_revision', {
+      p_term_id: termId,
+      p_content: content,
+      p_change_note: changeNote,
+    });
 
     if (error) {
-      logger.error("term:get_term_content_failed", error.message, { ...ctx, payload: { storagePath } });
-      return "";
-    }
-    return await data.text();
-  } catch (error) {
-    logger.error("term:get_term_content_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { storagePath } });
-    return "";
-  }
-}
-
-/**
- * 規約の更新（内容の上書き・バージョン名変更）
- * キャッシュ対策のため、保存のたびにタイムスタンプを含んだ新しいパスを作成して保存します。
- */
-export async function updateTerm(
-  termId: string, 
-  termType: string,
-  versionName: string,
-  content: string,
-  oldStoragePath: string
-) {
-  const ctx = await getLogContext();
-  try {
-    const supabase = createAdminClient();
-
-    // 1. キャッシュ対策のためタイムスタンプを含んだ新しいパスを生成
-    // 例: tos/tos_v1.1.0_20260508121011.md
-    const folder = termType.toUpperCase() === 'TERMS' ? 'tos' : 'privacy';
-    const timestamp = new Date().toISOString()
-      .replace(/[-:T]/g, '')  // 記号を削除
-      .split('.')[0];        // ミリ秒以降を削除 (YYYYMMDDHHMMSS)
-    const newPath = `${folder}/${folder}_${versionName}_${timestamp}.md`;
-
-    // 2. Storageにアップロード (upsert: false で常に新規ファイルとして扱う)
-    const { error: uploadError } = await supabase.storage
-      .from('terms')
-      .upload(newPath, content, {
-        contentType: 'text/markdown',
-        cacheControl: '3600',
-        upsert: false 
-      });
-
-    if (uploadError) {
-      logger.error("term:update_storage_failed", uploadError.message, { ...ctx, payload: { path: newPath } });
-      throw uploadError;
+      const errorCode = toErrorCode(error.message);
+      logger.error('term:add_revision_failed', error.message, { ...ctx, payload: { termId, changeNote } });
+      return { success: false, errorCode };
     }
 
-    // 3. DBレコードを更新 (storage_pathを新しいファイルに差し替え)
-    const { error: dbError } = await supabase
-      .from('com_m_terms')
-      .update({
-        version_name: versionName,
-        storage_path: newPath,
-        update_date: new Date().toISOString()
-      })
-      .eq('term_id', termId);
+    logger.info('term:add_revision_success', `Term revision added`, { ...ctx, payload: { termId, revisionNo, changeNote } });
 
-    if (dbError) {
-      // DB更新失敗時はアップロードしたファイルを削除してロールバック
-      await supabase.storage.from('terms').remove([newPath]);
-      logger.error("term:update_db_failed", dbError.message, { ...ctx, payload: { termId } });
-      throw dbError;
-    }
-
-    // 4. 古いファイルを削除（ストレージの肥大化を防ぐため）
-    const cleanOldPath = oldStoragePath?.startsWith('/') ? oldStoragePath.substring(1) : oldStoragePath;
-    if (cleanOldPath && cleanOldPath !== newPath) {
-      await supabase.storage.from('terms').remove([cleanOldPath]);
-    }
-
-    logger.info('term:update_term_success', `Term updated with cache busting path`, { 
-      ...ctx,
-      payload: { termId, newPath, oldPath: oldStoragePath } 
-    });
-    
     revalidatePath('/terms');
-    return { success: true, newPath };
+    revalidatePath(`/terms/${termId}/edit`);
+    return { success: true };
   } catch (error) {
-    logger.error("term:update_term_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    logger.error('term:add_revision_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
+    return { success: false, errorCode: 'UNEXPECTED' };
   }
 }
 
 /**
- * 規約の新規作成
+ * 規約の新規作成（新バージョン＋リビジョン1。必須規約なら公開日以降に全ユーザーへ再同意を求める）
  */
 export async function createTerm(params: {
   term_type: string;
@@ -237,59 +236,35 @@ export async function createTerm(params: {
   published_date: string; // "YYYY-MM-DD" 形式（JST）
   is_required: boolean;
   content: string;
-}) {
+}): Promise<TermActionResult> {
   const ctx = await getLogContext();
   try {
-    const supabase = createAdminClient();
+    const supabase = await createServerClient();
 
-    // 1. 公開日のUTC変換 (日付のみ入力からJST 00:00:00のUTC値を生成)
+    // 公開日のUTC変換 (日付のみ入力からJST 00:00:00のUTC値を生成)
     const { startUtc: publishedUtc } = getUtcRangeFromJstDate(params.published_date, params.published_date);
 
-    // 2. Storageパス生成 (種別/種別_バージョン_タイムスタンプ.md)
-    const folder = params.term_type.toUpperCase() === 'TERMS' ? 'tos' : 'privacy';
-    const timestamp = new Date().toISOString().replace(/[-:T]/g, '').split('.')[0];
-    const newPath = `${folder}/${folder}_${params.version_name}_${timestamp}.md`;
+    const { data: termId, error } = await supabase.rpc('create_term', {
+      p_term_type: params.term_type,
+      p_version_name: params.version_name,
+      p_published_date: publishedUtc,
+      p_is_required: params.is_required,
+      p_content: params.content,
+    });
 
-    // 3. Storageにアップロード
-    const { error: uploadError } = await supabase.storage
-      .from('terms')
-      .upload(newPath, params.content, {
-        contentType: 'text/markdown',
-        upsert: false 
-      });
-
-    if (uploadError) {
-      logger.error("term:create_storage_failed", uploadError.message, { ...ctx, payload: { path: newPath } });
-      throw uploadError;
-    }
-
-    // 4. DBレコードを挿入
-    const { data, error: dbError } = await supabase
-      .from('com_m_terms')
-      .insert({
-        term_type: params.term_type,
-        version_name: params.version_name,
-        storage_path: newPath,
-        is_required: params.is_required,
-        published_date: publishedUtc,
-      })
-      .select()
-      .single();
-
-    if (dbError) {
-      await supabase.storage.from('terms').remove([newPath]);
-      if (dbError.code === '23505') {
-        return { success: false, message: 'この種別とバージョンの組み合わせは既に存在します' };
+    if (error) {
+      if (error.code === '23505') {
+        return { success: false, errorCode: 'DUPLICATE_VERSION' };
       }
-      logger.error("term:create_db_failed", dbError.message, { ...ctx, payload: params });
-      throw dbError;
+      logger.error("term:create_term_failed", error.message, { ...ctx, payload: { ...params, content: undefined } });
+      return { success: false, errorCode: 'UNEXPECTED' };
     }
 
-    logger.info('term:create_term_success', `Term created`, { ...ctx, payload: { termId: data.term_id } });
+    logger.info('term:create_term_success', `Term created`, { ...ctx, payload: { termId } });
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
-    logger.error("term:create_term_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: params });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    logger.error("term:create_term_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { ...params, content: undefined } });
+    return { success: false, errorCode: 'UNEXPECTED' };
   }
 }

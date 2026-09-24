@@ -40,3 +40,18 @@ CREATE POLICY "Admins can manage terms" ON public.com_m_terms
 FOR ALL TO authenticated 
 USING (public.get_jwt_user_type() = '0')
 WITH CHECK (public.get_jwt_user_type() = '0');
+
+---------------------------------------------
+-- 追加パッチ: 規約本文のDB管理化（リビジョン管理） (2026-09-24 追加)
+---------------------------------------------
+-- 【背景】
+-- 規約本文はStorage（termsバケット）ではなく com_m_terms_revision.content で管理する
+-- 方針に変更した（詳細は table/com_m_terms_revision.sql を参照）。
+-- storage_pathは移行完了までの互換用に残すが、新規作成時は設定しないためNOT NULLを外す。
+-- 移行確認後の次リリースで列ごと削除する予定。
+---------------------------------------------
+ALTER TABLE public.com_m_terms
+  ALTER COLUMN storage_path DROP NOT NULL;
+
+COMMENT ON TABLE public.com_m_terms IS '規約マスタ：規約のバージョン（同意の単位）を管理。本文は com_m_terms_revision で管理';
+COMMENT ON COLUMN public.com_m_terms.storage_path IS '【非推奨・削除予定】旧Supabase Storage上の本文ファイルパス。本文は com_m_terms_revision を参照すること';

@@ -1236,3 +1236,227 @@ ALTER TABLE public.com_m_contents
   DROP CONSTRAINT IF EXISTS chk_com_m_contents_category_scope;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】規約管理: 本文のDB管理化とリビジョン管理（サイレント更新）
+-- 追加日: 2026-09-24
+--
+-- 【内容】
+--   規約本文を Supabase Storage（termsバケット）のMarkdownファイルから、DBの
+--   com_m_terms_revision.content へ移行する。
+--   - com_m_terms（バージョン）= 同意の単位。再同意が必要な変更は新バージョンで作成。
+--   - com_m_terms_revision（リビジョン）= 同一バージョン内の文言修正履歴。誤字修正等は
+--     リビジョン追加（サイレント更新、再同意不要）。追記専用（UPDATEはトリガーで拒否）。
+--   1. com_m_terms_revision の新規作成（RLS・不変性トリガー含む）
+--   2. com_m_terms.storage_path の NOT NULL 解除（移行確認後の次リリースで列削除予定）
+--   3. com_t_user_terms_agreement に revision_id（同意時点のリビジョン）を追加
+--   4. RPC create_term（バージョン＋リビジョン1の同時作成）/ add_term_revision（リビジョン追加）
+--
+-- 【本SQL適用後の作業（必須・アプリのデプロイ前に実施）】
+--   既存の規約本文をStorageから com_m_terms_revision へ移行する（SQLのみでは不可）。
+--   run.mjs で実行した場合は以下の @post が順に確認付きで実行される。1つ目（dry-run）の
+--   出力で登録予定件数・FAILが無いことを確認してから2つ目（反映）を実行すること。
+--   ※ 本文ファイルが既にStorageに無い過去版があると FAIL となる。復元不可と確認できた場合のみ
+--     --placeholder-missing を付けて手動で再実行する（注記のみのリビジョンを登録）。
+--   ※ 移行前にアプリをデプロイすると、学生アプリで規約本文が表示されなくなる。
+-- @post: node scripts/migrate_terms_storage_to_revision.mjs
+-- @post: node scripts/migrate_terms_storage_to_revision.mjs --apply
+--
+-- 対応ファイル: DDL/table/com_m_terms_revision.sql（新規）,
+--   DDL/table/com_m_terms.sql（リビジョン管理パッチ節）,
+--   DDL/table/com_t_user_terms_agreement.sql（リビジョン記録パッチ節）,
+--   DDL/function/create_term.sql（新規）, DDL/function/add_term_revision.sql（新規）
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 1. com_m_terms_revision の新規作成
+---------------------------------------------
+CREATE TABLE IF NOT EXISTS public.com_m_terms_revision (
+  revision_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  term_id uuid NOT NULL REFERENCES public.com_m_terms(term_id) ON DELETE CASCADE,
+  revision_no integer NOT NULL,
+  content text NOT NULL,
+  change_note text,
+  insert_user uuid DEFAULT auth.uid() REFERENCES public.com_m_user(id) ON DELETE SET NULL,
+  insert_date timestamp with time zone DEFAULT now() NOT NULL,
+
+  CONSTRAINT uq_com_m_terms_revision_no UNIQUE (term_id, revision_no),
+  CONSTRAINT chk_com_m_terms_revision_no CHECK (revision_no >= 1)
+);
+
+COMMENT ON TABLE public.com_m_terms_revision IS '規約本文リビジョン：同一バージョン内の文言修正履歴（追記専用、最新revision_noが現行本文）';
+COMMENT ON COLUMN public.com_m_terms_revision.revision_id IS 'リビジョンID';
+COMMENT ON COLUMN public.com_m_terms_revision.term_id IS '規約マスタID（バージョン）';
+COMMENT ON COLUMN public.com_m_terms_revision.revision_no IS 'バージョン内のリビジョン番号（1始まり）';
+COMMENT ON COLUMN public.com_m_terms_revision.content IS '規約本文（Markdown）';
+COMMENT ON COLUMN public.com_m_terms_revision.change_note IS '修正内容・理由（公開後の修正では必須）';
+COMMENT ON COLUMN public.com_m_terms_revision.insert_user IS '登録者（com_m_user.id）。データ移行分はNULL';
+COMMENT ON COLUMN public.com_m_terms_revision.insert_date IS '登録日時';
+
+---------------------------------------------
+-- 不変性の担保: UPDATEを拒否するトリガー
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_reject_terms_revision_update()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+    RAISE EXCEPTION 'com_m_terms_revision is append-only (revision_id=%)', OLD.revision_id;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_reject_terms_revision_update ON public.com_m_terms_revision;
+CREATE TRIGGER trg_reject_terms_revision_update
+BEFORE UPDATE ON public.com_m_terms_revision
+FOR EACH ROW EXECUTE FUNCTION public.fn_reject_terms_revision_update();
+
+---------------------------------------------
+-- 行レベルセキュリティ (RLS)
+---------------------------------------------
+ALTER TABLE public.com_m_terms_revision ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Terms revisions are viewable by everyone" ON public.com_m_terms_revision;
+DROP POLICY IF EXISTS "Admins can insert terms revisions" ON public.com_m_terms_revision;
+
+-- com_m_terms と同様、規約本文は公開情報のため誰でも参照可能
+CREATE POLICY "Terms revisions are viewable by everyone" ON public.com_m_terms_revision
+FOR SELECT USING (true);
+
+CREATE POLICY "Admins can insert terms revisions" ON public.com_m_terms_revision
+FOR INSERT TO authenticated
+WITH CHECK (public.get_jwt_user_type() = '0');
+
+---------------------------------------------
+-- 2. com_m_terms.storage_path の NOT NULL 解除
+---------------------------------------------
+ALTER TABLE public.com_m_terms
+  ALTER COLUMN storage_path DROP NOT NULL;
+
+COMMENT ON TABLE public.com_m_terms IS '規約マスタ：規約のバージョン（同意の単位）を管理。本文は com_m_terms_revision で管理';
+COMMENT ON COLUMN public.com_m_terms.storage_path IS '【非推奨・削除予定】旧Supabase Storage上の本文ファイルパス。本文は com_m_terms_revision を参照すること';
+
+---------------------------------------------
+-- 3. com_t_user_terms_agreement に revision_id を追加
+---------------------------------------------
+ALTER TABLE public.com_t_user_terms_agreement
+  ADD COLUMN IF NOT EXISTS revision_id uuid REFERENCES public.com_m_terms_revision(revision_id);
+
+COMMENT ON COLUMN public.com_t_user_terms_agreement.revision_id IS '同意時点で表示していた規約リビジョンID（導入前の同意はNULL）';
+
+CREATE INDEX IF NOT EXISTS idx_user_agreement_revision_id ON public.com_t_user_terms_agreement(revision_id);
+
+---------------------------------------------
+-- 4. RPC: create_term / add_term_revision
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.create_term(text, text, timestamp with time zone, boolean, text);
+
+CREATE OR REPLACE FUNCTION public.create_term(
+    p_term_type text,
+    p_version_name text,
+    p_published_date timestamp with time zone,
+    p_is_required boolean,
+    p_content text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_term_id uuid;
+BEGIN
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to create terms');
+
+    IF p_term_type NOT IN ('TERMS', 'PRIVACY') THEN
+        RAISE EXCEPTION 'invalid term_type: %', p_term_type;
+    END IF;
+
+    IF p_version_name IS NULL OR btrim(p_version_name) = '' THEN
+        RAISE EXCEPTION 'version_name is required';
+    END IF;
+
+    IF p_content IS NULL OR btrim(p_content) = '' THEN
+        RAISE EXCEPTION 'content is required';
+    END IF;
+
+    -- UNIQUE(term_type, version_name) 違反時は 23505 がそのまま呼び出し元に返る
+    INSERT INTO public.com_m_terms (term_type, version_name, is_required, published_date)
+    VALUES (p_term_type, btrim(p_version_name), p_is_required, p_published_date)
+    RETURNING term_id INTO v_term_id;
+
+    INSERT INTO public.com_m_terms_revision (term_id, revision_no, content, change_note, insert_user)
+    VALUES (v_term_id, 1, p_content, NULL, auth.uid());
+
+    RETURN v_term_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.create_term(text, text, timestamp with time zone, boolean, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_term(text, text, timestamp with time zone, boolean, text) TO authenticated;
+
+DROP FUNCTION IF EXISTS public.add_term_revision(uuid, text, text);
+
+CREATE OR REPLACE FUNCTION public.add_term_revision(
+    p_term_id uuid,
+    p_content text,
+    p_change_note text
+)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_term RECORD;
+    v_latest_no integer;
+    v_latest_content text;
+BEGIN
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to update terms');
+
+    IF p_content IS NULL OR btrim(p_content) = '' THEN
+        RAISE EXCEPTION 'content is required';
+    END IF;
+
+    SELECT term_id, published_date INTO v_term
+    FROM public.com_m_terms
+    WHERE term_id = p_term_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'term not found: %', p_term_id;
+    END IF;
+
+    IF v_term.published_date <= now() AND (p_change_note IS NULL OR btrim(p_change_note) = '') THEN
+        RAISE EXCEPTION 'change_note is required for published terms';
+    END IF;
+
+    SELECT revision_no, content INTO v_latest_no, v_latest_content
+    FROM public.com_m_terms_revision
+    WHERE term_id = p_term_id
+    ORDER BY revision_no DESC
+    LIMIT 1;
+
+    IF v_latest_content = p_content THEN
+        RAISE EXCEPTION 'content is unchanged';
+    END IF;
+
+    v_latest_no := COALESCE(v_latest_no, 0) + 1;
+
+    INSERT INTO public.com_m_terms_revision (term_id, revision_no, content, change_note, insert_user)
+    VALUES (p_term_id, v_latest_no, p_content, NULLIF(btrim(p_change_note), ''), auth.uid());
+
+    UPDATE public.com_m_terms
+    SET update_date = now()
+    WHERE term_id = p_term_id;
+
+    RETURN v_latest_no;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.add_term_revision(uuid, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.add_term_revision(uuid, text, text) TO authenticated;
+
+COMMIT;

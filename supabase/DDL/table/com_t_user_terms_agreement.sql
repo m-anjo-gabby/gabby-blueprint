@@ -48,3 +48,20 @@ WITH CHECK (
     OR 
     public.get_jwt_user_type() = '0'
 );
+
+---------------------------------------------
+-- 追加パッチ: 同意時点のリビジョン記録 (2026-09-24 追加)
+-- 前提: table/com_m_terms_revision.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- 規約本文のリビジョン管理（サイレント更新）導入に伴い、同意した時点で表示していた
+-- 文面を特定できるよう revision_id を記録する。
+-- 導入前の既存同意レコードはNULL（どのリビジョンに同意したかは agreed_date と
+-- com_m_terms_revision.insert_date の比較で推定する）。
+---------------------------------------------
+ALTER TABLE public.com_t_user_terms_agreement
+  ADD COLUMN IF NOT EXISTS revision_id uuid REFERENCES public.com_m_terms_revision(revision_id);
+
+COMMENT ON COLUMN public.com_t_user_terms_agreement.revision_id IS '同意時点で表示していた規約リビジョンID（導入前の同意はNULL）';
+
+CREATE INDEX IF NOT EXISTS idx_user_agreement_revision_id ON public.com_t_user_terms_agreement(revision_id);
