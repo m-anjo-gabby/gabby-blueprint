@@ -687,3 +687,21 @@
     プールされる可能性もあるため、例外で確実にトランザクション全体を中止させる方が安全。
   - 新しいテーブルを追加したリリースの後は、`purge-disposable-qa-data.sql`の削除対象にも追加が必要か
     （`com_m_user`等へのFKでCASCADEが無いか）を確認する。
+
+### KJ-2026-0924-04 run.mjsで「記録のみ（--mark-applied）」にしたセクションが、devには実際には反映されていなかった
+
+- **該当シナリオ**: `testing/features/branches/feature-20260918-dev/student-scoped-contents-verify.ts`
+  （dev, tag=scope0924）
+- **事象**: 検証用に `content_scope=9` のダイアログ教材を投入しようとしたところ、
+  `chk_com_m_contents_category_scope` 制約違反(23514)で失敗した。この制約はリリースのセクション7で
+  削除済みのはずで、`run.mjs --status` でもセクション7は「適用済み（記録のみ）」と表示されていた。
+- **原因**: `run.mjs` 導入時に、dev の既存セクションを `--mark-applied=all` で一括して「適用済み」と記録したが、
+  セクション7（2026-09-24追加）はその時点で dev に実際には流されていなかった。`--mark-applied` は
+  SQLを実行せず履歴だけを書くため、適用状況の表示とDBの実態が食い違った（staging は実際に適用済みで問題なし）。
+- **対処**: セクション7は `DROP CONSTRAINT IF EXISTS` のみで冪等なため、dev に
+  `run.mjs --sections=7 --reapply` で再適用し、`pg_constraint` から制約が消えたことを確認してから検証を再実行した。
+- **判断基準への反映**:
+  - **`--status` の「記録のみ」は「DBに反映済み」の証明ではない。** 記録のみのセクションに依存する検証で
+    想定外の制約違反・未定義関数エラーが出たら、まずカタログ（`pg_constraint` / `pg_proc` 等）を直接確認する。
+  - `--mark-applied=all` は、SQLエディタで全セクションを適用し終えたことを確認した環境でのみ使う。
+    記録する前に、各セクションの代表的なオブジェクト（追加した関数・削除した制約等）の有無を確認する。

@@ -1460,3 +1460,59 @@ REVOKE EXECUTE ON FUNCTION public.add_term_revision(uuid, text, text) FROM PUBLI
 GRANT EXECUTE ON FUNCTION public.add_term_revision(uuid, text, text) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】コーチ向け教材選択: 対象生徒のテナントで公開されている教材に限定
+-- 追加日: 2026-09-24
+--
+-- 【内容】
+--   コーチのDialogue Practice割当・Lesson Sprint教材選択は、可視範囲をcom_m_contentsの
+--   RLSに委ねていたため、コーチが担当した全生徒のテナント（およびコーチ自身のテナント）の
+--   限定公開教材が、どの生徒の画面にも表示・割当できていた（ステージング検証で発見）。
+--   対象生徒本人が閲覧できる範囲（共通 + 生徒のclient_idにアクセス権がある限定公開）の
+--   コンテンツIDを返すRPC get_student_available_content_ids を新設し、アプリ側の一覧取得・
+--   割当/結果登録時のサーバー側検証で使用する（com_m_contentsのRLS自体は変更しない）。
+--
+-- 対応ファイル: DDL/function/get_student_available_content_ids.sql（新規）
+-- =========================================================================
+
+BEGIN;
+
+DROP FUNCTION IF EXISTS public.get_student_available_content_ids(uuid, smallint);
+
+CREATE OR REPLACE FUNCTION public.get_student_available_content_ids(
+    p_student_id uuid,
+    p_content_type smallint
+)
+RETURNS SETOF uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT c.content_id
+  FROM public.com_m_contents c
+  JOIN public.com_m_user u ON u.id = p_student_id
+  WHERE c.content_type = p_content_type
+    AND c.delete_flg = '0'
+    AND c.content_scope <> 9
+    AND EXISTS (
+      SELECT 1 FROM public.com_m_coach_student_relationship r
+      WHERE r.coach_id = auth.uid()
+        AND r.student_id = p_student_id
+    )
+    AND (
+      c.content_scope = 0
+      OR EXISTS (
+        SELECT 1 FROM public.com_m_contents_access a
+        WHERE a.content_id = c.content_id
+          AND a.client_id = u.client_id
+          AND a.delete_flg = '0'
+      )
+    );
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_student_available_content_ids(uuid, smallint) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_student_available_content_ids(uuid, smallint) TO authenticated;
+
+COMMIT;

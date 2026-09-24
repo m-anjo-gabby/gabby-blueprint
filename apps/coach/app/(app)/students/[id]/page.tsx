@@ -37,7 +37,7 @@ export default async function StudentOverviewPage({
     getLessonSprintHistory(id),
     getContractTrainingReports(id),
     getStudentDialogueAssignments(id),
-    getAvailableDialogueContents(),
+    getAvailableDialogueContents(id),
   ]);
 
   // 現在有効な契約を優先し、無ければ直近の過去契約(contractsはstart_date降順)を初期選択とする

@@ -4,7 +4,7 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import type { LogEvent } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { hasCoachStudentRelationship } from './coachStudentActions';
+import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './coachStudentActions';
 import {
   DialogueAssignmentSummary,
   DialogueCategory,
@@ -28,12 +28,15 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const DIALOGUE_CONTENT_TYPE = 3;
+
 /**
- * コーチがダイアログプラクティスの教材として選択できるセット一覧を取得する
- * (content_type=3。可視範囲はcom_m_contentsのRLSに委ねる: 汎用は全員、コーパスは
- * 担当生徒のクライアントに紐づくものだけがcontent_scope=1経由で返る)
+ * コーチが指定生徒へダイアログプラクティスの教材として割り当てられるセット一覧を取得する
+ * (content_type=3。対象生徒のテナントで公開されている教材のみ: 共通(content_scope=0)と、
+ * 生徒のclient_idにアクセス権がある限定公開(content_scope=1)。com_m_contentsのRLSは
+ * コーチが担当した全生徒のテナント分を返すため、getStudentAvailableContentIdsで絞り込む)
  */
-export async function getAvailableDialogueContentsCore(): Promise<GetAvailableDialogueContentsResult> {
+export async function getAvailableDialogueContentsCore(studentId: string): Promise<GetAvailableDialogueContentsResult> {
   const ctx = await getLogContext();
 
   try {
@@ -41,10 +44,24 @@ export async function getAvailableDialogueContentsCore(): Promise<GetAvailableDi
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
+    if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    const availableIds = await getStudentAvailableContentIds(supabase, studentId, DIALOGUE_CONTENT_TYPE);
+    if (!availableIds) {
+      logger.error('dialogue:get_available_content_ids_failed', 'RPC get_student_available_content_ids failed', { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (availableIds.size === 0) {
+      return { success: true, contents: [] };
+    }
+
     const { data: contents, error: contentsError } = await supabase
       .from('com_m_contents')
       .select('content_id, content_name, content_name_en, category_id')
-      .eq('content_type', 3)
+      .in('content_id', [...availableIds])
+      .eq('content_type', DIALOGUE_CONTENT_TYPE)
       .eq('delete_flg', '0')
       .order('category_id', { ascending: true })
       .order('seq_no', { ascending: true })
@@ -114,6 +131,16 @@ export async function assignDialogueContentCore(
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    // 対象生徒のテナントで公開されていない教材（他テナント限定・非公開等）の割当を拒否する
+    const availableIds = await getStudentAvailableContentIds(supabase, studentId, DIALOGUE_CONTENT_TYPE);
+    if (!availableIds) {
+      logger.error('dialogue:assign_available_content_ids_failed', 'RPC get_student_available_content_ids failed', { ...ctx, userId: user.id, payload: { studentId, contentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!availableIds.has(contentId)) {
       return { success: false, errorCode: 'forbidden' };
     }
 

@@ -65,6 +65,25 @@ export async function hasCoachStudentRelationship(
   return Boolean(data && data.length > 0);
 }
 
+/**
+ * 指定生徒が利用可能な（＝生徒本人が生徒アプリで閲覧できる）コンテンツIDの一覧を取得する。
+ * com_m_contentsのRLSはコーチが担当した全生徒のテナントの限定公開教材を可視とするため、
+ * 生徒単位の教材選択・割当ではRLSに委ねず本関数で絞り込む。
+ * 担当関係がない場合は空集合、取得失敗時はnullを返す。
+ */
+export async function getStudentAvailableContentIds(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  studentId: string,
+  contentType: number
+): Promise<Set<string> | null> {
+  const { data, error } = await supabase.rpc('get_student_available_content_ids', {
+    p_student_id: studentId,
+    p_content_type: contentType,
+  });
+  if (error) return null;
+  return new Set((data as string[] | null) ?? []);
+}
+
 type ContractJoinRow = { plan_name: string; plan_name_en: string } | { plan_name: string; plan_name_en: string }[] | null;
 
 /**

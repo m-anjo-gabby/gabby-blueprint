@@ -1,0 +1,117 @@
+{
+  "scenario": "student-scoped-contents",
+  "env": "dev",
+  "tag": "scope0924",
+  "executedAt": "2026-09-24T13:56:19.287Z",
+  "gitCommit": "37aea3a8",
+  "gitBranch": "feature/20260924-dev",
+  "totalChecks": 23,
+  "passed": 23,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "Dialogue(type=3) 前提: コーチのRLS上は顧客A/B/C全ての限定公開教材が見える（旧実装の不具合条件）",
+      "ok": true
+    },
+    {
+      "name": "Dialogue(type=3) 生徒A向け: 顧客Aの限定公開教材を含む",
+      "ok": true
+    },
+    {
+      "name": "Dialogue(type=3) 生徒A向け: 顧客B（他の担当生徒）の限定公開教材を含まない",
+      "ok": true
+    },
+    {
+      "name": "Dialogue(type=3) 生徒A向け: 顧客C（コーチ自身）の限定公開教材を含まない",
+      "ok": true
+    },
+    {
+      "name": "Dialogue(type=3) 生徒A向け: 非公開(content_scope=9)は顧客Aにアクセス権があっても含まない",
+      "ok": true
+    },
+    {
+      "name": "Dialogue(type=3) 生徒B向け: 顧客Bの教材のみ含み、顧客A・Cの教材を含まない",
+      "ok": true
+    },
+    {
+      "name": "Dialogue(type=3) 生徒A向けRPC結果が生徒A本人のRLS閲覧範囲と一致",
+      "ok": true,
+      "detail": "RPC 29件 / 本人 29件"
+    },
+    {
+      "name": "Dialogue(type=3) 生徒B向けRPC結果が生徒B本人のRLS閲覧範囲と一致",
+      "ok": true,
+      "detail": "RPC 29件 / 本人 29件"
+    },
+    {
+      "name": "Dialogue(type=3) 共通公開(content_scope=0)教材はすべて含む",
+      "ok": true,
+      "detail": "共通 28件"
+    },
+    {
+      "name": "Dialogue(type=3) 担当外コーチが呼ぶと空集合",
+      "ok": true,
+      "detail": "0件"
+    },
+    {
+      "name": "Dialogue(type=3) 他生徒(生徒B)が生徒Aを指定して呼ぶと空集合",
+      "ok": true,
+      "detail": "0件"
+    },
+    {
+      "name": "Sprint(type=2) 前提: コーチのRLS上は顧客A/B/C全ての限定公開教材が見える（旧実装の不具合条件）",
+      "ok": true
+    },
+    {
+      "name": "Sprint(type=2) 生徒A向け: 顧客Aの限定公開教材を含む",
+      "ok": true
+    },
+    {
+      "name": "Sprint(type=2) 生徒A向け: 顧客B（他の担当生徒）の限定公開教材を含まない",
+      "ok": true
+    },
+    {
+      "name": "Sprint(type=2) 生徒A向け: 顧客C（コーチ自身）の限定公開教材を含まない",
+      "ok": true
+    },
+    {
+      "name": "Sprint(type=2) 生徒A向け: 非公開(content_scope=9)は顧客Aにアクセス権があっても含まない",
+      "ok": true
+    },
+    {
+      "name": "Sprint(type=2) 生徒B向け: 顧客Bの教材のみ含み、顧客A・Cの教材を含まない",
+      "ok": true
+    },
+    {
+      "name": "Sprint(type=2) 生徒A向けRPC結果が生徒A本人のRLS閲覧範囲と一致",
+      "ok": true,
+      "detail": "RPC 1件 / 本人 1件"
+    },
+    {
+      "name": "Sprint(type=2) 生徒B向けRPC結果が生徒B本人のRLS閲覧範囲と一致",
+      "ok": true,
+      "detail": "RPC 1件 / 本人 1件"
+    },
+    {
+      "name": "Sprint(type=2) 共通公開(content_scope=0)教材はすべて含む",
+      "ok": true,
+      "detail": "共通 0件"
+    },
+    {
+      "name": "Sprint(type=2) 担当外コーチが呼ぶと空集合",
+      "ok": true,
+      "detail": "0件"
+    },
+    {
+      "name": "Sprint(type=2) 他生徒(生徒B)が生徒Aを指定して呼ぶと空集合",
+      "ok": true,
+      "detail": "0件"
+    },
+    {
+      "name": "anonロールはRPCを実行できない",
+      "ok": true,
+      "detail": "42501"
+    }
+  ]
+}
