@@ -61,7 +61,7 @@ interface Props {
  * 誤操作にも繋がりやすいため、別セクションに分離している。Trainingは種類が増える前提
  * （Live SprintとDialog Practice）でカードグリッドの形にしてある。Dialog Practiceカードは
  * 生徒概要画面のパネル（DialoguePracticeCard）と同一コンポーネントを共有しており、
- * このハブでは`liveSessionId`を渡すことで、スライドリンクを開いた事実をこのセッションに
+ * このハブでは`liveSessionId`を渡すことで、教材リンクを開いた事実をこのセッションに
  * 紐づけて記録する（セッション結果画面のDialog Practice History参照）。
  *
  * このセッション自身の実施記録（入退室ログ・チャット履歴・スプリント履歴）はセッション結果画面

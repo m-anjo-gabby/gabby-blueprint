@@ -1470,11 +1470,15 @@
       "typeFilterAllOption": "All Types",
       "totalCount": "<styled>{count}</styled> total",
       "noData": "No content data found.",
-      "editorButtonTitle": "Launch editor"
+      "editorButton": {
+        "word": "Edit Words",
+        "sprint": "Edit Questions",
+        "dialogue": "Edit Sessions"
+      }
     },
     "formDialog": {
       "createButton": "Add New",
-      "editButton": "Edit",
+      "editButton": "Edit details",
       "confirmTitle": "Confirm Details",
       "createTitle": "Register New Content",
       "editTitle": "Edit Content Information",
@@ -1499,8 +1503,7 @@
       "dialogueCategoryUnselected": "Not selected",
       "dialogueCategoryPlaceholder": "Please select",
       "dialogueCategoryNoneOption": "Please select",
-      "dialogueCategoryDescription": "Beginner/Intermediate/Advanced sets are published commonly; Corpus sets are published to specific clients only.",
-      "scopeAutoFromDialogueCategoryHint": "Automatically set based on the selected set category",
+      "dialogueCategoryDescription": "Used to group sets (tabs) on the coach material selection screen. Can be set independently of the visibility scope.",
       "cefrLabel": "CEFR Level",
       "cefrUnset": "Not set",
       "cefrNoneOption": "None",
@@ -1823,8 +1826,8 @@
         },
         "sessionList": {
           "emptyState": "No sessions registered",
-          "coachSlidesLabel": "Coach Slides",
-          "studentSlidesLabel": "Student Slides",
+          "coachSlidesLabel": "Coach Materials",
+          "studentSlidesLabel": "Student Materials",
           "deleted": "Session deleted",
           "deleteFailed": "Failed to delete",
           "deleteDialogTitle": "Delete this session?",
@@ -1837,8 +1840,8 @@
           "createTitle": "Register New Session",
           "editTitle": "Edit Session",
           "sessionNoLabel": "Session No.",
-          "coachSlidesSectionLabel": "Coach Slides",
-          "studentSlidesSectionLabel": "Student Slides",
+          "coachSlidesSectionLabel": "Coach Materials",
+          "studentSlidesSectionLabel": "Student Materials",
           "titlePlaceholder": "Display title",
           "linkPlaceholder": "https://docs.google.com/presentation/...",
           "adminNotesLabel": "Production / Operations Notes (admin only)",

@@ -66,7 +66,7 @@ export interface DialogueContentSummary {
   content_name_en: string | null;
   category_id: DialogueCategory;
   session_count: number;
-  /** アサイン前に教材内容を確認できるよう、Session 1のコーチ用スライドリンクを併せて返す */
+  /** アサイン前に教材内容を確認できるよう、Session 1のコーチ用教材リンクを併せて返す */
   session1_coach_slides_link: string | null;
 }
 
@@ -111,7 +111,7 @@ export interface UpdateDialogueSessionProgressInput {
 }
 
 /**
- * ライブセッション中にコーチが教材のスライドリンクを開いた事実を記録する入力ペイロード
+ * ライブセッション中にコーチが教材の教材リンクを開いた事実を記録する入力ペイロード
  * (com_t_session_dialogue_log)。完了を意味するものではなく、オープンイベントの記録のみ。
  */
 export interface LogSessionDialogueOpenInput {

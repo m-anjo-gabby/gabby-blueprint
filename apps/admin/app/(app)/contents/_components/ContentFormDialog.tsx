@@ -167,7 +167,6 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
   const { isSubmitting } = form.formState;
   const currentContentType = form.watch('content_type');
   const currentSprintType = form.watch('sprint_type');
-  const currentDialogueCategory = form.watch('dialogue_category');
 
   // 種別が変わったときにスプリント用の値をリセット・制御するためのEffect
   useEffect(() => {
@@ -178,15 +177,6 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       form.setValue('dialogue_category', 'none');
     }
   }, [currentContentType, form]);
-
-  // ダイアログプラクティスは、セット分類ID(1-3:Beginner/Intermediate/Advanced ⇔ 4:Corpus)に
-  // 公開範囲(共通/限定)が一意に対応するため、分類の選択に応じて自動でセットする
-  // （DB側のchk_com_m_contents_category_scope制約と整合させるため）
-  useEffect(() => {
-    if (currentContentType !== '3') return;
-    if (!currentDialogueCategory || currentDialogueCategory === 'none') return;
-    form.setValue('content_scope', currentDialogueCategory === '4' ? '1' : '0');
-  }, [currentContentType, currentDialogueCategory, form]);
 
   const onSubmit = async (values: ContentFormValues) => {
     setServerError(null);
@@ -287,13 +277,19 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
             <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
-            <Edit size={14} /> {t('editButton')}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+            title={t('editButton')}
+            aria-label={t('editButton')}
+          >
+            <Edit size={14} />
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
+      <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
         <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
@@ -313,34 +309,36 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                 <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-xl font-medium">{serverError}</div>
               )}
 
-              {/* 教材名称 */}
-              <FormField control={form.control} name="content_name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
-                  ) : (
-                    <FormControl><Input {...field} placeholder={t('namePlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <div className="grid grid-cols-2 gap-4">
+                {/* 教材名称 */}
+                <FormField control={form.control} name="content_name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameLabel')}</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
+                    ) : (
+                      <FormControl><Input {...field} placeholder={t('namePlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
-              {/* 教材名称（英語） */}
-              <FormField control={form.control} name="content_name_en" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameEnLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value || '-'}</div>
-                  ) : (
-                    <FormControl><Input {...field} placeholder={t('namePlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
-                  )}
-                  <FormDescription className="text-[11px] text-slate-400">
-                    {t('nameEnDescription')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )} />
+                {/* 教材名称（英語） */}
+                <FormField control={form.control} name="content_name_en" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameEnLabel')}</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value || '-'}</div>
+                    ) : (
+                      <FormControl><Input {...field} placeholder={t('namePlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
+                    )}
+                    <FormDescription className="text-[11px] text-slate-400">
+                      {t('nameEnDescription')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 {/* 種別 */}
@@ -364,11 +362,11 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                   </FormItem>
                 )} />
 
-                {/* 公開範囲（ダイアログプラクティスはセット分類から自動決定するため編集不可） */}
+                {/* 公開範囲 */}
                 <FormField control={form.control} name="content_scope" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('scopeLabel')}</FormLabel>
-                    {isConfirming || currentContentType === '3' ? (
+                    {isConfirming ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
                         {CONTENT_SCOPES[Number(field.value) as ContentScope]?.label}
                       </div>
@@ -381,11 +379,6 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                           ))}
                         </SelectContent>
                       </Select>
-                    )}
-                    {currentContentType === '3' && !isConfirming && (
-                      <FormDescription className="text-[11px] text-slate-400">
-                        {t('scopeAutoFromDialogueCategoryHint')}
-                      </FormDescription>
                     )}
                   </FormItem>
                 )} />

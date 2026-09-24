@@ -12,7 +12,7 @@ interface Props {
   session: DialogueAssignmentSessionView;
   onProgressChange: (input: UpdateDialogueSessionProgressInput) => Promise<void>;
   /**
-   * ライブセッション中の文脈（セッションハブ）でのみ渡す。スライドリンクをクリックした時点の
+   * ライブセッション中の文脈（セッションハブ）でのみ渡す。教材リンクをクリックした時点の
    * 「オープンの事実」を記録するためのフィードバック用フック（完了とは別概念）。
    */
   onSlidesOpen?: () => void;
@@ -97,7 +97,7 @@ export function DialogueSessionRow({ assignmentId, session, onProgressChange, on
               className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium"
             >
               <ExternalLink size={11} />
-              Coach Slides
+              Coach Materials
             </a>
           )}
           {session.student_slides_link && (
@@ -109,7 +109,7 @@ export function DialogueSessionRow({ assignmentId, session, onProgressChange, on
               className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium"
             >
               <ExternalLink size={11} />
-              Student Slides
+              Student Materials
             </a>
           )}
           {session.is_completed && session.completed_date && (

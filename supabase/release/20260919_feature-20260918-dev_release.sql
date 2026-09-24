@@ -1216,3 +1216,23 @@ REVOKE EXECUTE ON FUNCTION public.admin_adjust_schedule_target_sessions(uuid, sm
 GRANT EXECUTE ON FUNCTION public.admin_adjust_schedule_target_sessions(uuid, smallint, text) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】教材管理: ダイアログプラクティスの公開範囲とセット分類の分離
+-- 追加日: 2026-09-24
+--
+-- 【内容】
+--   com_m_contents.category_id（セット分類）と content_scope（公開範囲）を一意に対応させて
+--   いた chk_com_m_contents_category_scope 制約を削除し、公開範囲をセット分類とは独立して
+--   設定できるようにする（例: Beginnerセットを限定公開、Corpusセットを共通公開、
+--   作成途中のセットを非公開にする等）。
+--
+-- 対応ファイル: DDL/table/com_m_contents.sql（ダイアログプラクティス対応パッチ節）
+-- =========================================================================
+
+BEGIN;
+
+ALTER TABLE public.com_m_contents
+  DROP CONSTRAINT IF EXISTS chk_com_m_contents_category_scope;
+
+COMMIT;

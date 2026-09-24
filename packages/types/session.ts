@@ -286,7 +286,7 @@ export interface SessionSprintSummaryEntry {
 
 /**
  * com_t_session_dialogue_log 1行分（このセッション中にコーチがダイアログプラクティス教材の
- * スライドリンクを開いた履歴。セッション結果画面のDialog Practice Historyで使用）。
+ * 教材リンクを開いた履歴。セッション結果画面のDialog Practice Historyで使用）。
  * あくまで「開いた」事実の記録であり、完了したことを意味しない。
  */
 export interface SessionDialogueLogEntry {

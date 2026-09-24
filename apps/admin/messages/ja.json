@@ -1470,11 +1470,15 @@
       "typeFilterAllOption": "すべての種別",
       "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "教材データが見つかりませんでした。",
-      "editorButtonTitle": "エディタを起動"
+      "editorButton": {
+        "word": "単語を編集",
+        "sprint": "問題を編集",
+        "dialogue": "セッションを編集"
+      }
     },
     "formDialog": {
       "createButton": "新規登録",
-      "editButton": "編集",
+      "editButton": "基本情報を編集",
       "confirmTitle": "内容の確認",
       "createTitle": "新規教材の登録",
       "editTitle": "教材情報の編集",
@@ -1499,8 +1503,7 @@
       "dialogueCategoryUnselected": "未選択",
       "dialogueCategoryPlaceholder": "選択してください",
       "dialogueCategoryNoneOption": "選択してください",
-      "dialogueCategoryDescription": "Beginner/Intermediate/Advancedは共通公開、Corpusはクライアント限定公開の教材になります。",
-      "scopeAutoFromDialogueCategoryHint": "セット分類の選択に応じて自動設定されます",
+      "dialogueCategoryDescription": "コーチ向け教材選択画面での分類（タブ）に使用します。公開範囲とは独立して設定できます。",
       "cefrLabel": "CEFR レベル",
       "cefrUnset": "未設定",
       "cefrNoneOption": "選択なし",
@@ -1823,8 +1826,8 @@
         },
         "sessionList": {
           "emptyState": "セッションが登録されていません",
-          "coachSlidesLabel": "コーチ用スライド",
-          "studentSlidesLabel": "生徒用スライド",
+          "coachSlidesLabel": "コーチ用教材",
+          "studentSlidesLabel": "生徒用教材",
           "deleted": "セッションを削除しました",
           "deleteFailed": "削除に失敗しました",
           "deleteDialogTitle": "セッションを削除しますか？",
@@ -1837,8 +1840,8 @@
           "createTitle": "新規セッションの登録",
           "editTitle": "セッションの編集",
           "sessionNoLabel": "セッション番号",
-          "coachSlidesSectionLabel": "コーチ用スライド",
-          "studentSlidesSectionLabel": "生徒用スライド",
+          "coachSlidesSectionLabel": "コーチ用教材",
+          "studentSlidesSectionLabel": "生徒用教材",
           "titlePlaceholder": "表示タイトル",
           "linkPlaceholder": "https://docs.google.com/presentation/...",
           "adminNotesLabel": "教材制作・運用メモ（管理者向け）",

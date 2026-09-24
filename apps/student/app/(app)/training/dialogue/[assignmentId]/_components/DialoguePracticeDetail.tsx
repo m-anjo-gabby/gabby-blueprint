@@ -14,7 +14,7 @@ interface Props {
 const NAV_BUTTON_CLASS =
   "h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 active:scale-95 transition-all cursor-pointer shrink-0";
 
-// 生徒用：割当済みダイアログ教材の進捗確認・スライドアクセス専用画面（読み取り専用）
+// 生徒用：割当済みダイアログ教材の進捗確認・教材アクセス専用画面（読み取り専用）
 export function DialoguePracticeDetail({ assignment }: Props) {
   const progressPercent =
     assignment.total_session_count > 0

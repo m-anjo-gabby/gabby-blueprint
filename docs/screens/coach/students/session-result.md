@@ -61,7 +61,7 @@
 
 **Dialog Practice Historyは「開いた」事実の記録であり、「完了した」ことを保証するものではない。**
 ダイアログプラクティス教材はGoogle Slidesを別タブで開く方式のため、実際に何を行ったかをアプリ側
-から検知することはできない。そのため、セッションハブでコーチがCoach Slides/Student Slidesリンクを
+から検知することはできない。そのため、セッションハブでコーチがCoach Materials/Student Materialsリンクを
 クリックした時点をそのまま1行として記録しており（`com_t_session_dialogue_log`）、誤って別教材を
 開いた・同じ教材を開き直した場合も重複排除せずそのまま複数行として残る。教材が「完了したか」は
 Dialogue Practiceカード側の進捗（`com_t_dialogue_session_progress`）が別途管理しており、本履歴とは

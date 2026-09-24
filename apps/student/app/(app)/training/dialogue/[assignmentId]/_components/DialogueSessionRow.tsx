@@ -6,7 +6,7 @@ interface Props {
   session: DialogueAssignmentSessionView;
 }
 
-// 生徒用：進捗表示とスライドリンクのみの読み取り専用行（完了操作・コーチメモはコーチ側の機能のため表示しない）
+// 生徒用：進捗表示と教材リンクのみの読み取り専用行（完了操作・コーチメモはコーチ側の機能のため表示しない）
 export function DialogueSessionRow({ session }: Props) {
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 space-y-2">

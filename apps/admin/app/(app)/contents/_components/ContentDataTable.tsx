@@ -37,19 +37,39 @@ import {
   EyeOff,
   HelpCircle,
   Building2,
-  Pencil
+  Pencil,
+  ArrowRight
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Content, CONTENT_TYPES, CONTENT_SCOPES } from "@gabby/types/content";
+import { Content, ContentType, CONTENT_TYPES, CONTENT_SCOPES } from "@gabby/types/content";
 import { ContentFormDialog } from "./ContentFormDialog";
 import Link from "next/link";
 import { ContentTagDialog } from "./ContentTagDialog";
 import { ContentAccessDialog } from "./ContentAccessDialog";
+import { saveContentsListQuery } from "../_lib/listQuery";
 
 interface ContentDataTableProps {
   data: Content[];
   pageCount: number;
   totalCount: number;
+}
+
+/**
+ * 種別ごとのエディタ導線設定（ビデオ(1)はエディタ未実装のため定義しない）。
+ * 色・アイコンは種別バッジと揃え、どのエディタへ遷移するかを視覚的に対応付ける。
+ */
+const EDITOR_CONFIG: Partial<Record<ContentType, { labelKey: "word" | "sprint" | "dialogue"; icon: React.ReactNode; className: string }>> = {
+  0: { labelKey: "word", icon: <MessageSquare size={13} />, className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300" },
+  2: { labelKey: "sprint", icon: <Layers size={13} />, className: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300" },
+  3: { labelKey: "dialogue", icon: <MessagesSquare size={13} />, className: "bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:border-cyan-300" },
+};
+
+function getEditorHref(content: Content): string {
+  if (content.content_type === 2) {
+    const questionType = content.metadata?.question_type;
+    return `/contents/${content.content_id}?type=${typeof questionType === "string" ? questionType : "0"}`;
+  }
+  return `/contents/${content.content_id}`;
 }
 
 export function ContentDataTable({
@@ -66,6 +86,12 @@ export function ContentDataTable({
   const currentPage = Number(searchParams.get("page")) || 1;
   const currentType = searchParams.get("type") || "all";
 
+  // エディタから戻った際に同じ条件で一覧を表示できるよう、現在の条件を保存する
+  const queryString = searchParams.toString();
+  React.useEffect(() => {
+    saveContentsListQuery(queryString);
+  }, [queryString]);
+
   // --- カラム定義 ---
   const columns = React.useMemo<ColumnDef<Content>[]>(() => [
     {
@@ -73,9 +99,19 @@ export function ContentDataTable({
       header: t('nameHeader'),
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5 py-1">
-          <span className="text-sm font-bold text-slate-900 leading-tight">
-            {row.original.content_name}
-          </span>
+          {/* エディタがある種別は教材名からも遷移できるようにする（操作列ボタンの補助導線） */}
+          {EDITOR_CONFIG[row.original.content_type] ? (
+            <Link
+              href={getEditorHref(row.original)}
+              className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-indigo-600 hover:underline underline-offset-2 transition-colors"
+            >
+              {row.original.content_name}
+            </Link>
+          ) : (
+            <span className="text-sm font-bold text-slate-900 leading-tight">
+              {row.original.content_name}
+            </span>
+          )}
           {row.original.content_name_en && (
             <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]">
               {row.original.content_name_en}
@@ -212,31 +248,30 @@ export function ContentDataTable({
     {
       id: "actions",
       header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('actionsHeader')}</div>,
-      cell: ({ row }) => (
-        <div className="flex justify-end items-center gap-2 px-2">
-          {/* 教材基本情報の編集モーダル */}
-          <ContentFormDialog mode="edit" initialData={row.original} />
+      cell: ({ row }) => {
+        const editor = EDITOR_CONFIG[row.original.content_type];
+        return (
+          <div className="flex justify-end items-center gap-3 px-2">
+            {/* 教材基本情報の編集モーダル */}
+            <ContentFormDialog mode="edit" initialData={row.original} />
 
-          {/* 詳細（単語エディタ等）画面へ */}
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-            title={t('editorButtonTitle')}
-          >
-            <Link 
-              href={
-                row.original.content_type === 2 
-                  ? `/contents/${row.original.content_id}?type=${(row.original.metadata as any)?.question_type || '0'}`
-                  : `/contents/${row.original.content_id}`
-              }
-            >
-              <ChevronRight size={18} />
-            </Link>
-          </Button>
-        </div>
-      ),
+            {/* 中身（単語・問題・セッション）のエディタ画面へ。未対応種別は列を揃えるため空枠を置く */}
+            {editor ? (
+              <Button variant="outline" size="sm" asChild className={`h-8 min-w-38 justify-between gap-2 px-3 font-bold text-xs shadow-sm transition-colors ${editor.className}`}>
+                <Link href={getEditorHref(row.original)}>
+                  <span className="flex items-center gap-1.5">
+                    {editor.icon}
+                    {t(`editorButton.${editor.labelKey}`)}
+                  </span>
+                  <ArrowRight size={13} />
+                </Link>
+              </Button>
+            ) : (
+              <div className="min-w-38" aria-hidden />
+            )}
+          </div>
+        );
+      },
     },
   ], [t]);
 

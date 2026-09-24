@@ -104,8 +104,8 @@ export async function updateDialogueSessionProgress(
 }
 
 /**
- * Records that a coach opened a Dialogue Practice material's slide link during a live session.
- * Best-effort logging only — callers should not block the slide link on this.
+ * Records that a coach opened a Dialogue Practice material's material link during a live session.
+ * Best-effort logging only — callers should not block the material link on this.
  */
 export async function logSessionDialogueOpen(
   input: LogSessionDialogueOpenInput

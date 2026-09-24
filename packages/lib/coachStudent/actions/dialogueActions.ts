@@ -467,7 +467,7 @@ export async function updateDialogueSessionProgressCore(
 }
 
 /**
- * セッションハブでコーチが教材のスライドリンクを開いた事実を1行記録する（com_t_session_dialogue_log）。
+ * セッションハブでコーチが教材の教材リンクを開いた事実を1行記録する（com_t_session_dialogue_log）。
  * Google Slidesを別タブで開く方式のため実際に何を行ったかまでは検知できず、あくまで
  * 「このセッション中にこの教材を開いた」というオープンイベントの記録に留める（完了状態は
  * updateDialogueSessionProgressCoreが別途管理する）。誤クリック・開き直し等も含めてそのまま

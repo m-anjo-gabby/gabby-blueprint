@@ -22,7 +22,7 @@
 
 1. **カテゴリフィルタ（カプセル型タブ）＋「Assign Set」ボタン** — 画面上部
 2. **割当済みセットのカード一覧** — セットごとに1枚のカード。各カードは展開/折りたたみ可能で、
-   展開するとセット内の全セッション（Complete/Cancelボタン・スライドリンク・メモ）が並ぶ
+   展開するとセット内の全セッション（Complete/Cancelボタン・教材リンク・メモ）が並ぶ
 
 ## カテゴリフィルタ・Assign Set
 
@@ -36,7 +36,7 @@
 - カテゴリタブ（Beginner / Intermediate / Advanced / Corpus）で教材セットを絞り込む。
   一覧エリアは常に同じ高さを確保しており、カテゴリごとの件数差でダイアログの高さがガタつかない
   （4件しか無いカテゴリでも、20件あるカテゴリと同じ枠の高さで、余白またはスクロールになる）
-- 各行に教材名（省略せず折り返し表示）・セッション数・（Session 1のコーチ用スライドリンクが
+- 各行に教材名（省略せず折り返し表示）・セッション数・（Session 1のコーチ用教材リンクが
   登録されている場合のみ）「Session 1」参考リンク・「Assign」ボタンを表示。参考リンクは
   新しいタブでGoogle Slidesを開き、割り当てる前に教材内容を確認できる
   （Session 1にリンクが無い教材では表示されない）
@@ -62,7 +62,7 @@
 |---|---|---|
 | 完了バッジ | 完了時のみ「Session n」の隣に緑の「Completed」バッジを表示（未完了時はバッジ無し） | 表示のみ |
 | 「Complete」／「Cancel」ボタン | 未完了時は黒背景の「Complete」、完了時は枠線のみの「Cancel」（取消アイコン付き）に切り替わる | クリックで完了状態を即時トグルする。完了にした瞬間の日付が「Completed yyyy-mm-dd」として記録され、取消すると消える。**この操作はメモの未保存の下書きを巻き込まない**（メモは最後に保存された内容のまま維持される） |
-| Coach Slides / Student Slides リンク | リンクが登録されているセッションのみ | 新しいタブでGoogle Slidesを開く |
+| Coach Materials / Student Materials リンク | リンクが登録されているセッションのみ | 新しいタブでGoogle Slidesを開く |
 | メモ欄（テキストエリア） | 常時 | 自由入力。**入力しただけでは保存されない** |
 | 「Save Note」ボタン | 常時表示だが、メモ内容が保存済みの値と同じ場合はdisabled | クリックで明示的に保存する（自動保存・blur時保存は行わない） |
 
@@ -95,8 +95,8 @@
 - 割当解除の「進捗があるとdisabled」は、UI側の制御に加えてサーバーアクション側でも同条件を
   再検証している（直接呼び出し・競合更新への防御）。
 - 教材選択ダイアログの「Session 1」参考リンクは、`getAvailableDialogueContentsCore`が
-  `com_m_dialogue_session`から`session_no=1`のコーチ用スライドリンクを教材ごとに1件だけ
-  集計して返している（`DialogueContentSummary.session1_coach_slides_link`）。生徒用スライドは
+  `com_m_dialogue_session`から`session_no=1`のコーチ用教材リンクを教材ごとに1件だけ
+  集計して返している（`DialogueContentSummary.session1_coach_slides_link`）。生徒用教材は
   対象外。
 
 ## 実装参照（エンジニア向け）
@@ -108,7 +108,7 @@
 - `apps/coach/app/(app)/students/[id]/_components/AssignDialogueDialog.tsx`（生徒概要カードと共有）
 - `apps/coach/app/(app)/students/[id]/_components/DialoguePracticeCard.tsx`（`DialogueSessionRow`を
   このディレクトリ外から直接importして共有している。生徒概要画面（`manageHref`指定、Manageリンクあり）
-  と[セッションハブ](session-detail.md)（`liveSessionId`指定、Manageリンク無し・スライドオープンを
+  と[セッションハブ](session-detail.md)（`liveSessionId`指定、Manageリンク無し・教材オープンを
   ログする）の2箇所から使われる汎用コンポーネント）
 - `apps/coach/app/(app)/students/[id]/_hooks/useDialoguePracticeAssignments.ts`
   （割当一覧の状態管理・更新ロジック。管理画面・生徒概要カード・セッションハブで共有）
@@ -120,4 +120,4 @@
   `packages/lib/coachStudent/actions/dialogueActions.ts`）
 - DB: `com_m_contents`（`content_type=3`）, `com_m_dialogue_session`,
   `com_t_dialogue_assignment`, `com_t_dialogue_session_progress`, `com_t_session_dialogue_log`
-  （セッションハブでのスライドオープン履歴。セッション結果画面のDialog Practice History用）
+  （セッションハブでの教材オープン履歴。セッション結果画面のDialog Practice History用）
