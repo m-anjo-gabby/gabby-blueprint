@@ -18,7 +18,7 @@ export default async function DialoguePracticePage({
   }
 
   const [availableContents, assignments] = await Promise.all([
-    getAvailableDialogueContents(),
+    getAvailableDialogueContents(id),
     getStudentDialogueAssignments(id),
   ]);
 

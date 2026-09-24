@@ -32,9 +32,10 @@ const LESSON_SPRINT_ERROR_MESSAGES_EN: Record<CoachStudentErrorCode, string> = {
 
 /**
  * Fetches the list of sprint contents a coach can pick from when starting a Lesson Sprint
+ * for the given student (only contents published to the student's tenant)
  */
-export async function getAvailableSprintContents(): Promise<LessonSprintContentSummary[]> {
-  const result = await getAvailableSprintContentsCore();
+export async function getAvailableSprintContents(studentId: string): Promise<LessonSprintContentSummary[]> {
+  const result = await getAvailableSprintContentsCore(studentId);
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('coach:get_lesson_sprint_contents_failed', result.errorCode, ctx);

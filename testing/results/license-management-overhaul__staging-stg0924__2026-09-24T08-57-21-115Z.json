@@ -1,0 +1,44 @@
+{
+  "scenario": "license-management-overhaul.feature",
+  "env": "staging",
+  "tag": "stg0924",
+  "executedAt": "2026-09-24T08:57:21.115Z",
+  "gitCommit": "5e4b1b93",
+  "gitBranch": "feature/20260924-dev",
+  "totalChecks": 7,
+  "passed": 7,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "シナリオ1: 次タームライセンス(期間重複なし)のINSERTが成功する",
+      "ok": true
+    },
+    {
+      "name": "シナリオ2: 重複期間の有効ライセンスのINSERTが排他制約(23P01)で拒否される",
+      "ok": true,
+      "detail": "23P01 conflicting key value violates exclusion constraint \"excl_user_license_active_overlap\""
+    },
+    {
+      "name": "シナリオ3: UPDATEでA1と重なる期間への変更が排他制約(23P01)で拒否される",
+      "ok": true,
+      "detail": "23P01 conflicting key value violates exclusion constraint \"excl_user_license_active_overlap\""
+    },
+    {
+      "name": "シナリオ3補足: 拒否されたUPDATEは実際にロールバックされ、A2の期間は変更されていない",
+      "ok": true
+    },
+    {
+      "name": "シナリオ4-前提: A1をstatus=0に無効化できる",
+      "ok": true
+    },
+    {
+      "name": "シナリオ4: 無効化済みライセンスと同じ期間でも新規の有効ライセンスをINSERTできる(status=1のみが排他対象)",
+      "ok": true
+    },
+    {
+      "name": "シナリオ5: 生徒Aと完全同一期間でも、排他制約(EXCLUDE)はuser_id違いの生徒BのINSERTを妨げない",
+      "ok": true
+    }
+  ]
+}

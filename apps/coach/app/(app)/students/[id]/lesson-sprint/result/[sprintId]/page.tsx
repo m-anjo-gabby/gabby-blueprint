@@ -14,7 +14,7 @@ export default async function LessonSprintResultPage({
   const { session_id: sessionId, back, back_label: backLabel } = await searchParams;
   const [result, contents, overview] = await Promise.all([
     getLessonSprintResult(sprintId),
-    getAvailableSprintContents(),
+    getAvailableSprintContents(id),
     getStudentOverview(id),
   ]);
 

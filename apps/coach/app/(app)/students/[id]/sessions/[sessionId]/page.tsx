@@ -28,7 +28,7 @@ export default async function SessionHubPage({
       getLessonSprintHistory(id),
       getSelfTrainingWeekSummary(id),
       getStudentDialogueAssignments(id),
-      getAvailableDialogueContents(),
+      getAvailableDialogueContents(id),
     ]);
 
   if (!sessionResult.success) {

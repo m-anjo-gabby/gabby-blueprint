@@ -41,8 +41,10 @@
   新しいタブでGoogle Slidesを開き、割り当てる前に教材内容を確認できる
   （Session 1にリンクが無い教材では表示されない）
 - **この生徒に既に割り当て済みの教材は一覧から除外される**
-- Corpusタブは、コーチが担当する生徒のテナントに紐づく専用教材のみが表示される
-  （テナントに紐づく専用教材が無ければ「No unassigned sets in this category.」）
+- 一覧に出るのは**この生徒のテナントで公開されている教材のみ**（共通公開の教材と、生徒の
+  テナントにアクセス権がある限定公開の教材。生徒本人が生徒アプリで閲覧できる範囲と同じ）。
+  コーチが担当する他の生徒のテナント向けの教材や、コーチ自身のテナント向けの教材は表示されない
+  （該当カテゴリに割当可能な教材が無ければ「No unassigned sets in this category.」）
 - 「Assign」を押すと即座に割り当てられ、ダイアログが閉じてカード一覧に反映される
   （確認ダイアログは無い＝割当は取り消しが容易な操作という位置づけ。ただし進捗が付いた後の
   解除には制限がある。下記「割当済みセットカード」参照）
@@ -87,7 +89,12 @@
 
 - 教材マスタは`com_m_contents`（`content_type=3`）に統合されており、`category_id`
   （1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）で汎用/コーパスを問わず一律に扱う。
-  Corpus（`content_scope=1`）の可視範囲は`com_m_contents`側のRLSに委ねている。
+  公開範囲（`content_scope` 0:共通 / 1:限定公開 / 9:非公開）はセット分類とは独立した軸。
+- 教材選択の候補は`com_m_contents`のRLSに委ねず、RPC`get_student_available_content_ids`
+  （SECURITY DEFINER）で対象生徒単位に絞り込む。RLSは「コーチが担当した全生徒のテナント」の
+  限定公開教材を可視とするため、RLS任せでは他の生徒のテナント向け教材まで候補に出てしまう
+  （2026-09-24修正）。割当（`assignDialogueContentCore`）でもサーバー側で同じ範囲を再検証し、
+  範囲外の教材は`forbidden`として拒否する。
 - 割当（`com_t_dialogue_assignment`）は論理削除方式。一度解除した教材を再度Assignした場合は、
   同じ行を再利用する（`assigned_by_coach_id`・`assigned_date`は再割当時点の値に更新される）。
 - セッション進捗（`com_t_dialogue_session_progress`）は、進捗が発生した行のみ作成される

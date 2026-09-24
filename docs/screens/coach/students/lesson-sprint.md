@@ -34,7 +34,7 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | 戻るボタン（左上） | 常時 | `session_id`があればセッションハブへ、無ければ生徒概要へ戻る |
-| Contentセレクト | 利用可能な教材一覧から選択 | 選択した教材に応じて、対応していない種別（Question Type）はボタンが無効化（「Unavailable」）される。教材切替時、選択中の種別が非対応なら最初にサポートされる種別＋レベルへ自動的にリセットされる |
+| Contentセレクト | この生徒のテナントで公開されている教材（共通公開＋生徒のテナントにアクセス権がある限定公開）から選択。他の担当生徒・コーチ自身のテナント向けの教材は出ない | 選択した教材に応じて、対応していない種別（Question Type）はボタンが無効化（「Unavailable」）される。教材切替時、選択中の種別が非対応なら最初にサポートされる種別＋レベルへ自動的にリセットされる |
 | Question Type（Speed/Structure/Builders/Mastery） | コーンテンツに応じて選択可否が変わる | 選択すると推奨制限時間（Recommended）も連動して変わる |
 | Levelボタン群 | 種別にレベル設定がある教材のみ表示。無い教材は「This content has no level setting」 | 選択したレベルで開始する |
 | Time Limitボタン群 | 選択肢から選ぶ。種別の推奨値には「Recommended」表示 | 選択した秒数がPlayer画面のタイマーに反映される |
@@ -64,7 +64,7 @@ Complete」の完了サマリー（回答数・平均スコア）がオーバー
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
-| 利用可能な教材が無い | 「No sprint content available」 | 教材コンテンツが1件も登録されていない場合 |
+| 利用可能な教材が無い | 「No sprint content available」 | この生徒のテナントで公開されているスプリント教材が1件も無い場合 |
 | 「Repeat Same Settings」経由 | Setup画面を経由せず直接Player画面が開く | Live Sprint結果画面から同一設定で再実施した場合 |
 
 ## 実装参照（エンジニア向け）
@@ -80,3 +80,6 @@ Complete」の完了サマリー（回答数・平均スコア）がオーバー
 - `apps/coach/app/(app)/students/[id]/lesson-sprint/_hooks/useLessonSprintTimers.ts`
 - サーバーアクション: `getAvailableSprintContents`, `getLessonSprintQuestions`,
   `createLessonSprintResult`（`apps/coach/actions/lessonSprintAction.ts`）
+- 教材候補は`com_m_contents`のRLSに委ねず、RPC`get_student_available_content_ids`で対象生徒単位に
+  絞り込む（RLSはコーチが担当した全生徒のテナントの限定公開教材を可視とするため。2026-09-24修正）。
+  結果登録（`createLessonSprintResultCore`）でも同じ範囲をサーバー側で再検証し、範囲外は`forbidden`。

@@ -68,3 +68,6 @@ Feature: 契約ユーザーライセンス管理の見直し データ主体テ�
 #  特有の制約）。この環境にはPlaywright/chromium-cliが導入されておらず、ブラウザでの
 #  実UI操作（成功トースト表示・案内文表示等）までは確認できていない。詳細は
 #  TEST-JUDGEMENT-GUIDE.md KJ-2026-0923-02を参照。テストデータ(tag=uicheck01)は削除済み。
+#
+# staging検証: testing/results/license-management-overhaul__staging-stg0924__2026-09-24T08-57-21-115Z.json
+# (7/7 OK。tag=stg0924。テストデータは cleanup.ts で削除済み)

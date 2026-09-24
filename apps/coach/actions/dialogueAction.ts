@@ -29,10 +29,11 @@ const DIALOGUE_ERROR_MESSAGES_EN: Record<CoachStudentErrorCode, string> = {
 };
 
 /**
- * Fetches the list of Dialogue Practice sets a coach can pick from when assigning to a student
+ * Fetches the list of Dialogue Practice sets a coach can assign to the given student
+ * (only sets published to the student's tenant)
  */
-export async function getAvailableDialogueContents(): Promise<DialogueContentSummary[]> {
-  const result = await getAvailableDialogueContentsCore();
+export async function getAvailableDialogueContents(studentId: string): Promise<DialogueContentSummary[]> {
+  const result = await getAvailableDialogueContentsCore(studentId);
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('coach:get_dialogue_contents_failed', result.errorCode, ctx);

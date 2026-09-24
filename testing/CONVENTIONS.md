@@ -42,7 +42,7 @@ testing/
 
 - **業務ロジックRPC・RLS配下のテーブル操作**は、`testing/helpers/auth.ts` の `signInAsRole(email, password)` で取得した、実際にサインインしたロールのクライアントを使用すること。
 - **`createAdminClient()`（service_role）はテストデータの初期投入・後始末専用**とし、業務ロジックRPCの実行には使わないこと。service_roleでは `auth.uid()` が `NULL` になり、「本人 or admin」等の認可分岐を誤って通過する（CLAUDE.md 6章）。
-- QAアカウントの共通パスワードなど機微情報は `.feature` ファイルやコードに直書きせず、環境変数経由で参照すること（例: `QA_LIVE_SESSION_TEST_PASSWORD`）。
+- QAアカウントの共通パスワードなど機微情報は `.feature` ファイルやコードに直書きせず、環境変数経由で参照すること（例: `QA_LIVE_SESSION_TEST_PASSWORD`）。テスト専用の値は `testing/.env.local`（Git管理外、雛形 `testing/.env.example`）に置き、`loadTestEnv()` がアプリのenvファイルに続けて読み込む（シェルで渡した値が優先）。アプリ用の `apps/*/.env.*` にはテスト専用の値を追加しない。
 
 ## 4. Preflightチェック（リリース未反映の検出）
 
@@ -56,6 +56,8 @@ testing/
 - staging・devとも本番相当のデータが混在するため、テスト由来データは識別可能な命名にすること（例: 顧客名に `【QAテスト】` 等のprefixを付与）。
 - 一括削除スクリプトはsandbox環境でブロックされる場合があるため、**削除前提ではなく「再実行しても壊れない」冪等設計**を優先する。具体的には、実行前に同一prefix/一意キーの既存データを検出し、あれば再利用・更新、なければ新規作成する。
 - テスト完了後は原則としてテストデータを削除する。ただし、ユーザーが手動確認等のために明示的に「残してほしい」と指示した場合は削除しない（CLAUDE.md 6章）。
+- 使い捨てデータは「メールが`qa-`で始まらない`@gabby-qa-test.example`」「顧客名が`【QAテスト】`で始まる」ことで固定フィクスチャと機械的に区別する（`${TAG}`に`qa`始まりの文字列を使わない。`FIXTURES.md`参照）。シナリオ単位の`cleanup.ts`で消しきれなかった残骸は`features/fixtures/purge-disposable-qa-data.sql`で一括削除し、`features/fixtures/inventory-qa-data.ts`で残存を確認する。
+- 過去タームの契約・学習履歴が必要な検証（期間判定・集計等）は、都度シードで過去データを捏造するより固定フィクスチャの蓄積データを使う（`feature-20260918-dev/monitor-target-period-verify.ts`が実例）。期間は`helpers/fixture-terms.ts`のタームから実行日基準で算出し、日付をハードコードしない。
 
 ## 6. Gherkinシナリオの記述方針
 
