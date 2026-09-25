@@ -131,35 +131,35 @@ export function CalendarBoard() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-4">
+      <div className="bg-white rounded-card border border-line/70 shadow-sm p-4">
         <div className="flex items-center justify-between mb-4">
           <button
             type="button"
             onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted"
             aria-label="前の月"
           >
             <ChevronLeft size={18} />
           </button>
-          <p className="text-sm font-black text-slate-800">{format(currentMonth, 'yyyy年M月')}</p>
+          <p className="text-sm font-bold text-ink">{format(currentMonth, 'yyyy年M月')}</p>
           <button
             type="button"
             onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted"
             aria-label="次の月"
           >
             <ChevronRight size={18} />
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-slate-400 mb-1">
+        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-ink-subtle mb-1">
           {WEEKDAY_LABELS_JA.map((d) => (
             <div key={d}>{d}</div>
           ))}
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-10 text-slate-400">
+          <div className="flex items-center justify-center py-10 text-ink-subtle">
             <Loader2 size={18} className="animate-spin" />
           </div>
         ) : (
@@ -176,7 +176,7 @@ export function CalendarBoard() {
                   className={cn(
                     'min-h-16 sm:min-h-19 rounded-lg flex flex-col items-stretch p-1 gap-0.5 text-left transition-colors relative',
                     !isSameMonth(day, currentMonth) && 'opacity-40',
-                    isSelected ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'hover:bg-slate-100'
+                    isSelected ? 'bg-brand-soft ring-2 ring-brand-500' : 'hover:bg-slate-100'
                   )}
                 >
                   <div className="flex justify-center px-0.5">
@@ -184,10 +184,10 @@ export function CalendarBoard() {
                       className={cn(
                         'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
                         isToday(day)
-                          ? 'bg-indigo-600 text-white'
+                          ? 'bg-brand text-white'
                           : isSameMonth(day, currentMonth) && !isBefore(day, startOfToday())
-                            ? 'text-slate-700'
-                            : 'text-slate-400'
+                            ? 'text-ink-soft'
+                            : 'text-ink-subtle'
                       )}
                     >
                       {day.getDate()}
@@ -200,7 +200,7 @@ export function CalendarBoard() {
                         <span
                           key={getCalendarItemKey(item)}
                           className={cn(
-                            'block text-[8px] font-bold px-1 py-0.5 rounded border truncate leading-tight',
+                            'block text-[11px] font-bold px-1 py-0.5 rounded border truncate leading-tight',
                             chip.className,
                             isItemPast(item) && 'grayscale opacity-60'
                           )}
@@ -210,7 +210,7 @@ export function CalendarBoard() {
                       );
                     })}
                     {dayItems.length > MAX_VISIBLE_CHIPS && (
-                      <span className="block text-[8px] font-bold text-slate-400 px-1">他{dayItems.length - MAX_VISIBLE_CHIPS}件</span>
+                      <span className="block text-[11px] font-bold text-ink-subtle px-1">他{dayItems.length - MAX_VISIBLE_CHIPS}件</span>
                     )}
                   </div>
                 </button>

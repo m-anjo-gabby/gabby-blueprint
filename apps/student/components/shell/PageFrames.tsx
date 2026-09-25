@@ -17,8 +17,9 @@ export function PanelFrame({ children, fullScreen = false }: PanelFrameProps) {
   return (
     <div
       className={cn(
-        'w-full flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden touch-none selection:bg-brand-100',
-        fullScreen ? 'h-dvh' : 'h-full'
+        'w-full flex flex-col items-center justify-center overflow-hidden touch-none selection:bg-brand-100',
+        // シェル内はモバイルで画面いっぱいに表示する（ヘッダー・タブに挟まれるため余白を取らない）
+        fullScreen ? 'h-dvh p-2 sm:p-4' : 'h-full p-0 sm:p-4'
       )}
     >
       {children}

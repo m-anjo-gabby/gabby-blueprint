@@ -68,9 +68,9 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
   return (
     <div className="space-y-6">
       {/* アイコン画像セクション */}
-      <section className="bg-white border border-slate-100 rounded-[28px] shadow-sm p-6 sm:p-8">
-        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-6 select-none">
-          <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" />
+      <section className="bg-white border border-line/70 rounded-card shadow-sm p-6 sm:p-8">
+        <h2 className="text-xs font-bold text-brand-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-6 select-none">
+          <div className="w-1.5 h-4 bg-linear-to-b from-brand to-cyan-400 rounded-full" />
           アイコン画像
         </h2>
 
@@ -92,24 +92,24 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
       </section>
 
       {/* アカウント情報セクション */}
-      <section className="bg-white border border-slate-100 rounded-[28px] shadow-sm p-6 sm:p-8">
-        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-6 select-none">
-          <div className="w-1.5 h-4 bg-linear-to-b from-indigo-600 to-cyan-400 rounded-full" />
+      <section className="bg-white border border-line/70 rounded-card shadow-sm p-6 sm:p-8">
+        <h2 className="text-xs font-bold text-brand-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-6 select-none">
+          <div className="w-1.5 h-4 bg-linear-to-b from-brand to-cyan-400 rounded-full" />
           アカウント情報
         </h2>
 
         <dl className="space-y-1">
-          <div className="flex items-center justify-between gap-4 py-3 border-b border-slate-50">
-            <dt className="text-xs font-bold text-slate-400 flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center justify-between gap-4 py-3 border-b border-line/50">
+            <dt className="text-xs font-bold text-ink-subtle flex items-center gap-1.5 shrink-0">
               <UserIcon size={13} /> 名前
             </dt>
-            <dd className="text-sm font-bold text-slate-700 text-right truncate">{userName}</dd>
+            <dd className="text-sm font-bold text-ink-soft text-right truncate">{userName}</dd>
           </div>
-          <div className="flex items-center justify-between gap-4 py-3 border-b border-slate-50">
-            <dt className="text-xs font-bold text-slate-400 flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center justify-between gap-4 py-3 border-b border-line/50">
+            <dt className="text-xs font-bold text-ink-subtle flex items-center gap-1.5 shrink-0">
               <IdCard size={13} /> 所属
             </dt>
-            <dd className="text-sm font-bold text-slate-700 text-right truncate">{clientName ?? '-'}</dd>
+            <dd className="text-sm font-bold text-ink-soft text-right truncate">{clientName ?? '-'}</dd>
           </div>
         </dl>
 

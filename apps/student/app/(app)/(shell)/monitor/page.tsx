@@ -76,48 +76,31 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
   const sprintHistory = sprintHistoryResult.success ? sprintHistoryResult.data : { sessions: [], drills: [] };
 
   const navItems = [
-    { id: 'overview' as const, label: '受講生サマリー', icon: LayoutDashboard, description: '全体の稼働・進捗状況' },
-    { id: 'word' as const, label: '単語ドリル履歴', icon: BookOpen, description: '語彙ログの絞り込み分析' },
-    { id: 'sprint' as const, label: 'スプリント履歴', icon: Zap, description: '瞬発ログの絞り込み分析' },
+    { id: 'overview' as const, label: '受講生サマリー', icon: LayoutDashboard },
+    { id: 'word' as const, label: '単語ドリル履歴', icon: BookOpen },
+    { id: 'sprint' as const, label: 'スプリント履歴', icon: Zap },
   ];
 
-  const currentNav = navItems.find(item => item.id === view) || navItems[0];
 
   return (
-    <div className="w-full max-w-7xl mx-auto py-5 sm:py-8 px-4 sm:px-6 md:px-8 space-y-6 text-slate-900 selection:bg-indigo-100">
+    <div className="w-full max-w-7xl mx-auto py-5 sm:py-8 px-4 sm:px-6 md:px-8 space-y-6 text-ink selection:bg-brand-100">
       
-      {/* ────────────── 🚀 フラット＆ミニマル・グランドヘッダー ────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
-        
-        <div className="space-y-1">
-
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-              <Users size={22} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
-              モニタリングダッシュボード
-            </h1>
-
-            <p className="text-xs font-bold text-slate-400 max-w-2xl leading-relaxed mt-1">
-              所属受講生のトレーニング成果のトラッキング、および詳細ログのアナリティクス
-            </p>
-          </div>
-        </div>
-
-        <div className="hidden sm:block text-right">
-          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest font-mono block">
-            Current Module
-          </span>
-          <span className="text-xs font-bold text-slate-400">
-            {currentNav.label}
-          </span>
-        </div>
-      </div>
+      {/* ────────────── ヘッダー ────────────── */}
+      <header className="space-y-1">
+        <h1 className="flex items-center gap-2 text-xl sm:text-2xl font-bold tracking-tight text-ink">
+          <Users size={22} className="shrink-0 text-brand" />
+          モニタリングダッシュボード
+        </h1>
+        <p className="max-w-2xl text-sm leading-relaxed text-ink-muted">
+          所属する受講生の学習状況を月ごとに確認し、CSVで出力できます。
+        </p>
+      </header>
 
       {/* ────────────── メーターナビゲーション（タブ形式） & グローバルトグル ────────────── */}
-      <div className="border-b border-slate-200/60 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="border-b border-line pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         
         {/* 左側：タブメニュー */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100/70 border border-slate-200/40 rounded-xl overflow-x-auto w-full sm:w-auto scrollbar-none">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-control overflow-x-auto w-full sm:w-auto scrollbar-none">
           {navItems.map((item) => {
             const isActive = view === item.id;
             const Icon = item.icon;
@@ -126,16 +109,15 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
                 key={item.id}
                 href={`/monitor?view=${item.id}${userIds ? `&userIds=${userIds}` : ''}${qStart ? `&startDate=${qStart}` : ''}${qEnd ? `&endDate=${qEnd}` : ''}${includeMonitor ? '&includeMonitor=true' : ''}`}
                 className={cn(
-                  "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black transition-all whitespace-nowrap group select-none",
-                  isActive 
-                    ? "bg-white text-slate-800 shadow-2xs border border-slate-200/60" 
-                    : "text-slate-500 hover:text-slate-800"
+                  "flex h-9 items-center gap-2 px-4 rounded-[calc(var(--radius-control)-0.25rem)] text-sm font-semibold transition-all whitespace-nowrap group select-none",
+                  isActive
+                    ? "bg-surface text-ink shadow-sm"
+                    : "text-ink-muted hover:text-ink"
                 )}
               >
-                <Icon 
-                  size={13} 
-                  strokeWidth={isActive ? 2.5 : 2} 
-                  className={cn("transition-transform", isActive ? "text-indigo-500" : "text-slate-400 group-hover:text-slate-600")} 
+                <Icon
+                  size={15}
+                  className={cn("transition-colors", isActive ? "text-brand" : "text-ink-subtle group-hover:text-ink-soft")}
                 />
                 <span>{item.label}</span>
               </Link>
@@ -155,7 +137,7 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
       {/* ────────────── メメイン：ダイナミックコンテンツビュー ────────────── */}
       <div className="min-h-[400px]">
         {view === 'overview' && (
-          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-[24px] border border-slate-200/60 bg-slate-50/40" />}>
+          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-card border border-line/60 bg-slate-50/40" />}>
             <MonitorUserList 
               users={users} 
               wordHistory={wordHistory} 
@@ -165,7 +147,7 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
         )}
 
         {view === 'word' && (
-          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-[24px] border border-slate-200/60 bg-slate-50/40" />}>
+          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-card border border-line/60 bg-slate-50/40" />}>
             <MonitorWordHistoryView
               initialData={wordHistory}
               users={users}
@@ -177,7 +159,7 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
         )}
 
         {view === 'sprint' && (
-          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-[24px] border border-slate-200/60 bg-slate-50/40" />}>
+          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-card border border-line/60 bg-slate-50/40" />}>
             <MonitorSprintHistoryView
               initialData={sprintHistory}
               users={users}

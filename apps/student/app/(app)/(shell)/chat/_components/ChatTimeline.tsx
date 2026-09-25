@@ -58,9 +58,9 @@ function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null
   return (
     <div
       style={{ width: size, height: size }}
-      className="rounded-full bg-indigo-50 flex items-center justify-center shrink-0"
+      className="rounded-full bg-brand-soft flex items-center justify-center shrink-0"
     >
-      <UserIcon size={Math.round(size * 0.55)} className="text-indigo-400" />
+      <UserIcon size={Math.round(size * 0.55)} className="text-brand-400" />
     </div>
   );
 }
@@ -189,12 +189,12 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
   };
 
   return (
-    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden">
-      <div className="flex items-center gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-50 shrink-0">
+    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-line/70 overflow-hidden">
+      <div className="flex items-center gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-line/50 shrink-0">
         <Link
           href="/chat"
           aria-label="チャット一覧に戻る"
-          className="flex items-center justify-center w-10 h-10 -ml-1.5 rounded-2xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 active:scale-90 transition-all shrink-0"
+          className="flex items-center justify-center w-10 h-10 -ml-1.5 rounded-2xl text-ink-subtle hover:bg-slate-100 hover:text-ink-soft active:scale-90 transition-all shrink-0"
         >
           <ChevronLeft size={22} />
         </Link>
@@ -207,8 +207,8 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
               <UsersIcon size={16} className="text-emerald-500" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-black text-slate-800 truncate">{room.room_name || 'グループ'}</p>
-              <p className="text-[11px] text-slate-400 truncate">
+              <p className="text-sm font-bold text-ink truncate">{room.room_name || 'グループ'}</p>
+              <p className="text-[11px] text-ink-subtle truncate">
                 {members.map((m) => m.user_name || '不明なユーザー').join(' / ')}
               </p>
             </div>
@@ -217,9 +217,9 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
           <>
             <MessageAvatar iconPath={otherMember?.icon_path} name={otherMember?.user_name} size={AVATAR_SIZE} />
             <div className="min-w-0">
-              <p className="text-sm font-black text-slate-800 truncate">{otherMember?.user_name || '不明なユーザー'}</p>
+              <p className="text-sm font-bold text-ink truncate">{otherMember?.user_name || '不明なユーザー'}</p>
               {otherMember && (
-                <p className="text-[11px] text-slate-400">{USER_TYPE_LABEL_JA[otherMember.user_type] ?? '不明'}</p>
+                <p className="text-[11px] text-ink-subtle">{USER_TYPE_LABEL_JA[otherMember.user_type] ?? '不明'}</p>
               )}
             </div>
           </>
@@ -231,7 +231,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
           <div ref={sentinelRef} />
           {isLoadingMore && (
             <div className="flex justify-center pb-2">
-              <Loader2 size={14} className="animate-spin text-slate-400" />
+              <Loader2 size={14} className="animate-spin text-ink-subtle" />
             </div>
           )}
 
@@ -248,15 +248,15 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
                 {showHeader && (
                   isMine ? (
                     <div className="mb-1">
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone)}</span>
+                      <span className="text-[11px] text-ink-subtle">{formatHeaderTime(msg.created_at, timeZone)}</span>
                     </div>
                   ) : (
                     <div
                       className="flex items-center gap-2 mb-1"
                       style={{ paddingLeft: AVATAR_SIZE + AVATAR_GAP + BUBBLE_PADDING_X }}
                     >
-                      <span className="text-xs font-bold text-slate-700">{sender?.user_name || '不明なユーザー'}</span>
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone)}</span>
+                      <span className="text-xs font-bold text-ink-soft">{sender?.user_name || '不明なユーザー'}</span>
+                      <span className="text-[11px] text-ink-subtle">{formatHeaderTime(msg.created_at, timeZone)}</span>
                     </div>
                   )
                 )}
@@ -273,7 +273,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
                   >
                     {!showHeader && (
                       <span
-                        className={`absolute bottom-1 whitespace-nowrap text-[10px] text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 ${
+                        className={`absolute bottom-1 whitespace-nowrap text-[11px] text-ink-subtle opacity-0 transition-opacity group-hover:opacity-100 ${
                           isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
                         }`}
                       >
@@ -282,7 +282,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
                     )}
                     <div
                       className={`max-w-120 min-w-0 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
-                        isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white text-slate-800 border border-slate-100 rounded-bl-sm'
+                        isMine ? 'bg-brand text-white rounded-br-sm' : 'bg-white text-ink border border-line/70 rounded-bl-sm'
                       }`}
                     >
                       <ChatMessageContent message={msg} />
@@ -299,7 +299,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
       {isMember ? (
         <ChatMessageInput roomId={roomId} onSent={handleSent} />
       ) : (
-        <div className="border-t border-slate-50 p-4 text-center text-xs font-bold text-slate-400">
+        <div className="border-t border-line/50 p-4 text-center text-xs font-bold text-ink-subtle">
           このルームの参加者ではないため、メッセージを送信できません。
         </div>
       )}

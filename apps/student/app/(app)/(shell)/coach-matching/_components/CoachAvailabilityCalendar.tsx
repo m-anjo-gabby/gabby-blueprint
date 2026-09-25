@@ -45,7 +45,7 @@ function slotIndexToLabel(slotIndex: number): string {
  */
 export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey, onSelect }: CoachAvailabilityCalendarProps) {
   if (cells.length === 0) {
-    return <p className="text-xs text-slate-400 text-center py-10">現在、対応可能時間の登録がありません</p>;
+    return <p className="text-xs text-ink-subtle text-center py-10">現在、対応可能時間の登録がありません</p>;
   }
 
   const cellByDaySlot = new Map<string, AvailabilityCell>();
@@ -64,13 +64,13 @@ export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey,
   const slotRange = Array.from({ length: endSlot - startSlot + 1 }, (_, i) => startSlot + i);
 
   return (
-    <div className="max-h-[360px] overflow-y-auto rounded-2xl border border-slate-200 select-none">
+    <div className="max-h-[360px] overflow-y-auto rounded-2xl border border-line select-none">
       <div className="grid" style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
-        <div className="sticky top-0 z-20 bg-white border-b border-slate-200" />
+        <div className="sticky top-0 z-20 bg-white border-b border-line" />
         {DAYS_OF_WEEK.map((day) => (
           <div
             key={day}
-            className="sticky top-0 z-20 bg-white border-b border-slate-200 py-1.5 text-center text-[10px] font-black text-slate-500 tracking-wide"
+            className="sticky top-0 z-20 bg-white border-b border-line py-1.5 text-center text-[11px] font-bold text-ink-muted tracking-wide"
           >
             {DAY_OF_WEEK_LABEL_JA[day].slice(0, 1)}
           </div>
@@ -82,8 +82,8 @@ export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey,
             <div key={slotIndex} className="contents">
               <div
                 className={cn(
-                  'h-[26px] pr-2 text-right text-[10px] text-slate-400 font-medium leading-[26px]',
-                  isHour ? 'border-t border-slate-200' : 'border-t border-slate-100'
+                  'h-[26px] pr-2 text-right text-[11px] text-ink-subtle font-medium leading-[26px]',
+                  isHour ? 'border-t border-line' : 'border-t border-line/70'
                 )}
               >
                 {isHour ? slotIndexToLabel(slotIndex) : ''}
@@ -109,14 +109,14 @@ export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey,
                         : undefined
                     }
                     className={cn(
-                      'h-[26px] border-l border-slate-100 transition-colors disabled:cursor-default flex items-center justify-center',
+                      'h-[26px] border-l border-line/70 transition-colors disabled:cursor-default flex items-center justify-center',
                       isHour ? 'border-t border-t-slate-200' : 'border-t border-t-slate-100',
                       isUnavailable
-                        ? 'bg-slate-100 text-slate-400'
+                        ? 'bg-slate-100 text-ink-subtle'
                         : cell
                           ? isSelected
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-indigo-50 text-indigo-500 hover:bg-indigo-500 hover:text-white'
+                            ? 'bg-brand text-white'
+                            : 'bg-brand-soft text-brand-500 hover:bg-brand-500 hover:text-white'
                           : 'bg-white'
                     )}
                   >

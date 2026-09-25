@@ -25,6 +25,7 @@ import { getSessionStatusBadge } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
 import { RescheduleProposalDialog } from './RescheduleProposalDialog';
+import { ShellPanel, ShellPanelHeader } from '@/components/shell/ShellPanel';
 
 const JOINABLE_WINDOW_MS = 48 * 60 * 60 * 1000;
 const HISTORY_PAGE_SIZE = 10;
@@ -156,21 +157,17 @@ export function LiveSessionHub({
   };
 
   return (
-    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden">
-      <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">ライブセッション</h1>
-
-        <p className="text-[13px] text-slate-500">セッションの予定確認・予約・キャンセルをここで管理できます。</p>
-
+    <ShellPanel>
+      <ShellPanelHeader title="ライブセッション" description="セッションの予定確認・予約・キャンセルをここで管理できます。">
         {/* ライブセッションタブ配下の関連画面への導線 */}
         <div className="grid grid-cols-2 gap-2">
           {HUB_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="flex items-center justify-center gap-2 h-11 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-200 active:scale-[0.98] transition-all"
+              className="flex items-center justify-center gap-2 h-11 rounded-control border border-line bg-surface text-sm font-semibold text-ink-soft hover:bg-slate-50 hover:border-brand-200 active:scale-[0.98] transition-all"
             >
-              <link.icon size={16} className="text-indigo-600" />
+              <link.icon size={16} className="text-brand" />
               {link.label}
             </Link>
           ))}
@@ -178,11 +175,11 @@ export function LiveSessionHub({
 
         {contracts.length > 1 && (
           <div className="space-y-1.5">
-            <Label className="text-[11px] text-slate-400">契約</Label>
+            <Label className="text-xs text-ink-muted">契約</Label>
             <select
               value={selectedTicketId ?? ''}
               onChange={(e) => handleTicketChange(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-10 w-full rounded-control border border-line bg-surface px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {contracts.map((c) => (
                 <option key={c.ticket_id} value={c.ticket_id}>
@@ -193,9 +190,9 @@ export function LiveSessionHub({
             </select>
           </div>
         )}
-      </header>
+      </ShellPanelHeader>
 
-      <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 bg-slate-50/50 space-y-2">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 bg-canvas/60 space-y-2">
         {pendingProposalGroups.length > 0 && (
           <div className="space-y-2">
             {pendingProposalGroups.map((group) => (
@@ -203,9 +200,9 @@ export function LiveSessionHub({
                 key={group.session_id}
                 type="button"
                 onClick={() => setProposalDetailGroup(group)}
-                className="w-full flex items-center gap-3 px-3.5 py-3 bg-amber-50 rounded-[20px] border border-amber-200 hover:bg-amber-100/60 active:scale-[0.99] transition-all"
+                className="w-full flex items-center gap-3 px-3.5 py-3 bg-amber-50 rounded-card border border-amber-200 hover:bg-amber-100/60 active:scale-[0.99] transition-all"
               >
-                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-rose-500 shrink-0">
+                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-amber-600 shrink-0">
                   <CalendarClock size={16} />
                 </div>
                 <p className="text-xs font-bold text-amber-800 flex-1 text-left">
@@ -230,29 +227,29 @@ export function LiveSessionHub({
                 <button
                   type="button"
                   onClick={() => setIsBookMakeupOpen(true)}
-                  className="w-full flex items-center gap-3 px-3.5 py-3 bg-indigo-50 rounded-[20px] border border-indigo-100 hover:bg-indigo-100/60 active:scale-[0.99] transition-all"
+                  className="w-full flex items-center gap-3 px-3.5 py-3 bg-brand-soft rounded-card border border-brand-100 hover:bg-brand-100/60 active:scale-[0.99] transition-all"
                 >
-                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-indigo-500 shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-brand-500 shrink-0">
                     <Ticket size={16} />
                   </div>
-                  <p className="text-xs font-bold text-indigo-700 flex-1 text-left">
+                  <p className="text-xs font-bold text-brand-strong flex-1 text-left">
                     未予約のセッションがあります。タップして予約をリクエストできます。
                   </p>
-                  <ArrowRight size={14} className="text-indigo-400 shrink-0" />
+                  <ArrowRight size={14} className="text-brand-400 shrink-0" />
                 </button>
               )}
 
               {myBookingRequests.map((request) => (
                 <div
                   key={request.request_id}
-                  className="flex items-center gap-3 px-3.5 py-3 bg-slate-50 rounded-[20px] border border-dashed border-slate-200"
+                  className="flex items-center gap-3 px-3.5 py-3 bg-slate-50 rounded-card border border-dashed border-line"
                 >
-                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-slate-400 shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-ink-subtle shrink-0">
                     <Clock size={16} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-600">コーチの承認待ち</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                    <p className="text-xs font-bold text-ink-soft">コーチの承認待ち</p>
+                    <p className="text-[11px] text-ink-subtle mt-0.5 truncate">
                       {formatDateTimeByZone(request.requested_start_datetime, timezone, false)}
                     </p>
                   </div>
@@ -275,15 +272,15 @@ export function LiveSessionHub({
                 return (
                   <div
                     key={session.session_id}
-                    className="flex flex-col gap-2.5 px-3.5 py-3.5 bg-white rounded-[24px] border border-slate-100 shadow-sm"
+                    className="flex flex-col gap-2.5 px-3.5 py-3.5 bg-white rounded-card border border-line/70 shadow-sm"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-full bg-rose-50 flex items-center justify-center text-rose-400 shrink-0">
+                      <div className="w-11 h-11 rounded-full bg-brand-soft flex items-center justify-center text-brand shrink-0">
                         <Video size={18} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-slate-800 truncate">{session.counterpart_name} コーチ</p>
-                        <p className="text-[13px] text-slate-500 truncate mt-0.5">
+                        <p className="text-sm font-bold text-ink truncate">{session.counterpart_name} コーチ</p>
+                        <p className="text-[13px] text-ink-muted truncate mt-0.5">
                           {formatDateTimeByZone(session.start_datetime, timezone, false)}
                         </p>
                       </div>
@@ -316,13 +313,13 @@ export function LiveSessionHub({
 
           <TabsContent value="completed" className="space-y-2">
             {isLoadingPast ? (
-              <div className="flex items-center justify-center py-16 text-slate-400">
+              <div className="flex items-center justify-center py-16 text-ink-subtle">
                 <Loader2 size={18} className="animate-spin" />
               </div>
             ) : completedSessions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                <CalendarClock size={22} className="text-slate-300 mb-4" />
-                <p className="text-sm font-bold text-slate-500">実施済みのセッションはありません</p>
+                <CalendarClock size={22} className="text-ink-subtle mb-4" />
+                <p className="text-sm font-bold text-ink-muted">実施済みのセッションはありません</p>
               </div>
             ) : (
               <>
@@ -330,19 +327,19 @@ export function LiveSessionHub({
                   <Link
                     key={session.session_id}
                     href={`/live-room/sessions/${session.session_id}/result`}
-                    className="flex items-center justify-between gap-3 px-3.5 py-3 bg-white rounded-[20px] border border-slate-100 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all"
+                    className="flex items-center justify-between gap-3 px-3.5 py-3 bg-white rounded-card border border-line/70 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all"
                   >
                     <div className="min-w-0">
-                      <p className="text-xs font-black text-slate-700 truncate">{session.counterpart_name} コーチ</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
+                      <p className="text-xs font-bold text-ink-soft truncate">{session.counterpart_name} コーチ</p>
+                      <p className="text-[11px] text-ink-subtle mt-0.5">
                         {formatDateTimeByZone(session.start_datetime, timezone, false)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${getSessionStatusBadge(session).className}`}>
+                      <span className={`text-[11px] font-bold uppercase px-2 py-1 rounded-md border ${getSessionStatusBadge(session).className}`}>
                         {getSessionStatusBadge(session).label}
                       </span>
-                      <FileText size={14} className="text-slate-300" />
+                      <FileText size={14} className="text-ink-subtle" />
                     </div>
                   </Link>
                 ))}
@@ -357,13 +354,13 @@ export function LiveSessionHub({
 
           <TabsContent value="history" className="space-y-2">
             {isLoadingPast ? (
-              <div className="flex items-center justify-center py-16 text-slate-400">
+              <div className="flex items-center justify-center py-16 text-ink-subtle">
                 <Loader2 size={18} className="animate-spin" />
               </div>
             ) : changeHistorySessions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                <CalendarClock size={22} className="text-slate-300 mb-4" />
-                <p className="text-sm font-bold text-slate-500">変更履歴はありません</p>
+                <CalendarClock size={22} className="text-ink-subtle mb-4" />
+                <p className="text-sm font-bold text-ink-muted">変更履歴はありません</p>
               </div>
             ) : (
               <>
@@ -372,21 +369,21 @@ export function LiveSessionHub({
                   return (
                     <div
                       key={session.session_id}
-                      className="flex flex-col gap-1.5 px-3.5 py-3 bg-white rounded-[20px] border border-slate-100 shadow-sm"
+                      className="flex flex-col gap-1.5 px-3.5 py-3 bg-white rounded-card border border-line/70 shadow-sm"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-xs font-black text-slate-700 truncate">{session.counterpart_name} コーチ</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
+                          <p className="text-xs font-bold text-ink-soft truncate">{session.counterpart_name} コーチ</p>
+                          <p className="text-[11px] text-ink-subtle mt-0.5">
                             {formatDateTimeByZone(session.start_datetime, timezone, false)}
                           </p>
                         </div>
-                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
+                        <span className={`text-[11px] font-bold uppercase px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
                           {badge.label}
                         </span>
                       </div>
                       {session.cancel_reason && (
-                        <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">{session.cancel_reason}</p>
+                        <p className="text-[11px] text-ink-muted bg-slate-50 border border-line/70 rounded-lg px-2.5 py-1.5">{session.cancel_reason}</p>
                       )}
                     </div>
                   );
@@ -421,6 +418,6 @@ export function LiveSessionHub({
         onAccepted={handleProposalAccepted}
         onDeclined={handleProposalDeclined}
       />
-    </div>
+    </ShellPanel>
   );
 }

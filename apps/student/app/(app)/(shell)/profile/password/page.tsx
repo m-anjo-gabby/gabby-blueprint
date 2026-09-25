@@ -91,8 +91,8 @@ export default function PasswordChangePage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-100 border border-slate-100">
-        <h1 className="text-xl font-bold text-slate-800 mb-6">パスワード変更</h1>
+      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-100 border border-line/70">
+        <h1 className="text-xl font-bold text-ink mb-6">パスワード変更</h1>
         
         <form action={handleSubmit} className="space-y-6">
           {/* 現在のパスワード入力：エラー時はフィールド下部にメッセージを表示 */}
@@ -171,7 +171,7 @@ export default function PasswordChangePage() {
 
           <Link 
             href="/dashboard" 
-            className="text-xs text-slate-500 hover:text-indigo-600 flex items-center justify-center gap-1 transition-colors"
+            className="text-xs text-ink-muted hover:text-brand flex items-center justify-center gap-1 transition-colors"
           >
             <ArrowLeft size={14} /> ダッシュボードに戻る
           </Link>

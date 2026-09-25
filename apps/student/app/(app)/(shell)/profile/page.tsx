@@ -9,7 +9,7 @@ export default async function ProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] text-rose-600">
         <p>プロフィール情報の取得に失敗しました。</p>
-        <p className="text-sm text-slate-500 mt-2">時間をおいて再度お試しください。</p>
+        <p className="text-sm text-ink-muted mt-2">時間をおいて再度お試しください。</p>
       </div>
     );
   }
@@ -17,8 +17,8 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-8 px-2 pb-10">
       <div className="space-y-1">
-        <h1 className="text-xl font-black text-slate-800 tracking-tight">プロフィール設定</h1>
-        <p className="text-[13px] text-slate-500">
+        <h1 className="text-xl font-bold text-ink tracking-tight">プロフィール設定</h1>
+        <p className="text-[13px] text-ink-muted">
           アイコン画像やアカウント情報を確認・変更できます。
         </p>
       </div>

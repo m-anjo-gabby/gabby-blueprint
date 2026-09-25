@@ -66,7 +66,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="h-14 md:h-16 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-4 md:px-6 flex items-center justify-between sticky top-0 z-50 shrink-0">
+      <header className="h-14 md:h-16 bg-white/70 backdrop-blur-xl border-b border-line/50 px-4 md:px-6 flex items-center justify-between sticky top-0 z-50 shrink-0">
         
         {/* 👑 ロゴエリア（クリックでダッシュボードへ遷移）。PCではサイドナビ側にロゴを表示するため非表示 */}
         <Link 
@@ -90,8 +90,8 @@ export default function Header() {
           <DropdownMenu>
             {/* ドロップダウンのトリガーボタン */}
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 hover:bg-slate-100 transition-all outline-none active:scale-95">
-                <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-indigo-500 overflow-hidden shrink-0">
+              <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-line/70 hover:bg-slate-100 transition-all outline-none active:scale-95">
+                <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
                   {profileIconUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
@@ -99,18 +99,18 @@ export default function Header() {
                     <UserIcon size={14} />
                   )}
                 </div>
-                <span className="text-xs font-bold text-slate-600 hidden sm:inline">
+                <span className="text-xs font-bold text-ink-soft hidden sm:inline">
                   {user?.user_name || user?.email?.split('@')[0]}
                 </span>
-                <ChevronDown size={12} className="text-slate-400" />
+                <ChevronDown size={12} className="text-ink-subtle" />
               </button>
             </DropdownMenuTrigger>
 
             {/* ドロップダウンメニュー内容 */}
-            <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-slate-100" align="end">
+            <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-line/70" align="end">
               {/* プロフィール概要（アイコン画像・名前） */}
               <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 overflow-hidden shrink-0">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 border border-line text-ink-subtle overflow-hidden shrink-0">
                   {profileIconUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
@@ -119,25 +119,25 @@ export default function Header() {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-black text-slate-800 truncate">
+                  <p className="text-xs font-bold text-ink truncate">
                     {user?.user_name || user?.email?.split('@')[0]}
                   </p>
                   {user?.email && (
-                    <p className="text-[10px] font-medium text-slate-400 truncate">{user.email}</p>
+                    <p className="text-[11px] font-medium text-ink-subtle truncate">{user.email}</p>
                   )}
                 </div>
               </div>
 
-              <DropdownMenuSeparator className="mb-1 border-slate-100" />
+              <DropdownMenuSeparator className="mb-1 border-line/70" />
 
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
+                <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-slate-50">
                   <UserIcon size={14} /> プロフィール
                 </Link>
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild>
-                <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
+                <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-slate-50">
                   <Lock size={14} /> パスワード変更
                 </Link>
               </DropdownMenuItem>
@@ -147,12 +147,12 @@ export default function Header() {
                   e.preventDefault();
                   setShowTermsModal(true);
                 }}
-                className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50"
+                className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-slate-50"
               >
                 <FileText size={14} /> 利用規約
               </DropdownMenuItem>
               
-              <DropdownMenuSeparator className="my-1 border-slate-100" />
+              <DropdownMenuSeparator className="my-1 border-line/70" />
               
               <DropdownMenuItem 
                 onClick={() => setShowLogoutConfirm(true)} 
@@ -190,7 +190,7 @@ export default function Header() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ type: "spring", damping: 25, stiffness: 400 }}
-                  className="fixed left-[50%] top-[50%] z-[111] w-[calc(100%-2rem)] max-w-[280px] translate-x-[-50%] translate-y-[-50%] outline-none bg-white rounded-[32px] shadow-2xl p-6 text-center"
+                  className="fixed left-[50%] top-[50%] z-[111] w-[calc(100%-2rem)] max-w-[280px] translate-x-[-50%] translate-y-[-50%] outline-none bg-white rounded-panel shadow-2xl p-6 text-center"
                 >
                   <div className="flex justify-center mb-4">
                     <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center">
@@ -198,23 +198,23 @@ export default function Header() {
                     </div>
                   </div>
                   
-                  <Dialog.Title className="text-sm font-black text-slate-800 mb-2 uppercase tracking-wider">
-                    Logout
+                  <Dialog.Title className="text-sm font-bold text-ink mb-2 uppercase">
+                    ログアウトしますか？
                   </Dialog.Title>
-                  <Dialog.Description className="text-[11px] text-slate-500 mb-6">
-                    ログアウトしてログイン画面に戻りますか？
+                  <Dialog.Description className="text-[11px] text-ink-muted mb-6">
+                    ログイン画面に戻ります。
                   </Dialog.Description>
 
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={handleSignOut}
-                      className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg shadow-rose-100 outline-none"
+                      className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-bold uppercase transition-colors shadow-lg shadow-rose-100 outline-none"
                     >
                       ログアウト
                     </button>
                     <button
                       onClick={() => setShowLogoutConfirm(false)}
-                      className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors outline-none"
+                      className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-ink-soft rounded-xl text-[11px] font-bold uppercase transition-colors outline-none"
                     >
                       キャンセル
                     </button>
@@ -229,8 +229,8 @@ export default function Header() {
       {/* ローディングオーバーレイ */}
       {isSigningOut && (
         <div className="fixed inset-0 z-200 flex flex-col items-center justify-center bg-white/80 backdrop-blur-md animate-in fade-in duration-300">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-          <p className="text-sm font-bold text-slate-800 animate-pulse">ログアウト中...</p>
+          <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" />
+          <p className="text-sm font-bold text-ink animate-pulse">ログアウト中...</p>
         </div>
       )}
 

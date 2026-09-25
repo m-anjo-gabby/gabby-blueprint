@@ -76,22 +76,22 @@ export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
   };
 
   return (
-    <div className="border-t border-slate-50 p-3 sm:p-4 bg-white">
+    <div className="border-t border-line/50 p-3 sm:p-4 bg-white">
       <div className="max-w-160 mx-auto space-y-2">
         {pendingAttachments.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {pendingAttachments.map((a) => (
               <div
                 key={a.file_path}
-                className="flex items-center gap-1.5 bg-slate-100 rounded-lg pl-2 pr-1 py-1 text-xs text-slate-600"
+                className="flex items-center gap-1.5 bg-slate-100 rounded-lg pl-2 pr-1 py-1 text-xs text-ink-soft"
               >
                 <FileText size={13} className="shrink-0" />
                 <span className="max-w-40 truncate">{a.file_name}</span>
-                <span className="text-slate-400 shrink-0">{formatFileSize(a.file_size)}</span>
+                <span className="text-ink-subtle shrink-0">{formatFileSize(a.file_size)}</span>
                 <button
                   type="button"
                   onClick={() => handleRemovePending(a.file_path)}
-                  className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5"
+                  className="text-ink-subtle hover:text-rose-500 shrink-0 p-0.5"
                   title="削除"
                 >
                   <X size={13} />

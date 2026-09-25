@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Star, ArrowRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { ContentItem } from "@gabby/types/content";
 import { motion } from "framer-motion";
-import { getTagStyle, getContentTypeConfig, getCefrStyle } from "@gabby/lib/content/ui";
+import { getContentTypeConfig, getCefrStyle } from "@gabby/lib/content/ui";
 import { cn } from "@/lib/utils";
 
 interface ContentCardProps {
@@ -30,7 +30,7 @@ export const ContentCard = ({
   const [isClamped, setIsClamped] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
 
-  const { icon: TypeIcon, label: typeLabel, theme } = getContentTypeConfig(content.content_type);
+  const { icon: TypeIcon, label: typeLabel } = getContentTypeConfig(content.content_type);
   
   // metadata から安全に取得
   const cefr = content.metadata?.cefr;
@@ -57,39 +57,24 @@ export const ContentCard = ({
 
   return (
     <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Card
-        className={cn(
-          "group overflow-hidden transition-all duration-300 rounded-[32px] bg-white border shadow-sm hover:shadow-md",
-          theme.border,
-          theme.hoverBorder
-        )}
-      >
-        {/* 1. Header Area */}
-        <div className={cn("px-6 py-3.5 border-b flex justify-between items-center gap-4", theme.bg, theme.border)}>
-          <div className="flex items-center gap-3 flex-1">
-            <div className="flex items-center gap-2">
-              <TypeIcon size={18} strokeWidth={2.5} className={cn("shrink-0", theme.text)} />
-              <span className={cn(
-                "text-[12px] font-black uppercase tracking-widest whitespace-nowrap inline", 
-                theme.text
-              )}>
-                {typeLabel}
-              </span>
-            </div>
-
-            <div className={cn("w-px h-3 opacity-20", theme.dotActive)} />
+      <Card className="group overflow-hidden rounded-card border border-line bg-surface shadow-xs transition-all duration-300 hover:border-brand-200 hover:shadow-sm">
+        {/* 1. Header Area: 種別・CEFR・お気に入り */}
+        <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-slate-100 text-ink-soft">
+              <TypeIcon size={16} />
+            </span>
+            <span className="whitespace-nowrap text-xs font-semibold text-ink-muted">{typeLabel}</span>
 
             {cefr && (
-              <Badge className={cn(
-                "px-2 py-1 rounded-full text-[10px] font-black shadow-md flex gap-1 items-center border-none shrink-0",
-                cefrStyle
-              )}>
-                <span className="opacity-70 text-[7px] font-bold tracking-tighter leading-none translate-y-[0.5px]">
-                  CEFR
-                </span>
-                <span className="leading-none">
-                  {cefr.label}
-                </span>
+              <Badge
+                className={cn(
+                  "flex shrink-0 items-center gap-1 rounded-full border-none px-2 py-0.5 text-[11px] font-bold shadow-none",
+                  cefrStyle
+                )}
+              >
+                <span className="text-[11px] font-semibold opacity-70">CEFR</span>
+                {cefr.label}
               </Badge>
             )}
           </div>
@@ -99,17 +84,18 @@ export const ContentCard = ({
               e.stopPropagation();
               onToggleFavorite(content.content_id, content.is_favorite || false);
             }}
+            aria-label={actionMode === 'favorite' ? 'お気に入りから削除' : content.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
             className={cn(
-              "transition-all active:scale-75 p-2 rounded-full shrink-0",
-              actionMode === 'favorite' 
-                ? "text-slate-300 hover:text-rose-500 hover:bg-rose-50" 
-                : content.is_favorite 
-                  ? "text-amber-500 bg-amber-50" 
-                  : "text-slate-300 hover:bg-white/50" 
+              "shrink-0 rounded-full p-2 transition-all active:scale-75",
+              actionMode === 'favorite'
+                ? "text-ink-subtle hover:bg-rose-50 hover:text-rose-500"
+                : content.is_favorite
+                  ? "bg-amber-50 text-amber-500"
+                  : "text-ink-subtle hover:bg-slate-100"
             )}
           >
             {actionMode === 'favorite' ? (
-              <Trash2 size={18} strokeWidth={2.5} />
+              <Trash2 size={18} />
             ) : (
               <Star size={18} fill={content.is_favorite ? "currentColor" : "none"} />
             )}
@@ -117,24 +103,22 @@ export const ContentCard = ({
         </div>
 
         {/* 2. Content Area */}
-        <CardContent className="p-6">
-          <h3 className="text-lg font-black text-slate-800 mb-3 tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
+        <CardContent className="px-5 pt-4 pb-5 sm:px-6">
+          <h3 className="mb-2 text-base sm:text-lg font-bold leading-snug tracking-tight text-ink transition-colors group-hover:text-brand-strong">
             {content.content_name}
           </h3>
 
           <div
             onClick={() => isClamped && setIsExpanded(!isExpanded)}
             className={cn(
-              "mb-4 transition-all duration-200 rounded-xl",
-              isClamped 
-                ? "cursor-pointer hover:bg-slate-50 -mx-2 px-2 py-1" 
-                : "cursor-default"
+              "mb-4 rounded-xl transition-all duration-200",
+              isClamped ? "-mx-2 cursor-pointer px-2 py-1 hover:bg-slate-50" : "cursor-default"
             )}
           >
             <p
               ref={descriptionRef}
               className={cn(
-                "text-[13px] text-slate-500 leading-relaxed transition-all",
+                "text-sm leading-relaxed text-ink-muted transition-all",
                 !isExpanded && `line-clamp-${clampLines}`
               )}
               style={!isExpanded ? {
@@ -146,45 +130,41 @@ export const ContentCard = ({
             >
               {content.description}
             </p>
-            
+
             {isClamped && (
-              <div className="flex items-center gap-1 mt-1 text-indigo-500 font-bold text-[10px] uppercase tracking-wider">
+              <div className="mt-1 flex items-center gap-1 text-xs font-semibold text-brand">
                 {isExpanded ? (
-                  <>Show less <ChevronUp size={12} /></>
+                  <>閉じる <ChevronUp size={14} /></>
                 ) : (
-                  <>Read more <ChevronDown size={12} /></>
+                  <>続きを読む <ChevronDown size={14} /></>
                 )}
               </div>
             )}
           </div>
 
-          <div className="flex flex-wrap gap-1.5">
-            {content.display_tags?.map((t) => {
-              const style = getTagStyle(t.tag_type);
-              return (
+          {content.display_tags && content.display_tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {content.display_tags.map((t) => (
                 <Badge
                   key={t.tag_id}
                   variant="secondary"
-                  className={cn(style.className, "text-[9px] border-none px-2.5 py-0.5 shadow-sm font-bold")}
+                  className="rounded-full border-none bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-ink-soft shadow-none"
                 >
                   #{t.tag_name}
                 </Badge>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
 
         {/* 3. Footer Area */}
-        <CardFooter className="px-6 pb-6 pt-0">
+        <CardFooter className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
           <Button
             onClick={() => onStart(content)}
-            className={cn(
-              "w-full rounded-2xl text-white border-none shadow-md group/btn transition-all h-12 font-black text-[11px] tracking-widest uppercase",
-              theme.button
-            )}
+            className="group/btn h-12 w-full rounded-control border-none bg-brand text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-strong"
           >
-            Start Training
-            <ArrowRight size={16} className="ml-2 group-hover/btn:translate-x-1 transition-transform" />
+            学習を始める
+            <ArrowRight size={16} className="ml-2 transition-transform group-hover/btn:translate-x-1" />
           </Button>
         </CardFooter>
       </Card>

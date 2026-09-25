@@ -79,7 +79,7 @@ export default function PhraseFavorites() {
       // 2. サーバーサイド処理
       await toggleFavorite(phraseId, false);
       showToast('お気に入りから削除しました', 'success');
-    } catch (error) {
+    } catch {
       // 3. 失敗時は再取得して整合性を戻す
       await fetchFavorites(true);
       showToast('削除に失敗しました', 'error');
@@ -90,8 +90,8 @@ export default function PhraseFavorites() {
   if (isLoading && !favoritePhrases) {
     return (
       <div className="py-20 flex flex-col items-center justify-center space-y-4">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading Phrases...</p>
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <p className="text-[11px] font-bold text-ink-subtle uppercase">読み込み中…</p>
       </div>
     );
   }
@@ -99,26 +99,26 @@ export default function PhraseFavorites() {
   return (
     <div className="space-y-8">
       {/* --- Filter Header --- */}
-      <div className="flex flex-col sm:flex-row gap-3 bg-white p-2 rounded-[24px] border border-slate-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row gap-3 bg-white p-2 rounded-card border border-line/70 shadow-sm">
         <div className="relative flex-1 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-400 transition-colors z-10" size={18} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-brand-400 transition-colors z-10" size={18} />
           <Input
-            placeholder="Search phrases..."
+            placeholder="フレーズを検索..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             // iOSズーム防止の text-base
-            className="pl-11 h-12 bg-slate-50 border-none rounded-2xl text-base sm:text-sm font-bold focus-visible:ring-2 focus-visible:ring-indigo-500/20 transition-all placeholder:text-slate-300"
+            className="pl-11 h-12 bg-slate-50 border-none rounded-2xl text-base sm:text-sm font-bold focus-visible:ring-2 focus-visible:ring-brand-500/20 transition-all placeholder:text-ink-subtle"
           />
         </div>
 
         <Select value={selectedContentId} onValueChange={setSelectedContentId}>
-          <SelectTrigger className="w-full sm:w-[200px] h-12 bg-slate-50 border-none rounded-2xl text-[11px] font-black uppercase tracking-wider focus:ring-2 focus:ring-indigo-500/20 text-slate-600 px-4">
-            <SelectValue placeholder="All Materials" />
+          <SelectTrigger className="w-full sm:w-[200px] h-12 bg-slate-50 border-none rounded-2xl text-[11px] font-bold uppercase focus:ring-2 focus:ring-brand-500/20 text-ink-soft px-4">
+            <SelectValue placeholder="すべての教材" />
           </SelectTrigger>
-          <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
-            <SelectItem value="all" className="text-[11px] font-black uppercase tracking-wider">All Materials</SelectItem>
+          <SelectContent className="rounded-2xl border-line/70 shadow-xl">
+            <SelectItem value="all" className="text-[11px] font-bold uppercase">すべての教材</SelectItem>
             {contentOptions.map(([id, name]) => (
-              <SelectItem key={id} value={id} className="text-[11px] font-black uppercase tracking-wider">
+              <SelectItem key={id} value={id} className="text-[11px] font-bold uppercase">
                 {name}
               </SelectItem>
             ))}
@@ -154,10 +154,10 @@ export default function PhraseFavorites() {
               animate={{ opacity: 1, y: 0 }}
               className="py-32 text-center space-y-4"
             >
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-slate-50">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-line/50">
                 <Star className="text-slate-200" size={32} />
               </div>
-              <p className="text-slate-400 font-bold text-sm tracking-wide">
+              <p className="text-ink-subtle font-bold text-sm tracking-wide">
                 {searchQuery ? '該当するフレーズが見つかりません' : 'お気に入りフレーズはありません'}
               </p>
             </motion.div>

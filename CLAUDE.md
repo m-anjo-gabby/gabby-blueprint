@@ -34,6 +34,10 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
 - 命名規則: 簡潔かつ直感的な名称（例: 'fetchUser', 'SubmitButton'）を使用し、プロジェクト全体で一貫性を保つこと。
 - 共通化: 複数アプリ（admin/coach/student）にまたがるロジック・型定義は `packages/types` や `packages/lib` に集約し、アプリごとの重複実装を避けること。
 - 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラーがない状態にしてから完了とすること。
+- `apps/student` のUI実装規約:
+  - 色・角丸は `apps/student/app/globals.css` のデザイントークン（`brand-*` / `ink-*` / `line` / `canvas` / `surface`、`rounded-panel` / `rounded-card` / `rounded-control`）で指定し、パレット名（`indigo-*` / `slate-*` 等）や任意値（`rounded-[32px]` 等）を直接書かない。機能ごとの色分けはせず、emerald/amber/rose は成功・警告・エラー等の状態表示に限定する。
+  - 文字は日本語表記を基本とし、最小サイズは11px。`font-black` と英語の大文字ラベル（`uppercase` + 広い字間）は使わない。
+  - 画面はアプリシェル（`app/(app)/(shell)/`、常設ナビあり）と没入画面（`app/(app)` 直下の training 等、ナビなし）に分ける。ナビ項目は `constants/navigation.ts` のみで定義し、シェル内のパネル型画面は `components/shell/ShellPanel.tsx`（`ShellPanel` / `ShellPanelHeader`）を使う。
 
 # 4. コミュニケーション・トーン
 

@@ -162,16 +162,16 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
                 selectedKey={selectedCell?.key ?? null}
                 onSelect={setSelectedCell}
               />
-              <p className="text-[11px] text-slate-400">〇は申請可能、×は受付終了です。</p>
+              <p className="text-[11px] text-ink-subtle">〇は申請可能、×は受付終了です。</p>
 
               {selectedCell && (
-                <div className="space-y-1.5 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2">
-                  <div className="flex items-center gap-2 text-sm font-bold text-indigo-700">
+                <div className="space-y-1.5 rounded-xl border border-brand-100 bg-brand-soft px-3 py-2">
+                  <div className="flex items-center gap-2 text-sm font-bold text-brand-strong">
                     <Clock size={14} />
                     毎週 {DAY_OF_WEEK_LABEL_JA[selectedCell.displayDay]} {selectedCell.displayStartTime} - {selectedCell.displayEndTime}
                   </div>
                   {firstSession && (
-                    <div className="flex items-center gap-2 border-t border-indigo-100 pt-1.5 text-xs font-bold text-indigo-700">
+                    <div className="flex items-center gap-2 border-t border-brand-100 pt-1.5 text-xs font-bold text-brand-strong">
                       <CalendarClock size={14} />
                       初回ライブセッション予定日: {formatZonedDate(firstSession.instant, studentTimezone)}（
                       {DAY_OF_WEEK_LABEL_JA[firstSession.day_of_week as DayOfWeek]}）{firstSession.start_time}〜

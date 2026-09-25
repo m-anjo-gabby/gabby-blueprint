@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Paperclip, Download, ExternalLink, Eye, Loader2 } from 'lucide-react';
+import { ChevronDown, Paperclip, Download, Eye, Loader2 } from 'lucide-react';
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -91,10 +91,10 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'bg-white rounded-[24px] border shadow-sm overflow-hidden transition-all',
+        'bg-white rounded-card border shadow-sm overflow-hidden transition-all',
         !notice.is_read
-          ? 'border-indigo-200 shadow-indigo-100/60'
-          : 'border-slate-100'
+          ? 'border-brand-200 shadow-brand-100/60'
+          : 'border-line/70'
       )}
     >
       {/* ─── カードヘッダー（クリックでアコーディオン） ──── */}
@@ -106,7 +106,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         {/* 未読インジケーター */}
         <div className="mt-1 shrink-0">
           {!notice.is_read ? (
-            <span className="inline-block w-2 h-2 rounded-full bg-indigo-500" />
+            <span className="inline-block w-2 h-2 rounded-full bg-brand-500" />
           ) : (
             <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />
           )}
@@ -117,7 +117,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
           <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
             <span
               className={cn(
-                'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
+                'text-[11px] font-bold uppercase px-1.5 py-0.5 rounded-md border',
                 NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
               )}
             >
@@ -126,7 +126,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             {notice.is_important && (
               <span
                 className={cn(
-                  'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
+                  'text-[11px] font-bold uppercase px-1.5 py-0.5 rounded-md border',
                   NOTICE_IMPORTANT_BADGE.badgeClass
                 )}
               >
@@ -134,7 +134,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
               </span>
             )}
             {notice.attachments.length > 0 && (
-              <span className="text-[9px] font-black text-slate-400 flex items-center gap-0.5">
+              <span className="text-[11px] font-bold text-ink-subtle flex items-center gap-0.5">
                 <Paperclip size={9} />
                 {notice.attachments.length}
               </span>
@@ -145,14 +145,14 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
           <p className={cn(
             'text-sm leading-snug truncate',
             notice.is_read
-              ? 'font-bold text-slate-600'
-              : 'font-black text-slate-900'
+              ? 'font-bold text-ink-soft'
+              : 'font-bold text-ink'
           )}>
             {notice.title}
           </p>
 
           {/* 公開日 */}
-          <p className="text-[10px] text-slate-400 mt-1 font-bold">
+          <p className="text-[11px] text-ink-subtle mt-1 font-bold">
             {formatZonedDateJapanese(notice.published_at, timezone)}
           </p>
         </div>
@@ -161,7 +161,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="shrink-0 mt-1 text-slate-400"
+          className="shrink-0 mt-1 text-ink-subtle"
         >
           <ChevronDown size={16} />
         </motion.div>
@@ -178,9 +178,9 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             transition={{ duration: 0.22, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 border-t border-slate-50 pt-4 space-y-4">
+            <div className="px-5 pb-5 border-t border-line/50 pt-4 space-y-4">
               {/* Markdown 本文 */}
-              <div className="prose prose-sm prose-slate max-w-none text-slate-600 text-sm leading-relaxed">
+              <div className="prose prose-sm prose-slate max-w-none text-ink-soft text-sm leading-relaxed">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {notice.content}
                 </ReactMarkdown>
@@ -189,8 +189,8 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
               {/* 添付ファイル */}
               {notice.attachments.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Paperclip size={10} /> Attachments
+                  <p className="text-[11px] font-bold text-ink-subtle uppercase flex items-center gap-1.5">
+                    <Paperclip size={12} /> 添付ファイル
                   </p>
                   <div className="space-y-2">
                     {notice.attachments.map(att => {
@@ -201,17 +201,17 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                       return (
                         <div
                           key={att.id}
-                          className="w-full flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100/80 hover:border-slate-200 transition-colors"
+                          className="w-full flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-2xl border border-line/70/80 hover:border-line transition-colors"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
-                              <Paperclip size={13} className="text-slate-400" />
+                              <Paperclip size={13} className="text-ink-subtle" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-slate-700 truncate">
+                              <p className="text-xs font-bold text-ink-soft truncate">
                                 {att.name}
                               </p>
-                              <p className="text-[10px] text-slate-400 font-mono">
+                              <p className="text-[11px] text-ink-subtle tabular-nums">
                                 {formatFileSize(att.size)}
                               </p>
                             </div>
@@ -224,11 +224,11 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                                 type="button"
                                 disabled={!!loadingActionId}
                                 onClick={() => handlePreview(att.id, att.path)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 text-slate-600 hover:text-indigo-600 rounded-xl text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-brand-soft border border-line/80 hover:border-brand-200 text-ink-soft hover:text-brand rounded-xl text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                                 title="別タブで表示"
                               >
                                 {isPreviewLoading ? (
-                                  <Loader2 size={12} className="animate-spin text-indigo-600" />
+                                  <Loader2 size={12} className="animate-spin text-brand" />
                                 ) : (
                                   <Eye size={12} />
                                 )}

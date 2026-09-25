@@ -208,7 +208,7 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
                 </option>
               ))}
             </select>
-            {isChecking && <p className="text-[11px] text-slate-400 mt-1">確認中…</p>}
+            {isChecking && <p className="text-[11px] text-ink-subtle mt-1">確認中…</p>}
             {conflictMessage && <p className="text-[11px] text-rose-600 mt-1">{conflictMessage}</p>}
           </div>
           <div className="space-y-1.5">

@@ -41,17 +41,17 @@ function CalendarEventAnnouncements({ calendarEventId, timezone }: { calendarEve
   if (messages.length === 0) return null;
 
   return (
-    <div className="space-y-2 pt-2 border-t border-slate-100">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+    <div className="space-y-2 pt-2 border-t border-line/70">
+      <p className="text-[11px] font-bold text-ink-subtle uppercase flex items-center gap-1.5">
         <Megaphone size={11} /> アナウンス
       </p>
       {messages.map((message) => (
-        <div key={message.calendar_event_message_id} className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 space-y-1.5">
+        <div key={message.calendar_event_message_id} className="bg-brand-soft/50 border border-brand-100 rounded-xl p-3 space-y-1.5">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-xs font-black text-slate-800">{message.title}</p>
-            <p className="text-[10px] text-slate-400 font-bold shrink-0">{formatDateTimeByZone(message.insert_date, timezone, false)}</p>
+            <p className="text-xs font-bold text-ink">{message.title}</p>
+            <p className="text-[11px] text-ink-subtle font-bold shrink-0">{formatDateTimeByZone(message.insert_date, timezone, false)}</p>
           </div>
-          <p className="text-xs text-slate-600 whitespace-pre-wrap">{message.content}</p>
+          <p className="text-xs text-ink-soft whitespace-pre-wrap">{message.content}</p>
           {message.attachments.length > 0 && (
             <div className="space-y-1 pt-1">
               {message.attachments.map((att) => (
@@ -59,14 +59,14 @@ function CalendarEventAnnouncements({ calendarEventId, timezone }: { calendarEve
                   key={att.id}
                   type="button"
                   onClick={() => handleDownload(att.path)}
-                  className="w-full flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-100 hover:border-indigo-200 transition-colors text-left"
+                  className="w-full flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-line/70 hover:border-brand-200 transition-colors text-left"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <Paperclip size={12} className="text-slate-400 shrink-0" />
-                    <span className="text-[11px] font-bold text-slate-700 truncate">{att.name}</span>
-                    <span className="text-[10px] text-slate-400 font-mono shrink-0">{formatAttachmentSize(att.size)}</span>
+                    <Paperclip size={12} className="text-ink-subtle shrink-0" />
+                    <span className="text-[11px] font-bold text-ink-soft truncate">{att.name}</span>
+                    <span className="text-[11px] text-ink-subtle tabular-nums shrink-0">{formatAttachmentSize(att.size)}</span>
                   </div>
-                  <Download size={12} className="text-slate-400 shrink-0" />
+                  <Download size={12} className="text-ink-subtle shrink-0" />
                 </button>
               ))}
             </div>
@@ -157,22 +157,22 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
   };
 
   return (
-    <article className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-2">
+    <article className="bg-white rounded-2xl border border-line/70 shadow-sm p-4 space-y-2">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
-            <span className={cn('text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border', badge.badgeClass)}>
+            <span className={cn('text-[11px] font-bold uppercase px-2 py-1 rounded-md border', badge.badgeClass)}>
               {badge.label}
             </span>
             {event.rsvp_enabled && event.is_joined && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-2 py-1">
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-2 py-1">
                 <CheckCircle2 size={11} />
                 参加済み
               </span>
             )}
           </div>
-          <p className="text-sm font-black text-slate-800">{event.title}</p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm font-bold text-ink">{event.title}</p>
+          <p className="text-xs text-ink-muted mt-0.5">
             {event.end_datetime
               ? `${formatTimeInZone(event.start_datetime, timezone)} - ${formatTimeInZone(event.end_datetime, timezone)}`
               : `${formatTimeInZone(event.start_datetime, timezone)}（開始日時のみ）`}
@@ -181,7 +181,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
       </div>
 
       {event.description && (
-        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 whitespace-pre-wrap">{event.description}</p>
+        <p className="text-xs text-ink-soft bg-slate-50 border border-line/70 rounded-lg px-3 py-2 whitespace-pre-wrap">{event.description}</p>
       )}
 
       {!event.rsvp_enabled && event.location_url && (
@@ -189,7 +189,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
           href={event.location_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-strong"
         >
           <ExternalLink size={13} />
           参加リンクを開く
@@ -234,17 +234,17 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
               <button
                 type="button"
                 onClick={() => setShowLink((v) => !v)}
-                className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-xs font-bold text-ink-subtle hover:text-ink-soft transition-colors"
               >
                 リンクを表示
               </button>
               {showLink && (
-                <div className="flex items-center gap-2 mt-1.5 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
-                  <span className="text-xs font-mono text-slate-600 truncate flex-1">{event.location_url}</span>
+                <div className="flex items-center gap-2 mt-1.5 bg-slate-50 border border-line/70 rounded-lg px-3 py-2">
+                  <span className="text-xs tabular-nums text-ink-soft truncate flex-1">{event.location_url}</span>
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="shrink-0 text-ink-subtle hover:text-ink-soft transition-colors"
                     title="コピー"
                   >
                     {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -277,7 +277,7 @@ export function DayDetailDrawer({
     <Drawer open={!!date} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="max-w-2xl mx-auto max-h-[85vh]">
         <DrawerHeader className="text-left">
-          <DrawerTitle className="text-base font-black text-slate-800">
+          <DrawerTitle className="text-base font-bold text-ink">
             {date ? `${formatZonedDateJapanese(date, timezone)}（${weekdayLabel(date)}）` : ''}
           </DrawerTitle>
         </DrawerHeader>
@@ -288,7 +288,7 @@ export function DayDetailDrawer({
               type="button"
               size="sm"
               variant="outline"
-              className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              className="w-full text-brand border-brand-200 hover:bg-brand-soft"
               onClick={() => onBookMakeupRequested(date)}
             >
               <Ticket size={13} />
@@ -298,8 +298,8 @@ export function DayDetailDrawer({
 
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <CalendarClock size={20} className="text-slate-300 mb-2" />
-              <p className="text-sm font-bold text-slate-500">この日の予定はありません</p>
+              <CalendarClock size={20} className="text-ink-subtle mb-2" />
+              <p className="text-sm font-bold text-ink-muted">この日の予定はありません</p>
             </div>
           ) : (
             sorted.map((item) => {
@@ -309,21 +309,21 @@ export function DayDetailDrawer({
                 const isFuture = new Date(session.start_datetime) > new Date();
                 const canAct = session.status === SESSION_STATUS.SCHEDULED && isFuture;
                 return (
-                  <article key={getCalendarItemKey(item)} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-2">
+                  <article key={getCalendarItemKey(item)} className="bg-white rounded-2xl border border-line/70 shadow-sm p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-black text-slate-800">
+                        <p className="text-sm font-bold text-ink">
                           {formatTimeInZone(session.start_datetime, timezone)} - {formatTimeInZone(session.end_datetime, timezone)}
                         </p>
-                        <p className="text-xs text-slate-500 mt-0.5">{session.counterpart_name}コーチ</p>
+                        <p className="text-xs text-ink-muted mt-0.5">{session.counterpart_name}コーチ</p>
                       </div>
-                      <span className={cn('text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0', badge.className)}>
+                      <span className={cn('text-[11px] font-bold uppercase px-2 py-1 rounded-md border shrink-0', badge.className)}>
                         {badge.label}
                       </span>
                     </div>
 
                     {session.cancel_reason && (
-                      <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">{session.cancel_reason}</p>
+                      <p className="text-xs text-ink-muted bg-slate-50 border border-line/70 rounded-lg px-3 py-2">{session.cancel_reason}</p>
                     )}
 
                     {canAct && (

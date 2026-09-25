@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Bell, ChevronLeft, BellOff } from 'lucide-react';
+import { BellOff } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NoticeCard } from './_components/NoticeCard';
+import { ShellPanel, ShellPanelHeader, CountBadge } from '@/components/shell/ShellPanel';
 
 export default function NoticePage() {
   const searchParams = useSearchParams();
@@ -52,29 +52,8 @@ export default function NoticePage() {
   }, [focusId, isLoading, notices]);
 
   return (
-    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden">
-      {/* ─── ヘッダー ──────────────────────────────────────── */}
-      <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="p-2 -ml-2 hover:bg-slate-100 rounded-2xl transition-all active:scale-90 text-slate-400"
-            >
-              <ChevronLeft size={24} />
-            </Link>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Notices</h1>
-            </div>
-          </div>
-
-          {/* 件数バッジ */}
-          <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 shadow-sm flex items-center gap-1.5">
-            <Bell size={10} />
-            {notices.length} <span className="opacity-60 ml-0.5">Items</span>
-          </div>
-        </div>
-      </header>
+    <ShellPanel>
+      <ShellPanelHeader title="お知らせ" back={{ history: '/dashboard' }} aside={<CountBadge count={notices.length} />} />
 
       {/* ─── リスト ─────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-3">
@@ -88,7 +67,7 @@ export default function NoticePage() {
               className="space-y-3"
             >
               {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-[72px] w-full rounded-[24px] opacity-60" />
+                <Skeleton key={i} className="h-[72px] w-full rounded-card opacity-60" />
               ))}
             </motion.div>
           ) : notices.length === 0 ? (
@@ -99,12 +78,12 @@ export default function NoticePage() {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-20 text-center"
             >
-              <div className="w-14 h-14 rounded-[20px] bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
+              <div className="w-14 h-14 rounded-card bg-slate-50 flex items-center justify-center text-ink-subtle mb-4 border border-line/70">
                 <BellOff size={22} />
               </div>
-              <p className="text-sm font-bold text-slate-500">現在お知らせはありません</p>
-              <p className="text-[10px] text-slate-400 mt-1.5 font-black uppercase tracking-wider">
-                No notifications yet
+              <p className="text-sm font-bold text-ink-muted">現在お知らせはありません</p>
+              <p className="text-[11px] text-ink-subtle mt-1.5 font-bold uppercase">
+                お知らせが届くと、ここに表示されます
               </p>
             </motion.div>
           ) : (
@@ -126,6 +105,6 @@ export default function NoticePage() {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </ShellPanel>
   );
 }

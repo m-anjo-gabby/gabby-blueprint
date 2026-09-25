@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LIVE_SESSION_INTRO, type LiveSessionIntroAction } from '@/constants/liveSessionIntro';
+import { ShellPanel } from '@/components/shell/ShellPanel';
 
 /**
  * ライブセッション紹介（アップセル）画面。
@@ -12,7 +13,7 @@ export function LiveSessionIntro() {
   const { eyebrow, title, lead, features, steps, actions, note } = LIVE_SESSION_INTRO;
 
   return (
-    <div className="flex flex-col w-full max-w-2xl h-full bg-surface rounded-panel shadow-2xl border border-line/60 overflow-hidden">
+    <ShellPanel>
       <div className="flex-1 overflow-y-auto touch-pan-y">
         {/* ヒーロー: ブランドの深いインディゴを面で使う */}
         <section className="relative overflow-hidden bg-brand-deep px-6 sm:px-10 pt-10 pb-12 text-white">
@@ -45,12 +46,12 @@ export function LiveSessionIntro() {
             <h2 className="text-sm font-bold text-ink">ご利用の流れ</h2>
             <ol className="grid grid-cols-3 gap-2">
               {steps.map((step, index) => (
-                <li key={step.title} className="rounded-control border border-line/60 bg-slate-50/70 p-3 text-center">
+                <li key={step.title} className="rounded-control border border-line/60 bg-slate-50/70 px-2 py-3 sm:p-3 text-center">
                   <span className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
                     {index + 1}
                   </span>
-                  <p className="mt-2 text-sm font-bold text-ink">{step.title}</p>
-                  <p className="mt-1 text-[11px] leading-snug text-ink-muted">{step.description}</p>
+                  <p className="mt-2 text-[13px] sm:text-sm font-bold text-ink [word-break:auto-phrase]">{step.title}</p>
+                  <p className="mt-1 text-[11px] leading-snug text-ink-muted [word-break:auto-phrase]">{step.description}</p>
                 </li>
               ))}
             </ol>
@@ -65,7 +66,7 @@ export function LiveSessionIntro() {
           </section>
         </div>
       </div>
-    </div>
+    </ShellPanel>
   );
 }
 

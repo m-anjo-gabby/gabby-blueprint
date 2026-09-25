@@ -79,9 +79,9 @@ export function CoachCard({ coach, countries, onRequest, selectedDays, selectedT
   );
 
   return (
-    <article className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+    <article className="bg-white rounded-2xl border border-line/70 shadow-sm p-4 space-y-3">
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-2xl bg-indigo-50 overflow-hidden flex items-center justify-center text-indigo-500 shrink-0">
+        <div className="w-11 h-11 rounded-2xl bg-brand-soft overflow-hidden flex items-center justify-center text-brand-500 shrink-0">
           {coach.icon_path ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={getProfileIconUrl(coach.icon_path) ?? ''} alt={coach.user_name} className="w-full h-full object-cover" />
@@ -90,8 +90,8 @@ export function CoachCard({ coach, countries, onRequest, selectedDays, selectedT
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-slate-800 truncate">{coach.user_name}</p>
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+          <p className="text-sm font-bold text-ink truncate">{coach.user_name}</p>
+          <div className="flex items-center gap-1.5 text-[11px] text-ink-subtle">
             {country?.icon_path && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -109,11 +109,11 @@ export function CoachCard({ coach, countries, onRequest, selectedDays, selectedT
       </div>
 
       {coach.introduction && (
-        <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{coach.introduction}</p>
+        <p className="text-xs text-ink-muted leading-relaxed line-clamp-2">{coach.introduction}</p>
       )}
 
       {coach.availability.length === 0 ? (
-        <p className="text-xs text-slate-400">現在、対応可能時間の登録がありません</p>
+        <p className="text-xs text-ink-subtle">現在、対応可能時間の登録がありません</p>
       ) : (
         <div className="flex flex-wrap items-center gap-1.5">
           {visibleSlots.map((slot) => (
@@ -122,8 +122,8 @@ export function CoachCard({ coach, countries, onRequest, selectedDays, selectedT
               className={cn(
                 'px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap',
                 hasActiveFilter && !slot.matches
-                  ? 'bg-slate-50 text-slate-400 border-slate-100'
-                  : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                  ? 'bg-slate-50 text-ink-subtle border-line/70'
+                  : 'bg-brand-soft text-brand-strong border-brand-100'
               )}
             >
               {DAY_OF_WEEK_LABEL_JA[slot.displayDay].slice(0, 1)} {slot.displayStartTime}
@@ -134,7 +134,7 @@ export function CoachCard({ coach, countries, onRequest, selectedDays, selectedT
             <button
               type="button"
               onClick={() => setShowAllSlots(true)}
-              className="px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-[11px] font-bold border border-slate-100 hover:bg-slate-100 transition-colors"
+              className="px-2.5 py-1 rounded-full bg-slate-50 text-ink-muted text-[11px] font-bold border border-line/70 hover:bg-slate-100 transition-colors"
             >
               +{hiddenSlotCount}
             </button>
@@ -143,7 +143,7 @@ export function CoachCard({ coach, countries, onRequest, selectedDays, selectedT
             <button
               type="button"
               onClick={() => setShowAllSlots(false)}
-              className="px-2 py-1 text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+              className="px-2 py-1 text-[11px] font-bold text-ink-subtle hover:text-ink-soft transition-colors"
             >
               閉じる
             </button>

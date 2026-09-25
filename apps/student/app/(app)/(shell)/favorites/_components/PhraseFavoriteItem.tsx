@@ -36,29 +36,29 @@ export function PhraseFavoriteItem({ phrase, onRemove }: Props) {
       exit={{ opacity: 0, scale: 0.98 }}
       className="mb-4 last:mb-0"
     >
-      <Card className="group overflow-hidden transition-all duration-300 rounded-[28px] bg-white border-slate-100 shadow-sm hover:shadow-md">
+      <Card className="group overflow-hidden transition-all duration-300 rounded-card bg-white border-line/70 shadow-sm hover:shadow-md">
         
         {/* 1. Header Area: 教材ラベルを表示 */}
-        <div className="px-5 py-3 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-slate-400">
-            <BookOpen size={12} strokeWidth={2.5} className="text-indigo-400" />
-            <span className="text-[10px] font-black uppercase tracking-widest truncate max-w-[220px]">
+        <div className="px-5 py-3 border-b border-line/50 bg-slate-50/30 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-ink-subtle">
+            <BookOpen size={12} strokeWidth={2.5} className="text-brand-400" />
+            <span className="text-[11px] font-bold uppercase truncate max-w-[220px]">
               {phrase.content_name}
             </span>
           </div>
           {/* アクセント：少し学習感のあるバッジ的要素 */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
-             <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter">ID: {phrase.phrase_id.slice(0, 6)}</span>
+             <span className="text-[11px] font-bold text-ink-subtle uppercase tracking-tighter">ID: {phrase.phrase_id.slice(0, 6)}</span>
           </div>
         </div>
 
         {/* 2. Main Content Area: フレーズを横いっぱいに表示 */}
         <CardContent className="p-6">
           <div className="space-y-2">
-            <h3 className="text-lg sm:text-xl font-black text-slate-800 tracking-tight leading-tight decoration-indigo-100 decoration-2">
+            <h3 className="text-lg sm:text-xl font-bold text-ink tracking-tight leading-tight decoration-brand-100 decoration-2">
               {phrase.phrase_en}
             </h3>
-            <p className="text-sm sm:text-base text-slate-500 font-bold leading-relaxed">
+            <p className="text-sm sm:text-base text-ink-muted font-bold leading-relaxed">
               {phrase.phrase_ja}
             </p>
           </div>
@@ -70,15 +70,15 @@ export function PhraseFavoriteItem({ phrase, onRemove }: Props) {
           <Button
             variant="secondary"
             onClick={() => handleSpeak(phrase)}
-            className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-none rounded-2xl h-11 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 group/btn"
+            className="flex-1 bg-brand-soft hover:bg-brand-100 text-brand border-none rounded-2xl h-11 font-bold text-[11px] uppercase transition-all active:scale-95 group/btn"
           >
             {isAudioPlaying === phrase.phrase_id
-              ? <Music4 size={16} strokeWidth={2.5} className="mr-2 animate-pulse text-indigo-500" />
+              ? <Music4 size={16} strokeWidth={2.5} className="mr-2 animate-pulse text-brand-500" />
               : isSpeaking
-                ? <Mic size={16} strokeWidth={2.5} className="mr-2 animate-pulse text-indigo-500" />
+                ? <Mic size={16} strokeWidth={2.5} className="mr-2 animate-pulse text-brand-500" />
                 : <Volume2 size={16} strokeWidth={2.5} className="mr-2 group-hover/btn:animate-pulse" />
             }
-            Listen Now
+            音声を聞く
           </Button>
 
           {/* Removeボタン：誤操作しにくいがアクセスしやすい位置 */}
@@ -86,8 +86,8 @@ export function PhraseFavoriteItem({ phrase, onRemove }: Props) {
             variant="ghost"
             size="icon"
             onClick={() => onRemove(phrase.phrase_id)}
-            className="w-11 h-11 rounded-2xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all active:scale-90"
-            title="Remove from favorites"
+            className="w-11 h-11 rounded-2xl text-ink-subtle hover:text-rose-500 hover:bg-rose-50 transition-all active:scale-90"
+            title="お気に入りから削除"
           >
             <Trash2 size={18} strokeWidth={2.5} />
           </Button>

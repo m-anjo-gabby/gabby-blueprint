@@ -10,7 +10,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Timer,
   SlidersHorizontal, 
   Calendar,
   Zap,
@@ -20,9 +19,8 @@ import {
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
-import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MonitorUser, MonitorSprintHistoryItem, MonitorSprintDrillHistoryItem, MonitorSprintHistoryResponse } from '@/actions/monitorAction';
+import { MonitorUser, MonitorSprintHistoryResponse } from '@/actions/monitorAction';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 
 export interface DisplayHistoryItem {
@@ -88,7 +86,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState<boolean>(false);
 
   // 💡 モニターユーザーであるかを判定するヘルパー関数
-  const isMonitorUser = (u: any): boolean => {
+  const isMonitorUser = (u: { is_monitor?: boolean | null; email?: string | null } | null | undefined): boolean => {
     if (!u) return false;
     return u.is_monitor === true || !!u.email?.toLowerCase().includes('monitor');
   };
@@ -331,16 +329,16 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
     <div className="space-y-4">
       
       {/* ────────────── 🛠️ コントロールバー（固定レイアウトエリア） ────────────── */}
-      <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4 sm:p-5 flex flex-col xl:flex-row gap-5 items-start xl:items-center justify-between">
+      <div className="bg-slate-50/50 border border-line/60 rounded-2xl p-4 sm:p-5 flex flex-col xl:flex-row gap-5 items-start xl:items-center justify-between">
         
         <div className="flex flex-col md:flex-row gap-5 items-start md:items-center w-full xl:w-auto flex-1">
           {/* 1. 期間指定 */}
           <div className="w-full md:w-auto space-y-1.5 shrink-0">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-0.5 flex items-center gap-2">
+            <label className="text-[11px] font-bold text-ink-subtle uppercase px-0.5 flex items-center gap-2">
               対象期間
               <span className={cn(
-                "text-[9px] font-bold normal-case transition-colors",
-                isInvalidRange ? "text-rose-500 animate-pulse" : "text-slate-400"
+                "text-[11px] font-bold normal-case transition-colors",
+                isInvalidRange ? "text-rose-500 animate-pulse" : "text-ink-subtle"
               )}>
                 {dateRangeValidationError === 'reverse' && "(※開始日には終了日より前の日付を指定してください)"}
                 {dateRangeValidationError === 'exceeded' && "(※最大半年まで指定可能)"}
@@ -349,27 +347,27 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
             </label>
             <div className={cn(
               "flex items-center gap-1.5 bg-white border rounded-xl p-1.5 shadow-2xs transition-colors",
-              isInvalidRange ? "border-rose-300 bg-rose-50/10" : "border-slate-200/80"
+              isInvalidRange ? "border-rose-300 bg-rose-50/10" : "border-line/80"
             )}>
               <input 
                 type="date" 
                 value={localStart} 
                 onChange={(e) => setLocalStart(e.target.value)}
-                className="border-0 bg-transparent text-xs font-black text-slate-700 outline-none px-2 py-1 select-none" 
+                className="border-0 bg-transparent text-xs font-bold text-ink-soft outline-none px-2 py-1 select-none" 
               />
-              <span className="text-slate-300 font-bold text-xs">~</span>
+              <span className="text-ink-subtle font-bold text-xs">~</span>
               <input 
                 type="date" 
                 value={localEnd} 
                 onChange={(e) => setLocalEnd(e.target.value)}
-                className="border-0 bg-transparent text-xs font-black text-slate-700 outline-none px-2 py-1 select-none" 
+                className="border-0 bg-transparent text-xs font-bold text-ink-soft outline-none px-2 py-1 select-none" 
               />
               <button 
                 onClick={handleDateSearch}
                 disabled={isInvalidRange}
                 className={cn(
                   "h-7 px-2.5 rounded-lg transition-all flex items-center justify-center shadow-xs",
-                  isInvalidRange ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                  isInvalidRange ? "bg-slate-200 text-ink-subtle cursor-not-allowed" : "bg-brand hover:bg-brand-strong text-white"
                 )}
               >
                 <Search size={13} strokeWidth={2.5} />
@@ -379,18 +377,18 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
 
           {/* 2. 受講生セレクト検索 */}
           <div className="w-full relative space-y-1.5 max-w-md">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-0.5 flex items-center justify-between">
+            <label className="text-[11px] font-bold text-ink-subtle uppercase px-0.5 flex items-center justify-between">
               <span>受講生絞り込み ({selectedUserIds.length > 0 ? `${selectedUserIds.length}名選択中` : '全員表示'})</span>
               {selectedUserIds.length > 0 && (
-                <button onClick={clearAllUsers} className="text-indigo-600 hover:text-indigo-800 transition-colors normal-case font-bold text-[9px]">
+                <button onClick={clearAllUsers} className="text-brand hover:text-brand-800 transition-colors normal-case font-bold text-[11px]">
                   クリアする
                 </button>
               )}
             </label>
             
             <div className="w-full">
-              <div className="relative bg-white border border-slate-200/80 rounded-xl shadow-2xs flex items-center p-1.5">
-                <SlidersHorizontal size={13} className="text-slate-400 ml-2 shrink-0" />
+              <div className="relative bg-white border border-line/80 rounded-xl shadow-2xs flex items-center p-1.5">
+                <SlidersHorizontal size={13} className="text-ink-subtle ml-2 shrink-0" />
                 <input
                   type="text"
                   placeholder={selectedUserIds.length > 0 ? "受講生を追加・検索..." : "受講生の名前・メールで検索..."}
@@ -400,16 +398,16 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                     setIsUserDropdownOpen(true);
                   }}
                   onFocus={() => setIsUserDropdownOpen(true)}
-                  className="w-full bg-transparent border-0 text-xs font-bold text-slate-700 placeholder-slate-400 focus:ring-0 outline-none px-2 py-1"
+                  className="w-full bg-transparent border-0 text-xs font-bold text-ink-soft placeholder-slate-400 focus:ring-0 outline-none px-2 py-1"
                 />
                 {userSearchQuery && (
-                  <button onClick={() => setUserSearchQuery('')} className="p-1 text-slate-400 hover:text-slate-600">
+                  <button onClick={() => setUserSearchQuery('')} className="p-1 text-ink-subtle hover:text-ink-soft">
                     <X size={12} />
                   </button>
                 )}
                 <button 
                   onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                  className="p-1 border-l border-slate-100 text-slate-400 hover:text-slate-600 ml-1"
+                  className="p-1 border-l border-line/70 text-ink-subtle hover:text-ink-soft ml-1"
                 >
                   <ChevronDown size={14} className={cn("transition-transform duration-200", isUserDropdownOpen && "rotate-180")} />
                 </button>
@@ -423,10 +421,10 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 4 }}
-                      className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 shadow-xl rounded-xl z-20 max-h-60 overflow-y-auto scrollbar-none p-1.5 space-y-0.5"
+                      className="absolute left-0 right-0 mt-1.5 bg-white border border-line shadow-xl rounded-xl z-20 max-h-60 overflow-y-auto scrollbar-none p-1.5 space-y-0.5"
                     >
                       {filteredUsers.length === 0 ? (
-                        <div className="p-3 text-center text-slate-400 text-xs font-bold">
+                        <div className="p-3 text-center text-ink-subtle text-xs font-bold">
                           該当する受講生が見つかりません
                         </div>
                       ) : (
@@ -439,17 +437,17 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                               onClick={() => toggleUserFilter(u.id)}
                               className={cn(
                                 "w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between transition-colors",
-                                isSelected ? "bg-indigo-50/60 text-indigo-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                isSelected ? "bg-brand-soft/60 text-brand-strong" : "text-ink-soft hover:bg-slate-50 hover:text-ink"
                               )}
                             >
                               <div className="flex flex-col">
-                                <span className="font-extrabold">
+                                <span className="font-bold">
                                   {u.user_name || '名前未設定'}
-                                  {isMonitor && <span className="ml-1 text-[9px] bg-amber-100 text-amber-700 px-1 rounded font-normal">Monitor</span>}
+                                  {isMonitor && <span className="ml-1 text-[11px] bg-amber-100 text-amber-700 px-1 rounded font-normal">Monitor</span>}
                                 </span>
-                                <span className="text-[10px] text-slate-400 font-mono font-medium">{u.email}</span>
+                                <span className="text-[11px] text-ink-subtle tabular-nums font-medium">{u.email}</span>
                               </div>
-                              {isSelected && <Check size={14} className="text-indigo-600 shrink-0" strokeWidth={2.5} />}
+                              {isSelected && <Check size={14} className="text-brand shrink-0" strokeWidth={2.5} />}
                             </button>
                           );
                         })
@@ -469,35 +467,35 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
             onClick={handleExportCSV}
             disabled={displayFilteredData.length === 0}
             className={cn(
-              "inline-flex items-center gap-2 justify-center text-xs font-bold h-9 px-4 rounded-xl shadow-2xs border transition-all bg-white hover:bg-slate-50 text-slate-700 border-slate-200",
-              displayFilteredData.length === 0 && "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+              "inline-flex items-center gap-2 justify-center text-xs font-bold h-9 px-4 rounded-xl shadow-2xs border transition-all bg-white hover:bg-slate-50 text-ink-soft border-line",
+              displayFilteredData.length === 0 && "bg-slate-100 text-ink-subtle border-line cursor-not-allowed"
             )}
           >
-            <Download size={14} strokeWidth={2.5} className="text-slate-500" />
+            <Download size={14} strokeWidth={2.5} className="text-ink-muted" />
             <span>CSVエクスポート</span>
           </button>
 
           {/* 右上コンパクトページングコントロール */}
           {totalPages > 1 && (
-            <div className="flex items-center gap-3 bg-white border border-slate-200/80 rounded-xl p-1 shadow-2xs">
+            <div className="flex items-center gap-3 bg-white border border-line/80 rounded-xl p-1 shadow-2xs">
               <button 
                 onClick={() => setPage(p => Math.max(1, p - 1))} 
                 disabled={page === 1} 
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all"
+                className="p-1.5 rounded-lg text-ink-subtle hover:text-ink hover:bg-slate-50 disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all"
               >
                 <ChevronLeft size={15} strokeWidth={3} />
               </button>
               
               <div className="flex items-center gap-1 text-[11px] select-none px-0.5">
-                <span className="font-black text-slate-800 font-mono">{page}</span>
-                <span className="text-slate-300 font-bold">/</span>
-                <span className="text-slate-400 font-bold font-mono">{totalPages}</span>
+                <span className="font-bold text-ink tabular-nums">{page}</span>
+                <span className="text-ink-subtle font-bold">/</span>
+                <span className="text-ink-subtle font-bold tabular-nums">{totalPages}</span>
               </div>
               
               <button 
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
                 disabled={page === totalPages} 
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all"
+                className="p-1.5 rounded-lg text-ink-subtle hover:text-ink hover:bg-slate-50 disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all"
               >
                 <ChevronRight size={15} strokeWidth={3} />
               </button>
@@ -509,11 +507,11 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
       {/* 4. 選択中バッジ表示エリア */}
       {selectedUserIds.length > 0 && (
         <div className="flex flex-wrap gap-1.5 items-center px-1">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">絞り込み中:</span>
+          <span className="text-[11px] font-bold text-ink-subtle uppercase mr-1">絞り込み中:</span>
           {users.filter(u => selectedUserIds.includes(u.id)).map(u => (
-            <div key={u.id} className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-100/80 rounded-lg pl-2 pr-1.5 py-1 text-[10px] font-black text-indigo-600">
+            <div key={u.id} className="inline-flex items-center gap-1 bg-brand-soft border border-brand-100/80 rounded-lg pl-2 pr-1.5 py-1 text-[11px] font-bold text-brand">
               <span>{u.user_name || u.email}</span>
-              <button onClick={() => toggleUserFilter(u.id)} className="hover:bg-indigo-100 p-0.5 rounded-md transition-colors">
+              <button onClick={() => toggleUserFilter(u.id)} className="hover:bg-brand-100 p-0.5 rounded-md transition-colors">
                 <X size={10} strokeWidth={2.5} />
               </button>
             </div>
@@ -524,9 +522,9 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
       {/* ────────────── 📄 独立スクロール一覧表示エリア ────────────── */}
       <div className="max-h-[calc(100vh-290px)] overflow-y-auto pr-1.5 space-y-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
         {pagedDates.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-200">
-            <Calendar size={32} className="mx-auto text-slate-300 mb-3" />
-            <p className="text-sm font-bold text-slate-400">該当する履歴はありません</p>
+          <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-line">
+            <Calendar size={32} className="mx-auto text-ink-subtle mb-3" />
+            <p className="text-sm font-bold text-ink-subtle">該当する履歴はありません</p>
           </div>
         ) : (
           pagedDates.map((date, index) => {
@@ -545,35 +543,35 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
               <motion.div 
                 key={date} 
                 layout="position"
-                className="bg-white rounded-xl border border-slate-200/60 overflow-hidden shadow-2xs"
+                className="bg-white rounded-xl border border-line/60 overflow-hidden shadow-2xs"
               >
                 {/* 日付ヘッダー */}
-                <div className="w-full p-4 flex items-center justify-between bg-slate-50/50 border-b border-slate-100">
+                <div className="w-full p-4 flex items-center justify-between bg-slate-50/50 border-b border-line/70">
                   <div className="flex items-center gap-3 text-left">
-                    <div className="w-9 h-9 bg-white border border-slate-200/60 rounded-lg flex items-center justify-center text-slate-400 font-black text-sm font-mono shrink-0 select-none shadow-3xs">
+                    <div className="w-9 h-9 bg-white border border-line/60 rounded-lg flex items-center justify-center text-ink-subtle font-bold text-sm tabular-nums shrink-0 select-none shadow-3xs">
                       {dayNo}
                     </div>
                     <div>
-                      <div className="text-sm font-black text-slate-800 tracking-tight mb-1">{date}</div>
-                      <div className="flex items-center gap-3 text-[10px] font-bold text-slate-600 flex-wrap">
+                      <div className="text-sm font-bold text-ink tracking-tight mb-1">{date}</div>
+                      <div className="flex items-center gap-3 text-[11px] font-bold text-ink-soft flex-wrap">
                         {sprintCount > 0 && (
-                          <span className="flex items-center gap-1 bg-indigo-50 border border-indigo-100/30 px-1.5 py-0.5 rounded-md text-indigo-700 font-extrabold">
-                            <span>スプリント <span className="font-mono text-xs">{sprintCount}</span></span>
+                          <span className="flex items-center gap-1 bg-brand-soft border border-brand-100/30 px-1.5 py-0.5 rounded-md text-brand-strong font-bold">
+                            <span>スプリント <span className="tabular-nums text-xs">{sprintCount}</span></span>
                           </span>
                         )}
                         {drillCount > 0 && (
-                          <span className="flex items-center gap-1 bg-emerald-50 border border-emerald-100/30 px-1.5 py-0.5 rounded-md text-emerald-700 font-extrabold">
-                            <span>ドリル <span className="font-mono text-xs">{drillCount}</span></span>
+                          <span className="flex items-center gap-1 bg-emerald-50 border border-emerald-100/30 px-1.5 py-0.5 rounded-md text-emerald-700 font-bold">
+                            <span>ドリル <span className="tabular-nums text-xs">{drillCount}</span></span>
                           </span>
                         )}
-                        <span className="flex items-center gap-1 bg-emerald-50/50 px-1.5 py-0.5 rounded-md border border-emerald-100/40 text-slate-700">
+                        <span className="flex items-center gap-1 bg-emerald-50/50 px-1.5 py-0.5 rounded-md border border-emerald-100/40 text-ink-soft">
                           <CheckCircle2 size={11} className="text-emerald-500 fill-emerald-500/10 shrink-0" />
-                          <span>回答数 <span className="font-mono text-slate-900 font-black text-xs">{totalAnswersDay}</span></span>
+                          <span>回答数 <span className="tabular-nums text-ink font-bold text-xs">{totalAnswersDay}</span></span>
                         </span>
                         {totalAssessmentsDay > 0 && (
-                          <span className="flex items-center gap-1 bg-rose-50/50 px-1.5 py-0.5 rounded-md border border-rose-100/40 text-slate-700">
+                          <span className="flex items-center gap-1 bg-rose-50/50 px-1.5 py-0.5 rounded-md border border-rose-100/40 text-ink-soft">
                             <Mic size={11} className="text-rose-500 shrink-0" />
-                            <span>発話評価数 <span className="font-mono text-xs">{totalAssessmentsDay}</span></span>
+                            <span>発話評価数 <span className="tabular-nums text-xs">{totalAssessmentsDay}</span></span>
                           </span>
                         )}
                       </div>
@@ -583,7 +581,7 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
 
                 {/* 明細リスト */}
                 <div className="bg-white">
-                  <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-2 border-b border-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-wider font-mono bg-slate-50/30">
+                  <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-2 border-b border-line/50 text-[11px] font-bold text-ink-subtle uppercase tabular-nums bg-slate-50/30">
                     <div className="col-span-2">受講生</div>
                     <div className="col-span-3">トレーニング教材</div>
                     <div className="col-span-5 text-left pl-1">トレーニング実績 (本数/回答/発話)</div>
@@ -597,18 +595,18 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                       return (
                         <div 
                           key={`${item.key}-${idx}`}
-                          className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 px-5 py-3 hover:bg-indigo-50/20 transition-colors items-center group"
+                          className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 px-5 py-3 hover:bg-brand-soft/20 transition-colors items-center group"
                         >
                           {/* 1. 受講生 */}
                           <div className="col-span-1 md:col-span-2 flex items-center gap-2">
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-5 h-5 rounded-md bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0 border border-indigo-100/50">
+                              <div className="w-5 h-5 rounded-md bg-brand-soft flex items-center justify-center text-brand-500 shrink-0 border border-brand-100/50">
                                 <User size={11} strokeWidth={2.5} />
                               </div>
-                              <span className="text-xs font-black text-slate-700 truncate flex items-center gap-1">
+                              <span className="text-xs font-bold text-ink-soft truncate flex items-center gap-1">
                                 {item.user_name}
                                 {isMonitor && (
-                                  <span className="text-[8px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-black font-mono scale-90 origin-left shrink-0">
+                                  <span className="text-[11px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-bold tabular-nums scale-90 origin-left shrink-0">
                                     MONITOR
                                   </span>
                                 )}
@@ -621,40 +619,40 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                             <div className="flex items-center gap-1.5 min-w-0">
                               {/* モードバッジ */}
                               <span className={cn(
-                                "text-[9px] font-black px-1.5 py-0.5 rounded-md border tracking-wider shrink-0",
+                                "text-[11px] font-bold px-1.5 py-0.5 rounded-md border shrink-0",
                                 isSprint
-                                  ? "bg-indigo-50 border-indigo-100 text-indigo-600"
+                                  ? "bg-brand-soft border-brand-100 text-brand"
                                   : "bg-emerald-50 border-emerald-100 text-emerald-600"
                               )}>
                                 {isSprint ? 'スプリント' : 'ドリル'}
                               </span>
                               
                               {/* 教材名称 */}
-                              <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition-colors truncate" title={item.content_name}>
+                              <span className="text-xs font-bold text-ink-soft group-hover:text-brand transition-colors truncate" title={item.content_name}>
                                 {item.content_name}
                               </span>
                             </div>
                           </div>
 
                           {/* 3. トレーニング実績（スプリント本数・回答数・発話数） */}
-                          <div className="col-span-1 md:col-span-5 flex items-center justify-start gap-3 text-[10px]">
-                            <div className="flex items-center gap-2 text-slate-500 font-bold font-mono">
+                          <div className="col-span-1 md:col-span-5 flex items-center justify-start gap-3 text-[11px]">
+                            <div className="flex items-center gap-2 text-ink-muted font-bold tabular-nums">
                               {/* スプリント本数 */}
                               <span className="inline-flex items-center min-w-[56px]" title="スプリント本数">
                                 <Zap size={11} className="text-amber-500/80 fill-amber-500/10 mr-1 shrink-0" />
-                                <span className="font-mono text-slate-700 font-extrabold">{item.sprint_count}</span>
+                                <span className="tabular-nums text-ink-soft font-bold">{item.sprint_count}</span>
                               </span>
                               
                               {/* 回答数 */}
                               <span className="inline-flex items-center min-w-[56px]" title="回答数">
                                 <CheckCircle2 size={11} className="text-emerald-500/80 mr-1 shrink-0" />
-                                <span className="font-mono text-slate-700 font-extrabold">{item.answered_count}</span>
+                                <span className="tabular-nums text-ink-soft font-bold">{item.answered_count}</span>
                               </span>
                               
                               {/* 発話数 */}
                               <span className="inline-flex items-center min-w-[56px]" title="発話数">
                                 <Mic size={11} className="text-rose-500 mr-1 shrink-0" />
-                                <span className="font-mono text-slate-700 font-extrabold">{item.assessment_count}</span>
+                                <span className="tabular-nums text-ink-soft font-bold">{item.assessment_count}</span>
                               </span>
                             </div>
                           </div>

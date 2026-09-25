@@ -81,7 +81,7 @@ function ChatAttachmentView({ attachment }: { attachment: ChatAttachmentRecord }
     >
       <FileText size={16} className="shrink-0" />
       <span className="truncate">{attachment.file_name}</span>
-      <span className="text-[10px] opacity-70 shrink-0">{formatFileSize(attachment.file_size)}</span>
+      <span className="text-[11px] opacity-70 shrink-0">{formatFileSize(attachment.file_size)}</span>
     </a>
   );
 }

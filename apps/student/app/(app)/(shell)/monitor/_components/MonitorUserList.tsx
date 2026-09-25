@@ -11,7 +11,6 @@ import {
   Hourglass, 
   Ban, 
   Mail, 
-  BookOpen, 
   MessageSquareText, 
   Mic, 
   CalendarDays,
@@ -143,7 +142,7 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
     });
 
     return statsMap;
-  }, [wordHistory, sprintHistory, timezone]);
+  }, [wordHistory, sprintHistory]);
 
   const handleExportCSV = () => {
     if (users.length === 0) return;
@@ -211,7 +210,7 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
   };
 
   const getLicenseStateBadge = (state: MonitorUser['license_state']) => {
-    const baseClass = "inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider shrink-0 border shadow-2xs font-sans w-[105px] select-none";
+    const baseClass = "inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold shrink-0 border shadow-2xs font-sans w-[105px] select-none";
     switch (state) {
       case 'active':
         return <span className={cn(baseClass, "bg-emerald-50/60 border-emerald-100 text-emerald-600")}><CheckCircle2 size={12} strokeWidth={2.5} /> 利用中</span>;
@@ -222,11 +221,11 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
       case 'inviting':
         return <span className={cn(baseClass, "bg-amber-50/60 border-amber-100 text-amber-700")}><Mail size={12} strokeWidth={2.5} /> 招待中</span>;
       case 'expired_invite':
-        return <span className={cn(baseClass, "bg-slate-50/80 border-slate-200/60 text-slate-400")}><Ban size={12} strokeWidth={2.5} /> 期限切れ</span>;
+        return <span className={cn(baseClass, "bg-slate-50/80 border-line/60 text-ink-subtle")}><Ban size={12} strokeWidth={2.5} /> 期限切れ</span>;
       case 'mail_failed':
         return <span className={cn(baseClass, "bg-orange-50/60 border-orange-100 text-orange-600")}><XCircle size={12} strokeWidth={2.5} /> 送信失敗</span>;
       default:
-        return <span className={cn(baseClass, "bg-slate-50 border-slate-200 text-slate-500")}>不明</span>;
+        return <span className={cn(baseClass, "bg-slate-50 border-line text-ink-muted")}>不明</span>;
     }
   };
 
@@ -234,17 +233,17 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
     <div className="space-y-4 animate-fade-in">
       
       {/* コントロールバー */}
-      <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="bg-slate-50/50 border border-line/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center w-full sm:w-auto">
           <div className="space-y-1.5 w-full sm:w-auto">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-0.5 flex items-center gap-1.5 font-mono">
-              <CalendarDays size={12} className="text-indigo-500" />
+            <label className="text-[11px] font-bold text-ink-subtle uppercase px-0.5 flex items-center gap-1.5 tabular-nums">
+              <CalendarDays size={12} className="text-brand-500" />
               対象年月
             </label>
-            <div className="flex items-center gap-2 bg-white border border-slate-200/80 rounded-xl p-1.5 shadow-2xs w-fit">
+            <div className="flex items-center gap-2 bg-white border border-line/80 rounded-xl p-1.5 shadow-2xs w-fit">
               <button 
                 onClick={() => handleMonthChange(-1)} 
-                className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-all active:scale-95"
+                className="p-1.5 text-ink-subtle hover:text-ink hover:bg-slate-50 rounded-lg transition-all active:scale-95"
                 title="前月"
               >
                 <ArrowLeft size={13} strokeWidth={3} />
@@ -253,17 +252,17 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
               <MonitorMonthPickerPopover currentMonth={currentMonthStr} onSelect={navigateToMonth}>
                 <button
                   type="button"
-                  className="flex items-center justify-center gap-1 text-xs font-black tracking-tight text-slate-700 font-mono min-w-[84px] text-center rounded-lg px-1.5 py-0.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                  className="flex items-center justify-center gap-1 text-xs font-bold tracking-tight text-ink-soft tabular-nums min-w-[84px] text-center rounded-lg px-1.5 py-0.5 hover:bg-slate-50 hover:text-brand transition-colors"
                   title="年月を選択"
                 >
                   {displayYear}年 {parseInt(displayMonth)}月
-                  <ChevronDown size={11} strokeWidth={3} className="text-slate-400" />
+                  <ChevronDown size={11} strokeWidth={3} className="text-ink-subtle" />
                 </button>
               </MonitorMonthPickerPopover>
 
               <button 
                 onClick={() => handleMonthChange(1)} 
-                className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-all active:scale-95"
+                className="p-1.5 text-ink-subtle hover:text-ink hover:bg-slate-50 rounded-lg transition-all active:scale-95"
                 title="来月"
               >
                 <ArrowRight size={13} strokeWidth={3} />
@@ -277,30 +276,30 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
             onClick={handleExportCSV}
             disabled={users.length === 0}
             className={cn(
-              "inline-flex items-center gap-2 justify-center text-xs font-bold h-9 px-4 rounded-xl shadow-2xs border transition-all bg-white hover:bg-slate-50 text-slate-700 border-slate-200",
-              users.length === 0 && "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+              "inline-flex items-center gap-2 justify-center text-xs font-bold h-9 px-4 rounded-xl shadow-2xs border transition-all bg-white hover:bg-slate-50 text-ink-soft border-line",
+              users.length === 0 && "bg-slate-100 text-ink-subtle border-line cursor-not-allowed"
             )}
           >
-            <Download size={14} strokeWidth={2.5} className="text-slate-500" />
+            <Download size={14} strokeWidth={2.5} className="text-ink-muted" />
             <span>CSVエクスポート</span>
           </button>
         </div>
       </div>
 
       {users.length === 0 ? (
-        <div className="bg-white rounded-[28px] border border-dashed border-slate-200/80 p-16 text-center">
-          <User size={36} className="mx-auto text-slate-300 mb-3" />
-          <p className="text-sm font-bold text-slate-400">
+        <div className="bg-white rounded-card border border-dashed border-line/80 p-16 text-center">
+          <User size={36} className="mx-auto text-ink-subtle mb-3" />
+          <p className="text-sm font-bold text-ink-subtle">
             {includeMonitor
               ? 'この年月に該当する受講生が見つかりません'
               : 'この年月に該当する受講生が見つかりません（モニター用アカウントのみ登録されている場合は「モニターを含める」をONにしてください）'}
           </p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200/60 rounded-[28px] shadow-sm overflow-hidden">
+        <div className="bg-white border border-line/60 rounded-card shadow-sm overflow-hidden">
           
           {/* PC用ヘッダー */}
-          <div className="hidden md:flex items-center px-6 py-4 bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono">
+          <div className="hidden md:flex items-center px-6 py-4 bg-slate-50 border-b border-line/70 text-[11px] font-bold text-ink-subtle uppercase tabular-nums">
             <div className="w-full grid grid-cols-12 gap-4 items-center">
               <div className="col-span-3 pl-12">受講生</div>
               <div className="col-span-2 text-center">ステータス</div>
@@ -331,15 +330,15 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                     
                     {/* 1. 受講生（名前・メール）エリア */}
                     <div className="col-span-1 md:col-span-3 flex items-center gap-3.5">
-                      <div className="w-10 h-10 bg-indigo-50/60 text-indigo-500 border border-indigo-100/50 rounded-2xl flex items-center justify-center shrink-0 font-black font-mono text-xs select-none shadow-2xs">
+                      <div className="w-10 h-10 bg-brand-soft/60 text-brand-500 border border-brand-100/50 rounded-2xl flex items-center justify-center shrink-0 font-bold tabular-nums text-xs select-none shadow-2xs">
                         {user.user_name?.[0] || <User size={15} strokeWidth={2.5} />}
                       </div>
                       <div className="space-y-0.5 min-w-0">
-                        <p className="text-sm font-black text-slate-800 tracking-tight truncate group-hover:text-indigo-600 transition-colors">
+                        <p className="text-sm font-bold text-ink tracking-tight truncate group-hover:text-brand transition-colors">
                           {user.user_name || '未設定ユーザー'}
                         </p>
                         {user.email && (
-                          <p className="text-xs text-slate-400 font-normal truncate font-sans">
+                          <p className="text-xs text-ink-subtle font-normal truncate font-sans">
                             {user.email}
                           </p>
                         )}
@@ -347,82 +346,82 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                     </div>
 
                     {/* 2. ステータス */}
-                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-center border-t md:border-none border-slate-100/60 pt-2.5 md:pt-0">
-                      <span className="md:hidden text-[10px] font-black text-slate-400 uppercase font-mono tracking-wider">ステータス</span>
+                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-center border-t md:border-none border-line/70/60 pt-2.5 md:pt-0">
+                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase tabular-nums">ステータス</span>
                       <div>
                         {getLicenseStateBadge(user.license_state)}
                       </div>
                     </div>
 
                     {/* 3. ライセンス期間（💡 formatDate を廃止し、インライン化してCompiler準拠に） */}
-                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-center border-t border-dashed border-slate-100 md:border-none pt-2.5 md:pt-0">
-                      <span className="md:hidden text-[10px] font-black text-slate-400 uppercase font-mono tracking-wider">ライセンス期間</span>
-                      <div className="flex flex-col md:items-center font-mono text-[11px] text-slate-500 font-bold leading-relaxed">
+                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-center border-t border-dashed border-line/70 md:border-none pt-2.5 md:pt-0">
+                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase tabular-nums">ライセンス期間</span>
+                      <div className="flex flex-col md:items-center tabular-nums text-[11px] text-ink-muted font-bold leading-relaxed">
                         {user.license_start_date || user.license_end_date ? (
                           <>
                             <div className="flex items-center gap-1">
-                              <span className="text-[9px] font-black px-1 py-0.5 rounded-sm bg-slate-100 text-slate-400 scale-90 origin-right md:origin-center">自</span>
-                              <span className="text-slate-700 tracking-tight">
+                              <span className="text-[11px] font-bold px-1 py-0.5 rounded-sm bg-slate-100 text-ink-subtle scale-90 origin-right md:origin-center">自</span>
+                              <span className="text-ink-soft tracking-tight">
                                 {formatZonedDate(user.license_start_date, timezone) || '—'}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <span className="text-[9px] font-black px-1 py-0.5 rounded-sm bg-slate-100 text-slate-400 scale-90 origin-right md:origin-center">至</span>
-                              <span className="text-slate-600 tracking-tight">
+                              <span className="text-[11px] font-bold px-1 py-0.5 rounded-sm bg-slate-100 text-ink-subtle scale-90 origin-right md:origin-center">至</span>
+                              <span className="text-ink-soft tracking-tight">
                                 {formatZonedDate(user.license_end_date, timezone) || '—'}
                               </span>
                             </div>
                           </>
                         ) : (
-                          <span className="text-slate-300 font-normal tracking-widest md:pl-2">—</span>
+                          <span className="text-ink-subtle font-normal md:pl-2">—</span>
                         )}
                       </div>
                     </div>
 
                     {/* 4. トレーニング日数 */}
-                    <div className="col-span-1 md:col-span-1 flex items-center justify-between md:justify-center border-t border-dashed border-slate-100 md:border-none pt-2.5 md:pt-0">
-                      <span className="md:hidden text-[10px] font-black text-slate-400 uppercase font-mono tracking-wider">トレーニング日数</span>
-                      <div className="flex items-center gap-1 font-mono text-xs text-slate-500 font-bold justify-center">
-                        <span className="text-slate-700 font-extrabold font-mono text-center">{stats.days.size}</span>
-                        <span className="text-[10px] font-bold text-slate-400 font-sans">日</span>
+                    <div className="col-span-1 md:col-span-1 flex items-center justify-between md:justify-center border-t border-dashed border-line/70 md:border-none pt-2.5 md:pt-0">
+                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase tabular-nums">トレーニング日数</span>
+                      <div className="flex items-center gap-1 tabular-nums text-xs text-ink-muted font-bold justify-center">
+                        <span className="text-ink-soft font-bold tabular-nums text-center">{stats.days.size}</span>
+                        <span className="text-[11px] font-bold text-ink-subtle font-sans">日</span>
                       </div>
                     </div>
 
                     {/* 5. 主要実績スタッツ */}
-                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-start border-t border-dashed border-slate-100 md:border-none pt-2.5 md:pt-0 md:pl-1">
-                      <span className="md:hidden text-[10px] font-black text-slate-400 uppercase font-mono tracking-wider">主要実績</span>
-                      <div className="flex items-center gap-2.5 text-slate-500 font-bold font-mono text-[10px] md:w-full md:justify-start">
+                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-start border-t border-dashed border-line/70 md:border-none pt-2.5 md:pt-0 md:pl-1">
+                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase tabular-nums">主要実績</span>
+                      <div className="flex items-center gap-2.5 text-ink-muted font-bold tabular-nums text-[11px] md:w-full md:justify-start">
                         <span className="inline-flex items-center min-w-[48px]" title="フレーズ数">
                           <MessageSquareText size={11} className="text-emerald-500/80 mr-1 shrink-0" /> 
-                          <span className="text-slate-700 font-extrabold font-mono">{stats.phrases}</span>
+                          <span className="text-ink-soft font-bold tabular-nums">{stats.phrases}</span>
                         </span>
                         <span className="inline-flex items-center min-w-[48px]" title="スプリント本数">
                           <Zap size={11} className="text-amber-500/80 fill-amber-500/10 mr-1 shrink-0" /> 
-                          <span className="text-slate-700 font-extrabold font-mono">{stats.sprintSessions}</span>
+                          <span className="text-ink-soft font-bold tabular-nums">{stats.sprintSessions}</span>
                         </span>
                         <span className="inline-flex items-center min-w-[48px]" title="回答数">
                           <CheckCircle2 size={11} className="text-emerald-500 mr-1 shrink-0" /> 
-                          <span className="text-slate-700 font-extrabold font-mono">{stats.sprintAnswers}</span>
+                          <span className="text-ink-soft font-bold tabular-nums">{stats.sprintAnswers}</span>
                         </span>
                         <span className="inline-flex items-center min-w-[48px]" title="発話数">
                           <Mic size={11} className="text-rose-500 mr-1 shrink-0" /> 
-                          <span className="text-slate-700 font-extrabold font-mono">{stats.assessments}</span>
+                          <span className="text-ink-soft font-bold tabular-nums">{stats.assessments}</span>
                         </span>
                       </div>
                     </div>
 
                     {/* 6. アクティビティ */}
-                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-end border-t border-dashed border-slate-100 md:border-none pt-2.5 md:pt-0 pr-0 md:pr-4">
-                      <span className="md:hidden text-[10px] font-black text-slate-400 uppercase tracking-wider">アクティビティ</span>
+                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-end border-t border-dashed border-line/70 md:border-none pt-2.5 md:pt-0 pr-0 md:pr-4">
+                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase">アクティビティ</span>
                       {stats.latestDate ? (
-                        <div className="text-[11px] text-slate-600 font-black flex items-center gap-1.5 font-mono">
-                          <Clock size={12} className="text-slate-400" />
+                        <div className="text-[11px] text-ink-soft font-bold flex items-center gap-1.5 tabular-nums">
+                          <Clock size={12} className="text-ink-subtle" />
                           <span>
                             {stats.latestDate}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs font-bold text-slate-300 font-sans">活動なし</span>
+                        <span className="text-xs font-bold text-ink-subtle font-sans">活動なし</span>
                       )}
                     </div>
 

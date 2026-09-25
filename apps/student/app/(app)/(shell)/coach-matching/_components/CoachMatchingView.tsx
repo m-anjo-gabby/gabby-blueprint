@@ -1,9 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, Loader2, Users, X } from 'lucide-react';
+import { Loader2, Users, X } from 'lucide-react';
 import { CoachCard } from './CoachCard';
 import { CoachSearchFilters } from './CoachSearchFilters';
 import { RequestDialog } from './RequestDialog';
@@ -17,6 +16,7 @@ import { LiveSessionTicketSummary } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
+import { ShellPanel, ShellPanelHeader, CountBadge } from '@/components/shell/ShellPanel';
 
 interface CoachMatchingViewProps {
   ticket: LiveSessionTicketSummary;
@@ -28,7 +28,7 @@ interface CoachMatchingViewProps {
 const STATUS_BADGE: Record<SlotStatusItem['status'], { label: string; className: string }> = {
   matched: { label: 'マッチング済み', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   pending: { label: '承認待ち', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  unmatched: { label: '未マッチング', className: 'bg-slate-100 text-slate-600 border-slate-200' },
+  unmatched: { label: '未マッチング', className: 'bg-slate-100 text-ink-soft border-line' },
 };
 
 function formatTimeRange(startTime: string, endTime: string): string {
@@ -132,42 +132,26 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
   };
 
   return (
-    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden">
-      {/* 1. ヘッダーエリア */}
-      <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/live-room"
-              className="p-2 -ml-2 hover:bg-slate-100 rounded-2xl transition-all active:scale-90 text-slate-400 shrink-0"
-            >
-              <ChevronLeft size={24} />
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">専属コーチを探す</h1>
-          </div>
-
-          <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 shadow-sm shrink-0">
-            {filteredCoaches.length} <span className="opacity-60 ml-0.5">件</span>
-          </div>
-        </div>
-
-        <p className="text-[13px] text-slate-500">
-          週{ticket.weekly_frequency}回のセッション枠ごとにコーチをリクエストできます。コーチが承認すると、契約期間分のセッションが自動で予約されます。
-        </p>
-      </header>
+    <ShellPanel>
+      <ShellPanelHeader
+        title="専属コーチを探す"
+        back="/live-room"
+        aside={<CountBadge count={filteredCoaches.length} unit="人" />}
+        description={`週${ticket.weekly_frequency}回のセッション枠ごとにコーチをリクエストできます。コーチが承認すると、契約期間分のセッションが自動で予約されます。`}
+      />
 
       {/* 2. コンテンツエリア（スクロール） */}
-      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 bg-slate-50/50 space-y-6">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 bg-canvas/60 space-y-6">
         <section className="space-y-3">
-          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-widest px-1">セッション枠の状況</h2>
+          <h2 className="text-xs font-bold text-brand-500 uppercase px-1">セッション枠の状況</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {slots.map((slot) => {
               const badge = STATUS_BADGE[slot.status];
               return (
-                <div key={slot.slot_no} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-2">
+                <div key={slot.slot_no} className="bg-white rounded-2xl border border-line/70 shadow-sm p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-black text-slate-700">{slot.slot_no}コマ目</p>
-                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
+                    <p className="text-xs font-bold text-ink-soft">{slot.slot_no}コマ目</p>
+                    <span className={`text-[11px] font-bold uppercase px-2 py-1 rounded-md border ${badge.className}`}>
                       {badge.label}
                     </span>
                   </div>
@@ -179,7 +163,7 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
                       studentTimezone
                     );
                     return (
-                      <p className="text-xs text-slate-600">
+                      <p className="text-xs text-ink-soft">
                         {slot.coach_name} ・ {DAY_OF_WEEK_LABEL_JA[display.day_of_week as DayOfWeek]}{' '}
                         {formatTimeRange(display.start_time, display.end_time)}
                       </p>
@@ -197,7 +181,7 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
                       type="button"
                       onClick={() => handleCancel(slot)}
                       disabled={cancellingSlotNo === slot.slot_no}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-ink-subtle hover:text-rose-600 transition-colors disabled:opacity-50"
                     >
                       {cancellingSlotNo === slot.slot_no ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
                       リクエストを取消す
@@ -210,11 +194,11 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xs font-black text-indigo-500 uppercase tracking-widest px-1">コーチを選ぶ</h2>
+          <h2 className="text-xs font-bold text-brand-500 uppercase px-1">コーチを選ぶ</h2>
 
           {unmatchedSlots.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center bg-white rounded-2xl border border-slate-200">
-              <p className="text-sm font-bold text-slate-500">すべての枠のマッチングが完了しています</p>
+            <div className="flex flex-col items-center justify-center py-10 text-center bg-white rounded-2xl border border-line">
+              <p className="text-sm font-bold text-ink-muted">すべての枠のマッチングが完了しています</p>
             </div>
           ) : (
             <>
@@ -231,18 +215,18 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
 
               <AnimatePresence mode="popLayout">
                 {coaches.length === 0 ? (
-                  <p className="text-sm text-slate-400 px-1 py-4">現在リクエスト可能なコーチがいません。</p>
+                  <p className="text-sm text-ink-subtle px-1 py-4">現在リクエスト可能なコーチがいません。</p>
                 ) : filteredCoaches.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-slate-200"
+                    className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-line"
                   >
                     <div className="p-4 bg-slate-50 rounded-full mb-3">
-                      <Users size={28} strokeWidth={1.5} className="text-slate-300" />
+                      <Users size={28} strokeWidth={1.5} className="text-ink-subtle" />
                     </div>
-                    <p className="text-sm font-bold text-slate-500">条件に合うコーチが見つかりませんでした</p>
-                    <p className="text-[11px] text-slate-400 mt-1">曜日・時間帯の条件を変更してお試しください</p>
+                    <p className="text-sm font-bold text-ink-muted">条件に合うコーチが見つかりませんでした</p>
+                    <p className="text-[11px] text-ink-subtle mt-1">曜日・時間帯の条件を変更してお試しください</p>
                   </motion.div>
                 ) : (
                   <div className="space-y-3">
@@ -278,6 +262,6 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
         onClose={() => setRequestTarget(null)}
         onRequested={handleSlotUpdate}
       />
-    </div>
+    </ShellPanel>
   );
 }

@@ -79,9 +79,9 @@ export function RescheduleProposalDialog({ group, timezone, onClose, onAccepted,
               {group.candidates.map((candidate) => (
                 <div
                   key={candidate.proposal_id}
-                  className="flex items-center justify-between gap-2 bg-slate-50 rounded-lg border border-slate-100 px-3 py-2.5"
+                  className="flex items-center justify-between gap-2 bg-slate-50 rounded-lg border border-line/70 px-3 py-2.5"
                 >
-                  <span className="text-sm font-semibold text-slate-700">
+                  <span className="text-sm font-semibold text-ink-soft">
                     {formatDateTimeByZone(candidate.proposed_start_datetime, timezone, false)}
                   </span>
                   <Button
