@@ -6,6 +6,12 @@ import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type ColorVowelDictionaryRow } from '@gabby/types/colorVowel';
+import {
+  type CVImportEntry,
+  type CVImportMode,
+  toCVEntryKey,
+  validateCVImportEntry,
+} from '@/lib/cvDictionaryImport';
 
 const logger = createLogger('admin');
 
@@ -182,41 +188,96 @@ export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: stri
   }
 }
 
+/** 一括インポート時の既存エントリ判定用キー情報 */
+export interface CVDictionaryKey {
+  word_en: string;
+  part_of_speech: string;
+  tts_status: number;
+}
+
+/**
+ * 全エントリのキー情報を取得（一括インポートのプレビュー・既存判定用）
+ * PostgRESTの1リクエスト上限（1000行）を超えるため range でページングする
+ */
+export async function getCVDictionaryKeys(): Promise<CVDictionaryKey[]> {
+  const supabase = await createAdminClient();
+  const PAGE_SIZE = 1000;
+  const keys: CVDictionaryKey[] = [];
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('com_m_color_vowel_dictionary')
+      .select('word_en, part_of_speech, tts_status')
+      .order('dic_id', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) throw new Error(error.message);
+    keys.push(...(data as CVDictionaryKey[]));
+    if (data.length < PAGE_SIZE) break;
+  }
+  return keys;
+}
+
 /**
  * TSV/CSV 一括インポート
+ * - insertOnly: 既存キー（英単語[大文字小文字無視]＋品詞）はスキップし、新規のみ登録
+ * - overwrite : 既存キーも上書き。登録日時は保持し、音声生成済みのエントリは「要再生成」にする
+ * ファイル内の重複キーは先勝ちで除外する（内容差異の検出はクライアント側プレビューで行う）
  */
-export async function bulkUpsertCVDictionary(
-  entries: Array<Partial<CVDictionaryEntry> & { word_en: string; part_of_speech: string }>
-) {
+export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVImportMode) {
   const ctx = await getLogContext();
   try {
-    const supabase = await createAdminClient();
-
-    const now = new Date().toISOString();
-    const rows = entries.map((e) => ({
-      word_en: e.word_en,
-      part_of_speech: e.part_of_speech,
-      word_ja: e.word_ja ?? '',
-      syllables: e.syllables ?? null,
-      primary_stress_syllable: e.primary_stress_syllable != null ? Number(e.primary_stress_syllable) : null,
-      stress_vowel_spelling: e.stress_vowel_spelling ?? null,
-      cv_id: e.cv_id ?? null,
-      phonetic_spelling: e.phonetic_spelling ?? null,
-      insert_date: now,
-      update_date: now,
-    }));
-
-    const { error } = await supabase
-      .from('com_m_color_vowel_dictionary')
-      .upsert(rows, { onConflict: 'word_en,part_of_speech' });
-
-    if (error) {
-      logger.error('cv_dict:bulk_upsert_failed', error.message, ctx);
-      return { success: false, message: error.message };
+    const invalid = entries.find((e) => validateCVImportEntry(e) !== null);
+    if (invalid) {
+      return { success: false, message: `不正なデータが含まれています: ${invalid.word_en} (${invalid.part_of_speech})` };
     }
 
+    const existingMap = new Map((await getCVDictionaryKeys()).map((k) => [toCVEntryKey(k.word_en, k.part_of_speech), k]));
+
+    const seen = new Set<string>();
+    const now = new Date().toISOString();
+    const rows = [];
+    let insertCount = 0;
+    let updateCount = 0;
+
+    for (const e of entries) {
+      const key = toCVEntryKey(e.word_en, e.part_of_speech);
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const existing = existingMap.get(key);
+      if (existing && mode === 'insertOnly') continue;
+
+      // insert_date は列ごと省略する（新規はDEFAULT、既存は保持される）
+      rows.push({
+        ...e,
+        // 大文字小文字違いの既存行を更新対象にするため、既存の表記に合わせる
+        word_en: existing ? existing.word_en : e.word_en,
+        tts_status: existing ? (existing.tts_status === 1 ? 2 : existing.tts_status) : 0,
+        update_date: now,
+      });
+      if (existing) updateCount++;
+      else insertCount++;
+    }
+
+    const skipCount = entries.length - rows.length;
+    if (rows.length > 0) {
+      const supabase = await createAdminClient();
+      const { error } = await supabase
+        .from('com_m_color_vowel_dictionary')
+        .upsert(rows, { onConflict: 'word_en,part_of_speech' });
+      if (error) {
+        logger.error('cv_dict:bulk_upsert_failed', error.message, ctx);
+        return { success: false, message: error.message };
+      }
+    }
+
+    logger.info('cv_dict:bulk_upsert', `inserted=${insertCount} updated=${updateCount} skipped=${skipCount}`, {
+      ...ctx,
+      payload: { mode, total: entries.length },
+    });
     revalidatePath('/tools/cv-dictionary');
-    return { success: true, message: `${entries.length}件を処理しました` };
+    return { success: true, message: '', inserted: insertCount, updated: updateCount, skipped: skipCount };
   } catch (err) {
     logger.error('cv_dict:bulk_upsert_unexpected', err instanceof Error ? err.message : 'Unknown', ctx);
     return { success: false, message: '予期せぬエラーが発生しました' };

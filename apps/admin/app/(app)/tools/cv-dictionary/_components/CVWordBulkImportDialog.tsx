@@ -8,48 +8,44 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { Upload, AlertCircle, Loader2, CheckCircle2, FileUp, RefreshCcw, Download } from 'lucide-react';
-import { bulkUpsertCVDictionary } from '@/actions/adminCVDictionaryAction';
+import { bulkUpsertCVDictionary, getCVDictionaryKeys } from '@/actions/adminCVDictionaryAction';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
+import {
+  CV_IMPORT_REQUIRED_HEADERS,
+  CV_IMPORT_OPTIONAL_HEADERS,
+  type CVImportEntry,
+  type CVImportMode,
+  type CVImportRowErrorCode,
+  normalizeCVImportRow,
+  validateCVImportEntry,
+  isSameCVImportEntry,
+  toCVEntryKey,
+} from '@/lib/cvDictionaryImport';
 import { cn } from '@/lib/utils';
-
-// ============================================================
-// 定数
-// ============================================================
-
-const REQUIRED_HEADERS = [
-  'word_en',
-  'part_of_speech',
-  'word_ja',
-];
-
-const OPTIONAL_HEADERS = [
-  'syllables',
-  'primary_stress_syllable',
-  'stress_vowel_spelling',
-  'cv_id',
-  'phonetic_spelling',
-];
 
 // ============================================================
 // 型
 // ============================================================
 
+type RowErrorCode = CVImportRowErrorCode | 'duplicateConflict';
+
+/** new: 新規 / existing: 登録済み / duplicate: ファイル内で同一内容の重複（スキップ） / error: 取込不可 */
+type RowStatus = 'new' | 'existing' | 'duplicate' | 'error';
+
 interface ParsedRow {
-  word_en: string;
-  part_of_speech: string;
-  word_ja: string;
-  syllables?: string;
-  primary_stress_syllable?: string;
-  stress_vowel_spelling?: string;
-  cv_id?: string;
-  phonetic_spelling?: string;
-  isValid: boolean;
-  error?: string;
+  line: number;
+  entry: CVImportEntry;
+  status: RowStatus;
+  errorCode?: RowErrorCode;
+  /** duplicateConflict / duplicate の場合の先行行番号 */
+  firstLine?: number;
 }
 
 interface CVWordBulkImportDialogProps {
   onSuccess?: () => void;
 }
+
+const MODES: CVImportMode[] = ['insertOnly', 'overwrite'];
 
 // ============================================================
 // Component
@@ -62,6 +58,8 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
 
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<ParsedRow[]>([]);
+  const [mode, setMode] = useState<CVImportMode>('insertOnly');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
@@ -73,18 +71,52 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
   // ファイル解析
   // ----------------------------------------------------------
 
+  const analyzeRows = async (rawRows: Record<string, string>[]) => {
+    setIsAnalyzing(true);
+    try {
+      const existingKeys = new Set((await getCVDictionaryKeys()).map((k) => toCVEntryKey(k.word_en, k.part_of_speech)));
+      const firstByKey = new Map<string, ParsedRow>();
+
+      const rows = rawRows.map((raw, index): ParsedRow => {
+        const line = index + 2;
+        const entry = normalizeCVImportRow(raw);
+        const errorCode = validateCVImportEntry(entry);
+        if (errorCode) return { line, entry, status: 'error', errorCode };
+
+        const key = toCVEntryKey(entry.word_en, entry.part_of_speech);
+        const first = firstByKey.get(key);
+        if (first) {
+          return isSameCVImportEntry(first.entry, entry)
+            ? { line, entry, status: 'duplicate', firstLine: first.line }
+            : { line, entry, status: 'error', errorCode: 'duplicateConflict', firstLine: first.line };
+        }
+
+        const row: ParsedRow = { line, entry, status: existingKeys.has(key) ? 'existing' : 'new' };
+        firstByKey.set(key, row);
+        return row;
+      });
+
+      setData(rows);
+      setHasCompleted(false);
+    } catch {
+      showToast(t('toastFetchKeysFailed'), 'error');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const processFile = (file: File) => {
     setLayoutError(null);
 
     const delimiter = file.name.endsWith('.tsv') ? '\t' : ',';
 
-    Papa.parse(file, {
+    Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
       delimiter,
       complete: (results) => {
         const headers = results.meta.fields ?? [];
-        const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
+        const missing = CV_IMPORT_REQUIRED_HEADERS.filter((h) => !headers.includes(h));
 
         if (missing.length > 0) {
           setLayoutError(t('missingHeaders', { headers: missing.join(', ') }));
@@ -92,38 +124,28 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
           return;
         }
 
-        const parsedRows: ParsedRow[] = (results.data as Record<string, string>[]).map((row, index) => {
-          const error = validateRow(row, index);
-          return {
-            word_en: row.word_en?.trim() ?? '',
-            part_of_speech: row.part_of_speech?.trim() ?? '',
-            word_ja: row.word_ja?.trim() ?? '',
-            syllables: row.syllables?.trim() || undefined,
-            primary_stress_syllable: row.primary_stress_syllable?.trim() || undefined,
-            stress_vowel_spelling: row.stress_vowel_spelling?.trim() || undefined,
-            cv_id: row.cv_id?.trim() || undefined,
-            phonetic_spelling: row.phonetic_spelling?.trim() || undefined,
-            isValid: !error,
-            error: error ?? undefined,
-          };
-        });
-
-        setData(parsedRows);
-        setHasCompleted(false);
+        void analyzeRows(results.data);
       },
     });
   };
 
-  const validateRow = (row: Record<string, string>, index: number): string | null => {
-    const lineNum = index + 2;
-    const prefix = t('rowErrorPrefix', { line: lineNum });
-    if (!row.word_en?.trim()) return `${prefix}${t('errorWordEnEmpty')}`;
-    if (!row.part_of_speech?.trim()) return `${prefix}${t('errorPosEmpty')}`;
-    if (!row.word_ja?.trim()) return `${prefix}${t('errorWordJaEmpty')}`;
-    const stress = row.primary_stress_syllable?.trim();
-    if (stress && isNaN(Number(stress))) return `${prefix}${t('errorStressInvalid')}`;
-    return null;
+  const errorMessage = (row: ParsedRow): string => {
+    const prefix = t('rowErrorPrefix', { line: row.line });
+    if (row.errorCode === 'duplicateConflict') {
+      return `${prefix}${t('errors.duplicateConflict', { line: row.firstLine ?? 0 })}`;
+    }
+    return `${prefix}${t(`errors.${row.errorCode ?? 'wordEnEmpty'}`)}`;
   };
+
+  // ----------------------------------------------------------
+  // 集計
+  // ----------------------------------------------------------
+
+  const errorItems = data.filter((d) => d.status === 'error');
+  const newCount = data.filter((d) => d.status === 'new').length;
+  const existingCount = data.filter((d) => d.status === 'existing').length;
+  const duplicateCount = data.filter((d) => d.status === 'duplicate').length;
+  const targetCount = mode === 'overwrite' ? newCount + existingCount : newCount;
 
   // ----------------------------------------------------------
   // インポート実行
@@ -132,22 +154,14 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
   const handleImport = async () => {
     setIsProcessing(true);
     try {
-      const validRows = data.filter((r) => r.isValid);
-      const result = await bulkUpsertCVDictionary(
-        validRows.map((r) => ({
-          word_en: r.word_en,
-          part_of_speech: r.part_of_speech,
-          word_ja: r.word_ja,
-          syllables: r.syllables ?? null,
-          primary_stress_syllable: r.primary_stress_syllable ? Number(r.primary_stress_syllable) : null,
-          stress_vowel_spelling: r.stress_vowel_spelling ?? null,
-          cv_id: r.cv_id ?? null,
-          phonetic_spelling: r.phonetic_spelling ?? null,
-        }))
-      );
+      const entries = data.filter((r) => r.status === 'new' || r.status === 'existing').map((r) => r.entry);
+      const result = await bulkUpsertCVDictionary(entries, mode);
 
       if (result.success) {
-        showToast(t('toastImported', { count: validRows.length }), 'success');
+        showToast(
+          t('toastImported', { inserted: result.inserted ?? 0, updated: result.updated ?? 0, skipped: result.skipped ?? 0 }),
+          'success'
+        );
         setHasCompleted(true);
         triggerRefresh();
         onSuccess?.();
@@ -163,13 +177,11 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
 
   const handleReset = () => {
     setData([]);
+    setMode('insertOnly');
     setLayoutError(null);
     setHasCompleted(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
-
-  const errorItems = data.filter((d) => !d.isValid);
-  const validCount = data.length - errorItems.length;
 
   // ============================================================
   // Render
@@ -218,7 +230,13 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
             </div>
           )}
 
-          {data.length === 0 ? (
+          {isAnalyzing ? (
+            /* 解析中 */
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
+              <Loader2 className="animate-spin" size={32} />
+              <p className="text-sm font-bold">{t('analyzing')}</p>
+            </div>
+          ) : data.length === 0 ? (
             /* ドロップゾーン */
             <div
               className={cn(
@@ -239,7 +257,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                 <p className="text-base font-black text-slate-700">{t('dropzoneTitle')}</p>
                 <p className="text-xs text-slate-400 font-medium">{t('dropzoneHint')}</p>
                 <p className="text-[11px] text-slate-300 font-mono mt-2">
-                  {[...REQUIRED_HEADERS, ...OPTIONAL_HEADERS].join(' | ')}
+                  {[...CV_IMPORT_REQUIRED_HEADERS, ...CV_IMPORT_OPTIONAL_HEADERS].join(' | ')}
                 </p>
               </div>
               <input
@@ -254,18 +272,16 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
             /* プレビューエリア */
             <div className="flex-1 flex flex-col gap-6 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
               {/* サマリーカード */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Entries', val: data.length, color: 'text-slate-700' },
-                  { label: 'Valid', val: validCount, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                  {
-                    label: errorItems.length > 0 ? 'Errors' : 'Status',
-                    val: errorItems.length > 0 ? t('errorCountSuffix', { count: errorItems.length }) : 'Clear',
-                    color: errorItems.length > 0 ? 'text-rose-600' : 'text-emerald-600',
-                    bg: errorItems.length > 0 ? 'bg-rose-50' : 'bg-emerald-50',
-                  },
-                ].map((s, i) => (
-                  <div key={i} className={cn('p-5 rounded-3xl border border-slate-100 flex flex-col bg-slate-50/50', s.bg)}>
+                  { label: 'Total', val: data.length, color: 'text-slate-700' },
+                  { label: 'New', val: newCount, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                  { label: 'Existing', val: existingCount, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                  errorItems.length > 0
+                    ? { label: 'Errors', val: errorItems.length, color: 'text-rose-600', bg: 'bg-rose-50' }
+                    : { label: 'Duplicates', val: duplicateCount, color: 'text-slate-500' },
+                ].map((s) => (
+                  <div key={s.label} className={cn('p-5 rounded-3xl border border-slate-100 flex flex-col bg-slate-50/50', s.bg)}>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
                     <p className={cn('text-3xl font-black tracking-tight', s.color)}>{s.val}</p>
                   </div>
@@ -284,16 +300,16 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                       <TableHeader className="bg-rose-50/50 sticky top-0 z-10">
                         <TableRow className="border-rose-100 hover:bg-transparent">
                           <TableHead className="text-[10px] font-black text-rose-700 uppercase w-32">word_en</TableHead>
-                          <TableHead className="text-[10px] font-black text-rose-700 uppercase w-32">POS</TableHead>
+                          <TableHead className="text-[10px] font-black text-rose-700 uppercase w-24">POS</TableHead>
                           <TableHead className="text-[10px] font-black text-rose-700 uppercase">Error</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {errorItems.map((item, i) => (
-                          <TableRow key={i} className="hover:bg-rose-50/30 border-rose-50">
-                            <TableCell className="font-black text-slate-800">{item.word_en || t('emptyCell')}</TableCell>
-                            <TableCell className="text-slate-500 font-medium">{item.part_of_speech || t('emptyCell')}</TableCell>
-                            <TableCell className="text-rose-500 text-xs font-bold italic">{item.error}</TableCell>
+                        {errorItems.map((item) => (
+                          <TableRow key={item.line} className="hover:bg-rose-50/30 border-rose-50">
+                            <TableCell className="font-black text-slate-800">{item.entry.word_en || t('emptyCell')}</TableCell>
+                            <TableCell className="text-slate-500 font-medium">{item.entry.part_of_speech || t('emptyCell')}</TableCell>
+                            <TableCell className="text-rose-500 text-xs font-bold italic">{errorMessage(item)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -308,11 +324,35 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                   </div>
                   <div className="space-y-2">
                     <p className="text-xl font-black text-slate-800 tracking-tight">{t('readyTitle')}</p>
-                    <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
-                      {t('readyBody', { count: data.length })}<br />
-                      {t('readyHint')}
+                    <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-md mx-auto">
+                      {t('readyBody', { count: data.length })}
+                      {duplicateCount > 0 && <><br />{t('duplicateHint', { count: duplicateCount })}</>}
                     </p>
                   </div>
+
+                  {/* 取込モード */}
+                  {!hasCompleted && (
+                    <div className="w-full max-w-md space-y-2">
+                      <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
+                        {MODES.map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setMode(m)}
+                            className={cn(
+                              'h-10 rounded-xl text-xs font-black transition-all',
+                              mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                            )}
+                          >
+                            {t(`mode.${m}`)}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        {t(`modeHint.${mode}`, { newCount, existingCount })}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -325,7 +365,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
             variant="ghost"
             size="sm"
             onClick={handleReset}
-            disabled={isProcessing || data.length === 0}
+            disabled={isProcessing || isAnalyzing || data.length === 0}
             className="text-slate-400 hover:text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
           >
             <RefreshCcw size={14} className="mr-2" /> {t('reset')}
@@ -346,12 +386,12 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                 size="lg"
                 className="bg-slate-900 text-white px-12 rounded-2xl font-black h-12 shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30"
                 onClick={handleImport}
-                disabled={isProcessing || data.length === 0 || errorItems.length > 0}
+                disabled={isProcessing || isAnalyzing || targetCount === 0 || errorItems.length > 0}
               >
                 {isProcessing ? (
                   <><Loader2 className="animate-spin mr-2" size={18} />Processing...</>
                 ) : (
-                  t('startImport')
+                  t('startImport', { count: targetCount })
                 )}
               </Button>
             )}

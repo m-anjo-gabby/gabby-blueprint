@@ -77,3 +77,7 @@ temp_data/
 # Agents
 .agents
 
+
+# Claude Code（skills / settings.json はチーム共有。ローカル専用のものだけ除外）
+.claude/worktrees/
+.claude/settings.local.json

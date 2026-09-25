@@ -53,14 +53,31 @@
 ## 一括登録（CSV/TSV）ダイアログ
 
 - CSVまたはTSVファイルをドラッグ&ドロップ、またはクリックして選択する
-- 必須列: `word_en`, `part_of_speech`, `word_ja`。任意列: `syllables`,
-  `primary_stress_syllable`, `stress_vowel_spelling`, `cv_id`, `phonetic_spelling`
+- 必須列: `word_en`, `part_of_speech`, `word_ja`, `syllables`, `primary_stress_syllable`,
+  `stress_vowel_spelling`, `cv_id`（DBのNOT NULL制約に合わせている）。任意列: `phonetic_spelling`。
+  それ以外の列（例: 作成時の確認メモ）は無視される
 - 必須列が欠けている場合はファイル構造エラーとして読み込みを拒否する
-- 行ごとに必須項目の空チェックと`primary_stress_syllable`の数値チェックを行い、エラー行がある
-  場合はエラー内容の一覧のみを表示する（1件でもエラーがあるとインポートは実行できない）
-- エラーが無い場合は「Ready for Import!」の確認画面になり、「インポートを開始」で確定する
-- 既存の同一キー（英単語＋品詞）のデータはUpsert（上書き）される
-- サンプルファイルのダウンロードリンクあり
+- 読み込み後、既存の辞書データと照合する（照合キーは英単語[大文字小文字を区別しない]＋品詞）。
+  照合中は「既存の辞書データと照合しています...」を表示する
+- 行ごとに次を検証し、エラー行がある場合はエラー内容の一覧のみを表示する
+  （1件でもエラーがあるとインポートは実行できない）
+  - 必須項目の空チェック
+  - `part_of_speech` が品詞キー（NOUN / VERB / ADJ / ADV / PRON / PREP / CONJ / ART / INT / UNKNOWN）のいずれか
+  - `primary_stress_syllable` が1以上の整数で、`syllables` の音節数以内
+  - `stress_vowel_spelling` がアクセント音節に含まれる
+  - `cv_id` がColor Vowelの定義値のいずれか
+  - ファイル内で同じキーの行が内容違いで複数ある（同一内容の重複はエラーにせず、後の行を除外する）
+- サマリーカードに Total / New（新規）/ Existing（登録済み）/ Errors（エラー時）または
+  Duplicates（ファイル内の同一内容の重複）を表示する
+- エラーが無い場合は「Ready for Import!」の確認画面で取込モードを選び、「N件をインポート」で確定する
+  - **新規のみ登録**（既定）: 登録済みのキーはスキップし、既存データは変更しない
+  - **既存も上書き**: 登録済みのキーも上書きする。登録日時は保持し、音声生成済み
+    （`tts_status=1`）のエントリは「要更新」（`tts_status=2`）にする。大文字小文字だけが異なる
+    既存行は、既存の表記のまま更新する
+- 完了時は新規・更新・スキップ件数をトーストで表示する
+- サンプルファイルのダウンロードリンクあり（`/templates/cv_dictionary_sample.tsv`）
+- 取込用TSVは、スプリント一括登録TSVからClaude Codeのプロジェクトスキル `/cv-dictionary-tsv`
+  （`.claude/skills/cv-dictionary-tsv/`）で作成できる
 
 ## 音声（TTS）作成ダイアログ（エントリ単位）
 
@@ -100,8 +117,11 @@
 - `apps/admin/app/(app)/tools/cv-dictionary/_components/CVWordBulkImportDialog.tsx`
 - `apps/admin/app/(app)/tools/cv-dictionary/_components/CVTTSDialog.tsx`
 - `apps/admin/app/(app)/tools/cv-dictionary/_components/CVTTSBulkDialog.tsx`
+- `apps/admin/lib/cvDictionaryImport.ts`（一括登録の行検証・キー正規化。クライアントの
+  プレビュー、Server Action、`/cv-dictionary-tsv` スキルの検証スクリプトで共通使用）
 - `apps/admin/actions/adminCVDictionaryAction.ts`（`getCVDictionaryWords`,
   `getCVDictionaryByWord`, `upsertCVDictionaryEntry`, `deleteCVDictionaryEntry`,
-  `bulkUpsertCVDictionary`, `saveCVDictionaryAudio`, `getAllCVDictionaryEntries`。RPCは使わず
+  `getCVDictionaryKeys`, `bulkUpsertCVDictionary`, `saveCVDictionaryAudio`,
+  `getAllCVDictionaryEntries`。RPCは使わず
   `com_m_color_vowel_dictionary`テーブルとStorage `audio`バケットを直接操作する）
 - `packages/lib/azure/ssml.ts`（`buildSSML`）, `packages/lib/hooks/usePlayAzureSpeech`
