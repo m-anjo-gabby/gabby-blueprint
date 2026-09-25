@@ -20,6 +20,7 @@ const TESTING_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TESTING_DIR, "..");
 const BASE_URL = process.env.E2E_BASE_URL ?? "https://localhost:3000";
 const ARTIFACTS_DIR = path.join(TESTING_DIR, "e2e/.artifacts");
+const ANDROID_ENABLED = process.env.E2E_ANDROID === "1";
 
 export default defineConfig({
   testDir: "./e2e/tests",
@@ -65,10 +66,20 @@ export default defineConfig({
       dependencies: ["setup"],
     },
     {
-      // Chromium でのモバイル端末エミュレーション（実機Safariの代替ではない。FIXTURES.md 参照）
+      // WebKit での iPhone エミュレーション（Safari の近似であり実機Safariの代替ではない。FIXTURES.md 参照）
       name: "mobile",
-      use: { ...devices["Pixel 7"] },
+      use: { ...devices["iPhone 15"] },
       dependencies: ["setup"],
     },
+    // Chromium でのモバイル表示確認は実行時間を抑えるため指定時のみ（`e2e:android`）
+    ...(ANDROID_ENABLED
+      ? [
+          {
+            name: "mobile-android",
+            use: { ...devices["Pixel 7"] },
+            dependencies: ["setup"],
+          },
+        ]
+      : []),
   ],
 });

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "e2e": "playwright test",
+    "e2e:android": "cross-env E2E_ANDROID=1 playwright test",
     "e2e:report": "playwright show-report e2e/.artifacts/report"
   },
   "dependencies": {
@@ -14,6 +15,7 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^20",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.4.2"
   }
 }

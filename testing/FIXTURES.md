@@ -95,8 +95,15 @@
 | Mac | Chrome, Safari, Edge |
 | モバイル（Android/iOS） | Chrome, Safari, Edge |
 
-**Playwright実装時の注意（着手時に判断すればよい先読み情報）**: PlaywrightのブラウザエンジンはChromium/Firefox/WebKitの3種類のみで、「Safari」「Edge」という名前のエンジンは無い。実務上は
-Edge = Chromiumを`channel: 'msedge'`で起動、Safari = WebKitエンジンで近似（実機Safariそのものではない）という対応になる。モバイルは`devices['iPhone 14']`等のデバイスエミュレーションが基本で、実機に近い検証をしたい場合はBrowserStack等の実機クラウドとの併用を検討する。どこまで厳密にやるかはPlaywright着手時に相談する。
+**Playwrightでの実行構成**（`testing/playwright.config.ts`）: PlaywrightのブラウザエンジンはChromium/Firefox/WebKitの3種類のみで、Safari = WebKitエンジンでの近似（実機Safariそのものではない。特にWindows版WebKitは音声・マイク周りの挙動が実機と異なり得る）、Edge = Chromiumと同一エンジンという扱いにする。実行時間を抑えるため（直列実行）、標準は次の2プロジェクトのみとする。
+
+| プロジェクト | エンジン / 端末 | 実行 |
+|---|---|---|
+| `desktop` | Chromium / 1440×900 | 標準 |
+| `mobile` | WebKit / `iPhone 15` | 標準 |
+| `mobile-android` | Chromium / `Pixel 7` | 指定時のみ（`e2e:android`） |
+
+音声（TTS/STT）の最終確認や実機に近い検証は実機で行う（必要になればBrowserStack等の実機クラウド併用を検討する）。
 
 ## 更新履歴の書き方
 

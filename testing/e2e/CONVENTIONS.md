@@ -85,10 +85,13 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   ペルソナは `testing/e2e/support/personas.ts` に定義する（`FIXTURES.md` の固定アカウント）。
 - 固定アカウントは「最新規約に同意済み」を前提とし、未同意ならログイン準備で画面操作により同意する。
   重要なお知らせのポップアップは `studentApp.ts` の `test` が自動で閉じる（DBは変更しない）。
-- プロジェクト: `desktop`（1440×900）と `mobile`（Pixel 7 エミュレーション）。同じテストが両方で動くよう、
-  表示中のナビだけを取得する `mainNav` / `navTab` を使う。
+- プロジェクト: 標準は `desktop`（Chromium、1440×900）と `mobile`（WebKit、iPhone 15 エミュレーション）。
+  `mobile-android`（Chromium、Pixel 7）は実行時間を抑えるため `e2e:android` 指定時のみ有効になる（構成の理由は `FIXTURES.md`）。
+  同じテストがすべてのプロジェクトで動くよう、表示中のナビだけを取得する `mainNav` / `navTab` を使う。
 - 実行: `pnpm --filter @gabby/testing e2e`（全件）。対象を絞る場合は
   `pnpm --filter @gabby/testing e2e -- <ファイル名の一部> --project=desktop`。
+  Android（Chromium）も含める場合は `pnpm --filter @gabby/testing e2e:android`（`--project=mobile-android` で単独実行も可）。
+  初回・Playwright更新時はブラウザ取得が必要: `pnpm --filter @gabby/testing exec playwright install chromium webkit`。
   結果レポート（人が見る用）: `pnpm --filter @gabby/testing e2e:report`。成果物は `testing/e2e/.artifacts/`（git管理外）。
 
 ## 8. トークン消費を抑える運用（AIアシスタントが実行する場合）

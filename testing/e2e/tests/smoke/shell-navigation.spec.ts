@@ -4,7 +4,7 @@ import { expect, navTab, test } from "../../support/studentApp.ts";
 /**
  * スモーク: アプリシェルのナビゲーション（docs/screens/student/dashboard.md「アプリシェル」）。
  * 契約・ロールに応じたタブの出し分けと、配下画面でのアクティブ表示を確認する。
- * desktop / mobile の両プロジェクトで同じテストが動く（表示中のナビだけが取得される）。
+ * 全プロジェクト（desktop / mobile 等）で同じテストが動く（表示中のナビだけが取得される）。
  */
 
 test.describe("ライブセッション契約の生徒", () => {
