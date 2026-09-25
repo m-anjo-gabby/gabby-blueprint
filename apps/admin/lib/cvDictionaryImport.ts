@@ -15,7 +15,7 @@ export const CV_IMPORT_REQUIRED_HEADERS = [
   'cv_id',
 ] as const;
 
-export const CV_IMPORT_OPTIONAL_HEADERS = ['phonetic_spelling'] as const;
+export const CV_IMPORT_OPTIONAL_HEADERS = ['phonetic_spelling', 'lemma'] as const;
 
 const VALID_POS: ReadonlySet<string> = new Set(Object.values(PART_OF_SPEECH_TYPES));
 const VALID_CV_IDS: ReadonlySet<string> = new Set(Object.keys(COLOR_VOWEL_COLORS));
@@ -36,6 +36,8 @@ export interface CVImportEntry {
   stress_vowel_spelling: string;
   cv_id: string;
   phonetic_spelling: string | null;
+  /** 原形。null: 原形そのもの / undefined: 取込ファイルに lemma 列がない（既存値を変更しない） */
+  lemma?: string | null;
 }
 
 export type CVImportRowErrorCode =
@@ -50,7 +52,8 @@ export type CVImportRowErrorCode =
   | 'vowelSpellingEmpty'
   | 'vowelSpellingMismatch'
   | 'cvIdEmpty'
-  | 'cvIdInvalid';
+  | 'cvIdInvalid'
+  | 'lemmaInvalid';
 
 // ============================================================
 // 関数
@@ -59,6 +62,13 @@ export type CVImportRowErrorCode =
 /** 重複判定キー（生徒側の検索が ilike のため大文字小文字を区別しない） */
 export const toCVEntryKey = (wordEn: string, partOfSpeech: string): string =>
   `${wordEn.trim().toLowerCase()}\t${partOfSpeech.trim()}`;
+
+/** 原形の正規化（空欄・見出し語と同じ値は null） */
+const normalizeLemma = (lemma: string | undefined, wordEn: string): string | null | undefined => {
+  if (lemma === undefined) return undefined;
+  const value = lemma.trim();
+  return !value || value.toLowerCase() === wordEn.toLowerCase() ? null : value;
+};
 
 /** 生の行（文字列の辞書）を正規化 */
 export const normalizeCVImportRow = (row: Record<string, string | undefined>): CVImportEntry => ({
@@ -70,6 +80,7 @@ export const normalizeCVImportRow = (row: Record<string, string | undefined>): C
   stress_vowel_spelling: row.stress_vowel_spelling?.trim() ?? '',
   cv_id: row.cv_id?.trim() ?? '',
   phonetic_spelling: row.phonetic_spelling?.trim() || null,
+  lemma: normalizeLemma(row.lemma, row.word_en?.trim() ?? ''),
 });
 
 /**
@@ -94,6 +105,8 @@ export const validateCVImportEntry = (e: CVImportEntry): CVImportRowErrorCode | 
 
   if (!e.cv_id) return 'cvIdEmpty';
   if (!VALID_CV_IDS.has(e.cv_id)) return 'cvIdInvalid';
+  // 生徒アプリの単語分割と同じ文字種（英数字・アポストロフィ・ハイフン）のみ
+  if (e.lemma && !/^[A-Za-z0-9'-]+$/.test(e.lemma)) return 'lemmaInvalid';
   return null;
 };
 
@@ -104,4 +117,5 @@ export const isSameCVImportEntry = (a: CVImportEntry, b: CVImportEntry): boolean
   a.primary_stress_syllable === b.primary_stress_syllable &&
   a.stress_vowel_spelling === b.stress_vowel_spelling &&
   a.cv_id === b.cv_id &&
-  a.phonetic_spelling === b.phonetic_spelling;
+  a.phonetic_spelling === b.phonetic_spelling &&
+  (a.lemma ?? null) === (b.lemma ?? null);

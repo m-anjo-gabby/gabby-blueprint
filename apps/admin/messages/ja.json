@@ -1455,6 +1455,7 @@
           "vowelSpellingMismatch": "stress_vowel_spelling がアクセント音節に含まれていません",
           "cvIdEmpty": "cv_id が空です",
           "cvIdInvalid": "cv_id が定義外の値です",
+          "lemmaInvalid": "lemma（原形）に使えない文字が含まれています（英数字・アポストロフィ・ハイフンのみ）",
           "duplicateConflict": "{line}行目と同じ英単語・品詞で内容が異なります（どちらか一方に統一してください）"
         },
         "toastImported": "新規 {inserted}件・更新 {updated}件を登録しました（スキップ {skipped}件）",

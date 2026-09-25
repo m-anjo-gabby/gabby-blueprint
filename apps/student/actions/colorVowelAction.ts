@@ -64,6 +64,7 @@ export async function lookupColorVowelDictionary(
         primary_stress_syllable,
         stress_vowel_spelling,
         phonetic_spelling,
+        lemma,
         audio_path,
         vowel:com_m_color_vowel (
           cv_id,
@@ -150,6 +151,7 @@ export async function lookupColorVowelDictionary(
         primaryStressSyllable: record.primary_stress_syllable,
         stressVowelSpelling: record.stress_vowel_spelling,
         phoneticSpelling: record.phonetic_spelling ?? null,
+        lemma: record.lemma ?? null,
         wordAudioUrl,
         vowel: {
           cvId: vowelRaw.cv_id,

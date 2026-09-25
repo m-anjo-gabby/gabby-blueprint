@@ -10,7 +10,7 @@
 ## 列（タブ区切り・この順序）
 
 ```
-word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_spelling	cv_id	phonetic_spelling	review_note
+word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_spelling	cv_id	phonetic_spelling	lemma	review_note
 ```
 
 - タブ以外の区切りは使わない。どのセルにもタブ・改行を含めない。
@@ -103,6 +103,22 @@ word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_sp
 - R音は `r` で表記する（`ɹ` は使わない）。
 - 機能語（冠詞・前置詞・代名詞・助動詞など）は**辞書の見出し発音（強形）**で統一する
   （例: `for` → `/fɔːr/` → `orange_door`、`you` → `/juː/` → `blue_moon`）。
+
+## 9. lemma（原形）
+
+- 語形変化した見出し語だけに原形を書く。**原形そのものの語は空欄**にする（トークン節約と、表示の重複を避けるため）。
+  - 動詞: `launched` / `launches` / `launching` → `launch`、`did` / `does` / `didn't` → `do`、
+    `is` / `are` / `was` / `were` / `am` / `been` / `isn't` → `be`
+  - 名詞の複数形・所有格: `analysts` → `analyst`、`company's` → `company`、`year's` → `year`
+  - 形容詞・副詞の比較級: `higher` → `high`、`better` → `good`、`fewer` → `few`
+- 原形は小文字の辞書形（略語は元の表記: `KPIs` → `KPI`）。英数字・アポストロフィ・ハイフン以外は使わない。
+- 次は語形変化ではなく独立した語として扱い、空欄にする。
+  - 派生語（`achievement`、`carefully`）
+  - 助動詞 `can` / `could` / `should` / `will` / `must`、代名詞の格変化（`them`, `our`）
+  - 動名詞・分詞でも、辞書で名詞・形容詞として登録している行（`meeting` NOUN、`shopping` NOUN、
+    `connected` ADJ、`automated` ADJ）
+- 原形の行が辞書に登録されていなくてもよい。同じ原形・同じ品詞の行があれば、`validate.ts` が
+  `cv_id` の食い違いを要確認に出す。
 
 ## 略語（note = abbreviation）
 

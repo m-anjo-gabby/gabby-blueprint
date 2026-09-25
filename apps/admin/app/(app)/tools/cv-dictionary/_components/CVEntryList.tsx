@@ -211,6 +211,12 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                             <span className="font-mono">{entry.phonetic_spelling}</span>
                           </div>
                         )}
+                        {entry.lemma && (
+                          <div className="flex items-center gap-1.5 text-slate-500">
+                            <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">Lemma</span>
+                            <span className="font-mono font-bold">{entry.lemma}</span>
+                          </div>
+                        )}
                         {entry.stress_vowel_spelling && (
                           <div className="flex items-center gap-1.5 text-slate-500">
                             <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">Vowel</span>

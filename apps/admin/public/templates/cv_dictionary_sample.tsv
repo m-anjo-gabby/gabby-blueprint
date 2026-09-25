@@ -1,5 +1,6 @@
-word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_spelling	cv_id	phonetic_spelling
-tailor	NOUN	仕立て屋、テーラー	tai-lor	1	ai	gray_day	/ˈteɪlər/
-record	NOUN	記録	rec-ord	1	e	red_pepper	/ˈrɛkərd/
-record	VERB	記録する	re-cord	2	o	orange_door	/rɪˈkɔːrd/
-the	ART	その	the	1	e	cup_of_mustard	/ðə/
+word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_spelling	cv_id	phonetic_spelling	lemma
+tailor	NOUN	仕立て屋、テーラー	tai-lor	1	ai	gray_day	/ˈteɪlər/	
+record	NOUN	記録	rec-ord	1	e	red_pepper	/ˈrɛkərd/	
+record	VERB	記録する	re-cord	2	o	orange_door	/rɪˈkɔːrd/	
+launched	VERB	発売した	launched	1	au	auburn_dog	/lɔːntʃt/	launch
+the	ART	その	the	1	e	green_tea	/ðiː/	

@@ -6,7 +6,7 @@
  *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts sync --work <作業ディレクトリ> [--ledger <台帳TSV>]
  *
  *   # 確定（confirmed）行を、CV辞書 一括登録用のTSVとして書き出す（取込画面で「既存も上書き」を選んで反映）
- *   # （word_ja は --dict で指定した生成済みの辞書TSVから引く。--since で確定日を絞り込める）
+ *   # （word_ja・lemma は --dict で指定した生成済みの辞書TSVから引く。--since で確定日を絞り込める）
  *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts export --out <出力TSV> --dict <辞書TSV> [--since <YYYY-MM-DD>] [--ledger <台帳TSV>]
  *
  *   # 状態・分類ごとの件数を表示する
@@ -94,27 +94,28 @@ const exportConfirmed = () => {
 
   const rows = ledger.filter((r) => r.status === 'confirmed' && (!since || r.decided_date >= since));
   const headers = [...CV_IMPORT_REQUIRED_HEADERS, ...CV_IMPORT_OPTIONAL_HEADERS];
-  // word_ja は台帳で管理しないため、--dict で指定した生成済みの辞書TSVから引く
+  // word_ja・lemma は台帳で管理しないため、--dict で指定した生成済みの辞書TSVから引く
   const dictPath = argOf('--dict');
   if (!dictPath) throw new Error('--dict に word_ja の参照元となる辞書TSV（生成済みの一括登録TSV）を指定してください');
   const dictLines = readFileSync(dictPath, 'utf-8').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim());
   const dictHeaders = dictLines[0].split('\t');
-  const wordJa = new Map(
+  const dict = new Map(
     dictLines.slice(1).map((l) => {
       const c = l.split('\t');
       const rec = Object.fromEntries(dictHeaders.map((h, i) => [h, c[i] ?? '']));
-      return [ledgerKey(rec as LedgerRow), rec.word_ja];
+      return [ledgerKey(rec as LedgerRow), { wordJa: rec.word_ja, lemma: rec.lemma ?? '' }];
     })
   );
 
-  const missing = rows.filter((r) => !wordJa.get(ledgerKey(r)));
+  const missing = rows.filter((r) => !dict.get(ledgerKey(r))?.wordJa);
   if (missing.length > 0) {
     throw new Error(`辞書TSVに word_ja が見つからない行があります: ${missing.map((r) => `${r.id} ${r.word_en}`).join(', ')}`);
   }
 
-  const body = rows.map((r) =>
-    [r.word_en, r.part_of_speech, wordJa.get(ledgerKey(r)), r.syllables, r.primary_stress_syllable, r.stress_vowel_spelling, r.cv_id, r.phonetic_spelling].join('\t')
-  );
+  const body = rows.map((r) => {
+    const d = dict.get(ledgerKey(r));
+    return [r.word_en, r.part_of_speech, d?.wordJa, r.syllables, r.primary_stress_syllable, r.stress_vowel_spelling, r.cv_id, r.phonetic_spelling, d?.lemma].join('\t');
+  });
   writeFileSync(outPath, [headers.join('\t'), ...body].join('\n') + '\n', 'utf-8');
   console.log(`確定行 ${rows.length}件 → ${outPath}（取込画面で「既存も上書き」を選んで反映してください）`);
 };

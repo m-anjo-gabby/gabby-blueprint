@@ -32,6 +32,7 @@ function createEntrySchema(t: FormT) {
     stress_vowel_spelling:    z.string().optional(),
     cv_id:                    z.string().optional(),
     phonetic_spelling:        z.string().optional(),
+    lemma:                    z.string().optional(),
   });
 }
 
@@ -77,6 +78,7 @@ export function CVWordFormDialog({
         stress_vowel_spelling: '',
         cv_id: '',
         phonetic_spelling: '',
+        lemma: '',
       };
     }
     return {
@@ -88,6 +90,7 @@ export function CVWordFormDialog({
       stress_vowel_spelling: data.stress_vowel_spelling ?? '',
       cv_id: data.cv_id ?? '',
       phonetic_spelling: data.phonetic_spelling ?? '',
+      lemma: data.lemma ?? '',
     };
   };
 
@@ -110,6 +113,7 @@ export function CVWordFormDialog({
         stress_vowel_spelling: values.stress_vowel_spelling || null,
         cv_id: values.cv_id || null,
         phonetic_spelling: values.phonetic_spelling || null,
+        lemma: values.lemma?.trim() || null,
       });
 
       if (result.success) {
@@ -290,6 +294,20 @@ export function CVWordFormDialog({
                 ) : (
                   <FormControl>
                     <Input {...field} placeholder="/ˈtɑːrɡɪt/" className="rounded-xl border-slate-200 font-mono" />
+                  </FormControl>
+                )}
+              </FormItem>
+            )} />
+
+            {/* 原形（語形変化した見出し語のみ） */}
+            <FormField control={form.control} name="lemma" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lemma</FormLabel>
+                {isConfirming ? (
+                  <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100 font-mono">{field.value || '—'}</div>
+                ) : (
+                  <FormControl>
+                    <Input {...field} placeholder="launch" className="rounded-xl border-slate-200 font-mono" />
                   </FormControl>
                 )}
               </FormItem>

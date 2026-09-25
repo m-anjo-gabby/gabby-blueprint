@@ -1455,6 +1455,7 @@
           "vowelSpellingMismatch": "stress_vowel_spelling is not contained in the stressed syllable",
           "cvIdEmpty": "cv_id is empty",
           "cvIdInvalid": "cv_id is not a valid value",
+          "lemmaInvalid": "lemma contains invalid characters (letters, digits, apostrophes and hyphens only)",
           "duplicateConflict": "Same word and part of speech as line {line} but with different content (keep only one)"
         },
         "toastImported": "Registered {inserted} new and updated {updated} entries ({skipped} skipped)",

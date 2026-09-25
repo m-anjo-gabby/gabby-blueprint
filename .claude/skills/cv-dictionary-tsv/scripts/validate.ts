@@ -5,7 +5,7 @@
  *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/validate.ts --work <作業ディレクトリ> --out <出力TSV> [--ledger <台帳TSV>]
  *
  * - エラー（取込不可・ワークリストの取りこぼし）があれば終了コード1。出力TSVは書き出さない
- * - 警告（音節綴り・IPAとcv_idの不一致など）は review.tsv に出力し、人が確認する
+ * - 警告（音節綴り・IPAとcv_idの不一致・原形とのcv_idの不一致など）は review.tsv に出力し、人が確認する
  * - 行検証は取込画面と同じ apps/admin/lib/cvDictionaryImport.ts を使用する
  * - 要確認台帳（docs/cv-dictionary/review-ledger.tsv）で確定済みの語は、確定値と異なればエラー。
  *   確定値どおりなら要確認から外し、確認待ちの語は台帳IDを添えて要確認に残す
@@ -163,6 +163,31 @@ if (uncovered.length > 0) errors.push(`未生成の単語 ${uncovered.length}語
 
 const ledgerByKey = new Map<string, LedgerRow>(readLedger(ledgerPath).map((r) => [ledgerKey(r), r]));
 
+// 規則変化の語尾（原形 → 見出し語）。不規則変化（began, sold 等）は母音が変わるのが正しいため照合しない
+const REGULAR_SUFFIXES: Array<[string, string]> = [
+  ['', "'s"], ['', 's'], ['', 'es'], ['', 'ed'], ['', 'd'], ['', 'ing'], ['e', 'ing'], ['y', 'ies'], ['y', 'ied'],
+];
+
+// 綴りは規則変化でも発音が変わる語
+const IRREGULAR_PRONUNCIATION = new Set(['does', 'says', 'said']);
+
+const isRegularInflection = (word: string, lemma: string): boolean => {
+  const w = word.toLowerCase();
+  const l = lemma.toLowerCase();
+  if (IRREGULAR_PRONUNCIATION.has(w)) return false;
+  const doubled = l + l.slice(-1);
+  return REGULAR_SUFFIXES.some(([drop, suffix]) => (drop === '' || l.endsWith(drop)) && w === l.slice(0, l.length - drop.length) + suffix)
+    || w === `${doubled}ed` || w === `${doubled}ing`;
+};
+
+/** 規則変化の行が、同じ原形・同じ品詞の行（原形の行）と Color Vowel で食い違っていないか */
+const lemmaWarning = (e: CVImportEntry): string | null => {
+  if (!e.lemma || !isRegularInflection(e.word_en, e.lemma)) return null;
+  const base = byKey.get(toCVEntryKey(e.lemma, e.part_of_speech))?.entry;
+  if (!base || base.cv_id === e.cv_id) return null;
+  return `原形 ${base.word_en}（${base.part_of_speech}）の cv_id（${base.cv_id}）と異なります`;
+};
+
 for (const row of byKey.values()) {
   const ledgerRow = ledgerByKey.get(toCVEntryKey(row.entry.word_en, row.entry.part_of_speech));
   if (ledgerRow?.status === 'confirmed') {
@@ -172,12 +197,13 @@ for (const row of byKey.values()) {
     continue;
   }
 
-  const notes = [...(row.reviewNote ? [row.reviewNote] : []), ...collectWarnings(row.entry)];
+  const lemmaNote = lemmaWarning(row.entry);
+  const notes = [...(row.reviewNote ? [row.reviewNote] : []), ...collectWarnings(row.entry), ...(lemmaNote ? [lemmaNote] : [])];
   if (!worklistKeys.has(row.entry.word_en.toLowerCase())) notes.push('ワークリストにない単語です');
   if (ledgerRow) notes.push(`台帳 ${ledgerRow.id}（確認待ち）`);
   if (notes.length > 0) {
     const e = row.entry;
-    review.push([e.word_en, e.part_of_speech, e.word_ja, e.syllables, String(e.primary_stress_syllable), e.stress_vowel_spelling, e.cv_id, e.phonetic_spelling ?? '', notes.join(' / '), row.source]);
+    review.push([e.word_en, e.part_of_speech, e.word_ja, e.syllables, String(e.primary_stress_syllable), e.stress_vowel_spelling, e.cv_id, e.phonetic_spelling ?? '', e.lemma ?? '', notes.join(' / '), row.source]);
   }
 }
 
@@ -203,7 +229,7 @@ const sorted = [...byKey.values()]
   .map((r) => r.entry)
   .sort((a, b) => a.word_en.toLowerCase().localeCompare(b.word_en.toLowerCase()) || a.part_of_speech.localeCompare(b.part_of_speech));
 const body = sorted.map((e) =>
-  [e.word_en, e.part_of_speech, e.word_ja, e.syllables, e.primary_stress_syllable, e.stress_vowel_spelling, e.cv_id, e.phonetic_spelling ?? ''].join('\t')
+  [e.word_en, e.part_of_speech, e.word_ja, e.syllables, e.primary_stress_syllable, e.stress_vowel_spelling, e.cv_id, e.phonetic_spelling ?? '', e.lemma ?? ''].join('\t')
 );
 writeFileSync(outPath, [OUTPUT_HEADERS.join('\t'), ...body].join('\n') + '\n', 'utf-8');
 console.log(`\n出力: ${sorted.length}件 → ${outPath}`);

@@ -126,6 +126,7 @@ export async function upsertCVDictionaryEntry(
       stress_vowel_spelling: payload.stress_vowel_spelling ?? null,
       cv_id: payload.cv_id ?? null,
       phonetic_spelling: payload.phonetic_spelling ?? null,
+      lemma: payload.lemma ?? null,
       update_date: new Date().toISOString(),
     };
 
@@ -248,9 +249,12 @@ export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVI
       const existing = existingMap.get(key);
       if (existing && mode === 'insertOnly') continue;
 
-      // insert_date は列ごと省略する（新規はDEFAULT、既存は保持される）
+      // insert_date は列ごと省略する（新規はDEFAULT、既存は保持される）。
+      // lemma 列のないファイル（lemma: undefined）は列ごと省略し、既存の原形を消さない
+      const { lemma, ...rest } = e;
       rows.push({
-        ...e,
+        ...rest,
+        ...(lemma !== undefined && { lemma }),
         // 大文字小文字違いの既存行を更新対象にするため、既存の表記に合わせる
         word_en: existing ? existing.word_en : e.word_en,
         tts_status: existing ? (existing.tts_status === 1 ? 2 : existing.tts_status) : 0,
