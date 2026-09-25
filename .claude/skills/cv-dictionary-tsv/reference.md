@@ -3,6 +3,10 @@
 `parts/part_NNN.tsv` の各行を作るときの判定ルール。旧Gemの「辞書データ作成Gem指示」を移植し、
 取込画面の検証（`apps/admin/lib/cvDictionaryImport.ts`）と生徒アプリの検索仕様に合わせて補強したもの。
 
+コンテンツチームとの確認で決まった方針・未決の論点は
+[docs/cv-dictionary/JUDGEMENT-GUIDE.md](../../../docs/cv-dictionary/JUDGEMENT-GUIDE.md) に蓄積している。
+本ファイルと食い違う場合は JUDGEMENT-GUIDE.md を優先する。
+
 ## 列（タブ区切り・この順序）
 
 ```

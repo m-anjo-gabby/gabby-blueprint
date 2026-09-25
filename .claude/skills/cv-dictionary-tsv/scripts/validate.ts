@@ -2,11 +2,13 @@
  * parts/*.tsv（Claudeが生成した辞書データ）を結合・検証し、CV辞書 一括登録用のTSVを出力する。
  *
  * 使い方:
- *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/validate.ts --work <作業ディレクトリ> --out <出力TSV>
+ *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/validate.ts --work <作業ディレクトリ> --out <出力TSV> [--ledger <台帳TSV>]
  *
  * - エラー（取込不可・ワークリストの取りこぼし）があれば終了コード1。出力TSVは書き出さない
  * - 警告（音節綴り・IPAとcv_idの不一致など）は review.tsv に出力し、人が確認する
  * - 行検証は取込画面と同じ apps/admin/lib/cvDictionaryImport.ts を使用する
+ * - 要確認台帳（docs/cv-dictionary/review-ledger.tsv）で確定済みの語は、確定値と異なればエラー。
+ *   確定値どおりなら要確認から外し、確認待ちの語は台帳IDを添えて要確認に残す
  */
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,6 +21,7 @@ import {
   isSameCVImportEntry,
   toCVEntryKey,
 } from '../../../../apps/admin/lib/cvDictionaryImport';
+import { DEFAULT_LEDGER_PATH, type LedgerRow, readLedger, ledgerKey, matchesLedger } from './ledgerLib';
 
 const OUTPUT_HEADERS = [...CV_IMPORT_REQUIRED_HEADERS, ...CV_IMPORT_OPTIONAL_HEADERS];
 
@@ -55,6 +58,7 @@ const argOf = (name: string) => {
 };
 const workDir = argOf('--work');
 const outPath = argOf('--out');
+const ledgerPath = argOf('--ledger') || DEFAULT_LEDGER_PATH;
 if (!workDir || !outPath) {
   console.error('Usage: validate.ts --work <dir> --out <file.tsv>');
   process.exit(1);
@@ -157,9 +161,20 @@ const worklistKeys = new Set(worklist.map((w) => w.toLowerCase()));
 const uncovered = worklist.filter((w) => !coveredWords.has(w.toLowerCase()) && !skipped.includes(w.toLowerCase()));
 if (uncovered.length > 0) errors.push(`未生成の単語 ${uncovered.length}語: ${uncovered.join(', ')}`);
 
+const ledgerByKey = new Map<string, LedgerRow>(readLedger(ledgerPath).map((r) => [ledgerKey(r), r]));
+
 for (const row of byKey.values()) {
+  const ledgerRow = ledgerByKey.get(toCVEntryKey(row.entry.word_en, row.entry.part_of_speech));
+  if (ledgerRow?.status === 'confirmed') {
+    if (!matchesLedger(ledgerRow, row.entry)) {
+      errors.push(`${row.source}: ${row.entry.word_en} (${row.entry.part_of_speech}) が台帳 ${ledgerRow.id} の確定値と異なります（${ledgerRow.cv_id} ${ledgerRow.phonetic_spelling}）`);
+    }
+    continue;
+  }
+
   const notes = [...(row.reviewNote ? [row.reviewNote] : []), ...collectWarnings(row.entry)];
   if (!worklistKeys.has(row.entry.word_en.toLowerCase())) notes.push('ワークリストにない単語です');
+  if (ledgerRow) notes.push(`台帳 ${ledgerRow.id}（確認待ち）`);
   if (notes.length > 0) {
     const e = row.entry;
     review.push([e.word_en, e.part_of_speech, e.word_ja, e.syllables, String(e.primary_stress_syllable), e.stress_vowel_spelling, e.cv_id, e.phonetic_spelling ?? '', notes.join(' / '), row.source]);

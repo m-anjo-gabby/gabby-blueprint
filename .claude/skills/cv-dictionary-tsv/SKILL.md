@@ -10,6 +10,9 @@ description: スプリント教材の一括登録TSV（statement_en / question_e
 
 - 引数: スプリントTSVのパス（複数可）。任意で、登録済み・作成済みの辞書TSV（`--exclude`、単語単位で除外）。
 - 判定ルール: [reference.md](reference.md)（**生成を始める前に必ず読む**）
+- 蓄積したナレッジ: [docs/cv-dictionary/](../../../docs/cv-dictionary/README.md)
+  - [JUDGEMENT-GUIDE.md](../../../docs/cv-dictionary/JUDGEMENT-GUIDE.md): 確定した方針・未決の論点（**生成前に必ず読む**。reference.md と食い違う場合はこちらを優先）
+  - [review-ledger.tsv](../../../docs/cv-dictionary/review-ledger.tsv): 要確認台帳。`confirmed` の語は台帳の値をそのまま使う
 - スクリプトはリポジトリルートから `npx tsx` で実行する。
 
 ## 手順
@@ -33,7 +36,9 @@ npx tsx .claude/skills/cv-dictionary-tsv/scripts/extract.ts --out "<作業ディ
 `worklist.tsv` を先頭から**80語ずつ**処理し、`<作業ディレクトリ>/parts/part_001.tsv`,
 `part_002.tsv` … に書き出す（各ファイルにヘッダー行を付ける）。
 
-- 列・判定基準は reference.md に従う。`word_en` は worklist の `word` をそのまま使う。
+- 列・判定基準は reference.md と JUDGEMENT-GUIDE.md に従う。`word_en` は worklist の `word` をそのまま使う。
+- 台帳で `confirmed` の語（英単語＋品詞）は、台帳の `syllables` 〜 `phonetic_spelling` をそのまま使う。
+  `pending` の語は台帳の値を参考にしてよい（判断が変わった場合は `review_note` に理由を書く）。
 - 文脈で品詞が分かれる語は品詞ごとに行を分ける。
 - 固有名詞などで行を作らない語は `<作業ディレクトリ>/skipped.tsv`（ヘッダー `word	reason`）に記録する。
 - 途中で中断した場合も、既存の parts はそのまま残し、未生成の語から再開する
@@ -47,9 +52,19 @@ npx tsx .claude/skills/cv-dictionary-tsv/scripts/validate.ts --work "<作業デ�
 
 - **エラー**（取込画面で弾かれる行・内容の異なる重複・未生成の単語）がある場合は出力されない。
   該当する part ファイルを修正して再実行する。
+- 台帳で `confirmed` の語が確定値と異なる場合もエラーになる。台帳の値に合わせて修正する。
 - **要確認**（`review.tsv`）: 音節の綴りが単語と一致しない、IPAと `cv_id` が一致しない、
   `review_note` 付きの行。IPA/cv_id の不一致と綴りの不一致は Claude が見直して修正し、再実行する。
-  それでも判断が分かれる行だけを残す。
+  それでも判断が分かれる行だけを残す。台帳で確認待ちの語には台帳IDが添えられる。
+
+### 3.5 要確認を台帳に記録する
+
+```bash
+npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts sync --work "<作業ディレクトリ>"
+```
+
+`review.tsv` のうち台帳に未登録の行を `pending` で追記する（登録済みの語は重複して追記しない）。
+複数の語に効く新しい論点が出た場合は、JUDGEMENT-GUIDE.md の「未決の論点」にも追記する。
 
 ### 4. 報告する
 
@@ -57,7 +72,20 @@ npx tsx .claude/skills/cv-dictionary-tsv/scripts/validate.ts --work "<作業デ�
 
 - 出力TSVのパスと件数（語数・行数）
 - 除外語（`excluded.tsv` / `skipped.tsv`）
-- 要確認として残った行（`review.tsv` の内容を表で）
+- 要確認として残った行（`review.tsv` の内容を分類ごとに表で）と、台帳への追記件数
 
 取込は admin の「Tools > CV Dictionary > 一括登録」から手動で行う。
 取込画面で「新規のみ登録」（既定）を選べば、登録済みの単語・品詞はスキップされ既存データは変わらない。
+
+## コンテンツチームの回答を反映するとき
+
+「要確認の回答を台帳に反映して」という依頼では、次を行う。
+
+1. 台帳の該当行の値を確定値に直し、`status` を `confirmed`、`decision_note` / `decided_by` / `decided_date` を記入する。
+2. 複数の語に効く方針なら、JUDGEMENT-GUIDE.md に事例（CVJ-…）として記録し、「未決の論点」から外す。
+   reference.md の該当節にも反映する。
+3. 取込済みデータへの反映用に、確定行を書き出す（取込画面で「既存も上書き」を選ぶよう案内する）。
+
+```bash
+npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts export --dict "<生成済みの辞書TSV>" --out "<出力TSV>" --since <確定日>
+```
