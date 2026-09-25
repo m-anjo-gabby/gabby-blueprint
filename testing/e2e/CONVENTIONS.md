@@ -1,5 +1,5 @@
 <!--
-  Playwright導入前に決めておく技術方針。「今の決め事」のみを保つ（変更履歴は書かない）。
+  E2E（Playwright）の技術方針。「今の決め事」のみを保つ（変更履歴は書かない）。
   実装段階で追加のルールが必要になったら本ファイルに追記する。
   testing/CONVENTIONS.md（データ主体テストの技術規約）と対になる、E2E側の技術規約。
 -->
@@ -74,3 +74,36 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
 - `test.only` / `test.describe.only`をコミットに残さない
 - テスト間で状態を共有しない（前のテストの実行結果に依存するテストを書かない。並列実行・
   実行順の入れ替えのどちらでも成立すること）
+
+## 7. 構成と実行方法
+
+- 設定: `testing/playwright.config.ts`。テスト: `testing/e2e/tests/`（`*.setup.ts` はログイン準備、機能ごとにディレクトリを分ける）。
+  共通の操作・ロケーター: `testing/e2e/support/`（`studentApp.ts` の `test` / `expect` / `mainNav` / `navTab` を使う）。
+- 接続先は dev のみ。student の `dev:ssl`（https://localhost:3000）が起動中なら再利用し、未起動なら Playwright が起動・停止する
+  （Next.js 16 は同一アプリの dev サーバーを二重起動できないため。`KJ-2026-0926-02`）。
+- ログインはペルソナごとに `auth.setup.ts` で1回だけ行い、ログイン状態を `testing/e2e/.auth/`（git管理外）に保存して各テストで使い回す。
+  ペルソナは `testing/e2e/support/personas.ts` に定義する（`FIXTURES.md` の固定アカウント）。
+- 固定アカウントは「最新規約に同意済み」を前提とし、未同意ならログイン準備で画面操作により同意する。
+  重要なお知らせのポップアップは `studentApp.ts` の `test` が自動で閉じる（DBは変更しない）。
+- プロジェクト: `desktop`（1440×900）と `mobile`（Pixel 7 エミュレーション）。同じテストが両方で動くよう、
+  表示中のナビだけを取得する `mainNav` / `navTab` を使う。
+- 実行: `pnpm --filter @gabby/testing e2e`（全件）。対象を絞る場合は
+  `pnpm --filter @gabby/testing e2e -- <ファイル名の一部> --project=desktop`。
+  結果レポート（人が見る用）: `pnpm --filter @gabby/testing e2e:report`。成果物は `testing/e2e/.artifacts/`（git管理外）。
+
+## 8. トークン消費を抑える運用（AIアシスタントが実行する場合）
+
+E2E 実行自体はトークンを消費しない。消費するのは結果・証跡を読むときだけなので、読む量を以下の順で最小化する。
+
+1. **結果は1行形式の要約だけを読む。** 成功時は件数のみ確認し、ログ全体を読まない
+   （例: `playwright test 2>&1 | grep -E "passed|failed|flaky"`）。
+2. **失敗時は失敗したテストだけを再実行し、エラーの要点だけを抽出する**
+   （`--last-failed` と `grep -E "Error:|Expected|Received|Locator:"`）。
+3. **原因調査はまず `error-context.md`（ページ構造のテキスト）を `grep` で部分的に読む。** スクリーンショット（画像）は、
+   見た目そのものの不具合が疑われる場合にだけ開く。開く場合も一覧画像・切り出しにまとめ、枚数を抑える。
+4. **関係するテストだけを実行する**（変更した画面・機能のディレクトリやファイル名で絞り込む。`--project=desktop` 等）。
+5. **再試行（retries）で失敗を隠さない。** 同じ箇所で不安定に落ちる場合は、推測で何度も再実行せず、
+   ロケーター・待ち方を直すか `data-testid` を付ける（1章）。解決した知見は `TEST-JUDGEMENT-GUIDE.md` に記録する。
+6. **見た目の回帰チェックを常用する場合は、画素比較（`toHaveScreenshot`）を Playwright に任せ、AI は差分が出たときだけ画像を見る。**
+   日付・件数など変動する部分はマスクする（導入時に対象画面を決める）。
+

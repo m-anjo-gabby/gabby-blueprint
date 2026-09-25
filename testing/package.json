@@ -3,11 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:report": "playwright show-report e2e/.artifacts/report"
+  },
   "dependencies": {
     "@gabby/lib": "workspace:*",
     "@supabase/supabase-js": "^2.94.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20",
     "dotenv": "^17.4.2"
   }

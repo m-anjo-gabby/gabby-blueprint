@@ -80,6 +80,9 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
 - データ主体テスト・回帰テストの技術規約とナレッジは `testing/CONVENTIONS.md` /
   `testing/TEST-JUDGEMENT-GUIDE.md` に集約する。テスト自動化に着手する際は必ず参照し、
   新しい気づき・失敗事例は `TEST-JUDGEMENT-GUIDE.md` に追記すること。
+- E2E（Playwright、`testing/playwright.config.ts`）は `testing/e2e/CONVENTIONS.md` に従う。特に実行時は
+  8章「トークン消費を抑える運用」（要約だけ読む・失敗分だけ再実行・画像より `error-context.md` を優先）を守り、
+  dev サーバーは自前で起動せず Playwright の `webServer` に任せる。
 - 画面・RPC・業務ルールを変更したら `docs/screens/_INDEX.md` / `testing/e2e/specs/_INDEX.md`
   を確認し、該当する仕様書があれば同じタスクで更新する（新規作成は依頼時のみ。詳細は
   `testing/README.md`参照）。対応する仕様書がまだ無い場合は新規作成しないが、タスク完了時の

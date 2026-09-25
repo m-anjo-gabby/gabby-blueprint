@@ -81,3 +81,7 @@ temp_data/
 # Claude Code（skills / settings.json はチーム共有。ローカル専用のものだけ除外）
 .claude/worktrees/
 .claude/settings.local.json
+
+# Playwright E2E（ログイン状態・実行結果・trace。git管理しない）
+testing/e2e/.auth/
+testing/e2e/.artifacts/
