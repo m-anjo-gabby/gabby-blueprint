@@ -189,7 +189,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
   };
 
   return (
-    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
+    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden">
       <div className="flex items-center gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-50 shrink-0">
         <Link
           href="/chat"

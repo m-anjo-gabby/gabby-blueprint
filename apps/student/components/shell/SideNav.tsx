@@ -17,7 +17,7 @@ interface SideNavProps {
  */
 export function SideNav({ items, badges, pathname }: SideNavProps) {
   return (
-    <aside className="hidden md:flex w-24 lg:w-64 shrink-0 flex-col border-r border-slate-200/70 bg-white/80 backdrop-blur-xl">
+    <aside className="hidden md:flex w-24 lg:w-64 shrink-0 flex-col border-r border-line bg-surface/80 backdrop-blur-xl">
       <Link
         href="/dashboard"
         className="flex h-16 shrink-0 items-center justify-center lg:justify-start lg:px-6 hover:opacity-80 transition-opacity select-none"
@@ -35,15 +35,15 @@ export function SideNav({ items, badges, pathname }: SideNavProps) {
                   href={item.href}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'flex flex-col lg:flex-row items-center gap-1 lg:gap-3 rounded-2xl px-2 py-3 lg:px-4 transition-colors',
+                    'flex flex-col lg:flex-row items-center gap-1 lg:gap-3 rounded-control px-2 py-3 lg:px-4 transition-colors',
                     isActive
-                      ? 'bg-indigo-950 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'bg-brand-deep text-white shadow-sm'
+                      : 'text-ink-soft hover:bg-slate-100 hover:text-ink'
                   )}
                 >
                   <span className="relative flex shrink-0">
                     <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} />
-                    <NavBadge badge={badges[item.id]} className={isActive ? 'ring-indigo-950' : undefined} />
+                    <NavBadge badge={badges[item.id]} className={isActive ? 'ring-brand-deep' : undefined} />
                   </span>
                   <span className={cn('text-[11px] lg:text-sm leading-tight text-center', isActive ? 'font-bold' : 'font-medium')}>
                     {/* レール幅では短縮名、サイドバー幅では正式名称 */}

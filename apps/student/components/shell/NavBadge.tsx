@@ -24,7 +24,7 @@ export function NavBadge({ badge, className }: NavBadgeProps) {
   if (badge?.dot) {
     return (
       <span
-        className={cn('absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-white', className)}
+        className={cn('absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-brand-500 ring-2 ring-white', className)}
       />
     );
   }

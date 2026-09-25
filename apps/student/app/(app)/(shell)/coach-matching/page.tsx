@@ -10,7 +10,7 @@ export default async function CoachMatchingPage() {
 
   if (!ticket) {
     return (
-      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
+      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden">
         <div className="flex flex-col items-center justify-center flex-1 py-16 text-center px-6">
           <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
             <UserX size={22} />

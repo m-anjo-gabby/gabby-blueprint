@@ -94,19 +94,19 @@ export function HomeView({ nextSession, assignments, activityDates }: HomeViewPr
   return (
     <div className="space-y-6 pb-6">
       <header className="space-y-1 px-1">
-        <p className="text-sm text-slate-500">{nowMs !== null ? formatToday(nowMs, timezone) : ' '}</p>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <p className="text-sm text-ink-muted">{nowMs !== null ? formatToday(nowMs, timezone) : ' '}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">
           {nowMs !== null ? getGreeting(getHourInZone(new Date(nowMs).toISOString(), timezone)) : 'ようこそ'}
-          {userName && <span className="text-slate-500">、{userName}さん</span>}
+          {userName && <span className="text-ink-muted">、{userName}さん</span>}
         </h1>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-3 lg:grid-flow-dense">
+      <div className="grid items-start gap-4 lg:grid-cols-3 lg:grid-flow-dense">
         <div className="lg:col-span-2">
           {focus !== null && nowMs !== null ? (
             <TodayFocusCard focus={focus} nowMs={nowMs} timezone={timezone} onClearResume={handleClearResume} />
           ) : (
-            <Skeleton className="h-60 w-full rounded-3xl" />
+            <Skeleton className="h-60 w-full rounded-card" />
           )}
         </div>
 
@@ -121,7 +121,7 @@ export function HomeView({ nextSession, assignments, activityDates }: HomeViewPr
         {week ? (
           <WeeklyActivityCard days={week.days} activeCount={week.activeCount} />
         ) : (
-          <Skeleton className="h-48 w-full rounded-3xl" />
+          <Skeleton className="h-48 w-full rounded-card" />
         )}
 
         {otherAssignments.length > 0 && (

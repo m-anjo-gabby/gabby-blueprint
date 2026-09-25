@@ -54,7 +54,7 @@ export default async function StudentAppLayout({
       {/* Color Vowel辞書 Provider: 単語タップで辞書検索ツールチップおよびダイアログをグローバル表示 */}
       <ColorVowelLookupProvider>
         {/* デザイン基盤: 全体共通の背景色やフォントを適用 */}
-        <div className="min-h-screen bg-[#f5f5f7] text-slate-900">
+        <div className="min-h-screen bg-canvas text-ink">
           {children}
         </div>
       </ColorVowelLookupProvider>

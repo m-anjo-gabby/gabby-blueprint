@@ -23,21 +23,21 @@ export function CoachAssignmentsCard({ assignments }: CoachAssignmentsCardProps)
             <li key={assignment.assignment_id}>
               <Link
                 href={`/training/dialogue/${assignment.assignment_id}`}
-                className="group flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-50 transition-colors"
+                className="group flex items-center gap-3 rounded-control p-2 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-strong">
                   <MessagesSquare size={18} />
                 </div>
                 <div className="min-w-0 flex-1 space-y-1.5">
-                  <p className="truncate text-sm font-bold text-slate-900">{assignment.content_name}</p>
+                  <p className="truncate text-sm font-bold text-ink">{assignment.content_name}</p>
                   <div className="flex items-center gap-3">
                     <ProgressBar percent={percent} />
-                    <span className="shrink-0 text-[11px] text-slate-500">
+                    <span className="shrink-0 text-[11px] text-ink-muted">
                       {assignment.completed_session_count}/{assignment.total_session_count} 完了
                     </span>
                   </div>
                 </div>
-                <ChevronRight size={18} className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                <ChevronRight size={18} className="shrink-0 text-ink-subtle group-hover:text-ink-muted transition-colors" />
               </Link>
             </li>
           );

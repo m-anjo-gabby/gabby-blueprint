@@ -93,17 +93,17 @@ export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayF
   const view = toFocusView(focus, nowMs, timezone);
 
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-indigo-950 p-6 sm:p-8 text-white shadow-lg shadow-indigo-950/10">
-      <div className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-indigo-500/25 blur-3xl" />
+    <section className="relative overflow-hidden rounded-card bg-brand-deep p-6 sm:p-8 text-white shadow-lg shadow-brand-deep/10">
+      <div className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-brand-500/25 blur-3xl" />
 
       <div className="relative flex items-start justify-between gap-3">
-        <p className="text-xs font-semibold tracking-wide text-indigo-300">{view.eyebrow}</p>
+        <p className="text-xs font-semibold tracking-wide text-brand-300">{view.eyebrow}</p>
         {focus.kind === 'resume' && (
           <button
             type="button"
             onClick={onClearResume}
             aria-label="ブックマークを削除"
-            className="-m-2 p-2 text-indigo-300/70 hover:text-white transition-colors"
+            className="-m-2 p-2 text-brand-300/70 hover:text-white transition-colors"
           >
             <Trash2 size={16} />
           </button>
@@ -111,19 +111,19 @@ export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayF
       </div>
 
       <h2 className="relative mt-2 text-xl sm:text-2xl font-bold leading-snug tracking-tight line-clamp-2">{view.title}</h2>
-      {view.description && <p className="relative mt-2 text-sm text-indigo-100/80">{view.description}</p>}
+      {view.description && <p className="relative mt-2 text-sm text-brand-100/80">{view.description}</p>}
 
       {view.progressPercent !== undefined && (
         <div className="relative mt-5 flex items-center gap-3">
           <ProgressBar percent={view.progressPercent} tone="light" />
-          <span className="shrink-0 text-xs font-semibold text-indigo-100">{Math.round(view.progressPercent)}%</span>
+          <span className="shrink-0 text-xs font-semibold text-brand-100">{Math.round(view.progressPercent)}%</span>
         </div>
       )}
 
       <div className="relative mt-6 flex flex-wrap items-center gap-3">
         <Link
           href={view.primary.href}
-          className="group inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-6 text-sm font-bold text-indigo-950 shadow-sm hover:bg-indigo-50 active:scale-[0.98] transition-all"
+          className="group inline-flex h-12 items-center gap-2 rounded-control bg-white px-6 text-sm font-bold text-brand-deep shadow-sm hover:bg-brand-soft active:scale-[0.98] transition-all"
         >
           {view.primary.label}
           <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
@@ -131,12 +131,12 @@ export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayF
         {view.secondary && (
           <Link
             href={view.secondary.href}
-            className="inline-flex h-12 items-center rounded-2xl border border-white/20 px-5 text-sm font-semibold text-white hover:bg-white/10 active:scale-[0.98] transition-all"
+            className="inline-flex h-12 items-center rounded-control border border-white/20 px-5 text-sm font-semibold text-white hover:bg-white/10 active:scale-[0.98] transition-all"
           >
             {view.secondary.label}
           </Link>
         )}
-        {view.note && <p className={cn('text-xs text-indigo-200/80', !view.secondary && 'sm:ml-1')}>{view.note}</p>}
+        {view.note && <p className={cn('text-xs text-brand-200/80', !view.secondary && 'sm:ml-1')}>{view.note}</p>}
       </div>
     </section>
   );

@@ -20,19 +20,19 @@ export function ContinueCard({ resume, onClear }: ContinueCardProps) {
     <HomeCard title="続きから">
       <div className="flex items-start gap-3">
         <Link href={getResumePath(resume)} className="group flex min-w-0 flex-1 items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-strong">
             <TypeIcon size={20} />
           </div>
           <div className="min-w-0 flex-1 space-y-2">
             <div>
-              <p className="text-xs text-slate-500">{typeLabel}</p>
-              <p className="line-clamp-2 text-sm font-bold text-slate-900 group-hover:text-indigo-800 transition-colors">
+              <p className="text-xs text-ink-muted">{typeLabel}</p>
+              <p className="line-clamp-2 text-sm font-bold text-ink group-hover:text-brand-800 transition-colors">
                 {content.content_name}
               </p>
             </div>
             <div className="flex items-center gap-3">
               <ProgressBar percent={progress} />
-              <span className="shrink-0 text-xs font-semibold text-slate-600">{progress}%</span>
+              <span className="shrink-0 text-xs font-semibold text-ink-soft">{progress}%</span>
             </div>
           </div>
         </Link>
@@ -40,7 +40,7 @@ export function ContinueCard({ resume, onClear }: ContinueCardProps) {
           type="button"
           onClick={onClear}
           aria-label="ブックマークを削除"
-          className="-m-1 shrink-0 p-1 text-slate-300 hover:text-rose-500 transition-colors"
+          className="-m-1 shrink-0 p-1 text-ink-subtle hover:text-rose-500 transition-colors"
         >
           <Trash2 size={16} />
         </button>

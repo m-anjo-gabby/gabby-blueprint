@@ -15,7 +15,7 @@ export function BottomTabBar({ items, badges, pathname }: BottomTabBarProps) {
   return (
     <nav
       aria-label="メインナビゲーション"
-      className="md:hidden shrink-0 border-t border-slate-200/70 bg-white/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
+      className="md:hidden shrink-0 border-t border-line bg-surface/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="flex">
         {items.map((item) => {
@@ -27,13 +27,13 @@ export function BottomTabBar({ items, badges, pathname }: BottomTabBarProps) {
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'flex h-16 flex-col items-center justify-center gap-1 transition-colors active:scale-95',
-                  isActive ? 'text-indigo-700' : 'text-slate-500'
+                  isActive ? 'text-brand-strong' : 'text-ink-muted'
                 )}
               >
                 <span
                   className={cn(
                     'relative flex h-7 w-12 items-center justify-center rounded-full transition-colors',
-                    isActive && 'bg-indigo-50'
+                    isActive && 'bg-brand-soft'
                   )}
                 >
                   <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} />

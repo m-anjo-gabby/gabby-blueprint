@@ -185,7 +185,7 @@ export function LiveSessionRoomView({ access }: Props) {
 
   if (phase === 'preview') {
     return (
-      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
+      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden">
         <header className="shrink-0 px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
           <div className="flex items-center gap-3 min-w-0">
             <Link
@@ -284,7 +284,7 @@ export function LiveSessionRoomView({ access }: Props) {
 
   if (phase === 'ended') {
     return (
-      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden items-center justify-center gap-4 px-6 text-center">
+      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden items-center justify-center gap-4 px-6 text-center">
         <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
           <CheckCircle2 size={22} />
         </div>

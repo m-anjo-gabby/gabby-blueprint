@@ -13,7 +13,7 @@ export default async function LiveSessionRoomPage({
 
   if (!result.success) {
     return (
-      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
+      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden">
         <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50">
           <div className="flex items-center gap-3 min-w-0">
             <Link

@@ -12,8 +12,8 @@
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --border: oklch(0.922 0 0); /* slate-200 */
-  --primary: oklch(0.205 0 0); /* indigo-600 */
-  --muted-foreground: oklch(0.556 0 0); /* slate-500 */ --radius: 0.625rem; --background: oklch(1 0 0); --foreground: oklch(0.145 0 0); --popover: oklch(1 0 0); --popover-foreground: oklch(0.145 0 0); --primary-foreground: oklch(0.985 0 0); --secondary: oklch(0.97 0 0); --secondary-foreground: oklch(0.205 0 0); --muted: oklch(0.97 0 0); --accent: oklch(0.97 0 0); --accent-foreground: oklch(0.205 0 0); --destructive: oklch(0.577 0.245 27.325); --input: oklch(0.922 0 0); --ring: oklch(0.708 0 0); --chart-1: oklch(0.646 0.222 41.116); --chart-2: oklch(0.6 0.118 184.704); --chart-3: oklch(0.398 0.07 227.392); --chart-4: oklch(0.828 0.189 84.429); --chart-5: oklch(0.769 0.188 70.08); --sidebar: oklch(0.985 0 0); --sidebar-foreground: oklch(0.145 0 0); --sidebar-primary: oklch(0.205 0 0); --sidebar-primary-foreground: oklch(0.985 0 0); --sidebar-accent: oklch(0.97 0 0); --sidebar-accent-foreground: oklch(0.205 0 0); --sidebar-border: oklch(0.922 0 0); --sidebar-ring: oklch(0.708 0 0);
+  --primary: oklch(0.511 0.262 276.966); /* indigo-600 (= brand) */
+  --muted-foreground: oklch(0.556 0 0); /* slate-500 */ --radius: 0.625rem; --background: oklch(0.975 0.004 264); /* canvas */ --foreground: oklch(0.208 0.042 265.755); /* slate-900 (= ink) */ --popover: oklch(1 0 0); --popover-foreground: oklch(0.145 0 0); --primary-foreground: oklch(1 0 0); --secondary: oklch(0.97 0 0); --secondary-foreground: oklch(0.205 0 0); --muted: oklch(0.97 0 0); --accent: oklch(0.97 0 0); --accent-foreground: oklch(0.205 0 0); --destructive: oklch(0.577 0.245 27.325); --input: oklch(0.922 0 0); --ring: oklch(0.785 0.115 274.713); /* indigo-300 */ --chart-1: oklch(0.646 0.222 41.116); --chart-2: oklch(0.6 0.118 184.704); --chart-3: oklch(0.398 0.07 227.392); --chart-4: oklch(0.828 0.189 84.429); --chart-5: oklch(0.769 0.188 70.08); --sidebar: oklch(0.985 0 0); --sidebar-foreground: oklch(0.145 0 0); --sidebar-primary: oklch(0.205 0 0); --sidebar-primary-foreground: oklch(0.985 0 0); --sidebar-accent: oklch(0.97 0 0); --sidebar-accent-foreground: oklch(0.205 0 0); --sidebar-border: oklch(0.922 0 0); --sidebar-ring: oklch(0.708 0 0);
 }
 
 @theme inline {
@@ -57,6 +57,56 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+
+/* ─────────────────────────────────────────────────────────────
+   Gabby Blueprint デザイントークン（studentアプリ）
+   - 色は用途名で指定し、パレット名（indigo/slate等）を画面側に直接書かない。
+   - ブランド色を変更する場合は、この brand-* の参照先だけを差し替える。
+   - 機能ごとの色分けは行わない。状態色（成功/警告/エラー）は emerald/amber/rose を用途限定で使う。
+   ───────────────────────────────────────────────────────────── */
+@theme {
+  /* 注意: Tailwind v4 は未使用のパレット変数（--color-indigo-* 等）を出力しないため、
+     var() で参照すると未定義になる。値は Tailwind 標準パレットと同じ oklch を直接記述する。 */
+
+  /* Brand: インディゴ（= Tailwind indigo）。主要ボタン・選択中・進捗・リンクに限定して使う */
+  --color-brand-50: oklch(96.2% 0.018 272.314);
+  --color-brand-100: oklch(93% 0.034 272.788);
+  --color-brand-200: oklch(87% 0.065 274.039);
+  --color-brand-300: oklch(78.5% 0.115 274.713);
+  --color-brand-400: oklch(67.3% 0.182 276.935);
+  --color-brand-500: oklch(58.5% 0.233 277.117);
+  --color-brand-600: oklch(51.1% 0.262 276.966);
+  --color-brand-700: oklch(45.7% 0.24 277.023);
+  --color-brand-800: oklch(39.8% 0.195 277.366);
+  --color-brand-900: oklch(35.9% 0.144 278.697);
+  --color-brand-950: oklch(25.7% 0.09 281.288);
+  --color-brand: oklch(51.1% 0.262 276.966);        /* = brand-600 主要ボタン・リンク */
+  --color-brand-strong: oklch(45.7% 0.24 277.023);  /* = brand-700 ホバー・選択中の文字 */
+  --color-brand-deep: oklch(25.7% 0.09 281.288);    /* = brand-950 高級感を出す面（今日やること・選択中ナビ） */
+  --color-brand-soft: oklch(96.2% 0.018 272.314);   /* = brand-50 アイコン下地・選択中タブの下地 */
+
+  /* Neutral: 画面の9割を占める基調色（= Tailwind slate） */
+  --color-canvas: oklch(97.5% 0.004 264);           /* ページ背景 */
+  --color-surface: oklch(100% 0 0);                 /* カード */
+  --color-ink: oklch(20.8% 0.042 265.755);          /* = slate-900 見出し・本文 */
+  --color-ink-soft: oklch(37.2% 0.044 257.287);     /* = slate-700 本文（やや弱め） */
+  --color-ink-muted: oklch(55.4% 0.046 257.417);    /* = slate-500 補足文 */
+  --color-ink-subtle: oklch(70.4% 0.04 256.788);    /* = slate-400 非活性・装飾アイコン */
+  --color-line: oklch(92.9% 0.013 255.508);         /* = slate-200 区切り線・カード枠 */
+
+  /* Radius: 用途別に3段階へ集約 */
+  --radius-panel: 1.75rem;   /* 画面を占めるパネル */
+  --radius-card: 1.5rem;     /* カード */
+  --radius-control: 1rem;    /* ボタン・入力欄・アイコン下地 */
+}
+
+/* Font: 欧文はGeist、和文はNoto Sans JP（未読込時はOS標準の和文ゴシック）。
+   フォント変数は body に付くため、utility 側で展開される inline 指定にする */
+@theme inline {
+  --font-sans: var(--font-geist-sans), var(--font-noto-sans-jp), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
 @layer base {
   /* iOS Safari のタップ座標ズレを CSS レベルで防止する。
      overscroll-behavior: none でバウンスによる座標系のズレを抑制。 */
@@ -67,9 +117,17 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: Arial, Helvetica, sans-serif;
+    /* --font-sans と同じ並び。フォント変数は body に付与されるため :root の --font-sans を
+       参照せず、ここで直接展開する（:root では --font-geist-sans 等が未定義で解決できない） */
+    font-family: var(--font-geist-sans), var(--font-noto-sans-jp), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif;
     -webkit-font-smoothing: antialiased;
     overscroll-behavior: none;
+  }
+
+  /* 日本語の見出しを文節単位で折り返す（「ましょ／う」のような不自然な改行を防ぐ。
+     非対応ブラウザでは通常の折り返しになる） */
+  h1, h2, h3 {
+    word-break: auto-phrase;
   }
 
   /* iPhone/Safari用のリセット */

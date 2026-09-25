@@ -15,16 +15,16 @@ export function NextSessionCard({ session, timezone }: NextSessionCardProps) {
     <HomeCard title="次回のライブセッション">
       <Link
         href="/live-room"
-        className="group -m-2 flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-50 transition-colors"
+        className="group -m-2 flex items-center gap-3 rounded-control p-2 hover:bg-slate-50 transition-colors"
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-strong">
           <Video size={20} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-slate-900">{session.counterpart_name} コーチ</p>
-          <p className="mt-0.5 text-xs text-slate-500">{formatDateTimeByZone(session.start_datetime, timezone, false)}</p>
+          <p className="truncate text-sm font-bold text-ink">{session.counterpart_name} コーチ</p>
+          <p className="mt-0.5 text-xs text-ink-muted">{formatDateTimeByZone(session.start_datetime, timezone, false)}</p>
         </div>
-        <ChevronRight size={18} className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" />
+        <ChevronRight size={18} className="shrink-0 text-ink-subtle group-hover:text-ink-muted transition-colors" />
       </Link>
     </HomeCard>
   );

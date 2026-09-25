@@ -17,7 +17,7 @@ export function PanelFrame({ children, fullScreen = false }: PanelFrameProps) {
   return (
     <div
       className={cn(
-        'w-full flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden touch-none selection:bg-indigo-100',
+        'w-full flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden touch-none selection:bg-brand-100',
         fullScreen ? 'h-dvh' : 'h-full'
       )}
     >

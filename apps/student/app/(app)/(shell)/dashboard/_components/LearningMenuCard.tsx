@@ -17,13 +17,13 @@ export function LearningMenuCard() {
           <li key={item.href}>
             <Link
               href={item.href}
-              className="group flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-50 transition-colors"
+              className="group flex items-center gap-3 rounded-control p-2 hover:bg-slate-50 transition-colors"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 group-hover:bg-indigo-50 group-hover:text-indigo-700 transition-colors">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-slate-100 text-ink-soft group-hover:bg-brand-soft group-hover:text-brand-strong transition-colors">
                 <item.icon size={18} />
               </div>
-              <span className="flex-1 text-sm font-semibold text-slate-800">{item.label}</span>
-              <ChevronRight size={18} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+              <span className="flex-1 text-sm font-semibold text-ink">{item.label}</span>
+              <ChevronRight size={18} className="text-ink-subtle group-hover:text-ink-muted transition-colors" />
             </Link>
           </li>
         ))}

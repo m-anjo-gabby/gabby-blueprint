@@ -23,7 +23,7 @@ export function AppShell({ navContext, children }: AppShellProps) {
   const badges = useShellNavBadges(navContext, pathname);
 
   return (
-    <div className="flex h-dvh bg-linear-to-b from-[#f8faff] to-[#f2f4f7] font-sans text-slate-900 selection:bg-indigo-100">
+    <div className="flex h-dvh bg-canvas font-sans text-ink selection:bg-brand-100">
       <SideNav items={items} badges={badges} pathname={pathname} />
 
       <div className="flex min-w-0 flex-1 flex-col">
