@@ -10,14 +10,14 @@
 
 ## この画面に来る経路
 
-- ダッシュボードの戻る矢印から遷移する（カレンダー画面と同様、ダッシュボードの子画面という
-  位置づけで、独立したナビゲーション項目としては存在しない）。
+- 画面下部のボトムタブ（モバイル）／左サイドナビ（PC）の「ライブセッション」タブから遷移する（全生徒に表示）。
+- [カレンダー](../calendar.md)・[専属コーチを探す](../coach-matching.md)の戻るボタンから戻ってくる。
 - 実施済みセッションの各カードから[セッション結果画面](./session-result.md)へ、今後の予定の
   「参加する」ボタンから[通話画面](./call-room.md)へ、それぞれ遷移する。
 
 ## 画面の構成
 
-1. **ヘッダー** — 画面タイトル、説明文、ダッシュボードへ戻るボタン。契約（チケット）を複数
+1. **ヘッダー** — 画面タイトル、説明文、「カレンダー」「専属コーチを探す」ボタン。契約（チケット）を複数
    保持している生徒のみ、対象契約を切り替えるセレクトボックスが表示される（現在有効な契約が
    あれば既定で選択される。無ければ最新の過去契約が選択される）
 2. **振替候補バナー**（コーチから振替候補が届いている場合のみ、リスト最上部に表示）— タップで
@@ -28,10 +28,27 @@
 4. **セッションキャンセルダイアログ**・**予約リクエストダイアログ**・**振替候補ダイアログ**
    （いずれもタブ内の操作から開く）
 
+## ライブセッション付き契約が無い場合（紹介画面）
+
+ライブセッション付き契約を一度も保持したことがない生徒（アプリのみ契約）には、ハブの代わりに
+ライブセッション紹介画面を表示する（過去に契約があった生徒は履歴確認のためハブを表示する）。
+
+| 要素 | 内容 | 操作した時の挙動 |
+|---|---|---|
+| ヒーロー | キャッチコピーとプラン概要 | — |
+| 特長 | 専属コーチ・自主トレとの連携・アプリで完結、の3項目 | — |
+| ご利用の流れ | 「コーチを選ぶ」「予約する」「入室する」の3ステップ | — |
+| 「プラン・料金を見る」ボタン | 常時 | 公式サイトの料金ページ（`https://gabbyacademy.com/price`）を別タブで開く |
+
+文言・導線は `apps/student/constants/liveSessionIntro.ts` で一元管理する（「担当者に相談」等の
+導線追加もこのファイルで行う）。
+
 ## 表示要素・操作
+
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
+| 「カレンダー」「専属コーチを探す」ボタン | 常時（ヘッダー内） | それぞれ `/calendar`・`/coach-matching` へ遷移 |
 | 契約セレクトボックス | 契約（チケット）を2件以上持つ生徒のみ | 選択した契約の実施済み・変更履歴を再取得して切り替える |
 | 振替候補バナー（「◯◯コーチから振替候補が届いています」） | 自分宛の未回答の振替候補提案がある場合 | タップで振替候補ダイアログを開く |
 | 「未予約のセッションがあります」バナー | 選択中の契約に未消化のチケット枠がある場合、「今後の予定」タブ内に表示 | タップで予約リクエストダイアログを開く（[calendar.md](../calendar.md)の予約リクエストダイアログと同一仕様） |
@@ -68,11 +85,13 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/live-room/page.tsx`
-- `apps/student/app/(app)/live-room/_components/LiveSessionHub.tsx`
-- `apps/student/app/(app)/live-room/_components/RescheduleProposalDialog.tsx`
-- `apps/student/app/(app)/calendar/_components/SessionActionDialog.tsx`（キャンセルダイアログを共用）
-- `apps/student/app/(app)/calendar/_components/BookMakeupSessionDialog.tsx`（予約リクエストダイアログを共用）
+- `apps/student/app/(app)/(shell)/live-room/_components/LiveSessionIntro.tsx`（紹介画面）
+
+- `apps/student/app/(app)/(shell)/live-room/page.tsx`
+- `apps/student/app/(app)/(shell)/live-room/_components/LiveSessionHub.tsx`
+- `apps/student/app/(app)/(shell)/live-room/_components/RescheduleProposalDialog.tsx`
+- `apps/student/app/(app)/(shell)/calendar/_components/SessionActionDialog.tsx`（キャンセルダイアログを共用）
+- `apps/student/app/(app)/(shell)/calendar/_components/BookMakeupSessionDialog.tsx`（予約リクエストダイアログを共用）
 - `apps/student/actions/sessionAction.ts`（`getMyUpcomingSessions`, `getMyPastSessions`,
   `getMyRescheduleProposalGroups`, `getMyBookingRequests`, `withdrawSessionBookingRequest`,
   `acceptRescheduleProposal`, `declineRescheduleProposals`, `cancelSession`,

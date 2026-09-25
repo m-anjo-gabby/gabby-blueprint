@@ -452,10 +452,10 @@
 - **該当仕様書**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`（画面仕様書
   `docs/screens/student/calendar.md`作成のため実装を確認中に発覚）
 - **事象**: 上記E2E仕様書の「関与ロール・画面」表で、生徒のセッションキャンセル操作を
-  `apps/student/app/(app)/live-room/_components/LiveSessionHub.tsx`が担うと記載していたが、
+  `apps/student/app/(app)/(shell)/live-room/_components/LiveSessionHub.tsx`が担うと記載していたが、
   実際にセッションキャンセルのダイアログ（`SessionActionDialog.tsx`、実体は
   `packages/lib/components/common/SessionActionDialog.tsx`）を開く導線は
-  `apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`（カレンダー画面の
+  `apps/student/app/(app)/(shell)/calendar/_components/DayDetailDrawer.tsx`（カレンダー画面の
   日別詳細ドロワー）にあり、ライブルーム画面には無かった。
 - **原因**: `cancelSession(`という文字列でのgrep一致だけを見て「呼び出し箇所がある画面」と
   即断したが、実際には`LiveSessionHub.tsx`は`cancelSession`を呼んでおらず、
@@ -480,8 +480,8 @@
   `docs/screens/student/live-room/hub.md`作成のため実装を確認中に発覚。KJ-2026-0918-01の続報）
 - **事象**: KJ-2026-0918-01でライブルーム画面の役割を「予約リクエストの取り下げ・振替候補への
   応答・過去セッション閲覧」と訂正したが、これも不完全だった。実際には
-  `apps/student/app/(app)/live-room/_components/LiveSessionHub.tsx`はカレンダー画面
-  （`apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`等）と同じ
+  `apps/student/app/(app)/(shell)/live-room/_components/LiveSessionHub.tsx`はカレンダー画面
+  （`apps/student/app/(app)/(shell)/calendar/_components/DayDetailDrawer.tsx`等）と同じ
   `SessionActionDialog`（セッションキャンセル＋振替候補提案）・`BookMakeupSessionDialog`
   （個別予約リクエストの新規作成）を直接インポートして使っており、今後の予定カードから
   「キャンセル」、未消化枠バナーから「予約リクエスト作成」も行える。つまりライブルーム画面は
@@ -512,7 +512,7 @@
   クライアント単位でデータを絞り込む）」と記載していた。しかしこの記述は誤りで、実際に
   画面へのアクセス可否を制御しているのは`apps/student/proxy.ts`のミドルウェア
   （`com_t_user_role.role_id='monitor'`を持たないユーザーを`/monitor`アクセス時に
-  `/dashboard`へリダイレクトする処理）と、`apps/student/app/(app)/(main)/dashboard/page.tsx`の
+  `/dashboard`へリダイレクトする処理）と、`apps/student/app/(app)/(shell)/dashboard/page.tsx`の
   `isMonitor`判定（ダッシュボード上の導線の出し分け）の2つである。`get_monitor_user_list`が
   行っているのは同一クライアント内での「表示対象データ」の絞り込みであり、画面そのものへの
   入室可否には関与しない（モニターロールを持たない同一クライアントの生徒がURLを直接叩いた

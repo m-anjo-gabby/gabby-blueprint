@@ -4,8 +4,7 @@ import {
   Users, 
   LayoutDashboard, 
   BookOpen, 
-  Zap, 
-  ArrowLeft
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -91,17 +90,8 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         
         <div className="space-y-1">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-[0.12em] font-mono select-none group transition-colors"
-          >
-            <ArrowLeft size={10} className="transform group-hover:-translate-x-0.5 transition-transform" strokeWidth={3} />
-            <span>Dashboard</span>
-            <span className="text-slate-300 mx-0.5">/</span>
-            <span className="text-indigo-500/90">Client Monitor</span>
-          </Link>
 
-          <div className="pt-0.5">
+          <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
               <Users size={22} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
               モニタリングダッシュボード

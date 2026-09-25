@@ -1,13 +1,6 @@
-// apps/student/app/(app)/calendar/layout.tsx
+// apps/student/app/(app)/(shell)/calendar/layout.tsx
+import { PanelFrame } from '@/components/shell/PageFrames';
 
-export default function CalendarLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="h-dvh w-full flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden touch-none selection:bg-indigo-100">
-      {children}
-    </div>
-  );
+export default function CalendarLayout({ children }: { children: React.ReactNode }) {
+  return <PanelFrame>{children}</PanelFrame>;
 }

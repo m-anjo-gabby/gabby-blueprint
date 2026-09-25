@@ -10,12 +10,12 @@
 
 ## この画面に来る経路
 
-- ダッシュボードの「Coaching」ナビゲーション（ライブセッション付き契約の有効なチケットを保持し
-  ている場合のみ表示）から遷移する。
+- [ライブセッション・ホーム](./live-room/hub.md)（`/live-room`）の「専属コーチを探す」ボタンから遷移する
+  （アプリシェルでは「ライブセッション」タブがアクティブになる）。
 
 ## 画面の構成
 
-1. **ヘッダー** — 画面タイトル、ダッシュボードへ戻るボタン、絞り込み後のコーチ件数バッジ、
+1. **ヘッダー** — 画面タイトル、ライブセッション・ホームへ戻るボタン、絞り込み後のコーチ件数バッジ、
    セッション枠数の案内文
 2. **セッション枠の状況** — 契約上の週あたりコマ数ぶんの状況カード（マッチング済み／承認待ち／
    未マッチング）
@@ -62,12 +62,12 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/coach-matching/page.tsx`
-- `apps/student/app/(app)/coach-matching/_components/CoachMatchingView.tsx`
-- `apps/student/app/(app)/coach-matching/_components/CoachSearchFilters.tsx`
-- `apps/student/app/(app)/coach-matching/_components/CoachCard.tsx`
-- `apps/student/app/(app)/coach-matching/_components/CoachAvailabilityCalendar.tsx`
-- `apps/student/app/(app)/coach-matching/_components/RequestDialog.tsx`
+- `apps/student/app/(app)/(shell)/coach-matching/page.tsx`
+- `apps/student/app/(app)/(shell)/coach-matching/_components/CoachMatchingView.tsx`
+- `apps/student/app/(app)/(shell)/coach-matching/_components/CoachSearchFilters.tsx`
+- `apps/student/app/(app)/(shell)/coach-matching/_components/CoachCard.tsx`
+- `apps/student/app/(app)/(shell)/coach-matching/_components/CoachAvailabilityCalendar.tsx`
+- `apps/student/app/(app)/(shell)/coach-matching/_components/RequestDialog.tsx`
 - コーチプロフィール表示: `packages/lib/components/common/CoachProfileDialog.tsx`
 - 関連アクション/RPC: `getMyLiveSessionTickets`, `getMySlotStatus`, `getCoachBrowseList`,
   `createMatchingRequest`, `cancelMatchingRequest`（`apps/student/actions/matchingAction.ts`）

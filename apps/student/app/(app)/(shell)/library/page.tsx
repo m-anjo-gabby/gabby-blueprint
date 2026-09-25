@@ -2,8 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Search, X, BookOpen, ChevronLeft, LayoutGrid } from 'lucide-react';
+import { Search, X, BookOpen, LayoutGrid } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Components
@@ -116,12 +115,6 @@ export default function LibraryPage() {
       <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link 
-              href="/dashboard" 
-              className="p-2 -ml-2 hover:bg-slate-100 rounded-2xl transition-all active:scale-90 text-slate-400"
-            >
-              <ChevronLeft size={24} />
-            </Link>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Library</h1>
             </div>

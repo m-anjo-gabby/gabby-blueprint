@@ -10,7 +10,7 @@
 
 ## この画面に来る経路
 
-- ダッシュボードの「Favorites」ナビゲーションから遷移する。
+- ダッシュボードの「Favorites」ショートカットから遷移する（アプリシェルでは「学習」タブがアクティブになる）。
 - ライブラリ画面の教材カードでお気に入り登録した教材も、ここに反映される。
 
 ## 画面の構成
@@ -43,10 +43,10 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/favorites/page.tsx`
-- `apps/student/app/(app)/favorites/_components/ContentFavorites.tsx`
-- `apps/student/app/(app)/favorites/_components/PhraseFavorites.tsx`
-- `apps/student/app/(app)/favorites/_components/PhraseFavoriteItem.tsx`
+- `apps/student/app/(app)/(shell)/favorites/page.tsx`
+- `apps/student/app/(app)/(shell)/favorites/_components/ContentFavorites.tsx`
+- `apps/student/app/(app)/(shell)/favorites/_components/PhraseFavorites.tsx`
+- `apps/student/app/(app)/(shell)/favorites/_components/PhraseFavoriteItem.tsx`
 - 共通カード: `apps/student/components/common/ContentCard.tsx`
 - 関連アクション: `toggleContentFavorite`（`apps/student/actions/contentAction.ts`）、
   `toggleFavorite`（`apps/student/actions/wordAction.ts`）

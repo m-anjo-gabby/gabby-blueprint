@@ -35,8 +35,8 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/profile/page.tsx`
-- `apps/student/app/(app)/profile/_components/ProfileView.tsx`
+- `apps/student/app/(app)/(shell)/profile/page.tsx`
+- `apps/student/app/(app)/(shell)/profile/_components/ProfileView.tsx`
 - 共通コンポーネント: `packages/lib/components/common/AvatarCropUploader.tsx`
   （円形切り抜き・アップロード）、`packages/lib/components/common/TimezoneSelector.tsx`
 - 関連アクション: `getMyProfile`, `getTimezoneList`, `uploadProfileIcon`, `removeProfileIcon`,

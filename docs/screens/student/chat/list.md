@@ -9,13 +9,13 @@
 
 ## この画面に来る経路
 
-- ダッシュボードの「Chat」ナビゲーション（ライブセッション付き契約の有効なチケットを保持している
+- 画面下部のボトムタブ（モバイル）／左サイドナビ（PC）の「チャット」タブ（ライブセッション付き契約の有効なチケットを保持している
   場合のみ表示）から遷移する。
 - チャットルーム画面（`/chat/[roomId]`）の「チャット一覧に戻る」ボタンから戻ってくる。
 
 ## 画面の構成
 
-1. **ヘッダー** — 画面タイトル「チャット」、説明文、ダッシュボードへ戻るボタン
+1. **ヘッダー** — 画面タイトル「チャット」、説明文
 2. **チャットルーム一覧** — 参加しているルームをリスト表示
 
 ## 表示要素・操作
@@ -34,7 +34,7 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/chat/page.tsx`
-- `apps/student/app/(app)/chat/layout.tsx`
-- `apps/student/app/(app)/chat/_components/ChatRoomList.tsx`
+- `apps/student/app/(app)/(shell)/chat/page.tsx`
+- `apps/student/app/(app)/(shell)/chat/layout.tsx`
+- `apps/student/app/(app)/(shell)/chat/_components/ChatRoomList.tsx`
 - 状態管理: `@gabby/lib/stores/useChatStore`（`fetchRooms`）

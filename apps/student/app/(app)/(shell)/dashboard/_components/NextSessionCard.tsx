@@ -1,48 +1,31 @@
-'use client';
-
 import Link from 'next/link';
-import { ArrowRight, Video } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { ChevronRight, Video } from 'lucide-react';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { SessionListItem } from '@gabby/types/session';
-
-const JOINABLE_WINDOW_MS = 48 * 60 * 60 * 1000;
-
-function isJoinableSoon(startDatetime: string): boolean {
-  return new Date(startDatetime).getTime() - Date.now() <= JOINABLE_WINDOW_MS;
-}
+import type { SessionListItem } from '@gabby/types/session';
+import { HomeCard } from './HomeCard';
 
 interface NextSessionCardProps {
   session: SessionListItem;
+  timezone: string;
 }
 
-/**
- * ライブセッション付き契約保持者向けの「次回セッション」ミニカード。
- * 予約管理(振替・キャンセル等)は持たず、ライブセッションハブへの導線のみを担う。
- */
-export const NextSessionCard = ({ session }: NextSessionCardProps) => {
-  const timezone = useTimezone();
-  const href = isJoinableSoon(session.start_datetime) ? `/live-room/${session.session_id}` : '/live-room';
-
+/** 次回ライブセッション（「今日やること」に出るほど直近でない場合に表示） */
+export function NextSessionCard({ session, timezone }: NextSessionCardProps) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <HomeCard title="次回のライブセッション">
       <Link
-        href={href}
-        className="group flex items-center gap-3.5 p-4 bg-white border-2 border-rose-100 rounded-[28px] shadow-sm hover:shadow-md active:scale-[0.99] transition-all"
+        href="/live-room"
+        className="group -m-2 flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-50 transition-colors"
       >
-        <div className="w-11 h-11 rounded-full bg-rose-50 flex items-center justify-center text-rose-400 shrink-0">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
           <Video size={20} />
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[9px] font-black tracking-wider text-rose-500 uppercase">Next Session</p>
-          <p className="text-sm font-black text-slate-800 truncate mt-0.5">{session.counterpart_name} コーチ</p>
-          <p className="text-xs text-slate-500 mt-0.5">{formatDateTimeByZone(session.start_datetime, timezone, false)}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-slate-900">{session.counterpart_name} コーチ</p>
+          <p className="mt-0.5 text-xs text-slate-500">{formatDateTimeByZone(session.start_datetime, timezone, false)}</p>
         </div>
-        <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-rose-50 group-hover:text-rose-600 transition-all shrink-0">
-          <ArrowRight size={15} strokeWidth={2.5} />
-        </div>
+        <ChevronRight size={18} className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" />
       </Link>
-    </motion.div>
+    </HomeCard>
   );
-};
+}

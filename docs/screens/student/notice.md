@@ -40,8 +40,8 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/notice/page.tsx`
-- `apps/student/app/(app)/notice/_components/NoticeCard.tsx`
+- `apps/student/app/(app)/(shell)/notice/page.tsx`
+- `apps/student/app/(app)/(shell)/notice/_components/NoticeCard.tsx`
 - お知らせ種別定義: `packages/types/notice.ts`（`NOTICE_TYPES`, `NOTICE_IMPORTANT_BADGE`）
 - 状態管理: `@gabby/lib/stores/useNoticeStore`（`fetchNotices`, `markAsRead`）
 - 関連アクション: `getNoticeAttachmentUrlAction`（`@gabby/lib/notice/actions/noticeActions`）

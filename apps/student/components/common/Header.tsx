@@ -66,19 +66,19 @@ export default function Header() {
 
   return (
     <>
-      <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-5 flex items-center justify-between sticky top-0 z-50 shrink-0">
+      <header className="h-14 md:h-16 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-4 md:px-6 flex items-center justify-between sticky top-0 z-50 shrink-0">
         
-        {/* 👑 ロゴエリア（クリックでダッシュボードへ遷移） */}
+        {/* 👑 ロゴエリア（クリックでダッシュボードへ遷移）。PCではサイドナビ側にロゴを表示するため非表示 */}
         <Link 
           href="/dashboard" 
-          className="flex items-center hover:opacity-80 transition-opacity cursor-pointer select-none"
+          className="flex md:invisible items-center hover:opacity-80 transition-opacity cursor-pointer select-none"
         >
           <Image 
             src="/logo-01.png" 
             alt="Gabby Logo" 
             width={120} 
             height={32} 
-            className="h-8 w-auto object-contain"
+            className="h-7 md:h-8 w-auto object-contain"
             priority 
           />
         </Link>

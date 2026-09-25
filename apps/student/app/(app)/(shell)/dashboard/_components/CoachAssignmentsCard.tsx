@@ -1,0 +1,48 @@
+import Link from 'next/link';
+import { ChevronRight, MessagesSquare } from 'lucide-react';
+import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
+import { HomeCard, ProgressBar } from './HomeCard';
+
+const MAX_ITEMS = 3;
+
+interface CoachAssignmentsCardProps {
+  assignments: DialogueAssignmentSummary[];
+}
+
+/** コーチから割り当てられた、未完了のダイアログ教材 */
+export function CoachAssignmentsCard({ assignments }: CoachAssignmentsCardProps) {
+  return (
+    <HomeCard title="コーチからの課題">
+      <ul className="-mx-2 space-y-1">
+        {assignments.slice(0, MAX_ITEMS).map((assignment) => {
+          const percent =
+            assignment.total_session_count > 0
+              ? (assignment.completed_session_count / assignment.total_session_count) * 100
+              : 0;
+          return (
+            <li key={assignment.assignment_id}>
+              <Link
+                href={`/training/dialogue/${assignment.assignment_id}`}
+                className="group flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
+                  <MessagesSquare size={18} />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <p className="truncate text-sm font-bold text-slate-900">{assignment.content_name}</p>
+                  <div className="flex items-center gap-3">
+                    <ProgressBar percent={percent} />
+                    <span className="shrink-0 text-[11px] text-slate-500">
+                      {assignment.completed_session_count}/{assignment.total_session_count} 完了
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight size={18} className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </HomeCard>
+  );
+}

@@ -8,7 +8,7 @@ export default function CalendarPage() {
       <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
         <div className="flex items-center gap-3 min-w-0">
           <Link
-            href="/dashboard"
+            href="/live-room"
             className="p-2 -ml-2 hover:bg-slate-100 rounded-2xl transition-all active:scale-90 text-slate-400 shrink-0"
           >
             <ChevronLeft size={24} />

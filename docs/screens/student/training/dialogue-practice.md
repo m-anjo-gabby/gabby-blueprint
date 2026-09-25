@@ -13,6 +13,8 @@
 
 - ライブラリ画面（`/library`）のダイアログ教材カードの「Start Training」ボタンから遷移する
   （`assignment_id`単位で遷移するため、同じ生徒でも割当ごとに別のURLになる）。
+- ダッシュボード（ホーム）の「今日やること」（未完了の課題が主役になった場合）、または
+  「コーチからの課題」カードから遷移する。
 
 ## 画面の構成
 
@@ -68,7 +70,7 @@
 - `apps/student/app/(app)/training/dialogue/[assignmentId]/page.tsx`
 - `apps/student/app/(app)/training/dialogue/[assignmentId]/_components/DialoguePracticeDetail.tsx`
 - `apps/student/app/(app)/training/dialogue/[assignmentId]/_components/DialogueSessionRow.tsx`
-- 遷移元: `apps/student/app/(app)/library/page.tsx`（`packages/lib/navigation/student-path.ts`の
+- 遷移元: `apps/student/app/(app)/(shell)/library/page.tsx`（`packages/lib/navigation/student-path.ts`の
   `getTrainingPath`が`content_type===3`の場合にこの画面へのパスを生成する）
 - 関連アクション: `getMyDialogueAssignments`（`apps/student/actions/dialogueAction.ts` →
   Core実装は`packages/lib/coachStudent/actions/dialogueActions.ts`の

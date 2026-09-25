@@ -49,10 +49,10 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/chat/[roomId]/page.tsx`
-- `apps/student/app/(app)/chat/_components/ChatTimeline.tsx`
-- `apps/student/app/(app)/chat/_components/ChatMessageContent.tsx`
-- `apps/student/app/(app)/chat/_components/ChatMessageInput.tsx`
+- `apps/student/app/(app)/chat/[roomId]/page.tsx`（没入画面のためアプリシェルのナビは表示しない）
+- `apps/student/app/(app)/(shell)/chat/_components/ChatTimeline.tsx`
+- `apps/student/app/(app)/(shell)/chat/_components/ChatMessageContent.tsx`
+- `apps/student/app/(app)/(shell)/chat/_components/ChatMessageInput.tsx`
 - 共通ロジック: `@gabby/lib/chat/actions/messageActions`（`getChatMessages`, `sendChatMessage`）、
   `@gabby/lib/chat/actions/roomActions`（`getChatRoomDetail`）、
   `@gabby/lib/chat/actions/attachmentActions`（`uploadChatAttachment`, `getChatAttachmentUrl`）、

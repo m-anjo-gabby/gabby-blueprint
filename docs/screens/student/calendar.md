@@ -10,12 +10,12 @@
 
 ## この画面に来る経路
 
-- ダッシュボード（`/dashboard`）の戻る矢印から遷移する。カレンダーはダッシュボードの子画面という
-  位置づけで、独立したナビゲーション項目としては存在しない。
+- [ライブセッション・ホーム](./live-room/hub.md)（`/live-room`）の「カレンダー」ボタンから遷移する。
+  独立したナビゲーション項目としては存在せず、アプリシェルでは「ライブセッション」タブがアクティブになる。
 
 ## 画面の構成
 
-1. **ヘッダー** — 画面タイトル、説明文、ダッシュボードへ戻るボタン
+1. **ヘッダー** — 画面タイトル、説明文、ライブセッション・ホームへ戻るボタン
 2. **月間カレンダー** — 月送りボタン、曜日ヘッダー、日付セル（各日にその日の予定を最大2件まで
    チップ表示し、3件以上ある場合は「他n件」とまとめる）
 3. **日別詳細（日付をタップすると下から開くドロワー）** — 選択した日の予定一覧。未消化枠が
@@ -77,10 +77,10 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/calendar/page.tsx`
-- `apps/student/app/(app)/calendar/_components/CalendarBoard.tsx`
-- `apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`
-- `apps/student/app/(app)/calendar/_components/SessionActionDialog.tsx`
+- `apps/student/app/(app)/(shell)/calendar/page.tsx`
+- `apps/student/app/(app)/(shell)/calendar/_components/CalendarBoard.tsx`
+- `apps/student/app/(app)/(shell)/calendar/_components/DayDetailDrawer.tsx`
+- `apps/student/app/(app)/(shell)/calendar/_components/SessionActionDialog.tsx`
   （実体は `packages/lib/components/common/SessionActionDialog.tsx` の薄いアダプタ）
-- `apps/student/app/(app)/calendar/_components/BookMakeupSessionDialog.tsx`
+- `apps/student/app/(app)/(shell)/calendar/_components/BookMakeupSessionDialog.tsx`
 - 関連RPC: `create_session_booking_request`, `cancel_session`, `check_session_conflict`

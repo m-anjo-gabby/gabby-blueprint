@@ -26,10 +26,10 @@
 
 ## この画面に来る経路
 
-- ダッシュボードの「Client Monitor」的な導線（画面上部のパンくずに「Dashboard / Client
-  Monitor」と表示される）から遷移する。閲覧権限は`com_t_user_role`の`role_id='monitor'`
-  ロールで制御されており、これを持たない受講生にはダッシュボード上の導線自体が表示されない
-  （`apps/student/app/(app)/(main)/dashboard/page.tsx`の`isMonitor`判定）。仮にURLを直接
+- 画面下部のボトムタブ（モバイル）／左サイドナビ（PC）の「モニター」タブから遷移する。閲覧権限は
+  `com_t_user_role`の`role_id='monitor'`ロールで制御されており、これを持たない受講生にはタブ自体が
+  表示されない（`apps/student/app/(app)/(shell)/layout.tsx`でロールを判定し、
+  `apps/student/constants/navigation.ts`の表示条件で出し分ける）。仮にURLを直接
   入力してアクセスしようとしても、`apps/student/proxy.ts`のミドルウェアが`role_id='monitor'`
   を持たないユーザーを`/dashboard`へリダイレクトするため画面自体を開けない。`get_monitor_user_list`
   等のRPCによるクライアント単位の絞り込みは、この画面に入れた後の「表示対象データ」の絞り込み
@@ -38,7 +38,7 @@
 
 ## 画面の構成
 
-1. **ヘッダー** — 画面タイトル、ダッシュボードへのパンくず、現在表示中のモジュール名
+1. **ヘッダー** — 画面タイトル、現在表示中のモジュール名
 2. **タブナビゲーション** — 「受講生サマリー」「単語ドリル履歴」「スプリント履歴」の3ビューを
    URLクエリ（`view`）で切り替える
 3. **モニター表示トグル** — デモ用・モニター用アカウントを一覧・集計に含めるかどうかを
@@ -79,12 +79,12 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/monitor/page.tsx`
-- `apps/student/app/(app)/monitor/_components/MonitorToggle.tsx`
-- `apps/student/app/(app)/monitor/_components/MonitorUserList.tsx`
-- `apps/student/app/(app)/monitor/_components/MonitorMonthPickerPopover.tsx`（年月ピッカー）
-- `apps/student/app/(app)/monitor/_components/MonitorWordHistoryView.tsx`
-- `apps/student/app/(app)/monitor/_components/MonitorSprintHistoryView.tsx`
+- `apps/student/app/(app)/(shell)/monitor/page.tsx`
+- `apps/student/app/(app)/(shell)/monitor/_components/MonitorToggle.tsx`
+- `apps/student/app/(app)/(shell)/monitor/_components/MonitorUserList.tsx`
+- `apps/student/app/(app)/(shell)/monitor/_components/MonitorMonthPickerPopover.tsx`（年月ピッカー）
+- `apps/student/app/(app)/(shell)/monitor/_components/MonitorWordHistoryView.tsx`
+- `apps/student/app/(app)/(shell)/monitor/_components/MonitorSprintHistoryView.tsx`
 - `apps/student/actions/monitorAction.ts`（`getMonitorUserList`, `getMonitorWordHistory`,
   `getMonitorSprintHistory`）
 - 関連RPC: `get_monitor_user_list`, `get_monitor_word_history`, `get_monitor_sprint_history`,

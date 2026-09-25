@@ -36,7 +36,7 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/profile/password/page.tsx`
+- `apps/student/app/(app)/(shell)/profile/password/page.tsx`
 - 共通コンポーネント: `packages/lib/components/common/PasswordInput.tsx`,
   `packages/lib/components/common/SubmitButton.tsx`
 - 関連アクション: `updatePassword`（`apps/student/actions/authAction.ts`、

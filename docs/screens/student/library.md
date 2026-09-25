@@ -11,11 +11,11 @@
 
 ## この画面に来る経路
 
-- ダッシュボードの「Library」ナビゲーションから遷移する。
+- 画面下部のボトムタブ（モバイル）／左サイドナビ（PC）の「学習」タブ、またはダッシュボードの「Library」ショートカットから遷移する。
 
 ## 画面の構成
 
-1. **ヘッダー** — 戻るボタン、画面タイトル「Library」、件数表示、検索バー、種別タブ（横スクロール）
+1. **ヘッダー** — 画面タイトル「Library」、件数表示、検索バー、種別タブ（横スクロール）
 2. **教材一覧** — 検索・タブ条件に一致する教材のカード一覧
 
 ## 表示要素・操作
@@ -46,7 +46,7 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/library/page.tsx`
+- `apps/student/app/(app)/(shell)/library/page.tsx`
 - 共通カード: `apps/student/components/common/ContentCard.tsx`
 - 教材種別・タブ定義: `packages/types/content.ts`（`CONTENT_TYPES`, `LIBRALY_TABS`）
 - 種別ごとのアイコン・配色: `packages/lib/content/ui.ts`（`getContentTypeConfig`）

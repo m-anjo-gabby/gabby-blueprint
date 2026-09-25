@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, CalendarClock, ChevronLeft, Clock, FileText, Loader2, Ticket, Video, X } from 'lucide-react';
+import { ArrowRight, CalendarClock, CalendarDays, Clock, FileText, Loader2, Ticket, Users, Video, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,11 @@ const HISTORY_PAGE_SIZE = 10;
 // packages/types/session.tsで共通定義したものを使う（コーチ側のLive Sessionsカードとも共有）。
 // 変更履歴タブの対象（生徒・コーチ本人起因のキャンセルのみ）はisSelfInitiatedCancelで判定する。
 const RESULT_LINKABLE_STATUSES = new Set<number>(SESSION_RESULT_STATUSES);
+
+const HUB_LINKS = [
+  { href: '/calendar', label: 'カレンダー', icon: CalendarDays },
+  { href: '/coach-matching', label: '専属コーチを探す', icon: Users },
+];
 
 function isJoinableSoon(startDatetime: string): boolean {
   return new Date(startDatetime).getTime() - Date.now() <= JOINABLE_WINDOW_MS;
@@ -153,17 +158,23 @@ export function LiveSessionHub({
   return (
     <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
       <header className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href="/dashboard"
-            className="p-2 -ml-2 hover:bg-slate-100 rounded-2xl transition-all active:scale-90 text-slate-400 shrink-0"
-          >
-            <ChevronLeft size={24} />
-          </Link>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">ライブセッション</h1>
-        </div>
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">ライブセッション</h1>
 
         <p className="text-[13px] text-slate-500">セッションの予定確認・予約・キャンセルをここで管理できます。</p>
+
+        {/* ライブセッションタブ配下の関連画面への導線 */}
+        <div className="grid grid-cols-2 gap-2">
+          {HUB_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="flex items-center justify-center gap-2 h-11 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-200 active:scale-[0.98] transition-all"
+            >
+              <link.icon size={16} className="text-indigo-600" />
+              {link.label}
+            </Link>
+          ))}
+        </div>
 
         {contracts.length > 1 && (
           <div className="space-y-1.5">

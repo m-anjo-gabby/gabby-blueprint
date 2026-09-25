@@ -138,7 +138,7 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Link
-              href="/dashboard"
+              href="/live-room"
               className="p-2 -ml-2 hover:bg-slate-100 rounded-2xl transition-all active:scale-90 text-slate-400 shrink-0"
             >
               <ChevronLeft size={24} />
