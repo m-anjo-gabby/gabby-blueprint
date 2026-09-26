@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { SUPPORT_EMAIL } from '../../contact';
 
 interface PasswordResetEmailTemplateProps {
   resetUrl: string;
@@ -108,8 +109,8 @@ export const PasswordResetEmailTemplate: React.FC<PasswordResetEmailTemplateProp
           <p style={{ margin: '0 0 8px 0', lineHeight: '1.5' }}>
             <strong>【お問い合わせ先】</strong><br />
             Gabby Blueprint ササポート窓口:{' '}
-            <a href="mailto:support@gabbyacademy.com" style={{ color: '#9ca3af', textDecoration: 'underline' }}>
-              support@gabbyacademy.com
+            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: '#9ca3af', textDecoration: 'underline' }}>
+              {SUPPORT_EMAIL}
             </a>
           </p>
           <p style={{ marginTop: '24px', marginBottom: 0 }}>&copy; Gabby All rights reserved.</p>

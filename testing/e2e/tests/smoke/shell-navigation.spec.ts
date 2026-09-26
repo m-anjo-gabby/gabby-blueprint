@@ -46,11 +46,15 @@ test.describe("アプリのみ契約・モニターロールの生徒", () => {
     await expect(navTab(page, "チャット")).toHaveCount(0);
   });
 
-  test("ライブセッションタブではアップセルの紹介画面が表示される", async ({ page }) => {
+  test("ライブセッションタブではアップセルの紹介画面が表示され、法人・個人の申し込み案内が併記される", async ({ page }) => {
     await page.goto("/live-room");
 
     await expect(navTab(page, "ライブ")).toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("link", { name: /プラン・料金を見る/ })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "サポート窓口にメールで相談する" })).toHaveAttribute(
+      "href",
+      /^mailto:support@gabbyacademy\.com\?subject=/
+    );
+    await expect(page.getByRole("link", { name: /個人向けプラン・料金を見る/ })).toHaveAttribute(
       "href",
       "https://gabbyacademy.com/price"
     );

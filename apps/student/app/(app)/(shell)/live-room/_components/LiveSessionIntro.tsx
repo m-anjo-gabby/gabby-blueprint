@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { ArrowRight, ExternalLink } from 'lucide-react';
+import { ArrowRight, ExternalLink, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LIVE_SESSION_INTRO, type LiveSessionIntroAction } from '@/constants/liveSessionIntro';
+import { LIVE_SESSION_INTRO, type LiveSessionIntroAction, type LiveSessionIntroAudience } from '@/constants/liveSessionIntro';
 
 /**
  * ライブセッション紹介（アップセル）画面。
@@ -9,7 +9,7 @@ import { LIVE_SESSION_INTRO, type LiveSessionIntroAction } from '@/constants/liv
  * （ホーム等へのバナー常設はせず、高級感を損なわない控えめな訴求にとどめる）。
  */
 export function LiveSessionIntro() {
-  const { eyebrow, title, lead, features, steps, actions, note } = LIVE_SESSION_INTRO;
+  const { eyebrow, title, lead, features, steps, audienceHeading, audiences } = LIVE_SESSION_INTRO;
 
   return (
     <div className="overflow-hidden rounded-panel border border-line bg-surface shadow-xs">
@@ -56,12 +56,14 @@ export function LiveSessionIntro() {
             </ol>
           </section>
 
-          {/* 導線 */}
-          <section className="space-y-3">
-            {actions.map((action) => (
-              <IntroActionLink key={action.label} action={action} />
-            ))}
-            {note && <p className="text-center text-xs text-ink-muted">{note}</p>}
+          {/* 導線: 契約形態（法人／個人）ごとに併記する */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-bold text-ink">{audienceHeading}</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {audiences.map((audience) => (
+                <IntroAudienceCard key={audience.id} audience={audience} />
+              ))}
+            </div>
           </section>
         </div>
       </div>
@@ -69,14 +71,40 @@ export function LiveSessionIntro() {
   );
 }
 
+function IntroAudienceCard({ audience }: { audience: LiveSessionIntroAudience }) {
+  return (
+    <div className="flex flex-col rounded-card border border-line p-5">
+      <h3 className="text-base font-bold text-ink">{audience.title}</h3>
+      <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{audience.description}</p>
+      {audience.note && <p className="mt-1.5 text-xs text-ink-muted [overflow-wrap:anywhere]">{audience.note}</p>}
+      {/* 2カラム表示時にボタンの位置を揃える */}
+      <div className="flex-1" />
+      <div className="mt-4 space-y-2">
+        {audience.actions.map((action) => (
+          <IntroActionLink key={action.label} action={action} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function IntroActionLink({ action }: { action: LiveSessionIntroAction }) {
   const className = cn(
-    'flex h-13 w-full items-center justify-center gap-2 rounded-control text-sm font-bold transition-all active:scale-[0.98]',
+    'flex min-h-12 w-full items-center justify-center gap-2 rounded-control px-4 py-3 text-center text-sm font-bold transition-all active:scale-[0.98]',
     action.variant === 'primary'
       // 料金ページへの導線はコーポレートサイトの CTA と揃えてゴールドにする
       ? 'bg-gold text-brand-deep shadow-sm hover:brightness-95'
-      : 'border border-line bg-surface text-ink-soft hover:bg-slate-50'
+      : 'border border-line bg-surface text-brand hover:border-brand-200 hover:bg-brand-soft'
   );
+
+  if (action.href.startsWith('mailto:')) {
+    return (
+      <a href={action.href} className={className}>
+        <Mail size={16} className="shrink-0" />
+        {action.label}
+      </a>
+    );
+  }
 
   if (action.external) {
     return (
