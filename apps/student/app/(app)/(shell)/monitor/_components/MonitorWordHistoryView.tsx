@@ -4,9 +4,6 @@ import React, { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Calendar, 
-  BookOpen, 
-  MessageSquareText, 
-  Mic, 
   ChevronDown, 
   User, 
   Search, 
@@ -17,6 +14,7 @@ import {
   SlidersHorizontal,
   Download 
 } from 'lucide-react';
+import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
@@ -437,16 +435,16 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                     <div>
                       <div className="text-sm font-bold text-ink tracking-tight mb-1">{date}</div>
                       <div className="flex items-center gap-3 text-[11px] font-bold text-ink-soft flex-wrap">
-                        <span className="flex items-center gap-1 bg-blue-50/50 px-1.5 py-0.5 rounded-md border border-blue-100/40 text-ink-soft">
-                          <BookOpen size={11} className="text-blue-500 shrink-0" />
+                        <span className="flex items-center gap-1 bg-canvas px-1.5 py-0.5 rounded-md border border-line text-ink-soft">
+                          <TrainingMetricIcon metric="word" size={11} />
                           <span>単語数 <span className="tabular-nums font-bold text-ink text-xs">{totalWordsDay}</span></span>
                         </span>
-                        <span className="flex items-center gap-1 bg-emerald-50/50 px-1.5 py-0.5 rounded-md border border-emerald-100/40 text-ink-soft">
-                          <MessageSquareText size={11} className="text-emerald-500 shrink-0" />
+                        <span className="flex items-center gap-1 bg-canvas px-1.5 py-0.5 rounded-md border border-line text-ink-soft">
+                          <TrainingMetricIcon metric="phrase" size={11} />
                           <span>フレーズ数 <span className="tabular-nums font-bold text-ink text-xs">{totalPhrasesDay}</span></span>
                         </span>
-                        <span className="flex items-center gap-1 bg-rose-50/50 px-1.5 py-0.5 rounded-md border border-rose-100/40 text-ink-soft">
-                          <Mic size={11} className="text-rose-500 shrink-0" />
+                        <span className="flex items-center gap-1 bg-canvas px-1.5 py-0.5 rounded-md border border-line text-ink-soft">
+                          <TrainingMetricIcon metric="speech" size={11} />
                           <span>発話評価数 <span className="tabular-nums font-bold text-ink text-xs">{totalAssessmentsDay}</span></span>
                         </span>
                       </div>
@@ -495,19 +493,19 @@ export const MonitorWordHistoryView: React.FC<MonitorWordHistoryViewProps> = ({
                             
                             {/* 単語数 */}
                             <span className="inline-flex items-center min-w-[56px]" title="単語数">
-                              <BookOpen size={11} className="text-blue-500/80 mr-1 shrink-0" /> 
+                              <TrainingMetricIcon metric="word" size={11} className="mr-1" /> 
                               <span className="tabular-nums text-ink-soft font-bold">{session.word_count}</span>
                             </span>
                             
                             {/* フレーズ数 */}
                             <span className="inline-flex items-center min-w-[56px]" title="フレーズ数">
-                              <MessageSquareText size={11} className="text-emerald-500/80 mr-1 shrink-0" /> 
+                              <TrainingMetricIcon metric="phrase" size={11} className="mr-1" /> 
                               <span className="tabular-nums text-ink-soft font-bold">{session.phrase_count}</span>
                             </span>
                             
                             {/* 発話評価数 */}
                             <span className="inline-flex items-center min-w-[56px]" title="発話評価数">
-                              <Mic size={11} className="text-rose-500 shrink-0" />
+                              <TrainingMetricIcon metric="speech" size={11} className="mr-1" />
                               <span className="tabular-nums text-ink-soft font-bold">{session.assessment_count}</span>
                             </span>
 

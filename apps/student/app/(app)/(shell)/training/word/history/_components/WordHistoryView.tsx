@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Calendar, BookOpen, MessageSquareText, ChevronDown, Mic } from 'lucide-react';
+import { Calendar, ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDate } from '@gabby/lib/date/date';
@@ -86,8 +86,8 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
 
       <div className="mb-6 grid grid-cols-3 gap-3">
         <StatTile label="実施日数" value={sortedDates.length} unit="日" icon={Calendar} />
-        <StatTile label="単語" value={monthlyTotals.words} unit="語" icon={BookOpen} />
-        <StatTile label="フレーズ" value={monthlyTotals.phrases} unit="件" icon={MessageSquareText} />
+        <StatTile label="単語" value={monthlyTotals.words} unit="語" metric="word" />
+        <StatTile label="フレーズ" value={monthlyTotals.phrases} unit="件" metric="phrase" />
       </div>
 
       <div className="space-y-3">
@@ -113,9 +113,9 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                   <div>
                     <p className="text-base font-bold text-ink tabular-nums">{date}</p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <HistoryMetric icon={BookOpen} label="単語" value={totalWordsDay} />
-                      <HistoryMetric icon={MessageSquareText} label="フレーズ" value={totalPhrasesDay} />
-                      <HistoryMetric icon={Mic} label="発話" value={totalAssessmentsDay} />
+                      <HistoryMetric metric="word" label="単語" value={totalWordsDay} />
+                      <HistoryMetric metric="phrase" label="フレーズ" value={totalPhrasesDay} />
+                      <HistoryMetric metric="speech" label="発話" value={totalAssessmentsDay} />
                     </div>
                   </div>
                   <ChevronDown size={18} className={cn('shrink-0 text-ink-subtle transition-transform duration-200', isExpanded && 'rotate-180')} />
@@ -135,9 +135,9 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                           <li key={session.content_id} className="rounded-control border border-line bg-surface p-3.5">
                             <p className="text-sm font-semibold text-ink">{session.com_m_contents?.content_name || '教材データなし'}</p>
                             <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-                              <HistoryMetric icon={BookOpen} label="単語" value={session.word_count} />
-                              <HistoryMetric icon={MessageSquareText} label="フレーズ" value={session.phrase_count} />
-                              <HistoryMetric icon={Mic} label="発話" value={session.assessment_count} />
+                              <HistoryMetric metric="word" label="単語" value={session.word_count} />
+                              <HistoryMetric metric="phrase" label="フレーズ" value={session.phrase_count} />
+                              <HistoryMetric metric="speech" label="発話" value={session.assessment_count} />
                             </div>
                           </li>
                         ))}

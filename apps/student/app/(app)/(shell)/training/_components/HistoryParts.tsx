@@ -1,10 +1,21 @@
 import { Calendar, type LucideIcon } from 'lucide-react';
+import { getTrainingMetricConfig, type TrainingMetric } from '@gabby/lib/content/ui';
+import { cn } from '@/lib/utils';
+
+type HistoryMetricProps = { label: string; value: number | string } & (
+  /** 分類のある指標：アイコンと分類色を共通定義から取得する */
+  | { metric: TrainingMetric; icon?: never }
+  /** 分類でない指標（制限時間・回答数等）：控えめなグレーで表示する */
+  | { metric?: never; icon: LucideIcon }
+);
 
 /** 履歴一覧の小さな数値表示（アイコン・ラベル・数値） */
-export function HistoryMetric({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number | string }) {
+export function HistoryMetric({ metric, icon, label, value }: HistoryMetricProps) {
+  const config = metric ? getTrainingMetricConfig(metric) : null;
+  const Icon = config?.icon ?? icon;
   return (
     <span className="inline-flex items-center gap-1 text-sm text-ink-muted">
-      <Icon size={14} className="shrink-0 text-brand-500" />
+      {Icon && <Icon size={14} className={cn('shrink-0', config?.theme.iconText ?? 'text-ink-subtle')} />}
       {label}
       <span className="font-semibold text-ink tabular-nums">{value}</span>
     </span>

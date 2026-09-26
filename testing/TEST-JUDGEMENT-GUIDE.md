@@ -761,3 +761,16 @@
   - `globals.css`（`@theme` のトークン）を変更して見た目を確認するときは、dev サーバーが動いていないことを確認してから
     `apps/student/.next/dev` を削除し、撮影し直す。色が変わらない場合は、まずコンパイル済みCSSの値を `grep` で確認する。
   - 動作中の dev サーバーの `.next` は削除しない。自分が起動した残存プロセスか（起動時刻で判断）を確認してから停止する。
+
+### KJ-2026-0926-05 qa-admin は user_type=admin だが、admin画面のロール（com_m_role）が無く教材管理等に入れない
+
+- **該当シナリオ**: admin 教材一覧（`/contents`）の表示確認（Playwright、dev）
+- **事象**: `qa-admin` でログインはできるが、サイドナビにはダッシュボード・チャットしか出ず、`/contents` に遷移すると
+  ダッシュボードへ戻された（ダッシュボードの「教材管理」カードはロールに関係なく表示される）。
+- **原因**: admin の画面アクセス制御（`apps/admin/proxy.ts` → `lib/navigation.ts` の `canAccessPath`）は
+  `user_type` ではなくロール（`admin` / `content_manager` 等）で判定する。`FIXTURES.md` の「admin(0)」は `user_type` の意味で、
+  ロールの付与は保証されていない。
+- **判断基準への反映**:
+  - admin 画面の E2E で固定アカウントを使う前に、対象画面の `requiredRoles` を持っているかを確認する。
+    リダイレクト先がダッシュボードなら、まずロール不足を疑う（ログイン直後の遷移の競合と見分けるため、`page.goto` 後の URL を出力する）。
+  - admin はログイン後にクライアント側で `/dashboard` へ遷移するため、`waitForURL("**/dashboard")` を待ってから次の画面へ遷移する。

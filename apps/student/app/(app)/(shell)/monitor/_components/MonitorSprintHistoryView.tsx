@@ -12,11 +12,10 @@ import {
   ChevronDown,
   SlidersHorizontal, 
   Calendar,
-  Zap,
   Download,
-  Mic,
   CheckCircle2
 } from 'lucide-react';
+import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { cn } from "@/lib/utils";
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -555,22 +554,24 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                       <div className="text-sm font-bold text-ink tracking-tight mb-1">{date}</div>
                       <div className="flex items-center gap-3 text-[11px] font-bold text-ink-soft flex-wrap">
                         {sprintCount > 0 && (
-                          <span className="flex items-center gap-1 bg-brand-soft border border-brand-100/30 px-1.5 py-0.5 rounded-md text-brand-strong font-bold">
+                          <span className="flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded-md text-ink-soft font-bold">
+                            <TrainingMetricIcon metric="sprint" size={11} />
                             <span>スプリント <span className="tabular-nums text-xs">{sprintCount}</span></span>
                           </span>
                         )}
                         {drillCount > 0 && (
-                          <span className="flex items-center gap-1 bg-emerald-50 border border-emerald-100/30 px-1.5 py-0.5 rounded-md text-emerald-700 font-bold">
+                          <span className="flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded-md text-ink-soft font-bold">
+                            <TrainingMetricIcon metric="drill" size={11} />
                             <span>ドリル <span className="tabular-nums text-xs">{drillCount}</span></span>
                           </span>
                         )}
-                        <span className="flex items-center gap-1 bg-emerald-50/50 px-1.5 py-0.5 rounded-md border border-emerald-100/40 text-ink-soft">
-                          <CheckCircle2 size={11} className="text-emerald-500 fill-emerald-500/10 shrink-0" />
+                        <span className="flex items-center gap-1 bg-canvas px-1.5 py-0.5 rounded-md border border-line text-ink-soft">
+                          <CheckCircle2 size={11} className="text-ink-subtle shrink-0" />
                           <span>回答数 <span className="tabular-nums text-ink font-bold text-xs">{totalAnswersDay}</span></span>
                         </span>
                         {totalAssessmentsDay > 0 && (
-                          <span className="flex items-center gap-1 bg-rose-50/50 px-1.5 py-0.5 rounded-md border border-rose-100/40 text-ink-soft">
-                            <Mic size={11} className="text-rose-500 shrink-0" />
+                          <span className="flex items-center gap-1 bg-canvas px-1.5 py-0.5 rounded-md border border-line text-ink-soft">
+                            <TrainingMetricIcon metric="speech" size={11} />
                             <span>発話評価数 <span className="tabular-nums text-xs">{totalAssessmentsDay}</span></span>
                           </span>
                         )}
@@ -618,12 +619,8 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                           <div className="col-span-1 md:col-span-3">
                             <div className="flex items-center gap-1.5 min-w-0">
                               {/* モードバッジ */}
-                              <span className={cn(
-                                "text-[11px] font-bold px-1.5 py-0.5 rounded-md border shrink-0",
-                                isSprint
-                                  ? "bg-brand-soft border-brand-100 text-brand"
-                                  : "bg-emerald-50 border-emerald-100 text-emerald-600"
-                              )}>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded-md border border-line bg-canvas text-ink-soft shrink-0">
+                                <TrainingMetricIcon metric={isSprint ? 'sprint' : 'drill'} size={11} />
                                 {isSprint ? 'スプリント' : 'ドリル'}
                               </span>
                               
@@ -639,19 +636,19 @@ export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> =
                             <div className="flex items-center gap-2 text-ink-muted font-bold tabular-nums">
                               {/* スプリント本数 */}
                               <span className="inline-flex items-center min-w-[56px]" title="スプリント本数">
-                                <Zap size={11} className="text-amber-500/80 fill-amber-500/10 mr-1 shrink-0" />
+                                <TrainingMetricIcon metric="sprint" size={11} className="mr-1" />
                                 <span className="tabular-nums text-ink-soft font-bold">{item.sprint_count}</span>
                               </span>
                               
                               {/* 回答数 */}
                               <span className="inline-flex items-center min-w-[56px]" title="回答数">
-                                <CheckCircle2 size={11} className="text-emerald-500/80 mr-1 shrink-0" />
+                                <CheckCircle2 size={11} className="text-ink-subtle mr-1 shrink-0" />
                                 <span className="tabular-nums text-ink-soft font-bold">{item.answered_count}</span>
                               </span>
                               
                               {/* 発話数 */}
                               <span className="inline-flex items-center min-w-[56px]" title="発話数">
-                                <Mic size={11} className="text-rose-500 mr-1 shrink-0" />
+                                <TrainingMetricIcon metric="speech" size={11} className="mr-1" />
                                 <span className="tabular-nums text-ink-soft font-bold">{item.assessment_count}</span>
                               </span>
                             </div>

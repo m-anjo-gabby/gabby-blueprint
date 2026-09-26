@@ -2,7 +2,8 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { BookOpen, Zap, ChevronRight, CalendarDays, Mic } from 'lucide-react';
+import { ChevronRight, CalendarDays, type LucideIcon } from 'lucide-react';
+import { getContentTypeConfig, getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
@@ -14,23 +15,30 @@ import { StatTile } from '../../_components/StatTile';
 
 const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'] as const;
 
+// 分類色・アイコン（全アプリ共通の定義から取得）
+const WORD_BOOK = getContentTypeConfig(0);
+const SPRINT = getContentTypeConfig(2);
+const SPEECH = getTrainingMetricConfig('speech');
+
 interface RecordLinkCardProps {
   href: string;
   title: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: LucideIcon;
+  /** アイコンのマスの分類色 */
+  iconTile: string;
   metrics: { label: string; value: number; unit: string }[];
   note?: string;
 }
 
 /** トレーニング種別ごとの集計と、その履歴画面への導線 */
-function RecordLinkCard({ href, title, icon: Icon, metrics, note }: RecordLinkCardProps) {
+function RecordLinkCard({ href, title, icon: Icon, iconTile, metrics, note }: RecordLinkCardProps) {
   return (
     <Link
       href={href}
       className="group flex flex-col rounded-card border border-line bg-surface p-4 sm:p-5 transition-all hover:border-brand-200 active:scale-[0.99]"
     >
       <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand">
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-control ${iconTile}`}>
           <Icon size={16} />
         </span>
         <span className="flex-1 text-base font-bold text-ink">{title}</span>
@@ -196,7 +204,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
             <ShellSectionTitle>{monthLabel}のまとめ</ShellSectionTitle>
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <StatTile label="トレーニング日数" value={stats.activeDays} unit="日" icon={CalendarDays} emphasis />
-              <StatTile label="発話回数" value={stats.totalAssessments} unit="回" icon={Mic} emphasis />
+              <StatTile label="発話回数" value={stats.totalAssessments} unit="回" metric="speech" emphasis />
             </div>
           </section>
 
@@ -206,7 +214,8 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
               <RecordLinkCard
                 href={`/training/word/history?month=${targetMonth}`}
                 title="単語帳"
-                icon={BookOpen}
+                icon={WORD_BOOK.icon}
+                iconTile={WORD_BOOK.theme.iconTile}
                 metrics={[
                   { label: '単語', value: stats.totalWords, unit: '語' },
                   { label: 'フレーズ', value: stats.totalPhrases, unit: '件' },
@@ -215,7 +224,8 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
               <RecordLinkCard
                 href={`/training/sprint/history?month=${targetMonth}`}
                 title="スプリント"
-                icon={Zap}
+                icon={SPRINT.icon}
+                iconTile={SPRINT.theme.iconTile}
                 metrics={[
                   { label: '実施', value: stats.sprintSessions, unit: '回' },
                   { label: '回答', value: stats.sprintAnswers, unit: '問' },
@@ -266,12 +276,12 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                       </p>
                       <dl className="mt-2 space-y-1.5 text-sm">
                         {(day.wordCount > 0 || day.phraseCount > 0) && (
-                          <DayDetailRow icon={BookOpen} label="単語帳" value={`${day.wordCount}語 / ${day.phraseCount}フレーズ`} />
+                          <DayDetailRow icon={WORD_BOOK.icon} iconColor={WORD_BOOK.theme.iconText} label="単語帳" value={`${day.wordCount}語 / ${day.phraseCount}フレーズ`} />
                         )}
                         {day.sprintSessionCount > 0 && (
-                          <DayDetailRow icon={Zap} label="スプリント" value={`${day.sprintSessionCount}回 / ${day.sprintAnswerCount}問`} />
+                          <DayDetailRow icon={SPRINT.icon} iconColor={SPRINT.theme.iconText} label="スプリント" value={`${day.sprintSessionCount}回 / ${day.sprintAnswerCount}問`} />
                         )}
-                        <DayDetailRow icon={Mic} label="発話回数" value={`${day.assessmentCount}回`} />
+                        <DayDetailRow icon={SPEECH.icon} iconColor={SPEECH.theme.iconText} label="発話回数" value={`${day.assessmentCount}回`} />
                       </dl>
                     </PopoverContent>
                   </Popover>
@@ -292,11 +302,11 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
   );
 };
 
-function DayDetailRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ size?: number; className?: string }>; label: string; value: string }) {
+function DayDetailRow({ icon: Icon, iconColor, label, value }: { icon: LucideIcon; iconColor: string; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <dt className="flex items-center gap-1.5 text-ink-muted">
-        <Icon size={14} className="text-brand-500" />
+        <Icon size={14} className={iconColor} />
         {label}
       </dt>
       <dd className="font-semibold text-ink tabular-nums">{value}</dd>

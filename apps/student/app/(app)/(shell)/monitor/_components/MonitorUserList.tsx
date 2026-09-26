@@ -11,15 +11,13 @@ import {
   Hourglass, 
   Ban, 
   Mail, 
-  MessageSquareText, 
-  Mic, 
   CalendarDays,
   ArrowLeft,
   ArrowRight,
   ChevronDown,
-  Download,
-  Zap
+  Download
 } from 'lucide-react';
+import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
@@ -392,19 +390,19 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
                       <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase tabular-nums">主要実績</span>
                       <div className="flex items-center gap-2.5 text-ink-muted font-bold tabular-nums text-[11px] md:w-full md:justify-start">
                         <span className="inline-flex items-center min-w-[48px]" title="フレーズ数">
-                          <MessageSquareText size={11} className="text-emerald-500/80 mr-1 shrink-0" /> 
+                          <TrainingMetricIcon metric="phrase" size={11} className="mr-1" /> 
                           <span className="text-ink-soft font-bold tabular-nums">{stats.phrases}</span>
                         </span>
                         <span className="inline-flex items-center min-w-[48px]" title="スプリント本数">
-                          <Zap size={11} className="text-amber-500/80 fill-amber-500/10 mr-1 shrink-0" /> 
+                          <TrainingMetricIcon metric="sprint" size={11} className="mr-1" /> 
                           <span className="text-ink-soft font-bold tabular-nums">{stats.sprintSessions}</span>
                         </span>
                         <span className="inline-flex items-center min-w-[48px]" title="回答数">
-                          <CheckCircle2 size={11} className="text-emerald-500 mr-1 shrink-0" /> 
+                          <CheckCircle2 size={11} className="text-ink-subtle mr-1 shrink-0" /> 
                           <span className="text-ink-soft font-bold tabular-nums">{stats.sprintAnswers}</span>
                         </span>
                         <span className="inline-flex items-center min-w-[48px]" title="発話数">
-                          <Mic size={11} className="text-rose-500 mr-1 shrink-0" /> 
+                          <TrainingMetricIcon metric="speech" size={11} className="mr-1" /> 
                           <span className="text-ink-soft font-bold tabular-nums">{stats.assessments}</span>
                         </span>
                       </div>

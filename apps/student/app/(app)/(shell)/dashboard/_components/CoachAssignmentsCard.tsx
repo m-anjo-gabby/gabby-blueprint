@@ -1,9 +1,13 @@
 import Link from 'next/link';
-import { ChevronRight, MessagesSquare } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { getContentTypeConfig } from '@gabby/lib/content/ui';
 import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import { HomeCard, ProgressBar } from './HomeCard';
 
 const MAX_ITEMS = 3;
+
+// コーチからの課題はダイアログ教材のため、ダイアログの分類色・アイコンで表示する
+const DIALOGUE = getContentTypeConfig(3);
 
 interface CoachAssignmentsCardProps {
   assignments: DialogueAssignmentSummary[];
@@ -25,8 +29,8 @@ export function CoachAssignmentsCard({ assignments }: CoachAssignmentsCardProps)
                 href={`/training/dialogue/${assignment.assignment_id}`}
                 className="group flex items-center gap-3 rounded-control p-2 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-strong">
-                  <MessagesSquare size={18} />
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${DIALOGUE.theme.iconTile}`}>
+                  <DIALOGUE.icon size={18} />
                 </div>
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <p className="truncate text-sm font-bold text-ink">{assignment.content_name}</p>

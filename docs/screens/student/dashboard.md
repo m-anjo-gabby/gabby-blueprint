@@ -97,6 +97,7 @@
 - `apps/student/app/(app)/(shell)/dashboard/_components/TodayFocusCard.tsx` ほか同ディレクトリの各カード
 - 「今日やること」の判定: `apps/student/app/(app)/(shell)/dashboard/_lib/todayFocus.ts`
 - 今週のトレーニング・連続日数の算出: `apps/student/app/(app)/(shell)/dashboard/_lib/weeklyActivity.ts`
+- 指標・教材種別のアイコンと分類色: `packages/lib/content/ui.ts`（`getTrainingMetricConfig` / `getContentTypeConfig`）
 - データ取得: `apps/student/app/(app)/(shell)/dashboard/_lib/fetchHomeData.ts`
   （`getMyUpcomingSessions`, `getMyDialogueAssignments`, `getUserTrainingPerformanceAction`, `getMyTrainingLifetimeStats`）。
   再開情報はクライアントストア `useResumeStore`（`getLatestResumeContent` / `clearResumeContent`）

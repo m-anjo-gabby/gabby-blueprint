@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Calendar, Zap, Timer, ChevronRight, ChevronDown, Sliders, CheckCircle2, Mic } from 'lucide-react';
+import { Calendar, Timer, ChevronRight, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -174,8 +174,8 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
 
       <div className="mb-6 grid grid-cols-3 gap-3">
         <StatTile label="実施日数" value={sortedDates.length} unit="日" icon={Calendar} />
-        <StatTile label="スプリント" value={initialData?.sessions?.length ?? 0} unit="回" icon={Zap} />
-        <StatTile label="ドリル" value={initialData?.drills?.length ?? 0} unit="件" icon={Sliders} />
+        <StatTile label="スプリント" value={initialData?.sessions?.length ?? 0} unit="回" metric="sprint" />
+        <StatTile label="ドリル" value={initialData?.drills?.length ?? 0} unit="件" metric="drill" />
       </div>
 
       <div className="space-y-3">
@@ -197,8 +197,8 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                   <div>
                     <p className="text-base font-bold text-ink tabular-nums">{date}</p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <HistoryMetric icon={Zap} label="スプリント" value={sessions.length} />
-                      <HistoryMetric icon={Sliders} label="ドリル" value={drills.length} />
+                      <HistoryMetric metric="sprint" label="スプリント" value={sessions.length} />
+                      <HistoryMetric metric="drill" label="ドリル" value={drills.length} />
                     </div>
                   </div>
                   <ChevronDown size={18} className={cn('shrink-0 text-ink-subtle transition-transform duration-200', isExpanded && 'rotate-180')} />
@@ -224,7 +224,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                   <p className="truncate text-sm font-semibold text-ink">{getContentName(drill.com_m_contents)}</p>
                                   <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                                     <HistoryMetric icon={CheckCircle2} label="回答" value={drill.question_count} />
-                                    <HistoryMetric icon={Mic} label="発話" value={drill.assessment_count} />
+                                    <HistoryMetric metric="speech" label="発話" value={drill.assessment_count} />
                                   </div>
                                   <div className="mt-2 flex flex-wrap gap-1.5">
                                     {DRILL_BREAKDOWN_KEYS.filter(({ countKey }) => drill[countKey] > 0).map(({ type, countKey }) => (

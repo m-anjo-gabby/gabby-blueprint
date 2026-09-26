@@ -1,6 +1,6 @@
 // packages/lib/content/ui.ts
 import { TAG_TYPES, TagType } from "@gabby/types/content";
-import { FileText, HelpCircle, LucideIcon, MessagesSquare, Video, Zap } from "lucide-react";
+import { BookOpen, FileText, HelpCircle, LucideIcon, MessageSquareText, MessagesSquare, Mic, Sliders, Video, Zap } from "lucide-react";
 
 export const getTagStyle = (tagType: string) => {
   const config = TAG_TYPES[tagType as TagType] || TAG_TYPES.other;
@@ -89,6 +89,35 @@ const FALLBACK_CONTENT_TYPE_CONFIG: ContentTypeConfig = {
 
 export const getContentTypeConfig = (type: number): ContentTypeConfig =>
   CONTENT_TYPE_CONFIG[type] ?? FALLBACK_CONTENT_TYPE_CONFIG;
+
+/**
+ * トレーニング指標（記録・履歴・モニター・ホームの数値）の分類。
+ * 色は「どのトレーニングの指標か」で決め、教材種別の色を引き継ぐ
+ * （単語・フレーズ＝単語帳、スプリント・ドリル＝スプリント）。
+ * 種別をまたぐ発話評価だけは独自の色（薄いローズ）を持つ。
+ * 実施日数など分類でない指標はここに含めず、各アプリのブランド色で表示する。
+ */
+export type TrainingMetric = "word" | "phrase" | "sprint" | "drill" | "speech";
+
+type TrainingMetricConfig = { label: string; icon: LucideIcon; theme: ContentTheme };
+
+const SPEECH_THEME: ContentTheme = {
+  iconTile: "bg-rose-50 text-rose-500",
+  iconText: "text-rose-500",
+  chip: "bg-rose-50 text-rose-700 border-rose-200",
+  chipHover: "hover:bg-rose-100 hover:border-rose-300",
+};
+
+const TRAINING_METRIC_CONFIG: Record<TrainingMetric, TrainingMetricConfig> = {
+  word: { label: "単語", icon: BookOpen, theme: CONTENT_TYPE_CONFIG[0].theme },
+  phrase: { label: "フレーズ", icon: MessageSquareText, theme: CONTENT_TYPE_CONFIG[0].theme },
+  sprint: { label: "スプリント", icon: Zap, theme: CONTENT_TYPE_CONFIG[2].theme },
+  drill: { label: "ドリル", icon: Sliders, theme: CONTENT_TYPE_CONFIG[2].theme },
+  speech: { label: "発話評価", icon: Mic, theme: SPEECH_THEME },
+};
+
+export const getTrainingMetricConfig = (metric: TrainingMetric): TrainingMetricConfig =>
+  TRAINING_METRIC_CONFIG[metric];
 
 /**
  * CEFRレベルのスタイルを取得 (グラデーションのステップアップ表現)

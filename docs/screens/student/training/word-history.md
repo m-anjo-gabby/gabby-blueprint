@@ -44,4 +44,5 @@
 - `apps/student/app/(app)/(shell)/training/word/history/page.tsx`
 - `apps/student/app/(app)/(shell)/training/word/history/_components/WordHistoryView.tsx`
 - `apps/student/actions/wordAction.ts`（`getUserWordHistoryAction`）
+- 指標・教材種別のアイコンと分類色: `packages/lib/content/ui.ts`（`getTrainingMetricConfig` / `getContentTypeConfig`）
 - `packages/lib/hooks/useMonthNavigator.ts`

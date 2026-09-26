@@ -85,6 +85,7 @@
 - `apps/student/app/(app)/(shell)/monitor/_components/MonitorMonthPickerPopover.tsx`（年月ピッカー）
 - `apps/student/app/(app)/(shell)/monitor/_components/MonitorWordHistoryView.tsx`
 - `apps/student/app/(app)/(shell)/monitor/_components/MonitorSprintHistoryView.tsx`
+- 指標・教材種別のアイコンと分類色: `packages/lib/content/ui.ts`（`getTrainingMetricConfig` / `getContentTypeConfig`）
 - `apps/student/actions/monitorAction.ts`（`getMonitorUserList`, `getMonitorWordHistory`,
   `getMonitorSprintHistory`）
 - 関連RPC: `get_monitor_user_list`, `get_monitor_word_history`, `get_monitor_sprint_history`,

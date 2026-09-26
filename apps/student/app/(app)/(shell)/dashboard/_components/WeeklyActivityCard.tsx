@@ -1,4 +1,5 @@
-import { Check, Flame, Mic } from 'lucide-react';
+import { Check, Flame } from 'lucide-react';
+import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { cn } from '@/lib/utils';
 import type { WeekDay } from '../_lib/weeklyActivity';
 import { HomeCard } from './HomeCard';
@@ -57,7 +58,7 @@ export function WeeklyActivityCard({ days, activeCount, assessmentCount, streakD
       </ol>
 
       <p className="mt-4 flex items-center gap-1.5 border-t border-line pt-3 text-sm text-ink-muted">
-        <Mic size={14} className="text-brand-500" />
+        <TrainingMetricIcon metric="speech" />
         今週の発話
         <span className="ml-auto font-bold text-ink tabular-nums">
           {assessmentCount}
