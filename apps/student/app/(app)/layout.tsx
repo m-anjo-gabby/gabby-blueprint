@@ -8,7 +8,7 @@ import { TermsAgreementModal } from "@/components/common/TermsAgreementModal";
 import { checkPendingAgreements } from '@/actions/termAction';
 import ScrollRestorer from '@/components/common/ScrollRestorer';
 import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
-import { GlobalNoticePopup } from '@/components/common/GlobalNoticePopup';
+import { PopupHost } from '@/components/popups/PopupHost';
 
 /**
  * 生徒用 統合アプリケーションレイアウト
@@ -73,7 +73,8 @@ export default async function StudentAppLayout({
       {/* 通知・ダイアログ系 UI: 全てのコンテンツの上にオーバーレイされるように配置 */}
       <ToastContainer />
       <ConfirmContainer />
-      <GlobalNoticePopup />
+      {/* ポップアップ（お知らせ等）: 規約が未同意の間は一切表示しない */}
+      <PopupHost hasPendingGate={pendingTerms.length > 0} />
     </>
   );
 }

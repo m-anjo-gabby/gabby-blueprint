@@ -33,6 +33,7 @@ if (!PASSWORD_ENV) {
 const PASSWORD: string = PASSWORD_ENV;
 
 const FIXED_CLIENT_NAME = "【QA固定】E2E/データ主体共通アカウント";
+const POPUP_CLIENT_NAME = "【QA固定】ポップアップ検証";
 const ADMIN_EMAIL = "qa-admin@gabby-qa-test.example";
 
 const admin = await createAdminClient();
@@ -347,5 +348,18 @@ for (const p of personas) {
   if (p.historyWithoutLicense) await ensureTermHistory(userId, termOf(CUR), contents);
 }
 
+// 自動ポップアップ（規約同意・お知らせ等）の検証用。テストがお知らせをテナント限定で配信・削除するため、
+// 他の固定アカウントに影響しないよう専用テナントに所属させる
+const popupClientId = await ensureClient(POPUP_CLIENT_NAME);
+const popupStudent = await ensureUser({
+  email: "qa-student-07@gabby-qa-test.example",
+  userType: "1",
+  userName: "QA生徒07（ポップアップ検証）",
+  clientId: popupClientId,
+});
+await ensureLicense(popupStudent, await ensureContract(popupClientId, "BLUEPRINT_ONLY", termOf(CUR), 1), termOf(CUR), 1);
+studentIds["07"] = popupStudent;
+console.log("- qa-student-07@gabby-qa-test.example QA生徒07（ポップアップ検証）");
+
 console.log("\n=== 投入完了 ===");
-console.log({ clientId, coachCa, coachUs, students: studentIds });
+console.log({ clientId, popupClientId, coachCa, coachUs, students: studentIds });

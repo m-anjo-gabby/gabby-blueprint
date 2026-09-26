@@ -88,6 +88,21 @@
 - 画面上部のヘッダーには、通知センター（ベル）とアカウントメニュー（プロフィール・パスワード変更・
   利用規約・ログアウト）を表示する。PCではロゴをサイドナビ側に表示する。
 
+## ポップアップ表示
+
+ログイン後の画面に重ねて出すポップアップは、次の順で1つずつ表示する。
+
+1. **利用規約・プライバシーポリシーへの同意**（全画面共通）: 未同意の最新版がある間は閉じられず、
+   他のポップアップ（お知らせ等）は一切表示しない。
+2. **利用者が通知センターから開いたお知らせ**: 通知一覧で選んだ1件を表示する。
+3. **自動表示のお知らせ**（ダッシュボードのみ）: 「ポップアップ表示」指定かつ未読のお知らせを
+   まとめて表示する（複数件は「次のお知らせ」で送る）。閉じた時点で**実際に表示したものだけ**
+   既読になり、表示しなかった残りは次回ログイン時に再度表示する。
+   同じログイン中は一度閉じたら再表示しない。
+
+- 自動表示のポップアップは、1回の画面表示につき1件まで（連続して出さない）。
+- ドリル実施中・ライブ通話などの没入画面では自動表示しない。
+
 ## 実装参照（エンジニア向け）
 
 - `apps/student/app/(app)/(shell)/dashboard/page.tsx`
@@ -101,3 +116,5 @@
 - データ取得: `apps/student/app/(app)/(shell)/dashboard/_lib/fetchHomeData.ts`
   （`getMyUpcomingSessions`, `getMyDialogueAssignments`, `getUserTrainingPerformanceAction`, `getMyTrainingLifetimeStats`）。
   再開情報はクライアントストア `useResumeStore`（`getLatestResumeContent` / `clearResumeContent`）
+- ポップアップの表示制御: `apps/student/components/popups/PopupHost.tsx`（排他・順番・表示画面）、
+  `apps/student/components/popups/useAutoPopups.tsx`（自動表示ポップアップの登録簿）
