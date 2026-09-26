@@ -26,7 +26,7 @@ export function BottomTabBar({ items, badges, pathname }: BottomTabBarProps) {
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'flex h-16 flex-col items-center justify-center gap-1 transition-colors active:scale-95',
+                  'flex h-14 flex-col items-center justify-center gap-1 transition-colors active:scale-95',
                   isActive ? 'text-brand-strong' : 'text-ink-muted'
                 )}
               >

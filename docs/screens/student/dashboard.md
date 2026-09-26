@@ -49,6 +49,7 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
+| タイムゾーンのずれ警告 | 日付の横の警告アイコン（amber）。プロフィールのタイムゾーン設定と端末のタイムゾーンで現在時刻の表示が異なる場合のみ表示（名前が違っても時刻が同じ場合、ユーザー情報の読み込み前、「このままにする」を選んだ組み合わせの場合は表示しない） | 日付・アイコンをタップするとポップオーバーを表示（設定側はタイムゾーンマスタの名称〔例: 日本（東京）〕、端末側はUTCからの時差〔例: UTC−4:00〕と、それぞれの現在時刻。時刻表示は設定側に従う旨の説明）。「プロフィールで変更する」で `/profile` へ遷移。「このままにする」でその「設定と端末の組み合わせ」を端末（localStorage）に記録して非表示にする（端末側のタイムゾーンが変わると再び表示） |
 | 次回のライブセッション | コーチ名・開始日時 | `/live-room` へ遷移 |
 | 続きから | 教材の種別・名称・進捗率・進捗バー | タップで続きの教材ページへ遷移。ゴミ箱アイコンでブックマークを削除（確認ダイアログあり） |
 | 今週のトレーニング | 今週（月〜日、利用者のタイムゾーン）にトレーニングした日数、曜日ごとの実施有無（実施済み=塗りつぶし、今日=リング、未来=点線）、今週の発話回数。連続日数が2日以上続いている場合のみ「n日連続」バッジを表示する（途切れたことは表示しない） | 「記録を見る」リンクで `/training/performance` へ遷移 |
@@ -115,9 +116,11 @@
 - `apps/student/app/(app)/(shell)/dashboard/_components/TodayFocusCard.tsx` ほか同ディレクトリの各カード
 - 「今日やること」の判定: `apps/student/app/(app)/(shell)/dashboard/_lib/todayFocus.ts`
 - 今週のトレーニング・連続日数の算出: `apps/student/app/(app)/(shell)/dashboard/_lib/weeklyActivity.ts`
+- 日付行とタイムゾーンのずれ警告: `apps/student/app/(app)/(shell)/dashboard/_components/TodayDateLine.tsx`、
+  判定 `apps/student/app/(app)/(shell)/dashboard/_lib/timezoneMismatch.ts`
 - 指標・教材種別のアイコンと分類色: `packages/lib/content/ui.ts`（`getTrainingMetricConfig` / `getContentTypeConfig`）
 - データ取得: `apps/student/app/(app)/(shell)/dashboard/_lib/fetchHomeData.ts`
-  （`getMyUpcomingSessions`, `getMyDialogueAssignments`, `getUserTrainingPerformanceAction`, `getMyTrainingLifetimeStats`）。
+  （`getMyUpcomingSessions`, `getMyDialogueAssignments`, `getUserTrainingPerformanceAction`, `getMyTrainingLifetimeStats`, `getTimezoneList`）。
   再開情報はクライアントストア `useResumeStore`（`getLatestResumeContent` / `clearResumeContent`）
 - ポップアップの表示制御: `apps/student/components/popups/PopupHost.tsx`（排他・順番・表示画面）、
   `apps/student/components/popups/useAutoPopups.tsx`（自動表示ポップアップの登録簿）

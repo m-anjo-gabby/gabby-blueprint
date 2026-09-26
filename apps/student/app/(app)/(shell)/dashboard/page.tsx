@@ -7,7 +7,15 @@ import { fetchHomeData } from './_lib/fetchHomeData';
  * 再開情報（ブックマーク）は他画面と共有するクライアントストアで扱うため HomeView 側で取得する。
  */
 export default async function DashboardPage() {
-  const { nextSession, assignments, activities, lifetimeStats } = await fetchHomeData();
+  const { nextSession, assignments, activities, lifetimeStats, timezoneNames } = await fetchHomeData();
 
-  return <HomeView nextSession={nextSession} assignments={assignments} activities={activities} lifetimeStats={lifetimeStats} />;
+  return (
+    <HomeView
+      nextSession={nextSession}
+      assignments={assignments}
+      activities={activities}
+      lifetimeStats={lifetimeStats}
+      timezoneNames={timezoneNames}
+    />
+  );
 }

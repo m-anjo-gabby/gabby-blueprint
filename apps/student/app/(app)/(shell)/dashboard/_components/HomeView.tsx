@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { resolveTodayFocus } from '../_lib/todayFocus';
 import { buildCurrentWeek, resolveStreakDays, type TrainingActivity } from '../_lib/weeklyActivity';
+import { TodayDateLine } from './TodayDateLine';
 import { TodayFocusCard } from './TodayFocusCard';
 import { NextSessionCard } from './NextSessionCard';
 import { ContinueCard } from './ContinueCard';
@@ -32,6 +33,8 @@ interface HomeViewProps {
   activities: TrainingActivity[];
   /** 通算のトレーニング実績（未実施の場合は null） */
   lifetimeStats: TrainingLifetimeStats | null;
+  /** タイムゾーンマスタの表示名（IANA名 → 日本語名） */
+  timezoneNames: Record<string, string>;
 }
 
 const getGreeting = (hour: number) => {
@@ -40,20 +43,18 @@ const getGreeting = (hour: number) => {
   return 'こんばんは';
 };
 
-const formatToday = (nowMs: number, timeZone: string) =>
-  new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(nowMs));
-
 /**
  * ホーム画面。
  * 「今日やること」を1つだけ主役に据え、残りの情報は補助カードとして並べる
  * （モバイル=1列、PC(lg以上)=3列グリッド。1〜2行目は主役・予定・実績・メニュー、3行目は「続きから」と課題）。
  */
-export function HomeView({ nextSession, assignments, activities, lifetimeStats }: HomeViewProps) {
+export function HomeView({ nextSession, assignments, activities, lifetimeStats, timezoneNames }: HomeViewProps) {
   const nowMs = useNow();
   const timezone = useTimezone();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const userName = useUserStore((state) => state.user?.user_name);
+  const settingTimezone = useUserStore((state) => state.user?.timezone ?? null);
   const fetchNotices = useNoticeStore((state) => state.fetchNotices);
   const fetchAllContents = useContentStore((state) => state.fetchAllContents);
   const { resumeData, fetchResume, clearResume } = useResumeStore();
@@ -96,7 +97,16 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats }
   return (
     <div className="space-y-6 pb-6">
       <header className="space-y-1 px-1">
-        <p className="text-sm text-ink-muted">{nowMs !== null ? formatToday(nowMs, timezone) : ' '}</p>
+        {nowMs !== null ? (
+          <TodayDateLine
+            nowMs={nowMs}
+            timezone={timezone}
+            settingTimezone={settingTimezone}
+            timezoneNames={timezoneNames}
+          />
+        ) : (
+          <p className="text-sm text-ink-muted">{' '}</p>
+        )}
         <h1 className="text-2xl font-bold tracking-tight text-ink">
           {nowMs !== null ? getGreeting(getHourInZone(new Date(nowMs).toISOString(), timezone)) : 'ようこそ'}
           {userName && <span className="text-ink-muted">、{userName}さん</span>}

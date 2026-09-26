@@ -1,14 +1,16 @@
-// src/app/(app)/profile/password/page.tsx
+// apps/student/app/(app)/(shell)/profile/password/page.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import { CheckCircle2, KeyRound } from 'lucide-react';
 import { updatePassword } from '@/actions/authAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
-import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { ProfileSection } from '../_components/ProfileSection';
 
 /**
  * パスワード変更ページ
@@ -85,98 +87,128 @@ export default function PasswordChangePage() {
     } else {
       // 成功時の処理
       showToast('パスワードを正常に更新しました', 'success');
-      router.push('/dashboard');
+      router.push('/profile');
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-100 border border-line/70">
-        <h1 className="text-xl font-bold text-ink mb-6">パスワード変更</h1>
-        
+    <div className="pb-10">
+      <ShellPageHeader
+        title="パスワード変更"
+        back={{ history: '/profile' }}
+        description="現在のパスワードを入力し、新しいパスワードを設定してください。"
+      />
+
+      <ProfileSection>
         <form action={handleSubmit} className="space-y-6">
           {/* 現在のパスワード入力：エラー時はフィールド下部にメッセージを表示 */}
           <div className="space-y-1">
-            <PasswordInput 
-              label="現在のパスワード" 
-              name="currentPassword" 
+            <PasswordInput
+              label="現在のパスワード"
+              name="currentPassword"
+              autoComplete="current-password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              required 
+              required
             />
-            {currentPasswordError && (
-              <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in">
-                {currentPasswordError}
-              </p>
-            )}
+            {currentPasswordError && <FieldMessage>{currentPasswordError}</FieldMessage>}
           </div>
 
           {/* 新しいパスワード入力 */}
           <div className="space-y-1">
-            <PasswordInput 
-              label="新しいパスワード" 
-              name="newPassword" 
+            <PasswordInput
+              label="新しいパスワード"
+              name="newPassword"
+              autoComplete="new-password"
               value={newPassword}
-              required 
+              required
               minLength={8}
               onChange={(e) => {
                 setNewPassword(e.target.value);
                 setNewPasswordGeneralError(null); // 入力開始でエラーをクリア
               }}
             />
-            {/* 💡 英数混在のインラインフィードバックを追加 */}
-            {strengthStatus !== null && !strengthStatus && (
-              <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in">
-                英字と数字を両方含めてください
-              </p>
+            {strengthStatus === false ? (
+              <FieldMessage>英字と数字を両方含めてください</FieldMessage>
+            ) : (
+              <FieldMessage tone="hint">8文字以上で、英字と数字を両方含めてください</FieldMessage>
             )}
           </div>
-          
+
           {/* パスワード（確認用）入力と一致確認のインラインフィードバック */}
-          <div className="relative">
-            <PasswordInput 
-              label="新しいパスワード（確認用）" 
-              name="confirmPassword" 
+          <div className="space-y-1">
+            <PasswordInput
+              label="新しいパスワード（確認用）"
+              name="confirmPassword"
+              autoComplete="new-password"
               value={confirmPassword}
-              required 
+              required
               minLength={8}
               onChange={(e) => {
                 setConfirmPassword(e.target.value);
                 setNewPasswordGeneralError(null); // 入力開始でエラーをクリア
               }}
             />
-            
             {matchStatus !== null && (
-              <p className={`text-[11px] font-bold mt-1 ml-1 flex items-center gap-1 animate-in fade-in ${
-                matchStatus ? 'text-emerald-600' : 'text-red-500'
-              }`}>
+              <FieldMessage tone={matchStatus ? 'success' : 'error'}>
                 {matchStatus ? (
-                  <><CheckCircle2 size={12} /> パスワードが一致しました</>
+                  <>
+                    <CheckCircle2 size={12} /> パスワードが一致しました
+                  </>
                 ) : (
                   'パスワードが一致していません'
                 )}
-              </p>
+              </FieldMessage>
             )}
           </div>
 
-          {/* 💡 新しいパスワード関連の一般的なエラー表示 */}
+          {/* 新しいパスワード関連の一般的なエラー表示 */}
           {newPasswordGeneralError && (
-            <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in slide-in-from-top-1">
+            <p className="rounded-control border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600 animate-in fade-in">
               {newPasswordGeneralError}
             </p>
           )}
 
-          {/* 送信ボタン：useFormStatusによる自動ローディング管理 */}
-          <SubmitButton label="パスワードを更新" loadingLabel="更新中..." />
-
-          <Link 
-            href="/dashboard" 
-            className="text-xs text-ink-muted hover:text-brand flex items-center justify-center gap-1 transition-colors"
-          >
-            <ArrowLeft size={14} /> ダッシュボードに戻る
-          </Link>
+          <div className="flex justify-end pt-2">
+            <PasswordSubmitButton />
+          </div>
         </form>
-      </div>
+      </ProfileSection>
     </div>
+  );
+}
+
+const FIELD_MESSAGE_TONE_CLASS = {
+  error: 'text-rose-600 font-bold',
+  success: 'text-emerald-600 font-bold',
+  hint: 'text-ink-muted',
+} as const;
+
+function FieldMessage({
+  tone = 'error',
+  children,
+}: {
+  tone?: keyof typeof FIELD_MESSAGE_TONE_CLASS;
+  children: React.ReactNode;
+}) {
+  return (
+    <p className={`ml-1 flex items-center gap-1 text-[11px] animate-in fade-in ${FIELD_MESSAGE_TONE_CLASS[tone]}`}>
+      {children}
+    </p>
+  );
+}
+
+/** 送信ボタン（useFormStatus で送信中を検知して pending 表示） */
+function PasswordSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button
+      type="submit"
+      pending={pending}
+      icon={<KeyRound />}
+      className="h-11 w-full rounded-control bg-brand px-6 font-bold text-white hover:bg-brand-strong sm:w-auto"
+    >
+      {pending ? '更新中...' : 'パスワードを更新'}
+    </Button>
   );
 }

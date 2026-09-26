@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { User as UserIcon, IdCard } from 'lucide-react';
+import Link from 'next/link';
+import { User as UserIcon, IdCard, KeyRound, ChevronRight } from 'lucide-react';
 import { AvatarCropUploader } from '@gabby/lib/components/common/AvatarCropUploader';
 import { TimezoneSelector } from '@gabby/lib/components/common/TimezoneSelector';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
@@ -9,6 +10,7 @@ import { uploadProfileIcon, removeProfileIcon, updateMyTimezone } from '@/action
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { TimezoneMaster } from '@gabby/types/timezone';
+import { ProfileSection } from './ProfileSection';
 
 interface ProfileViewProps {
   userName: string;
@@ -20,7 +22,7 @@ interface ProfileViewProps {
 
 /**
  * 生徒向けプロフィール設定画面
- * アイコン画像・アカウント情報をセクションカードで表示する構成とし、
+ * アイコン画像・アカウント情報・セキュリティをセクションカードで表示する構成とし、
  * 今後の設定項目追加（通知設定・言語設定 等）はセクションを追加するだけで拡張できるようにしている。
  */
 export function ProfileView({ userName, clientName, initialIconPath, initialTimezone, timezones }: ProfileViewProps) {
@@ -66,13 +68,9 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* アイコン画像セクション */}
-      <section className="bg-white border border-line/70 rounded-card shadow-sm p-6 sm:p-8">
-        <h2 className="text-xs font-bold text-brand-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-6 select-none">
-          <div className="w-1.5 h-4 bg-linear-to-b from-brand to-cyan-400 rounded-full" />
-          アイコン画像
-        </h2>
+      <ProfileSection title="アイコン画像">
 
         <AvatarCropUploader
           currentImageUrl={getProfileIconUrl(iconPath)}
@@ -89,14 +87,10 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
             removeConfirmMessage: '削除すると元に戻せません。',
           }}
         />
-      </section>
+      </ProfileSection>
 
       {/* アカウント情報セクション */}
-      <section className="bg-white border border-line/70 rounded-card shadow-sm p-6 sm:p-8">
-        <h2 className="text-xs font-bold text-brand-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-6 select-none">
-          <div className="w-1.5 h-4 bg-linear-to-b from-brand to-cyan-400 rounded-full" />
-          アカウント情報
-        </h2>
+      <ProfileSection title="アカウント情報">
 
         <dl className="space-y-1">
           <div className="flex items-center justify-between gap-4 py-3 border-b border-line/50">
@@ -122,7 +116,24 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
             labels={{ label: 'タイムゾーン', currentTimeLabel: '現在の日時' }}
           />
         </div>
-      </section>
+      </ProfileSection>
+
+      {/* セキュリティセクション */}
+      <ProfileSection title="セキュリティ">
+        <Link
+          href="/profile/password"
+          className="group -mx-3 flex items-center gap-3 rounded-control px-3 py-3 hover:bg-surface transition-colors"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-strong">
+            <KeyRound size={18} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-ink">パスワードを変更</span>
+            <span className="block text-xs text-ink-muted">ログインに使うパスワードを新しくします</span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-ink-subtle group-hover:text-brand transition-colors" />
+        </Link>
+      </ProfileSection>
     </div>
   );
 }

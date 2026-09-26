@@ -1,5 +1,6 @@
-// apps/student/app/(app)/profile/page.tsx
+// apps/student/app/(app)/(shell)/profile/page.tsx
 import { getMyProfile, getTimezoneList } from '@/actions/studentProfileAction';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { ProfileView } from './_components/ProfileView';
 
 export default async function ProfilePage() {
@@ -15,13 +16,8 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="space-y-8 px-2 pb-10">
-      <div className="space-y-1">
-        <h1 className="text-xl font-bold text-ink tracking-tight">プロフィール設定</h1>
-        <p className="text-[13px] text-ink-muted">
-          アイコン画像やアカウント情報を確認・変更できます。
-        </p>
-      </div>
+    <div className="pb-10">
+      <ShellPageHeader title="プロフィール設定" description="アイコン画像やアカウント情報を確認・変更できます。" />
 
       <ProfileView
         userName={profile.user_name ?? '(未設定)'}
