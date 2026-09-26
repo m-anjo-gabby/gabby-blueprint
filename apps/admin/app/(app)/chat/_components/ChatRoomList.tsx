@@ -178,8 +178,8 @@ export function ChatRoomList() {
                   <UsersIcon size={20} className="text-emerald-500" />
                 </div>
               ) : (
-                <div className="w-11 h-11 shrink-0 rounded-full bg-indigo-50 flex items-center justify-center">
-                  <UserIcon size={20} className="text-indigo-500" />
+                <div className="w-11 h-11 shrink-0 rounded-full bg-brand-50 flex items-center justify-center">
+                  <UserIcon size={20} className="text-brand-500" />
                 </div>
               )}
 

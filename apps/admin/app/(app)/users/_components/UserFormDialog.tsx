@@ -300,7 +300,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none transition-all active:scale-95">
+          <Button className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none transition-all active:scale-95">
             <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
@@ -316,9 +316,9 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
             {isConfirming ? (
               <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
+              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> {t('editTitle')}</>
+              <><Edit size={18} className="text-brand-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -334,7 +334,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('idLabel')}</label>
                         <div className="group relative flex items-center">
                           <code className="flex-1 bg-slate-50 text-slate-500 text-[10px] font-mono px-3 py-2 rounded-lg border border-slate-100 truncate">{initialData.id}</code>
-                          <Button type="button" variant="ghost" className="ml-2 h-8 px-2 text-slate-400 hover:text-indigo-600 transition-colors"
+                          <Button type="button" variant="ghost" className="ml-2 h-8 px-2 text-slate-400 hover:text-brand transition-colors"
                             onClick={() => {
                               navigator.clipboard.writeText(initialData.id);
                               showToast(t('idCopied'), "success");
@@ -357,7 +357,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                               onClick={() => field.onChange('invite')}
                               className={`flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg text-left transition-all ${field.value === 'invite' ? 'bg-white shadow-sm border border-slate-200' : 'text-slate-500 hover:bg-white/60 border border-transparent'}`}
                             >
-                              <span className="text-xs font-bold flex items-center gap-1.5 text-slate-700"><Mail size={12} className="text-indigo-500" /> {t('creationModeInvite')}</span>
+                              <span className="text-xs font-bold flex items-center gap-1.5 text-slate-700"><Mail size={12} className="text-brand-500" /> {t('creationModeInvite')}</span>
                               <span className="text-[10px] text-slate-400 leading-snug">{t('creationModeInviteDesc')}</span>
                             </button>
                             <button
@@ -530,8 +530,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       render={() => (
                         <FormItem className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                           <div className="flex items-center gap-2">
-                            <Shield size={14} className="text-indigo-500" />
-                            <FormLabel className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
+                            <Shield size={14} className="text-brand-500" />
+                            <FormLabel className="text-[10px] font-bold text-brand-500 uppercase tracking-wider">
                               {watchUserType === '0' ? t('adminRoleSectionTitle') : t('permissionSectionTitle')}
                             </FormLabel>
                           </div>
@@ -540,7 +540,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                             <div className="flex flex-wrap gap-2">
                               {form.getValues('roles').length > 0 ? (
                                 form.getValues('roles').map(rId => (
-                                  <span key={rId} className="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-md border border-indigo-200">
+                                  <span key={rId} className="px-2.5 py-1 bg-brand-100 text-brand-strong text-[10px] font-black rounded-md border border-brand-200">
                                     {roleMaster.find(m => m.role_id === rId)?.role_name}
                                   </span>
                                 ))

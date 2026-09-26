@@ -61,7 +61,7 @@ export function MonthPickerPopover({
                 type="button"
                 onClick={() => handlePick(i)}
                 className={`rounded-md py-1.5 text-xs font-semibold transition-colors ${
-                  isSelected ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  isSelected ? 'bg-brand text-white' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 {label}

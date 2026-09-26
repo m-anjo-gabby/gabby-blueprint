@@ -58,9 +58,9 @@ function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null
   return (
     <div
       style={{ width: size, height: size }}
-      className="rounded-full bg-indigo-50 flex items-center justify-center shrink-0"
+      className="rounded-full bg-brand-50 flex items-center justify-center shrink-0"
     >
-      <UserIcon size={Math.round(size * 0.55)} className="text-indigo-400" />
+      <UserIcon size={Math.round(size * 0.55)} className="text-brand-400" />
     </div>
   );
 }
@@ -292,7 +292,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
                     )}
                     <div
                       className={`max-w-160 min-w-0 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
-                        isMine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
+                        isMine ? 'bg-brand text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
                       }`}
                     >
                       <ChatMessageContent message={msg} />

@@ -96,7 +96,7 @@ export function TermEditor({ term }: TermEditorProps) {
           <Button
             onClick={handleSave}
             disabled={isSaving || !canSave}
-            className="h-9 px-6 bg-indigo-600 hover:bg-indigo-700 font-bold rounded-xl transition-all"
+            className="h-9 px-6 bg-brand hover:bg-brand-strong font-bold rounded-xl transition-all"
           >
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             {t('saveButton')}
@@ -108,7 +108,7 @@ export function TermEditor({ term }: TermEditorProps) {
       {viewMode !== "history" && (
         <div className="px-4 py-3 border-b space-y-3">
           <p className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-600">
-            <Info size={14} className="mt-0.5 shrink-0 text-indigo-500" />
+            <Info size={14} className="mt-0.5 shrink-0 text-brand-500" />
             {term.is_published ? t('silentUpdateNotice') : t('upcomingNotice')}
           </p>
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
@@ -162,7 +162,7 @@ export function TermEditor({ term }: TermEditorProps) {
                       onClick={() => setSelectedRevisionId(rev.revision_id)}
                       className={cn(
                         "w-full text-left px-4 py-3 space-y-1 transition-colors hover:bg-slate-50",
-                        rev.revision_id === selectedRevision?.revision_id && "bg-indigo-50/60"
+                        rev.revision_id === selectedRevision?.revision_id && "bg-brand-50/60"
                       )}
                     >
                       <div className="flex items-center gap-2">

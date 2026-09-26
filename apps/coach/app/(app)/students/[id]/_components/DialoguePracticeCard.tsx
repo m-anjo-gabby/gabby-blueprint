@@ -64,7 +64,7 @@ export function DialoguePracticeCard({
             Assign
           </Button>
           {manageHref && (
-            <Link href={manageHref} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+            <Link href={manageHref} className="text-[11px] font-bold text-brand hover:text-brand-strong transition-colors">
               Manage
             </Link>
           )}

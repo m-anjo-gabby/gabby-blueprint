@@ -149,11 +149,11 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 rounded-xl gap-2 shadow-md">
+          <Button className="bg-brand hover:bg-brand-strong text-white font-bold h-10 rounded-xl gap-2 shadow-md">
             <PlusCircle size={18} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand transition-all">
             <Edit size={16} />
           </Button>
         )}
@@ -161,7 +161,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
       <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl rounded-3xl focus:outline-none">
         <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 font-black">
-            <MessageSquare className="text-indigo-400" size={20} />
+            <MessageSquare className="text-brand-400" size={20} />
             {mode === 'create' ? t('createTitle') : t('editTitle')}
           </DialogTitle>
         </DialogHeader>
@@ -173,12 +173,12 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
               <div className="flex items-center gap-4 p-4 bg-slate-900 rounded-2xl mb-4">
                 <div className="flex-1">
                   <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Current Group ID</span>
-                  <code className="text-indigo-400 text-xs font-mono">{form.watch('group_id')}</code>
+                  <code className="text-brand-400 text-xs font-mono">{form.watch('group_id')}</code>
                 </div>
                 {isMastery && (
                   <div className="flex-1 border-l border-slate-700 pl-4">
                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Type</span>
-                    <Badge className="bg-indigo-500">Shared Statement</Badge>
+                    <Badge className="bg-brand-500">Shared Statement</Badge>
                   </div>
                 )}
               </div>
@@ -209,7 +209,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                 {!isSpeed && (index === 0 || isCueType) && (
                   <div className="space-y-4 p-5 bg-slate-50 rounded-[24px] border border-slate-100">
                     <div className="flex items-center gap-2 mb-2">
-                        <Sparkles size={14} className="text-indigo-400" />
+                        <Sparkles size={14} className="text-brand-400" />
                         <span className="text-xs font-black text-slate-500 uppercase tracking-wider">{t('statementSectionLabel')}</span>
                         {isMastery && index === 0 && <Badge variant="outline" className="text-[9px] h-4">Group Shared</Badge>}
                     </div>
@@ -235,12 +235,12 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                 )}
 
                 {/* 質問／指示セクション */}
-                <div className={cn("space-y-4", isCueType && "p-5 bg-indigo-50/30 rounded-[24px] border border-indigo-100")}>
+                <div className={cn("space-y-4", isCueType && "p-5 bg-brand-50/30 rounded-[24px] border border-brand-100")}>
                   <FormField control={form.control} name={`items.${index}.question_en`} render={({ field }) => (
                     <FormItem className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <FormLabel className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{questionLabel}</FormLabel>
-                        <span className="text-[9px] font-bold text-indigo-300 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">English</span>
+                        <FormLabel className="text-[10px] font-black text-brand-500 uppercase tracking-widest">{questionLabel}</FormLabel>
+                        <span className="text-[9px] font-bold text-brand-300 bg-brand-50 px-1.5 py-0.5 rounded uppercase">English</span>
                       </div>
                       <FormControl><Textarea {...field} placeholder={isCueType ? "Cue (e.g. Change to Past Tense)" : "Question text..."} className="rounded-xl min-h-[80px] font-bold text-lg" /></FormControl>
                       <FormMessage />
@@ -299,7 +299,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
             ))}
 
             {mode === 'create' && (
-              <Button type="button" variant="outline" className="w-full border-dashed border-2 rounded-2xl h-12 gap-2 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all"
+              <Button type="button" variant="outline" className="w-full border-dashed border-2 rounded-2xl h-12 gap-2 text-slate-400 hover:text-brand hover:border-brand-200 hover:bg-brand-50/30 transition-all"
                 onClick={() => append({ seq_no: String(fields.length + 1), statement_en: isMastery ? form.getValues('items.0.statement_en') : '', statement_ja: isMastery ? form.getValues('items.0.statement_ja') : '', question_en: '', question_ja: '', answer_sentence_yes_en: '', answer_sentence_yes_ja: '', answer_sentence_no_en: '', answer_sentence_no_ja: '' })}
               >
                 <Plus size={16} /> {t('addItemButton')}

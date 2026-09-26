@@ -31,7 +31,7 @@ const NOTIFICATION_ICONS = { Sparkles, Flame, MessageCircle } as const;
 type CenterTab = 'notice' | 'notification';
 
 const UnreadDot = () => (
-  <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1" />
+  <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />
 );
 
 function TabCountBadge({ count }: { count: number }) {
@@ -165,7 +165,7 @@ export function NotificationCenterDropdown() {
                 <div className="flex justify-end px-4 pt-2 pb-1">
                   <button
                     onClick={handleMarkAllNoticesAsRead}
-                    className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                    className="text-[10px] font-bold text-slate-400 hover:text-brand transition-colors"
                   >
                     Mark all as read
                   </button>
@@ -201,7 +201,7 @@ export function NotificationCenterDropdown() {
                           }}
                           className={cn(
                             'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
-                            !notice.is_read && 'bg-indigo-50/50'
+                            !notice.is_read && 'bg-brand-50/50'
                           )}
                         >
                           <div className="mt-1">
@@ -261,7 +261,7 @@ export function NotificationCenterDropdown() {
                 <div className="flex justify-end px-4 pt-2 pb-1">
                   <button
                     onClick={() => markAllAsRead()}
-                    className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                    className="text-[10px] font-bold text-slate-400 hover:text-brand transition-colors"
                   >
                     Mark all as read
                   </button>
@@ -304,7 +304,7 @@ export function NotificationCenterDropdown() {
                             }}
                             className={cn(
                               'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
-                              !notification.is_read && 'bg-indigo-50/50'
+                              !notification.is_read && 'bg-brand-50/50'
                             )}
                           >
                             <div className="mt-1">
@@ -355,7 +355,7 @@ export function NotificationCenterDropdown() {
             <DropdownMenuItem asChild className="p-0 border-none outline-none">
               <Link
                 href={activeTab === 'notice' ? '/notice' : '/notification'}
-                className="flex items-center justify-center w-full h-10 !bg-indigo-600 hover:!bg-indigo-700 !text-white focus:!text-white focus:!bg-indigo-700 data-[highlighted]:!bg-indigo-700 data-[highlighted]:!text-white rounded-xl text-[11px] font-black uppercase tracking-wider shadow-sm transition-all outline-none cursor-pointer"
+                className="flex items-center justify-center w-full h-10 !bg-brand hover:!bg-brand-strong !text-white focus:!text-white focus:!bg-brand-strong data-[highlighted]:!bg-brand-strong data-[highlighted]:!text-white rounded-xl text-[11px] font-black uppercase tracking-wider shadow-sm transition-all outline-none cursor-pointer"
               >
                 View all →
               </Link>

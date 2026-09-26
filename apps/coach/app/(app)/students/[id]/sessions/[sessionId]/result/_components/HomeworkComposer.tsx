@@ -133,7 +133,7 @@ function HomeworkCreateForm({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-brand-50 text-brand shrink-0">
           <BookOpen size={13} />
         </span>
         <p className="text-xs font-bold text-slate-700">New Homework</p>
@@ -301,7 +301,7 @@ function PostedHomework({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-brand-50 text-brand shrink-0">
               <BookOpen size={13} />
             </span>
             <p className="text-xs font-bold text-slate-700">Instructions</p>
@@ -321,13 +321,13 @@ function PostedHomework({
       <div className="space-y-3 pt-3 border-t border-slate-100">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-brand-50 text-brand shrink-0">
               <ListTodo size={13} />
             </span>
             <p className="text-xs font-bold text-slate-700">Checklist</p>
           </div>
           {checklist.length > 0 && (
-            <span className="text-[11px] font-black text-indigo-600 tabular-nums shrink-0">
+            <span className="text-[11px] font-black text-brand tabular-nums shrink-0">
               {doneCount}/{checklist.length} done
             </span>
           )}
@@ -467,7 +467,7 @@ function HomeworkAttachmentView({ attachment }: { attachment: SessionHomeworkAtt
   }
 
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-indigo-600 underline underline-offset-2">
+    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-brand underline underline-offset-2">
       <FileText size={16} className="shrink-0" />
       <span className="truncate">{attachment.file_name}</span>
       <span className="text-[10px] opacity-70 shrink-0">{formatFileSize(attachment.file_size)}</span>

@@ -252,7 +252,7 @@ export function LiveSessionRoom({ access }: Props) {
           </button>
           <button
             onClick={handleRetryLockCheck}
-            className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-3.5 py-2 rounded-full"
+            className="text-xs font-bold text-white bg-brand hover:bg-brand-500 transition-colors px-3.5 py-2 rounded-full"
           >
             I closed the other tab — Retry
           </button>
@@ -284,7 +284,7 @@ export function LiveSessionRoom({ access }: Props) {
         </div>
         <button
           onClick={() => window.close()}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-brand hover:bg-brand-500 transition-colors px-4 py-2 rounded-full"
         >
           <X size={14} />
           Close Tab
@@ -363,7 +363,7 @@ export function LiveSessionRoom({ access }: Props) {
                 onClick={() => previewCanvasRef.current && preview.toggleBlur(previewCanvasRef.current)}
                 disabled={!preview.isPreviewing || !preview.isCameraOn}
                 title="Blur background"
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm'}`}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-brand text-white hover:bg-brand-500' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm'}`}
               >
                 <Sparkles size={18} />
               </button>
@@ -378,7 +378,7 @@ export function LiveSessionRoom({ access }: Props) {
             <button
               onClick={handleStartCall}
               disabled={!preview.isPreviewing}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold py-3 rounded-xl shadow-lg shadow-indigo-600/10 transition-all"
+              className="w-full flex items-center justify-center gap-2 bg-brand hover:bg-brand-500 disabled:opacity-40 text-white text-sm font-bold py-3 rounded-xl shadow-lg shadow-brand/10 transition-all"
             >
               Join Session
               <ArrowRight size={16} />
@@ -471,7 +471,7 @@ export function LiveSessionRoom({ access }: Props) {
                 chatMessages.map((msg) => (
                   <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                     <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
-                    <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-100'}`}>
+                    <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-slate-800 text-slate-100'}`}>
                       {msg.message}
                     </p>
                   </div>
@@ -484,11 +484,11 @@ export function LiveSessionRoom({ access }: Props) {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
                 placeholder="Type a message..."
-                className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
+                className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-brand-500"
               />
               <button
                 onClick={handleSendChat}
-                className="shrink-0 w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
+                className="shrink-0 w-8 h-8 rounded-lg bg-brand hover:bg-brand-500 text-white flex items-center justify-center transition-colors"
               >
                 <Send size={14} />
               </button>
@@ -532,14 +532,14 @@ export function LiveSessionRoom({ access }: Props) {
           onClick={toggleBlur}
           disabled={!isJoined || !isCameraOn || !isBlurSupported}
           title={isBlurSupported ? 'Blur background' : 'Background blur is not supported on this device'}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isBlurOn ? 'bg-brand hover:bg-brand-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
         >
           <Sparkles size={18} />
         </button>
         <button
           onClick={() => shareVideoRef.current && toggleScreenShare(shareVideoRef.current)}
           disabled={!isJoined}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isScreenSharing ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${isScreenSharing ? 'bg-brand hover:bg-brand-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
         >
           {isScreenSharing ? <MonitorX size={18} /> : <MonitorUp size={18} />}
         </button>

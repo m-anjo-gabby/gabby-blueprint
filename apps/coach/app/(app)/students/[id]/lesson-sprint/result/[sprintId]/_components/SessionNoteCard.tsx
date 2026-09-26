@@ -49,14 +49,14 @@ export function SessionNoteCard({ lessonSprintId, initialNote }: Props) {
     <Card className="rounded-2xl border-slate-200 shadow-sm shrink-0">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-          <StickyNote size={14} className="text-indigo-500" />
+          <StickyNote size={14} className="text-brand-500" />
           Session Notes
         </CardTitle>
         {!isEditing && (
           <button
             type="button"
             onClick={handleEdit}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-500 hover:text-brand-strong transition-colors"
           >
             <Pencil size={11} />
             Edit

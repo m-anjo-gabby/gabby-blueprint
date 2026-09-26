@@ -42,7 +42,7 @@ export function createColumns(t: TableT, locale: string): ColumnDef<ContractDeta
           </span>
           {contract.contract_type === 2 && (
             <div className="flex flex-wrap gap-1">
-              <Badge className="w-fit bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-[10px] font-bold">
+              <Badge className="w-fit bg-brand-100 text-brand-strong border-brand-200 hover:bg-brand-100 text-[10px] font-bold">
                 {t('liveBadge', { weekly: contract.weekly_frequency ?? 0, total: contract.total_sessions ?? 0 })}
               </Badge>
               {contract.has_dialogue_practice && (
@@ -82,7 +82,7 @@ export function createColumns(t: TableT, locale: string): ColumnDef<ContractDeta
           {/* 左側：数値 ＋ プログレスバー */}
           <div className="flex flex-col gap-1.5 min-w-[120px]">
             <div className="flex items-baseline gap-1">
-              <span className={`text-sm font-bold font-mono ${assigned >= max ? 'text-amber-600' : 'text-slate-900'} ${!isExpired && 'group-hover/usage:text-indigo-600'} transition-colors`}>
+              <span className={`text-sm font-bold font-mono ${assigned >= max ? 'text-amber-600' : 'text-slate-900'} ${!isExpired && 'group-hover/usage:text-brand'} transition-colors`}>
                 {assigned}
               </span>
               <span className="text-slate-400 text-[10px]">/ {max}</span>
@@ -91,7 +91,7 @@ export function createColumns(t: TableT, locale: string): ColumnDef<ContractDeta
 
             <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-sm transition-all">
               <div
-                className={`h-full transition-all duration-500 ${assigned >= max ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                className={`h-full transition-all duration-500 ${assigned >= max ? 'bg-amber-500' : 'bg-brand-500'}`}
                 style={{ width: `${usageRate}%` }}
               />
             </div>
@@ -106,8 +106,8 @@ export function createColumns(t: TableT, locale: string): ColumnDef<ContractDeta
           {/* 右側：ペンシルまたは参照ボタン（有効無効で切替表示） */}
           <div className={`flex items-center justify-center w-6 h-6 rounded-xl border transition-all duration-300
             ${isExpired
-              ? 'bg-slate-50 text-slate-400 border-slate-200 group-hover/usage:bg-indigo-50 group-hover/usage:text-indigo-600 group-hover/usage:border-indigo-200'
-              : 'bg-indigo-50 text-indigo-500 border-indigo-100 shadow-sm group-hover/usage:bg-indigo-600 group-hover/usage:text-white group-hover/usage:border-indigo-600 group-hover/usage:shadow-md'
+              ? 'bg-slate-50 text-slate-400 border-slate-200 group-hover/usage:bg-brand-50 group-hover/usage:text-brand group-hover/usage:border-brand-200'
+              : 'bg-brand-50 text-brand-500 border-brand-100 shadow-sm group-hover/usage:bg-brand group-hover/usage:text-white group-hover/usage:border-brand group-hover/usage:shadow-md'
             }`}
           >
             {isExpired ? (

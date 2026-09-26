@@ -56,7 +56,7 @@ export function PendingRequestsPanel({ initialRequests, onDateHover, onSessionsC
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col max-h-[70vh] lg:max-h-none lg:h-full">
       <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100 shrink-0">
-        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-widest">Pending Requests ({pending.length})</h2>
+        <h2 className="text-xs font-black text-brand-500 uppercase tracking-widest">Pending Requests ({pending.length})</h2>
         <Link href="/matching-requests" className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-700 shrink-0">
           History
           <ArrowRight size={12} />

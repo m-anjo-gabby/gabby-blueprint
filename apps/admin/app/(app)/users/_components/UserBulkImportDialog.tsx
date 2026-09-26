@@ -246,7 +246,7 @@ export function UserBulkImportDialog() {
                   </>
                 ) : (
                   <>
-                    <UserPlus className="text-indigo-400" size={24} />
+                    <UserPlus className="text-brand-400" size={24} />
                     {t('title')}
                   </>
                 )}
@@ -267,7 +267,7 @@ export function UserBulkImportDialog() {
                 className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white h-9 text-[11px] font-bold shrink-0"
               >
                 <a href="/templates/balk_user_sample.csv" download>
-                  <Download size={14} className="mr-2 text-indigo-400" /> {t('downloadSample')}
+                  <Download size={14} className="mr-2 text-brand-400" /> {t('downloadSample')}
                 </a>
               </Button>
             )}
@@ -299,7 +299,7 @@ export function UserBulkImportDialog() {
               <div className="flex items-center gap-2">
                 <span className={cn(
                   "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white transition-colors",
-                  contracts.length > 0 ? "bg-indigo-600" : "bg-slate-300"
+                  contracts.length > 0 ? "bg-brand" : "bg-slate-300"
                 )}>
                   2
                 </span>
@@ -358,12 +358,12 @@ export function UserBulkImportDialog() {
             ) : data.length === 0 ? (
               <div className="flex-1 flex flex-col gap-4">
                 <div 
-                  className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-2 gap-4 cursor-pointer transition-all duration-200 ${isDragging ? "border-indigo-500 bg-indigo-50/50 scale-[0.99]" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"}`}
+                  className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-2 gap-4 cursor-pointer transition-all duration-200 ${isDragging ? "border-brand-500 bg-brand-50/50 scale-[0.99]" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"}`}
                   onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="p-4 bg-slate-50 rounded-full text-slate-400 shadow-sm border border-slate-100">
-                    <Upload className={isDragging ? "animate-bounce text-indigo-500" : ""} size={32} />
+                    <Upload className={isDragging ? "animate-bounce text-brand-500" : ""} size={32} />
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-bold text-slate-700">{t('dropzoneTitle')}</p>

@@ -33,7 +33,7 @@ export default async function AIKnowledgeBasePage({ searchParams }: AIKnowledgeB
     <div className="space-y-8 pb-16">
       <header className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20 text-white">
+          <div className="p-2.5 bg-brand rounded-xl shadow-lg shadow-brand/20 text-white">
             <Library size={28} strokeWidth={2.5} />
           </div>
           <div>

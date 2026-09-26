@@ -24,7 +24,7 @@ export function LessonSprintCard({ studentId, history }: Props) {
         </CardTitle>
         <Link
           href={`/students/${studentId}/lesson-sprint/history`}
-          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+          className="text-[11px] font-bold text-brand hover:text-brand-strong transition-colors"
         >
           View history
         </Link>

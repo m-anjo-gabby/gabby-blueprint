@@ -32,9 +32,9 @@ function AttentionTile({ tile, idx }: { tile: Tile; idx: number }) {
     >
       <Link
         href={tile.href}
-        className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all"
+        className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-brand-200 hover:shadow-md transition-all"
       >
-        <div className={`p-2.5 rounded-xl border shrink-0 ${hasCount ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+        <div className={`p-2.5 rounded-xl border shrink-0 ${hasCount ? 'bg-brand-50 text-brand border-brand-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
           <Icon size={18} />
         </div>
         <div className="min-w-0 flex-1">

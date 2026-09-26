@@ -192,18 +192,18 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
         <DialogContent className="max-w-5xl p-0 overflow-hidden border-none shadow-2xl focus:outline-none">
           <DialogHeader className="p-8 bg-slate-900 text-white border-b border-slate-800">
             <DialogTitle className="flex items-center gap-2 font-black text-xl">
-              <Volume2 className="text-indigo-400" size={24} />
+              <Volume2 className="text-brand-400" size={24} />
               Sprint TTS Designer - {section.toUpperCase()}
             </DialogTitle>
           </DialogHeader>
 
-          <div className={`px-8 py-6 bg-indigo-50/30 border-b border-indigo-100/50 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+          <div className={`px-8 py-6 bg-brand-50/30 border-b border-brand-100/50 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
             <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-x-2 gap-y-3">
               {adjustments.map((adj) => (
                 <Popover key={adj.id}>
                   <PopoverTrigger asChild>
                     <span className={`text-xl font-bold px-1 rounded transition-all border-b-2 cursor-pointer
-                      ${adj.emphasis || adj.ipa || adj.breakAfter ? 'text-indigo-600 bg-indigo-100 border-indigo-500' : 'text-slate-800 border-transparent hover:bg-slate-100'}`}
+                      ${adj.emphasis || adj.ipa || adj.breakAfter ? 'text-brand bg-brand-100 border-brand-500' : 'text-slate-800 border-transparent hover:bg-slate-100'}`}
                     >
                       {adj.fullText}
                     </span>
@@ -220,7 +220,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                       {/* 💡 改善: ロジック上存在していた IPA (発音記号) 調整用の UI 入力欄を追加 */}
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                          <Mic2 size={12} className={adj.ipa ? "text-indigo-500" : ""} /> IPA Pronunciation
+                          <Mic2 size={12} className={adj.ipa ? "text-brand-500" : ""} /> IPA Pronunciation
                         </Label>
                         <Input 
                           placeholder="e.g. dædi" 
@@ -243,7 +243,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                           <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-md">
                             {(['reduced', 'moderate', 'strong'] as const).map((level) => (
                               <button key={level} onClick={() => updateAdjustment(adj.id, { emphasisLevel: level })}
-                                className={`text-[9px] py-1 rounded transition-all ${adj.emphasisLevel === level ? 'bg-white shadow-sm font-bold text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+                                className={`text-[9px] py-1 rounded transition-all ${adj.emphasisLevel === level ? 'bg-white shadow-sm font-bold text-brand' : 'text-slate-500 hover:text-slate-700'}`}>
                                 {level}
                               </button>
                             ))}
@@ -252,7 +252,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                       </div>
                       <div className="space-y-2 border-t pt-3">
                         <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                          <PlusCircle size={12} className={adj.breakAfter ? "text-indigo-500" : ""} /> Pause After
+                          <PlusCircle size={12} className={adj.breakAfter ? "text-brand-500" : ""} /> Pause After
                         </Label>
                         <div className="flex justify-end">
                           <Button variant={adj.breakAfter ? "default" : "outline"} size="sm" className="h-6 px-2 text-[9px]" onClick={() => updateAdjustment(adj.id, { breakAfter: !adj.breakAfter })}>
@@ -261,7 +261,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                         </div>
                         {adj.breakAfter && (
                           <div className="space-y-2 px-1">
-                            <div className="flex justify-between text-[9px] text-indigo-600 font-mono">
+                            <div className="flex justify-between text-[9px] text-brand font-mono">
                               <span>Duration:</span>
                               <span>{adj.breakDuration}ms</span>
                             </div>
@@ -303,14 +303,14 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
 
             <div className="p-8 bg-slate-50 flex flex-col h-full">
               <div className="flex justify-between items-center mb-3">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">SSML Code <Sparkles size={10} className="text-indigo-500" /></Label>
+                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">SSML Code <Sparkles size={10} className="text-brand-500" /></Label>
               </div>
               <div className="flex-grow flex flex-col border border-slate-200 rounded-xl overflow-hidden shadow-inner bg-slate-900">
                 <Textarea value={ssml} readOnly={ssmlMode === 'auto'} onChange={(e) => setSsml(e.target.value)} className="flex-grow font-mono text-[11px] leading-relaxed text-emerald-400 border-none rounded-none p-5 focus-visible:ring-0 resize-none bg-transparent min-h-[200px]" />
                 <div className={`flex items-center justify-between px-3 py-2 border-t ${ssmlMode === 'manual' ? 'bg-rose-950/30 border-rose-900/30' : 'bg-slate-800 border-slate-700'}`}>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 bg-black/20 p-1 rounded-md">
-                      <button onClick={() => ssmlMode === 'manual' && setShowModeAlert(true)} className={`text-[8px] font-black px-2 py-0.5 rounded ${ssmlMode === 'auto' ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500'}`}>AUTO</button>
+                      <button onClick={() => ssmlMode === 'manual' && setShowModeAlert(true)} className={`text-[8px] font-black px-2 py-0.5 rounded ${ssmlMode === 'auto' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500'}`}>AUTO</button>
                       <Switch checked={ssmlMode === 'manual'} onCheckedChange={(checked) => checked ? setSsmlMode('manual') : setShowModeAlert(true)} className="data-[state=checked]:bg-rose-500 scale-75" />
                       <button onClick={() => ssmlMode === 'auto' && setSsmlMode('manual')} className={`text-[8px] font-black px-2 py-0.5 rounded ${ssmlMode === 'manual' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500'}`}>MANUAL</button>
                     </div>
@@ -325,11 +325,11 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           </div>
 
           <DialogFooter className="p-4 bg-white border-t flex gap-3">
-            <Button variant="outline" className="px-8 border-2 border-indigo-100 text-indigo-600 font-bold h-12 rounded-full gap-2" onClick={() => speak(ssml)} disabled={isSpeaking || isProcessing}>
+            <Button variant="outline" className="px-8 border-2 border-brand-100 text-brand font-bold h-12 rounded-full gap-2" onClick={() => speak(ssml)} disabled={isSpeaking || isProcessing}>
               {isSpeaking ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} />}
               LISTEN
             </Button>
-            <Button className={`px-12 font-black h-12 rounded-full shadow-lg gap-2 text-white ${ssmlMode === 'manual' ? 'bg-rose-600' : 'bg-indigo-600'}`} onClick={() => setShowSaveAlert(true)} disabled={isProcessing || isSpeaking}>
+            <Button className={`px-12 font-black h-12 rounded-full shadow-lg gap-2 text-white ${ssmlMode === 'manual' ? 'bg-rose-600' : 'bg-brand'}`} onClick={() => setShowSaveAlert(true)} disabled={isProcessing || isSpeaking}>
               {isProcessing ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
               SAVE
             </Button>
@@ -345,7 +345,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setSsmlMode('auto'); setShowModeAlert(false); }} className="bg-indigo-600">Switch</AlertDialogAction>
+            <AlertDialogAction onClick={() => { setSsmlMode('auto'); setShowModeAlert(false); }} className="bg-brand">Switch</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -358,7 +358,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSave} className={ssmlMode === 'manual' ? "bg-rose-600" : "bg-indigo-600"}>Confirm Save</AlertDialogAction>
+            <AlertDialogAction onClick={handleSave} className={ssmlMode === 'manual' ? "bg-rose-600" : "bg-brand"}>Confirm Save</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

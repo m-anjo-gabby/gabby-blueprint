@@ -76,7 +76,7 @@ export function ImpersonateButton({ user }: Props) {
       <DialogContent className="max-w-md p-0 border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 rounded-xl overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
-            <LogIn size={18} className="text-indigo-400" /> {t('title')}
+            <LogIn size={18} className="text-brand-400" /> {t('title')}
           </DialogTitle>
         </DialogHeader>
 

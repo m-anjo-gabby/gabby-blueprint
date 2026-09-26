@@ -149,7 +149,7 @@ export default function PasswordChangePage() {
 
           <Link
             href="/dashboard"
-            className="text-xs text-slate-500 hover:text-indigo-600 flex items-center justify-center gap-1 transition-colors"
+            className="text-xs text-slate-500 hover:text-brand flex items-center justify-center gap-1 transition-colors"
           >
             <ArrowLeft size={14} /> Back to Dashboard
           </Link>

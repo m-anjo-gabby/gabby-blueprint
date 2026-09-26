@@ -31,7 +31,7 @@ export default async function NoticeReadStatusPage({
       <div className="space-y-4">
         <Link
           href="/notice"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-brand transition-colors"
         >
           <ArrowLeft size={14} /> {t('backToList')}
         </Link>
@@ -45,7 +45,7 @@ export default async function NoticeReadStatusPage({
       <div>
         <Link
           href="/notice"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors mb-2"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-brand transition-colors mb-2"
         >
           <ArrowLeft size={14} /> {t('backToList')}
         </Link>

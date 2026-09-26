@@ -41,7 +41,7 @@ export function EditorHeader({ content }: ContentHeaderProps) {
 
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <BookOpen size={16} className="text-indigo-500" />
+            <BookOpen size={16} className="text-brand-500" />
             <h1 className="text-sm font-black text-slate-900 truncate max-w-75">
               {content.content_name}
             </h1>

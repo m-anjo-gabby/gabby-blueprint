@@ -207,7 +207,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
           <div className="p-8 space-y-8 bg-white flex-1 overflow-y-auto">
             {isLoadingData ? (
               <div className="py-12 flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+                <Loader2 className="h-8 w-8 text-brand-500 animate-spin" />
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading entries...</p>
               </div>
             ) : status === 'idle' ? (
@@ -227,7 +227,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
                   </Tabs>
                   <div className="flex justify-end pt-1">
                     <span className="text-[10px] font-black text-slate-400 italic">
-                      Selected: <span className="text-indigo-600 text-sm">{filteredEntries.length}</span> / {rawEntries.length} entries
+                      Selected: <span className="text-brand text-sm">{filteredEntries.length}</span> / {rawEntries.length} entries
                     </span>
                   </div>
                 </div>
@@ -241,7 +241,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
                       size="sm"
                       onClick={handlePreview}
                       disabled={isSpeaking}
-                      className="h-8 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 gap-1.5 px-3 rounded-full border border-indigo-100"
+                      className="h-8 text-[10px] font-bold text-brand hover:bg-brand-50 gap-1.5 px-3 rounded-full border border-brand-100"
                     >
                       {isSpeaking ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
                       TEST PREVIEW
@@ -267,14 +267,14 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-[10px] font-black text-slate-400 uppercase">Speed</span>
-                        <span className="text-[11px] font-black text-indigo-600 font-mono">{params.rate.toFixed(2)}x</span>
+                        <span className="text-[11px] font-black text-brand font-mono">{params.rate.toFixed(2)}x</span>
                       </div>
                       <Slider value={[params.rate]} min={0.5} max={1.5} step={0.05} onValueChange={([v]) => setParams((p) => ({ ...p, rate: v }))} />
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-[10px] font-black text-slate-400 uppercase">Pitch</span>
-                        <span className="text-[11px] font-black text-indigo-600 font-mono">{params.pitch > 0 ? `+${params.pitch}` : params.pitch}%</span>
+                        <span className="text-[11px] font-black text-brand font-mono">{params.pitch > 0 ? `+${params.pitch}` : params.pitch}%</span>
                       </div>
                       <Slider value={[params.pitch]} min={-20} max={20} step={1} onValueChange={([v]) => setParams((p) => ({ ...p, pitch: v }))} />
                     </div>
@@ -287,7 +287,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
             ) : (
               /* 進捗表示 */
               <div className="py-10 flex flex-col items-center justify-center space-y-6">
-                {status === 'running' && <Loader2 className="h-14 w-14 text-indigo-500 animate-spin" strokeWidth={1.5} />}
+                {status === 'running' && <Loader2 className="h-14 w-14 text-brand-500 animate-spin" strokeWidth={1.5} />}
                 {status === 'completed' && <CheckCircle2 className="h-14 w-14 text-emerald-500" strokeWidth={1.5} />}
                 {status === 'error' && <AlertCircle className="h-14 w-14 text-rose-500" strokeWidth={1.5} />}
 
@@ -309,7 +309,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
                 {!showConfirm ? (
                   <Button
                     onClick={() => setShowConfirm(true)}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 shadow-lg gap-2 rounded-full"
+                    className="w-full bg-brand hover:bg-brand-strong text-white font-black h-12 shadow-lg gap-2 rounded-full"
                     disabled={filteredEntries.length === 0}
                   >
                     NEXT STEP <ChevronRight size={18} />

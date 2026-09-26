@@ -70,7 +70,7 @@ export function SessionResult({ studentId, session, homework, checklist }: Props
                 <ul className="space-y-2">
                   {session.call_log.map((entry) => (
                     <li key={entry.call_log_id} className="flex items-start gap-2 text-xs">
-                      <span className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'}`}>
+                      <span className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-brand-50 text-brand' : 'bg-rose-50 text-rose-600'}`}>
                         {entry.left_at ? <LogOut size={11} /> : <LogIn size={11} />}
                       </span>
                       <span className="text-slate-600">
@@ -156,7 +156,7 @@ export function SessionResult({ studentId, session, homework, checklist }: Props
                     <p className="font-bold text-slate-400 text-[10px] capitalize">{entry.sender_role}</p>
                     <p
                       className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${
-                        entry.sender_role === 'coach' ? 'bg-indigo-50 text-indigo-700' : 'bg-rose-50 text-rose-700'
+                        entry.sender_role === 'coach' ? 'bg-brand-50 text-brand-strong' : 'bg-rose-50 text-rose-700'
                       }`}
                     >
                       {entry.message}

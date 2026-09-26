@@ -15,7 +15,7 @@ export function LoginButton() {
         transition-all duration-300 flex items-center justify-center gap-3
         ${pending
           ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-          : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 active:scale-[0.98]'
+          : 'bg-brand text-white hover:bg-brand-strong shadow-lg shadow-brand-200 active:scale-[0.98]'
         }
       `}
     >
@@ -23,7 +23,7 @@ export function LoginButton() {
         <>
           <div className="relative flex items-center justify-center">
             <Loader2 className="w-4 h-4 animate-spin stroke-[3px]" />
-            <div className="absolute inset-0 w-4 h-4 border-2 border-indigo-600/20 rounded-full animate-ping" />
+            <div className="absolute inset-0 w-4 h-4 border-2 border-brand/20 rounded-full animate-ping" />
           </div>
           <span className="animate-pulse">Signing in...</span>
         </>

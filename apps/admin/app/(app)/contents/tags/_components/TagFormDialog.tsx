@@ -119,7 +119,7 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
+          <Button className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none">
             <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
@@ -138,9 +138,9 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
             {isConfirming ? (
               <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
+              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> {t('editTitle')}</>
+              <><Edit size={18} className="text-brand-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>

@@ -8,7 +8,7 @@ interface Props {
 export default function DashboardHeader({ greeting, firstName, dateLabel }: Props) {
   return (
     <div>
-      <p className="text-xs font-bold text-indigo-500">{dateLabel}</p>
+      <p className="text-xs font-bold text-brand-500">{dateLabel}</p>
       <h1 className="text-xl font-bold text-slate-800 mt-0.5">
         {greeting}, {firstName}
       </h1>

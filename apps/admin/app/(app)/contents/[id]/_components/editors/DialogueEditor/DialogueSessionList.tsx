@@ -66,7 +66,7 @@ export function DialogueSessionList({ sessions, contentId, onUpdate }: DialogueS
                       label={t('coachSlidesLabel')}
                       title={s.coach_slides_title}
                       link={s.coach_slides_link}
-                      accent="indigo"
+                      accent="brand"
                     />
                     <SlideLink
                       label={t('studentSlidesLabel')}
@@ -133,12 +133,12 @@ function SlideLink({
   label: string;
   title: string | null;
   link: string | null;
-  accent: 'indigo' | 'emerald';
+  accent: 'brand' | 'emerald';
 }) {
-  const colorClasses = accent === 'indigo'
-    ? 'bg-indigo-50/50 border-indigo-100'
+  const colorClasses = accent === 'brand'
+    ? 'bg-brand-50/50 border-brand-100'
     : 'bg-emerald-50/50 border-emerald-100';
-  const labelClasses = accent === 'indigo' ? 'text-indigo-500' : 'text-emerald-500';
+  const labelClasses = accent === 'brand' ? 'text-brand-500' : 'text-emerald-500';
 
   return (
     <div className={`rounded-2xl border p-3 space-y-1 ${colorClasses}`}>

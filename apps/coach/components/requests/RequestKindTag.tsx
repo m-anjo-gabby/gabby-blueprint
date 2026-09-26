@@ -2,7 +2,7 @@ import { CalendarPlus, Repeat, Shuffle } from 'lucide-react';
 import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
 
 const KIND_META: Record<CoachIncomingRequestItem['kind'], { label: string; icon: typeof Repeat; className: string }> = {
-  matching: { label: 'Matching Request', icon: Repeat, className: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
+  matching: { label: 'Matching Request', icon: Repeat, className: 'bg-brand-50 text-brand border-brand-200' },
   booking: { label: 'New Booking', icon: CalendarPlus, className: 'bg-sky-50 text-sky-600 border-sky-200' },
   reschedule_proposal: { label: 'Reschedule Proposal', icon: Shuffle, className: 'bg-amber-50 text-amber-600 border-amber-200' },
 };

@@ -75,7 +75,7 @@ export default function TranslatePlayground() {
           </div>
 
           <Button
-            className="h-11 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 gap-2"
+            className="h-11 px-6 rounded-2xl bg-brand hover:bg-brand-strong gap-2"
             onClick={handleTranslate}
             disabled={isLoading || !inputText.trim()}
           >
@@ -89,7 +89,7 @@ export default function TranslatePlayground() {
         <div className="border-t border-slate-100 bg-slate-50 p-8 space-y-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2 px-1">
-              <Sparkles size={14} className="text-indigo-500" />
+              <Sparkles size={14} className="text-brand-500" />
               <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
                 {t('japaneseLabel')}
               </Label>

@@ -63,7 +63,7 @@ export function AttentionCellDialog({
                   {session.is_unresolved && (
                     <Link
                       href={`/students/${detail.studentId}/sessions/${session.session_id}`}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 whitespace-nowrap"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-brand hover:text-brand-strong whitespace-nowrap"
                     >
                       Resolve <ArrowRight size={12} />
                     </Link>

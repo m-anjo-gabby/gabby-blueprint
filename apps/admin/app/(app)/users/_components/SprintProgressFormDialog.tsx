@@ -136,7 +136,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
       <DialogContent className="max-w-md p-0 shadow-2xl border-none [&>button]:text-white [&>button]:opacity-70 max-h-[90vh] flex flex-col rounded-xl overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
-            <Rocket size={18} className="text-indigo-400" /> {t('title')}
+            <Rocket size={18} className="text-brand-400" /> {t('title')}
           </DialogTitle>
           <p className="text-slate-400 text-[11px] font-bold mt-1">{user.user_name} / {user.client_name}</p>
         </DialogHeader>

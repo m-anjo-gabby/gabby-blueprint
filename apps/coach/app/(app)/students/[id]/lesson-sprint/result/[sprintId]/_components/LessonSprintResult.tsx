@@ -107,7 +107,7 @@ export function LessonSprintResult({ studentId, studentName, studentIconPath, re
               )}
               <div className="flex items-center gap-2">
                 <span className="text-sm font-black text-slate-800">{typeLabel}</span>
-                <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 rounded-full px-2.5 py-0.5">
+                <span className="text-[11px] font-black text-brand bg-brand-50 rounded-full px-2.5 py-0.5">
                   {formatSprintLevelLabel(record.question_type, record.difficulty_level)}
                 </span>
                 <span className="inline-flex items-center gap-1 text-[11px] font-mono font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
@@ -123,7 +123,7 @@ export function LessonSprintResult({ studentId, studentName, studentIconPath, re
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Answered</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-indigo-600">{averageScore ?? '—'}{averageScore !== null && <span className="text-sm text-slate-400">/5</span>}</p>
+                  <p className="text-2xl font-black text-brand">{averageScore ?? '—'}{averageScore !== null && <span className="text-sm text-slate-400">/5</span>}</p>
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avg Score</p>
                 </div>
               </div>
@@ -140,7 +140,7 @@ export function LessonSprintResult({ studentId, studentName, studentIconPath, re
               <RepeatSprintButton studentId={studentId} record={record} content={content} sessionId={sessionId} />
               <Link
                 href={withLiveSessionParam(`/students/${studentId}/lesson-sprint`, sessionId)}
-                className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shrink-0"
+                className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider bg-brand hover:bg-brand-strong text-white flex items-center justify-center gap-2 shrink-0"
               >
                 <Zap size={14} className="fill-current text-amber-300" />
                 Start Another Live Sprint
@@ -197,8 +197,8 @@ export function LessonSprintResult({ studentId, studentName, studentIconPath, re
                     </div>
                   )}
 
-                  <div className="border-l-4 border-indigo-500 pl-3 py-0.5">
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-wider mb-1">
+                  <div className="border-l-4 border-brand-500 pl-3 py-0.5">
+                    <p className="text-[10px] font-black text-brand-400 uppercase tracking-wider mb-1">
                       {isQuestionBased ? 'Question' : 'Instruction'}
                     </p>
                     <p className="text-base font-black text-slate-800 leading-snug">{question.question_en}</p>
@@ -258,7 +258,7 @@ export function LessonSprintResult({ studentId, studentName, studentIconPath, re
           backLabel={backLabel}
           info={
             averageScore !== null ? (
-              <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1 whitespace-nowrap">
+              <span className="text-[11px] font-black text-brand bg-brand-50 border border-brand-100 rounded-full px-2.5 py-1 whitespace-nowrap">
                 Avg {averageScore}/5
               </span>
             ) : undefined

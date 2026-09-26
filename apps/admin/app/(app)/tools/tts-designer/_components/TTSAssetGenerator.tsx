@@ -155,7 +155,7 @@ export default function TTSAssetGenerator() {
           <Textarea 
             value={phraseEn} 
             onChange={(e) => setPhraseEn(e.target.value)}
-            className="h-24 bg-white border-slate-200 font-bold text-xl rounded-2xl focus:ring-4 focus:ring-indigo-500/5 transition-all resize-none shadow-inner"
+            className="h-24 bg-white border-slate-200 font-bold text-xl rounded-2xl focus:ring-4 focus:ring-brand-500/5 transition-all resize-none shadow-inner"
             placeholder="Type or paste text here..."
           />
         </div>
@@ -173,7 +173,7 @@ export default function TTSAssetGenerator() {
       {/* SECTION 2: Step 2 - Word-Level Tuning */}
       <div className={`px-8 py-10 border-b border-slate-100 bg-white transition-all ${ssmlMode === 'manual' ? 'opacity-30 grayscale pointer-events-none' : 'opacity-100'}`}>
         <div className="flex items-center gap-2 mb-6 px-1">
-          <MousePointer2 size={14} className="text-indigo-500" />
+          <MousePointer2 size={14} className="text-brand-500" />
           <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Word-Level Fine-Tuning</Label>
         </div>
         
@@ -184,7 +184,7 @@ export default function TTSAssetGenerator() {
               <PopoverTrigger asChild>
                 <button className={`text-lg font-bold px-3 py-1.5 rounded-xl transition-all border-b-4 active:translate-y-0.5
                   ${adj.emphasis || adj.ipa || adj.breakAfter 
-                    ? 'text-indigo-600 bg-indigo-50 border-indigo-500 shadow-sm scale-105' 
+                    ? 'text-brand bg-brand-50 border-brand-500 shadow-sm scale-105' 
                     : 'text-slate-700 border-slate-100 hover:border-slate-300 hover:bg-slate-50'}`}
                 >
                   {adj.fullText}
@@ -206,7 +206,7 @@ export default function TTSAssetGenerator() {
                     {adj.emphasis && (
                       <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
                         {(['reduced', 'moderate', 'strong'] as const).map((l) => (
-                          <button key={l} onClick={() => updateAdjustment(adj.id, { emphasisLevel: l })} className={`text-[10px] font-bold py-1.5 rounded transition-all ${adj.emphasisLevel === l ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}>{l}</button>
+                          <button key={l} onClick={() => updateAdjustment(adj.id, { emphasisLevel: l })} className={`text-[10px] font-bold py-1.5 rounded transition-all ${adj.emphasisLevel === l ? 'bg-white shadow-sm text-brand' : 'text-slate-500'}`}>{l}</button>
                         ))}
                       </div>
                     )}
@@ -217,7 +217,7 @@ export default function TTSAssetGenerator() {
                       </div>
                       {adj.breakAfter && (
                         <div className="space-y-3">
-                          <div className="flex justify-between text-[10px] font-mono text-indigo-600"><span>Duration</span><span>{adj.breakDuration}ms</span></div>
+                          <div className="flex justify-between text-[10px] font-mono text-brand"><span>Duration</span><span>{adj.breakDuration}ms</span></div>
                           <Slider value={[adj.breakDuration]} min={50} max={1000} step={50} onValueChange={([v]) => updateAdjustment(adj.id, { breakDuration: v })} />
                         </div>
                       )}
@@ -246,7 +246,7 @@ export default function TTSAssetGenerator() {
                 value={params.voice} 
                 onValueChange={(v) => setParams(p => ({...p, voice: v as any}))}
               >
-                <SelectTrigger className="h-12 bg-slate-50 border-slate-200 font-bold focus:ring-indigo-500 shadow-sm">
+                <SelectTrigger className="h-12 bg-slate-50 border-slate-200 font-bold focus:ring-brand-500 shadow-sm">
                   <SelectValue placeholder="Select a voice profile" />
                 </SelectTrigger>
                 
@@ -255,7 +255,7 @@ export default function TTSAssetGenerator() {
                     <SelectItem 
                       key={v.id} 
                       value={v.id} 
-                      className="py-2.5 focus:bg-indigo-50 border-b border-slate-50 last:border-none cursor-pointer"
+                      className="py-2.5 focus:bg-brand-50 border-b border-slate-50 last:border-none cursor-pointer"
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1.5">
@@ -282,14 +282,14 @@ export default function TTSAssetGenerator() {
                             </span>
                           )}
                           {!v.isRecommended && v.isPopular && (
-                            <span className="text-[7px] px-1.5 py-0.5 bg-indigo-50 text-indigo-500 rounded-full font-black uppercase border border-indigo-100">
+                            <span className="text-[7px] px-1.5 py-0.5 bg-brand-50 text-brand-500 rounded-full font-black uppercase border border-brand-100">
                               Pop
                             </span>
                           )}
                         </div>
 
                         {/* Tagline (Short visual description) */}
-                        <span className="text-[10px] text-indigo-500 font-medium ml-[1.8rem]">
+                        <span className="text-[10px] text-brand-500 font-medium ml-[1.8rem]">
                           {v.tagline}
                         </span>
                       </div>
@@ -300,9 +300,9 @@ export default function TTSAssetGenerator() {
 
               {/* 詳細説明（選択時のみ表示） */}
               {params.voice && (
-                <div className="px-3 py-2.5 bg-indigo-50/30 rounded-xl border border-indigo-100/50 animate-in fade-in slide-in-from-top-1">
+                <div className="px-3 py-2.5 bg-brand-50/30 rounded-xl border border-brand-100/50 animate-in fade-in slide-in-from-top-1">
                   <p className="text-[10px] text-slate-500 leading-relaxed font-medium italic">
-                    <span className="text-indigo-600 font-bold not-italic mr-1 text-[9px] uppercase tracking-wider">Note:</span>
+                    <span className="text-brand font-bold not-italic mr-1 text-[9px] uppercase tracking-wider">Note:</span>
                     {AZURE_GENERAL_VOICES.find(v => v.id === params.voice)?.description}
                   </p>
                 </div>
@@ -311,7 +311,7 @@ export default function TTSAssetGenerator() {
             
             {/* Style Select はシンプルに維持 */}
             <Select value={params.style} onValueChange={(v) => setParams(p => ({...p, style: v as any}))}>
-              <SelectTrigger className="h-12 bg-slate-50 border-slate-200 font-bold focus:ring-indigo-500 shadow-sm text-sm">
+              <SelectTrigger className="h-12 bg-slate-50 border-slate-200 font-bold focus:ring-brand-500 shadow-sm text-sm">
                 <SelectValue placeholder="Style (Neutral by default)" />
               </SelectTrigger>
               <SelectContent className="max-h-[200px]">
@@ -326,14 +326,14 @@ export default function TTSAssetGenerator() {
             <div className="space-y-4">
               <div className="flex justify-between items-end">
                 <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Speaking Rate</Label>
-                <span className="text-sm font-black text-indigo-600 bg-indigo-50 px-2 rounded">{params.rate}x</span>
+                <span className="text-sm font-black text-brand bg-brand-50 px-2 rounded">{params.rate}x</span>
               </div>
               <Slider value={[params.rate]} min={0.5} max={1.5} step={0.05} onValueChange={([v]) => setParams(p => ({...p, rate: v}))} />
             </div>
             <div className="space-y-4">
               <div className="flex justify-between items-end">
                 <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Voice Pitch</Label>
-                <span className="text-sm font-black text-indigo-600 bg-indigo-50 px-2 rounded">{params.pitch}%</span>
+                <span className="text-sm font-black text-brand bg-brand-50 px-2 rounded">{params.pitch}%</span>
               </div>
               <Slider value={[params.pitch]} min={-20} max={20} step={1} onValueChange={([v]) => setParams(p => ({...p, pitch: v}))} />
             </div>
@@ -345,7 +345,7 @@ export default function TTSAssetGenerator() {
           <div className="flex-grow flex flex-col bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
             <div className="px-6 py-3 bg-slate-900/50 border-b border-white/5 flex justify-between items-center">
               <div className="flex items-center gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
-                <button onClick={() => ssmlMode === 'manual' && handleModeToggle(false)} className={`text-[9px] font-black px-4 py-1.5 rounded-lg transition-all ${ssmlMode === 'auto' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>AUTO</button>
+                <button onClick={() => ssmlMode === 'manual' && handleModeToggle(false)} className={`text-[9px] font-black px-4 py-1.5 rounded-lg transition-all ${ssmlMode === 'auto' ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>AUTO</button>
                 <button onClick={() => ssmlMode === 'auto' && handleModeToggle(true)} className={`text-[9px] font-black px-4 py-1.5 rounded-lg transition-all ${ssmlMode === 'manual' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>MANUAL</button>
               </div>
               <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold text-slate-500 hover:text-white transition-all gap-2" onClick={handleCopy}>
@@ -357,7 +357,7 @@ export default function TTSAssetGenerator() {
               value={ssml}
               readOnly={ssmlMode === 'auto'}
               onChange={(e) => { setSsml(e.target.value); setError(null); }}
-              className={`flex-grow font-mono text-[11px] leading-relaxed text-indigo-300 border-none rounded-none p-8 focus-visible:ring-0 resize-none transition-all ${ssmlMode === 'auto' ? 'bg-transparent opacity-60 cursor-not-allowed' : 'bg-black/20'}`}
+              className={`flex-grow font-mono text-[11px] leading-relaxed text-brand-300 border-none rounded-none p-8 focus-visible:ring-0 resize-none transition-all ${ssmlMode === 'auto' ? 'bg-transparent opacity-60 cursor-not-allowed' : 'bg-black/20'}`}
               spellCheck={false}
             />
             {error && <div className="px-8 py-4 bg-rose-500/10 border-t border-rose-500/20 text-[10px] font-mono text-rose-400 uppercase tracking-tighter">{error}</div>}
@@ -377,7 +377,7 @@ export default function TTSAssetGenerator() {
             {isSpeaking ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} fill="currentColor" />} LISTEN RESULT
           </Button>
           <Button className={`h-14 px-14 font-black text-sm tracking-[0.1em] rounded-2xl shadow-xl transition-all gap-3 text-white
-            ${ssmlMode === 'manual' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'}`} 
+            ${ssmlMode === 'manual' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-brand hover:bg-brand-strong'}`} 
             onClick={handleSave} 
             disabled={isProcessing || isSpeaking || !phraseEn}
           >
@@ -398,7 +398,7 @@ export default function TTSAssetGenerator() {
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-4 gap-2">
             <AlertDialogCancel className="rounded-xl font-bold border-slate-200 h-11">Keep Manual</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmReturnToAuto} className="rounded-xl font-bold bg-indigo-600 h-11 border-none">Reset & Switch</AlertDialogAction>
+            <AlertDialogAction onClick={confirmReturnToAuto} className="rounded-xl font-bold bg-brand h-11 border-none">Reset & Switch</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

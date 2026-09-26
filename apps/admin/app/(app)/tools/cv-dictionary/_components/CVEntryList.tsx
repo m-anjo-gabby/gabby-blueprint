@@ -173,7 +173,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
               {entries.map((entry) => (
                 <div
                   key={`${entry.word_en}-${entry.part_of_speech}`}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group hover:border-indigo-300 hover:shadow-md transition-all duration-300"
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group hover:border-brand-300 hover:shadow-md transition-all duration-300"
                 >
                   <div className="p-5 flex gap-5">
                     {/* 左：品詞バッジ */}
@@ -226,7 +226,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                         {entry.cv_id && (
                           <div className="flex items-center gap-1.5 text-slate-500">
                             <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">CV ID</span>
-                            <span className="font-mono text-indigo-600 font-bold">{entry.cv_id}</span>
+                            <span className="font-mono text-brand font-bold">{entry.cv_id}</span>
                           </div>
                         )}
                       </div>
@@ -243,8 +243,8 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                             className={cn(
                               'h-7 px-2.5 gap-1.5 rounded-lg border transition-all',
                               isPlaying === `${entry.word_en}-${entry.part_of_speech}`
-                                ? 'bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 shadow-sm'
-                                : 'text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 border-transparent hover:border-indigo-100'
+                                ? 'bg-brand text-white hover:bg-brand-strong border-brand shadow-sm'
+                                : 'text-brand-500 hover:text-brand-strong hover:bg-brand-50 border-transparent hover:border-brand-100'
                             )}
                           >
                             {isPlaying === `${entry.word_en}-${entry.part_of_speech}` ? (
@@ -270,7 +270,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 rounded-xl transition-all"
+                          className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand hover:border-brand-200 rounded-xl transition-all"
                           title={t('ttsButtonTitle')}
                         >
                           <Settings2 size={16} />

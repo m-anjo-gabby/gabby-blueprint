@@ -57,7 +57,7 @@ export default function NoticePage() {
             Announcements and updates from the Gabby Blueprint team.
           </p>
         </div>
-        <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 flex items-center gap-1.5 shrink-0">
+        <div className="text-[10px] font-black text-brand uppercase tracking-widest bg-brand-50 px-3 py-1.5 rounded-xl border border-brand-100 flex items-center gap-1.5 shrink-0">
           <Bell size={10} />
           {notices.length} <span className="opacity-60 ml-0.5">Items</span>
         </div>

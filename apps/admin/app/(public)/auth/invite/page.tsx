@@ -196,7 +196,7 @@ export default function InvitePage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mt-2"
+                  className="w-full bg-brand hover:bg-brand-strong disabled:bg-brand-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mt-2"
                 >
                   {isSubmitting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -219,7 +219,7 @@ export default function InvitePage() {
 function LoadingState() {
   return (
     <motion.div className="flex flex-col items-center text-center">
-      <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-4" />
+      <Loader2 className="w-8 h-8 animate-spin text-brand mb-4" />
       <h1 className="text-xl font-bold text-slate-800">招待を確認しています</h1>
       <p className="text-sm text-slate-500 mt-2 leading-relaxed">
         安全なセッションを確立しています。少々お待ちください...
@@ -243,7 +243,7 @@ function ErrorState({ type }: { type: 'expired' | 'error' }) {
           ? 'この招待リンクは有効期限が切れているか、すでに使用されています。'
           : '予期せぬエラーが発生しました。もう一度メールのリンクをクリックしてください。'}
       </p>
-      <Link href="/login" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
+      <Link href="/login" className="w-full bg-brand hover:bg-brand-strong text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
         ログイン画面へ戻る
         <ArrowRight className="w-4 h-4" />
       </Link>

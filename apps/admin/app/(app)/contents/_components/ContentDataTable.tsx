@@ -103,7 +103,7 @@ export function ContentDataTable({
           {EDITOR_CONFIG[row.original.content_type] ? (
             <Link
               href={getEditorHref(row.original)}
-              className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-indigo-600 hover:underline underline-offset-2 transition-colors"
+              className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-brand hover:underline underline-offset-2 transition-colors"
             >
               {row.original.content_name}
             </Link>

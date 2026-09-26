@@ -241,7 +241,7 @@ export function LiveSessionHistoryCard({
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2 space-y-3">
         <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-          <Video size={14} className="text-indigo-500" />
+          <Video size={14} className="text-brand-500" />
           Live Sessions
         </CardTitle>
         {hasOtherCoachSessions && (

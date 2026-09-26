@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../../../packages/lib/styles/brand-theme.css";
 
 @source "../../../packages/lib/**/*.{ts,tsx}";
 @source "../../../packages/ui/**/*.{ts,tsx}";
@@ -12,7 +13,7 @@
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --border: oklch(0.922 0 0); /* slate-200 */
-  --primary: oklch(0.205 0 0); /* indigo-600 */
+  --primary: oklch(0.205 0 0); /* 標準ボタンは黒系のまま（ブランド色はアクセントに限定。brand-* は packages/lib/styles/brand-theme.css） */
   --muted-foreground: oklch(0.556 0 0); /* slate-500 */ --radius: 0.625rem; --background: oklch(1 0 0); --foreground: oklch(0.145 0 0); --popover: oklch(1 0 0); --popover-foreground: oklch(0.145 0 0); --primary-foreground: oklch(0.985 0 0); --secondary: oklch(0.97 0 0); --secondary-foreground: oklch(0.205 0 0); --muted: oklch(0.97 0 0); --accent: oklch(0.97 0 0); --accent-foreground: oklch(0.205 0 0); --destructive: oklch(0.577 0.245 27.325); --input: oklch(0.922 0 0); --ring: oklch(0.708 0 0); --chart-1: oklch(0.646 0.222 41.116); --chart-2: oklch(0.6 0.118 184.704); --chart-3: oklch(0.398 0.07 227.392); --chart-4: oklch(0.828 0.189 84.429); --chart-5: oklch(0.769 0.188 70.08); --sidebar: oklch(0.985 0 0); --sidebar-foreground: oklch(0.145 0 0); --sidebar-primary: oklch(0.205 0 0); --sidebar-primary-foreground: oklch(0.985 0 0); --sidebar-accent: oklch(0.97 0 0); --sidebar-accent-foreground: oklch(0.205 0 0); --sidebar-border: oklch(0.922 0 0); --sidebar-ring: oklch(0.708 0 0);
 }
 
@@ -55,30 +56,6 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-}
-
-/* ─────────────────────────────────────────────────────────────
-   ブランド色トークン（packages/lib の共通部品が参照する）
-   - 共通部品は brand / brand-strong / brand-soft / brand-N のみを使い、パレット名を直接書かない。
-   - このアプリは現状インディゴ基調のため、Tailwind indigo と同じ値を割り当てている
-     （student は Gabby Academy のコーポレートカラー #0e3196 基準。apps/student/app/globals.css 参照）。
-     コーポレートカラーへ揃える場合は、この値を student と同じものに差し替える。
-   ───────────────────────────────────────────────────────────── */
-@theme {
-  --color-brand-50: oklch(96.2% 0.018 272.314);
-  --color-brand-100: oklch(93% 0.034 272.788);
-  --color-brand-200: oklch(87% 0.065 274.039);
-  --color-brand-300: oklch(78.5% 0.115 274.713);
-  --color-brand-400: oklch(67.3% 0.182 276.935);
-  --color-brand-500: oklch(58.5% 0.233 277.117);
-  --color-brand-600: oklch(51.1% 0.262 276.966);
-  --color-brand-700: oklch(45.7% 0.24 277.023);
-  --color-brand-800: oklch(39.8% 0.195 277.366);
-  --color-brand-900: oklch(35.9% 0.144 278.697);
-  --color-brand-950: oklch(25.7% 0.09 281.288);
-  --color-brand: oklch(51.1% 0.262 276.966);        /* = indigo-600 */
-  --color-brand-strong: oklch(45.7% 0.24 277.023);  /* = indigo-700 */
-  --color-brand-soft: oklch(96.2% 0.018 272.314);   /* = indigo-50 */
 }
 
 @layer base {

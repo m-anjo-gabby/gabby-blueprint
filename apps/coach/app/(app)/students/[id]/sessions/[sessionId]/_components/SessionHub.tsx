@@ -205,7 +205,7 @@ export function SessionHub({
               </div>
 
               {isActionable && hasCallEndedElsewhere && (
-                <div className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">
+                <div className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-strong">
                   <PhoneOff size={13} className="shrink-0" />
                   The call ended in the other tab. Press End Session below to record the outcome.
                 </div>
@@ -239,7 +239,7 @@ export function SessionHub({
                         rel="noopener noreferrer"
                         title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
                         onClick={handleStartLiveSessionClick}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-indigo-200"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-brand hover:bg-brand-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-brand-200"
                       >
                         <Video size={14} />
                         Start Live Session
@@ -305,7 +305,7 @@ export function SessionHub({
                   <p className="text-xs text-slate-500">This lesson has already been finalized.</p>
                   <Link
                     href={`/students/${studentId}/sessions/${session.session_id}/result`}
-                    className="shrink-0 text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                    className="shrink-0 text-xs font-bold text-brand hover:text-brand-500 transition-colors"
                   >
                     View Session Result
                   </Link>

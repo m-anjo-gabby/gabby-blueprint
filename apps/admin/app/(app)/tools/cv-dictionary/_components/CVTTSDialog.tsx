@@ -257,7 +257,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
             <div className="flex justify-between items-center">
               <div className="space-y-1">
                 <DialogTitle className="flex items-center gap-2 font-black text-xl">
-                  <Volume2 className="text-indigo-400" size={24} />
+                  <Volume2 className="text-brand-400" size={24} />
                   Azure TTS Voice Designer
                 </DialogTitle>
                 <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
@@ -282,7 +282,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
           </DialogHeader>
 
           {/* 原文表示セクション：Manual時は操作不可 */}
-          <div className={`px-8 py-6 bg-indigo-50/30 border-b border-indigo-100/50 transition-all duration-300 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
+          <div className={`px-8 py-6 bg-brand-50/30 border-b border-brand-100/50 transition-all duration-300 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
             <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-x-2 gap-y-3">
               {adjustments.map((adj) => (
                 <Popover key={adj.id}>
@@ -291,7 +291,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                       className={`text-xl font-bold leading-snug tracking-tight cursor-pointer px-1 rounded transition-all border-b-2 
                         ${
                           adj.emphasis || adj.ipa || adj.breakAfter
-                            ? 'text-indigo-600 bg-indigo-100 border-indigo-500'
+                            ? 'text-brand bg-brand-100 border-brand-500'
                             : 'text-slate-800 border-transparent hover:bg-slate-100'
                         }`}
                     >
@@ -335,7 +335,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                                 onClick={() => updateAdjustment(adj.id, { emphasisLevel: level })}
                                 className={`text-[9px] py-1 rounded transition-all ${
                                   adj.emphasisLevel === level
-                                    ? 'bg-white shadow-sm font-bold text-indigo-600'
+                                    ? 'bg-white shadow-sm font-bold text-brand'
                                     : 'text-slate-500 hover:text-slate-700'
                                 }`}
                               >
@@ -350,7 +350,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                       <div className="space-y-2 border-t pt-3">
                         <div className="flex items-center justify-between">
                           <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                            <PlusCircle size={12} className={adj.breakAfter ? 'text-indigo-500' : ''} /> Pause After
+                            <PlusCircle size={12} className={adj.breakAfter ? 'text-brand-500' : ''} /> Pause After
                           </Label>
                           <Button
                             variant={adj.breakAfter ? 'default' : 'outline'}
@@ -363,7 +363,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                         </div>
                         {adj.breakAfter && (
                           <div className="space-y-2 px-1">
-                            <div className="flex justify-between text-[9px] text-indigo-600 font-mono">
+                            <div className="flex justify-between text-[9px] text-brand font-mono">
                               <span>Duration:</span>
                               <span>{adj.breakDuration}ms</span>
                             </div>
@@ -449,7 +449,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
             <div className="p-8 bg-slate-50 space-y-0 flex flex-col h-full">
               <div className="flex justify-between items-center mb-3 px-1">
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                  SSML Code <Sparkles size={10} className="text-indigo-500" />
+                  SSML Code <Sparkles size={10} className="text-brand-500" />
                 </Label>
                 <Button variant="ghost" size="sm" onClick={handleReset} className="h-6 text-[10px] gap-1 text-slate-400 hover:text-rose-500 transition-colors">
                   <RotateCcw size={10} /> Reset
@@ -476,7 +476,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                       <button
                         onClick={() => ssmlMode === 'manual' && handleModeToggle(false)}
                         className={`text-[8px] font-black px-2 py-0.5 rounded transition-all ${
-                          ssmlMode === 'auto' ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-400'
+                          ssmlMode === 'auto' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-400'
                         }`}
                       >
                         AUTO
@@ -552,7 +552,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
 
             <Button
               variant="outline"
-              className="px-8 border-2 border-indigo-100 text-indigo-600 font-bold h-12 rounded-full gap-2 hover:bg-indigo-50 transition-all"
+              className="px-8 border-2 border-brand-100 text-brand font-bold h-12 rounded-full gap-2 hover:bg-brand-50 transition-all"
               onClick={() => {
                 if (isSpeaking) return;
                 speak(ssml);
@@ -565,7 +565,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
 
             <Button
               className={`px-12 font-black h-12 rounded-full shadow-lg gap-2 text-white transition-all ${
-                ssmlMode === 'manual' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                ssmlMode === 'manual' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-brand hover:bg-brand-strong'
               }`}
               onClick={() => setShowSaveAlert(true)}
               disabled={isProcessing || isSpeaking}
@@ -588,7 +588,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setShowModeAlert(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmReturnToAuto} className="bg-indigo-600 hover:bg-indigo-700">
+            <AlertDialogAction onClick={confirmReturnToAuto} className="bg-brand hover:bg-brand-strong">
               Reset and Switch
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -610,7 +610,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
             <AlertDialogCancel onClick={() => setShowSaveAlert(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleSave}
-              className={ssmlMode === 'manual' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'}
+              className={ssmlMode === 'manual' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-brand hover:bg-brand-strong'}
             >
               Confirm Save
             </AlertDialogAction>

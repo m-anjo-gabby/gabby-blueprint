@@ -169,8 +169,8 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={iconUrl} alt="" className="w-8 h-8 shrink-0 rounded-full object-cover" />
                     ) : (
-                      <div className="w-8 h-8 shrink-0 rounded-full bg-indigo-50 flex items-center justify-center">
-                        <UsersIcon size={14} className="text-indigo-400" />
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-brand-50 flex items-center justify-center">
+                        <UsersIcon size={14} className="text-brand-400" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

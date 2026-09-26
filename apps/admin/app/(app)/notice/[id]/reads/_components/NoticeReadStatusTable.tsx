@@ -77,7 +77,7 @@ export function NoticeReadStatusTable({
           <select
             value={currentClientId}
             onChange={(e) => updateQueryParams('clientId', e.target.value)}
-            className="w-full sm:w-auto py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+            className="w-full sm:w-auto py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
           >
             <option value="">{t('allClients')}</option>
             {clients.map((c) => (
@@ -90,7 +90,7 @@ export function NoticeReadStatusTable({
           <select
             value={currentUserType}
             onChange={(e) => updateQueryParams('userType', e.target.value)}
-            className="w-full sm:w-auto py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+            className="w-full sm:w-auto py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
           >
             <option value="">{t('allTypes')}</option>
             <option value={USER_TYPES.STUDENT}>{t('studentType')}</option>
@@ -165,7 +165,7 @@ export function NoticeReadStatusTable({
                         className={cn(
                           'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border',
                           user.user_type === USER_TYPES.STUDENT
-                            ? 'text-indigo-600 border-indigo-100 bg-indigo-50/30'
+                            ? 'text-brand border-brand-100 bg-brand-50/30'
                             : 'text-slate-500 border-slate-100 bg-slate-50'
                         )}
                       >

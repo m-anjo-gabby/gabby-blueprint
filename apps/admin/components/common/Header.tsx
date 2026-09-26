@@ -69,7 +69,7 @@ export default function Header() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 hover:bg-slate-100 transition-all outline-none active:scale-95">
-            <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-indigo-500 overflow-hidden shrink-0">
+            <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
               {profileIconUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />

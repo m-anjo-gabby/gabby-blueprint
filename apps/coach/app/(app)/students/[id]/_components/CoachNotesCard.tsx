@@ -57,7 +57,7 @@ export function CoachNotesCard({ studentId, initialNotes }: Props) {
         </div>
         <Link
           href={`/students/${studentId}/coach-notes`}
-          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors shrink-0"
+          className="text-[11px] font-bold text-brand hover:text-brand-strong transition-colors shrink-0"
         >
           View all notes
         </Link>

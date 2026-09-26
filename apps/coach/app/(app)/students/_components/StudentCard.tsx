@@ -19,7 +19,7 @@ export function StudentCard({ student }: Props) {
 
   return (
     <Link href={`/students/${student.student_id}`}>
-      <Card className="h-full rounded-2xl border-slate-200 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all">
+      <Card className="h-full rounded-2xl border-slate-200 shadow-sm hover:border-brand-200 hover:shadow-md transition-all">
         <CardContent className="p-5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -64,7 +64,7 @@ export function StudentCard({ student }: Props) {
           </div>
 
           {next_session && (
-            <div className="mt-2.5 flex items-center gap-1.5 px-3.5 text-[11px] font-semibold text-indigo-600">
+            <div className="mt-2.5 flex items-center gap-1.5 px-3.5 text-[11px] font-semibold text-brand">
               <CalendarClock size={12} className="shrink-0" />
               <span className="truncate">Next: {formatDateTimeEn(next_session.start_datetime, timezone)}</span>
             </div>

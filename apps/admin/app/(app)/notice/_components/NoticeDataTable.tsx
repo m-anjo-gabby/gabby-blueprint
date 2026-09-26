@@ -158,7 +158,7 @@ export function NoticeDataTable({ data, pageCount, totalCount }: NoticeDataTable
               placeholder={t('searchPlaceholder')}
               defaultValue={currentSearch}
               onChange={(e) => updateQueryParams('q', e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
             />
           </div>
 
@@ -166,7 +166,7 @@ export function NoticeDataTable({ data, pageCount, totalCount }: NoticeDataTable
           <select
             value={currentType}
             onChange={(e) => updateQueryParams('type', e.target.value)}
-            className="py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+            className="py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
           >
             <option value="ALL">{t('allTypes')}</option>
             {Object.entries(NOTICE_TYPES).map(([key, config]) => (
@@ -178,7 +178,7 @@ export function NoticeDataTable({ data, pageCount, totalCount }: NoticeDataTable
         {/* 新規登録ボタン */}
         <Link
           href="/notice/new"
-          className="w-full sm:w-auto h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+          className="w-full sm:w-auto h-10 px-5 bg-brand hover:bg-brand-strong text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-brand/20 active:scale-95 transition-all"
         >
           <Plus size={16} />
           {t('createButton')}
@@ -216,7 +216,7 @@ export function NoticeDataTable({ data, pageCount, totalCount }: NoticeDataTable
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/notice/${notice.notice_id}/edit`}
-                            className="font-black text-slate-800 hover:text-indigo-600 transition-colors leading-snug line-clamp-1"
+                            className="font-black text-slate-800 hover:text-brand transition-colors leading-snug line-clamp-1"
                           >
                             {notice.title}
                           </Link>
@@ -263,8 +263,8 @@ export function NoticeDataTable({ data, pageCount, totalCount }: NoticeDataTable
                           <Users size={13} className="text-emerald-500" /> {t('targetCoach')}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600">
-                          <Building2 size={13} className="text-indigo-500" />
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-brand">
+                          <Building2 size={13} className="text-brand-500" />
                           {notice.client_name || t('targetClientFallback')}
                         </span>
                       )}
@@ -290,7 +290,7 @@ export function NoticeDataTable({ data, pageCount, totalCount }: NoticeDataTable
                       <div className="flex items-center justify-end gap-1">
                         <Link
                           href={`/notice/${notice.notice_id}/edit`}
-                          className="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95"
+                          className="p-2 rounded-xl text-slate-400 hover:text-brand hover:bg-brand-50 transition-all active:scale-95"
                           title={t('editTooltip')}
                         >
                           <Edit3 size={15} />

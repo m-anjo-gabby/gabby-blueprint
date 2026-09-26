@@ -93,11 +93,11 @@ export function KnowledgeEntryFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="gap-1.5 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none shrink-0 h-9 text-xs">
+          <Button className="gap-1.5 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none shrink-0 h-9 text-xs">
             <PlusCircle size={14} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-brand hover:bg-brand-50">
             <Edit size={14} />
           </Button>
         )}
@@ -108,7 +108,7 @@ export function KnowledgeEntryFormDialog({
 
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
-            <Sparkles size={18} className="text-indigo-400" />
+            <Sparkles size={18} className="text-brand-400" />
             {mode === 'create' ? t('createTitle') : t('editTitle')}
           </DialogTitle>
         </DialogHeader>

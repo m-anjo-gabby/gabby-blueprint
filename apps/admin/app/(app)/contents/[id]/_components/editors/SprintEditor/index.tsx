@@ -150,7 +150,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
 
           <div className="mt-6 flex flex-col justify-end">
              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black">
+                <Badge variant="outline" className="bg-brand-50 text-brand border-brand-100 font-black">
                   {questions.length} Questions
                 </Badge>
                 {selectedType !== '0' && (
@@ -170,7 +170,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
             level={Number(selectedLevel)} 
             onComplete={fetchQuestions}
           >
-            <Button variant="outline" className="border-indigo-100 text-indigo-600 font-bold h-10 rounded-xl gap-2 hover:bg-indigo-50">
+            <Button variant="outline" className="border-brand-100 text-brand font-bold h-10 rounded-xl gap-2 hover:bg-brand-50">
               <Zap size={16} className="text-amber-500" fill="currentColor" />
               {t('bulkAudioButton')}
             </Button>

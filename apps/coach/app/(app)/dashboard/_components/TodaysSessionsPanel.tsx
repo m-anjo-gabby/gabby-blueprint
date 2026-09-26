@@ -63,7 +63,7 @@ export default function TodaysSessionsPanel() {
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-sm font-bold text-slate-800">Next 24 Hours</CardTitle>
-        <Link href="/calendar" className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+        <Link href="/calendar" className="text-[11px] font-bold text-brand hover:text-brand-strong transition-colors">
           View calendar
         </Link>
       </CardHeader>
@@ -91,7 +91,7 @@ export default function TodaysSessionsPanel() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-xs font-semibold text-slate-700 truncate">{session.counterpart_name}</p>
                       {session.session_id === nextSessionId && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-wider border border-indigo-100 shrink-0">
+                        <span className="px-1.5 py-0.5 rounded-md bg-brand-50 text-brand text-[9px] font-black uppercase tracking-wider border border-brand-100 shrink-0">
                           Up next
                         </span>
                       )}

@@ -77,7 +77,7 @@ function CalendarEventAnnouncements({ calendarEventId, timezone }: { calendarEve
         <Megaphone size={11} /> Announcements
       </p>
       {messages.map((message) => (
-        <div key={message.calendar_event_message_id} className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 space-y-1.5">
+        <div key={message.calendar_event_message_id} className="bg-brand-50/50 border border-brand-100 rounded-xl p-3 space-y-1.5">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs font-black text-slate-800">{message.title}</p>
             <p className="text-[10px] text-slate-400 font-bold shrink-0">{formatDateTimeInZone(message.insert_date, timezone)}</p>
@@ -90,7 +90,7 @@ function CalendarEventAnnouncements({ calendarEventId, timezone }: { calendarEve
                   key={att.id}
                   type="button"
                   onClick={() => handleDownload(att.path)}
-                  className="w-full flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-100 hover:border-indigo-200 transition-colors text-left"
+                  className="w-full flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-100 hover:border-brand-200 transition-colors text-left"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Paperclip size={12} className="text-slate-400 shrink-0" />
@@ -177,7 +177,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
           <div className="flex items-center gap-1.5 mb-1">
             <span className={cn('text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border', badge.badgeClass)}>{label}</span>
             {event.is_assigned_coach && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-md px-2 py-1">
+              <span className="inline-flex items-center gap-1 text-[10px] font-black text-brand-strong bg-brand-50 border border-brand-100 rounded-md px-2 py-1">
                 <CheckCircle2 size={11} />
                 You&apos;re the coach
               </span>
@@ -207,7 +207,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
           href={event.location_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-strong"
         >
           <ExternalLink size={13} />
           Open event link
@@ -354,7 +354,7 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
                       <div className="flex items-center gap-2 pt-1">
                         <Link
                           href={`/students/${session.counterpart_id}/sessions/${session.session_id}/result`}
-                          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-500 transition-colors"
                         >
                           View Session Result
                         </Link>

@@ -201,7 +201,7 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
                 .map((r) => (
                   <span
                     key={rangeKey(r.day, r.start_time, r.end_time)}
-                    className="inline-flex items-center gap-1.5 pl-3 pr-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold"
+                    className="inline-flex items-center gap-1.5 pl-3 pr-3 py-1.5 rounded-full bg-brand-50 border border-brand-100 text-brand-strong text-xs font-bold"
                   >
                     {DAY_OF_WEEK_LABEL_EN[day]} {r.start_time} - {r.end_time}
                   </span>

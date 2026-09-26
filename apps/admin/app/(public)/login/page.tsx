@@ -96,7 +96,7 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="account@example.com"
                     required
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-base"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all text-base"
                   />
                 </div>
               </div>
@@ -117,7 +117,7 @@ export default function LoginPage() {
               <div className="flex justify-end mt-2">
                 <a
                   href="/forgot-password"
-                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium hover:underline transition-all"
+                  className="text-xs text-brand hover:text-brand-strong font-medium hover:underline transition-all"
                 >
                   {t('forgotPasswordLink')}
                 </a>

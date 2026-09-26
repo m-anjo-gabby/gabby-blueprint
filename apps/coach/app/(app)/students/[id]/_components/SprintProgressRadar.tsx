@@ -77,7 +77,7 @@ export function SprintProgressRadar({ studentId, progress: initialProgress }: Pr
         <div className="shrink-0 h-56 flex flex-col">
           <span className="self-start text-[11px] font-bold text-slate-400 tracking-wide">Sprint Progress</span>
           <div className="flex-1 flex flex-col justify-center space-y-1.5">
-            <span className="inline-flex self-center text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-0.5">
+            <span className="inline-flex self-center text-[11px] font-black text-brand bg-brand-50 border border-brand-100 rounded-full px-2.5 py-0.5">
               Stage {progress.stage}
             </span>
             <div className="space-y-1">
@@ -106,7 +106,7 @@ export function SprintProgressRadar({ studentId, progress: initialProgress }: Pr
               <PolarGrid stroke="#e2e8f0" />
               <PolarAngleAxis dataKey="axisLabel" tick={AngleTick} />
               <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} tickCount={5} />
-              <Radar dataKey="percent" stroke="#4f46e5" fill="#4f46e5" fillOpacity={0.25} strokeWidth={2} />
+              <Radar dataKey="percent" stroke="var(--color-brand-500)" fill="var(--color-brand-500)" fillOpacity={0.25} strokeWidth={2} />
               <Tooltip content={<RadarTooltip />} isAnimationActive={false} />
             </RadarChart>
           </ResponsiveContainer>

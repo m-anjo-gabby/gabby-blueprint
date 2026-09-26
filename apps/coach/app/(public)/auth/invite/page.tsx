@@ -133,7 +133,7 @@ export default function InvitePage() {
               transition={{ duration: 0.25, ease: 'easeOut' }}
             >
               <div className="text-center mb-6">
-                <p className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-2">Coach Portal</p>
+                <p className="text-xs font-black text-brand uppercase tracking-widest mb-2">Coach Portal</p>
                 <h1 className="text-2xl font-bold text-slate-800">Coach Account Setup</h1>
                 <p className="text-sm text-slate-500 mt-2 leading-relaxed">
                   {invitedUser.user_name} ({invitedUser.email})<br />
@@ -196,7 +196,7 @@ export default function InvitePage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mt-2"
+                  className="w-full bg-brand hover:bg-brand-strong disabled:bg-brand-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mt-2"
                 >
                   {isSubmitting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -225,7 +225,7 @@ function LoadingState() {
       transition={{ duration: 0.25, ease: 'easeOut' }}
       className="flex flex-col items-center text-center"
     >
-      <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-4" />
+      <Loader2 className="w-8 h-8 animate-spin text-brand mb-4" />
       <h1 className="text-xl font-bold text-slate-800">Verifying Invitation</h1>
       <p className="text-sm text-slate-500 mt-2 leading-relaxed">
         Establishing a secure session. Please wait a moment...
@@ -255,7 +255,7 @@ function ErrorState({ type }: { type: 'expired' | 'error' }) {
           ? 'This invitation link has expired or has already been used. Please ask your administrator to send a new invitation.'
           : 'An unexpected error occurred while creating your session. Please try the link again or contact your administrator.'}
       </p>
-      <Link href="/login" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
+      <Link href="/login" className="w-full bg-brand hover:bg-brand-strong text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
         Back to Sign In
         <ArrowRight className="w-4 h-4" />
       </Link>

@@ -101,7 +101,7 @@ export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
           variant="outline"
           className={`font-bold border-2 text-[10px] px-2 ${
             isStudent
-              ? 'text-indigo-600 border-indigo-100 bg-indigo-50/30'
+              ? 'text-brand border-brand-100 bg-brand-50/30'
               : 'text-slate-500 border-slate-100 bg-slate-50'
           }`}
         >
@@ -140,7 +140,7 @@ export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
               <>
                 <div className={`flex items-center gap-1`}>
                   <div className={`text-[11px] font-black truncate transition-colors ${
-                    license_state === 'active' ? 'text-slate-700 group-hover/lic:text-indigo-600' :
+                    license_state === 'active' ? 'text-slate-700 group-hover/lic:text-brand' :
                     license_state === 'future' ? 'text-blue-600' : 'text-rose-500'
                   }`}>
                     {plan_name}
@@ -159,7 +159,7 @@ export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
 
           {/* 生徒のみペンシルを表示 */}
           {canAssign && (
-            <div className="flex items-center justify-center w-6 h-6 rounded-xl bg-indigo-50 text-indigo-500 border border-indigo-100 shadow-sm transition-all duration-300 group-hover/lic:bg-indigo-600 group-hover/lic:text-white group-hover/lic:border-indigo-600 group-hover/lic:shadow-md group-hover/lic:scale-105">
+            <div className="flex items-center justify-center w-6 h-6 rounded-xl bg-brand-50 text-brand-500 border border-brand-100 shadow-sm transition-all duration-300 group-hover/lic:bg-brand group-hover/lic:text-white group-hover/lic:border-brand group-hover/lic:shadow-md group-hover/lic:scale-105">
               <Pencil size={14} strokeWidth={2.5} />
             </div>
           )}

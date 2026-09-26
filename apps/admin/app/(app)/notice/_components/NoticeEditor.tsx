@@ -280,7 +280,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           <Button
             onClick={handleSave}
             disabled={isSaving || isUploading}
-            className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+            className="h-10 px-6 bg-brand hover:bg-brand-strong text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-brand/20 active:scale-95 transition-all"
           >
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             {isEdit ? t('saveUpdate') : t('saveCreate')}
@@ -302,7 +302,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('titlePlaceholder')}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
             />
           </div>
 
@@ -313,7 +313,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
               <select
                 value={noticeType}
                 onChange={(e) => setNoticeType(e.target.value as NoticeType)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
               >
                 {Object.entries(NOTICE_TYPES).map(([key, config]) => (
                   <option key={key} value={key}>{config.label}</option>
@@ -326,7 +326,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
               <select
                 value={targetType}
                 onChange={(e) => setTargetType(e.target.value as NoticeTargetType)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
               >
                 <option value="ALL">{t('targetAllOption')}</option>
                 <option value="CLIENT">{t('targetClientOption')}</option>
@@ -337,14 +337,14 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
 
           {/* 顧客指定時のドロップダウン */}
           {targetType === 'CLIENT' && (
-            <div className="space-y-2 bg-indigo-50/50 p-3.5 rounded-xl border border-indigo-100">
-              <Label className="text-xs font-black text-indigo-900 flex items-center gap-1.5">
-                <Building2 size={14} className="text-indigo-600" /> {t('selectClientLabel')} <span className="text-rose-500">*</span>
+            <div className="space-y-2 bg-brand-50/50 p-3.5 rounded-xl border border-brand-100">
+              <Label className="text-xs font-black text-brand-900 flex items-center gap-1.5">
+                <Building2 size={14} className="text-brand" /> {t('selectClientLabel')} <span className="text-rose-500">*</span>
               </Label>
               <select
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-all"
+                className="w-full px-3 py-2 bg-white border border-brand-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 transition-all"
               >
                 <option value="">{t('selectClientPlaceholder')}</option>
                 {clientOptions.map((c) => (
@@ -364,7 +364,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                   type="date"
                   value={publishedAtJst}
                   onChange={(e) => setPublishedAtJst(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
                 />
               </div>
 
@@ -375,7 +375,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                     <button
                       type="button"
                       onClick={() => setExpiredAtJst('')}
-                      className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5"
+                      className="text-[10px] font-bold text-brand hover:text-brand-800 transition-colors flex items-center gap-0.5"
                     >
                       <RotateCcw size={10} /> {t('clearLabel')}
                     </button>
@@ -386,7 +386,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                     type="date"
                     value={expiredAtJst}
                     onChange={(e) => setExpiredAtJst(e.target.value)}
-                    className={`w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all ${
+                    className={`w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition-all ${
                       expiredAtJst ? 'pr-8' : ''
                     }`}
                   />
@@ -484,7 +484,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                         <div className="flex items-center gap-1.5">
                           <p className="font-bold text-slate-700 truncate">{att.name}</p>
                           {att.file && (
-                            <span className="text-[9px] bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold px-1.5 py-0.2 rounded-md shrink-0">
+                            <span className="text-[9px] bg-brand-50 text-brand border border-brand-100 font-bold px-1.5 py-0.2 rounded-md shrink-0">
                               {t('newBadge')}
                             </span>
                           )}

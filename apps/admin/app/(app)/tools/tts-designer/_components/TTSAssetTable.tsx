@@ -92,7 +92,7 @@ export default function TTSAssetTable({ assets = [], onRefresh }: TTSAssetTableP
         return (
           <div className="flex items-center gap-3 py-1">
             <div className="flex items-center gap-2 font-mono text-[10px] text-slate-500 bg-slate-50/50 px-2 py-1 rounded-md border border-slate-100 min-w-[140px]">
-              <FileAudio size={12} className={path ? "text-indigo-400" : "text-slate-300 animate-pulse"}/>
+              <FileAudio size={12} className={path ? "text-brand-400" : "text-slate-300 animate-pulse"}/>
               <span className="truncate max-w-[150px]">{fileName}</span>
             </div>
 
@@ -105,8 +105,8 @@ export default function TTSAssetTable({ assets = [], onRefresh }: TTSAssetTableP
                   className={cn(
                     "h-7 w-[88px] px-2 gap-1.5 rounded-lg border transition-all justify-start",
                     isCurrentPlaying 
-                      ? "bg-indigo-50 text-indigo-600 border-indigo-200 shadow-sm" 
-                      : "text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 border-transparent hover:border-slate-100"
+                      ? "bg-brand-50 text-brand border-brand-200 shadow-sm" 
+                      : "text-brand-500 hover:text-brand-strong hover:bg-brand-50 border-transparent hover:border-slate-100"
                   )}
                 >
                   {isCurrentPlaying ? <Loader2 size={12} className="animate-spin" /> : <Headphones size={12} />}
@@ -118,7 +118,7 @@ export default function TTSAssetTable({ assets = [], onRefresh }: TTSAssetTableP
                   size="sm"
                   disabled={isCurrentDownloading}
                   onClick={() => download(path, assetId, fileName || `tts_${assetId}`)}
-                  className="h-7 w-7 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                  className="h-7 w-7 p-0 text-slate-400 hover:text-brand hover:bg-brand-50 rounded-lg transition-all"
                 >
                   {isCurrentDownloading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
                 </Button>
@@ -211,19 +211,19 @@ export default function TTSAssetTable({ assets = [], onRefresh }: TTSAssetTableP
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assets</span>
-            <span className="bg-indigo-50 text-indigo-600 text-[9px] font-bold px-2 py-0.5 rounded-full border border-indigo-100">
+            <span className="bg-brand-50 text-brand text-[9px] font-bold px-2 py-0.5 rounded-full border border-brand-100">
               {table.getFilteredRowModel().rows.length} hits
             </span>
           </div>
 
           {/* 検索バー */}
           <div className="relative w-full md:w-72 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={14} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-500 transition-colors" size={14} />
             <Input
               placeholder="Search phrases or comments..."
               value={globalFilter ?? ""}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="h-9 pl-9 pr-8 bg-white border-slate-200 rounded-xl text-xs font-medium focus-visible:ring-indigo-500 shadow-sm transition-all"
+              className="h-9 pl-9 pr-8 bg-white border-slate-200 rounded-xl text-xs font-medium focus-visible:ring-brand-500 shadow-sm transition-all"
             />
             {globalFilter && (
               <button 

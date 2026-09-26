@@ -62,7 +62,7 @@ export function SprintThemeDialog({ entry, open, onOpenChange }: Props) {
 
               {entry.examples.length > 0 && (
                 <div className="space-y-3 pt-3 border-t border-slate-100">
-                  <h4 className="text-xs font-black text-indigo-600 uppercase tracking-wider">Example Questions</h4>
+                  <h4 className="text-xs font-black text-brand uppercase tracking-wider">Example Questions</h4>
                   <div className="space-y-2.5">
                     {entry.examples.map((example, idx) => (
                       <div key={idx} className="text-xs leading-relaxed">

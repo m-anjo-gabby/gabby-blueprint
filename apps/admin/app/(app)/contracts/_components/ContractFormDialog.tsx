@@ -206,7 +206,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
+          <Button className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none">
             <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
@@ -222,9 +222,9 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
             {isConfirming ? (
               <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
+              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> {t('editTitle')}</>
+              <><Edit size={18} className="text-brand-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -300,7 +300,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
 
             {/* --- ライブセッション設定（コーチ有りプランの場合のみ表示） --- */}
             {isLivePlan && (
-              <div className="space-y-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+              <div className="space-y-4 p-4 bg-brand-50/50 rounded-xl border border-brand-100">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="weekly_frequency" render={({ field }) => (
                     <FormItem>
@@ -349,14 +349,14 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                   <FormItem className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2.5">
                     <FormLabel className="text-xs font-bold text-slate-600">{t('dialoguePracticeLabel')}</FormLabel>
                     {isConfirming ? (
-                      <span className={`text-xs font-bold ${field.value ? 'text-indigo-600' : 'text-slate-400'}`}>{field.value ? t('dialoguePracticeYes') : t('dialoguePracticeNo')}</span>
+                      <span className={`text-xs font-bold ${field.value ? 'text-brand' : 'text-slate-400'}`}>{field.value ? t('dialoguePracticeYes') : t('dialoguePracticeNo')}</span>
                     ) : (
                       <FormControl>
                         <input
                           type="checkbox"
                           checked={field.value as boolean}
                           onChange={(e) => field.onChange(e.target.checked)}
-                          className="h-4 w-4 rounded border-slate-300 accent-indigo-600"
+                          className="h-4 w-4 rounded border-slate-300 accent-brand"
                         />
                       </FormControl>
                     )}

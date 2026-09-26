@@ -168,13 +168,13 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
-                <p className="text-[10px] text-right font-bold text-slate-400">Target: <span className="text-indigo-600">{filteredTasks.length}</span> audio segments</p>
+                <p className="text-[10px] text-right font-bold text-slate-400">Target: <span className="text-brand">{filteredTasks.length}</span> audio segments</p>
               </div>
 
               <div className="space-y-5 pt-6 border-t border-dashed border-slate-200">
                 <div className="flex justify-between items-center">
                   <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 2: Settings</Label>
-                  <Button variant="ghost" size="sm" onClick={() => speak(SAMPLE_TEXT, params)} disabled={isSpeaking} className="h-8 text-[10px] font-bold text-indigo-600 gap-1.5 px-3 rounded-full border border-indigo-100">
+                  <Button variant="ghost" size="sm" onClick={() => speak(SAMPLE_TEXT, params)} disabled={isSpeaking} className="h-8 text-[10px] font-bold text-brand gap-1.5 px-3 rounded-full border border-brand-100">
                     {isSpeaking ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />} TEST VOICE
                   </Button>
                 </div>
@@ -202,7 +202,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
             </>
           ) : (
             <div className="py-10 flex flex-col items-center justify-center space-y-6">
-              {status === 'running' && <Loader2 className="h-14 w-14 text-indigo-500 animate-spin" strokeWidth={1.5} />}
+              {status === 'running' && <Loader2 className="h-14 w-14 text-brand-500 animate-spin" strokeWidth={1.5} />}
               {status === 'completed' && <CheckCircle2 className="h-14 w-14 text-emerald-500" strokeWidth={1.5} />}
               {status === 'error' && <AlertCircle className="h-14 w-14 text-rose-500" strokeWidth={1.5} />}
               <div className="w-full space-y-3 text-center px-4">
@@ -219,7 +219,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
         <DialogFooter className="p-4 bg-slate-50 border-t flex gap-2">
           {status === 'idle' && (
             !showConfirm ? (
-              <Button onClick={() => setShowConfirm(true)} disabled={filteredTasks.length === 0} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 shadow-lg gap-2 rounded-full">NEXT STEP <ChevronRight size={18} /></Button>
+              <Button onClick={() => setShowConfirm(true)} disabled={filteredTasks.length === 0} className="w-full bg-brand hover:bg-brand-strong text-white font-black h-12 shadow-lg gap-2 rounded-full">NEXT STEP <ChevronRight size={18} /></Button>
             ) : (
               <div className="flex gap-2 w-full">
                 <Button variant="ghost" onClick={() => setShowConfirm(false)} className="flex-1 font-bold h-12 rounded-full"><ArrowLeft size={16} /> Back</Button>

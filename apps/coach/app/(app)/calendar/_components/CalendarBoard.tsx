@@ -172,7 +172,7 @@ export function CalendarBoard({ highlightedDate, reloadToken }: CalendarBoardPro
                   className={cn(
                     'min-h-16 sm:min-h-19 rounded-lg flex flex-col items-stretch p-1 gap-0.5 text-left transition-colors relative',
                     !isSameMonth(day, currentMonth) && 'opacity-40',
-                    isSelected ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'hover:bg-slate-100',
+                    isSelected ? 'bg-brand-50 ring-2 ring-brand-500' : 'hover:bg-slate-100',
                     isHighlighted && 'bg-amber-50 ring-2 ring-amber-400'
                   )}
                 >
@@ -181,7 +181,7 @@ export function CalendarBoard({ highlightedDate, reloadToken }: CalendarBoardPro
                       className={cn(
                         'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
                         key === todayKey
-                          ? 'bg-indigo-600 text-white'
+                          ? 'bg-brand text-white'
                           : isSameMonth(day, currentMonth) && key >= todayKey
                             ? 'text-slate-700'
                             : 'text-slate-400'

@@ -84,7 +84,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
       id={`notice-${notice.notice_id}`}
       className={cn(
         'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all',
-        !notice.is_read ? 'border-indigo-200' : 'border-slate-200'
+        !notice.is_read ? 'border-brand-200' : 'border-slate-200'
       )}
     >
       {/* ─── Card header (click to expand) ──── */}
@@ -96,7 +96,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         {/* Unread indicator */}
         <div className="mt-1 shrink-0">
           {!notice.is_read ? (
-            <span className="inline-block w-2 h-2 rounded-full bg-indigo-500" />
+            <span className="inline-block w-2 h-2 rounded-full bg-brand-500" />
           ) : (
             <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />
           )}
@@ -211,11 +211,11 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                                 type="button"
                                 disabled={!!loadingActionId}
                                 onClick={() => handlePreview(att.id, att.path)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-slate-600 hover:text-indigo-600 rounded-lg text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-brand-50 border border-slate-200 hover:border-brand-200 text-slate-600 hover:text-brand rounded-lg text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                                 title="Open in a new tab"
                               >
                                 {isPreviewLoading ? (
-                                  <Loader2 size={12} className="animate-spin text-indigo-600" />
+                                  <Loader2 size={12} className="animate-spin text-brand" />
                                 ) : (
                                   <Eye size={12} />
                                 )}

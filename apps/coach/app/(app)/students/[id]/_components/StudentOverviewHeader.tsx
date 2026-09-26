@@ -109,7 +109,7 @@ export function StudentOverviewHeader({ profile, upcomingSession }: Props) {
             </div>
           </div>
         </div>
-        <div className="border-t border-indigo-100 bg-linear-to-br from-indigo-50/80 to-indigo-50/10 px-5 py-4">
+        <div className="border-t border-brand-100 bg-linear-to-br from-brand-50/80 to-brand-50/10 px-5 py-4">
           <TodaysLessonPanel studentId={profile.student_id} upcomingSession={upcomingSession} />
         </div>
       </div>

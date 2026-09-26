@@ -94,7 +94,7 @@ export function TermFormDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
+        <Button className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none">
           <PlusCircle size={16} /> {t('createButton')}
         </Button>
       </DialogTrigger>
@@ -105,7 +105,7 @@ export function TermFormDialog() {
             {isConfirming ? (
               <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : (
-              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
+              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -157,8 +157,8 @@ export function TermFormDialog() {
                 )} />
               </div>
 
-              <p className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-600 bg-indigo-50/60 border border-indigo-100 rounded-xl px-3 py-2">
-                <Info size={14} className="mt-0.5 shrink-0 text-indigo-500" />
+              <p className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-600 bg-brand-50/60 border border-brand-100 rounded-xl px-3 py-2">
+                <Info size={14} className="mt-0.5 shrink-0 text-brand-500" />
                 {t('reagreementNotice')}
               </p>
 

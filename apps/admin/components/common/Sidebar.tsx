@@ -33,7 +33,7 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
   return (
     <li className="list-none group relative">
       {isActive && !isCollapsed && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-indigo-600" />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-brand" />
       )}
       <Link
         href={item.href}
@@ -42,7 +42,7 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
           flex items-center rounded-xl transition-all duration-200 text-sm font-bold
           ${isCollapsed ? 'justify-center py-3 px-0' : isChild ? 'justify-between px-3 py-2.5' : 'justify-between px-4 py-3'}
           ${isActive
-            ? 'bg-indigo-50 text-indigo-700'
+            ? 'bg-brand-50 text-brand-strong'
             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
           }
         `}
@@ -51,7 +51,7 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
           <span className="relative shrink-0">
             <Icon
               size={isChild ? 15 : 18}
-              className={isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'}
+              className={isActive ? 'text-brand' : 'text-slate-400 group-hover:text-brand-500'}
             />
             {hasBadge && (
               <span
@@ -110,11 +110,11 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
         <button
           className={`
             flex justify-center items-center w-full rounded-xl py-3 transition-all duration-200
-            ${isAnyChildActive ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-400 hover:text-slate-900'}
+            ${isAnyChildActive ? 'bg-brand-50 text-brand-strong' : 'hover:bg-slate-50 text-slate-400 hover:text-slate-900'}
           `}
           title={groupLabel}
         >
-          <Icon size={18} className={isAnyChildActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'} />
+          <Icon size={18} className={isAnyChildActive ? 'text-brand' : 'text-slate-400 group-hover:text-brand-500'} />
         </button>
         {/* ホバーで子メニューをフライアウト表示 */}
         <div className="fixed left-20 ml-2 top-auto -translate-y-8 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 z-100">
@@ -127,7 +127,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
                 onClick={onLinkClick}
                 className={`
                   flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors
-                  ${currentPathname.startsWith(child.href) ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}
+                  ${currentPathname.startsWith(child.href) ? 'bg-brand-50 text-brand-strong' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}
                 `}
               >
                 <child.icon size={13} />
@@ -147,18 +147,18 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
         onClick={() => setIsOpen((v) => !v)}
         className={`
           flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 text-sm font-bold
-          ${isAnyChildActive ? 'text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
+          ${isAnyChildActive ? 'text-brand-strong' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
         `}
       >
         <div className="flex items-center gap-3">
-          <Icon size={18} className={isAnyChildActive ? 'text-indigo-600' : 'text-slate-400'} />
+          <Icon size={18} className={isAnyChildActive ? 'text-brand' : 'text-slate-400'} />
           <span className="whitespace-nowrap overflow-hidden text-sm font-bold">{groupLabel}</span>
         </div>
         <span className={`flex items-center justify-center rounded-full p-1 transition-colors ${isOpen ? 'bg-slate-100' : 'group-hover:bg-slate-100'}`}>
           <ChevronDown
             size={18}
             strokeWidth={2.5}
-            className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${isAnyChildActive ? 'text-indigo-600' : 'text-slate-400'}`}
+            className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${isAnyChildActive ? 'text-brand' : 'text-slate-400'}`}
           />
         </span>
       </button>
