@@ -58,10 +58,12 @@
 | コーチ未登録 | 「コーチが登録されていません。」 | システムにコーチが1人も登録されていない場合 |
 | レポート取得失敗 | エラーメッセージ（赤背景） | サーバー側でレポート取得に失敗した場合 |
 | 対象生徒なし | 「対象月に有効契約を持つ生徒がいません。」 | その月に有効契約を持つ生徒が0人の場合。この場合CSV出力ボタンも非活性 |
+| 読み込み中 | 見出しとコーチ・月選択はそのまま、承認バー・グリッドの位置に表の骨組みを表示 | 初回表示時、およびコーチ・月を切り替えた時（条件ごとに `key` を変えた `Suspense`） |
 
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/monthly-reports/page.tsx`
+- `apps/admin/app/(app)/monthly-reports/_components/MonthlyReportSection.tsx`（レポートの取得と本体表示）
 - `apps/admin/app/(app)/monthly-reports/_components/CoachMonthSelector.tsx`
 - `apps/admin/app/(app)/monthly-reports/_components/MonthPickerPopover.tsx`
 - `apps/admin/app/(app)/monthly-reports/_components/ApprovalControlBar.tsx`

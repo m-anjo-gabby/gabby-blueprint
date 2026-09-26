@@ -86,11 +86,13 @@
 | 操作可能期間の終了 | 「Start Live Session」ボタンと「Training」セクションが非表示になり、「Starting a new call or Live Sprint is no longer available for this session — press End Session to record the outcome.」の案内のみ | 終了予定時刻から規定の猶予時間（Video SDKの最大通話時間相当）を過ぎた場合 |
 | 確定済み | 通常操作エリアの代わりに「This lesson has already been finalized.」＋結果画面へのリンク | 既にfinalize_session/resolve_stale_sessionで確定済みの場合（このハブへの通常の導線は生じないが、別タブで先に確定された場合等に発生しうる） |
 | 該当データが無い | 404ページ | 指定した`sessionId`が存在しない、または生徒との担当関係が無い場合 |
+| 読み込み中 | Session Info（通話開始・終了の操作）を先に表示し、Dialogue Practice・Prep・Self-Trainingの各区画は骨組みから取得が終わった順に置き換わる | セッション情報の取得後、区画ごとに個別の `Suspense` で遅延表示 |
 
 ## 実装参照（エンジニア向け）
 
 - `apps/coach/app/(app)/students/[id]/sessions/[sessionId]/page.tsx`
 - `apps/coach/app/(app)/students/[id]/sessions/[sessionId]/_components/SessionHub.tsx`
+- `apps/coach/app/(app)/students/[id]/sessions/[sessionId]/_components/HubSections.tsx` / `LastHomeworkList.tsx`（区画ごとのデータ取得。page.tsx が `Suspense` で包んで SessionHub の差し込み口に渡す）
 - `apps/coach/hooks/useEndLesson.ts`
 - `apps/coach/components/session/EndLessonReasonDialog.tsx`
 - 共通ダイアログ: `apps/coach/app/(app)/calendar/_components/SessionActionDialog.tsx`

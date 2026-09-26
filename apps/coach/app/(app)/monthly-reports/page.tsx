@@ -1,7 +1,7 @@
-import { getMyMonthlyReport } from '@/actions/monthlyReportAction';
+import { Suspense } from 'react';
+import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
 import { MonthSelector } from './_components/MonthSelector';
-import { SummaryCard } from './_components/SummaryCard';
-import { MonthlyReportGrid } from './_components/MonthlyReportGrid';
+import { MonthlyReportSection } from './_components/MonthlyReportSection';
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -16,8 +16,6 @@ export default async function MonthlyReportsPage({
   const params = await searchParams;
   const yearMonth = params.month || currentYearMonth();
 
-  const result = await getMyMonthlyReport(yearMonth);
-
   return (
     <div className="space-y-6">
       <div className="max-w-2xl">
@@ -30,16 +28,10 @@ export default async function MonthlyReportsPage({
 
       <MonthSelector currentMonth={yearMonth} />
 
-      {!result.success ? (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {result.message}
-        </div>
-      ) : (
-        <>
-          <SummaryCard report={result.report} />
-          <MonthlyReportGrid report={result.report} />
-        </>
-      )}
+      {/* Query changes don't trigger loading.tsx, so re-key per month to show the skeleton while switching */}
+      <Suspense key={yearMonth} fallback={<PageSkeleton label="Loading..." variant="table" header={false} />}>
+        <MonthlyReportSection yearMonth={yearMonth} />
+      </Suspense>
     </div>
   );
 }
