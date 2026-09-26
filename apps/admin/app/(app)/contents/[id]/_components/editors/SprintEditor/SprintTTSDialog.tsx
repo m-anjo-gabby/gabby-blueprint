@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, XCircle, PencilLine, Check, Copy } from 'lucide-react';
+import { Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, XCircle, PencilLine, Check, Copy } from 'lucide-react';
 import { SprintQuestion } from '@gabby/types/sprint';
 import { TTSAdjustmentData, WordAdjustment } from '@gabby/types/word';
 import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
@@ -325,12 +325,10 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           </div>
 
           <DialogFooter className="p-4 bg-white border-t flex gap-3">
-            <Button variant="outline" className="px-8 border-2 border-brand-100 text-brand font-bold h-12 rounded-full gap-2" onClick={() => speak(ssml)} disabled={isSpeaking || isProcessing}>
-              {isSpeaking ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} />}
+            <Button pending={isSpeaking} icon={<Play size={18} />} variant="outline" className="px-8 border-2 border-brand-100 text-brand font-bold h-12 rounded-full gap-2" onClick={() => speak(ssml)} disabled={isSpeaking || isProcessing}>
               LISTEN
             </Button>
-            <Button className={`px-12 font-black h-12 rounded-full shadow-lg gap-2 text-white ${ssmlMode === 'manual' ? 'bg-rose-600' : 'bg-brand'}`} onClick={() => setShowSaveAlert(true)} disabled={isProcessing || isSpeaking}>
-              {isProcessing ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+            <Button pending={isProcessing} icon={<Save size={18} />} className={`px-12 font-black h-12 rounded-full shadow-lg gap-2 text-white ${ssmlMode === 'manual' ? 'bg-rose-600' : 'bg-brand'}`} onClick={() => setShowSaveAlert(true)} disabled={isProcessing || isSpeaking}>
               SAVE
             </Button>
           </DialogFooter>

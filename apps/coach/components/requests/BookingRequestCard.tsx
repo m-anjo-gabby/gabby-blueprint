@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Check, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -117,8 +117,7 @@ export function BookingRequestCard({ request, onResolved, onDateHover }: Booking
 
       {isPending && (
         <div className="flex items-center gap-2 pt-1">
-          <Button type="button" size="sm" onClick={handleApprove} disabled={isApproving || isRejecting}>
-            {isApproving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+          <Button pending={isApproving} icon={<Check size={14} />} type="button" size="sm" onClick={handleApprove} disabled={isApproving || isRejecting}>
             Approve
           </Button>
           <Button
@@ -152,8 +151,7 @@ export function BookingRequestCard({ request, onResolved, onDateHover }: Booking
             <Button type="button" variant="outline" onClick={() => setShowRejectDialog(false)} disabled={isRejecting}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleReject} disabled={isRejecting}>
-              {isRejecting && <Loader2 size={14} className="animate-spin" />}
+            <Button pending={isRejecting} type="button" onClick={handleReject} disabled={isRejecting}>
               Reject Request
             </Button>
           </DialogFooter>

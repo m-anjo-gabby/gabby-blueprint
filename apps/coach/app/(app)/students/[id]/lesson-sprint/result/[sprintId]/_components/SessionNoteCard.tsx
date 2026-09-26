@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Pencil, StickyNote } from 'lucide-react';
+import { Pencil, StickyNote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -78,8 +78,7 @@ export function SessionNoteCard({ lessonSprintId, initialNote }: Props) {
               <Button type="button" size="sm" variant="ghost" onClick={handleCancel} disabled={isSaving}>
                 Cancel
               </Button>
-              <Button type="button" size="sm" onClick={handleSave} disabled={isSaving}>
-                {isSaving && <Loader2 size={14} className="animate-spin" />}
+              <Button pending={isSaving} type="button" size="sm" onClick={handleSave} disabled={isSaving}>
                 Save
               </Button>
             </div>

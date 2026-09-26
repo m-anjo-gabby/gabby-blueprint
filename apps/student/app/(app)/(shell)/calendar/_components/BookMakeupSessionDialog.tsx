@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -235,8 +234,7 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
           <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             戻る
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isSubmitting || !selectedSlot || !newStartTime || !!conflictMessage}>
-            {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+          <Button pending={isSubmitting} type="button" onClick={handleSubmit} disabled={isSubmitting || !selectedSlot || !newStartTime || !!conflictMessage}>
             リクエストする
           </Button>
         </DialogFooter>

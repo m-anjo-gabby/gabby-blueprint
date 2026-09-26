@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Loader2, StickyNote } from 'lucide-react';
+import { StickyNote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -71,8 +71,7 @@ export function CoachNotesCard({ studentId, initialNotes }: Props) {
             placeholder="e.g. Struggling with past perfect tense, review in next session."
           />
           <div className="flex justify-end">
-            <Button type="button" size="sm" onClick={handleSave} disabled={isSaving}>
-              {isSaving && <Loader2 size={14} className="animate-spin" />}
+            <Button pending={isSaving} type="button" size="sm" onClick={handleSave} disabled={isSaving}>
               Save Note
             </Button>
           </div>

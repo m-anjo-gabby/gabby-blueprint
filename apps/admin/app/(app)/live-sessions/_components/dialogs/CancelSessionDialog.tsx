@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -81,8 +80,7 @@ export function CancelSessionDialog({ target, onClose, onCancelled }: Props) {
           <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={isCancelling}>
             {t('close')}
           </Button>
-          <Button type="button" onClick={handleCancel} disabled={isCancelling} className="bg-rose-600 hover:bg-rose-700">
-            {isCancelling && <Loader2 size={14} className="animate-spin" />}
+          <Button pending={isCancelling} type="button" onClick={handleCancel} disabled={isCancelling} className="bg-rose-600 hover:bg-rose-700">
             {t('confirmButton')}
           </Button>
         </DialogFooter>

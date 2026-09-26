@@ -373,8 +373,8 @@ export default function TTSAssetGenerator() {
         </Button>
 
         <div className="flex items-center gap-4">
-          <Button variant="outline" className="h-14 px-8 border-2 border-slate-200 text-slate-800 font-black text-xs tracking-widest rounded-2xl hover:bg-slate-50 transition-all gap-3" onClick={() => speak(ssml)} disabled={isSpeaking || isProcessing || !ssml}>
-            {isSpeaking ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} fill="currentColor" />} LISTEN RESULT
+          <Button pending={isSpeaking} icon={<Play size={18} fill="currentColor" />} variant="outline" className="h-14 px-8 border-2 border-slate-200 text-slate-800 font-black text-xs tracking-widest rounded-2xl hover:bg-slate-50 transition-all gap-3" onClick={() => speak(ssml)} disabled={isSpeaking || isProcessing || !ssml}>
+            LISTEN RESULT
           </Button>
           <Button className={`h-14 px-14 font-black text-sm tracking-[0.1em] rounded-2xl shadow-xl transition-all gap-3 text-white
             ${ssmlMode === 'manual' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-brand hover:bg-brand-strong'}`} 

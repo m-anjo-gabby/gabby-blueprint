@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { createUser, createUserDirect, updateUser, resendInvite, getRoles } from '@/actions/adminUserAction';
 import { getActiveContractsByClient, assignLicenseToUser } from '@/actions/adminContractAction';
-import { Mail, AlertCircle, PlusCircle, CheckCircle2, Loader2, Edit, ShieldCheck, Save, Shield } from 'lucide-react';
+import { Mail, AlertCircle, PlusCircle, CheckCircle2, Edit, ShieldCheck, Save, Shield } from 'lucide-react';
 import { CreateUserResponse, UserRecord, RoleDefinition, USER_TYPES, getUserTypeLabel } from '@gabby/types/user';
 import { ClientOption } from '@gabby/types/client';
 import { ContractDetail } from '@gabby/types/contract';
@@ -593,8 +593,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                       )}
                       <div className="flex gap-3">
                         <Button type="button" variant="ghost" className="flex-1 text-slate-400 h-12 rounded-xl" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>{tCommon('back')}</Button>
-                        <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white shadow-lg h-12 rounded-xl font-bold" disabled={isSubmitting}>
-                          {isSubmitting ? <Loader2 className="animate-spin" /> : (mode === 'create' && watchCreationMode === 'direct' ? t('createAccount') : t('confirmSave'))}
+                        <Button type="submit" pending={isSubmitting} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white shadow-lg h-12 rounded-xl font-bold">
+                          {mode === 'create' && watchCreationMode === 'direct' ? t('createAccount') : t('confirmSave')}
                         </Button>
                       </div>
                     </div>
@@ -616,8 +616,8 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                         </Button>
                       )}
                       {mode === 'edit' && isInvitingUser && ( // 編集モードかつ招待中のユーザーの場合のみ再送ボタンを表示
-                        <Button type="button" variant="outline" className="w-full text-xs h-10 rounded-xl border-dashed border-slate-300 text-slate-500" disabled={isResending} onClick={handleResendInvite}>
-                          {isResending ? <Loader2 className="animate-spin" size={14} /> : <Mail size={14} />} {t('resendInvite')}
+                        <Button pending={isResending} icon={<Mail size={14} />} type="button" variant="outline" className="w-full text-xs h-10 rounded-xl border-dashed border-slate-300 text-slate-500" disabled={isResending} onClick={handleResendInvite}>
+                          {t('resendInvite')}
                         </Button>
                       )}
                     </div>

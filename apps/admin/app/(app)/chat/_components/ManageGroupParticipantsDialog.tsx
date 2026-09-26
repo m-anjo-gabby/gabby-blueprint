@@ -243,8 +243,7 @@ export function ManageGroupParticipantsDialog({ roomId, members, onChanged }: Ma
                   disabled={isLoadingCandidates || !addUserType}
                 />
               </div>
-              <Button onClick={handleAdd} disabled={!addUserId || isAdding} className="gap-1.5 shrink-0">
-                {isAdding ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+              <Button pending={isAdding} icon={<UserPlus size={16} />} onClick={handleAdd} disabled={!addUserId || isAdding} className="gap-1.5 shrink-0">
                 {t('addButton')}
               </Button>
             </div>

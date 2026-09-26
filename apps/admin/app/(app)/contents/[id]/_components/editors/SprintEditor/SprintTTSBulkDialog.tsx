@@ -174,8 +174,8 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
               <div className="space-y-5 pt-6 border-t border-dashed border-slate-200">
                 <div className="flex justify-between items-center">
                   <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 2: Settings</Label>
-                  <Button variant="ghost" size="sm" onClick={() => speak(SAMPLE_TEXT, params)} disabled={isSpeaking} className="h-8 text-[10px] font-bold text-brand gap-1.5 px-3 rounded-full border border-brand-100">
-                    {isSpeaking ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />} TEST VOICE
+                  <Button pending={isSpeaking} icon={<Volume2 size={14} />} variant="ghost" size="sm" onClick={() => speak(SAMPLE_TEXT, params)} disabled={isSpeaking} className="h-8 text-[10px] font-bold text-brand gap-1.5 px-3 rounded-full border border-brand-100">
+                    TEST VOICE
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 gap-3">

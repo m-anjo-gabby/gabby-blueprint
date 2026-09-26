@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Loader2, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -191,8 +191,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
           <Button variant="outline" onClick={() => setOpen(false)}>
             {tCommon('cancel')}
           </Button>
-          <Button onClick={handleCreate} disabled={!canCreate} className="gap-1.5">
-            {isCreating && <Loader2 size={16} className="animate-spin" />}
+          <Button pending={isCreating} onClick={handleCreate} disabled={!canCreate} className="gap-1.5">
             {t('createButton')}
           </Button>
         </DialogFooter>

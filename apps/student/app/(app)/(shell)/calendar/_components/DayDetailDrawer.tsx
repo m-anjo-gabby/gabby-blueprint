@@ -197,8 +197,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
       )}
 
       {event.rsvp_enabled && !event.is_joined && isFuture && (
-        <Button type="button" size="sm" onClick={handleJoin} disabled={isSubmitting} className="mt-1">
-          {isSubmitting && <Loader2 size={13} className="animate-spin" />}
+        <Button pending={isSubmitting} type="button" size="sm" onClick={handleJoin} disabled={isSubmitting} className="mt-1">
           参加する
         </Button>
       )}

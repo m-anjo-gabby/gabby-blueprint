@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Clock, CalendarClock } from 'lucide-react';
+import { Clock, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -202,8 +202,7 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
               <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 キャンセル
               </Button>
-              <Button type="button" onClick={handleSubmit} disabled={isSubmitting || !selectedCell || !slotNo}>
-                {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+              <Button pending={isSubmitting} type="button" onClick={handleSubmit} disabled={isSubmitting || !selectedCell || !slotNo}>
                 リクエストを送信
               </Button>
             </DialogFooter>

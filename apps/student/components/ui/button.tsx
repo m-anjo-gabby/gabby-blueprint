@@ -41,10 +41,12 @@ export interface ButtonProps
   asChild?: boolean
   /** 処理中表示（スピナーを出して押せなくする）。asChild のときはスピナーを出さず無効化のみ行う */
   pending?: boolean
+  /** ラベルの前に置くアイコン。pending 中はスピナーに置き換わる */
+  icon?: React.ReactNode
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, pending = false, disabled, children, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, pending = false, icon, disabled, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
     return (
       <Comp
@@ -54,13 +56,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={pending || undefined}
         {...props}
       >
-        {pending && !asChild ? (
-          <>
-            <Loader2 className="animate-spin" aria-hidden />
-            {size !== "icon" && children}
-          </>
-        ) : (
+        {asChild ? (
+          // Slot は子要素1つだけを受け取るため、アイコン・スピナーは付けない
           children
+        ) : (
+          <>
+            {pending ? <Loader2 className="animate-spin" aria-hidden /> : icon}
+            {/* アイコンだけのボタンは、処理中はスピナーだけを出す */}
+            {!(pending && size === "icon") && children}
+          </>
         )}
       </Comp>
     )

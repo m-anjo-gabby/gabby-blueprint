@@ -37,7 +37,7 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
 - ローディング表示（全アプリ共通）: 次の4種類に分けて実装する。部品は `packages/lib/components/common/`（`Skeleton` / `PageSkeleton`・`CardSkeleton`・`LoadingScreen`）に集約し、各アプリは `RouteLoading`（admin/coach は `components/common/`、student は `components/shell/`）経由で使う。スケルトンの色は `brand-theme.css` の `skeleton` トークン。
   - A. 画面遷移: サーバーで取得する画面は、遷移直後に骨組みを出すため `loading.tsx`（中身は `<RouteLoading variant=... />` の1行）を置く。`loading.tsx` は**そのフォルダ直下の区間が切り替わる遷移でしか表示されない**（Next.jsの仕様）ため、ルートグループ直下に加え、一覧→詳細など複数の子を行き来するフォルダにも置く。新しい子ルート・詳細画面を追加したら、親フォルダに `loading.tsx` があるか確認する。
   - B. 画面内の遅延表示: 取得の重い画面は、ページで全件を `await` せずカード・区画ごとの async コンポーネントに分けて `<Suspense fallback={<CardSkeleton />}>` で包む（例: coach `students/[id]/page.tsx`）。複数区画で同じ取得を使う場合は React の `cache()` で1回にまとめる。クライアント部品が画面全体を持つ場合は、区画を `ReactNode` の差し込み口にしてサーバー側で `Suspense` を渡す（例: coach `sessions/[sessionId]/page.tsx`）。月切替・検索などURLのクエリだけが変わる遷移では `loading.tsx` が出ないため、結果の区画を条件ごとに `key` を変えた `<Suspense>` で包む（例: admin/coach `monthly-reports/page.tsx`）か、切替操作側で `useTransition` の `isPending` を表示する（例: `useMonthNavigator`）。
-  - C. 操作中: ボタンの処理中表示は各アプリの `Button` の `pending` プロップ（フォーム送信は `useFormStatus`、それ以外は `useTransition` の `isPending` を渡す）を使い、`Loader2` の個別実装は新規に増やさない。既存の個別実装は、その画面を改修するついでに置き換える。
+  - C. 操作中: ボタンの処理中表示は各アプリの `Button` の `pending` プロップ（先頭アイコンは `icon` プロップで渡すと処理中はスピナーに置き換わる）（フォーム送信は `useFormStatus`、それ以外は `useTransition` の `isPending` を渡す）を使い、`Loader2` の個別実装は新規に増やさない。既存の個別実装は、その画面を改修するついでに置き換える。
   - D. 没入画面（ドリル・ライブ通話・チャットルーム等）の準備中表示は画面専用の実装を許可する。遷移中の汎用表示は `LoadingScreen`（student は `ImmersiveLoading`）。
 - 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラーがない状態にしてから完了とすること。
 - `apps/student` のUI実装規約:

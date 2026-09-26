@@ -229,8 +229,7 @@ export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUp
                   </p>
                 )}
 
-                <Button type="button" onClick={handleStageUp} disabled={isForcingStage} className="w-full">
-                  {isForcingStage && <Loader2 size={14} className="animate-spin" />}
+                <Button pending={isForcingStage} type="button" onClick={handleStageUp} disabled={isForcingStage} className="w-full">
                   {gaps.length > 0 ? `Force Advance to Stage ${targetStage}` : `Advance to Stage ${targetStage}`}
                 </Button>
               </>

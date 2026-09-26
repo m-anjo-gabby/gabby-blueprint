@@ -205,12 +205,9 @@ function HomeworkCreateForm({
 
       <div className="flex items-center justify-between gap-2">
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-        <Button type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()}>
-          {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
-        </Button>
+        <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
 
-        <Button type="button" disabled={!text.trim() || busy} onClick={handlePost} className="gap-1.5">
-          {isPosting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+        <Button pending={isPosting} icon={<Send size={16} />} type="button" disabled={!text.trim() || busy} onClick={handlePost} className="gap-1.5">
           Post Homework
         </Button>
       </div>
@@ -390,9 +387,7 @@ function PostedHomework({
 
         <div className="flex items-center gap-2">
           <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-          <Button type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()}>
-            {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
-          </Button>
+          <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
 
           <Textarea
             value={commentText}
@@ -402,9 +397,7 @@ function PostedHomework({
             disabled={busy}
           />
 
-          <Button type="button" size="icon" disabled={(!commentText.trim() && pendingAttachments.length === 0) || busy} onClick={handleSendComment}>
-            {isSendingComment ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-          </Button>
+          <Button pending={isSendingComment} icon={<Send size={16} />} type="button" size="icon" disabled={(!commentText.trim() && pendingAttachments.length === 0) || busy} onClick={handleSendComment} />
         </div>
       </div>
 

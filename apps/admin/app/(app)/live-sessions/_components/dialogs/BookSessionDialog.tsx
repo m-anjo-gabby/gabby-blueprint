@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -90,8 +89,7 @@ export function BookSessionDialog({ target, onClose, onBooked }: Props) {
           <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={isBooking}>
             {t('close')}
           </Button>
-          <Button type="button" onClick={handleBook} disabled={isBooking || !date || !time}>
-            {isBooking && <Loader2 size={14} className="animate-spin" />}
+          <Button pending={isBooking} type="button" onClick={handleBook} disabled={isBooking || !date || !time}>
             {t('confirmButton')}
           </Button>
         </DialogFooter>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Loader2, Lock, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Lock, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -141,12 +141,10 @@ export function TrainingReportEntry({ studentId, ticketId, report: initialReport
                 className="text-xs"
               />
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={handleSave} disabled={isSaving || isFinalizing}>
-                  {isSaving && <Loader2 size={12} className="animate-spin" />}
+                <Button pending={isSaving} type="button" variant="outline" size="sm" onClick={handleSave} disabled={isSaving || isFinalizing}>
                   Save Draft
                 </Button>
-                <Button type="button" size="sm" onClick={handleFinalize} disabled={isSaving || isFinalizing}>
-                  {isFinalizing && <Loader2 size={12} className="animate-spin" />}
+                <Button pending={isFinalizing} type="button" size="sm" onClick={handleFinalize} disabled={isSaving || isFinalizing}>
                   Finalize Report
                 </Button>
               </div>
