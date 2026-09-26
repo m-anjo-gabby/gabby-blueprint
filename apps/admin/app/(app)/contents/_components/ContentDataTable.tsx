@@ -25,23 +25,17 @@ import {
   ChevronRight, 
   Search, 
   X, 
-  Layers,
-  Video,
-  MessageSquare,
-  MessagesSquare,
   Globe,
   Lock,
-  ExternalLink,
   Plus,
-  TagIcon,
   EyeOff,
-  HelpCircle,
   Building2,
   Pencil,
   ArrowRight
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Content, ContentType, CONTENT_TYPES, CONTENT_SCOPES } from "@gabby/types/content";
+import { getContentTypeConfig } from "@gabby/lib/content/ui";
 import { ContentFormDialog } from "./ContentFormDialog";
 import Link from "next/link";
 import { ContentTagDialog } from "./ContentTagDialog";
@@ -56,12 +50,12 @@ interface ContentDataTableProps {
 
 /**
  * 種別ごとのエディタ導線設定（ビデオ(1)はエディタ未実装のため定義しない）。
- * 色・アイコンは種別バッジと揃え、どのエディタへ遷移するかを視覚的に対応付ける。
+ * 色・アイコンは種別バッジと同じく getContentTypeConfig（全アプリ共通の分類色）から取得する。
  */
-const EDITOR_CONFIG: Partial<Record<ContentType, { labelKey: "word" | "sprint" | "dialogue"; icon: React.ReactNode; className: string }>> = {
-  0: { labelKey: "word", icon: <MessageSquare size={13} />, className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300" },
-  2: { labelKey: "sprint", icon: <Layers size={13} />, className: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300" },
-  3: { labelKey: "dialogue", icon: <MessagesSquare size={13} />, className: "bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:border-cyan-300" },
+const EDITOR_LABEL_KEYS: Partial<Record<ContentType, "word" | "sprint" | "dialogue">> = {
+  0: "word",
+  2: "sprint",
+  3: "dialogue",
 };
 
 function getEditorHref(content: Content): string {
@@ -100,7 +94,7 @@ export function ContentDataTable({
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5 py-1">
           {/* エディタがある種別は教材名からも遷移できるようにする（操作列ボタンの補助導線） */}
-          {EDITOR_CONFIG[row.original.content_type] ? (
+          {EDITOR_LABEL_KEYS[row.original.content_type] ? (
             <Link
               href={getEditorHref(row.original)}
               className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-brand hover:underline underline-offset-2 transition-colors"
@@ -128,16 +122,11 @@ export function ContentDataTable({
       header: t('typeHeader'),
       cell: ({ row }) => {
         const type = row.original.content_type;
-        const config = {
-          0: { icon: <MessageSquare size={12} />, className: "bg-blue-50 text-blue-600 border-blue-100" },
-          1: { icon: <Video size={12} />, className: "bg-purple-50 text-purple-600 border-purple-100" },
-          2: { icon: <Layers size={12} />, className: "bg-emerald-50 text-emerald-600 border-emerald-100" },
-          3: { icon: <MessagesSquare size={12} />, className: "bg-cyan-50 text-cyan-600 border-cyan-100" },
-        }[type] || { icon: null, className: "" };
+        const { icon: TypeIcon, theme } = getContentTypeConfig(type);
 
         return (
-          <Badge variant="outline" className={`${config.className} gap-1 font-bold text-[10px] px-2`}>
-            {config.icon}
+          <Badge variant="outline" className={`${theme.chip} gap-1 font-bold text-[10px] px-2`}>
+            <TypeIcon size={12} />
             {CONTENT_TYPES[type]?.label}
           </Badge>
         );
@@ -249,19 +238,20 @@ export function ContentDataTable({
       id: "actions",
       header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('actionsHeader')}</div>,
       cell: ({ row }) => {
-        const editor = EDITOR_CONFIG[row.original.content_type];
+        const editorLabelKey = EDITOR_LABEL_KEYS[row.original.content_type];
+        const { icon: TypeIcon, theme } = getContentTypeConfig(row.original.content_type);
         return (
           <div className="flex justify-end items-center gap-3 px-2">
             {/* 教材基本情報の編集モーダル */}
             <ContentFormDialog mode="edit" initialData={row.original} />
 
             {/* 中身（単語・問題・セッション）のエディタ画面へ。未対応種別は列を揃えるため空枠を置く */}
-            {editor ? (
-              <Button variant="outline" size="sm" asChild className={`h-8 min-w-38 justify-between gap-2 px-3 font-bold text-xs shadow-sm transition-colors ${editor.className}`}>
+            {editorLabelKey ? (
+              <Button variant="outline" size="sm" asChild className={`h-8 min-w-38 justify-between gap-2 px-3 font-bold text-xs shadow-sm transition-colors ${theme.chip} ${theme.chipHover}`}>
                 <Link href={getEditorHref(row.original)}>
                   <span className="flex items-center gap-1.5">
-                    {editor.icon}
-                    {t(`editorButton.${editor.labelKey}`)}
+                    <TypeIcon size={13} />
+                    {t(`editorButton.${editorLabelKey}`)}
                   </span>
                   <ArrowRight size={13} />
                 </Link>

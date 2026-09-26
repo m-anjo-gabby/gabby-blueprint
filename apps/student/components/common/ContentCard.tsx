@@ -30,7 +30,7 @@ export const ContentCard = ({
   const [isClamped, setIsClamped] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
 
-  const { icon: TypeIcon, label: typeLabel } = getContentTypeConfig(content.content_type);
+  const { icon: TypeIcon, label: typeLabel, theme: typeTheme } = getContentTypeConfig(content.content_type);
   
   // metadata から安全に取得
   const cefr = content.metadata?.cefr;
@@ -56,12 +56,12 @@ export const ContentCard = ({
   }, [content.description, isExpanded, clampLines]);
 
   return (
-    <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="group overflow-hidden rounded-card border border-line bg-surface shadow-xs transition-all duration-300 hover:border-brand-200 hover:shadow-sm">
+    <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="h-full">
+      <Card className="group flex h-full flex-col overflow-hidden rounded-card border border-line bg-surface shadow-xs transition-all duration-300 hover:border-brand-200 hover:shadow-sm">
         {/* 1. Header Area: 種別・CEFR・お気に入り */}
         <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-slate-100 text-ink-soft">
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-control ${typeTheme.iconTile}`}>
               <TypeIcon size={16} />
             </span>
             <span className="whitespace-nowrap text-xs font-semibold text-ink-muted">{typeLabel}</span>
@@ -91,7 +91,7 @@ export const ContentCard = ({
                 ? "text-ink-subtle hover:bg-rose-50 hover:text-rose-500"
                 : content.is_favorite
                   ? "bg-amber-50 text-amber-500"
-                  : "text-ink-subtle hover:bg-slate-100"
+                  : "text-ink-subtle hover:bg-canvas"
             )}
           >
             {actionMode === 'favorite' ? (
@@ -104,7 +104,7 @@ export const ContentCard = ({
 
         {/* 2. Content Area */}
         <CardContent className="px-5 pt-4 pb-5 sm:px-6">
-          <h3 className="mb-2 text-base sm:text-lg font-bold leading-snug tracking-tight text-ink transition-colors group-hover:text-brand-strong">
+          <h3 className="mb-2 line-clamp-2 text-base sm:text-lg font-bold leading-snug tracking-tight text-ink transition-colors group-hover:text-brand-strong">
             {content.content_name}
           </h3>
 
@@ -112,7 +112,7 @@ export const ContentCard = ({
             onClick={() => isClamped && setIsExpanded(!isExpanded)}
             className={cn(
               "mb-4 rounded-xl transition-all duration-200",
-              isClamped ? "-mx-2 cursor-pointer px-2 py-1 hover:bg-slate-50" : "cursor-default"
+              isClamped ? "-mx-2 cursor-pointer px-2 py-1 hover:bg-canvas" : "cursor-default"
             )}
           >
             <p
@@ -148,7 +148,7 @@ export const ContentCard = ({
                 <Badge
                   key={t.tag_id}
                   variant="secondary"
-                  className="rounded-full border-none bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-ink-soft shadow-none"
+                  className="rounded-full border-none bg-canvas px-2.5 py-0.5 text-xs font-medium text-ink-soft shadow-none"
                 >
                   #{t.tag_name}
                 </Badge>
@@ -158,7 +158,7 @@ export const ContentCard = ({
         </CardContent>
 
         {/* 3. Footer Area */}
-        <CardFooter className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+        <CardFooter className="mt-auto px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
           <Button
             onClick={() => onStart(content)}
             className="group/btn h-12 w-full rounded-control border-none bg-brand text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-strong"

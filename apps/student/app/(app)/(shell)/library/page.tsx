@@ -151,6 +151,8 @@ export default function LibraryPage() {
                 const isAll = tab.id === 'All';
                 const config = isAll ? null : getContentTypeConfig(Number(tab.id));
                 const Icon = config?.icon ?? LayoutGrid;
+                // 種別アイコンに分類色を付け、カード側のアイコン色との対応を覚えやすくする
+                const iconColor = config?.theme.iconText ?? 'text-ink-subtle';
                 const count = allContents
                   ? allContents.filter(c => tab.id === 'All' || String(c.content_type) === String(tab.id)).length
                   : 0;
@@ -165,7 +167,7 @@ export default function LibraryPage() {
                   >
                     <Icon
                       size={15}
-                      className="shrink-0 text-ink-subtle transition-colors group-data-[state=active]:text-white"
+                      className={cn("shrink-0 transition-colors group-data-[state=active]:text-white", iconColor)}
                     />
                     {tab.label}
                     <span className="text-xs font-normal text-ink-muted group-data-[state=active]:text-white/70">{count}</span>
@@ -203,6 +205,7 @@ export default function LibraryPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
+                  className="h-full"
                 >
                   <ContentCard 
                     content={content}

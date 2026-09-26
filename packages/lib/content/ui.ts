@@ -11,107 +11,84 @@ export const getTagStyle = (tagType: string) => {
   };
 };
 
+/**
+ * 教材種別の分類色（全アプリ共通の唯一の定義元）。
+ * ブランド色（青）・状態色（emerald/amber/rose）と重ならない色相を選び、
+ * 面積の小さい部位（アイコンのマス・種別チップ）に限定して使う。
+ */
 export type ContentTheme = {
-  bg: string;
-  text: string;
-  border: string;
-  hoverBorder: string;
-  badge: string;
-  dotActive: string;
-  dotInactive: string;
-  button: string;
+  /** アイコンのマス（薄い背景＋色付きアイコン） */
+  iconTile: string;
+  /** 背景なしでアイコン単体に色を付ける場合 */
+  iconText: string;
+  /** 種別チップ・バッジ（背景・文字・枠線） */
+  chip: string;
+  /** チップをリンク・ボタンとして使う場合のホバー */
+  chipHover: string;
 };
 
-export const getContentTypeConfig = (type: number): { label: string; icon: LucideIcon; theme: ContentTheme } => {
-  // 💡 ボタンのベースは各アプリの brand トークンに統一（色の実体は各アプリの globals.css で定義）
-  const SHARED_BRAND_BUTTON = "bg-brand hover:bg-brand-strong shadow-brand/10 text-white border-none";
+type ContentTypeConfig = { label: string; icon: LucideIcon; theme: ContentTheme };
 
-  switch (type) {
-    case 0: // 単語帳: 誠実で知的なライトブルー（主力教材）
-      return {
-        label: "単語帳",
-        icon: FileText,
-        theme: {
-          bg: "bg-blue-50/60",
-          text: "text-blue-700",
-          border: "border-blue-100",
-          hoverBorder: "hover:border-blue-300",
-          badge: "bg-blue-100 text-blue-800",
-          dotActive: "bg-blue-500",
-          dotInactive: "bg-blue-200",
-          button: SHARED_BRAND_BUTTON,
-        }
-      };
-
-    case 1: // ビデオ: 没入感とエンタメ性を両立する洗練されたパープル
-      // 💡 今後教材が追加された際、コーラルやブルーと並んでも浮かないよう、
-      // 派手すぎない少し落ち着いたディープパープルトーンに調整しています。
-      return {
-        label: "ビデオ",
-        icon: Video,
-        theme: {
-          bg: "bg-purple-50/60",
-          text: "text-purple-700",
-          border: "border-purple-100",
-          hoverBorder: "hover:border-purple-300",
-          badge: "bg-purple-100 text-purple-800",
-          dotActive: "bg-purple-500",
-          dotInactive: "bg-purple-200",
-          button: SHARED_BRAND_BUTTON,
-        }
-      };
-
-    case 2: // スプリント: 脳への負荷・即応性を表現する洗練されたコーラルオレンジ
-      // 💡 ボタン共通化により、上部パーツのみに適用されるため
-      // 鮮やかなコーラルが「知的な躍動感」として美しく映えます。
-      return {
-        label: "スプリント",
-        icon: Zap,
-        theme: {
-          bg: "bg-orange-50/60",
-          text: "text-orange-600",
-          border: "border-orange-100",
-          hoverBorder: "hover:border-orange-300", // 🎨 ホバー枠線もコーラル系に同期
-          badge: "bg-orange-100 text-orange-800", // 🎨 種別バッジもコーラルに統一して一体感を強化
-          dotActive: "bg-orange-500",             // 🎨 アクティブドットをコーラルに修正
-          dotInactive: "bg-orange-200",           // 🎨 インアクティブドットをコーラルに修正
-          button: SHARED_BRAND_BUTTON,
-        }
-      };
-
-    case 3: // ダイアログ: 対話・コミュニケーションを表現する落ち着いたティール
-      return {
-        label: "ダイアログ",
-        icon: MessagesSquare,
-        theme: {
-          bg: "bg-teal-50/60",
-          text: "text-teal-700",
-          border: "border-teal-100",
-          hoverBorder: "hover:border-teal-300",
-          badge: "bg-teal-100 text-teal-800",
-          dotActive: "bg-teal-500",
-          dotInactive: "bg-teal-200",
-          button: SHARED_BRAND_BUTTON,
-        }
-      };
-
-    default:
-      return {
-        label: "その他",
-        icon: HelpCircle,
-        theme: {
-          bg: "bg-slate-50",
-          text: "text-slate-700",
-          border: "border-slate-200",
-          hoverBorder: "hover:border-slate-400",
-          badge: "bg-slate-100 text-slate-800",
-          dotActive: "bg-slate-500",
-          dotInactive: "bg-slate-200",
-          button: "bg-slate-600 hover:bg-slate-700",
-        }
-      };
-  }
+const CONTENT_TYPE_CONFIG: Record<number, ContentTypeConfig> = {
+  // 単語帳: ブランド色（#0e3196）より明るいスカイで区別する
+  0: {
+    label: "単語帳",
+    icon: FileText,
+    theme: {
+      iconTile: "bg-sky-50 text-sky-600",
+      iconText: "text-sky-600",
+      chip: "bg-sky-50 text-sky-700 border-sky-200",
+      chipHover: "hover:bg-sky-100 hover:border-sky-300",
+    },
+  },
+  // ビデオ
+  1: {
+    label: "ビデオ",
+    icon: Video,
+    theme: {
+      iconTile: "bg-violet-50 text-violet-600",
+      iconText: "text-violet-600",
+      chip: "bg-violet-50 text-violet-700 border-violet-200",
+      chipHover: "hover:bg-violet-100 hover:border-violet-300",
+    },
+  },
+  // スプリント
+  2: {
+    label: "スプリント",
+    icon: Zap,
+    theme: {
+      iconTile: "bg-orange-50 text-orange-600",
+      iconText: "text-orange-600",
+      chip: "bg-orange-50 text-orange-700 border-orange-200",
+      chipHover: "hover:bg-orange-100 hover:border-orange-300",
+    },
+  },
+  // ダイアログ
+  3: {
+    label: "ダイアログ",
+    icon: MessagesSquare,
+    theme: {
+      iconTile: "bg-teal-50 text-teal-600",
+      iconText: "text-teal-600",
+      chip: "bg-teal-50 text-teal-700 border-teal-200",
+      chipHover: "hover:bg-teal-100 hover:border-teal-300",
+    },
+  },
 };
+
+const FALLBACK_CONTENT_TYPE_CONFIG: ContentTypeConfig = {
+  label: "その他",
+  icon: HelpCircle,
+  theme: {
+    iconTile: "bg-slate-100 text-slate-600",
+    iconText: "text-slate-500",
+    chip: "bg-slate-50 text-slate-700 border-slate-200",
+    chipHover: "hover:bg-slate-100 hover:border-slate-300",
+  },
+};
+
+export const getContentTypeConfig = (type: number): ContentTypeConfig =>
+  CONTENT_TYPE_CONFIG[type] ?? FALLBACK_CONTENT_TYPE_CONFIG;
 
 /**
  * CEFRレベルのスタイルを取得 (グラデーションのステップアップ表現)

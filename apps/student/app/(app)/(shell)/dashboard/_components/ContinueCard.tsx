@@ -13,14 +13,14 @@ interface ContinueCardProps {
 /** 途中の教材（ブックマーク）の再開カード（「今日やること」に別の行動が出ている場合に表示） */
 export function ContinueCard({ resume, onClear }: ContinueCardProps) {
   const content = resume.com_m_contents;
-  const { icon: TypeIcon, label: typeLabel } = getContentTypeConfig(content.content_type);
+  const { icon: TypeIcon, label: typeLabel, theme: typeTheme } = getContentTypeConfig(content.content_type);
   const progress = resume.metadata.display?.progress_percent ?? 0;
 
   return (
     <HomeCard title="続きから">
       <div className="flex items-start gap-3">
         <Link href={getResumePath(resume)} className="group flex min-w-0 flex-1 items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-strong">
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control ${typeTheme.iconTile}`}>
             <TypeIcon size={20} />
           </div>
           <div className="min-w-0 flex-1 space-y-2">
