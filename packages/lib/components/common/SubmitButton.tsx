@@ -21,7 +21,7 @@ export function SubmitButton({ label, loadingLabel = '処理中...', className }
         w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2
         ${pending 
           ? 'bg-slate-200 text-slate-500 cursor-not-allowed' 
-          : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+          : 'bg-brand hover:bg-brand-strong text-white'
         } ${className}`}
     >
       {pending ? (

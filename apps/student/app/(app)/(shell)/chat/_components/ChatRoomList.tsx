@@ -43,7 +43,7 @@ export function ChatRoomList() {
   }, [fetchRooms]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 space-y-2">
+    <div className="space-y-2">
       {!isLoading && rooms.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-3 py-20 text-ink-subtle">
           <MessageCircle size={32} strokeWidth={1.5} />
@@ -62,7 +62,7 @@ export function ChatRoomList() {
           <Link
             key={room.room_id}
             href={`/chat/${room.room_id}`}
-            className="flex items-center gap-3.5 px-3.5 py-3.5 bg-white rounded-card border border-line/70 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all"
+            className="flex items-center gap-3.5 px-3.5 py-3.5 bg-surface rounded-card border border-line shadow-xs hover:border-brand-200 active:scale-[0.99] transition-all"
           >
             {iconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

@@ -35,7 +35,7 @@ export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, on
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+            className="w-full h-11 rounded-xl bg-brand hover:bg-brand-strong text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
           >
             <RefreshCw size={14} strokeWidth={2.5} />
             <span>再読み込み</span>

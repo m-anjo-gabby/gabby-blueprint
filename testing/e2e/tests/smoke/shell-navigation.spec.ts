@@ -26,6 +26,13 @@ test.describe("ライブセッション契約の生徒", () => {
     await expect(page.getByRole("heading", { level: 1, name: "カレンダー" })).toBeVisible();
     await expect(navTab(page, "ライブ")).toHaveAttribute("aria-current", "page");
   });
+
+  test("学習記録はナビ付きの画面として表示され、学習タブがアクティブになる", async ({ page }) => {
+    await page.goto("/training/performance");
+
+    await expect(page.getByRole("heading", { level: 1, name: "学習記録" })).toBeVisible();
+    await expect(navTab(page, "学習")).toHaveAttribute("aria-current", "page");
+  });
 });
 
 test.describe("アプリのみ契約・モニターロールの生徒", () => {

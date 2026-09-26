@@ -524,9 +524,9 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return (
       <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-4">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
+          <Loader2 className="w-10 h-10 text-brand animate-spin mx-auto" />
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Preparing Questions</h2>
-          <button onClick={() => onExit?.()} className="w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest">Go Back</button>
+          <button onClick={() => onExit?.()} className="w-full h-14 bg-brand text-white rounded-2xl font-black text-[11px] uppercase tracking-widest">Go Back</button>
         </div>
       </div>
     );
@@ -540,13 +540,13 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         <div className="shrink-0 pt-4 w-full px-4 border-b border-slate-50 pb-2">
           <div className="grid grid-cols-5 items-center min-h-[3rem] px-2">
             <div className="col-span-1 flex justify-start">
-              <button onClick={handleExitWithSync} disabled={isAutoPlaying} className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
+              <button onClick={handleExitWithSync} disabled={isAutoPlaying} className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-brand active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
                 <ChevronLeft size={20} strokeWidth={2.5} />
               </button>
             </div>
             <div className="col-span-3 flex flex-col items-center min-w-0">
               <div className="flex flex-col items-center">
-                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5">{contentName || 'Drill Mode'}</span>
+                <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-0.5">{contentName || 'Drill Mode'}</span>
               </div>
               <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none truncate w-full text-center">{courseTitle}</h1>
             </div>

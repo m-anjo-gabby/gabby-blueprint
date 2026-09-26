@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
                       name="email"
                       type="email"
                       required
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
                       placeholder="account@example.com"
                     />
                   </div>
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
 
                 <button 
                   disabled={loading}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
+                  className="w-full bg-brand hover:bg-brand-strong disabled:bg-slate-200 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : '送信する'}
                 </button>
@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
                 <div className="text-center">
                   <Link 
                     href="/login" 
-                    className="text-xs text-slate-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-1"
+                    className="text-xs text-slate-500 hover:text-brand transition-colors flex items-center justify-center gap-1"
                   >
                     <ArrowLeft size={14} /> ログイン画面に戻る
                   </Link>
@@ -111,7 +111,7 @@ export default function ForgotPasswordPage() {
               {/* 統一されたコンポーネントとしての遷移ボタン */}
               <Link 
                 href="/login" 
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
+                className="w-full bg-brand hover:bg-brand-strong text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
               >
                 <ArrowLeft size={16} /> ログイン画面へ戻る
               </Link>

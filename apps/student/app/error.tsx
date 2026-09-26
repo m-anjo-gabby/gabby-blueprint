@@ -41,13 +41,13 @@ export default function Error({ error }: ErrorProps) {
           className="flex flex-col items-center w-full"
         >
           {/* アイコンコンテナ（インディゴ系アクセントトーン） */}
-          <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-6 relative">
-            <ShieldAlert className="w-8 h-8 text-indigo-600 animate-pulse" />
+          <div className="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mb-6 relative">
+            <ShieldAlert className="w-8 h-8 text-brand animate-pulse" />
           </div>
 
           {/* 見出しセクション */}
           <div className="mb-6">
-            <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-bold text-brand uppercase tracking-widest bg-brand-50 px-2.5 py-1 rounded-full">
               System Error
             </span>
             <h1 className="text-xl font-bold text-slate-800 mt-3">
@@ -69,7 +69,7 @@ export default function Error({ error }: ErrorProps) {
           <div className="w-full space-y-3">
             <button 
               onClick={handleBackToDashboard}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px] shadow-sm shadow-indigo-600/10 hover:shadow-md hover:shadow-indigo-600/20"
+              className="w-full bg-brand hover:bg-brand-strong text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px] shadow-sm shadow-brand/10 hover:shadow-md hover:shadow-brand/20"
             >
               <Home size={16} />
               ダッシュボードへ戻る

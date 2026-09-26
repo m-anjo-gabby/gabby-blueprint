@@ -29,9 +29,9 @@ export function ContentLoading({
       <div className="w-full max-w-sm text-center space-y-8">
         {/* スピナーアニメーションエリア */}
         <div className="relative w-20 h-20 mx-auto">
-          <div className="absolute inset-0 border-4 border-indigo-100 rounded-2xl" />
+          <div className="absolute inset-0 border-4 border-brand-100 rounded-2xl" />
           <motion.div 
-            className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-2xl"
+            className="absolute inset-0 border-4 border-brand border-t-transparent rounded-2xl"
             animate={{ rotate: 360 }}
             transition={{
               repeat: Infinity,
@@ -39,7 +39,7 @@ export function ContentLoading({
               ease: 'linear'
             }}
           />
-          <div className="absolute inset-0 flex items-center justify-center text-indigo-600">
+          <div className="absolute inset-0 flex items-center justify-center text-brand">
             <BookOpen size={32} className="animate-pulse" />
           </div>
         </div>
@@ -63,7 +63,7 @@ export function ContentLoading({
                 duration: 1.5, 
                 ease: 'easeInOut' 
               }}
-              className="absolute top-0 bottom-0 left-0 w-full bg-indigo-600"
+              className="absolute top-0 bottom-0 left-0 w-full bg-brand"
             />
           </div>
         </div>

@@ -40,7 +40,7 @@ export interface LiveSessionIntroContent {
 }
 
 export const LIVE_SESSION_INTRO: LiveSessionIntroContent = {
-  eyebrow: 'Live Session',
+  eyebrow: 'ライブセッション',
   title: '専属コーチと、\n話せる英語へ。',
   lead: 'アプリでの自主トレーニングに、専属コーチとのオンラインレッスン「ライブセッション」を組み合わせたプランです。',
   features: [

@@ -404,7 +404,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         <div className="space-y-3">
           <button
             onClick={() => router.push('/dashboard')}
-            className="w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-indigo-100"
+            className="w-full h-14 bg-brand text-white rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-brand-100"
           >
             Go to Dashboard
           </button>
@@ -426,7 +426,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   // 3. メイン学習画面
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none selection:bg-indigo-100">
+    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none selection:bg-brand-100">
       
       <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
         

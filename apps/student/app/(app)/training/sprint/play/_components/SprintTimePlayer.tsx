@@ -157,7 +157,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 🆕 発話評価は完了したが、演出ウェイト（displayDelay）の反映待ちだった問題を、タイムアップ時に即時確定させるためのコミット関数を保持
   const pendingCommitRef = useRef<(() => void) | null>(null);
 
-  const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none";
+  const SHARED_BRAND_BUTTON = "bg-brand hover:bg-brand-strong active:scale-[0.98] shadow-md shadow-brand/10 text-white border-none";
 
   const hasLevel = resolveSprintHasLevel(contentMetadata);
 
@@ -624,7 +624,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
             {/* 中央：タイマー排除により、圧倒的に広がったタイトル表示エリア */}
             <div className="flex-1 flex flex-col items-center px-4 min-w-0">
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5 select-none shrink-0">
+              <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-0.5 select-none shrink-0">
                 {contentName || 'Sprint Mode'}
               </span>
               <h1 className="text-sm font-black text-slate-800 tracking-tight text-center w-full max-w-[280px] sm:max-w-[360px] truncate">
@@ -645,7 +645,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   "absolute top-0 left-0 h-full rounded-full transition-all shadow-[inset_-3px_0_8px_rgba(0,0,0,0.05)]",
                   isCritical ? "bg-gradient-to-r from-rose-500 to-rose-600 shadow-[0_0_15px_rgba(225,29,72,0.2)]" :
                   isWarning ? "bg-gradient-to-r from-amber-400 to-amber-500" :
-                  "bg-gradient-to-r from-indigo-500 to-indigo-600"
+                  "bg-gradient-to-r from-brand-500 to-brand"
                 )}
                 style={{
                   width: `${progressPercent}%`,
@@ -664,7 +664,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 size={11}
                 className={cn(
                   isCritical && "animate-pulse",
-                  isCritical ? "text-rose-500" : isWarning ? "text-amber-500" : "text-indigo-500"
+                  isCritical ? "text-rose-500" : isWarning ? "text-amber-500" : "text-brand-500"
                 )}
                 strokeWidth={3}
               />
@@ -707,9 +707,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                       <div className={cn(
                         "flex-1 flex items-center justify-center py-2 px-2 rounded-xl border text-center transition-all duration-300",
                         isCurrent 
-                          ? "bg-indigo-600 border-indigo-600 text-white font-black shadow-md shadow-indigo-600/10 scale-[1.02]" 
+                          ? "bg-brand border-brand text-white font-black shadow-md shadow-brand/10 scale-[1.02]" 
                           : isCompleted 
-                            ? "bg-indigo-50 border-indigo-100 text-indigo-600 font-bold" 
+                            ? "bg-brand-50 border-brand-100 text-brand font-bold" 
                             : "bg-white border-slate-200 text-slate-400 font-medium"
                       )}>
                         <span className="text-xs sm:text-sm tracking-tight whitespace-nowrap">
@@ -721,7 +721,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                       {idx < userActionSteps.length - 1 && (
                         <span className={cn(
                           "text-xs font-bold font-mono transition-colors duration-300 shrink-0 px-0.5",
-                          isCompleted ? "text-indigo-400" : "text-slate-300"
+                          isCompleted ? "text-brand-400" : "text-slate-300"
                         )}>
                           ➔
                         </span>
@@ -745,8 +745,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                     displayPhase === 'idle'
                       ? "text-slate-300"
                       : displayPhase === 'answer'
-                        ? (isBrainAnswerMode ? "text-rose-500" : "text-indigo-500")
-                        : "text-indigo-600"
+                        ? (isBrainAnswerMode ? "text-rose-500" : "text-brand-500")
+                        : "text-brand"
                   )}
                 >
                   {displayPhase === 'answer' ? (
@@ -812,7 +812,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                             "flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl text-white font-black text-sm tracking-wider shadow-md active:scale-[0.98] cursor-pointer transition-all w-60 group border-none",
                             isBrainActionDisabled 
                               ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" 
-                              : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/10"
+                              : "bg-brand hover:bg-brand-strong shadow-brand/10"
                           )}
                           title="この問題をスキップして次へ"
                         >
@@ -980,7 +980,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                     key="saving-icon"
                     layoutId="sprint-completion-icon"
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm text-indigo-600"
+                    className="absolute inset-0 bg-brand-50 rounded-2xl flex items-center justify-center border border-brand-100 shadow-sm text-brand"
                   >
                     <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
                   </motion.div>
@@ -989,7 +989,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                     key="done-icon"
                     layoutId="sprint-completion-icon"
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm text-indigo-600"
+                    className="absolute inset-0 bg-brand-50 rounded-2xl flex items-center justify-center border border-brand-100 shadow-sm text-brand"
                   >
                     <CheckCircle2 className="w-7 h-7" strokeWidth={2.2} />
                   </motion.div>
@@ -1014,7 +1014,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   label="回答"
                   value={previewStats.answered}
                   active
-                  color="text-indigo-500"
+                  color="text-brand-500"
                 />
                 {previewStats.isAssessmentMode && (
                   <>
@@ -1061,7 +1061,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                 {showTimeUpOverlay && (
                   <motion.div
                     key={resultId}
-                    className="h-full bg-indigo-300 rounded-full"
+                    className="h-full bg-brand-300 rounded-full"
                     initial={{ width: '100%' }}
                     animate={{ width: '0%' }}
                     transition={{ duration: 3.5, ease: 'linear' }}

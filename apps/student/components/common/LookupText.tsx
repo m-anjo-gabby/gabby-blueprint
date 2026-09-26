@@ -73,8 +73,8 @@ export function LookupText({
             className={cn(
               'inline-block cursor-pointer rounded px-[1.5px] transition-colors',
               isActive
-                ? 'bg-indigo-100 text-indigo-950 font-semibold'
-                : 'hover:bg-indigo-50/80 hover:text-indigo-900 active:bg-indigo-100'
+                ? 'bg-brand-100 text-brand-deep font-semibold'
+                : 'hover:bg-brand-50/80 hover:text-brand-900 active:bg-brand-100'
             )}
           >
             {token.content}

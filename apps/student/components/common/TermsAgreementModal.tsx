@@ -102,7 +102,7 @@ export const TermsAgreementModal = ({
 
             {terms.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-20 gap-4">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
                 <p className="text-xs font-bold tracking-widest uppercase text-slate-400 animate-pulse">
                   Loading Document...
                 </p>
@@ -114,7 +114,7 @@ export const TermsAgreementModal = ({
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex flex-col gap-3">
                       <div className="flex">
-                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                        <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em] bg-brand-50 px-3 py-1 rounded-full border border-brand-100">
                           {badgeText}
                         </span>
                       </div>
@@ -144,7 +144,7 @@ export const TermsAgreementModal = ({
                           <Tabs.Trigger
                             key={term.term_id}
                             value={term.term_id}
-                            className="rounded-xl font-black text-[10px] uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-slate-400 flex items-center justify-center gap-2 outline-none"
+                            className="rounded-xl font-black text-[10px] uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:shadow-sm text-slate-400 flex items-center justify-center gap-2 outline-none"
                           >
                             {term.term_type === "TERMS" ? <FileText size={14} /> : <ShieldCheck size={14} />}
                             {term.term_type === "TERMS" ? "利用規約" : "個人情報保護方針"}
@@ -186,7 +186,7 @@ export const TermsAgreementModal = ({
                       className={cn(
                         "w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg active:scale-[0.98] flex items-center justify-center",
                         allRead && !isSubmitting 
-                          ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20" 
+                          ? "bg-brand hover:bg-brand-strong text-white shadow-brand/20" 
                           : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
                       )}
                     >

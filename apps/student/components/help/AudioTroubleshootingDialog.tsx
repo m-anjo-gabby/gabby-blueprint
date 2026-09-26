@@ -16,7 +16,7 @@ export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProp
       >
         <DialogHeader>
           <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2 select-none">
-            <HelpCircle className="w-5 h-5 text-indigo-500" />
+            <HelpCircle className="w-5 h-5 text-brand-500" />
             音声・マイクのトラブル対処法
           </DialogTitle>
         </DialogHeader>

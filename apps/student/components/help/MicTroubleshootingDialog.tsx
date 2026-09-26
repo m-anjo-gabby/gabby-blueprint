@@ -44,7 +44,7 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
       >
         <DialogHeader>
           <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2 select-none">
-            <HelpCircle className="w-5 h-5 text-indigo-500" />
+            <HelpCircle className="w-5 h-5 text-brand-500" />
             マイク権限のリセット手順
           </DialogTitle>
         </DialogHeader>
@@ -68,7 +68,7 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
                   onClick={() => setActiveTab(tab)}
                   className={cn(
                     "relative py-2 text-xs font-black rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 z-10 outline-none select-none",
-                    isActive ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"
+                    isActive ? "text-brand" : "text-slate-400 hover:text-slate-600"
                   )}
                 >
                   {/* layoutId を復活させ、transitionをイージングに変更 */}
@@ -99,7 +99,7 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
               >
                 {steps[activeTab].map((step, index) => (
                   <div key={index} className="flex gap-2.5 items-start">
-                    <div className="h-5 w-5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 font-mono">
+                    <div className="h-5 w-5 rounded-full bg-brand-50 border border-brand-100 text-brand text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 font-mono">
                       {index + 1}
                     </div>
                     <p className="text-xs font-bold text-slate-600 leading-relaxed pt-0.5">

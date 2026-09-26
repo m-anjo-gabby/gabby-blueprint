@@ -1,6 +1,5 @@
 import { getUserSprintHistoryAction } from "@/actions/sprintAction";
 import { SprintHistoryView } from "./_components/SprintHistoryView";
-import { redirect } from "next/navigation";
 
 interface PageProps {
   searchParams: Promise<{

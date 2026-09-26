@@ -385,14 +385,14 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
           className={cn(
-            "sm:max-w-[420px] flex flex-col overflow-hidden rounded-2xl border border-indigo-600/20 dark:border-indigo-950/50 shadow-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 p-0 gap-0 [&>button]:text-indigo-100 hover:[&>button]:text-white [&>button]:focus:ring-indigo-500 [&>button]:focus:ring-offset-indigo-600",
+            "sm:max-w-[420px] flex flex-col overflow-hidden rounded-2xl border border-brand/20 dark:border-brand-deep/50 shadow-2xl bg-gradient-to-r from-brand to-brand-strong p-0 gap-0 [&>button]:text-brand-100 hover:[&>button]:text-white [&>button]:focus:ring-brand-500 [&>button]:focus:ring-offset-brand",
             activeResult ? "h-[520px] sm:h-[70vh] max-h-[90vh]" : "h-auto"
           )}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <DialogHeader className="bg-transparent px-6 pt-5 pb-4 text-white border-none shrink-0 space-y-0">
-            <DialogTitle className="flex items-center gap-2 text-sm font-bold tracking-wider text-indigo-50/90 uppercase">
-              <BookA className="h-5 w-5 text-indigo-100 opacity-95 shrink-0" />
+            <DialogTitle className="flex items-center gap-2 text-sm font-bold tracking-wider text-brand-50/90 uppercase">
+              <BookA className="h-5 w-5 text-brand-100 opacity-95 shrink-0" />
               <span className="tracking-widest font-black text-white">Color Vowel Dictionary</span>
             </DialogTitle>
           </DialogHeader>

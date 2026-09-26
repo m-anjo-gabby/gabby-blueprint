@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, Calendar, Zap, ArrowRight, History, Timer, ArrowLeft, ChevronRight, Sliders, CheckCircle2, Mic, Loader2, Home } from 'lucide-react';
+import { Calendar, Zap, Timer, ChevronRight, ChevronDown, Sliders, CheckCircle2, Mic } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +11,23 @@ import { formatZonedDate } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { resolveSprintHasLevel } from '@gabby/lib';
 import type { ContentMetadata } from '@gabby/types/content';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { MonthSwitcher } from '../../../_components/MonthSwitcher';
+import { StatTile } from '../../../_components/StatTile';
+import { HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
+
+/** ドリル種別ごとの回答数の列（表示順は QUESTION_TYPES の seq_no に合わせる） */
+const DRILL_BREAKDOWN_KEYS = [
+  { type: '0', countKey: 'speed_count' },
+  { type: '5', countKey: 'builders_count' },
+  { type: '4', countKey: 'structure_count' },
+  { type: '6', countKey: 'mastery_count' },
+] as const;
+
+const getContentName = (raw: { content_name: string } | { content_name: string }[] | null | undefined): string =>
+  (Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name) || '教材データなし';
+
+const SUB_LIST_TITLE_CLASS = 'px-1 text-xs font-semibold text-ink-muted';
 
 interface HistorySession {
   self_sprint_id: string;
@@ -64,7 +81,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   const timezone = useTimezone();
 
   // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定等）はWord履歴画面と共通のためフック化
-  const { currentMonthStr, displayYear, displayMonth, isNotCurrentMonth, handleMonthChange, goToMonth, isPending } = useMonthNavigator({
+  const monthNavigator = useMonthNavigator({
     targetMonth,
     basePath: '/training/sprint/history',
   });
@@ -132,11 +149,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     Object.keys(groups).forEach(date => {
       groups[date].sessions.sort((a, b) => new Date(a.insert_date).getTime() - new Date(b.insert_date).getTime());
       
-      groups[date].drills.sort((a, b) => {
-        const nameA = (Array.isArray(a.com_m_contents) ? a.com_m_contents[0]?.content_name : a.com_m_contents?.content_name) || '';
-        const nameB = (Array.isArray(b.com_m_contents) ? b.com_m_contents[0]?.content_name : b.com_m_contents?.content_name) || '';
-        return nameA.localeCompare(nameB);
-      });
+      groups[date].drills.sort((a, b) => getContentName(a.com_m_contents).localeCompare(getContentName(b.com_m_contents)));
     });
 
     return groups;
@@ -154,334 +167,139 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
   }, [groupedData]);
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
-      <div className="w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-panel shadow-xl flex flex-col overflow-hidden animate-fade-in">
-        
-        {/* ────────────── ヘッダー ────────────── */}
-        <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-3">
-          <div className="absolute top-0 right-0 p-3 opacity-[0.08] pointer-events-none">
-            <History size={115} strokeWidth={1.2} className="text-indigo-600" />
-          </div>
+    <>
+      <ShellPageHeader title="スプリントの履歴" back="/training/performance">
+        <MonthSwitcher {...monthNavigator} />
+      </ShellPageHeader>
 
-          {/* Row1: 戻る（左端）+ 画面名（右端） */}
-          <div className="relative flex items-center justify-between z-10">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => router.push('/training/performance')}
-                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
-                title="パフォーマンスに戻る"
-              >
-                <ChevronLeft size={20} strokeWidth={2.5} />
-              </button>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
-                title="ダッシュボードに戻る"
-              >
-                <Home size={18} strokeWidth={2.5} />
-              </button>
-            </div>
+      <div className="mb-6 grid grid-cols-3 gap-3">
+        <StatTile label="実施日数" value={sortedDates.length} unit="日" icon={Calendar} />
+        <StatTile label="スプリント" value={initialData?.sessions?.length ?? 0} unit="回" icon={Zap} />
+        <StatTile label="ドリル" value={initialData?.drills?.length ?? 0} unit="件" icon={Sliders} />
+      </div>
 
-            <div className="text-right">
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
-                Sprint History
-              </span>
-              <p className="text-[9px] font-bold text-slate-400 opacity-90 mt-0.5">
-                スプリントの学習履歴
-              </p>
-            </div>
-          </div>
+      <div className="space-y-3">
+        {sortedDates.length === 0 ? (
+          <HistoryEmpty message="この月のスプリントの履歴はありません" />
+        ) : (
+          sortedDates.map((date) => {
+            const { sessions, drills } = groupedData[date] || { sessions: [], drills: [] };
+            const isExpanded = expandedDates.includes(date);
 
-          {/* Row2: 月移動
-              💡 今月ボタンの有無に関わらず月カプセルが常に中央に来るよう、
-              左右を1frの空セルで挟んだ3カラムgridで配置する（左右セル幅は常に等しい） */}
-          <div className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <div aria-hidden="true" />
-
-            <div className="justify-self-center inline-flex items-center bg-white border border-slate-200/80 shadow-sm rounded-xl p-0.5">
-              <button
-                onClick={() => handleMonthChange('prev')}
-                disabled={isPending}
-                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
-                title="前月"
-              >
-                <ArrowLeft size={13} strokeWidth={2.5} />
-              </button>
-
-              <div className="px-3 h-8 flex items-center justify-center min-w-24 select-none border-x border-slate-100">
-                {isPending ? (
-                  <Loader2 size={16} className="text-indigo-400 animate-spin" />
-                ) : (
-                  <span className="text-sm font-black text-slate-800 font-mono tracking-tight whitespace-nowrap">
-                    <span className="text-slate-400 font-bold mr-1.5">{displayYear}年</span>
-                    {parseInt(displayMonth)}月
-                  </span>
-                )}
-              </div>
-
-              <button
-                onClick={() => handleMonthChange('next')}
-                disabled={isPending}
-                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all active:scale-90 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
-                title="来月"
-              >
-                <ArrowRight size={13} strokeWidth={2.5} />
-              </button>
-            </div>
-
-            {/* 「今月」ボタン */}
-            <div className="flex items-center justify-start">
-              <AnimatePresence>
-                {isNotCurrentMonth && (
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                    onClick={() => goToMonth(currentMonthStr)}
-                    disabled={isPending}
-                    className="ml-3 px-2.5 py-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-100 rounded-lg hover:bg-indigo-50/80 hover:border-indigo-200 transition-all active:scale-95 shadow-xs font-sans cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none"
-                    title="現在の月に戻る"
-                  >
-                    今月
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Row3: 月次サマリー */}
-          <div className="relative z-10 flex justify-center select-none">
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-slate-700 font-sans">
-              <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
-                <Calendar size={13} strokeWidth={2.5} className="text-slate-400 shrink-0" />
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">実施日数</span>
-                <span className="text-sm font-black text-slate-800 font-mono leading-none">{sortedDates.length}</span>
-              </div>
-              <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
-                <Zap size={13} fill="currentColor" className="text-amber-500 shrink-0" />
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">スプリント</span>
-                <span className="text-sm font-black text-slate-800 font-mono leading-none">{initialData?.sessions?.length ?? 0}</span>
-              </div>
-              <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
-                <Sliders size={13} strokeWidth={2.5} className="text-indigo-500 shrink-0" />
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">ドリル</span>
-                <span className="text-sm font-black text-slate-800 font-mono leading-none">{initialData?.drills?.length ?? 0}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ────────────── メイン：リストエリア ────────────── */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/50 p-5 sm:p-6">
-          <div className="max-w-xl mx-auto space-y-3">
-          {sortedDates.length === 0 ? (
-            <div className="bg-white rounded-[32px] p-12 text-center border border-dashed border-slate-200 mt-4">
-              <Calendar size={40} className="mx-auto text-slate-200 mb-4" />
-              <p className="text-sm font-bold text-slate-400">この月のスプリント履歴はありません</p>
-            </div>
-          ) : (
-            sortedDates.map((date) => {
-              const { sessions, drills } = groupedData[date] || { sessions: [], drills: [] };
-              const isExpanded = expandedDates.includes(date);
-
-              return (
-                <div key={date} className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm">
-                  <button
-                    onClick={() => toggleDate(date)}
-                    className="w-full p-5 sm:p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
-                  >
-                    <div className="text-left">
-                      <div className="text-sm font-bold text-slate-800 tracking-tight mb-1.5">{date}</div>
-                      <div className="flex items-center gap-2 mt-1 text-xs font-black text-slate-400 uppercase tracking-wider font-mono flex-wrap">
-                        <span className="flex items-center gap-0.5">
-                          <Zap size={11} fill="currentColor" className="text-amber-500" />
-                          スプリント {sessions.length}
-                        </span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                        <span className="text-indigo-500 flex items-center gap-0.5">
-                          <Sliders size={11} className="text-indigo-500" />
-                          ドリル {drills.length}
-                        </span>
-                      </div>
+            return (
+              <div key={date} className="overflow-hidden rounded-card border border-line bg-surface">
+                <button
+                  type="button"
+                  onClick={() => toggleDate(date)}
+                  aria-expanded={isExpanded}
+                  className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-brand-soft/40 sm:p-5"
+                >
+                  <div>
+                    <p className="text-base font-bold text-ink tabular-nums">{date}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <HistoryMetric icon={Zap} label="スプリント" value={sessions.length} />
+                      <HistoryMetric icon={Sliders} label="ドリル" value={drills.length} />
                     </div>
-                    <div className={cn("transition-transform duration-300", isExpanded ? "rotate-180" : "")}>
-                      <ChevronRight size={20} className="text-slate-300" />
-                    </div>
-                  </button>
+                  </div>
+                  <ChevronDown size={18} className={cn('shrink-0 text-ink-subtle transition-transform duration-200', isExpanded && 'rotate-180')} />
+                </button>
 
-                  <AnimatePresence initial={false}>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25, ease: 'easeInOut' }}
-                        className="border-t border-slate-50 bg-slate-50/30"
-                      >
-                        <div className="p-4 sm:p-5 space-y-4">
-                          {/* 1. ドリル履歴一覧 */}
-                          {drills.length > 0 && (
-                            <div className="space-y-2">
-                              <div className="text-xs font-black text-slate-400 uppercase tracking-wider px-1">
-                                ドリル
-                              </div>
-                              <div className="space-y-2">
-                                {drills.map((drill) => {
-                                  return (
-                                    <div
-                                      key={drill.summary_id}
-                                      className="flex items-center justify-between p-3.5 bg-white border border-dashed border-slate-200 rounded-2xl transition-all"
-                                    >
-                                      <div className="space-y-1">
-                                        {/* 1段目: 教材名 */}
-                                        <div className="text-xs font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
-                                          {(() => {
-                                            const raw = drill.com_m_contents;
-                                            const name = Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name;
-                                            return name || '教材データなし';
-                                          })()}
-                                        </div>
-                                        {/* 2段目: 回答数と発話数 */}
-                                        <div className="text-xs font-black text-slate-800 flex items-center gap-3 flex-wrap">
-                                          <span className="flex items-center gap-1">
-                                            <CheckCircle2 size={13} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
-                                            回答 <span className="font-mono font-extrabold text-indigo-600">{drill.question_count}</span>
-                                          </span>
-                                          <span className="flex items-center gap-1">
-                                            <Mic size={13} className="text-rose-500 shrink-0 stroke-[2.5]" />
-                                            発話 <span className="font-mono font-extrabold text-rose-600">{drill.assessment_count}</span>
-                                          </span>
-                                        </div>
-                                        {/* 3段目: 各種別の内訳 */}
-                                        <div className="flex items-center gap-3 text-xs font-bold text-slate-400 flex-wrap">
-                                          {drill.speed_count > 0 && (
-                                            <span className="flex items-center gap-1">
-                                              <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-1 rounded leading-none py-0.5">SPEED</span>
-                                              <span className="font-mono text-slate-700 font-extrabold">{drill.speed_count}</span>
-                                            </span>
-                                          )}
-                                          {drill.structure_count > 0 && (
-                                            <span className="flex items-center gap-1">
-                                              <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 px-1 rounded leading-none py-0.5">STR</span>
-                                              <span className="font-mono text-slate-700 font-extrabold">{drill.structure_count}</span>
-                                            </span>
-                                          )}
-                                          {drill.builders_count > 0 && (
-                                            <span className="flex items-center gap-1">
-                                              <span className="text-[10px] font-black text-sky-500 bg-sky-50 px-1 rounded leading-none py-0.5">BLD</span>
-                                              <span className="font-mono text-slate-700 font-extrabold">{drill.builders_count}</span>
-                                            </span>
-                                          )}
-                                          {drill.mastery_count > 0 && (
-                                            <span className="flex items-center gap-1">
-                                              <span className="text-[10px] font-black text-purple-500 bg-purple-50 px-1 rounded leading-none py-0.5">MST</span>
-                                              <span className="font-mono text-slate-700 font-extrabold">{drill.mastery_count}</span>
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      className="border-t border-line bg-canvas"
+                    >
+                      <div className="space-y-4 p-3 sm:p-4">
+                        {/* 1. ドリル履歴一覧（結果画面は無いため表示のみ） */}
+                        {drills.length > 0 && (
+                          <div className="space-y-2">
+                            <p className={SUB_LIST_TITLE_CLASS}>ドリル</p>
+                            <ul className="space-y-2">
+                              {drills.map((drill) => (
+                                <li key={drill.summary_id} className="rounded-control border border-line bg-surface p-3.5">
+                                  <p className="truncate text-sm font-semibold text-ink">{getContentName(drill.com_m_contents)}</p>
+                                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+                                    <HistoryMetric icon={CheckCircle2} label="回答" value={drill.question_count} />
+                                    <HistoryMetric icon={Mic} label="発話" value={drill.assessment_count} />
+                                  </div>
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {DRILL_BREAKDOWN_KEYS.filter(({ countKey }) => drill[countKey] > 0).map(({ type, countKey }) => (
+                                      <span key={type} className="rounded-full bg-brand-soft px-2 py-0.5 text-xs text-ink-soft">
+                                        {QUESTION_TYPES[type].label}
+                                        <span className="ml-1 font-semibold text-ink tabular-nums">{drill[countKey]}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
-                          {/* 2. スプリントセッション履歴一覧 */}
-                          {sessions.length > 0 && (
-                            <div className="space-y-2">
-                              <div className="text-xs font-black text-slate-400 uppercase tracking-wider px-1">
-                                スプリント
-                              </div>
-                              <div className="space-y-2">
-                                {sessions.map((session) => {
-                                  const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];
-                                  const isSpeedMode = session.question_type === '0';
-                                  const raw = session.com_m_contents;
-                                  const name = (Array.isArray(raw) ? raw[0]?.content_name : raw?.content_name) || '教材データなし';
-                                  const content = Array.isArray(raw) ? raw[0] : raw;
-                                  const hasLevel = resolveSprintHasLevel(content?.metadata?.sprint);
+                        {/* 2. スプリントセッション履歴一覧（タップで結果画面へ） */}
+                        {sessions.length > 0 && (
+                          <div className="space-y-2">
+                            <p className={SUB_LIST_TITLE_CLASS}>スプリント</p>
+                            <ul className="space-y-2">
+                              {sessions.map((session) => {
+                                const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];
+                                const isSpeedMode = session.question_type === '0';
+                                const raw = session.com_m_contents;
+                                const content = Array.isArray(raw) ? raw[0] : raw;
+                                const hasLevel = resolveSprintHasLevel(content?.metadata?.sprint);
 
-                                  return (
+                                return (
+                                  <li key={session.self_sprint_id}>
                                     <button
-                                      key={session.self_sprint_id}
                                       id={`session-${session.self_sprint_id}`}
                                       type="button"
                                       onClick={() => router.push(`/training/sprint/result/${session.self_sprint_id}`)}
                                       className={cn(
-                                        "w-full flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400",
-                                        focusId === session.self_sprint_id && "ring-2 ring-blue-500 border-transparent bg-blue-50/30 shadow-sm"
+                                        'group flex w-full items-center justify-between gap-3 rounded-control border border-line bg-surface p-3.5 text-left transition-all hover:border-brand-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300',
+                                        focusId === session.self_sprint_id && 'border-transparent ring-2 ring-brand-500'
                                       )}
                                     >
-                                      <div className="space-y-1">
-                                        {/* 1段目: 教材名 */}
-                                        <div className="text-xs font-bold text-slate-500 truncate max-w-[280px] sm:max-w-xs">
-                                          {name}
-                                        </div>
-
-                                        {/* 2段目: メタ情報 (種別, レベル, 形式など) */}
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="text-xs font-black text-slate-800 mr-0.5">{typeInfo?.label || 'Sprint'}</span>
+                                      <div className="min-w-0 space-y-1">
+                                        <p className="truncate text-sm font-semibold text-ink">{getContentName(raw)}</p>
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          <span className="text-sm text-ink-soft">{typeInfo?.label || 'Sprint'}</span>
                                           {hasLevel && (
-                                            <span className="text-xs font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 whitespace-nowrap">
+                                            <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand">
                                               {session.difficulty_level === 0 ? 'Basic' : `Lv.${session.difficulty_level}`}
                                             </span>
                                           )}
-
                                           {isSpeedMode && (
-                                            <span className={cn(
-                                              "text-[11px] font-black px-1.5 py-0.5 rounded-md border tracking-wider whitespace-nowrap",
-                                              session.answer_type === '1'
-                                                ? "bg-amber-50 border-amber-100 text-amber-600"
-                                                : "bg-emerald-50 border-emerald-100 text-emerald-600"
-                                            )}>
+                                            <span className="rounded-full border border-line px-2 py-0.5 text-xs font-semibold text-ink-soft">
                                               {session.answer_type === '1' ? 'NO' : 'YES'}
                                             </span>
                                           )}
                                         </div>
-
-                                        {/* 3段目: 実施結果数値 (時間, 回答数など) */}
-                                        <div className="flex items-center gap-3 text-xs font-bold text-slate-400 flex-wrap">
-                                          <span className="flex items-center gap-1"><Timer size={11} /> {session.time_limit_sec}秒</span>
-                                          <span className="flex items-center gap-1">
-                                            <CheckCircle2 size={11} className="text-indigo-500 shrink-0" strokeWidth={2.5} />
-                                            回答 <span className="font-mono font-extrabold text-slate-800">{session.total_answered}</span>
-                                          </span>
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                          <HistoryMetric icon={Timer} label="制限時間" value={`${session.time_limit_sec}秒`} />
+                                          <HistoryMetric icon={CheckCircle2} label="回答" value={session.total_answered} />
                                         </div>
                                       </div>
-                                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-200 bg-slate-50 group-hover:bg-blue-600 group-hover:text-white transition-all shrink-0">
-                                        <ArrowRight size={14} strokeWidth={3} className="group-hover:translate-x-0.5 transition-transform duration-200" />
-                                      </div>
+                                      <ChevronRight size={18} className="shrink-0 text-ink-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
                                     </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })
-          )}
-          </div>
-        </div>
-
-        {/* ────────────── フッター ────────────── */}
-        <div className="shrink-0 p-5 sm:p-6 bg-white border-t border-slate-100">
-          <button
-            onClick={() => router.push('/library')}
-            className="w-full h-13 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
-          >
-            <span>教材を選択する</span>
-            <ArrowRight size={14} strokeWidth={3} />
-          </button>
-        </div>
-
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })
+        )}
       </div>
-    </div>
+    </>
   );
 };

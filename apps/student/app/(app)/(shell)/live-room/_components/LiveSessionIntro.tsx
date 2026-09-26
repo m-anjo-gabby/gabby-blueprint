@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { ArrowRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LIVE_SESSION_INTRO, type LiveSessionIntroAction } from '@/constants/liveSessionIntro';
-import { ShellPanel } from '@/components/shell/ShellPanel';
 
 /**
  * ライブセッション紹介（アップセル）画面。
@@ -13,16 +12,16 @@ export function LiveSessionIntro() {
   const { eyebrow, title, lead, features, steps, actions, note } = LIVE_SESSION_INTRO;
 
   return (
-    <ShellPanel>
-      <div className="flex-1 overflow-y-auto touch-pan-y">
-        {/* ヒーロー: ブランドの深いインディゴを面で使う */}
-        <section className="relative overflow-hidden bg-brand-deep px-6 sm:px-10 pt-10 pb-12 text-white">
-          <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full bg-brand-500/25 blur-3xl pointer-events-none" />
-          <p className="relative text-xs font-semibold tracking-[0.2em] text-brand-300 uppercase">{eyebrow}</p>
+    <div className="overflow-hidden rounded-panel border border-line bg-surface shadow-xs">
+      <div>
+        {/* ヒーロー: ブランドのグラデーション面（ホームの「今日やること」と共通） */}
+        <section className="relative overflow-hidden bg-brand-hero px-6 sm:px-10 pt-10 pb-12 text-white">
+          <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+          <p className="relative text-xs font-semibold text-brand-100">{eyebrow}</p>
           <h1 className="relative mt-3 whitespace-pre-line text-2xl sm:text-3xl font-bold leading-snug tracking-tight">
             {title}
           </h1>
-          <p className="relative mt-4 text-sm leading-relaxed text-brand-100/90">{lead}</p>
+          <p className="relative mt-4 text-sm leading-relaxed text-white/85">{lead}</p>
         </section>
 
         <div className="px-6 sm:px-10 py-8 space-y-10">
@@ -66,7 +65,7 @@ export function LiveSessionIntro() {
           </section>
         </div>
       </div>
-    </ShellPanel>
+    </div>
   );
 }
 
@@ -74,7 +73,8 @@ function IntroActionLink({ action }: { action: LiveSessionIntroAction }) {
   const className = cn(
     'flex h-13 w-full items-center justify-center gap-2 rounded-control text-sm font-bold transition-all active:scale-[0.98]',
     action.variant === 'primary'
-      ? 'bg-brand text-white shadow-sm hover:bg-brand-strong'
+      // 料金ページへの導線はコーポレートサイトの CTA と揃えてゴールドにする
+      ? 'bg-gold text-brand-deep shadow-sm hover:brightness-95'
       : 'border border-line bg-surface text-ink-soft hover:bg-slate-50'
   );
 

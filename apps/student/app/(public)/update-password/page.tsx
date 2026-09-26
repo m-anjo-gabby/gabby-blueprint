@@ -178,7 +178,7 @@ function UpdatePasswordForm() {
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="flex flex-col items-center text-center py-6"
           >
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-4" />
+            <Loader2 className="w-8 h-8 animate-spin text-brand mb-4" />
             <p className="text-slate-600 font-medium">認証情報を確認中...</p>
             <p className="text-xs text-slate-400 mt-2">安全なセッションを確立しています。</p>
           </motion.div>
@@ -194,8 +194,8 @@ function UpdatePasswordForm() {
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="flex flex-col items-center text-center py-4"
           >
-            <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
-              <KeyRound className="w-6 h-6 text-indigo-600" />
+            <div className="w-12 h-12 bg-brand-50 rounded-full flex items-center justify-center mb-4">
+              <KeyRound className="w-6 h-6 text-brand" />
             </div>
             <h1 className="text-xl font-bold text-slate-800">パスワードの再設定</h1>
             <p className="text-sm text-slate-500 mt-3 mb-8 leading-relaxed max-w-xs">
@@ -205,7 +205,7 @@ function UpdatePasswordForm() {
               type="button"
               disabled={loading}
               onClick={handleStartReset}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
+              className="w-full bg-brand hover:bg-brand-strong disabled:bg-brand-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -256,7 +256,7 @@ function UpdatePasswordForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
+                className="w-full bg-brand hover:bg-brand-strong disabled:bg-slate-200 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -268,7 +268,7 @@ function UpdatePasswordForm() {
               <div className="text-center">
                 <Link
                   href="/login"
-                  className="text-xs text-slate-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-1"
+                  className="text-xs text-slate-500 hover:text-brand transition-colors flex items-center justify-center gap-1"
                 >
                   <ArrowLeft size={14} /> ログイン画面に戻る
                 </Link>
@@ -300,7 +300,7 @@ function UpdatePasswordForm() {
             {/* 明示的なフォールバックアクションボタン */}
             <Link
               href="/login?message=updated"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
+              className="w-full bg-brand hover:bg-brand-strong text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
             >
               ログイン画面へ移動 <ArrowLeft size={16} className="rotate-180" />
             </Link>
@@ -324,7 +324,7 @@ function UpdatePasswordForm() {
             </p>
             <Link
               href="/forgot-password"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
+                className="w-full bg-brand hover:bg-brand-strong text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px]"
             >
               再設定メールをリクエストする
             </Link>
@@ -342,7 +342,7 @@ export default function UpdatePasswordPage() {
       {/* Vercelビルドエラー（Missing Suspense with CSR Bailout）を防ぐためのSuspense境界 */}
       <Suspense fallback={
         <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 min-h-[340px] flex flex-col items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-brand mb-4" />
           <p className="text-slate-600 font-medium">読み込み中...</p>
         </div>
       }>

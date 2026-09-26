@@ -253,13 +253,13 @@ export const SprintResult: React.FC<SprintResultProps> = ({
   const displayAverageScore = scoreData.averageAssessmentScore ?? 0;
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-indigo-100">
+    <div className="fixed inset-0 w-full h-full bg-slate-50/60 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none select-none text-slate-900 selection:bg-brand-100">
       <div className="relative w-full max-w-2xl h-full max-h-[95vh] bg-white border border-slate-200/80 rounded-panel shadow-xl flex flex-col overflow-hidden animate-fade-in">
         
 {/* ────────────── ヘッダー：シンプル中央寄せ・余白調整モデル ────────────── */}
-        <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
+        <div className="shrink-0 bg-brand-50/60 border-b border-brand-100/40 p-5 sm:p-6 relative overflow-hidden space-y-4">
           <div className="absolute top-0 right-0 p-3 opacity-[0.08] pointer-events-none">
-            <Trophy size={115} strokeWidth={1.2} className="text-indigo-600" />
+            <Trophy size={115} strokeWidth={1.2} className="text-brand" />
           </div>
           
           {/* 上段：ナビゲーション */}
@@ -271,14 +271,14 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                   const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                   router.push(`/training/sprint/history?month=${monthStr}&focus=${scoreData.self_sprint_id}`);
                 }}
-                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-indigo-600 active:scale-95 transition-all"
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/70 hover:text-brand active:scale-95 transition-all"
                 title="履歴に戻る"
               >
                 <ChevronLeft size={20} strokeWidth={2.5} />
               </button>
               <button
                 onClick={() => router.push('/dashboard')}
-                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100/80 shadow-xs hover:bg-slate-50 hover:text-brand active:scale-95 transition-all"
                 title="ダッシュボードに戻る"
               >
                 <Home size={18} strokeWidth={2.5} />
@@ -286,7 +286,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             </div>
             
             <div className="text-right">
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] font-mono block">
+              <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em] font-mono block">
                 Sprint Result
               </span>
               <p className="text-[9px] font-bold text-slate-400 opacity-90">
@@ -324,7 +324,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-slate-700 font-sans">
               {/* 回答数 */}
               <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
-                <CheckCircle2 size={13} fill="none" strokeWidth={2.5} className="text-indigo-500 shrink-0" />
+                <CheckCircle2 size={13} fill="none" strokeWidth={2.5} className="text-brand-500 shrink-0" />
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">回答</span>
                 <span className="text-sm font-black text-slate-800 font-mono leading-none">{displayTotalAnswered}</span>
               </div>
@@ -338,7 +338,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
               <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
                 <ChartSpline size={13} strokeWidth={2.5} className="text-amber-500 shrink-0" />
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">平均スコア</span>
-                <span className="text-sm font-black text-indigo-600 font-mono leading-none inline-flex items-baseline">
+                <span className="text-sm font-black text-brand font-mono leading-none inline-flex items-baseline">
                   {displayTotalAssessment > 0 ? (
                     <>
                       {displayAverageScore}
@@ -380,7 +380,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                     key={q.question_id || index}
                     className={cn(
                       "bg-white border rounded-[28px] p-4 sm:p-5 transition-all duration-300 flex flex-col gap-4 relative shadow-sm",
-                      isFocused && "ring-2 ring-indigo-500 border-transparent shadow-md scale-[1.01]",
+                      isFocused && "ring-2 ring-brand-500 border-transparent shadow-md scale-[1.01]",
                       isSkipped ? "border-slate-200/50 bg-slate-50/40 opacity-85" : "border-slate-100"
                     )}
                   >
@@ -400,8 +400,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           className={cn(
                             "h-7 pl-2.5 pr-3 rounded-full flex items-center gap-1.5 transition-all active:scale-95 border select-none group whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none",
                             isFocused
-                              ? "bg-indigo-600 border-transparent text-white shadow-xs shadow-indigo-200"
-                              : "bg-slate-50 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/70 border-slate-200/50"
+                              ? "bg-brand border-transparent text-white shadow-xs shadow-brand-200"
+                              : "bg-slate-50 text-slate-500 hover:text-brand hover:bg-brand-50/70 border-slate-200/50"
                           )}
                           title="一連の流れを再生"
                         >
@@ -419,7 +419,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                           {/* 役割を明示するコンパクトなラベル */}
                           <span className={cn(
                             "text-[10px] font-black tracking-widest",
-                            isFocused ? "text-indigo-100" : "text-slate-400 group-hover:text-indigo-500"
+                            isFocused ? "text-brand-100" : "text-slate-400 group-hover:text-brand-500"
                           )}>
                             {isFocused ? "再生中" : "再生"}
                           </span>
@@ -492,7 +492,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                     )}
 
                     {/* Question / Instructionセクション */}
-                    <div className="w-full text-left border-l-4 border-indigo-500 pl-3 py-0.5 flex flex-col gap-1">
+                    <div className="w-full text-left border-l-4 border-brand-500 pl-3 py-0.5 flex flex-col gap-1">
                       <PhraseAudioHeader
                         label={isQuestionBased ? "質問文" : "指示文"}
                         tone="indigo"
@@ -585,7 +585,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
             // 履歴一覧からの遷移、または全て再生の完了/停止後：リトライへ
             <button
               onClick={() => router.push(`/training/sprint/play?mode=sprint&sprint_type=${scoreData.sprint_type}&content_id=${scoreData.content_id}`)}
-              className="w-full h-13 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/10 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
+              className="w-full h-13 rounded-2xl bg-brand text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-brand/10 hover:bg-brand-strong transition-all active:scale-95 flex items-center justify-center gap-2 border-none"
             >
               <span>スプリントをリトライ</span>
               <ArrowRight size={14} strokeWidth={3} />
@@ -599,8 +599,8 @@ export const SprintResult: React.FC<SprintResultProps> = ({
                 className={cn(
                   "w-full h-13 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 border-none",
                   activePlaybackMode === 'all'
-                    ? "bg-indigo-50 text-indigo-600 shadow-none border border-indigo-200"
-                    : "bg-indigo-600 text-white shadow-indigo-600/10 hover:bg-indigo-700"
+                    ? "bg-brand-50 text-brand shadow-none border border-brand-200"
+                    : "bg-brand text-white shadow-brand/10 hover:bg-brand-strong"
                 )}
               >
                 {activePlaybackMode === 'all' ? (
@@ -618,7 +618,7 @@ export const SprintResult: React.FC<SprintResultProps> = ({
               <button
                 type="button"
                 onClick={() => router.push(`/training/sprint/play?mode=sprint&sprint_type=${scoreData.sprint_type}&content_id=${scoreData.content_id}`)}
-                className="flex items-center justify-center gap-1.5 px-6 py-1.5 rounded-xl text-slate-400 hover:text-indigo-600 active:scale-[0.98] transition-all cursor-pointer border-none"
+                className="flex items-center justify-center gap-1.5 px-6 py-1.5 rounded-xl text-slate-400 hover:text-brand active:scale-[0.98] transition-all cursor-pointer border-none"
                 title="再生せずにすぐリトライする"
               >
                 <FastForward size={12} strokeWidth={2.5} />

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, BookOpen, LayoutGrid } from 'lucide-react';
-import { ShellPanel, ShellPanelHeader, CountBadge } from '@/components/shell/ShellPanel';
+import { ShellPageHeader, CountBadge } from '@/components/shell/ShellPage';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Components
@@ -111,9 +111,9 @@ export default function LibraryPage() {
   };
 
   return (
-    <ShellPanel>
-      {/* 1. ヘッダーエリア */}
-      <ShellPanelHeader title="教材" aside={<CountBadge count={filteredList.length} />}>
+    <>
+      {/* 1. ヘッダーエリア（検索・種別タブはスクロールしても上部に固定） */}
+      <ShellPageHeader title="教材" aside={<CountBadge count={filteredList.length} />}>
 
         {/* 検索バー */}
         <div className="flex gap-2">
@@ -124,7 +124,7 @@ export default function LibraryPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               // iOSズーム防止の text-base
-              className="pl-11 h-12 bg-slate-50 border-line shadow-none rounded-control text-base sm:text-sm focus-visible:bg-surface focus-visible:ring-brand/15 focus-visible:border-brand-200 transition-all"
+              className="pl-11 h-12 bg-surface border-line shadow-none rounded-control text-base sm:text-sm focus-visible:ring-brand/15 focus-visible:border-brand-200 transition-all"
             />
           </div>
           {(searchQuery || selectedType !== 'All' || selectedTag !== 'All') && (
@@ -132,7 +132,7 @@ export default function LibraryPage() {
               variant="ghost" 
               size="icon" 
               onClick={() => { setSearchQuery(''); setSelectedType('All'); setSelectedTag('All'); }} 
-              className="rounded-control text-ink-muted hover:bg-slate-100 hover:text-ink"
+              className="rounded-control text-ink-muted hover:bg-surface hover:text-ink"
             >
               <X size={20} />
             </Button>
@@ -159,8 +159,8 @@ export default function LibraryPage() {
                     key={tab.label}
                     value={String(tab.id)}
                     className={cn(
-                      "group shrink-0 snap-start gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-4 h-10 text-sm font-semibold text-ink-soft shadow-none transition-all hover:bg-slate-50",
-                      "data-[state=active]:border-brand-deep data-[state=active]:bg-brand-deep data-[state=active]:text-white"
+                      "group shrink-0 snap-start gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-4 h-10 text-sm font-semibold text-ink-soft shadow-none transition-all hover:border-brand-200",
+                      "data-[state=active]:border-brand data-[state=active]:bg-brand data-[state=active]:text-white"
                     )}
                   >
                     <Icon
@@ -176,26 +176,26 @@ export default function LibraryPage() {
 
             {/* 続きがあることを示す端のフェード（スクロール可能な時のみ表示） */}
             {showLeftFade && (
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-linear-to-r from-white to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-linear-to-r from-canvas to-transparent" />
             )}
             {showRightFade && (
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-white to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-canvas to-transparent" />
             )}
           </div>
         </Tabs>
-      </ShellPanelHeader>
+      </ShellPageHeader>
 
-      {/* 2. リストエリア */}
-      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 bg-canvas/60">
+      {/* 2. リストエリア（PCは2列） */}
+      <div>
         <AnimatePresence mode="popLayout">
           {isLoading && !allContents ? (
-            <div className="space-y-5">
-              {[...Array(3)].map((_, i) => (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {[...Array(4)].map((_, i) => (
                 <Skeleton key={i} className="h-48 w-full rounded-panel" />
               ))}
             </div>
           ) : filteredList.length > 0 ? (
-            <div className="space-y-5">
+            <div className="grid gap-4 lg:grid-cols-2">
               {filteredList.map(content => (
                 <motion.div
                   key={content.content_id}
@@ -219,14 +219,14 @@ export default function LibraryPage() {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-32 text-ink-subtle space-y-4"
             >
-              <div className="p-6 bg-white rounded-full shadow-sm border border-line/70">
-                <BookOpen size={48} strokeWidth={1} className="text-slate-200" />
+              <div className="p-6 bg-surface rounded-full border border-line">
+                <BookOpen size={48} strokeWidth={1} className="text-ink-subtle" />
               </div>
               <p className="text-sm font-semibold text-ink-muted">条件に合う教材が見つかりません</p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </ShellPanel>
+    </>
   );
 }

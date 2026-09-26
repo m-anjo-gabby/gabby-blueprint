@@ -42,7 +42,8 @@ export const SHELL_NAV_ITEMS: ShellNavItem[] = [
     label: '学習',
     href: '/library',
     icon: BookOpen,
-    matchPaths: ['/library', '/favorites'],
+    // 学習記録・履歴・ダイアログ課題（シェル内のトレーニング画面）も学習タブ配下として扱う
+    matchPaths: ['/library', '/favorites', '/training/performance', '/training/word/history', '/training/sprint/history', '/training/dialogue'],
     isVisible: () => true,
   },
   {

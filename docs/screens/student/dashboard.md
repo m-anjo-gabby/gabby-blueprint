@@ -50,7 +50,7 @@
 | 学習メニュー | 「教材を探す」「お気に入りを復習」「学習記録を見る」 | それぞれ `/library`・`/favorites`・`/training/performance` へ遷移 |
 
 「今週の学習」の学習日は、単語ドリル・スプリントセッション・スプリントドリルのいずれかの実績がある日
-（[トレーニングパフォーマンス](./training/performance.md)の学習日数と同じ判定）。
+（[学習記録](./training/performance.md)の学習日数と同じ判定）。
 
 ## 状態
 
@@ -63,12 +63,14 @@
 
 ホームを含む `(shell)` ルートグループ配下の画面には、共通ナビゲーションが常設される
 （モバイル=画面下部のボトムタブ、PC(md以上)=左サイドナビ。項目・順番・アイコンは共通）。
-トレーニング・通話画面・チャットルーム等の没入画面（`(app)` 直下）には表示されない。
+ドリル実施中のトレーニング（単語帳・スプリントの実施・結果画面）・通話画面・チャットルーム等の
+没入画面（`(app)` 直下）には表示されない。学習記録・履歴・ダイアログ課題など「見る・振り返る」系の
+トレーニング画面はシェル内（`(app)/(shell)/training/`）に置き、ナビを表示する。
 
 | タブ | 表示条件 | 遷移先 | アクティブになる画面 |
 |---|---|---|---|
 | ホーム | 常時 | `/dashboard` | `/dashboard` |
-| 学習 | 常時 | `/library` | `/library`, `/favorites` |
+| 学習 | 常時 | `/library` | `/library`, `/favorites`, `/training/performance`, `/training/word/history`, `/training/sprint/history`, `/training/dialogue/*` |
 | ライブセッション（モバイル表記「ライブ」） | 常時（契約が無い場合は遷移先が紹介画面になる） | `/live-room` | `/live-room`, `/calendar`, `/coach-matching` |
 | チャット | ライブセッション付き契約の有効なチケットを1件以上保持している場合 | `/chat` | `/chat` |
 | モニター | `monitor`ロールを保持している場合 | `/monitor` | `/monitor` |

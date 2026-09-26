@@ -35,7 +35,7 @@ export function HomeCard({ title, action, className, children }: HomeCardProps) 
 export function ProgressBar({ percent, tone = 'brand' }: { percent: number; tone?: 'brand' | 'light' }) {
   const clamped = Math.min(100, Math.max(0, percent));
   return (
-    <div className={cn('h-1.5 w-full overflow-hidden rounded-full', tone === 'light' ? 'bg-white/15' : 'bg-slate-100')}>
+    <div className={cn('h-1.5 w-full overflow-hidden rounded-full', tone === 'light' ? 'bg-white/25' : 'bg-slate-100')}>
       <div
         className={cn('h-full rounded-full transition-[width] duration-700', tone === 'light' ? 'bg-white' : 'bg-brand')}
         style={{ width: `${clamped}%` }}

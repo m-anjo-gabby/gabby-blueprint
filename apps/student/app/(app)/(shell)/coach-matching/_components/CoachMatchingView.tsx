@@ -16,7 +16,7 @@ import { LiveSessionTicketSummary } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
-import { ShellPanel, ShellPanelHeader, CountBadge } from '@/components/shell/ShellPanel';
+import { ShellPageHeader, CountBadge } from '@/components/shell/ShellPage';
 
 interface CoachMatchingViewProps {
   ticket: LiveSessionTicketSummary;
@@ -132,8 +132,8 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
   };
 
   return (
-    <ShellPanel>
-      <ShellPanelHeader
+    <>
+      <ShellPageHeader
         title="専属コーチを探す"
         back="/live-room"
         aside={<CountBadge count={filteredCoaches.length} unit="人" />}
@@ -141,7 +141,7 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
       />
 
       {/* 2. コンテンツエリア（スクロール） */}
-      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 bg-canvas/60 space-y-6">
+      <div className="space-y-6">
         <section className="space-y-3">
           <h2 className="text-xs font-bold text-brand-500 uppercase px-1">セッション枠の状況</h2>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -262,6 +262,6 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
         onClose={() => setRequestTarget(null)}
         onRequested={handleSlotUpdate}
       />
-    </ShellPanel>
+    </>
   );
 }

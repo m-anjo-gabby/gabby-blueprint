@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 import { NotificationItem } from '@gabby/types/notification';
 import { NotificationCard } from './_components/NotificationCard';
-import { ShellPanel, ShellPanelHeader, CountBadge } from '@/components/shell/ShellPanel';
+import { ShellPageHeader, CountBadge } from '@/components/shell/ShellPage';
 
 export default function NotificationPage() {
   const { notifications, isLoading, fetchNotifications, markAsRead } = useNotificationStore();
@@ -29,11 +29,11 @@ export default function NotificationPage() {
   }, [markAsRead, router]);
 
   return (
-    <ShellPanel>
-      <ShellPanelHeader title="通知" back={{ history: '/dashboard' }} aside={<CountBadge count={notifications.length} />} />
+    <>
+      <ShellPageHeader title="通知" back={{ history: '/dashboard' }} aside={<CountBadge count={notifications.length} />} />
 
       {/* ─── リスト ─────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-3">
+      <div>
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
@@ -55,11 +55,11 @@ export default function NotificationPage() {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-20 text-center"
             >
-              <div className="w-14 h-14 rounded-card bg-slate-50 flex items-center justify-center text-ink-subtle mb-4 border border-line/70">
+              <div className="w-14 h-14 rounded-card bg-surface flex items-center justify-center text-ink-subtle mb-4 border border-line">
                 <BellOff size={22} />
               </div>
               <p className="text-sm font-bold text-ink-muted">現在通知はありません</p>
-              <p className="text-[11px] text-ink-subtle mt-1.5 font-bold uppercase">
+              <p className="text-xs text-ink-subtle mt-1.5">
                 通知が届くと、ここに表示されます
               </p>
             </motion.div>
@@ -68,7 +68,7 @@ export default function NotificationPage() {
               key="list"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="space-y-3 pb-6"
+              className="space-y-3"
             >
               {notifications.map(notification => (
                 <NotificationCard
@@ -81,6 +81,6 @@ export default function NotificationPage() {
           )}
         </AnimatePresence>
       </div>
-    </ShellPanel>
+    </>
   );
 }

@@ -30,7 +30,7 @@ export default async function TrainingLogPage({ searchParams }: PageProps) {
         userTimezone = userData.timezone;
       }
     }
-  } catch (_) {
+  } catch {
     // タイムゾーン取得失敗時のフォールバック
   }
 

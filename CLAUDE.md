@@ -33,11 +33,14 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
 - クリーンコード: DRY原則（Don't Repeat Yourself）を徹底し、関心の分離（Separation of Concerns）を意識したコンポーネント設計を行うこと。
 - 命名規則: 簡潔かつ直感的な名称（例: 'fetchUser', 'SubmitButton'）を使用し、プロジェクト全体で一貫性を保つこと。
 - 共通化: 複数アプリ（admin/coach/student）にまたがるロジック・型定義は `packages/types` や `packages/lib` に集約し、アプリごとの重複実装を避けること。
+- `packages/lib` の共通UIでブランド色を使う箇所は `brand` / `brand-strong` / `brand-soft` / `brand-N` トークンで書き、パレット名（`indigo-*` 等）を直接書かない。色の実体は各アプリの `app/globals.css` で定義する（student は #0e3196 基準、coach/admin は現状インディゴと同値）。
 - 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラーがない状態にしてから完了とすること。
 - `apps/student` のUI実装規約:
-  - 色・角丸は `apps/student/app/globals.css` のデザイントークン（`brand-*` / `ink-*` / `line` / `canvas` / `surface`、`rounded-panel` / `rounded-card` / `rounded-control`）で指定し、パレット名（`indigo-*` / `slate-*` 等）や任意値（`rounded-[32px]` 等）を直接書かない。機能ごとの色分けはせず、emerald/amber/rose は成功・警告・エラー等の状態表示に限定する。
+  - 色・角丸は `apps/student/app/globals.css` のデザイントークン（`brand-*` / `gold` / `ink-*` / `line` / `canvas` / `surface`、`rounded-panel` / `rounded-card` / `rounded-control`）で指定し、パレット名（`indigo-*` / `slate-*` 等）や任意値（`rounded-[32px]` 等）を直接書かない。機能ごとの色分けはせず、emerald/amber/rose は成功・警告・エラー等の状態表示に限定する。
+  - ブランド色はコーポレートカラー #0e3196（`brand` = `brand-700`）を基準にした段階色。明るさが要る所（進捗バー・フォーカス・濃紺面上のアイコン）は `brand-500` を使う。`gold`（#ffd700）はコーポレートサイトの強調色で、料金ページへのCTA・「おすすめ」・達成演出に限定して少量使い、文字色や警告表示には使わない。
   - 文字は日本語表記を基本とし、最小サイズは11px。`font-black` と英語の大文字ラベル（`uppercase` + 広い字間）は使わない。
-  - 画面はアプリシェル（`app/(app)/(shell)/`、常設ナビあり）と没入画面（`app/(app)` 直下の training 等、ナビなし）に分ける。ナビ項目は `constants/navigation.ts` のみで定義し、シェル内のパネル型画面は `components/shell/ShellPanel.tsx`（`ShellPanel` / `ShellPanelHeader`）を使う。
+  - 画面はアプリシェル（`app/(app)/(shell)/`、常設ナビあり）と没入画面（`app/(app)` 直下、ナビなし）に分ける。基準は「利用者が連続した作業の最中か」で、ドリル実施・結果、ライブ通話、チャットルームは没入画面、一覧・学習記録・履歴・課題確認など「見る・選ぶ・振り返る」画面はシェルに置く（URLを変えずに移す場合は `(shell)/training/...` のようにルートグループ側へ置く）。ナビ項目は `constants/navigation.ts` のみで定義する。
+  - シェル内の画面は、各 `layout.tsx` で `ContentFrame`（`components/shell/PageFrames.tsx`、`width` = narrow / medium / wide / full）を使い、ページ内の見出しは `components/shell/ShellPage.tsx` の `ShellPageHeader`（検索・タブ・月切替などは `children` に渡すと上部に固定表示）で統一する。スクロールはシェルの `<main>` に任せ、画面内に「スマホ型の浮いたパネル」や内側だけのスクロール領域を作らない。`PanelFrame` は没入画面専用。
 
 # 4. コミュニケーション・トーン
 

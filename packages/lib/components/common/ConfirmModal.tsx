@@ -27,7 +27,7 @@ export const ConfirmModal = ({
   const themes = {
     danger: { bg: 'bg-rose-50', text: 'text-rose-500', btn: 'bg-rose-500 hover:bg-rose-600 shadow-rose-100', icon: Trash2 },
     warning: { bg: 'bg-amber-50', text: 'text-amber-500', btn: 'bg-amber-500 hover:bg-amber-600 shadow-amber-100', icon: AlertTriangle },
-    info: { bg: 'bg-indigo-50', text: 'text-indigo-500', btn: 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-100', icon: Info },
+    info: { bg: 'bg-brand-50', text: 'text-brand-500', btn: 'bg-brand-500 hover:bg-brand shadow-brand-100', icon: Info },
   };
 
   const theme = themes[variant];

@@ -12,8 +12,8 @@
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --border: oklch(0.922 0 0); /* slate-200 */
-  --primary: oklch(0.511 0.262 276.966); /* indigo-600 (= brand) */
-  --muted-foreground: oklch(0.556 0 0); /* slate-500 */ --radius: 0.625rem; --background: oklch(0.975 0.004 264); /* canvas */ --foreground: oklch(0.208 0.042 265.755); /* slate-900 (= ink) */ --popover: oklch(1 0 0); --popover-foreground: oklch(0.145 0 0); --primary-foreground: oklch(1 0 0); --secondary: oklch(0.97 0 0); --secondary-foreground: oklch(0.205 0 0); --muted: oklch(0.97 0 0); --accent: oklch(0.97 0 0); --accent-foreground: oklch(0.205 0 0); --destructive: oklch(0.577 0.245 27.325); --input: oklch(0.922 0 0); --ring: oklch(0.785 0.115 274.713); /* indigo-300 */ --chart-1: oklch(0.646 0.222 41.116); --chart-2: oklch(0.6 0.118 184.704); --chart-3: oklch(0.398 0.07 227.392); --chart-4: oklch(0.828 0.189 84.429); --chart-5: oklch(0.769 0.188 70.08); --sidebar: oklch(0.985 0 0); --sidebar-foreground: oklch(0.145 0 0); --sidebar-primary: oklch(0.205 0 0); --sidebar-primary-foreground: oklch(0.985 0 0); --sidebar-accent: oklch(0.97 0 0); --sidebar-accent-foreground: oklch(0.205 0 0); --sidebar-border: oklch(0.922 0 0); --sidebar-ring: oklch(0.708 0 0);
+  --primary: oklch(0.367 0.169 264.4); /* = brand (#0e3196) */
+  --muted-foreground: oklch(0.556 0 0); /* slate-500 */ --radius: 0.625rem; --background: oklch(0.975 0.004 264); /* canvas */ --foreground: oklch(0.208 0.042 265.755); /* slate-900 (= ink) */ --popover: oklch(1 0 0); --popover-foreground: oklch(0.145 0 0); --primary-foreground: oklch(1 0 0); --secondary: oklch(0.97 0 0); --secondary-foreground: oklch(0.205 0 0); --muted: oklch(0.97 0 0); --accent: oklch(0.97 0 0); --accent-foreground: oklch(0.205 0 0); --destructive: oklch(0.577 0.245 27.325); --input: oklch(0.922 0 0); --ring: oklch(0.78 0.1 263); /* = brand-300 */ --chart-1: oklch(0.646 0.222 41.116); --chart-2: oklch(0.6 0.118 184.704); --chart-3: oklch(0.398 0.07 227.392); --chart-4: oklch(0.828 0.189 84.429); --chart-5: oklch(0.769 0.188 70.08); --sidebar: oklch(0.985 0 0); --sidebar-foreground: oklch(0.145 0 0); --sidebar-primary: oklch(0.205 0 0); --sidebar-primary-foreground: oklch(0.985 0 0); --sidebar-accent: oklch(0.97 0 0); --sidebar-accent-foreground: oklch(0.205 0 0); --sidebar-border: oklch(0.922 0 0); --sidebar-ring: oklch(0.708 0 0);
 }
 
 @theme inline {
@@ -68,22 +68,30 @@
   /* 注意: Tailwind v4 は未使用のパレット変数（--color-indigo-* 等）を出力しないため、
      var() で参照すると未定義になる。値は Tailwind 標準パレットと同じ oklch を直接記述する。 */
 
-  /* Brand: インディゴ（= Tailwind indigo）。主要ボタン・選択中・進捗・リンクに限定して使う */
-  --color-brand-50: oklch(96.2% 0.018 272.314);
-  --color-brand-100: oklch(93% 0.034 272.788);
-  --color-brand-200: oklch(87% 0.065 274.039);
-  --color-brand-300: oklch(78.5% 0.115 274.713);
-  --color-brand-400: oklch(67.3% 0.182 276.935);
-  --color-brand-500: oklch(58.5% 0.233 277.117);
-  --color-brand-600: oklch(51.1% 0.262 276.966);
-  --color-brand-700: oklch(45.7% 0.24 277.023);
-  --color-brand-800: oklch(39.8% 0.195 277.366);
-  --color-brand-900: oklch(35.9% 0.144 278.697);
-  --color-brand-950: oklch(25.7% 0.09 281.288);
-  --color-brand: oklch(51.1% 0.262 276.966);        /* = brand-600 主要ボタン・リンク */
-  --color-brand-strong: oklch(45.7% 0.24 277.023);  /* = brand-700 ホバー・選択中の文字 */
-  --color-brand-deep: oklch(25.7% 0.09 281.288);    /* = brand-950 高級感を出す面（今日やること・選択中ナビ） */
-  --color-brand-soft: oklch(96.2% 0.018 272.314);   /* = brand-50 アイコン下地・選択中タブの下地 */
+  /* Brand: Gabby Academy のコーポレートカラー #0e3196（= brand-700）を基準に、同じ色相（H264）で展開したロイヤルブルー。
+     主要ボタン・選択中・進捗・リンクに限定して使う。
+     - #0e3196 は暗い色のため、進捗バー・フォーカス・濃紺面上のアイコン等「明るさが要る所」は brand-500 を使う */
+  --color-brand-50: oklch(97% 0.013 262);           /* #f0f5fe */
+  --color-brand-100: oklch(93.5% 0.03 262);         /* #dfeafe */
+  --color-brand-200: oklch(87% 0.058 263);          /* #c0d5fb */
+  --color-brand-300: oklch(78% 0.1 263);            /* #96b7f8 */
+  --color-brand-400: oklch(66% 0.155 264);          /* #618ef0 */
+  --color-brand-500: oklch(55% 0.195 264);          /* #3467e1 */
+  --color-brand-600: oklch(45.5% 0.2 264);          /* #1847c3 */
+  --color-brand-700: oklch(36.7% 0.169 264.4);      /* #0e3196 コーポレートカラー */
+  --color-brand-800: oklch(31% 0.14 264.5);         /* #0a2675 */
+  --color-brand-900: oklch(26.5% 0.11 265);         /* #0a1e5a */
+  --color-brand-950: oklch(21.5% 0.075 266);        /* #09163b */
+  --color-brand: oklch(36.7% 0.169 264.4);          /* = brand-700 主要ボタン・リンク */
+  --color-brand-strong: oklch(31% 0.14 264.5);      /* = brand-800 ホバー・選択中の文字 */
+  --color-brand-deep: oklch(21.5% 0.075 266);       /* = brand-950 濃い文字色（ゴールド面・淡い下地の上）。重く見えるため面には使わない */
+  --color-brand-soft: oklch(97% 0.013 262);         /* = brand-50 アイコン下地・選択中タブの下地 */
+
+  /* Gold: コーポレートサイトの強調色 #ffd700。「おすすめ」・マーカー・達成の演出に限定して少量使う。
+     - 文字色には使わない（白背景で読めない）。ゴールド面の上の文字は ink / brand-deep にする
+     - 警告表示には使わない（警告は amber） */
+  --color-gold: #ffd700;
+  --color-gold-soft: #fffadd;                       /* ゴールドの淡い下地 */
 
   /* Neutral: 画面の9割を占める基調色（= Tailwind slate） */
   --color-canvas: oklch(97.5% 0.004 264);           /* ページ背景 */
@@ -98,6 +106,12 @@
   --radius-panel: 1.75rem;   /* 画面を占めるパネル */
   --radius-card: 1.5rem;     /* カード */
   --radius-control: 1rem;    /* ボタン・入力欄・アイコン下地 */
+}
+
+/* ヒーロー面（今日やること・ライブセッション紹介）: コーポレートサイトの見出し帯と同じく、
+   明るめの青から #0e3196 へ流す。濃紺ベタ塗りより軽く、落ち着きは保つ */
+@utility bg-brand-hero {
+  background-image: linear-gradient(135deg, var(--color-brand-600) 0%, var(--color-brand) 70%);
 }
 
 /* Font: 欧文はGeist、和文はNoto Sans JP（未読込時はOS標準の和文ゴシック）。

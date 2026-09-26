@@ -76,13 +76,13 @@ export const WordControls: React.FC<WordControlsProps> = ({
             </motion.div>
           ) : isAutoPlaying ? (
             <motion.div key="auto" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
-              <RotateCw size={10} className="animate-spin text-indigo-600" />
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Auto Playing</span>
+              <RotateCw size={10} className="animate-spin text-brand" />
+              <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">Auto Playing</span>
             </motion.div>
           ) : isPlaying ? (
             <motion.div key="play" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
-              <RotateCw size={10} className="animate-spin text-indigo-600" />
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Playing</span>
+              <RotateCw size={10} className="animate-spin text-brand" />
+              <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">Playing</span>
             </motion.div>
           ) : (
             <motion.span key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
@@ -98,18 +98,18 @@ export const WordControls: React.FC<WordControlsProps> = ({
         <button
           onClick={onSaveResume}
           disabled={isAutoPlaying || isPlaying}
-          className={cn(sideBtnBase, "hover:bg-indigo-50 hover:text-indigo-600 text-slate-400")}
+          className={cn(sideBtnBase, "hover:bg-brand-50 hover:text-brand text-slate-400")}
         >
           <Bookmark size={18} strokeWidth={2.5} />
         </button>
 
         {/* スプリット・ナビゲーションユニット */}
-        <div className={cn("flex-1 h-full bg-white border-indigo-100", unitBase)}>
+        <div className={cn("flex-1 h-full bg-white border-brand-100", unitBase)}>
           {/* 戻るボタン */}
           <button 
             onClick={onPrev} 
             disabled={isInteractionDisabled || isFirstStep} 
-            className={cn(splitLeftBase, "text-slate-400 hover:bg-slate-50 border-indigo-50")}
+            className={cn(splitLeftBase, "text-slate-400 hover:bg-slate-50 border-brand-50")}
           >
             <ArrowLeft size={18} strokeWidth={3} />
           </button>
@@ -122,7 +122,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
               "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40 rounded-r-2xl",
               isLastStep 
                 ? "bg-emerald-500 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]" 
-                : "bg-indigo-600 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
+                : "bg-brand text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
             )}
           >
             <span className="text-[10px] font-black uppercase tracking-[0.15em] tabular-nums">
@@ -138,7 +138,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
           disabled={isManualPlaying}
           className={cn(
             sideBtnBase,
-            isAutoPlaying ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" : "hover:bg-indigo-50 hover:text-indigo-600 text-slate-400"
+            isAutoPlaying ? "bg-brand text-white border-brand shadow-lg shadow-brand-100" : "hover:bg-brand-50 hover:text-brand text-slate-400"
           )}
         >
           <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-slate-400")} />
@@ -170,7 +170,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
             disabled={isInteractionDisabled}
             className={cn(
               "flex-1 h-full flex items-center justify-center gap-2 transition-all rounded-r-2xl",
-              isManualPlaying ? "bg-indigo-50 text-indigo-600" : "text-slate-600 hover:text-indigo-600"
+              isManualPlaying ? "bg-brand-50 text-brand" : "text-slate-600 hover:text-brand"
             )}
           >
             {isManualPlaying ? (

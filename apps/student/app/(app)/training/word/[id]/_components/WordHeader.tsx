@@ -27,7 +27,7 @@ export const WordHeader: React.FC<WordHeaderProps> = ({ onBack }) => {
       <div className="flex items-center justify-between gap-2 h-12 px-2">
         <button 
           onClick={onBack} 
-          className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all"
+          className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-brand active:scale-95 transition-all"
         >
           <ChevronLeft size={20} strokeWidth={2.5} />
         </button>
@@ -38,7 +38,7 @@ export const WordHeader: React.FC<WordHeaderProps> = ({ onBack }) => {
           className="flex-1 min-w-0 flex flex-col items-center group active:opacity-70 transition-opacity"
         >
           {/* 教材名バッジ（CEFRレベルを統合） */}
-          <div className="mb-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/80 group-hover:bg-indigo-50 transition-colors">
+          <div className="mb-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/80 group-hover:bg-brand-50 transition-colors">
             {cefr && (
               <span className={cn(
                 "px-1 py-0.5 rounded-[4px] text-[7px] font-black leading-none uppercase",
@@ -47,7 +47,7 @@ export const WordHeader: React.FC<WordHeaderProps> = ({ onBack }) => {
                 {cefr.label}
               </span>
             )}
-            <span className="text-[8px] font-black text-slate-400 group-hover:text-indigo-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">
+            <span className="text-[8px] font-black text-slate-400 group-hover:text-brand-400 uppercase tracking-[0.2em] leading-none block whitespace-nowrap">
               {contentName || 'Vocabulary'}
             </span>
           </div>
@@ -58,7 +58,7 @@ export const WordHeader: React.FC<WordHeaderProps> = ({ onBack }) => {
               {currentWord.word_en}
             </h1>
             {/* アイコン */}
-            <ChevronDown size={20} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all ml-1 shrink-0" />
+            <ChevronDown size={20} className="text-slate-400 group-hover:text-brand-500 group-hover:translate-y-0.5 transition-all ml-1 shrink-0" />
           </div>
         </button>
 
@@ -72,7 +72,7 @@ export const WordHeader: React.FC<WordHeaderProps> = ({ onBack }) => {
           <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">
             Word
           </span>
-          <span className="text-[11px] font-black text-indigo-600 ml-1 tabular-nums">
+          <span className="text-[11px] font-black text-brand ml-1 tabular-nums">
             {current}
           </span>
           <span className="text-[9px] font-bold text-slate-300">/</span>
@@ -88,7 +88,7 @@ export const WordHeader: React.FC<WordHeaderProps> = ({ onBack }) => {
         {/* プログレスバー本体 */}
         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner relative">
           <div 
-            className="absolute top-0 left-0 h-full bg-indigo-600 transition-all duration-500 ease-out rounded-full"
+            className="absolute top-0 left-0 h-full bg-brand transition-all duration-500 ease-out rounded-full"
             style={{ width: `${progress}%` }}
           />
         </div>

@@ -25,7 +25,7 @@ import { getSessionStatusBadge } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
 import { RescheduleProposalDialog } from './RescheduleProposalDialog';
-import { ShellPanel, ShellPanelHeader } from '@/components/shell/ShellPanel';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
 
 const JOINABLE_WINDOW_MS = 48 * 60 * 60 * 1000;
 const HISTORY_PAGE_SIZE = 10;
@@ -157,15 +157,17 @@ export function LiveSessionHub({
   };
 
   return (
-    <ShellPanel>
-      <ShellPanelHeader title="ライブセッション" description="セッションの予定確認・予約・キャンセルをここで管理できます。">
+    <>
+      <ShellPageHeader title="ライブセッション" description="セッションの予定確認・予約・キャンセルをここで管理できます。" />
+
+      <div className="mb-5 space-y-3">
         {/* ライブセッションタブ配下の関連画面への導線 */}
         <div className="grid grid-cols-2 gap-2">
           {HUB_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="flex items-center justify-center gap-2 h-11 rounded-control border border-line bg-surface text-sm font-semibold text-ink-soft hover:bg-slate-50 hover:border-brand-200 active:scale-[0.98] transition-all"
+              className="flex items-center justify-center gap-2 h-11 rounded-control border border-line bg-surface text-sm font-semibold text-ink-soft hover:border-brand-200 active:scale-[0.98] transition-all"
             >
               <link.icon size={16} className="text-brand" />
               {link.label}
@@ -190,9 +192,9 @@ export function LiveSessionHub({
             </select>
           </div>
         )}
-      </ShellPanelHeader>
+      </div>
 
-      <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 bg-canvas/60 space-y-2">
+      <div className="space-y-2">
         {pendingProposalGroups.length > 0 && (
           <div className="space-y-2">
             {pendingProposalGroups.map((group) => (
@@ -418,6 +420,6 @@ export function LiveSessionHub({
         onAccepted={handleProposalAccepted}
         onDeclined={handleProposalDeclined}
       />
-    </ShellPanel>
+    </>
   );
 }

@@ -100,7 +100,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
               {formatDateTimeByZone(session.start_datetime, timezone, false)} 〜 {formatDateTimeByZone(session.end_datetime, timezone, false)}
             </p>
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-50 overflow-hidden flex items-center justify-center text-indigo-500 shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-brand-50 overflow-hidden flex items-center justify-center text-brand-500 shrink-0">
                 {coachIconUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={coachIconUrl} alt={session.counterpart_name} className="w-full h-full object-cover" />
@@ -141,7 +141,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
                       <ul className="space-y-2">
                         {session.call_log.map((entry) => (
                           <li key={entry.call_log_id} className="flex items-start gap-2 text-xs">
-                            <span className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'}`}>
+                            <span className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-brand-50 text-brand' : 'bg-rose-50 text-rose-600'}`}>
                               {entry.left_at ? <LogOut size={11} /> : <LogIn size={11} />}
                             </span>
                             <span className="text-slate-600">
@@ -162,7 +162,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
 
         {/* 宿題（指示・チェックリスト・フォローアップコメントを1セクションに集約） */}
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
-          <SectionHeading icon={BookOpen} iconClassName="bg-indigo-50 text-indigo-600" title="宿題" />
+          <SectionHeading icon={BookOpen} iconClassName="bg-brand-50 text-brand" title="宿題" />
 
           {!homework ? (
             <p className="text-xs text-slate-400 italic">まだ宿題はありません。</p>
@@ -187,7 +187,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
                       <ListTodo size={13} />
                       <p className="text-xs font-bold">チェックリスト</p>
                     </div>
-                    <span className="text-[11px] font-black text-indigo-600 tabular-nums shrink-0">
+                    <span className="text-[11px] font-black text-brand tabular-nums shrink-0">
                       {doneCount}/{checklist.length} 完了
                     </span>
                   </div>
@@ -297,7 +297,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
                       <p className="text-xs font-semibold text-slate-700 truncate">{entry.content_name}</p>
                       <p className="text-[11px] text-slate-400">{formatDateTimeByZone(entry.insert_date, timezone, false)}</p>
                     </div>
-                    <span className="shrink-0 text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1">
+                    <span className="shrink-0 text-[11px] font-black text-brand bg-brand-50 border border-brand-100 rounded-full px-2.5 py-1">
                       {entry.average_score !== null ? `${entry.average_score}/5` : '—'}
                     </span>
                   </li>
@@ -332,7 +332,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
                   <p className="font-bold text-slate-400 text-[10px]">{entry.sender_role === 'coach' ? 'コーチ' : '自分'}</p>
                   <p
                     className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${
-                      entry.sender_role === 'student' ? 'bg-indigo-50 text-indigo-700' : 'bg-rose-50 text-rose-700'
+                      entry.sender_role === 'student' ? 'bg-brand-50 text-brand-strong' : 'bg-rose-50 text-rose-700'
                     }`}
                   >
                     {entry.message}
@@ -387,7 +387,7 @@ function HomeworkAttachmentView({ attachment }: { attachment: SessionHomeworkAtt
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 text-xs text-indigo-600 underline underline-offset-2"
+      className="flex items-center gap-2 text-xs text-brand underline underline-offset-2"
     >
       <FileText size={16} className="shrink-0" />
       <span className="truncate">{attachment.file_name}</span>

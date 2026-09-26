@@ -106,7 +106,7 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
           <DrawerHeader className="px-8 py-0 flex items-center justify-between h-10">
             <div className="flex flex-col text-left">
               <DrawerTitle className="text-xl font-black tracking-tight text-slate-800 leading-none">Index</DrawerTitle>
-              <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Vocabulary List</span>
+              <span className="text-[10px] font-bold text-brand-500 uppercase tracking-widest mt-1">Vocabulary List</span>
             </div>
             <DrawerClose asChild>
               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
@@ -119,10 +119,10 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
           <div className="px-8 pt-6 pb-4" data-vaul-no-drag>
             <Tabs value={sortOrder} onValueChange={(v) => setSortOrder(v as 'default' | 'alpha')}>
               <TabsList className="flex w-full bg-slate-100/50 p-1 rounded-2xl h-11 border border-slate-100">
-                <TabsTrigger value="default" className="flex-1 text-xs font-bold rounded-xl data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm transition-all">
+                <TabsTrigger value="default" className="flex-1 text-xs font-bold rounded-xl data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:shadow-sm transition-all">
                   By Rank
                 </TabsTrigger>
-                <TabsTrigger value="alpha" className="flex-1 text-xs font-bold rounded-xl data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm transition-all">
+                <TabsTrigger value="alpha" className="flex-1 text-xs font-bold rounded-xl data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:shadow-sm transition-all">
                   A - Z
                 </TabsTrigger>
               </TabsList>
@@ -145,7 +145,7 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
                     <button
                       key={char}
                       onClick={() => scrollToSection(char)}
-                      className="inline-flex items-center justify-center min-w-[36px] h-9 rounded-xl bg-slate-50 text-[11px] font-black text-slate-400 hover:text-white hover:bg-indigo-500 active:scale-90 transition-all border border-slate-100"
+                      className="inline-flex items-center justify-center min-w-[36px] h-9 rounded-xl bg-slate-50 text-[11px] font-black text-slate-400 hover:text-white hover:bg-brand-500 active:scale-90 transition-all border border-slate-100"
                     >
                       {char}
                     </button>
@@ -171,7 +171,7 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
                     {/* アルファベットセクション見出し */}
                     {isFirst && (
                       <div id={`section-${initial}`} className="pt-6 pb-2 pl-2 flex items-center gap-4">
-                        <span className="text-xl font-black text-indigo-100 uppercase select-none">{initial}</span>
+                        <span className="text-xl font-black text-brand-100 uppercase select-none">{initial}</span>
                         <div className="h-px flex-1 bg-slate-50" />
                       </div>
                     )}
@@ -183,7 +183,7 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
                       className={cn(
                         "w-full flex items-center gap-4 px-5 py-4 rounded-[22px] transition-all duration-300 outline-none border-2 text-left",
                         isActive
-                          ? "bg-indigo-50/40 border-indigo-400 shadow-sm"
+                          ? "bg-brand-50/40 border-brand-400 shadow-sm"
                           : "bg-white border-transparent hover:border-slate-100 hover:bg-slate-50 group"
                       )}
                     >
@@ -192,21 +192,21 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
                           {sortOrder === 'default' && (
                             <span className={cn(
                               "text-[10px] font-mono font-bold w-5 text-right shrink-0",
-                              isActive ? "text-indigo-400" : "text-slate-300"
+                              isActive ? "text-brand-400" : "text-slate-300"
                             )}>
                               {(w.originalIdx + 1).toString().padStart(2, '0')}
                             </span>
                           )}
                           <span className={cn(
                             "text-[17px] font-bold tracking-tight truncate block",
-                            isActive ? "text-indigo-700" : "text-slate-700"
+                            isActive ? "text-brand-strong" : "text-slate-700"
                           )}>
                             {w.word_en}
                           </span>
                         </div>
                         <p className={cn(
                           "text-xs font-medium truncate mt-0.5 block",
-                          isActive ? "text-indigo-500/70" : "text-slate-400",
+                          isActive ? "text-brand-500/70" : "text-slate-400",
                           sortOrder === 'default' ? "ml-8" : "ml-0"
                         )}>
                           {w.word_ja}
@@ -216,7 +216,7 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
                       {/* 右端アクション表示 */}
                       <div className={cn(
                         "h-8 w-8 rounded-full flex items-center justify-center transition-all shrink-0",
-                        isActive ? "bg-indigo-500 text-white shadow-sm" : "bg-slate-50 text-slate-200 opacity-0 group-hover:opacity-100"
+                        isActive ? "bg-brand-500 text-white shadow-sm" : "bg-slate-50 text-slate-200 opacity-0 group-hover:opacity-100"
                       )}>
                         <ChevronRight size={16} strokeWidth={3} />
                       </div>

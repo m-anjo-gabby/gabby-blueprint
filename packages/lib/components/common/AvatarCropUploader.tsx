@@ -145,7 +145,7 @@ export function AvatarCropUploader({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg transition-colors"
+          className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-brand hover:bg-brand-strong text-white flex items-center justify-center shadow-lg transition-colors"
         >
           <Camera size={15} />
         </button>
@@ -221,7 +221,7 @@ export function AvatarCropUploader({
                   step={0.05}
                   value={zoom}
                   onChange={(e) => setZoom(Number(e.target.value))}
-                  className="w-full accent-indigo-600"
+                  className="w-full accent-brand"
                 />
 
                 <div className="flex gap-3">
@@ -237,7 +237,7 @@ export function AvatarCropUploader({
                     type="button"
                     onClick={handleApply}
                     disabled={isSaving || !croppedAreaPixels}
-                    className="flex-1 h-11 text-[13px] font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-2xl shadow-lg transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 h-11 text-[13px] font-black text-white bg-brand hover:bg-brand-strong rounded-2xl shadow-lg transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSaving ? (
                       <>

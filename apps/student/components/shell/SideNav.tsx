@@ -37,13 +37,14 @@ export function SideNav({ items, badges, pathname }: SideNavProps) {
                   className={cn(
                     'flex flex-col lg:flex-row items-center gap-1 lg:gap-3 rounded-control px-2 py-3 lg:px-4 transition-colors',
                     isActive
-                      ? 'bg-brand-deep text-white shadow-sm'
-                      : 'text-ink-soft hover:bg-slate-100 hover:text-ink'
+                      // モバイルのボトムタブと同じ「淡い下地＋ブランド色の文字」で、重くせずに現在地を示す
+                      ? 'bg-brand-soft text-brand'
+                      : 'text-ink-soft hover:bg-canvas hover:text-ink'
                   )}
                 >
                   <span className="relative flex shrink-0">
                     <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} />
-                    <NavBadge badge={badges[item.id]} className={isActive ? 'ring-brand-deep' : undefined} />
+                    <NavBadge badge={badges[item.id]} className={isActive ? 'ring-brand-soft' : undefined} />
                   </span>
                   <span className={cn('text-[11px] lg:text-sm leading-tight text-center', isActive ? 'font-bold' : 'font-medium')}>
                     {/* レール幅では短縮名、サイドバー幅では正式名称 */}

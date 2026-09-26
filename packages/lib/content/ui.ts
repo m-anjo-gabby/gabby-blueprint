@@ -23,8 +23,8 @@ export type ContentTheme = {
 };
 
 export const getContentTypeConfig = (type: number): { label: string; icon: LucideIcon; theme: ContentTheme } => {
-  // 💡 アプリ全体の主力ブランドカラー（Indigo）をボタンのベースに完全統一
-  const SHARED_BRAND_BUTTON = "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/10 text-white border-none";
+  // 💡 ボタンのベースは各アプリの brand トークンに統一（色の実体は各アプリの globals.css で定義）
+  const SHARED_BRAND_BUTTON = "bg-brand hover:bg-brand-strong shadow-brand/10 text-white border-none";
 
   switch (type) {
     case 0: // 単語帳: 誠実で知的なライトブルー（主力教材）

@@ -20,7 +20,7 @@ interface PlaybackRateControlProps {
 const TRIGGER_STYLES = {
   word: {
     base: "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-2xl",
-    selected: "bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700 active:bg-indigo-800",
+    selected: "bg-brand text-white border-brand-500 hover:bg-brand-strong active:bg-brand-800",
     unselected: "text-slate-400 border-slate-200 hover:bg-slate-100 active:bg-slate-200",
     value: "text-[10px] font-black leading-none",
     label: "text-[10px] font-bold uppercase tracking-tighter",
@@ -29,11 +29,11 @@ const TRIGGER_STYLES = {
   },
   sprint: {
     base: "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-2xl border-slate-200 hover:bg-slate-100 active:bg-slate-200 cursor-pointer z-10",
-    selected: "bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700 active:bg-indigo-800",
+    selected: "bg-brand text-white border-brand-500 hover:bg-brand-strong active:bg-brand-800",
     unselected: "text-slate-600",
     value: "text-[11px] font-black leading-none",
     label: "text-[9px] font-black uppercase tracking-tight mt-0.5",
-    labelSelected: "text-indigo-100",
+    labelSelected: "text-brand-100",
     labelUnselected: "text-slate-400",
   },
 } as const;
@@ -96,12 +96,12 @@ export const PlaybackRateControl: React.FC<PlaybackRateControlProps> = ({
                   className={cn(
                     "w-full px-2.5 py-1.5 text-xs font-black font-mono rounded-xl transition-all flex items-center justify-between gap-2 cursor-pointer",
                     isSelected
-                      ? "bg-indigo-50 text-indigo-600"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-indigo-500"
+                      ? "bg-brand-50 text-brand"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-brand-500"
                   )}
                 >
                   <span>{rate.toFixed(1)}x</span>
-                  {isSelected && <Check size={12} strokeWidth={3} className="text-indigo-600 shrink-0" />}
+                  {isSelected && <Check size={12} strokeWidth={3} className="text-brand shrink-0" />}
                 </button>
               );
             })}

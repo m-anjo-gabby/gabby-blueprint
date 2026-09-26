@@ -223,7 +223,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     return (
       <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6 z-[100]">
         <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-6">
-          <div className="w-16 h-16 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto text-indigo-600 border border-indigo-100">
+          <div className="w-16 h-16 bg-brand-50 rounded-3xl flex items-center justify-center mx-auto text-brand border border-brand-100">
             <BookOpen size={32} strokeWidth={2} />
           </div>
           <div className="space-y-2">
@@ -234,7 +234,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
           </div>
           <Link 
             href="/library" 
-            className="inline-flex items-center justify-center gap-2 w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+            className="inline-flex items-center justify-center gap-2 w-full h-14 bg-brand hover:bg-brand-strong text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-brand/20 active:scale-95 transition-all"
           >
             Go to Library
           </Link>
@@ -257,7 +257,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     return (
       <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
         <div className="bg-white p-8 rounded-[36px] shadow-2xl border border-slate-100 w-full max-w-sm text-center space-y-6">
-          <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 text-indigo-600 animate-pulse">
+          <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto border border-brand-100 text-brand animate-pulse">
             <Volume2 size={26} strokeWidth={2.5} />
           </div>
           <div className="space-y-2">
@@ -282,7 +282,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
                 isAssessmentMode: config.isAssessmentMode
               });
             }}
-            className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+            className="w-full h-14 bg-brand hover:bg-brand-strong text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-brand/20 active:scale-95 transition-all"
           >
             Start Training 🎯
           </button>
@@ -303,7 +303,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
             <h2 className="text-xl font-black text-slate-900 tracking-tight">Data Not Found</h2>
             <p className="text-sm text-slate-500 leading-relaxed px-2">教材データの取得に失敗しました。もう一度一覧からお試しください。</p>
           </div>
-          <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest">Go Back</Link>
+          <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 w-full h-14 bg-brand text-white rounded-2xl font-black text-[11px] uppercase tracking-widest">Go Back</Link>
         </div>
       </div>
     );

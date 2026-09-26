@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NoticeCard } from './_components/NoticeCard';
-import { ShellPanel, ShellPanelHeader, CountBadge } from '@/components/shell/ShellPanel';
+import { ShellPageHeader, CountBadge } from '@/components/shell/ShellPage';
 
 export default function NoticePage() {
   const searchParams = useSearchParams();
@@ -52,11 +52,11 @@ export default function NoticePage() {
   }, [focusId, isLoading, notices]);
 
   return (
-    <ShellPanel>
-      <ShellPanelHeader title="お知らせ" back={{ history: '/dashboard' }} aside={<CountBadge count={notices.length} />} />
+    <>
+      <ShellPageHeader title="お知らせ" back={{ history: '/dashboard' }} aside={<CountBadge count={notices.length} />} />
 
       {/* ─── リスト ─────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-3">
+      <div>
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
@@ -78,11 +78,11 @@ export default function NoticePage() {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-20 text-center"
             >
-              <div className="w-14 h-14 rounded-card bg-slate-50 flex items-center justify-center text-ink-subtle mb-4 border border-line/70">
+              <div className="w-14 h-14 rounded-card bg-surface flex items-center justify-center text-ink-subtle mb-4 border border-line">
                 <BellOff size={22} />
               </div>
               <p className="text-sm font-bold text-ink-muted">現在お知らせはありません</p>
-              <p className="text-[11px] text-ink-subtle mt-1.5 font-bold uppercase">
+              <p className="text-xs text-ink-subtle mt-1.5">
                 お知らせが届くと、ここに表示されます
               </p>
             </motion.div>
@@ -91,7 +91,7 @@ export default function NoticePage() {
               key="list"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="space-y-3 pb-6"
+              className="space-y-3"
             >
               {notices.map(notice => (
                 <NoticeCard
@@ -105,6 +105,6 @@ export default function NoticePage() {
           )}
         </AnimatePresence>
       </div>
-    </ShellPanel>
+    </>
   );
 }

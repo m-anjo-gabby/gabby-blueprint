@@ -18,17 +18,18 @@
 
 ## 画面の構成
 
-1. **ヘッダー** — 戻る（ライブラリ）／ホーム（ダッシュボード）ボタン、画面タイトル「ダイアログ」、
-   教材名、カテゴリバッジ、割当日、進捗バー
-2. **セッション一覧** — セット内のセッションごとに1行。完了バッジ・完了日・教材リンク
+1. **ヘッダー** — 戻るボタン、画面タイトル「ダイアログ」
+2. **課題の概要カード** — 教材名、カテゴリバッジ、割当日、進捗バー
+3. **セッション一覧** — セット内のセッションごとに1枚のカード。完了バッジ・完了日・教材リンク
+
+アプリシェル内の画面で、共通ナビゲーションは「学習」タブがアクティブになる。
 
 ## 表示要素・操作
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 戻るボタン | 常時 | ライブラリ画面（`/library`）へ遷移 |
-| ホームボタン | 常時 | ダッシュボード（`/dashboard`）へ遷移 |
-| 画面タイトル「ダイアログ」 | 常時。ライブラリ画面の「Library」と同様、ナビゲーションと同じ行に表示 | 操作なし |
+| 戻るボタン | 常時 | 直前の画面（ライブラリまたはホーム）へ戻る。履歴が無い場合はライブラリ画面（`/library`）へ遷移 |
+| 画面タイトル「ダイアログ」 | 常時。戻るボタンと同じ行に表示 | 操作なし |
 | 教材名 | 常時。ライブラリの教材カード見出しと同じ大きさで表示し、長い場合は省略せず折り返す | 操作なし |
 | カテゴリバッジ（Beginner／Intermediate／Advanced／Corpus） | 常時 | 操作なし |
 | 割当日 | 常時 | 操作なし |
@@ -67,9 +68,9 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/training/dialogue/[assignmentId]/page.tsx`
-- `apps/student/app/(app)/training/dialogue/[assignmentId]/_components/DialoguePracticeDetail.tsx`
-- `apps/student/app/(app)/training/dialogue/[assignmentId]/_components/DialogueSessionRow.tsx`
+- `apps/student/app/(app)/(shell)/training/dialogue/[assignmentId]/page.tsx`
+- `apps/student/app/(app)/(shell)/training/dialogue/[assignmentId]/_components/DialoguePracticeDetail.tsx`
+- `apps/student/app/(app)/(shell)/training/dialogue/[assignmentId]/_components/DialogueSessionRow.tsx`
 - 遷移元: `apps/student/app/(app)/(shell)/library/page.tsx`（`packages/lib/navigation/student-path.ts`の
   `getTrainingPath`が`content_type===3`の場合にこの画面へのパスを生成する）
 - 関連アクション: `getMyDialogueAssignments`（`apps/student/actions/dialogueAction.ts` →

@@ -2,5 +2,5 @@
 import { PanelFrame } from '@/components/shell/PageFrames';
 
 export default function ChatRoomLayout({ children }: { children: React.ReactNode }) {
-  return <PanelFrame fullScreen>{children}</PanelFrame>;
+  return <PanelFrame>{children}</PanelFrame>;
 }

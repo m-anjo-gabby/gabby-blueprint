@@ -13,16 +13,16 @@ const TONE_STYLES: Record<
   slate: {
     label: 'text-slate-400',
     idle: 'text-slate-400',
-    hover: 'hover:text-indigo-500 hover:bg-slate-100',
-    langActive: 'bg-slate-100 text-indigo-600',
+    hover: 'hover:text-brand-500 hover:bg-slate-100',
+    langActive: 'bg-slate-100 text-brand',
     langIdle: 'text-slate-300 hover:text-slate-400 hover:bg-slate-50',
   },
   indigo: {
-    label: 'text-indigo-500',
-    idle: 'text-indigo-400',
-    hover: 'hover:text-indigo-600 hover:bg-indigo-50',
-    langActive: 'bg-indigo-50 text-indigo-600',
-    langIdle: 'text-indigo-200 hover:text-indigo-400 hover:bg-indigo-50',
+    label: 'text-brand-500',
+    idle: 'text-brand-400',
+    hover: 'hover:text-brand hover:bg-brand-50',
+    langActive: 'bg-brand-50 text-brand',
+    langIdle: 'text-brand-200 hover:text-brand-400 hover:bg-brand-50',
   },
   emerald: {
     label: 'text-emerald-600',
@@ -85,7 +85,7 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
           disabled={playDisabled}
           className={cn(
             'w-8 h-8 flex items-center justify-center rounded-full transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none shrink-0',
-            isLoading ? 'text-indigo-600 bg-indigo-50' : cn(styles.idle, styles.hover),
+            isLoading ? 'text-brand bg-brand-50' : cn(styles.idle, styles.hover),
           )}
         >
           {isLoading ? (

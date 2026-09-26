@@ -147,7 +147,7 @@ export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) 
                   transition={{ duration: 0.15 }}
                   className="space-y-6"
                 >
-                  <article className="prose prose-indigo prose-sm sm:prose-base max-w-none break-words [word-break:break-word] text-slate-600">
+                  <article className="prose prose-sm prose-a:text-brand sm:prose-base max-w-none break-words [word-break:break-word] text-slate-600">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
@@ -173,10 +173,10 @@ export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) 
                           <li {...props} className="!text-slate-600" />
                         ),
                         a: ({ node, ...props }) => (
-                          <a {...props} className="!text-indigo-600 !font-semibold underline hover:!text-indigo-800" target="_blank" rel="noopener noreferrer" />
+                          <a {...props} className="!text-brand !font-semibold underline hover:!text-brand-800" target="_blank" rel="noopener noreferrer" />
                         ),
                         blockquote: ({ node, ...props }) => (
-                          <blockquote {...props} className="!border-l-4 !border-indigo-200 !pl-4 !italic !text-slate-500 !my-4" />
+                          <blockquote {...props} className="!border-l-4 !border-brand-200 !pl-4 !italic !text-slate-500 !my-4" />
                         ),
                         code: ({ node, className, children, ...props }) => {
                           return (
@@ -221,11 +221,11 @@ export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) 
                                     type="button"
                                     disabled={!!loadingActionId}
                                     onClick={() => handlePreview(att.id, att.path)}
-                                    className="flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-indigo-50 border border-slate-200/60 text-slate-600 hover:text-indigo-600 rounded-lg text-[10px] font-bold transition-all disabled:opacity-50 cursor-pointer"
+                                    className="flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-brand-50 border border-slate-200/60 text-slate-600 hover:text-brand rounded-lg text-[10px] font-bold transition-all disabled:opacity-50 cursor-pointer"
                                     title="別タブで表示"
                                   >
                                     {isPreviewLoading ? (
-                                      <Loader2 size={11} className="animate-spin text-indigo-600" />
+                                      <Loader2 size={11} className="animate-spin text-brand" />
                                     ) : (
                                       <Eye size={11} />
                                     )}
@@ -262,7 +262,7 @@ export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) 
             <div className="p-8 bg-white flex flex-col gap-4 flex-shrink-0">
               <button
                 onClick={handleNext}
-                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-indigo-600/20 active:scale-[0.98] transition-all flex items-center justify-center"
+                className="w-full h-14 bg-brand hover:bg-brand-strong text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-brand/20 active:scale-[0.98] transition-all flex items-center justify-center"
               >
                 {currentIndex < total - 1 ? '次のお知らせ →' : '確認しました'}
               </button>
@@ -276,7 +276,7 @@ export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) 
                       onClick={() => setCurrentIndex(i)}
                       className={cn(
                         'h-1.5 rounded-full transition-all duration-300',
-                        i === currentIndex ? 'bg-indigo-600 w-6' : 'bg-slate-200 w-1.5'
+                        i === currentIndex ? 'bg-brand w-6' : 'bg-slate-200 w-1.5'
                       )}
                       aria-label={`お知らせ ${i + 1}`}
                     />
