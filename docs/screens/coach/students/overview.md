@@ -133,6 +133,7 @@
 | Dialogue Practiceカードの割当セット行が0件 | 「All assigned sets are completed」 | 割当は1件以上あるが、いずれも全セッション完了済みの場合 |
 | Coach Notesカードが空 | 「No notes yet」 | メモが1件も無い場合 |
 | Training Reportsカードが空 | 「No contracts yet」 | 契約が1件も無い場合 |
+| 読み込み中（遷移直後） | 一覧→概要の遷移直後はカード群の骨組み、その後ヘッダーを先に表示し、各カードは取得が終わった順に骨組みから置き換わる | ヘッダー（`getStudentOverview` / `getStudentUpcomingSession`）の取得後、カードごとに個別の `Suspense` で遅延表示 |
 | 生徒が見つからない/担当関係が無い | 404ページ | 指定した生徒IDに対して自分が一度も担当関係を持ったことが無い場合 |
 
 過去に担当していた生徒（現在は担当関係が終了、`is_active=false`）についても、この概要画面
@@ -147,6 +148,7 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/coach/app/(app)/students/[id]/page.tsx`
+- `apps/coach/app/(app)/students/[id]/_components/OverviewSections.tsx`（カード単位のデータ取得。page.tsx が各カードを `Suspense` で包む）
 - `apps/coach/app/(app)/students/[id]/_components/StudentOverviewHeader.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/SprintProgressRadar.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/StageLevelDialog.tsx`

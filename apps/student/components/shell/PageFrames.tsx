@@ -28,9 +28,11 @@ const CONTENT_WIDTH_CLASS = {
   full: '',
 } as const;
 
+export type ContentWidth = keyof typeof CONTENT_WIDTH_CLASS;
+
 interface ContentFrameProps {
   children: React.ReactNode;
-  width?: keyof typeof CONTENT_WIDTH_CLASS;
+  width?: ContentWidth;
 }
 
 /** アプリシェル内の画面の共通枠（スクロールはシェルの <main> に任せる） */

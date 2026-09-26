@@ -30,6 +30,10 @@
      - 警告表示には使わない（警告は amber） */
   --color-gold: #ffd700;
   --color-gold-soft: #fffadd;                       /* ゴールドの淡い下地 */
+
+  /* Skeleton: 読み込み中の骨組み（packages/lib/components/common/Skeleton.tsx）の面色。
+     ページ背景（slate-50 / canvas）の上でも判別できるよう slate-200 相当にする */
+  --color-skeleton: oklch(92.9% 0.013 255.508);     /* = slate-200 */
 }
 
 /* ヒーロー面（明るめの青から #0e3196 へ流す。濃紺ベタ塗りより軽く、落ち着きは保つ） */

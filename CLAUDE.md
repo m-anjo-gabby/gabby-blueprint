@@ -34,6 +34,11 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
 - 命名規則: 簡潔かつ直感的な名称（例: 'fetchUser', 'SubmitButton'）を使用し、プロジェクト全体で一貫性を保つこと。
 - 共通化: 複数アプリ（admin/coach/student）にまたがるロジック・型定義は `packages/types` や `packages/lib` に集約し、アプリごとの重複実装を避けること。
 - ブランド色（全アプリ共通）: 画面・共通UIのブランド色は `brand` / `brand-strong` / `brand-soft` / `brand-N`（および `gold`）トークンで書き、パレット名（`indigo-*` 等）を直接書かない。色の実体は `packages/lib/styles/brand-theme.css`（コーポレートカラー #0e3196 基準）で一元定義し、各アプリの `app/globals.css` から読み込む。アプリごとにテーマカラーを変える場合は、そのアプリの `globals.css` で同名トークンを上書きする。coach/admin の shadcn 標準ボタン（`--primary`）は黒系のままとし、ブランド色はアクセントに限定する。青・紫等の分類色・状態色（タグ種別・ステータスバッジ等）はブランド色とは別扱い。
+- ローディング表示（全アプリ共通）: 次の4種類に分けて実装する。部品は `packages/lib/components/common/`（`Skeleton` / `PageSkeleton`・`CardSkeleton`・`LoadingScreen`）に集約し、各アプリは `RouteLoading`（admin/coach は `components/common/`、student は `components/shell/`）経由で使う。スケルトンの色は `brand-theme.css` の `skeleton` トークン。
+  - A. 画面遷移: サーバーで取得する画面は、遷移直後に骨組みを出すため `loading.tsx`（中身は `<RouteLoading variant=... />` の1行）を置く。`loading.tsx` は**そのフォルダ直下の区間が切り替わる遷移でしか表示されない**（Next.jsの仕様）ため、ルートグループ直下に加え、一覧→詳細など複数の子を行き来するフォルダにも置く。新しい子ルート・詳細画面を追加したら、親フォルダに `loading.tsx` があるか確認する。
+  - B. 画面内の遅延表示: 取得の重い画面は、ページで全件を `await` せずカード・区画ごとの async コンポーネントに分けて `<Suspense fallback={<CardSkeleton />}>` で包む（例: coach `students/[id]/page.tsx`）。複数区画で同じ取得を使う場合は React の `cache()` で1回にまとめる。
+  - C. 操作中: ボタンの処理中表示は各アプリの `Button` の `pending` プロップ（フォーム送信は `useFormStatus`、それ以外は `useTransition` の `isPending` を渡す）を使い、`Loader2` の個別実装は新規に増やさない。既存の個別実装は、その画面を改修するついでに置き換える。
+  - D. 没入画面（ドリル・ライブ通話・チャットルーム等）の準備中表示は画面専用の実装を許可する。遷移中の汎用表示は `LoadingScreen`（student は `ImmersiveLoading`）。
 - 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラーがない状態にしてから完了とすること。
 - `apps/student` のUI実装規約:
   - 色・角丸は `apps/student/app/globals.css` のデザイントークン（`brand-*` / `gold` / `ink-*` / `line` / `canvas` / `surface`、`rounded-panel` / `rounded-card` / `rounded-control`）で指定し、パレット名（`indigo-*` / `slate-*` 等）や任意値（`rounded-[32px]` 等）を直接書かない。機能ごとの色分けはせず、emerald/amber/rose は成功・警告・エラー等の状態表示に限定する。例外として教材種別・トレーニング指標・CEFRレベルは分類色として扱う。教材種別とトレーニング指標の色は `packages/lib/content/ui.ts` の `getContentTypeConfig()` / `getTrainingMetricConfig()` だけで定義し、アイコンのマスやアイコン単体など小さな部位に限って使う（カードの枠・ボタン・文字には付けない）。指標の色は所属するトレーニングの色を引き継ぐ（単語・フレーズ＝単語帳のsky、スプリント・ドリル＝スプリントのorange、種別をまたぐ発話評価＝薄いローズ）。実施日数などの分類でない指標は、ブランド色かグレーで表示する。
@@ -75,7 +80,7 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
    - コンポーネント内テキストは各アプリの基本言語（英語 / 日本語）で直接記述します。
    - アプリ内でテキストを分離したい場合は、`constants/dictionary.ts` 等の定数オブジェクトで管理します。
 
-3. **Shared Components (`packages/ui`):**
+3. **Shared Components (`packages/lib/components`):**
    - 共通UIコンポーネントには特定の言語をハードコードせず、必ず `children` や `props`（例: `label`, `placeholder`, `confirmText`）経由で渡す設計（コンポジションパターン）を徹底します。
 
 # 6. データ主体テスト・dev環境接続時の注意
