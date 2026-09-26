@@ -8,7 +8,7 @@ type MonthSwitcherProps = ReturnType<typeof useMonthNavigator>;
 const ARROW_BUTTON_CLASS =
   'flex h-10 w-10 items-center justify-center rounded-control text-ink-muted hover:bg-brand-soft hover:text-brand active:scale-95 transition-all disabled:pointer-events-none disabled:opacity-40';
 
-/** 学習記録系画面の月切替（前月・翌月・今月に戻る） */
+/** トレーニング記録系画面の月切替（前月・翌月・今月に戻る） */
 export function MonthSwitcher({
   currentMonthStr,
   displayYear,

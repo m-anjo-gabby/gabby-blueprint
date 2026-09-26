@@ -10,7 +10,7 @@ interface StatTileProps {
   emphasis?: boolean;
 }
 
-/** 学習記録の数値表示（ラベル・数値・単位） */
+/** トレーニング記録の数値表示（ラベル・数値・単位） */
 export function StatTile({ label, value, unit, icon: Icon, emphasis = false }: StatTileProps) {
   return (
     <div className="rounded-card border border-line bg-surface p-4 sm:p-5">

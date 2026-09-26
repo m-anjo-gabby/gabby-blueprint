@@ -185,7 +185,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
 
   return (
     <>
-      <ShellPageHeader title="学習記録" back={{ history: '/dashboard' }} description="月ごとのトレーニングの実績を確認できます。">
+      <ShellPageHeader title="トレーニング記録" back={{ history: '/dashboard' }} description="月ごとのトレーニングの実績を確認できます。">
         <MonthSwitcher {...monthNavigator} />
       </ShellPageHeader>
 

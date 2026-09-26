@@ -20,7 +20,7 @@ import { NextSessionCard } from './NextSessionCard';
 import { ContinueCard } from './ContinueCard';
 import { WeeklyActivityCard } from './WeeklyActivityCard';
 import { CoachAssignmentsCard } from './CoachAssignmentsCard';
-import { LearningMenuCard } from './LearningMenuCard';
+import { TrainingMenuCard } from './TrainingMenuCard';
 
 interface HomeViewProps {
   nextSession: SessionListItem | null;
@@ -130,7 +130,7 @@ export function HomeView({ nextSession, assignments, activityDates }: HomeViewPr
           </div>
         )}
 
-        <LearningMenuCard />
+        <TrainingMenuCard />
       </div>
     </div>
   );

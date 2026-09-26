@@ -198,7 +198,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     isNavigating.current = true;
     const { isLast } = nextStep();
     if (isLast) {
-      showToast("全ての学習が完了しました！", "success");
+      showToast("すべてのトレーニングが完了しました！", "success");
     }
     
     // ナビゲーションガードを長めに確保し、再レンダリングに伴うアンマウントの嵐をやり過ごす

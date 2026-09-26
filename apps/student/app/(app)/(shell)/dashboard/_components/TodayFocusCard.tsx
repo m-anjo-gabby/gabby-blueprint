@@ -76,9 +76,9 @@ function toFocusView(focus: TodayFocus, nowMs: number, timeZone: string): FocusV
     }
     case 'start':
       return {
-        eyebrow: '今日の学習',
+        eyebrow: '今日のトレーニング',
         title: '今日も少しだけ、英語に触れましょう',
-        description: '教材を選んで学習を始めましょう。お気に入りからの復習もおすすめです。',
+        description: '教材を選んでトレーニングを始めましょう。お気に入りからの復習もおすすめです。',
         primary: { label: '教材を選ぶ', href: '/library' },
         secondary: { label: 'お気に入りを復習', href: '/favorites' },
       };

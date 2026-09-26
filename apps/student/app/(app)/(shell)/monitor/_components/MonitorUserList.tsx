@@ -161,7 +161,7 @@ export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHis
       'ライセンス開始日', 
       'ライセンス終了日', 
       'トレーニング日数', 
-      '学習フレーズ数', 
+      'フレーズ数', 
       'スプリント本数',
       'スプリント回答数',
       '発話数', 

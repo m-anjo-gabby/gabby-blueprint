@@ -163,7 +163,7 @@ export const ContentCard = ({
             onClick={() => onStart(content)}
             className="group/btn h-12 w-full rounded-control border-none bg-brand text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-strong"
           >
-            学習を始める
+            トレーニングを始める
             <ArrowRight size={16} className="ml-2 transition-transform group-hover/btn:translate-x-1" />
           </Button>
         </CardFooter>

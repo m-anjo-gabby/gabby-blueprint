@@ -129,7 +129,7 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
   (payload: Record<string, unknown>) => NotificationText
 > = {
   TRAINING_FIRST: () => ({
-    title: '学習スタート！',
+    title: 'トレーニングスタート！',
     body: '初めてのトレーニングを実施しました。この調子で続けましょう。',
   }),
   TRAINING_STREAK: (payload) => {

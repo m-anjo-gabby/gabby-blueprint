@@ -8,13 +8,13 @@ interface WeeklyActivityCardProps {
   activeCount: number;
 }
 
-/** 今週(月〜日)の学習日数と、日ごとの学習有無 */
+/** 今週(月〜日)のトレーニング日数と、日ごとの実施有無 */
 export function WeeklyActivityCard({ days, activeCount }: WeeklyActivityCardProps) {
   return (
-    <HomeCard title="今週の学習" action={{ label: '学習記録', href: '/training/performance' }}>
+    <HomeCard title="今週のトレーニング" action={{ label: '記録を見る', href: '/training/performance' }}>
       <p className="text-ink">
         <span className="text-3xl font-bold tracking-tight">{activeCount}</span>
-        <span className="ml-1 text-sm font-semibold text-ink-muted">日 学習しました</span>
+        <span className="ml-1 text-sm font-semibold text-ink-muted">日 実施しました</span>
       </p>
 
       <ol className="mt-4 grid grid-cols-7 gap-1.5">
@@ -30,7 +30,7 @@ export function WeeklyActivityCard({ days, activeCount }: WeeklyActivityCardProp
                     : 'bg-slate-100 text-transparent',
                 day.isToday && 'ring-2 ring-brand-200 ring-offset-2'
               )}
-              aria-label={`${day.label}曜日${day.isActive ? '：学習済み' : ''}`}
+              aria-label={`${day.label}曜日${day.isActive ? '：トレーニング済み' : ''}`}
             >
               {day.isActive && <Check size={14} strokeWidth={3} />}
             </span>

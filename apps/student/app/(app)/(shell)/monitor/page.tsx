@@ -92,7 +92,7 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
           モニタリングダッシュボード
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-ink-muted">
-          所属する受講生の学習状況を月ごとに確認し、CSVで出力できます。
+          所属する受講生のトレーニング状況を月ごとに確認し、CSVで出力できます。
         </p>
       </header>
 

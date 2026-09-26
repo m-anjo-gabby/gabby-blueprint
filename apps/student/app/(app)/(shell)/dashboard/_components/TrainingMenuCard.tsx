@@ -5,13 +5,13 @@ import { HomeCard } from './HomeCard';
 const MENU_ITEMS = [
   { href: '/library', label: '教材を探す', icon: BookOpen },
   { href: '/favorites', label: 'お気に入りを復習', icon: Star },
-  { href: '/training/performance', label: '学習記録を見る', icon: BarChart3 },
+  { href: '/training/performance', label: 'トレーニング記録を見る', icon: BarChart3 },
 ];
 
 /** 自主トレーニングの入り口 */
-export function LearningMenuCard() {
+export function TrainingMenuCard() {
   return (
-    <HomeCard title="学習メニュー">
+    <HomeCard title="メニュー">
       <ul className="-mx-2 space-y-1">
         {MENU_ITEMS.map((item) => (
           <li key={item.href}>

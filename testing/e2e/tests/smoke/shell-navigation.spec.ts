@@ -14,7 +14,7 @@ test.describe("ライブセッション契約の生徒", () => {
     await page.goto("/dashboard");
 
     await expect(navTab(page, "ホーム")).toHaveAttribute("aria-current", "page");
-    await expect(navTab(page, "学習")).toBeVisible();
+    await expect(navTab(page, "トレーニング")).toBeVisible();
     await expect(navTab(page, "ライブ")).toBeVisible();
     await expect(navTab(page, "チャット")).toBeVisible();
     await expect(navTab(page, "モニター")).toHaveCount(0);
@@ -27,11 +27,11 @@ test.describe("ライブセッション契約の生徒", () => {
     await expect(navTab(page, "ライブ")).toHaveAttribute("aria-current", "page");
   });
 
-  test("学習記録はナビ付きの画面として表示され、学習タブがアクティブになる", async ({ page }) => {
+  test("トレーニング記録はナビ付きの画面として表示され、トレーニングタブがアクティブになる", async ({ page }) => {
     await page.goto("/training/performance");
 
-    await expect(page.getByRole("heading", { level: 1, name: "学習記録" })).toBeVisible();
-    await expect(navTab(page, "学習")).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("heading", { level: 1, name: "トレーニング記録" })).toBeVisible();
+    await expect(navTab(page, "トレーニング")).toHaveAttribute("aria-current", "page");
   });
 });
 
