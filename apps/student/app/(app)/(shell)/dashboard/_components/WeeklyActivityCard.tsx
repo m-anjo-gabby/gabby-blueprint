@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { Check, Flame, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { WeekDay } from '../_lib/weeklyActivity';
 import { HomeCard } from './HomeCard';
@@ -6,16 +6,31 @@ import { HomeCard } from './HomeCard';
 interface WeeklyActivityCardProps {
   days: WeekDay[];
   activeCount: number;
+  /** 今週の発話回数 */
+  assessmentCount: number;
+  /** 表示用の連続日数（途切れている場合は 0） */
+  streakDays: number;
 }
 
-/** 今週(月〜日)のトレーニング日数と、日ごとの実施有無 */
-export function WeeklyActivityCard({ days, activeCount }: WeeklyActivityCardProps) {
+/** 連続日数を表示する下限（1日だけでは「連続」と言わない。途切れたことは表示しない） */
+const STREAK_DISPLAY_MIN_DAYS = 2;
+
+/** 今週(月〜日)のトレーニング日数・日ごとの実施有無・発話回数と、継続中の連続日数 */
+export function WeeklyActivityCard({ days, activeCount, assessmentCount, streakDays }: WeeklyActivityCardProps) {
   return (
     <HomeCard title="今週のトレーニング" action={{ label: '記録を見る', href: '/training/performance' }}>
-      <p className="text-ink">
-        <span className="text-3xl font-bold tracking-tight">{activeCount}</span>
-        <span className="ml-1 text-sm font-semibold text-ink-muted">日 実施しました</span>
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-ink">
+          <span className="text-3xl font-bold tracking-tight tabular-nums">{activeCount}</span>
+          <span className="ml-1 text-sm font-semibold text-ink-muted">日 実施しました</span>
+        </p>
+        {streakDays >= STREAK_DISPLAY_MIN_DAYS && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-1 text-xs font-bold text-brand">
+            <Flame size={14} />
+            {streakDays}日連続
+          </span>
+        )}
+      </div>
 
       <ol className="mt-4 grid grid-cols-7 gap-1.5">
         {days.map((day) => (
@@ -40,6 +55,15 @@ export function WeeklyActivityCard({ days, activeCount }: WeeklyActivityCardProp
           </li>
         ))}
       </ol>
+
+      <p className="mt-4 flex items-center gap-1.5 border-t border-line pt-3 text-sm text-ink-muted">
+        <Mic size={14} className="text-brand-500" />
+        今週の発話
+        <span className="ml-auto font-bold text-ink tabular-nums">
+          {assessmentCount}
+          <span className="ml-0.5 text-xs font-normal text-ink-muted">回</span>
+        </span>
+      </p>
     </HomeCard>
   );
 }

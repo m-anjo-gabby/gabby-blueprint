@@ -3,11 +3,11 @@ import { fetchHomeData } from './_lib/fetchHomeData';
 
 /**
  * ホーム（ダッシュボード）
- * サーバー側で予定・課題・今週の学習実績をまとめて取得し、「今日やること」の判定材料として渡す。
+ * サーバー側で予定・課題・今週・通算のトレーニング実績をまとめて取得し、「今日やること」の判定材料として渡す。
  * 再開情報（ブックマーク）は他画面と共有するクライアントストアで扱うため HomeView 側で取得する。
  */
 export default async function DashboardPage() {
-  const { nextSession, assignments, activityDates } = await fetchHomeData();
+  const { nextSession, assignments, activities, lifetimeStats } = await fetchHomeData();
 
-  return <HomeView nextSession={nextSession} assignments={assignments} activityDates={activityDates} />;
+  return <HomeView nextSession={nextSession} assignments={assignments} activities={activities} lifetimeStats={lifetimeStats} />;
 }

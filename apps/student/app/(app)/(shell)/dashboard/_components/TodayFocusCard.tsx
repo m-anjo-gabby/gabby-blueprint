@@ -93,7 +93,7 @@ export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayF
   const view = toFocusView(focus, nowMs, timezone);
 
   return (
-    <section className="relative overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 text-white shadow-md shadow-brand/15">
+    <section className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 text-white shadow-md shadow-brand/15">
       <div className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
 
       <div className="relative flex items-start justify-between gap-3">
@@ -120,7 +120,8 @@ export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayF
         </div>
       )}
 
-      <div className="relative mt-6 flex flex-wrap items-center gap-3">
+      {/* 隣のカードより背が低い場合も、ボタンはカードの下端に揃える */}
+      <div className="relative mt-auto flex flex-wrap items-center gap-3 pt-6">
         <Link
           href={view.primary.href}
           className="group inline-flex h-12 items-center gap-2 rounded-control bg-white px-6 text-sm font-bold text-brand shadow-sm hover:bg-brand-soft active:scale-[0.98] transition-all"

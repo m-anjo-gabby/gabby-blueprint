@@ -10,23 +10,27 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import type { SessionListItem } from '@gabby/types/session';
 import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
+import type { TrainingLifetimeStats } from '@/actions/performanceAction';
 import { useContentStore } from '@/stores/useContentStore';
 import { useResumeStore } from '@/stores/useResumeStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { resolveTodayFocus } from '../_lib/todayFocus';
-import { buildCurrentWeek } from '../_lib/weeklyActivity';
+import { buildCurrentWeek, resolveStreakDays, type TrainingActivity } from '../_lib/weeklyActivity';
 import { TodayFocusCard } from './TodayFocusCard';
 import { NextSessionCard } from './NextSessionCard';
 import { ContinueCard } from './ContinueCard';
 import { WeeklyActivityCard } from './WeeklyActivityCard';
+import { LifetimeStatsCard } from './LifetimeStatsCard';
 import { CoachAssignmentsCard } from './CoachAssignmentsCard';
 import { TrainingMenuCard } from './TrainingMenuCard';
 
 interface HomeViewProps {
   nextSession: SessionListItem | null;
   assignments: DialogueAssignmentSummary[];
-  /** 学習した日時（日付文字列またはタイムスタンプ）。今週の学習日数の算出に使う */
-  activityDates: string[];
+  /** 今週を含む月のトレーニング実績（実施日時と件数）。今週の実施日数・発話回数の算出に使う */
+  activities: TrainingActivity[];
+  /** 通算のトレーニング実績（未実施の場合は null） */
+  lifetimeStats: TrainingLifetimeStats | null;
 }
 
 const getGreeting = (hour: number) => {
@@ -43,7 +47,7 @@ const formatToday = (nowMs: number, timeZone: string) =>
  * 「今日やること」を1つだけ主役に据え、残りの情報は補助カードとして並べる
  * （モバイル=1列、PC(lg以上)=主役2列分＋サイド1列のグリッド）。
  */
-export function HomeView({ nextSession, assignments, activityDates }: HomeViewProps) {
+export function HomeView({ nextSession, assignments, activities, lifetimeStats }: HomeViewProps) {
   const nowMs = useNow();
   const timezone = useTimezone();
   const { showToast } = useToast();
@@ -89,7 +93,14 @@ export function HomeView({ nextSession, assignments, activityDates }: HomeViewPr
   const otherAssignments = pendingAssignments.filter(
     (a) => !(focus?.kind === 'assignment' && focus.assignment.assignment_id === a.assignment_id)
   );
-  const week = nowMs !== null ? buildCurrentWeek(activityDates, timezone, nowMs) : null;
+  const week = nowMs !== null ? buildCurrentWeek(activities, timezone, nowMs) : null;
+  const streakDays = nowMs !== null ? resolveStreakDays(lifetimeStats, timezone, nowMs) : 0;
+
+  // PC(3列)で空きマスが出ないよう、「これまでの積み上げ」の幅（1列/2列）を他のカードの占有マス数から決める。
+  // 例: アプリのみ契約 = ヒーロー2＋今週1 → 積み上げ2＋メニュー1、ライブ契約 = ヒーロー2＋次回1 → 今週1＋積み上げ1＋メニュー1
+  const occupiedCells =
+    2 + (showNextSession ? 1 : 0) + (showContinue ? 2 : 0) + (otherAssignments.length > 0 ? 2 : 0) + 1 + 1;
+  const lifetimeSpansTwo = occupiedCells % 3 === 1;
 
   return (
     <div className="space-y-6 pb-6">
@@ -101,7 +112,8 @@ export function HomeView({ nextSession, assignments, activityDates }: HomeViewPr
         </h1>
       </header>
 
-      <div className="grid items-start gap-4 lg:grid-cols-3 lg:grid-flow-dense">
+      {/* PCで横に並ぶカードは行ごとに高さを揃える（各カードは h-full で行の高さいっぱいに広がる） */}
+      <div className="grid gap-4 lg:grid-cols-3 lg:grid-flow-dense">
         <div className="lg:col-span-2">
           {focus !== null && nowMs !== null ? (
             <TodayFocusCard focus={focus} nowMs={nowMs} timezone={timezone} onClearResume={handleClearResume} />
@@ -119,10 +131,17 @@ export function HomeView({ nextSession, assignments, activityDates }: HomeViewPr
         )}
 
         {week ? (
-          <WeeklyActivityCard days={week.days} activeCount={week.activeCount} />
+          <WeeklyActivityCard
+            days={week.days}
+            activeCount={week.activeCount}
+            assessmentCount={week.assessmentCount}
+            streakDays={streakDays}
+          />
         ) : (
           <Skeleton className="h-48 w-full rounded-card" />
         )}
+
+        <LifetimeStatsCard stats={lifetimeStats} className={lifetimeSpansTwo ? 'lg:col-span-2' : undefined} />
 
         {otherAssignments.length > 0 && (
           <div className="lg:col-span-2">

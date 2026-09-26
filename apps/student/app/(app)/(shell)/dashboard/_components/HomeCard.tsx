@@ -10,10 +10,10 @@ interface HomeCardProps {
   children: React.ReactNode;
 }
 
-/** ホーム画面の各カードの共通枠（見出し＋本文） */
+/** ホーム画面の各カードの共通枠（見出し＋本文）。グリッドの行の高さに合わせて伸びる */
 export function HomeCard({ title, action, className, children }: HomeCardProps) {
   return (
-    <section className={cn('rounded-card border border-line bg-surface p-5 sm:p-6 shadow-xs', className)}>
+    <section className={cn('h-full rounded-card border border-line bg-surface p-5 sm:p-6 shadow-xs', className)}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-sm font-bold text-ink">{title}</h2>
         {action && (
