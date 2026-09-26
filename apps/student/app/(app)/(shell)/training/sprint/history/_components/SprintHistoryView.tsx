@@ -257,7 +257,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                                     <button
                                       id={`session-${session.self_sprint_id}`}
                                       type="button"
-                                      onClick={() => router.push(`/training/sprint/result/${session.self_sprint_id}`)}
+                                      onClick={() => router.push(`/training/sprint/history/${session.self_sprint_id}`)}
                                       className={cn(
                                         'group flex w-full items-center justify-between gap-3 rounded-control border border-line bg-surface p-3.5 text-left transition-all hover:border-brand-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300',
                                         focusId === session.self_sprint_id && 'border-transparent ring-2 ring-brand-500'

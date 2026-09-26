@@ -774,3 +774,19 @@
   - admin 画面の E2E で固定アカウントを使う前に、対象画面の `requiredRoles` を持っているかを確認する。
     リダイレクト先がダッシュボードなら、まずロール不足を疑う（ログイン直後の遷移の競合と見分けるため、`page.goto` 後の URL を出力する）。
   - admin はログイン後にクライアント側で `/dashboard` へ遷移するため、`waitForURL("**/dashboard")` を待ってから次の画面へ遷移する。
+
+### KJ-2026-0926-06 Playwright の新しいタブは履歴が2件あり、「直前の画面へ戻る」ボタンが about:blank に戻る
+
+- **該当シナリオ**: 生徒のライブセッション結果画面（`/live-room/sessions/[sessionId]/result`）を URL 直接指定で開き、戻るボタンを押す（Playwright、dev）
+- **事象**: 戻るボタンを押しても `/live-room` に遷移せず、`waitForURL` がタイムアウトした。
+  直前に `/live-room` を開いてから遷移した場合は正しく戻れた。
+- **原因**: `ShellPageHeader` の `back={{ history: fallback }}` は `window.history.length > 1` なら `router.back()`、
+  そうでなければ fallback へ遷移する。Playwright の新しいタブは `about:blank` から始まるため、最初の `page.goto` の時点で
+  `history.length` が2になり、`router.back()` で `about:blank` に戻っていた。実ブラウザでメールのリンク等から新しいタブで開いた場合は
+  `history.length` が1になり、fallback へ遷移する。
+- **判断基準への反映**:
+  - `{ history: ... }` 型の戻るボタンは、「直前の画面から遷移して戻る」ケースだけを E2E で確認する。
+    「直接開いた場合の fallback」は Playwright では再現できないため、手動で確認するか、E2E の対象から外す。
+  - 固定アカウント `qa-student-01` には status=完了（`SESSION_RESULT_STATUSES`）のセッションが無いため、ライブセッション・ホーム画面の
+    「実施済み」タブから結果画面を開くテストはスキップされる。結果画面の取得処理はステータスで絞り込まないため、本人の過去セッションの
+    URL を直接開けば、DB を変更せずに表示を確認できる（ID をテストにハードコードしないこと）。

@@ -301,9 +301,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           stopAllAudio();
           resetStore();
           // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
-          const targetUrl = `/training/sprint/result/${res.data.self_sprint_id}?from=play`;
+          const targetUrl = `/training/sprint/result/${res.data.self_sprint_id}`;
           setTimeout(() => {
-            router.push(targetUrl);
+            // 実施画面を履歴に残さない（ブラウザの戻るで実施途中の画面を再表示させない）
+            router.replace(targetUrl);
           }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
         }
       } else {
@@ -326,7 +327,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       resetStore();
       // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
       setTimeout(() => {
-        router.push(`/training/sprint/result/${resultId}?from=play`);
+        router.replace(`/training/sprint/result/${resultId}`);
       }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
     }
   }, [resultId, router, stopAllAudio, resetStore, unlockAudioContext]);

@@ -29,7 +29,7 @@
 | [training/performance.md](student/training/performance.md) | `/training/performance` | トレーニング記録（月間トレーニング実績・実施カレンダー） | ✅ |
 | [training/sprint-history.md](student/training/sprint-history.md) | `/training/sprint/history` | スプリントの履歴 | ✅ |
 | [training/sprint-play.md](student/training/sprint-play.md) | `/training/sprint/play` | スプリント実施画面 | ✅ |
-| [training/sprint-result.md](student/training/sprint-result.md) | `/training/sprint/result/[id]` | スプリント結果、英文中の単語タップによるColor Vowel辞書 | ✅ |
+| [training/sprint-result.md](student/training/sprint-result.md) | `/training/sprint/result/[id]`、`/training/sprint/history/[id]` | スプリント結果（実施直後は没入画面・履歴からはシェル画面）、英文中の単語タップによるColor Vowel辞書 | ✅ |
 | [training/word-detail.md](student/training/word-detail.md) | `/training/word/[id]` | 単語帳カードのトレーニング画面 | ✅ |
 | [training/word-history.md](student/training/word-history.md) | `/training/word/history` | 単語帳の履歴 | ✅ |
 
