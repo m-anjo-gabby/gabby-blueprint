@@ -10,7 +10,7 @@ interface ContinueCardProps {
   onClear: () => void;
 }
 
-/** 途中の教材（ブックマーク）の再開カード（「今日やること」に別の行動が出ている場合に表示） */
+/** 途中の教材（ブックマーク）の再開カード（ホームの3行目に表示） */
 export function ContinueCard({ resume, onClear }: ContinueCardProps) {
   const content = resume.com_m_contents;
   const { icon: TypeIcon, label: typeLabel, theme: typeTheme } = getContentTypeConfig(content.content_type);

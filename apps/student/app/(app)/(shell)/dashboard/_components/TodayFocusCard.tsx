@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Trash2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { getResumePath } from '@gabby/lib/navigation/student-path';
 import { cn } from '@/lib/utils';
 import type { TodayFocus } from '../_lib/todayFocus';
 import { ProgressBar } from './HomeCard';
@@ -13,7 +12,6 @@ interface TodayFocusCardProps {
   focus: TodayFocus;
   nowMs: number;
   timezone: string;
-  onClearResume: () => void;
 }
 
 interface FocusView {
@@ -51,16 +49,6 @@ function toFocusView(focus: TodayFocus, nowMs: number, timeZone: string): FocusV
           : { label: '予定を確認する', href: '/live-room' },
       };
     }
-    case 'resume': {
-      const { resume } = focus;
-      return {
-        eyebrow: '続きから再開',
-        title: resume.com_m_contents.content_name,
-        description: resume.metadata.display?.position_text,
-        progressPercent: resume.metadata.display?.progress_percent ?? 0,
-        primary: { label: '続きから始める', href: getResumePath(resume) },
-      };
-    }
     case 'assignment': {
       const { assignment } = focus;
       return {
@@ -89,26 +77,14 @@ function toFocusView(focus: TodayFocus, nowMs: number, timeZone: string): FocusV
  * ホームの主役カード「今日やること」。
  * 状況に応じた行動を1つだけ提示し、ブランドのグラデーション面で特別感を出す。
  */
-export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayFocusCardProps) {
+export function TodayFocusCard({ focus, nowMs, timezone }: TodayFocusCardProps) {
   const view = toFocusView(focus, nowMs, timezone);
 
   return (
     <section className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 text-white shadow-md shadow-brand/15">
       <div className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
 
-      <div className="relative flex items-start justify-between gap-3">
-        <p className="text-xs font-semibold tracking-wide text-brand-100">{view.eyebrow}</p>
-        {focus.kind === 'resume' && (
-          <button
-            type="button"
-            onClick={onClearResume}
-            aria-label="ブックマークを削除"
-            className="-m-2 p-2 text-white/70 hover:text-white transition-colors"
-          >
-            <Trash2 size={16} />
-          </button>
-        )}
-      </div>
+      <p className="relative text-xs font-semibold tracking-wide text-brand-100">{view.eyebrow}</p>
 
       <h2 className="relative mt-2 text-xl sm:text-2xl font-bold leading-snug tracking-tight line-clamp-2">{view.title}</h2>
       {view.description && <p className="relative mt-2 text-sm text-white/85">{view.description}</p>}
