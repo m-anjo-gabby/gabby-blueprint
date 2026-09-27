@@ -7,7 +7,7 @@ import { CalendarDays, ChevronRight, Ticket, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
+import { CountBadge, ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { withdrawSessionBookingRequest } from '@/actions/sessionAction';
@@ -116,7 +116,8 @@ export function LiveSessionHub({
   const unbookedCount = isCurrent && overview ? Math.max(overview.unbooked_count - adjustingCount, 0) : 0;
   const unmatchedSlotCount = isCurrent && overview ? overview.slots.filter((s) => s.status === 'unmatched').length : 0;
   const showBookingNotice = unbookedCount > 0 && bookableSlots.length > 0;
-  const hasActions = isCurrent && (proposalGroups.length > 0 || unmatchedSlotCount > 0 || showBookingNotice);
+  const actionCount = isCurrent ? proposalGroups.length + (unmatchedSlotCount > 0 ? 1 : 0) + (showBookingNotice ? 1 : 0) : 0;
+  const hasActions = actionCount > 0;
 
   const handleContractChange = (ticketId: string) => {
     startRefresh(() => router.replace(`/live-room?contract=${ticketId}`, { scroll: false }));
@@ -172,7 +173,7 @@ export function LiveSessionHub({
       <div className={cn('space-y-8 transition-opacity', isRefreshing && 'pointer-events-none opacity-60')} aria-busy={isRefreshing}>
         {hasActions && (
           <div>
-            <ShellSectionTitle>対応が必要です</ShellSectionTitle>
+            <ShellSectionTitle aside={<CountBadge count={actionCount} />}>対応が必要です</ShellSectionTitle>
             <div className="space-y-3">
               {proposalGroups.map((group) => (
                 <RescheduleProposalCard
@@ -229,7 +230,12 @@ export function LiveSessionHub({
             onCancel={() => setActionTarget({ session: nextSession, mode: 'cancel' })}
           />
         ) : (
-          previousSession && <PreviousSessionLink previous={previousSession} timezone={timezone} variant="card" />
+          previousSession && (
+            <div>
+              <ShellSectionTitle>前回のセッション</ShellSectionTitle>
+              <PreviousSessionLink previous={previousSession} timezone={timezone} variant="card" />
+            </div>
+          )
         )}
 
         {overview && (

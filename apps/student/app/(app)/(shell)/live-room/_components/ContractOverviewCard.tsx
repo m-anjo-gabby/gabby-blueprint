@@ -5,6 +5,7 @@ import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { LiveSessionContractSummary, LiveSessionOverview, SlotStatusItem } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
+import { ShellSectionTitle } from '@/components/shell/ShellPage';
 
 // 「コーチ未選択」の回は、まだ日時の枠自体が無いことを斜線で表す（色はトークンのみ使用）
 const HATCHED_CLASS = 'bg-[repeating-linear-gradient(135deg,var(--color-line)_0_3px,transparent_3px_6px)]';
@@ -94,51 +95,55 @@ export function ContractOverviewCard({ contract, overview, timezone, adjustingCo
   const barTotal = Math.max(overview.total_sessions, segments.reduce((sum, s) => sum + s.count, 0));
 
   return (
-    <section className="rounded-card border border-line bg-surface p-5 sm:p-6 shadow-xs">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-bold text-ink">{contract.is_current ? '契約の状況' : '契約の実績'}</h2>
-          <p className="mt-1 text-xs text-ink-muted tabular-nums">
+    <div>
+      <ShellSectionTitle
+        aside={
+          <span className="text-xs text-ink-muted tabular-nums">
             {formatContractDate(contract.start_date, timezone)}〜{formatContractDate(contract.end_date, timezone)}・週{overview.weekly_frequency}回
-          </p>
-        </div>
-        <p className="shrink-0 text-right font-bold text-ink tabular-nums">
-          <span className="text-2xl">{overview.completed_count}</span>
-          <span className="text-sm text-ink-muted"> / {overview.total_sessions}回</span>
-        </p>
-      </div>
-
-      <div
-        className="mt-4 flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-line"
-        role="img"
-        aria-label={segments.map((s) => `${s.label}${s.count}回`).join('、')}
+          </span>
+        }
       >
-        {segments
-          .filter((s) => s.count > 0)
-          .map((s) => (
-            <div key={s.key} className={cn('h-full', s.className)} style={{ width: `${(s.count / barTotal) * 100}%` }} />
-          ))}
-      </div>
+        {contract.is_current ? '契約の状況' : '契約の実績'}
+      </ShellSectionTitle>
+      <section className="rounded-card border border-line bg-surface p-5 sm:p-6 shadow-xs">
+        <p className="flex items-baseline gap-2 font-bold text-ink tabular-nums">
+          <span className="text-sm text-ink-muted">実施済み</span>
+          <span className="text-2xl">{overview.completed_count}</span>
+          <span className="text-sm text-ink-muted">/ {overview.total_sessions}回</span>
+        </p>
 
-      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
-        {segments
-          .filter((s) => s.always || s.count > 0)
-          .map((s) => (
-            <div key={s.key} className="flex items-center gap-2 text-xs">
-              <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full border border-line', s.className)} />
-              <dt className="text-ink-muted">{s.label}</dt>
-              <dd className="ml-auto font-semibold text-ink tabular-nums sm:ml-0">{s.count}回</dd>
-            </div>
-          ))}
-      </dl>
+        <div
+          className="mt-4 flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-line"
+          role="img"
+          aria-label={segments.map((s) => `${s.label}${s.count}回`).join('、')}
+        >
+          {segments
+            .filter((s) => s.count > 0)
+            .map((s) => (
+              <div key={s.key} className={cn('h-full', s.className)} style={{ width: `${(s.count / barTotal) * 100}%` }} />
+            ))}
+        </div>
 
-      {contract.is_current && overview.slots.length > 0 && (
-        <ul className="mt-4 divide-y divide-line border-t border-line">
-          {overview.slots.map((slot) => (
-            <SlotRow key={slot.slot_no} slot={slot} weeklyFrequency={overview.weekly_frequency} timezone={timezone} />
-          ))}
-        </ul>
-      )}
-    </section>
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+          {segments
+            .filter((s) => s.always || s.count > 0)
+            .map((s) => (
+              <div key={s.key} className="flex items-center gap-2 text-xs">
+                <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full border border-line', s.className)} />
+                <dt className="text-ink-muted">{s.label}</dt>
+                <dd className="ml-auto font-semibold text-ink tabular-nums sm:ml-0">{s.count}回</dd>
+              </div>
+            ))}
+        </dl>
+
+        {contract.is_current && overview.slots.length > 0 && (
+          <ul className="mt-4 divide-y divide-line border-t border-line">
+            {overview.slots.map((slot) => (
+              <SlotRow key={slot.slot_no} slot={slot} weeklyFrequency={overview.weekly_frequency} timezone={timezone} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   );
 }

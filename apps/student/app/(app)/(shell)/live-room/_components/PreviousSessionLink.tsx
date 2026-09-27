@@ -66,8 +66,7 @@ export function PreviousSessionLink({ previous, timezone, variant }: Props) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs text-ink-muted tabular-nums">
-          前回のセッション・{slot.date}
-          {variant === 'card' && `・${previous.session.counterpart_name} コーチ`}
+          {variant === 'embedded' ? `前回のセッション・${slot.date}` : `${slot.date}・${previous.session.counterpart_name} コーチ`}
         </p>
         <p className="mt-0.5 truncate text-sm">
           <HomeworkLabel homework={previous.homework} />
