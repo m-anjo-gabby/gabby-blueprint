@@ -39,9 +39,7 @@ export function SprintResultDetail({ scoreData, questions, courseTitle }: Sprint
         </div>
       </ShellPageHeader>
 
-      <div className="mb-4 rounded-card border border-line bg-surface p-4 sm:p-5">
-        <SprintResultSummary scoreData={scoreData} courseTitle={courseTitle} />
-      </div>
+      <SprintResultSummary scoreData={scoreData} courseTitle={courseTitle} className="mb-4" />
 
       <SprintResultQuestionList scoreData={scoreData} questions={questions} playback={playback} />
 

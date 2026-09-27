@@ -39,13 +39,16 @@ interface SprintResultSummaryProps {
   className?: string;
 }
 
-/** コース名・回答タイプ・制限時間と、回答数/発話数/平均スコア */
+/**
+ * コース名・回答タイプ・制限時間と、回答数/発話数/平均スコアのカード。
+ * 実施直後（没入画面）と履歴（シェル画面）で同じ見た目にするため、カードの枠まで含めて共通化する。
+ */
 export function SprintResultSummary({ scoreData, courseTitle, className }: SprintResultSummaryProps) {
   const speech = getTrainingMetricConfig('speech');
   const hasAssessment = scoreData.totalAssessmentCount > 0;
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn('space-y-3 rounded-card border border-line bg-surface p-4 sm:p-5', className)}>
       <div className="flex flex-wrap items-center justify-center gap-2">
         <h2 className="min-w-0 truncate text-center text-lg font-bold tracking-tight text-ink sm:text-xl">{courseTitle}</h2>
         {scoreData.question_type === '0' && (

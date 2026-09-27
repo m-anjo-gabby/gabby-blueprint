@@ -3,7 +3,7 @@
 
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, FastForward, Home, Trophy } from 'lucide-react';
+import { ChevronLeft, FastForward, Home } from 'lucide-react';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
@@ -18,8 +18,9 @@ import {
 } from '@/components/training/sprint-result/SprintResultSummary';
 import type { SprintResultData } from '@/components/training/sprint-result/types';
 
+// 見出しの並び（戻る・見出し・日付）は履歴側の ShellPageHeader と揃える
 const NAV_BUTTON_CLASS =
-  'flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-ink-subtle transition-all hover:bg-surface hover:text-brand active:scale-95';
+  'flex h-10 w-10 shrink-0 items-center justify-center rounded-control text-ink-muted transition-all hover:bg-canvas hover:text-ink active:scale-95';
 
 /**
  * スプリント実施直後の結果画面（没入画面）。
@@ -36,38 +37,23 @@ export function SprintResult({ scoreData, questions, courseTitle }: SprintResult
 
   return (
     <ImmersivePanel className="select-none">
-      {/* ヘッダー：ナビゲーションと結果サマリー */}
-      <div className="relative shrink-0 space-y-4 overflow-hidden border-b border-brand-100/40 bg-brand-50/60 p-5 sm:p-6">
-        <div className="pointer-events-none absolute right-0 top-0 p-3 opacity-[0.08]">
-          <Trophy size={115} strokeWidth={1.2} className="text-brand" />
+      {/* ヘッダー：戻る・見出し・日付（履歴側の結果画面と同じ並び）。ホームへはナビが無いため右端に置く */}
+      <header className="shrink-0 space-y-1.5 border-b border-line px-5 pb-4 pt-4 sm:px-6 sm:pt-5">
+        <div className="flex items-center gap-2">
+          <Link href={selectHref} className={`-ml-2 ${NAV_BUTTON_CLASS}`} aria-label="スプリント選択に戻る" title="スプリント選択に戻る">
+            <ChevronLeft size={22} />
+          </Link>
+          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">スプリント結果</h1>
+          <Link href="/dashboard" className={NAV_BUTTON_CLASS} aria-label="ホームに戻る" title="ホームに戻る">
+            <Home size={20} />
+          </Link>
         </div>
+        <p className="text-sm leading-relaxed text-ink-muted tabular-nums">{formatZonedDate(scoreData.created_at, timezone)}</p>
+      </header>
 
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Link href={selectHref} className={NAV_BUTTON_CLASS} title="スプリント選択に戻る" aria-label="スプリント選択に戻る">
-              <ChevronLeft size={20} strokeWidth={2.5} />
-            </Link>
-            <Link
-              href="/dashboard"
-              className={`${NAV_BUTTON_CLASS} border border-line bg-surface`}
-              title="ホームに戻る"
-              aria-label="ホームに戻る"
-            >
-              <Home size={18} strokeWidth={2.5} />
-            </Link>
-          </div>
-
-          <div className="text-right">
-            <p className="text-xs font-bold text-brand">スプリント結果</p>
-            <p className="text-[11px] text-ink-muted tabular-nums">{formatZonedDate(scoreData.created_at, timezone)}</p>
-          </div>
-        </div>
-
-        <SprintResultSummary scoreData={scoreData} courseTitle={courseTitle} className="relative z-10" />
-      </div>
-
-      {/* 出題リスト */}
+      {/* 結果サマリーと出題リスト（履歴側と同じくサマリーも一緒にスクロールさせ、リストを広く見せる） */}
       <div className="flex-1 overflow-y-auto bg-canvas p-5 sm:p-6">
+        <SprintResultSummary scoreData={scoreData} courseTitle={courseTitle} className="mb-4" />
         <SprintResultQuestionList scoreData={scoreData} questions={questions} playback={playback} />
       </div>
 
