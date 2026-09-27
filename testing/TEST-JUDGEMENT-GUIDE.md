@@ -788,5 +788,18 @@
   - `{ history: ... }` 型の戻るボタンは、「直前の画面から遷移して戻る」ケースだけを E2E で確認する。
     「直接開いた場合の fallback」は Playwright では再現できないため、手動で確認するか、E2E の対象から外す。
   - 固定アカウント `qa-student-01` には status=完了（`SESSION_RESULT_STATUSES`）のセッションが無いため、ライブセッション・ホーム画面の
-    「実施済み」タブから結果画面を開くテストはスキップされる。結果画面の取得処理はステータスで絞り込まないため、本人の過去セッションの
+    「履歴」から結果画面を開くテストはスキップされる。結果画面の取得処理はステータスで絞り込まないため、本人の過去セッションの
     URL を直接開けば、DB を変更せずに表示を確認できる（ID をテストにハードコードしないこと）。
+
+### KJ-2026-0927-01 振替候補を承諾すると、cleanupのセッション削除がcom_t_session_slot_proposalのFKで失敗する
+
+- **該当シナリオ**: 生徒ライブセッション・ホーム刷新の画面確認（`feature-20260925-dev/live-session-hub-redesign-*`、dev）
+- **事象**: 画面から振替候補を承諾した後に cleanup を実行すると、`com_t_session` の削除が
+  `com_t_session_slot_proposal_resulting_session_id_fkey` 違反（23503）で失敗した。
+- **原因**: KJ-2026-0915-01 と同じ `resulting_session_id`（CASCADEなし）が、テーブル統合後は `com_t_session_slot_proposal` にあり、
+  予約リクエストの承認だけでなく**振替候補の承諾**でも設定される。既存の cleanup（`target-sessions-adjustment-cleanup.ts` 等）は
+  承諾操作を伴わないため、この削除ステップを持っていなかった。
+- **判断基準への反映**:
+  - 予約リクエストの承認・振替候補の承諾を（RPC・画面のどちらでも）行うシナリオの cleanup では、`com_t_session` より先に
+    `com_t_session_slot_proposal` を `student_id` で絞って削除する（`live-session-hub-redesign-cleanup.ts` の手順0）。
+  - 既存の cleanup を雛形にする場合は、シナリオで新たに行う操作が作る参照（FK）を DDL の `REFERENCES` で確認してから流用する。

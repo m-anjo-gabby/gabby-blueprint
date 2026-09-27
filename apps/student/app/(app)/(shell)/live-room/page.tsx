@@ -1,13 +1,44 @@
 import { getMyUpcomingSessions, getMyPastSessions, getMyRescheduleProposalGroups, getMyBookingRequests } from '@/actions/sessionAction';
 import { getMyBookableTickets, getMyLiveSessionContracts, getMyLiveSessionOverview } from '@/actions/matchingAction';
-import type { SessionListItem } from '@gabby/types/session';
+import { getSessionHomework, getSessionHomeworkChecklist } from '@/actions/sessionHomeworkAction';
+import { COMPLETION_RESULT, SESSION_STATUS, type SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
 import { LiveSessionHub } from './_components/LiveSessionHub';
 import { LiveSessionIntro } from './_components/LiveSessionIntro';
+import type { PreviousHomeworkStatus, PreviousSessionSummary } from './_components/PreviousSessionLink';
 
 // URLで指定された契約を優先し、無ければ現在有効な契約、それも無ければ直近の過去契約(contractsはstart_date降順)を選ぶ
 function pickContract<T extends { ticket_id: string; is_current: boolean }>(contracts: T[], requestedTicketId?: string): T | undefined {
   return contracts.find((c) => c.ticket_id === requestedTicketId) ?? contracts.find((c) => c.is_current) ?? contracts[0];
+}
+
+const HOMEWORK_PREVIEW_LENGTH = 60;
+
+/**
+ * 前回のセッション（実施済みのうち最新の1件。未参加は内容・宿題が無いため除く）と、その宿題の状況を取得する。
+ * 宿題は未登録・本文のみ・チェックリストありの3通りがあるため、それぞれ区別して返す
+ */
+async function fetchPreviousSession(pastSessions: SessionListItem[]): Promise<PreviousSessionSummary | null> {
+  const session = pastSessions.find(
+    (s) => s.status === SESSION_STATUS.COMPLETED && s.completion_result !== COMPLETION_RESULT.NO_SHOW
+  );
+  if (!session) return null;
+
+  const [homework, checklist] = await Promise.all([
+    getSessionHomework(session.session_id),
+    getSessionHomeworkChecklist(session.session_id),
+  ]);
+
+  let status: PreviousHomeworkStatus;
+  if (!homework) {
+    status = { kind: 'none' };
+  } else if (checklist.length > 0) {
+    status = { kind: 'checklist', done: checklist.filter((item) => item.is_done).length, total: checklist.length };
+  } else {
+    const firstLine = homework.homework_text.trim().split(/\r?\n/)[0] ?? '';
+    status = { kind: 'text', preview: firstLine.slice(0, HOMEWORK_PREVIEW_LENGTH) };
+  }
+  return { session, homework: status };
 }
 
 export default async function LiveSessionHubPage({ searchParams }: { searchParams: Promise<{ contract?: string }> }) {
@@ -15,13 +46,18 @@ export default async function LiveSessionHubPage({ searchParams }: { searchParam
 
   // 契約単位のデータ（履歴・回数の内訳）は選択中の契約に依存するため、契約一覧の取得直後に開始し、他の取得と並行させる
   const contractsPromise = getMyLiveSessionContracts();
-  const contractDataPromise = contractsPromise.then(async (contracts): Promise<[SessionListItem[], LiveSessionOverview | null]> => {
-    const selected = pickContract(contracts, requestedTicketId);
-    if (!selected) return [[], null];
-    return Promise.all([getMyPastSessions(selected.ticket_id), getMyLiveSessionOverview(selected.ticket_id)]);
-  });
+  // 前回のセッション（次回に向けた振り返り用）は現在の契約を表示している時だけ取得する
+  const contractDataPromise = contractsPromise.then(
+    async (contracts): Promise<[SessionListItem[], LiveSessionOverview | null, PreviousSessionSummary | null]> => {
+      const selected = pickContract(contracts, requestedTicketId);
+      if (!selected) return [[], null, null];
+      const [past, overview] = await Promise.all([getMyPastSessions(selected.ticket_id), getMyLiveSessionOverview(selected.ticket_id)]);
+      const previous = selected.is_current ? await fetchPreviousSession(past) : null;
+      return [past, overview, previous];
+    }
+  );
 
-  const [contracts, [pastSessions, overview], upcomingSessions, bookableSlots, proposalGroups, bookingRequests] = await Promise.all([
+  const [contracts, [pastSessions, overview, previousSession], upcomingSessions, bookableSlots, proposalGroups, bookingRequests] = await Promise.all([
     contractsPromise,
     contractDataPromise,
     getMyUpcomingSessions(),
@@ -42,6 +78,7 @@ export default async function LiveSessionHubPage({ searchParams }: { searchParam
       contracts={contracts}
       selectedContract={selectedContract}
       overview={overview}
+      previousSession={previousSession}
       upcomingSessions={upcomingSessions}
       pastSessions={pastSessions}
       bookableSlots={bookableSlots}

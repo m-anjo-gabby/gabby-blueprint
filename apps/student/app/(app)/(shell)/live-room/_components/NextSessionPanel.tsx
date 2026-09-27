@@ -8,17 +8,23 @@ import { useNow } from '@gabby/lib/hooks/useNow';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { formatSessionSlot, formatTimeUntil } from '@/lib/sessionFormat';
 import { SessionListItem } from '@gabby/types/session';
+import { PreviousSessionLink, PreviousSessionSummary } from './PreviousSessionLink';
 
 const EARLY_JOIN_MINUTES = Math.round(LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000);
 
 interface Props {
   session: SessionListItem;
   timezone: string;
+  /** 前回のセッション（宿題の再確認・内容の振り返り用の導線をカード下部に出す） */
+  previous: PreviousSessionSummary | null;
   onCancel: () => void;
 }
 
-/** 次回のセッション。入室ボタンは実際に入室できる時刻（開始の数分前）になってから有効にする */
-export function NextSessionPanel({ session, timezone, onCancel }: Props) {
+/**
+ * 次回のセッション。入室ボタンは実際に入室できる時刻（開始の数分前）になってから有効にする。
+ * 次回に向けた準備として、前回のセッション結果（宿題・内容）への導線を同じカードの下部に置く
+ */
+export function NextSessionPanel({ session, timezone, previous, onCancel }: Props) {
   const nowMs = useNow();
   const slot = formatSessionSlot(session.start_datetime, session.end_datetime, timezone);
   const startMs = new Date(session.start_datetime).getTime();
@@ -63,6 +69,12 @@ export function NextSessionPanel({ session, timezone, onCancel }: Props) {
           この回をキャンセル
         </Button>
       </div>
+
+      {previous && (
+        <div className="mt-4 border-t border-line pt-3">
+          <PreviousSessionLink previous={previous} timezone={timezone} variant="embedded" />
+        </div>
+      )}
     </section>
   );
 }

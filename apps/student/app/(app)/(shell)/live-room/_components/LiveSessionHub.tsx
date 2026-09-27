@@ -26,6 +26,7 @@ import { NextSessionPanel } from './NextSessionPanel';
 import { ContractOverviewCard } from './ContractOverviewCard';
 import { UpcomingSessionList } from './UpcomingSessionList';
 import { SessionHistoryList } from './SessionHistoryList';
+import { PreviousSessionLink, PreviousSessionSummary } from './PreviousSessionLink';
 
 // 履歴に出すのは、結果画面へ進める実施済みと、生徒・コーチ本人起因のキャンセルのみ
 // （ライセンス無効化・コーチ交代等の運用都合のキャンセルは表示しない。isSelfInitiatedCancel参照）
@@ -33,6 +34,11 @@ const RESULT_LINKABLE_STATUSES = new Set<number>(SESSION_RESULT_STATUSES);
 
 function formatContractDate(iso: string, timezone: string): string {
   return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: timezone }).format(new Date(iso));
+}
+
+function formatContractLabel(contract: LiveSessionContractSummary, timezone: string): string {
+  const period = `${formatContractDate(contract.start_date, timezone)}〜${formatContractDate(contract.end_date, timezone)}`;
+  return contract.is_current ? `現在の契約：${period}` : period;
 }
 
 /** 「対応が必要」欄の1行（アイコン・説明・操作ボタン） */
@@ -67,6 +73,7 @@ interface Props {
   contracts: LiveSessionContractSummary[];
   selectedContract: LiveSessionContractSummary;
   overview: LiveSessionOverview | null;
+  previousSession: PreviousSessionSummary | null;
   upcomingSessions: SessionListItem[];
   pastSessions: SessionListItem[];
   bookableSlots: BookableTicketSlot[];
@@ -76,13 +83,14 @@ interface Props {
 
 /**
  * ライブセッション・ホーム。優先度の高い順に1本のスクロールで並べる:
- * ①対応が必要（振替候補・コーチ未選択・未予約） ②次回のセッション ③契約の状況 ④今後の予定 ⑤履歴。
+ * ①対応が必要（振替候補・コーチ未選択・未予約） ②次回のセッション（＋前回の結果への導線） ③契約の状況 ④今後の予定 ⑤履歴。
  * データはすべてサーバーから受け取り、操作後は router.refresh() で取り直す（契約の切替はURLの ?contract=）。
  */
 export function LiveSessionHub({
   contracts,
   selectedContract,
   overview,
+  previousSession,
   upcomingSessions,
   pastSessions,
   bookableSlots,
@@ -147,13 +155,13 @@ export function LiveSessionHub({
         <div className="mb-5">
           <Select value={selectedContract.ticket_id} onValueChange={handleContractChange}>
             <SelectTrigger className="h-10 w-full rounded-control border-line bg-surface text-sm sm:w-80" aria-label="表示する契約">
-              <SelectValue />
+              {/* 選択肢はポータル内にあり開くまで描画されないため、選択中の表示は明示的に渡す */}
+              <SelectValue>{formatContractLabel(selectedContract, timezone)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {contracts.map((c) => (
                 <SelectItem key={c.ticket_id} value={c.ticket_id}>
-                  {c.is_current ? '現在の契約：' : ''}
-                  {formatContractDate(c.start_date, timezone)}〜{formatContractDate(c.end_date, timezone)}
+                  {formatContractLabel(c, timezone)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -201,7 +209,7 @@ export function LiveSessionHub({
                 <ActionNotice
                   icon={Ticket}
                   title={`日時が決まっていないセッションが${unbookedCount}回あります`}
-                  description="キャンセル等で空いた回です。ご希望の日時をコーチにリクエストしてください。"
+                  description="ご希望の日時をコーチにリクエストすると、承認後に予約が確定します。"
                   action={
                     <Button type="button" className="w-full sm:w-auto" onClick={() => setIsBookingOpen(true)}>
                       日時をリクエスト
@@ -213,12 +221,15 @@ export function LiveSessionHub({
           </div>
         )}
 
-        {nextSession && (
+        {nextSession ? (
           <NextSessionPanel
             session={nextSession}
             timezone={timezone}
+            previous={previousSession}
             onCancel={() => setActionTarget({ session: nextSession, mode: 'cancel' })}
           />
+        ) : (
+          previousSession && <PreviousSessionLink previous={previousSession} timezone={timezone} variant="card" />
         )}
 
         {overview && (
@@ -245,10 +256,7 @@ export function LiveSessionHub({
           </p>
         )}
 
-        <div>
-          <ShellSectionTitle>履歴</ShellSectionTitle>
-          <SessionHistoryList key={selectedContract.ticket_id} sessions={historySessions} timezone={timezone} />
-        </div>
+        <SessionHistoryList key={selectedContract.ticket_id} sessions={historySessions} timezone={timezone} />
       </div>
 
       <SessionActionDialog target={actionTarget} onClose={() => setActionTarget(null)} onResolved={refresh} />
