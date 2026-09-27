@@ -14,7 +14,7 @@ export default async function CoachMatchingPage() {
       <>
         <ShellPageHeader title="専属コーチを探す" back="/live-room" />
         <div className="flex flex-col items-center justify-center rounded-card border border-line bg-surface py-16 text-center px-6">
-          <div className="w-14 h-14 rounded-control bg-slate-100 flex items-center justify-center text-ink-subtle mb-4">
+          <div className="w-14 h-14 rounded-control bg-canvas flex items-center justify-center text-ink-subtle mb-4">
             <UserX size={22} />
           </div>
           <p className="text-sm font-semibold text-ink-soft">この機能はライブセッション付きプランの方のみご利用いただけます</p>

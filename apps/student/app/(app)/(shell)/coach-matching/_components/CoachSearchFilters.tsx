@@ -28,9 +28,9 @@ export function CoachSearchFilters({
   hasFilter,
 }: CoachSearchFiltersProps) {
   return (
-    <div className="bg-white rounded-2xl border border-line/70 shadow-sm p-4 space-y-3">
+    <div className="bg-surface rounded-card border border-line/70 shadow-sm p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-bold text-ink-subtle uppercase">コーチ名・曜日・時間帯で絞り込み</p>
+        <p className="text-[11px] font-bold text-ink-subtle">コーチ名・曜日・時間帯で絞り込み</p>
         {hasFilter && (
           <button
             type="button"
@@ -49,7 +49,7 @@ export function CoachSearchFilters({
           value={nameQuery}
           onChange={(e) => onChangeNameQuery(e.target.value)}
           placeholder="コーチ名で検索"
-          className="w-full h-10 rounded-xl border border-line/70 bg-slate-50 pl-9 pr-3 text-sm text-ink-soft focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-200"
+          className="w-full h-10 rounded-control border border-line/70 bg-canvas pl-9 pr-3 text-sm text-ink-soft focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-200"
         />
       </div>
 
@@ -61,10 +61,10 @@ export function CoachSearchFilters({
             onClick={() => onToggleDay(day)}
             aria-pressed={selectedDays.has(day)}
             className={cn(
-              'w-9 h-9 rounded-xl text-xs font-bold transition-colors border',
+              'w-9 h-9 rounded-control text-xs font-bold transition-colors border',
               selectedDays.has(day)
                 ? 'bg-brand border-brand text-white'
-                : 'bg-slate-50 border-line/70 text-ink-muted hover:bg-brand-soft'
+                : 'bg-canvas border-line/70 text-ink-muted hover:bg-brand-soft'
             )}
           >
             {DAY_OF_WEEK_LABEL_JA[day].slice(0, 1)}
@@ -80,10 +80,10 @@ export function CoachSearchFilters({
             onClick={() => onToggleTimeBucket(bucket.key)}
             aria-pressed={selectedTimeBuckets.has(bucket.key)}
             className={cn(
-              'h-9 px-3 rounded-xl text-xs font-bold transition-colors border',
+              'h-9 px-3 rounded-control text-xs font-bold transition-colors border',
               selectedTimeBuckets.has(bucket.key)
                 ? 'bg-brand border-brand text-white'
-                : 'bg-slate-50 border-line/70 text-ink-muted hover:bg-brand-soft'
+                : 'bg-canvas border-line/70 text-ink-muted hover:bg-brand-soft'
             )}
           >
             {bucket.label}
