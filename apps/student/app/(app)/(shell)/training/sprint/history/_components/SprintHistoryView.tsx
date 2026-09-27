@@ -168,7 +168,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
 
   return (
     <>
-      <ShellPageHeader title="スプリントの履歴" back="/training/performance">
+      <ShellPageHeader title="スプリントの履歴" back={`/training/performance?month=${targetMonth}`}>
         <MonthSwitcher {...monthNavigator} />
       </ShellPageHeader>
 

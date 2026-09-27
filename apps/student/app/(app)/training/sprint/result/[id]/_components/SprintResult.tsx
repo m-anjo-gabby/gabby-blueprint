@@ -25,6 +25,8 @@ const NAV_BUTTON_CLASS =
 /**
  * スプリント実施直後の結果画面（没入画面）。
  * 続けてリトライする流れのため、戻る先はスプリント選択画面にする。
+ * 選択→実施→結果の間は履歴を置き換えて移動し、履歴には入口（教材一覧・ホーム等）だけを残す
+ * （選択画面の「戻る」で結果画面に戻ってループしないようにする）。
  * 履歴から振り返る場合はシェル側の結果画面（/training/sprint/history/[id]）を使う。
  */
 export function SprintResult({ scoreData, questions, courseTitle }: SprintResultData) {
@@ -40,7 +42,7 @@ export function SprintResult({ scoreData, questions, courseTitle }: SprintResult
       {/* ヘッダー：戻る・見出し・日付（履歴側の結果画面と同じ並び）。ホームへはナビが無いため右端に置く */}
       <header className="shrink-0 space-y-1.5 border-b border-line px-5 pb-4 pt-4 sm:px-6 sm:pt-5">
         <div className="flex items-center gap-2">
-          <Link href={selectHref} className={`-ml-2 ${NAV_BUTTON_CLASS}`} aria-label="スプリント選択に戻る" title="スプリント選択に戻る">
+          <Link href={selectHref} replace className={`-ml-2 ${NAV_BUTTON_CLASS}`} aria-label="スプリント選択に戻る" title="スプリント選択に戻る">
             <ChevronLeft size={22} />
           </Link>
           <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">スプリント結果</h1>
@@ -67,6 +69,7 @@ export function SprintResult({ scoreData, questions, courseTitle }: SprintResult
             <SprintPlayAllButton playback={playback} primary />
             <Link
               href={selectHref}
+              replace
               className="flex items-center justify-center gap-1.5 rounded-control px-6 py-1.5 text-ink-subtle transition-all hover:text-brand active:scale-[0.98]"
               title="再生せずにすぐリトライする"
             >

@@ -119,6 +119,8 @@ export function SprintRetryLink({
   return (
     <Link
       href={getSprintSelectHref(scoreData)}
+      // 結果画面を履歴に残さない（選択画面の「戻る」で結果画面に戻ってループしないようにする）
+      replace
       className={cn(ACTION_BUTTON_CLASS, 'bg-brand text-white shadow-lg shadow-brand/10 hover:bg-brand-strong')}
     >
       {label}

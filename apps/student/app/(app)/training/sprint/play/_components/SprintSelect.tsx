@@ -209,7 +209,10 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                router.back();
+                // 選択→実施→結果の間は履歴を置き換えて移動するため、1つ戻ると入口（教材一覧・ホーム等）に戻る。
+                // URLを直接開いた等で戻る先が無い場合は教材一覧へ
+                if (window.history.length > 1) router.back();
+                else router.push('/library');
               }}
               className="h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shadow-3xs hover:bg-slate-100 hover:text-slate-600 active:scale-95 transition-all cursor-pointer"
             >

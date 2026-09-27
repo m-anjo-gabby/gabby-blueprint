@@ -80,7 +80,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
 
   return (
     <>
-      <ShellPageHeader title="単語帳の履歴" back="/training/performance">
+      <ShellPageHeader title="単語帳の履歴" back={`/training/performance?month=${targetMonth}`}>
         <MonthSwitcher {...monthNavigator} />
       </ShellPageHeader>
 
