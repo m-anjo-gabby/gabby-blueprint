@@ -76,12 +76,11 @@ test.describe("ライブセッション結果画面", () => {
 
   test("実施済みセッションの結果はナビ付きの画面で表示され、戻るでライブセッション画面へ戻る", async ({ page }) => {
     await page.goto("/live-room");
-    await page.getByRole("tab", { name: "実施済み" }).click();
+    // 履歴は1本スクロールの末尾にあり、実施済みの行だけが結果画面へのリンクになる（キャンセル行はリンクなし）
+    await expect(page.getByRole("heading", { level: 2, name: "履歴" })).toBeVisible();
 
     const resultLink = page.locator('a[href^="/live-room/sessions/"][href$="/result"]').first();
-    const emptyMessage = page.getByText("実施済みのセッションはありません");
-    await expect(resultLink.or(emptyMessage)).toBeVisible();
-    test.skip(await emptyMessage.isVisible(), "固定アカウントに実施済みセッションが無い");
+    test.skip((await resultLink.count()) === 0, "固定アカウントに実施済みセッションが無い");
 
     await resultLink.click();
     await page.waitForURL(/\/live-room\/sessions\/[0-9a-f-]{36}\/result$/);

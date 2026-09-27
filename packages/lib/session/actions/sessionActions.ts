@@ -359,10 +359,25 @@ export async function getMyRescheduleProposalGroupsCore(): Promise<
   try {
     const supabase = await createServerClient();
     const coachIds = Array.from(new Set(groups.map((g) => g.coach_id)));
-    const { data: coaches } = await supabase.from('com_m_user').select('id, user_name').in('id', coachIds);
+    const [{ data: coaches }, { data: sessions }] = await Promise.all([
+      supabase.from('com_m_user').select('id, user_name').in('id', coachIds),
+      supabase.from('com_t_session').select('session_id, start_datetime, end_datetime').in('session_id', groups.map((g) => g.session_id)),
+    ]);
     const nameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+    const sessionById = new Map((sessions ?? []).map((s) => [s.session_id, s]));
 
-    return { success: true, groups: groups.map((g) => ({ ...g, coach_name: nameById.get(g.coach_id) ?? '(Unknown)' })) };
+    return {
+      success: true,
+      groups: groups.map((g) => {
+        const original = sessionById.get(g.session_id);
+        return {
+          ...g,
+          coach_name: nameById.get(g.coach_id) ?? '(Unknown)',
+          original_session_start_datetime: original?.start_datetime ?? g.insert_date,
+          original_session_end_datetime: original?.end_datetime ?? g.insert_date,
+        };
+      }),
+    };
   } catch (err) {
     logger.error('session:get_my_reschedule_proposal_groups_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };

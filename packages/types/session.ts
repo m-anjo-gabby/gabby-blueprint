@@ -176,6 +176,9 @@ export interface SessionRescheduleProposalGroup {
 /** 生徒側で表示する振替候補グループ（コーチ名を結合済み） */
 export interface MyRescheduleProposalGroup extends SessionRescheduleProposalGroup {
   coach_name: string;
+  /** キャンセルされた元セッションの日時（振替候補カードで「元の予定」として表示する） */
+  original_session_start_datetime: string;
+  original_session_end_datetime: string;
 }
 
 /** コーチ側の申請一覧で表示する振替候補グループ（生徒名・元セッション日時を結合済み） */

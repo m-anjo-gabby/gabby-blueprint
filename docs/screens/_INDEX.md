@@ -21,7 +21,7 @@
 | [notification.md](student/notification.md) | `/notification` | 通知一覧 | ✅ |
 | [profile.md](student/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
 | [profile-password.md](student/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |
-| [live-room/hub.md](student/live-room/hub.md) | `/live-room` | セッション一覧・キャンセル・予約リクエスト作成・振替応答の起点画面 | ✅ |
+| [live-room/hub.md](student/live-room/hub.md) | `/live-room` | 対応が必要な事項・次回予定・契約の回数内訳・予定・履歴を1本スクロールで表示。キャンセル・予約リクエスト・振替応答の起点画面 | ✅ |
 | [live-room/call-room.md](student/live-room/call-room.md) | `/live-room/[sessionId]` | ビデオ通話画面（Zoom Video SDK） | ✅ |
 | [live-room/session-result.md](student/live-room/session-result.md) | `/live-room/sessions/[sessionId]/result` | セッション結果・宿題・Live Sprint実績 | ✅ |
 | [monitor.md](student/monitor.md) | `/monitor` | 同一契約先ユーザー横断モニタリング | ✅ |

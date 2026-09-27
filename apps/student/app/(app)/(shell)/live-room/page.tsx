@@ -1,24 +1,29 @@
 import { getMyUpcomingSessions, getMyPastSessions, getMyRescheduleProposalGroups, getMyBookingRequests } from '@/actions/sessionAction';
-import { getMyBookableTickets, getMyLiveSessionContracts } from '@/actions/matchingAction';
+import { getMyBookableTickets, getMyLiveSessionContracts, getMyLiveSessionOverview } from '@/actions/matchingAction';
+import type { SessionListItem } from '@gabby/types/session';
+import type { LiveSessionOverview } from '@gabby/types/matching';
 import { LiveSessionHub } from './_components/LiveSessionHub';
 import { LiveSessionIntro } from './_components/LiveSessionIntro';
 
-// 現在有効な契約を優先し、無ければ直近の過去契約(contractsはstart_date降順)を初期選択とする
-function pickInitialContract<T extends { is_current: boolean }>(contracts: T[]): T | undefined {
-  return contracts.find((c) => c.is_current) ?? contracts[0];
+// URLで指定された契約を優先し、無ければ現在有効な契約、それも無ければ直近の過去契約(contractsはstart_date降順)を選ぶ
+function pickContract<T extends { ticket_id: string; is_current: boolean }>(contracts: T[], requestedTicketId?: string): T | undefined {
+  return contracts.find((c) => c.ticket_id === requestedTicketId) ?? contracts.find((c) => c.is_current) ?? contracts[0];
 }
 
-export default async function LiveSessionHubPage() {
-  // 過去セッションは初期選択の契約に依存するため、契約一覧の取得直後に開始し、他の取得と並行させる
+export default async function LiveSessionHubPage({ searchParams }: { searchParams: Promise<{ contract?: string }> }) {
+  const { contract: requestedTicketId } = await searchParams;
+
+  // 契約単位のデータ（履歴・回数の内訳）は選択中の契約に依存するため、契約一覧の取得直後に開始し、他の取得と並行させる
   const contractsPromise = getMyLiveSessionContracts();
-  const pastSessionsPromise = contractsPromise.then((contracts) => {
-    const initialContract = pickInitialContract(contracts);
-    return initialContract ? getMyPastSessions(initialContract.ticket_id) : [];
+  const contractDataPromise = contractsPromise.then(async (contracts): Promise<[SessionListItem[], LiveSessionOverview | null]> => {
+    const selected = pickContract(contracts, requestedTicketId);
+    if (!selected) return [[], null];
+    return Promise.all([getMyPastSessions(selected.ticket_id), getMyLiveSessionOverview(selected.ticket_id)]);
   });
 
-  const [contracts, initialPastSessions, upcomingSessions, bookableSlots, pendingProposalGroups, myBookingRequests] = await Promise.all([
+  const [contracts, [pastSessions, overview], upcomingSessions, bookableSlots, proposalGroups, bookingRequests] = await Promise.all([
     contractsPromise,
-    pastSessionsPromise,
+    contractDataPromise,
     getMyUpcomingSessions(),
     getMyBookableTickets(),
     getMyRescheduleProposalGroups(),
@@ -27,20 +32,21 @@ export default async function LiveSessionHubPage() {
 
   // ライブセッション付き契約を一度も持ったことがない（アプリのみ契約）場合は紹介画面を表示する。
   // 過去に契約があった利用者は、履歴を確認できるようハブを表示する
-  const initialContract = pickInitialContract(contracts);
-  if (!initialContract) {
+  const selectedContract = pickContract(contracts, requestedTicketId);
+  if (!selectedContract) {
     return <LiveSessionIntro />;
   }
 
   return (
     <LiveSessionHub
       contracts={contracts}
-      initialTicketId={initialContract.ticket_id}
+      selectedContract={selectedContract}
+      overview={overview}
       upcomingSessions={upcomingSessions}
-      initialPastSessions={initialPastSessions}
+      pastSessions={pastSessions}
       bookableSlots={bookableSlots}
-      pendingProposalGroups={pendingProposalGroups}
-      myBookingRequests={myBookingRequests}
+      proposalGroups={proposalGroups}
+      bookingRequests={bookingRequests}
     />
   );
 }

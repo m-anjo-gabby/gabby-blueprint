@@ -1,20 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, CalendarClock, CalendarDays, Clock, FileText, Loader2, Ticket, Users, X } from 'lucide-react';
+import { CalendarDays, ChevronRight, Ticket, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatSessionSlot } from '@/lib/sessionFormat';
-import { CoachAvatar } from '@/components/session/CoachAvatar';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
-import { getMyPastSessions, withdrawSessionBookingRequest } from '@/actions/sessionAction';
+import { withdrawSessionBookingRequest } from '@/actions/sessionAction';
 import {
   MyBookingRequestItem,
   MyRescheduleProposalGroup,
@@ -22,128 +18,103 @@ import {
   SESSION_RESULT_STATUSES,
   isSelfInitiatedCancel,
 } from '@gabby/types/session';
-import { BookableTicketSlot, LiveSessionContractSummary } from '@gabby/types/matching';
-import { getSessionStatusBadge } from '@/constants/session';
+import { BookableTicketSlot, LiveSessionContractSummary, LiveSessionOverview } from '@gabby/types/matching';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
-import { RescheduleProposalDialog } from './RescheduleProposalDialog';
-import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { RescheduleProposalCard } from './RescheduleProposalCard';
+import { NextSessionPanel } from './NextSessionPanel';
+import { ContractOverviewCard } from './ContractOverviewCard';
+import { UpcomingSessionList } from './UpcomingSessionList';
+import { SessionHistoryList } from './SessionHistoryList';
 
-const JOINABLE_WINDOW_MS = 48 * 60 * 60 * 1000;
-const HISTORY_PAGE_SIZE = 10;
-// 結果画面への導線を出す(=call_logが記録されている想定の)確定ステータスは
-// packages/types/session.tsで共通定義したものを使う（コーチ側のLive Sessionsカードとも共有）。
-// 変更履歴タブの対象（生徒・コーチ本人起因のキャンセルのみ）はisSelfInitiatedCancelで判定する。
+// 履歴に出すのは、結果画面へ進める実施済みと、生徒・コーチ本人起因のキャンセルのみ
+// （ライセンス無効化・コーチ交代等の運用都合のキャンセルは表示しない。isSelfInitiatedCancel参照）
 const RESULT_LINKABLE_STATUSES = new Set<number>(SESSION_RESULT_STATUSES);
 
-const HUB_LINKS = [
-  { href: '/calendar', label: 'カレンダー', icon: CalendarDays },
-  { href: '/coach-matching', label: '専属コーチを探す', icon: Users },
-];
-
-function isJoinableSoon(startDatetime: string): boolean {
-  return new Date(startDatetime).getTime() - Date.now() <= JOINABLE_WINDOW_MS;
+function formatContractDate(iso: string, timezone: string): string {
+  return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: timezone }).format(new Date(iso));
 }
 
-function formatContractDate(iso: string, timezone: string): string {
-  return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: timezone }).format(new Date(iso));
+/** 「対応が必要」欄の1行（アイコン・説明・操作ボタン） */
+function ActionNotice({
+  icon: Icon,
+  title,
+  description,
+  action,
+}: {
+  icon: typeof Users;
+  title: string;
+  description: string;
+  action: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3 rounded-card border border-brand-100 bg-surface p-4 shadow-xs sm:flex-row sm:items-center sm:p-5">
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-500">
+          <Icon size={18} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-ink">{title}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{description}</p>
+        </div>
+      </div>
+      <div className="shrink-0 sm:ml-auto">{action}</div>
+    </section>
+  );
 }
 
 interface Props {
   contracts: LiveSessionContractSummary[];
-  initialTicketId: string | null;
+  selectedContract: LiveSessionContractSummary;
+  overview: LiveSessionOverview | null;
   upcomingSessions: SessionListItem[];
-  initialPastSessions: SessionListItem[];
+  pastSessions: SessionListItem[];
   bookableSlots: BookableTicketSlot[];
-  pendingProposalGroups: MyRescheduleProposalGroup[];
-  myBookingRequests: MyBookingRequestItem[];
+  proposalGroups: MyRescheduleProposalGroup[];
+  bookingRequests: MyBookingRequestItem[];
 }
 
+/**
+ * ライブセッション・ホーム。優先度の高い順に1本のスクロールで並べる:
+ * ①対応が必要（振替候補・コーチ未選択・未予約） ②次回のセッション ③契約の状況 ④今後の予定 ⑤履歴。
+ * データはすべてサーバーから受け取り、操作後は router.refresh() で取り直す（契約の切替はURLの ?contract=）。
+ */
 export function LiveSessionHub({
   contracts,
-  initialTicketId,
-  upcomingSessions: initialUpcoming,
-  initialPastSessions,
+  selectedContract,
+  overview,
+  upcomingSessions,
+  pastSessions,
   bookableSlots,
-  pendingProposalGroups: initialPendingProposalGroups,
-  myBookingRequests: initialMyBookingRequests,
+  proposalGroups,
+  bookingRequests,
 }: Props) {
   const timezone = useTimezone();
   const router = useRouter();
   const { showToast } = useToast();
-  const [upcomingSessions, setUpcomingSessions] = useState(initialUpcoming);
-  const [selectedTicketId, setSelectedTicketId] = useState(initialTicketId);
-  const [pastSessionsByTicket, setPastSessionsByTicket] = useState<Record<string, SessionListItem[]>>(
-    initialTicketId ? { [initialTicketId]: initialPastSessions } : {}
-  );
+  const [isRefreshing, startRefresh] = useTransition();
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
-  const [isBookMakeupOpen, setIsBookMakeupOpen] = useState(false);
-  const [pendingProposalGroups, setPendingProposalGroups] = useState(initialPendingProposalGroups);
-  const [proposalDetailGroup, setProposalDetailGroup] = useState<MyRescheduleProposalGroup | null>(null);
-  const [myBookingRequests, setMyBookingRequests] = useState(initialMyBookingRequests);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [withdrawingRequestId, setWithdrawingRequestId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!selectedTicketId || pastSessionsByTicket[selectedTicketId]) return;
-    getMyPastSessions(selectedTicketId).then((sessions) => {
-      setPastSessionsByTicket((prev) => ({ ...prev, [selectedTicketId]: sessions }));
-    });
-  }, [selectedTicketId, pastSessionsByTicket]);
+  const refresh = () => startRefresh(() => router.refresh());
 
-  const isCurrentSelected = contracts.find((c) => c.ticket_id === selectedTicketId)?.is_current ?? false;
-  const pastSessions = selectedTicketId ? pastSessionsByTicket[selectedTicketId] : undefined;
-  const isLoadingPast = selectedTicketId !== null && pastSessions === undefined;
-  const completedSessions = (pastSessions ?? []).filter((s) => RESULT_LINKABLE_STATUSES.has(s.status));
-  const changeHistorySessions = (pastSessions ?? []).filter((s) => isSelfInitiatedCancel(s));
+  const isCurrent = selectedContract.is_current;
+  const historySessions = pastSessions.filter((s) => RESULT_LINKABLE_STATUSES.has(s.status) || isSelfInitiatedCancel(s));
+  const [nextSession, ...laterSessions] = isCurrent ? upcomingSessions : [];
 
-  // 今後の予定が無い契約(過去契約など)では「今後の予定」タブ自体を出さない。
-  // タブが消えた際に選択中タブが宙に浮かないよう、表示用の値は都度導出する（stateにしない）
-  const showUpcomingTab = isCurrentSelected && upcomingSessions.length > 0;
-  const [activeTab, setActiveTab] = useState('upcoming');
-  const displayedTab = activeTab === 'upcoming' && !showUpcomingTab ? 'completed' : activeTab;
+  // 未予約の回のうち、予約リクエスト・振替候補の回答待ちになっている分は「調整中」として差し引く
+  const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length : 0;
+  const unbookedCount = isCurrent && overview ? Math.max(overview.unbooked_count - adjustingCount, 0) : 0;
+  const unmatchedSlotCount = isCurrent && overview ? overview.slots.filter((s) => s.status === 'unmatched').length : 0;
+  const showBookingNotice = unbookedCount > 0 && bookableSlots.length > 0;
+  const hasActions = isCurrent && (proposalGroups.length > 0 || unmatchedSlotCount > 0 || showBookingNotice);
 
-  // 実施済み・変更履歴は契約が長く続くほど件数が増え続けるため、最初はHISTORY_PAGE_SIZE件だけ
-  // 表示し、ボタン押下で追加表示する。契約(ticket)を切り替えたら表示件数もリセットする
-  const completedReveal = useIncrementalReveal(completedSessions, HISTORY_PAGE_SIZE);
-  const historyReveal = useIncrementalReveal(changeHistorySessions, HISTORY_PAGE_SIZE);
-
-  const invalidateSelectedPastSessions = () => {
-    if (!selectedTicketId) return;
-    setPastSessionsByTicket((prev) => {
-      const next = { ...prev };
-      delete next[selectedTicketId];
-      return next;
-    });
+  const handleContractChange = (ticketId: string) => {
+    startRefresh(() => router.replace(`/live-room?contract=${ticketId}`, { scroll: false }));
   };
 
-  const handleTicketChange = (ticketId: string) => {
-    setSelectedTicketId(ticketId);
-    completedReveal.reset();
-    historyReveal.reset();
-  };
-
-  const handleResolved = (sessionId: string, patch: Partial<SessionListItem>) => {
-    setUpcomingSessions((prev) => prev.map((s) => (s.session_id === sessionId ? { ...s, ...patch } : s)));
-    // キャンセルは変更履歴タブ、返還可否は未予約のセッションにも影響するため、
-    // 選択中の契約の履歴キャッシュを破棄しつつサーバーの最新データも取得し直す
-    invalidateSelectedPastSessions();
-    router.refresh();
-  };
-
-  const handleProposalAccepted = (sessionId: string) => {
-    setPendingProposalGroups((prev) => prev.filter((g) => g.session_id !== sessionId));
-    setProposalDetailGroup(null);
-    setUpcomingSessions((prev) => [...prev]);
-    invalidateSelectedPastSessions();
-    router.refresh();
-  };
-
-  const handleProposalDeclined = (sessionId: string) => {
-    setPendingProposalGroups((prev) => prev.filter((g) => g.session_id !== sessionId));
-    setProposalDetailGroup(null);
-  };
-
-  const handleWithdrawBookingRequest = async (requestId: string) => {
+  const handleWithdrawRequest = async (requestId: string) => {
     setWithdrawingRequestId(requestId);
     try {
       const result = await withdrawSessionBookingRequest(requestId);
@@ -151,8 +122,8 @@ export function LiveSessionHub({
         showToast(result.message, 'error');
         return;
       }
-      setMyBookingRequests((prev) => prev.filter((r) => r.request_id !== requestId));
       showToast('予約リクエストを取り下げました。', 'success');
+      refresh();
     } finally {
       setWithdrawingRequestId(null);
     }
@@ -160,276 +131,136 @@ export function LiveSessionHub({
 
   return (
     <>
-      <ShellPageHeader title="ライブセッション" description="セッションの予定確認・予約・キャンセルをここで管理できます。" />
-
-      <div className="mb-5 space-y-3">
-        {/* ライブセッションタブ配下の関連画面への導線 */}
-        <div className="grid grid-cols-2 gap-2">
-          {HUB_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="flex items-center justify-center gap-2 h-11 rounded-control border border-line bg-surface text-sm font-semibold text-ink-soft hover:border-brand-200 active:scale-[0.98] transition-all"
-            >
-              <link.icon size={16} className="text-brand" />
-              {link.label}
+      <ShellPageHeader
+        title="ライブセッション"
+        aside={
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Link href="/calendar">
+              <CalendarDays size={15} className="text-brand" />
+              カレンダー
             </Link>
-          ))}
-        </div>
-
-        {contracts.length > 1 && (
-          <div className="space-y-1.5">
-            <Label className="text-xs text-ink-muted">契約</Label>
-            <select
-              value={selectedTicketId ?? ''}
-              onChange={(e) => handleTicketChange(e.target.value)}
-              className="flex h-10 w-full rounded-control border border-line bg-surface px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {contracts.map((c) => (
-                <option key={c.ticket_id} value={c.ticket_id}>
-                  {c.is_current ? '現在の契約 ' : ''}
-                  {formatContractDate(c.start_date, timezone)} 〜 {formatContractDate(c.end_date, timezone)}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        {pendingProposalGroups.length > 0 && (
-          <div className="space-y-2">
-            {pendingProposalGroups.map((group) => (
-              <button
-                key={group.session_id}
-                type="button"
-                onClick={() => setProposalDetailGroup(group)}
-                className="w-full flex items-center gap-3 px-3.5 py-3 bg-amber-50 rounded-card border border-amber-200 hover:bg-amber-100/60 active:scale-[0.99] transition-all"
-              >
-                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-amber-600 shrink-0">
-                  <CalendarClock size={16} />
-                </div>
-                <p className="text-xs font-bold text-amber-800 flex-1 text-left">
-                  {group.coach_name}コーチから振替候補が届いています。タップしてご確認ください。
-                </p>
-                <ArrowRight size={14} className="text-amber-500 shrink-0" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        <Tabs value={displayedTab} onValueChange={setActiveTab} className="space-y-2">
-          <TabsList className={cn('grid w-full', showUpcomingTab ? 'grid-cols-3' : 'grid-cols-2')}>
-            {showUpcomingTab && <TabsTrigger value="upcoming">今後の予定</TabsTrigger>}
-            <TabsTrigger value="completed">実施済み</TabsTrigger>
-            <TabsTrigger value="history">変更履歴</TabsTrigger>
-          </TabsList>
-
-          {showUpcomingTab && (
-            <TabsContent value="upcoming" className="space-y-2">
-              {bookableSlots.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setIsBookMakeupOpen(true)}
-                  className="w-full flex items-center gap-3 px-3.5 py-3 bg-brand-soft rounded-card border border-brand-100 hover:bg-brand-100/60 active:scale-[0.99] transition-all"
-                >
-                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-brand-500 shrink-0">
-                    <Ticket size={16} />
-                  </div>
-                  <p className="text-xs font-bold text-brand-strong flex-1 text-left">
-                    未予約のセッションがあります。タップして予約をリクエストできます。
-                  </p>
-                  <ArrowRight size={14} className="text-brand-400 shrink-0" />
-                </button>
-              )}
-
-              {myBookingRequests.map((request) => {
-                const slot = formatSessionSlot(request.requested_start_datetime, request.requested_end_datetime, timezone);
-                return (
-                  <div
-                    key={request.request_id}
-                    className="flex items-center gap-3 px-3.5 py-3 bg-slate-50 rounded-card border border-dashed border-line"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-ink-subtle shrink-0">
-                      <Clock size={16} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="flex flex-wrap items-baseline gap-x-2 font-bold text-ink-soft tabular-nums">
-                        <span className="text-sm">{slot.date}</span>
-                        <span className="text-[13px]">{slot.time}</span>
-                      </p>
-                      <p className="text-xs text-ink-subtle mt-0.5 truncate">{request.coach_name} コーチの承認待ち</p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0 h-7 px-2.5 text-[11px]"
-                      pending={withdrawingRequestId === request.request_id}
-                      onClick={() => handleWithdrawBookingRequest(request.request_id)}
-                    >
-                      取り下げる
-                    </Button>
-                  </div>
-                );
-              })}
-
-              {upcomingSessions.map((session) => {
-                const joinable = isJoinableSoon(session.start_datetime);
-                const slot = formatSessionSlot(session.start_datetime, session.end_datetime, timezone);
-                return (
-                  <div
-                    key={session.session_id}
-                    className="flex flex-col gap-2.5 px-3.5 py-3.5 bg-white rounded-card border border-line/70 shadow-sm"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <CoachAvatar iconPath={session.counterpart_icon_path} size={44} />
-                      <div className="flex-1 min-w-0">
-                        <p className="flex flex-wrap items-baseline gap-x-2 font-bold text-ink tabular-nums">
-                          <span className="text-base">{slot.date}</span>
-                          <span className="text-sm">{slot.time}</span>
-                        </p>
-                        <p className="text-[13px] text-ink-muted truncate mt-0.5">{session.counterpart_name} コーチ</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {joinable && (
-                        <Button type="button" size="sm" asChild>
-                          <Link href={`/live-room/${session.session_id}`}>
-                            参加する
-                            <ArrowRight size={13} />
-                          </Link>
-                        </Button>
-                      )}
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="text-rose-600 border-rose-200 hover:bg-rose-50"
-                        onClick={() => setActionTarget({ session, mode: 'cancel' })}
-                      >
-                        <X size={13} />
-                        キャンセル
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </TabsContent>
-          )}
-
-          <TabsContent value="completed" className="space-y-2">
-            {isLoadingPast ? (
-              <div className="flex items-center justify-center py-16 text-ink-subtle">
-                <Loader2 size={18} className="animate-spin" />
-              </div>
-            ) : completedSessions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                <CalendarClock size={22} className="text-ink-subtle mb-4" />
-                <p className="text-sm font-bold text-ink-muted">実施済みのセッションはありません</p>
-              </div>
-            ) : (
-              <>
-                {completedReveal.visibleItems.map((session) => (
-                  <Link
-                    key={session.session_id}
-                    href={`/live-room/sessions/${session.session_id}/result`}
-                    className="flex items-center justify-between gap-3 px-3.5 py-3 bg-white rounded-card border border-line/70 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <CoachAvatar iconPath={session.counterpart_icon_path} size={36} />
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-ink-soft truncate">{session.counterpart_name} コーチ</p>
-                        <p className="text-[11px] text-ink-subtle mt-0.5">
-                          {formatDateTimeByZone(session.start_datetime, timezone, false)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[11px] font-bold uppercase px-2 py-1 rounded-md border ${getSessionStatusBadge(session).className}`}>
-                        {getSessionStatusBadge(session).label}
-                      </span>
-                      <FileText size={14} className="text-ink-subtle" />
-                    </div>
-                  </Link>
-                ))}
-                {completedReveal.hasMore && (
-                  <Button type="button" size="sm" variant="outline" className="w-full" onClick={completedReveal.showMore}>
-                    さらに{completedReveal.remainingCount}件を表示
-                  </Button>
-                )}
-              </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="history" className="space-y-2">
-            {isLoadingPast ? (
-              <div className="flex items-center justify-center py-16 text-ink-subtle">
-                <Loader2 size={18} className="animate-spin" />
-              </div>
-            ) : changeHistorySessions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                <CalendarClock size={22} className="text-ink-subtle mb-4" />
-                <p className="text-sm font-bold text-ink-muted">変更履歴はありません</p>
-              </div>
-            ) : (
-              <>
-                {historyReveal.visibleItems.map((session) => {
-                  const badge = getSessionStatusBadge(session);
-                  return (
-                    <div
-                      key={session.session_id}
-                      className="flex flex-col gap-1.5 px-3.5 py-3 bg-white rounded-card border border-line/70 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <CoachAvatar iconPath={session.counterpart_icon_path} size={36} />
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-ink-soft truncate">{session.counterpart_name} コーチ</p>
-                            <p className="text-[11px] text-ink-subtle mt-0.5">
-                              {formatDateTimeByZone(session.start_datetime, timezone, false)}
-                            </p>
-                          </div>
-                        </div>
-                        <span className={`text-[11px] font-bold uppercase px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
-                          {badge.label}
-                        </span>
-                      </div>
-                      {session.cancel_reason && (
-                        <p className="text-[11px] text-ink-muted bg-slate-50 border border-line/70 rounded-lg px-2.5 py-1.5">{session.cancel_reason}</p>
-                      )}
-                    </div>
-                  );
-                })}
-                {historyReveal.hasMore && (
-                  <Button type="button" size="sm" variant="outline" className="w-full" onClick={historyReveal.showMore}>
-                    さらに{historyReveal.remainingCount}件を表示
-                  </Button>
-                )}
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      <SessionActionDialog target={actionTarget} onClose={() => setActionTarget(null)} onResolved={handleResolved} />
-
-      <BookMakeupSessionDialog
-        open={isBookMakeupOpen}
-        slots={bookableSlots}
-        onClose={() => setIsBookMakeupOpen(false)}
-        onRequested={(request) => {
-          setIsBookMakeupOpen(false);
-          setMyBookingRequests((prev) => [request, ...prev]);
-        }}
+          </Button>
+        }
       />
 
-      <RescheduleProposalDialog
-        group={proposalDetailGroup}
-        timezone={timezone}
-        onClose={() => setProposalDetailGroup(null)}
-        onAccepted={handleProposalAccepted}
-        onDeclined={handleProposalDeclined}
+      {contracts.length > 1 && (
+        <div className="mb-5">
+          <Select value={selectedContract.ticket_id} onValueChange={handleContractChange}>
+            <SelectTrigger className="h-10 w-full rounded-control border-line bg-surface text-sm sm:w-80" aria-label="表示する契約">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {contracts.map((c) => (
+                <SelectItem key={c.ticket_id} value={c.ticket_id}>
+                  {c.is_current ? '現在の契約：' : ''}
+                  {formatContractDate(c.start_date, timezone)}〜{formatContractDate(c.end_date, timezone)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className={cn('space-y-8 transition-opacity', isRefreshing && 'pointer-events-none opacity-60')} aria-busy={isRefreshing}>
+        {hasActions && (
+          <div>
+            <ShellSectionTitle>対応が必要です</ShellSectionTitle>
+            <div className="space-y-3">
+              {proposalGroups.map((group) => (
+                <RescheduleProposalCard
+                  key={group.session_id}
+                  group={group}
+                  timezone={timezone}
+                  onAccepted={refresh}
+                  onDeclined={() => {
+                    refresh();
+                    if (bookableSlots.length > 0) setIsBookingOpen(true);
+                  }}
+                />
+              ))}
+              {unmatchedSlotCount > 0 && overview && (
+                <ActionNotice
+                  icon={Users}
+                  title={
+                    overview.weekly_frequency > 1
+                      ? `週${overview.weekly_frequency}回のうち${unmatchedSlotCount}コマの専属コーチが未選択です`
+                      : '専属コーチが未選択です'
+                  }
+                  description={`コーチを選ぶと、そのコマのセッション（${overview.unassigned_count}回分）が毎週の日時で自動的に予約されます。`}
+                  action={
+                    <Button asChild className="w-full sm:w-auto">
+                      <Link href="/coach-matching">
+                        コーチを選ぶ
+                        <ChevronRight size={16} />
+                      </Link>
+                    </Button>
+                  }
+                />
+              )}
+              {showBookingNotice && (
+                <ActionNotice
+                  icon={Ticket}
+                  title={`日時が決まっていないセッションが${unbookedCount}回あります`}
+                  description="キャンセル等で空いた回です。ご希望の日時をコーチにリクエストしてください。"
+                  action={
+                    <Button type="button" className="w-full sm:w-auto" onClick={() => setIsBookingOpen(true)}>
+                      日時をリクエスト
+                    </Button>
+                  }
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {nextSession && (
+          <NextSessionPanel
+            session={nextSession}
+            timezone={timezone}
+            onCancel={() => setActionTarget({ session: nextSession, mode: 'cancel' })}
+          />
+        )}
+
+        {overview && (
+          <ContractOverviewCard contract={selectedContract} overview={overview} timezone={timezone} adjustingCount={adjustingCount} />
+        )}
+
+        {isCurrent && (laterSessions.length > 0 || bookingRequests.length > 0) && (
+          <div>
+            <ShellSectionTitle>今後の予定</ShellSectionTitle>
+            <UpcomingSessionList
+              sessions={laterSessions}
+              requests={bookingRequests}
+              timezone={timezone}
+              withdrawingRequestId={withdrawingRequestId}
+              onCancelSession={(session) => setActionTarget({ session, mode: 'cancel' })}
+              onWithdrawRequest={handleWithdrawRequest}
+            />
+          </div>
+        )}
+
+        {isCurrent && !nextSession && bookingRequests.length === 0 && !hasActions && (
+          <p className="rounded-card border border-dashed border-line px-4 py-8 text-center text-sm text-ink-muted">
+            予定されているセッションはありません
+          </p>
+        )}
+
+        <div>
+          <ShellSectionTitle>履歴</ShellSectionTitle>
+          <SessionHistoryList key={selectedContract.ticket_id} sessions={historySessions} timezone={timezone} />
+        </div>
+      </div>
+
+      <SessionActionDialog target={actionTarget} onClose={() => setActionTarget(null)} onResolved={refresh} />
+
+      <BookMakeupSessionDialog
+        open={isBookingOpen}
+        slots={bookableSlots}
+        onClose={() => setIsBookingOpen(false)}
+        onRequested={() => {
+          setIsBookingOpen(false);
+          refresh();
+        }}
       />
     </>
   );

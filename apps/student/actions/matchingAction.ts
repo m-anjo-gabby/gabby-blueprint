@@ -6,6 +6,7 @@ import {
   getMySlotStatusCore,
   getCoachBrowseListCore,
   getMyBookableTicketsCore,
+  getMyLiveSessionOverviewCore,
   createMatchingRequestCore,
   cancelMatchingRequestCore,
 } from '@gabby/lib/matching/actions/matchingActions';
@@ -17,6 +18,7 @@ import {
   CoachBrowseItem,
   CreateMatchingRequestInput,
   LiveSessionContractSummary,
+  LiveSessionOverview,
   LiveSessionTicketSummary,
   MatchingRequestErrorCode,
   SlotStatusItem,
@@ -100,6 +102,19 @@ export async function getMyLiveSessionContracts(): Promise<LiveSessionContractSu
     return [];
   }
   return result.contracts;
+}
+
+/**
+ * 指定契約(チケット)のセッション回数の内訳とコマの状況を取得（ライブセッションハブの「契約の状況」用）
+ */
+export async function getMyLiveSessionOverview(ticketId: string): Promise<LiveSessionOverview | null> {
+  const result = await getMyLiveSessionOverviewCore(ticketId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_live_session_overview_failed', result.errorCode, ctx);
+    return null;
+  }
+  return result.overview;
 }
 
 /**

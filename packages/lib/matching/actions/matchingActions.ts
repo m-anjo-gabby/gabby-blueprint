@@ -13,6 +13,7 @@ import {
   ApproveMatchingRequestResult,
   GetMyBookableTicketsResult,
   GetMyLiveSessionContractsResult,
+  GetMyLiveSessionOverviewResult,
   RejectMatchingRequestResult,
   IncomingMatchingRequestItem,
   LiveSessionContractSummary,
@@ -21,6 +22,7 @@ import {
   MatchingRequestErrorCode,
   SlotStatusItem,
 } from '@gabby/types/matching';
+import { SESSION_STATUS } from '@gabby/types/session';
 
 const logger = createLogger('common');
 
@@ -285,6 +287,83 @@ export async function getMySlotStatusCore(
     return { success: true, slots };
   } catch (err) {
     logger.error('matching:get_slot_status_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 指定チケット(契約)のセッション回数の内訳と、コマごとのコーチ選択状況を取得する
+ * （生徒向け。ライブセッションハブの「契約の状況」表示用。ポータル共通）。
+ * 未予約数はcreate_session_booking_request RPCの予約可否判定と同じfn_schedule_shortfall()で算出し、
+ * コーチ未選択のコマの回数は承認時(fn_commit_matching_schedule)と同じ均等割りで見積もる。
+ */
+export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<GetMyLiveSessionOverviewResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: ticket, error: ticketError } = await supabase
+      .from('com_t_user_session_ticket')
+      .select('ticket_id, weekly_frequency, total_sessions')
+      .eq('ticket_id', ticketId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (ticketError) {
+      logger.error('matching:get_overview_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!ticket) return { success: false, errorCode: 'not_eligible' };
+
+    const [slotResult, { data: sessions, error: sessionError }, { data: schedules, error: scheduleError }] = await Promise.all([
+      getMySlotStatusCore(ticketId),
+      supabase.from('com_t_session').select('status, ticket_refunded').eq('ticket_id', ticketId),
+      supabase.from('com_m_lesson_schedule').select('schedule_id').eq('ticket_id', ticketId).eq('status', 1),
+    ]);
+
+    if (!slotResult.success) return slotResult;
+    if (sessionError || scheduleError) {
+      logger.error('matching:get_overview_failed', sessionError?.message ?? scheduleError?.message ?? 'unknown', { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const shortfallResults = await Promise.all(
+      (schedules ?? []).map((schedule) =>
+        supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single()
+      )
+    );
+    const unbookedCount = shortfallResults.reduce(
+      (sum, { data }) => sum + ((data as ScheduleShortfallRow | null)?.shortfall ?? 0),
+      0
+    );
+
+    // コーチ未選択のコマは承認時にtotal_sessions/weekly_frequencyを均等割りし、余りをslot_no昇順に配分する
+    const baseTarget = Math.floor(ticket.total_sessions / ticket.weekly_frequency);
+    const remainder = ticket.total_sessions % ticket.weekly_frequency;
+    const unassignedCount = slotResult.slots
+      .filter((slot) => slot.status !== 'matched')
+      .reduce((sum, slot) => sum + baseTarget + (slot.slot_no <= remainder ? 1 : 0), 0);
+
+    const rows = sessions ?? [];
+    return {
+      success: true,
+      overview: {
+        ticket_id: ticket.ticket_id,
+        weekly_frequency: ticket.weekly_frequency,
+        total_sessions: ticket.total_sessions,
+        completed_count: rows.filter((s) => s.status === SESSION_STATUS.COMPLETED).length,
+        scheduled_count: rows.filter((s) => s.status === SESSION_STATUS.SCHEDULED).length,
+        forfeited_count: rows.filter((s) => s.status === SESSION_STATUS.CANCELLED && s.ticket_refunded === false).length,
+        unbooked_count: unbookedCount,
+        unassigned_count: unassignedCount,
+        slots: slotResult.slots,
+      },
+    };
+  } catch (err) {
+    logger.error('matching:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
