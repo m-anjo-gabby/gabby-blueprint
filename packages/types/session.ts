@@ -99,6 +99,7 @@ export interface SessionListItem {
   viewer_role: SessionViewerRole; // ログイン中ユーザーがこのセッションにおいて生徒/コーチのどちらか
   counterpart_id: string;
   counterpart_name: string;
+  counterpart_icon_path: string | null; // プロフィールアイコン画像のStorageパス（未設定時はnull）
   counterpart_timezone: string;
   rescheduled_from: string | null;
   cancel_reason: string | null;

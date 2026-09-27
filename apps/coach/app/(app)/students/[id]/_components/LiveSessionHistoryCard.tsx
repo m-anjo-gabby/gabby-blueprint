@@ -44,6 +44,7 @@ function toSessionListItem(
     viewer_role: 'coach',
     counterpart_id: studentId,
     counterpart_name: studentName,
+    counterpart_icon_path: null,
     counterpart_timezone: studentTimezone,
     rescheduled_from: session.rescheduled_from,
     cancel_reason: session.cancel_reason,

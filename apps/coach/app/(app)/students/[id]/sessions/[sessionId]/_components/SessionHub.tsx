@@ -266,6 +266,7 @@ export function SessionHub({
                               viewer_role: 'coach',
                               counterpart_id: studentId,
                               counterpart_name: session.counterpart_name,
+                              counterpart_icon_path: session.counterpart_icon_path,
                               counterpart_timezone: timezone,
                               rescheduled_from: null,
                               cancel_reason: null,

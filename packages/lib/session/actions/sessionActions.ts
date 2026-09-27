@@ -110,9 +110,10 @@ async function toSessionListItems(
 
   const { data: counterparts } = await supabase
     .from('com_m_user')
-    .select('id, user_name, timezone')
+    .select('id, user_name, icon_path, timezone')
     .in('id', Array.from(counterpartIds));
   const nameById = new Map((counterparts ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+  const iconPathById = new Map((counterparts ?? []).map((c) => [c.id, c.icon_path ?? null]));
   const timezoneById = new Map((counterparts ?? []).map((c) => [c.id, c.timezone ?? 'Asia/Tokyo']));
 
   return rows.map((s) => {
@@ -129,6 +130,7 @@ async function toSessionListItems(
       viewer_role: isStudent ? 'student' : 'coach',
       counterpart_id: counterpartId,
       counterpart_name: nameById.get(counterpartId) ?? '(Unknown)',
+      counterpart_icon_path: iconPathById.get(counterpartId) ?? null,
       counterpart_timezone: timezoneById.get(counterpartId) ?? 'Asia/Tokyo',
       rescheduled_from: s.rescheduled_from,
       cancel_reason: s.cancel_reason,
