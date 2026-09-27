@@ -17,6 +17,7 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { AudioTroubleshootingDialog } from '@/components/help/AudioTroubleshootingDialog';
 import { MicTroubleshootingDialog } from '@/components/help/MicTroubleshootingDialog';
+import { ImmersivePanel } from '@/components/shell/PageFrames';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface SprintSelectProps {
@@ -195,8 +196,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const currentHint = SPRINT_NOTES[selectedType] || '';
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] bg-slate-100 flex items-center justify-center p-2 sm:p-4 overflow-hidden overscroll-none touch-none select-none text-slate-900">
-      <main className="bg-white shadow-2xl w-full max-w-2xl h-full flex flex-col relative overflow-hidden rounded-[40px]">
+    <ImmersivePanel as="main" className="overscroll-none select-none">
         
       {/* 🌟 完全中央集約型のノイズレス・ヒーローヘッダー */}
       <div 
@@ -773,7 +773,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
         <AudioTroubleshootingDialog open={isHelpOpen} onOpenChange={setIsHelpOpen} />
         <MicTroubleshootingDialog open={isMicHelpOpen} onOpenChange={setIsMicHelpOpen} />
         <ConfirmContainer />
-      </main>
-    </div>
+    </ImmersivePanel>
   );
 };

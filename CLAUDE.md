@@ -46,6 +46,7 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
   - 文字は日本語表記を基本とし、最小サイズは11px。`font-black` と英語の大文字ラベル（`uppercase` + 広い字間）は使わない。
   - 画面はアプリシェル（`app/(app)/(shell)/`、常設ナビあり）と没入画面（`app/(app)` 直下、ナビなし）に分ける。基準は「利用者が連続した作業の最中か」で、ドリル実施・結果、ライブ通話、チャットルームは没入画面、一覧・学習記録・履歴・課題確認など「見る・選ぶ・振り返る」画面はシェルに置く（URLを変えずに移す場合は `(shell)/training/...` のようにルートグループ側へ置く）。ナビ項目は `constants/navigation.ts` のみで定義する。
   - シェル内の画面は、各 `layout.tsx` で `ContentFrame`（`components/shell/PageFrames.tsx`、`width` = narrow / medium / wide / full）を使い、ページ内の見出しは `components/shell/ShellPage.tsx` の `ShellPageHeader`（検索・タブ・月切替などは `children` に渡すと上部に固定表示）で統一する。スクロールはシェルの `<main>` に任せ、画面内に「スマホ型の浮いたパネル」や内側だけのスクロール領域を作らない。`PanelFrame` は没入画面専用。
+  - 没入画面は、`layout.tsx` で `PanelFrame` を使い、各画面の最上位を `ImmersivePanel`（`components/shell/PageFrames.tsx`）にする。モバイルでは画面いっぱいに表示し（角丸・枠・影なし）、`sm` 以上では角丸のパネルとして浮かせる。画面ごとに `fixed inset-0` の外枠や角丸・影・最大幅を書かない。教材なし・エラー・開始待ち・終了後などの状態表示は `ImmersiveNotice`（`components/shell/ImmersiveNotice.tsx`、操作ボタンには `noticeActionClass()` を付ける）で統一する。新しいトレーニング種別を追加するときも同じ構成にする。
 
 # 4. コミュニケーション・トーン
 

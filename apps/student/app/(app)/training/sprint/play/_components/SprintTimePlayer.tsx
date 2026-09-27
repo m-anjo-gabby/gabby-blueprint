@@ -20,6 +20,7 @@ import { useSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useSprin
 import { ExitProcessingOverlay } from './ExitProcessingOverlay';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { CircularProgressRing } from '@/components/common/CircularProgressRing';
+import { ImmersivePanel } from '@/components/shell/PageFrames';
 import { QuestionStepBadge, StepIndicator } from '@/components/common/QuestionStepBadge';
 
 interface SprintTimePlayerProps {
@@ -607,8 +608,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     : audioPhase;
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden text-slate-900">
-      <main className="bg-white border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden shadow-2xl">
+    <ImmersivePanel as="main">
         
         {/* ① 上部ヘッダー（プログレスバー一体型・タイトル領域最大化） */}
         <div className="shrink-0 w-full px-6 pt-5 pb-3 border-b border-slate-100/60 bg-white relative z-10">
@@ -959,7 +959,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             </div>
           </div>
         </div>
-      </main>
 
       <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
 
@@ -1073,6 +1072,6 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </ImmersivePanel>
   );
 };

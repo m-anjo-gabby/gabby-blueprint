@@ -23,11 +23,12 @@ import { WordControls } from './_components/WordControls';
 import { WordFeedback } from './_components/WordFeedback';
 import { WordIndex } from './_components/WordIndex';
 import { BookOpen, ArrowLeft, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { PhraseItem } from '@gabby/types/word';
 import { ContentLoading } from '@/components/common/ContentLoading';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
+import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
+import { ImmersivePanel } from '@/components/shell/PageFrames';
 
 export default function WordTrainingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: sectionId } = use(params);
@@ -386,39 +387,23 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   // 2. エンプティステート：コンテンツが存在しない場合
   if (words.length === 0) return (
-    <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-sm text-center"
-      >
-        <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
-          <AlertCircle size={40} className="text-amber-500" />
-        </div>
-        <h2 className="text-xl font-black text-slate-900 mb-2">Unavailable</h2>
-        <p className="text-slate-500 text-[13px] font-medium leading-relaxed mb-8 px-4">
-          この教材は現在ご利用いただけないか、<br/>
-          アクセスする権限がありません。
-        </p>
-        
-        <div className="space-y-3">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="w-full h-14 bg-brand text-white rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-brand-100"
-          >
-            Go to Dashboard
+    <ImmersiveNotice
+      tone="warning"
+      icon={<AlertCircle size={28} />}
+      title="この教材は利用できません"
+      description="現在ご利用いただけないか、アクセスする権限がありません。"
+      actions={
+        <>
+          <button type="button" onClick={() => router.push('/dashboard')} className={noticeActionClass()}>
+            ホームに戻る
           </button>
-          
-          <button
-            onClick={handleBackToPrevious}
-            className="w-full h-12 bg-transparent text-slate-400 rounded-2xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:opacity-60"
-          >
-            <ArrowLeft size={14} strokeWidth={3} />
-            Back to previous page
+          <button type="button" onClick={handleBackToPrevious} className={noticeActionClass('secondary')}>
+            <ArrowLeft size={14} strokeWidth={2.5} />
+            前の画面に戻る
           </button>
-        </div>
-      </motion.div>
-    </div>
+        </>
+      }
+    />
   );
 
   // 安全装置（words[0]はあるが何らかの理由で現在のインデックスが異常な場合）
@@ -426,9 +411,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   // 3. メイン学習画面
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none selection:bg-brand-100">
-      
-      <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
+    <>
+      <ImmersivePanel as="main">
         
         <div className="flex-1 flex flex-col overflow-hidden p-4 pb-0">
           <WordHeader onBack={handleBackToPrevious} />
@@ -458,7 +442,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         <WordIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
 
         <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
-      </main>
+      </ImmersivePanel>
 
       <style jsx global>{`
         :root {
@@ -476,6 +460,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
       `}</style>
-    </div>
+    </>
   );
 }

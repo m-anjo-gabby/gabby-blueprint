@@ -7,13 +7,37 @@ interface PanelFrameProps {
 /**
  * 没入（フォーカス）画面の共通枠（トレーニング・ライブ通話・チャットルーム等、ナビを出さない画面）。
  * 画面全体（h-dvh）を占有し、外側のスクロールは禁止して内部だけをスクロールさせる。
- * モバイル端末の端にカードが張り付かないよう余白を確保する。
+ * 中身は `ImmersivePanel` で包む。モバイルでは端末の画面そのものをパネルとみなすため余白を取らない。
  */
 export function PanelFrame({ children }: PanelFrameProps) {
   return (
-    <div className="w-full h-dvh flex flex-col items-center justify-center overflow-hidden touch-none p-2 sm:p-4 selection:bg-brand-100">
+    <div className="w-full h-dvh flex flex-col items-center justify-center overflow-hidden touch-none sm:p-4 selection:bg-brand-100">
       {children}
     </div>
+  );
+}
+
+interface ImmersivePanelProps extends React.HTMLAttributes<HTMLElement> {
+  /** 画面の主領域として置く場合は 'main' */
+  as?: 'div' | 'main';
+}
+
+/**
+ * 没入画面のパネル本体（PanelFrame の直下に1つ置く）。
+ * - モバイル: 画面いっぱいに広げる（角丸・枠・影なし）。端末の角丸と二重にならず、余白も使い切る
+ * - sm 以上: 幅を絞った角丸パネルとして背景から浮かせ、アプリの画面らしく見せる
+ * 中は flex-col なので、ヘッダー・フッターは shrink-0、本文は flex-1 + overflow-y-auto で組む。
+ */
+export function ImmersivePanel({ as: Comp = 'div', className, ...props }: ImmersivePanelProps) {
+  return (
+    <Comp
+      className={cn(
+        'relative flex h-full w-full flex-col overflow-hidden bg-surface text-ink',
+        'sm:max-w-2xl sm:rounded-panel sm:border sm:border-line sm:shadow-xl',
+        className
+      )}
+      {...props}
+    />
   );
 }
 

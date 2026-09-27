@@ -7,6 +7,7 @@ import { ChevronLeft, FastForward, Home, Trophy } from 'lucide-react';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
+import { ImmersivePanel } from '@/components/shell/PageFrames';
 import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
 import { SprintResultQuestionList } from '@/components/training/sprint-result/SprintResultQuestionList';
 import {
@@ -34,7 +35,7 @@ export function SprintResult({ scoreData, questions, courseTitle }: SprintResult
   const selectHref = getSprintSelectHref(scoreData);
 
   return (
-    <div className="relative flex h-full w-full max-w-2xl select-none flex-col overflow-hidden rounded-panel border border-line bg-surface shadow-xl animate-fade-in selection:bg-brand-100">
+    <ImmersivePanel className="select-none">
       {/* ヘッダー：ナビゲーションと結果サマリー */}
       <div className="relative shrink-0 space-y-4 overflow-hidden border-b border-brand-100/40 bg-brand-50/60 p-5 sm:p-6">
         <div className="pointer-events-none absolute right-0 top-0 p-3 opacity-[0.08]">
@@ -91,6 +92,6 @@ export function SprintResult({ scoreData, questions, courseTitle }: SprintResult
       </div>
 
       <AudioResumeBanner status={playback.resumeStatus} onResume={() => { playback.unlockAudioContext(); }} />
-    </div>
+    </ImmersivePanel>
   );
 }

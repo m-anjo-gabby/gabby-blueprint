@@ -12,6 +12,7 @@ import { isContinuationMessage, formatMessageHeaderTime } from '@gabby/lib/chat/
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { CHAT_ROOM_TYPES, ChatMessage, ChatRoom, ChatRoomListItem } from '@gabby/types/chat';
 import { USER_TYPES, type UserType } from '@gabby/types/user';
+import { ImmersivePanel } from '@/components/shell/PageFrames';
 import { ChatMessageInput } from './ChatMessageInput';
 import { ChatMessageContent } from './ChatMessageContent';
 
@@ -189,7 +190,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
   };
 
   return (
-    <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-line/70 overflow-hidden">
+    <ImmersivePanel>
       <div className="flex items-center gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-line/50 shrink-0">
         <Link
           href="/chat"
@@ -303,6 +304,6 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
           このルームの参加者ではないため、メッセージを送信できません。
         </div>
       )}
-    </div>
+    </ImmersivePanel>
   );
 }

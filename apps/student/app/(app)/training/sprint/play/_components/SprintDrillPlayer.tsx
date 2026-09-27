@@ -21,6 +21,8 @@ import { logClientEvent } from '@gabby/lib/logger/actions';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
 import { playStatementThenQuestion, useStopAllAudioCore, useFullscreenAudioLifecycle, useFlowGuard } from '@gabby/lib/hooks/useSprintPlaybackFlow';
 import { useSprintProgressSync } from '../_hooks/useSprintProgressSync';
+import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
+import { ImmersivePanel } from '@/components/shell/PageFrames';
 
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
@@ -522,19 +524,20 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   // 🛡️ View 層：問題が1件も無い場合の空状態ガード（戻る手段の無い無限ローディングを防ぐ）
   if (!questions || questions.length === 0 || !currentQuestion) {
     return (
-      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-4">
-          <Loader2 className="w-10 h-10 text-brand animate-spin mx-auto" />
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">Preparing Questions</h2>
-          <button onClick={() => onExit?.()} className="w-full h-14 bg-brand text-white rounded-2xl font-black text-[11px] uppercase tracking-widest">Go Back</button>
-        </div>
-      </div>
+      <ImmersiveNotice
+        icon={<Loader2 size={28} className="animate-spin" />}
+        title="問題を準備しています"
+        actions={
+          <button type="button" onClick={() => onExit?.()} className={noticeActionClass('secondary')}>
+            選択画面に戻る
+          </button>
+        }
+      />
     );
   }
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none select-none">
-      <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
+    <ImmersivePanel as="main" className="select-none">
         
         {/* ヘッダー */}
         <div className="shrink-0 pt-4 w-full px-4 border-b border-slate-50 pb-2">
@@ -609,7 +612,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
 
         <ExitProcessingOverlay visible={exitLoading} />
-      </main>
-    </div>
+    </ImmersivePanel>
   );
 };

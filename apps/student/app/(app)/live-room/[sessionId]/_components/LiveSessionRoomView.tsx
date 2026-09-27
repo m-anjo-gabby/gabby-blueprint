@@ -31,6 +31,8 @@ import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
+import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
+import { ImmersivePanel } from '@/components/shell/PageFrames';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
@@ -185,7 +187,7 @@ export function LiveSessionRoomView({ access }: Props) {
 
   if (phase === 'preview') {
     return (
-      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden">
+      <ImmersivePanel>
         <header className="shrink-0 px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
           <div className="flex items-center gap-3 min-w-0">
             <Link
@@ -278,27 +280,23 @@ export function LiveSessionRoomView({ access }: Props) {
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
-      </div>
+      </ImmersivePanel>
     );
   }
 
   if (phase === 'ended') {
     return (
-      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden items-center justify-center gap-4 px-6 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
-          <CheckCircle2 size={22} />
-        </div>
-        <div className="space-y-1">
-          <p className="text-sm font-bold text-slate-900">セッションが終了しました</p>
-          <p className="text-xs text-slate-500 max-w-xs">通話が終了しました。</p>
-        </div>
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-brand hover:bg-brand-500 transition-colors px-4 py-2 rounded-full"
-        >
-          ダッシュボードに戻る
-        </button>
-      </div>
+      <ImmersiveNotice
+        tone="success"
+        icon={<CheckCircle2 size={26} />}
+        title="セッションが終了しました"
+        description="通話が終了しました。"
+        actions={
+          <button type="button" onClick={() => router.push('/dashboard')} className={noticeActionClass()}>
+            ホームに戻る
+          </button>
+        }
+      />
     );
   }
 
