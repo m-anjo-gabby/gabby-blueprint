@@ -35,7 +35,7 @@ export function SprintResultDetail({ scoreData, questions, courseTitle }: Sprint
       >
         <div className="grid grid-cols-2 gap-3">
           <SprintPlayAllButton playback={playback} />
-          <SprintRetryLink scoreData={scoreData} />
+          <SprintRetryLink scoreData={scoreData} label="リトライ" />
         </div>
       </ShellPageHeader>
 

@@ -105,14 +105,20 @@ export function SprintPlayAllButton({ playback, primary = false }: { playback: S
   );
 }
 
-/** 「スプリントをリトライ」ボタン（同じ教材・種別でスプリント選択画面を開く） */
-export function SprintRetryLink({ scoreData }: { scoreData: SprintResultScore }) {
+/** リトライボタン（同じ教材・種別でスプリント選択画面を開く）。横幅が狭い配置では `label` で短い表記を渡す */
+export function SprintRetryLink({
+  scoreData,
+  label = 'スプリントをリトライ',
+}: {
+  scoreData: SprintResultScore;
+  label?: string;
+}) {
   return (
     <Link
       href={getSprintSelectHref(scoreData)}
       className={cn(ACTION_BUTTON_CLASS, 'bg-brand text-white shadow-lg shadow-brand/10 hover:bg-brand-strong')}
     >
-      スプリントをリトライ
+      {label}
       <ArrowRight size={14} strokeWidth={3} />
     </Link>
   );

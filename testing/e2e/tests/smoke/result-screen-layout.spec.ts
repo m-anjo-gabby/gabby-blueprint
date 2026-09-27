@@ -40,7 +40,7 @@ test.describe("スプリント結果画面", () => {
     await expect(page.getByRole("heading", { level: 1, name: "スプリント結果" })).toBeVisible();
     await expect(navTab(page, "トレーニング")).toHaveAttribute("aria-current", "page");
     await expect(page.getByRole("button", { name: "全て再生" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "スプリントをリトライ" })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "リトライ", exact: true })).toHaveAttribute(
       "href",
       /^\/training\/sprint\/play\?mode=sprint&/
     );
