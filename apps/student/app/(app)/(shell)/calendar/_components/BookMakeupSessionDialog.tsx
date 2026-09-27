@@ -23,7 +23,7 @@ import {
 import { CounterpartLocalTime } from '@gabby/lib/components/common/CounterpartLocalTime';
 import { createSessionBookingRequest, checkSessionConflict } from '@/actions/sessionAction';
 import { BookableTicketSlot } from '@gabby/types/matching';
-import { SESSION_BOOKING_REQUEST_STATUS, SessionBookingRequest } from '@gabby/types/session';
+import { SESSION_BOOKING_REQUEST_STATUS, MyBookingRequestItem } from '@gabby/types/session';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 
 // セッション枠は30分単位のため、時刻選択もこの粒度に揃える。担当コーチの対応可能時間に
@@ -36,7 +36,7 @@ interface BookMakeupSessionDialogProps {
   slots: BookableTicketSlot[];
   initialDate?: string | null;
   onClose: () => void;
-  onRequested: (request: SessionBookingRequest) => void;
+  onRequested: (request: MyBookingRequestItem) => void;
 }
 
 function tomorrowIsoDate(): string {
@@ -135,6 +135,7 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
         schedule_id: selectedSlot.schedule_id,
         student_id: currentUserId ?? '',
         coach_id: selectedSlot.coach_id,
+        coach_name: selectedSlot.coach_name,
         requested_start_datetime: start.toISOString(),
         requested_end_datetime: end.toISOString(),
         reason: reason.trim() || null,

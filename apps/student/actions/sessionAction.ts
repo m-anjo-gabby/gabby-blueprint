@@ -17,9 +17,9 @@ import {
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
+  MyBookingRequestItem,
   MyRescheduleProposalGroup,
   SessionActionErrorCode,
-  SessionBookingRequest,
   SessionListItem,
   SessionResultSummary,
 } from '@gabby/types/session';
@@ -164,7 +164,7 @@ export async function withdrawSessionBookingRequest(
 /**
  * ログイン中生徒本人の、コーチの承認待ち(pending)の予約リクエスト一覧を取得する
  */
-export async function getMyBookingRequests(): Promise<SessionBookingRequest[]> {
+export async function getMyBookingRequests(): Promise<MyBookingRequestItem[]> {
   const result = await getMyBookingRequestsCore();
   if (!result.success) {
     const ctx = await getLogContext();

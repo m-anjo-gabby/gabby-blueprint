@@ -26,6 +26,7 @@ import {
   SESSION_STATUS,
   SessionActionErrorCode,
   SessionBookingRequest,
+  MyBookingRequestItem,
   SessionCallLogEntry,
   SessionChatMessageEntry,
   SessionDialogueLogEntry,
@@ -739,7 +740,7 @@ const BOOKING_REQUEST_ROW_COLUMNS = 'request_id:proposal_id, schedule_id, studen
  * ライブセッションハブで「コーチの承認待ち」として表示するために使う）。
  */
 export async function getMyBookingRequestsCore(): Promise<
-  { success: true; requests: SessionBookingRequest[] } | { success: false; errorCode: SessionActionErrorCode }
+  { success: true; requests: MyBookingRequestItem[] } | { success: false; errorCode: SessionActionErrorCode }
 > {
   const ctx = await getLogContext();
 
@@ -761,7 +762,16 @@ export async function getMyBookingRequestsCore(): Promise<
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return { success: true, requests: (data ?? []) as SessionBookingRequest[] };
+    const requests = (data ?? []) as SessionBookingRequest[];
+    if (requests.length === 0) return { success: true, requests: [] };
+
+    const coachIds = Array.from(new Set(requests.map((r) => r.coach_id)));
+    const { data: coaches } = await supabase.from('com_m_user').select('id, user_name').in('id', coachIds);
+    const nameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+    return {
+      success: true,
+      requests: requests.map((r) => ({ ...r, coach_name: nameById.get(r.coach_id) ?? '(Unknown)' })),
+    };
   } catch (err) {
     logger.error('session:get_my_booking_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };

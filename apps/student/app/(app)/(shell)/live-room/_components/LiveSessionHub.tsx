@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, CalendarClock, CalendarDays, Clock, FileText, Loader2, Ticket, Users, Video, X } from 'lucide-react';
+import { ArrowRight, CalendarClock, CalendarDays, Clock, FileText, Loader2, Ticket, Users, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatSessionSlot } from '@/lib/sessionFormat';
+import { CoachAvatar } from '@/components/session/CoachAvatar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,8 +16,8 @@ import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
 import { getMyPastSessions, withdrawSessionBookingRequest } from '@/actions/sessionAction';
 import {
+  MyBookingRequestItem,
   MyRescheduleProposalGroup,
-  SessionBookingRequest,
   SessionListItem,
   SESSION_RESULT_STATUSES,
   isSelfInitiatedCancel,
@@ -54,7 +56,7 @@ interface Props {
   initialPastSessions: SessionListItem[];
   bookableSlots: BookableTicketSlot[];
   pendingProposalGroups: MyRescheduleProposalGroup[];
-  myBookingRequests: SessionBookingRequest[];
+  myBookingRequests: MyBookingRequestItem[];
 }
 
 export function LiveSessionHub({
@@ -241,50 +243,53 @@ export function LiveSessionHub({
                 </button>
               )}
 
-              {myBookingRequests.map((request) => (
-                <div
-                  key={request.request_id}
-                  className="flex items-center gap-3 px-3.5 py-3 bg-slate-50 rounded-card border border-dashed border-line"
-                >
-                  <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-ink-subtle shrink-0">
-                    <Clock size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-ink-soft">コーチの承認待ち</p>
-                    <p className="text-[11px] text-ink-subtle mt-0.5 truncate">
-                      {formatDateTimeByZone(request.requested_start_datetime, timezone, false)}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 h-7 px-2.5 text-[11px]"
-                    disabled={withdrawingRequestId === request.request_id}
-                    onClick={() => handleWithdrawBookingRequest(request.request_id)}
+              {myBookingRequests.map((request) => {
+                const slot = formatSessionSlot(request.requested_start_datetime, request.requested_end_datetime, timezone);
+                return (
+                  <div
+                    key={request.request_id}
+                    className="flex items-center gap-3 px-3.5 py-3 bg-slate-50 rounded-card border border-dashed border-line"
                   >
-                    {withdrawingRequestId === request.request_id && <Loader2 size={12} className="animate-spin" />}
-                    取り下げる
-                  </Button>
-                </div>
-              ))}
+                    <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-ink-subtle shrink-0">
+                      <Clock size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="flex flex-wrap items-baseline gap-x-2 font-bold text-ink-soft tabular-nums">
+                        <span className="text-sm">{slot.date}</span>
+                        <span className="text-[13px]">{slot.time}</span>
+                      </p>
+                      <p className="text-xs text-ink-subtle mt-0.5 truncate">{request.coach_name} コーチの承認待ち</p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 h-7 px-2.5 text-[11px]"
+                      pending={withdrawingRequestId === request.request_id}
+                      onClick={() => handleWithdrawBookingRequest(request.request_id)}
+                    >
+                      取り下げる
+                    </Button>
+                  </div>
+                );
+              })}
 
               {upcomingSessions.map((session) => {
                 const joinable = isJoinableSoon(session.start_datetime);
+                const slot = formatSessionSlot(session.start_datetime, session.end_datetime, timezone);
                 return (
                   <div
                     key={session.session_id}
                     className="flex flex-col gap-2.5 px-3.5 py-3.5 bg-white rounded-card border border-line/70 shadow-sm"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-full bg-brand-soft flex items-center justify-center text-brand shrink-0">
-                        <Video size={18} />
-                      </div>
+                      <CoachAvatar iconPath={session.counterpart_icon_path} size={44} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-ink truncate">{session.counterpart_name} コーチ</p>
-                        <p className="text-[13px] text-ink-muted truncate mt-0.5">
-                          {formatDateTimeByZone(session.start_datetime, timezone, false)}
+                        <p className="flex flex-wrap items-baseline gap-x-2 font-bold text-ink tabular-nums">
+                          <span className="text-base">{slot.date}</span>
+                          <span className="text-sm">{slot.time}</span>
                         </p>
+                        <p className="text-[13px] text-ink-muted truncate mt-0.5">{session.counterpart_name} コーチ</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -331,11 +336,14 @@ export function LiveSessionHub({
                     href={`/live-room/sessions/${session.session_id}/result`}
                     className="flex items-center justify-between gap-3 px-3.5 py-3 bg-white rounded-card border border-line/70 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all"
                   >
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-ink-soft truncate">{session.counterpart_name} コーチ</p>
-                      <p className="text-[11px] text-ink-subtle mt-0.5">
-                        {formatDateTimeByZone(session.start_datetime, timezone, false)}
-                      </p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <CoachAvatar iconPath={session.counterpart_icon_path} size={36} />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-ink-soft truncate">{session.counterpart_name} コーチ</p>
+                        <p className="text-[11px] text-ink-subtle mt-0.5">
+                          {formatDateTimeByZone(session.start_datetime, timezone, false)}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-[11px] font-bold uppercase px-2 py-1 rounded-md border ${getSessionStatusBadge(session).className}`}>
@@ -374,11 +382,14 @@ export function LiveSessionHub({
                       className="flex flex-col gap-1.5 px-3.5 py-3 bg-white rounded-card border border-line/70 shadow-sm"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-ink-soft truncate">{session.counterpart_name} コーチ</p>
-                          <p className="text-[11px] text-ink-subtle mt-0.5">
-                            {formatDateTimeByZone(session.start_datetime, timezone, false)}
-                          </p>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CoachAvatar iconPath={session.counterpart_icon_path} size={36} />
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-ink-soft truncate">{session.counterpart_name} コーチ</p>
+                            <p className="text-[11px] text-ink-subtle mt-0.5">
+                              {formatDateTimeByZone(session.start_datetime, timezone, false)}
+                            </p>
+                          </div>
                         </div>
                         <span className={`text-[11px] font-bold uppercase px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
                           {badge.label}

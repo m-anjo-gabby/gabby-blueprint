@@ -226,6 +226,11 @@ export interface SessionBookingRequest {
   insert_date: string;
 }
 
+/** 生徒本人の予約リクエスト（「コーチの承認待ち」表示用に宛先コーチ名を結合したもの） */
+export interface MyBookingRequestItem extends SessionBookingRequest {
+  coach_name: string;
+}
+
 /** 予約リクエスト作成(create_session_booking_request RPC)の結果 */
 export type CreateSessionBookingRequestResult =
   | { success: true; requestId: string }
