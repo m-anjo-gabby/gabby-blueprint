@@ -7,6 +7,7 @@ import {
   createAuthFixture,
   createDisposableStudent,
   generateRecoveryLinkPath,
+  grantAppLicense,
   type AuthFixture,
 } from "../../support/authFixtures.ts";
 import { extractAppLinkPath, resendReadApiKey, resendTestAddress, waitForEmail } from "../../support/resendInbox.ts";
@@ -27,11 +28,14 @@ test.describe("再設定リンクからの設定（未ログイン）", () => {
 
   let fixture: AuthFixture | undefined;
   let email: string;
+  let userId: string;
 
   test.beforeEach(async () => {
     fixture = await createAuthFixture("reset");
     email = `${fixture.tag}-reset@${DISPOSABLE_EMAIL_DOMAIN}`;
-    await createDisposableStudent(fixture, { email, password: INITIAL_PASSWORD });
+    userId = await createDisposableStudent(fixture, { email, password: INITIAL_PASSWORD });
+    // 完了後にダッシュボード（ライセンス必須）まで進むため、アプリのみ契約のライセンスを付ける
+    await grantAppLicense(fixture, userId);
   });
 
   test.afterEach(async () => {
@@ -39,7 +43,14 @@ test.describe("再設定リンクからの設定（未ログイン）", () => {
     fixture = undefined;
   });
 
-  test("リンクを確認してから新しいパスワードを設定でき、完了後は新しいパスワードでログインできる", async ({ page }) => {
+  test("リンクを確認してから新しいパスワードを設定でき、完了後はそのままダッシュボードへ移る", async ({ page }) => {
+    // 別の端末でログイン中のセッション（再設定の完了でログアウトされる）と、ログイン失敗によるロック中の状態を用意する
+    const otherDevice = await signInAsRole(email, INITIAL_PASSWORD);
+    await fixture!.admin
+      .from("com_m_user")
+      .update({ login_failed_count: 10, locked_until: new Date(Date.now() + 30 * 60 * 1000).toISOString() })
+      .eq("id", userId);
+
     await page.goto(await generateRecoveryLinkPath(fixture!.admin, email));
 
     // メールソフトの事前読み込みでトークンを消費しないよう、表示しただけでは確認しない
@@ -54,7 +65,7 @@ test.describe("再設定リンクからの設定（未ログイン）", () => {
 
     const newPassword = page.getByLabel("新しいパスワード", { exact: true });
     const confirmPassword = page.getByLabel("新しいパスワード（確認用）");
-    const submit = page.getByRole("button", { name: "パスワードを更新する" });
+    const submit = page.getByRole("button", { name: "パスワードを更新してログイン" });
 
     // 入力中の警告（送信前のチェックと同じ文言）
     await newPassword.fill("abcdefgh");
@@ -74,12 +85,21 @@ test.describe("再設定リンクからの設定（未ログイン）", () => {
     await submit.click();
     await expect(heading(page, "パスワードを更新しました")).toBeVisible();
 
-    await expect(page).toHaveURL(/\/login\?message=updated$/);
-    await expect(page.getByText("パスワードを更新しました。新しいパスワードでログインしてください。")).toBeVisible();
+    // この端末はログインしたまま、ダッシュボードへ移る
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.locator("main")).toBeVisible();
 
-    // 新しいパスワードで認証できる（ライセンスの無い使い捨て生徒のため、画面ではなく認証APIで確かめる）
+    // 他の端末はログアウトされ、ロックは解除され、パスワードは新しいものに変わっている
+    const { error: otherDeviceError } = await otherDevice.auth.getUser();
+    expect(otherDeviceError).not.toBeNull();
+    const { data: lock } = await fixture!.admin.from("com_m_user").select("login_failed_count, locked_until").eq("id", userId).single();
+    expect(lock).toEqual({ login_failed_count: 0, locked_until: null });
     await signInAsRole(email, NEW_PASSWORD);
     await expect(signInAsRole(email, INITIAL_PASSWORD)).rejects.toThrow();
+
+    // 確認済みの印は消えているため、再設定画面を開き直してもフォームは出ない（以後の変更は現在のパスワード確認が必要）
+    await page.goto("/update-password");
+    await expect(heading(page, "再設定リンクを確認できませんでした")).toBeVisible();
   });
 
   test("使用済みの再設定リンクはもう一度使えない", async ({ page }) => {

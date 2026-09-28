@@ -367,7 +367,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
     return authErrorResponse('reset_link_required');
   }
 
-  const { error } = await supabase.auth.updateUser({ password });
+  const { data: updated, error } = await supabase.auth.updateUser({ password });
 
   if (error) {
     logger.error('auth:reset_password_submission_failed', error.message);
@@ -375,9 +375,26 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
     return translateAuthError(error.message);
   }
 
-  // 再設定用のセッションは使い終わったら破棄し、新しいパスワードでログインし直してもらう
+  // 完了後はこの端末のログインを保ったまま、ダッシュボードへ進ませる（画面側で遷移）。
+  // - 確認済みの印を消し、以後のパスワード変更には現在のパスワード確認（updatePasswordCore）を求める
+  // - パスワードが漏れていた場合に備え、この端末以外のセッションはすべてログアウトさせる
   await clearRecoveryMarker();
-  await supabase.auth.signOut();
+  const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' });
+  if (signOutError) {
+    logger.error('auth:reset_password_signout_others_failed', signOutError.message, { userId: updated.user?.id });
+  }
+
+  // 本人確認（再設定リンク）が済んだため、ログイン失敗の回数とロックを解除する
+  // 💡 login_failed_count / locked_until はセッションクライアントでは更新できないため service_role で行う
+  if (updated.user?.id) {
+    const { error: unlockError } = await createAdminClient()
+      .from('com_m_user')
+      .update({ login_failed_count: 0, locked_until: null, update_date: new Date().toISOString() } as Partial<UserBase>)
+      .eq('id', updated.user.id);
+    if (unlockError) {
+      logger.error('auth:reset_password_unlock_failed', unlockError.message, { userId: updated.user.id });
+    }
+  }
 
   return { success: true };
 }

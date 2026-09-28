@@ -43,7 +43,6 @@ export function useAuthLabels(): AuthLabels {
         submitting: tLogin('submitting'),
         invalidLinkTitle: tLogin('invalidLinkTitle'),
         invalidLinkBody: tLogin('invalidLinkBody'),
-        passwordUpdatedNotice: tLogin('passwordUpdatedNotice'),
         linkErrorNotice: tLogin('linkErrorNotice'),
       },
       forgotPassword: {

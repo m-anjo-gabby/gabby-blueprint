@@ -29,7 +29,6 @@ export interface LoginLabels {
   submitting: string;
   invalidLinkTitle: string;
   invalidLinkBody: string;
-  passwordUpdatedNotice: string;
   linkErrorNotice: string;
 }
 

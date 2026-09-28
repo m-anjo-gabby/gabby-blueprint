@@ -13,7 +13,6 @@ export const AUTH_LABELS: AuthLabels = {
     submitting: '認証中...',
     invalidLinkTitle: 'リンクが無効です',
     invalidLinkBody: 'このリセットリンクは既に使用済みか、有効期限が切れています。再度リセットメールを送信しますか？',
-    passwordUpdatedNotice: 'パスワードを更新しました。新しいパスワードでログインしてください。',
     linkErrorNotice: 'リンクを確認できませんでした。もう一度お試しいただくか、管理者にお問い合わせください。',
   },
   forgotPassword: {
@@ -35,11 +34,11 @@ export const AUTH_LABELS: AuthLabels = {
     guideAction: '手続きを開始する',
     formTitle: '新しいパスワードの設定',
     formDescription: 'ログインに使う新しいパスワードを入力してください。',
-    submit: 'パスワードを更新する',
+    submit: 'パスワードを更新してログイン',
     submitting: '更新中...',
     successTitle: 'パスワードを更新しました',
-    successBody: 'まもなくログイン画面へ移動します。新しいパスワードでログインしてください。',
-    successAction: 'ログイン画面へ',
+    successBody: 'まもなくホームへ移動します。次回からは新しいパスワードでログインしてください。',
+    successAction: 'ホームへ',
     invalidTitle: '再設定リンクを確認できませんでした',
     invalidBody:
       '再設定リンクの有効期限が切れているか、正しく確認できませんでした。お手数ですが、再設定メールの送信からやり直してください。',

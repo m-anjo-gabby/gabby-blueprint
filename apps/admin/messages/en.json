@@ -59,7 +59,6 @@
     "submitting": "Signing in...",
     "invalidLinkTitle": "This link is invalid",
     "invalidLinkBody": "This reset link has already been used or has expired. Would you like to send another reset email?",
-    "passwordUpdatedNotice": "Your password has been updated. Please sign in with your new password.",
     "linkErrorNotice": "We couldn't verify the link. Please try again or contact your administrator."
   },
   "authErrors": {
@@ -103,11 +102,11 @@
     "guideAction": "Continue",
     "formTitle": "Set a new password",
     "formDescription": "Enter the new password you will use to sign in to the admin console.",
-    "submit": "Update password",
+    "submit": "Update password & sign in",
     "submitting": "Updating...",
     "successTitle": "Password updated",
-    "successBody": "Redirecting you to sign in shortly. Please sign in with your new password.",
-    "successAction": "Go to sign in",
+    "successBody": "Taking you to the dashboard shortly. Use your new password the next time you sign in.",
+    "successAction": "Go to dashboard",
     "invalidTitle": "We couldn't verify your reset link",
     "invalidBody": "Your password reset link has expired or could not be verified. Please request a new reset email.",
     "invalidAction": "Request a new reset link",

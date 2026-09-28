@@ -6,10 +6,9 @@ import { useConfirm } from './useConfirm';
 
 /**
  * ログイン画面に出す案内
- * - password_updated: パスワード再設定の完了後（`?message=updated`）
- * - link_error: 認証コールバック等でリンクを確認できなかった（`?error=<理由>`）
+ * - link_error: 認証コールバック・代理ログイン等でリンクを確認できなかった（`?error=<理由>`）
  */
-export type LoginNotice = 'password_updated' | 'link_error';
+export type LoginNotice = 'link_error';
 
 export interface LoginNoticeLabels {
   /** 使用済み・期限切れの再設定リンク（`#error_description`）で戻った場合のダイアログ */
@@ -20,14 +19,11 @@ export interface LoginNoticeLabels {
 const noopSubscribe = () => () => {};
 
 function readNotice(): LoginNotice | null {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('message') === 'updated') return 'password_updated';
-  if (params.has('error')) return 'link_error';
-  return null;
+  return new URLSearchParams(window.location.search).has('error') ? 'link_error' : null;
 }
 
 /**
- * ログイン画面の案内（再設定の完了・リンクのエラー）を URL から読み取る共通フック
+ * ログイン画面の案内（リンクのエラー）を URL から読み取る共通フック
  *
  * Supabase 標準の確認画面を経由したリンクが使用済み・期限切れの場合は、
  * `#error_description` 付きで戻ってくるため、再設定メールの再送を促すダイアログを出す。

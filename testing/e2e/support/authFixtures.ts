@@ -56,6 +56,49 @@ export async function createDisposableStudent(
   return data.user.id;
 }
 
+/**
+ * 使い捨ての生徒に、アプリのみ契約（BLUEPRINT_ONLY）のライセンスを付ける（ログイン後の画面まで確かめる場合）。
+ * 契約は使い捨ての顧客に作るため、固定テナントの契約・ライセンス数には影響しない。
+ */
+export async function grantAppLicense(fixture: AuthFixture, userId: string): Promise<void> {
+  const { admin } = fixture;
+  const { data: plan, error: planError } = await admin.from("com_m_contract_plan").select("*").eq("plan_code", "BLUEPRINT_ONLY").single();
+  if (planError) throw new Error(`契約プランの取得に失敗しました: ${planError.message}`);
+
+  const start = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const end = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const { data: contract, error: contractError } = await admin
+    .from("com_m_contract")
+    .insert({
+      client_id: fixture.clientId,
+      plan_id: plan.plan_id,
+      plan_name: plan.plan_name,
+      plan_name_en: plan.plan_name_en,
+      contract_type: plan.contract_type,
+      weekly_frequency: plan.weekly_frequency,
+      total_sessions: plan.total_sessions,
+      has_dialogue_practice: plan.has_dialogue_practice,
+      max_licenses: 1,
+      start_date: start.toISOString(),
+      end_date: end.toISOString(),
+      status: 1,
+      note: `【QAテスト】認証E2E（${fixture.tag}）`,
+    })
+    .select("contract_id")
+    .single();
+  if (contractError) throw new Error(`契約の作成に失敗しました: ${contractError.message}`);
+
+  // ライセンスの追加で auth.users の app_metadata.is_licensed が更新される（トリガー）
+  const { error: licenseError } = await admin.from("com_t_user_license").insert({
+    contract_id: contract.contract_id,
+    user_id: userId,
+    status: 1,
+    start_date: start.toISOString(),
+    end_date: end.toISOString(),
+  });
+  if (licenseError) throw new Error(`ライセンスの付与に失敗しました: ${licenseError.message}`);
+}
+
 /** 招待（com_t_invitation）を直接作る。戻り値は招待トークン */
 export async function createInvitation(
   fixture: AuthFixture,
@@ -98,6 +141,14 @@ export async function cleanupAuthFixture(fixture: AuthFixture | undefined): Prom
   const { admin } = fixture;
   if (fixture.invitationEmails.length > 0) {
     await admin.from("com_t_invitation").delete().in("email", fixture.invitationEmails);
+  }
+  // 使い捨て顧客の契約・ライセンス（grantAppLicense）
+  const { data: contracts } = await admin.from("com_m_contract").select("contract_id").eq("client_id", fixture.clientId);
+  const contractIds = (contracts ?? []).map((c) => c.contract_id);
+  if (contractIds.length > 0) {
+    await admin.from("com_t_user_license_history").delete().in("contract_id", contractIds);
+    await admin.from("com_t_user_license").delete().in("contract_id", contractIds);
+    await admin.from("com_m_contract").delete().in("contract_id", contractIds);
   }
   for (const id of fixture.userIds) {
     await admin.from("com_t_user_role").delete().eq("user_id", id);

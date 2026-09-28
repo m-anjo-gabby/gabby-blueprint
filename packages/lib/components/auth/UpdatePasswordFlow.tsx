@@ -14,7 +14,7 @@ export interface UpdatePasswordActions {
   verifyRecovery: (tokenHash: string) => Promise<AuthActionResult>;
   /** 再設定リンクの確認が済んだセッションか */
   hasRecoverySession: () => Promise<boolean>;
-  /** 新しいパスワードを設定する（完了後はサーバー側でログアウトする） */
+  /** 新しいパスワードを設定する（完了後もこの端末のログインは保ち、他の端末はログアウトさせる） */
   resetPassword: FormAuthAction;
 }
 
@@ -22,11 +22,11 @@ interface UpdatePasswordFlowProps {
   actions: UpdatePasswordActions;
   labels: UpdatePasswordLabels;
   passwordLabels: PasswordFieldLabels;
+  /** 完了後に移る画面（ログイン後の起点） */
+  homePath?: string;
 }
 
 type ViewStatus = 'initializing' | 'guide' | 'form' | 'success' | 'invalid';
-
-const LOGIN_UPDATED_PATH = '/login?message=updated';
 
 /**
  * パスワード再設定画面（3アプリ共通）
@@ -35,7 +35,7 @@ const LOGIN_UPDATED_PATH = '/login?message=updated';
  *    （メーラーの事前読み込みでトークンが消費されないよう、表示しただけでは確認しない）
  * 2. 確認が済んだセッションだけがフォームを使える。ログイン中でもリンクを確認していなければ invalid
  *    （プロフィールのパスワード変更の「現在のパスワード」確認を迂回させないため）
- * 3. 更新後はサーバー側でログアウトし、ログイン画面へ移る
+ * 3. 更新後はそのままログインした状態でダッシュボードへ移る（他の端末はサーバー側でログアウトさせる）
  */
 export function UpdatePasswordFlow(props: UpdatePasswordFlowProps) {
   return (
@@ -51,7 +51,7 @@ export function UpdatePasswordFlow(props: UpdatePasswordFlowProps) {
   );
 }
 
-function UpdatePasswordContent({ actions, labels, passwordLabels }: UpdatePasswordFlowProps) {
+function UpdatePasswordContent({ actions, labels, passwordLabels, homePath = '/dashboard' }: UpdatePasswordFlowProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tokenHash = searchParams.get('token_hash');
@@ -124,8 +124,8 @@ function UpdatePasswordContent({ actions, labels, passwordLabels }: UpdatePasswo
         setError(result.error);
       } else {
         setViewStatus('success');
-        // 完了表示を見せてからログイン画面へ（アンマウント時はタイマーを解除）
-        redirectTimerRef.current = setTimeout(() => router.push(LOGIN_UPDATED_PATH), 1500);
+        // 完了表示を見せてからダッシュボードへ（戻るで再設定画面に戻らないよう replace。アンマウント時はタイマーを解除）
+        redirectTimerRef.current = setTimeout(() => router.replace(homePath), 1500);
       }
     } catch {
       setError(labels.networkError);
@@ -186,7 +186,7 @@ function UpdatePasswordContent({ actions, labels, passwordLabels }: UpdatePasswo
               tone="success"
               title={labels.successTitle}
               action={
-                <AuthLinkButton href={LOGIN_UPDATED_PATH}>
+                <AuthLinkButton href={homePath}>
                   {labels.successAction} <ArrowRight size={16} aria-hidden />
                 </AuthLinkButton>
               }

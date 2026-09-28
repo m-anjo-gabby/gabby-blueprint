@@ -22,11 +22,6 @@ test("認証に失敗するとエラーを表示し、パスワード欄だけ�
   await expect(page.getByLabel("メールアドレス")).toHaveValue(email);
 });
 
-test("パスワード再設定の完了後は、更新済みの案内を表示する", async ({ page }) => {
-  await page.goto("/login?message=updated");
-  await expect(page.getByText("パスワードを更新しました。新しいパスワードでログインしてください。")).toBeVisible();
-});
-
 test("認証用リンクの確認に失敗して戻った場合は、リンクのエラーを案内する", async ({ page }) => {
   await page.goto("/login?error=auth");
   await expect(page.getByText("リンクを確認できませんでした。もう一度お試しいただくか、管理者にお問い合わせください。")).toBeVisible();

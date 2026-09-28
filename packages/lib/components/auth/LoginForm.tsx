@@ -68,7 +68,7 @@ export function LoginForm({ action, labels, badge }: LoginFormProps) {
       <form action={handleSubmit} className="space-y-5" data-ready={isHydrated ? 'true' : undefined}>
         <LoginNoticeBanner
           notice={notice}
-          messages={{ password_updated: labels.passwordUpdatedNotice, link_error: labels.linkErrorNotice }}
+          messages={{ link_error: labels.linkErrorNotice }}
         />
 
         <div className="space-y-4">

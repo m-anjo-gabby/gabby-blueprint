@@ -25,6 +25,16 @@ const leftoverInvitations = (invitations ?? []).filter((i) => PATTERN.test(i.ema
 console.log(`users=${users.length} clients=${clients?.length ?? 0} invitations=${leftoverInvitations.length}`);
 if (doDelete) {
   if (leftoverInvitations.length > 0) await admin.from("com_t_invitation").delete().in("email", leftoverInvitations.map((i) => i.email));
+  // 契約・ライセンスはユーザーより先に消す（ライセンスが com_m_user を参照するため）
+  for (const c of clients ?? []) {
+    const { data: contracts } = await admin.from("com_m_contract").select("contract_id").eq("client_id", c.client_id);
+    const contractIds = (contracts ?? []).map((k) => k.contract_id);
+    if (contractIds.length > 0) {
+      await admin.from("com_t_user_license_history").delete().in("contract_id", contractIds);
+      await admin.from("com_t_user_license").delete().in("contract_id", contractIds);
+      await admin.from("com_m_contract").delete().in("contract_id", contractIds);
+    }
+  }
   for (const u of users) {
     await admin.from("com_t_user_role").delete().eq("user_id", u.id);
     await admin.from("com_m_user").delete().eq("id", u.id);
