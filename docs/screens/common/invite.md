@@ -40,6 +40,8 @@
 | 見出し | 管理アカウント初期設定 | Coach account setup | アカウント初期設定 |
 | 氏名が無い場合の呼び方 | 管理者 | Coach | 会員 |
 | 送信ボタン | アカウントを有効化する | Activate account | 本登録を完了する |
+| 招待メールの言語 | 日本語・英語の併記 | 英語 | 日本語 |
+| 招待メールの宛名（氏名が無い場合） | 管理者様 / Dear Administrator | Dear Coach | 会員様 |
 
 - 招待リンクの有効期限は、招待メールの送信（再送を含む）から3日間。再送すると新しいリンクが発行され、期限も送信時点から3日間に付け直される
   （以前のリンクは使えなくなる）。メール本文にも同じ日数を記載する。
@@ -51,5 +53,7 @@
 - 処理: `packages/lib/auth/portalActions.ts`（`verifyInvitation` / `acceptInvitation`）、
   `packages/lib/auth/core.ts`（`verifyInvitationCore` / `acceptInvitationCore`。画面へは氏名・メールアドレスだけを返す）
 - 招待の作成・再送: `apps/admin/actions/adminUserAction.ts`（有効期限は `INVITATION_EXPIRES_DAYS`）、テーブル `com_t_invitation`
+- 招待メール: `packages/lib/mail/actions/send{Admin,Coach,}Invitation.ts`・`packages/lib/mail/templates/*InviteEmailTemplate.tsx`
+  （admin 向けの文面は `testing/unit/admin-invite-mail-content.test.ts` で検証）
 - 文言: admin `apps/admin/messages/{ja,en}.json` の `invite` / `passwordFields` / `authErrors`、
   coach `apps/coach/constants/auth.ts`、student `apps/student/constants/auth.ts`

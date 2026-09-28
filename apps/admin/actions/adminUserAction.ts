@@ -208,7 +208,8 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     const inviteUrl = getInvitationUrl(user_type, inviteData.token);
     const mailResult = await dispatchInvitationEmail(user_type, {
       to: email,
-      userName: user_name || '会員',
+      // 氏名が無ければ空で渡し、宛名は各テンプレートの既定（会員様 / Dear Coach / 管理者様）に任せる
+      userName: user_name || '',
       inviteUrl: inviteUrl,
       expiresDays: INVITATION_EXPIRES_DAYS,
     });
@@ -425,7 +426,7 @@ export async function resendInvite(email: string, userType?: string) {
     const inviteUrl = getInvitationUrl(resolvedUserType, newWeightToken);
     const mailResult = await dispatchInvitationEmail(resolvedUserType, {
       to: email,
-      userName: currentInvite.user_name || '会員',
+      userName: currentInvite.user_name || '',
       inviteUrl: inviteUrl,
       expiresDays: INVITATION_EXPIRES_DAYS,
     });

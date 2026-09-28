@@ -71,7 +71,9 @@
 | 期限切れ・存在しない招待 | `invite.spec.ts` | 中 | 異常系6・7 |
 | ログイン失敗・再設定完了の案内・リンクエラーの案内・外部への next | `login-notice.spec.ts` | 中 | 異常系9・10 |
 
-メールの文面（3言語・件名・有効期限・リンク）は、送信せずに `testing/unit/reset-mail-content.test.ts`（`pnpm --filter @gabby/testing unit`）で確かめる。
+メールの文面は、送信せずに `testing/unit/`（`pnpm --filter @gabby/testing unit`）で確かめる。
+再設定メール（3言語・件名・有効期限・リンク）は `reset-mail-content.test.ts`、admin 向け招待メール（日英併記・宛名の既定値）は
+`admin-invite-mail-content.test.ts`。
 Playwright のテスト実行環境では React のメールテンプレートを描画できないため、Node のテストランナーで実行している。
 
 admin・coach の画面は同じ共通部品のため、E2E は student で代表させる（文言の言語だけが異なる）。
