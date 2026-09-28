@@ -2,48 +2,31 @@
 'use client';
 
 import { signIn } from '@/actions/authAction';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { LoginButton } from './_components/LoginButton';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
-import { useRouter } from 'next/navigation';
+import { LoginNoticeBanner } from '@gabby/lib/components/common/LoginNoticeBanner';
+import { useLoginNotice } from '@gabby/lib/hooks/useLoginNotice';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
 import { RETURN_TO_PARAM } from '@gabby/lib/auth/returnTo';
+
+const LOGIN_NOTICE_LABELS = {
+  invalidLinkTitle: 'リンクが無効です',
+  invalidLinkBody: 'このリセットリンクは既に使用済みか、有効期限が切れています。再度リセットメールを送信しますか？',
+};
+
+const LOGIN_NOTICE_MESSAGES = {
+  password_updated: 'パスワードを更新しました。新しいパスワードでログインしてください。',
+  link_error: 'リンクを確認できませんでした。もう一度お試しいただくか、管理者にお問い合わせください。',
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const { showConfirm } = useConfirm();
-  const router = useRouter();
-
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes('error_description')) {
-      const params = new URLSearchParams(hash.substring(1));
-      const errorDesc = params.get('error_description');
-      
-      if (errorDesc) {
-        // ダイアログを表示してユーザーのアクションを促す
-        const handleShowError = async () => {
-          const confirmed = await showConfirm(
-            'リンクが無効です',
-            'このリセットリンクは既に使用済みか、有効期限が切れています。再度リセットメールを送信しますか？',
-            { variant: 'info' } // 必要に応じて 'danger' などに変更可
-          );
-
-          if (confirmed) {
-            router.push('/forgot-password');
-          }
-        };
-
-        handleShowError();
-        window.history.replaceState(null, '', window.location.pathname);
-      }
-    }
-  }, [showConfirm, router]);
+  const notice = useLoginNotice(LOGIN_NOTICE_LABELS);
 
   // loadingステートを手動で管理する必要がなくなります
   const handleSubmit = async (formData: FormData) => {
@@ -85,6 +68,8 @@ export default function LoginPage() {
           </div>
 
           <form action={handleSubmit} className="space-y-5">
+            <LoginNoticeBanner notice={notice} messages={LOGIN_NOTICE_MESSAGES} />
+
             <div className="space-y-4">
               {/* メールアドレス */}
               <div className="space-y-2">

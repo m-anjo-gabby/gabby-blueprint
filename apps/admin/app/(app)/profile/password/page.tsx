@@ -61,8 +61,8 @@ export default function PasswordChangePage() {
     const result = await updatePassword(formData);
 
     if (result?.error) {
-      // result.error は共有Server Action（@gabby/lib）由来の日本語固定メッセージ
-      if (result.error.includes('現在のパスワード') || result.error.includes('正しくありません')) {
+      // result.error は表示言語に合わせた文言。どの入力欄に出すかは errorCode で判定する
+      if (result.errorCode === 'current_password_incorrect') {
         setCurrentPasswordError(result.error);
         setCurrentPassword('');
         showToast(t('toastUpdateFailed'), 'error');

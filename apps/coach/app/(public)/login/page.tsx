@@ -6,13 +6,17 @@ import Image from 'next/image';
 import { Mail } from 'lucide-react';
 import { LoginButton } from './_components/LoginButton';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
+import { LoginNoticeBanner } from '@gabby/lib/components/common/LoginNoticeBanner';
+import { useLoginNotice } from '@gabby/lib/hooks/useLoginNotice';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
 import { RETURN_TO_PARAM } from '@gabby/lib/auth/returnTo';
+import { LOGIN_NOTICE_LABELS, LOGIN_NOTICE_MESSAGES } from '@/constants/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const notice = useLoginNotice(LOGIN_NOTICE_LABELS);
 
   const handleSubmit = async (formData: FormData) => {
     setError(null);
@@ -50,6 +54,8 @@ export default function LoginPage() {
           </div>
 
           <form action={handleSubmit} className="space-y-5">
+            <LoginNoticeBanner notice={notice} messages={LOGIN_NOTICE_MESSAGES} />
+
             <div className="space-y-4">
               {/* メールアドレス */}
               <div className="space-y-2">

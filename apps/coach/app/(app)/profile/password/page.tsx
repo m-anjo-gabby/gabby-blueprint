@@ -59,7 +59,7 @@ export default function PasswordChangePage() {
     const result = await updatePassword(formData);
 
     if (result?.error) {
-      if (result.error.toLowerCase().includes('current password')) {
+      if (result.errorCode === 'current_password_incorrect') {
         setCurrentPasswordError(result.error);
         setCurrentPassword('');
         showToast('Failed to update password.', 'error');

@@ -7,7 +7,8 @@ import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
 import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
-import { validatePasswordStrength } from './validation';
+import { getPasswordStrengthErrorCode } from './validation';
+import { AUTH_ERROR_MESSAGES_JA, formatAuthErrorMessage, type AuthErrorCode } from './errors';
 
 // 💡 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');
@@ -16,25 +17,39 @@ const logger = createLogger('common');
  * 認証レスポンスの共通型
  */
 export type AuthResponse = {
+  /** 日本語の既定文言（portalActions で各アプリの表示言語の文言に置き換える） */
   error?: string;
+  /** エラー種別。文言の出し分けや、どの入力欄に出すかの判定に使う */
+  errorCode?: AuthErrorCode;
+  /** 原因究明用の補足（Supabaseの生メッセージ等）。文言の末尾に付与される */
+  errorDetail?: string;
   success?: boolean;
   user?: User;
 };
 
+/** エラー応答を組み立てる（既定の日本語文言を付けておく） */
+function authErrorResponse(code: AuthErrorCode, detail?: string): AuthResponse {
+  return {
+    error: formatAuthErrorMessage(AUTH_ERROR_MESSAGES_JA[code], detail),
+    errorCode: code,
+    errorDetail: detail,
+  };
+}
+
 /**
- * 🔒 Supabaseからのエラーメッセージをユーザー向けの日本語に翻訳する共通関数
+ * 🔒 Supabaseからのエラーメッセージをエラー種別に振り分ける共通関数
  */
-function translateAuthError(message: string): string {
+function translateAuthError(message: string): AuthResponse {
   const lowerMsg = message.toLowerCase();
   
   // 同一パスワードの再利用制限
   if (lowerMsg.includes('different from the old')) {
-    return '新しいパスワードは現在と同じものは使用できません。';
+    return authErrorResponse('password_same_as_old');
   }
   
   // 1. 漏洩検知（HIBP: Have I Been Pwned 等）
   if (lowerMsg.includes('leaked') || lowerMsg.includes('pwned') || lowerMsg.includes('compromised')) {
-    return 'このパスワードは過去にデータ漏洩の被害に遭った可能性があるため使用できません。他のパスワードを指定してください。';
+    return authErrorResponse('password_leaked');
   }
 
   // 2. 脆弱性・推測のしやすさ（Weak / Common / Guessable）
@@ -43,16 +58,16 @@ function translateAuthError(message: string): string {
     lowerMsg.includes('weak') || 
     lowerMsg.includes('easy to guess')
   ) {
-    return 'このパスワードは単純すぎるか推測されやすいため使用できません。より複雑なパスワードを設定してください。';
+    return authErrorResponse('password_weak');
   }
 
   // セッション欠落（本番環境でのCookie不整合や期限切れなど）
   if (lowerMsg.includes('session missing')) {
-    return '認証セッションが無効、または期限が切れています。一度ログアウトして再度ログインしてからお試しください。';
+    return authErrorResponse('session_invalid');
   }
   
   // 想定外のエラー時は、原因究明のために生のメッセージを付与して返却
-  return `パスワードの更新に失敗しました。(${message})`;
+  return authErrorResponse('password_update_failed', message);
 }
 
 /**
@@ -68,7 +83,7 @@ export async function signInCore(
   const password = formData.get('password') as string;
 
   if (!email || !password) {
-    return { error: 'メールアドレスとパスワードを入力してください。' };
+    return authErrorResponse('missing_credentials');
   }
 
   // 役割ごとに2つのクライアントを使い分ける
@@ -104,7 +119,7 @@ export async function signInCore(
       userId: userMaster.id,
       payload: { email, lockedUntil: userMaster.locked_until }
     });
-    return { error: 'アカウントが一時的にロックされています。しばらく時間をおいてお試しください。' };
+    return authErrorResponse('account_locked');
   }
 
   // -------------------------------------------------------------
@@ -150,11 +165,11 @@ export async function signInCore(
           userId: userMaster.id,
           payload: { email, failedCount: nextFailedCount }
         });
-        return { error: 'パスワードを連続して間違えたため、アカウントが30分間ロックされました。' };
+        return authErrorResponse('account_locked_now');
       }
     }
 
-    return { error: '認証情報が正しくありません。' };
+    return authErrorResponse('invalid_credentials');
   }
 
   // -------------------------------------------------------------
@@ -194,7 +209,7 @@ export async function signInCore(
       });
       // ライセンスがない場合は即座にサインアウトさせる
       await supabase.auth.signOut();
-      return { error: '有効なライセンスが見つかりません。管理者にお問い合わせください。' };
+      return authErrorResponse('license_not_found');
     }
   }
 
@@ -210,7 +225,7 @@ export async function signOutCore(): Promise<AuthResponse> {
 
   if (error) {
     logger.error('auth:supabase_signout_failed', error.message);
-    return { error: 'ログアウト中にエラーが発生しました。' };
+    return authErrorResponse('signout_failed');
   }
 
   return { success: true };
@@ -224,7 +239,7 @@ export async function forgotPasswordCore(formData: FormData): Promise<AuthRespon
   const email = formData.get('email') as string;
 
   if (!email) {
-    return { error: 'メールアドレスを入力してください。' };
+    return authErrorResponse('missing_email');
   }
 
   try {
@@ -242,12 +257,12 @@ export async function forgotPasswordCore(formData: FormData): Promise<AuthRespon
 
     if (linkError) {
       logger.error('auth:reset_email_link_generation_failed', linkError.message, { payload: { email } });
-      return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+      return authErrorResponse('reset_email_failed');
     }
 
     if (!data || !data.properties?.action_link) {
       logger.error('auth:reset_email_link_empty', '生成されたアクションリンクが空です', { payload: { email } });
-      return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+      return authErrorResponse('reset_email_failed');
     }
 
     // 💡 修正: Supabase内部の verify エンドポイントを経由すると、非PKCE時はセッションが
@@ -266,14 +281,14 @@ export async function forgotPasswordCore(formData: FormData): Promise<AuthRespon
 
     if (!mailResult.success) {
       logger.error('auth:reset_email_dispatch_failed', mailResult.error || 'Unknown error', { payload: { email } });
-      return { error: 'メールの送信に失敗しました。時間をおいて再度お試しください。' };
+      return authErrorResponse('reset_email_failed');
     }
 
     return { success: true };
 
   } catch (err) {
     logger.error('auth:forgot_password_unexpected', err instanceof Error ? err.message : 'Unknown error', { payload: { email } });
-    return { error: '予期せぬエラーが発生しました。時間をおいて再度お試しください。' };
+    return authErrorResponse('unexpected');
   }
 }
 
@@ -285,9 +300,9 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
   const password = formData.get('password') as string;
 
   // 💡 共通の強度バリデーションを適用（8文字以上、英数混在）
-  const validationError = validatePasswordStrength(password);
+  const validationError = getPasswordStrengthErrorCode(password);
   if (validationError) {
-    return { error: validationError };
+    return authErrorResponse(validationError);
   }
 
   const supabase = await createServerClient();
@@ -297,7 +312,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
   if (error) {
     logger.error('auth:reset_password_submission_failed', error.message);
     // 💡 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
-    return { error: translateAuthError(error.message) };
+    return translateAuthError(error.message);
   }
 
   return { success: true };
@@ -312,15 +327,15 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
   const newPassword = formData.get('newPassword') as string;
 
   // 💡 共通の強度バリデーションを適用（8文字以上、英数混在）
-  const validationError = validatePasswordStrength(newPassword);
+  const validationError = getPasswordStrengthErrorCode(newPassword);
   if (validationError) {
-    return { error: validationError };
+    return authErrorResponse(validationError);
   }
 
   const supabase = await createServerClient();
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !user.email) return { error: 'セッションがタイムアウトしました。再度ログインしてください。' };
+  if (!user || !user.email) return authErrorResponse('session_timeout');
 
   // 💡 ログイン済みなのでログコンテキスト（IP、UAなど）を取得して紐付け
   const ctx = await getLogContext();
@@ -336,7 +351,7 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
       email: user.email,
       ...ctx
     });
-    return { error: '現在のパスワードが正しくありません。' };
+    return authErrorResponse('current_password_incorrect');
   }
 
   const { error: updateError } = await supabase.auth.updateUser({ 
@@ -350,7 +365,7 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
       ...ctx
     });
     // 💡 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
-    return { error: translateAuthError(updateError.message) };
+    return translateAuthError(updateError.message);
   }
 
   return { success: true };
@@ -437,9 +452,9 @@ export async function acceptInvitationAction(payload: AcceptInvitationPayload): 
     }
 
     // 💡 改善: ファイル上部に定義されている共通の強度バリデーションを完全流用
-    const validationError = validatePasswordStrength(password);
+    const validationError = getPasswordStrengthErrorCode(password);
     if (validationError) {
-      return { success: false, errorType: 'validation_error', message: validationError };
+      return { success: false, errorType: 'validation_error', message: AUTH_ERROR_MESSAGES_JA[validationError] };
     }
 
     // 1. トークンの厳密な有効性検証

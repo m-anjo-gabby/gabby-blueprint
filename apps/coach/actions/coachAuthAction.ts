@@ -2,6 +2,7 @@
 
 import { createPortalAuthActions } from '@gabby/lib/auth/portalActions';
 import { USER_TYPES } from '@gabby/types/user';
+import { AUTH_ERROR_MESSAGES } from '@/constants/auth';
 
 /**
  * Coach portal authentication actions
@@ -9,11 +10,11 @@ import { USER_TYPES } from '@gabby/types/user';
  */
 const { signIn, signOut, forgotPassword, resetPassword, updatePassword } = createPortalAuthActions({
   appName: 'coach',
-  unexpectedErrorMessage: 'An unexpected error occurred',
+  messages: (code) => AUTH_ERROR_MESSAGES[code],
   guardUser: (user) =>
     user.app_metadata?.user_type === USER_TYPES.COACH
       ? { ok: true }
-      : { ok: false, message: 'You do not have permission. Please sign in with a coach account.' },
+      : { ok: false },
 });
 
 export { signIn, signOut, forgotPassword, resetPassword, updatePassword };

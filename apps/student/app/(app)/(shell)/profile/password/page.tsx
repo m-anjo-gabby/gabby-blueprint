@@ -75,7 +75,7 @@ export default function PasswordChangePage() {
 
     if (result?.error) {
       // 現在のパスワード間違いはフォーム直下に表示し、そのフィールドのみリセット
-      if (result.error.includes('現在のパスワード') || result.error.includes('正しくありません')) {
+      if (result.errorCode === 'current_password_incorrect') {
         setCurrentPasswordError(result.error);
         setCurrentPassword(''); // 問題箇所のみクリア
         showToast('パスワードの更新に失敗しました。', 'error'); // 現在のパスワードエラー時もトーストは出す
