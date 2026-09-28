@@ -1090,6 +1090,7 @@
     },
     "timeline": {
       "unreadDivider": "ここから未読",
+      "readReceipt": "既読",
       "jumpToLatest": "最新のメッセージへ",
       "newMessages": "新着メッセージ {count}件",
       "detailsButton": "ルーム情報",

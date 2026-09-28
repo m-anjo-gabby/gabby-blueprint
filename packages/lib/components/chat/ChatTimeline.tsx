@@ -9,7 +9,8 @@ import { useTimezone } from '../../hooks/useTimezone';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useToast } from '../../hooks/useToast';
 import { useChatRealtimeMessages } from '../../chat/realtime/useChatRealtimeMessages';
-import { deleteChatMessage, getChatMessages } from '../../chat/actions/messageActions';
+import { useChatReadReceipt } from '../../chat/realtime/useChatReadReceipt';
+import { deleteChatMessage, getChatMessageById, getChatMessages } from '../../chat/actions/messageActions';
 import { formatMessageHeaderTime, isContinuationMessage } from '../../chat/messageGrouping';
 import { getChatRoomCounterpart, getChatRoomTitle } from '../../chat/roomDisplay';
 import { cn } from '../../utils';
@@ -31,6 +32,11 @@ interface ChatTimelineProps {
   allowModeration?: boolean;
   /** ヘッダー右端に置く操作（参加者管理・詳細パネルの開閉等） */
   headerActions?: React.ReactNode;
+  /**
+   * 1対1ルームの相手が最後に読んだメッセージの送信時刻（getChatRoomDetail の counterpartLastReadAt）。
+   * 指定すると、相手が読んだ自分の最新の発言に「既読」を表示する。グループ・査閲では渡さない（null）
+   */
+  counterpartLastReadAt?: string | null;
 }
 
 const AVATAR_SIZE = 32;
@@ -55,6 +61,7 @@ export function ChatTimeline({
   members,
   allowModeration = false,
   headerActions,
+  counterpartLastReadAt = null,
 }: ChatTimelineProps) {
   const { labels, basePath, breakpoint } = useChatUi();
   const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
@@ -101,6 +108,8 @@ export function ChatTimeline({
 
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
   const counterpart = getChatRoomCounterpart(members, currentUserId);
+  const showReadReceipt = isMember && !isGroup;
+  const [counterpartReadAt, setCounterpartReadAt] = useState<string | null>(counterpartLastReadAt);
   const title = getChatRoomTitle({ ...room, members, is_member: isMember }, currentUserId, labels);
 
   /** 表示中の最新メッセージまで既読にする（タブが裏にある間は既読にしない） */
@@ -206,6 +215,31 @@ export function ChatTimeline({
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, []);
+
+  // 相手が既読にしたら「既読」の位置を進める（前にしか進めない）
+  const advanceCounterpartRead = (readAt: string) =>
+    setCounterpartReadAt((prev) => (prev && prev >= readAt ? prev : readAt));
+
+  useChatReadReceipt(roomId, showReadReceipt ? counterpart?.user_id ?? null : null, (lastReadChatId) => {
+    const known = messages.find((m) => m.chat_id === lastReadChatId);
+    if (known) {
+      advanceCounterpartRead(known.created_at);
+      return;
+    }
+    getChatMessageById(lastReadChatId).then((res) => {
+      if (res.success && res.data) advanceCounterpartRead(res.data.created_at);
+    });
+  });
+
+  // 相手が読んだ自分の発言のうち最新の1件（その下に「既読」を出す）
+  const lastReadOwnChatId = (() => {
+    if (!showReadReceipt || !counterpartReadAt) return null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.sender_user_id === currentUserId && !m.deleted_at && m.created_at <= counterpartReadAt) return m.chat_id;
+    }
+    return null;
+  })();
 
   useChatRealtimeMessages(roomId, (message) => {
     // 自分の送信メッセージは handleSent の楽観的追加と Realtime のエコーが両方届くため重複排除する
@@ -404,6 +438,9 @@ export function ChatTimeline({
                       {!isMine && deleteButton}
                     </div>
                   </div>
+                  {msg.chat_id === lastReadOwnChatId && (
+                    <span className="mt-1 text-[11px] text-ink-subtle">{labels.readReceipt}</span>
+                  )}
                 </div>
               </div>
             );

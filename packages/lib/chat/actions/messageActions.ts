@@ -204,6 +204,27 @@ export async function markAsRead(params: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
+    // 既読位置は前にしか進めない（古いタブ等から古い位置で上書きされると、相手に見せる「既読」が戻ってしまうため）
+    const { data: membership } = await supabase
+      .from('com_t_chat_room_user')
+      .select('last_read_chat_id')
+      .eq('room_id', params.roomId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const currentReadId = membership?.last_read_chat_id as string | null | undefined;
+    if (currentReadId && currentReadId !== params.chatId) {
+      const { data: chats } = await supabase
+        .from('com_t_chat')
+        .select('chat_id, created_at')
+        .in('chat_id', [currentReadId, params.chatId]);
+      const createdAt = new Map((chats ?? []).map((c) => [c.chat_id as string, c.created_at as string]));
+      const currentAt = createdAt.get(currentReadId);
+      const nextAt = createdAt.get(params.chatId);
+      if (currentAt && nextAt && nextAt <= currentAt) {
+        return { success: true };
+      }
+    }
+
     const { error } = await supabase
       .from('com_t_chat_room_user')
       .update({ last_read_chat_id: params.chatId })

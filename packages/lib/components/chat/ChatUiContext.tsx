@@ -39,6 +39,8 @@ export interface ChatLabels extends ChatRoomTitleLabels {
   unreadDivider: string;
   jumpToLatest: string;
   newMessages: (count: number) => string;
+  /** 1対1ルームで、相手が読んだ自分の最新の発言の下に出す表示（「既読」等） */
+  readReceipt: string;
   deletedMessage: string;
   attachmentFailed: string;
   deleteMessage: string;

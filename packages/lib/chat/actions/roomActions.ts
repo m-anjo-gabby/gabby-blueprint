@@ -601,12 +601,18 @@ export async function getAllChatRoomsForAdmin(): Promise<{
 }
 
 /**
- * ルーム詳細（参加者一覧・自分が参加者かどうか）を取得する。
+ * ルーム詳細（参加者一覧・自分が参加者かどうか・相手の既読位置）を取得する。
  * 非参加ルームはRLSにより非Adminからは取得できない（Adminは査閲のため取得可能）。
+ * counterpartLastReadAt は、自分が参加している1対1ルームでのみ返す（既読表示用。グループ・査閲では null）。
  */
 export async function getChatRoomDetail(roomId: string): Promise<{
   success: boolean;
-  data?: { room: ChatRoom; members: ChatRoomListItem['members']; isMember: boolean };
+  data?: {
+    room: ChatRoom;
+    members: ChatRoomListItem['members'];
+    isMember: boolean;
+    counterpartLastReadAt: string | null;
+  };
   error?: string;
 }> {
   const ctx = await getLogContext();
@@ -627,7 +633,7 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     const { data: members } = await supabase
       .from('com_t_chat_room_user')
-      .select('user_id, user_type, com_m_user(user_name, icon_path, client_id, com_m_client(client_name))')
+      .select('user_id, user_type, last_read_chat_id, com_m_user(user_name, icon_path, client_id, com_m_client(client_name))')
       .eq('room_id', roomId)
       .is('left_at', null);
 
@@ -646,7 +652,23 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     const isMember = memberList.some((m) => m.user_id === user.id);
 
-    return { success: true, data: { room: room as ChatRoom, members: memberList, isMember } };
+    // 1対1ルームの相手が最後に読んだメッセージの送信時刻（自分の発言の「既読」表示に使う）
+    let counterpartLastReadAt: string | null = null;
+    if (isMember && room.room_type === CHAT_ROOM_TYPES.ONE_ON_ONE) {
+      const counterpartReadChatId = ((members || []) as { user_id: string; last_read_chat_id: string | null }[]).find(
+        (m) => m.user_id !== user.id
+      )?.last_read_chat_id;
+      if (counterpartReadChatId) {
+        const { data: readChat } = await supabase
+          .from('com_t_chat')
+          .select('created_at')
+          .eq('chat_id', counterpartReadChatId)
+          .maybeSingle();
+        counterpartLastReadAt = (readChat?.created_at as string | undefined) ?? null;
+      }
+    }
+
+    return { success: true, data: { room: room as ChatRoom, members: memberList, isMember, counterpartLastReadAt } };
   } catch (err) {
     logger.error('chat:get_room_detail_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,

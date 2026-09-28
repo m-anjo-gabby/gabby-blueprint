@@ -19,7 +19,7 @@ export default async function ChatRoomPage({
     notFound();
   }
 
-  const { room, members, isMember } = roomDetail.data;
+  const { room, members, isMember, counterpartLastReadAt } = roomDetail.data;
 
   return (
     <ChatTimeline
@@ -29,6 +29,7 @@ export default async function ChatRoomPage({
       initialHasMore={initialMessages.success ? initialMessages.hasMore : false}
       isMember={isMember}
       members={members}
+      counterpartLastReadAt={counterpartLastReadAt}
     />
   );
 }

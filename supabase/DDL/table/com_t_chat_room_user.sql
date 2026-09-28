@@ -47,3 +47,10 @@ CREATE POLICY "Users can update their own participation row" ON public.com_t_cha
 FOR UPDATE TO authenticated
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
+
+---------------------------------------------
+-- Realtime（2026-09-28 追加）
+---------------------------------------------
+-- 1対1チャットの「既読」表示で、相手の既読位置（last_read_chat_id）の更新を購読するため配信対象にする。
+-- 受信できる行はRLS（同じルームの参加者のみ閲覧可）の範囲に限られる。
+ALTER PUBLICATION supabase_realtime ADD TABLE public.com_t_chat_room_user;

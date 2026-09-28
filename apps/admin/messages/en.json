@@ -1090,6 +1090,7 @@
     },
     "timeline": {
       "unreadDivider": "New messages",
+      "readReceipt": "Seen",
       "jumpToLatest": "Jump to latest",
       "newMessages": "{count, plural, one {# new message} other {# new messages}}",
       "detailsButton": "Room info",

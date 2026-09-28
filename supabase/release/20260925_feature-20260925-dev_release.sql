@@ -443,3 +443,30 @@ REVOKE EXECUTE ON FUNCTION public.fn_ensure_one_on_one_chat_room(uuid, uuid) FRO
 GRANT EXECUTE ON FUNCTION public.fn_ensure_one_on_one_chat_room(uuid, uuid) TO service_role;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】1対1チャットの既読表示（既読位置のRealtime配信）
+-- 追加日: 2026-09-28
+--
+-- 【内容】
+--   1対1チャットで、相手が読んだ自分の最新の発言に「既読」を表示する（グループは対象外）。
+--   相手がルームを開いた時点で表示を進めるため、com_t_chat_room_user（last_read_chat_id を持つ）を
+--   Realtime の配信対象に追加する。受信できる行はRLS（同じルームの参加者のみ閲覧可）の範囲に限られる。
+--   テーブル・RLSの変更は無し。再実行しても安全なように、未登録の場合だけ追加する。
+--
+-- 対応ファイル: DDL/table/com_t_chat_room_user.sql（末尾の Realtime 節）
+-- =========================================================================
+
+BEGIN;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'com_t_chat_room_user'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.com_t_chat_room_user;
+  END IF;
+END $$;
+
+COMMIT;

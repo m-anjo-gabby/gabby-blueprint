@@ -44,6 +44,7 @@ export const CHAT_LABELS: ChatLabels = {
   unreadDivider: 'ここから未読',
   jumpToLatest: '最新のメッセージへ',
   newMessages: (count) => `新着メッセージ ${count}件`,
+  readReceipt: '既読',
   deletedMessage: 'このメッセージは削除されました',
   attachmentFailed: '添付ファイルの読み込みに失敗しました',
   deleteMessage: '削除',

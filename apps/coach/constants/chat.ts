@@ -41,6 +41,7 @@ export const CHAT_LABELS: ChatLabels = {
   unreadDivider: 'New messages',
   jumpToLatest: 'Jump to latest',
   newMessages: (count) => `${count} new message${count === 1 ? '' : 's'}`,
+  readReceipt: 'Seen',
   deletedMessage: 'This message was deleted',
   attachmentFailed: 'Failed to load attachment',
   deleteMessage: 'Delete',

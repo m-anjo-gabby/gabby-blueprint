@@ -49,6 +49,7 @@ export function useAdminChatLabels(): ChatLabels {
       unreadDivider: t('timeline.unreadDivider'),
       jumpToLatest: t('timeline.jumpToLatest'),
       newMessages: (count) => t('timeline.newMessages', { count }),
+      readReceipt: t('timeline.readReceipt'),
       deletedMessage: t('messageContent.deletedMessage'),
       attachmentFailed: t('messageContent.attachmentFetchFailed'),
       deleteMessage: t('timeline.deleteTooltip'),
