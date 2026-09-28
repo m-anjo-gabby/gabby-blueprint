@@ -20,6 +20,7 @@ import { sendAdminInvitationEmail } from "@gabby/lib/mail/actions/sendAdminInvit
 import { sendCoachInvitationEmail } from "@gabby/lib/mail/actions/sendCoachInvitation"; // コーチ向け招待メール（英文）
 import { validatePasswordStrength } from "@gabby/lib/auth/validation"; // パスワード強度の共通バリデーション
 import { randomBytes } from "crypto"; // 暗号トークン生成用
+import { getPortalBaseUrl } from "@gabby/lib/navigation/portalUrl";
 
 const logger = createLogger('admin');
 
@@ -27,14 +28,7 @@ const logger = createLogger('admin');
  * ユーザ種別に応じたリダイレクト先（招待画面のベースURL）を解決する共通ヘルパー
  */
 function getRedirectBase(userType?: string): string {
-  switch (userType) {
-    case USER_TYPES.ADMIN:
-      return process.env.NEXT_PUBLIC_SITE_URL || '';
-    case USER_TYPES.COACH:
-      return process.env.NEXT_PUBLIC_COACH_URL || '';
-    default:
-      return process.env.NEXT_PUBLIC_STUDENT_URL || '';
-  }
+  return getPortalBaseUrl(userType);
 }
 
 /**

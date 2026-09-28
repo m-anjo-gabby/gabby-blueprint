@@ -12,6 +12,7 @@ import { getChatRoomCounterpart, getChatRoomTitle, matchesChatRoomQuery } from '
 import { cn } from '../../utils';
 import { CHAT_ROOM_TYPES, type ChatRoomListItem } from '@gabby/types/chat';
 import { getHeaderTimeLabels, useChatUi } from './ChatUiContext';
+import { Skeleton } from '../common/Skeleton';
 import { ChatAvatar } from './ChatAvatar';
 
 type ReadFilter = 'all' | 'unread';
@@ -139,6 +140,8 @@ export function ChatRoomListPane({ rooms, isLoading, headerAction, toolbar, empt
         onScroll={(e) => setIsListScrolled(e.currentTarget.scrollTop > 0)}
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1.5"
       >
+        {isLoading && visibleRooms.length === 0 && <ChatRoomRowsSkeleton />}
+
         {!isLoading && visibleRooms.length === 0 && (
           <li className="flex flex-col items-center justify-center gap-3 px-8 py-16 text-center text-ink-subtle">
             <MessageCircle size={30} strokeWidth={1.5} />
@@ -161,6 +164,23 @@ export function ChatRoomListPane({ rooms, isLoading, headerAction, toolbar, empt
         ))}
       </ul>
     </div>
+  );
+}
+
+/** 一覧の初回読み込み中の骨組み（ルーム行の形） */
+function ChatRoomRowsSkeleton() {
+  return (
+    <li aria-hidden className="space-y-1 px-2">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+          <Skeleton className="size-11 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-3.5 w-2/5" />
+            <Skeleton className="h-3 w-4/5" />
+          </div>
+        </div>
+      ))}
+    </li>
   );
 }
 

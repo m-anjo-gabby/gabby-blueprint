@@ -10,6 +10,7 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { useRouter } from 'next/navigation';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import { RETURN_TO_PARAM } from '@gabby/lib/auth/returnTo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -52,6 +53,8 @@ export default function LoginPage() {
     }
 
     setError(null);
+    // 未ログインで開いた画面（?next=、メール内のリンク等）へ、ログイン後に戻す
+    formData.set(RETURN_TO_PARAM, new URLSearchParams(window.location.search).get(RETURN_TO_PARAM) ?? '');
     const result = await signIn(formData);
     
     // エラーハンドリング（サインイン処理内の成功時はリダイレクト）

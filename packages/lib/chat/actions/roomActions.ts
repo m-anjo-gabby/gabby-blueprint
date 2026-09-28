@@ -601,9 +601,12 @@ export async function getAllChatRoomsForAdmin(): Promise<{
 }
 
 /**
- * ルーム詳細（参加者一覧・自分が参加者かどうか・相手の既読位置）を取得する。
+ * ルーム詳細（参加者一覧・自分が参加者かどうか・既読位置）を取得する。
  * 非参加ルームはRLSにより非Adminからは取得できない（Adminは査閲のため取得可能）。
- * counterpartLastReadAt は、自分が参加している1対1ルームでのみ返す（既読表示用。グループ・査閲では null）。
+ * - viewerUserId: 表示しているユーザー。クライアントのユーザー情報の読み込みを待たずに、
+ *   初回表示から自分/相手の発言を正しく出し分けるために返す（メール等のリンクから直接開いた場合も同じ）
+ * - myLastReadAt: 自分が最後に読んだメッセージの送信時刻（「ここから未読」の位置。参加者でなければ null）
+ * - counterpartLastReadAt: 自分が参加している1対1ルームの相手の既読位置（既読表示用。グループ・査閲では null）
  */
 export async function getChatRoomDetail(roomId: string): Promise<{
   success: boolean;
@@ -611,6 +614,8 @@ export async function getChatRoomDetail(roomId: string): Promise<{
     room: ChatRoom;
     members: ChatRoomListItem['members'];
     isMember: boolean;
+    viewerUserId: string;
+    myLastReadAt: string | null;
     counterpartLastReadAt: string | null;
   };
   error?: string;
@@ -652,23 +657,31 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     const isMember = memberList.some((m) => m.user_id === user.id);
 
-    // 1対1ルームの相手が最後に読んだメッセージの送信時刻（自分の発言の「既読」表示に使う）
-    let counterpartLastReadAt: string | null = null;
-    if (isMember && room.room_type === CHAT_ROOM_TYPES.ONE_ON_ONE) {
-      const counterpartReadChatId = ((members || []) as { user_id: string; last_read_chat_id: string | null }[]).find(
-        (m) => m.user_id !== user.id
-      )?.last_read_chat_id;
-      if (counterpartReadChatId) {
-        const { data: readChat } = await supabase
-          .from('com_t_chat')
-          .select('created_at')
-          .eq('chat_id', counterpartReadChatId)
-          .maybeSingle();
-        counterpartLastReadAt = (readChat?.created_at as string | undefined) ?? null;
-      }
+    // 既読位置（メッセージID）を送信時刻に置き換える（自分=「ここから未読」、1対1の相手=「既読」表示）
+    const readRows = (members || []) as { user_id: string; last_read_chat_id: string | null }[];
+    const myReadChatId = isMember ? readRows.find((m) => m.user_id === user.id)?.last_read_chat_id ?? null : null;
+    const counterpartReadChatId =
+      isMember && room.room_type === CHAT_ROOM_TYPES.ONE_ON_ONE
+        ? readRows.find((m) => m.user_id !== user.id)?.last_read_chat_id ?? null
+        : null;
+    const readChatIds = [myReadChatId, counterpartReadChatId].filter((id): id is string => !!id);
+    const readAtByChatId = new Map<string, string>();
+    if (readChatIds.length > 0) {
+      const { data: readChats } = await supabase.from('com_t_chat').select('chat_id, created_at').in('chat_id', readChatIds);
+      for (const c of readChats ?? []) readAtByChatId.set(c.chat_id as string, c.created_at as string);
     }
 
-    return { success: true, data: { room: room as ChatRoom, members: memberList, isMember, counterpartLastReadAt } };
+    return {
+      success: true,
+      data: {
+        room: room as ChatRoom,
+        members: memberList,
+        isMember,
+        viewerUserId: user.id,
+        myLastReadAt: myReadChatId ? readAtByChatId.get(myReadChatId) ?? null : null,
+        counterpartLastReadAt: counterpartReadChatId ? readAtByChatId.get(counterpartReadChatId) ?? null : null,
+      },
+    };
   } catch (err) {
     logger.error('chat:get_room_detail_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,

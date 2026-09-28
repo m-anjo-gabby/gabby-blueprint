@@ -1,6 +1,6 @@
 'use client';
 
-import { useChatStore } from '@gabby/lib/stores/useChatStore';
+import { useMyChatRooms } from '@gabby/lib/components/chat/useMyChatRooms';
 import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
 import { ChatRoomListPane } from '@gabby/lib/components/chat/ChatRoomListPane';
 import { CHAT_LABELS, CHAT_SPLIT_BREAKPOINT } from '@/constants/chat';
@@ -21,7 +21,6 @@ export function CoachChatLayout({ children }: { children: React.ReactNode }) {
 
 // 生徒の所属（顧客）はコーチに見せないため、顧客での絞り込みは置かない
 function CoachChatRoomList() {
-  const rooms = useChatStore((state) => state.rooms);
-  const isLoading = useChatStore((state) => state.isLoading);
+  const { rooms, isLoading } = useMyChatRooms();
   return <ChatRoomListPane rooms={rooms} isLoading={isLoading} />;
 }

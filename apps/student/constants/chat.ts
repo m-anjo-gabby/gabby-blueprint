@@ -37,6 +37,8 @@ export const CHAT_LABELS: ChatLabels = {
 
   selectRoomTitle: 'チャットを選択してください',
   selectRoomHint: '左の一覧から、担当コーチや運営とのチャットを開けます。',
+  roomUnavailableTitle: 'このチャットは表示できません',
+  roomUnavailableHint: 'チャットが終了したか、参加者から外れた可能性があります。一覧から開き直してください。',
 
   backToList: 'チャット一覧に戻る',
   reviewModeBadge: '閲覧のみ',

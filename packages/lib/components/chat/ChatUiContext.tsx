@@ -31,6 +31,9 @@ export interface ChatLabels extends ChatRoomTitleLabels {
   // 未選択時の右ペイン
   selectRoomTitle: string;
   selectRoomHint: string;
+  /** 開けないルーム（存在しない・退出済み・参加していない）をリンク等で開いた場合 */
+  roomUnavailableTitle: string;
+  roomUnavailableHint: string;
 
   // タイムライン
   backToList: string;

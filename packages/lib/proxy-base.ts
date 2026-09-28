@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { User } from '@supabase/supabase-js';
 import type { UserType } from '@gabby/types/user';
 import { createLogger, type createRequestLogger } from '@gabby/lib/logger';
+import { buildLoginPath, RETURN_TO_PARAM, sanitizeReturnTo } from './auth/returnTo';
 
 export type ProxyLogger = ReturnType<typeof createRequestLogger>;
 
@@ -70,6 +71,24 @@ export async function createSupabaseProxy(req: NextRequest) {
  */
 export function redirectTo(req: NextRequest, path: string): NextResponse {
   return NextResponse.redirect(new URL(path, req.url));
+}
+
+/**
+ * 未ログインで保護された画面を開いた場合のログイン画面への転送。
+ * 画面表示（GET）の場合は元のパスを `?next=` に付け、ログイン後にその画面へ戻す
+ * （メール内のチャットルームへのリンク等。packages/lib/auth/returnTo.ts）。
+ */
+export function redirectToLogin(req: NextRequest, loginPath: string): NextResponse {
+  const returnTo = req.method === 'GET' ? `${req.nextUrl.pathname}${req.nextUrl.search}` : null;
+  return redirectTo(req, buildLoginPath(loginPath, returnTo));
+}
+
+/**
+ * ログイン済みでログイン画面を開いた場合の転送先。`?next=` に安全な戻り先があればそこへ、無ければ既定の画面へ。
+ */
+export function redirectAfterLogin(req: NextRequest, loginPath: string, defaultPath: string): NextResponse {
+  const returnTo = sanitizeReturnTo(req.nextUrl.searchParams.get(RETURN_TO_PARAM), loginPath);
+  return redirectTo(req, returnTo ?? defaultPath);
 }
 
 /**

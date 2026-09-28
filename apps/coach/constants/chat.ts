@@ -34,6 +34,8 @@ export const CHAT_LABELS: ChatLabels = {
 
   selectRoomTitle: 'Select a conversation',
   selectRoomHint: 'Choose a chat room from the list to read and reply to messages.',
+  roomUnavailableTitle: 'This chat room is not available',
+  roomUnavailableHint: 'The room may have been closed, or you may no longer be a participant. Please open it again from the list.',
 
   backToList: 'Back to chat list',
   reviewModeBadge: 'Review mode',

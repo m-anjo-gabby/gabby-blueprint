@@ -42,6 +42,8 @@ export function useAdminChatLabels(): ChatLabels {
 
       selectRoomTitle: t('page.selectRoomTitle'),
       selectRoomHint: t('page.selectRoomHint'),
+      roomUnavailableTitle: t('page.roomUnavailableTitle'),
+      roomUnavailableHint: t('page.roomUnavailableHint'),
 
       backToList: t('timeline.backAriaLabel'),
       reviewModeBadge: t('timeline.reviewModeBadge'),

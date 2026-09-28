@@ -1005,6 +1005,8 @@
     "page": {
       "selectRoomTitle": "Select a chat room",
       "selectRoomHint": "Choose a room from the list to show its messages here.",
+      "roomUnavailableTitle": "This chat room is not available",
+      "roomUnavailableHint": "The room may not exist or may have been deleted. Please open it again from the list.",
       "title": "Chat"
     },
     "roomList": {

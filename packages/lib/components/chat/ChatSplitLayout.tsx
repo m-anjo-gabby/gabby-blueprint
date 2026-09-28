@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { MessageCircle } from 'lucide-react';
+import Link from 'next/link';
+import { MessageCircle, MessageCircleOff } from 'lucide-react';
 import { useSelectedLayoutSegment } from 'next/navigation';
 import { useUserStore } from '../../stores/useUserStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { useChatRoomsRealtime } from '../../chat/realtime/useChatRoomsRealtime';
+import { CHAT_BASE_PATH } from '../../chat/links';
 import { cn } from '../../utils';
 import { CHAT_SPLIT_CLASSES, ChatUiProvider, useChatUi, type ChatLabels, type ChatSplitBreakpoint } from './ChatUiContext';
 
@@ -34,7 +36,7 @@ export function ChatSplitLayout({
   breakpoint,
   list,
   children,
-  basePath = '/chat',
+  basePath = CHAT_BASE_PATH,
   className,
   refetchOnUnknownRoom = true,
 }: ChatSplitLayoutProps) {
@@ -80,6 +82,29 @@ export function ChatEmptyPane() {
       </div>
       <p className="text-sm font-bold text-ink-soft">{labels.selectRoomTitle}</p>
       <p className="max-w-72 text-xs leading-relaxed text-ink-muted">{labels.selectRoomHint}</p>
+    </div>
+  );
+}
+
+/**
+ * 開けないルームの表示（chat/[roomId]/not-found.tsx）。存在しない・退出済み・参加していないルームを
+ * 通知やメール内のリンクから開いた場合に、画面全体の404ではなく右ペインに案内を出し、一覧へ戻れるようにする。
+ */
+export function ChatRoomUnavailable() {
+  const { labels, basePath } = useChatUi();
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+      <div className="flex size-14 items-center justify-center rounded-full bg-canvas text-ink-subtle">
+        <MessageCircleOff size={26} />
+      </div>
+      <p className="text-sm font-bold text-ink-soft">{labels.roomUnavailableTitle}</p>
+      <p className="max-w-80 text-xs leading-relaxed text-ink-muted">{labels.roomUnavailableHint}</p>
+      <Link
+        href={basePath}
+        className="mt-2 rounded-full border border-line px-4 py-2 text-xs font-bold text-ink-soft transition-colors hover:bg-canvas"
+      >
+        {labels.backToList}
+      </Link>
     </div>
   );
 }

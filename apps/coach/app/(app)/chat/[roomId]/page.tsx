@@ -18,17 +18,12 @@ export default async function ChatRoomPage({
     notFound();
   }
 
-  const { room, members, isMember, counterpartLastReadAt } = roomDetail.data;
-
   return (
     <ChatTimeline
       roomId={roomId}
-      room={room}
+      {...roomDetail.data}
       initialMessages={initialMessages.success ? initialMessages.data : []}
       initialHasMore={initialMessages.success ? initialMessages.hasMore : false}
-      isMember={isMember}
-      members={members}
-      counterpartLastReadAt={counterpartLastReadAt}
     />
   );
 }

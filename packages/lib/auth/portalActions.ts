@@ -10,6 +10,7 @@ import {
   resetPasswordCore,
   updatePasswordCore,
 } from './actions';
+import { RETURN_TO_PARAM, sanitizeReturnTo } from './returnTo';
 
 type GuardResult = { ok: true } | { ok: false; message: string };
 
@@ -85,7 +86,9 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
         userId: user.id,
         payload: { roles: user.app_metadata?.roles, isLicensed: user.app_metadata?.is_licensed },
       });
-      redirect(dashboardPath);
+      // 未ログインで開いた画面（メール内のリンク等）があればそこへ戻す（オープンリダイレクト対策済み）
+      const returnTo = sanitizeReturnTo(formData.get(RETURN_TO_PARAM) as string | null, loginPath);
+      redirect(returnTo ?? dashboardPath);
     } catch (error) {
       if (isRedirectError(error)) {
         throw error; // redirect() internal error

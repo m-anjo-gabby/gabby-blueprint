@@ -1005,6 +1005,8 @@
     "page": {
       "selectRoomTitle": "チャットを選択してください",
       "selectRoomHint": "左の一覧からルームを選ぶと、ここにメッセージが表示されます。",
+      "roomUnavailableTitle": "このチャットルームは表示できません",
+      "roomUnavailableHint": "ルームが存在しないか、削除された可能性があります。一覧から開き直してください。",
       "title": "チャット"
     },
     "roomList": {

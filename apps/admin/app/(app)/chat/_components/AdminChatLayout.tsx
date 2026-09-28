@@ -9,6 +9,7 @@ import { getAllChatRoomsForAdmin } from '@gabby/lib/chat/actions/roomActions';
 import { filterChatRoomsByClient, getChatRoomClientOptions } from '@gabby/lib/chat/roomDisplay';
 import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
 import { ChatRoomListPane } from '@gabby/lib/components/chat/ChatRoomListPane';
+import { useMyChatRooms } from '@gabby/lib/components/chat/useMyChatRooms';
 import { cn } from '@gabby/lib/utils';
 import { USER_TYPES } from '@gabby/types/user';
 import type { ChatRoomListItem } from '@gabby/types/chat';
@@ -38,8 +39,7 @@ function AdminChatRoomList() {
   const t = useTranslations('chat.roomList');
   const tCommon = useTranslations('chat.common');
   const locale = useLocale();
-  const myRooms = useChatStore((state) => state.rooms);
-  const isLoadingMyRooms = useChatStore((state) => state.isLoading);
+  const { rooms: myRooms, isLoading: isLoadingMyRooms } = useMyChatRooms();
   const invalidateMyRooms = useChatStore((state) => state.invalidate);
   const isAdmin = useUserStore((state) => state.user?.app_metadata?.user_type === USER_TYPES.ADMIN);
 

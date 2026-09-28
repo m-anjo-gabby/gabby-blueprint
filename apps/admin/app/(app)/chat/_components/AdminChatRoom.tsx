@@ -19,6 +19,8 @@ interface AdminChatRoomProps {
   initialHasMore: boolean;
   isMember: boolean;
   members: ChatRoomMemberSummary[];
+  viewerUserId: string;
+  myLastReadAt: string | null;
   counterpartLastReadAt: string | null;
 }
 

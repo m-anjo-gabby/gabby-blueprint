@@ -7,6 +7,7 @@ import { Mail } from 'lucide-react';
 import { LoginButton } from './_components/LoginButton';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import { RETURN_TO_PARAM } from '@gabby/lib/auth/returnTo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,6 +16,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (formData: FormData) => {
     setError(null);
+    // 未ログインで開いた画面（?next=、メール内のリンク等）へ、ログイン後に戻す
+    formData.set(RETURN_TO_PARAM, new URLSearchParams(window.location.search).get(RETURN_TO_PARAM) ?? '');
     const result = await signIn(formData);
 
     if (result && result.error) {

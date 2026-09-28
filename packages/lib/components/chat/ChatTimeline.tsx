@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowDown, ChevronLeft, Loader2, Trash2 } from 'lucide-react';
-import { useUserStore } from '../../stores/useUserStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { useTimezone } from '../../hooks/useTimezone';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -28,6 +27,13 @@ interface ChatTimelineProps {
   /** ログイン中のユーザーがこのルームの参加者かどうか（参加者でない場合はAdminの査閲のみ、送信不可） */
   isMember: boolean;
   members: ChatRoomMemberSummary[];
+  /**
+   * 表示しているユーザー（getChatRoomDetail の viewerUserId）。クライアントのユーザー情報の読み込みを待たずに
+   * 初回表示から自分/相手の発言を出し分けるため、サーバーで確定した値を使う
+   */
+  viewerUserId: string;
+  /** 自分が最後に読んだメッセージの送信時刻（getChatRoomDetail の myLastReadAt）。「ここから未読」の位置に使う */
+  myLastReadAt?: string | null;
   /** メッセージの削除（モデレーション）を許可するか（Adminのみ） */
   allowModeration?: boolean;
   /** ヘッダー右端に置く操作（参加者管理・詳細パネルの開閉等） */
@@ -61,11 +67,13 @@ export function ChatTimeline({
   members,
   allowModeration = false,
   headerActions,
+  viewerUserId,
+  myLastReadAt = null,
   counterpartLastReadAt = null,
 }: ChatTimelineProps) {
   const { labels, basePath, breakpoint } = useChatUi();
   const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
-  const currentUserId = useUserStore((state) => state.user?.id);
+  const currentUserId = viewerUserId;
   const timeZone = useTimezone();
   const timeLabels = getHeaderTimeLabels(labels, timeZone);
   const markRoomAsRead = useChatStore((state) => state.markRoomAsRead);
@@ -77,12 +85,15 @@ export function ChatTimeline({
   const [messages, setMessages] = useState<ChatMessage[]>(() => [...initialMessages].reverse());
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  // 開いた時点の未読の先頭（「ここから未読」の区切り線を出す位置）。一覧の未読数から求める
+  // 開いた時点の未読の先頭（「ここから未読」の区切り線を出す位置）。サーバーの既読位置から求めるため、
+  // 一覧の読み込みを待たない（メール等のリンクから直接開いた場合も正しく出る）。
+  // 未読が取得件数を超える場合は、取得した中で最も古い相手の発言から未読とみなす
   const [firstUnreadChatId] = useState<string | null>(() => {
-    const unread = useChatStore.getState().rooms.find((r) => r.room_id === roomId)?.unread_count ?? 0;
-    if (unread <= 0 || initialMessages.length === 0) return null;
-    // initialMessages は降順。未読が取得件数を超える場合は取得した最古のメッセージから未読とみなす
-    return initialMessages[Math.min(unread, initialMessages.length) - 1].chat_id;
+    if (!isMember) return null;
+    const firstUnread = [...initialMessages]
+      .reverse()
+      .find((m) => m.sender_user_id !== viewerUserId && (!myLastReadAt || m.created_at > myLastReadAt));
+    return firstUnread?.chat_id ?? null;
   });
   // 下端から離れて過去ログを読んでいる間に届いた新着の件数（「最新へ」ボタンに表示）
   const [isAwayFromBottom, setIsAwayFromBottom] = useState(false);

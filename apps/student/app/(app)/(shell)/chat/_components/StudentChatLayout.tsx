@@ -1,6 +1,6 @@
 'use client';
 
-import { useChatStore } from '@gabby/lib/stores/useChatStore';
+import { useMyChatRooms } from '@gabby/lib/components/chat/useMyChatRooms';
 import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
 import { ChatRoomListPane } from '@gabby/lib/components/chat/ChatRoomListPane';
 import { CHAT_LABELS, CHAT_SPLIT_BREAKPOINT } from '@/constants/chat';
@@ -20,7 +20,6 @@ export function StudentChatLayout({ children }: { children: React.ReactNode }) {
 }
 
 function StudentChatRoomList() {
-  const rooms = useChatStore((state) => state.rooms);
-  const isLoading = useChatStore((state) => state.isLoading);
+  const { rooms, isLoading } = useMyChatRooms();
   return <ChatRoomListPane rooms={rooms} isLoading={isLoading} />;
 }
