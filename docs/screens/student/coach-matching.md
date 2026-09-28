@@ -23,6 +23,13 @@
 4. **リクエストダイアログ**（コーチカードから開く） — 空き時間カレンダーから希望日時を選び、
    リクエストを送信する
 
+## 一覧に出るコーチ
+
+- 有効なコーチプロフィールを持つコーチが対象。
+- デモユーザー（ロール `demo_user`）のコーチは、本番検証・顧客向けプレゼン用のため、通常の生徒には
+  表示されず、リクエストもできない（コーチIDを直接指定した送信も「この操作を行う権限がありません。」で拒否される）。
+- 生徒自身がデモユーザーの場合は、デモコーチを含む全コーチが対象になる。
+
 ## 表示要素・操作
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
@@ -72,6 +79,8 @@
 - コーチプロフィール表示: `packages/lib/components/common/CoachProfileDialog.tsx`
 - 関連アクション/RPC: `getMyLiveSessionTickets`, `getMySlotStatus`, `getCoachBrowseList`,
   `createMatchingRequest`, `cancelMatchingRequest`（`apps/student/actions/matchingAction.ts`）
+- 対象コーチの判定: `get_matchable_coach_ids()`（一覧・リクエスト送信時の両方で使用）。
+  検証: `testing/features/branches/feature-20260925-dev/demo-coach-matching-verify.ts`
 - 備考: `testing/e2e/specs/_INDEX.md`によれば、マッチング業務フロー（`matching/`）の仕様書は
   本調査時点では未作成（`booking/individual-booking-and-reschedule.md`はセッション予約・振替に
   関する別フローであり、この画面の初回マッチングとは対象が異なるためリンクしていない）。

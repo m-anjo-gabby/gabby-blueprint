@@ -496,6 +496,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 /**
  * マッチング可能なコーチの一覧を取得する（生徒向け。ポータル共通）
  * zoom_meeting_url等の非公開項目は含めない。
+ * 対象コーチはget_matchable_coach_ids()で決まる（通常の生徒にはデモコーチを含めない）。
  */
 export async function getCoachBrowseListCore(): Promise<
   { success: true; coaches: CoachBrowseItem[] } | { success: false; errorCode: MatchingRequestErrorCode }
@@ -507,9 +508,20 @@ export async function getCoachBrowseListCore(): Promise<
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
+    const { data: matchableCoaches, error: matchableError } = await supabase.rpc('get_matchable_coach_ids');
+
+    if (matchableError) {
+      logger.error('matching:get_coach_list_matchable_failed', matchableError.message, ctx);
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!matchableCoaches || matchableCoaches.length === 0) {
+      return { success: true, coaches: [] };
+    }
+
     const { data: profiles, error: profileError } = await supabase
       .from('com_m_coach_profile')
       .select('user_id, country_code, coach_since, education, qualifications, teaching_years, job_experience, introduction, intro_video_path')
+      .in('user_id', matchableCoaches.map((c: { coach_id: string }) => c.coach_id))
       .eq('delete_flg', '0');
 
     if (profileError) {
@@ -630,6 +642,20 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!ticket || input.slot_no > ticket.weekly_frequency) {
+      return { success: false, errorCode: 'not_eligible' };
+    }
+
+    // 申請先がこの生徒のマッチング対象コーチか確認（一覧に出ないデモコーチへの直接申請を防ぐ）
+    const { data: matchableCoach, error: matchableError } = await supabase
+      .rpc('get_matchable_coach_ids')
+      .eq('coach_id', input.coach_id)
+      .maybeSingle();
+
+    if (matchableError) {
+      logger.error('matching:create_request_matchable_check_failed', matchableError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!matchableCoach) {
       return { success: false, errorCode: 'not_eligible' };
     }
 

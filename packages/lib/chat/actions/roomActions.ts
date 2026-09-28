@@ -145,41 +145,25 @@ async function createOneOnOneChatRoom(
     return { success: false, error: 'Invalid member combination' };
   }
 
-  const existingRoomId = await findExistingTwoPersonRoom(supabase, memberIdA, memberIdB);
-  if (existingRoomId) {
-    return { success: true, roomId: existingRoomId };
+  // 既存ルームの検索・開設はマッチング成立時の自動開設と共通のRPCに任せる
+  // （判定条件と同時実行の制御は supabase/DDL/function/fn_ensure_one_on_one_chat_room.sql）
+  const { data: ensured, error: ensureError } = await supabase
+    .rpc('fn_ensure_one_on_one_chat_room', { p_user_a: memberIdA, p_user_b: memberIdB })
+    .single<{ room_id: string; created: boolean }>();
+
+  if (ensureError || !ensured) {
+    logger.error('chat:create_room_failed', ensureError?.message || 'Unknown error', { ...ctx, payload });
+    return { success: false, error: ensureError?.message || 'Failed to create chat room' };
   }
 
-  const { data: newRoom, error: roomError } = await supabase
-    .from('com_t_chat_room')
-    .insert({ room_type: CHAT_ROOM_TYPES.ONE_ON_ONE })
-    .select('room_id')
-    .single();
-
-  if (roomError || !newRoom) {
-    logger.error('chat:create_room_failed', roomError?.message || 'Unknown error', { ...ctx, payload });
-    return { success: false, error: roomError?.message || 'Failed to create chat room' };
-  }
-
-  const { error: memberError } = await supabase.from('com_t_chat_room_user').insert([
-    { room_id: newRoom.room_id, user_id: profileA.id, user_type: profileA.user_type },
-    { room_id: newRoom.room_id, user_id: profileB.id, user_type: profileB.user_type },
-  ]);
-
-  if (memberError) {
-    logger.error('chat:create_room_members_failed', memberError.message, {
+  if (ensured.created) {
+    logger.info('chat:create_room_success', `Chat room created: ${ensured.room_id}`, {
       ...ctx,
-      payload: { roomId: newRoom.room_id },
+      payload: { roomId: ensured.room_id },
     });
-    return { success: false, error: memberError.message };
   }
 
-  logger.info('chat:create_room_success', `Chat room created: ${newRoom.room_id}`, {
-    ...ctx,
-    payload: { roomId: newRoom.room_id },
-  });
-
-  return { success: true, roomId: newRoom.room_id };
+  return { success: true, roomId: ensured.room_id };
 }
 
 async function createGroupChatRoom(
@@ -241,49 +225,6 @@ async function createGroupChatRoom(
   });
 
   return { success: true, roomId: newRoom.room_id };
-}
-
-/**
- * memberIdA と memberIdB だけが参加している、クローズされていないルームを探す（重複作成防止）
- */
-async function findExistingTwoPersonRoom(
-  supabase: ReturnType<typeof createAdminClient>,
-  memberIdA: string,
-  memberIdB: string
-): Promise<string | null> {
-  const { data: roomsOfA } = await supabase
-    .from('com_t_chat_room_user')
-    .select('room_id')
-    .eq('user_id', memberIdA)
-    .is('left_at', null);
-
-  const roomIdsOfA = (roomsOfA || []).map((r) => r.room_id);
-  if (roomIdsOfA.length === 0) return null;
-
-  const { data: sharedRooms } = await supabase
-    .from('com_t_chat_room_user')
-    .select('room_id, com_t_chat_room!inner(closed_at)')
-    .eq('user_id', memberIdB)
-    .is('left_at', null)
-    .in('room_id', roomIdsOfA);
-
-  for (const shared of sharedRooms || []) {
-    const room = Array.isArray(shared.com_t_chat_room) ? shared.com_t_chat_room[0] : shared.com_t_chat_room;
-    if (room?.closed_at) continue;
-
-    const { count } = await supabase
-      .from('com_t_chat_room_user')
-      .select('room_id', { count: 'exact', head: true })
-      .eq('room_id', shared.room_id)
-      .is('left_at', null);
-
-    // 将来の1対多対応時はこの「2人部屋」判定を拡張する
-    if (count === 2) {
-      return shared.room_id;
-    }
-  }
-
-  return null;
 }
 
 /**

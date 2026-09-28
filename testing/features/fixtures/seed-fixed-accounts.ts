@@ -98,6 +98,14 @@ async function ensureRole(userId: string, roleId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** コーチプロフィール（生徒の「専属コーチを探す」の対象）。createUserにuser_typeを渡さないため handle_new_user では作られない */
+async function ensureCoachProfile(coachId: string): Promise<void> {
+  const { data } = await admin.from("com_m_coach_profile").select("user_id").eq("user_id", coachId).maybeSingle();
+  if (data) return;
+  const { error } = await admin.from("com_m_coach_profile").insert({ user_id: coachId, coach_since: new Date().toISOString().slice(0, 8) + "01" });
+  if (error) throw error;
+}
+
 async function ensureCoachAvailability(coachId: string, days: number[], start: string, end: string): Promise<void> {
   const { data: existing } = await admin.from("com_m_coach_availability").select("availability_id").eq("coach_id", coachId).limit(1);
   if (existing && existing.length > 0) return;
@@ -301,8 +309,15 @@ if (!adminUserId) {
 
 const coachCa = await ensureUser({ email: "qa-coach-ca-01@gabby-qa-test.example", userType: "2", userName: "QAコーチCA01", clientId, timezone: "America/Vancouver" });
 const coachUs = await ensureUser({ email: "qa-coach-us-01@gabby-qa-test.example", userType: "2", userName: "QAコーチUS01", clientId, timezone: "America/New_York" });
+await ensureCoachProfile(coachCa);
 await ensureCoachAvailability(coachCa, [1, 3, 5], "18:00:00", "22:00:00");
+await ensureCoachProfile(coachUs);
 await ensureCoachAvailability(coachUs, [2, 4], "10:00:00", "16:00:00");
+// デモコーチ（通常の生徒の「専属コーチを探す」には出ず、デモの生徒にだけ出る）
+const coachDemo = await ensureUser({ email: "qa-coach-demo-01@gabby-qa-test.example", userType: "2", userName: "QAコーチDEMO01（デモ）", clientId, timezone: "Asia/Tokyo" });
+await ensureRole(coachDemo, "demo_user");
+await ensureCoachProfile(coachDemo);
+await ensureCoachAvailability(coachDemo, [6], "10:00:00", "12:00:00");
 
 const appContract = async (term: Term) => ensureContract(clientId, "BLUEPRINT_ONLY", term, 10);
 
@@ -362,4 +377,4 @@ studentIds["07"] = popupStudent;
 console.log("- qa-student-07@gabby-qa-test.example QA生徒07（ポップアップ検証）");
 
 console.log("\n=== 投入完了 ===");
-console.log({ clientId, popupClientId, coachCa, coachUs, students: studentIds });
+console.log({ clientId, popupClientId, coachCa, coachUs, coachDemo, students: studentIds });
