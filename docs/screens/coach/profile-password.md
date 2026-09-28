@@ -20,10 +20,10 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| Current Password | 常時表示 | 入力必須 |
-| New Password | 8文字以上、英字と数字の両方を含む必要がある | 条件を満たさない場合、入力中にその場でメッセージが表示される |
-| New Password (confirm) | 常時表示 | 「New Password」と一致すると緑色の「Passwords match」表示、不一致だと赤字でエラー表示 |
-| 「Update Password」ボタン | 常時表示 | 入力内容をチェックした上でパスワード変更を実行する |
+| Current password | 常時表示 | 入力必須 |
+| New password | 8文字以上、英字と数字の両方を含む必要がある。欄の下に条件を常に案内する | 英字と数字を両方含んでいない場合、入力中に案内が警告文に切り替わる |
+| Confirm new password | 常時表示 | 「New password」と一致すると緑色の「Passwords match」表示、不一致だと赤字で「Passwords do not match」表示 |
+| 「Update Password」ボタン | 常時表示。送信中は「Updating...」 | 8文字未満・英数混在でない・一致しないのいずれかであれば送信せずエラーを表示し、条件を満たせばパスワード変更を実行する |
 | 「Back to Dashboard」リンク | 常時表示 | `/dashboard`へ遷移 |
 
 ## 状態
@@ -38,3 +38,5 @@
 
 - `apps/coach/app/(app)/profile/password/page.tsx`
 - `apps/coach/actions/coachAuthAction.ts`（`updatePassword`）
+- 新しいパスワード欄と送信前チェック: `packages/lib/components/auth/NewPasswordFields.tsx`（再設定・招待と共通）、
+  文言は `apps/coach/constants/auth.ts` の `AUTH_LABELS.passwordFields`

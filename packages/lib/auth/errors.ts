@@ -16,7 +16,6 @@ export const AUTH_ERROR_CODES = [
   'signout_failed',
   // 再設定メール
   'missing_email',
-  'reset_email_failed',
   // パスワードの設定・変更
   'password_too_short',
   'password_needs_alnum',
@@ -27,6 +26,11 @@ export const AUTH_ERROR_CODES = [
   'password_update_failed',
   'session_timeout',
   'current_password_incorrect',
+  'reset_link_required',
+  // 招待
+  'invitation_invalid',
+  'invitation_expired',
+  'account_create_failed',
   // 想定外
   'unexpected',
 ] as const;
@@ -46,7 +50,6 @@ export const AUTH_ERROR_MESSAGES_JA: Record<AuthErrorCode, string> = {
   portal_forbidden: 'このアカウントではログインできません。',
   signout_failed: 'ログアウト中にエラーが発生しました。',
   missing_email: 'メールアドレスを入力してください。',
-  reset_email_failed: 'メールの送信に失敗しました。時間をおいて再度お試しください。',
   password_too_short: 'パスワードは8文字以上で入力してください。',
   password_needs_alnum: 'パスワードには英字と数字を両方含めてください。',
   password_same_as_old: '新しいパスワードは現在と同じものは使用できません。',
@@ -56,6 +59,10 @@ export const AUTH_ERROR_MESSAGES_JA: Record<AuthErrorCode, string> = {
   password_update_failed: 'パスワードの更新に失敗しました。',
   session_timeout: 'セッションがタイムアウトしました。再度ログインしてください。',
   current_password_incorrect: '現在のパスワードが正しくありません。',
+  reset_link_required: '再設定リンクを確認できませんでした。お手数ですが、再設定メールの送信からやり直してください。',
+  invitation_invalid: 'この招待リンクは無効か、すでに本登録が完了しています。',
+  invitation_expired: '招待リンクの有効期限が切れています。管理者に再送を依頼してください。',
+  account_create_failed: 'アカウントの作成に失敗しました。',
   unexpected: '予期せぬエラーが発生しました。時間をおいて再度お試しください。',
 };
 

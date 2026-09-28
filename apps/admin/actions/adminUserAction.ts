@@ -58,12 +58,15 @@ function getInvitationUrl(userType: string | undefined, token: string): string {
   return `${base}/auth/invite?token=${token}`;
 }
 
+/** 招待リンクの有効期限（日数）。新規送信・再送で共通し、メール本文の期限表記にも同じ値を使う */
+const INVITATION_EXPIRES_DAYS = 3;
+
 /**
- * 招待リンクの有効期限（送信から7日間）を一元的に生成するヘルパー
+ * 招待リンクの有効期限（送信から INVITATION_EXPIRES_DAYS 日後）を生成するヘルパー
  */
-function getInvitationExpiry(days: number = 7): Date {
+function getInvitationExpiry(): Date {
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + days);
+  expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRES_DAYS);
   return expiresAt;
 }
 
@@ -152,7 +155,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     }
 
     // 有効期限を 3日間に設定（従来の24時間制限を突破） -> 共通ヘルパーを利用
-    const expiresAt = getInvitationExpiry(3);
+    const expiresAt = getInvitationExpiry();
 
     // 暗号論的に安全なランダムトークンを生成
     const invitationToken = randomBytes(32).toString('hex');
@@ -206,7 +209,8 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     const mailResult = await dispatchInvitationEmail(user_type, {
       to: email,
       userName: user_name || '会員',
-      inviteUrl: inviteUrl
+      inviteUrl: inviteUrl,
+      expiresDays: INVITATION_EXPIRES_DAYS,
     });
 
     // メール送信結果をDBに記録
@@ -397,8 +401,8 @@ export async function resendInvite(email: string, userType?: string) {
       return { success: false, message: '対象の招待データが見つからないか、既に登録が完了しています。' };
     }
 
-    // 💡 改善: 安全性の向上として有効期限を +7日 にリフレッシュし、新しいワンタイムトークンを再生成します -> 💡 共通ヘルパーを利用
-    const newExpiresAt = getInvitationExpiry(7);
+    // 💡 改善: 安全性の向上として有効期限を送信時点から付け直し、新しいワンタイムトークンを再生成します -> 💡 共通ヘルパーを利用
+    const newExpiresAt = getInvitationExpiry();
     const newWeightToken = randomBytes(32).toString('hex');
 
     const { error: updateError } = await supabase
@@ -422,7 +426,8 @@ export async function resendInvite(email: string, userType?: string) {
     const mailResult = await dispatchInvitationEmail(resolvedUserType, {
       to: email,
       userName: currentInvite.user_name || '会員',
-      inviteUrl: inviteUrl
+      inviteUrl: inviteUrl,
+      expiresDays: INVITATION_EXPIRES_DAYS,
     });
 
     // 💡 改善: 再送結果をDBに記録（成功時はエラーをクリア）

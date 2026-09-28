@@ -11,7 +11,7 @@ interface SendInvitationParams {
   to: string;
   userName: string;
   inviteUrl: string;
-  expiresDays?: number; // 外部（Admin画面など）から可変対応。デフォルトは7
+  expiresDays?: number; // 外部（Admin画面など）から可変対応。デフォルトは3
 }
 
 /**

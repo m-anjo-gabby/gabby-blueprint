@@ -1,15 +1,22 @@
 // apps/student/app/(app)/(shell)/profile/password/page.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, KeyRound } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 import { updatePassword } from '@/actions/authAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import {
+  EMPTY_NEW_PASSWORD,
+  NewPasswordFields,
+  validateNewPassword,
+  type NewPasswordValue,
+} from '@gabby/lib/components/auth/NewPasswordFields';
 import { Button } from '@/components/ui/button';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { AUTH_LABELS } from '@/constants/auth';
 import { ProfileSection } from '../_components/ProfileSection';
 
 /**
@@ -17,75 +24,40 @@ import { ProfileSection } from '../_components/ProfileSection';
  * ログインユーザーが自身のパスワードを更新するための画面
  */
 export default function PasswordChangePage() {
-  // 各フィールドの状態をステートで管理し、エラー時も入力を保持
+  // 入力値はステートで管理し、エラー時も入力を保持
   const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // 現在のパスワード検証エラーを管理
+  const [newPassword, setNewPassword] = useState<NewPasswordValue>(EMPTY_NEW_PASSWORD);
+
+  // 現在のパスワード誤りは現在のパスワード欄の直下、それ以外は新しいパスワードのエラーとして表示する
   const [currentPasswordError, setCurrentPasswordError] = useState<string | null>(null);
-  // 新しいパスワード関連の一般的なエラーを管理
-  const [newPasswordGeneralError, setNewPasswordGeneralError] = useState<string | null>(null);
-  
+  const [newPasswordError, setNewPasswordError] = useState<string | null>(null);
+
   const { showToast } = useToast();
   const router = useRouter();
 
-  // 💡 新しいパスワードの強度（英数混在）判定をリアルタイムで算出
-  const strengthStatus = useMemo(() => {
-    if (!newPassword) return null;
-    const hasAlpha = /[a-zA-Z]/.test(newPassword);
-    const hasNumber = /[0-9]/.test(newPassword);
-    return hasAlpha && hasNumber;
-  }, [newPassword]);
-
-  // パスワードの一致判定をリアルタイムで算出
-  const matchStatus = useMemo(() => {
-    if (!newPassword || !confirmPassword) return null;
-    return newPassword === confirmPassword;
-  }, [newPassword, confirmPassword]);
-
-  /**
-   * フォーム送信ハンドラ
-   * 送信時のバリデーションと、サーバーからのレスポンスに応じた状態更新を担当
-   */
   const handleSubmit = async (formData: FormData) => {
-    // エラーメッセージのリセット
     setCurrentPasswordError(null);
-    setNewPasswordGeneralError(null);
 
-    // 💡 1. サーバー送信前の強度チェック（文字数と英数混在）
-    if (newPassword.length < 8) {
-      setNewPasswordGeneralError('新しいパスワードは8文字以上で入力してください。');
+    // サーバー送信前のチェック（8文字以上・英数混在・確認用と一致）
+    const validationError = validateNewPassword(newPassword, AUTH_LABELS.passwordFields);
+    if (validationError) {
+      setNewPasswordError(validationError);
       return;
     }
+    setNewPasswordError(null);
 
-    if (strengthStatus === false) {
-      setNewPasswordGeneralError('パスワードには英字と数字を両方含めてください。');
-      return;
-    }
-
-    // 2. パスワード一致チェック
-    if (matchStatus === false) {
-      setNewPasswordGeneralError('新しいパスワードが一致していません。');
-      return;
-    }
-
-    // 3. サーバーアクションの実行
     const result = await updatePassword(formData);
 
     if (result?.error) {
-      // 現在のパスワード間違いはフォーム直下に表示し、そのフィールドのみリセット
       if (result.errorCode === 'current_password_incorrect') {
         setCurrentPasswordError(result.error);
         setCurrentPassword(''); // 問題箇所のみクリア
-        showToast('パスワードの更新に失敗しました。', 'error'); // 現在のパスワードエラー時もトーストは出す
       } else {
-        // 💡 共通コアで翻訳された「漏洩パスワード警告」や「過去と同じパスワードエラー」はトーストで綺麗に通知されます
-        setNewPasswordGeneralError(result.error); // その他のエラーは新しいパスワードのインラインエラーとして表示
-        showToast('パスワードの更新に失敗しました。', 'error'); // 一般的な失敗トーストも出す
+        // 漏洩パスワード・現在と同じパスワード等のサーバー側の判定
+        setNewPasswordError(result.error);
       }
+      showToast('パスワードの更新に失敗しました。', 'error');
     } else {
-      // 成功時の処理
       showToast('パスワードを正常に更新しました', 'success');
       router.push('/profile');
     }
@@ -101,7 +73,6 @@ export default function PasswordChangePage() {
 
       <ProfileSection>
         <form action={handleSubmit} className="space-y-6">
-          {/* 現在のパスワード入力：エラー時はフィールド下部にメッセージを表示 */}
           <div className="space-y-1">
             <PasswordInput
               label="現在のパスワード"
@@ -111,61 +82,24 @@ export default function PasswordChangePage() {
               onChange={(e) => setCurrentPassword(e.target.value)}
               required
             />
-            {currentPasswordError && <FieldMessage>{currentPasswordError}</FieldMessage>}
-          </div>
-
-          {/* 新しいパスワード入力 */}
-          <div className="space-y-1">
-            <PasswordInput
-              label="新しいパスワード"
-              name="newPassword"
-              autoComplete="new-password"
-              value={newPassword}
-              required
-              minLength={8}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                setNewPasswordGeneralError(null); // 入力開始でエラーをクリア
-              }}
-            />
-            {strengthStatus === false ? (
-              <FieldMessage>英字と数字を両方含めてください</FieldMessage>
-            ) : (
-              <FieldMessage tone="hint">8文字以上で、英字と数字を両方含めてください</FieldMessage>
+            {currentPasswordError && (
+              <p className="ml-1 text-[11px] font-bold text-rose-600 animate-in fade-in">{currentPasswordError}</p>
             )}
           </div>
 
-          {/* パスワード（確認用）入力と一致確認のインラインフィードバック */}
-          <div className="space-y-1">
-            <PasswordInput
-              label="新しいパスワード（確認用）"
-              name="confirmPassword"
-              autoComplete="new-password"
-              value={confirmPassword}
-              required
-              minLength={8}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setNewPasswordGeneralError(null); // 入力開始でエラーをクリア
-              }}
-            />
-            {matchStatus !== null && (
-              <FieldMessage tone={matchStatus ? 'success' : 'error'}>
-                {matchStatus ? (
-                  <>
-                    <CheckCircle2 size={12} /> パスワードが一致しました
-                  </>
-                ) : (
-                  'パスワードが一致していません'
-                )}
-              </FieldMessage>
-            )}
-          </div>
+          <NewPasswordFields
+            labels={AUTH_LABELS.passwordFields}
+            value={newPassword}
+            onChange={(next) => {
+              setNewPassword(next);
+              setNewPasswordError(null); // 入力し直したらエラーを消す
+            }}
+            name="newPassword"
+          />
 
-          {/* 新しいパスワード関連の一般的なエラー表示 */}
-          {newPasswordGeneralError && (
+          {newPasswordError && (
             <p className="rounded-control border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600 animate-in fade-in">
-              {newPasswordGeneralError}
+              {newPasswordError}
             </p>
           )}
 
@@ -175,26 +109,6 @@ export default function PasswordChangePage() {
         </form>
       </ProfileSection>
     </div>
-  );
-}
-
-const FIELD_MESSAGE_TONE_CLASS = {
-  error: 'text-rose-600 font-bold',
-  success: 'text-emerald-600 font-bold',
-  hint: 'text-ink-muted',
-} as const;
-
-function FieldMessage({
-  tone = 'error',
-  children,
-}: {
-  tone?: keyof typeof FIELD_MESSAGE_TONE_CLASS;
-  children: React.ReactNode;
-}) {
-  return (
-    <p className={`ml-1 flex items-center gap-1 text-[11px] animate-in fade-in ${FIELD_MESSAGE_TONE_CLASS[tone]}`}>
-      {children}
-    </p>
   );
 }
 

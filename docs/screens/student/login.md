@@ -60,10 +60,10 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(public)/login/page.tsx`, `apps/student/app/(public)/login/_components/LoginButton.tsx`
+- `apps/student/app/(public)/login/page.tsx`（文言を渡すだけ）、画面本体は `packages/lib/components/auth/LoginForm.tsx`（3アプリ共通）
 - `apps/student/actions/authAction.ts`（管理者の拒否・ライセンスチェックの設定）
 - `apps/student/proxy.ts`（未ログイン時の転送、ログイン済みで開いた場合の転送、ライセンス・管理者の判定）
 - 共通処理: `packages/lib/auth/portalActions.ts`（`signIn`）、`packages/lib/auth/errors.ts`（エラー種別と日本語の文言）、
-  `packages/lib/hooks/useLoginNotice.ts`・`packages/lib/components/common/LoginNoticeBanner.tsx`（案内）、`packages/lib/auth/actions.ts`（`signInCore`: ロック・失敗回数・ライセンス）、
+  `packages/lib/hooks/useLoginNotice.ts`・`packages/lib/components/common/LoginNoticeBanner.tsx`（案内）、`packages/lib/auth/core.ts`（`signInCore`: ロック・失敗回数・ライセンス）、
   `packages/lib/auth/returnTo.ts`（`?next=` の検証）、`packages/lib/proxy-base.ts`（`redirectToLogin` / `redirectAfterLogin`）
 - 関連RPC: `get_user_lock_status_by_email`, `increment_login_failed_count`

@@ -61,12 +61,13 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/admin/app/(public)/login/page.tsx`, `apps/admin/app/(public)/login/_components/LoginButton.tsx`
+- `apps/admin/app/(public)/login/page.tsx`（文言を渡すだけ）、画面本体は `packages/lib/components/auth/LoginForm.tsx`（3アプリ共通）
 - `apps/admin/actions/adminAuthAction.ts`（管理者以外の拒否の設定）
 - `apps/admin/proxy.ts`（未ログイン時の転送、ログイン済みで開いた場合の転送、管理者以外の判定）
-- 画面の文言: `apps/admin/messages/{ja,en}.json` の `login`（画面・案内）、`authErrors`（エラー）
+- 画面の文言: `apps/admin/messages/{ja,en}.json` の `login`（画面・案内）、`authErrors`（エラー）。`apps/admin/components/auth/useAuthLabels.ts` で組み立てる
+- 表示言語の切り替え: `apps/admin/app/(public)/layout.tsx`（公開画面すべてに表示）
 - 表示言語の既定値: `apps/admin/i18n/request.ts`（`DEFAULT_LOCALE`）
 - 共通処理: `packages/lib/auth/portalActions.ts`（`signIn`、エラー種別から文言への置き換え）、`packages/lib/auth/errors.ts`（エラー種別）、
-  `packages/lib/hooks/useLoginNotice.ts`・`packages/lib/components/common/LoginNoticeBanner.tsx`（案内）、`packages/lib/auth/actions.ts`（`signInCore`: ロック・失敗回数）、
+  `packages/lib/hooks/useLoginNotice.ts`・`packages/lib/components/common/LoginNoticeBanner.tsx`（案内）、`packages/lib/auth/core.ts`（`signInCore`: ロック・失敗回数）、
   `packages/lib/auth/returnTo.ts`（`?next=` の検証）、`packages/lib/proxy-base.ts`（`redirectToLogin` / `redirectAfterLogin`）
 - 関連RPC: `get_user_lock_status_by_email`, `increment_login_failed_count`

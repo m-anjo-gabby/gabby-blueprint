@@ -6,6 +6,15 @@
 
 # 画面仕様書 索引
 
+## 3アプリ共通
+
+画面・処理を3アプリで共有しているもの。アプリごとの違い（文言の言語等）は各ファイル内の表に記載する。
+
+| ファイル | パス | 概要 | 状態 |
+|---|---|---|---|
+| [common/password-reset.md](common/password-reset.md) | `/forgot-password`、`/update-password` | パスワード再設定（再設定メールの依頼・リンク確認・新しいパスワードの設定） | ✅ |
+| [common/invite.md](common/invite.md) | `/auth/invite` | 招待メールからの本登録（パスワード設定・自動ログイン。リンクの有効期限は3日） | ✅ |
+
 ## student
 
 | ファイル | パス | 概要 | 状態 |

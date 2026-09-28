@@ -1,5 +1,10 @@
-'use server';
-
+/**
+ * 認証の共通処理（サーバー専用）
+ *
+ * 💡 このモジュールは 'use server' を付けない。付けると export した関数がすべて外部から直接呼べる
+ * エンドポイントになり、ポータルごとの利用者チェック等を迂回されるため。
+ * ブラウザから呼ぶ入口は、各アプリの *AuthAction.ts（createPortalAuthActions）だけにする。
+ */
 import { createServerClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { User } from '@supabase/supabase-js';
@@ -7,8 +12,10 @@ import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
 import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
+import type { PasswordResetMailLanguage } from '../mail/templates/PasswordResetEmailTemplate';
 import { getPasswordStrengthErrorCode } from './validation';
 import { AUTH_ERROR_MESSAGES_JA, formatAuthErrorMessage, type AuthErrorCode } from './errors';
+import { clearRecoveryMarker, hasValidRecoveryMarker, setRecoveryMarker } from './recovery';
 
 // 💡 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');
@@ -34,6 +41,10 @@ function authErrorResponse(code: AuthErrorCode, detail?: string): AuthResponse {
     errorCode: code,
     errorDetail: detail,
   };
+}
+
+function authErrorFields(code: AuthErrorCode): { errorCode: AuthErrorCode; error: string } {
+  return { errorCode: code, error: AUTH_ERROR_MESSAGES_JA[code] };
 }
 
 /**
@@ -235,7 +246,10 @@ export async function signOutCore(): Promise<AuthResponse> {
  * 3. パスワードリセットメール送信
  * @param formData - email を含むフォームデータ
  */
-export async function forgotPasswordCore(formData: FormData): Promise<AuthResponse> {
+export async function forgotPasswordCore(
+  formData: FormData,
+  options: { mailLanguage: PasswordResetMailLanguage }
+): Promise<AuthResponse> {
   const email = formData.get('email') as string;
 
   if (!email) {
@@ -255,14 +269,16 @@ export async function forgotPasswordCore(formData: FormData): Promise<AuthRespon
       }
     });
 
+    // 💡 未登録のメールアドレスでも成功と同じ応答を返す（登録の有無を外部から判別させない）。
+    // 失敗の内容はログにだけ残す。
     if (linkError) {
-      logger.error('auth:reset_email_link_generation_failed', linkError.message, { payload: { email } });
-      return authErrorResponse('reset_email_failed');
+      logger.warn('auth:reset_email_link_generation_failed', linkError.message, { payload: { email } });
+      return { success: true };
     }
 
     if (!data || !data.properties?.action_link) {
       logger.error('auth:reset_email_link_empty', '生成されたアクションリンクが空です', { payload: { email } });
-      return authErrorResponse('reset_email_failed');
+      return { success: true };
     }
 
     // 💡 修正: Supabase内部の verify エンドポイントを経由すると、非PKCE時はセッションが
@@ -272,24 +288,61 @@ export async function forgotPasswordCore(formData: FormData): Promise<AuthRespon
     const appResetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?token_hash=${tokenHash}&type=recovery&next=/update-password`;
 
     // 独自にデザインしたリッチHTMLメールを Resend から安全に送信！
-    // 考慮点: 有効期限テキストは、SupabaseのAuth設定（Inactivity timeout / Gotrue設定）のデフォルトに合わせて調整（通常は30分や60分）
+    // メールの言語はポータルごと（student: 日本語 / coach: 英語 / admin: 日英併記）
     const mailResult = await sendPasswordResetEmail({
       to: email,
       resetUrl: appResetUrl,
-      expiresText: '30分間' 
+      language: options.mailLanguage,
     });
 
     if (!mailResult.success) {
       logger.error('auth:reset_email_dispatch_failed', mailResult.error || 'Unknown error', { payload: { email } });
-      return authErrorResponse('reset_email_failed');
     }
 
     return { success: true };
 
   } catch (err) {
     logger.error('auth:forgot_password_unexpected', err instanceof Error ? err.message : 'Unknown error', { payload: { email } });
-    return authErrorResponse('unexpected');
+    return { success: true };
   }
+}
+
+/** 現在のセッションの session_id（JWTを検証した上で取得） */
+async function getCurrentSessionId(supabase: Awaited<ReturnType<typeof createServerClient>>): Promise<string | undefined> {
+  const { data } = await supabase.auth.getClaims();
+  const sessionId = data?.claims?.session_id;
+  return typeof sessionId === 'string' ? sessionId : undefined;
+}
+
+/**
+ * 再設定リンク（recovery トークン）をサーバーで確認し、再設定用のセッションを確立する
+ * 💡 メーラーの事前読み込みでトークンが消費されないよう、画面のボタン操作から呼ぶ（GETでは確認しない）
+ */
+export async function verifyRecoveryCore(tokenHash: string): Promise<AuthResponse> {
+  if (!tokenHash) return authErrorResponse('reset_link_required');
+
+  const supabase = await createServerClient();
+  const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' });
+
+  if (error || !data.session) {
+    logger.warn('auth:recovery_verify_failed', error?.message || 'No session');
+    return authErrorResponse('reset_link_required');
+  }
+
+  const payload = JSON.parse(Buffer.from(data.session.access_token.split('.')[1], 'base64url').toString('utf-8'));
+  if (typeof payload?.session_id !== 'string') {
+    logger.error('auth:recovery_session_id_missing', 'session_id claim not found');
+    return authErrorResponse('reset_link_required');
+  }
+
+  await setRecoveryMarker(payload.session_id);
+  return { success: true };
+}
+
+/** 現在のセッションで再設定フォームを出してよいか（再設定リンクの確認後に画面を再読み込みした場合など） */
+export async function hasRecoverySessionCore(): Promise<boolean> {
+  const supabase = await createServerClient();
+  return hasValidRecoveryMarker(await getCurrentSessionId(supabase));
 }
 
 /**
@@ -306,7 +359,14 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
   }
 
   const supabase = await createServerClient();
-  
+
+  // 💡 再設定リンクを確認したセッションに限る。ログイン中の利用者がこの画面から
+  // 現在のパスワード確認（updatePasswordCore）を迂回して変更できないようにする。
+  if (!(await hasValidRecoveryMarker(await getCurrentSessionId(supabase)))) {
+    logger.warn('auth:reset_password_without_recovery', 'Password reset attempted without a verified recovery link');
+    return authErrorResponse('reset_link_required');
+  }
+
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {
@@ -314,6 +374,10 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
     // 💡 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
     return translateAuthError(error.message);
   }
+
+  // 再設定用のセッションは使い終わったら破棄し、新しいパスワードでログインし直してもらう
+  await clearRecoveryMarker();
+  await supabase.auth.signOut();
 
   return { success: true };
 }
@@ -395,79 +459,70 @@ export async function checkLicense(userId: string): Promise<boolean> {
 }
 
 // =============================================================
-// 💡 以下、独自招待テーブル（com_t_invitation）用の新規アクション
+// 独自招待テーブル（com_t_invitation）
 // =============================================================
 
-interface AcceptInvitationPayload {
-  token: string;
-  password?: string;
+/** 招待画面に返す情報（画面に必要な項目だけ。client_id・roles 等は返さない） */
+export interface InvitationSummary {
+  email: string;
+  userName: string | null;
 }
 
-interface AcceptInvitationResponse {
-  success: boolean;
-  message: string | null;
-  errorType: 'invalid_token' | 'expired_token' | 'auth_failed' | 'validation_error' | 'unexpected_error' | null;
+export type VerifyInvitationResponse =
+  | { valid: true; invitation: InvitationSummary }
+  | { valid: false; errorCode: AuthErrorCode; error: string };
+
+const INVITATION_COLUMNS = 'id, email, user_name, expires_at, user_type, client_id, contract_id, roles';
+
+/** 未使用・期限内の招待を取得する（サーバー内部用。全項目を返す） */
+async function findActiveInvitation(token: string) {
+  const supabase = createAdminClient();
+  const { data: invite, error } = await supabase
+    .from('com_t_invitation')
+    .select(INVITATION_COLUMNS)
+    .eq('token', token)
+    .is('accepted_at', null)
+    .maybeSingle();
+
+  if (error || !invite) return { errorCode: 'invitation_invalid' as const };
+  if (new Date(invite.expires_at) < new Date()) return { errorCode: 'invitation_expired' as const };
+  return { invite };
 }
 
 /**
- * 6. 招待用ワンタイムトークンの事前検証（クライアント初期ロード用）
+ * 6. 招待用ワンタイムトークンの事前検証（画面の初期表示用）
  * @param token - 招待状の一意な暗号トークン
  */
-export async function verifyInvitationToken(token: string) {
+export async function verifyInvitationCore(token: string): Promise<VerifyInvitationResponse> {
   try {
-    const supabase = createAdminClient();
-
-    const { data: invite, error } = await supabase
-      .from('com_t_invitation')
-      .select('id, email, user_name, expires_at, user_type, client_id, contract_id, roles')
-      .eq('token', token)
-      .is('accepted_at', null)
-      .maybeSingle();
-
-    if (error || !invite) {
-      return { valid: false, errorType: 'invalid_token', message: 'この招待リンクは無効か、すでに本登録が完了しています。' };
-    }
-
-    if (new Date(invite.expires_at) < new Date()) {
-      return { valid: false, errorType: 'expired_token', message: '招待リンクの有効期限が切れています。管理者に再送を依頼してください。' };
-    }
-
-    return { valid: true, data: invite };
+    if (!token) return { valid: false, ...authErrorFields('invitation_invalid') };
+    const result = await findActiveInvitation(token);
+    if (!result.invite) return { valid: false, ...authErrorFields(result.errorCode) };
+    return { valid: true, invitation: { email: result.invite.email, userName: result.invite.user_name } };
   } catch (err) {
-    return { valid: false, errorType: 'unexpected_error', message: 'トークンの検証中にエラーが発生しました。' };
+    logger.error('auth:verify_invitation_unexpected', err instanceof Error ? err.message : 'Unknown error');
+    return { valid: false, ...authErrorFields('unexpected') };
   }
 }
 
 /**
  * 7. 招待リンクからのユーザー本登録（パスワード設定・マスタ同期）処理
- * @param payload - token とユーザーによって入力された password
  */
-export async function acceptInvitationAction(payload: AcceptInvitationPayload): Promise<AcceptInvitationResponse> {
+export async function acceptInvitationCore(token: string, password: string): Promise<AuthResponse> {
   const ctx = await getLogContext();
-  const { token, password } = payload;
 
   try {
-    if (!password) {
-      return { success: false, errorType: 'validation_error', message: 'パスワードを入力してください。' };
-    }
+    if (!password) return authErrorResponse('password_too_short');
 
-    // 💡 改善: ファイル上部に定義されている共通の強度バリデーションを完全流用
+    // 共通の強度バリデーション（8文字以上、英数混在）
     const validationError = getPasswordStrengthErrorCode(password);
-    if (validationError) {
-      return { success: false, errorType: 'validation_error', message: AUTH_ERROR_MESSAGES_JA[validationError] };
-    }
+    if (validationError) return authErrorResponse(validationError);
 
     // 1. トークンの厳密な有効性検証
-    const verification = await verifyInvitationToken(token);
-    if (!verification.valid || !verification.data) {
-      return { 
-        success: false, 
-        errorType: verification.errorType as any, 
-        message: verification.message ?? '不正なリクエストです。' 
-      };
-    }
+    const verification = await findActiveInvitation(token);
+    if (!verification.invite) return authErrorResponse(verification.errorCode);
 
-    const inviteRecord = verification.data;
+    const inviteRecord = verification.invite;
     const supabase = createAdminClient();
 
     // 2. Supabase Auth側へ正式なログインユーザーとしてアカウントを作成
@@ -486,7 +541,7 @@ export async function acceptInvitationAction(payload: AcceptInvitationPayload): 
 
     if (authError || !authData.user) {
       logger.error('auth:accept_invite_signup_failed', authError?.message || 'User object null', { ...ctx, email: inviteRecord.email });
-      return { success: false, errorType: 'auth_failed', message: `アカウントの作成に失敗しました: ${authError?.message}` };
+      return authErrorResponse('account_create_failed', authError?.message);
     }
 
     const newUserId = authData.user.id;
@@ -565,10 +620,10 @@ export async function acceptInvitationAction(payload: AcceptInvitationPayload): 
       userId: newUserId
     });
 
-    return { success: true, message: '本登録が正常に完了しました。', errorType: null };
+    return { success: true };
 
   } catch (err) {
     logger.error('auth:accept_invite_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
-    return { success: false, errorType: 'unexpected_error', message: '予期せぬシステムエラーが発生しました。' };
+    return authErrorResponse('unexpected');
   }
 }

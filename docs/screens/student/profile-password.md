@@ -40,6 +40,8 @@
 
 - `apps/student/app/(app)/(shell)/profile/password/page.tsx`
 - 共通コンポーネント: `packages/lib/components/common/PasswordInput.tsx`、
+  新しいパスワード欄と送信前チェックは `packages/lib/components/auth/NewPasswordFields.tsx`（再設定・招待と共通、
+  文言は `apps/student/constants/auth.ts` の `AUTH_LABELS.passwordFields`）、
   セクションカードは `profile/_components/ProfileSection.tsx`（プロフィール設定と共通）、
   送信ボタンは `components/ui/button.tsx` の `pending`
 - 関連アクション: `updatePassword`（`apps/student/actions/authAction.ts`、

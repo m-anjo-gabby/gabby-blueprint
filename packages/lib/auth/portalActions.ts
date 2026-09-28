@@ -9,9 +9,15 @@ import {
   forgotPasswordCore,
   resetPasswordCore,
   updatePasswordCore,
+  verifyRecoveryCore,
+  hasRecoverySessionCore,
+  verifyInvitationCore,
+  acceptInvitationCore,
   type AuthResponse,
-} from './actions';
+  type VerifyInvitationResponse,
+} from './core';
 import { RETURN_TO_PARAM, sanitizeReturnTo } from './returnTo';
+import type { PasswordResetMailLanguage } from '../mail/templates/PasswordResetEmailTemplate';
 import {
   AUTH_ERROR_MESSAGES_JA,
   formatAuthErrorMessage,
@@ -35,6 +41,8 @@ export interface PortalAuthConfig {
   messages?: AuthErrorMessageResolver;
   /** signInCore に渡す追加オプション（生徒ポータルのライセンスチェック等） */
   signInOptions?: { checkLicense?: boolean };
+  /** パスワード再設定メールの言語（student: 'ja' / coach: 'en' / admin: 'bilingual'） */
+  resetMailLanguage: PasswordResetMailLanguage;
   /** ログイン成功後、そのユーザーがこのポータルへのアクセスを許可されるかを判定する（不許可時の文言は `portal_forbidden`） */
   guardUser: (user: User) => GuardResult;
   /**
@@ -163,7 +171,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
     const ctx = await getLogContext();
 
     try {
-      const result = await forgotPasswordCore(formData);
+      const result = await forgotPasswordCore(formData, { mailLanguage: config.resetMailLanguage });
 
       if (result.error) {
         logger.error(`auth:${config.appName}_forgot_password_failed`, result.error, {
@@ -246,5 +254,37 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
     }
   }
 
-  return { signIn, signOut, forgotPassword, resetPassword, updatePassword };
+  /** 再設定リンクを確認し、再設定用のセッションを確立する（再設定画面のボタン操作から呼ぶ） */
+  async function verifyRecovery(tokenHash: string): Promise<AuthResponse> {
+    return localize(await verifyRecoveryCore(tokenHash));
+  }
+
+  /** 再設定リンクの確認が済んだセッションか（再設定画面を再読み込みした場合の判定） */
+  async function hasRecoverySession(): Promise<boolean> {
+    return hasRecoverySessionCore();
+  }
+
+  async function verifyInvitation(token: string): Promise<VerifyInvitationResponse> {
+    const result = await verifyInvitationCore(token);
+    if (result.valid) return result;
+    const { error, errorCode } = await errorResponse(result.errorCode);
+    return { valid: false, error: error ?? '', errorCode: errorCode ?? result.errorCode };
+  }
+
+  async function acceptInvitation(token: string, password: string): Promise<AuthResponse> {
+    const { success, error, errorCode } = await localize(await acceptInvitationCore(token, password));
+    return { success, error, errorCode };
+  }
+
+  return {
+    signIn,
+    signOut,
+    forgotPassword,
+    resetPassword,
+    updatePassword,
+    verifyRecovery,
+    hasRecoverySession,
+    verifyInvitation,
+    acceptInvitation,
+  };
 }

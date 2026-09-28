@@ -60,8 +60,7 @@
     "invalidLinkTitle": "リンクが無効です",
     "invalidLinkBody": "このリセットリンクは既に使用済みか、有効期限が切れています。再度リセットメールを送信しますか？",
     "passwordUpdatedNotice": "パスワードを更新しました。新しいパスワードでログインしてください。",
-    "linkErrorNotice": "リンクを確認できませんでした。もう一度お試しいただくか、管理者にお問い合わせください。",
-    "copyright": "© {year} Gabby All rights reserved."
+    "linkErrorNotice": "リンクを確認できませんでした。もう一度お試しいただくか、管理者にお問い合わせください。"
   },
   "authErrors": {
     "missing_credentials": "メールアドレスとパスワードを入力してください。",
@@ -72,7 +71,6 @@
     "portal_forbidden": "権限がありません。生徒用サイトからログインしてください。",
     "signout_failed": "ログアウト中にエラーが発生しました。",
     "missing_email": "メールアドレスを入力してください。",
-    "reset_email_failed": "メールの送信に失敗しました。時間をおいて再度お試しください。",
     "password_too_short": "パスワードは8文字以上で入力してください。",
     "password_needs_alnum": "パスワードには英字と数字を両方含めてください。",
     "password_same_as_old": "新しいパスワードは現在と同じものは使用できません。",
@@ -82,7 +80,57 @@
     "password_update_failed": "パスワードの更新に失敗しました。",
     "session_timeout": "セッションがタイムアウトしました。再度ログインしてください。",
     "current_password_incorrect": "現在のパスワードが正しくありません。",
+    "reset_link_required": "再設定リンクを確認できませんでした。お手数ですが、再設定メールの送信からやり直してください。",
+    "invitation_invalid": "この招待リンクは無効か、すでに本登録が完了しています。",
+    "invitation_expired": "招待リンクの有効期限が切れています。管理者に再送を依頼してください。",
+    "account_create_failed": "アカウントの作成に失敗しました。",
     "unexpected": "予期せぬエラーが発生しました。時間をおいて再度お試しください。"
+  },
+  "forgotPassword": {
+    "title": "パスワードの再設定",
+    "description": "管理アカウントに登録したメールアドレスを入力してください。パスワード再設定用のリンクをお送りします。",
+    "emailLabel": "メールアドレス",
+    "submit": "送信する",
+    "submitting": "送信中...",
+    "sentTitle": "メールを確認してください",
+    "sentBody": "入力したメールアドレスが登録されている場合は、パスワード再設定用のメールをお送りしました。受信トレイを確認し、記載されたリンクからパスワードを更新してください。届かない場合は、メールアドレスに誤りがないかご確認ください。",
+    "backToLogin": "ログイン画面に戻る"
+  },
+  "updatePassword": {
+    "verifying": "確認しています...",
+    "guideTitle": "パスワードの再設定",
+    "guideBody": "ご本人確認用のリンクからアクセスされました。ボタンを押して、新しいパスワードの設定を始めてください。",
+    "guideAction": "手続きを開始する",
+    "formTitle": "新しいパスワードの設定",
+    "formDescription": "管理画面へのログインに使う新しいパスワードを入力してください。",
+    "submit": "パスワードを更新する",
+    "submitting": "更新中...",
+    "successTitle": "パスワードを更新しました",
+    "successBody": "まもなくログイン画面へ移動します。新しいパスワードでログインしてください。",
+    "successAction": "ログイン画面へ",
+    "invalidTitle": "再設定リンクを確認できませんでした",
+    "invalidBody": "再設定リンクの有効期限が切れているか、正しく確認できませんでした。お手数ですが、再設定メールの送信からやり直してください。",
+    "invalidAction": "再設定メールを送信する",
+    "backToLogin": "ログイン画面に戻る",
+    "networkError": "通信エラーが発生しました。時間をおいて再度お試しください。"
+  },
+  "invite": {
+    "verifying": "招待を確認しています...",
+    "formTitle": "管理アカウント初期設定",
+    "formDescription": "{name} 様（{email}）管理画面へのログインに使用するパスワードを設定してください。",
+    "fallbackName": "管理者",
+    "submit": "アカウントを有効化する",
+    "submitting": "登録中...",
+    "expiredTitle": "招待リンクの期限切れ",
+    "invalidTitle": "招待リンクを確認できませんでした",
+    "backToLogin": "ログイン画面に戻る"
+  },
+  "passwordFields": {
+    "newPassword": "新しいパスワード",
+    "confirmPassword": "新しいパスワード（確認用）",
+    "requirement": "8文字以上で、英字と数字を両方含めてください",
+    "match": "パスワードが一致しました",
+    "mismatch": "パスワードが一致していません"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -356,14 +404,6 @@
     "password": {
       "title": "パスワード変更",
       "currentPasswordLabel": "現在のパスワード",
-      "newPasswordLabel": "新しいパスワード",
-      "confirmPasswordLabel": "新しいパスワード（確認用）",
-      "errorTooShort": "新しいパスワードは8文字以上で入力してください。",
-      "errorComplexity": "パスワードには英字と数字を両方含めてください。",
-      "errorMismatchSubmit": "新しいパスワードが一致していません。",
-      "strengthHint": "英字と数字を両方含めてください",
-      "matchSuccess": "パスワードが一致しました",
-      "matchFail": "パスワードが一致していません",
       "toastUpdateFailed": "パスワードの更新に失敗しました。",
       "toastUpdateSuccess": "パスワードを正常に更新しました",
       "submitLabel": "パスワードを更新",

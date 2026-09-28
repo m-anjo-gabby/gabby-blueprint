@@ -24,19 +24,19 @@
 
 1. **ロゴと案内文** — 「Coach Portal」「Sign in with your coach account」
 2. **案内欄** — パスワード再設定の完了後・リンクのエラー時のみ（フォームの上）
-3. **入力欄** — Email Address、Password
+3. **入力欄** — Email address、Password
 4. **「Forgot your password?」リンク**
 5. **エラー表示欄** — ログインに失敗した場合のみ
-6. **「Sign In」ボタン**
+6. **「Sign in」ボタン**
 
 ## 表示要素・操作
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| Email Address | 常時表示。必須 | — |
+| Email address | 常時表示。必須 | — |
 | Password | 常時表示。必須。右端に表示切り替え（目のアイコン） | アイコンを押すと、入力した文字の表示・非表示を切り替える |
 | 「Forgot your password?」 | 常時表示 | パスワード再設定の画面（`/forgot-password`）へ移る |
-| 「Sign In」ボタン | 常時表示。処理中は「Signing in...」と表示して押せなくなる | ログインする。パスワード欄で Enter キーを押しても同じ |
+| 「Sign in」ボタン | 常時表示。処理中は「Signing in...」と表示して押せなくなる | ログインする。パスワード欄で Enter キーを押しても同じ |
 | ログイン後の移動先 | ログインに成功した場合 | URL に `?next=` があればその画面へ、無ければダッシュボード（`/dashboard`）へ移る。`?next=` はアプリ内の画面のみ有効で、外部サイト（`//example.com` 等）やログイン画面自身が指定されている場合は無視してダッシュボードへ移る |
 | ログイン済みで開いた場合 | 既にログインしている場合 | 画面を表示せず、`?next=` があればその画面へ、無ければダッシュボードへ移る |
 
@@ -60,11 +60,11 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/coach/app/(public)/login/page.tsx`, `apps/coach/app/(public)/login/_components/LoginButton.tsx`
+- `apps/coach/app/(public)/login/page.tsx`（文言を渡すだけ）、画面本体は `packages/lib/components/auth/LoginForm.tsx`（3アプリ共通）
 - `apps/coach/actions/coachAuthAction.ts`（コーチ以外の拒否の設定）
 - `apps/coach/proxy.ts`（未ログイン時の転送、ログイン済みで開いた場合の転送、コーチ以外の判定）
 - 画面の文言: `apps/coach/constants/auth.ts`（エラー・案内）
 - 共通処理: `packages/lib/auth/portalActions.ts`（`signIn`、エラー種別から文言への置き換え）、`packages/lib/auth/errors.ts`（エラー種別）、
-  `packages/lib/hooks/useLoginNotice.ts`・`packages/lib/components/common/LoginNoticeBanner.tsx`（案内）、`packages/lib/auth/actions.ts`（`signInCore`: ロック・失敗回数）、
+  `packages/lib/hooks/useLoginNotice.ts`・`packages/lib/components/common/LoginNoticeBanner.tsx`（案内）、`packages/lib/auth/core.ts`（`signInCore`: ロック・失敗回数）、
   `packages/lib/auth/returnTo.ts`（`?next=` の検証）、`packages/lib/proxy-base.ts`（`redirectToLogin` / `redirectAfterLogin`）
 - 関連RPC: `get_user_lock_status_by_email`, `increment_login_failed_count`

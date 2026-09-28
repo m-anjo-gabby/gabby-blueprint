@@ -9,7 +9,17 @@ import { USER_TYPES } from '@gabby/types/user';
  * 誤って管理者がここからログインした場合は拒否します。
  * ログイン時はライセンスチェックを有効化します。
  */
-const { signIn, signOut, forgotPassword, resetPassword, updatePassword } = createPortalAuthActions({
+const {
+  signIn,
+  signOut,
+  forgotPassword,
+  resetPassword,
+  updatePassword,
+  verifyRecovery,
+  hasRecoverySession,
+  verifyInvitation,
+  acceptInvitation,
+} = createPortalAuthActions({
   appName: 'student',
   messages: (code) =>
     code === 'portal_forbidden'
@@ -17,10 +27,22 @@ const { signIn, signOut, forgotPassword, resetPassword, updatePassword } = creat
       : AUTH_ERROR_MESSAGES_JA[code],
   signInOptions: { checkLicense: true },
   signOutMode: 'revalidate',
+  // 再設定メールは日本語
+  resetMailLanguage: 'ja',
   guardUser: (user) =>
     user.app_metadata?.user_type === USER_TYPES.ADMIN
       ? { ok: false }
       : { ok: true },
 });
 
-export { signIn, signOut, forgotPassword, resetPassword, updatePassword };
+export {
+  signIn,
+  signOut,
+  forgotPassword,
+  resetPassword,
+  updatePassword,
+  verifyRecovery,
+  hasRecoverySession,
+  verifyInvitation,
+  acceptInvitation,
+};

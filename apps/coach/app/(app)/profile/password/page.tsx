@@ -1,13 +1,21 @@
 // apps/coach/app/(app)/profile/password/page.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { updatePassword } from '@/actions/coachAuthAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
 import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { FormError } from '@gabby/lib/components/auth/AuthLayout';
+import {
+  EMPTY_NEW_PASSWORD,
+  NewPasswordFields,
+  validateNewPassword,
+  type NewPasswordValue,
+} from '@gabby/lib/components/auth/NewPasswordFields';
+import { AUTH_LABELS } from '@/constants/auth';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 /**
@@ -16,45 +24,23 @@ import Link from 'next/link';
  */
 export default function PasswordChangePage() {
   const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = useState<NewPasswordValue>(EMPTY_NEW_PASSWORD);
 
   const [currentPasswordError, setCurrentPasswordError] = useState<string | null>(null);
-  const [newPasswordGeneralError, setNewPasswordGeneralError] = useState<string | null>(null);
+  const [newPasswordError, setNewPasswordError] = useState<string | null>(null);
 
   const { showToast } = useToast();
   const router = useRouter();
 
-  const strengthStatus = useMemo(() => {
-    if (!newPassword) return null;
-    const hasAlpha = /[a-zA-Z]/.test(newPassword);
-    const hasNumber = /[0-9]/.test(newPassword);
-    return hasAlpha && hasNumber;
-  }, [newPassword]);
-
-  const matchStatus = useMemo(() => {
-    if (!newPassword || !confirmPassword) return null;
-    return newPassword === confirmPassword;
-  }, [newPassword, confirmPassword]);
-
   const handleSubmit = async (formData: FormData) => {
     setCurrentPasswordError(null);
-    setNewPasswordGeneralError(null);
 
-    if (newPassword.length < 8) {
-      setNewPasswordGeneralError('New password must be at least 8 characters long.');
+    const validationError = validateNewPassword(newPassword, AUTH_LABELS.passwordFields);
+    if (validationError) {
+      setNewPasswordError(validationError);
       return;
     }
-
-    if (strengthStatus === false) {
-      setNewPasswordGeneralError('Password must include both letters and numbers.');
-      return;
-    }
-
-    if (matchStatus === false) {
-      setNewPasswordGeneralError('New passwords do not match.');
-      return;
-    }
+    setNewPasswordError(null);
 
     const result = await updatePassword(formData);
 
@@ -62,11 +48,10 @@ export default function PasswordChangePage() {
       if (result.errorCode === 'current_password_incorrect') {
         setCurrentPasswordError(result.error);
         setCurrentPassword('');
-        showToast('Failed to update password.', 'error');
       } else {
-        setNewPasswordGeneralError(result.error);
-        showToast('Failed to update password.', 'error');
+        setNewPasswordError(result.error);
       }
+      showToast('Failed to update password.', 'error');
     } else {
       showToast('Password updated successfully', 'success');
       router.push('/dashboard');
@@ -81,69 +66,29 @@ export default function PasswordChangePage() {
         <form action={handleSubmit} className="space-y-6">
           <div className="space-y-1">
             <PasswordInput
-              label="Current Password"
+              label="Current password"
               name="currentPassword"
+              autoComplete="current-password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               required
             />
             {currentPasswordError && (
-              <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in">
-                {currentPasswordError}
-              </p>
+              <p className="text-[11px] text-rose-600 font-bold ml-1">{currentPasswordError}</p>
             )}
           </div>
 
-          <div className="space-y-1">
-            <PasswordInput
-              label="New Password"
-              name="newPassword"
-              value={newPassword}
-              required
-              minLength={8}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                setNewPasswordGeneralError(null);
-              }}
-            />
-            {strengthStatus !== null && !strengthStatus && (
-              <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in">
-                Include both letters and numbers
-              </p>
-            )}
-          </div>
+          <NewPasswordFields
+            labels={AUTH_LABELS.passwordFields}
+            value={newPassword}
+            onChange={(next) => {
+              setNewPassword(next);
+              setNewPasswordError(null);
+            }}
+            name="newPassword"
+          />
 
-          <div className="relative">
-            <PasswordInput
-              label="New Password (confirm)"
-              name="confirmPassword"
-              value={confirmPassword}
-              required
-              minLength={8}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setNewPasswordGeneralError(null);
-              }}
-            />
-
-            {matchStatus !== null && (
-              <p className={`text-[11px] font-bold mt-1 ml-1 flex items-center gap-1 animate-in fade-in ${
-                matchStatus ? 'text-emerald-600' : 'text-red-500'
-              }`}>
-                {matchStatus ? (
-                  <><CheckCircle2 size={12} /> Passwords match</>
-                ) : (
-                  'Passwords do not match'
-                )}
-              </p>
-            )}
-          </div>
-
-          {newPasswordGeneralError && (
-            <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in slide-in-from-top-1">
-              {newPasswordGeneralError}
-            </p>
-          )}
+          <FormError message={newPasswordError} />
 
           <SubmitButton label="Update Password" loadingLabel="Updating..." />
 

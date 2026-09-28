@@ -1,7 +1,7 @@
 import type { AuthErrorCode } from '@gabby/lib/auth/errors';
-import type { LoginNotice, LoginNoticeLabels } from '@gabby/lib/hooks/useLoginNotice';
+import type { AuthLabels } from '@gabby/lib/components/auth/types';
 
-/** Messages for sign-in / password reset / password change errors (coach portal) */
+/** Messages for sign-in / password reset / password change / invitation errors (coach portal) */
 export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   missing_credentials: 'Please enter your email address and password.',
   account_locked: 'Your account is temporarily locked. Please try again later.',
@@ -11,7 +11,6 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   portal_forbidden: 'You do not have permission. Please sign in with a coach account.',
   signout_failed: 'An error occurred while signing out.',
   missing_email: 'Please enter your email address.',
-  reset_email_failed: 'Failed to send the email. Please try again later.',
   password_too_short: 'Password must be at least 8 characters long.',
   password_needs_alnum: 'Password must contain both letters and numbers.',
   password_same_as_old: 'Your new password must be different from your current password.',
@@ -21,17 +20,77 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   password_update_failed: 'Failed to update your password.',
   session_timeout: 'Your session has timed out. Please sign in again.',
   current_password_incorrect: 'Your current password is incorrect.',
+  reset_link_required: "We couldn't verify your reset link. Please request a new reset email.",
+  invitation_invalid: 'This invitation link is invalid or has already been used.',
+  invitation_expired: 'This invitation link has expired. Please ask your administrator to send a new one.',
+  account_create_failed: 'Failed to create your account.',
   unexpected: 'An unexpected error occurred. Please try again later.',
 };
 
-/** Dialog shown when returning to sign-in from a used or expired reset link */
-export const LOGIN_NOTICE_LABELS: LoginNoticeLabels = {
-  invalidLinkTitle: 'This link is invalid',
-  invalidLinkBody: 'This reset link has already been used or has expired. Would you like to send another reset email?',
-};
-
-/** Notices shown above the sign-in form */
-export const LOGIN_NOTICE_MESSAGES: Record<LoginNotice, string> = {
-  password_updated: 'Your password has been updated. Please sign in with your new password.',
-  link_error: "We couldn't verify the link. Please try again or contact your administrator.",
+/** Labels for the sign-in, forgot password, reset password and invitation screens */
+export const AUTH_LABELS: AuthLabels = {
+  login: {
+    subtitle: 'Sign in with your coach account',
+    emailLabel: 'Email address',
+    emailPlaceholder: 'coach@example.com',
+    passwordLabel: 'Password',
+    forgotPassword: 'Forgot your password?',
+    submit: 'Sign in',
+    submitting: 'Signing in...',
+    invalidLinkTitle: 'This link is invalid',
+    invalidLinkBody: 'This reset link has already been used or has expired. Would you like to send another reset email?',
+    passwordUpdatedNotice: 'Your password has been updated. Please sign in with your new password.',
+    linkErrorNotice: "We couldn't verify the link. Please try again or contact your administrator.",
+  },
+  forgotPassword: {
+    title: 'Reset your password',
+    description: "Enter the email address for your coach account and we'll send you a link to reset your password.",
+    emailLabel: 'Email address',
+    emailPlaceholder: 'coach@example.com',
+    submit: 'Send reset link',
+    submitting: 'Sending...',
+    sentTitle: 'Check your email',
+    sentBody:
+      "If an account exists for that email address, we've sent a password reset link. Check your inbox and follow the link to reset your password. If it doesn't arrive, please make sure the address is correct.",
+    backToLogin: 'Back to sign in',
+  },
+  updatePassword: {
+    verifying: 'Verifying...',
+    guideTitle: 'Reset your password',
+    guideBody: "You've arrived from a verification link. Press the button below to start setting a new password.",
+    guideAction: 'Continue',
+    formTitle: 'Set a new password',
+    formDescription: 'Enter the new password you will use to sign in.',
+    submit: 'Update password',
+    submitting: 'Updating...',
+    successTitle: 'Password updated',
+    successBody: 'Redirecting you to sign in shortly. Please sign in with your new password.',
+    successAction: 'Go to sign in',
+    invalidTitle: "We couldn't verify your reset link",
+    invalidBody: 'Your password reset link has expired or could not be verified. Please request a new reset email.',
+    invalidAction: 'Request a new reset link',
+    backToLogin: 'Back to sign in',
+    networkError: 'A network error occurred. Please try again later.',
+  },
+  invite: {
+    verifying: 'Verifying your invitation...',
+    formTitle: 'Coach account setup',
+    formDescription: ({ name, email }) => `${name} (${email}) — please set a password to sign in to the Coach Portal.`,
+    fallbackName: 'Coach',
+    submit: 'Activate account',
+    submitting: 'Activating...',
+    expiredTitle: 'Invitation link expired',
+    invalidTitle: "We couldn't verify your invitation",
+    backToLogin: 'Back to sign in',
+    unexpected: AUTH_ERROR_MESSAGES.unexpected,
+  },
+  passwordFields: {
+    newPassword: 'New password',
+    confirmPassword: 'Confirm new password',
+    requirement: 'At least 8 characters, including both letters and numbers',
+    tooShort: AUTH_ERROR_MESSAGES.password_too_short,
+    needsAlnum: AUTH_ERROR_MESSAGES.password_needs_alnum,
+    match: 'Passwords match',
+    mismatch: 'Passwords do not match',
+  },
 };

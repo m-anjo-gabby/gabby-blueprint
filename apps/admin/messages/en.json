@@ -60,8 +60,7 @@
     "invalidLinkTitle": "This link is invalid",
     "invalidLinkBody": "This reset link has already been used or has expired. Would you like to send another reset email?",
     "passwordUpdatedNotice": "Your password has been updated. Please sign in with your new password.",
-    "linkErrorNotice": "We couldn't verify the link. Please try again or contact your administrator.",
-    "copyright": "© {year} Gabby All rights reserved."
+    "linkErrorNotice": "We couldn't verify the link. Please try again or contact your administrator."
   },
   "authErrors": {
     "missing_credentials": "Please enter your email address and password.",
@@ -72,7 +71,6 @@
     "portal_forbidden": "You do not have permission. Please sign in from the student site.",
     "signout_failed": "An error occurred while signing out.",
     "missing_email": "Please enter your email address.",
-    "reset_email_failed": "Failed to send the email. Please try again later.",
     "password_too_short": "Password must be at least 8 characters long.",
     "password_needs_alnum": "Password must contain both letters and numbers.",
     "password_same_as_old": "Your new password must be different from your current password.",
@@ -82,7 +80,57 @@
     "password_update_failed": "Failed to update your password.",
     "session_timeout": "Your session has timed out. Please sign in again.",
     "current_password_incorrect": "Your current password is incorrect.",
+    "reset_link_required": "We couldn't verify your reset link. Please request a new reset email.",
+    "invitation_invalid": "This invitation link is invalid or has already been used.",
+    "invitation_expired": "This invitation link has expired. Please ask your administrator to send a new one.",
+    "account_create_failed": "Failed to create your account.",
     "unexpected": "An unexpected error occurred. Please try again later."
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "description": "Enter the email address registered to your admin account and we'll send you a link to reset your password.",
+    "emailLabel": "Email address",
+    "submit": "Send reset link",
+    "submitting": "Sending...",
+    "sentTitle": "Check your email",
+    "sentBody": "If an account exists for that email address, we've sent a password reset link. Check your inbox and follow the link to reset your password. If it doesn't arrive, please make sure the address is correct.",
+    "backToLogin": "Back to sign in"
+  },
+  "updatePassword": {
+    "verifying": "Verifying...",
+    "guideTitle": "Reset your password",
+    "guideBody": "You've arrived from a verification link. Press the button below to start setting a new password.",
+    "guideAction": "Continue",
+    "formTitle": "Set a new password",
+    "formDescription": "Enter the new password you will use to sign in to the admin console.",
+    "submit": "Update password",
+    "submitting": "Updating...",
+    "successTitle": "Password updated",
+    "successBody": "Redirecting you to sign in shortly. Please sign in with your new password.",
+    "successAction": "Go to sign in",
+    "invalidTitle": "We couldn't verify your reset link",
+    "invalidBody": "Your password reset link has expired or could not be verified. Please request a new reset email.",
+    "invalidAction": "Request a new reset link",
+    "backToLogin": "Back to sign in",
+    "networkError": "A network error occurred. Please try again later."
+  },
+  "invite": {
+    "verifying": "Verifying your invitation...",
+    "formTitle": "Admin account setup",
+    "formDescription": "{name} ({email}) — please set a password to sign in to the admin console.",
+    "fallbackName": "Admin",
+    "submit": "Activate account",
+    "submitting": "Activating...",
+    "expiredTitle": "Invitation link expired",
+    "invalidTitle": "We couldn't verify your invitation",
+    "backToLogin": "Back to sign in"
+  },
+  "passwordFields": {
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "requirement": "At least 8 characters, including both letters and numbers",
+    "match": "Passwords match",
+    "mismatch": "Passwords do not match"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -356,14 +404,6 @@
     "password": {
       "title": "Change Password",
       "currentPasswordLabel": "Current password",
-      "newPasswordLabel": "New password",
-      "confirmPasswordLabel": "New password (confirm)",
-      "errorTooShort": "New password must be at least 8 characters.",
-      "errorComplexity": "Password must contain both letters and numbers.",
-      "errorMismatchSubmit": "The new passwords do not match.",
-      "strengthHint": "Include both letters and numbers",
-      "matchSuccess": "Passwords match",
-      "matchFail": "Passwords do not match",
       "toastUpdateFailed": "Failed to update password.",
       "toastUpdateSuccess": "Password updated successfully",
       "submitLabel": "Update password",

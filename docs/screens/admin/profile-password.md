@@ -21,7 +21,7 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | 現在のパスワード欄 | 常時表示（必須） | 入力値が誤っている場合、送信後にこの欄の下にエラーメッセージが表示され、入力値はクリアされる |
-| 新しいパスワード欄 | 常時表示（必須・8文字以上） | 入力中、英字と数字を両方含んでいない場合は即座に警告文が表示される |
+| 新しいパスワード欄 | 常時表示（必須・8文字以上）。欄の下に条件（8文字以上・英数混在）を常に案内する | 入力中、英字と数字を両方含んでいない場合は、案内が警告文に切り替わる |
 | 新しいパスワード（確認用）欄 | 常時表示（必須） | 新しいパスワードと一致していれば緑色のチェック付きメッセージ、不一致なら赤色のメッセージがリアルタイムで表示される |
 | 「パスワードを更新」ボタン | 常時表示 | 送信中は「更新中...」表示になる。以下のバリデーションをクライアント側で行った上でサーバーに送信する: 8文字以上、英字と数字を両方含む、確認用と一致 |
 | 「ダッシュボードに戻る」リンク | 常時表示 | `/dashboard` へ遷移 |
@@ -38,4 +38,7 @@
 - `apps/admin/app/(app)/profile/password/page.tsx`
 - `apps/admin/actions/adminAuthAction.ts`（`updatePassword`）
 - 共通コンポーネント: `packages/lib/components/common/PasswordInput.tsx`,
-  `packages/lib/components/common/SubmitButton.tsx`
+  `packages/lib/components/common/SubmitButton.tsx`、
+  新しいパスワード欄と送信前チェックは `packages/lib/components/auth/NewPasswordFields.tsx`（再設定・招待と共通）
+- 文言: `apps/admin/messages/{ja,en}.json` の `profile.password`、新しいパスワード欄は `passwordFields`
+  （`apps/admin/components/auth/useAuthLabels.ts` の `usePasswordFieldLabels`）
