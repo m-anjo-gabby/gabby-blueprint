@@ -10,6 +10,7 @@
 
 | ファイル | パス | 概要 | 状態 |
 |---|---|---|---|
+| [login.md](student/login.md) | `/login` | ログイン（ロック・ライセンス確認、ログイン後に元の画面へ戻る） | ✅ |
 | [calendar.md](student/calendar.md) | `/calendar` | 予定の月表示、セッションキャンセル、未消化枠の予約リクエスト | ✅ |
 | [dashboard.md](student/dashboard.md) | `/dashboard` | ログイン後の起点画面。各機能への導線・次回セッション表示 | ✅ |
 | [chat/list.md](student/chat/list.md) | `/chat` | 参加中チャットルーム一覧（個別/グループ） | ✅ |
@@ -37,6 +38,7 @@
 
 | ファイル | パス | 概要 | 状態 |
 |---|---|---|---|
+| [login.md](coach/login.md) | `/login` | ログイン（ロック、ログイン後に元の画面へ戻る。要確認事項あり） | ✅ |
 | [dashboard.md](coach/dashboard.md) | `/dashboard` | Attentionタイル・直近セッション・Session Tasks | ✅ |
 | [calendar.md](coach/calendar.md) | `/calendar` | 月間カレンダー＋Pending Requestsパネル | ✅ |
 | [chat/list.md](coach/chat/list.md) | `/chat` | チャットルーム一覧（2ペイン） | ✅ |
@@ -63,6 +65,7 @@
 
 | ファイル | パス | 概要 | 状態 |
 |---|---|---|---|
+| [login.md](admin/login.md) | `/login` | ログイン（表示言語切替・ロック、ログイン後に元の画面へ戻る。要確認事項あり） | ✅ |
 | [dashboard.md](admin/dashboard.md) | `/dashboard` | 5モジュールの件数・要対応件数サマリー | ✅ |
 | [clients.md](admin/clients.md) | `/clients` | 顧客（テナント）マスタ管理（要確認事項あり） | ✅ |
 | [contracts/list.md](admin/contracts/list.md) | `/contracts` | 契約管理（プラン紐付け・ライセンス割当） | ✅ |
