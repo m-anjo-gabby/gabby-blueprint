@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDown, ChevronLeft, Loader2, Trash2 } from 'lucide-react';
+import { ArrowDown, ChevronLeft, Loader2, Paperclip, Trash2 } from 'lucide-react';
 import { useChatStore } from '../../stores/useChatStore';
 import { useTimezone } from '../../hooks/useTimezone';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -17,6 +17,7 @@ import { CHAT_ROOM_TYPES, ChatMessage, ChatRoom, ChatRoomMemberSummary } from '@
 import { CHAT_SPLIT_CLASSES, getHeaderTimeLabels, useChatUi } from './ChatUiContext';
 import { ChatAvatar } from './ChatAvatar';
 import { ChatComposer } from './ChatComposer';
+import { useChatAttachmentUpload } from './useChatAttachmentUpload';
 import { ChatMessageContent } from './ChatMessageContent';
 
 interface ChatTimelineProps {
@@ -80,6 +81,11 @@ export function ChatTimeline({
   const setActiveRoom = useChatStore((state) => state.setActiveRoom);
   const { showConfirm } = useConfirm();
   const { showToast } = useToast();
+  const { isUploading, addFiles } = useChatAttachmentUpload(roomId, labels);
+  // ファイルのドラッグ中（タイムライン全体をドロップ先にする）。子要素の出入りで dragenter/leave が
+  // 繰り返し発生するため、入った回数を数えて判定する
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const dragDepthRef = useRef(0);
 
   // APIは created_at 降順で返るため、表示用に昇順へ並び替える
   const [messages, setMessages] = useState<ChatMessage[]>(() => [...initialMessages].reverse());
@@ -310,6 +316,34 @@ export function ChatTimeline({
     );
   };
 
+  // ファイルをタイムラインにドロップすると、クリップ添付と同じく送信前の添付に加える（即送信しない）
+  const hasFiles = (e: React.DragEvent) => Array.from(e.dataTransfer.types).includes('Files');
+  const fileDropHandlers = {
+    onDragEnter: (e: React.DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      dragDepthRef.current += 1;
+      setIsDraggingFile(true);
+    },
+    onDragOver: (e: React.DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (!hasFiles(e)) return;
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+      if (dragDepthRef.current === 0) setIsDraggingFile(false);
+    },
+    onDrop: (e: React.DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      dragDepthRef.current = 0;
+      setIsDraggingFile(false);
+      addFiles(Array.from(e.dataTransfer.files));
+    },
+  };
+
   const subtitle = !isMember
     ? members.map((m) => `${m.user_name || labels.unnamedUser}（${labels.userType[m.user_type]}）`).join(' / ')
     : isGroup
@@ -319,7 +353,16 @@ export function ChatTimeline({
         : '';
 
   return (
-    <section className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-surface text-ink">
+    <section
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-surface text-ink"
+      {...(isMember ? fileDropHandlers : {})}
+    >
+      {isDraggingFile && (
+        <div className="pointer-events-none absolute inset-2 z-20 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand-300 bg-brand-50/90 text-sm font-bold text-brand">
+          <Paperclip size={22} />
+          {labels.dropToAttach}
+        </div>
+      )}
       <header
         className={cn(
           'flex shrink-0 items-center gap-3 border-b px-3 py-3 transition-colors sm:px-4',
@@ -474,7 +517,7 @@ export function ChatTimeline({
       {/* 入力エリアはタイムラインと同じ背景で一体に見せる。過去のメッセージを読んでいる間だけ境界線を出す */}
       <div className={cn('shrink-0 border-t transition-colors', isAwayFromBottom ? 'border-line' : 'border-transparent')}>
         {isMember ? (
-          <ChatComposer roomId={roomId} onSent={handleSent} />
+          <ChatComposer roomId={roomId} onSent={handleSent} isUploading={isUploading} onAddFiles={addFiles} />
         ) : (
           <div className="p-4 text-center text-xs font-bold text-ink-subtle">{labels.viewOnlyNotice}</div>
         )}

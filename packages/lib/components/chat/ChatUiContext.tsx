@@ -46,6 +46,10 @@ export interface ChatLabels extends ChatRoomTitleLabels {
   readReceipt: string;
   deletedMessage: string;
   attachmentFailed: string;
+  /** 添付画像の拡大表示 */
+  openImage: string;
+  openOriginalImage: string;
+  closeImage: string;
   deleteMessage: string;
   deleteMessageConfirmTitle: string;
   deleteMessageConfirmBody: string;
@@ -56,6 +60,8 @@ export interface ChatLabels extends ChatRoomTitleLabels {
   attachFile: string;
   sendMessage: string;
   removeAttachment: string;
+  /** ファイルをタイムラインにドラッグしている間の案内 */
+  dropToAttach: string;
   sendFailed: string;
   fileTooLarge: (fileName: string) => string;
   uploadFailed: (fileName: string) => string;

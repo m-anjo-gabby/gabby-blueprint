@@ -1032,11 +1032,15 @@
     },
     "messageContent": {
       "deletedMessage": "This message was deleted",
-      "attachmentFetchFailed": "Failed to fetch the attachment"
+      "attachmentFetchFailed": "Failed to fetch the attachment",
+      "openImage": "View image",
+      "openOriginalImage": "Open original",
+      "closeImage": "Close"
     },
     "messageInput": {
       "attachFile": "Attach a file",
       "sendMessage": "Send",
+      "dropToAttach": "Drop files here to attach",
       "placeholder": "Type a message",
       "removeTooltip": "Remove",
       "toastSendFailed": "Failed to send the message",

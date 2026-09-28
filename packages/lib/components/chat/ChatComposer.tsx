@@ -3,17 +3,21 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FileText, Loader2, Paperclip, Send, X } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useHydrated } from '../../hooks/useHydrated';
 import { sendChatMessage } from '../../chat/actions/messageActions';
-import { uploadChatAttachment } from '../../chat/actions/attachmentActions';
 import { formatFileSize } from '../../chat/formatFileSize';
 import { useChatDraft, useChatDraftStore } from '../../stores/useChatDraftStore';
 import { cn } from '../../utils';
-import { CHAT_ATTACHMENT_MAX_SIZE, ChatMessage } from '@gabby/types/chat';
+import { ChatMessage } from '@gabby/types/chat';
 import { useChatUi } from './ChatUiContext';
 
 interface ChatComposerProps {
   roomId: string;
   onSent: (message: ChatMessage) => void;
+  /** 添付のアップロード中か（useChatAttachmentUpload。タイムラインへのドロップと共有する） */
+  isUploading: boolean;
+  /** ファイルを送信前の添付に加える（即送信はしない） */
+  onAddFiles: (files: File[]) => void;
 }
 
 /**
@@ -75,14 +79,16 @@ function ComposerIconButton({
  * メッセージ入力欄。
  * 入力中の本文・添付はルームごとの下書きとして保持し、ルームを切り替えて戻っても失われない。
  */
-export function ChatComposer({ roomId, onSent }: ChatComposerProps) {
+export function ChatComposer({ roomId, onSent, isUploading, onAddFiles }: ChatComposerProps) {
   const { labels } = useChatUi();
   const { showToast } = useToast();
   const { text, attachments } = useChatDraft(roomId);
   const setDraft = useChatDraftStore((state) => state.setDraft);
   const clearDraft = useChatDraftStore((state) => state.clearDraft);
-  const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  // ハイドレーション前に入力された内容は、ハイドレーション時に下書きの値で上書きされる。
+  // 入力できる状態になったことを data-ready で示す（E2E はこれを待ってから入力する）
+  const isHydrated = useHydrated();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -126,34 +132,19 @@ export function ChatComposer({ roomId, onSent }: ChatComposerProps) {
     }
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (files.length === 0) return;
+    onAddFiles(files);
+  };
 
-    setIsUploading(true);
-    try {
-      for (const file of files) {
-        if (file.size > CHAT_ATTACHMENT_MAX_SIZE) {
-          showToast(labels.fileTooLarge(file.name), 'error');
-          continue;
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-        const uploadRes = await uploadChatAttachment(roomId, formData);
-        if (!uploadRes.success || !uploadRes.attachment) {
-          showToast(uploadRes.message || labels.uploadFailed(file.name), 'error');
-          continue;
-        }
-        const uploaded = uploadRes.attachment;
-        // アップロード中にルームを切り替えても、そのルームの下書きへ追加する
-        const current = useChatDraftStore.getState().drafts[roomId]?.attachments ?? [];
-        setDraft(roomId, { attachments: [...current, uploaded] });
-      }
-    } finally {
-      setIsUploading(false);
-    }
+  // スクリーンショット等の貼り付けは、クリップ添付と同じく送信前の添付に加える（即送信しない）。
+  // Excel・Word 等からのコピーは文字と画像の両方が入るため、文字がある場合は通常の文字の貼り付けを優先する
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = Array.from(e.clipboardData.files);
+    if (files.length === 0 || e.clipboardData.getData('text/plain')) return;
+    e.preventDefault();
+    onAddFiles(files);
   };
 
   const handleRemovePending = (filePath: string) => {
@@ -204,6 +195,8 @@ export function ChatComposer({ roomId, onSent }: ChatComposerProps) {
             rows={1}
             value={text}
             onChange={(e) => setDraft(roomId, { text: e.target.value })}
+            onPaste={handlePaste}
+            data-ready={isHydrated ? 'true' : undefined}
             onKeyDown={(e) => {
               // PCはEnterで送信（Shift+Enterで改行）。IME変換確定のEnter・タッチ端末のEnterでは送信しない
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !isTouchDevice()) {

@@ -7,6 +7,7 @@ import { formatFileSize } from '../../chat/formatFileSize';
 import { linkifyText } from '../../chat/linkifyText';
 import { ChatAttachmentRecord, ChatMessage } from '@gabby/types/chat';
 import { useChatUi } from './ChatUiContext';
+import { ChatImageViewer } from './ChatImageViewer';
 
 /** 吹き出しの中身（本文・添付ファイル・削除済み表示） */
 export function ChatMessageContent({ message }: { message: ChatMessage }) {
@@ -64,10 +65,10 @@ function ChatAttachmentView({ attachment }: { attachment: ChatAttachmentRecord }
 
   if (isImage) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer">
+      <ChatImageViewer url={url} fileName={attachment.file_name}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
-      </a>
+      </ChatImageViewer>
     );
   }
 

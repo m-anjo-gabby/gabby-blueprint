@@ -1032,11 +1032,15 @@
     },
     "messageContent": {
       "deletedMessage": "このメッセージは削除されました",
-      "attachmentFetchFailed": "添付ファイルの取得に失敗しました"
+      "attachmentFetchFailed": "添付ファイルの取得に失敗しました",
+      "openImage": "画像を拡大表示",
+      "openOriginalImage": "元の画像を開く",
+      "closeImage": "閉じる"
     },
     "messageInput": {
       "attachFile": "ファイルを添付",
       "sendMessage": "送信",
+      "dropToAttach": "ここにドロップして添付",
       "placeholder": "メッセージを入力",
       "removeTooltip": "削除",
       "toastSendFailed": "メッセージの送信に失敗しました",
