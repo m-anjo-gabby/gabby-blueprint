@@ -135,7 +135,7 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     const { data: schedules, error } = await supabase
       .from('com_m_lesson_schedule')
-      .select('schedule_id, ticket_id, slot_no, day_of_week, start_time, end_time, coach_id, status')
+      .select('schedule_id, ticket_id, slot_no, day_of_week, start_time, end_time, coach_id, status, target_sessions')
       .eq('ticket_id', ticketId)
       .order('slot_no', { ascending: true });
 
@@ -373,6 +373,46 @@ export async function matchStudentWithCoachAsAdmin(params: {
     return { success: true };
   } catch (err) {
     logger.error('liveSession:admin_match_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: params });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
+/**
+ * 定期スケジュール枠のtarget_sessions個別引き上げ（アドミン代理操作）。
+ * total_sessions（契約全体のセッション数）は変更しない、あくまで正当な理由がある
+ * 追加予約の例外措置。fn_generate_sessions_for_schedule()は呼ばない
+ * （同関数は「この呼び出しで新規作成した行数」しか数えないため、既存生成済み分を
+ * 考慮できず再実行すると過剰生成してしまう。target_sessions引き上げ後は
+ * fn_schedule_shortfall()が自動的にshortfallを検知し、既存の「セッションを予約」/
+ * 「直接マッチング」ボタンから管理者が個別に日時を指定して追加予約する）。
+ * 理由(reason)は必須。DB側に履歴テーブルは持たないため、説明責任の担保として
+ * ここでログに残す。
+ */
+export async function adjustTargetSessionsAsAdmin(
+  scheduleId: string,
+  newTargetSessions: number,
+  reason: string
+): Promise<AdminSessionActionResult> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createServerClient();
+    const { error } = await supabase.rpc('admin_adjust_schedule_target_sessions', {
+      p_schedule_id: scheduleId,
+      p_new_target_sessions: newTargetSessions,
+      p_reason: reason,
+    });
+
+    if (error) {
+      logger.error('liveSession:adjust_target_sessions_failed', error.message, { ...ctx, payload: { scheduleId, newTargetSessions, reason } });
+      return { success: false, message: error.message };
+    }
+
+    logger.info('liveSession:adjust_target_sessions_success', 'Schedule target_sessions adjusted', { ...ctx, payload: { scheduleId, newTargetSessions, reason } });
+
+    revalidatePath('/live-sessions');
+    return { success: true };
+  } catch (err) {
+    logger.error('liveSession:adjust_target_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { scheduleId, newTargetSessions, reason } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

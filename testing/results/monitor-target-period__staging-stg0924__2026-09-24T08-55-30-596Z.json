@@ -1,0 +1,123 @@
+{
+  "scenario": "monitor-target-period",
+  "env": "staging",
+  "tag": "stg0924",
+  "executedAt": "2026-09-24T08:55:30.596Z",
+  "gitCommit": "5e4b1b93",
+  "gitBranch": "feature/20260924-dev",
+  "totalChecks": 22,
+  "passed": 21,
+  "failed": 1,
+  "ok": false,
+  "checks": [
+    {
+      "name": "受講生一覧: 前期の月(2026-07-01) → 生徒01/03/04のみ",
+      "ok": true,
+      "detail": "actual=01,03,04"
+    },
+    {
+      "name": "受講生一覧: 前期の月(2026-07-01)・モニター含む → 生徒01/03/04/02のみ",
+      "ok": true,
+      "detail": "actual=01,02,03,04"
+    },
+    {
+      "name": "受講生一覧: 前期最終月(2026-08-01) → 生徒01/03/04のみ",
+      "ok": true,
+      "detail": "actual=01,03,04"
+    },
+    {
+      "name": "受講生一覧: 当期の月(2026-09-01) → 生徒01のみ",
+      "ok": true,
+      "detail": "actual=01"
+    },
+    {
+      "name": "受講生一覧: 当期の月(2026-09-01)・モニター含む → 生徒01/02のみ",
+      "ok": true,
+      "detail": "actual=01,02"
+    },
+    {
+      "name": "受講生一覧: 次期開始の直前月(2026-11-01) → 生徒01のみ",
+      "ok": false,
+      "detail": "actual=01,05"
+    },
+    {
+      "name": "受講生一覧: 次期の月(2026-12-01) → 生徒05のみ",
+      "ok": true,
+      "detail": "actual=05"
+    },
+    {
+      "name": "get_monitor_word_history: 前期の月 → 生徒01/03/04の実績のみ",
+      "ok": true,
+      "detail": "actual=01,03,04"
+    },
+    {
+      "name": "get_monitor_word_history: 当期の月 → ライセンス外の03/04の実績は除外され01のみ",
+      "ok": true,
+      "detail": "actual=01"
+    },
+    {
+      "name": "get_monitor_word_history: 当期の月・モニター含む → 01/02",
+      "ok": true,
+      "detail": "actual=01,02"
+    },
+    {
+      "name": "get_monitor_word_history: 前期の月・_user_ids=[03,06] → 対象生徒の03のみ（デモ06は指定しても除外）",
+      "ok": true,
+      "detail": "actual=03"
+    },
+    {
+      "name": "get_monitor_sprint_history: 前期の月 → 生徒01/03/04の実績のみ",
+      "ok": true,
+      "detail": "actual=01,03,04"
+    },
+    {
+      "name": "get_monitor_sprint_history: 当期の月 → ライセンス外の03/04の実績は除外され01のみ",
+      "ok": true,
+      "detail": "actual=01"
+    },
+    {
+      "name": "get_monitor_sprint_history: 当期の月・モニター含む → 01/02",
+      "ok": true,
+      "detail": "actual=01,02"
+    },
+    {
+      "name": "get_monitor_sprint_history: 前期の月・_user_ids=[03,06] → 対象生徒の03のみ（デモ06は指定しても除外）",
+      "ok": true,
+      "detail": "actual=03"
+    },
+    {
+      "name": "get_monitor_sprint_drill_history: 前期の月 → 生徒01/03/04の実績のみ",
+      "ok": true,
+      "detail": "actual=01,03,04"
+    },
+    {
+      "name": "get_monitor_sprint_drill_history: 当期の月 → ライセンス外の03/04の実績は除外され01のみ",
+      "ok": true,
+      "detail": "actual=01"
+    },
+    {
+      "name": "get_monitor_sprint_drill_history: 当期の月・モニター含む → 01/02",
+      "ok": true,
+      "detail": "actual=01,02"
+    },
+    {
+      "name": "get_monitor_sprint_drill_history: 前期の月・_user_ids=[03,06] → 対象生徒の03のみ（デモ06は指定しても除外）",
+      "ok": true,
+      "detail": "actual=03"
+    },
+    {
+      "name": "get_monitor_user_list: 対象期間を省略した呼び出しはエラーになる（NOW()基準のフォールバック廃止）",
+      "ok": true,
+      "detail": "PGRST202"
+    },
+    {
+      "name": "旧シグネチャ get_monitor_user_list(BOOLEAN) が削除されている",
+      "ok": true
+    },
+    {
+      "name": "内部ヘルパー private.get_monitor_target_users は認証ユーザーから直接呼べない",
+      "ok": true,
+      "detail": "42501"
+    }
+  ]
+}

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -19,18 +20,22 @@ import { PART_OF_SPEECH_OPTIONS, PART_OF_SPEECH_MAP, type PartOfSpeechType } fro
 // バリデーションスキーマ
 // ============================================================
 
-const entrySchema = z.object({
-  word_en:                  z.string().min(1, '英単語は必須です'),
-  part_of_speech:           z.string().min(1, '品詞を選択してください'),
-  word_ja:                  z.string().min(1, '日本語訳は必須です'),
-  syllables:                z.string().optional(),
-  primary_stress_syllable:  z.string().optional(),
-  stress_vowel_spelling:    z.string().optional(),
-  cv_id:                    z.string().optional(),
-  phonetic_spelling:        z.string().optional(),
-});
+type FormT = ReturnType<typeof useTranslations<'tools.cvDictionary.formDialog'>>;
 
-type EntryFormValues = z.infer<typeof entrySchema>;
+function createEntrySchema(t: FormT) {
+  return z.object({
+    word_en:                  z.string().min(1, t('errors.wordRequired')),
+    part_of_speech:           z.string().min(1, t('errors.posRequired')),
+    word_ja:                  z.string().min(1, t('errors.jaRequired')),
+    syllables:                z.string().optional(),
+    primary_stress_syllable:  z.string().optional(),
+    stress_vowel_spelling:    z.string().optional(),
+    cv_id:                    z.string().optional(),
+    phonetic_spelling:        z.string().optional(),
+  });
+}
+
+type EntryFormValues = z.infer<ReturnType<typeof createEntrySchema>>;
 
 // ============================================================
 // Props
@@ -54,6 +59,8 @@ export function CVWordFormDialog({
   fixedWordEn,
   onSuccess,
 }: CVWordFormDialogProps) {
+  const t = useTranslations('tools.cvDictionary.formDialog');
+  const entrySchema = useMemo(() => createEntrySchema(t), [t]);
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -106,14 +113,14 @@ export function CVWordFormDialog({
       });
 
       if (result.success) {
-        showToast(mode === 'create' ? 'エントリを登録しました' : 'エントリを更新しました', 'success');
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         onSuccess?.();
       } else {
-        setServerError(result.message || '処理に失敗しました');
+        setServerError(result.message || t('toastGenericFailed'));
       }
     } catch {
-      setServerError('システムエラーが発生しました');
+      setServerError(t('toastSystemError'));
     }
   };
 
@@ -129,7 +136,7 @@ export function CVWordFormDialog({
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-1.5 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none shrink-0 h-8 text-xs">
-            <PlusCircle size={14} /> 単語追加
+            <PlusCircle size={14} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50">
@@ -144,11 +151,11 @@ export function CVWordFormDialog({
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認</>
+              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> エントリの新規登録</>
+              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
             ) : (
-              <><Languages size={18} className="text-indigo-400" /> エントリの編集</>
+              <><Languages size={18} className="text-indigo-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -184,7 +191,7 @@ export function CVWordFormDialog({
                     <Select onValueChange={field.onChange} value={field.value} disabled={mode === 'edit'}>
                       <FormControl>
                         <SelectTrigger className="rounded-xl border-slate-200">
-                          <SelectValue placeholder="選択..." />
+                          <SelectValue placeholder={t('posPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -202,7 +209,7 @@ export function CVWordFormDialog({
             {/* 日本語訳 */}
             <FormField control={form.control} name="word_ja" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">日本語訳</FormLabel>
+                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('japaneseLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100">{field.value}</div>
                 ) : (
@@ -295,9 +302,9 @@ export function CVWordFormDialog({
                   <p className="text-xs font-bold text-center text-slate-400 uppercase tracking-tighter">Please confirm the details above</p>
                   {serverError && <Alert variant="destructive" className="text-xs py-2">{serverError}</Alert>}
                   <div className="flex gap-3">
-                    <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>戻る</Button>
+                    <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>{t('back')}</Button>
                     <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold" disabled={isSubmitting}>
-                      {isSubmitting ? '保存中...' : '確定する'}
+                      {isSubmitting ? t('saving') : t('confirmButton')}
                     </Button>
                   </div>
                 </div>
@@ -307,7 +314,7 @@ export function CVWordFormDialog({
                   className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11"
                   onClick={async () => { if (await form.trigger()) setIsConfirming(true); }}
                 >
-                  内容を確認する
+                  {t('reviewButton')}
                 </Button>
               )}
             </div>

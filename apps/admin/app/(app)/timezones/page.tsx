@@ -1,8 +1,10 @@
+import { getTranslations } from 'next-intl/server';
 import { getTimezones } from "@/actions/adminTimezoneAction";
 import { TimezoneDataTable } from "./_components/TimezoneDataTable";
 import { TimezoneFormDialog } from "./_components/TimezoneFormDialog";
 
 export default async function TimezonesPage() {
+  const t = await getTranslations('timezones.page');
   const timezones = await getTimezones();
 
   return (
@@ -10,9 +12,9 @@ export default async function TimezonesPage() {
       {/* ヘッダー */}
       <div className="flex justify-between items-center">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">タイムゾーン管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-xs text-slate-500 mt-1">
-            生徒・コーチ・管理者のプロフィールで選択可能なタイムゾーン（IANA準拠）を管理します
+            {t('subtitle')}
           </p>
         </div>
         <TimezoneFormDialog />

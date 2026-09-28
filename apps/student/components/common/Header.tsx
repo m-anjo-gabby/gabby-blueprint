@@ -29,14 +29,9 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { signOut } from '@/actions/authAction';
 import { getLatestTerms } from '@/actions/termAction';
 import { TermsAgreementModal } from './TermsAgreementModal';
+import type { TermDocument } from '@gabby/types/term';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 
-interface TermItem {
-  term_id: string;
-  term_type: string;
-  version_name: string;
-  storage_path: string;
-}
 
 export default function Header() {
   const user = useUserStore((state) => state.user);
@@ -44,13 +39,13 @@ export default function Header() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [terms, setTerms] = useState<TermItem[]>([]);
+  const [terms, setTerms] = useState<TermDocument[]>([]);
 
   // 参照モード用に最新の規約セットを取得
   useEffect(() => {
     const fetchLatestTerms = async () => {
       const data = await getLatestTerms();
-      setTerms(data as TermItem[]);
+      setTerms(data);
     };
     fetchLatestTerms();
   }, []);

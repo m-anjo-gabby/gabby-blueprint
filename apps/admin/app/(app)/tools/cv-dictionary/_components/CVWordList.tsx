@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +32,7 @@ import { deleteCVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
 // ============================================================
 
 export function CVWordList() {
+  const t = useTranslations('tools.cvDictionary.wordList');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -54,11 +56,11 @@ export function CVWordList() {
       const data = await getCVDictionaryWords();
       setWords(data);
     } catch {
-      showToast('単語一覧の取得に失敗しました', 'error');
+      showToast(t('fetchFailedToast'), 'error');
     } finally {
       setIsLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   useEffect(() => {
     fetchWords();
@@ -97,14 +99,14 @@ export function CVWordList() {
         await deleteCVDictionaryEntry(entry.word_en, entry.part_of_speech);
       }
 
-      showToast(`「${wordEn}」の全エントリを削除しました`, 'success');
+      showToast(t('deleteSuccessToast', { word: wordEn }), 'success');
       await fetchWords();
 
       if (selectedWord === wordEn) {
         router.push(pathname);
       }
     } catch {
-      showToast('削除中にエラーが発生しました', 'error');
+      showToast(t('deleteErrorToast'), 'error');
     }
   };
 
@@ -214,22 +216,26 @@ export function CVWordList() {
                               <AlertCircle size={32} />
                             </div>
                             <div className="text-center space-y-2">
-                              <AlertDialogTitle className="text-xl font-black text-slate-800">単語削除の確認</AlertDialogTitle>
+                              <AlertDialogTitle className="text-xl font-black text-slate-800">{t('deleteDialogTitle')}</AlertDialogTitle>
                               <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
-                                <span className="font-bold text-slate-900">「{word.word_en}」</span>のすべての品詞エントリ（{word.entry_count}件）を削除しますか？<br />
-                                音声ファイルも含め完全に削除されます。
+                                {t.rich('deleteDialogBody', {
+                                  word: word.word_en,
+                                  count: word.entry_count,
+                                  bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
+                                })}<br />
+                                {t('deleteDialogHint')}
                               </AlertDialogDescription>
                             </div>
                           </AlertDialogHeader>
                           <AlertDialogFooter className="flex gap-3 mt-6">
                             <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-slate-100 font-bold text-slate-500">
-                              キャンセル
+                              {t('cancel')}
                             </AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => handleDeleteWord(word.word_en)}
                               className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg"
                             >
-                              削除する
+                              {t('deleteConfirm')}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>

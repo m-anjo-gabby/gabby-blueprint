@@ -19,7 +19,7 @@ export default async function LessonSprintSetupPage({
   }
 
   const [contents, lessonSprints] = await Promise.all([
-    getAvailableSprintContents(),
+    getAvailableSprintContents(id),
     getLessonSprintHistory(id),
   ]);
 

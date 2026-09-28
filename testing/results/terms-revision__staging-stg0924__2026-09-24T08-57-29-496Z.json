@@ -1,0 +1,85 @@
+{
+  "scenario": "terms-revision",
+  "env": "staging",
+  "tag": "stg0924",
+  "executedAt": "2026-09-24T08:57:29.496Z",
+  "gitCommit": "5e4b1b93",
+  "gitBranch": "feature/20260924-dev",
+  "totalChecks": 15,
+  "passed": 15,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "admin: create_term で作成できる",
+      "ok": true
+    },
+    {
+      "name": "create_term: リビジョン1が作成者付きで登録される",
+      "ok": true,
+      "detail": "[{\"revision_id\":\"487f6517-604d-4b7d-a21c-aa8e188b8389\",\"revision_no\":1,\"insert_user\":\"56f96e38-d0d0-40ce-a26a-085fe2338aa4\"}]"
+    },
+    {
+      "name": "create_term: 同一種別・バージョン名は23505で拒否",
+      "ok": true,
+      "detail": "23505"
+    },
+    {
+      "name": "add_term_revision: 公開済みで修正理由なしは拒否",
+      "ok": true,
+      "detail": "change_note is required for published terms"
+    },
+    {
+      "name": "add_term_revision: 本文未変更は拒否",
+      "ok": true,
+      "detail": "content is unchanged"
+    },
+    {
+      "name": "add_term_revision: 修正理由ありでリビジョン2が追加される",
+      "ok": true,
+      "detail": "revNo=2"
+    },
+    {
+      "name": "add_term_revision: 公開前は修正理由なしで追加できる",
+      "ok": true
+    },
+    {
+      "name": "student: create_term は拒否",
+      "ok": true,
+      "detail": "not authorized to create terms"
+    },
+    {
+      "name": "student: add_term_revision は拒否",
+      "ok": true,
+      "detail": "not authorized to update terms"
+    },
+    {
+      "name": "trigger: リビジョンのUPDATEは拒否される",
+      "ok": true,
+      "detail": "com_m_terms_revision is append-only (revision_id=487f6517-604d-4b7d-a21c-aa8e188b8389)"
+    },
+    {
+      "name": "student: 最新リビジョン(2)を参照できる",
+      "ok": true,
+      "detail": "[{\"revision_id\":\"19d1ac19-ea13-4b2f-a320-f7f00ec7e4c6\",\"revision_no\":2},{\"revision_id\":\"487f6517-604d-4b7d-a21c-aa8e188b8389\",\"revision_no\":1}]"
+    },
+    {
+      "name": "anon: リビジョンを参照できる",
+      "ok": true
+    },
+    {
+      "name": "student: リビジョンの直接INSERTは拒否",
+      "ok": true,
+      "detail": "new row violates row-level security policy for table \"com_m_terms_revision\""
+    },
+    {
+      "name": "student: 同意時の revision_id が記録される",
+      "ok": true
+    },
+    {
+      "name": "FK: 同意済みリビジョンは削除できない",
+      "ok": true,
+      "detail": "update or delete on table \"com_m_terms_revision\" violates foreign key constraint \"com_t_user_terms_agreement_revision_id_fkey\" on table \"com_t_user_terms_agreement\""
+    }
+  ]
+}

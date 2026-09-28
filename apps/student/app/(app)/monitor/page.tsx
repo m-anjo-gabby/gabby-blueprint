@@ -60,7 +60,9 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
   const selectedUserIds = userIds ? userIds.split(',') : [];
 
   // 並列データフェッチ
-  const fetchUserList = getMonitorUserList(includeMonitor);
+  // 💡 対象期間(start/end)を渡し、「その期間に有効な契約を持っていた生徒」を一覧・絞り込み
+  //    候補の対象にする
+  const fetchUserList = getMonitorUserList(start, end, includeMonitor);
   const fetchWordHistory = getMonitorWordHistory(start, end, selectedUserIds.length > 0 ? selectedUserIds : undefined, includeMonitor);
   const fetchSprintHistory = getMonitorSprintHistory(start, end, selectedUserIds.length > 0 ? selectedUserIds : undefined, includeMonitor);
 

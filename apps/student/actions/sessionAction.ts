@@ -91,7 +91,7 @@ export async function cancelSession(
   const result = await cancelSessionCore(sessionId, reason, proposedSlots);
 
   if (!result.success) {
-    logger.error('student:cancel_session_failed', result.errorCode, ctx);
+    logger.error('student:cancel_session_failed', result.errorCode, { ...ctx, payload: { sessionId, reason, proposedSlots } });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -114,7 +114,7 @@ export async function checkSessionConflict(
   const result = await checkSessionConflictCore(coachId, studentId, startIso, endIso, excludeSessionId);
 
   if (!result.success) {
-    logger.error('student:check_session_conflict_failed', result.errorCode, ctx);
+    logger.error('student:check_session_conflict_failed', result.errorCode, { ...ctx, payload: { coachId, studentId, startIso, endIso, excludeSessionId } });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -135,7 +135,7 @@ export async function createSessionBookingRequest(
   const result = await createSessionBookingRequestCore(scheduleId, startIso, endIso, reason);
 
   if (!result.success) {
-    logger.error('student:create_booking_request_failed', result.errorCode, ctx);
+    logger.error('student:create_booking_request_failed', result.errorCode, { ...ctx, payload: { scheduleId, startIso, endIso } });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -153,7 +153,7 @@ export async function withdrawSessionBookingRequest(
   const result = await withdrawSessionBookingRequestCore(requestId);
 
   if (!result.success) {
-    logger.error('student:withdraw_booking_request_failed', result.errorCode, ctx);
+    logger.error('student:withdraw_booking_request_failed', result.errorCode, { ...ctx, payload: { requestId } });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -198,7 +198,7 @@ export async function acceptRescheduleProposal(
   const result = await acceptRescheduleProposalCore(proposalId);
 
   if (!result.success) {
-    logger.error('student:accept_reschedule_proposal_failed', result.errorCode, ctx);
+    logger.error('student:accept_reschedule_proposal_failed', result.errorCode, { ...ctx, payload: { proposalId } });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -216,7 +216,7 @@ export async function declineRescheduleProposals(
   const result = await declineRescheduleProposalsCore(sessionId);
 
   if (!result.success) {
-    logger.error('student:decline_reschedule_proposals_failed', result.errorCode, ctx);
+    logger.error('student:decline_reschedule_proposals_failed', result.errorCode, { ...ctx, payload: { sessionId } });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -234,7 +234,7 @@ export async function getSessionResultSummary(
   const result = await getSessionResultSummaryCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();
-    logger.error('student:get_session_result_summary_failed', result.errorCode, ctx);
+    logger.error('student:get_session_result_summary_failed', result.errorCode, { ...ctx, payload: { sessionId } });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
   return { success: true, session: result.session };

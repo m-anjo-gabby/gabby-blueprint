@@ -2,6 +2,7 @@
 
 import { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import Papa from 'papaparse';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,6 +23,8 @@ import { ClientOption } from '@gabby/types/client';
 const MAX_BULK_COUNT = 30;
 
 export function UserBulkImportDialog() {
+  const t = useTranslations('users.bulkImport');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
@@ -64,7 +67,7 @@ export function UserBulkImportDialog() {
         const res = await getClientsFilter();
         setClients(res);
       } catch (error) {
-        showToast("顧客リストの取得に失敗しました", "error");
+        showToast(t('toastClientFetchFailed'), "error");
       } finally {
         setIsLoadingClients(false);
       }
@@ -94,7 +97,7 @@ export function UserBulkImportDialog() {
       const activeContracts = await getActiveContractsByClient(clientId);
       setContracts(activeContracts);
     } catch (error) {
-      showToast("契約情報の取得に失敗しました", "error");
+      showToast(t('toastContractFetchFailed'), "error");
     } finally {
       setIsLoadingContracts(false);
     }
@@ -102,7 +105,7 @@ export function UserBulkImportDialog() {
 
   const processFile = (file: File) => {
     if (!selectedClientId) {
-      showToast("先に所属顧客を選択してください", "error");
+      showToast(t('toastSelectClientFirst'), "error");
       return;
     }
 
@@ -111,17 +114,17 @@ export function UserBulkImportDialog() {
       skipEmptyLines: true,
       complete: (results) => {
         if (results.data.length > MAX_BULK_COUNT) {
-          showToast(`一度に登録できるのは${MAX_BULK_COUNT}件までです`, "error");
+          showToast(t('toastMaxCount', { max: MAX_BULK_COUNT }), "error");
           return;
         }
 
         const parsedData = results.data.map((row) => {
           const email = (row['メールアドレス'] || row['email'] || '').trim();
           const userName = (row['名前'] || row['user_name'] || '').trim();
-          
+
           let error = '';
-          if (!email || !email.includes('@')) error = '無効なメール形式';
-          else if (!userName) error = '名前未入力';
+          if (!email || !email.includes('@')) error = t('errorInvalidEmail');
+          else if (!userName) error = t('errorNameRequired');
 
           return {
             email,
@@ -146,7 +149,7 @@ export function UserBulkImportDialog() {
     // 生徒(user_type === '1')が含まれる場合、ライセンス割当は必須とする
     const hasStudent = data.some(user => user.user_type === '1');
     if (hasStudent && !selectedContractId) {
-      showToast("生徒が含まれるため、ライセンスの割当が必須です。", "error");
+      showToast(t('toastLicenseRequired'), "error");
       return;
     }
 
@@ -165,7 +168,7 @@ export function UserBulkImportDialog() {
       }
 
     } catch (error) {
-      showToast("処理中にエラーが発生しました", "error");
+      showToast(t('toastProcessError'), "error");
       if (!userResult) {
         setIsProcessing(false);
         return;
@@ -227,7 +230,7 @@ export function UserBulkImportDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2 border-dashed border-slate-300 hover:bg-slate-50 transition-colors font-bold">
-          <UserPlus size={16} /> 一括登録
+          <UserPlus size={16} /> {t('button')}
         </Button>
       </DialogTrigger>
 
@@ -238,33 +241,33 @@ export function UserBulkImportDialog() {
               <DialogTitle className="text-2xl font-black flex items-center gap-2">
                 {hasCompleted ? (
                   <>
-                    <CheckCircle2 className="text-emerald-400" size={24} /> 
-                    インポート結果レポート
+                    <CheckCircle2 className="text-emerald-400" size={24} />
+                    {t('resultTitle')}
                   </>
                 ) : (
                   <>
-                    <UserPlus className="text-indigo-400" size={24} /> 
-                    新規ユーザーの一括登録
+                    <UserPlus className="text-indigo-400" size={24} />
+                    {t('title')}
                   </>
                 )}
               </DialogTitle>
               <p className="text-xs text-slate-400 font-medium">
-                {hasCompleted 
-                  ? "ユーザー作成とライセンス割当の結果を確認してください。" 
-                  : `CSVファイルをアップロードしてください（最大${MAX_BULK_COUNT}件）`
+                {hasCompleted
+                  ? t('resultSubtitle')
+                  : t('subtitle', { max: MAX_BULK_COUNT })
                 }
               </p>
             </div>
-            
+
             {/* インポート完了前のみダウンロードボタンを表示 */}
             {!hasCompleted && (
-              <Button 
-                variant="outline" 
-                asChild 
+              <Button
+                variant="outline"
+                asChild
                 className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white h-9 text-[11px] font-bold shrink-0"
               >
                 <a href="/templates/balk_user_sample.csv" download>
-                  <Download size={14} className="mr-2 text-indigo-400" /> サンプルCSVをDL
+                  <Download size={14} className="mr-2 text-indigo-400" /> {t('downloadSample')}
                 </a>
               </Button>
             )}
@@ -277,15 +280,15 @@ export function UserBulkImportDialog() {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">1</span>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">所属顧客</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('clientLabel')}</label>
               </div>
-              
+
               <SearchableSelect
                 options={clients.map(c => ({ value: c.client_id, label: c.client_name }))}
                 value={selectedClientId}
                 onChange={handleClientChange}
-                placeholder={isLoadingClients ? "読み込み中..." : "顧客を選択してください"}
-                searchPlaceholder="顧客名で検索..."
+                placeholder={isLoadingClients ? tCommon('loading') : t('selectClientPlaceholder')}
+                searchPlaceholder={t('clientSearchPlaceholder')}
                 disabled={isProcessing || hasCompleted || isLoadingClients}
                 className="bg-white shadow-sm" // 一括登録の背景に合わせて微調整
               />
@@ -301,7 +304,7 @@ export function UserBulkImportDialog() {
                   2
                 </span>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  初期ライセンス割当
+                  {t('licenseLabel')}
                 </label>
               </div>
               
@@ -322,10 +325,10 @@ export function UserBulkImportDialog() {
                   ) : selectedClientId && contracts.length === 0 ? (
                     <div className="flex items-center gap-2 text-orange-600">
                       <AlertCircle size={14} className="shrink-0" />
-                      <span className="text-xs font-bold whitespace-nowrap">有効な契約がありません（割当必須）</span>
+                      <span className="text-xs font-bold whitespace-nowrap">{t('noContracts')}</span>
                     </div>
                   ) : (
-                    <SelectValue placeholder="ライセンスを選択してください" />
+                    <SelectValue placeholder={t('selectLicensePlaceholder')} />
                   )}
                 </SelectTrigger>
 
@@ -333,11 +336,11 @@ export function UserBulkImportDialog() {
                   {contracts.length > 0 ? (
                     contracts.map(c => (
                       <SelectItem key={c.contract_id} value={c.contract_id} className="text-xs">
-                        {c.plan_name}（残 {c.remaining_licenses}枠）
+                        {t('planWithRemaining', { plan: c.plan_name, count: c.remaining_licenses })}
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="none" disabled>有効な契約がありません（割当必須）</SelectItem>
+                    <SelectItem value="none" disabled>{t('noContracts')}</SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -350,7 +353,7 @@ export function UserBulkImportDialog() {
             {!selectedClientId ? (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-2 border-2 border-dashed rounded-2xl bg-slate-50/50">
                 <AlertCircle className="mb-2 opacity-10" size={48} />
-                <p className="text-sm font-bold text-slate-400">先に顧客を選択してください</p>
+                <p className="text-sm font-bold text-slate-400">{t('selectClientFirst')}</p>
               </div>
             ) : data.length === 0 ? (
               <div className="flex-1 flex flex-col gap-4">
@@ -363,22 +366,22 @@ export function UserBulkImportDialog() {
                     <Upload className={isDragging ? "animate-bounce text-indigo-500" : ""} size={32} />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-bold text-slate-700">CSVファイルをドロップするかクリックして選択</p>
-                    <p className="text-[11px] text-slate-400 mt-1 font-medium">.csv または .tsv 形式のみ対応</p>
+                    <p className="text-sm font-bold text-slate-700">{t('dropzoneTitle')}</p>
+                    <p className="text-[11px] text-slate-400 mt-1 font-medium">{t('dropzoneHint')}</p>
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept=".csv,.tsv" onChange={handleFileChange} />
                 </div>
               </div>
             ) : (
               <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1">{hasCompleted ? "処理結果一覧" : "内容確認"}</h3>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1">{hasCompleted ? t('resultListTitle') : t('previewTitle')}</h3>
                 <div className="flex-1 overflow-auto border border-slate-200 rounded-xl bg-white shadow-sm">
                   <Table>
                     <TableHeader className="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10">
                       <TableRow className="hover:bg-transparent border-slate-200">
-                        <TableHead className="w-32 text-[10px] uppercase font-bold text-center text-slate-500">データ / メール</TableHead>
-                        <TableHead className="w-48 text-[10px] uppercase font-bold text-slate-500">メールアドレス</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold text-slate-500">名前</TableHead>
+                        <TableHead className="w-32 text-[10px] uppercase font-bold text-center text-slate-500">{t('colStatus')}</TableHead>
+                        <TableHead className="w-48 text-[10px] uppercase font-bold text-slate-500">{t('colEmail')}</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold text-slate-500">{t('colName')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -394,16 +397,16 @@ export function UserBulkImportDialog() {
                                       row.status === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
                                     }`}
                                   >
-                                    {row.status === 'success' ? 'データ作成済' : '作成失敗'}
+                                    {row.status === 'success' ? t('created') : t('createFailed')}
                                   </Badge>
                                   {row.mailStatus === 'success' && (
                                     <Badge variant="outline" className="bg-emerald-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
-                                      メール送信済
+                                      {t('mailSent')}
                                     </Badge>
                                   )}
                                   {row.mailStatus === 'error' && (
                                     <Badge variant="outline" className="bg-rose-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
-                                      メール送信失敗
+                                      {t('mailFailed')}
                                     </Badge>
                                   )}
                                 </>
@@ -432,20 +435,20 @@ export function UserBulkImportDialog() {
             onClick={() => { setData([]); setHasCompleted(false); setSelectedContractId(""); }} 
             disabled={isProcessing}
           >
-            {hasCompleted ? <><RefreshCcw size={14} className="mr-1.5" /> 別のファイルを読み込む</> : "リセット"}
+            {hasCompleted ? <><RefreshCcw size={14} className="mr-1.5" /> {t('loadAnother')}</> : t('reset')}
           </Button>
 
           <div className="flex gap-3">
             <Button variant="outline" size="sm" className="rounded-xl px-5 font-bold border-slate-200" onClick={handleClose} disabled={isProcessing}>
-              {hasCompleted ? "閉じる" : "キャンセル"}
+              {hasCompleted ? tCommon('close') : tCommon('cancel')}
             </Button>
             {!hasCompleted && (
-              <Button 
+              <Button
                 size="sm" className="px-8 font-black text-xs rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 transition-all active:scale-95"
-                onClick={handleImport} 
+                onClick={handleImport}
                 disabled={isProcessing || data.some(d => !d.isValid) || data.length === 0}
               >
-                {isProcessing ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" /> 実行中...</> : "一括登録を開始"}
+                {isProcessing ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" /> {t('processing')}</> : t('start')}
               </Button>
             )}
           </div>

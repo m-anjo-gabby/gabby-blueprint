@@ -57,6 +57,7 @@ export async function getClients(page: number = 1, limit: number = 10, searchQue
       .select('*', { count: 'exact' })
       .eq('delete_flg', '0')
       .order('insert_date', { ascending: false })
+      .order('client_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
 
     if (searchQuery) {

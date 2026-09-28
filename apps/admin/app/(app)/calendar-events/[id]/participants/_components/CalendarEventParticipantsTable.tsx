@@ -12,6 +12,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { getUserTypeLabel } from '@gabby/types/user';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
@@ -23,27 +24,28 @@ interface CalendarEventParticipantsTableProps {
 }
 
 export function CalendarEventParticipantsTable({ data, totalCount }: CalendarEventParticipantsTableProps) {
+  const t = useTranslations('calendarEvents.participantsTable');
   const [globalFilter, setGlobalFilter] = React.useState('');
 
   const columns = React.useMemo<ColumnDef<CalendarEventParticipant>[]>(
     () => [
       {
         accessorKey: 'user_name',
-        header: '氏名',
-        cell: ({ row }) => <span className="font-bold text-slate-700">{row.original.user_name || '(不明)'}</span>,
+        header: t('nameHeader'),
+        cell: ({ row }) => <span className="font-bold text-slate-700">{row.original.user_name || t('unknown')}</span>,
       },
       {
         accessorKey: 'user_type',
-        header: '種別',
+        header: t('typeHeader'),
         cell: ({ row }) => <span className="text-slate-600">{getUserTypeLabel(row.original.user_type)}</span>,
       },
       {
         accessorKey: 'insert_date',
-        header: '参加登録日時',
+        header: t('registeredAtHeader'),
         cell: ({ row }) => <span className="text-slate-500">{formatDateTimeByZone(row.original.insert_date)}</span>,
       },
     ],
-    []
+    [t]
   );
 
   const table = useReactTable({
@@ -62,7 +64,7 @@ export function CalendarEventParticipantsTable({ data, totalCount }: CalendarEve
   return (
     <div className="space-y-4">
       <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm w-fit">
-        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">参加人数</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">{t('participantCount')}</p>
         <p className="text-2xl font-black text-slate-800 mt-1">{totalCount}</p>
       </div>
 
@@ -72,7 +74,7 @@ export function CalendarEventParticipantsTable({ data, totalCount }: CalendarEve
             <div className="relative flex-1 group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
               <Input
-                placeholder="氏名で検索..."
+                placeholder={t('searchPlaceholder')}
                 value={globalFilter ?? ''}
                 onChange={(e) => setGlobalFilter(e.target.value)}
                 className="pl-10 pr-10 h-9 bg-white border-slate-200 focus-visible:ring-1 focus-visible:ring-slate-400 shadow-sm"
@@ -91,7 +93,10 @@ export function CalendarEventParticipantsTable({ data, totalCount }: CalendarEve
 
           <div className="flex items-center gap-4">
             <div className="hidden md:block text-[13px] text-slate-500 whitespace-nowrap font-medium">
-              全 <span className="text-slate-900">{table.getFilteredRowModel().rows.length}</span> 件
+              {t.rich('totalCount', {
+                count: table.getFilteredRowModel().rows.length,
+                styled: (chunks) => <span className="text-slate-900">{chunks}</span>,
+              })}
             </div>
 
             <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-sm">
@@ -151,7 +156,7 @@ export function CalendarEventParticipantsTable({ data, totalCount }: CalendarEve
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                    参加者がまだいません。
+                    {t('noParticipants')}
                   </TableCell>
                 </TableRow>
               )}

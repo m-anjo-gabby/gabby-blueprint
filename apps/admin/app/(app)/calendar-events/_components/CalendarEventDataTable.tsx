@@ -13,6 +13,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight, Search, X, Trash2, Users } from 'lucide-react';
 import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
@@ -36,15 +37,17 @@ interface CalendarEventDataTableProps {
 }
 
 export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
+  const t = useTranslations('calendarEvents.dataTable');
+  const tCommon = useTranslations('common');
   const { showToast } = useToast();
   const [globalFilter, setGlobalFilter] = React.useState('');
 
   const handleDelete = async (calendarEventId: string) => {
     const result = await deleteCalendarEvent(calendarEventId);
     if (result.success) {
-      showToast('カレンダーイベントを削除しました', 'success');
+      showToast(t('toastDeleted'), 'success');
     } else {
-      showToast(result.message || '削除に失敗しました', 'error');
+      showToast(result.message || t('toastDeleteFailed'), 'error');
     }
   };
 
@@ -52,7 +55,7 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
     () => [
       {
         accessorKey: 'event_type',
-        header: '種別',
+        header: t('typeHeader'),
         cell: ({ row }) => {
           const badge = CALENDAR_EVENT_TYPES[row.original.event_type];
           return (
@@ -64,51 +67,51 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
       },
       {
         accessorKey: 'title',
-        header: 'タイトル',
+        header: t('titleHeader'),
         cell: ({ row }) => <span className="font-bold text-slate-700">{row.original.title}</span>,
       },
       {
         accessorKey: 'start_datetime',
-        header: '開始日時',
+        header: t('startDatetimeHeader'),
         cell: ({ row }) => (
           <span className="text-slate-600">{formatDateTimeByZone(row.original.start_datetime, 'Asia/Tokyo', false)}</span>
         ),
       },
       {
         id: 'coaches',
-        header: '担当コーチ',
+        header: t('coachHeader'),
         cell: ({ row }) => {
           const coaches = row.original.coaches ?? [];
-          if (coaches.length === 0) return <span className="text-slate-300">-</span>;
+          if (coaches.length === 0) return <span className="text-slate-300">{t('noCoach')}</span>;
           return (
-            <span className="text-xs text-slate-600">{coaches.map((c) => c.user_name || '(名称未設定)').join(', ')}</span>
+            <span className="text-xs text-slate-600">{coaches.map((c) => c.user_name || t('unnamed')).join(', ')}</span>
           );
         },
       },
       {
         accessorKey: 'is_published',
-        header: '公開状態',
+        header: t('publishStatusHeader'),
         cell: ({ row }) =>
           row.original.is_published ? (
             <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-emerald-50 text-emerald-700 border-emerald-100">
-              公開中
+              {t('published')}
             </span>
           ) : (
             <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-slate-100 text-slate-500 border-slate-200">
-              下書き
+              {t('draft')}
             </span>
           ),
       },
       {
         id: 'actions',
-        header: () => <div className="text-right">操作</div>,
+        header: () => <div className="text-right">{t('actionsHeader')}</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
             {(row.original.rsvp_enabled || (row.original.coaches?.length ?? 0) > 0) && (
               <Link
                 href={`/calendar-events/${row.original.calendar_event_id}/participants`}
                 className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all active:scale-95"
-                title="参加者・アナウンスを管理"
+                title={t('manageParticipants')}
               >
                 <Users size={15} />
               </Link>
@@ -124,20 +127,21 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle className="font-black">カレンダーイベントの削除</AlertDialogTitle>
+                  <AlertDialogTitle className="font-black">{t('deleteDialogTitle')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    「<span className="font-bold text-slate-900">{row.original.title}</span>」を削除してもよろしいですか？
-                    <br />
-                    削除後は生徒/コーチのカレンダーから表示されなくなります。
+                    {t.rich('deleteDialogBody', {
+                      title: row.original.title,
+                      bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
+                    })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel className="rounded-xl font-bold">キャンセル</AlertDialogCancel>
+                  <AlertDialogCancel className="rounded-xl font-bold">{tCommon('cancel')}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => handleDelete(row.original.calendar_event_id)}
                     className="bg-rose-600 hover:bg-rose-700 rounded-xl font-bold"
                   >
-                    削除する
+                    {t('deleteConfirm')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -146,7 +150,7 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
         ),
       },
     ],
-    []
+    [t, tCommon]
   );
 
   const table = useReactTable({
@@ -169,7 +173,7 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
-              placeholder="タイトルで検索..."
+              placeholder={t('searchPlaceholder')}
               value={globalFilter ?? ''}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="pl-10 pr-10 h-9 bg-white border-slate-200 focus-visible:ring-1 focus-visible:ring-slate-400 shadow-sm"
@@ -188,7 +192,10 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
 
         <div className="flex items-center gap-4">
           <div className="hidden md:block text-[13px] text-slate-500 whitespace-nowrap font-medium">
-            全 <span className="text-slate-900">{table.getFilteredRowModel().rows.length}</span> 件
+            {t.rich('totalCount', {
+              count: table.getFilteredRowModel().rows.length,
+              styled: (chunks) => <span className="text-slate-900">{chunks}</span>,
+            })}
           </div>
 
           <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-sm">
@@ -248,7 +255,7 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  カレンダーイベントが見つかりませんでした。
+                  {t('noData')}
                 </TableCell>
               </TableRow>
             )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function ContentAccessDialog({ content, children }: Props) {
+  const t = useTranslations('contents.accessDialog')
   const [open, setOpen] = useState(false)
   const [isAddMode, setIsAddMode] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -35,11 +37,11 @@ export function ContentAccessDialog({ content, children }: Props) {
       setAssignedClients(data.assignedClients)
       setUnassignedClients(data.unassignedClients)
     } catch (error) {
-      showToast('データ取得に失敗しました', 'error')
+      showToast(t('toastFetchFailed'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [content.content_id, showToast])
+  }, [content.content_id, showToast, t])
 
   useEffect(() => {
     if (open) {
@@ -53,9 +55,9 @@ export function ContentAccessDialog({ content, children }: Props) {
     const res = await assignAccess(content.content_id, clientId)
     if (res.success) {
       await loadData()
-      showToast('アクセス権限を付与しました', 'success')
+      showToast(t('toastAssigned'), 'success')
     } else {
-      showToast('付与に失敗しました', 'error')
+      showToast(t('toastAssignFailed'), 'error')
       setLoading(false)
     }
   }
@@ -65,9 +67,9 @@ export function ContentAccessDialog({ content, children }: Props) {
     const res = await removeAccess(content.content_id, clientId)
     if (res.success) {
       await loadData()
-      showToast('アクセス権限を解除しました', 'success')
+      showToast(t('toastRemoved'), 'success')
     } else {
-      showToast('解除に失敗しました', 'error')
+      showToast(t('toastRemoveFailed'), 'error')
       setLoading(false)
     }
   }
@@ -82,7 +84,7 @@ export function ContentAccessDialog({ content, children }: Props) {
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             <ShieldCheck className="text-amber-400" size={20} />
-            {isAddMode ? '権限を追加' : 'アクセス許可済み顧客'}
+            {isAddMode ? t('addModeTitle') : t('listModeTitle')}
           </DialogTitle>
         </DialogHeader>
 
@@ -93,20 +95,20 @@ export function ContentAccessDialog({ content, children }: Props) {
             /* --- 追加モード --- */
             <div className="space-y-4">
               <Button variant="ghost" size="sm" onClick={() => setIsAddMode(false)} className="h-8 text-slate-500 p-0 font-bold hover:bg-transparent hover:text-indigo-600">
-                <ArrowLeft size={16} className="mr-1" /> 戻る
+                <ArrowLeft size={16} className="mr-1" /> {t('backButton')}
               </Button>
               <ScrollArea className="h-[350px] pr-4">
                 {unassignedClients.length === 0 ? (
                   <div className="text-center py-20 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 px-6">
                     <Building2 className="mx-auto text-slate-200 mb-2" size={32} />
-                    <p className="text-xs text-slate-400 font-bold leading-relaxed">追加できる顧客がいません</p>
+                    <p className="text-xs text-slate-400 font-bold leading-relaxed">{t('emptyUnassigned')}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {unassignedClients.map(client => (
                       <div key={client.client_id} className="flex items-center justify-between p-3 border rounded-2xl bg-slate-50/30 group hover:border-indigo-200 transition-colors">
                         <span className="text-sm font-bold text-slate-700">{client.client_name}</span>
-                        <Button size="sm" onClick={() => handleAdd(client.client_id)} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 h-8 rounded-xl font-bold">追加</Button>
+                        <Button size="sm" onClick={() => handleAdd(client.client_id)} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 h-8 rounded-xl font-bold">{t('addButtonLabel')}</Button>
                       </div>
                     ))}
                   </div>
@@ -119,7 +121,7 @@ export function ContentAccessDialog({ content, children }: Props) {
               <div className="flex justify-between items-center">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Authorized Clients</p>
                 <Button size="sm" onClick={() => setIsAddMode(true)} className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 rounded-xl h-8 font-bold shadow-md active:scale-95 transition-all">
-                  <Plus size={14} /> 顧客を追加
+                  <Plus size={14} /> {t('addClientsButton')}
                 </Button>
               </div>
 
@@ -128,8 +130,8 @@ export function ContentAccessDialog({ content, children }: Props) {
                   <div className="text-center py-20 bg-amber-50/50 rounded-3xl border border-dashed border-amber-200 px-6">
                     <AlertCircle className="mx-auto text-amber-300 mb-2" size={32} />
                     <p className="text-xs text-amber-600 font-bold leading-relaxed">
-                      割当がありません。<br />
-                      現在、どの顧客も閲覧できない状態です。
+                      {t('emptyAssignedTitle')}<br />
+                      {t('emptyAssignedBody')}
                     </p>
                   </div>
                 ) : (

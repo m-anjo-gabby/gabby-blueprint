@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { FileText, Loader2, Paperclip, Send, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ interface ChatMessageInputProps {
 }
 
 export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
+  const t = useTranslations('chat.messageInput');
   const { showToast } = useToast();
   const [text, setText] = useState('');
   const [pendingAttachments, setPendingAttachments] = useState<PendingChatAttachment[]>([]);
@@ -33,7 +35,7 @@ export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
     try {
       const res = await sendChatMessage({ roomId, message: trimmed, attachments: pendingAttachments });
       if (!res.success || !res.data) {
-        showToast(res.error || 'メッセージの送信に失敗しました', 'error');
+        showToast(res.error || t('toastSendFailed'), 'error');
         return;
       }
       setText('');
@@ -53,7 +55,7 @@ export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
     try {
       for (const file of files) {
         if (file.size > CHAT_ATTACHMENT_MAX_SIZE) {
-          showToast(`${file.name}: ファイルサイズは10MBまでです`, 'error');
+          showToast(t('toastFileSizeError', { name: file.name }), 'error');
           continue;
         }
 
@@ -61,7 +63,7 @@ export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
         formData.append('file', file);
         const uploadRes = await uploadChatAttachment(roomId, formData);
         if (!uploadRes.success || !uploadRes.attachment) {
-          showToast(uploadRes.message || `${file.name} のアップロードに失敗しました`, 'error');
+          showToast(uploadRes.message || t('toastUploadFailed', { name: file.name }), 'error');
           continue;
         }
         setPendingAttachments((prev) => [...prev, uploadRes.attachment!]);
@@ -92,7 +94,7 @@ export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
                   type="button"
                   onClick={() => handleRemovePending(a.file_path)}
                   className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5"
-                  title="削除"
+                  title={t('removeTooltip')}
                 >
                   <X size={13} />
                 </button>
@@ -122,7 +124,7 @@ export function ChatMessageInput({ roomId, onSent }: ChatMessageInputProps) {
                 handleSend();
               }
             }}
-            placeholder="メッセージを入力（Shift+Enterで改行）"
+            placeholder={t('placeholder')}
             className="min-h-10 max-h-32 resize-none"
             disabled={busy}
           />

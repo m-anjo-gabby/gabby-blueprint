@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -12,9 +13,6 @@ import { ClientOption } from '@gabby/types/client';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 
-// 顧客フィルターをリセットするための「すべての顧客」選択肢
-const ALL_CLIENTS_OPTION = { value: '', label: 'すべての顧客（絞り込みなし）' };
-
 interface GroupParticipantsPickerProps {
   users: ChatTargetUser[];
   clients: ClientOption[];
@@ -24,6 +22,9 @@ interface GroupParticipantsPickerProps {
 }
 
 export function GroupParticipantsPicker({ users, clients, selectedIds, onChange, disabled }: GroupParticipantsPickerProps) {
+  const t = useTranslations('chat.groupParticipantsPicker');
+  const tCommon = useTranslations('chat.common');
+  const ALL_CLIENTS_OPTION = { value: '', label: tCommon('allClientsOption') };
   const [userType, setUserType] = useState<UserType | ''>('');
   const [clientId, setClientId] = useState('');
 
@@ -45,7 +46,7 @@ export function GroupParticipantsPicker({ users, clients, selectedIds, onChange,
 
   return (
     <div className="space-y-2">
-      <label className="text-xs font-bold text-slate-600 block">参加者（複数選択可）</label>
+      <label className="text-xs font-bold text-slate-600 block">{t('label')}</label>
 
       <Tabs
         value={userType}
@@ -68,16 +69,16 @@ export function GroupParticipantsPicker({ users, clients, selectedIds, onChange,
           options={[ALL_CLIENTS_OPTION, ...clients.map((c) => ({ value: c.client_id, label: c.client_name }))]}
           value={clientId}
           onChange={setClientId}
-          placeholder="顧客で絞り込み（任意）"
-          searchPlaceholder="顧客名で検索..."
+          placeholder={tCommon('clientFilterPlaceholder')}
+          searchPlaceholder={tCommon('clientSearchPlaceholder')}
           disabled={disabled}
         />
       )}
 
       <Command className="rounded-xl border border-slate-200">
-        <CommandInput placeholder="名前で検索..." className="h-9" disabled={disabled} />
+        <CommandInput placeholder={tCommon('nameSearchPlaceholder')} className="h-9" disabled={disabled} />
         <CommandList className="max-h-[220px]">
-          <CommandEmpty>該当するユーザーが見つかりません。</CommandEmpty>
+          <CommandEmpty>{tCommon('noMatchingUsers')}</CommandEmpty>
           <CommandGroup>
             {filteredUsers.map((u) => {
               const checked = selectedIds.includes(u.id);
@@ -90,8 +91,8 @@ export function GroupParticipantsPicker({ users, clients, selectedIds, onChange,
                 >
                   <Check className={cn('mr-2 h-4 w-4 shrink-0', checked ? 'opacity-100' : 'opacity-0')} />
                   <span className="truncate">
-                    {u.user_name || '（名称未設定）'}
-                    {u.client_id ? ` - ${clientNameById.get(u.client_id) || '（顧客不明）'}` : ''}
+                    {u.user_name || tCommon('unnamed')}
+                    {u.client_id ? ` - ${clientNameById.get(u.client_id) || tCommon('unknownClient')}` : ''}
                   </span>
                   <span className="ml-auto pl-2 text-[10px] text-slate-400 shrink-0">{getUserTypeLabel(u.user_type)}</span>
                 </CommandItem>
@@ -110,13 +111,13 @@ export function GroupParticipantsPicker({ users, clients, selectedIds, onChange,
                 key={id}
                 className="inline-flex items-center gap-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium pl-2.5 pr-1.5 py-1"
               >
-                {u?.user_name || '（名称未設定）'}
+                {u?.user_name || tCommon('unnamed')}
                 <button
                   type="button"
                   onClick={() => toggle(id)}
                   disabled={disabled}
                   className="hover:text-indigo-900"
-                  aria-label={`${u?.user_name || '（名称未設定）'}を削除`}
+                  aria-label={tCommon('removeAriaLabel', { name: u?.user_name || tCommon('unnamed') })}
                 >
                   <X size={12} />
                 </button>

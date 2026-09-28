@@ -152,4 +152,4 @@ ALTER TABLE public.com_m_lesson_schedule ALTER COLUMN target_sessions SET NOT NU
 ALTER TABLE public.com_m_lesson_schedule DROP CONSTRAINT IF EXISTS chk_lesson_schedule_target_sessions;
 ALTER TABLE public.com_m_lesson_schedule ADD CONSTRAINT chk_lesson_schedule_target_sessions CHECK (target_sessions >= 1);
 
-COMMENT ON COLUMN public.com_m_lesson_schedule.target_sessions IS 'このコマ(slot_no)が契約上持つべき目標セッション数。承認時にtotal_sessions/weekly_frequencyの均等割り(余りはslot_no昇順に配分)で確定し、以後は不変。fn_generate_sessions_for_schedule()の生成上限、fn_schedule_shortfall()の期待値として使う唯一の真実源。';
+COMMENT ON COLUMN public.com_m_lesson_schedule.target_sessions IS 'このコマ(slot_no)が契約上持つべき目標セッション数。承認時にtotal_sessions/weekly_frequencyの均等割り(余りはslot_no昇順に配分)で確定し、以後は不変。fn_generate_sessions_for_schedule()の生成上限、fn_schedule_shortfall()の期待値として使う唯一の真実源。正当な理由がある追加予約の例外措置として、admin_adjust_schedule_target_sessions()経由でtotal_sessionsを変更せずに個別枠のみ引き上げ可能（詳細は同関数のコメント参照）。';

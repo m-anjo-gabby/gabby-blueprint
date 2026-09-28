@@ -12,7 +12,6 @@ import {
   History,
   Info,
   Loader2,
-  MessageCircle,
   PhoneOff,
   TrendingUp,
   TriangleAlert,
@@ -23,7 +22,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Section } from '@/components/common/Section';
 import { ImmersiveShell } from '@/components/common/ImmersiveShell';
 import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
-import { withLiveSessionParam } from '@/lib/liveSession/context';
+import { withLiveSessionParam, buildLiveSessionHubHref } from '@/lib/liveSession/context';
+import { LessonSprintHistoryRow } from '../../../_components/LessonSprintHistoryRow';
+import { DialoguePracticeCard } from '../../../_components/DialoguePracticeCard';
 import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -37,6 +38,7 @@ import { SESSION_STATUS, type SessionListItem, type SessionResultSummary } from 
 import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 import type { SelfTrainingWeekSummary } from '@gabby/types/coachStudent';
+import type { DialogueAssignmentSummary, DialogueContentSummary } from '@gabby/types/dialogue';
 
 interface Props {
   studentId: string;
@@ -46,6 +48,8 @@ interface Props {
   /** 直近のLive Sprint実施（このセッション自身の実施分を除く） */
   recentSprints: LessonSprintHistoryListItem[];
   selfTrainingSummary: SelfTrainingWeekSummary;
+  dialogueAssignments: DialogueAssignmentSummary[];
+  dialogueContents: DialogueContentSummary[];
 }
 
 /**
@@ -55,7 +59,10 @@ interface Props {
  *
  * Session Info（セッションの識別・通話の開始/終了）とTraining（教材操作）は特性が異なり
  * 誤操作にも繋がりやすいため、別セクションに分離している。Trainingは種類が増える前提
- * （Live Sprintに加えて将来Dialog Practice等）でカードグリッドの形にしてある。
+ * （Live SprintとDialog Practice）でカードグリッドの形にしてある。Dialog Practiceカードは
+ * 生徒概要画面のパネル（DialoguePracticeCard）と同一コンポーネントを共有しており、
+ * このハブでは`liveSessionId`を渡すことで、教材リンクを開いた事実をこのセッションに
+ * 紐づけて記録する（セッション結果画面のDialog Practice History参照）。
  *
  * このセッション自身の実施記録（入退室ログ・チャット履歴・スプリント履歴）はセッション結果画面
  * （.../result）で確認する前提とし、ここでは重複させない。代わりに、通話前後に画面遷移せず
@@ -72,7 +79,15 @@ interface Props {
  * どうかで出し分けず常時没入表示にする）。Live Sprint等コンテンツ側の没入判定（URLの
  * ?session_id=の有無）とは独立しており、混同しないこと（apps/coach/lib/liveSession/context.ts参照）。
  */
-export function SessionHub({ studentId, session, recentHomework, recentSprints, selfTrainingSummary }: Props) {
+export function SessionHub({
+  studentId,
+  session,
+  recentHomework,
+  recentSprints,
+  selfTrainingSummary,
+  dialogueAssignments,
+  dialogueContents,
+}: Props) {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
   const timezone = user?.timezone || 'Asia/Tokyo';
@@ -322,20 +337,12 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
                 </CardContent>
               </Card>
   
-              <Card className="rounded-2xl border-slate-200 border-dashed shadow-sm bg-slate-50/40">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-bold text-slate-500 flex items-center gap-1.5">
-                    <MessageCircle size={14} />
-                    Dialog Practice
-                    <span className="text-[9px] font-black uppercase tracking-wide text-slate-400 bg-white border border-slate-200 rounded-full px-1.5 py-0.5">
-                      Soon
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <p className="text-xs text-slate-400 italic">Coming soon.</p>
-                </CardContent>
-              </Card>
+              <DialoguePracticeCard
+                studentId={studentId}
+                assignments={dialogueAssignments}
+                availableContents={dialogueContents}
+                liveSessionId={session.session_id}
+              />
             </div>
           </Section>
         )}
@@ -353,18 +360,13 @@ export function SessionHub({ studentId, session, recentHomework, recentSprints, 
                   <ul className="space-y-2">
                     {recentSprints.map((entry) => (
                       <li key={entry.lesson_sprint_id}>
-                        <Link
-                          href={withLiveSessionParam(`/students/${studentId}/lesson-sprint/result/${entry.lesson_sprint_id}`, session.session_id)}
-                          className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-100/80 hover:border-slate-200 transition-colors"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-700 truncate">{entry.content_name}</p>
-                            <p className="text-[11px] text-slate-400">{formatDateTimeEn(entry.insert_date, timezone)}</p>
-                          </div>
-                          <span className="shrink-0 text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1">
-                            {entry.average_score !== null ? `${entry.average_score}/5` : '—'}
-                          </span>
-                        </Link>
+                        <LessonSprintHistoryRow
+                          studentId={studentId}
+                          record={entry}
+                          backHref={buildLiveSessionHubHref(studentId, session.session_id)}
+                          backLabel="Back to Session Hub"
+                          liveSessionId={session.session_id}
+                        />
                       </li>
                     ))}
                   </ul>

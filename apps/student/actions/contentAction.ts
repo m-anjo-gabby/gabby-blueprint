@@ -1,31 +1,54 @@
 "use server";
 
 import { createServerClient } from "@gabby/lib/supabase/server";
-import { ContentItem, FavoriteContentItem } from "@gabby/types/content";
+import { ContentItem, ContentRecord, ContentTagSummary, FavoriteContentItem } from "@gabby/types/content";
 import { ResumeContentResponse, ResumeMetadata } from "@gabby/types/training";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
+import { getMyDialogueAssignments } from "./dialogueAction";
 
 const logger = createLogger('student');
 
+const CONTENT_SELECT = `
+  *,
+  tags:com_t_contents_tag_rel(
+    tag:com_m_contents_tag(tag_id, tag_name, tag_type)
+  ),
+  is_favorite:com_t_favorite_contents(count)
+`;
+
+// CONTENT_SELECT のリレーション部分（タグ・お気に入り件数）を加えたcom_m_contentsの取得行
+type ContentRow = ContentRecord & {
+  tags: { tag: ContentTagSummary | null }[] | null;
+  is_favorite: { count: number }[] | null;
+};
+
+// com_m_contents の取得行を ContentItem 表示用の形へ変換（お気に入りcount→boolean、タグのフラット化）
+function mapContentRow(c: ContentRow): ContentItem {
+  return {
+    ...c,
+    is_favorite: (c.is_favorite?.[0]?.count || 0) > 0,
+    display_tags: c.tags
+      ?.map((t) => t.tag)
+      .filter((t): t is ContentTagSummary => t !== null) || []
+  };
+}
+
 // 全コンテンツを取得
+// ダイアログ（content_type=3）のみ、com_m_contentsのRLS可視範囲ではなく
+// 自身への割当（com_t_dialogue_assignment）を起点に取得する（コーチが割り当てたものだけを表示するため）
 export async function getAllContent(): Promise<ContentItem[]> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    
-    // RLSにより、ログインユーザーがアクセス権を持つレコードのみが自動的に返る
+
+    // 1. 通常コンテンツ（ダイアログ以外）。RLSにより、ログインユーザーがアクセス権を持つレコードのみが自動的に返る
     const { data, error } = await supabase
       .from('com_m_contents')
-      .select(`
-        *,
-        tags:com_t_contents_tag_rel(
-          tag:com_m_contents_tag(tag_id, tag_name, tag_type)
-        ),
-        is_favorite:com_t_favorite_contents(count)
-      `)
+      .select(CONTENT_SELECT)
       .eq('delete_flg', '0')
       .neq('content_scope', 9)
+      .neq('content_type', 3)
       .order('seq_no', { ascending: true });
 
     if (error) {
@@ -33,15 +56,32 @@ export async function getAllContent(): Promise<ContentItem[]> {
       return [];
     }
 
-    return (data || []).map(c => ({
-      ...c,
-      // countオブジェクトからbooleanへ変換
-      is_favorite: ((c.is_favorite as any)?.[0]?.count || 0) > 0,
-      // タグのリレーションをフラット化
-      display_tags: c.tags
-        ?.map((t: any) => t.tag)
-        .filter((t: any) => t !== null) || []
-    })) as unknown as ContentItem[];
+    const normalContents = (data || []).map(mapContentRow);
+
+    // 2. ダイアログ（割当済みのみ）
+    const assignments = await getMyDialogueAssignments();
+    if (assignments.length === 0) {
+      return normalContents;
+    }
+
+    const { data: dialogueData, error: dialogueError } = await supabase
+      .from('com_m_contents')
+      .select(CONTENT_SELECT)
+      .eq('delete_flg', '0')
+      .in('content_id', assignments.map(a => a.content_id));
+
+    if (dialogueError) {
+      logger.error("content:get_all_dialogue_failed", dialogueError.message, ctx);
+      return normalContents;
+    }
+
+    const assignmentIdByContentId = new Map(assignments.map(a => [a.content_id, a.assignment_id]));
+    const dialogueContents = (dialogueData || []).map(c => ({
+      ...mapContentRow(c),
+      assignment_id: assignmentIdByContentId.get(c.content_id),
+    }));
+
+    return [...normalContents, ...dialogueContents];
   } catch (err) {
     logger.error("content:get_all_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
     return [];

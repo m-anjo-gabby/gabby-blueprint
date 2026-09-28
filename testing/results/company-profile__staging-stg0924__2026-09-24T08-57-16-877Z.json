@@ -1,0 +1,38 @@
+{
+  "scenario": "company-profile",
+  "env": "staging",
+  "tag": "stg0924",
+  "executedAt": "2026-09-24T08:57:16.877Z",
+  "gitCommit": "5e4b1b93",
+  "gitBranch": "feature/20260924-dev",
+  "totalChecks": 5,
+  "passed": 5,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "tax_registration_number 列を含めて参照できる（列追加の反映）",
+      "ok": true
+    },
+    {
+      "name": "会社情報は1行のみ（シングルトン運用）",
+      "ok": true,
+      "detail": "1行"
+    },
+    {
+      "name": "名義がバンクーバー法人（Global Vision Technology Vancouver, Inc.）",
+      "ok": true,
+      "detail": "Global Vision Technology Vancouver, Inc."
+    },
+    {
+      "name": "住所がバンクーバー（Vancouver, BC）",
+      "ok": true,
+      "detail": "555 Burrard St / Vancouver, BC V7X 1M8 / Canada"
+    },
+    {
+      "name": "税務登録番号は未登録（NULL運用）",
+      "ok": true,
+      "detail": "null"
+    }
+  ]
+}

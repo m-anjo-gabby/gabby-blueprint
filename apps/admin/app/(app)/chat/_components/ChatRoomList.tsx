@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import { MessageCircle, ShieldCheck, User as UserIcon, Users as UsersIcon } from 'lucide-react';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -14,50 +15,54 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { CreateChatRoomDialog } from './CreateChatRoomDialog';
 
-// 顧客フィルターをリセットするための「すべての顧客」選択肢
-const ALL_CLIENTS_OPTION = { value: '', label: 'すべての顧客（絞り込みなし）' };
+type RoomListT = ReturnType<typeof useTranslations<'chat.roomList'>>;
+type CommonT = ReturnType<typeof useTranslations<'chat.common'>>;
 
 /** ルーム一覧の参加者から、参照可能な顧客の選択肢を重複なく抽出する */
-function getRoomClientOptions(rooms: ChatRoomListItem[]): { value: string; label: string }[] {
+function getRoomClientOptions(rooms: ChatRoomListItem[], t: RoomListT, locale: string): { value: string; label: string }[] {
   const clientNameById = new Map<string, string>();
   for (const room of rooms) {
     for (const member of room.members) {
       if (member.client_id) {
-        clientNameById.set(member.client_id, member.client_name || '（顧客名未設定）');
+        clientNameById.set(member.client_id, member.client_name || t('unnamedGroupClient'));
       }
     }
   }
   return Array.from(clientNameById.entries())
     .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'ja'));
+    .sort((a, b) => a.label.localeCompare(b.label, locale === 'en' ? 'en' : 'ja'));
 }
 
-function formatTime(iso: string, timeZone: string): string {
-  return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日', timeZone });
+function formatTime(iso: string, timeZone: string, t: RoomListT, locale: string): string {
+  return formatMessageHeaderTime(iso, { locale: locale === 'en' ? 'en-US' : 'ja-JP', yesterdayLabel: t('yesterdayLabel'), timeZone });
 }
 
-function getPreviewText(room: ChatRoomListItem): string {
+function getPreviewText(room: ChatRoomListItem, t: RoomListT): string {
   return getChatMessagePreviewText(room.last_message, {
-    deleted: '（このメッセージは削除されました）',
-    photo: '📷 画像',
-    file: '📎 ファイル',
-    noMessages: 'メッセージはまだありません',
+    deleted: t('previewDeleted'),
+    photo: t('previewPhoto'),
+    file: t('previewFile'),
+    noMessages: t('previewNoMessages'),
   });
 }
 
-function getRoomTitle(room: ChatRoomListItem, currentUserId: string | undefined): string {
+function getRoomTitle(room: ChatRoomListItem, currentUserId: string | undefined, tCommon: CommonT): string {
   if (room.room_type === CHAT_ROOM_TYPES.GROUP) {
-    return room.room_name || '（名称未設定）';
+    return room.room_name || tCommon('unnamed');
   }
   if (room.is_member) {
     const other = room.members.find((m) => m.user_id !== currentUserId);
-    return other?.user_name || '（名称未設定）';
+    return other?.user_name || tCommon('unnamed');
   }
   // Adminの査閲対象（非参加ルーム）は両参加者を並べて表示する
-  return room.members.map((m) => m.user_name || '（名称未設定）').join(' ⇔ ');
+  return room.members.map((m) => m.user_name || tCommon('unnamed')).join(' ⇔ ');
 }
 
 export function ChatRoomList() {
+  const t = useTranslations('chat.roomList');
+  const tCommon = useTranslations('chat.common');
+  const locale = useLocale();
+  const ALL_CLIENTS_OPTION = { value: '', label: tCommon('allClientsOption') };
   const myRooms = useChatStore((state) => state.rooms);
   const isLoadingMyRooms = useChatStore((state) => state.isLoading);
   const fetchMyRooms = useChatStore((state) => state.fetchRooms);
@@ -89,7 +94,7 @@ export function ChatRoomList() {
   const sourceRooms = mode === 'mine' ? myRooms : allRooms ?? [];
   const isLoading = mode === 'mine' ? isLoadingMyRooms : allRooms === null;
 
-  const clientOptions = useMemo(() => getRoomClientOptions(sourceRooms), [sourceRooms]);
+  const clientOptions = useMemo(() => getRoomClientOptions(sourceRooms, t, locale), [sourceRooms, t, locale]);
   const rooms = useMemo(
     () =>
       clientFilter
@@ -109,7 +114,7 @@ export function ChatRoomList() {
                 mode === 'mine' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'
               }`}
             >
-              自分のチャット
+              {t('myChatsTab')}
             </button>
             <button
               onClick={() => setMode('all')}
@@ -118,7 +123,7 @@ export function ChatRoomList() {
               }`}
             >
               <ShieldCheck size={13} />
-              全チャットルーム（査閲）
+              {t('allRoomsTab')}
             </button>
           </div>
         ) : (
@@ -130,8 +135,8 @@ export function ChatRoomList() {
             options={[ALL_CLIENTS_OPTION, ...clientOptions]}
             value={clientFilter}
             onChange={setClientFilter}
-            placeholder="顧客で絞り込み"
-            searchPlaceholder="顧客名で検索..."
+            placeholder={t('clientFilterPlaceholder')}
+            searchPlaceholder={tCommon('clientSearchPlaceholder')}
             className="w-56"
           />
           <CreateChatRoomDialog onCreated={invalidateMyRooms} />
@@ -143,9 +148,9 @@ export function ChatRoomList() {
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-400">
             <MessageCircle size={32} strokeWidth={1.5} />
             <p className="text-[13px] font-bold">
-              {clientFilter ? '該当する顧客のチャットルームがありません' : 'チャットルームがありません'}
+              {clientFilter ? t('noRoomsFiltered') : t('noRooms')}
             </p>
-            <p className="text-xs">「新規チャット作成」からコーチ・生徒とのチャットを開始できます</p>
+            <p className="text-xs">{t('createHint')}</p>
           </div>
         )}
 
@@ -165,7 +170,7 @@ export function ChatRoomList() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={iconUrl}
-                  alt={getRoomTitle(room, currentUser?.id)}
+                  alt={getRoomTitle(room, currentUser?.id, tCommon)}
                   className="w-11 h-11 shrink-0 rounded-full object-cover"
                 />
               ) : isGroup ? (
@@ -181,10 +186,10 @@ export function ChatRoomList() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-slate-800 truncate">
-                    {getRoomTitle(room, currentUser?.id)}
+                    {getRoomTitle(room, currentUser?.id, tCommon)}
                   </p>
                   {isGroup && (
-                    <span className="text-[10px] font-bold text-emerald-500 shrink-0">グループ</span>
+                    <span className="text-[10px] font-bold text-emerald-500 shrink-0">{t('groupBadge')}</span>
                   )}
                   {!isGroup && room.is_member && other && (
                     <span className="text-[10px] font-bold text-slate-400 shrink-0">
@@ -192,15 +197,15 @@ export function ChatRoomList() {
                     </span>
                   )}
                   {!room.is_member && (
-                    <span className="text-[10px] font-bold text-amber-500 shrink-0">非参加</span>
+                    <span className="text-[10px] font-bold text-amber-500 shrink-0">{t('notMemberBadge')}</span>
                   )}
                 </div>
-                <p className="text-[13px] text-slate-500 truncate mt-0.5">{getPreviewText(room)}</p>
+                <p className="text-[13px] text-slate-500 truncate mt-0.5">{getPreviewText(room, t)}</p>
               </div>
 
               <div className="flex flex-col items-end gap-1.5 shrink-0">
                 <span className="text-[11px] text-slate-400">
-                  {room.last_message ? formatTime(room.last_message.created_at, timeZone) : ''}
+                  {room.last_message ? formatTime(room.last_message.created_at, timeZone, t, locale) : ''}
                 </span>
                 {room.unread_count > 0 && (
                   <span className="min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CoachMonthlyReport } from '@gabby/types/monthlyReport';
@@ -25,6 +26,7 @@ function studentBreakdown(sessionsByDate: CoachMonthlyReport['students'][number]
 }
 
 export function ExportCsvButton({ report, coachName }: { report: CoachMonthlyReport; coachName: string }) {
+  const t = useTranslations('monthlyReports.exportCsv');
   const handleExport = () => {
     const headers = ['Student', 'Completed', 'Late cancel ', 'No Show', 'Total Sessions'];
     const rows = report.students.map((student) => {
@@ -51,7 +53,7 @@ export function ExportCsvButton({ report, coachName }: { report: CoachMonthlyRep
   return (
     <Button variant="outline" onClick={handleExport} disabled={report.students.length === 0}>
       <Download size={14} className="mr-1.5" />
-      CSV出力
+      {t('button')}
     </Button>
   );
 }

@@ -4,7 +4,7 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { LIVE_SESSION_END_AFTER_MS } from '../../liveSessionRoom/constants';
-import { hasCoachStudentRelationship } from './coachStudentActions';
+import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './coachStudentActions';
 import {
   CreateLessonSprintResultInput,
   CreateLessonSprintResultResponse,
@@ -71,11 +71,15 @@ function shuffleArray<T>(array: T[]): T[] {
   return result;
 }
 
+const SPRINT_CONTENT_TYPE = 2;
+
 /**
- * コーチがLesson Sprintの教材として選択できるコンテンツ一覧を取得する
- * (content_type=2: Gabbyスプリント教材。可視範囲はcom_m_contentsのRLSに委ねる)
+ * コーチが指定生徒のLesson Sprintの教材として選択できるコンテンツ一覧を取得する
+ * (content_type=2: Gabbyスプリント教材。対象生徒のテナントで公開されている教材のみ。
+ * com_m_contentsのRLSはコーチが担当した全生徒のテナント分を返すため、
+ * getStudentAvailableContentIdsで絞り込む)
  */
-export async function getAvailableSprintContentsCore(): Promise<GetLessonSprintContentsResult> {
+export async function getAvailableSprintContentsCore(studentId: string): Promise<GetLessonSprintContentsResult> {
   const ctx = await getLogContext();
 
   try {
@@ -83,10 +87,24 @@ export async function getAvailableSprintContentsCore(): Promise<GetLessonSprintC
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
+    if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    const availableIds = await getStudentAvailableContentIds(supabase, studentId, SPRINT_CONTENT_TYPE);
+    if (!availableIds) {
+      logger.error('lessonSprint:get_available_content_ids_failed', 'RPC get_student_available_content_ids failed', { ...ctx, userId: user.id, payload: { studentId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (availableIds.size === 0) {
+      return { success: true, contents: [] };
+    }
+
     const { data, error } = await supabase
       .from('com_m_contents')
       .select('content_id, content_name, content_name_en, metadata')
-      .eq('content_type', 2)
+      .in('content_id', [...availableIds])
+      .eq('content_type', SPRINT_CONTENT_TYPE)
       .eq('delete_flg', '0')
       .order('seq_no', { ascending: true });
 
@@ -180,6 +198,16 @@ export async function createLessonSprintResultCore(
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, input.student_id))) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+
+    // 対象生徒のテナントで公開されていない教材での結果登録を拒否する
+    const availableIds = await getStudentAvailableContentIds(supabase, input.student_id, SPRINT_CONTENT_TYPE);
+    if (!availableIds) {
+      logger.error('lessonSprint:create_result_available_content_ids_failed', 'RPC get_student_available_content_ids failed', { ...ctx, userId: user.id, payload: { studentId: input.student_id } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!availableIds.has(input.content_id)) {
       return { success: false, errorCode: 'forbidden' };
     }
 

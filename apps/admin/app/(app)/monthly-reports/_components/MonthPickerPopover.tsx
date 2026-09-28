@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+const MONTH_KEYS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12'];
 
 export function MonthPickerPopover({
   currentMonth,
@@ -15,6 +16,8 @@ export function MonthPickerPopover({
   onSelect: (yearMonth: string) => void;
   children: React.ReactNode;
 }) {
+  const t = useTranslations('monthlyReports.monthPicker');
+  const tMonths = useTranslations('monthlyReports.monthPicker.months');
   const [open, setOpen] = useState(false);
   const [selectedYear, selectedMonth] = currentMonth.split('-').map(Number);
   const [viewYear, setViewYear] = useState(selectedYear);
@@ -38,33 +41,33 @@ export function MonthPickerPopover({
             type="button"
             onClick={() => setViewYear((y) => y - 1)}
             className="p-1 rounded-md text-slate-500 hover:bg-slate-100"
-            aria-label="前年"
+            aria-label={t('prevYear')}
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="text-sm font-bold text-slate-800">{viewYear}年</span>
+          <span className="text-sm font-bold text-slate-800">{t('yearLabel', { year: viewYear })}</span>
           <button
             type="button"
             onClick={() => setViewYear((y) => y + 1)}
             className="p-1 rounded-md text-slate-500 hover:bg-slate-100"
-            aria-label="翌年"
+            aria-label={t('nextYear')}
           >
             <ChevronRight size={16} />
           </button>
         </div>
         <div className="grid grid-cols-3 gap-1.5">
-          {MONTH_LABELS.map((label, i) => {
+          {MONTH_KEYS.map((key, i) => {
             const isSelected = viewYear === selectedYear && i + 1 === selectedMonth;
             return (
               <button
-                key={label}
+                key={key}
                 type="button"
                 onClick={() => handlePick(i)}
                 className={`rounded-md py-1.5 text-xs font-semibold transition-colors ${
                   isSelected ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                {label}
+                {tMonths(key)}
               </button>
             );
           })}

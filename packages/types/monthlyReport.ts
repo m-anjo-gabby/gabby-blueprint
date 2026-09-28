@@ -67,6 +67,7 @@ export interface CompanyProfile {
   company_name: string;
   address: string;
   logo_path: string | null; // company-logoバケット内の相対パス（例: "logo-01.png"）
+  tax_registration_number: string | null; // 税務登録番号（例: カナダGST/HST登録番号）。任意項目
 }
 
 /** セッション単価マスタ(com_m_session_pay_rate)の表示用型 */

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { FileText, Loader2, Ban } from 'lucide-react';
 import { getChatAttachmentUrl } from '@gabby/lib/chat/actions/attachmentActions';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
@@ -12,11 +13,12 @@ interface ChatMessageContentProps {
 }
 
 export function ChatMessageContent({ message }: ChatMessageContentProps) {
+  const t = useTranslations('chat.messageContent');
   if (message.deleted_at) {
     return (
       <p className="flex items-center gap-1.5 italic opacity-70">
         <Ban size={13} />
-        このメッセージは削除されました
+        {t('deletedMessage')}
       </p>
     );
   }
@@ -38,6 +40,7 @@ export function ChatMessageContent({ message }: ChatMessageContentProps) {
 }
 
 function ChatAttachmentView({ attachment }: { attachment: ChatAttachmentRecord }) {
+  const t = useTranslations('chat.messageContent');
   const isImage = attachment.file_type.startsWith('image/');
   const [url, setUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,7 +63,7 @@ function ChatAttachmentView({ attachment }: { attachment: ChatAttachmentRecord }
   }
 
   if (!url) {
-    return <p className="text-xs">添付ファイルの取得に失敗しました</p>;
+    return <p className="text-xs">{t('attachmentFetchFailed')}</p>;
   }
 
   if (isImage) {

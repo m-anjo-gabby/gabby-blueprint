@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import { Megaphone, Paperclip, Loader2, Upload, Trash2, Pencil, X, Send, Save, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,6 +61,8 @@ function isEdited(message: CalendarEventMessageItem): boolean {
 }
 
 export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessages }: CalendarEventAnnouncementPanelProps) {
+  const t = useTranslations('calendarEvents.announcementPanel');
+  const tCommon = useTranslations('common');
   const { showToast } = useToast();
   const [messages, setMessages] = React.useState(initialMessages);
   const [open, setOpen] = React.useState(false);
@@ -120,7 +123,7 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
-      showToast('タイトルと本文を入力してください', 'error');
+      showToast(t('toastTitleBodyRequired'), 'error');
       return;
     }
 
@@ -139,7 +142,7 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
         fileFormData.append('file', att.file);
         const res = await uploadCalendarEventMessageFile(messageId, fileFormData);
         if (!res.success || !res.attachment) {
-          showToast(res.message || `${att.name} のアップロードに失敗しました`, 'error');
+          showToast(res.message || t('toastUploadFailed', { name: att.name }), 'error');
           setIsSaving(false);
           return;
         }
@@ -167,7 +170,7 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
             m.calendar_event_message_id === editingId ? { ...m, title, content, attachments: finalAttachments, update_date: now } : m
           )
         );
-        showToast('アナウンスを更新しました', 'success');
+        showToast(t('toastUpdated'), 'success');
       } else {
         setMessages((prev) => [
           {
@@ -181,7 +184,7 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
           },
           ...prev,
         ]);
-        showToast('アナウンスを送信しました', 'success');
+        showToast(t('toastSent'), 'success');
       }
 
       setOpen(false);
@@ -195,9 +198,9 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
     const result = await deleteCalendarEventMessage(messageId, calendarEventId);
     if (result.success) {
       setMessages((prev) => prev.filter((m) => m.calendar_event_message_id !== messageId));
-      showToast('アナウンスを削除しました', 'success');
+      showToast(t('toastDeleted'), 'success');
     } else {
-      showToast(result.message || '削除に失敗しました', 'error');
+      showToast(result.message || t('toastDeleteFailed'), 'error');
     }
   };
 
@@ -210,7 +213,7 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
     <div className="space-y-4">
       <div className="flex justify-end">
         <Button onClick={handleOpenCreate} className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
-          <Megaphone size={16} /> アナウンスを送信
+          <Megaphone size={16} /> {t('sendButton')}
         </Button>
 
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -219,11 +222,11 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
               <DialogTitle className="flex items-center gap-2 text-lg font-black">
                 {editingId ? (
                   <>
-                    <Pencil size={18} className="text-indigo-400" /> アナウンスの編集
+                    <Pencil size={18} className="text-indigo-400" /> {t('editTitle')}
                   </>
                 ) : (
                   <>
-                    <Megaphone size={18} className="text-indigo-400" /> アナウンスの送信
+                    <Megaphone size={18} className="text-indigo-400" /> {t('sendTitle')}
                   </>
                 )}
               </DialogTitle>
@@ -231,26 +234,26 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
 
             <div className="p-6 space-y-4 bg-white overflow-y-auto">
               <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                このカレンダーイベントの参加者・担当コーチに配信されます（返信・既読管理はありません）。
+                {t('deliveryNote')}
               </p>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">タイトル</Label>
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('titleLabel')}</Label>
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="例: 開始時刻の変更について"
+                  placeholder={t('titlePlaceholder')}
                   className="bg-white rounded-xl border-slate-200"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">本文</Label>
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('bodyLabel')}</Label>
                 <Textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={5}
-                  placeholder="参加者・担当コーチへ伝える内容を入力してください"
+                  placeholder={t('bodyPlaceholder')}
                   className="bg-white rounded-xl border-slate-200"
                 />
               </div>
@@ -258,10 +261,10 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Paperclip size={13} /> 添付ファイル（任意）
+                    <Paperclip size={13} /> {t('attachmentsLabel')}
                   </Label>
                   <label className="cursor-pointer h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
-                    <Upload size={13} /> 追加
+                    <Upload size={13} /> {t('addButton')}
                     <input type="file" multiple onChange={handleFileSelect} className="hidden" />
                   </label>
                 </div>
@@ -298,7 +301,7 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
                   className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md gap-2"
                 >
                   {isSaving ? <Loader2 size={16} className="animate-spin" /> : editingId ? <Save size={16} /> : <Send size={16} />}
-                  {isSaving ? '処理中...' : editingId ? '更新する' : '送信する'}
+                  {isSaving ? t('processing') : editingId ? t('updateButton') : t('sendConfirmButton')}
                 </Button>
               </div>
             </div>
@@ -308,7 +311,7 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
 
       {messages.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200 text-sm text-slate-400 font-bold">
-          アナウンスはまだありません
+          {t('noAnnouncements')}
         </div>
       ) : (
         <div className="space-y-3">
@@ -320,7 +323,7 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
                     <p className="text-sm font-black text-slate-800">{message.title}</p>
                     {isEdited(message) && (
                       <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border bg-slate-100 text-slate-500 border-slate-200">
-                        編集済み
+                        {t('editedBadge')}
                       </span>
                     )}
                   </div>
@@ -347,20 +350,21 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="font-black">アナウンスの削除</AlertDialogTitle>
+                        <AlertDialogTitle className="font-black">{t('deleteDialogTitle')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          「<span className="font-bold text-slate-900">{message.title}</span>」を削除してもよろしいですか？
-                          <br />
-                          削除後は生徒/コーチのカレンダーから表示されなくなります。
+                          {t.rich('deleteDialogBody', {
+                            title: message.title,
+                            bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
+                          })}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl font-bold">キャンセル</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl font-bold">{tCommon('cancel')}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => handleDelete(message.calendar_event_message_id)}
                           className="bg-rose-600 hover:bg-rose-700 rounded-xl font-bold"
                         >
-                          削除する
+                          {t('deleteConfirm')}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

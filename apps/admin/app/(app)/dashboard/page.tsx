@@ -4,6 +4,7 @@ import { getDashboardSummary, type DashboardModuleKey } from "@/actions/adminDas
 import { DASHBOARD_MODULE_CONFIG, DASHBOARD_MODULE_ORDER } from "./_components/moduleConfig";
 import DashboardHeader from "./_components/DashboardHeader";
 import ModuleSummaryGrid from "./_components/ModuleSummaryGrid";
+import ModuleCard from "./_components/ModuleCard";
 
 export default async function Page() {
   const supabase = await createServerClient();
@@ -16,11 +17,15 @@ export default async function Page() {
   );
 
   const modules = await getDashboardSummary(visibleKeys);
+  const cards = modules.map((summary) => ({
+    key: summary.key,
+    node: <ModuleCard summary={summary} />,
+  }));
 
   return (
     <div className="space-y-8">
       <DashboardHeader />
-      <ModuleSummaryGrid modules={modules} />
+      <ModuleSummaryGrid cards={cards} />
     </div>
   );
 }

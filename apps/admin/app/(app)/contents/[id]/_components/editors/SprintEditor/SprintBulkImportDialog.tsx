@@ -2,8 +2,9 @@
 
 import { useState, useRef } from 'react';
 import Papa from 'papaparse';
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger 
+import { useTranslations } from 'next-intl';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { 
@@ -40,6 +41,7 @@ const REQUIRED_HEADERS = [
 ];
 
 export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: SprintBulkImportDialogProps) {
+  const t = useTranslations('contents.editor.sprint.bulkImportDialog');
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<any[]>([]); 
@@ -69,15 +71,15 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
       escapeChar: "",  // 💡 エスケープ文字の処理を無効化
       skipEmptyLines: true,
       error: (error) => {
-        setLayoutError(`TSVパースエラー: ${error.message}`);
+        setLayoutError(t('tsvParseError', { message: error.message }));
         setData([]);
       },
       complete: (results) => {
         const headers = results.meta.fields || [];
         const missing = REQUIRED_HEADERS.filter(h => !headers.includes(h));
-        
+
         if (missing.length > 0) {
-          setLayoutError(`不足項目: ${missing.join(', ')}`);
+          setLayoutError(t('missingHeaders', { headers: missing.join(', ') }));
           setData([]);
           return;
         }
@@ -155,26 +157,26 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
 
   const validateRow = (row: any, index: number): string | null => {
     const lineNum = index + 2;
-    const prefix = `[${lineNum}行目]: `;
+    const prefix = t('rowErrorPrefix', { line: lineNum });
 
     if (!row.seq_no || isNaN(Number(row.seq_no))) {
-      return `${prefix}連番(seq_no)は有効な数値を入力してください。`;
+      return `${prefix}${t('errorSeqInvalid')}`;
     }
 
     if (!isSpeed && !row.tsv_group_id?.trim()) {
-      return `${prefix}Speed以外の種別では、問題グループを識別するための「tsv_group_id」が必須です。`;
+      return `${prefix}${t('errorGroupIdRequired')}`;
     }
 
     if (!row.question_en?.trim()) {
-      return `${prefix}英文問題/指示(question_en)が空欄です。`;
+      return `${prefix}${t('errorQuestionEmpty')}`;
     }
 
     if (!row.answer_sentence_yes_en?.trim()) {
-      return `${prefix}英文解答Positive(answer_sentence_yes_en)が空欄です。`;
+      return `${prefix}${t('errorAnswerYesEmpty')}`;
     }
 
     if (isSpeed && !row.answer_sentence_no_en?.trim()) {
-      return `${prefix}Speedタイプでは、英文解答Negative(answer_sentence_no_en)が必須です。`;
+      return `${prefix}${t('errorAnswerNoRequired')}`;
     }
 
     return null;
@@ -185,17 +187,17 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     try {
       // サーバーアクション側で content_id, question_type, difficulty_level を付与し既存のデータを全削除 (洗い替え)
       const payload: Partial<SprintQuestion>[] = data.map(({ isValid, error, ...cleanData }) => cleanData);
-      
+
       const result = await bulkImportSprintQuestions(contentId, type, level, payload);
       if (result.success) {
-        showToast(`${data.length}件のスプリント問題を処理しました`, "success");
+        showToast(t('toastImported', { count: data.length }), "success");
         setHasCompleted(true);
         onSuccess?.();
       } else {
-        showToast(result.message || "保存中にエラーが発生しました", "error");
+        showToast(result.message || t('toastSaveFailed'), "error");
       }
     } catch (error) {
-      showToast("システムエラーが発生しました", "error");
+      showToast(t('toastSystemError'), "error");
     } finally {
       setIsProcessing(false);
     }
@@ -214,7 +216,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2 border-dashed border-slate-300 hover:bg-slate-50 transition-all font-bold h-8 text-xs">
-          <FileUp size={14} /> 一括登録
+          <FileUp size={14} /> {t('button')}
         </Button>
       </DialogTrigger>
 
@@ -225,16 +227,16 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
           <div className="flex justify-between items-start">
             <div className="space-y-1">
               <DialogTitle className="text-2xl font-black flex items-center gap-2">
-                 <FileUp className="text-indigo-400" size={24} /> 
-                 {hasCompleted ? "インポート完了" : "スプリント問題 一括登録 (TSV)"}
+                 <FileUp className="text-indigo-400" size={24} />
+                 {hasCompleted ? t('titleComplete') : t('titleNormal')}
               </DialogTitle>
               <p className="text-xs text-slate-400 font-medium">
-                選択中の問題タイプ・レベルに対してTSV（タブ区切り）データから一括登録（洗い替え）を行います。
+                {t('subtitle')}
               </p>
             </div>
             <Button variant="outline" asChild className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white h-9 text-[11px] font-bold shrink-0">
               <a href="/templates/bulk_sprint_sample.tsv" download>
-                <Download size={14} className="mr-2 text-indigo-400" /> サンプルTSVをDL
+                <Download size={14} className="mr-2 text-indigo-400" /> {t('downloadSample')}
               </a>
             </Button>
           </div>
@@ -245,7 +247,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
             <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3 text-rose-600 animate-in fade-in slide-in-from-top-2">
               <AlertCircle className="shrink-0 mt-0.5" size={20} />
               <div className="space-y-1">
-                <p className="text-sm font-black">TSVファイル構造のエラー</p>
+                <p className="text-sm font-black">{t('layoutErrorTitle')}</p>
                 <p className="text-xs font-medium leading-relaxed opacity-80">{layoutError}</p>
               </div>
             </div>
@@ -266,8 +268,8 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
                 <Upload className={cn("text-slate-300 transition-transform duration-500", isDragging && "scale-125 text-indigo-500")} size={48} />
               </div>
               <div className="text-center space-y-2">
-                <p className="text-base font-black text-slate-700">TSVファイルをここにドロップ</p>
-                <p className="text-xs text-slate-400 font-medium">またはクリックしてファイルを選択（UTF-8推奨）</p>
+                <p className="text-base font-black text-slate-700">{t('dropzoneTitle')}</p>
+                <p className="text-xs text-slate-400 font-medium">{t('dropzoneHint')}</p>
               </div>
               <input type="file" ref={fileInputRef} className="hidden" accept=".tsv" onChange={(e) => { const f = e.target.files?.[0]; if(f) processFile(f); }} />
             </div>
@@ -276,11 +278,11 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
               <div className="grid grid-cols-2 gap-6">
                 {[
                   { label: "Total Questions", val: data.length, color: "text-slate-600" },
-                  { 
-                    label: errorItems.length > 0 ? "Errors Found" : "Status", 
-                    val: errorItems.length > 0 ? `${errorItems.length}件` : "Clear", 
+                  {
+                    label: errorItems.length > 0 ? "Errors Found" : "Status",
+                    val: errorItems.length > 0 ? t('errorCountValue', { count: errorItems.length }) : "Clear",
                     color: errorItems.length > 0 ? "text-rose-600" : "text-emerald-600",
-                    bg: errorItems.length > 0 ? "bg-rose-50" : "bg-emerald-50" 
+                    bg: errorItems.length > 0 ? "bg-rose-50" : "bg-emerald-50"
                   }
                 ].map((s, i) => (
                   <div key={i} className={cn("p-5 rounded-3xl border border-slate-100 flex flex-col bg-slate-50/50", s.bg)}>
@@ -294,7 +296,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
                 <div className="flex-1 flex flex-col gap-4 overflow-hidden">
                   <div className="flex items-center gap-2 text-rose-600 px-2">
                     <AlertCircle size={18} />
-                    <span className="text-sm font-black">データ不備のある行のみ表示しています</span>
+                    <span className="text-sm font-black">{t('errorsOnlyLabel')}</span>
                   </div>
                   <div className="flex-1 overflow-auto border border-rose-100 rounded-2xl bg-white shadow-sm">
                     <Table>
@@ -307,7 +309,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
                       <TableBody>
                         {errorItems.map((item, i) => (
                           <TableRow key={i} className="hover:bg-rose-50/30 border-rose-50">
-                            <TableCell className="font-black text-slate-800">行 {item.index + 2}</TableCell>
+                            <TableCell className="font-black text-slate-800">{t('rowLabel', { n: item.index + 2 })}</TableCell>
                             <TableCell className="text-rose-500 text-xs font-bold italic">{item.error}</TableCell>
                           </TableRow>
                         ))}
@@ -323,8 +325,8 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
                   <div className="space-y-2">
                     <p className="text-xl font-black text-slate-800 tracking-tight">Ready for Update!</p>
                     <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
-                      すべてのデータ検証をクリアしました。<br />
-                      Speed以外のデータ群は、仮のIDに基づき自動でUUIDへ安全にマッピングされます。
+                      {t('readyBody')}<br />
+                      {t('readyHint')}
                     </p>
                   </div>
                 </div>
@@ -341,30 +343,30 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
             disabled={isProcessing || data.length === 0} 
             className="text-slate-400 hover:text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
           >
-            <RefreshCcw size={14} className="mr-2" /> リセット
+            <RefreshCcw size={14} className="mr-2" /> {t('reset')}
           </Button>
-          
+
           <div className="flex gap-4">
-            <Button 
-              variant="outline" 
-              className="rounded-2xl px-8 font-bold border-slate-200 hover:bg-white transition-all h-12 shadow-sm" 
-              onClick={() => setOpen(false)} 
+            <Button
+              variant="outline"
+              className="rounded-2xl px-8 font-bold border-slate-200 hover:bg-white transition-all h-12 shadow-sm"
+              onClick={() => setOpen(false)}
               disabled={isProcessing}
             >
-              {hasCompleted ? "閉じる" : "キャンセル"}
+              {hasCompleted ? t('close') : t('cancel')}
             </Button>
-            
+
             {!hasCompleted && (
-              <Button 
-                size="lg" 
-                className="bg-slate-900 text-white px-12 rounded-2xl font-black h-12 shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30" 
-                onClick={handleImport} 
+              <Button
+                size="lg"
+                className="bg-slate-900 text-white px-12 rounded-2xl font-black h-12 shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30"
+                onClick={handleImport}
                 disabled={isProcessing || data.length === 0 || errorItems.length > 0}
               >
                 {isProcessing ? (
                   <><Loader2 className="animate-spin mr-2" size={18} /> Processing...</>
                 ) : (
-                  "インポートを開始"
+                  t('startImport')
                 )}
               </Button>
             )}

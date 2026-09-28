@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ export function PaymentSettingsForm({
   initialCompanyProfile: CompanyProfile;
   initialSessionPayRate: SessionPayRate;
 }) {
+  const t = useTranslations('paymentSettings');
   const { showToast } = useToast();
   const [companyProfile, setCompanyProfile] = useState(initialCompanyProfile);
   const [sessionPayRate, setSessionPayRate] = useState(initialSessionPayRate);
@@ -28,16 +30,20 @@ export function PaymentSettingsForm({
 
   const handleSaveCompany = async () => {
     setIsSavingCompany(true);
-    const result = await updateCompanyProfile({ company_name: companyProfile.company_name, address: companyProfile.address });
+    const result = await updateCompanyProfile({
+      company_name: companyProfile.company_name,
+      address: companyProfile.address,
+      tax_registration_number: companyProfile.tax_registration_number,
+    });
     setIsSavingCompany(false);
-    showToast(result.success ? '会社情報を更新しました' : result.message, result.success ? 'success' : 'error');
+    showToast(result.success ? t('toastCompanyUpdated') : result.message, result.success ? 'success' : 'error');
   };
 
   const handleSaveRate = async () => {
     setIsSavingRate(true);
     const result = await updateSessionPayRate(sessionPayRate);
     setIsSavingRate(false);
-    showToast(result.success ? 'セッション単価を更新しました' : result.message, result.success ? 'success' : 'error');
+    showToast(result.success ? t('toastRateUpdated') : result.message, result.success ? 'success' : 'error');
   };
 
   const handleLogoFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +57,7 @@ export function PaymentSettingsForm({
 
     if (result.success) {
       setCompanyProfile({ ...companyProfile, logo_path: result.logoPath });
-      showToast('ロゴ画像を更新しました', 'success');
+      showToast(t('toastLogoUpdated'), 'success');
     } else {
       showToast(result.message, 'error');
     }
@@ -62,11 +68,13 @@ export function PaymentSettingsForm({
   return (
     <div className="space-y-6 max-w-xl">
       <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
-        <h2 className="text-sm font-bold text-slate-800">会社情報</h2>
-        <p className="text-xs text-slate-500">コーチ向け月次支払通知書(PDF)に印字されます。</p>
+        <h2 className="text-sm font-bold text-slate-800">{t('companyInfoTitle')}</h2>
+        <p className="text-xs text-slate-500">
+          {t('companyInfoDesc')}
+        </p>
 
         <div className="space-y-1.5">
-          <Label htmlFor="company_name">会社名</Label>
+          <Label htmlFor="company_name">{t('companyNameLabel')}</Label>
           <Input
             id="company_name"
             value={companyProfile.company_name}
@@ -75,7 +83,7 @@ export function PaymentSettingsForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="address">住所</Label>
+          <Label htmlFor="address">{t('addressLabel')}</Label>
           <Textarea
             id="address"
             rows={2}
@@ -84,25 +92,38 @@ export function PaymentSettingsForm({
           />
         </div>
 
+        <div className="space-y-1.5">
+          <Label htmlFor="tax_registration_number">{t('taxRegistrationLabel')}</Label>
+          <Input
+            id="tax_registration_number"
+            value={companyProfile.tax_registration_number ?? ''}
+            onChange={(e) => setCompanyProfile({ ...companyProfile, tax_registration_number: e.target.value })}
+            placeholder={t('taxRegistrationPlaceholder')}
+          />
+          <p className="text-[11px] text-slate-400">
+            {t('taxRegistrationHint')}
+          </p>
+        </div>
+
         <Button onClick={handleSaveCompany} disabled={isSavingCompany}>
           <Save size={14} className="mr-1.5" />
-          会社情報を保存
+          {t('saveCompany')}
         </Button>
 
         <div className="space-y-1.5 pt-2 border-t border-slate-100">
-          <Label>会社ロゴ</Label>
+          <Label>{t('logoLabel')}</Label>
           <div className="flex items-center gap-4">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage上の画像URLのプレビュー表示
-              <img src={logoUrl} alt="会社ロゴ" className="h-16 w-auto max-w-[160px] object-contain border border-slate-100 rounded-md p-2" />
+              <img src={logoUrl} alt={t('logoAlt')} className="h-16 w-auto max-w-[160px] object-contain border border-slate-100 rounded-md p-2" />
             ) : (
-              <span className="text-xs text-slate-400">未設定</span>
+              <span className="text-xs text-slate-400">{t('logoNotSet')}</span>
             )}
             <div>
               <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden" onChange={handleLogoFileSelected} />
               <Button type="button" variant="outline" disabled={isUploadingLogo} onClick={() => fileInputRef.current?.click()}>
                 <Upload size={14} className="mr-1.5" />
-                {isUploadingLogo ? 'アップロード中...' : 'ロゴ画像を変更'}
+                {isUploadingLogo ? t('uploadingLogo') : t('changeLogo')}
               </Button>
             </div>
           </div>
@@ -110,16 +131,14 @@ export function PaymentSettingsForm({
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
-        <h2 className="text-sm font-bold text-slate-800">セッション単価</h2>
+        <h2 className="text-sm font-bold text-slate-800">{t('sessionRateTitle')}</h2>
         <p className="text-xs text-slate-500">
-          全コーチ共通の単価です。月次支払通知書の支払額は「単価 × 月間総セッション数」で算出されます
-          （単価自体は通知書には表示しません）。承認済み月は承認時点の単価で固定されるため、
-          ここでの変更は未承認の月にのみ影響します。
+          {t('sessionRateDesc')}
         </p>
 
         <div className="flex gap-4">
           <div className="space-y-1.5 flex-1">
-            <Label htmlFor="rate_amount">単価</Label>
+            <Label htmlFor="rate_amount">{t('rateAmountLabel')}</Label>
             <Input
               id="rate_amount"
               type="number"
@@ -130,7 +149,7 @@ export function PaymentSettingsForm({
             />
           </div>
           <div className="space-y-1.5 w-32">
-            <Label htmlFor="currency_code">通貨コード</Label>
+            <Label htmlFor="currency_code">{t('currencyCodeLabel')}</Label>
             <Input
               id="currency_code"
               value={sessionPayRate.currency_code}
@@ -142,7 +161,7 @@ export function PaymentSettingsForm({
 
         <Button onClick={handleSaveRate} disabled={isSavingRate}>
           <Save size={14} className="mr-1.5" />
-          単価を保存
+          {t('saveRate')}
         </Button>
       </div>
     </div>

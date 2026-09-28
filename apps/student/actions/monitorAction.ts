@@ -87,19 +87,28 @@ export interface MonitorSprintHistoryResponse {
 
 /**
  * 現在のクライアントに所属する全ユーザーのリストを取得する (モニター用)
+ * @param startDate 対象期間の開始日 (この期間に有効なライセンスを持つ生徒を対象とする)
+ * @param endDate 対象期間の終了日 (startDateとセットで指定する)
  * @param includeMonitor デモユーザー・モニターを含めるかどうか (デフォルト: false)
  */
-export async function getMonitorUserList(includeMonitor: boolean = false): Promise<{ success: boolean; data: MonitorUser[]; error?: string }> {
+export async function getMonitorUserList(
+  startDate: string,
+  endDate: string,
+  includeMonitor: boolean = false
+): Promise<{ success: boolean; data: MonitorUser[]; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("monitor:get_user_list_start", "Fetching monitor user list via RPC", { ...ctx, includeMonitor });
+  logger.info("monitor:get_user_list_start", "Fetching monitor user list via RPC", { ...ctx, includeMonitor, startDate, endDate });
 
   try {
     const supabase = await createServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    // 💡 _include_monitor パラメータを渡す
+    // 💡 _start_date/_end_date は必須。対象期間に有効な契約（status=1かつ期間が重なる）を
+    //    持つ生徒のみを対象にする（private.get_monitor_target_users に判定ロジックを集約）
     const { data, error } = await supabase.rpc('get_monitor_user_list', {
+      _start_date: startDate,
+      _end_date: endDate,
       _include_monitor: includeMonitor
     });
 

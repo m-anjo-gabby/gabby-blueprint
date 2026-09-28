@@ -1,6 +1,7 @@
 // apps/admin/app/(app)/notice/[id]/reads/page.tsx
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from 'next-intl/server';
 import { getNoticeReadStatus } from "@/actions/adminNoticeAction";
 import { getClientsFilter } from "@/actions/adminClientAction";
 import { NoticeReadStatusTable } from "./_components/NoticeReadStatusTable";
@@ -12,6 +13,7 @@ export default async function NoticeReadStatusPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ page?: string; clientId?: string; userType?: string }>;
 }) {
+  const t = await getTranslations('notice.readsPage');
   const { id } = await params;
   const sp = await searchParams;
   const currentPage = Number(sp.page) || 1;
@@ -31,9 +33,9 @@ export default async function NoticeReadStatusPage({
           href="/notice"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
         >
-          <ArrowLeft size={14} /> お知らせ一覧に戻る
+          <ArrowLeft size={14} /> {t('backToList')}
         </Link>
-        <p className="text-sm text-slate-500 font-bold">お知らせが見つかりません。</p>
+        <p className="text-sm text-slate-500 font-bold">{t('notFound')}</p>
       </div>
     );
   }
@@ -45,13 +47,13 @@ export default async function NoticeReadStatusPage({
           href="/notice"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors mb-2"
         >
-          <ArrowLeft size={14} /> お知らせ一覧に戻る
+          <ArrowLeft size={14} /> {t('backToList')}
         </Link>
         <h1 className="text-xl font-bold text-slate-800 tracking-tight line-clamp-1">
-          既読状況: {notice.title}
+          {t('readStatusTitle', { title: notice.title })}
         </h1>
         <p className="text-[13px] text-slate-500 mt-1">
-          このお知らせの配信対象ユーザーごとの既読・未読状況を確認できます。
+          {t('subtitle')}
         </p>
       </div>
 

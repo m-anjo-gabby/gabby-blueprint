@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,12 +26,13 @@ interface CreateChatRoomDialogProps {
   onCreated: () => void;
 }
 
-const ROOM_TYPE_LABELS: Record<ChatRoomType, string> = {
-  [CHAT_ROOM_TYPES.ONE_ON_ONE]: '1対1',
-  [CHAT_ROOM_TYPES.GROUP]: 'グループ',
-};
-
 export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
+  const t = useTranslations('chat.createRoomDialog');
+  const tCommon = useTranslations('common');
+  const ROOM_TYPE_LABELS: Record<ChatRoomType, string> = {
+    [CHAT_ROOM_TYPES.ONE_ON_ONE]: t('roomTypeOneOnOne'),
+    [CHAT_ROOM_TYPES.GROUP]: t('roomTypeGroup'),
+  };
   const router = useRouter();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
@@ -65,7 +67,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
       if (usersRes.success) {
         setCandidateUsers(usersRes.data);
       } else {
-        showToast(usersRes.error || 'ユーザー一覧の取得に失敗しました', 'error');
+        showToast(usersRes.error || t('toastUsersFetchFailed'), 'error');
       }
       setClients(clientsRes);
     } finally {
@@ -92,7 +94,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
         : await createChatRoom({ roomType, memberIds: groupMemberIds, roomName: roomName.trim() });
 
       if (!res.success || !res.roomId) {
-        showToast(res.error || 'チャットルームの作成に失敗しました', 'error');
+        showToast(res.error || t('toastCreateFailed'), 'error');
         return;
       }
 
@@ -108,12 +110,12 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <Button size="sm" className="gap-1.5" onClick={() => handleOpenChange(true)}>
         <Plus size={16} />
-        新規チャット作成
+        {t('button')}
       </Button>
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>新規チャット作成</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -130,11 +132,11 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
           {isOneOnOne ? (
             <div className="space-y-5">
               <p className="text-xs text-slate-500">
-                Admin・コーチ・生徒の中から異なる2名を選択してください（種別の組み合わせは自由です）。生徒を選択する場合は顧客で絞り込めます。
+                {t('oneOnOneHint')}
               </p>
 
               <ParticipantPicker
-                label="参加者 1"
+                label={t('participant1Label')}
                 users={candidateUsers}
                 clients={clients}
                 value={participantA}
@@ -143,7 +145,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
               />
 
               <ParticipantPicker
-                label="参加者 2"
+                label={t('participant2Label')}
                 users={candidateUsers}
                 clients={clients}
                 value={participantB}
@@ -151,20 +153,20 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
                 disabled={isLoadingUsers}
               />
 
-              {isSameUser && <p className="text-xs text-rose-500">異なる2名を選択してください</p>}
+              {isSameUser && <p className="text-xs text-rose-500">{t('sameUserError')}</p>}
             </div>
           ) : (
             <div className="space-y-5">
               <p className="text-xs text-slate-500">
-                ルーム名と参加者（2名以上）を指定してグループチャットを作成します。参加者はAdmin・コーチ・生徒から種別を問わず選択できます。
+                {t('groupHint')}
               </p>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-600 block">ルーム名</label>
+                <label className="text-xs font-bold text-slate-600 block">{t('roomNameLabel')}</label>
                 <Input
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
-                  placeholder="例: 中学受験対策チーム"
+                  placeholder={t('roomNamePlaceholder')}
                   disabled={isLoadingUsers}
                   maxLength={100}
                 />
@@ -179,7 +181,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
               />
 
               {groupMemberIds.length > 0 && groupMemberIds.length < 2 && (
-                <p className="text-xs text-rose-500">参加者を2名以上選択してください</p>
+                <p className="text-xs text-rose-500">{t('groupMinMembersError')}</p>
               )}
             </div>
           )}
@@ -187,11 +189,11 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            キャンセル
+            {tCommon('cancel')}
           </Button>
           <Button onClick={handleCreate} disabled={!canCreate} className="gap-1.5">
             {isCreating && <Loader2 size={16} className="animate-spin" />}
-            作成する
+            {t('createButton')}
           </Button>
         </DialogFooter>
       </DialogContent>

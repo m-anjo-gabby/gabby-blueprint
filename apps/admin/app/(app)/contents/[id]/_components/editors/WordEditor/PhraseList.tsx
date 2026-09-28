@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,7 @@ interface PhraseListProps {
  * 単語詳細パネル：フレーズ（例文）の一覧表示と管理を行うコンポーネント
  */
 export function PhraseList({ wordId }: PhraseListProps) {
+  const t = useTranslations('contents.editor.word.phraseList');
   const { showToast } = useToast();
   const { play, isPlaying, download, isDownloading } = usePlayAudioSpeech();
   const [phrases, setPhrases] = useState<PhraseRecord[]>([]);
@@ -58,11 +60,11 @@ export function PhraseList({ wordId }: PhraseListProps) {
       const data = await getPhrasesByWordId(wordId);
       setPhrases(data);
     } catch (error) {
-      showToast("フレーズの取得に失敗しました", "error");
+      showToast(t('fetchFailed'), "error");
     } finally {
       setIsLoading(false);
     }
-  }, [wordId, showToast]);
+  }, [wordId, showToast, t]);
 
   useEffect(() => {
     fetchPhrases();
@@ -74,15 +76,15 @@ export function PhraseList({ wordId }: PhraseListProps) {
   const handleDelete = async (phraseId: string, audioPath?: string | null) => {
     try {
       // phraseId と audioPath を渡す
-      const result = await deletePhrase(phraseId, audioPath); 
+      const result = await deletePhrase(phraseId, audioPath);
       if (result.success) {
-        showToast("フレーズを削除しました", "success");
+        showToast(t('deleted'), "success");
         fetchPhrases();
       } else {
-        showToast(result.message || "削除に失敗しました", "error");
+        showToast(result.message || t('deleteFailed'), "error");
       }
     } catch (error) {
-      showToast("システムエラーが発生しました", "error");
+      showToast(t('systemError'), "error");
     }
   };
 
@@ -106,21 +108,21 @@ export function PhraseList({ wordId }: PhraseListProps) {
         
       await download(phrase.audio_path, phrase.phrase_id, safeBaseName);
     } catch (error) {
-      showToast("ダウンロードに失敗しました", "error");
+      showToast(t('downloadFailed'), "error");
     }
-  }, [download, selectedWord, showToast]);
+  }, [download, selectedWord, showToast, t]);
 
   /**
    * TTS（音声生成）ステータスに応じたバッジのレンダリング
    */
-  const renderStatusBadge = (status: number) => {
-    const configs: Record<number, { label: string; icon: any; className: string }> = {
-      1: { label: "生成済", icon: CheckCircle2, className: "bg-emerald-50 text-emerald-600 border-emerald-100" },
-      2: { label: "要更新", icon: AlertCircle, className: "bg-amber-50 text-amber-600 border-amber-100" },
-      9: { label: "エラー", icon: AlertCircle, className: "bg-rose-50 text-rose-600 border-rose-100" },
-    };
+  const statusConfigs = useMemo((): Record<number, { label: string; icon: React.ElementType; className: string }> => ({
+    1: { label: t('statusGenerated'), icon: CheckCircle2, className: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+    2: { label: t('statusNeedsUpdate'), icon: AlertCircle, className: "bg-amber-50 text-amber-600 border-amber-100" },
+    9: { label: t('statusError'), icon: AlertCircle, className: "bg-rose-50 text-rose-600 border-rose-100" },
+  }), [t]);
 
-    const config = configs[status] || { label: "未生成", icon: Music4, className: "bg-slate-100 text-slate-400 border-slate-200" };
+  const renderStatusBadge = (status: number) => {
+    const config = statusConfigs[status] || { label: t('statusNotGenerated'), icon: Music4, className: "bg-slate-100 text-slate-400 border-slate-200" };
     const Icon = config.icon;
 
     return (
@@ -143,7 +145,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
               {phrases.length}
             </Badge>
           </div>
-          <p className="text-[11px] text-slate-400 font-medium truncate">単語に関連する例文と音声の管理</p>
+          <p className="text-[11px] text-slate-400 font-medium truncate">{t('subtitle')}</p>
         </div>
         
         {/* 新規登録ダイアログ */}
@@ -164,7 +166,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
               <div className="p-4 bg-white rounded-full shadow-sm">
                 <Plus size={24} className="text-slate-200" />
               </div>
-              <p className="text-sm font-bold">フレーズが登録されていません</p>
+              <p className="text-sm font-bold">{t('emptyState')}</p>
             </div>
           ) : (
             <div className="space-y-4 max-w-5xl mx-auto">
@@ -269,22 +271,23 @@ export function PhraseList({ wordId }: PhraseListProps) {
                               <AlertCircle size={32} />
                             </div>
                             <div className="text-center space-y-2">
-                              <AlertDialogTitle className="text-xl font-black text-slate-800">フレーズの削除</AlertDialogTitle>
+                              <AlertDialogTitle className="text-xl font-black text-slate-800">{t('deleteDialogTitle')}</AlertDialogTitle>
                               <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed italic">
-                                {phrase.phrase_en.substring(0, 40)}{phrase.phrase_en.length > 40 ? '...' : ''}
-                                <br />を削除します。この操作は取り消せません。
+                                {t('confirmDeletePhrase', {
+                                  preview: `${phrase.phrase_en.substring(0, 40)}${phrase.phrase_en.length > 40 ? '...' : ''}`,
+                                })}
                               </AlertDialogDescription>
                             </div>
                           </AlertDialogHeader>
                           <AlertDialogFooter className="flex gap-3 mt-6">
                             <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-slate-100 font-bold text-slate-500 hover:bg-slate-200">
-                              キャンセル
+                              {t('cancelButton')}
                             </AlertDialogCancel>
-                            <AlertDialogAction 
+                            <AlertDialogAction
                               onClick={() => handleDelete(phrase.phrase_id, phrase.audio_path)}
                               className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg"
                             >
-                              削除する
+                              {t('deleteConfirmButton')}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>

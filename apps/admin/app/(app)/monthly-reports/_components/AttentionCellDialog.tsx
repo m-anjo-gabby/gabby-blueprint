@@ -1,5 +1,6 @@
 'use client';
 
+import { useLocale, useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -15,8 +16,8 @@ export interface AttentionCellDetail {
   sessions: MonthlyReportSession[];
 }
 
-function formatTimeRange(session: MonthlyReportSession): string {
-  const formatter = new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' });
+function formatTimeRange(session: MonthlyReportSession, locale: string): string {
+  const formatter = new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'ja-JP', { hour: '2-digit', minute: '2-digit' });
   return `${formatter.format(new Date(session.start_datetime))} 〜 ${formatter.format(new Date(session.end_datetime))}`;
 }
 
@@ -27,6 +28,8 @@ export function AttentionCellDialog({
   detail: AttentionCellDetail | null;
   onClose: () => void;
 }) {
+  const t = useTranslations('monthlyReports.status');
+  const locale = useLocale();
   return (
     <Dialog open={detail !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
@@ -43,8 +46,8 @@ export function AttentionCellDialog({
                   key={session.session_id}
                   className="rounded-md border border-slate-200 px-3 py-2 text-sm"
                 >
-                  <p className="font-medium text-slate-800">{formatTimeRange(session)}</p>
-                  <p className="text-xs text-slate-500">{sessionStatusLabel(session)}</p>
+                  <p className="font-medium text-slate-800">{formatTimeRange(session, locale)}</p>
+                  <p className="text-xs text-slate-500">{sessionStatusLabel(session, t)}</p>
                   {session.status_note && (
                     <p className="text-xs text-slate-400 mt-0.5">{session.status_note}</p>
                   )}

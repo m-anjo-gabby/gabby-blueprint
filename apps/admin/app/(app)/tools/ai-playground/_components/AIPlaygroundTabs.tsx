@@ -1,19 +1,21 @@
 'use client';
 
 import { MessageSquare, Languages } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ChatPlayground from './ChatPlayground';
 import TranslatePlayground from './TranslatePlayground';
 
 export default function AIPlaygroundTabs() {
+  const t = useTranslations('tools.aiPlayground.tabs');
   return (
     <Tabs defaultValue="chat" className="w-full max-w-[1200px]">
       <TabsList>
         <TabsTrigger value="chat" className="gap-2">
-          <MessageSquare size={14} /> AI Chat
+          <MessageSquare size={14} /> {t('chatTab')}
         </TabsTrigger>
         <TabsTrigger value="translate" className="gap-2">
-          <Languages size={14} /> 英文翻訳
+          <Languages size={14} /> {t('translateTab')}
         </TabsTrigger>
       </TabsList>
 

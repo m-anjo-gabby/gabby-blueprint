@@ -1,8 +1,10 @@
+import { getTranslations } from 'next-intl/server';
 import { getCalendarEvents } from '@/actions/adminCalendarEventAction';
 import { CalendarEventDataTable } from './_components/CalendarEventDataTable';
 import { CalendarEventFormDialog } from './_components/CalendarEventFormDialog';
 
 export default async function CalendarEventsPage() {
+  const t = await getTranslations('calendarEvents.page');
   const events = await getCalendarEvents();
 
   return (
@@ -10,9 +12,9 @@ export default async function CalendarEventsPage() {
       {/* ヘッダー */}
       <div className="flex justify-between items-center">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">カレンダーイベント管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-xs text-slate-500 mt-1">
-            生徒・コーチのカレンダーに表示するグループセッション・メンテナンス告知等を管理します
+            {t('subtitle')}
           </p>
         </div>
         <CalendarEventFormDialog />

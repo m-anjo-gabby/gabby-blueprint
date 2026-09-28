@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -18,34 +19,38 @@ import { ContractPlan } from '@gabby/types/contract';
 // コーチ有無はcontract_typeの実値(1/2)をそのまま文字列で扱う（Select用）
 const HAS_COACH_VALUE = { NO: '1', YES: '2' } as const;
 
-const planSchema = z.object({
-  plan_code: z.string().min(1, 'プランコードは必須です'),
-  plan_name: z.string().min(1, 'プラン名（日本語）は必須です'),
-  plan_name_en: z.string().min(1, 'プラン名（英語）は必須です'),
-  has_coach: z.enum([HAS_COACH_VALUE.NO, HAS_COACH_VALUE.YES]),
-  weekly_frequency: z.string().optional(),
-  period_months: z.coerce.number().min(1, '1以上の数値を入力してください'),
-  total_sessions: z.string().optional(),
-  has_dialogue_practice: z.boolean(),
-  sort_no: z.coerce.number(),
-}).refine((data) => {
-  if (data.has_coach !== HAS_COACH_VALUE.YES) return true;
-  const weekly = Number(data.weekly_frequency);
-  return Number.isInteger(weekly) && weekly >= 1;
-}, {
-  message: 'コーチ有りの場合、週回数(1以上)を入力してください',
-  path: ['weekly_frequency'],
-}).refine((data) => {
-  if (data.has_coach !== HAS_COACH_VALUE.YES) return true;
-  const total = Number(data.total_sessions);
-  return Number.isInteger(total) && total >= 1;
-}, {
-  message: 'コーチ有りの場合、チケット数(1以上)を入力してください',
-  path: ['total_sessions'],
-});
+type FormT = ReturnType<typeof useTranslations<'contracts.plans.formDialog'>>;
 
-type PlanFormInput = z.input<typeof planSchema>;
-type PlanFormOutput = z.output<typeof planSchema>;
+function createPlanSchema(t: FormT) {
+  return z.object({
+    plan_code: z.string().min(1, t('errors.planCodeRequired')),
+    plan_name: z.string().min(1, t('errors.planNameRequired')),
+    plan_name_en: z.string().min(1, t('errors.planNameEnRequired')),
+    has_coach: z.enum([HAS_COACH_VALUE.NO, HAS_COACH_VALUE.YES]),
+    weekly_frequency: z.string().optional(),
+    period_months: z.coerce.number().min(1, t('errors.periodInvalid')),
+    total_sessions: z.string().optional(),
+    has_dialogue_practice: z.boolean(),
+    sort_no: z.coerce.number(),
+  }).refine((data) => {
+    if (data.has_coach !== HAS_COACH_VALUE.YES) return true;
+    const weekly = Number(data.weekly_frequency);
+    return Number.isInteger(weekly) && weekly >= 1;
+  }, {
+    message: t('errors.weeklyFrequencyRequired'),
+    path: ['weekly_frequency'],
+  }).refine((data) => {
+    if (data.has_coach !== HAS_COACH_VALUE.YES) return true;
+    const total = Number(data.total_sessions);
+    return Number.isInteger(total) && total >= 1;
+  }, {
+    message: t('errors.totalSessionsRequired'),
+    path: ['total_sessions'],
+  });
+}
+
+type PlanFormInput = z.input<ReturnType<typeof createPlanSchema>>;
+type PlanFormOutput = z.output<ReturnType<typeof createPlanSchema>>;
 
 interface ContractPlanFormDialogProps {
   mode?: 'create' | 'edit';
@@ -70,6 +75,8 @@ const DEFAULT_VALUES: PlanFormInput = {
  * ダイアログプラクティス提供有無を設定できる。
  */
 export function ContractPlanFormDialog({ mode = 'create', initialData }: ContractPlanFormDialogProps) {
+  const t = useTranslations('contracts.plans.formDialog');
+  const planSchema = useMemo(() => createPlanSchema(t), [t]);
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -116,14 +123,14 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
       });
 
       if (result.success) {
-        showToast(mode === 'create' ? 'プランを登録しました' : 'プランを更新しました', 'success');
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         setIsConfirming(false);
       } else {
-        setServerError(result.message || '処理に失敗しました');
+        setServerError(result.message || t('toastGenericFailed'));
       }
     } catch (error) {
-      setServerError('システムエラーが発生しました');
+      setServerError(t('toastSystemError'));
     }
   };
 
@@ -139,11 +146,11 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
-            <PlusCircle size={16} /> 新規登録
+            <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
-            <Edit size={14} /> 編集
+            <Edit size={14} /> {t('editButton')}
           </Button>
         )}
       </DialogTrigger>
@@ -152,11 +159,11 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> 内容の確認</>
+              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> 新規プランの登録</>
+              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> プラン情報の編集</>
+              <><Edit size={18} className="text-indigo-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -168,7 +175,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="plan_name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン名（日本語）</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('planNameJaLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                   ) : (
@@ -180,7 +187,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
 
               <FormField control={form.control} name="plan_name_en" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プラン名（英語）</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('planNameEnLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
                   ) : (
@@ -193,11 +200,11 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
 
             <FormField control={form.control} name="plan_code" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">プランコード（システム内部識別用）</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('planCodeLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono text-slate-700">{field.value}</div>
                 ) : (
-                  <FormControl><Input {...field} placeholder="例: STANDARD_WEEKLY1_3M" className="bg-white rounded-xl border-slate-200 font-mono" /></FormControl>
+                  <FormControl><Input {...field} placeholder={t('planCodePlaceholder')} className="bg-white rounded-xl border-slate-200 font-mono" /></FormControl>
                 )}
                 <FormMessage />
               </FormItem>
@@ -205,10 +212,10 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
 
             <FormField control={form.control} name="has_coach" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">コーチとのライブセッション</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('hasCoachLabel')}</FormLabel>
                 {isConfirming ? (
                   <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                    {field.value === HAS_COACH_VALUE.YES ? '有り' : '無し'}
+                    {field.value === HAS_COACH_VALUE.YES ? t('hasCoachDisplayYes') : t('hasCoachDisplayNo')}
                   </div>
                 ) : (
                   <Select onValueChange={field.onChange} value={field.value}>
@@ -216,8 +223,8 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
                       <SelectTrigger className="rounded-xl border-slate-200"><SelectValue /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={HAS_COACH_VALUE.NO}>無し（Blueprintのみ）</SelectItem>
-                      <SelectItem value={HAS_COACH_VALUE.YES}>有り</SelectItem>
+                      <SelectItem value={HAS_COACH_VALUE.NO}>{t('hasCoachNo')}</SelectItem>
+                      <SelectItem value={HAS_COACH_VALUE.YES}>{t('hasCoachYes')}</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -230,9 +237,9 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="weekly_frequency" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">週回数</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('weeklyFrequencyLabel')}</FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">週{field.value}回</div>
+                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{t('weeklyFrequencyDisplay', { count: field.value ?? '' })}</div>
                       ) : (
                         <FormControl><Input {...field} type="number" min={1} className="bg-white rounded-xl border-slate-200" /></FormControl>
                       )}
@@ -242,9 +249,9 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
 
                   <FormField control={form.control} name="total_sessions" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">チケット数（回）</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('totalSessionsLabel')}</FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{field.value}回</div>
+                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{t('sessionsUnit', { count: field.value ?? '' })}</div>
                       ) : (
                         <FormControl><Input {...field} type="number" min={1} className="bg-white rounded-xl border-slate-200" /></FormControl>
                       )}
@@ -255,9 +262,9 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
 
                 <FormField control={form.control} name="has_dialogue_practice" render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2.5">
-                    <FormLabel className="text-xs font-bold text-slate-600">ダイアログプラクティスを提供する</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-600">{t('dialoguePracticeLabel')}</FormLabel>
                     {isConfirming ? (
-                      <span className={`text-xs font-bold ${field.value ? 'text-indigo-600' : 'text-slate-400'}`}>{field.value ? '有り' : '無し'}</span>
+                      <span className={`text-xs font-bold ${field.value ? 'text-indigo-600' : 'text-slate-400'}`}>{field.value ? t('dialoguePracticeYes') : t('dialoguePracticeNo')}</span>
                     ) : (
                       <FormControl>
                         <input
@@ -276,9 +283,9 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="period_months" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">標準契約期間（月数）</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('periodMonthsLabel')}</FormLabel>
                   {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{field.value as number}か月</div>
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{t('periodUnit', { count: field.value as number })}</div>
                   ) : (
                     <FormControl>
                       <Input
@@ -297,7 +304,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
 
               <FormField control={form.control} name="sort_no" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">表示順</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('sortNoLabel')}</FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono font-bold text-slate-700">{field.value as number}</div>
                   ) : (
@@ -320,7 +327,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
             <div className="shrink-0 p-6 pt-4 border-t border-slate-100 bg-white">
               {isConfirming ? (
                 <div className="space-y-4">
-                  <p className="text-sm font-bold text-center text-slate-800">この内容で{mode === 'create' ? '登録' : '更新'}してもよろしいですか？</p>
+                  <p className="text-sm font-bold text-center text-slate-800">{t('confirmQuestion', { action: mode === 'create' ? t('actionCreate') : t('actionUpdate') })}</p>
                   {serverError && (
                     <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
                       <AlertCircle size={14} />{serverError}
@@ -328,10 +335,10 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
                   )}
                   <div className="flex gap-3">
                     <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>
-                      いいえ
+                      {t('no')}
                     </Button>
                     <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg" disabled={isSubmitting}>
-                      {isSubmitting ? '処理中...' : 'はい、確定します'}
+                      {isSubmitting ? t('processing') : t('yesConfirm')}
                     </Button>
                   </div>
                 </div>
@@ -344,7 +351,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
                     if (isValid) setIsConfirming(true);
                   }}
                 >
-                  {mode === 'create' ? '登録内容を確認する' : '編集内容を確認する'}
+                  {mode === 'create' ? t('confirmCreateButton') : t('confirmEditButton')}
                 </Button>
               )}
             </div>

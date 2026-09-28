@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -17,25 +18,29 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 // 💡 修正: 新しい _en カラム拡張の型定義・スキーマに合わせてバリデーションパスを改修
-const questionItemSchema = z.object({
-  question_id: z.string().optional(),
-  statement_en: z.string().optional(),
-  statement_ja: z.string().optional(),
-  question_en: z.string().min(1, '必須です'),
-  question_ja: z.string().optional(),
-  answer_sentence_yes_en: z.string().min(1, '必須です'),
-  answer_sentence_yes_ja: z.string().optional(),
-  answer_sentence_no_en: z.string().optional(),
-  answer_sentence_no_ja: z.string().optional(),
-  seq_no: z.string().min(1, '必須'),
-});
+type FormT = ReturnType<typeof useTranslations<'contents.editor.sprint.questionFormDialog'>>;
 
-const sprintSchema = z.object({
-  group_id: z.string().optional(),
-  items: z.array(questionItemSchema),
-});
+function createSprintQuestionSchema(t: FormT) {
+  const questionItemSchema = z.object({
+    question_id: z.string().optional(),
+    statement_en: z.string().optional(),
+    statement_ja: z.string().optional(),
+    question_en: z.string().min(1, t('errors.required')),
+    question_ja: z.string().optional(),
+    answer_sentence_yes_en: z.string().min(1, t('errors.required')),
+    answer_sentence_yes_ja: z.string().optional(),
+    answer_sentence_no_en: z.string().optional(),
+    answer_sentence_no_ja: z.string().optional(),
+    seq_no: z.string().min(1, t('errors.required')),
+  });
 
-type FormValues = z.infer<typeof sprintSchema>;
+  return z.object({
+    group_id: z.string().optional(),
+    items: z.array(questionItemSchema),
+  });
+}
+
+type FormValues = z.infer<ReturnType<typeof createSprintQuestionSchema>>;
 
 interface Props {
   mode: 'create' | 'edit';
@@ -50,12 +55,14 @@ interface Props {
 }
 
 export function SprintQuestionFormDialog({ mode, initialData, type, level, initialGroupId, initialStatement, initialStatementJa, onSuccess, contentId }: Props) {
+  const t = useTranslations('contents.editor.sprint.questionFormDialog');
+  const sprintSchema = useMemo(() => createSprintQuestionSchema(t), [t]);
   const [open, setOpen] = useState(false);
   const { showToast } = useToast();
   const isSpeed = type === '0';
   const isCueType = type === '4' || type === '5';
   const isMastery = type === '6';
-  const questionLabel = isCueType ? "指示 / Cue" : "Question";
+  const questionLabel = isCueType ? t('cueLabel') : "Question";
 
   // ダイアログが開くたびにフォームをリセット
   useEffect(() => {
@@ -130,11 +137,11 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
 
     const res = await bulkUpsertSprintQuestions(payload);
     if (res.success) {
-      showToast("保存しました", "success");
+      showToast(t('toastSaved'), "success");
       setOpen(false);
       onSuccess();
     } else {
-      showToast(res.message || "エラーが発生しました", "error");
+      showToast(res.message || t('toastError'), "error");
     }
   };
 
@@ -143,7 +150,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
       <DialogTrigger asChild>
         {mode === 'create' ? (
           <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 rounded-xl gap-2 shadow-md">
-            <PlusCircle size={18} /> 問題追加
+            <PlusCircle size={18} /> {t('createButton')}
           </Button>
         ) : (
           <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
@@ -155,7 +162,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
         <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 font-black">
             <MessageSquare className="text-indigo-400" size={20} />
-            {mode === 'create' ? '新規問題の登録' : '問題の編集'}
+            {mode === 'create' ? t('createTitle') : t('editTitle')}
           </DialogTitle>
         </DialogHeader>
         
@@ -203,7 +210,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                   <div className="space-y-4 p-5 bg-slate-50 rounded-[24px] border border-slate-100">
                     <div className="flex items-center gap-2 mb-2">
                         <Sparkles size={14} className="text-indigo-400" />
-                        <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Statement / 基本文</span>
+                        <span className="text-xs font-black text-slate-500 uppercase tracking-wider">{t('statementSectionLabel')}</span>
                         {isMastery && index === 0 && <Badge variant="outline" className="text-[9px] h-4">Group Shared</Badge>}
                     </div>
                     <div className="space-y-3">
@@ -220,7 +227,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-[9px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-100 uppercase">Japanese</span>
                           </div>
-                          <FormControl><Input {...field} placeholder="日本語訳..." className="bg-white rounded-xl h-10" /></FormControl>
+                          <FormControl><Input {...field} placeholder={t('japanesePlaceholder')} className="bg-white rounded-xl h-10" /></FormControl>
                         </FormItem>
                       )} />
                     </div>
@@ -244,7 +251,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 uppercase">Japanese Translation</span>
                       </div>
-                      <FormControl><Input {...field} placeholder="日本語訳..." className="rounded-xl" /></FormControl>
+                      <FormControl><Input {...field} placeholder={t('japanesePlaceholder')} className="rounded-xl" /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -264,7 +271,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                     )} />
                     <FormField control={form.control} name={`items.${index}.answer_sentence_yes_ja`} render={({ field }) => (
                       <FormItem>
-                        <FormControl><Input {...field} placeholder="日本語訳..." className="rounded-xl border-emerald-50 text-xs bg-white" /></FormControl>
+                        <FormControl><Input {...field} placeholder={t('japanesePlaceholder')} className="rounded-xl border-emerald-50 text-xs bg-white" /></FormControl>
                       </FormItem>
                     )} />
                   </div>
@@ -282,7 +289,7 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
                       )} />
                       <FormField control={form.control} name={`items.${index}.answer_sentence_no_ja`} render={({ field }) => (
                         <FormItem>
-                          <FormControl><Input {...field} placeholder="日本語訳..." className="rounded-xl border-amber-50 text-xs bg-white" /></FormControl>
+                          <FormControl><Input {...field} placeholder={t('japanesePlaceholder')} className="rounded-xl border-amber-50 text-xs bg-white" /></FormControl>
                         </FormItem>
                       )} />
                     </div>
@@ -295,15 +302,15 @@ export function SprintQuestionFormDialog({ mode, initialData, type, level, initi
               <Button type="button" variant="outline" className="w-full border-dashed border-2 rounded-2xl h-12 gap-2 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all"
                 onClick={() => append({ seq_no: String(fields.length + 1), statement_en: isMastery ? form.getValues('items.0.statement_en') : '', statement_ja: isMastery ? form.getValues('items.0.statement_ja') : '', question_en: '', question_ja: '', answer_sentence_yes_en: '', answer_sentence_yes_ja: '', answer_sentence_no_en: '', answer_sentence_no_ja: '' })}
               >
-                <Plus size={16} /> 追加する
+                <Plus size={16} /> {t('addItemButton')}
               </Button>
             )}
 
             <div className="pt-6 border-t flex justify-end gap-3">
-               <Button type="button" variant="ghost" className="rounded-xl font-bold px-6" onClick={() => setOpen(false)}>キャンセル</Button>
+               <Button type="button" variant="ghost" className="rounded-xl font-bold px-6" onClick={() => setOpen(false)}>{t('cancelButton')}</Button>
                <Button type="submit" className="bg-slate-900 text-white rounded-xl font-black px-10 gap-2 h-12 shadow-xl hover:bg-slate-800 transition-all active:scale-95">
                   <CheckCircle2 size={18} />
-                  確定して保存
+                  {t('confirmSaveButton')}
                </Button>
             </div>
           </form>

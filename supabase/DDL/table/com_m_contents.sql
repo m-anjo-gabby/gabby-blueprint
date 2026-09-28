@@ -60,3 +60,30 @@ FOR SELECT TO authenticated USING (
         OR public.is_coach_content_accessible(public.com_m_contents.content_id)
     )
 );
+
+---------------------------------------------
+-- 追加パッチ: ダイアログプラクティス対応 (2026-09-20)
+---------------------------------------------
+-- 【背景】
+-- ダイアログプラクティス（コーチとのロールプレイ教材）の教材マスタを、旧システムの
+-- COM_M_DIALOGUE（汎用）/COM_M_TAILOR_MADE（顧客専用コーパス）という2マスタ体系から、
+-- com_m_contents（content_type追加）+ content_scopeによる汎用/専用の一体管理へ刷新する
+-- （コーパススプリントと汎用スプリントを統合した既存パターンを踏襲）。
+--
+-- Beginner/Intermediate/Advanced/Corpusの4区分は、difficulty_levelのような連続尺度
+-- ではなく、コーチ向け教材選択画面の一覧構造（タブ）そのものに対応する独立した
+-- ナビゲーション軸のため、category_idとして切り出す。
+-- category_id と content_scope（公開範囲）は独立した軸として扱い、組み合わせの制約は設けない
+-- （他コンテンツ種別ではNULLのまま未使用）。
+-- ※ 当初は category_id=1〜3 ⇔ content_scope=0、category_id=4 ⇔ content_scope=1 を
+--   chk_com_m_contents_category_scope で強制していたが、運用上セット分類と公開範囲を
+--   個別に設定したい要件があるため 2026-09-24 に削除した。
+---------------------------------------------
+ALTER TABLE public.com_m_contents
+  ADD COLUMN IF NOT EXISTS category_id SMALLINT DEFAULT NULL;
+
+ALTER TABLE public.com_m_contents
+  DROP CONSTRAINT IF EXISTS chk_com_m_contents_category_scope;
+
+COMMENT ON COLUMN public.com_m_contents.category_id IS 'セット分類ID（現状ダイアログプラクティスのみで使用。1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）。他コンテンツ種別では未使用のためNULL';
+COMMENT ON COLUMN public.com_m_contents.content_type IS 'コンテンツ種別 0:単語・フレーズ, 1:ビデオ, 2:Gabbyスプリント, 3:ダイアログプラクティス';

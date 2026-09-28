@@ -1,32 +1,25 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tabs from "@radix-ui/react-tabs";
 import { motion } from "framer-motion";
 import { Loader2, CheckCircle2, X, FileText, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createBrowserClient } from "@gabby/lib/supabase/client";
 import { agreeToTerms } from "@/actions/termAction";
 import { TermViewer } from "@gabby/lib/components/term/TermViewer";
-
-interface TermItem {
-  term_id: string;
-  term_type: string;
-  version_name: string;
-  storage_path: string;
-}
+import type { TermDocument } from "@gabby/types/term";
 
 interface Props {
   userId: string;
-  terms?: TermItem[];
+  terms?: TermDocument[];
   mode?: 'agreement' | 'reference';
-  pendingTerms?: TermItem[];
+  pendingTerms?: TermDocument[];
   onClose?: () => void;
   isOpen?: boolean;
 }
 
-const EMPTY_ARRAY: TermItem[] = [];
+const EMPTY_ARRAY: TermDocument[] = [];
 
 export const TermsAgreementModal = ({ 
   userId, 
@@ -36,10 +29,8 @@ export const TermsAgreementModal = ({
   onClose, 
   isOpen = true 
 }: Props) => {
-  const [contents, setContents] = useState<Record<string, string>>({});
   const [readTerms, setReadTerms] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const supabase = createBrowserClient();
 
   const terms = propsTerms || pendingTerms || EMPTY_ARRAY;
   const isAgreementMode = mode === 'agreement';
@@ -47,40 +38,6 @@ export const TermsAgreementModal = ({
   // 規約が1件のみの場合の判定
   const isSingleTerm = terms.length === 1;
   const singleTerm = terms[0];
-
-  const termsKey = JSON.stringify(terms.map((t) => `${t.term_id}-${t.storage_path}`));
-
-  useEffect(() => {
-    if (!isOpen || terms.length === 0) return;
-
-    let isMounted = true;
-
-    const fetchContents = async () => {
-      const newContents: Record<string, string> = {};
-      
-      for (const term of terms) {
-        try {
-          const { data } = supabase.storage.from("terms").getPublicUrl(term.storage_path);
-          const res = await fetch(data.publicUrl);
-          if (!res.ok) throw new Error("Fetch failed");
-          newContents[term.term_id] = await res.text();
-        } catch (e) {
-          console.error(`Failed to fetch term (${term.term_id}):`, e);
-          newContents[term.term_id] = "規約の読み込みに失敗しました。お手数ですが時間をおいて再度お試しください。";
-        }
-      }
-
-      if (isMounted) {
-        setContents(newContents);
-      }
-    };
-
-    fetchContents();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [termsKey, isOpen, supabase]);
 
   const allRead = useMemo(() => terms.length > 0 && terms.every((t) => readTerms[t.term_id]), [terms, readTerms]);
 
@@ -95,7 +52,8 @@ export const TermsAgreementModal = ({
     if (!allRead || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await agreeToTerms(userId, terms.map(t => t.term_id));
+      // 同意時点で表示していたリビジョンを併せて記録する
+      await agreeToTerms(userId, terms.map((t) => ({ term_id: t.term_id, revision_id: t.revision_id })));
     } catch (e) {
       alert("同意処理に失敗しました。通信環境の良い場所で再度お試しください。");
     } finally {
@@ -211,9 +169,8 @@ export const TermsAgreementModal = ({
                         )}
                       >
                         <TermViewer
-                          content={contents[term.term_id]}
+                          content={term.content || "規約の読み込みに失敗しました。お手数ですが時間をおいて再度お試しください。"}
                           onScrollEnd={() => handleScrollEnd(term.term_id)}
-                          isLoading={!contents[term.term_id]}
                         />
                       </Tabs.Content>
                     ))}

@@ -3,6 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { updatePassword } from '@/actions/adminAuthAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
@@ -15,6 +16,7 @@ import Link from 'next/link';
  * ログイン中の管理者が自身のパスワードを更新するための画面
  */
 export default function PasswordChangePage() {
+  const t = useTranslations('profile.password');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,33 +44,34 @@ export default function PasswordChangePage() {
     setNewPasswordGeneralError(null);
 
     if (newPassword.length < 8) {
-      setNewPasswordGeneralError('新しいパスワードは8文字以上で入力してください。');
+      setNewPasswordGeneralError(t('errorTooShort'));
       return;
     }
 
     if (strengthStatus === false) {
-      setNewPasswordGeneralError('パスワードには英字と数字を両方含めてください。');
+      setNewPasswordGeneralError(t('errorComplexity'));
       return;
     }
 
     if (matchStatus === false) {
-      setNewPasswordGeneralError('新しいパスワードが一致していません。');
+      setNewPasswordGeneralError(t('errorMismatchSubmit'));
       return;
     }
 
     const result = await updatePassword(formData);
 
     if (result?.error) {
+      // result.error は共有Server Action（@gabby/lib）由来の日本語固定メッセージ
       if (result.error.includes('現在のパスワード') || result.error.includes('正しくありません')) {
         setCurrentPasswordError(result.error);
         setCurrentPassword('');
-        showToast('パスワードの更新に失敗しました。', 'error');
+        showToast(t('toastUpdateFailed'), 'error');
       } else {
         setNewPasswordGeneralError(result.error);
-        showToast('パスワードの更新に失敗しました。', 'error');
+        showToast(t('toastUpdateFailed'), 'error');
       }
     } else {
-      showToast('パスワードを正常に更新しました', 'success');
+      showToast(t('toastUpdateSuccess'), 'success');
       router.push('/dashboard');
     }
   };
@@ -76,12 +79,12 @@ export default function PasswordChangePage() {
   return (
     <div className="flex flex-col items-center justify-center h-full px-4">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-100 border border-slate-100">
-        <h1 className="text-xl font-bold text-slate-800 mb-6">パスワード変更</h1>
+        <h1 className="text-xl font-bold text-slate-800 mb-6">{t('title')}</h1>
 
         <form action={handleSubmit} className="space-y-6">
           <div className="space-y-1">
             <PasswordInput
-              label="現在のパスワード"
+              label={t('currentPasswordLabel')}
               name="currentPassword"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
@@ -96,7 +99,7 @@ export default function PasswordChangePage() {
 
           <div className="space-y-1">
             <PasswordInput
-              label="新しいパスワード"
+              label={t('newPasswordLabel')}
               name="newPassword"
               value={newPassword}
               required
@@ -108,14 +111,14 @@ export default function PasswordChangePage() {
             />
             {strengthStatus !== null && !strengthStatus && (
               <p className="text-[11px] text-red-500 font-bold ml-1 animate-in fade-in">
-                英字と数字を両方含めてください
+                {t('strengthHint')}
               </p>
             )}
           </div>
 
           <div className="relative">
             <PasswordInput
-              label="新しいパスワード（確認用）"
+              label={t('confirmPasswordLabel')}
               name="confirmPassword"
               value={confirmPassword}
               required
@@ -131,9 +134,9 @@ export default function PasswordChangePage() {
                 matchStatus ? 'text-emerald-600' : 'text-red-500'
               }`}>
                 {matchStatus ? (
-                  <><CheckCircle2 size={12} /> パスワードが一致しました</>
+                  <><CheckCircle2 size={12} /> {t('matchSuccess')}</>
                 ) : (
-                  'パスワードが一致していません'
+                  t('matchFail')
                 )}
               </p>
             )}
@@ -145,13 +148,13 @@ export default function PasswordChangePage() {
             </p>
           )}
 
-          <SubmitButton label="パスワードを更新" loadingLabel="更新中..." />
+          <SubmitButton label={t('submitLabel')} loadingLabel={t('submitLoadingLabel')} />
 
           <Link
             href="/dashboard"
             className="text-xs text-slate-500 hover:text-indigo-600 flex items-center justify-center gap-1 transition-colors"
           >
-            <ArrowLeft size={14} /> ダッシュボードに戻る
+            <ArrowLeft size={14} /> {t('backToDashboard')}
           </Link>
         </form>
       </div>

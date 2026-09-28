@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
-import { tokenizeWords, getSprintTitle, resolveSprintHasLevel, SPRINT_NOTES_EN, SPRINT_NOTE_FOOTER_EN, SPRINT_THEMES_EN } from '@gabby/lib';
+import { tokenizeWordsWithPunctuation, getSprintTitle, resolveSprintHasLevel, SPRINT_NOTES_EN, SPRINT_NOTE_FOOTER_EN, SPRINT_THEMES_EN } from '@gabby/lib';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useLessonSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useLessonSprintTimers';
 import { createLessonSprintResult } from '@/actions/lessonSprintAction';
@@ -57,7 +57,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
     return currentQuestion.answer_sentence_yes_en;
   }, [currentQuestion, isSpeedMode, config.answerType]);
 
-  const answerWords = useMemo(() => tokenizeWords(answerText), [answerText]);
+  const answerWords = useMemo(() => tokenizeWordsWithPunctuation(answerText), [answerText]);
 
   const buildHistory = useCallback((): LessonSprintHistoryItem[] => {
     const state = useLessonSprintStore.getState().session;

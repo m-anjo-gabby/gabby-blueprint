@@ -1,6 +1,10 @@
 ---------------------------------------------
 -- 2. ドリル履歴関数（セキュリティ修正版）
 ---------------------------------------------
+-- 【2026-09-22 抜本改修】対象生徒の判定を private.get_monitor_target_users に一本化。
+-- 従来はライセンス状態を一切見ず client_id の一致のみで絞り込んでいたため、対象期間に
+-- 有効な契約を持っていない生徒（そもそも一度も契約していない等）の履歴も表示され得た。
+-- 他のモニターRPCと同じ「対象期間に有効な契約を持っていた生徒」の定義に揃える。
 CREATE OR REPLACE FUNCTION public.get_monitor_word_history(
     _start_date DATE,
     _end_date DATE,
@@ -21,6 +25,9 @@ BEGIN
     END IF;
 
     RETURN QUERY
+    WITH target_users AS (
+        SELECT t.user_id FROM private.get_monitor_target_users(_client_id, _start_date, _end_date, _include_monitor) t
+    )
     SELECT jsonb_build_object(
         'summary_id', w.summary_id,
         'content_id', w.content_id,
@@ -34,23 +41,11 @@ BEGIN
         'user_name', u.user_name
     )
     FROM public.self_t_word_summary w
+    INNER JOIN target_users tu ON tu.user_id = w.user_id
     INNER JOIN public.com_m_user u ON u.id = w.user_id
     LEFT JOIN public.com_m_contents c ON c.content_id = w.content_id
-    WHERE u.client_id = _client_id
-      AND w.training_date BETWEEN _start_date AND _end_date
+    WHERE w.training_date BETWEEN _start_date AND _end_date
       AND (_user_ids IS NULL OR cardinality(_user_ids) = 0 OR w.user_id = ANY(_user_ids))
-      -- 💡 デモユーザーの履歴は常に100%遮断
-      AND NOT EXISTS (
-        SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'demo_user'
-      )
-      -- 💡 モニターの履歴切り替え
-      AND (
-        _include_monitor = TRUE
-        OR
-        NOT EXISTS (
-          SELECT 1 FROM public.com_t_user_role r WHERE r.user_id = u.id AND r.role_id = 'monitor'
-        )
-      )
     ORDER BY w.training_date DESC;
 END;
 $$;

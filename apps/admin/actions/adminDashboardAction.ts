@@ -12,9 +12,7 @@ export type DashboardModuleKey = 'clients' | 'contracts' | 'users' | 'contents' 
 export interface DashboardModuleSummary {
   key: DashboardModuleKey;
   count: number;
-  countLabel: string;
   alertCount: number;
-  alertLabel: string;
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -71,13 +69,11 @@ async function getClientsSummary(supabase: ReturnType<typeof createAdminClient>,
     return {
       key: 'clients',
       count: totalCount || 0,
-      countLabel: '登録顧客数',
       alertCount,
-      alertLabel: '有効契約なし',
     };
   } catch (error) {
     logger.error('dashboard:get_clients_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
-    return { key: 'clients', count: 0, countLabel: '登録顧客数', alertCount: 0, alertLabel: '有効契約なし' };
+    return { key: 'clients', count: 0, alertCount: 0 };
   }
 }
 
@@ -102,13 +98,11 @@ async function getContractsSummary(supabase: ReturnType<typeof createAdminClient
     return {
       key: 'contracts',
       count: activeContracts?.length || 0,
-      countLabel: '稼働中の契約',
       alertCount: alertIds.size,
-      alertLabel: '期限間近・超過契約',
     };
   } catch (error) {
     logger.error('dashboard:get_contracts_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
-    return { key: 'contracts', count: 0, countLabel: '稼働中の契約', alertCount: 0, alertLabel: '期限間近・超過契約' };
+    return { key: 'contracts', count: 0, alertCount: 0 };
   }
 }
 
@@ -133,13 +127,11 @@ async function getUsersSummary(supabase: ReturnType<typeof createAdminClient>): 
     return {
       key: 'users',
       count: totalCount || 0,
-      countLabel: '総ユーザー数',
       alertCount: pendingCount || 0,
-      alertLabel: '招待対応待ち',
     };
   } catch (error) {
     logger.error('dashboard:get_users_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
-    return { key: 'users', count: 0, countLabel: '総ユーザー数', alertCount: 0, alertLabel: '招待対応待ち' };
+    return { key: 'users', count: 0, alertCount: 0 };
   }
 }
 
@@ -164,13 +156,11 @@ async function getContentsSummary(supabase: ReturnType<typeof createAdminClient>
     return {
       key: 'contents',
       count: totalCount || 0,
-      countLabel: '登録教材数',
       alertCount: privateCount || 0,
-      alertLabel: '非公開教材',
     };
   } catch (error) {
     logger.error('dashboard:get_contents_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
-    return { key: 'contents', count: 0, countLabel: '登録教材数', alertCount: 0, alertLabel: '非公開教材' };
+    return { key: 'contents', count: 0, alertCount: 0 };
   }
 }
 
@@ -205,12 +195,10 @@ async function getNoticeSummary(supabase: ReturnType<typeof createAdminClient>, 
     return {
       key: 'notice',
       count: publishedCount || 0,
-      countLabel: '公開中のお知らせ',
       alertCount: (draftCount || 0) + (expiredButPublishedCount || 0),
-      alertLabel: '下書き・掲載期限切れ',
     };
   } catch (error) {
     logger.error('dashboard:get_notice_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
-    return { key: 'notice', count: 0, countLabel: '公開中のお知らせ', alertCount: 0, alertLabel: '下書き・掲載期限切れ' };
+    return { key: 'notice', count: 0, alertCount: 0 };
   }
 }

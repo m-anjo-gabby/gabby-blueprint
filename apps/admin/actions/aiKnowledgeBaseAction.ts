@@ -53,6 +53,7 @@ export async function getKnowledgeEntries(
       .select('knowledge_id, source_type, title, body, metadata, embedding_model, update_date', { count: 'exact' })
       .eq('delete_flg', '0')
       .order('update_date', { ascending: false })
+      .order('knowledge_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
 
     if (sourceType) {

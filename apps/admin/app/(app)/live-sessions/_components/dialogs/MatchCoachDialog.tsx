@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { matchStudentWithCoachAsAdmin } from '@/actions/adminLiveSessionAction';
 import { ADMIN_TIME_OPTIONS } from './adminTimeOptions';
 import type { AdminCoachSummary } from '@gabby/types/adminLiveSession';
 
-const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 // レッスン自体の実施時間（枠は30分だが実施は25分。マッチング申請時と同じ前提）
 const LESSON_DURATION_MINUTES = 25;
 
@@ -37,6 +38,8 @@ interface Props {
  * その場でマッチングを成立させ、セッションも自動で予約する（24時間ルールの対象外）。
  */
 export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClose, onMatched }: Props) {
+  const t = useTranslations('liveSessions.matchDialog');
+  const tDay = useTranslations('liveSessions.day');
   const { showToast } = useToast();
   const [coachId, setCoachId] = useState('');
   const [slotNo, setSlotNo] = useState(String(initialSlotNo));
@@ -69,7 +72,7 @@ export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClo
         endTime: addMinutesToTime(startTime, LESSON_DURATION_MINUTES),
       });
       if (result.success) {
-        showToast('マッチングが成立しました。セッションが予約されました', 'success');
+        showToast(t('toastSuccess'), 'success');
         reset();
         await onMatched();
       } else {
@@ -84,26 +87,26 @@ export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClo
     <Dialog open={open} onOpenChange={(o) => !o && reset()}>
       <DialogContent className="rounded-3xl">
         <DialogHeader>
-          <DialogTitle>コーチと直接マッチング</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription>
-            生徒のリクエスト・コーチの承認を経ずに、その場でマッチングを成立させます（セッションも自動で予約されます）。
+            {t('description')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">コーチ</Label>
+            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('coachLabel')}</Label>
             <SearchableSelect
               options={coaches.map((c) => ({ value: c.id, label: c.user_name }))}
               value={coachId}
               onChange={setCoachId}
-              placeholder="コーチを選択"
-              searchPlaceholder="コーチ名で検索..."
+              placeholder={t('coachPlaceholder')}
+              searchPlaceholder={t('coachSearchPlaceholder')}
               className="bg-white"
             />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">枠番号</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('slotNoLabel')}</Label>
               <input
                 type="number"
                 min={1}
@@ -113,41 +116,41 @@ export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClo
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">曜日</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('dayOfWeekLabel')}</Label>
               <select
                 value={dayOfWeek}
                 onChange={(e) => setDayOfWeek(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                {DAY_LABELS_JA.map((label, i) => (
-                  <option key={i} value={i}>{label}曜</option>
+                {DAY_KEYS.map((key, i) => (
+                  <option key={i} value={i}>{tDay(key)}</option>
                 ))}
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">開始時刻</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('timeLabel')}</Label>
               <select
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <option value="" disabled>時刻</option>
-                {ADMIN_TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                <option value="" disabled>{t('timePlaceholder')}</option>
+                {ADMIN_TIME_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
               </select>
             </div>
           </div>
           <p className="text-[10px] text-slate-400 leading-relaxed">
-            ※ 枠番号は週n回契約のうち何コマ目かを表します（既存の枠と重複する番号は使用できません）。<br />
-            ※ コーチの空き時間・既存の予定との重複は自動でチェックされます。
+            {t('hint1')}<br />
+            {t('hint2')}
           </p>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={reset} disabled={isMatching}>
-            閉じる
+            {t('close')}
           </Button>
           <Button type="button" onClick={handleMatch} disabled={isMatching || !coachId || !startTime}>
             {isMatching && <Loader2 size={14} className="animate-spin" />}
-            マッチングを成立させる
+            {t('confirmButton')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Languages, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +16,7 @@ interface TranslateResult {
 }
 
 export default function TranslatePlayground() {
+  const t = useTranslations('tools.aiPlayground.translate');
   const [inputText, setInputText] = useState('');
   const [includeExplanation, setIncludeExplanation] = useState(true);
   const [result, setResult] = useState<TranslateResult | null>(null);
@@ -43,7 +45,7 @@ export default function TranslatePlayground() {
       setResult(data);
     } catch (err) {
       console.error('AI Translate Error:', err);
-      showToast('翻訳リクエストに失敗しました', 'error');
+      showToast(t('toastError'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +63,7 @@ export default function TranslatePlayground() {
           <Textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="SpeechSuperの英文アドバイス等を貼り付けてください..."
+            placeholder={t('inputPlaceholder')}
             className="h-32 bg-slate-50 border-slate-200 rounded-2xl resize-none"
           />
         </div>
@@ -69,7 +71,7 @@ export default function TranslatePlayground() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Switch checked={includeExplanation} onCheckedChange={setIncludeExplanation} />
-            <Label className="text-xs font-bold text-slate-600">学習者向け補足説明を含める</Label>
+            <Label className="text-xs font-bold text-slate-600">{t('includeExplanationLabel')}</Label>
           </div>
 
           <Button
@@ -78,7 +80,7 @@ export default function TranslatePlayground() {
             disabled={isLoading || !inputText.trim()}
           >
             {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Languages size={16} />}
-            翻訳する
+            {t('translateButton')}
           </Button>
         </div>
       </div>
@@ -89,7 +91,7 @@ export default function TranslatePlayground() {
             <div className="flex items-center gap-2 px-1">
               <Sparkles size={14} className="text-indigo-500" />
               <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                日本語訳
+                {t('japaneseLabel')}
               </Label>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-5 text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
@@ -100,7 +102,7 @@ export default function TranslatePlayground() {
           {result.explanation && (
             <div className="space-y-2">
               <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">
-                補足説明
+                {t('explanationLabel')}
               </Label>
               <div className="bg-white rounded-2xl border border-slate-200 p-5 text-sm leading-relaxed text-slate-600 whitespace-pre-wrap">
                 {result.explanation}

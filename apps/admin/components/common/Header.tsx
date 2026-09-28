@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Menu, X, LogOut, User as UserIcon, Lock, ChevronDown,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +19,10 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { signOut } from '@/actions/adminAuthAction';
 import { NotificationDropdown } from './NotificationDropdown';
+import LocaleSwitcher from './LocaleSwitcher';
 
 export default function Header() {
+  const t = useTranslations('common');
   const user = useUserStore((state) => state.user);
   const profileIconUrl = getProfileIconUrl(user?.icon_path);
   const isMobileSidebarOpen = useSidebarStore((state) => state.isOpen);
@@ -28,8 +31,8 @@ export default function Header() {
 
   const handleSignOut = async () => {
     const ok = await showConfirm(
-      'ログアウトの確認',
-      'セッションを終了してログアウトします。よろしいですか？',
+      t('logoutConfirmTitle'),
+      t('logoutConfirmBody'),
       { variant: 'danger', isModal: true }
     );
     if (ok) await signOut();
@@ -42,7 +45,7 @@ export default function Header() {
         <button
           onClick={toggleMobileSidebar}
           className="lg:hidden p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
-          aria-label="メニューを開く"
+          aria-label={t('openMenu')}
         >
           {isMobileSidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -59,8 +62,9 @@ export default function Header() {
         </Link>
       </div>
 
-      {/* 右側：通知ベル + アカウントドロップダウン */}
+      {/* 右側：言語切替 + 通知ベル + アカウントドロップダウン */}
       <div className="flex items-center gap-2">
+      <LocaleSwitcher />
       <NotificationDropdown />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -74,7 +78,7 @@ export default function Header() {
               )}
             </div>
             <span className="text-xs font-bold text-slate-600 hidden sm:inline max-w-32 truncate">
-              {user?.email?.split('@')[0] || 'Guest'}
+              {user?.email?.split('@')[0] || t('guestFallback')}
             </span>
             <ChevronDown size={12} className="text-slate-400" />
           </button>
@@ -93,7 +97,7 @@ export default function Header() {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-black text-slate-800 truncate">
-                {user?.email?.split('@')[0] || 'Guest'}
+                {user?.email?.split('@')[0] || t('guestFallback')}
               </p>
               {user?.email && (
                 <p className="text-[10px] font-medium text-slate-400 truncate">{user.email}</p>
@@ -105,13 +109,13 @@ export default function Header() {
 
           <DropdownMenuItem asChild>
             <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
-              <UserIcon size={14} /> プロフィール
+              <UserIcon size={14} /> {t('profile')}
             </Link>
           </DropdownMenuItem>
 
           <DropdownMenuItem asChild>
             <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
-              <Lock size={14} /> パスワード変更
+              <Lock size={14} /> {t('changePassword')}
             </Link>
           </DropdownMenuItem>
 
@@ -121,7 +125,7 @@ export default function Header() {
             onClick={handleSignOut}
             className="flex items-center gap-2 text-xs font-bold text-rose-500 cursor-pointer hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-600"
           >
-            <LogOut size={14} /> ログアウト
+            <LogOut size={14} /> {t('logout')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

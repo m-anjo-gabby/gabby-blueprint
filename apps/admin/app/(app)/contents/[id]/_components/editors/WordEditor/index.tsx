@@ -1,10 +1,11 @@
 // src\app\(app)\admin\contents\[id]\_components\editors\WordEditor\index.tsx
 'use client';
 
-import { 
-  ResizableHandle, 
-  ResizablePanel, 
-  ResizablePanelGroup 
+import { useTranslations } from 'next-intl';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup
 } from "@/components/ui/resizable";
 import { WordList } from "./WordList";
 import { PhraseList } from "./PhraseList";
@@ -16,6 +17,8 @@ interface WordEditorProps {
 }
 
 export function WordEditor({ contentId, selectedWordId }: WordEditorProps) {
+  const t = useTranslations('contents.editor.word.index');
+
   return (
     <div className="flex-1 min-h-0 min-w-0 w-full border-t border-slate-200 bg-white flex overflow-hidden">
       <ResizablePanelGroup 
@@ -50,7 +53,7 @@ export function WordEditor({ contentId, selectedWordId }: WordEditorProps) {
                <div className="p-6 bg-white rounded-full shadow-sm">
                  <Search size={32} className="text-slate-200" />
                </div>
-               <p className="text-sm font-medium italic">Select a word to manage phrases</p>
+               <p className="text-sm font-medium italic">{t('emptyState')}</p>
             </div>
           )}
         </ResizablePanel>

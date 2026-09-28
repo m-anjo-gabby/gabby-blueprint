@@ -100,6 +100,7 @@ export async function getNotices(params: AdminNoticeFilterParams = {}) {
 
     const { data, count, error } = await query
       .order('insert_date', { ascending: false })
+      .order('notice_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
 
     if (error) {

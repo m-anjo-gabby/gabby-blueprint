@@ -1,65 +1,62 @@
 // apps/admin/app/(app)/terms/[id]/edit/page.tsx
-import { getTermById, getTermContent } from "@/actions/adminTermAction";
+import { getTranslations } from 'next-intl/server';
+import { getTermDetail } from "@/actions/adminTermAction";
 import { TermEditor } from "./_components/TermEditor";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import type { TermDetail } from '@gabby/types/term';
 
 export default async function TermEditPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getTranslations('terms.editPage');
+  const tCommon = await getTranslations('terms.common');
   const { id } = await params;
-  
-  let term;
-  let content;
+
+  let term: TermDetail | null;
 
   try {
-    term = await getTermById(id);
-    if (!term) {
-      notFound(); // データが見つからない場合はNext.jsのnot-foundページを表示
-    }
-    content = await getTermContent(term.storage_path);
+    term = await getTermDetail(id);
   } catch (error) {
     // データ取得中にエラーが発生した場合
     console.error("Failed to load term data:", error);
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] text-rose-600">
-        <p>データの読み込みに失敗しました。</p>
-        <p className="text-sm text-slate-500 mt-2">時間をおいて再度お試しください。</p>
+        <p>{t('loadFailedTitle')}</p>
+        <p className="text-sm text-slate-500 mt-2">{t('loadFailedHint')}</p>
       </div>
     );
   }
 
-  // データが正常に取得できた場合のみJSXをレンダリング
+  if (!term) {
+    notFound(); // データが見つからない場合はNext.jsのnot-foundページを表示
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] space-y-4">
       <div className="flex flex-col">
         {/* 戻る導線 */}
-        <Link 
-            href="/terms" 
+        <Link
+            href="/terms"
             className="flex items-center text-[13px] text-slate-500 hover:text-indigo-600 transition-colors mb-2 w-fit"
         >
             <ChevronLeft size={14} className="mr-1" />
-            規約管理一覧に戻る
+            {t('backToList')}
         </Link>
 
         <h1 className="text-xl font-bold text-slate-800 tracking-tight">
-            規約編集: {term.version_name}
+            {t('editTitle', { version: term.version_name })}
         </h1>
         <p className="text-[13px] text-slate-500 mt-1">
-            {term.term_type === "TERMS" ? "利用規約" : "プライバシーポリシー"} の文言を直接修正します。
+            {t('subtitle', { termType: term.term_type === "TERMS" ? tCommon('termTypeTerms') : tCommon('termTypePrivacy') })}
         </p>
       </div>
 
-      <TermEditor 
-        termId={term.term_id}
-        termType={term.term_type}
-        initialVersion={term.version_name}
-        initialContent={content} 
-        storagePath={term.storage_path} 
-      />
+      {/* 保存後はリビジョン履歴が更新されるため、最新リビジョンIDをkeyにして編集状態を初期化する */}
+      <TermEditor key={term.revisions[0]?.revision_id ?? 'empty'} term={term} />
     </div>
   );
 }

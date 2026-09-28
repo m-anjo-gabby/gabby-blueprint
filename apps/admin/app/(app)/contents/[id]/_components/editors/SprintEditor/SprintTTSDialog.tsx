@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ const DEFAULT_PARAMS: TTSParameters = {
 };
 
 export function SprintTTSDialog({ question, section, onUpdate, children }: SprintTTSDialogProps) {
+  const t = useTranslations('contents.editor.sprint.ttsDialog');
   const [open, setOpen] = useState(false);
   const [params, setParams] = useState<TTSParameters>(DEFAULT_PARAMS);
   const [ssml, setSsml] = useState('');
@@ -169,14 +171,14 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
       );
 
       if (result.success) {
-        showToast("音声を保存しました", "success");
+        showToast(t('toastSaved'), "success");
         onUpdate();
         setOpen(false);
       } else {
-        showToast(result.message || "保存に失敗しました", "error");
+        showToast(result.message || t('toastSaveFailed'), "error");
       }
     } catch (e) {
-      showToast("エラーが発生しました", "error");
+      showToast(t('toastError'), "error");
     } finally {
       setIsProcessing(false);
       setShowSaveAlert(false);

@@ -34,6 +34,9 @@ export interface AdminScheduleSlotSummary {
   coach_id: string;
   coach_name: string;
   status: number; // com_m_lesson_schedule.status (1:active 0:paused 9:terminated)
+  /** このコマ(slot_no)が契約上持つべき目標セッション数。通常は承認時にtotal_sessions/weekly_frequencyから
+   *  均等割りで確定するが、admin_adjust_schedule_target_sessionsにより個別に引き上げられる場合がある */
+  target_sessions: number;
   /** 未割当のチケット枠数（fn_schedule_shortfallより。稼働中(status=1)の枠のみ意味を持つ） */
   shortfall: number;
 }

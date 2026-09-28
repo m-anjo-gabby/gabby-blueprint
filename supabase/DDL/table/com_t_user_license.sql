@@ -84,3 +84,55 @@ ALTER TABLE public.com_t_user_license
   ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN public.com_t_user_license.has_dialogue_practice IS 'ダイアログプラクティスの利用可否（自主トレ・コーチとのセッション両方での利用可否に使う）。ライセンス発行時にcom_m_contractの値をコピーする';
+
+---------------------------------------------
+-- 追加パッチ: 同一ユーザーへの重複した有効ライセンス防止（DB制約化） (2026-09-23)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 「有効なライセンスは生徒に対して1件のみ」は、これまで
+-- apps/admin/actions/adminContractAction.ts の findOverlappingLicense() による
+-- 事前チェック（check-then-insert）のみで担保していた。契約更新に伴う次タームライセンスの
+-- 前倒し登録（期間が重ならない複数ライセンスの事前登録）自体は引き続き許容する運用の
+-- ため、アプリ側の重複判定ロジックは変更しない。一方、複数管理者による同時操作等の
+-- レースコンディションでは、チェックと書き込みの間に別トランザクションがコミットされ、
+-- 期間の重なる有効(status=1)ライセンスが二重に登録され得る隙間があったため、DB側の
+-- 排他制約(EXCLUDE constraint)で最終防衛線を張る。
+-- status=1のライセンスのみを対象とするのは、無効化済み(status=0)のライセンスは
+-- 「有効」ではなく対象外とするため（アプリ側のfindOverlappingLicenseはstatusを問わず
+-- 既存全件を見ているため、こちらの方がやや広めに防止しているが、業務ルール上必要な
+-- 範囲はstatus=1のみで十分）。
+---------------------------------------------
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- 適用前に、既に重複が存在しないかを確認する（通常はアプリ側の検証により存在しないはず）
+DO $$
+DECLARE
+  v_conflict_count integer;
+BEGIN
+  SELECT COUNT(*) INTO v_conflict_count
+  FROM public.com_t_user_license a
+  JOIN public.com_t_user_license b
+    ON a.user_id = b.user_id
+   AND a.license_id < b.license_id
+   AND a.status = 1 AND b.status = 1
+   AND tstzrange(a.start_date, a.end_date, '[]') && tstzrange(b.start_date, b.end_date, '[]');
+
+  IF v_conflict_count > 0 THEN
+    RAISE EXCEPTION '期間が重なる有効ライセンスが%組見つかりました。制約追加前に解消してください。', v_conflict_count;
+  END IF;
+END $$;
+
+ALTER TABLE public.com_t_user_license
+  DROP CONSTRAINT IF EXISTS excl_user_license_active_overlap;
+
+ALTER TABLE public.com_t_user_license
+  ADD CONSTRAINT excl_user_license_active_overlap
+  EXCLUDE USING gist (
+    user_id WITH =,
+    tstzrange(start_date, end_date, '[]') WITH &&
+  )
+  WHERE (status = 1);
+
+COMMENT ON CONSTRAINT excl_user_license_active_overlap ON public.com_t_user_license IS
+  '同一ユーザーに対し、期間が重なる有効(status=1)ライセンスを同時に複数登録できないようにするDB側の最終防衛線（アプリ側のfindOverlappingLicenseと二重の防御。無効化済み(status=0)は対象外）';

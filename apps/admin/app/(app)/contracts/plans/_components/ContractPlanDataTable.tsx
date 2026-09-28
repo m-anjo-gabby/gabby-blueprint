@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Search, X, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { ContractPlan } from '@gabby/types/contract';
 import { ContractPlanFormDialog } from './ContractPlanFormDialog';
 import { deleteContractPlan } from '@/actions/adminContractAction';
@@ -42,27 +43,28 @@ interface ContractPlanDataTableProps {
 }
 
 export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
+  const t = useTranslations('contracts.plans.table');
   const { showToast } = useToast();
   const [globalFilter, setGlobalFilter] = React.useState('');
 
   const handleDelete = async (planId: string) => {
     const result = await deleteContractPlan(planId);
     if (result.success) {
-      showToast('プランを削除しました', 'success');
+      showToast(t('toastDeleted'), 'success');
     } else {
-      showToast(result.message || '削除に失敗しました', 'error');
+      showToast(result.message || t('toastDeleteFailed'), 'error');
     }
   };
 
   const columns = React.useMemo<ColumnDef<ContractPlan>[]>(() => [
     {
       accessorKey: 'sort_no',
-      header: 'SEQ',
+      header: t('seqHeader'),
       cell: ({ row }) => <span className="font-mono text-slate-500">{row.original.sort_no}</span>,
     },
     {
       accessorKey: 'plan_name',
-      header: 'プラン名',
+      header: t('planNameHeader'),
       cell: ({ row }) => (
         <div className="flex flex-col">
           <span className="font-bold text-slate-700">{row.original.plan_name}</span>
@@ -72,23 +74,23 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
     },
     {
       accessorKey: 'contract_type',
-      header: '構成',
+      header: t('structureHeader'),
       cell: ({ row }) => {
         const plan = row.original;
         return (
           <div className="flex flex-wrap gap-1.5">
             {plan.contract_type === 1 ? (
               <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] font-bold">
-                コーチ無し
+                {t('noCoachBadge')}
               </Badge>
             ) : (
               <>
                 <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-[10px] font-bold">
-                  週{plan.weekly_frequency}回・全{plan.total_sessions}回
+                  {t('liveBadge', { weekly: plan.weekly_frequency ?? 0, total: plan.total_sessions ?? 0 })}
                 </Badge>
                 {plan.has_dialogue_practice && (
                   <Badge className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100 text-[10px] font-bold">
-                    ダイアログプラクティス
+                    {t('dialoguePracticeBadge')}
                   </Badge>
                 )}
               </>
@@ -99,17 +101,17 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
     },
     {
       accessorKey: 'period_months',
-      header: '標準期間',
-      cell: ({ row }) => <span className="text-slate-600">{row.original.period_months}か月</span>,
+      header: t('periodHeader'),
+      cell: ({ row }) => <span className="text-slate-600">{t('periodUnit', { count: row.original.period_months })}</span>,
     },
     {
       accessorKey: 'plan_code',
-      header: 'プランコード',
+      header: t('codeHeader'),
       cell: ({ row }) => <span className="text-[10px] text-slate-400 font-mono">{row.original.plan_code}</span>,
     },
     {
       id: 'actions',
-      header: () => <div className="text-right">操作</div>,
+      header: () => <div className="text-right">{t('actionsHeader')}</div>,
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
           <ContractPlanFormDialog mode="edit" initialData={row.original} />
@@ -122,19 +124,21 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle className="font-black">プランの削除</AlertDialogTitle>
+                <AlertDialogTitle className="font-black">{t('deleteDialogTitle')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  プラン「<span className="font-bold text-slate-900">{row.original.plan_name}</span>」を削除してもよろしいですか？<br />
-                  既にこのプランを選択して作成された契約には影響しません（選択肢から消えるのみです）。
+                  {t.rich('deleteDialogBody', {
+                    name: row.original.plan_name,
+                    bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
+                  })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-xl font-bold">キャンセル</AlertDialogCancel>
+                <AlertDialogCancel className="rounded-xl font-bold">{t('cancel')}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => handleDelete(row.original.plan_id)}
                   className="bg-rose-600 hover:bg-rose-700 rounded-xl font-bold"
                 >
-                  削除する
+                  {t('deleteConfirm')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -142,7 +146,7 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
         </div>
       ),
     },
-  ], []);
+  ], [t]);
 
   const table = useReactTable({
     data,
@@ -168,7 +172,7 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
-              placeholder="プラン名、コードで検索..."
+              placeholder={t('searchPlaceholder')}
               value={globalFilter ?? ''}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="pl-10 pr-10 h-9 bg-white border-slate-200 focus-visible:ring-1 focus-visible:ring-slate-400 shadow-sm"
@@ -187,7 +191,10 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
 
         <div className="flex items-center gap-4">
           <div className="hidden md:block text-[13px] text-slate-500 whitespace-nowrap font-medium">
-            全 <span className="text-slate-900">{table.getFilteredRowModel().rows.length}</span> 件
+            {t.rich('totalCount', {
+              count: table.getFilteredRowModel().rows.length,
+              styled: (chunks) => <span className="text-slate-900">{chunks}</span>,
+            })}
           </div>
 
           <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-sm">
@@ -247,7 +254,7 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  プランデータが見つかりませんでした。
+                  {t('noData')}
                 </TableCell>
               </TableRow>
             )}

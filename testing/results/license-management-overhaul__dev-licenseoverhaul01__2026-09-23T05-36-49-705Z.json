@@ -1,0 +1,46 @@
+{
+  "scenario": "license-management-overhaul.feature",
+  "env": "dev",
+  "tag": "licenseoverhaul01",
+  "executedAt": "2026-09-23T05:36:49.705Z",
+  "gitCommit": "96cee07d",
+  "gitBranch": "feature/20260918-dev",
+  "totalChecks": 7,
+  "passed": 4,
+  "failed": 3,
+  "ok": false,
+  "checks": [
+    {
+      "name": "シナリオ1: 次タームライセンス(期間重複なし)のINSERTが成功する",
+      "ok": true
+    },
+    {
+      "name": "シナリオ2: 重複期間の有効ライセンスのINSERTが排他制約(23P01)で拒否される",
+      "ok": false,
+      "detail": "23505 duplicate key value violates unique constraint \"unique_user_contract\""
+    },
+    {
+      "name": "シナリオ3: UPDATEでA1と重なる期間への変更が排他制約(23P01)で拒否される",
+      "ok": true,
+      "detail": "23P01 conflicting key value violates exclusion constraint \"excl_user_license_active_overlap\""
+    },
+    {
+      "name": "シナリオ3補足: 拒否されたUPDATEは実際にロールバックされ、A2の期間は変更されていない",
+      "ok": true
+    },
+    {
+      "name": "シナリオ4-前提: A1をstatus=0に無効化できる",
+      "ok": true
+    },
+    {
+      "name": "シナリオ4: 無効化済みライセンスと同じ期間でも新規の有効ライセンスをINSERTできる(status=1のみが排他対象)",
+      "ok": false,
+      "detail": "23505 duplicate key value violates unique constraint \"unique_user_contract\""
+    },
+    {
+      "name": "シナリオ5: 生徒Aと完全同一期間でも、排他制約(EXCLUDE)はuser_id違いの生徒BのINSERTを妨げない",
+      "ok": false,
+      "detail": "23P01 conflicting key value violates exclusion constraint \"excl_user_license_active_overlap\""
+    }
+  ]
+}

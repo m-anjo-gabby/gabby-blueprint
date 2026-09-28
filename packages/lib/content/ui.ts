@@ -1,6 +1,6 @@
 // packages/lib/content/ui.ts
 import { TAG_TYPES, TagType } from "@gabby/types/content";
-import { FileText, HelpCircle, LucideIcon, Video, Zap } from "lucide-react";
+import { FileText, HelpCircle, LucideIcon, MessagesSquare, Video, Zap } from "lucide-react";
 
 export const getTagStyle = (tagType: string) => {
   const config = TAG_TYPES[tagType as TagType] || TAG_TYPES.other;
@@ -75,6 +75,22 @@ export const getContentTypeConfig = (type: number): { label: string; icon: Lucid
           badge: "bg-orange-100 text-orange-800", // 🎨 種別バッジもコーラルに統一して一体感を強化
           dotActive: "bg-orange-500",             // 🎨 アクティブドットをコーラルに修正
           dotInactive: "bg-orange-200",           // 🎨 インアクティブドットをコーラルに修正
+          button: SHARED_BRAND_BUTTON,
+        }
+      };
+
+    case 3: // ダイアログ: 対話・コミュニケーションを表現する落ち着いたティール
+      return {
+        label: "ダイアログ",
+        icon: MessagesSquare,
+        theme: {
+          bg: "bg-teal-50/60",
+          text: "text-teal-700",
+          border: "border-teal-100",
+          hoverBorder: "hover:border-teal-300",
+          badge: "bg-teal-100 text-teal-800",
+          dotActive: "bg-teal-500",
+          dotInactive: "bg-teal-200",
           button: SHARED_BRAND_BUTTON,
         }
       };

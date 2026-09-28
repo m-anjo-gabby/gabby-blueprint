@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ const DEFAULT_PARAMS: TTSParameters = {
 const SAMPLE_TEXT = "This is a sample sentence to check the voice settings.";
 
 export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialogProps) {
+  const t = useTranslations('contents.editor.word.ttsBulkDialog');
   // --- 状態管理 ---
   const [open, setOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false); // 実行直前の確認画面フラグ
@@ -79,11 +81,11 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
       const phrases = await getPhrasesByContentId(contentId);
       setRawPhrases(phrases || []);
     } catch (err) {
-      showToast("Failed to fetch phrases.", "error");
+      showToast(t('toastFetchFailed'), "error");
     } finally {
       setIsLoadingData(false);
     }
-  }, [contentId, showToast]);
+  }, [contentId, showToast, t]);
 
   /**
    * ダイアログの開閉制御
@@ -166,7 +168,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
 
     if (errorCount === 0) {
       setStatus('completed');
-      showToast(`Successfully generated ${successCount} audio files.`, "success");
+      showToast(t('toastCompleted', { count: successCount }), "success");
       
       // 正常終了時にクライアント側のリストを最新化
       triggerRefresh();

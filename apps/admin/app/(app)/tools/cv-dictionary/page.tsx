@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -30,6 +31,7 @@ interface CVDictionaryPageProps {
 // ============================================================
 
 export default async function CVDictionaryPage({ searchParams }: CVDictionaryPageProps) {
+  const t = await getTranslations('tools.cvDictionary.page');
   const { word } = await searchParams;
 
   return (
@@ -41,7 +43,7 @@ export default async function CVDictionaryPage({ searchParams }: CVDictionaryPag
         </div>
         <div>
           <h1 className="text-base font-black text-slate-800 tracking-tight">ColorVowel Dictionary</h1>
-          <p className="text-[11px] text-slate-400 font-medium">CV辞書の単語・品詞別エントリ管理</p>
+          <p className="text-[11px] text-slate-400 font-medium">{t('subtitle')}</p>
         </div>
       </div>
 
@@ -79,8 +81,8 @@ export default async function CVDictionaryPage({ searchParams }: CVDictionaryPag
                   <BookOpenText size={32} className="text-slate-200" />
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-sm font-bold">単語を選択してください</p>
-                  <p className="text-xs text-slate-300">左ペインから単語を選ぶと品詞別エントリが表示されます</p>
+                  <p className="text-sm font-bold">{t('selectWordTitle')}</p>
+                  <p className="text-xs text-slate-300">{t('selectWordHint')}</p>
                 </div>
               </div>
             )}

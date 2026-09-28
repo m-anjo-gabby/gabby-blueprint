@@ -1,27 +1,39 @@
 'use client';
 
+import type { MouseEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, BookOpen, Layers, CheckCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ContentRecord, CONTENT_TYPES } from '@gabby/types/content';
 import { WordBulkImportDialog } from './editors/WordEditor/WordBulkImportDialog';
 import { TTSBulkDialog } from './editors/WordEditor/TTSBulkDialog';
+import { CONTENTS_LIST_PATH, getContentsListHref } from '../../_lib/listQuery';
 
 interface ContentHeaderProps {
   content: ContentRecord;
 }
 
 export function EditorHeader({ content }: ContentHeaderProps) {
+  const t = useTranslations('contents.editor.header');
+  const router = useRouter();
   const typeLabel = CONTENT_TYPES[content.content_type]?.label || 'Unknown';
+
+  // 一覧で最後に使用していた検索・絞り込み・ページ条件を復元して戻る
+  const handleBack = (e: MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    router.push(getContentsListHref());
+  };
 
   return (
     <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild className="text-slate-500 hover:text-slate-900 -ml-2">
-          <Link href="/contents">
+          <Link href={CONTENTS_LIST_PATH} onClick={handleBack}>
             <ChevronLeft size={20} className="mr-1" />
-            一覧へ戻る
+            {t('backButton')}
           </Link>
         </Button>
 
@@ -64,7 +76,7 @@ export function EditorHeader({ content }: ContentHeaderProps) {
                 className="h-8 px-4 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 font-bold gap-2 transition-all shadow-sm"
               >
                 <Zap size={14} fill="currentColor" />
-                一括音声生成
+                {t('bulkAudioButton')}
               </Button>
             </TTSBulkDialog>
           </>

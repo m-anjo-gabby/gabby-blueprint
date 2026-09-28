@@ -109,6 +109,7 @@ export async function getUsers(
 
     const { data, error, count } = await query
       .order('insert_date', { ascending: false }) // 💡 改善: 統合されたビューの特性に合わせ、最新の招待・登録者が一番上に来るように降順に最適化
+      .order('id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
 
     if (error) {

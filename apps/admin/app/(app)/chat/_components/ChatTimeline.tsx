@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { ChevronLeft, Loader2, ShieldCheck, Trash2, User as UserIcon, Users as UsersIcon } from 'lucide-react';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
@@ -35,8 +36,8 @@ const BUBBLE_PADDING_X = 16; // 吹き出しの px-4 分、本文の開始位置
 // （添付画像の非同期ロード完了など）でも下端へ再追従させる
 const STICK_TO_BOTTOM_THRESHOLD_PX = 80;
 
-function formatHeaderTime(iso: string, timeZone: string): string {
-  return formatMessageHeaderTime(iso, { locale: 'ja-JP', yesterdayLabel: '昨日', timeZone });
+function formatHeaderTime(iso: string, timeZone: string, yesterdayLabel: string, locale: string): string {
+  return formatMessageHeaderTime(iso, { locale: locale === 'en' ? 'en-US' : 'ja-JP', yesterdayLabel, timeZone });
 }
 
 function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null; name?: string | null; size?: number }) {
@@ -63,6 +64,9 @@ function MessageAvatar({ iconPath, name, size = 28 }: { iconPath?: string | null
 }
 
 export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, isMember, members }: ChatTimelineProps) {
+  const t = useTranslations('chat.timeline');
+  const tCommon = useTranslations('chat.common');
+  const locale = useLocale();
   const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
   const router = useRouter();
   const currentUser = useUserStore((state) => state.user);
@@ -199,15 +203,15 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
 
   const handleDelete = async (chatId: string) => {
     const ok = await showConfirm(
-      'メッセージの削除',
-      'ポリシー違反等を理由にこのメッセージを削除します。この操作は元に戻せません。よろしいですか？',
+      t('deleteMessageConfirmTitle'),
+      t('deleteMessageConfirmBody'),
       { variant: 'danger', isModal: true }
     );
     if (!ok) return;
 
     const res = await deleteChatMessage({ chatId });
     if (!res.success) {
-      showToast(res.error || 'メッセージの削除に失敗しました', 'error');
+      showToast(res.error || t('toastDeleteFailed'), 'error');
       return;
     }
 
@@ -223,7 +227,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
       <div className="flex items-center gap-3 px-3 py-3 border-b border-slate-100 shrink-0">
         <Link
           href="/chat"
-          aria-label="チャット一覧へ戻る"
+          aria-label={t('backAriaLabel')}
           className="flex items-center justify-center w-9 h-9 rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shrink-0"
         >
           <ChevronLeft size={24} />
@@ -238,9 +242,9 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
               <UsersIcon size={16} className="text-emerald-500" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-slate-800 truncate">{room.room_name || '（名称未設定）'}</p>
+              <p className="text-sm font-bold text-slate-800 truncate">{room.room_name || tCommon('unnamed')}</p>
               <p className="text-[11px] text-slate-400 truncate">
-                {members.map((m) => m.user_name || '（名称未設定）').join(' / ')}
+                {members.map((m) => m.user_name || tCommon('unnamed')).join(' / ')}
               </p>
             </div>
           </>
@@ -249,7 +253,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
             <MessageAvatar iconPath={otherMember?.icon_path} name={otherMember?.user_name} size={AVATAR_SIZE} />
             <div className="min-w-0">
               <p className="text-sm font-bold text-slate-800 truncate">
-                {otherMember?.user_name || '（名称未設定）'}
+                {otherMember?.user_name || tCommon('unnamed')}
               </p>
               {otherMember && (
                 <p className="text-[11px] text-slate-400">{getUserTypeLabel(otherMember.user_type)}</p>
@@ -267,14 +271,14 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-slate-800 truncate">
-                  {isGroup ? room.room_name || '（名称未設定）' : members.map((m) => m.user_name || '（名称未設定）').join(' ⇔ ')}
+                  {isGroup ? room.room_name || tCommon('unnamed') : members.map((m) => m.user_name || tCommon('unnamed')).join(' ⇔ ')}
                 </p>
                 <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shrink-0">
-                  査閲モード
+                  {t('reviewModeBadge')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 truncate">
-                {members.map((m) => `${m.user_name || '（名称未設定）'}（${getUserTypeLabel(m.user_type)}）`).join(' / ')}
+                {members.map((m) => `${m.user_name || tCommon('unnamed')}（${getUserTypeLabel(m.user_type)}）`).join(' / ')}
               </p>
             </div>
           </>
@@ -308,15 +312,15 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
                 {showHeader && (
                   isMine ? (
                     <div className="mb-1">
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone)}</span>
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone, t('yesterdayLabel'), locale)}</span>
                     </div>
                   ) : (
                     <div
                       className="flex items-center gap-2 mb-1"
                       style={{ paddingLeft: AVATAR_SIZE + AVATAR_GAP + BUBBLE_PADDING_X }}
                     >
-                      <span className="text-xs font-bold text-slate-700">{sender?.user_name || '（名称未設定）'}</span>
-                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone)}</span>
+                      <span className="text-xs font-bold text-slate-700">{sender?.user_name || tCommon('unnamed')}</span>
+                      <span className="text-[10px] text-slate-400">{formatHeaderTime(msg.created_at, timeZone, t('yesterdayLabel'), locale)}</span>
                     </div>
                   )
                 )}
@@ -337,14 +341,14 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
                           isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
                         }`}
                       >
-                        {formatHeaderTime(msg.created_at, timeZone)}
+                        {formatHeaderTime(msg.created_at, timeZone, t('yesterdayLabel'), locale)}
                       </span>
                     )}
                     {canDelete && isMine && (
                       <button
                         onClick={() => handleDelete(msg.chat_id)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-rose-500 shrink-0 mb-1"
-                        title="削除する"
+                        title={t('deleteTooltip')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -360,7 +364,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
                       <button
                         onClick={() => handleDelete(msg.chat_id)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-rose-500 shrink-0 mb-1"
-                        title="削除する"
+                        title={t('deleteTooltip')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -378,7 +382,7 @@ export function ChatTimeline({ roomId, room, initialMessages, initialHasMore, is
         <ChatMessageInput roomId={roomId} onSent={handleSent} />
       ) : (
         <div className="border-t border-slate-100 p-4 text-center text-xs font-bold text-slate-400">
-          このルームの参加者ではないため、閲覧のみ可能です（発言はできません）
+          {t('viewOnlyNotice')}
         </div>
       )}
     </div>

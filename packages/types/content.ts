@@ -8,6 +8,7 @@ export const CONTENT_TYPES = {
   0: { label: '単語帳', value: 0 },
   1: { label: 'ビデオ', value: 1 },
   2: { label: 'スプリント', value: 2 },
+  3: { label: 'ダイアログ', value: 3 },
 } as const;
 
 // タグ種別
@@ -128,6 +129,8 @@ export interface ContentRecord {
   seq_no: number;
   difficulty_level: number;
   recommend: number;
+  // セット分類ID（現状ダイアログプラクティス content_type=3 のみで使用。1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）
+  category_id: number | null;
   metadata: ContentMetadata;
   delete_flg: '0' | '1';
   insert_date: string;
@@ -151,6 +154,9 @@ export interface ContentItem extends Omit<ContentRecord, 'metadata'> {
   is_favorite: boolean;
   // メタデータ（必要に応じて。基本はdisplay_tagsを優先）
   metadata: ContentMetadata;
+  // ダイアログ（content_type=3）のみ設定。自身への割当ID（com_t_dialogue_assignment.assignment_id）。
+  // 割当ベースで取得されるため、ダイアログ種別のアイテムには必ず値が入る
+  assignment_id?: string;
 }
 
 // お気に入りリスト用も共通の型を使用（一貫性を保つため）

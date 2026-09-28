@@ -1,27 +1,30 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
+import type { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { UserFormDialog } from "./UserFormDialog";
 import { LicenseFormDialog } from "./LicenseFormDialog";
 import { ImpersonateButton } from "./ImpersonateButton";
 import { SprintProgressFormDialog } from "./SprintProgressFormDialog";
-import { Calendar, Building2, Plus, StickyNote, ShieldCheck, Pencil, ShieldAlert, Rocket } from "lucide-react";
+import { Calendar, Building2, ShieldAlert, Pencil, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserTypeLabel, UserRecord, USER_TYPES } from "@gabby/types/user";
-import { isBefore, startOfDay } from "date-fns";
 
-export const columns: ColumnDef<UserRecord>[] = [
+type TableT = ReturnType<typeof useTranslations<'users.table'>>;
+
+export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
+  return [
   {
     accessorKey: "user_name",
-    header: "ユーザー",
+    header: t('user'),
     cell: ({ row }) => {
       const { user_name, email } = row.original;
 
       return (
         <div className="flex flex-col gap-0.5 py-1">
           <span className="text-sm font-bold text-slate-900 leading-tight">
-            {user_name || "名称未設定"}
+            {user_name || t('unnamed')}
           </span>
           <span className="text-[10px] text-slate-400 font-medium tracking-tight truncate max-w-45">
             {email}
@@ -35,34 +38,34 @@ export const columns: ColumnDef<UserRecord>[] = [
     header: "",
     cell: ({ row }) => {
       const { last_sign_in_at, confirmed_at, mail_sent_at, last_mail_error } = row.original;
-      
+
       let statusBadge;
       if (last_sign_in_at) {
         statusBadge = (
           <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 h-5 px-1.5 text-[10px] font-bold shadow-sm whitespace-nowrap">
-            アクティブ
+            {t('statusActive')}
           </Badge>
         );
       } else if (confirmed_at) {
         statusBadge = (
           <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-blue-100 h-5 px-1.5 text-[10px] font-bold shadow-sm whitespace-nowrap">
-            招待確認済
+            {t('statusInviteConfirmed')}
           </Badge>
         );
       } else if (last_mail_error || (!mail_sent_at && !last_sign_in_at)) {
         // エラーメッセージがある、または送信記録がなくログインもしていない場合を「送信失敗」とみなす
         statusBadge = (
-          <Badge 
+          <Badge
             className="bg-rose-50 text-rose-600 border-rose-200 h-5 px-1.5 text-[10px] font-black shadow-sm whitespace-nowrap gap-1 cursor-help"
-            title={last_mail_error || "招待メールが送信されていません"}
+            title={last_mail_error || t('statusSendFailedTooltip')}
           >
-            <ShieldAlert size={10} /> 送信失敗
+            <ShieldAlert size={10} /> {t('statusSendFailed')}
           </Badge>
         );
       } else {
         statusBadge = (
           <Badge className="bg-orange-50 text-orange-600 border-orange-200 h-5 px-1.5 text-[10px] font-black animate-pulse shadow-sm whitespace-nowrap">
-            招待中
+            {t('statusInviting')}
           </Badge>
         );
       };
@@ -76,29 +79,29 @@ export const columns: ColumnDef<UserRecord>[] = [
   },
   {
     accessorKey: "client_name",
-    header: "所属顧客",
+    header: t('client'),
     cell: ({ row }) => {
       const clientName = row.getValue("client_name") as string;
       return (
         <div className="flex items-center gap-1.5 text-slate-600">
           <Building2 size={13} className="text-slate-300" />
-          <span className="text-xs font-medium">{clientName || "未所属"}</span>
+          <span className="text-xs font-medium">{clientName || t('noClient')}</span>
         </div>
       );
     },
   },
   {
     accessorKey: "user_type",
-    header: "区分",
+    header: t('userType'),
     cell: ({ row }) => {
       const type = row.getValue("user_type") as string;
       const isStudent = type === '1';
       return (
-        <Badge 
-          variant="outline" 
+        <Badge
+          variant="outline"
           className={`font-bold border-2 text-[10px] px-2 ${
-            isStudent 
-              ? 'text-indigo-600 border-indigo-100 bg-indigo-50/30' 
+            isStudent
+              ? 'text-indigo-600 border-indigo-100 bg-indigo-50/30'
               : 'text-slate-500 border-slate-100 bg-slate-50'
           }`}
         >
@@ -109,11 +112,11 @@ export const columns: ColumnDef<UserRecord>[] = [
   },
   {
     accessorKey: "plan_name",
-    header: "ライセンス",
+    header: t('license'),
     cell: ({ row }) => {
       const user = row.original;
       const { license_state, plan_name, license_end_date, user_type } = user;
-      
+
       // 生徒(user_type === '1')のみを編集対象とする
       const isStudent = user_type === '1';
       // 💡 招待中のユーザー（まだ本登録が完了していない）にはライセンス割当を許可しない
@@ -122,7 +125,7 @@ export const columns: ColumnDef<UserRecord>[] = [
 
       // 生徒以外は「対象外」や「空」として扱うためのUI
       if (!isStudent) {
-        return <div className="text-[10px] text-slate-300 italic">対象外</div>;
+        return <div className="text-[10px] text-slate-300 italic">{t('notApplicable')}</div>;
       }
 
       const LicenseContent = (
@@ -131,7 +134,7 @@ export const columns: ColumnDef<UserRecord>[] = [
           <div className="flex flex-col gap-0.5 min-w-30">
             {license_state === 'none' ? (
               <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] border-dashed border-slate-300 text-slate-400">
-                <ShieldAlert size={12} className="mr-1.5" /> 未設定
+                <ShieldAlert size={12} className="mr-1.5" /> {t('licenseNotSet')}
               </Button>
             ) : (
               <>
@@ -142,10 +145,10 @@ export const columns: ColumnDef<UserRecord>[] = [
                   }`}>
                     {plan_name}
                   </div>
-                  {license_state === 'future' && <span className="text-[9px] text-blue-400 font-bold">[開始待ち]</span>}
-                  {license_state === 'expired' && <span className="text-[9px] text-rose-400 font-bold">[期限切れ]</span>}
+                  {license_state === 'future' && <span className="text-[9px] text-blue-400 font-bold">{t('licenseFuture')}</span>}
+                  {license_state === 'expired' && <span className="text-[9px] text-rose-400 font-bold">{t('licenseExpired')}</span>}
                 </div>
-                
+
                 <div className="flex items-center gap-1 text-[10px] text-slate-400">
                   <Calendar size={10} />
                   <span>{license_end_date ? license_end_date.split('T')[0] : ''}</span>
@@ -169,7 +172,7 @@ export const columns: ColumnDef<UserRecord>[] = [
   },
   {
     id: "actions",
-    header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">操作</div>,
+    header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('actions')}</div>,
     cell: ({ row }) => {
       const user = row.original;
       // 本登録済み（招待中ではない）の生徒・コーチのみ代理ログイン対象とする（管理者は対象外）
@@ -187,7 +190,7 @@ export const columns: ColumnDef<UserRecord>[] = [
           {isStudent && (
             <SprintProgressFormDialog user={user}>
               <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
-                <Rocket size={14} /> ステージ
+                <Rocket size={14} /> {t('stageButton')}
               </Button>
             </SprintProgressFormDialog>
           )}
@@ -201,4 +204,5 @@ export const columns: ColumnDef<UserRecord>[] = [
       );
     },
   },
-];
+  ];
+}

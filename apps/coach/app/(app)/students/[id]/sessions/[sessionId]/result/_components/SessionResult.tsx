@@ -10,6 +10,7 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import { HomeworkComposer } from './HomeworkComposer';
+import { LessonSprintHistoryRow } from '../../../../_components/LessonSprintHistoryRow';
 
 interface Props {
   studentId: string;
@@ -103,18 +104,12 @@ export function SessionResult({ studentId, session, homework, checklist }: Props
                 <ul className="space-y-2">
                   {session.sprint_log.map((entry) => (
                     <li key={entry.lesson_sprint_id}>
-                      <Link
-                        href={`/students/${studentId}/lesson-sprint/result/${entry.lesson_sprint_id}?back=${encodeURIComponent(`/students/${studentId}/sessions/${session.session_id}/result`)}&back_label=${encodeURIComponent('Back to Session Result')}`}
-                        className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-100/80 hover:border-slate-200 transition-colors"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-slate-700 truncate">{entry.content_name}</p>
-                          <p className="text-[11px] text-slate-400">{formatDateTimeEn(entry.insert_date, timezone)}</p>
-                        </div>
-                        <span className="shrink-0 text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1">
-                          {entry.average_score !== null ? `${entry.average_score}/5` : '—'}
-                        </span>
-                      </Link>
+                      <LessonSprintHistoryRow
+                        studentId={studentId}
+                        record={entry}
+                        backHref={`/students/${studentId}/sessions/${session.session_id}/result`}
+                        backLabel="Back to Session Result"
+                      />
                     </li>
                   ))}
                 </ul>
@@ -122,17 +117,25 @@ export function SessionResult({ studentId, session, homework, checklist }: Props
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-slate-200 border-dashed shadow-sm bg-slate-50/40">
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-500 flex items-center gap-1.5">
-                Dialog Practice History
-                <span className="text-[9px] font-black uppercase tracking-wide text-slate-400 bg-white border border-slate-200 rounded-full px-1.5 py-0.5">
-                  Soon
-                </span>
-              </CardTitle>
+              <CardTitle className="text-sm font-bold text-slate-800">Dialog Practice History</CardTitle>
             </CardHeader>
             <CardContent className="pt-2">
-              <p className="text-xs text-slate-400 italic">Coming soon.</p>
+              {session.dialogue_log.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">No Dialogue Practice material was opened in this session.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {session.dialogue_log.map((entry) => (
+                    <li key={entry.log_id} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
+                      <p className="text-[10px] font-bold text-slate-400">{formatDateTimeEn(entry.insert_date, timezone)}</p>
+                      <p className="text-xs text-slate-700 font-semibold mt-0.5">
+                        {entry.content_name} · Session {entry.session_no}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </div>

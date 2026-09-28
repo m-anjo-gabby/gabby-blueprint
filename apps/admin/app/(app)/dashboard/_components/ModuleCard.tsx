@@ -1,6 +1,7 @@
 // apps/admin/app/(app)/dashboard/_components/ModuleCard.tsx
 import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { DashboardModuleSummary } from '@/actions/adminDashboardAction';
@@ -10,10 +11,12 @@ type Props = {
   summary: DashboardModuleSummary;
 };
 
-export default function ModuleCard({ summary }: Props) {
+export default async function ModuleCard({ summary }: Props) {
   const config = DASHBOARD_MODULE_CONFIG[summary.key];
   const Icon = config.icon;
   const hasAlert = summary.alertCount > 0;
+  const t = await getTranslations(`dashboard.modules.${summary.key}`);
+  const tDashboard = await getTranslations('dashboard');
 
   return (
     <Link href={config.href} className="block h-full group">
@@ -27,8 +30,8 @@ export default function ModuleCard({ summary }: Props) {
           </div>
 
           <div className="mt-5">
-            <h3 className="text-base font-bold text-slate-800">{config.title}</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{config.desc}</p>
+            <h3 className="text-base font-bold text-slate-800">{t('title')}</h3>
+            <p className="text-xs text-slate-400 mt-0.5">{t('desc')}</p>
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-end justify-between gap-2">
@@ -37,17 +40,17 @@ export default function ModuleCard({ summary }: Props) {
                 {summary.count.toLocaleString()}
               </span>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1.5">
-                {summary.countLabel}
+                {t('countLabel')}
               </span>
             </div>
 
             {hasAlert ? (
               <Badge variant="outline" className="shrink-0 text-amber-700 bg-amber-50 border-amber-200 font-bold whitespace-nowrap">
-                {summary.alertLabel} {summary.alertCount}件
+                {tDashboard('alertBadge', { label: t('alertLabel'), count: summary.alertCount })}
               </Badge>
             ) : (
               <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold whitespace-nowrap">
-                <CheckCircle2 size={13} /> 問題なし
+                <CheckCircle2 size={13} /> {tDashboard('noIssues')}
               </span>
             )}
           </div>

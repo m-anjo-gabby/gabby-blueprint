@@ -7,6 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useTranslations } from "next-intl";
 import {
   Table,
   TableBody,
@@ -18,15 +19,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ChevronLeft, 
   ChevronRight, 
   Search, 
   X, 
-  Layers, 
-  Video, 
-  MessageSquare, 
-  Globe, 
+  Layers,
+  Video,
+  MessageSquare,
+  MessagesSquare,
+  Globe,
   Lock,
   ExternalLink,
   Plus,
@@ -34,14 +37,16 @@ import {
   EyeOff,
   HelpCircle,
   Building2,
-  Pencil
+  Pencil,
+  ArrowRight
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Content, CONTENT_TYPES, CONTENT_SCOPES } from "@gabby/types/content";
+import { Content, ContentType, CONTENT_TYPES, CONTENT_SCOPES } from "@gabby/types/content";
 import { ContentFormDialog } from "./ContentFormDialog";
 import Link from "next/link";
 import { ContentTagDialog } from "./ContentTagDialog";
 import { ContentAccessDialog } from "./ContentAccessDialog";
+import { saveContentsListQuery } from "../_lib/listQuery";
 
 interface ContentDataTableProps {
   data: Content[];
@@ -49,28 +54,64 @@ interface ContentDataTableProps {
   totalCount: number;
 }
 
+/**
+ * 種別ごとのエディタ導線設定（ビデオ(1)はエディタ未実装のため定義しない）。
+ * 色・アイコンは種別バッジと揃え、どのエディタへ遷移するかを視覚的に対応付ける。
+ */
+const EDITOR_CONFIG: Partial<Record<ContentType, { labelKey: "word" | "sprint" | "dialogue"; icon: React.ReactNode; className: string }>> = {
+  0: { labelKey: "word", icon: <MessageSquare size={13} />, className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300" },
+  2: { labelKey: "sprint", icon: <Layers size={13} />, className: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300" },
+  3: { labelKey: "dialogue", icon: <MessagesSquare size={13} />, className: "bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:border-cyan-300" },
+};
+
+function getEditorHref(content: Content): string {
+  if (content.content_type === 2) {
+    const questionType = content.metadata?.question_type;
+    return `/contents/${content.content_id}?type=${typeof questionType === "string" ? questionType : "0"}`;
+  }
+  return `/contents/${content.content_id}`;
+}
+
 export function ContentDataTable({
   data,
   pageCount,
   totalCount,
 }: ContentDataTableProps) {
+  const t = useTranslations("contents.dataTable");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = React.useState(searchParams.get("q") || "");
 
   const currentPage = Number(searchParams.get("page")) || 1;
+  const currentType = searchParams.get("type") || "all";
+
+  // エディタから戻った際に同じ条件で一覧を表示できるよう、現在の条件を保存する
+  const queryString = searchParams.toString();
+  React.useEffect(() => {
+    saveContentsListQuery(queryString);
+  }, [queryString]);
 
   // --- カラム定義 ---
   const columns = React.useMemo<ColumnDef<Content>[]>(() => [
     {
       accessorKey: "content_name",
-      header: "教材 / ラベル",
+      header: t('nameHeader'),
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5 py-1">
-          <span className="text-sm font-bold text-slate-900 leading-tight">
-            {row.original.content_name}
-          </span>
+          {/* エディタがある種別は教材名からも遷移できるようにする（操作列ボタンの補助導線） */}
+          {EDITOR_CONFIG[row.original.content_type] ? (
+            <Link
+              href={getEditorHref(row.original)}
+              className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-indigo-600 hover:underline underline-offset-2 transition-colors"
+            >
+              {row.original.content_name}
+            </Link>
+          ) : (
+            <span className="text-sm font-bold text-slate-900 leading-tight">
+              {row.original.content_name}
+            </span>
+          )}
           {row.original.content_name_en && (
             <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]">
               {row.original.content_name_en}
@@ -84,13 +125,14 @@ export function ContentDataTable({
     },
     {
       accessorKey: "content_type",
-      header: "種別",
+      header: t('typeHeader'),
       cell: ({ row }) => {
         const type = row.original.content_type;
         const config = {
           0: { icon: <MessageSquare size={12} />, className: "bg-blue-50 text-blue-600 border-blue-100" },
           1: { icon: <Video size={12} />, className: "bg-purple-50 text-purple-600 border-purple-100" },
           2: { icon: <Layers size={12} />, className: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+          3: { icon: <MessagesSquare size={12} />, className: "bg-cyan-50 text-cyan-600 border-cyan-100" },
         }[type] || { icon: null, className: "" };
 
         return (
@@ -103,7 +145,7 @@ export function ContentDataTable({
     },
     {
       accessorKey: "content_scope",
-      header: "公開範囲",
+      header: t('scopeHeader'),
       cell: ({ row }) => {
         const content = row.original;
         const scope = content.content_scope as keyof typeof CONTENT_SCOPES;
@@ -138,7 +180,7 @@ export function ContentDataTable({
                   {/* 下段：クライアント名またはエラーメッセージ */}
                   <div className="flex items-center gap-1.5 pl-1 transition-colors">
                     {isAlert ? (
-                      <span className="text-[10px] font-bold text-rose-400 italic">公開先を設定してください</span>
+                      <span className="text-[10px] font-bold text-rose-400 italic">{t('accessAlertHint')}</span>
                     ) : (
                       <div className="flex items-center gap-1.5 text-slate-500 group-hover/access:text-amber-700">
                         <Building2 size={10} className="text-slate-300 group-hover/access:text-amber-400 shrink-0" />
@@ -189,7 +231,7 @@ export function ContentDataTable({
     },
     {
       id: "tags",
-      header: "タグ",
+      header: t('tagsHeader'),
       cell: ({ row }) => {
         // row.original は Content 型
         const content = row.original;
@@ -205,34 +247,33 @@ export function ContentDataTable({
     },
     {
       id: "actions",
-      header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">操作</div>,
-      cell: ({ row }) => (
-        <div className="flex justify-end items-center gap-2 px-2">
-          {/* 教材基本情報の編集モーダル */}
-          <ContentFormDialog mode="edit" initialData={row.original} />
+      header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('actionsHeader')}</div>,
+      cell: ({ row }) => {
+        const editor = EDITOR_CONFIG[row.original.content_type];
+        return (
+          <div className="flex justify-end items-center gap-3 px-2">
+            {/* 教材基本情報の編集モーダル */}
+            <ContentFormDialog mode="edit" initialData={row.original} />
 
-          {/* 詳細（単語エディタ等）画面へ */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            asChild
-            className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-            title="エディタを起動"
-          >
-            <Link 
-              href={
-                row.original.content_type === 2 
-                  ? `/contents/${row.original.content_id}?type=${(row.original.metadata as any)?.question_type || '0'}`
-                  : `/contents/${row.original.content_id}`
-              }
-            >
-              <ChevronRight size={18} />
-            </Link>
-          </Button>
-        </div>
-      ),
+            {/* 中身（単語・問題・セッション）のエディタ画面へ。未対応種別は列を揃えるため空枠を置く */}
+            {editor ? (
+              <Button variant="outline" size="sm" asChild className={`h-8 min-w-38 justify-between gap-2 px-3 font-bold text-xs shadow-sm transition-colors ${editor.className}`}>
+                <Link href={getEditorHref(row.original)}>
+                  <span className="flex items-center gap-1.5">
+                    {editor.icon}
+                    {t(`editorButton.${editor.labelKey}`)}
+                  </span>
+                  <ArrowRight size={13} />
+                </Link>
+              </Button>
+            ) : (
+              <div className="min-w-38" aria-hidden />
+            )}
+          </div>
+        );
+      },
     },
-  ], []);
+  ], [t]);
 
   const table = useReactTable({
     data,
@@ -257,15 +298,26 @@ export function ContentDataTable({
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const handleTypeFilterChange = (type: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (type === "all") {
+      params.delete("type");
+    } else {
+      params.set("type", type);
+    }
+    params.set("page", "1");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   return (
     <div className="space-y-0">
       {/* コントロールパネル */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-slate-50/80 rounded-t-lg border-x border-t border-slate-200">
-        <div className="flex items-center gap-2 w-full max-w-md">
+        <div className="flex items-center gap-2 w-full max-w-2xl">
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
             <Input
-              placeholder="教材名、ラベルで検索..."
+              placeholder={t('searchPlaceholder')}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearchTrigger(searchValue)}
@@ -278,13 +330,28 @@ export function ContentDataTable({
             )}
           </div>
           <Button onClick={() => handleSearchTrigger(searchValue)} variant="secondary" size="sm" className="h-9 px-4 bg-white border border-slate-200 shadow-sm font-bold text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">
-            検索
+            {t('searchButton')}
           </Button>
+
+          <Select value={currentType} onValueChange={handleTypeFilterChange}>
+            <SelectTrigger className="h-9 w-40 bg-white border-slate-200 shadow-sm rounded-xl font-bold text-slate-600 shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('typeFilterAllOption')}</SelectItem>
+              {Object.entries(CONTENT_TYPES).map(([val, info]) => (
+                <SelectItem key={val} value={val}>{info.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden md:block text-[13px] text-slate-500 font-medium">
-            全 <span className="text-slate-900 font-bold">{totalCount}</span> 件
+            {t.rich('totalCount', {
+              count: totalCount,
+              styled: (chunks) => <span className="text-slate-900 font-bold">{chunks}</span>,
+            })}
           </div>
           <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
             <Button variant="ghost" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage <= 1} className="h-8 w-8 p-0 rounded-lg">
@@ -328,7 +395,7 @@ export function ContentDataTable({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  教材データが見つかりませんでした。
+                  {t('noData')}
                 </TableCell>
               </TableRow>
             )}

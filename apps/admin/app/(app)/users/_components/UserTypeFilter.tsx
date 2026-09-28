@@ -1,9 +1,11 @@
 'use client';
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { USER_TYPE_MAP } from '@gabby/types/user';
 
 export default function UserTypeFilter() {
+  const t = useTranslations('users.filter');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -29,7 +31,7 @@ export default function UserTypeFilter() {
       onChange={(e) => handleFilter(e.target.value)}
       className="h-9 shrink-0 px-3 border border-slate-200 rounded-md text-sm text-slate-700 bg-white shadow-sm focus:ring-1 focus:ring-indigo-500 outline-none"
     >
-      <option value="">すべての区分</option>
+      <option value="">{t('allUserTypes')}</option>
       {Object.entries(USER_TYPE_MAP).map(([type, label]) => (
         <option key={type} value={type}>
           {label}
