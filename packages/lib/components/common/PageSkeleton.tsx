@@ -7,8 +7,9 @@ import { Skeleton } from './Skeleton';
  * - list: 1列に並ぶ行（お知らせ・履歴・チャット一覧・フォーム等）
  * - cards: カードのグリッド（ダッシュボード・概要画面等）
  * - table: ツールバー＋表（管理画面の一覧等）
+ * - chat: チャットルーム（2ペインの右側。ヘッダー＋吹き出し）。見出しの骨組みは出さない
  */
-export type PageSkeletonVariant = 'list' | 'cards' | 'table';
+export type PageSkeletonVariant = 'list' | 'cards' | 'table' | 'chat';
 
 interface PageSkeletonProps {
   /** 支援技術向けの読み上げ文言（アプリの言語で渡す） */
@@ -56,10 +57,36 @@ function TableBody() {
   );
 }
 
+/** 吹き出しの幅（相手→自分→相手…の順）。毎回同じ形にしてちらつきを抑える */
+const CHAT_BUBBLE_WIDTHS = ['w-56', 'w-40', 'w-64', 'w-48', 'w-36'] as const;
+
+function ChatBody() {
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="flex items-center gap-3 border-b border-skeleton px-4 py-3">
+        <Skeleton className="size-8 rounded-full" />
+        <div className="space-y-1.5">
+          <Skeleton className="h-3.5 w-32" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </div>
+      <div className="flex-1 space-y-4 px-6 py-6">
+        {CHAT_BUBBLE_WIDTHS.map((width, i) => (
+          <div key={i} className={cn('flex items-end gap-2.5', i % 2 === 1 && 'justify-end')}>
+            {i % 2 === 0 && <Skeleton className="size-8 rounded-full" />}
+            <Skeleton className={cn('h-10 rounded-2xl', width)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const BODY: Record<PageSkeletonVariant, () => React.ReactElement> = {
   list: ListBody,
   cards: CardsBody,
   table: TableBody,
+  chat: ChatBody,
 };
 
 /**
@@ -68,9 +95,15 @@ const BODY: Record<PageSkeletonVariant, () => React.ReactElement> = {
  */
 export function PageSkeleton({ label, variant = 'list', header = true, className }: PageSkeletonProps) {
   const Body = BODY[variant];
+  const isChat = variant === 'chat';
   return (
-    <div role="status" aria-label={label} aria-busy className={cn('w-full space-y-6', className)}>
-      {header && (
+    <div
+      role="status"
+      aria-label={label}
+      aria-busy
+      className={cn('w-full', isChat ? 'flex min-h-0 flex-1 flex-col' : 'space-y-6', className)}
+    >
+      {header && !isChat && (
         <div className="space-y-2">
           <Skeleton className="h-8 w-56 max-w-full" />
           <Skeleton className="h-4 w-80 max-w-full" />

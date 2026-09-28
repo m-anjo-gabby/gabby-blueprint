@@ -1,4 +1,4 @@
-import { RouteLoading } from '@/components/common/RouteLoading';
+import { RouteLoading } from '@/components/shell/RouteLoading';
 
 export default function Loading() {
   return <RouteLoading variant="chat" />;

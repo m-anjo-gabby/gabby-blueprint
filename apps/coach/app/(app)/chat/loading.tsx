@@ -1,5 +1,5 @@
 import { RouteLoading } from '@/components/common/RouteLoading';
 
 export default function Loading() {
-  return <RouteLoading variant="list" />;
+  return <RouteLoading variant="chat" />;
 }

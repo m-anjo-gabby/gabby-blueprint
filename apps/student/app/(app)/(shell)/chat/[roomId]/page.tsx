@@ -2,7 +2,7 @@
 import { notFound } from 'next/navigation';
 import { getChatMessages } from '@gabby/lib/chat/actions/messageActions';
 import { getChatRoomDetail } from '@gabby/lib/chat/actions/roomActions';
-import { ChatTimeline } from '@/app/(app)/(shell)/chat/_components/ChatTimeline';
+import { ChatTimeline } from '@gabby/lib/components/chat/ChatTimeline';
 
 export default async function ChatRoomPage({
   params,

@@ -2,7 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import Header from '@/components/common/Header';
-import { getVisibleNavItems, type ShellNavContext } from '@/constants/navigation';
+import { cn } from '@/lib/utils';
+import { getVisibleNavItems, isMobileFocusPath, type ShellNavContext } from '@/constants/navigation';
 import { SideNav } from './SideNav';
 import { BottomTabBar } from './BottomTabBar';
 import { useShellNavBadges } from './useShellNavBadges';
@@ -21,17 +22,21 @@ export function AppShell({ navContext, children }: AppShellProps) {
   const pathname = usePathname();
   const items = getVisibleNavItems(navContext);
   const badges = useShellNavBadges(navContext, pathname);
+  // チャットルーム等の作業画面では、モバイルのヘッダー・ボトムタブを隠して縦幅を作業領域に回す
+  const isMobileFocus = isMobileFocusPath(pathname);
 
   return (
     <div className="flex h-dvh bg-canvas font-sans text-ink selection:bg-brand-100">
       <SideNav items={items} badges={badges} pathname={pathname} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header />
+        <div className={cn('contents', isMobileFocus && 'max-md:hidden')}>
+          <Header />
+        </div>
         <main data-scroll-container className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {children}
         </main>
-        <BottomTabBar items={items} badges={badges} pathname={pathname} />
+        {!isMobileFocus && <BottomTabBar items={items} badges={badges} pathname={pathname} />}
       </div>
     </div>
   );

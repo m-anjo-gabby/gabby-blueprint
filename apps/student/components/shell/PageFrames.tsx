@@ -5,7 +5,7 @@ interface PanelFrameProps {
 }
 
 /**
- * 没入（フォーカス）画面の共通枠（トレーニング・ライブ通話・チャットルーム等、ナビを出さない画面）。
+ * 没入（フォーカス）画面の共通枠（トレーニング・ライブ通話等、ナビを出さない画面）。
  * 画面全体（h-dvh）を占有し、外側のスクロールは禁止して内部だけをスクロールさせる。
  * 中身は `ImmersivePanel` で包む。モバイルでは端末の画面そのものをパネルとみなすため余白を取らない。
  */
@@ -57,10 +57,23 @@ export type ContentWidth = keyof typeof CONTENT_WIDTH_CLASS;
 interface ContentFrameProps {
   children: React.ReactNode;
   width?: ContentWidth;
+  /**
+   * シェルの表示領域の高さいっぱいに広げ、中の区画ごとにスクロールさせる（チャットの2ペイン専用）。
+   * 一覧とタイムラインを別々にスクロールさせ、入力欄を下端に固定する必要があるため、
+   * 「スクロールはシェルの <main> に任せる」の例外として扱う。モバイルでは余白を取らず端まで広げる。
+   */
+  fill?: boolean;
 }
 
 /** アプリシェル内の画面の共通枠（スクロールはシェルの <main> に任せる） */
-export function ContentFrame({ children, width = 'narrow' }: ContentFrameProps) {
+export function ContentFrame({ children, width = 'narrow', fill = false }: ContentFrameProps) {
+  if (fill) {
+    return (
+      <div className="flex h-full justify-center sm:px-6 sm:py-6">
+        <div className={cn('flex h-full min-h-0 w-full flex-col', CONTENT_WIDTH_CLASS[width])}>{children}</div>
+      </div>
+    );
+  }
   return (
     <div className="flex justify-center px-4 sm:px-6 py-4 sm:py-8">
       <div className={cn('relative w-full animate-in fade-in slide-in-from-bottom-2 duration-700', CONTENT_WIDTH_CLASS[width])}>

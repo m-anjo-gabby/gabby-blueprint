@@ -10,7 +10,7 @@ import type { ShellNavContext } from '@/constants/navigation';
  * 画面は次の2層に分かれる:
  * - (shell) 配下: ホーム・トレーニング・ライブセッション・チャット・モニター等、タブ間を行き来する画面。
  *   モバイル=ボトムタブ / PC=左サイドバーを常設する。
- * - (app) 直下（training / live-room/[sessionId] / chat/[roomId] 等）: 没入（フォーカス）画面。
+ * - (app) 直下（training / live-room/[sessionId] 等）: 没入（フォーカス）画面。
  *   ナビを出さず、学習・セッションに集中させる。
  *
  * タブの表示可否はサーバー側で解決し、クライアントでのちらつき（後から出現）を防ぐ。

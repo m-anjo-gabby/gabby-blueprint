@@ -70,14 +70,7 @@
      注意: Tailwind v4 は未使用のパレット変数（--color-slate-* 等）を出力しないため、
      var() で参照すると未定義になる。値は Tailwind 標準パレットと同じ oklch を直接記述する。 */
 
-  /* Neutral: 画面の9割を占める基調色（= Tailwind slate） */
-  --color-canvas: oklch(97.5% 0.004 264);           /* ページ背景 */
-  --color-surface: oklch(100% 0 0);                 /* カード */
-  --color-ink: oklch(20.8% 0.042 265.755);          /* = slate-900 見出し・本文 */
-  --color-ink-soft: oklch(37.2% 0.044 257.287);     /* = slate-700 本文（やや弱め） */
-  --color-ink-muted: oklch(55.4% 0.046 257.417);    /* = slate-500 補足文 */
-  --color-ink-subtle: oklch(70.4% 0.04 256.788);    /* = slate-400 非活性・装飾アイコン */
-  --color-line: oklch(92.9% 0.013 255.508);         /* = slate-200 区切り線・カード枠 */
+  /* Neutral（canvas / surface / ink-* / line）は packages/lib/styles/brand-theme.css で定義（全アプリ共通） */
 
   /* Radius: 用途別に3段階へ集約 */
   --radius-panel: 1.75rem;   /* 画面を占めるパネル */

@@ -79,3 +79,12 @@ export const getVisibleNavItems = (ctx: ShellNavContext): ShellNavItem[] =>
 
 export const isNavItemActive = (item: ShellNavItem, pathname: string): boolean =>
   item.matchPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
+/**
+ * モバイル（md未満）でヘッダーとボトムタブを隠し、画面を作業領域だけにするシェル内の画面。
+ * チャットルームは入力欄とキーボードで縦幅を使うため、会話中はナビを出さない（一覧へは画面内の戻るで戻る）。
+ */
+const MOBILE_FOCUS_PATH_PATTERNS: RegExp[] = [/^\/chat\/[^/]+/];
+
+export const isMobileFocusPath = (pathname: string): boolean =>
+  MOBILE_FOCUS_PATH_PATTERNS.some((pattern) => pattern.test(pathname));

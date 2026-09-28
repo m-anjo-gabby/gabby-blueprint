@@ -1,12 +1,6 @@
-import { ShellPageHeader } from '@/components/shell/ShellPage';
-import { ChatRoomList } from './_components/ChatRoomList';
+import { ChatEmptyPane } from '@gabby/lib/components/chat/ChatSplitLayout';
 
+/** ルーム未選択時の右ペイン（2ペイン未満の画面幅では一覧だけを表示するため出ない） */
 export default function ChatPage() {
-  return (
-    <>
-      <ShellPageHeader title="チャット" description="担当コーチや運営とのメッセージをまとめて確認できます。" />
-
-      <ChatRoomList />
-    </>
-  );
+  return <ChatEmptyPane />;
 }

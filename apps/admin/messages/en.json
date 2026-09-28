@@ -1003,10 +1003,17 @@
       "removeAriaLabel": "Remove {name}"
     },
     "page": {
+      "selectRoomTitle": "Select a chat room",
+      "selectRoomHint": "Choose a room from the list to show its messages here.",
       "title": "Chat",
       "subtitle": "1-on-1 or group chats with coaches and students. Only admins can create new rooms."
     },
     "roomList": {
+      "searchPlaceholder": "Search by name or message",
+      "clearSearch": "Clear search",
+      "filterAll": "All",
+      "filterUnread": "Unread",
+      "noMatchingRooms": "No matching chat rooms",
       "myChatsTab": "My chats",
       "allRoomsTab": "All chat rooms (review)",
       "clientFilterPlaceholder": "Filter by client",
@@ -1027,6 +1034,8 @@
       "attachmentFetchFailed": "Failed to fetch the attachment"
     },
     "messageInput": {
+      "attachFile": "Attach a file",
+      "sendMessage": "Send",
       "placeholder": "Type a message (Shift+Enter for a new line)",
       "removeTooltip": "Remove",
       "toastSendFailed": "Failed to send the message",
@@ -1074,7 +1083,19 @@
       "toastAddFailed": "Failed to add the participant",
       "toastRemoveFailed": "Failed to remove the participant"
     },
+    "roomDetails": {
+      "title": "Room info",
+      "roomTypeLabel": "Type",
+      "roomTypeOneOnOne": "1-on-1",
+      "roomTypeGroup": "Group",
+      "createdAtLabel": "Created",
+      "membersLabel": "Participants ({count})"
+    },
     "timeline": {
+      "unreadDivider": "New messages",
+      "jumpToLatest": "Jump to latest",
+      "newMessages": "{count, plural, one {# new message} other {# new messages}}",
+      "detailsButton": "Room info",
       "backAriaLabel": "Back to chat list",
       "reviewModeBadge": "Review mode",
       "viewOnlyNotice": "You are not a member of this room, so you can only view it (you cannot send messages)",

@@ -1003,10 +1003,17 @@
       "removeAriaLabel": "{name}を削除"
     },
     "page": {
+      "selectRoomTitle": "チャットを選択してください",
+      "selectRoomHint": "左の一覧からルームを選ぶと、ここにメッセージが表示されます。",
       "title": "チャット",
       "subtitle": "コーチ・生徒との1対1チャット、またはグループチャットです。ルームの新規作成はAdminのみ行えます。"
     },
     "roomList": {
+      "searchPlaceholder": "名前・メッセージを検索",
+      "clearSearch": "検索をクリア",
+      "filterAll": "すべて",
+      "filterUnread": "未読",
+      "noMatchingRooms": "該当するチャットルームがありません",
       "myChatsTab": "自分のチャット",
       "allRoomsTab": "全チャットルーム（査閲）",
       "clientFilterPlaceholder": "顧客で絞り込み",
@@ -1027,6 +1034,8 @@
       "attachmentFetchFailed": "添付ファイルの取得に失敗しました"
     },
     "messageInput": {
+      "attachFile": "ファイルを添付",
+      "sendMessage": "送信",
       "placeholder": "メッセージを入力（Shift+Enterで改行）",
       "removeTooltip": "削除",
       "toastSendFailed": "メッセージの送信に失敗しました",
@@ -1074,7 +1083,19 @@
       "toastAddFailed": "参加者の追加に失敗しました",
       "toastRemoveFailed": "参加者の削除に失敗しました"
     },
+    "roomDetails": {
+      "title": "ルーム情報",
+      "roomTypeLabel": "種別",
+      "roomTypeOneOnOne": "1対1",
+      "roomTypeGroup": "グループ",
+      "createdAtLabel": "作成日",
+      "membersLabel": "参加者（{count}名）"
+    },
     "timeline": {
+      "unreadDivider": "ここから未読",
+      "jumpToLatest": "最新のメッセージへ",
+      "newMessages": "新着メッセージ {count}件",
+      "detailsButton": "ルーム情報",
       "backAriaLabel": "チャット一覧へ戻る",
       "reviewModeBadge": "査閲モード",
       "viewOnlyNotice": "このルームの参加者ではないため、閲覧のみ可能です（発言はできません）",
