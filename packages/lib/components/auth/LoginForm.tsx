@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { RETURN_TO_PARAM } from '../../auth/returnTo';
+import { useHydrated } from '../../hooks/useHydrated';
 import { useLoginNotice } from '../../hooks/useLoginNotice';
 import ConfirmContainer from '../common/ConfirmContainer';
 import { LoginNoticeBanner } from '../common/LoginNoticeBanner';
@@ -25,6 +26,7 @@ export function LoginForm({ action, labels, badge }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const isHydrated = useHydrated();
   const notice = useLoginNotice({ invalidLinkTitle: labels.invalidLinkTitle, invalidLinkBody: labels.invalidLinkBody });
 
   const handleSubmit = async (formData: FormData) => {
@@ -62,7 +64,8 @@ export function LoginForm({ action, labels, badge }: LoginFormProps) {
         </div>
       </div>
 
-      <form action={handleSubmit} className="space-y-5">
+      {/* 入力できる状態になったことを data-ready で示す（E2E はこれを待ってから入力する。KJ-2026-0928-02） */}
+      <form action={handleSubmit} className="space-y-5" data-ready={isHydrated ? 'true' : undefined}>
         <LoginNoticeBanner
           notice={notice}
           messages={{ password_updated: labels.passwordUpdatedNotice, link_error: labels.linkErrorNotice }}

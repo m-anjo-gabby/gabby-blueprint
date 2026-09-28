@@ -25,12 +25,21 @@
 | 機能 | E2Eで検証する範囲 | 対象外・モック化する部分 |
 |---|---|---|
 | Zoom Video SDK（ライブセッション通話） | ルーム入室ボタンの表示・入室操作・退室後の画面遷移等 | 実際の映像/音声の疎通、通話品質 |
-| Resend（メール送信） | メール送信トリガーとなる操作が成功すること（画面上の成功表示・送信履歴の記録） | 実際のメール受信・文面の見た目 |
+| Resend（メール送信） | メール送信トリガーとなる操作が成功すること（画面上の成功表示・送信履歴の記録）。文面（件名・言語・期限・リンク）は送信せずにテンプレートの描画結果で検証する（`testing/unit/`）。受信は Resend のテスト用アドレス宛に送り、送信済みメールを API で読んでリンクを開くまで検証できる（下記） | 実在の宛先への配信、メールソフトでの見た目 |
 | Azure Speech SDK（音声認識・TTS） | 音声入力UIの表示・録音開始/停止操作 | 認識精度・実際の音声合成品質 |
 
 外部サービス呼び出しをモックする方式（APIレイヤーでスタブ化する、テスト用エンドポイントを
 用意する等）は、Playwright導入時に機能ごとに実装方針を決める。本ファイルには
 「どこまで見るか」の境界のみを定義する。
+
+メール（Resend）の検証方法:
+
+- **文面**: 送信処理と同じ組み立て関数（例: `renderPasswordResetEmail`）の結果を `testing/unit/*.test.ts` で検証する
+  （`pnpm --filter @gabby/testing unit`。Playwright のテスト実行環境は JSX を独自形式に変換するため、React のメールテンプレートを描画できない）。
+- **受信**: 宛先を Resend のテスト用アドレス `delivered+<ラベル>@resend.dev`（`support/resendInbox.ts` の `resendTestAddress`）にして
+  画面から送信し、`waitForEmail` で送信済みメールを取得してリンクを開く。読み取りには Full access の API キーが必要で、
+  `testing/.env.local` の `RESEND_TEST_READ_API_KEY` に置く（アプリの `RESEND_API_KEY` は送信専用）。未設定ならテストをスキップする。
+- `@gabby-qa-test.example` 等の実在しない宛先へは送信しない（バウンスで送信元ドメインの評価が下がる）。実際に送信するテストは desktop だけで行う。
 
 ## 3. 固定アカウントの並列実行時の扱い
 
@@ -93,6 +102,7 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   Android（Chromium）も含める場合は `pnpm --filter @gabby/testing e2e:android`（`--project=mobile-android` で単独実行も可）。
   初回・Playwright更新時はブラウザ取得が必要: `pnpm --filter @gabby/testing exec playwright install chromium webkit`。
   結果レポート（人が見る用）: `pnpm --filter @gabby/testing e2e:report`。成果物は `testing/e2e/.artifacts/`（git管理外）。
+- ブラウザを使わない検証（メールの文面等）は `testing/unit/*.test.ts` に置き、`pnpm --filter @gabby/testing unit`（`tsx --test`）で実行する。
 
 ## 8. トークン消費を抑える運用（AIアシスタントが実行する場合）
 

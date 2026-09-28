@@ -847,3 +847,21 @@
     固定アカウントのパスワードを変えないよう、更新は「現在と同じパスワード」を送り、同一パスワードのエラーが出ることで
     リンク確認の判定を通過したことを確かめる（更新が成功すると全セッションがログアウトされ、他テストのログイン状態も無効になる）。
   - パスワード忘れのテストで「未登録アドレスはエラー」を期待しない（常に完了画面になる）。
+
+### KJ-2026-0928-04 メールの自動検証: アプリの Resend キーは送信専用、React のメールは Playwright で描画できない
+
+- **該当シナリオ**: 認証E2E（`e2e/tests/auth/`）で、再設定メールの文面・受信まで自動で確かめようとした
+- **事象**:
+  - アプリの `RESEND_API_KEY` で送信済みメールの一覧（`GET /emails`）を取得すると 401（`restricted_api_key`: 送信専用）。
+  - Playwright のテストから React のメールテンプレートを `renderToString` すると
+    「Objects are not valid as a React child (found: object with keys {__pw_type, …})」で失敗した。Playwright のテスト実行環境が
+    JSX をコンポーネントテスト用の独自形式に変換するため。
+  - 失敗したテストの後始末が漏れ、使い捨てユーザーと顧客が残った（ユーザー検索に `com_m_user.email` を使ったが、この列は無い）。
+- **判断基準への反映**:
+  - メールの受信確認には、読み取り用に Full access の Resend キーを別に発行し `testing/.env.local` の `RESEND_TEST_READ_API_KEY` に置く。
+    宛先は `delivered+<ラベル>@resend.dev`。未設定ならスキップする作りにする（キーの無い環境でもE2E全体は通る）。
+  - メールの文面は、送信処理と同じ組み立て関数を `testing/unit/`（`tsx --test`）で検証する。Playwright では描画しない。
+  - メールアドレスからユーザーを探すときは `auth.admin.listUsers` を使う（`com_m_user` にメールアドレスは無い）。
+    使い捨てデータの後始末が漏れた疑いがあれば、`authFixtures.leftovers.ts` で残骸を確認する。
+  - ログイン画面の入力欄は制御コンポーネントのため、WebKit ではハイドレーション前の入力が消える（KJ-2026-0928-02 と同じ）。
+    `form[data-ready='true']` を待ってから入力する。

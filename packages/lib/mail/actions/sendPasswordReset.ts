@@ -23,6 +23,21 @@ interface SendPasswordResetParams {
   language: PasswordResetMailLanguage;
 }
 
+/** パスワード再設定メールの件名・本文を組み立てる（送信はしない。文面の検証にも使う） */
+export function renderPasswordResetEmail({
+  resetUrl,
+  language,
+}: Pick<SendPasswordResetParams, 'resetUrl' | 'language'>): { subject: string; html: string } {
+  const html = renderToString(
+    React.createElement(PasswordResetEmailTemplate, {
+      resetUrl,
+      language,
+      expiresInMinutes: PASSWORD_RESET_LINK_TTL_MINUTES,
+    })
+  );
+  return { subject: PASSWORD_RESET_SUBJECTS[language], html };
+}
+
 /**
  * 🔒 パスワード再設定メールを組み立てて Resend 経由で送信する
  */
@@ -32,19 +47,8 @@ export async function sendPasswordResetEmail({
   language,
 }: SendPasswordResetParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const html = renderToString(
-      React.createElement(PasswordResetEmailTemplate, {
-        resetUrl,
-        language,
-        expiresInMinutes: PASSWORD_RESET_LINK_TTL_MINUTES,
-      })
-    );
-
-    const data = await sendCore({
-      to,
-      subject: PASSWORD_RESET_SUBJECTS[language],
-      html,
-    });
+    const { subject, html } = renderPasswordResetEmail({ resetUrl, language });
+    const data = await sendCore({ to, subject, html });
 
     logger.info('mail:send_password_reset_success', `パスワードリセットメールを送信しました: ${to}`, { messageId: data?.id, language });
     return { success: true };
