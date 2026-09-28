@@ -79,6 +79,8 @@ export function ChatTimeline({
   });
   // 下端から離れて過去ログを読んでいる間に届いた新着の件数（「最新へ」ボタンに表示）
   const [isAwayFromBottom, setIsAwayFromBottom] = useState(false);
+  // メッセージがヘッダーの下に潜り込んでいる（一番上までスクロールしていない）間だけ、ヘッダーの区切り線を出す
+  const [isScrolledFromTop, setIsScrolledFromTop] = useState(false);
   const [newWhileAway, setNewWhileAway] = useState(0);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -171,6 +173,7 @@ export function ChatTimeline({
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     const stuck = distanceFromBottom < STICK_TO_BOTTOM_THRESHOLD_PX;
     stickToBottomRef.current = stuck;
+    setIsScrolledFromTop(container.scrollTop > 0);
     setIsAwayFromBottom(!stuck);
     if (stuck) setNewWhileAway(0);
   };
@@ -272,7 +275,12 @@ export function ChatTimeline({
 
   return (
     <section className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-surface text-ink">
-      <header className="flex shrink-0 items-center gap-3 border-b border-line px-3 py-3 sm:px-4">
+      <header
+        className={cn(
+          'flex shrink-0 items-center gap-3 border-b px-3 py-3 transition-colors sm:px-4',
+          isScrolledFromTop ? 'border-line' : 'border-transparent'
+        )}
+      >
         <Link
           href={basePath}
           aria-label={labels.backToList}
@@ -306,7 +314,7 @@ export function ChatTimeline({
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overscroll-contain bg-canvas/60 px-4 py-4 sm:px-6"
+        className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6"
       >
         <div ref={contentRef} className="mx-auto max-w-200 space-y-0.5">
           <div ref={sentinelRef} />
@@ -386,9 +394,9 @@ export function ChatTimeline({
                       <div
                         className={cn(
                           'min-w-0 max-w-140 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed',
-                          isMine
-                            ? 'rounded-br-sm bg-brand text-white'
-                            : 'rounded-bl-sm border border-line bg-surface text-ink'
+                          // 自分=淡いブランド色、相手=淡いグレー。どちらも濃い文字にして長文でも読みやすくし、
+                          // 濃いブランド色は送信ボタン等のアクセントに限定する（Google Chat と同じ考え方）
+                          isMine ? 'rounded-br-sm bg-brand-100 text-ink' : 'rounded-bl-sm bg-ink/5 text-ink'
                         )}
                       >
                         <ChatMessageContent message={msg} />
@@ -415,13 +423,14 @@ export function ChatTimeline({
         </button>
       )}
 
-      {isMember ? (
-        <ChatComposer roomId={roomId} onSent={handleSent} />
-      ) : (
-        <div className="shrink-0 border-t border-line p-4 text-center text-xs font-bold text-ink-subtle">
-          {labels.viewOnlyNotice}
-        </div>
-      )}
+      {/* 入力エリアはタイムラインと同じ背景で一体に見せる。過去のメッセージを読んでいる間だけ境界線を出す */}
+      <div className={cn('shrink-0 border-t transition-colors', isAwayFromBottom ? 'border-line' : 'border-transparent')}>
+        {isMember ? (
+          <ChatComposer roomId={roomId} onSent={handleSent} />
+        ) : (
+          <div className="p-4 text-center text-xs font-bold text-ink-subtle">{labels.viewOnlyNotice}</div>
+        )}
+      </div>
     </section>
   );
 }

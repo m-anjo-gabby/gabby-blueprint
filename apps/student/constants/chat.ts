@@ -51,7 +51,7 @@ export const CHAT_LABELS: ChatLabels = {
   deleteMessageConfirmBody: 'このメッセージを削除します。元に戻せません。よろしいですか？',
   deleteMessageFailed: 'メッセージの削除に失敗しました',
 
-  composerPlaceholder: 'メッセージを入力（Shift+Enterで改行）',
+  composerPlaceholder: 'メッセージを入力',
   attachFile: 'ファイルを添付',
   sendMessage: '送信',
   removeAttachment: '削除',

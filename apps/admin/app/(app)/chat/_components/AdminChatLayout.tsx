@@ -83,7 +83,7 @@ function AdminChatRoomList() {
                   type="button"
                   onClick={() => setMode(value)}
                   className={cn(
-                    'flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-bold transition-colors',
+                    'flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-bold transition-colors',
                     mode === value ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
                   )}
                 >

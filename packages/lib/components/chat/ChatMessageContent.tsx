@@ -23,7 +23,7 @@ export function ChatMessageContent({ message }: { message: ChatMessage }) {
 
   return (
     <div className="space-y-2">
-      {message.message && <p className="whitespace-pre-wrap wrap-break-word">{linkifyText(message.message)}</p>}
+      {message.message && <p className="whitespace-pre-wrap wrap-break-word [&_a]:text-brand-600">{linkifyText(message.message)}</p>}
       {message.attachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {message.attachments.map((attachment) => (

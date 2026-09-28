@@ -39,7 +39,7 @@
 |---|---|---|---|
 | [dashboard.md](coach/dashboard.md) | `/dashboard` | Attentionタイル・直近セッション・Session Tasks | ✅ |
 | [calendar.md](coach/calendar.md) | `/calendar` | 月間カレンダー＋Pending Requestsパネル | ✅ |
-| [chat/list.md](coach/chat/list.md) | `/chat` | チャットルーム一覧（顧客フィルター） | ✅ |
+| [chat/list.md](coach/chat/list.md) | `/chat` | チャットルーム一覧（2ペイン） | ✅ |
 | [chat/room.md](coach/chat/room.md) | `/chat/[roomId]` | チャット詳細 | ✅ |
 | [availability.md](coach/availability.md) | `/availability` | 週次対応可能時間帯の設定 | ✅ |
 | [matching-requests.md](coach/matching-requests.md) | `/matching-requests` | マッチング申請・予約・振替候補の承認/却下 | ✅ |

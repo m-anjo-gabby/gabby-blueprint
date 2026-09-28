@@ -1005,8 +1005,7 @@
     "page": {
       "selectRoomTitle": "チャットを選択してください",
       "selectRoomHint": "左の一覧からルームを選ぶと、ここにメッセージが表示されます。",
-      "title": "チャット",
-      "subtitle": "コーチ・生徒との1対1チャット、またはグループチャットです。ルームの新規作成はAdminのみ行えます。"
+      "title": "チャット"
     },
     "roomList": {
       "searchPlaceholder": "名前・メッセージを検索",
@@ -1015,7 +1014,7 @@
       "filterUnread": "未読",
       "noMatchingRooms": "該当するチャットルームがありません",
       "myChatsTab": "自分のチャット",
-      "allRoomsTab": "全チャットルーム（査閲）",
+      "allRoomsTab": "全ルーム（査閲）",
       "clientFilterPlaceholder": "顧客で絞り込み",
       "noRoomsFiltered": "該当する顧客のチャットルームがありません",
       "noRooms": "チャットルームがありません",
@@ -1036,7 +1035,7 @@
     "messageInput": {
       "attachFile": "ファイルを添付",
       "sendMessage": "送信",
-      "placeholder": "メッセージを入力（Shift+Enterで改行）",
+      "placeholder": "メッセージを入力",
       "removeTooltip": "削除",
       "toastSendFailed": "メッセージの送信に失敗しました",
       "toastFileSizeError": "{name}: ファイルサイズは10MBまでです",
@@ -1067,8 +1066,6 @@
       "label": "参加者（複数選択可）"
     },
     "manageParticipantsDialog": {
-      "button": "参加者を管理",
-      "title": "参加者を管理",
       "currentMembersLabel": "現在の参加者（{count}名）",
       "minMembersError": "グループの参加者は最低{min}名必要です",
       "deleteTooltip": "削除する",

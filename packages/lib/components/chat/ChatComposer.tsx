@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FileText, Loader2, Paperclip, Send, X } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { sendChatMessage } from '../../chat/actions/messageActions';
@@ -16,7 +16,34 @@ interface ChatComposerProps {
   onSent: (message: ChatMessage) => void;
 }
 
-const TEXTAREA_MAX_HEIGHT_PX = 160;
+/**
+ * 入力欄が自動で広がる上限の行数（超えたら入力欄の中でスクロールする）。
+ * PC は Google Chat と同程度の10行。スマートフォン（sm 未満）はキーボード表示中の可視領域が狭く、
+ * 10行まで広げるとタイムラインがほぼ隠れるため5行に抑える。
+ */
+const TEXTAREA_MAX_ROWS = 10;
+const TEXTAREA_MAX_ROWS_MOBILE = 5;
+
+/**
+ * 入力内容に合わせて入力欄の高さを合わせる。
+ * scrollHeight は枠線を含まないため、枠線分を足さないと常に数pxはみ出してスクロールバーが出てしまう。
+ * 上限の行数までは広げ、超えた場合だけスクロールバーを出す。
+ */
+function fitTextareaHeight(el: HTMLTextAreaElement) {
+  const style = window.getComputedStyle(el);
+  const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+  const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+  const maxRows = window.matchMedia('(min-width: 640px)').matches ? TEXTAREA_MAX_ROWS : TEXTAREA_MAX_ROWS_MOBILE;
+  const maxHeight = parseFloat(style.lineHeight) * maxRows + padding + border;
+
+  el.style.height = 'auto';
+  const contentHeight = el.scrollHeight + border;
+  el.style.height = `${Math.min(contentHeight, maxHeight)}px`;
+  el.style.overflowY = contentHeight > maxHeight ? 'auto' : 'hidden';
+}
+
+/** タッチ操作の端末か（スマートフォン等はEnterで改行し、送信はボタンで行う。LINE等と同じ操作感） */
+const isTouchDevice = () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
 /** 丸いアイコンボタン（処理中はアイコンをスピナーに置き換える） */
 function ComposerIconButton({
@@ -62,13 +89,24 @@ export function ChatComposer({ roomId, onSent }: ChatComposerProps) {
   const busy = isUploading || isSending;
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !busy;
 
-  // 入力量に合わせて高さを伸ばす（上限を超えたら入力欄の中でスクロール）
+  // 入力量に合わせて高さを伸ばす（改行・折り返しで広がり、上限の行数を超えたら入力欄の中でスクロール）
   useLayoutEffect(() => {
+    if (textareaRef.current) fitTextareaHeight(textareaRef.current);
+  }, [text]);
+
+  // 画面幅が変わると折り返し位置が変わるため、幅の変化でも高さを合わせ直す
+  useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT_PX)}px`;
-  }, [text]);
+    let lastWidth = el.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth === lastWidth) return;
+      lastWidth = el.clientWidth;
+      fitTextareaHeight(el);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -123,7 +161,7 @@ export function ChatComposer({ roomId, onSent }: ChatComposerProps) {
   };
 
   return (
-    <div className="shrink-0 border-t border-line bg-surface px-3 py-3 sm:px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div className="bg-surface px-3 py-3 sm:px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div className="mx-auto max-w-200 space-y-2">
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -167,15 +205,15 @@ export function ChatComposer({ roomId, onSent }: ChatComposerProps) {
             value={text}
             onChange={(e) => setDraft(roomId, { text: e.target.value })}
             onKeyDown={(e) => {
-              // IME変換確定のEnterでは送信しない
-              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              // PCはEnterで送信（Shift+Enterで改行）。IME変換確定のEnter・タッチ端末のEnterでは送信しない
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !isTouchDevice()) {
                 e.preventDefault();
                 handleSend();
               }
             }}
             placeholder={labels.composerPlaceholder}
             disabled={isSending}
-            className="min-h-10 flex-1 resize-none rounded-2xl border border-line bg-canvas px-4 py-2.5 text-sm leading-5 text-ink placeholder:text-ink-subtle focus:border-brand-300 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:opacity-60"
+            className="min-h-10 flex-1 resize-none overflow-y-hidden rounded-2xl border border-line bg-canvas px-4 py-2 text-base leading-6 text-ink sm:py-2.5 sm:text-sm sm:leading-5 placeholder:text-ink-subtle focus:border-brand-300 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:opacity-60"
           />
 
           <ComposerIconButton

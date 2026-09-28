@@ -1005,8 +1005,7 @@
     "page": {
       "selectRoomTitle": "Select a chat room",
       "selectRoomHint": "Choose a room from the list to show its messages here.",
-      "title": "Chat",
-      "subtitle": "1-on-1 or group chats with coaches and students. Only admins can create new rooms."
+      "title": "Chat"
     },
     "roomList": {
       "searchPlaceholder": "Search by name or message",
@@ -1015,7 +1014,7 @@
       "filterUnread": "Unread",
       "noMatchingRooms": "No matching chat rooms",
       "myChatsTab": "My chats",
-      "allRoomsTab": "All chat rooms (review)",
+      "allRoomsTab": "All rooms (review)",
       "clientFilterPlaceholder": "Filter by client",
       "noRoomsFiltered": "No chat rooms found for this client",
       "noRooms": "There are no chat rooms",
@@ -1036,7 +1035,7 @@
     "messageInput": {
       "attachFile": "Attach a file",
       "sendMessage": "Send",
-      "placeholder": "Type a message (Shift+Enter for a new line)",
+      "placeholder": "Type a message",
       "removeTooltip": "Remove",
       "toastSendFailed": "Failed to send the message",
       "toastFileSizeError": "{name}: files must be 10MB or smaller",
@@ -1067,8 +1066,6 @@
       "label": "Participants (multiple)"
     },
     "manageParticipantsDialog": {
-      "button": "Manage participants",
-      "title": "Manage Participants",
       "currentMembersLabel": "Current participants ({count})",
       "minMembersError": "A group must have at least {min} participants",
       "deleteTooltip": "Remove",

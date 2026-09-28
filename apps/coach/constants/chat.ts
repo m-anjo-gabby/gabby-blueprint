@@ -48,7 +48,7 @@ export const CHAT_LABELS: ChatLabels = {
   deleteMessageConfirmBody: 'This message will be deleted. This action cannot be undone. Are you sure?',
   deleteMessageFailed: 'Failed to delete the message',
 
-  composerPlaceholder: 'Type a message (Shift+Enter for a new line)',
+  composerPlaceholder: 'Type a message',
   attachFile: 'Attach a file',
   sendMessage: 'Send',
   removeAttachment: 'Remove',

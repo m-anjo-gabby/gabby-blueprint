@@ -21,9 +21,7 @@
    1. 見出し「Chat」
    2. 検索欄 — 「Search by name or message」
    3. 絞り込み — 「All」「Unread」の切り替え
-   4. 顧客フィルター — 表示中のルームに複数の顧客（契約先企業等）のメンバーが含まれる場合のみ
-      表示されるプルダウン
-   5. ルーム一覧 — 1対1／グループの別、相手の名前、直近メッセージのプレビュー、日時、未読件数バッジ
+   4. ルーム一覧 — 1対1／グループの別、相手の名前、直近メッセージのプレビュー、日時、未読件数バッジ
 2. **右ペイン（`md` 以上）** — ルーム未選択時は「Select a conversation」の案内。ルームを選ぶと
    チャット詳細（[room.md](room.md)）を表示する
 
@@ -33,7 +31,6 @@
 |---|---|---|
 | 検索欄 | 常時表示 | ルーム名・参加者名・最新メッセージの本文に部分一致で絞り込む（大文字小文字を区別しない）。×ボタンで入力をクリア |
 | 「All」「Unread」 | 常時表示。「Unread」には未読のあるルーム数を赤いバッジで表示 | 「Unread」を選ぶと未読メッセージのあるルームだけを表示する（開いているルームは既読になっても表示し続ける） |
-| 顧客フィルタープルダウン | 一覧中のルームメンバーに紐づく顧客（client）が2種類以上ある場合のみ表示 | 選択した顧客のメンバーを含むルームだけに絞り込む |
 | ルーム行のアイコン | 1対1はアイコン画像（未設定時は人型アイコン）、グループは常に人々アイコン | — |
 | 種別ラベル | 1対1の場合は相手の種別（"Student"/"Admin"）、グループの場合は「Group」 | — |
 | 直近メッセージのプレビュー | 削除済みメッセージは「This message was deleted」、写真のみは「📷 Photo」、ファイルのみは「📎 File」、メッセージが1件も無い場合は「No messages yet」 | — |
@@ -47,13 +44,13 @@
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
 | ルームが1件も無い | 「No chat rooms yet」「An admin will create a chat room for you to start a conversation.」 | 参加しているルームが1件も無い場合 |
-| 検索・絞り込みで0件 | 「No matching chat rooms」 | 検索語・「Unread」・顧客フィルターの結果、該当ルームが無い場合 |
+| 検索・絞り込みで0件 | 「No matching chat rooms」 | 検索語・「Unread」の絞り込みの結果、該当ルームが無い場合 |
 | ルーム未選択（右ペイン） | 「Select a conversation」「Choose a chat room from the list to read and reply to messages.」 | `md` 以上で `/chat` を開いている場合 |
 
 ## 実装参照（エンジニア向け）
 
 - `apps/coach/app/(app)/chat/layout.tsx`, `apps/coach/app/(app)/chat/page.tsx`
-- `apps/coach/app/(app)/chat/_components/CoachChatLayout.tsx`（顧客フィルター）
+- `apps/coach/app/(app)/chat/_components/CoachChatLayout.tsx`（生徒の所属顧客はコーチに見せないため、顧客での絞り込みは置かない）
 - `apps/coach/constants/chat.ts`（文言 `CHAT_LABELS`、2ペインにする画面幅 `CHAT_SPLIT_BREAKPOINT`）
 - 共通部品: `packages/lib/components/chat/ChatSplitLayout.tsx`, `ChatRoomListPane.tsx`
 - ストア: `@gabby/lib/stores/useChatStore`（ルーム一覧・未読数の取得元）、

@@ -40,6 +40,8 @@ export function ChatRoomListPane({ rooms, isLoading, headerAction, toolbar, empt
   const timeLabels = getHeaderTimeLabels(labels, timeZone);
   const [query, setQuery] = useState('');
   const [readFilter, setReadFilter] = useState<ReadFilter>('all');
+  // 一覧がスクロールされている間だけ、検索・絞り込み欄の下に区切り線を出す（タイムラインのヘッダーと同じ扱い）
+  const [isListScrolled, setIsListScrolled] = useState(false);
 
   const unreadRoomCount = rooms.filter((r) => r.unread_count > 0).length;
 
@@ -74,7 +76,12 @@ export function ChatRoomListPane({ rooms, isLoading, headerAction, toolbar, empt
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-surface">
-      <div className="shrink-0 space-y-3 border-b border-line px-4 pb-3 pt-4">
+      <div
+        className={cn(
+          'shrink-0 space-y-3 border-b px-4 pb-3 pt-4 transition-colors',
+          isListScrolled ? 'border-line' : 'border-transparent'
+        )}
+      >
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-lg font-bold text-ink">{labels.listTitle}</h1>
           {headerAction}
@@ -88,7 +95,7 @@ export function ChatRoomListPane({ rooms, isLoading, headerAction, toolbar, empt
             onChange={(e) => setQuery(e.target.value)}
             placeholder={labels.searchPlaceholder}
             aria-label={labels.searchPlaceholder}
-            className="h-9 w-full rounded-full border border-line bg-canvas pl-9 pr-8 text-sm text-ink placeholder:text-ink-subtle focus:border-brand-300 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden"
+            className="h-9 w-full rounded-full border border-line bg-canvas pl-9 pr-8 text-base text-ink sm:text-sm placeholder:text-ink-subtle focus:border-brand-300 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
@@ -128,7 +135,10 @@ export function ChatRoomListPane({ rooms, isLoading, headerAction, toolbar, empt
         {toolbar}
       </div>
 
-      <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1.5">
+      <ul
+        onScroll={(e) => setIsListScrolled(e.currentTarget.scrollTop > 0)}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1.5"
+      >
         {!isLoading && visibleRooms.length === 0 && (
           <li className="flex flex-col items-center justify-center gap-3 px-8 py-16 text-center text-ink-subtle">
             <MessageCircle size={30} strokeWidth={1.5} />

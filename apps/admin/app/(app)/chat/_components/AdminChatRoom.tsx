@@ -48,7 +48,7 @@ export function AdminChatRoom(props: AdminChatRoomProps) {
                 <Info size={18} />
               </button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-full space-y-6 overflow-y-auto p-5 sm:max-w-sm">
+            <SheetContent side="right" aria-describedby={undefined} className="w-full space-y-6 overflow-y-auto p-5 sm:max-w-sm">
               <SheetHeader className="p-0 text-left">
                 <SheetTitle className="text-base font-bold text-ink">{tDetails('title')}</SheetTitle>
               </SheetHeader>
