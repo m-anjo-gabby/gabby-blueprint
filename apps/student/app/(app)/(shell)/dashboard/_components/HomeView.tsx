@@ -146,7 +146,11 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
 
         {/* 2行目で空きマスが出ないよう、次回のセッションが1行目に入らない場合は「これまでの歩み」を2列分にする。
             例: アプリのみ契約 = 歩み2＋メニュー1、ライブ契約 = 今週1＋歩み1＋メニュー1 */}
-        <LifetimeStatsCard stats={lifetimeStats} className={showNextSession ? undefined : 'lg:col-span-2'} />
+        <LifetimeStatsCard
+          stats={lifetimeStats}
+          weekGains={week && { activeDays: week.activeCount, assessments: week.assessmentCount, phrases: week.phraseCount }}
+          className={showNextSession ? undefined : 'lg:col-span-2'}
+        />
 
         <TrainingMenuCard />
 

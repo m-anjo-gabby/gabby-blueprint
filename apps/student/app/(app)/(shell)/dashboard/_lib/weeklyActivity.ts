@@ -46,7 +46,7 @@ export interface WeekDay {
 const toLocalIsoDate = (date: string, timeZone: string): string =>
   DATE_ONLY_PATTERN.test(date) ? date : toIsoDateInZone(date, timeZone);
 
-/** 利用者のタイムゾーンでの今週(月〜日)の各日と、実施日数・今週の発話回数を算出する */
+/** 利用者のタイムゾーンでの今週(月〜日)の各日と、実施日数・今週の発話回数・フレーズ数を算出する */
 export function buildCurrentWeek(activities: TrainingActivity[], timeZone: string, nowMs: number) {
   const localActivities = activities.map((a) => ({ ...a, isoDate: toLocalIsoDate(a.date, timeZone) }));
   const activeDates = new Set(localActivities.map((a) => a.isoDate));
@@ -68,11 +68,11 @@ export function buildCurrentWeek(activities: TrainingActivity[], timeZone: strin
 
   const weekStart = days[0].isoDate;
   const weekEnd = days[days.length - 1].isoDate;
-  const assessmentCount = localActivities
-    .filter((a) => a.isoDate >= weekStart && a.isoDate <= weekEnd)
-    .reduce((sum, a) => sum + a.assessments, 0);
+  const weekActivities = localActivities.filter((a) => a.isoDate >= weekStart && a.isoDate <= weekEnd);
+  const assessmentCount = weekActivities.reduce((sum, a) => sum + a.assessments, 0);
+  const phraseCount = weekActivities.reduce((sum, a) => sum + a.phrases, 0);
 
-  return { days, activeCount: days.filter((d) => d.isActive).length, assessmentCount };
+  return { days, activeCount: days.filter((d) => d.isActive).length, assessmentCount, phraseCount };
 }
 
 /**

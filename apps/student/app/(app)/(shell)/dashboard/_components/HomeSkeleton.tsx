@@ -3,7 +3,7 @@ import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { WEEKDAY_LABELS } from '../_lib/weeklyActivity';
-import { HOME_LAYOUT, HomeCard } from './HomeCard';
+import { HOME_LAYOUT, HeroBackdrop, HomeCard } from './HomeCard';
 import { TrainingMenuCard } from './TrainingMenuCard';
 
 /*
@@ -35,17 +35,17 @@ function HeroBar({ className }: { className?: string }) {
 export function TodayFocusCardSkeleton() {
   return (
     <section aria-hidden className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 shadow-md shadow-brand/15">
-      <div className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-      <div className="flex h-4 items-center">
+      <HeroBackdrop />
+      <div className="relative flex h-4 items-center">
         <HeroBar className="h-3 w-28" />
       </div>
-      <div className="mt-2 flex h-7 items-center sm:h-8">
+      <div className="relative mt-2 flex h-7 items-center sm:h-8">
         <HeroBar className="h-5 w-3/4 sm:h-6" />
       </div>
-      <div className="mt-2 flex h-5 items-center">
+      <div className="relative mt-2 flex h-5 items-center">
         <HeroBar className="h-3.5 w-1/2" />
       </div>
-      <div className="mt-auto pt-6">
+      <div className="relative mt-auto pt-6">
         <HeroBar className="h-12 w-40 rounded-control" />
       </div>
     </section>
@@ -78,14 +78,14 @@ export function WeeklyActivityCardSkeleton() {
   );
 }
 
-/** 「これまでの歩み」の骨組み（1列の時は横長3行、2列分の時は2段の3マス） */
+/** 「これまでの歩み」の骨組み（1列の時は横長3行、2列分の時は3段の3マス。各マスは節目の行を含む高さ） */
 export function LifetimeStatsCardSkeleton({ className }: { className?: string }) {
   return (
     <HomeCard title="これまでの歩み" className={className}>
       <div className="@container">
         <div className="grid gap-2 @md:grid-cols-3">
           {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-13 rounded-control @md:h-27" />
+            <Skeleton key={i} className="h-21.5 rounded-control @md:h-35.5" />
           ))}
         </div>
       </div>

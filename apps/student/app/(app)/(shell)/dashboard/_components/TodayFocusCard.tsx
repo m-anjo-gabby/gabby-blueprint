@@ -8,7 +8,7 @@ import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/co
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { cn } from '@/lib/utils';
 import type { TodayFocus } from '../_lib/todayFocus';
-import { ProgressBar } from './HomeCard';
+import { HeroBackdrop, ProgressBar } from './HomeCard';
 
 interface TodayFocusCardProps {
   focus: TodayFocus;
@@ -97,7 +97,7 @@ export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayF
 
   return (
     <section className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 text-white shadow-md shadow-brand/15">
-      <div className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+      <HeroBackdrop />
 
       <p className="relative text-xs font-semibold tracking-wide text-brand-100">{view.eyebrow}</p>
 
