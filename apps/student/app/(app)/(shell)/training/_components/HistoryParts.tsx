@@ -52,10 +52,10 @@ export function HistoryDayListSkeleton({ metricCount }: { metricCount: number })
 }
 
 /** 履歴が0件の月の表示 */
-export function HistoryEmpty({ message }: { message: string }) {
+export function HistoryEmpty({ message, icon: Icon = Calendar }: { message: React.ReactNode; icon?: LucideIcon }) {
   return (
     <div className="rounded-card border border-dashed border-line bg-surface px-6 py-14 text-center">
-      <Calendar size={32} className="mx-auto mb-3 text-ink-subtle" />
+      <Icon size={32} className="mx-auto mb-3 text-ink-subtle" />
       <p className="text-sm font-semibold text-ink-muted">{message}</p>
     </div>
   );

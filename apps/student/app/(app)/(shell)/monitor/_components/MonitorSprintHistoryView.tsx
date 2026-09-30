@@ -1,671 +1,221 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { 
-  User, 
-  Search, 
-  X, 
-  Check, 
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  SlidersHorizontal, 
-  Calendar,
-  Download,
-  CheckCircle2
-} from 'lucide-react';
-import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
-import { cn } from "@/lib/utils";
-
-import { motion, AnimatePresence } from 'framer-motion';
-import { MonitorUser, MonitorSprintHistoryResponse } from '@/actions/monitorAction';
+import { useMemo, useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
+import type { MonitorSprintHistoryResponse, MonitorUser } from '@/actions/monitorAction';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { logClientEvent } from '@gabby/lib/logger/actions';
+import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
+import { cn } from '@/lib/utils';
+import { HistoryEmpty, HistoryMetric } from '../../training/_components/HistoryParts';
+import { MonitorFilterBar } from './MonitorFilterBar';
+import { MONITOR_DAYS_PER_PAGE, MonitorDayCard, MonitorDayRow, MonitorPager, MonitorUserName } from './MonitorParts';
+import { downloadCsv, getMonitorAccountIds, toDayLabel, type MonitorQuery } from './monitorQuery';
+import { useMonitorNavigation } from './useMonitorNavigation';
 
-export interface DisplayHistoryItem {
-  id: string;
+/** 受講生・教材・種別（スプリント／ドリル）ごとに1日分を集約した行 */
+interface SprintDayItem {
   key: string;
   mode: 'sprint' | 'drill';
-  dateStr: string;
-  user_id: string;
-  user_name: string;
-  isMonitor: boolean;
-  content_id: string;
-  content_name: string;
-  sprint_count: number | string;
-  answered_count: number;
-  assessment_count: number | string;
+  /** YYYY-MM-DD */
+  date: string;
+  userId: string;
+  userName: string;
+  contentId: string;
+  contentName: string;
+  /** スプリント本数（ドリルは本数の概念が無いため null） */
+  sprintCount: number | null;
+  answeredCount: number;
+  assessmentCount: number;
 }
+
+const MODE_LABEL = { sprint: 'スプリント', drill: 'ドリル' } as const;
 
 interface MonitorSprintHistoryViewProps {
   initialData: MonitorSprintHistoryResponse;
   users: MonitorUser[];
-  startDate: string;
-  endDate: string;
-  selectedUserIds: string[];
+  /** 表示中の条件（期間は当月の既定値を解決済み） */
+  query: MonitorQuery & { startDate: string; endDate: string };
 }
 
-export const MonitorSprintHistoryView: React.FC<MonitorSprintHistoryViewProps> = ({ 
-  initialData, 
-  users, 
-  startDate, 
-  endDate, 
-  selectedUserIds 
-}) => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [localStart, setLocalStart] = useState<string>(startDate);
-  const [localEnd, setLocalEnd] = useState<string>(endDate);
-  const [page, setPage] = useState<number>(1);
+export function MonitorSprintHistoryView({ initialData, users, query }: MonitorSprintHistoryViewProps) {
+  const { startDate, endDate, userIds = [], includeMonitor } = query;
+  const { navigate, isPending } = useMonitorNavigation(query);
+  const timezone = useTimezone();
+  const [page, setPage] = useState(1);
+  const monitorIds = useMemo(() => getMonitorAccountIds(users), [users]);
 
-  // 💡 URLから includeMonitor の現在地を検知 (文字列の 'true' かどうか)
-  const isIncludeMonitorActive = searchParams.get('includeMonitor') === 'true';
+  const { groups, sortedDates, totalItems } = useMemo(() => {
+    const map = new Map<string, SprintDayItem>();
+    const add = (item: Omit<SprintDayItem, 'key'>) => {
+      const key = `${item.date}-${item.userId}-${item.mode}-${item.contentId}`;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, { ...item, key });
+        return;
+      }
+      existing.sprintCount = existing.sprintCount === null ? null : existing.sprintCount + (item.sprintCount ?? 0);
+      existing.answeredCount += item.answeredCount;
+      existing.assessmentCount += item.assessmentCount;
+    };
 
-  // 期間のインテリジェントバリデーション
-  const dateRangeValidationError = useMemo<'reverse' | 'exceeded' | null>(() => {
-    const start = new Date(localStart);
-    const end = new Date(localEnd);
-    
-    if (start > end) {
-      return 'reverse';
-    }
-    
-    const diffDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-    if (diffDays > 186) {
-      return 'exceeded';
-    }
-    
-    return null;
-  }, [localStart, localEnd]);
-
-  const isInvalidRange = dateRangeValidationError !== null;
-
-  // 受講生検索用のローカル状態
-  const [userSearchQuery, setUserSearchQuery] = useState<string>('');
-  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState<boolean>(false);
-
-  // 💡 モニターユーザーであるかを判定するヘルパー関数
-  const isMonitorUser = (u: { is_monitor?: boolean | null; email?: string | null } | null | undefined): boolean => {
-    if (!u) return false;
-    return u.is_monitor === true || !!u.email?.toLowerCase().includes('monitor');
-  };
-
-  // フィルター共通更新処理
-  const applyFilters = (newStart: string, newEnd: string, newUserIds: string[]): void => {
-    if (isInvalidRange) return;
-
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('startDate', newStart);
-    params.set('endDate', newEnd);
-    
-    if (newUserIds.length > 0) {
-      params.set('userIds', newUserIds.join(','));
-    } else {
-      params.delete('userIds');
-    }
-
-    // 💡 既存 of includeMonitor フラグを確実にURLクエリへマージして維持する
-    if (isIncludeMonitorActive) {
-      params.set('includeMonitor', 'true');
-    } else {
-      params.delete('includeMonitor');
-    }
-
-    setPage(1);
-    router.push(`/monitor?${params.toString()}`);
-  };
-
-  const handleDateSearch = (): void => {
-    applyFilters(localStart, localEnd, selectedUserIds);
-  };
-
-  const toggleUserFilter = (uid: string): void => {
-    const newIds = selectedUserIds.includes(uid)
-      ? selectedUserIds.filter(id => id !== uid)
-      : [...selectedUserIds, uid];
-    applyFilters(localStart, localEnd, newIds);
-  };
-
-  const clearAllUsers = (): void => {
-    applyFilters(localStart, localEnd, []);
-  };
-
-  // 検索クエリで受講生リストをフィルタリング
-  const filteredUsers = useMemo<MonitorUser[]>(() => {
-    let result = users;
-
-    // 💡 モニター非表示（includeMonitor=false）なら、ドロップダウンからもモニターを除外
-    if (!isIncludeMonitorActive) {
-      result = result.filter(u => !isMonitorUser(u));
-    }
-
-    if (!userSearchQuery) return result;
-    const q = userSearchQuery.toLowerCase();
-    return result.filter(u => 
-      (u.user_name?.toLowerCase().includes(q)) || 
-      (u.email?.toLowerCase().includes(q))
+    // スプリントは実施日時（timestamptz）のため、利用者のタイムゾーンの日付に変換する
+    initialData.sessions.forEach((s) =>
+      add({
+        mode: 'sprint',
+        date: toIsoDateInZone(s.insert_date, timezone),
+        userId: s.user_id,
+        userName: s.com_m_user?.user_name || '未設定',
+        contentId: s.content_id,
+        contentName: s.com_m_contents?.content_name || '教材名なし',
+        sprintCount: 1,
+        answeredCount: s.total_answered,
+        assessmentCount: s.total_assessments || 0,
+      })
     );
-  }, [users, userSearchQuery, isIncludeMonitorActive]);
+    // ドリルの集計は日付（DATE）単位
+    initialData.drills.forEach((d) =>
+      add({
+        mode: 'drill',
+        date: d.training_date,
+        userId: d.user_id,
+        userName: d.com_m_user?.user_name || '未設定',
+        contentId: d.content_id,
+        contentName: d.com_m_contents?.content_name || '教材名なし',
+        sprintCount: null,
+        answeredCount: d.question_count,
+        assessmentCount: d.assessment_count,
+      })
+    );
 
-  // 日付文字列のパースヘルパー (JSTなどのローカルタイム日付)
-  const getLocalDateStr = (isoString: string): string => {
-    const d = new Date(isoString);
-    return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+    // 日付内は受講生名 → ドリル・スプリントの順 → 教材名で並べる
+    const byDate = new Map<string, SprintDayItem[]>();
+    map.forEach((item) => byDate.set(item.date, [...(byDate.get(item.date) ?? []), item]));
+    byDate.forEach((items) =>
+      items.sort(
+        (a, b) =>
+          a.userName.localeCompare(b.userName, 'ja') ||
+          (a.mode === b.mode ? 0 : a.mode === 'drill' ? -1 : 1) ||
+          a.contentName.localeCompare(b.contentName, 'ja')
+      )
+    );
+    return { groups: byDate, sortedDates: [...byDate.keys()].sort((a, b) => b.localeCompare(a)), totalItems: map.size };
+  }, [initialData, timezone]);
+
+  const totalPages = Math.ceil(sortedDates.length / MONITOR_DAYS_PER_PAGE);
+  const pagedDates = sortedDates.slice((page - 1) * MONITOR_DAYS_PER_PAGE, page * MONITOR_DAYS_PER_PAGE);
+
+  const applyFilters = (patch: Partial<MonitorQuery>) => {
+    setPage(1);
+    navigate(patch);
   };
 
-  // 💡 上位の設定（URLパラメータ）を適用した表示用ベースデータを作成（受講生・教材・モード単位で集約）
-  const displayFilteredData = useMemo<DisplayHistoryItem[]>(() => {
-    const sessions = initialData.sessions || [];
-    const drills = initialData.drills || [];
-
-    const filteredSessions = isIncludeMonitorActive 
-      ? sessions 
-      : sessions.filter(s => !isMonitorUser(s.com_m_user));
-
-    const filteredDrills = isIncludeMonitorActive 
-      ? drills 
-      : drills.filter(d => !isMonitorUser(d.com_m_user));
-
-    const map = new Map<string, DisplayHistoryItem>();
-
-    // 1. スプリントセッションの集計
-    filteredSessions.forEach(s => {
-      const dateStr = getLocalDateStr(s.insert_date);
-      const userIdKey = s.user_id || 'unknown';
-      const contentIdKey = s.content_id || 'unknown';
-      const key = `${dateStr}-${userIdKey}-sprint-${contentIdKey}`;
-
-      if (map.has(key)) {
-        const existing = map.get(key)!;
-        if (typeof existing.sprint_count === 'number') {
-          existing.sprint_count += 1;
-        }
-        existing.answered_count += s.total_answered;
-        if (typeof existing.assessment_count === 'number') {
-          existing.assessment_count += s.total_assessments || 0;
-        }
-      } else {
-        map.set(key, {
-          id: s.self_sprint_id,
-          key,
-          dateStr,
-          user_id: userIdKey,
-          user_name: s.com_m_user?.user_name || '未設定',
-          isMonitor: isMonitorUser(s.com_m_user),
-          mode: 'sprint',
-          content_id: contentIdKey,
-          content_name: s.com_m_contents?.content_name || 'Sprint',
-          sprint_count: 1,
-          answered_count: s.total_answered,
-          assessment_count: s.total_assessments || 0
-        });
-      }
-    });
-
-    // 2. ドリルサマリーの集計
-    filteredDrills.forEach(d => {
-      const dateStr = d.training_date;
-      const userIdKey = d.user_id || 'unknown';
-      const contentIdKey = d.content_id || 'unknown';
-      const key = `${dateStr}-${userIdKey}-drill-${contentIdKey}`;
-
-      if (map.has(key)) {
-        const existing = map.get(key)!;
-        existing.answered_count += d.question_count;
-        if (typeof existing.assessment_count === 'number') {
-          existing.assessment_count += d.assessment_count;
-        }
-      } else {
-        map.set(key, {
-          id: d.summary_id,
-          key,
-          dateStr,
-          user_id: userIdKey,
-          user_name: d.com_m_user?.user_name || '未設定',
-          isMonitor: isMonitorUser(d.com_m_user),
-          mode: 'drill',
-          content_id: contentIdKey,
-          content_name: d.com_m_contents?.content_name || 'Drill',
-          sprint_count: '-',
-          answered_count: d.question_count,
-          assessment_count: d.assessment_count
-        });
-      }
-    });
-
-    return Array.from(map.values());
-  }, [initialData, isIncludeMonitorActive]);
-
-  // 日付ごとにグループ化し、日付内でユーザーごと、さらにドリル→スプリントの順でソート
-  const groupedData = useMemo<{ [dateStr: string]: DisplayHistoryItem[] }>(() => {
-    const groups: { [dateStr: string]: DisplayHistoryItem[] } = {};
-    
-    displayFilteredData.forEach(item => {
-      if (!groups[item.dateStr]) {
-        groups[item.dateStr] = [];
-      }
-      groups[item.dateStr].push(item);
-    });
-    
-    Object.keys(groups).forEach(date => {
-      groups[date].sort((a, b) => {
-        // 1. 受講生名でソートしてグループ化
-        if (a.user_name !== b.user_name) {
-          return a.user_name.localeCompare(b.user_name, 'ja');
-        }
-        // 2. 同じ受講生内では、ドリルモードが先、スプリントモードが後の順にする
-        if (a.mode !== b.mode) {
-          return a.mode === 'drill' ? -1 : 1;
-        }
-        // 3. 同じモード内では教材名順
-        return a.content_name.localeCompare(b.content_name, 'ja');
-      });
-    });
-
-    return groups;
-  }, [displayFilteredData]);
-
-  const sortedDates = useMemo<string[]>(() => {
-    return Object.keys(groupedData).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-  }, [groupedData]);
-
-  const daysPerPage = 7;
-  const totalPages = Math.ceil(sortedDates.length / daysPerPage);
-  const pagedDates = sortedDates.slice((page - 1) * daysPerPage, page * daysPerPage);
-
-  // CSVエクスポート処理 (エクスポート対象も表示フィルターと連動)
-  const handleExportCSV = (): void => {
-    if (displayFilteredData.length === 0) return;
-
-    const headers = ['日付', '受講生名', 'モード', '教材名', 'スプリント本数', '回答数', '発話数'];
-    
-    // 画面と同じソート順（日付降順 -> 受講生名 -> モード（ドリル→スプリント） -> 教材名）でフラットに展開
-    const sortedItems: DisplayHistoryItem[] = [];
-    sortedDates.forEach(date => {
-      const items = groupedData[date] || [];
-      sortedItems.push(...items);
-    });
+  const handleExportCSV = () => {
+    const rows = sortedDates.flatMap((date) =>
+      (groups.get(date) ?? []).map((item) => [
+        toDayLabel(date),
+        item.userName,
+        MODE_LABEL[item.mode],
+        item.contentName,
+        item.sprintCount ?? '-',
+        item.answeredCount,
+        item.assessmentCount,
+      ])
+    );
 
     logClientEvent({
       service: 'student',
       event: 'monitor:sprint_history_csv_exported',
       level: 'info',
       message: `Sprint history CSV exported: ${startDate}~${endDate}`,
-      payload: { startDate, endDate, targetUserIds: selectedUserIds, rowCount: sortedItems.length }
+      payload: { startDate, endDate, targetUserIds: userIds, rowCount: rows.length },
     }).catch(() => {});
 
-    const rows = sortedItems.map(item => {
-      const date = item.dateStr;
-      const modeStr = item.mode === 'sprint' ? 'スプリント' : 'ドリル';
-      
-      return [
-        `"${date}"`,
-        `"${item.user_name}"`,
-        `"${modeStr}"`,
-        `"${item.content_name}"`,
-        item.sprint_count,
-        item.answered_count,
-        item.assessment_count
-      ];
-    });
-
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    
-    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-    const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
-    
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    const fileSuffix = isIncludeMonitorActive ? '_with_monitor' : '';
-    link.setAttribute('download', `blueprint_sprint_drill_history_${startDate}_to_${endDate}${fileSuffix}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(
+      `blueprint_sprint_drill_history_${startDate}_to_${endDate}${includeMonitor ? '_with_monitor' : ''}.csv`,
+      ['日付', '受講生名', 'モード', '教材名', 'スプリント本数', '回答数', '発話数'],
+      rows
+    );
   };
 
   return (
-    <div className="space-y-4">
-      
-      {/* ────────────── 🛠️ コントロールバー（固定レイアウトエリア） ────────────── */}
-      <div className="bg-slate-50/50 border border-line/60 rounded-2xl p-4 sm:p-5 flex flex-col xl:flex-row gap-5 items-start xl:items-center justify-between">
-        
-        <div className="flex flex-col md:flex-row gap-5 items-start md:items-center w-full xl:w-auto flex-1">
-          {/* 1. 期間指定 */}
-          <div className="w-full md:w-auto space-y-1.5 shrink-0">
-            <label className="text-[11px] font-bold text-ink-subtle uppercase px-0.5 flex items-center gap-2">
-              対象期間
-              <span className={cn(
-                "text-[11px] font-bold normal-case transition-colors",
-                isInvalidRange ? "text-rose-500 animate-pulse" : "text-ink-subtle"
-              )}>
-                {dateRangeValidationError === 'reverse' && "(※開始日には終了日より前の日付を指定してください)"}
-                {dateRangeValidationError === 'exceeded' && "(※最大半年まで指定可能)"}
-                {!dateRangeValidationError && "(最大半年まで指定可能)"}
-              </span>
-            </label>
-            <div className={cn(
-              "flex items-center gap-1.5 bg-white border rounded-xl p-1.5 shadow-2xs transition-colors",
-              isInvalidRange ? "border-rose-300 bg-rose-50/10" : "border-line/80"
-            )}>
-              <input 
-                type="date" 
-                value={localStart} 
-                onChange={(e) => setLocalStart(e.target.value)}
-                className="border-0 bg-transparent text-xs font-bold text-ink-soft outline-none px-2 py-1 select-none" 
-              />
-              <span className="text-ink-subtle font-bold text-xs">~</span>
-              <input 
-                type="date" 
-                value={localEnd} 
-                onChange={(e) => setLocalEnd(e.target.value)}
-                className="border-0 bg-transparent text-xs font-bold text-ink-soft outline-none px-2 py-1 select-none" 
-              />
-              <button 
-                onClick={handleDateSearch}
-                disabled={isInvalidRange}
-                className={cn(
-                  "h-7 px-2.5 rounded-lg transition-all flex items-center justify-center shadow-xs",
-                  isInvalidRange ? "bg-slate-200 text-ink-subtle cursor-not-allowed" : "bg-brand hover:bg-brand-strong text-white"
-                )}
-              >
-                <Search size={13} strokeWidth={2.5} />
-              </button>
-            </div>
+    <>
+      <MonitorFilterBar
+        key={`${startDate}_${endDate}`}
+        users={users}
+        monitorIds={monitorIds}
+        startDate={startDate}
+        endDate={endDate}
+        selectedUserIds={userIds}
+        onApply={applyFilters}
+        isPending={isPending}
+        onExport={handleExportCSV}
+        exportDisabled={totalItems === 0}
+      />
+
+      <div aria-busy={isPending} className={cn('space-y-3 transition-opacity', isPending && 'opacity-60')}>
+        {sortedDates.length > 0 && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-ink-muted">
+              <span className="font-semibold text-ink tabular-nums">{sortedDates.length}</span>日分の履歴
+            </p>
+            <MonitorPager page={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
+        )}
 
-          {/* 2. 受講生セレクト検索 */}
-          <div className="w-full relative space-y-1.5 max-w-md">
-            <label className="text-[11px] font-bold text-ink-subtle uppercase px-0.5 flex items-center justify-between">
-              <span>受講生絞り込み ({selectedUserIds.length > 0 ? `${selectedUserIds.length}名選択中` : '全員表示'})</span>
-              {selectedUserIds.length > 0 && (
-                <button onClick={clearAllUsers} className="text-brand hover:text-brand-800 transition-colors normal-case font-bold text-[11px]">
-                  クリアする
-                </button>
-              )}
-            </label>
-            
-            <div className="w-full">
-              <div className="relative bg-white border border-line/80 rounded-xl shadow-2xs flex items-center p-1.5">
-                <SlidersHorizontal size={13} className="text-ink-subtle ml-2 shrink-0" />
-                <input
-                  type="text"
-                  placeholder={selectedUserIds.length > 0 ? "受講生を追加・検索..." : "受講生の名前・メールで検索..."}
-                  value={userSearchQuery}
-                  onChange={(e) => {
-                    setUserSearchQuery(e.target.value);
-                    setIsUserDropdownOpen(true);
-                  }}
-                  onFocus={() => setIsUserDropdownOpen(true)}
-                  className="w-full bg-transparent border-0 text-xs font-bold text-ink-soft placeholder-slate-400 focus:ring-0 outline-none px-2 py-1"
-                />
-                {userSearchQuery && (
-                  <button onClick={() => setUserSearchQuery('')} className="p-1 text-ink-subtle hover:text-ink-soft">
-                    <X size={12} />
-                  </button>
-                )}
-                <button 
-                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                  className="p-1 border-l border-line/70 text-ink-subtle hover:text-ink-soft ml-1"
-                >
-                  <ChevronDown size={14} className={cn("transition-transform duration-200", isUserDropdownOpen && "rotate-180")} />
-                </button>
-              </div>
-
-              <AnimatePresence>
-                {isUserDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsUserDropdownOpen(false)} />
-                    <motion.div 
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 4 }}
-                      className="absolute left-0 right-0 mt-1.5 bg-white border border-line shadow-xl rounded-xl z-20 max-h-60 overflow-y-auto scrollbar-none p-1.5 space-y-0.5"
-                    >
-                      {filteredUsers.length === 0 ? (
-                        <div className="p-3 text-center text-ink-subtle text-xs font-bold">
-                          該当する受講生が見つかりません
-                        </div>
-                      ) : (
-                        filteredUsers.map(u => {
-                          const isSelected = selectedUserIds.includes(u.id);
-                          const isMonitor = isMonitorUser(u);
-                          return (
-                            <button
-                              key={u.id}
-                              onClick={() => toggleUserFilter(u.id)}
-                              className={cn(
-                                "w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between transition-colors",
-                                isSelected ? "bg-brand-soft/60 text-brand-strong" : "text-ink-soft hover:bg-slate-50 hover:text-ink"
-                              )}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-bold">
-                                  {u.user_name || '名前未設定'}
-                                  {isMonitor && <span className="ml-1 text-[11px] bg-amber-100 text-amber-700 px-1 rounded font-normal">Monitor</span>}
-                                </span>
-                                <span className="text-[11px] text-ink-subtle tabular-nums font-medium">{u.email}</span>
-                              </div>
-                              {isSelected && <Check size={14} className="text-brand shrink-0" strokeWidth={2.5} />}
-                            </button>
-                          );
-                        })
-                      )}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. CSV ＆ 固定配置された右上ページングエリア */}
-        <div className="w-full xl:w-auto flex flex-row sm:items-center justify-between xl:justify-end gap-4 self-end xl:self-center shrink-0 pt-1">
-          {/* CSVボタン */}
-          <button
-            onClick={handleExportCSV}
-            disabled={displayFilteredData.length === 0}
-            className={cn(
-              "inline-flex items-center gap-2 justify-center text-xs font-bold h-9 px-4 rounded-xl shadow-2xs border transition-all bg-white hover:bg-slate-50 text-ink-soft border-line",
-              displayFilteredData.length === 0 && "bg-slate-100 text-ink-subtle border-line cursor-not-allowed"
-            )}
-          >
-            <Download size={14} strokeWidth={2.5} className="text-ink-muted" />
-            <span>CSVエクスポート</span>
-          </button>
-
-          {/* 右上コンパクトページングコントロール */}
-          {totalPages > 1 && (
-            <div className="flex items-center gap-3 bg-white border border-line/80 rounded-xl p-1 shadow-2xs">
-              <button 
-                onClick={() => setPage(p => Math.max(1, p - 1))} 
-                disabled={page === 1} 
-                className="p-1.5 rounded-lg text-ink-subtle hover:text-ink hover:bg-slate-50 disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all"
-              >
-                <ChevronLeft size={15} strokeWidth={3} />
-              </button>
-              
-              <div className="flex items-center gap-1 text-[11px] select-none px-0.5">
-                <span className="font-bold text-ink tabular-nums">{page}</span>
-                <span className="text-ink-subtle font-bold">/</span>
-                <span className="text-ink-subtle font-bold tabular-nums">{totalPages}</span>
-              </div>
-              
-              <button 
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
-                disabled={page === totalPages} 
-                className="p-1.5 rounded-lg text-ink-subtle hover:text-ink hover:bg-slate-50 disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all"
-              >
-                <ChevronRight size={15} strokeWidth={3} />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 4. 選択中バッジ表示エリア */}
-      {selectedUserIds.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 items-center px-1">
-          <span className="text-[11px] font-bold text-ink-subtle uppercase mr-1">絞り込み中:</span>
-          {users.filter(u => selectedUserIds.includes(u.id)).map(u => (
-            <div key={u.id} className="inline-flex items-center gap-1 bg-brand-soft border border-brand-100/80 rounded-lg pl-2 pr-1.5 py-1 text-[11px] font-bold text-brand">
-              <span>{u.user_name || u.email}</span>
-              <button onClick={() => toggleUserFilter(u.id)} className="hover:bg-brand-100 p-0.5 rounded-md transition-colors">
-                <X size={10} strokeWidth={2.5} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ────────────── 📄 独立スクロール一覧表示エリア ────────────── */}
-      <div className="max-h-[calc(100vh-290px)] overflow-y-auto pr-1.5 space-y-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
         {pagedDates.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-line">
-            <Calendar size={32} className="mx-auto text-ink-subtle mb-3" />
-            <p className="text-sm font-bold text-ink-subtle">該当する履歴はありません</p>
-          </div>
+          <HistoryEmpty message="該当する履歴はありません" />
         ) : (
-          pagedDates.map((date, index) => {
-            const items = groupedData[date];
-            const dayNo = sortedDates.length - ((page - 1) * daysPerPage + index);
-            
-            const sprintCount = items.filter(i => i.mode === 'sprint').length;
-            const drillCount = items.filter(i => i.mode === 'drill').length;
-            const totalAnswersDay = items.reduce((acc, i) => acc + i.answered_count, 0);
-            const totalAssessmentsDay = items.reduce((acc, i) => {
-              const val = typeof i.assessment_count === 'number' ? i.assessment_count : 0;
-              return acc + val;
-            }, 0);
+          pagedDates.map((date) => {
+            const items = groups.get(date) ?? [];
+            const sprintCount = items.reduce((acc, i) => acc + (i.sprintCount ?? 0), 0);
+            const drillCount = items.filter((i) => i.mode === 'drill').length;
+            const answeredCount = items.reduce((acc, i) => acc + i.answeredCount, 0);
+            const assessmentCount = items.reduce((acc, i) => acc + i.assessmentCount, 0);
 
             return (
-              <motion.div 
-                key={date} 
-                layout="position"
-                className="bg-white rounded-xl border border-line/60 overflow-hidden shadow-2xs"
+              <MonitorDayCard
+                key={date}
+                date={date}
+                metrics={
+                  <>
+                    {sprintCount > 0 && <HistoryMetric metric="sprint" label="スプリント" value={sprintCount} />}
+                    {drillCount > 0 && <HistoryMetric metric="drill" label="ドリル" value={drillCount} />}
+                    <HistoryMetric icon={CheckCircle2} label="回答" value={answeredCount} />
+                    <HistoryMetric metric="speech" label="発話" value={assessmentCount} />
+                  </>
+                }
               >
-                {/* 日付ヘッダー */}
-                <div className="w-full p-4 flex items-center justify-between bg-slate-50/50 border-b border-line/70">
-                  <div className="flex items-center gap-3 text-left">
-                    <div className="w-9 h-9 bg-white border border-line/60 rounded-lg flex items-center justify-center text-ink-subtle font-bold text-sm tabular-nums shrink-0 select-none shadow-3xs">
-                      {dayNo}
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-ink tracking-tight mb-1">{date}</div>
-                      <div className="flex items-center gap-3 text-[11px] font-bold text-ink-soft flex-wrap">
-                        {sprintCount > 0 && (
-                          <span className="flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded-md text-ink-soft font-bold">
-                            <TrainingMetricIcon metric="sprint" size={11} />
-                            <span>スプリント <span className="tabular-nums text-xs">{sprintCount}</span></span>
-                          </span>
-                        )}
-                        {drillCount > 0 && (
-                          <span className="flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded-md text-ink-soft font-bold">
-                            <TrainingMetricIcon metric="drill" size={11} />
-                            <span>ドリル <span className="tabular-nums text-xs">{drillCount}</span></span>
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1 bg-canvas px-1.5 py-0.5 rounded-md border border-line text-ink-soft">
-                          <CheckCircle2 size={11} className="text-ink-subtle shrink-0" />
-                          <span>回答数 <span className="tabular-nums text-ink font-bold text-xs">{totalAnswersDay}</span></span>
+                {items.map((item) => (
+                  <MonitorDayRow
+                    key={item.key}
+                    user={<MonitorUserName name={item.userName} isMonitor={monitorIds.has(item.userId)} />}
+                    content={
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-line bg-canvas px-2 py-0.5 text-xs font-semibold text-ink-soft">
+                          <TrainingMetricIcon metric={item.mode} size={12} />
+                          {MODE_LABEL[item.mode]}
                         </span>
-                        {totalAssessmentsDay > 0 && (
-                          <span className="flex items-center gap-1 bg-canvas px-1.5 py-0.5 rounded-md border border-line text-ink-soft">
-                            <TrainingMetricIcon metric="speech" size={11} />
-                            <span>発話評価数 <span className="tabular-nums text-xs">{totalAssessmentsDay}</span></span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 明細リスト */}
-                <div className="bg-white">
-                  <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-2 border-b border-line/50 text-[11px] font-bold text-ink-subtle uppercase tabular-nums bg-slate-50/30">
-                    <div className="col-span-2">受講生</div>
-                    <div className="col-span-3">トレーニング教材</div>
-                    <div className="col-span-5 text-left pl-1">トレーニング実績 (本数/回答/発話)</div>
-                    <div className="col-span-2" />
-                  </div>
-                  <div className="divide-y divide-slate-50">
-                    {items.map((item, idx) => {
-                      const isMonitor = item.isMonitor;
-                      const isSprint = item.mode === 'sprint';
-
-                      return (
-                        <div 
-                          key={`${item.key}-${idx}`}
-                          className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 px-5 py-3 hover:bg-brand-soft/20 transition-colors items-center group"
-                        >
-                          {/* 1. 受講生 */}
-                          <div className="col-span-1 md:col-span-2 flex items-center gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-5 h-5 rounded-md bg-brand-soft flex items-center justify-center text-brand-500 shrink-0 border border-brand-100/50">
-                                <User size={11} strokeWidth={2.5} />
-                              </div>
-                              <span className="text-xs font-bold text-ink-soft truncate flex items-center gap-1">
-                                {item.user_name}
-                                {isMonitor && (
-                                  <span className="text-[11px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-bold tabular-nums scale-90 origin-left shrink-0">
-                                    MONITOR
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* 2. トレーニング教材 */}
-                          <div className="col-span-1 md:col-span-3">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              {/* モードバッジ */}
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded-md border border-line bg-canvas text-ink-soft shrink-0">
-                                <TrainingMetricIcon metric={isSprint ? 'sprint' : 'drill'} size={11} />
-                                {isSprint ? 'スプリント' : 'ドリル'}
-                              </span>
-                              
-                              {/* 教材名称 */}
-                              <span className="text-xs font-bold text-ink-soft group-hover:text-brand transition-colors truncate" title={item.content_name}>
-                                {item.content_name}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* 3. トレーニング実績（スプリント本数・回答数・発話数） */}
-                          <div className="col-span-1 md:col-span-5 flex items-center justify-start gap-3 text-[11px]">
-                            <div className="flex items-center gap-2 text-ink-muted font-bold tabular-nums">
-                              {/* スプリント本数 */}
-                              <span className="inline-flex items-center min-w-[56px]" title="スプリント本数">
-                                <TrainingMetricIcon metric="sprint" size={11} className="mr-1" />
-                                <span className="tabular-nums text-ink-soft font-bold">{item.sprint_count}</span>
-                              </span>
-                              
-                              {/* 回答数 */}
-                              <span className="inline-flex items-center min-w-[56px]" title="回答数">
-                                <CheckCircle2 size={11} className="text-ink-subtle mr-1 shrink-0" />
-                                <span className="tabular-nums text-ink-soft font-bold">{item.answered_count}</span>
-                              </span>
-                              
-                              {/* 発話数 */}
-                              <span className="inline-flex items-center min-w-[56px]" title="発話数">
-                                <TrainingMetricIcon metric="speech" size={11} className="mr-1" />
-                                <span className="tabular-nums text-ink-soft font-bold">{item.assessment_count}</span>
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* 4. 余白 */}
-                          <div className="hidden md:block col-span-2" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </motion.div>
+                        <span className="truncate text-ink-soft" title={item.contentName}>
+                          {item.contentName}
+                        </span>
+                      </span>
+                    }
+                    metrics={
+                      <>
+                        {item.sprintCount !== null && <HistoryMetric metric="sprint" label="本数" value={item.sprintCount} />}
+                        <HistoryMetric icon={CheckCircle2} label="回答" value={item.answeredCount} />
+                        <HistoryMetric metric="speech" label="発話" value={item.assessmentCount} />
+                      </>
+                    }
+                  />
+                ))}
+              </MonitorDayCard>
             );
           })
         )}
       </div>
-    </div>
+    </>
   );
-};
+}

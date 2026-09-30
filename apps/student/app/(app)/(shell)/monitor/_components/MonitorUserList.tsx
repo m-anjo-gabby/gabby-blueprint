@@ -1,436 +1,267 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { MonitorUser, MonitorWordSummaryHistoryItem, MonitorSprintHistoryResponse } from '@/actions/monitorAction';
-import { cn } from '@/lib/utils';
-import { 
-  User, 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
-  Hourglass, 
-  Ban, 
-  Mail, 
-  CalendarDays,
-  ArrowLeft,
-  ArrowRight,
-  ChevronDown,
-  Download
-} from 'lucide-react';
-import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
-import { motion } from 'framer-motion';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo } from 'react';
+import { CheckCircle2, Download, Users } from 'lucide-react';
+import type { MonitorSprintHistoryResponse, MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { toIsoMonthInZone, formatZonedDate } from '@gabby/lib/date/date';
+import { formatZonedDate, toIsoDateInZone, toIsoMonthInZone } from '@gabby/lib/date/date';
 import { logClientEvent } from '@gabby/lib/logger/actions';
+import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { HistoryEmpty } from '../../training/_components/HistoryParts';
+import { MonthSwitcher } from '../../training/_components/MonthSwitcher';
 import { MonitorMonthPickerPopover } from './MonitorMonthPickerPopover';
+import { MonitorUserName } from './MonitorParts';
+import { downloadCsv, getMonthRange, isMonitorAccount, toDayLabel, type MonitorQuery } from './monitorQuery';
+import { useMonitorNavigation } from './useMonitorNavigation';
+
+interface UserStats {
+  days: Set<string>;
+  phrases: number;
+  sprintSessions: number;
+  sprintAnswers: number;
+  assessments: number;
+  /** 最終実施日（YYYY-MM-DD） */
+  latestDate: string | null;
+}
+
+const emptyStats = (): UserStats => ({ days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null });
+
+type LicenseState = MonitorUser['license_state'];
+
+/** ライセンス状態（現時点での状態）。受講生サマリーの対象は本登録済みの受講生のみのため、招待系の状態は発生しない */
+const LICENSE_STATE: Partial<Record<LicenseState, { label: string; className: string }>> = {
+  active: { label: '利用中', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+  expired: { label: '期限切れ', className: 'border-rose-200 bg-rose-50 text-rose-700' },
+  future: { label: '開始前', className: 'border-line bg-canvas text-ink-muted' },
+};
+const UNKNOWN_STATE = { label: '不明', className: 'border-line bg-canvas text-ink-muted' };
+
+/** 一覧の列（lg 以上）。見出しと各行で共有する */
+const TABLE_GRID = 'lg:grid-cols-[minmax(0,1.8fr)_6rem_7.5rem_repeat(5,minmax(0,0.7fr))_6.5rem]';
 
 interface MonitorUserListProps {
   users: MonitorUser[];
   wordHistory: MonitorWordSummaryHistoryItem[];
   sprintHistory: MonitorSprintHistoryResponse;
+  /** 表示中の条件（期間は当月の既定値を解決済み） */
+  query: MonitorQuery & { startDate: string; endDate: string };
 }
 
-export const MonitorUserList: React.FC<MonitorUserListProps> = ({ users, wordHistory, sprintHistory }) => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export function MonitorUserList({ users, wordHistory, sprintHistory, query }: MonitorUserListProps) {
+  const { navigate, isPending } = useMonitorNavigation(query);
   const timezone = useTimezone();
-  
-  const currentView = searchParams.get('view') || 'overview';
-  const userIds = searchParams.get('userIds');
-  const qStart = searchParams.get('startDate');
-  
-  // 💡 URLのクエリパラメータからincludeMonitorの状態を取得
-  const includeMonitor = searchParams.get('includeMonitor') === 'true';
-  
-  const currentMonthStr = useMemo(() => {
-    if (qStart && qStart.length >= 7) {
-      return qStart.substring(0, 7);
-    }
-    return toIsoMonthInZone(new Date(), timezone);
-  }, [qStart, timezone]);
+  const targetMonth = query.startDate.slice(0, 7);
+  const thisMonth = toIsoMonthInZone(new Date(), timezone);
 
-  // 💡 対象年月（"YYYY-MM"）を指定して遷移する共通処理（replace & scroll: false による遷移最適化）
-  const navigateToMonth = (yearMonthStr: string) => {
-    const [year, month] = yearMonthStr.split('-').map(Number);
-    const params = new URLSearchParams(searchParams.toString());
-
-    const startStr = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDay = new Date(Date.UTC(year, month, 0)).getDate();
-    const endStr = `${year}-${String(month).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
-
-    params.set('startDate', startStr);
-    params.set('endDate', endStr);
-    params.set('view', currentView);
-    if (userIds) params.set('userIds', userIds);
-
-    // 💡 pushではなくreplaceにすることで、ブラウザバックの履歴スタック詰まりを防止
-    router.replace(`/monitor?${params.toString()}`, { scroll: false });
+  const goToMonth = (yearMonth: string) => navigate(getMonthRange(yearMonth));
+  const [displayYear, displayMonth] = targetMonth.split('-');
+  const monthNavigator = {
+    currentMonthStr: thisMonth,
+    displayYear,
+    displayMonth,
+    isNotCurrentMonth: targetMonth !== thisMonth,
+    goToMonth,
+    handleMonthChange: (direction: 'prev' | 'next') => {
+      const [year, month] = targetMonth.split('-').map(Number);
+      const d = new Date(Date.UTC(year, month - 1 + (direction === 'prev' ? -1 : 1), 1));
+      goToMonth(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+    },
+    isPending,
   };
 
-  const handleMonthChange = (offset: number) => {
-    const [year, month] = currentMonthStr.split('-').map(Number);
-    const targetDate = new Date(year, month - 1 + offset, 1);
-    navigateToMonth(`${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`);
-  };
-
-  const [displayYear, displayMonth] = currentMonthStr.split('-');
-
-  // 💡 ループによる統計マップ生成のメモ化（タイムゾーンを依存配列に追加して安全性を担保）
   const userStats = useMemo(() => {
-    const statsMap: Record<
-      string, 
-      { 
-        days: Set<string>; 
-        phrases: number; 
-        sprintSessions: number; 
-        sprintAnswers: number; 
-        assessments: number; 
-        latestDate: string | null;
-      }
-    > = {};
-    
-    // 1. 単語ドリル履歴の集計
-    wordHistory.forEach(h => {
-      const uid = h.user_id;
-      if (!statsMap[uid]) {
-        statsMap[uid] = { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null };
-      }
-      statsMap[uid].days.add(h.training_date);
-      statsMap[uid].phrases += h.phrase_count;
-      statsMap[uid].assessments += h.assessment_count; // 単語ドリルの発話数
+    const statsMap = new Map<string, UserStats>();
+    const record = (userId: string, date: string, apply: (s: UserStats) => void) => {
+      const stats = statsMap.get(userId) ?? emptyStats();
+      stats.days.add(date);
+      if (!stats.latestDate || date > stats.latestDate) stats.latestDate = date;
+      apply(stats);
+      statsMap.set(userId, stats);
+    };
 
-      const dateStr = h.training_date;
-      if (!statsMap[uid].latestDate || dateStr > statsMap[uid].latestDate) {
-        statsMap[uid].latestDate = dateStr;
-      }
-    });
-
-    // 2. スプリントセッション履歴の集計 (本数と回答数)
-    (sprintHistory?.sessions || []).forEach(s => {
-      const uid = s.user_id;
-      if (!statsMap[uid]) {
-        statsMap[uid] = { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null };
-      }
-      if (s.insert_date) {
-        const dateStr = s.insert_date.split('T')[0];
-        statsMap[uid].days.add(dateStr);
-        if (!statsMap[uid].latestDate || dateStr > statsMap[uid].latestDate) {
-          statsMap[uid].latestDate = dateStr;
-        }
-      }
-      statsMap[uid].sprintSessions += 1; // スプリント本数
-      statsMap[uid].sprintAnswers += s.total_answered; // スプリント回答数
-      statsMap[uid].assessments += s.total_assessments || 0; // スプリント発話数
-    });
-
-    // 3. スプリントドリルサマリー履歴の集計 (発話数)
-    (sprintHistory?.drills || []).forEach(d => {
-      const uid = d.user_id;
-      if (!statsMap[uid]) {
-        statsMap[uid] = { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null };
-      }
-      statsMap[uid].days.add(d.training_date);
-      statsMap[uid].assessments += d.assessment_count; // スプリントドリルサマリーの発話数
-
-      const dateStr = d.training_date;
-      if (!statsMap[uid].latestDate || dateStr > statsMap[uid].latestDate) {
-        statsMap[uid].latestDate = dateStr;
-      }
-    });
+    // 単語ドリル（training_date は DATE）
+    wordHistory.forEach((h) =>
+      record(h.user_id, h.training_date, (s) => {
+        s.phrases += h.phrase_count;
+        s.assessments += h.assessment_count;
+      })
+    );
+    // スプリント（実施日時は timestamptz のため、利用者のタイムゾーンの日付にする）
+    sprintHistory.sessions.forEach((h) =>
+      record(h.user_id, toIsoDateInZone(h.insert_date, timezone), (s) => {
+        s.sprintSessions += 1;
+        s.sprintAnswers += h.total_answered;
+        s.assessments += h.total_assessments || 0;
+      })
+    );
+    // スプリントドリル（training_date は DATE）
+    sprintHistory.drills.forEach((h) =>
+      record(h.user_id, h.training_date, (s) => {
+        s.assessments += h.assessment_count;
+      })
+    );
 
     return statsMap;
-  }, [wordHistory, sprintHistory]);
+  }, [wordHistory, sprintHistory, timezone]);
+
+  const formatDate = (value: string | null) => formatZonedDate(value, timezone) || '—';
 
   const handleExportCSV = () => {
-    if (users.length === 0) return;
-
     logClientEvent({
       service: 'student',
       event: 'monitor:user_summary_csv_exported',
       level: 'info',
-      message: `User summary CSV exported: ${currentMonthStr}`,
-      payload: { month: currentMonthStr, targetUserIds: users.map(u => u.id), rowCount: users.length }
+      message: `User summary CSV exported: ${targetMonth}`,
+      payload: { month: targetMonth, targetUserIds: users.map((u) => u.id), rowCount: users.length },
     }).catch(() => {});
 
-    const headers = [
-      '受講生', 
-      'ステータス', 
-      'ライセンス開始日', 
-      'ライセンス終了日', 
-      'トレーニング日数', 
-      'フレーズ数', 
-      'スプリント本数',
-      'スプリント回答数',
-      '発話数', 
-      'アクティビティ'
-    ];
-    
-    const rows = users.map(user => {
-      const stats = userStats[user.id] || { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null };
-      
-      const statusLabel = (Object({
-        active: '利用中', 
-        expired: '期限切れ', 
-        future: '開始前',
-        inviting: '招待中', 
-        expired_invite: '期限切れ(招待)', 
-        mail_failed: '送信失敗'
-      }) as Record<string, string>)[user.license_state] || '不明';
-      
+    const rows = users.map((user) => {
+      const stats = userStats.get(user.id) ?? emptyStats();
       return [
         user.user_name || '未設定',
-        statusLabel,
-        user.license_start_date ? formatZonedDate(user.license_start_date, timezone) : '—',
-        user.license_end_date ? formatZonedDate(user.license_end_date, timezone) : '—',
+        (LICENSE_STATE[user.license_state] ?? UNKNOWN_STATE).label,
+        formatDate(user.license_start_date),
+        formatDate(user.license_end_date),
         `${stats.days.size}日`,
         stats.phrases,
         stats.sprintSessions,
         stats.sprintAnswers,
         stats.assessments,
-        stats.latestDate || 'なし'
+        stats.latestDate ? toDayLabel(stats.latestDate) : 'なし',
       ];
     });
-
-    const csvContent = "\uFEFF" + [headers, ...rows]
-      .map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    const fileSuffix = includeMonitor ? '_with_monitor' : '';
-    link.setAttribute("download", `blueprint_user_summary_${currentMonthStr}${fileSuffix}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const getLicenseStateBadge = (state: MonitorUser['license_state']) => {
-    const baseClass = "inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold shrink-0 border shadow-2xs font-sans w-[105px] select-none";
-    switch (state) {
-      case 'active':
-        return <span className={cn(baseClass, "bg-emerald-50/60 border-emerald-100 text-emerald-600")}><CheckCircle2 size={12} strokeWidth={2.5} /> 利用中</span>;
-      case 'expired':
-        return <span className={cn(baseClass, "bg-rose-50/60 border-rose-100 text-rose-600")}><XCircle size={12} strokeWidth={2.5} /> 期限切れ</span>;
-      case 'future':
-        return <span className={cn(baseClass, "bg-blue-50/60 border-blue-100 text-blue-600")}><Hourglass size={12} strokeWidth={2.5} /> 開始前</span>;
-      case 'inviting':
-        return <span className={cn(baseClass, "bg-amber-50/60 border-amber-100 text-amber-700")}><Mail size={12} strokeWidth={2.5} /> 招待中</span>;
-      case 'expired_invite':
-        return <span className={cn(baseClass, "bg-slate-50/80 border-line/60 text-ink-subtle")}><Ban size={12} strokeWidth={2.5} /> 期限切れ</span>;
-      case 'mail_failed':
-        return <span className={cn(baseClass, "bg-orange-50/60 border-orange-100 text-orange-600")}><XCircle size={12} strokeWidth={2.5} /> 送信失敗</span>;
-      default:
-        return <span className={cn(baseClass, "bg-slate-50 border-line text-ink-muted")}>不明</span>;
-    }
+    downloadCsv(
+      `blueprint_user_summary_${targetMonth}${query.includeMonitor ? '_with_monitor' : ''}.csv`,
+      ['受講生', 'ステータス', 'ライセンス開始日', 'ライセンス終了日', 'トレーニング日数', 'フレーズ数', 'スプリント本数', 'スプリント回答数', '発話数', '最終実施日'],
+      rows
+    );
   };
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      
-      {/* コントロールバー */}
-      <div className="bg-slate-50/50 border border-line/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center w-full sm:w-auto">
-          <div className="space-y-1.5 w-full sm:w-auto">
-            <label className="text-[11px] font-bold text-ink-subtle uppercase px-0.5 flex items-center gap-1.5 tabular-nums">
-              <CalendarDays size={12} className="text-brand-500" />
-              対象年月
-            </label>
-            <div className="flex items-center gap-2 bg-white border border-line/80 rounded-xl p-1.5 shadow-2xs w-fit">
-              <button 
-                onClick={() => handleMonthChange(-1)} 
-                className="p-1.5 text-ink-subtle hover:text-ink hover:bg-slate-50 rounded-lg transition-all active:scale-95"
-                title="前月"
-              >
-                <ArrowLeft size={13} strokeWidth={3} />
-              </button>
-              
-              <MonitorMonthPickerPopover currentMonth={currentMonthStr} onSelect={navigateToMonth}>
-                <button
-                  type="button"
-                  className="flex items-center justify-center gap-1 text-xs font-bold tracking-tight text-ink-soft tabular-nums min-w-[84px] text-center rounded-lg px-1.5 py-0.5 hover:bg-slate-50 hover:text-brand transition-colors"
-                  title="年月を選択"
-                >
-                  {displayYear}年 {parseInt(displayMonth)}月
-                  <ChevronDown size={11} strokeWidth={3} className="text-ink-subtle" />
-                </button>
-              </MonitorMonthPickerPopover>
-
-              <button 
-                onClick={() => handleMonthChange(1)} 
-                className="p-1.5 text-ink-subtle hover:text-ink hover:bg-slate-50 rounded-lg transition-all active:scale-95"
-                title="来月"
-              >
-                <ArrowRight size={13} strokeWidth={3} />
-              </button>
-            </div>
-          </div>
+    <>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <MonthSwitcher {...monthNavigator} />
+          <MonitorMonthPickerPopover currentMonth={targetMonth} onSelect={goToMonth} disabled={isPending} />
         </div>
-
-        <div className="shrink-0">
-          <button
-            onClick={handleExportCSV}
-            disabled={users.length === 0}
-            className={cn(
-              "inline-flex items-center gap-2 justify-center text-xs font-bold h-9 px-4 rounded-xl shadow-2xs border transition-all bg-white hover:bg-slate-50 text-ink-soft border-line",
-              users.length === 0 && "bg-slate-100 text-ink-subtle border-line cursor-not-allowed"
-            )}
-          >
-            <Download size={14} strokeWidth={2.5} className="text-ink-muted" />
-            <span>CSVエクスポート</span>
-          </button>
-        </div>
+        <Button
+          variant="outline"
+          onClick={handleExportCSV}
+          disabled={users.length === 0}
+          icon={<Download />}
+          className="h-10 rounded-control border-line bg-surface px-4 text-sm font-semibold text-ink-soft shadow-none"
+        >
+          CSVエクスポート
+        </Button>
       </div>
 
-      {users.length === 0 ? (
-        <div className="bg-white rounded-card border border-dashed border-line/80 p-16 text-center">
-          <User size={36} className="mx-auto text-ink-subtle mb-3" />
-          <p className="text-sm font-bold text-ink-subtle">
-            {includeMonitor
-              ? 'この年月に該当する受講生が見つかりません'
-              : 'この年月に該当する受講生が見つかりません（モニター用アカウントのみ登録されている場合は「モニターを含める」をONにしてください）'}
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white border border-line/60 rounded-card shadow-sm overflow-hidden">
-          
-          {/* PC用ヘッダー */}
-          <div className="hidden md:flex items-center px-6 py-4 bg-slate-50 border-b border-line/70 text-[11px] font-bold text-ink-subtle uppercase tabular-nums">
-            <div className="w-full grid grid-cols-12 gap-4 items-center">
-              <div className="col-span-3 pl-12">受講生</div>
-              <div className="col-span-2 text-center">ステータス</div>
-              <div className="col-span-2 text-center">ライセンス期間</div>
-              <div className="col-span-1 flex flex-col items-center justify-center text-center leading-tight">
-                <span>トレーニング</span>
-                <span>日数</span>
-              </div>
-              <div className="col-span-2 text-left pl-1">主要実績 (フレーズ/本数/回答/発話)</div>
-              <div className="col-span-2 text-right pr-4">アクティビティ</div>
+      <div aria-busy={isPending} className={cn('transition-opacity', isPending && 'opacity-60')}>
+        {users.length === 0 ? (
+          <HistoryEmpty
+            icon={Users}
+            message={
+              query.includeMonitor
+                ? 'この年月に該当する受講生が見つかりません'
+                : 'この年月に該当する受講生が見つかりません（モニター用アカウントのみの場合は「モニターを含める」をオンにしてください）'
+            }
+          />
+        ) : (
+          <div className="overflow-hidden rounded-card border border-line bg-surface">
+            <div className={cn('hidden items-center gap-4 border-b border-line bg-canvas px-5 py-2.5 text-xs font-semibold text-ink-muted lg:grid', TABLE_GRID)}>
+              <span>受講生</span>
+              <span className="text-center">ステータス</span>
+              <span className="text-center">ライセンス期間</span>
+              <span className="text-center">日数</span>
+              <HeaderMetric icon={<TrainingMetricIcon metric="phrase" size={12} />} label="フレーズ" />
+              <HeaderMetric icon={<TrainingMetricIcon metric="sprint" size={12} />} label="スプリント" />
+              <HeaderMetric icon={<CheckCircle2 size={12} className="shrink-0 text-ink-subtle" />} label="回答" />
+              <HeaderMetric icon={<TrainingMetricIcon metric="speech" size={12} />} label="発話" />
+              <span className="text-right">最終実施日</span>
             </div>
-          </div>
 
-          {/* 受講生リスト本体 */}
-          <div className="divide-y divide-slate-100/70">
-            {users.map((user, idx) => {
-              const stats = userStats[user.id] || { days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0 };
+            <ul className="divide-y divide-line">
+              {users.map((user) => {
+                const stats = userStats.get(user.id) ?? emptyStats();
+                const state = LICENSE_STATE[user.license_state] ?? UNKNOWN_STATE;
 
-              return (
-                <motion.div
-                  key={user.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.02, ease: 'easeOut' }}
-                  className="p-5 md:px-6 md:py-4 flex flex-col md:flex-row items-stretch md:items-center hover:bg-slate-50/40 transition-colors group relative"
-                >
-                  <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-3.5 md:gap-4 items-center">
-                    
-                    {/* 1. 受講生（名前・メール）エリア */}
-                    <div className="col-span-1 md:col-span-3 flex items-center gap-3.5">
-                      <div className="w-10 h-10 bg-brand-soft/60 text-brand-500 border border-brand-100/50 rounded-2xl flex items-center justify-center shrink-0 font-bold tabular-nums text-xs select-none shadow-2xs">
-                        {user.user_name?.[0] || <User size={15} strokeWidth={2.5} />}
-                      </div>
-                      <div className="space-y-0.5 min-w-0">
-                        <p className="text-sm font-bold text-ink tracking-tight truncate group-hover:text-brand transition-colors">
-                          {user.user_name || '未設定ユーザー'}
-                        </p>
-                        {user.email && (
-                          <p className="text-xs text-ink-subtle font-normal truncate font-sans">
-                            {user.email}
-                          </p>
-                        )}
-                      </div>
+                return (
+                  <li key={user.id} className={cn('grid gap-3 px-4 py-4 sm:px-5 lg:items-center lg:gap-4 lg:py-3', TABLE_GRID)}>
+                    <div className="min-w-0">
+                      <MonitorUserName name={user.user_name} isMonitor={isMonitorAccount(user)} className="text-sm" />
+                      <p className="truncate text-xs text-ink-muted">{user.email}</p>
                     </div>
 
-                    {/* 2. ステータス */}
-                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-center border-t md:border-none border-line/70/60 pt-2.5 md:pt-0">
-                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase tabular-nums">ステータス</span>
-                      <div>
-                        {getLicenseStateBadge(user.license_state)}
-                      </div>
-                    </div>
-
-                    {/* 3. ライセンス期間（💡 formatDate を廃止し、インライン化してCompiler準拠に） */}
-                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-center border-t border-dashed border-line/70 md:border-none pt-2.5 md:pt-0">
-                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase tabular-nums">ライセンス期間</span>
-                      <div className="flex flex-col md:items-center tabular-nums text-[11px] text-ink-muted font-bold leading-relaxed">
-                        {user.license_start_date || user.license_end_date ? (
-                          <>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[11px] font-bold px-1 py-0.5 rounded-sm bg-slate-100 text-ink-subtle scale-90 origin-right md:origin-center">自</span>
-                              <span className="text-ink-soft tracking-tight">
-                                {formatZonedDate(user.license_start_date, timezone) || '—'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[11px] font-bold px-1 py-0.5 rounded-sm bg-slate-100 text-ink-subtle scale-90 origin-right md:origin-center">至</span>
-                              <span className="text-ink-soft tracking-tight">
-                                {formatZonedDate(user.license_end_date, timezone) || '—'}
-                              </span>
-                            </div>
-                          </>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4 lg:contents">
+                      <Cell label="ステータス">
+                        <span className={cn('inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold', state.className)}>{state.label}</span>
+                      </Cell>
+                      <Cell label="ライセンス期間">
+                        <span className="text-xs text-ink-soft tabular-nums">
+                          {formatDate(user.license_start_date)} 〜{' '}
+                          <br className="max-lg:hidden" />
+                          {formatDate(user.license_end_date)}
+                        </span>
+                      </Cell>
+                      <Cell label="トレーニング日数">
+                        <Value value={stats.days.size} unit="日" />
+                      </Cell>
+                      <Cell label="フレーズ">
+                        <Value value={stats.phrases} />
+                      </Cell>
+                      <Cell label="スプリント">
+                        <Value value={stats.sprintSessions} unit="本" />
+                      </Cell>
+                      <Cell label="回答">
+                        <Value value={stats.sprintAnswers} />
+                      </Cell>
+                      <Cell label="発話">
+                        <Value value={stats.assessments} />
+                      </Cell>
+                      <Cell label="最終実施日" align="end">
+                        {stats.latestDate ? (
+                          <span className="text-sm text-ink-soft tabular-nums">{toDayLabel(stats.latestDate)}</span>
                         ) : (
-                          <span className="text-ink-subtle font-normal md:pl-2">—</span>
+                          <span className="text-sm text-ink-subtle">活動なし</span>
                         )}
-                      </div>
+                      </Cell>
                     </div>
-
-                    {/* 4. トレーニング日数 */}
-                    <div className="col-span-1 md:col-span-1 flex items-center justify-between md:justify-center border-t border-dashed border-line/70 md:border-none pt-2.5 md:pt-0">
-                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase tabular-nums">トレーニング日数</span>
-                      <div className="flex items-center gap-1 tabular-nums text-xs text-ink-muted font-bold justify-center">
-                        <span className="text-ink-soft font-bold tabular-nums text-center">{stats.days.size}</span>
-                        <span className="text-[11px] font-bold text-ink-subtle font-sans">日</span>
-                      </div>
-                    </div>
-
-                    {/* 5. 主要実績スタッツ */}
-                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-start border-t border-dashed border-line/70 md:border-none pt-2.5 md:pt-0 md:pl-1">
-                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase tabular-nums">主要実績</span>
-                      <div className="flex items-center gap-2.5 text-ink-muted font-bold tabular-nums text-[11px] md:w-full md:justify-start">
-                        <span className="inline-flex items-center min-w-[48px]" title="フレーズ数">
-                          <TrainingMetricIcon metric="phrase" size={11} className="mr-1" /> 
-                          <span className="text-ink-soft font-bold tabular-nums">{stats.phrases}</span>
-                        </span>
-                        <span className="inline-flex items-center min-w-[48px]" title="スプリント本数">
-                          <TrainingMetricIcon metric="sprint" size={11} className="mr-1" /> 
-                          <span className="text-ink-soft font-bold tabular-nums">{stats.sprintSessions}</span>
-                        </span>
-                        <span className="inline-flex items-center min-w-[48px]" title="回答数">
-                          <CheckCircle2 size={11} className="text-ink-subtle mr-1 shrink-0" /> 
-                          <span className="text-ink-soft font-bold tabular-nums">{stats.sprintAnswers}</span>
-                        </span>
-                        <span className="inline-flex items-center min-w-[48px]" title="発話数">
-                          <TrainingMetricIcon metric="speech" size={11} className="mr-1" /> 
-                          <span className="text-ink-soft font-bold tabular-nums">{stats.assessments}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* 6. アクティビティ */}
-                    <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-end border-t border-dashed border-line/70 md:border-none pt-2.5 md:pt-0 pr-0 md:pr-4">
-                      <span className="md:hidden text-[11px] font-bold text-ink-subtle uppercase">アクティビティ</span>
-                      {stats.latestDate ? (
-                        <div className="text-[11px] text-ink-soft font-bold flex items-center gap-1.5 tabular-nums">
-                          <Clock size={12} className="text-ink-subtle" />
-                          <span>
-                            {stats.latestDate}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-bold text-ink-subtle font-sans">活動なし</span>
-                      )}
-                    </div>
-
-                  </div>
-                </motion.div>
-              );
-            })}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
+        )}
+      </div>
+    </>
+  );
+}
 
-        </div>
-      )}
+function HeaderMetric({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center justify-center gap-1">
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+/** 一覧の1項目。lg 未満は項目名を上に添え、lg 以上は見出し行の列に揃える */
+function Cell({ label, align = 'center', children }: { label: string; align?: 'center' | 'end'; children: React.ReactNode }) {
+  return (
+    <div className={cn('flex min-w-0 flex-col items-start gap-1', align === 'end' ? 'lg:items-end' : 'lg:items-center')}>
+      <span className="text-xs text-ink-muted lg:hidden">{label}</span>
+      {children}
     </div>
   );
-};
+}
+
+function Value({ value, unit }: { value: number; unit?: string }) {
+  return (
+    <span className="text-sm font-semibold text-ink tabular-nums">
+      {value}
+      {unit && <span className="ml-0.5 text-xs font-normal text-ink-muted">{unit}</span>}
+    </span>
+  );
+}

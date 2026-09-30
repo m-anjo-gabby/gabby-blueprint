@@ -1,23 +1,19 @@
-import React, { Suspense } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  getMonitorUserList, 
-  getMonitorWordHistory, 
-  getMonitorSprintHistory, 
-  MonitorUser 
+import {
+  getMonitorUserList,
+  getMonitorWordHistory,
+  getMonitorSprintHistory,
 } from '@/actions/monitorAction';
+import { MonitorHeader } from './_components/MonitorHeader';
 import { MonitorUserList } from './_components/MonitorUserList';
 import { MonitorWordHistoryView } from './_components/MonitorWordHistoryView';
 import { MonitorSprintHistoryView } from './_components/MonitorSprintHistoryView';
-import { MonitorToggle } from './_components/MonitorToggle';
-import { MONITOR_PAGE_CLASS, MonitorHeader, MonitorToggleSkeleton, type MonitorViewType } from './_components/MonitorHeader';
+import { getMonthRange, parseMonitorView, type MonitorQuery } from './_components/monitorQuery';
 
 export const dynamic = 'force-dynamic';
 
 interface MonitorPageProps {
   searchParams: Promise<{
-    view?: MonitorViewType;
-    month?: string;
+    view?: string;
     userIds?: string;
     startDate?: string;
     endDate?: string;
@@ -26,98 +22,41 @@ interface MonitorPageProps {
 }
 
 export default async function MonitorPage({ searchParams }: MonitorPageProps) {
-  const resolvedParams = await searchParams;
-  const { 
-    view = 'overview', 
-    userIds, 
-    startDate: qStart, 
-    endDate: qEnd,
-    includeMonitor: qIncludeMonitor
-  } = resolvedParams;
+  const params = await searchParams;
 
-  const includeMonitor = qIncludeMonitor === 'true';
-
-  // デフォルトの期間計算（当月月初〜月末）
+  // 期間の指定が無い場合は当月（月初〜月末）
   const now = new Date();
-  const year = now.getFullYear();
-  const m = now.getMonth();
-  
-  const defStart = new Date(Date.UTC(year, m, 1)).toISOString().split('T')[0];
-  const defEnd = new Date(Date.UTC(year, m + 1, 0, 23, 59, 59)).toISOString().split('T')[0];
+  const thisMonth = getMonthRange(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  const query: MonitorQuery & { startDate: string; endDate: string } = {
+    view: parseMonitorView(params.view),
+    startDate: params.startDate || thisMonth.startDate,
+    endDate: params.endDate || thisMonth.endDate,
+    userIds: params.userIds ? params.userIds.split(',') : [],
+    includeMonitor: params.includeMonitor === 'true',
+  };
+  const { startDate, endDate, userIds, includeMonitor } = query;
+  const filterUserIds = userIds && userIds.length > 0 ? userIds : undefined;
 
-  const start = qStart || defStart;
-  const end = qEnd || defEnd;
-  const selectedUserIds = userIds ? userIds.split(',') : [];
-
-  // 並列データフェッチ
-  // 💡 対象期間(start/end)を渡し、「その期間に有効な契約を持っていた生徒」を一覧・絞り込み
-  //    候補の対象にする
-  const fetchUserList = getMonitorUserList(start, end, includeMonitor);
-  const fetchWordHistory = getMonitorWordHistory(start, end, selectedUserIds.length > 0 ? selectedUserIds : undefined, includeMonitor);
-  const fetchSprintHistory = getMonitorSprintHistory(start, end, selectedUserIds.length > 0 ? selectedUserIds : undefined, includeMonitor);
-
+  // 💡 対象期間(start/end)を渡し、「その期間に有効な契約を持っていた生徒」を一覧・絞り込み候補の対象にする
   const [userListResult, wordHistoryResult, sprintHistoryResult] = await Promise.all([
-    fetchUserList,
-    fetchWordHistory,
-    fetchSprintHistory
+    getMonitorUserList(startDate, endDate, includeMonitor),
+    getMonitorWordHistory(startDate, endDate, filterUserIds, includeMonitor),
+    getMonitorSprintHistory(startDate, endDate, filterUserIds, includeMonitor),
   ]);
 
-  const users: MonitorUser[] = userListResult.success ? userListResult.data : [];
-  const wordHistory = wordHistoryResult.success ? wordHistoryResult.data : [];
-  const sprintHistory = sprintHistoryResult.success ? sprintHistoryResult.data : { sessions: [], drills: [] };
+  const users = userListResult.data;
+  const wordHistory = wordHistoryResult.data;
+  const sprintHistory = sprintHistoryResult.data;
 
   return (
-    <div className={MONITOR_PAGE_CLASS}>
-      <MonitorHeader
-        view={view}
-        userIds={userIds}
-        startDate={qStart}
-        endDate={qEnd}
-        includeMonitor={includeMonitor}
-        toggle={
-          <Suspense fallback={<MonitorToggleSkeleton />}>
-            <MonitorToggle />
-          </Suspense>
-        }
-      />
+    <>
+      <MonitorHeader query={query} />
 
-      {/* ────────────── メメイン：ダイナミックコンテンツビュー ────────────── */}
-      <div className="min-h-[400px]">
-        {view === 'overview' && (
-          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-card border border-line/60 bg-slate-50/40" />}>
-            <MonitorUserList 
-              users={users} 
-              wordHistory={wordHistory} 
-              sprintHistory={sprintHistory}
-            />
-          </Suspense>
-        )}
-
-        {view === 'word' && (
-          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-card border border-line/60 bg-slate-50/40" />}>
-            <MonitorWordHistoryView
-              initialData={wordHistory}
-              users={users}
-              startDate={start}
-              endDate={end}
-              selectedUserIds={selectedUserIds}
-            />
-          </Suspense>
-        )}
-
-        {view === 'sprint' && (
-          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-card border border-line/60 bg-slate-50/40" />}>
-            <MonitorSprintHistoryView
-              initialData={sprintHistory}
-              users={users}
-              startDate={start}
-              endDate={end}
-              selectedUserIds={selectedUserIds}
-            />
-          </Suspense>
-        )}
-      </div>
-
-    </div>
+      {query.view === 'overview' && (
+        <MonitorUserList users={users} wordHistory={wordHistory} sprintHistory={sprintHistory} query={query} />
+      )}
+      {query.view === 'word' && <MonitorWordHistoryView initialData={wordHistory} users={users} query={query} />}
+      {query.view === 'sprint' && <MonitorSprintHistoryView initialData={sprintHistory} users={users} query={query} />}
+    </>
   );
 }
