@@ -2,25 +2,25 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, BookOpen, LayoutGrid } from 'lucide-react';
+import { Search, X, BookOpen } from 'lucide-react';
 import { ShellPageHeader, CountBadge } from '@/components/shell/ShellPage';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Components
 import { ContentCard } from '@/components/common/ContentCard';
-import { PillTabs, type PillTabItem } from '@/components/shell/PillTabs';
+import { PillTabs } from '@/components/shell/PillTabs';
 import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
 
 // Actions & Hooks
 import { toggleContentFavorite } from '@/actions/contentAction';
 import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
-import { LIBRALY_TABS, type ContentItem } from '@gabby/types/content';
+import type { ContentItem } from '@gabby/types/content';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
 import { getTrainingPath } from '@gabby/lib/navigation/student-path';
-import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import { buildTypeTabs } from '../_lib/typeTabs';
 
 interface LibraryViewProps {
   /** サーバーで取得した教材一覧（開くたびに取得するため、他画面での変更や管理側の更新も反映される） */
@@ -49,18 +49,7 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('All');
 
-  // 種別タブ（種別アイコンに分類色を付け、カード側のアイコン色との対応を覚えやすくする）
-  const typeTabs = useMemo<PillTabItem<string>[]>(() => LIBRALY_TABS.map(tab => {
-    const isAll = tab.id === 'All';
-    const config = isAll ? null : getContentTypeConfig(Number(tab.id));
-    return {
-      value: String(tab.id),
-      label: tab.label,
-      icon: config?.icon ?? LayoutGrid,
-      iconClassName: config?.theme.iconText,
-      count: allContents.filter(c => isAll || String(c.content_type) === String(tab.id)).length,
-    };
-  }), [allContents]);
+  const typeTabs = useMemo(() => buildTypeTabs(allContents), [allContents]);
 
   // --- Logic: フィルタリングロジック ---
   const filteredList = useMemo(() => {
@@ -136,8 +125,10 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
       </ShellPageHeader>
 
       {/* 2. リストエリア（PCは2列） */}
+      {/* カードをフェードインさせない（骨組みから本番へ、その場で置き換わるようにする）。
+          絞り込み時の並び替え（layout）と、該当なし表示の出入りは動かす */}
       <div>
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="popLayout" initial={false}>
           {filteredList.length > 0 ? (
             <div className="grid gap-4 lg:grid-cols-2">
               {filteredList.map(content => (

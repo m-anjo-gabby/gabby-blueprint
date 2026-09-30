@@ -1,23 +1,21 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BellOff } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
 import { NotificationItem } from '@gabby/types/notification';
 import { NotificationCard } from './_components/NotificationCard';
-import { ShellPageHeader, CountBadge } from '@/components/shell/ShellPage';
+import { NotificationListSkeleton, NotificationPageHeader } from './_components/NotificationSkeleton';
 
 export default function NotificationPage() {
   const { notifications, isLoading, fetchNotifications, markAsRead } = useNotificationStore();
   const router = useRouter();
 
-  // このページは常に最新を見せる
-  useEffect(() => {
-    fetchNotifications(true);
-  }, [fetchNotifications]);
+  // 開くたびに最新を取り直し、取り直しが終わるまでは骨組みを出す（他画面で取得した古い一覧は出さない）
+  const isReady = useFetchOnMount(fetchNotifications, isLoading);
 
   const handleOpen = useCallback((notification: NotificationItem) => {
     if (!notification.is_read) {
@@ -30,57 +28,37 @@ export default function NotificationPage() {
 
   return (
     <>
-      <ShellPageHeader title="通知" back={{ history: '/dashboard' }} aside={<CountBadge count={notifications.length} />} />
+      <NotificationPageHeader count={isReady ? notifications.length : null} />
 
-      {/* ─── リスト ─────────────────────────────────────────── */}
-      <div>
-        <AnimatePresence mode="wait">
-          {isLoading ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-3"
-            >
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-[72px] w-full rounded-card opacity-60" />
-              ))}
-            </motion.div>
-          ) : notifications.length === 0 ? (
-            // エンプティステート
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center py-20 text-center"
-            >
-              <div className="w-14 h-14 rounded-card bg-surface flex items-center justify-center text-ink-subtle mb-4 border border-line">
-                <BellOff size={22} />
-              </div>
-              <p className="text-sm font-bold text-ink-muted">現在通知はありません</p>
-              <p className="text-xs text-ink-subtle mt-1.5">
-                通知が届くと、ここに表示されます
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-3"
-            >
-              {notifications.map(notification => (
-                <NotificationCard
-                  key={notification.notification_id}
-                  notification={notification}
-                  onOpen={handleOpen}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* ─── リスト（骨組みから本番へは、その場で置き換える） ─────── */}
+      {!isReady ? (
+        <NotificationListSkeleton />
+      ) : notifications.length === 0 ? (
+        // エンプティステート
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-20 text-center"
+        >
+          <div className="w-14 h-14 rounded-card bg-surface flex items-center justify-center text-ink-subtle mb-4 border border-line">
+            <BellOff size={22} />
+          </div>
+          <p className="text-sm font-bold text-ink-muted">現在通知はありません</p>
+          <p className="text-xs text-ink-subtle mt-1.5">
+            通知が届くと、ここに表示されます
+          </p>
+        </motion.div>
+      ) : (
+        <div className="space-y-3">
+          {notifications.map(notification => (
+            <NotificationCard
+              key={notification.notification_id}
+              notification={notification}
+              onOpen={handleOpen}
+            />
+          ))}
+        </div>
+      )}
     </>
   );
 }

@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/shell/RouteLoading';
+import { SprintHistoryRouteSkeleton } from './_components/SprintHistoryRouteSkeleton';
 
 export default function Loading() {
-  return <RouteLoading />;
+  return <SprintHistoryRouteSkeleton />;
 }

@@ -11,10 +11,11 @@ import { WordSummaryHistoryItem } from '@/actions/wordAction';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { MonthSwitcher } from '../../../_components/MonthSwitcher';
 import { StatTile } from '../../../_components/StatTile';
-import { HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
+import { HistoryDayListSkeleton, HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
 
 interface WordHistoryViewProps {
-  initialData: WordSummaryHistoryItem[];
+  /** 月の履歴。null は読み込み中（loading.tsx）で、見出し・月切替は本物のまま数値と一覧を骨組みにする */
+  initialData: WordSummaryHistoryItem[] | null;
   targetMonth: string; // 形式: "YYYY-MM"
 }
 
@@ -23,6 +24,8 @@ interface GroupedWordHistory {
 }
 
 export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, targetMonth }) => {
+  const isLoading = initialData === null;
+  const items = useMemo(() => initialData ?? [], [initialData]);
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const timezone = useTimezone();
 
@@ -35,7 +38,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
 
   // 📊 ヘッダーの月次サマリー用集計（追加のAPIコールなしで算出）
   const monthlyTotals = useMemo(() => {
-    return initialData.reduce(
+    return items.reduce(
       (acc, s) => {
         acc.words += s.word_count;
         acc.phrases += s.phrase_count;
@@ -43,13 +46,13 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
       },
       { words: 0, phrases: 0 }
     );
-  }, [initialData]);
+  }, [items]);
 
   // 🎯 日付ごとにグループ化（React Compiler が確実に追随できるよう外部関数参照を排除し、依存配列を修正）
   const groupedData = useMemo(() => {
     const groups: GroupedWordHistory = {};
 
-    initialData.forEach(session => {
+    items.forEach(session => {
       // 💡 外部関数を通さず、直接インラインでタイムゾーン付きフォーマットを実行
       const dateStr = formatZonedDate(session.training_date, timezone);
       if (!groups[dateStr]) groups[dateStr] = [];
@@ -65,7 +68,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
     });
 
     return groups;
-  }, [initialData, timezone]); // 💡 静的解析が一致するよう `timezone` を依存配列にしっかり追加
+  }, [items, timezone]); // 💡 静的解析が一致するよう `timezone` を依存配列にしっかり追加
 
   const toggleDate = (date: string) => {
     setExpandedDates(prev =>
@@ -85,13 +88,15 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
       </ShellPageHeader>
 
       <div className="mb-6 grid grid-cols-3 gap-3">
-        <StatTile label="実施日数" value={sortedDates.length} unit="日" icon={Calendar} />
-        <StatTile label="単語" value={monthlyTotals.words} unit="語" metric="word" />
-        <StatTile label="フレーズ" value={monthlyTotals.phrases} unit="件" metric="phrase" />
+        <StatTile label="実施日数" value={isLoading ? null : sortedDates.length} unit="日" icon={Calendar} />
+        <StatTile label="単語" value={isLoading ? null : monthlyTotals.words} unit="語" metric="word" />
+        <StatTile label="フレーズ" value={isLoading ? null : monthlyTotals.phrases} unit="件" metric="phrase" />
       </div>
 
       <div className="space-y-3">
-        {sortedDates.length === 0 ? (
+        {isLoading ? (
+          <HistoryDayListSkeleton metricCount={3} />
+        ) : sortedDates.length === 0 ? (
           <HistoryEmpty message="この月の単語帳の履歴はありません" />
         ) : (
           sortedDates.map((date) => {

@@ -9,6 +9,7 @@ import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
 import { MonthSwitcher } from '../../_components/MonthSwitcher';
 import { StatTile } from '../../_components/StatTile';
@@ -26,7 +27,8 @@ interface RecordLinkCardProps {
   icon: LucideIcon;
   /** アイコンのマスの分類色 */
   iconTile: string;
-  metrics: { label: string; value: number; unit: string }[];
+  /** value が null の間は読み込み中（数値の位置に骨組みを出す） */
+  metrics: { label: string; value: number | null; unit: string }[];
   note?: string;
 }
 
@@ -51,10 +53,16 @@ function RecordLinkCard({ href, title, icon: Icon, iconTile, metrics, note }: Re
         {metrics.map((metric) => (
           <div key={metric.label}>
             <dt className="text-xs text-ink-muted">{metric.label}</dt>
-            <dd className="mt-0.5 flex items-baseline gap-1 tabular-nums">
-              <span className="text-2xl font-bold tracking-tight text-ink">{metric.value}</span>
-              <span className="text-sm text-ink-muted">{metric.unit}</span>
-            </dd>
+            {metric.value === null ? (
+              <dd className="mt-0.5 flex h-8 items-center">
+                <Skeleton className="h-6 w-12" />
+              </dd>
+            ) : (
+              <dd className="mt-0.5 flex items-baseline gap-1 tabular-nums">
+                <span className="text-2xl font-bold tracking-tight text-ink">{metric.value}</span>
+                <span className="text-sm text-ink-muted">{metric.unit}</span>
+              </dd>
+            )}
           </div>
         ))}
       </dl>
@@ -64,7 +72,11 @@ function RecordLinkCard({ href, title, icon: Icon, iconTile, metrics, note }: Re
 }
 
 interface TrainingPerformanceProps {
-  initialData: UserTrainingPerformanceResponse;
+  /**
+   * 月の実績。null は読み込み中（loading.tsx）で、見出し・月切替・カード・カレンダーの日付は本物のまま、
+   * 数値だけを骨組みにし、カレンダーの実施日の色は付けない
+   */
+  initialData: UserTrainingPerformanceResponse | null;
   targetMonth: string; // 形式: "YYYY-MM"
 }
 
@@ -190,6 +202,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
   const [calendarYear, calendarMonth] = targetMonth.split('-').map(Number);
   const leadingBlankCount = new Date(calendarYear, calendarMonth - 1, 1).getDay();
   const monthLabel = `${parseInt(monthNavigator.displayMonth, 10)}月`;
+  const shown = (value: number) => (initialData === null ? null : value);
 
   return (
     <>
@@ -203,8 +216,8 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
           <section>
             <ShellSectionTitle>{monthLabel}のまとめ</ShellSectionTitle>
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <StatTile label="トレーニング日数" value={stats.activeDays} unit="日" icon={CalendarDays} emphasis />
-              <StatTile label="発話回数" value={stats.totalAssessments} unit="回" metric="speech" emphasis />
+              <StatTile label="トレーニング日数" value={shown(stats.activeDays)} unit="日" icon={CalendarDays} emphasis />
+              <StatTile label="発話回数" value={shown(stats.totalAssessments)} unit="回" metric="speech" emphasis />
             </div>
           </section>
 
@@ -217,8 +230,8 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 icon={WORD_BOOK.icon}
                 iconTile={WORD_BOOK.theme.iconTile}
                 metrics={[
-                  { label: '単語', value: stats.totalWords, unit: '語' },
-                  { label: 'フレーズ', value: stats.totalPhrases, unit: '件' },
+                  { label: '単語', value: shown(stats.totalWords), unit: '語' },
+                  { label: 'フレーズ', value: shown(stats.totalPhrases), unit: '件' },
                 ]}
               />
               <RecordLinkCard
@@ -227,8 +240,8 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                 icon={SPRINT.icon}
                 iconTile={SPRINT.theme.iconTile}
                 metrics={[
-                  { label: '実施', value: stats.sprintSessions, unit: '回' },
-                  { label: '回答', value: stats.sprintAnswers, unit: '問' },
+                  { label: '実施', value: shown(stats.sprintSessions), unit: '回' },
+                  { label: '回答', value: shown(stats.sprintAnswers), unit: '問' },
                 ]}
                 note="※ 回答数にドリルモードの回答は含みません"
               />

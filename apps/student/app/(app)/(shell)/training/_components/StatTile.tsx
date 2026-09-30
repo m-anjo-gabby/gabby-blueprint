@@ -1,10 +1,12 @@
 import type { LucideIcon } from 'lucide-react';
 import { getTrainingMetricConfig, type TrainingMetric } from '@gabby/lib/content/ui';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 type StatTileProps = {
   label: string;
-  value: number;
+  /** null は読み込み中（数値の位置に骨組みを出す） */
+  value: number | null;
   unit: string;
   /** 主要指標として大きく表示する */
   emphasis?: boolean;
@@ -30,10 +32,17 @@ export function StatTile({ label, value, unit, metric, icon, emphasis = false }:
         </span>
         {label}
       </div>
-      <p className="mt-3 flex items-baseline gap-1 tabular-nums">
-        <span className={cn('font-bold tracking-tight text-ink', emphasis ? 'text-3xl sm:text-4xl' : 'text-2xl')}>{value}</span>
-        <span className="text-sm text-ink-muted">{unit}</span>
-      </p>
+      {value === null ? (
+        // 数値の行（text-3xl / sm:text-4xl / text-2xl）と同じ高さの骨組み
+        <div className={cn('mt-3 flex items-center', emphasis ? 'h-9 sm:h-10' : 'h-8')}>
+          <Skeleton className={cn('w-14', emphasis ? 'h-7 sm:h-8' : 'h-6')} />
+        </div>
+      ) : (
+        <p className="mt-3 flex items-baseline gap-1 tabular-nums">
+          <span className={cn('font-bold tracking-tight text-ink', emphasis ? 'text-3xl sm:text-4xl' : 'text-2xl')}>{value}</span>
+          <span className="text-sm text-ink-muted">{unit}</span>
+        </p>
+      )}
     </div>
   );
 }

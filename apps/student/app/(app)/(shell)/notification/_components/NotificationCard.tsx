@@ -25,8 +25,6 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
       className={cn(
         'bg-white rounded-card border shadow-sm overflow-hidden transition-all',
         !notification.is_read

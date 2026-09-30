@@ -15,6 +15,12 @@ import { ALL_OPTION, getDownstreamFilterIds, resolveFavoriteFilters } from './fa
 import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton } from './FavoriteFilterControls';
 import { replaceSearchParams } from './favoriteUrl';
 
+/** 画面の見出し（読み込み中の FavoritesSkeleton と共有する） */
+export const FAVORITES_HEADER = { title: 'お気に入り', back: { history: '/dashboard' } } as const;
+
+/** 一覧のグリッド（読み込み中の FavoritesSkeleton と共有する） */
+export const getFavoriteGridClass = (columns: 1 | 2) => cn('grid gap-4', columns === 2 && 'lg:grid-cols-2');
+
 /** 一度に表示する件数（「さらに表示」で追加する件数） */
 const PAGE_SIZE = 50;
 
@@ -76,7 +82,7 @@ export function FavoriteKindSection<T>({ def, items, pills, onRemove }: Favorite
 
   return (
     <>
-      <ShellPageHeader title="お気に入り" back={{ history: '/dashboard' }}>
+      <ShellPageHeader {...FAVORITES_HEADER}>
         {pills}
         {items.length > 0 && (
           <>
@@ -133,7 +139,7 @@ export function FavoriteKindSection<T>({ def, items, pills, onRemove }: Favorite
         </EmptyState>
       ) : (
         <div className="space-y-4">
-          <div className={cn('grid gap-4', def.columns === 2 && 'lg:grid-cols-2')}>
+          <div className={getFavoriteGridClass(def.columns)}>
             <AnimatePresence mode="popLayout" initial={false}>
               {visible.map((item) => (
                 <motion.div

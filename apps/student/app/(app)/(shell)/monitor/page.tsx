@@ -1,12 +1,4 @@
 import React, { Suspense } from 'react';
-import Link from 'next/link';
-import { 
-  Users, 
-  LayoutDashboard, 
-  BookOpen, 
-  Zap
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   getMonitorUserList, 
@@ -17,11 +9,10 @@ import {
 import { MonitorUserList } from './_components/MonitorUserList';
 import { MonitorWordHistoryView } from './_components/MonitorWordHistoryView';
 import { MonitorSprintHistoryView } from './_components/MonitorSprintHistoryView';
-import { MonitorToggle } from './_components/MonitorToggle'; // 💡 追加
+import { MonitorToggle } from './_components/MonitorToggle';
+import { MONITOR_PAGE_CLASS, MonitorHeader, MonitorToggleSkeleton, type MonitorViewType } from './_components/MonitorHeader';
 
 export const dynamic = 'force-dynamic';
-
-type MonitorViewType = 'overview' | 'word' | 'sprint';
 
 interface MonitorPageProps {
   searchParams: Promise<{
@@ -75,64 +66,20 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
   const wordHistory = wordHistoryResult.success ? wordHistoryResult.data : [];
   const sprintHistory = sprintHistoryResult.success ? sprintHistoryResult.data : { sessions: [], drills: [] };
 
-  const navItems = [
-    { id: 'overview' as const, label: '受講生サマリー', icon: LayoutDashboard },
-    { id: 'word' as const, label: '単語ドリル履歴', icon: BookOpen },
-    { id: 'sprint' as const, label: 'スプリント履歴', icon: Zap },
-  ];
-
-
   return (
-    <div className="w-full max-w-7xl mx-auto py-5 sm:py-8 px-4 sm:px-6 md:px-8 space-y-6 text-ink selection:bg-brand-100">
-      
-      {/* ────────────── ヘッダー ────────────── */}
-      <header className="space-y-1">
-        <h1 className="flex items-center gap-2 text-xl sm:text-2xl font-bold tracking-tight text-ink">
-          <Users size={22} className="shrink-0 text-brand" />
-          モニタリングダッシュボード
-        </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-ink-muted">
-          所属する受講生のトレーニング状況を月ごとに確認し、CSVで出力できます。
-        </p>
-      </header>
-
-      {/* ────────────── メーターナビゲーション（タブ形式） & グローバルトグル ────────────── */}
-      <div className="border-b border-line pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        
-        {/* 左側：タブメニュー */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-control overflow-x-auto w-full sm:w-auto scrollbar-none">
-          {navItems.map((item) => {
-            const isActive = view === item.id;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.id}
-                href={`/monitor?view=${item.id}${userIds ? `&userIds=${userIds}` : ''}${qStart ? `&startDate=${qStart}` : ''}${qEnd ? `&endDate=${qEnd}` : ''}${includeMonitor ? '&includeMonitor=true' : ''}`}
-                className={cn(
-                  "flex h-9 items-center gap-2 px-4 rounded-[calc(var(--radius-control)-0.25rem)] text-sm font-semibold transition-all whitespace-nowrap group select-none",
-                  isActive
-                    ? "bg-surface text-ink shadow-sm"
-                    : "text-ink-muted hover:text-ink"
-                )}
-              >
-                <Icon
-                  size={15}
-                  className={cn("transition-colors", isActive ? "text-brand" : "text-ink-subtle group-hover:text-ink-soft")}
-                />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* 💡 右側：グローバルモニター切り替えトグル */}
-        <div className="self-start sm:self-auto shrink-0">
-          <Suspense fallback={<div className="h-[38px] w-36 bg-slate-100 animate-pulse rounded-xl" />}>
+    <div className={MONITOR_PAGE_CLASS}>
+      <MonitorHeader
+        view={view}
+        userIds={userIds}
+        startDate={qStart}
+        endDate={qEnd}
+        includeMonitor={includeMonitor}
+        toggle={
+          <Suspense fallback={<MonitorToggleSkeleton />}>
             <MonitorToggle />
           </Suspense>
-        </div>
-
-      </div>
+        }
+      />
 
       {/* ────────────── メメイン：ダイナミックコンテンツビュー ────────────── */}
       <div className="min-h-[400px]">

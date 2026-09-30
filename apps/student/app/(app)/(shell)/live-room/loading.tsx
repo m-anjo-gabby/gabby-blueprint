@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/shell/RouteLoading';
+import { LiveRoomRouteSkeleton } from './_components/LiveRoomSkeleton';
 
 export default function Loading() {
-  return <RouteLoading />;
+  return <LiveRoomRouteSkeleton />;
 }

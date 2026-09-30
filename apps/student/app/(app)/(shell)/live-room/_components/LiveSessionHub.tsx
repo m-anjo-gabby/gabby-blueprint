@@ -3,11 +3,12 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, ChevronRight, Ticket, Users } from 'lucide-react';
+import { ChevronRight, Ticket, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CountBadge, ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
+import { CountBadge, ShellSectionTitle } from '@/components/shell/ShellPage';
+import { LiveRoomPageHeader } from './LiveRoomSkeleton';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { withdrawSessionBookingRequest } from '@/actions/sessionAction';
@@ -140,17 +141,7 @@ export function LiveSessionHub({
 
   return (
     <>
-      <ShellPageHeader
-        title="ライブセッション"
-        aside={
-          <Button asChild variant="outline" size="sm" className="shrink-0">
-            <Link href="/calendar">
-              <CalendarDays size={15} className="text-brand" />
-              カレンダー
-            </Link>
-          </Button>
-        }
-      />
+      <LiveRoomPageHeader />
 
       {contracts.length > 1 && (
         <div className="mb-5">

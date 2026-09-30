@@ -6,7 +6,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { PillTabs, type PillTabItem } from '@/components/shell/PillTabs';
+import { PillTabs } from '@/components/shell/PillTabs';
 import { FavoriteKindSection } from './FavoriteKindSection';
 import { FavoriteAudioProvider } from './FavoriteAudioProvider';
 import { replaceSearchParams } from './favoriteUrl';
@@ -14,6 +14,7 @@ import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/
 import {
   FAVORITE_KINDS,
   FAVORITE_KIND_IDS,
+  buildKindPills,
   parseFavoriteKind,
   type FavoriteItemMap,
   type FavoriteKindDef,
@@ -52,15 +53,7 @@ export function FavoritesView({ initialLists, renderId }: FavoritesViewProps) {
     replaceSearchParams('', (params) => params.set('kind', next));
   };
 
-  const pills = useMemo<PillTabItem<FavoriteKindId>[]>(
-    () => FAVORITE_KIND_IDS.map((id) => ({
-      value: id,
-      label: FAVORITE_KINDS[id].label,
-      icon: FAVORITE_KINDS[id].icon,
-      count: lists[id].length,
-    })),
-    [lists]
-  );
+  const pills = useMemo(() => buildKindPills(lists), [lists]);
 
   const handleRemove = useCallback(async <K extends FavoriteKindId>(kindId: K, item: FavoriteItemMap[K]) => {
     const def: FavoriteKindDef<FavoriteItemMap[K]> = FAVORITE_KINDS[kindId];

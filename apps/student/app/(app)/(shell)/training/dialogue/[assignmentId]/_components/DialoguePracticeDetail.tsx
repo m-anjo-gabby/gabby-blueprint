@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
 import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
-import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { DialoguePageHeader } from '../../_components/DialogueSkeleton';
 import { DialogueSessionRow } from './DialogueSessionRow';
 
 interface Props {
@@ -18,8 +18,7 @@ export function DialoguePracticeDetail({ assignment }: Props) {
 
   return (
     <>
-      {/* ホームの「今日やること」と教材一覧の両方から来るため、直前の画面へ戻す */}
-      <ShellPageHeader title="ダイアログ" back={{ history: '/library' }} />
+      <DialoguePageHeader />
 
       <section className="mb-6 rounded-card border border-line bg-surface p-5 sm:p-6">
         <div className="flex flex-wrap items-start gap-2">

@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { BellOff } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
+import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
 import { NoticeCard } from './_components/NoticeCard';
-import { ShellPageHeader, CountBadge } from '@/components/shell/ShellPage';
+import { NoticeListSkeleton, NoticePageHeader } from './_components/NoticeSkeleton';
 
 export default function NoticePage() {
   const searchParams = useSearchParams();
@@ -18,10 +18,8 @@ export default function NoticePage() {
     focusId ? new Set([focusId]) : new Set()
   );
 
-  // マウント時に最新データを強制取得（このページは常に最新を見せる）
-  useEffect(() => {
-    fetchNotices(true);
-  }, [fetchNotices]);
+  // 開くたびに最新を取り直し、取り直しが終わるまでは骨組みを出す（他画面で取得した古い一覧は出さない）
+  const isReady = useFetchOnMount(fetchNotices, isLoading);
 
   // トグルハンドラー（開閉トグル＋未読時既読化）
   const handleToggleNotice = useCallback((noticeId: string, isRead: boolean) => {
@@ -43,68 +41,48 @@ export default function NoticePage() {
   // focus パラメータがある場合は対象カードまでスクロール
   const scrolledRef = useRef(false);
   useEffect(() => {
-    if (!focusId || isLoading || scrolledRef.current) return;
+    if (!focusId || !isReady || scrolledRef.current) return;
     const el = document.getElementById(`notice-${focusId}`);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       scrolledRef.current = true;
     }
-  }, [focusId, isLoading, notices]);
+  }, [focusId, isReady, notices]);
 
   return (
     <>
-      <ShellPageHeader title="お知らせ" back={{ history: '/dashboard' }} aside={<CountBadge count={notices.length} />} />
+      <NoticePageHeader count={isReady ? notices.length : null} />
 
-      {/* ─── リスト ─────────────────────────────────────────── */}
-      <div>
-        <AnimatePresence mode="wait">
-          {isLoading ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-3"
-            >
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-[72px] w-full rounded-card opacity-60" />
-              ))}
-            </motion.div>
-          ) : notices.length === 0 ? (
-            // エンプティステート
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center py-20 text-center"
-            >
-              <div className="w-14 h-14 rounded-card bg-surface flex items-center justify-center text-ink-subtle mb-4 border border-line">
-                <BellOff size={22} />
-              </div>
-              <p className="text-sm font-bold text-ink-muted">現在お知らせはありません</p>
-              <p className="text-xs text-ink-subtle mt-1.5">
-                お知らせが届くと、ここに表示されます
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-3"
-            >
-              {notices.map(notice => (
-                <NoticeCard
-                  key={notice.notice_id}
-                  notice={notice}
-                  isOpen={expandedIds.has(notice.notice_id)}
-                  onToggle={handleToggleNotice}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* ─── リスト（骨組みから本番へは、その場で置き換える） ─────── */}
+      {!isReady ? (
+        <NoticeListSkeleton />
+      ) : notices.length === 0 ? (
+        // エンプティステート
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-20 text-center"
+        >
+          <div className="w-14 h-14 rounded-card bg-surface flex items-center justify-center text-ink-subtle mb-4 border border-line">
+            <BellOff size={22} />
+          </div>
+          <p className="text-sm font-bold text-ink-muted">現在お知らせはありません</p>
+          <p className="text-xs text-ink-subtle mt-1.5">
+            お知らせが届くと、ここに表示されます
+          </p>
+        </motion.div>
+      ) : (
+        <div className="space-y-3">
+          {notices.map(notice => (
+            <NoticeCard
+              key={notice.notice_id}
+              notice={notice}
+              isOpen={expandedIds.has(notice.notice_id)}
+              onToggle={handleToggleNotice}
+            />
+          ))}
+        </div>
+      )}
     </>
   );
 }

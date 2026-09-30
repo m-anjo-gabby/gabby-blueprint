@@ -14,7 +14,7 @@ import type { ContentMetadata } from '@gabby/types/content';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { MonthSwitcher } from '../../../_components/MonthSwitcher';
 import { StatTile } from '../../../_components/StatTile';
-import { HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
+import { HistoryDayListSkeleton, HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
 
 /** ドリル種別ごとの回答数の列（表示順は QUESTION_TYPES の seq_no に合わせる） */
 const DRILL_BREAKDOWN_KEYS = [
@@ -65,14 +65,16 @@ interface HistoryDrillSummary {
 }
 
 interface SprintHistoryViewProps {
+  /** 月の履歴。null は読み込み中（loading.tsx）で、見出し・月切替は本物のまま数値と一覧を骨組みにする */
   initialData: {
     sessions: HistorySession[];
     drills: HistoryDrillSummary[];
-  };
+  } | null;
   targetMonth: string; // 形式: "YYYY-MM"
 }
 
 export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialData, targetMonth }) => {
+  const isLoading = initialData === null;
   const router = useRouter();
   const searchParams = useSearchParams();
   const focusId = searchParams.get('focus');
@@ -173,13 +175,15 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
       </ShellPageHeader>
 
       <div className="mb-6 grid grid-cols-3 gap-3">
-        <StatTile label="実施日数" value={sortedDates.length} unit="日" icon={Calendar} />
-        <StatTile label="スプリント" value={initialData?.sessions?.length ?? 0} unit="回" metric="sprint" />
-        <StatTile label="ドリル" value={initialData?.drills?.length ?? 0} unit="件" metric="drill" />
+        <StatTile label="実施日数" value={isLoading ? null : sortedDates.length} unit="日" icon={Calendar} />
+        <StatTile label="スプリント" value={isLoading ? null : initialData.sessions.length} unit="回" metric="sprint" />
+        <StatTile label="ドリル" value={isLoading ? null : initialData.drills.length} unit="件" metric="drill" />
       </div>
 
       <div className="space-y-3">
-        {sortedDates.length === 0 ? (
+        {isLoading ? (
+          <HistoryDayListSkeleton metricCount={2} />
+        ) : sortedDates.length === 0 ? (
           <HistoryEmpty message="この月のスプリントの履歴はありません" />
         ) : (
           sortedDates.map((date) => {

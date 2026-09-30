@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/shell/RouteLoading';
+import { ProfileRouteSkeleton } from './_components/ProfileSkeleton';
 
 export default function Loading() {
-  return <RouteLoading />;
+  return <ProfileRouteSkeleton />;
 }

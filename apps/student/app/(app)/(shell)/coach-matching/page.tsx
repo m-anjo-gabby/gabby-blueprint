@@ -1,7 +1,7 @@
 import { UserX } from 'lucide-react';
 import { getMyLiveSessionTickets, getMySlotStatus, getCoachBrowseList, getCountryList } from '@/actions/matchingAction';
 import { CoachMatchingView } from './_components/CoachMatchingView';
-import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { CoachMatchingPageHeader } from './_components/CoachMatchingSkeleton';
 
 export default async function CoachMatchingPage() {
   const tickets = await getMyLiveSessionTickets();
@@ -12,7 +12,7 @@ export default async function CoachMatchingPage() {
   if (!ticket) {
     return (
       <>
-        <ShellPageHeader title="専属コーチを探す" back="/live-room" />
+        <CoachMatchingPageHeader />
         <div className="flex flex-col items-center justify-center rounded-card border border-line bg-surface py-16 text-center px-6">
           <div className="w-14 h-14 rounded-control bg-canvas flex items-center justify-center text-ink-subtle mb-4">
             <UserX size={22} />

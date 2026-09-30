@@ -15,7 +15,6 @@ import {
   LogOut,
   MessageCircle,
   MessageSquareText,
-  type LucideIcon,
 } from 'lucide-react';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
@@ -26,7 +25,7 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import { updateHomeworkChecklistItemStatus } from '@/actions/sessionHomeworkAction';
 import { Progress } from '@/components/ui/progress';
-import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { SectionHeading, SessionResultPageHeader } from './SessionResultParts';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import type { SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkAttachment, SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
@@ -35,21 +34,6 @@ interface Props {
   session: SessionResultSummary;
   homework: SessionHomeworkEntry | null;
   checklist: SessionHomeworkChecklistItem[];
-}
-
-/**
- * セクション見出し（アイコンバッジ+タイトル）。コーチ向け画面と視覚言語を揃えつつ、
- * 本画面は1カラムの画面のため、コーチ側のような横幅グリッドは使わず縦積みにする。
- */
-function SectionHeading({ icon: Icon, iconClassName, title }: { icon: LucideIcon; iconClassName: string; title: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className={`flex items-center justify-center w-7 h-7 rounded-control shrink-0 ${iconClassName}`}>
-        <Icon size={15} />
-      </span>
-      <h2 className="text-sm font-bold text-ink">{title}</h2>
-    </div>
-  );
 }
 
 /**
@@ -81,7 +65,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
 
   return (
     <>
-      <ShellPageHeader title="セッション結果" back={{ history: '/live-room' }} />
+      <SessionResultPageHeader />
 
       <div className="space-y-4">
         {/* サマリー: 見出しラベルは付けず、いつ・誰とのセッションかを最優先で大きく見せる */}

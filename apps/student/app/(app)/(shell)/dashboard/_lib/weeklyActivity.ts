@@ -2,7 +2,7 @@ import { toIsoDateInZone } from '@gabby/lib/date/date';
 import type { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日'];
+export const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日'];
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**

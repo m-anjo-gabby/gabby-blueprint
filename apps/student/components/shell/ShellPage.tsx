@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * 戻る先の指定。
@@ -82,8 +83,9 @@ export function ShellPageHeader({ title, description, back, aside, children }: S
   );
 }
 
-/** 見出し右側の件数表示（例: 「12件」） */
-export function CountBadge({ count, unit = '件' }: { count: number; unit?: string }) {
+/** 見出し右側の件数表示（例: 「12件」）。count が null の間は読み込み中として同じ大きさの骨組みを出す */
+export function CountBadge({ count, unit = '件' }: { count: number | null; unit?: string }) {
+  if (count === null) return <Skeleton className="h-6.5 w-14 shrink-0 rounded-full" />;
   return (
     <span className="shrink-0 rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold text-ink-soft">
       {count}

@@ -9,7 +9,10 @@ import { toggleContentFavorite } from '@/actions/contentAction';
 import { toggleFavorite } from '@/actions/wordAction';
 import { toggleSprintQuestionFavorite } from '@/actions/sprintFavoriteAction';
 import type { FavoriteToggleResult } from '@/constants/favorites';
+import { ContentCardSkeleton } from '@/components/common/ContentCardSkeleton';
+import type { PillTabItem } from '@/components/shell/PillTabs';
 import { ContentFavoriteCard } from './ContentFavoriteCard';
+import { PhraseFavoriteCardSkeleton, SprintQuestionFavoriteCardSkeleton } from './FavoriteCardSkeletons';
 import { PhraseFavoriteCard } from './PhraseFavoriteCard';
 import { SprintQuestionFavoriteCard } from './SprintQuestionFavoriteCard';
 import type { FavoriteFilterDef } from './favoriteFilters';
@@ -50,6 +53,10 @@ export interface FavoriteKindDef<T> {
   /** お気に入り解除のサーバー処理 */
   remove: (item: T) => Promise<FavoriteToggleResult>;
   renderItem: (item: T, onRemove: () => void) => ReactNode;
+  /** 読み込み中のカード1枚分の骨組み（renderItem のカードと同じ形） */
+  renderSkeleton: () => ReactNode;
+  /** 読み込み中に並べる骨組みの枚数 */
+  skeletonCount: number;
 }
 
 /** 出典の教材での絞り込み（フレーズ・スプリント問題で共通） */
@@ -86,6 +93,8 @@ export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteIt
     ],
     remove: (c) => toggleContentFavorite(c.content_id, false),
     renderItem: (c, onRemove) => <ContentFavoriteCard content={c} onRemove={onRemove} />,
+    renderSkeleton: () => <ContentCardSkeleton />,
+    skeletonCount: 4,
   },
   phrases: {
     label: 'フレーズ',
@@ -100,6 +109,8 @@ export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteIt
     filters: [contentFilter((p) => p.content_id && p.content_name ? { id: p.content_id, name: p.content_name } : null)],
     remove: (p) => toggleFavorite(p.phrase_id, false),
     renderItem: (p, onRemove) => <PhraseFavoriteCard phrase={p} onRemove={onRemove} />,
+    renderSkeleton: () => <PhraseFavoriteCardSkeleton />,
+    skeletonCount: 4,
   },
   sprintQuestions: {
     label: 'スプリント問題',
@@ -138,6 +149,8 @@ export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteIt
     ],
     remove: (q) => toggleSprintQuestionFavorite(q.question_id, false),
     renderItem: (q, onRemove) => <SprintQuestionFavoriteCard question={q} onRemove={onRemove} />,
+    renderSkeleton: () => <SprintQuestionFavoriteCardSkeleton />,
+    skeletonCount: 2,
   },
 };
 
@@ -146,4 +159,17 @@ export const FAVORITE_KIND_IDS = Object.keys(FAVORITE_KINDS) as FavoriteKindId[]
 
 export function parseFavoriteKind(value: string | null): FavoriteKindId | null {
   return FAVORITE_KIND_IDS.find((id) => id === value) ?? null;
+}
+
+/**
+ * 種別切り替えのピル。
+ * lists を省略すると件数なしで組み立てる（読み込み中の骨組みで、ピルだけ先に本物を出すため）。
+ */
+export function buildKindPills(lists?: FavoriteLists): PillTabItem<FavoriteKindId>[] {
+  return FAVORITE_KIND_IDS.map((id) => ({
+    value: id,
+    label: FAVORITE_KINDS[id].label,
+    icon: FAVORITE_KINDS[id].icon,
+    count: lists?.[id].length,
+  }));
 }

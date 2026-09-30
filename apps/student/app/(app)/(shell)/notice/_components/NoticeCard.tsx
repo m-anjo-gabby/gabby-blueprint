@@ -88,8 +88,6 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
   return (
     <motion.article
       id={`notice-${notice.notice_id}`}
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
       className={cn(
         'bg-white rounded-card border shadow-sm overflow-hidden transition-all',
         !notice.is_read

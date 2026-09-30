@@ -15,9 +15,9 @@ import {
   type NewPasswordValue,
 } from '@gabby/lib/components/auth/NewPasswordFields';
 import { Button } from '@/components/ui/button';
-import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { AUTH_LABELS } from '@/constants/auth';
 import { ProfileSection } from '../_components/ProfileSection';
+import { PasswordPageHeader } from '../_components/ProfileParts';
 
 /**
  * パスワード変更ページ
@@ -65,11 +65,7 @@ export default function PasswordChangePage() {
 
   return (
     <div className="pb-10">
-      <ShellPageHeader
-        title="パスワード変更"
-        back={{ history: '/profile' }}
-        description="現在のパスワードを入力し、新しいパスワードを設定してください。"
-      />
+      <PasswordPageHeader />
 
       <ProfileSection>
         <form action={handleSubmit} className="space-y-6">

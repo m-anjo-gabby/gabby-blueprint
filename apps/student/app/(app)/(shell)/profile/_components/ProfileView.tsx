@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { User as UserIcon, IdCard, KeyRound, ChevronRight } from 'lucide-react';
+import { User as UserIcon, IdCard } from 'lucide-react';
 import { AvatarCropUploader } from '@gabby/lib/components/common/AvatarCropUploader';
 import { TimezoneSelector } from '@gabby/lib/components/common/TimezoneSelector';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
@@ -11,6 +10,7 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { ProfileSection } from './ProfileSection';
+import { AccountInfoRow, SecuritySection } from './ProfileParts';
 
 interface ProfileViewProps {
   userName: string;
@@ -93,18 +93,8 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
       <ProfileSection title="アカウント情報">
 
         <dl className="space-y-1">
-          <div className="flex items-center justify-between gap-4 py-3 border-b border-line/50">
-            <dt className="text-xs font-bold text-ink-subtle flex items-center gap-1.5 shrink-0">
-              <UserIcon size={13} /> 名前
-            </dt>
-            <dd className="text-sm font-bold text-ink-soft text-right truncate">{userName}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-4 py-3 border-b border-line/50">
-            <dt className="text-xs font-bold text-ink-subtle flex items-center gap-1.5 shrink-0">
-              <IdCard size={13} /> 所属
-            </dt>
-            <dd className="text-sm font-bold text-ink-soft text-right truncate">{clientName ?? '-'}</dd>
-          </div>
+          <AccountInfoRow icon={UserIcon} label="名前">{userName}</AccountInfoRow>
+          <AccountInfoRow icon={IdCard} label="所属">{clientName ?? '-'}</AccountInfoRow>
         </dl>
 
         <div className="pt-4 max-w-xs">
@@ -119,21 +109,7 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
       </ProfileSection>
 
       {/* セキュリティセクション */}
-      <ProfileSection title="セキュリティ">
-        <Link
-          href="/profile/password"
-          className="group -mx-3 flex items-center gap-3 rounded-control px-3 py-3 hover:bg-surface transition-colors"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-strong">
-            <KeyRound size={18} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-bold text-ink">パスワードを変更</span>
-            <span className="block text-xs text-ink-muted">ログインに使うパスワードを新しくします</span>
-          </span>
-          <ChevronRight size={18} className="shrink-0 text-ink-subtle group-hover:text-brand transition-colors" />
-        </Link>
-      </ProfileSection>
+      <SecuritySection />
     </div>
   );
 }

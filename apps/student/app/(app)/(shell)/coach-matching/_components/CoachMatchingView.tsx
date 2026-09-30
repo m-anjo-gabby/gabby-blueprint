@@ -16,7 +16,8 @@ import { LiveSessionTicketSummary } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
-import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
+import { ShellSectionTitle } from '@/components/shell/ShellPage';
+import { CoachMatchingPageHeader } from './CoachMatchingSkeleton';
 import { Button } from '@/components/ui/button';
 
 interface CoachMatchingViewProps {
@@ -152,11 +153,7 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
 
   return (
     <>
-      <ShellPageHeader
-        title="専属コーチを探す"
-        back="/live-room"
-        description={`週${ticket.weekly_frequency}回のセッション枠ごとにコーチをリクエストできます。コーチが承認すると、契約期間分のセッションが自動で予約されます。`}
-      />
+      <CoachMatchingPageHeader weeklyFrequency={ticket.weekly_frequency} />
 
       {/* 2. コンテンツエリア（スクロール） */}
       <div className="space-y-6">
@@ -245,7 +242,8 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
                 </p>
               )}
 
-              <AnimatePresence mode="popLayout">
+              {/* 初回表示ではカードをフェードインさせない（骨組みから本番へ、その場で置き換わるようにする） */}
+              <AnimatePresence mode="popLayout" initial={false}>
                 {coaches.length === 0 ? (
                   <p className="text-sm text-ink-subtle px-1 py-4">現在リクエスト可能なコーチがいません。</p>
                 ) : filteredCoaches.length === 0 ? (

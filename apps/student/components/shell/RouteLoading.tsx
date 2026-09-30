@@ -23,3 +23,16 @@ export function RouteLoading({ variant, frame }: RouteLoadingProps) {
 export function ImmersiveLoading() {
   return <LoadingScreen label={LABEL} className="text-ink-muted" />;
 }
+
+/**
+ * 画面専用の骨組みの外枠（読み上げ用の「読み込み中」を付ける）。
+ * 中身は各画面の XxxSkeleton が本番と同じ枠・グリッドで描く。見出しなどデータに依存しない部分は本物を描き、
+ * データに依存する部分だけを骨組みにすることで、骨組み→本番の切り替えを「中身が埋まるだけ」にする。
+ */
+export function RouteSkeleton({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div role="status" aria-busy aria-label={LABEL} className={className}>
+      {children}
+    </div>
+  );
+}

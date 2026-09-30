@@ -10,6 +10,20 @@ interface HomeCardProps {
   children: React.ReactNode;
 }
 
+/**
+ * ホーム画面の外形（HomeView と読み込み中の HomeSkeleton で共有し、骨組み→本番で形がずれないようにする）。
+ * PCで横に並ぶカードは行ごとに高さを揃える（各カードは h-full で行の高さいっぱいに広がる）。
+ * モバイルも grid-cols-1（minmax(0,1fr)）を明示する。暗黙の列は中身の最小幅まで広がるため、
+ * truncate した長いコーチ名・課題名が省略前の幅で列を押し広げ、画面外へはみ出してしまう
+ */
+export const HOME_LAYOUT = {
+  page: 'space-y-6 pb-6',
+  header: 'space-y-1 px-1',
+  grid: 'grid grid-cols-1 gap-4 lg:grid-cols-3',
+  /** 主役カード「今日やること」の区画 */
+  focus: 'lg:col-span-2',
+} as const;
+
 /** ホーム画面の各カードの共通枠（見出し＋本文）。グリッドの行の高さに合わせて伸びる */
 export function HomeCard({ title, action, className, children }: HomeCardProps) {
   return (

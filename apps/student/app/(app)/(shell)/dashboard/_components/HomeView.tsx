@@ -15,11 +15,12 @@ import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import type { ResumeContentResponse } from '@gabby/types/training';
 import type { TrainingLifetimeStats } from '@/actions/performanceAction';
 import { clearResumeContent } from '@/actions/contentAction';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { resolveTodayFocus } from '../_lib/todayFocus';
 import { buildCurrentWeek, resolveStreakDays, type TrainingActivity } from '../_lib/weeklyActivity';
 import { TodayDateLine } from './TodayDateLine';
+import { HOME_LAYOUT } from './HomeCard';
+import { HomeHeaderSkeleton, TodayFocusCardSkeleton, WeeklyActivityCardSkeleton } from './HomeSkeleton';
 import { TodayFocusCard } from './TodayFocusCard';
 import { NextSessionCard } from './NextSessionCard';
 import { ContinueCard } from './ContinueCard';
@@ -53,6 +54,7 @@ const getGreeting = (hour: number) => {
  * ホーム画面。
  * 「今日やること」を1つだけ主役に据え、残りの情報は補助カードとして並べる
  * （モバイル=1列、PC(lg以上)=3列グリッド。1〜2行目は主役・予定・実績・メニュー、3行目は「続きから」と課題）。
+ * 現在時刻の確定前（初回表示のハイドレーション時）は、時刻に依存する部分を loading.tsx と同じ骨組みで描く。
  */
 export function HomeView({ nextSession, assignments, activities, lifetimeStats, timezoneNames, resume: serverResume, renderId }: HomeViewProps) {
   const nowMs = useNow();
@@ -99,33 +101,30 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
   const showAssignments = otherAssignments.length > 0;
 
   return (
-    <div className="space-y-6 pb-6">
-      <header className="space-y-1 px-1">
-        {nowMs !== null ? (
+    <div className={HOME_LAYOUT.page}>
+      {nowMs !== null ? (
+        <header className={HOME_LAYOUT.header}>
           <TodayDateLine
             nowMs={nowMs}
             timezone={timezone}
             settingTimezone={settingTimezone}
             timezoneNames={timezoneNames}
           />
-        ) : (
-          <p className="text-sm text-ink-muted">{' '}</p>
-        )}
-        <h1 className="text-2xl font-bold tracking-tight text-ink">
-          {nowMs !== null ? getGreeting(getHourInZone(new Date(nowMs).toISOString(), timezone)) : 'ようこそ'}
-          {userName && <span className="text-ink-muted">、{userName}さん</span>}
-        </h1>
-      </header>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
+            {getGreeting(getHourInZone(new Date(nowMs).toISOString(), timezone))}
+            {userName && <span className="text-ink-muted">、{userName}さん</span>}
+          </h1>
+        </header>
+      ) : (
+        <HomeHeaderSkeleton />
+      )}
 
-      {/* PCで横に並ぶカードは行ごとに高さを揃える（各カードは h-full で行の高さいっぱいに広がる）。
-          モバイルも grid-cols-1（minmax(0,1fr)）を明示する。暗黙の列は中身の最小幅まで広がるため、
-          truncate した長いコーチ名・課題名が省略前の幅で列を押し広げ、画面外へはみ出してしまう */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className={HOME_LAYOUT.grid}>
+        <div className={HOME_LAYOUT.focus}>
           {focus !== null && nowMs !== null ? (
             <TodayFocusCard focus={focus} nowMs={nowMs} timezone={timezone} />
           ) : (
-            <Skeleton className="h-60 w-full rounded-card" />
+            <TodayFocusCardSkeleton />
           )}
         </div>
 
@@ -139,7 +138,7 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
             streakDays={streakDays}
           />
         ) : (
-          <Skeleton className="h-48 w-full rounded-card" />
+          <WeeklyActivityCardSkeleton />
         )}
 
         {/* 2行目で空きマスが出ないよう、次回のセッションが1行目に入らない場合は「これまでの積み上げ」を2列分にする。

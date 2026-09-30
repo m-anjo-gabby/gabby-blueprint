@@ -1,7 +1,7 @@
 // apps/student/app/(app)/(shell)/profile/page.tsx
 import { getMyProfile, getTimezoneList } from '@/actions/studentProfileAction';
-import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { ProfileView } from './_components/ProfileView';
+import { ProfilePageHeader } from './_components/ProfileParts';
 
 export default async function ProfilePage() {
   const [profile, timezones] = await Promise.all([getMyProfile(), getTimezoneList()]);
@@ -17,7 +17,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="pb-10">
-      <ShellPageHeader title="プロフィール設定" description="アイコン画像やアカウント情報を確認・変更できます。" />
+      <ProfilePageHeader />
 
       <ProfileView
         userName={profile.user_name ?? '(未設定)'}

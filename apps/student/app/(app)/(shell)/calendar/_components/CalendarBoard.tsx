@@ -1,55 +1,20 @@
 'use client';
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import {
-  addMonths,
-  subMonths,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  startOfToday,
-  eachDayOfInterval,
-  isSameMonth,
-  isToday,
-  isBefore,
-  format,
-} from 'date-fns';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { getMySessions } from '@/actions/sessionAction';
 import { getMyCalendarEvents } from '@/actions/calendarEventAction';
 import { getMyBookableTickets } from '@/actions/matchingAction';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { SessionListItem, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
-import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
-import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
+import { CalendarEventItem } from '@gabby/types/calendarEvent';
+import type { CalendarItem } from '@gabby/types/calendarItem';
 import { BookableTicketSlot } from '@gabby/types/matching';
-import { getSessionStatusBadge } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from './SessionActionDialog';
 import { DayDetailDrawer } from './DayDetailDrawer';
 import { BookMakeupSessionDialog } from './BookMakeupSessionDialog';
-
-const WEEKDAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
-const MAX_VISIBLE_CHIPS = 2;
-
-function getChipInfo(item: CalendarItem): { label: string; className: string } {
-  if (item.kind === 'session') {
-    return { label: item.data.counterpart_name, className: getSessionStatusBadge(item.data).className };
-  }
-  return { label: item.data.title, className: CALENDAR_EVENT_TYPES[item.data.event_type].badgeClass };
-}
-
-/**
- * 終了時刻(終了時刻を持たないお知らせ系イベントは開始時刻)が既に過ぎているかどうか。
- * status上は"Scheduled"のまま(結果未入力)でも実際は終了済みのケースがあるため、
- * ステータス色だけに頼らず時刻で過去判定する。
- */
-function isItemPast(item: CalendarItem): boolean {
-  const cutoff = item.kind === 'session' ? item.data.end_datetime : (item.data.end_datetime ?? item.data.start_datetime);
-  return new Date(cutoff) < new Date();
-}
+import { CalendarMonthCard } from './CalendarMonthCard';
 
 export function CalendarBoard() {
   const timezone = useTimezone();
@@ -113,12 +78,6 @@ export function CalendarBoard() {
     return map;
   }, [sessions, events, timezone]);
 
-  const calendarDays = useMemo(() => {
-    const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
-    const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 });
-    return eachDayOfInterval({ start, end });
-  }, [currentMonth]);
-
   const handleResolved = (sessionId: string, patch: Partial<SessionListItem>) => {
     setSessions((prev) => prev.map((s) => (s.session_id === sessionId ? { ...s, ...patch } : s)));
   };
@@ -131,94 +90,14 @@ export function CalendarBoard() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-card border border-line/70 shadow-sm p-4">
-        <div className="flex items-center justify-between mb-4">
-          <button
-            type="button"
-            onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted"
-            aria-label="前の月"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <p className="text-sm font-bold text-ink">{format(currentMonth, 'yyyy年M月')}</p>
-          <button
-            type="button"
-            onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted"
-            aria-label="次の月"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-ink-subtle mb-1">
-          {WEEKDAY_LABELS_JA.map((d) => (
-            <div key={d}>{d}</div>
-          ))}
-        </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-10 text-ink-subtle">
-            <Loader2 size={18} className="animate-spin" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day) => {
-              const key = format(day, 'yyyy-MM-dd');
-              const dayItems = itemsByDate.get(key) ?? [];
-              const isSelected = key === selectedDate;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setSelectedDate(key)}
-                  className={cn(
-                    'min-h-16 sm:min-h-19 rounded-lg flex flex-col items-stretch p-1 gap-0.5 text-left transition-colors relative',
-                    !isSameMonth(day, currentMonth) && 'opacity-40',
-                    isSelected ? 'bg-brand-soft ring-2 ring-brand-500' : 'hover:bg-slate-100'
-                  )}
-                >
-                  <div className="flex justify-center px-0.5">
-                    <span
-                      className={cn(
-                        'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
-                        isToday(day)
-                          ? 'bg-brand text-white'
-                          : isSameMonth(day, currentMonth) && !isBefore(day, startOfToday())
-                            ? 'text-ink-soft'
-                            : 'text-ink-subtle'
-                      )}
-                    >
-                      {day.getDate()}
-                    </span>
-                  </div>
-                  <div className="space-y-0.5 min-w-0">
-                    {dayItems.slice(0, MAX_VISIBLE_CHIPS).map((item) => {
-                      const chip = getChipInfo(item);
-                      return (
-                        <span
-                          key={getCalendarItemKey(item)}
-                          className={cn(
-                            'block text-[11px] font-bold px-1 py-0.5 rounded border truncate leading-tight',
-                            chip.className,
-                            isItemPast(item) && 'grayscale opacity-60'
-                          )}
-                        >
-                          {chip.label}
-                        </span>
-                      );
-                    })}
-                    {dayItems.length > MAX_VISIBLE_CHIPS && (
-                      <span className="block text-[11px] font-bold text-ink-subtle px-1">他{dayItems.length - MAX_VISIBLE_CHIPS}件</span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <CalendarMonthCard
+        currentMonth={currentMonth}
+        itemsByDate={isLoading ? null : itemsByDate}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+        onPrev={() => setCurrentMonth((m) => subMonths(m, 1))}
+        onNext={() => setCurrentMonth((m) => addMonths(m, 1))}
+      />
 
       <DayDetailDrawer
         date={selectedDate}
