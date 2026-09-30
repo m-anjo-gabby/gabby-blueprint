@@ -29,7 +29,7 @@ const NAV_BUTTON_CLASS =
  * （選択画面の「戻る」で結果画面に戻ってループしないようにする）。
  * 履歴から振り返る場合はシェル側の結果画面（/training/sprint/history/[id]）を使う。
  */
-export function SprintResult({ scoreData, questions, courseTitle }: SprintResultData) {
+export function SprintResult({ scoreData, questions, courseTitle, favoriteQuestionIds }: SprintResultData) {
   const timezone = useTimezone();
   // フッターの主役ボタン。まず「全て再生」から始まり、再生完了/停止で「リトライ」に切り替わる
   const [footerShowsRetry, setFooterShowsRetry] = useState(false);
@@ -56,7 +56,12 @@ export function SprintResult({ scoreData, questions, courseTitle }: SprintResult
       {/* 結果サマリーと出題リスト（履歴側と同じくサマリーも一緒にスクロールさせ、リストを広く見せる） */}
       <div className="flex-1 overflow-y-auto bg-canvas p-5 sm:p-6">
         <SprintResultSummary scoreData={scoreData} courseTitle={courseTitle} className="mb-4" />
-        <SprintResultQuestionList scoreData={scoreData} questions={questions} playback={playback} />
+        <SprintResultQuestionList
+          scoreData={scoreData}
+          questions={questions}
+          playback={playback}
+          initialFavoriteIds={favoriteQuestionIds}
+        />
       </div>
 
       {/* フッター：状況に応じて役割が切り替わる単一ボタン */}

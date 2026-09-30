@@ -28,6 +28,7 @@ import { ContentLoading } from '@/components/common/ContentLoading';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
 import { ImmersivePanel } from '@/components/shell/PageFrames';
+import { cancelSpeech } from '@gabby/lib/speech/synthesis';
 
 export default function WordTrainingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: sectionId } = use(params);
@@ -192,7 +193,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * ナビゲーション：次へ進む
    */
   const handleNext = useCallback(() => {
-    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    cancelSpeech();
     if (isNavigating.current) return;
 
     isNavigating.current = true;
@@ -209,7 +210,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * ナビゲーション：前へ戻る
    */
   const handlePrev = useCallback(() => {
-    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    cancelSpeech();
     if (isNavigating.current) return;
 
     isNavigating.current = true;
@@ -312,7 +313,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
     return () => {
       clearTimeout(t);
-      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+      cancelSpeech();
     };
   }, [wordIdx, phraseIdx, isAutoPlaying, isListening, loading, currentPhrase, handleGlobalSpeak]);
 

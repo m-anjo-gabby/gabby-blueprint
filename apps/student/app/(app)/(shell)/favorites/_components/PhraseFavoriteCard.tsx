@@ -7,6 +7,7 @@ import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { cancelSpeech } from '@gabby/lib/speech/synthesis';
 
 // フレーズは単語帳の教材に属するため、出典の表示には単語帳の分類色（アイコンのみ）を使う
 const WORD_CONTENT_TYPE = 0;
@@ -26,7 +27,7 @@ export function PhraseFavoriteCard({ phrase, onRemove }: PhraseFavoriteCardProps
   const isAudioActive = isPlaying === phrase.phrase_id || isSpeaking;
 
   const handleSpeak = () => {
-    window.speechSynthesis.cancel();
+    cancelSpeech();
     if (phrase.audio_path && phrase.tts_status === 1) {
       play(phrase.audio_path, phrase.phrase_id, { restart: true });
     } else {

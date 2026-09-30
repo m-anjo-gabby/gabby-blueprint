@@ -39,17 +39,29 @@ export function PillTabs<T extends string>({ items, value, onValueChange, 'aria-
     setShowRightFade(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
   }, []);
 
-  // 件数の表示が変わって幅が変化した場合にもフェード状態を再計算する
+  // 画面幅・フォント読み込み・件数表示の変化でピルの幅が変わった場合にもフェード状態を再計算する
   useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
     updateFade();
-    window.addEventListener('resize', updateFade);
-    return () => window.removeEventListener('resize', updateFade);
+    const observer = new ResizeObserver(updateFade);
+    observer.observe(el);
+    Array.from(el.children).forEach((child) => observer.observe(child));
+    return () => observer.disconnect();
   }, [updateFade, items]);
 
-  // 選択中のピルが横スクロール範囲外にある場合、中央に自動スクロールする
+  // 選択中のピルを横スクロールの中央に寄せる（初回表示は即座に、切り替え時はなめらかに）。
+  // scrollIntoView はページ全体の縦スクロールまで動かすことがあるため、ピルの列だけをスクロールする
+  const hasScrolledRef = useRef(false);
   useEffect(() => {
-    const active = scrollRef.current?.querySelector<HTMLElement>('[data-state="active"]');
-    active?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    const el = scrollRef.current;
+    const active = el?.querySelector<HTMLElement>('[data-state="active"]');
+    if (!el || !active) return;
+    const listRect = el.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    const offset = activeRect.left - listRect.left - (listRect.width - activeRect.width) / 2;
+    el.scrollTo({ left: el.scrollLeft + offset, behavior: hasScrolledRef.current ? 'smooth' : 'auto' });
+    hasScrolledRef.current = true;
   }, [value]);
 
   const handleValueChange = (next: string) => {

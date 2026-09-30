@@ -1,4 +1,5 @@
 import { getSprintResultAction, type SprintHistoryItem } from '@/actions/sprintAction';
+import { getFavoriteSprintQuestionIds } from '@/actions/sprintFavoriteAction';
 import { getSprintTitle } from '@gabby/lib';
 import type { SprintResultData } from './types';
 
@@ -19,6 +20,8 @@ export async function loadSprintResult(selfSprintId: string): Promise<SprintResu
       ? JSON.parse(scoreRecord.answered_history)
       : scoreRecord.answered_history ?? [];
 
+  const favoriteQuestionIds = await getFavoriteSprintQuestionIds(questions.map((q) => q.question_id));
+
   return {
     scoreData: {
       self_sprint_id: scoreRecord.self_sprint_id,
@@ -36,5 +39,6 @@ export async function loadSprintResult(selfSprintId: string): Promise<SprintResu
     },
     questions,
     courseTitle: getSprintTitle(scoreRecord.question_type || '0', Number(scoreRecord.difficulty_level), hasLevel),
+    favoriteQuestionIds,
   };
 }

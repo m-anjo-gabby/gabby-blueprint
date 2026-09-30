@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { SPRINT_FLOW_TIMING, SprintQuestion } from '@gabby/types/sprint';
 import { setAudioSessionPlayback } from '../sprint/utils';
+import { cancelSpeech } from '../speech/synthesis';
 
 export interface PlayStatementThenQuestionOptions {
   /** テキスト・音声パスを受け取り再生する関数（各プレイヤーが持つ playTrack をそのまま渡す） */
@@ -55,7 +56,7 @@ export async function playStatementThenQuestion(
 export function useStopAllAudioCore(stopTrack: () => void, stopListening: () => void) {
   return useCallback(() => {
     stopTrack();
-    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    cancelSpeech();
     stopListening();
 
     // 🚀 iOS WebKitデッドロック防止:

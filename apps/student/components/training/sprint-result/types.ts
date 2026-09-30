@@ -22,4 +22,6 @@ export interface SprintResultData {
   scoreData: SprintResultScore;
   questions: SprintQuestion[];
   courseTitle: string;
+  /** questions のうち、お気に入り登録済みの問題ID（☆の初期表示） */
+  favoriteQuestionIds: string[];
 }

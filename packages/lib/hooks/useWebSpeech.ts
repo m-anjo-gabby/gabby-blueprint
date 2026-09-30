@@ -5,6 +5,7 @@ import { analyzePhrase } from '../assessment/native-speech';
 import { AnalysisResult } from '../../types/speechAssessment';
 
 import { NavigatorWithAudioSession, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '../sprint/utils';
+import { cancelSpeech, getSpeechSynthesis } from '../speech/synthesis';
 
 /**
  * startAssessment のオプション
@@ -284,10 +285,12 @@ export function useWebSpeech() {
    * @param rate 再生速度 (オプション)
    */
   const speak = useCallback((text: string, rate?: number) => {
-    if (typeof window === 'undefined') return;
-    
+    // 音声合成の非対応環境（Android WebView等）では何もしない
+    const synth = getSpeechSynthesis();
+    if (!synth) return;
+
     // 二重再生防止
-    window.speechSynthesis.cancel();
+    synth.cancel();
     
     const uttr = new SpeechSynthesisUtterance(text);
     uttr.lang = 'en-US';
@@ -300,7 +303,7 @@ export function useWebSpeech() {
     uttr.onend = () => setIsSpeaking(false);
     uttr.onerror = () => setIsSpeaking(false);
     
-    window.speechSynthesis.speak(uttr);
+    synth.speak(uttr);
   }, []);
 
   /**
@@ -318,7 +321,7 @@ export function useWebSpeech() {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
-      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+      cancelSpeech();
     };
   }, [clearAllTimers]);
 

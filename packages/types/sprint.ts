@@ -183,6 +183,18 @@ export interface SprintQuestion {
   update_date: string;
 }
 
+/**
+ * お気に入り一覧用のスプリント問題（生徒アプリ）
+ * 問題マスタに、登録日時と出典の教材名・コース名（例: "UG Speed Lv.1"）を付加したもの
+ */
+export interface FavoriteSprintQuestionItem extends SprintQuestion {
+  favorite_id: string;
+  /** お気に入りに登録した日時 */
+  favorited_at: string;
+  content_name: string;
+  sprint_title: string;
+}
+
 export interface SprintQuestionResponse {
   success: boolean;
   data: SprintQuestion[] | null;

@@ -33,7 +33,7 @@
    ホームへ戻るボタン（右端）、実施日
 2. **サマリー** — シェル画面と同じカード。出題リストと一緒にスクロールする
 3. **出題リスト** — 実施した問題を出題順に並べたカード一覧。各カードに基本文/質問文/指示文/
-   解答文とその音声、発話評価スコア（記録がある場合）を表示する
+   解答文とその音声、発話評価スコア（記録がある場合）、お気に入り（☆）ボタンを表示する
 4. **フッター** — 初めは「全て再生」、再生完了・停止後は「スプリントをリトライ」のボタンに
    切り替わる単一のアクションエリア
 
@@ -54,6 +54,7 @@
 | 日本語表示切り替え | 各文の見出し部分 | タップで英文⇔日本語訳の表示を切り替える |
 | スコアバッジ | 発話評価を行った問題（スキップ・未評価を除く） | 詳細な評価データ（フィードバック）が保存されている場合、タップで発話フィードバックのモーダルを開く。古いデータで詳細が無い場合はタップ不可 |
 | スキップバッジ | その場でスキップした問題 | 表示のみ（操作不可） |
+| お気に入り（☆）ボタン | 全カードの右上。登録済みの問題は塗りつぶしの☆ | タップでお気に入りの登録／解除を即座に切り替える（トースト通知あり、失敗時は元の状態に戻す）。登録した問題は[お気に入り](../favorites.md)の「スプリント問題」に表示される |
 | 「全て再生」ボタン | 没入画面ではフッターの初期状態、シェル画面では上部に常時表示 | 全問題を順番に自動再生する（再生中の問題カードまで自動スクロール）。再生中は「停止」ボタンに変わる。没入画面では再生完了または停止後に「スプリントをリトライ」ボタンに切り替わる |
 | 「再生せずにすぐリトライする」リンク | 「全て再生」表示中に併記 | 再生せず、直接リトライ（同じ教材・種別で[スプリント実施画面](./sprint-play.md)を開く）する |
 | 「スプリントをリトライ」ボタン（シェル画面では「リトライ」） | 没入画面では全て再生の完了/停止後、シェル画面では常時表示 | 同じ教材・スプリント種別で[スプリント実施画面](./sprint-play.md)のスプリント選択を開く。結果画面は履歴から置き換えるため、選択画面の「戻る」では入口（没入画面では教材一覧・ホーム等、シェル画面ではスプリントの履歴）へ戻る |
@@ -117,6 +118,9 @@
 - `apps/student/components/training/sprint-result/`（両画面で共通：`loadSprintResult.ts` のデータ取得、
   `useSprintResultPlayback.ts` の音声再生、`SprintResultSummary.tsx`、`SprintResultQuestionList.tsx`）
 - `apps/student/actions/sprintAction.ts`（`getSprintResultAction`）
+- `apps/student/actions/sprintFavoriteAction.ts`（`getFavoriteSprintQuestionIds`・`toggleSprintQuestionFavorite`。
+  ☆の初期表示と切り替え。テーブルは `com_t_favorite_sprint_question`）
+- `apps/student/components/training/sprint-result/SprintPhraseBlock.tsx`（1文の表示ブロック。お気に入り画面と共用）
 - `packages/lib/hooks/usePlayAudioSpeech.ts`
 - `apps/student/app/(app)/training/sprint/play/_components/SprintFeedback.tsx`（発話フィードバック
   モーダルを共用）

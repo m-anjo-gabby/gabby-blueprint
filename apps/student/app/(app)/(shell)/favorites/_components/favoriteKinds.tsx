@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react';
-import { BookOpen, MessageSquareQuote, type LucideIcon } from 'lucide-react';
+import { BookOpen, MessageSquareQuote, Zap, type LucideIcon } from 'lucide-react';
 import type { FavoriteContentItem } from '@gabby/types/content';
 import type { FavoritePhraseItem } from '@gabby/types/word';
+import type { FavoriteSprintQuestionItem } from '@gabby/types/sprint';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
 import { toggleContentFavorite } from '@/actions/contentAction';
 import { toggleFavorite } from '@/actions/wordAction';
+import { toggleSprintQuestionFavorite } from '@/actions/sprintFavoriteAction';
 import { useContentStore } from '@/stores/useContentStore';
 import { ContentFavoriteCard } from './ContentFavoriteCard';
 import { PhraseFavoriteCard } from './PhraseFavoriteCard';
+import { SprintQuestionFavoriteCard } from './SprintQuestionFavoriteCard';
 
 /**
  * お気に入りの種別ごとの項目の型。
@@ -17,6 +20,7 @@ import { PhraseFavoriteCard } from './PhraseFavoriteCard';
 export interface FavoriteItemMap {
   contents: FavoriteContentItem;
   phrases: FavoritePhraseItem;
+  sprintQuestions: FavoriteSprintQuestionItem;
 }
 
 export type FavoriteKindId = keyof FavoriteItemMap;
@@ -87,6 +91,24 @@ export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteIt
     getGroup: (p) => ({ id: p.content_id ?? '', label: p.content_name ?? '教材' }),
     remove: (p) => toggleFavorite(p.phrase_id, false),
     renderItem: (p, onRemove) => <PhraseFavoriteCard phrase={p} onRemove={onRemove} />,
+  },
+  sprintQuestions: {
+    label: 'スプリント問題',
+    icon: Zap,
+    noun: '問題',
+    searchPlaceholder: '英語・日本語で検索',
+    allGroupsLabel: 'すべての教材',
+    emptyHint: 'スプリントの結果画面・履歴で、各問題の☆から登録できます',
+    emptyAction: { label: 'スプリントの履歴を見る', href: '/training/sprint/history' },
+    columns: 1,
+    getKey: (q) => q.question_id,
+    getSearchText: (q) => [
+      q.statement_en, q.statement_ja, q.question_en, q.question_ja,
+      q.answer_sentence_yes_en, q.answer_sentence_yes_ja, q.answer_sentence_no_en, q.answer_sentence_no_ja,
+    ].filter(Boolean).join(' '),
+    getGroup: (q) => ({ id: q.content_id, label: q.content_name }),
+    remove: (q) => toggleSprintQuestionFavorite(q.question_id, false),
+    renderItem: (q, onRemove) => <SprintQuestionFavoriteCard question={q} onRemove={onRemove} />,
   },
 };
 

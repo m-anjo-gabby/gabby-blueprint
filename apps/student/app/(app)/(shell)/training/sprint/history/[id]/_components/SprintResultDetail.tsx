@@ -17,7 +17,7 @@ import type { SprintResultData } from '@/components/training/sprint-result/types
  * スプリントの履歴から開く結果画面（シェル画面）。
  * 振り返りのための画面なので常設ナビを出し、戻る先は該当セッションをハイライトした履歴画面にする。
  */
-export function SprintResultDetail({ scoreData, questions, courseTitle }: SprintResultData) {
+export function SprintResultDetail({ scoreData, questions, courseTitle, favoriteQuestionIds }: SprintResultData) {
   const timezone = useTimezone();
   const playback = useSprintResultPlayback(scoreData, questions);
 
@@ -41,7 +41,12 @@ export function SprintResultDetail({ scoreData, questions, courseTitle }: Sprint
 
       <SprintResultSummary scoreData={scoreData} courseTitle={courseTitle} className="mb-4" />
 
-      <SprintResultQuestionList scoreData={scoreData} questions={questions} playback={playback} />
+      <SprintResultQuestionList
+        scoreData={scoreData}
+        questions={questions}
+        playback={playback}
+        initialFavoriteIds={favoriteQuestionIds}
+      />
 
       <AudioResumeBanner status={playback.resumeStatus} onResume={() => { playback.unlockAudioContext(); }} />
     </>

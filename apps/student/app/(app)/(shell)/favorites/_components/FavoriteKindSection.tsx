@@ -77,7 +77,9 @@ export function FavoriteKindSection<T>({ def, items, pills, onRemove }: Favorite
                   aria-label="絞り込み"
                   className="h-11! w-full rounded-control border-line bg-surface text-sm shadow-none sm:w-56"
                 >
-                  <SelectValue />
+                  <SelectValue>
+                    {groups.find((g) => g.id === activeGroupId)?.label ?? def.allGroupsLabel}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL_GROUPS}>{def.allGroupsLabel}</SelectItem>

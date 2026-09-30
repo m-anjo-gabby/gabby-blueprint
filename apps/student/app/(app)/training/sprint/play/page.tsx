@@ -11,6 +11,7 @@ import { AlertCircle, Volume2, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { ContentLoading } from "@/components/common/ContentLoading";
 import { ImmersiveNotice, noticeActionClass } from "@/components/shell/ImmersiveNotice";
+import { primeSpeechSynthesis } from '@gabby/lib/speech/synthesis';
 
 interface PageProps {
   searchParams: Promise<{
@@ -254,7 +255,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
               const audio = new Audio();
               audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
               audio.play().catch(() => {});
-              window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+              primeSpeechSynthesis();
               
               handleStartSession({
                 mode: config.mode,
