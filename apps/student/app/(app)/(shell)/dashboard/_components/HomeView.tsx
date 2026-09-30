@@ -53,7 +53,8 @@ const getGreeting = (hour: number) => {
 /**
  * ホーム画面。
  * 「今日やること」を1つだけ主役に据え、残りの情報は補助カードとして並べる
- * （モバイル=1列、PC(lg以上)=3列グリッド。1〜2行目は主役・予定・実績・メニュー、3行目は「続きから」と課題）。
+ * （モバイル=1列、PC(lg以上)=3列グリッド。1〜2行目は主役・予定・実績・メニュー、3行目は主役に出ていない「続きから」と課題）。
+ * アプリのみの契約（セッション・課題なし）では、途中の教材があれば「続きから」が主役になる。
  * 現在時刻の確定前（初回表示のハイドレーション時）は、時刻に依存する部分を loading.tsx と同じ骨組みで描く。
  */
 export function HomeView({ nextSession, assignments, activities, lifetimeStats, timezoneNames, resume: serverResume, renderId }: HomeViewProps) {
@@ -89,7 +90,7 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
   };
 
   const pendingAssignments = assignments.filter((a) => !a.is_set_completed);
-  const focus = nowMs !== null ? resolveTodayFocus({ nextSession, assignments: pendingAssignments, nowMs }) : null;
+  const focus = nowMs !== null ? resolveTodayFocus({ nextSession, assignments: pendingAssignments, resume, nowMs }) : null;
 
   // 「今日やること」に出した項目は補助カード側では重複表示しない
   const showNextSession = nextSession !== null && focus !== null && focus.kind !== 'session';
@@ -99,6 +100,8 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
   const week = nowMs !== null ? buildCurrentWeek(activities, timezone, nowMs) : null;
   const streakDays = nowMs !== null ? resolveStreakDays(lifetimeStats, timezone, nowMs) : 0;
   const showAssignments = otherAssignments.length > 0;
+  // 再開が主役に出ていない（セッション・課題を優先した）場合だけ、補助カード「続きから」に出す
+  const showContinue = resume !== null && focus !== null && focus.kind !== 'resume';
 
   return (
     <div className={HOME_LAYOUT.page}>
@@ -122,7 +125,7 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
       <div className={HOME_LAYOUT.grid}>
         <div className={HOME_LAYOUT.focus}>
           {focus !== null && nowMs !== null ? (
-            <TodayFocusCard focus={focus} nowMs={nowMs} timezone={timezone} />
+            <TodayFocusCard focus={focus} nowMs={nowMs} timezone={timezone} onClearResume={handleClearResume} />
           ) : (
             <TodayFocusCardSkeleton />
           )}
@@ -141,16 +144,16 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
           <WeeklyActivityCardSkeleton />
         )}
 
-        {/* 2行目で空きマスが出ないよう、次回のセッションが1行目に入らない場合は「これまでの積み上げ」を2列分にする。
-            例: アプリのみ契約 = 積み上げ2＋メニュー1、ライブ契約 = 今週1＋積み上げ1＋メニュー1 */}
+        {/* 2行目で空きマスが出ないよう、次回のセッションが1行目に入らない場合は「これまでの歩み」を2列分にする。
+            例: アプリのみ契約 = 歩み2＋メニュー1、ライブ契約 = 今週1＋歩み1＋メニュー1 */}
         <LifetimeStatsCard stats={lifetimeStats} className={showNextSession ? undefined : 'lg:col-span-2'} />
 
         <TrainingMenuCard />
 
-        {/* 3行目: 途中の教材の再開とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
-        {(resume !== null || showAssignments) && (
-          <div className={cn('grid grid-cols-1 gap-4 lg:col-span-3', resume !== null && showAssignments && 'lg:grid-cols-2')}>
-            {resume !== null && <ContinueCard resume={resume} onClear={handleClearResume} />}
+        {/* 3行目: 途中の教材の再開（主役に出ていない場合）とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
+        {(showContinue || showAssignments) && (
+          <div className={cn('grid grid-cols-1 gap-4 lg:col-span-3', showContinue && showAssignments && 'lg:grid-cols-2')}>
+            {showContinue && <ContinueCard resume={resume} onClear={handleClearResume} />}
             {showAssignments && <CoachAssignmentsCard assignments={otherAssignments} />}
           </div>
         )}

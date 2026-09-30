@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import { getResumePath } from '@gabby/lib/navigation/student-path';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { cn } from '@/lib/utils';
@@ -12,6 +14,8 @@ interface TodayFocusCardProps {
   focus: TodayFocus;
   nowMs: number;
   timezone: string;
+  /** 再開情報（ブックマーク）の削除。主役が「続きから」の時だけ使う */
+  onClearResume?: () => void;
 }
 
 interface FocusView {
@@ -62,6 +66,17 @@ function toFocusView(focus: TodayFocus, nowMs: number, timeZone: string): FocusV
         primary: { label: '課題に取り組む', href: `/training/dialogue/${assignment.assignment_id}` },
       };
     }
+    case 'resume': {
+      const { resume } = focus;
+      return {
+        eyebrow: '続きから',
+        title: resume.com_m_contents.content_name,
+        description: `${getContentTypeConfig(resume.com_m_contents.content_type).label}・前回の続きから再開できます`,
+        progressPercent: resume.metadata.display?.progress_percent ?? 0,
+        primary: { label: '続きから再開', href: getResumePath(resume) },
+        secondary: { label: '別の教材を選ぶ', href: '/library' },
+      };
+    }
     case 'start':
       return {
         eyebrow: '今日のトレーニング',
@@ -77,7 +92,7 @@ function toFocusView(focus: TodayFocus, nowMs: number, timeZone: string): FocusV
  * ホームの主役カード「今日やること」。
  * 状況に応じた行動を1つだけ提示し、ブランドのグラデーション面で特別感を出す。
  */
-export function TodayFocusCard({ focus, nowMs, timezone }: TodayFocusCardProps) {
+export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayFocusCardProps) {
   const view = toFocusView(focus, nowMs, timezone);
 
   return (
@@ -114,6 +129,15 @@ export function TodayFocusCard({ focus, nowMs, timezone }: TodayFocusCardProps) 
           </Link>
         )}
         {view.note && <p className={cn('text-xs text-white/75', !view.secondary && 'sm:ml-1')}>{view.note}</p>}
+        {focus.kind === 'resume' && onClearResume && (
+          <button
+            type="button"
+            onClick={onClearResume}
+            className="text-xs text-white/75 underline-offset-4 hover:text-white hover:underline transition-colors sm:ml-auto"
+          >
+            ブックマークを削除
+          </button>
+        )}
       </div>
     </section>
   );

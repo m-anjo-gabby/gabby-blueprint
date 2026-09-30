@@ -78,14 +78,14 @@ export function WeeklyActivityCardSkeleton() {
   );
 }
 
-/** 「これまでの積み上げ」の骨組み（1列の時は横長3行、2列分の時は縦長3マス） */
+/** 「これまでの歩み」の骨組み（1列の時は横長3行、2列分の時は2段の3マス） */
 export function LifetimeStatsCardSkeleton({ className }: { className?: string }) {
   return (
-    <HomeCard title="これまでの積み上げ" className={className}>
+    <HomeCard title="これまでの歩み" className={className}>
       <div className="@container">
         <div className="grid gap-2 @md:grid-cols-3">
           {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-13 rounded-control @md:h-34" />
+            <Skeleton key={i} className="h-13 rounded-control @md:h-27" />
           ))}
         </div>
       </div>
@@ -96,7 +96,7 @@ export function LifetimeStatsCardSkeleton({ className }: { className?: string })
 /**
  * ホーム画面の読み込み中表示（loading.tsx 用）。
  * 次回のセッションの有無はデータが届くまで分からないため、最も多い「次回のセッションなし」の並び
- * （1行目: 今日やること＋今週 / 2行目: 積み上げ2列分＋メニュー）で描く。
+ * （1行目: 今日やること＋今週 / 2行目: 歩み2列分＋メニュー）で描く。
  */
 export function HomeSkeleton() {
   return (

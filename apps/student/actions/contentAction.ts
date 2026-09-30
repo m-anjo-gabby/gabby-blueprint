@@ -174,6 +174,41 @@ export async function clearResumeContent() {
 }
 
 /**
+ * 教材の再開地点を取り出す（取り出した再開情報は削除する）。
+ * 「続きから」で教材を開いた時点で役目を終えるため、読み取りと削除を1回の往復で行う。
+ * 別の教材の再開情報は残す。戻り値は再開するアイテムID（該当なしは null）
+ */
+export async function takeResumeContent(contentId: string): Promise<string | null> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('com_t_resume_contents')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('content_id', contentId)
+      .select('item_id')
+      .maybeSingle();
+
+    if (error) {
+      logger.error("training:take_resume_failed", error.message, { ...ctx, payload: { contentId } });
+      return null;
+    }
+
+    if (data) {
+      logger.info("training:take_resume_success", "Resume point consumed", { ...ctx, payload: { contentId } });
+    }
+    return data?.item_id ?? null;
+  } catch (err) {
+    logger.error("training:take_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    return null;
+  }
+}
+
+/**
  * 最新の再開地点を取得する
  */
 export async function getLatestResumeContent(): Promise<ResumeContentResponse | null> {

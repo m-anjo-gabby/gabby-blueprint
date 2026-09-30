@@ -10,7 +10,7 @@ import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
 import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
-import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
+import { saveResumeContent, takeResumeContent } from '@/actions/contentAction';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { WordResumeMetadata } from '@gabby/types/training';
 import { getFeedbackConfig } from '@gabby/lib';
@@ -91,12 +91,12 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         let startP = 0;
         let isResumed = false;
 
-        // クエリパラメータに resume=true がある場合、DBから最終学習位置を取得
+        // クエリパラメータに resume=true がある場合、DBから最終学習位置を取り出す（再開した時点で再開情報は削除される）
         if (searchParams.get('resume') === 'true') {
-          const resume = await getLatestResumeContent();
-          if (resume && resume.content_id === sectionId) {
+          const resumeItemId = await takeResumeContent(sectionId);
+          if (resumeItemId) {
             fetchedWords.some((w, wIdx) => {
-              const pIdx = w.phrases.findIndex(p => p.phrase_id === resume.item_id);
+              const pIdx = w.phrases.findIndex(p => p.phrase_id === resumeItemId);
               if (pIdx !== -1) { 
                 startW = wIdx; 
                 startP = pIdx; 
@@ -273,7 +273,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    */
   const handleSaveAndExit = async () => {
     if (!currentWord || !currentPhrase) return;
-    const ok = await showConfirm("Bookmark?", "進捗を保存してダッシュボードに戻ります。", { variant: 'warning', isModal: false });
+    const ok = await showConfirm("ブックマークして終了しますか？", "ホームの「続きから」で、この位置から再開できます。", { variant: 'warning', isModal: false });
     if (!ok) return;
 
     const metadata: WordResumeMetadata = {
