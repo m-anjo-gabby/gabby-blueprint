@@ -142,13 +142,7 @@ export type FavoriteResponse = {
   favorite_id: string;
   phrase_id: string;
   insert_date: string;
-  com_m_phrase: {
-    phrase_en: string;
-    phrase_ja: string;
-    phrase_type: PhraseType;
-    seq_no: number;
-    status: WordStatus;
-    tts_status: TtsStatus;
+  com_m_phrase: PhraseRecord & {
     com_m_word: {
       word_en: string;
       com_m_contents: {

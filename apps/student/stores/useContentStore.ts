@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getAllContent, toggleContentFavorite } from '@/actions/contentAction';
+import { getAllContent } from '@/actions/contentAction';
 import { ContentItem } from '@gabby/types/content';
 
 interface ContentState {
@@ -19,11 +19,6 @@ interface ContentState {
    * サーバーのレスポンスを待たずにUIを更新し、不整合を防ぐ。
    */
   updateFavoriteStatus: (contentId: string, isFavorite: boolean) => void;
-
-  /**
-   * 特定の教材をお気に入りリストからのみ削除する場合（Favoriteタブ用）
-   */
-  removeFavorite: (contentId: string) => void;
 
   /**
    * ログアウト時などのキャッシュクリア
@@ -58,11 +53,6 @@ export const useContentStore = create<ContentState>((set, get) => ({
           )
         : null
     }));
-  },
-
-  removeFavorite: (contentId) => {
-    // updateFavoriteStatus(contentId, false) と同等の処理
-    get().updateFavoriteStatus(contentId, false);
   },
 
   clearCache: () => set({ allContents: null }),

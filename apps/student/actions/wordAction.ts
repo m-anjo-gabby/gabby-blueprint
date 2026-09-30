@@ -198,16 +198,14 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
       throw new Error(`取得失敗: ${error.message}`);
     }
 
-    return (data as unknown as FavoriteResponse[]).map(item => ({
+    return (data as unknown as FavoriteResponse[]).map(({ com_m_phrase: { com_m_word, ...phrase }, ...item }) => ({
       // PhraseRecord の全フィールドをマッピングに含める
-      ...item.com_m_phrase as any, 
+      ...phrase,
       favorite_id: item.favorite_id,
       phrase_id: item.phrase_id,
-      phrase_en: item.com_m_phrase.phrase_en,
-      phrase_ja: item.com_m_phrase.phrase_ja,
-      word_en: item.com_m_phrase.com_m_word.word_en,
-      content_id: item.com_m_phrase.com_m_word.com_m_contents.content_id,
-      content_name: item.com_m_phrase.com_m_word.com_m_contents.content_name,
+      word_en: com_m_word.word_en,
+      content_id: com_m_word.com_m_contents.content_id,
+      content_name: com_m_word.com_m_contents.content_name,
       insert_date: item.insert_date, // お気に入り登録日を優先
       is_favorite: true
     }));

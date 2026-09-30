@@ -666,3 +666,23 @@ GRANT USAGE ON SCHEMA private TO service_role;
 GRANT SELECT ON private.vw_user_list TO service_role;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】お気に入りフレーズのRLS修正（同じ顧客の他ユーザーからの参照を禁止）
+-- 追加日: 2026-09-30
+--
+-- 【内容】
+--   com_t_favorite_phrase のポリシー「Managers can view client's favorites」は、閲覧者のロールを
+--   見ずに同じ顧客（client_id）の全ユーザーへSELECTを許していたため、同じ法人の他の生徒からも
+--   お気に入りフレーズが読めた。参照しているアプリ・関数は無いため廃止する。
+--   本人のみ参照・更新できるポリシー（Users can manage their own favorites）は変更しない。
+--   管理画面から参照する場合は service_role（RLS対象外）のサーバー処理で取得する。
+--
+-- 対応ファイル: DDL/table/com_t_favorite_phrase.sql
+-- =========================================================================
+
+BEGIN;
+
+DROP POLICY IF EXISTS "Managers can view client's favorites" ON public.com_t_favorite_phrase;
+
+COMMIT;

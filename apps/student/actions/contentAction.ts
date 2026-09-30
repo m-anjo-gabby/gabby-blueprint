@@ -89,39 +89,11 @@ export async function getAllContent(): Promise<ContentItem[]> {
 }
 
 // お気に入りコンテンツを取得
-export async function getFavoriteContentes(): Promise<FavoriteContentItem[]> {
-  const ctx = await getLogContext();
-  try {
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
-    const { data, error } = await supabase
-      .from('com_t_favorite_contents')
-      .select(`
-        content:com_m_contents!inner(*)
-      `)
-      .eq('user_id', user.id)
-      .eq('com_m_contents.delete_flg', '0')
-      .neq('com_m_contents.content_scope', 9)
-      .order('seq_no', { referencedTable: 'com_m_contents', ascending: true });
-
-    if (error) {
-      logger.error("content:get_favorites_failed", error.message, ctx);
-      return [];
-    }
-
-    return (data || []).map(d => {
-      const content = d.content as unknown as FavoriteContentItem;
-      return {
-        ...content,
-        is_favorite: true,
-      };
-    });
-  } catch (err) {
-    logger.error("content:get_favorites_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
-    return [];
-  }
+// 教材一覧と同じ取得処理（アクセス権・ダイアログの割当判定）を通したうえでお気に入りだけを返す。
+// お気に入りテーブルから直接引くと、割当の外れたダイアログや assignment_id の無い行が混ざるため
+export async function getFavoriteContents(): Promise<FavoriteContentItem[]> {
+  const contents = await getAllContent();
+  return contents.filter((c) => c.is_favorite);
 }
 
 /**

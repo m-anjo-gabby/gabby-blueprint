@@ -41,13 +41,15 @@
   自身への割当（`com_t_dialogue_assignment`）を起点に取得している。コーチが割り当てていない
   ダイアログ教材は、たとえRLS上アクセス可能でもこの一覧には出ない
   （[コーチ側のDialogue Practice管理画面](../coach/students/dialogue-practice.md)を参照）。
-- お気に入りタブ（`/favorites`）も本画面と同じ取得ロジック（`getAllContent`）を再利用しているため、
+- [お気に入り](favorites.md)（`/favorites`）の教材も本画面と同じ取得ロジック（`getAllContent` を
+  `getFavoriteContents` で絞り込み）を再利用しているため、
   ダイアログの「割当済みのみ」ルールはお気に入り側にも自動的に及ぶ。
 
 ## 実装参照（エンジニア向け）
 
 - `apps/student/app/(app)/(shell)/library/page.tsx`
 - 共通カード: `apps/student/components/common/ContentCard.tsx`
+- 種別タブ（横スクロールのピル）: `apps/student/components/shell/PillTabs.tsx`（お気に入り画面と共通）
 - 教材種別・タブ定義: `packages/types/content.ts`（`CONTENT_TYPES`, `LIBRALY_TABS`）
 - 種別ごとのアイコン・配色: `packages/lib/content/ui.ts`（`getContentTypeConfig`）
 - 教材種別ごとの遷移先解決: `packages/lib/navigation/student-path.ts`（`getTrainingPath`）

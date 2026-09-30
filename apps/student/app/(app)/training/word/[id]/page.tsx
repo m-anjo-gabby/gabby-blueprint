@@ -11,7 +11,6 @@ import { logClientEvent } from '@gabby/lib/logger/actions';
 import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
 import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
 import { useResumeStore } from '@/stores/useResumeStore';
-import { usePhraseStore } from '@/stores/usePhraseStore';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { WordResumeMetadata } from '@gabby/types/training';
 import { getFeedbackConfig } from '@gabby/lib';
@@ -260,7 +259,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
     try {
       await toggleFavorite(phraseId, nextState);
-      usePhraseStore.getState().clearCache();
       showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りを解除しました', 'success');
     } catch (e) {
       updatePhraseFavorite(phraseId, currentState);
