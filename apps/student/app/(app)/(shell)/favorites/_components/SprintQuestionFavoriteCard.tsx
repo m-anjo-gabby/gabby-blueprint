@@ -4,11 +4,9 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { FavoriteSprintQuestionItem } from '@gabby/types/sprint';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
-import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
-import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
-import { cancelSpeech } from '@gabby/lib/speech/synthesis';
 import { SprintPhraseBlock, type SprintPhraseVariant } from '@/components/training/sprint-result/SprintPhraseBlock';
 import { cn } from '@/lib/utils';
+import { useFavoriteAudio } from './FavoriteAudioProvider';
 
 // 出典の表示にはスプリントの分類色（アイコンのみ）を使う
 const SPRINT_CONTENT_TYPE = 2;
@@ -46,17 +44,9 @@ interface SprintQuestionFavoriteCardProps {
 
 /** お気に入りスプリント問題のカード（出典、基本文・質問文・解答文ごとの再生と日本語切り替え） */
 export function SprintQuestionFavoriteCard({ question, onRemove }: SprintQuestionFavoriteCardProps) {
-  const { play, isPlaying } = usePlayAudioSpeech();
-  const { speak } = useWebSpeech();
+  const audio = useFavoriteAudio();
   const [jaVisible, setJaVisible] = useState<Record<string, boolean>>({});
   const { icon: SourceIcon, theme } = getContentTypeConfig(SPRINT_CONTENT_TYPE);
-
-  const handlePlay = (s: SentenceDef, audioId: string) => {
-    cancelSpeech();
-    // 生成済みの音声ファイルがあればそれを、無ければブラウザの音声合成で読み上げる
-    if (s.voice) play(s.voice, audioId, { restart: true });
-    else speak(s.en);
-  };
 
   return (
     <article className="space-y-4 rounded-card border border-line bg-surface p-5 shadow-xs transition-colors hover:border-brand-200 sm:p-6">
@@ -86,8 +76,9 @@ export function SprintQuestionFavoriteCard({ question, onRemove }: SprintQuestio
             label={s.label}
             en={s.en}
             ja={s.ja}
-            onPlay={() => handlePlay(s, audioId)}
-            isPlaying={isPlaying === audioId}
+            // 生成済みの音声ファイルがあればそれを、無ければブラウザの音声合成で読み上げる
+            onPlay={() => audio.play(audioId, s.en, s.voice)}
+            isPlaying={audio.activeId === audioId}
             isJaVisible={!!jaVisible[s.key]}
             onToggleJa={() => setJaVisible((prev) => ({ ...prev, [s.key]: !prev[s.key] }))}
           />

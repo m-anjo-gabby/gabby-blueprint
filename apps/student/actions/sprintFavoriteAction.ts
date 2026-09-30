@@ -65,16 +65,16 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
     return rows.flatMap(({ favorite_id, insert_date, question }) => {
       const content = contentById.get(question.content_id);
       if (!content) return [];
+      // 汎用／コーパスの判定は問題マスタの sprint_type ではなく教材の設定で行う
+      // （コーパススプリントの問題にも sprint_type='0' が入っているため）
+      const hasLevel = resolveSprintHasLevel(content.metadata?.sprint);
       return [{
         ...question,
         favorite_id,
         favorited_at: insert_date,
         content_name: content.content_name,
-        sprint_title: getSprintTitle(
-          question.question_type,
-          question.difficulty_level,
-          resolveSprintHasLevel(content.metadata?.sprint)
-        ),
+        sprint_title: getSprintTitle(question.question_type, question.difficulty_level, hasLevel),
+        has_level: hasLevel,
       }];
     });
   } catch (err) {

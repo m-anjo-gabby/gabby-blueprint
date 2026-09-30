@@ -2,16 +2,20 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, SearchX, X } from 'lucide-react';
+import { ChevronDown, Search, SearchX, X } from 'lucide-react';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { FavoriteGroup, FavoriteKindDef } from './favoriteKinds';
+import type { FavoriteKindDef } from './favoriteKinds';
+import { ALL_OPTION, getDownstreamFilterIds, resolveFavoriteFilters } from './favoriteFilters';
+import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton } from './FavoriteFilterControls';
+import { replaceSearchParams } from './favoriteUrl';
 
-const ALL_GROUPS = 'all';
+/** 一度に表示する件数（「さらに表示」で追加する件数） */
+const PAGE_SIZE = 50;
 
 interface FavoriteKindSectionProps<T> {
   def: FavoriteKindDef<T>;
@@ -21,36 +25,52 @@ interface FavoriteKindSectionProps<T> {
   onRemove: (item: T) => void;
 }
 
-/** 1種別分のお気に入り（固定ツールバーの検索・絞り込みと一覧） */
+/**
+ * 1種別分のお気に入り（固定ツールバーの検索・絞り込みと一覧）。
+ * 絞り込みの状態は URL のクエリ（絞り込みID=値）で持ち、トレーニングから戻った時も条件を残す。
+ * 検索語は入力途中の値のため URL には載せない。
+ */
 export function FavoriteKindSection<T>({ def, items, pills, onRemove }: FavoriteKindSectionProps<T>) {
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState('');
-  const [groupId, setGroupId] = useState(ALL_GROUPS);
 
-  // 絞り込みの選択肢は、登録済みの項目に含まれる分類だけを出す
-  const groups = useMemo(() => {
-    const map = new Map<string, FavoriteGroup>();
-    items.forEach((item) => {
-      const group = def.getGroup(item);
-      if (!map.has(group.id)) map.set(group.id, group);
-    });
-    return Array.from(map.values());
-  }, [def, items]);
-
-  // 絞り込み中の分類が削除で無くなった場合は「すべて」に戻す
-  const activeGroupId = groups.some((g) => g.id === groupId) ? groupId : ALL_GROUPS;
+  const selected = useMemo(
+    () => Object.fromEntries(def.filters.map((f) => [f.id, searchParams.get(f.id)])),
+    [def, searchParams]
+  );
+  const { filters, items: filteredByOptions } = useMemo(
+    () => resolveFavoriteFilters(items, def.filters, selected),
+    [def, items, selected]
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((item) =>
-      (activeGroupId === ALL_GROUPS || def.getGroup(item).id === activeGroupId) &&
-      (!q || def.getSearchText(item).toLowerCase().includes(q))
-    );
-  }, [def, items, query, activeGroupId]);
+    return q ? filteredByOptions.filter((item) => def.getSearchText(item).toLowerCase().includes(q)) : filteredByOptions;
+  }, [def, filteredByOptions, query]);
 
-  const isFiltering = query !== '' || activeGroupId !== ALL_GROUPS;
-  const clearFilters = () => {
+  // 条件を変えたら表示件数を最初のページに戻す
+  const conditionKey = `${filters.map((f) => f.value).join('|')}|${query}`;
+  const [page, setPage] = useState({ key: conditionKey, count: PAGE_SIZE });
+  const visibleCount = page.key === conditionKey ? page.count : PAGE_SIZE;
+  const visible = filtered.slice(0, visibleCount);
+
+  // 絞り込みを変えたら、連動して選択肢が変わる後ろの絞り込みは「すべて」に戻す
+  const handleFilterChange = (filterId: string, value: string) => {
+    replaceSearchParams(searchParams, (params) => {
+      if (value === ALL_OPTION) params.delete(filterId);
+      else params.set(filterId, value);
+      getDownstreamFilterIds(def.filters, filterId).forEach((id) => params.delete(id));
+    });
+  };
+
+  const clearFilterOptions = () => {
+    replaceSearchParams(searchParams, (params) => def.filters.forEach((f) => params.delete(f.id)));
+  };
+
+  const isFiltering = query !== '' || filters.some((f) => f.value !== ALL_OPTION);
+  const clearAll = () => {
     setQuery('');
-    setGroupId(ALL_GROUPS);
+    clearFilterOptions();
   };
 
   return (
@@ -58,38 +78,30 @@ export function FavoriteKindSection<T>({ def, items, pills, onRemove }: Favorite
       <ShellPageHeader title="お気に入り" back={{ history: '/dashboard' }}>
         {pills}
         {items.length > 0 && (
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle" size={18} />
-              <Input
-                type="search"
-                placeholder={def.searchPlaceholder}
-                aria-label={`${def.noun}を検索`}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                // iOSでのズーム防止のため text-base (16px)
-                className="h-11 rounded-control border-line bg-surface pl-11 text-base shadow-none transition-all focus-visible:border-brand-200 focus-visible:ring-brand/15 sm:text-sm"
+          <>
+            <div className="flex gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle" size={18} />
+                <Input
+                  type="search"
+                  placeholder={def.searchPlaceholder}
+                  aria-label={`${def.noun}を検索`}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  // iOSでのズーム防止のため text-base (16px)
+                  className="h-11 rounded-control border-line bg-surface pl-11 text-base shadow-none transition-all focus-visible:border-brand-200 focus-visible:ring-brand/15 sm:text-sm"
+                />
+              </div>
+              <FavoriteFilterSelects filters={filters} onChange={handleFilterChange} />
+              <FavoriteFilterSheetButton
+                filters={filters}
+                onChange={handleFilterChange}
+                onClearAll={clearFilterOptions}
+                resultCount={filtered.length}
               />
             </div>
-            {groups.length > 1 && (
-              <Select value={activeGroupId} onValueChange={setGroupId}>
-                <SelectTrigger
-                  aria-label="絞り込み"
-                  className="h-11! w-full rounded-control border-line bg-surface text-sm shadow-none sm:w-56"
-                >
-                  <SelectValue>
-                    {groups.find((g) => g.id === activeGroupId)?.label ?? def.allGroupsLabel}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_GROUPS}>{def.allGroupsLabel}</SelectItem>
-                  {groups.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+            <FavoriteFilterChips filters={filters} onChange={handleFilterChange} />
+          </>
         )}
       </ShellPageHeader>
 
@@ -105,29 +117,45 @@ export function FavoriteKindSection<T>({ def, items, pills, onRemove }: Favorite
       ) : filtered.length === 0 ? (
         <EmptyState icon={<SearchX size={28} className="text-ink-subtle" />} title={`条件に合う${def.noun}が見つかりません`}>
           {isFiltering && (
-            <Button variant="ghost" onClick={clearFilters} className="mt-1 h-10 rounded-control text-sm font-semibold text-brand hover:bg-brand-soft">
+            <Button variant="ghost" onClick={clearAll} className="mt-1 h-10 rounded-control text-sm font-semibold text-brand hover:bg-brand-soft">
               <X size={16} className="mr-1" />
               条件をクリア
             </Button>
           )}
         </EmptyState>
       ) : (
-        <div className={cn('grid gap-4', def.columns === 2 && 'lg:grid-cols-2')}>
-          <AnimatePresence mode="popLayout" initial={false}>
-            {filtered.map((item) => (
-              <motion.div
-                key={def.getKey(item)}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ duration: 0.2 }}
-                className="h-full"
+        <div className="space-y-4">
+          <div className={cn('grid gap-4', def.columns === 2 && 'lg:grid-cols-2')}>
+            <AnimatePresence mode="popLayout" initial={false}>
+              {visible.map((item) => (
+                <motion.div
+                  key={def.getKey(item)}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.2 }}
+                  className="h-full"
+                >
+                  {def.renderItem(item, () => onRemove(item))}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {filtered.length > visible.length && (
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPage({ key: conditionKey, count: visibleCount + PAGE_SIZE })}
+                className="h-11 rounded-control border-line bg-surface px-6 text-sm font-semibold text-ink-soft shadow-none"
               >
-                {def.renderItem(item, () => onRemove(item))}
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                さらに表示（残り{filtered.length - visible.length}件）
+                <ChevronDown size={16} className="ml-1" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </>

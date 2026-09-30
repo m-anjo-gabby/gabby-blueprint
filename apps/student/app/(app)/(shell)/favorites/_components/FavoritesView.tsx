@@ -6,6 +6,8 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { PillTabs, type PillTabItem } from '@/components/shell/PillTabs';
 import { FavoriteKindSection } from './FavoriteKindSection';
+import { FavoriteAudioProvider } from './FavoriteAudioProvider';
+import { replaceSearchParams } from './favoriteUrl';
 import {
   FAVORITE_KINDS,
   FAVORITE_KIND_IDS,
@@ -24,6 +26,7 @@ interface FavoritesViewProps {
  * お気に入り画面の本体。種別（教材・フレーズ等）をピルで切り替え、種別ごとの一覧を表示する。
  * 表示中の種別は URL（?kind=）で持ち、ホーム等から種別を指定して開けるようにする。
  * 切り替えは history.replaceState で行い、サーバーへの再取得や履歴の積み上げをしない。
+ * 音声は一覧で1つのプレイヤーを共有する（FavoriteAudioProvider）。
  */
 export function FavoritesView({ initialLists }: FavoritesViewProps) {
   const searchParams = useSearchParams();
@@ -37,10 +40,9 @@ export function FavoritesView({ initialLists }: FavoritesViewProps) {
   );
   const kind = parseFavoriteKind(searchParams.get('kind')) ?? defaultKind;
 
+  // 種別ごとに絞り込みの項目が違うため、切り替えたら前の種別の絞り込み条件は外す
   const handleKindChange = (next: FavoriteKindId) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('kind', next);
-    window.history.replaceState(null, '', `?${params.toString()}`);
+    replaceSearchParams('', (params) => params.set('kind', next));
   };
 
   const pills = useMemo<PillTabItem<FavoriteKindId>[]>(
@@ -83,11 +85,15 @@ export function FavoritesView({ initialLists }: FavoritesViewProps) {
     }
   }, [lists, showConfirm, showToast]);
 
-  return renderSection(
-    kind,
-    lists[kind],
-    <PillTabs items={pills} value={kind} onValueChange={handleKindChange} aria-label="お気に入りの種別" />,
-    handleRemove
+  return (
+    <FavoriteAudioProvider>
+      {renderSection(
+        kind,
+        lists[kind],
+        <PillTabs items={pills} value={kind} onValueChange={handleKindChange} aria-label="お気に入りの種別" />,
+        handleRemove
+      )}
+    </FavoriteAudioProvider>
   );
 }
 

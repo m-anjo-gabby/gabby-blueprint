@@ -193,6 +193,8 @@ export interface FavoriteSprintQuestionItem extends SprintQuestion {
   favorited_at: string;
   content_name: string;
   sprint_title: string;
+  /** 出典の教材がレベル分けを持つか（汎用スプリントは true、レベル固定のコーパススプリントは false） */
+  has_level: boolean;
 }
 
 export interface SprintQuestionResponse {

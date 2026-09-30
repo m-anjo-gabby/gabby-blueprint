@@ -3,11 +3,9 @@
 import { Trash2, Volume2 } from 'lucide-react';
 import type { FavoritePhraseItem } from '@gabby/types/word';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
-import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
-import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { cancelSpeech } from '@gabby/lib/speech/synthesis';
+import { useFavoriteAudio } from './FavoriteAudioProvider';
 
 // フレーズは単語帳の教材に属するため、出典の表示には単語帳の分類色（アイコンのみ）を使う
 const WORD_CONTENT_TYPE = 0;
@@ -19,20 +17,15 @@ interface PhraseFavoriteCardProps {
 
 /** お気に入りフレーズのカード（出典の教材・単語、英文、日本語訳、音声再生） */
 export function PhraseFavoriteCard({ phrase, onRemove }: PhraseFavoriteCardProps) {
-  // 生成済みの音声ファイルがあればそれを、無ければブラウザの音声合成で読み上げる
-  const { play, isPlaying } = usePlayAudioSpeech();
-  const { speak, isSpeaking } = useWebSpeech();
+  const audio = useFavoriteAudio();
   const { icon: SourceIcon, theme } = getContentTypeConfig(WORD_CONTENT_TYPE);
 
-  const isAudioActive = isPlaying === phrase.phrase_id || isSpeaking;
+  const isAudioActive = audio.activeId === phrase.phrase_id;
 
+  // 生成済みの音声ファイルがあればそれを、無ければブラウザの音声合成で読み上げる
   const handleSpeak = () => {
-    cancelSpeech();
-    if (phrase.audio_path && phrase.tts_status === 1) {
-      play(phrase.audio_path, phrase.phrase_id, { restart: true });
-    } else {
-      speak(phrase.phrase_en);
-    }
+    const path = phrase.audio_path && phrase.tts_status === 1 ? phrase.audio_path : null;
+    audio.play(phrase.phrase_id, phrase.phrase_en, path);
   };
 
   return (

@@ -205,15 +205,39 @@ async function pickHistoryContents(clientId: string): Promise<HistoryContents> {
       .single();
     if (error) throw new Error(`content_type=${contentType}の公開中教材が見つかりません: ${error.message}`);
     if (data.content_scope === 1) {
-      const { data: access } = await admin.from("com_m_contents_access").select("access_id").eq("client_id", clientId).eq("content_id", data.content_id).eq("delete_flg", "0").maybeSingle();
-      if (!access) {
-        const { error: accessErr } = await admin.from("com_m_contents_access").insert({ client_id: clientId, content_id: data.content_id, notes: "【QA固定】学習履歴フィクスチャ用" });
-        if (accessErr) throw accessErr;
-      }
+      await ensureContentAccess(clientId, data.content_id as string, "【QA固定】学習履歴フィクスチャ用");
     }
     return data.content_id as string;
   };
   return { wordContentId: await pick(0), sprintContentId: await pick(2) };
+}
+
+/** 顧客に限定公開(1)教材のアクセス権（com_m_contents_access）を付与する（付与済みなら何もしない） */
+async function ensureContentAccess(clientId: string, contentId: string, notes: string): Promise<void> {
+  const { data: access } = await admin.from("com_m_contents_access").select("access_id").eq("client_id", clientId).eq("content_id", contentId).eq("delete_flg", "0").maybeSingle();
+  if (access) return;
+  const { error } = await admin.from("com_m_contents_access").insert({ client_id: clientId, content_id: contentId, notes });
+  if (error) throw error;
+}
+
+/**
+ * 汎用スプリント（教材設定 metadata.sprint.sprint_type='0'、例: Gabby NLT）のアクセス権を固定テナントに付与する。
+ * 問題種別×レベルを持つのは汎用スプリントだけのため、レベルに関わる画面（お気に入りのレベル絞り込み等）の
+ * 検証に使う。限定公開(1)の場合だけ付与し、環境に汎用スプリントが無い場合は何もしない。
+ */
+async function ensureGenericSprintAccess(clientId: string): Promise<void> {
+  const { data, error } = await admin
+    .from("com_m_contents")
+    .select("content_id, content_name, content_scope")
+    .eq("content_type", 2)
+    .eq("delete_flg", "0")
+    .eq("metadata->sprint->>sprint_type", "0");
+  if (error) throw error;
+  for (const content of data ?? []) {
+    if (content.content_scope !== 1) continue;
+    await ensureContentAccess(clientId, content.content_id as string, "【QA固定】汎用スプリントの検証用");
+    console.log(`汎用スプリントのアクセス権: ${content.content_name}`);
+  }
 }
 
 /** 対象月の10日(JST)に、単語ドリル・スプリント・スプリントドリルの実績を1件ずつ作る。実行日より未来の月は作らない。 */
@@ -302,6 +326,7 @@ async function ensureLiveMatch(studentId: string, coachId: string, clientId: str
 // ---------------------------------------------------------------------------
 const clientId = await ensureClient(FIXED_CLIENT_NAME);
 const contents = await pickHistoryContents(clientId);
+await ensureGenericSprintAccess(clientId);
 
 const adminUserId = await findAuthUserByEmail(ADMIN_EMAIL);
 if (!adminUserId) {
