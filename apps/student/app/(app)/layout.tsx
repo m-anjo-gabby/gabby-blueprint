@@ -9,7 +9,7 @@ import ScrollRestorer from '@/components/common/ScrollRestorer';
 import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
 import { PopupHost } from '@/components/popups/PopupHost';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getMyLiveSessionTickets } from '@/actions/matchingAction';
+import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
 import { ShellNavProvider } from '@/components/shell/ShellNavContext';
 import type { ShellNavContext } from '@/constants/navigation';
 
@@ -41,9 +41,13 @@ export default async function StudentAppLayout({
   // ログイン後の全ページで共通して、最新規約への同意状況を確認します。
   // 未同意がある場合は TermsAgreementModal が表示され、操作をロックします。
   // 規約の同意状況と、シェルのナビ項目の表示可否（ライブセッション付き契約の有無）を並列に取得する
-  const [pendingTerms, tickets] = await Promise.all([checkPendingAgreements(user.id), getMyLiveSessionTickets()]);
+  const [pendingTerms, contracts] = await Promise.all([checkPendingAgreements(user.id), getMyLiveSessionContractsCached()]);
   const roles = (user.app_metadata?.roles as string[] | undefined) ?? [];
-  const navContext: ShellNavContext = { hasLiveSession: tickets.length > 0, isMonitor: roles.includes('monitor') };
+  const navContext: ShellNavContext = {
+    hasLiveSession: contracts.some((c) => c.is_active),
+    hasLiveSessionContract: contracts.length > 0,
+    isMonitor: roles.includes('monitor'),
+  };
 
   // 💡 user_type/ライセンスに基づく詳細なアクセス制御は apps/student/proxy.ts (Middleware) で
   // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。

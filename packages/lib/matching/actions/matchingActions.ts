@@ -137,13 +137,15 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
       .map((t) => {
         const license = licenseById.get(t.license_id);
         if (!license) return null;
-        const isCurrent = license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
+        const isActive = license.status === 1 && now <= new Date(license.end_date);
+        const isCurrent = isActive && new Date(license.start_date) <= now;
         return {
           ticket_id: t.ticket_id,
           license_id: t.license_id,
           start_date: license.start_date,
           end_date: license.end_date,
           is_current: isCurrent,
+          is_active: isActive,
         };
       })
       .filter((c): c is LiveSessionContractSummary => c !== null)

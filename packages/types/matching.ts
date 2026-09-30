@@ -72,6 +72,8 @@ export interface LiveSessionContractSummary {
   end_date: string;   // ライセンス終了日
   /** status=1(有効)かつ現在日時が期間内であればtrue */
   is_current: boolean;
+  /** status=1(有効)かつ終了日前であればtrue（開始前の契約も含む。有効なチケットの判定と同じ条件） */
+  is_active: boolean;
 }
 
 /**

@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { useShellNavContext } from '@/components/shell/ShellNavContext';
+import { LiveSessionIntro } from './LiveSessionIntro';
 import { SectionHeading, SessionResultPageHeader } from '../sessions/[sessionId]/result/_components/SessionResultParts';
 
 const SPRINT = getTrainingMetricConfig('sprint');
@@ -144,10 +146,14 @@ function SessionResultSkeleton() {
 /**
  * ライブセッション配下の読み込み中表示（loading.tsx 用）。
  * ハブとセッション結果（/live-room/sessions/[id]/result）の両方でこのフォルダの loading.tsx が出るため、
- * 表示中のパスで出し分ける。
+ * 表示中のパスで出し分ける。ライブセッション付き契約が無い生徒のハブは、アップセル導線をそのまま出す。
  */
 export function LiveRoomRouteSkeleton() {
   const pathname = usePathname();
+  const { hasLiveSessionContract } = useShellNavContext();
   const isResult = pathname.startsWith('/live-room/sessions/');
+  // ライブセッション付き契約が無い生徒は、ハブではなくアップセル導線を表示する（本番の page.tsx と同じ判定）。
+  // 導線はデータに依存しないため、骨組みではなく本物をそのまま出す
+  if (!isResult && !hasLiveSessionContract) return <LiveSessionIntro />;
   return <RouteSkeleton>{isResult ? <SessionResultSkeleton /> : <LiveSessionHubSkeleton />}</RouteSkeleton>;
 }

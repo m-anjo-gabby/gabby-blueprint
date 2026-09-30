@@ -9,6 +9,11 @@ import { BookOpen, Eye, Home, MessageCircle, Video, type LucideIcon } from 'luci
 export interface ShellNavContext {
   /** ライブセッション付き契約の有効なチケットを保持しているか */
   hasLiveSession: boolean;
+  /**
+   * 過去の契約を含め、ライブセッション付き契約が1件でもあるか。
+   * false の生徒はライブ画面がアップセル導線になるため、読み込み中の骨組みの出し分けに使う（ナビ項目の判定には使わない）
+   */
+  hasLiveSessionContract: boolean;
   /** モニター（顧客担当者）ロールを保持しているか */
   isMonitor: boolean;
 }

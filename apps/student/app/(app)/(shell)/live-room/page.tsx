@@ -1,5 +1,6 @@
 import { getMyUpcomingSessions, getMyPastSessions, getMyRescheduleProposalGroups, getMyBookingRequests } from '@/actions/sessionAction';
-import { getMyBookableTickets, getMyLiveSessionContracts, getMyLiveSessionOverview } from '@/actions/matchingAction';
+import { getMyBookableTickets, getMyLiveSessionOverview } from '@/actions/matchingAction';
+import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
 import { getSessionHomework, getSessionHomeworkChecklist } from '@/actions/sessionHomeworkAction';
 import { COMPLETION_RESULT, SESSION_STATUS, type SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
@@ -45,7 +46,8 @@ export default async function LiveSessionHubPage({ searchParams }: { searchParam
   const { contract: requestedTicketId } = await searchParams;
 
   // 契約単位のデータ（履歴・回数の内訳）は選択中の契約に依存するため、契約一覧の取得直後に開始し、他の取得と並行させる
-  const contractsPromise = getMyLiveSessionContracts();
+  // 契約一覧は (app)/layout.tsx と同じ取得を使う（1リクエスト内で1回）
+  const contractsPromise = getMyLiveSessionContractsCached();
   // 前回のセッション（次回に向けた振り返り用）は現在の契約を表示している時だけ取得する
   const contractDataPromise = contractsPromise.then(
     async (contracts): Promise<[SessionListItem[], LiveSessionOverview | null, PreviousSessionSummary | null]> => {

@@ -3,7 +3,7 @@
 import { createContext, useContext } from 'react';
 import type { ShellNavContext as ShellNavContextValue } from '@/constants/navigation';
 
-const DEFAULT_NAV_CONTEXT: ShellNavContextValue = { hasLiveSession: false, isMonitor: false };
+const DEFAULT_NAV_CONTEXT: ShellNavContextValue = { hasLiveSession: false, hasLiveSessionContract: false, isMonitor: false };
 
 const ShellNavReactContext = createContext<ShellNavContextValue>(DEFAULT_NAV_CONTEXT);
 
