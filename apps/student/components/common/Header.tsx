@@ -89,7 +89,10 @@ export default function Header() {
           <DropdownMenu>
             {/* ドロップダウンのトリガーボタン */}
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-line/70 hover:bg-slate-100 transition-all outline-none active:scale-95">
+              <button
+                aria-label="アカウントメニュー"
+                className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-line/70 hover:bg-slate-100 transition-all outline-none active:scale-95"
+              >
                 <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
                   {profileIconUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element

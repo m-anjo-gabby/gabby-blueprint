@@ -8,6 +8,7 @@ import {
   sendAsCoach,
   type ChatE2EFixture,
 } from "../../support/chatFixtures.ts";
+import { watchRealtime } from "../../support/realtime.ts";
 
 /**
  * チャット（生徒アプリ）の2ペイン・既読・下書き・添付・直接リンクの回帰テスト。
@@ -174,14 +175,18 @@ test.describe("画像の添付（PCのみ）", () => {
 });
 
 test("ナビの未読バッジ: チャット画面以外でも新着でリアルタイムに増える", async ({ page }) => {
+  const realtime = watchRealtime(page);
   await page.goto("/dashboard");
   const chatTab = navTab(page, /チャット/);
   await expect(chatTab).toBeVisible();
 
   const unreadCount = async () => Number((await chatTab.textContent())?.match(/\d+/)?.[0] ?? 0);
-  // 初期表示の未読数の取得を待つ（使い捨てルームに未読が2件あるため1以上）
+  // 初期表示の未読数の反映を待つ（使い捨てルームに未読が2件あるため1以上。未読数はサーバーで取得して最初から表示される）
   await expect.poll(unreadCount).toBeGreaterThan(0);
   const before = await unreadCount();
+  // 未読数が表示されても Realtime の購読は完了していないことがあるため、新着を送る前に購読の完了を待つ
+  // （ナビの未読は通知の購読に相乗りして取り直す。useNotificationRealtime）
+  await realtime.waitForSubscribed("notification_");
 
   await sendAsCoach(fixture, fixture.oneOnOneRoomId, "E2E realtime badge");
   await expect.poll(unreadCount).toBe(before + 1);
