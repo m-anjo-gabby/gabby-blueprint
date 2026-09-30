@@ -6,6 +6,8 @@ import { ResumeContentResponse, ResumeMetadata } from "@gabby/types/training";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { getMyDialogueAssignments } from "./dialogueAction";
+import { toggleFavoriteRow } from "@/lib/favoriteToggle";
+import type { FavoriteToggleResult } from "@/constants/favorites";
 
 const logger = createLogger('student');
 
@@ -97,41 +99,10 @@ export async function getFavoriteContents(): Promise<FavoriteContentItem[]> {
 }
 
 /**
- * コンテンツ（教材）のお気に入り状態を切り替え
+ * コンテンツ（教材）のお気に入り状態を切り替え（上限超過・失敗は戻り値で返す）
  */
-export async function toggleContentFavorite(contentId: string, isFavorite: boolean) {
-  const ctx = await getLogContext();
-  try {
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Unauthorized');
-
-    let error;
-    if (isFavorite) {
-      // お気に入り登録
-      const { error: upsertError } = await supabase
-        .from('com_t_favorite_contents')
-        .upsert({ user_id: user.id, content_id: contentId });
-      error = upsertError;
-    } else {
-      // 解除
-      const { error: deleteError } = await supabase
-        .from('com_t_favorite_contents')
-        .delete()
-        .match({ user_id: user.id, content_id: contentId });
-      error = deleteError;
-    }
-
-    if (error) {
-      logger.error("content:toggle_favorite_failed", error.message, { ...ctx, payload: { contentId, isFavorite } });
-      throw error;
-    }
-
-    logger.info("content:toggle_favorite_success", `Favorite ${isFavorite ? 'added' : 'removed'}`, { ...ctx, payload: { contentId, isFavorite } });
-  } catch (err) {
-    logger.error("content:toggle_favorite_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId, isFavorite } });
-    throw err;
-  }
+export async function toggleContentFavorite(contentId: string, isFavorite: boolean): Promise<FavoriteToggleResult> {
+  return toggleFavoriteRow('content', contentId, isFavorite);
 }
 
 /**

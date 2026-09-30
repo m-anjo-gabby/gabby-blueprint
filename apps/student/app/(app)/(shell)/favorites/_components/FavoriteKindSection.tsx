@@ -4,11 +4,12 @@ import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Search, SearchX, X } from 'lucide-react';
+import { ChevronDown, Info, Search, SearchX, X } from 'lucide-react';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { FAVORITE_LIMIT } from '@/constants/favorites';
 import type { FavoriteKindDef } from './favoriteKinds';
 import { ALL_OPTION, getDownstreamFilterIds, resolveFavoriteFilters } from './favoriteFilters';
 import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton } from './FavoriteFilterControls';
@@ -104,6 +105,13 @@ export function FavoriteKindSection<T>({ def, items, pills, onRemove }: Favorite
           </>
         )}
       </ShellPageHeader>
+
+      {items.length >= FAVORITE_LIMIT && (
+        <p role="status" className="mb-4 flex items-start gap-2 rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
+          <Info size={16} className="mt-0.5 shrink-0" />
+          {`お気に入りの${def.noun}が上限（${FAVORITE_LIMIT.toLocaleString()}件）に達しています。新しく登録するには、不要なものを削除してください。`}
+        </p>
+      )}
 
       {items.length === 0 ? (
         <EmptyState icon={<def.icon size={28} className="text-ink-subtle" />} title={`お気に入りの${def.noun}はまだありません`}>

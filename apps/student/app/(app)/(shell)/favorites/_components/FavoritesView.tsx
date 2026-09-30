@@ -8,6 +8,7 @@ import { PillTabs, type PillTabItem } from '@/components/shell/PillTabs';
 import { FavoriteKindSection } from './FavoriteKindSection';
 import { FavoriteAudioProvider } from './FavoriteAudioProvider';
 import { replaceSearchParams } from './favoriteUrl';
+import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
 import {
   FAVORITE_KINDS,
   FAVORITE_KIND_IDS,
@@ -71,18 +72,18 @@ export function FavoritesView({ initialLists }: FavoritesViewProps) {
 
     // 楽観的に一覧から外し、失敗した場合は元の位置に戻す
     replaceList((list) => list.filter((i) => def.getKey(i) !== key));
-    try {
-      await def.remove(item);
+    const result = await def.remove(item).catch(() => FAVORITE_TOGGLE_NETWORK_ERROR);
+    if (result.ok) {
       showToast('お気に入りから削除しました', 'success');
-    } catch {
-      replaceList((list) => {
-        if (list.some((i) => def.getKey(i) === key)) return list;
-        const next = [...list];
-        next.splice(Math.max(0, Math.min(index, next.length)), 0, item);
-        return next;
-      });
-      showToast('削除できませんでした。通信環境を確認してください', 'error');
+      return;
     }
+    replaceList((list) => {
+      if (list.some((i) => def.getKey(i) === key)) return list;
+      const next = [...list];
+      next.splice(Math.max(0, Math.min(index, next.length)), 0, item);
+      return next;
+    });
+    showToast(getFavoriteToggleErrorMessage(result), 'error');
   }, [lists, showConfirm, showToast]);
 
   return (

@@ -25,5 +25,21 @@ DROP POLICY IF EXISTS "Users can manage their own favorite contents" ON public.c
 
 CREATE POLICY "Users can manage their own favorite contents" ON public.com_t_favorite_contents
 FOR ALL TO authenticated 
-USING (user_id = auth.uid())
-WITH CHECK (user_id = auth.uid());
+-- auth.uid() を SELECT で包み、行ごとではなくクエリで1回だけ評価させる（Supabase推奨）
+USING (user_id = (SELECT auth.uid()))
+WITH CHECK (user_id = (SELECT auth.uid()));
+
+---------------------------------------------
+-- 索引（ユーザーごとの取得は UNIQUE(user_id, content_id) の索引を使う）
+-- 対象側の列の索引: 教材・フレーズ・問題の削除時の ON DELETE CASCADE で、お気に入り全体を走査しないようにする
+---------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_com_t_favorite_contents_content_id
+ON public.com_t_favorite_contents (content_id);
+
+---------------------------------------------
+-- 登録上限（ユーザーごと1000件。DDL/function/fn_check_favorite_limit.sql）
+---------------------------------------------
+DROP TRIGGER IF EXISTS trg_com_t_favorite_contents_limit ON public.com_t_favorite_contents;
+CREATE TRIGGER trg_com_t_favorite_contents_limit
+BEFORE INSERT ON public.com_t_favorite_contents
+FOR EACH ROW EXECUTE FUNCTION public.fn_check_favorite_limit('content_id');

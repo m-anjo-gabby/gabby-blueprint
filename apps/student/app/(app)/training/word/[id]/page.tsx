@@ -9,6 +9,7 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
+import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
 import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
 import { useResumeStore } from '@/stores/useResumeStore';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
@@ -258,13 +259,14 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     const nextState = !currentState;
     updatePhraseFavorite(phraseId, nextState);
 
-    try {
-      await toggleFavorite(phraseId, nextState);
-      showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りを解除しました', 'success');
-    } catch (e) {
+    // 登録上限の超過・失敗は戻り値で返る
+    const result = await toggleFavorite(phraseId, nextState).catch(() => FAVORITE_TOGGLE_NETWORK_ERROR);
+    if (!result.ok) {
       updatePhraseFavorite(phraseId, currentState);
-      showToast("更新に失敗しました", "error");
+      showToast(getFavoriteToggleErrorMessage(result), 'error');
+      return;
     }
+    showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りを解除しました', 'success');
   };
 
   /**

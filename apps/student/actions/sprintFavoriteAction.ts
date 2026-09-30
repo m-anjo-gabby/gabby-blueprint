@@ -5,14 +5,16 @@ import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { getSprintTitle, resolveSprintHasLevel } from "@gabby/lib";
 import type { ContentMetadata } from "@gabby/types/content";
-import type { FavoriteSprintQuestionItem, SprintQuestion } from "@gabby/types/sprint";
+import { FAVORITE_SPRINT_QUESTION_COLUMNS, type FavoriteSprintQuestionFields, type FavoriteSprintQuestionItem } from "@gabby/types/sprint";
+import { toggleFavoriteRow } from "@/lib/favoriteToggle";
+import { FAVORITE_LIMIT, type FavoriteToggleResult } from "@/constants/favorites";
 
 const logger = createLogger('student');
 
 type FavoriteSprintQuestionRow = {
   favorite_id: string;
   insert_date: string;
-  question: SprintQuestion;
+  question: FavoriteSprintQuestionFields;
 };
 
 type SprintContentRow = {
@@ -34,9 +36,10 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
 
     const { data, error } = await supabase
       .from('com_t_favorite_sprint_question')
-      .select('favorite_id, insert_date, question:com_m_sprint_questions!inner(*)')
+      .select(`favorite_id, insert_date, question:com_m_sprint_questions!inner(${FAVORITE_SPRINT_QUESTION_COLUMNS.join(', ')})`)
       .eq('user_id', user.id)
-      .order('insert_date', { ascending: false });
+      .order('insert_date', { ascending: false })
+      .limit(FAVORITE_LIMIT);
 
     if (error) {
       logger.error("sprint:get_favorite_questions_failed", error.message, ctx);
@@ -112,33 +115,8 @@ export async function getFavoriteSprintQuestionIds(questionIds: string[]): Promi
 }
 
 /**
- * スプリント問題のお気に入り状態を切り替える（失敗時は例外を投げる）
+ * スプリント問題のお気に入り状態を切り替える（上限超過・失敗は戻り値で返す）
  */
-export async function toggleSprintQuestionFavorite(questionId: string, isFavorite: boolean): Promise<void> {
-  const ctx = await getLogContext();
-  const payload = { questionId, isFavorite };
-  try {
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Unauthorized');
-
-    const { error } = isFavorite
-      ? await supabase
-        .from('com_t_favorite_sprint_question')
-        .upsert({ user_id: user.id, question_id: questionId }, { onConflict: 'user_id,question_id' })
-      : await supabase
-        .from('com_t_favorite_sprint_question')
-        .delete()
-        .match({ user_id: user.id, question_id: questionId });
-
-    if (error) {
-      logger.error("sprint:toggle_favorite_question_failed", error.message, { ...ctx, payload });
-      throw new Error(error.message);
-    }
-
-    logger.info("sprint:toggle_favorite_question_success", `Sprint question favorite ${isFavorite ? 'added' : 'removed'}`, { ...ctx, payload });
-  } catch (err) {
-    logger.error("sprint:toggle_favorite_question_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload });
-    throw err;
-  }
+export async function toggleSprintQuestionFavorite(questionId: string, isFavorite: boolean): Promise<FavoriteToggleResult> {
+  return toggleFavoriteRow('sprintQuestion', questionId, isFavorite);
 }

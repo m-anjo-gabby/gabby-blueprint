@@ -9,6 +9,7 @@ import { toggleContentFavorite } from '@/actions/contentAction';
 import { toggleFavorite } from '@/actions/wordAction';
 import { toggleSprintQuestionFavorite } from '@/actions/sprintFavoriteAction';
 import { useContentStore } from '@/stores/useContentStore';
+import type { FavoriteToggleResult } from '@/constants/favorites';
 import { ContentFavoriteCard } from './ContentFavoriteCard';
 import { PhraseFavoriteCard } from './PhraseFavoriteCard';
 import { SprintQuestionFavoriteCard } from './SprintQuestionFavoriteCard';
@@ -47,8 +48,8 @@ export interface FavoriteKindDef<T> {
   getSearchText: (item: T) => string;
   /** 絞り込み（定義順に連動する。URLのクエリパラメータで状態を持つ） */
   filters: FavoriteFilterDef<T>[];
-  /** お気に入り解除のサーバー処理（失敗時は例外を投げる） */
-  remove: (item: T) => Promise<void>;
+  /** お気に入り解除のサーバー処理 */
+  remove: (item: T) => Promise<FavoriteToggleResult>;
   renderItem: (item: T, onRemove: () => void) => ReactNode;
 }
 
@@ -85,9 +86,10 @@ export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteIt
       },
     ],
     remove: async (c) => {
-      await toggleContentFavorite(c.content_id, false);
+      const result = await toggleContentFavorite(c.content_id, false);
       // 教材一覧のキャッシュ（☆の状態）も合わせる
-      useContentStore.getState().updateFavoriteStatus(c.content_id, false);
+      if (result.ok) useContentStore.getState().updateFavoriteStatus(c.content_id, false);
+      return result;
     },
     renderItem: (c, onRemove) => <ContentFavoriteCard content={c} onRemove={onRemove} />,
   },

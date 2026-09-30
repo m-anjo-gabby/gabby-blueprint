@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 
 // Actions & Hooks
 import { toggleContentFavorite } from '@/actions/contentAction';
+import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
 import { LIBRALY_TABS } from '@gabby/types/content';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useContentStore } from '@/stores/useContentStore';
@@ -79,24 +80,22 @@ export default function LibraryPage() {
     // 1. 楽観的アップデート（ストアの値を書き換える）
     updateFavoriteStatus(contentId, nextState);
 
-    try {
-      // 2. サーバーサイド処理
-      await toggleContentFavorite(contentId, nextState);
-
-      // 3. 成功時のトースト通知
-      showToast(
-        nextState 
-          ? `「${contentName}」をお気に入りに追加しました` 
-          : `「${contentName}」をお気に入りから解除しました`, 
-        'success'
-      );
-
-    } catch (error) {
-      // 4. エラー時のロールバック
+    // 2. サーバーサイド処理（登録上限の超過・失敗は戻り値で返る）
+    const result = await toggleContentFavorite(contentId, nextState).catch(() => FAVORITE_TOGGLE_NETWORK_ERROR);
+    if (!result.ok) {
+      // 3. 失敗時のロールバック
       updateFavoriteStatus(contentId, currentState);
-      console.error("Favorite Error:", error);
-      showToast('更新に失敗しました。通信環境を確認してください。', 'error');
+      showToast(getFavoriteToggleErrorMessage(result), 'error');
+      return;
     }
+
+    // 4. 成功時のトースト通知
+    showToast(
+      nextState 
+        ? `「${contentName}」をお気に入りに追加しました` 
+        : `「${contentName}」をお気に入りから解除しました`, 
+      'success'
+    );
   };
 
   return (

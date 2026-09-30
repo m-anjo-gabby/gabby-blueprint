@@ -47,6 +47,7 @@
 | 0件 | 「お気に入りの教材（フレーズ／問題）はまだありません」、登録方法の案内、「教材一覧を見る」（スプリント問題は「スプリントの履歴を見る」）ボタン | 選択中の種別に登録が1件も無い場合 |
 | 該当なし | 「条件に合う教材（フレーズ／問題）が見つかりません」、「条件をクリア」ボタン | 検索・絞り込みの結果が0件の場合 |
 | 削除 | 一覧から即座に外し、「お気に入りから削除しました」を表示。ピルの件数も減る | 確認ダイアログで削除を選んだ場合 |
+| 登録上限 | 「お気に入りの教材（フレーズ／問題）が上限（1,000件）に達しています。新しく登録するには、不要なものを削除してください。」の案内 | 選択中の種別の登録件数が1,000件の場合 |
 | 削除失敗 | 項目を元の位置に戻し、「削除できませんでした。通信環境を確認してください」を表示 | お気に入り解除のサーバー処理が失敗した場合 |
 
 ## 業務ルール
@@ -59,6 +60,10 @@
   RLSにより本人だけが参照・登録・解除できる（同じ顧客の他ユーザーからは参照できない）。種別ごとに別テーブルとし、
   元の教材・フレーズ・問題が削除されるとお気に入りも削除される（`ON DELETE CASCADE`）。
 - 教材のお気に入りを解除すると、教材一覧の☆の表示にも反映される。
+- **登録上限は1人・種別ごとに1,000件**（Supabase API の1回の取得上限 `max_rows=1000` と揃え、一覧の取りこぼしを防ぐ）。
+  DBのトリガー（`fn_check_favorite_limit`）で判定するため、教材一覧・単語帳トレーニング・スプリント結果のどこから
+  登録しても同じく拒否され、各画面は「お気に入りは1,000件まで登録できます。不要なものを削除してから登録してください」を
+  トーストで表示する。登録済みの項目を登録し直す（upsert）場合は件数が増えないため拒否しない。
 
 ## 実装参照（エンジニア向け）
 
@@ -76,5 +81,8 @@
 - 関連アクション: `getFavoriteContents`, `toggleContentFavorite`（`apps/student/actions/contentAction.ts`）、
   `getFavoritePhrases`, `toggleFavorite`（`apps/student/actions/wordAction.ts`）、
   `getFavoriteSprintQuestions`, `toggleSprintQuestionFavorite`（`apps/student/actions/sprintFavoriteAction.ts`）
+- 登録・解除の共通処理: `apps/student/lib/favoriteToggle.ts`（上限超過は `{ ok: false, reason: 'limit' }` で返す）、
+  上限と文言: `apps/student/constants/favorites.ts`
+- 上限チェック: `supabase/DDL/function/fn_check_favorite_limit.sql`
 - DDL: `supabase/DDL/table/com_t_favorite_contents.sql`, `supabase/DDL/table/com_t_favorite_phrase.sql`,
   `supabase/DDL/table/com_t_favorite_sprint_question.sql`

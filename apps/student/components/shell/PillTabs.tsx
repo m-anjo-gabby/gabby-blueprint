@@ -39,30 +39,45 @@ export function PillTabs<T extends string>({ items, value, onValueChange, 'aria-
     setShowRightFade(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
   }, []);
 
-  // 画面幅・フォント読み込み・件数表示の変化でピルの幅が変わった場合にもフェード状態を再計算する
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    updateFade();
-    const observer = new ResizeObserver(updateFade);
-    observer.observe(el);
-    Array.from(el.children).forEach((child) => observer.observe(child));
-    return () => observer.disconnect();
-  }, [updateFade, items]);
-
-  // 選択中のピルを横スクロールの中央に寄せる（初回表示は即座に、切り替え時はなめらかに）。
+  // 選択中のピルを横スクロールの中央に寄せる。
   // scrollIntoView はページ全体の縦スクロールまで動かすことがあるため、ピルの列だけをスクロールする
-  const hasScrolledRef = useRef(false);
-  useEffect(() => {
+  const centerActive = useCallback((behavior: ScrollBehavior) => {
     const el = scrollRef.current;
     const active = el?.querySelector<HTMLElement>('[data-state="active"]');
     if (!el || !active) return;
     const listRect = el.getBoundingClientRect();
     const activeRect = active.getBoundingClientRect();
     const offset = activeRect.left - listRect.left - (listRect.width - activeRect.width) / 2;
-    el.scrollTo({ left: el.scrollLeft + offset, behavior: hasScrolledRef.current ? 'smooth' : 'auto' });
+    el.scrollTo({ left: el.scrollLeft + offset, behavior });
+  }, []);
+
+  // 画面幅・フォント読み込み・件数表示の変化でピルの幅が変わった場合は、フェード状態を再計算し、
+  // 選択中のピルが見切れていれば中央に寄せ直す（初回描画時は幅が確定する前に位置を計算することがあるため）
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleResize = () => {
+      const active = el.querySelector<HTMLElement>('[data-state="active"]');
+      if (active) {
+        const listRect = el.getBoundingClientRect();
+        const activeRect = active.getBoundingClientRect();
+        if (activeRect.left < listRect.left || activeRect.right > listRect.right) centerActive('auto');
+      }
+      updateFade();
+    };
+    handleResize();
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(el);
+    Array.from(el.children).forEach((child) => observer.observe(child));
+    return () => observer.disconnect();
+  }, [updateFade, centerActive, items]);
+
+  // 選択を変えたら中央に寄せる（初回表示は即座に、切り替え時はなめらかに）
+  const hasScrolledRef = useRef(false);
+  useEffect(() => {
+    centerActive(hasScrolledRef.current ? 'smooth' : 'auto');
     hasScrolledRef.current = true;
-  }, [value]);
+  }, [value, centerActive]);
 
   const handleValueChange = (next: string) => {
     const item = items.find((i) => i.value === next);

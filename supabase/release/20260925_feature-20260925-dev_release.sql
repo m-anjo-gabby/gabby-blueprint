@@ -727,3 +727,112 @@ USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】お気に入りの性能対策と登録上限（1人・種別ごと1000件）
+-- 追加日: 2026-09-30
+--
+-- 【内容】
+--   利用者・登録件数が増えても性能と表示の正しさを保つための対応。
+--
+--   1. fn_check_favorite_limit() を新規作成し、お気に入り3テーブルに BEFORE INSERT トリガーを付与
+--      - ユーザーごと・種別ごとに1000件まで（Supabase APIの1回の取得上限 max_rows=1000 と揃え、
+--        一覧の取りこぼしを防ぐ）。超える登録は SQLSTATE 'GBF01' で拒否する。
+--   2. 対象側の列（content_id / phrase_id / question_id）に索引を追加
+--      - 教材・フレーズ・問題の削除（一括登録の洗い替えを含む）時の ON DELETE CASCADE で、
+--        お気に入り全体を走査しないようにする。
+--   3. RLSを auth.uid() → (SELECT auth.uid()) に変更（行ごとの評価を避ける。Supabase推奨）
+--   4. com_t_favorite_phrase の重複索引 idx_com_t_favorite_phrase_user_phrase を削除
+--      （UNIQUE(user_id, phrase_id) の索引と同じ内容）
+--
+-- 対応ファイル: DDL/function/fn_check_favorite_limit.sql
+--               DDL/table/com_t_favorite_contents.sql / com_t_favorite_phrase.sql / com_t_favorite_sprint_question.sql
+-- =========================================================================
+
+BEGIN;
+
+CREATE OR REPLACE FUNCTION public.fn_check_favorite_limit()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_limit CONSTANT integer := 1000;
+  v_target_column text := TG_ARGV[0];
+  v_exists boolean;
+  v_count integer;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext(TG_TABLE_NAME || ':' || NEW.user_id::text));
+
+  EXECUTE format(
+    'SELECT EXISTS (SELECT 1 FROM %I.%I WHERE user_id = $1 AND %I::text = $2)',
+    TG_TABLE_SCHEMA, TG_TABLE_NAME, v_target_column
+  )
+  INTO v_exists
+  USING NEW.user_id, to_jsonb(NEW) ->> v_target_column;
+
+  IF v_exists THEN
+    RETURN NEW;
+  END IF;
+
+  EXECUTE format('SELECT count(*) FROM %I.%I WHERE user_id = $1', TG_TABLE_SCHEMA, TG_TABLE_NAME)
+  INTO v_count
+  USING NEW.user_id;
+
+  IF v_count >= v_limit THEN
+    RAISE EXCEPTION 'favorite limit exceeded (% rows) on %', v_limit, TG_TABLE_NAME
+      USING ERRCODE = 'GBF01';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION public.fn_check_favorite_limit() IS 'お気に入りの登録上限チェック（BEFORE INSERTトリガー。引数=対象の列名）';
+
+
+DROP POLICY IF EXISTS "Users can manage their own favorite contents" ON public.com_t_favorite_contents;
+CREATE POLICY "Users can manage their own favorite contents" ON public.com_t_favorite_contents
+FOR ALL TO authenticated
+USING (user_id = (SELECT auth.uid()))
+WITH CHECK (user_id = (SELECT auth.uid()));
+
+CREATE INDEX IF NOT EXISTS idx_com_t_favorite_contents_content_id
+ON public.com_t_favorite_contents (content_id);
+
+DROP TRIGGER IF EXISTS trg_com_t_favorite_contents_limit ON public.com_t_favorite_contents;
+CREATE TRIGGER trg_com_t_favorite_contents_limit
+BEFORE INSERT ON public.com_t_favorite_contents
+FOR EACH ROW EXECUTE FUNCTION public.fn_check_favorite_limit('content_id');
+
+DROP POLICY IF EXISTS "Users can manage their own favorites" ON public.com_t_favorite_phrase;
+CREATE POLICY "Users can manage their own favorites" ON public.com_t_favorite_phrase
+FOR ALL TO authenticated
+USING (user_id = (SELECT auth.uid()))
+WITH CHECK (user_id = (SELECT auth.uid()));
+
+CREATE INDEX IF NOT EXISTS idx_com_t_favorite_phrase_phrase_id
+ON public.com_t_favorite_phrase (phrase_id);
+
+DROP TRIGGER IF EXISTS trg_com_t_favorite_phrase_limit ON public.com_t_favorite_phrase;
+CREATE TRIGGER trg_com_t_favorite_phrase_limit
+BEFORE INSERT ON public.com_t_favorite_phrase
+FOR EACH ROW EXECUTE FUNCTION public.fn_check_favorite_limit('phrase_id');
+
+DROP INDEX IF EXISTS public.idx_com_t_favorite_phrase_user_phrase;
+
+DROP POLICY IF EXISTS "Users can manage their own favorite sprint questions" ON public.com_t_favorite_sprint_question;
+CREATE POLICY "Users can manage their own favorite sprint questions" ON public.com_t_favorite_sprint_question
+FOR ALL TO authenticated
+USING (user_id = (SELECT auth.uid()))
+WITH CHECK (user_id = (SELECT auth.uid()));
+
+CREATE INDEX IF NOT EXISTS idx_com_t_favorite_sprint_question_question_id
+ON public.com_t_favorite_sprint_question (question_id);
+
+DROP TRIGGER IF EXISTS trg_com_t_favorite_sprint_question_limit ON public.com_t_favorite_sprint_question;
+CREATE TRIGGER trg_com_t_favorite_sprint_question_limit
+BEFORE INSERT ON public.com_t_favorite_sprint_question
+FOR EACH ROW EXECUTE FUNCTION public.fn_check_favorite_limit('question_id');
+
+COMMIT;

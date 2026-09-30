@@ -126,14 +126,20 @@ export interface TrainingWordResponse {
   cefr?: { id: string; label: string }; // CEFR情報を追加
 }
 
+/** お気に入り一覧で使うフレーズの列（一覧の転送量を抑えるため、TTSの調整データ等は取得しない） */
+export const FAVORITE_PHRASE_COLUMNS = ['phrase_id', 'phrase_en', 'phrase_ja', 'audio_path', 'tts_status'] as const;
+
 /**
- * お気に入り一覧用の型定義
- * 基本的に PhraseItem と同じだが、お気に入り画面では favorite_id が必須
+ * お気に入り一覧用の型定義（生徒アプリ）
+ * フレーズの表示・再生に必要な列に、登録日時と出典の単語・教材を付加したもの
  */
-export interface FavoritePhraseItem extends PhraseItem {
+export type FavoritePhraseItem = Pick<PhraseRecord, (typeof FAVORITE_PHRASE_COLUMNS)[number]> & {
   favorite_id: string;
   insert_date: string; // お気に入りに登録した日時
-}
+  word_en: string;
+  content_id: string;
+  content_name: string;
+};
 
 /**
  * サーバーアクションからの生レスポンス型 (Join結果)
@@ -142,7 +148,7 @@ export type FavoriteResponse = {
   favorite_id: string;
   phrase_id: string;
   insert_date: string;
-  com_m_phrase: PhraseRecord & {
+  com_m_phrase: Pick<PhraseRecord, (typeof FAVORITE_PHRASE_COLUMNS)[number]> & {
     com_m_word: {
       word_en: string;
       com_m_contents: {
