@@ -4,9 +4,11 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Props {
-  studentName: string;
+  /** 生徒名。null は読み込み中（アバターと名前を骨組みにする。loading.tsx の骨組みで使う） */
+  studentName: string | null;
   studentIconPath: string | null;
   /** 画面名。パンくず的な選択風表現は避け、視認性の高い単一のタイトルとして表示する */
   title: string;
@@ -37,8 +39,17 @@ export function ImmersiveHeader({ studentName, studentIconPath, title, info, bac
         </Link>
 
         <div className="flex items-center gap-2.5 min-w-0 shrink-0">
-          <UserAvatar userName={studentName} iconPath={studentIconPath} size={32} />
-          <p className="text-xs font-bold text-slate-500 truncate max-w-28 sm:max-w-48">{studentName}</p>
+          {studentName === null ? (
+            <>
+              <Skeleton className="size-8 shrink-0 rounded-full" />
+              <Skeleton className="h-3 w-20" />
+            </>
+          ) : (
+            <>
+              <UserAvatar userName={studentName} iconPath={studentIconPath} size={32} />
+              <p className="text-xs font-bold text-slate-500 truncate max-w-28 sm:max-w-48">{studentName}</p>
+            </>
+          )}
         </div>
 
         <div className="flex-1 min-w-0 px-2 text-center">

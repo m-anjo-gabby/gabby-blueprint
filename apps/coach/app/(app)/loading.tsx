@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/common/RouteLoading';
+import { CoachRouteSkeleton } from '@/components/common/CoachRouteSkeleton';
 
 export default function Loading() {
-  return <RouteLoading variant="cards" />;
+  return <CoachRouteSkeleton />;
 }

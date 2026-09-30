@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { getSessionResultSummary } from '@/actions/sessionAction';
-import { CardSkeleton } from '@gabby/lib/components/common/PageSkeleton';
+import { HubDialoguePracticeSkeleton, HubPrepSkeleton, HubSelfTrainingSkeleton } from '../../_components/LiveSessionSkeletons';
 import { SessionHub } from './_components/SessionHub';
 import { HubDialoguePractice, HubPrep, HubSelfTraining } from './_components/HubSections';
 
@@ -33,24 +33,17 @@ export default async function SessionHubPage({
       studentId={id}
       session={sessionResult.session}
       dialoguePractice={
-        <Suspense fallback={<CardSkeleton />}>
+        <Suspense fallback={<HubDialoguePracticeSkeleton />}>
           <HubDialoguePractice studentId={id} sessionId={sessionId} />
         </Suspense>
       }
       prep={
-        <Suspense
-          fallback={
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CardSkeleton rows={2} />
-              <CardSkeleton rows={2} />
-            </div>
-          }
-        >
+        <Suspense fallback={<HubPrepSkeleton />}>
           <HubPrep studentId={id} sessionId={sessionId} />
         </Suspense>
       }
       selfTraining={
-        <Suspense fallback={<CardSkeleton rows={1} />}>
+        <Suspense fallback={<HubSelfTrainingSkeleton />}>
           <HubSelfTraining studentId={id} />
         </Suspense>
       }

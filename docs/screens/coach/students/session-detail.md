@@ -82,6 +82,7 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
+| 読み込み中（画面遷移直後・再読み込み） | 本番と同じ没入表示（Header/Sidebarなし）で、見出しの画面名・戻るボタン・案内文・区分と各カードの見出しは本物、生徒名・ステータス・日時・操作ボタン・各区画の中身を骨組みで表示。区分は実施前（Trainingあり）の並びで描く | 生徒配下の `loading.tsx` と `(app)/loading.tsx`（表示中のパスで出し分け） |
 | 終了予定時刻超過・未対応 | 「Action Needed」バッジ＋「This session's scheduled end time has passed. Please press End Session once you're done...」という警告文 | 実施予定のまま終了予定時刻を過ぎている場合 |
 | 操作可能期間の終了 | 「Start Live Session」ボタンと「Training」セクションが非表示になり、「Starting a new call or Live Sprint is no longer available for this session — press End Session to record the outcome.」の案内のみ | 終了予定時刻から規定の猶予時間（Video SDKの最大通話時間相当）を過ぎた場合 |
 | 確定済み | 通常操作エリアの代わりに「This lesson has already been finalized.」＋結果画面へのリンク | 既にfinalize_session/resolve_stale_sessionで確定済みの場合（このハブへの通常の導線は生じないが、別タブで先に確定された場合等に発生しうる） |
