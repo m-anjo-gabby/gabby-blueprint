@@ -24,6 +24,8 @@ interface NoticeState {
 
   // Actions
   fetchNotices: (force?: boolean) => Promise<void>;
+  /** 取得済みのお知らせを反映する（fetchNotices と、サーバーで取得した初期値の流し込みで共有する） */
+  applyNotices: (notices: NoticeItem[]) => void;
   markAsRead: (noticeId: string) => Promise<void>;
   markBatchAsRead: (noticeIds: string[]) => Promise<void>;
   dismissDialog: () => void;
@@ -51,23 +53,22 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
     try {
       const res = await getNoticesAction();
       if (!res.success) return;
-
-      const notices = res.data;
-      const unreadCount = notices.filter(n => !n.is_read).length;
-      // show_dialog=TRUE かつ未読のお知らせをダイアログ表示対象に
-      const dialogNotices = notices.filter(n => n.show_dialog && !n.is_read);
-
-      set({
-        notices,
-        unreadCount,
-        dialogNotices,
-        lastFetched: Date.now(),
-      });
+      get().applyNotices(res.data);
     } catch (err) {
       console.error('Notice fetch error:', err);
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  applyNotices: (notices) => {
+    set({
+      notices,
+      unreadCount: notices.filter(n => !n.is_read).length,
+      // show_dialog=TRUE かつ未読のお知らせをダイアログ表示対象に
+      dialogNotices: notices.filter(n => n.show_dialog && !n.is_read),
+      lastFetched: Date.now(),
+    });
   },
 
   markAsRead: async (noticeId: string) => {

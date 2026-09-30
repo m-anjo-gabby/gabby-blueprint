@@ -2,6 +2,7 @@ import { getUserTrainingPerformanceAction } from "@/actions/performanceAction";
 import { TrainingPerformance } from "./_components/TrainingPerformance";
 import { createServerClient } from "@gabby/lib/supabase/server";
 import { toIsoMonthInZone } from "@gabby/lib/date/date";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ export default async function TrainingLogPage({ searchParams }: PageProps) {
   let userTimezone = 'Asia/Tokyo';
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (user) {
       const { data: userData } = await supabase
         .from('com_m_user')

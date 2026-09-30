@@ -1,5 +1,5 @@
 // apps/student/app/(app)/(shell)/layout.tsx
-import { createServerClient } from '@gabby/lib/supabase/server';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getMyLiveSessionTickets } from '@/actions/matchingAction';
 import { AppShell } from '@/components/shell/AppShell';
 import type { ShellNavContext } from '@/constants/navigation';
@@ -16,11 +16,7 @@ import type { ShellNavContext } from '@/constants/navigation';
  * タブの表示可否はサーバー側で解決し、クライアントでのちらつき（後から出現）を防ぐ。
  */
 export default async function ShellLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createServerClient();
-  const [{ data: { user } }, tickets] = await Promise.all([
-    supabase.auth.getUser(),
-    getMyLiveSessionTickets(),
-  ]);
+  const [user, tickets] = await Promise.all([getAuthUser(), getMyLiveSessionTickets()]);
 
   const roles = (user?.app_metadata?.roles as string[] | undefined) ?? [];
   const navContext: ShellNavContext = {

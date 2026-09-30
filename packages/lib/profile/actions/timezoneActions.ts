@@ -4,6 +4,7 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { GetTimezoneListResult, UpdateTimezoneResult } from '@gabby/types/profile';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -43,7 +44,7 @@ export async function updateMyTimezoneCore(timezone: string): Promise<UpdateTime
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: master, error: masterError } = await supabase

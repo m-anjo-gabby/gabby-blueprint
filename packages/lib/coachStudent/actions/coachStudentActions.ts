@@ -31,6 +31,7 @@ import { SESSION_STATUS, SESSION_RESULT_STATUSES } from '@gabby/types/session';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
 import { clampLevel, computeStage, getForcedLevels } from '../../sprint/stageProgression';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 const MAX_NOTE_LENGTH = 4000;
@@ -180,7 +181,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: relationships, error } = await supabase
@@ -281,7 +282,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -381,7 +382,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -463,7 +464,7 @@ export async function getStudentSessionsByTicketCore(studentId: string, ticketId
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -515,7 +516,7 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: session, error } = await supabase
@@ -611,7 +612,7 @@ export async function getStudentLiveSessionShortfallsCore(studentId: string): Pr
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const result = await fetchOwnScheduleShortfalls(supabase, user.id, studentId, ctx);
@@ -710,7 +711,7 @@ export async function getStudentNotesCore(studentId: string): Promise<GetStudent
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: notes, error } = await supabase
@@ -743,7 +744,7 @@ export async function getSelfTrainingWeekSummaryCore(studentId: string, days = 7
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -786,7 +787,7 @@ export async function addCoachStudentNoteCore(studentId: string, noteText: strin
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const trimmed = noteText.trim();
@@ -839,7 +840,7 @@ export async function getContractTrainingReportsCore(studentId: string): Promise
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -876,7 +877,7 @@ export async function saveContractTrainingReportDraftCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const trimmed = commentText.trim();
@@ -944,7 +945,7 @@ export async function finalizeContractTrainingReportCore(reportId: string): Prom
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -986,7 +987,7 @@ export async function updateStudentSprintLevelCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -1056,7 +1057,7 @@ export async function forceStageUpStudentCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {

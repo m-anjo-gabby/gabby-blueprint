@@ -18,6 +18,7 @@ import {
   LogSessionDialogueOpenInput,
   LogSessionDialogueOpenResult,
 } from '@gabby/types/dialogue';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -41,7 +42,7 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -127,7 +128,7 @@ export async function assignDialogueContentCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -214,7 +215,7 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: assignment, error: fetchError } = await supabase
@@ -384,7 +385,7 @@ export async function getStudentDialogueAssignmentsCore(studentId: string): Prom
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -408,7 +409,7 @@ export async function getMyDialogueAssignmentsCore(): Promise<GetStudentDialogue
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     return await fetchDialogueAssignmentSummaries(supabase, user.id, user.id, ctx);
@@ -430,7 +431,7 @@ export async function updateDialogueSessionProgressCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: assignment, error: assignmentError } = await supabase
@@ -506,7 +507,7 @@ export async function logSessionDialogueOpenCore(input: LogSessionDialogueOpenIn
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: assignment, error: assignmentError } = await supabase

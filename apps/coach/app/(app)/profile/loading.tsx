@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/common/RouteLoading';
+import { ProfileRouteSkeleton } from '@/components/common/ToolPageSkeletons';
 
 export default function Loading() {
-  return <RouteLoading variant="list" />;
+  return <ProfileRouteSkeleton />;
 }

@@ -7,6 +7,7 @@ import { getLogContext } from "@gabby/lib/logger/context";
 import { resolveSprintHasLevel } from "@gabby/lib";
 import type { ContentMetadata } from "@gabby/types/content";
 import type { AnalysisResult } from "@gabby/types/speechAssessment";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger("student");
 const SPRINT_LIMIT_COUNT = 10;
@@ -217,8 +218,8 @@ export async function createSprintScoreAction(
     const supabase = await createServerClient();
 
     // サーバー側でセッションから安全に本人のユーザーIDを検証・取得
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // self_t_sprint へのインサート (JSONBなので拡張されたオブジェクト配列をそのまま渡せる)
     const { data, error } = await supabase
@@ -271,8 +272,8 @@ export async function getSprintResultAction(
     const supabase = await createServerClient();
 
     // サーバー側でセッションから安全に本人のユーザーIDを検証・取得
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // ① スコア・履歴レコードを1件取得（本人のレコードのみ）
     // 🛠️ hasLevel 解決に必要な教材メタデータ（com_m_contents.metadata）を同一クエリでJOIN取得し、
@@ -396,8 +397,8 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // 月の開始日と終了日を計算 (UTCベースでクエリ)
     const [year, month] = yearMonth.split('-').map(Number);
@@ -494,8 +495,8 @@ export async function getLastSprintSessionAction(contentId?: string) {
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // 最新の1件を取得
     let query = supabase
@@ -533,8 +534,8 @@ export async function getSprintProgressAction() {
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     const { data, error } = await supabase
       .from("student_m_sprint_progress")

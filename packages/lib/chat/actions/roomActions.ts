@@ -16,6 +16,7 @@ import {
   CreateChatRoomPayload,
   RemoveChatRoomMemberPayload,
 } from '@gabby/types/chat';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 // ルーム作成で選択可能なuser_type
 const HUMAN_USER_TYPES: readonly UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
@@ -31,7 +32,7 @@ const logger = createLogger('common');
  */
 export async function getCurrentUserWithType(): Promise<{ id: string; user_type: string } | null> {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -514,7 +515,7 @@ export async function getChatRooms(): Promise<{
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, data: [], error: 'Unauthorized' };
 
     const { data: myMemberships, error: memberError } = await supabase
@@ -623,7 +624,7 @@ export async function getChatRoomDetail(roomId: string): Promise<{
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const { data: room, error: roomError } = await supabase

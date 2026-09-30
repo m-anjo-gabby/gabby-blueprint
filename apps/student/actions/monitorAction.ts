@@ -4,6 +4,7 @@ import { createServerClient } from "@gabby/lib/supabase/server";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { WordSummaryHistoryItem } from "./wordAction"; // Re-use type
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('monitor');
 
@@ -101,8 +102,8 @@ export async function getMonitorUserList(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // 💡 _start_date/_end_date は必須。対象期間に有効な契約（status=1かつ期間が重なる）を
     //    持つ生徒のみを対象にする（private.get_monitor_target_users に判定ロジックを集約）
@@ -140,8 +141,8 @@ export async function getMonitorWordHistory(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     const { data, error } = await supabase.rpc('get_monitor_word_history', {
       _start_date: startDate,
@@ -189,8 +190,8 @@ export async function getMonitorSprintHistory(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // 💡 _user_ids パラメータに渡すために、空配列なら null にする
     const queryUserIds = userIds && userIds.length > 0 ? userIds : null;

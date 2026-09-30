@@ -23,6 +23,7 @@ import {
   SlotStatusItem,
 } from '@gabby/types/matching';
 import { SESSION_STATUS } from '@gabby/types/session';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -43,7 +44,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: tickets, error: ticketError } = await supabase
@@ -103,7 +104,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: tickets, error: ticketError } = await supabase
@@ -165,7 +166,7 @@ export async function getMySlotStatusCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: ticket, error: ticketError } = await supabase
@@ -302,7 +303,7 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: ticket, error: ticketError } = await supabase
@@ -380,7 +381,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: schedules, error: scheduleError } = await supabase
@@ -505,7 +506,7 @@ export async function getCoachBrowseListCore(): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: matchableCoaches, error: matchableError } = await supabase.rpc('get_matchable_coach_ids');
@@ -619,7 +620,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (
@@ -748,7 +749,7 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -801,7 +802,7 @@ export async function getPendingIncomingRequestsAsCoachCore(): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: requests, error } = await supabase
@@ -840,7 +841,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     let query = supabase
@@ -878,7 +879,7 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase.rpc('approve_matching_request', { p_request_id: requestId });
@@ -911,7 +912,7 @@ export async function rejectMatchingRequestCore(requestId: string, reason: strin
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!reason || reason.trim().length === 0) {

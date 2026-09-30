@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
-import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
 import { MonthSelector } from './_components/MonthSelector';
 import { MonthlyReportSection } from './_components/MonthlyReportSection';
+import { MonthlyReportTableSkeleton, MonthlyReportsPageHeader } from '@/components/common/ToolPageSkeletons';
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -18,18 +18,12 @@ export default async function MonthlyReportsPage({
 
   return (
     <div className="space-y-6">
-      <div className="max-w-2xl">
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight">Monthly Report</h1>
-        <p className="text-[13px] text-slate-500 mt-1">
-          Your live session counts by student and day. Cells in amber need a lesson to be finalized;
-          cells in rose contain a late cancellation, no-show, or early-ended session.
-        </p>
-      </div>
+      <MonthlyReportsPageHeader />
 
       <MonthSelector currentMonth={yearMonth} />
 
       {/* Query changes don't trigger loading.tsx, so re-key per month to show the skeleton while switching */}
-      <Suspense key={yearMonth} fallback={<PageSkeleton label="Loading..." variant="table" header={false} />}>
+      <Suspense key={yearMonth} fallback={<MonthlyReportTableSkeleton />}>
         <MonthlyReportSection yearMonth={yearMonth} />
       </Suspense>
     </div>

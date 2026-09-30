@@ -8,6 +8,7 @@ import { getLogContext } from "@gabby/lib/logger/context";
 import { getMyDialogueAssignments } from "./dialogueAction";
 import { toggleFavoriteRow } from "@/lib/favoriteToggle";
 import type { FavoriteToggleResult } from "@/constants/favorites";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('student');
 
@@ -117,7 +118,7 @@ export async function saveResumeContent<T extends ResumeMetadata>(
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("Unauthorized");
 
     // upsertにより、ユーザーごとに1件のみの再開情報を維持
@@ -152,7 +153,7 @@ export async function clearResumeContent() {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("Unauthorized");
 
     const { error } = await supabase
@@ -179,7 +180,7 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return null;
 
     const { data, error } = await supabase

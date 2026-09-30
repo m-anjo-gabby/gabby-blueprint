@@ -42,6 +42,7 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
     - 骨組み→本番の切り替えは「その場で置き換える」。本番側の初回表示でフェードイン（`initial={{ opacity: 0 }}`）や `AnimatePresence mode="wait"` を使わない（一瞬空白になる）。一覧のカードのアニメーションは `AnimatePresence initial={false}` にする。
     - クライアント側でストアから取得する画面（student のお知らせ・通知）は `useFetchOnMount`（`packages/lib/hooks/`）で「開いてからの取得が終わるまで骨組み」にする（ストアに残った古い一覧や「0件」を一瞬出さない）。月切替など画面内の再取得でも、枠を残して中身だけを骨組みにする（例: student `CalendarMonthCard`）。
     - `loading.tsx` は**そのフォルダ直下の区間が切り替わる遷移でしか表示されない**（Next.jsの仕様）ため、一覧→詳細など複数の子を行き来するフォルダにも置く。新しい子ルート・詳細画面を追加したら、親フォルダに `loading.tsx` があるか確認する。
+  - 初期表示に必要なデータを、表示後にブラウザからサーバーアクションで取りに行かない（`useEffect` での取得等）。サーバーアクションはブラウザから1つずつ順番に実行されるため、表示後の往復が増えるうえ他の取得も後ろに並ばされ、海外のユーザーほど遅くなる。画面のデータはサーバーで取得して区画単位で表示し（B）、アプリシェル（ヘッダー・サイドバー）の未読・件数はレイアウトでサーバー取得した Promise を await せずに渡してストアに流し込む（例: coach `lib/shellData.ts` と `components/common/ShellDataLoader.tsx`。各ストアの `apply…` で反映する）。
   - B. 画面内の区画単位の遅延表示: 独立した区画（カード）が並び、区画ごとに取得の重さが違う画面は、ページで全件を `await` せずカード・区画ごとの async コンポーネントに分けて `<Suspense fallback={<CardSkeleton />}>` で包む（例: coach `students/[id]/page.tsx`）。区画の骨組みは本番の区画と同じ枠・高さにし、区画の並び（列数・幅）は遅れて届くデータで変わらないようにする（変わると後から出た区画が周りを押し動かす）。判定に複数の取得を使うなど区画同士でデータが連動する場合は、同じ `Suspense` にまとめる。1種類のデータを一覧する画面は、区画に分けず A の画面専用の骨組み（一覧部分だけ骨組み）で足りる。複数区画で同じ取得を使う場合は React の `cache()` で1回にまとめる。クライアント部品が画面全体を持つ場合は、区画を `ReactNode` の差し込み口にしてサーバー側で `Suspense` を渡す（例: coach `sessions/[sessionId]/page.tsx`）。月切替・検索などURLのクエリだけが変わる遷移では `loading.tsx` が出ないため、結果の区画を条件ごとに `key` を変えた `<Suspense>` で包む（例: admin/coach `monthly-reports/page.tsx`）か、切替操作側で `useTransition` の `isPending` を表示する（例: `useMonthNavigator`）。
   - C. 操作中: ボタンの処理中表示は各アプリの `Button` の `pending` プロップ（先頭アイコンは `icon` プロップで渡すと処理中はスピナーに置き換わる）（フォーム送信は `useFormStatus`、それ以外は `useTransition` の `isPending` を渡す）を使い、`Loader2` の個別実装は新規に増やさない。既存の個別実装は、その画面を改修するついでに置き換える。
   - D. 没入画面（ドリル・ライブ通話等）の準備中表示は画面専用の実装を許可する。遷移中の汎用表示は `LoadingScreen`（student は `ImmersiveLoading`）。
@@ -125,6 +126,12 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
   INSERT/UPDATE（例: `supabase.from('com_m_notice').update(...)`）はRPC化せず直接呼び出してよい。
   複数テーブルにまたがる処理、トランザクションとしての一貫性が必要な処理、RLSの範囲を越えた
   認可判定が必要な処理は、SECURITY DEFINER関数（RPC）として実装すること。
+- **ログイン中のユーザーの取得**: サーバーアクション・Server Component・Route Handler では
+  `supabase.auth.getUser()` を直接呼ばず、`getAuthUser()`（`packages/lib/supabase/authUser.ts`）を使う。
+  各リクエストは入口の `proxy.ts` で `auth.getUser()`（Auth サーバーへの問い合わせ。失効したセッションも弾く）を
+  通過済みのため、リクエスト内では `auth.getClaims()` による手元の JWT 検証＋`cache()` で1回にまとめる
+  （処理ごとに Auth サーバーへ問い合わせると、順番待ちの1段目が毎回増える）。入口の `proxy-base.ts` と
+  認証そのもの（ログイン・パスワード変更等の `packages/lib/auth/core.ts`）は `auth.getUser()` のままにする。
 - RPCのシグネチャを変更する場合は、`DROP FUNCTION IF EXISTS`で旧シグネチャを明示的に削除してから
   `CREATE OR REPLACE FUNCTION`で新シグネチャを作成すること（Postgresの関数オーバーロードの
   曖昧性を避けるため）。

@@ -2,6 +2,7 @@ import { createServerClient } from "@gabby/lib/supabase/server";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { FAVORITE_LIMIT_ERROR_CODE, type FavoriteToggleResult } from "@/constants/favorites";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('student');
 
@@ -24,7 +25,7 @@ export async function toggleFavoriteRow(target: FavoriteTarget, targetId: string
   const payload = { target, targetId, isFavorite };
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { ok: false, reason: 'error' };
 
     const { error } = isFavorite

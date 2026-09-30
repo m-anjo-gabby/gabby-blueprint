@@ -12,6 +12,8 @@ interface ChatState {
   activeRoomId: string | null;
 
   fetchRooms: (force?: boolean) => Promise<void>;
+  /** 取得済みのルーム一覧を反映する（fetchRooms と、サーバーで取得した初期値の流し込みで共有する） */
+  applyRooms: (rooms: ChatRoomListItem[]) => void;
   /**
    * 次回の fetchRooms 呼び出しで再取得させるためキャッシュを無効化するだけの軽量な操作。
    * 画面遷移の直前にここで getChatRooms() を即時実行してしまうと、その応答が
@@ -48,16 +50,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const res = await getChatRooms();
       if (!res.success) return;
-
-      // 表示中のルームは既読処理と取得が行き違うことがあるため、応答の未読数で上書きしない
-      const { activeRoomId } = get();
-      const rooms = activeRoomId
-        ? res.data.map((r) => (r.room_id === activeRoomId ? { ...r, unread_count: 0 } : r))
-        : res.data;
-      set({ rooms, totalUnreadCount: sumUnread(rooms), lastFetched: Date.now() });
+      get().applyRooms(res.data);
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  applyRooms: (fetched) => {
+    // 表示中のルームは既読処理と取得が行き違うことがあるため、応答の未読数で上書きしない
+    const { activeRoomId } = get();
+    const rooms = activeRoomId
+      ? fetched.map((r) => (r.room_id === activeRoomId ? { ...r, unread_count: 0 } : r))
+      : fetched;
+    set({ rooms, totalUnreadCount: sumUnread(rooms), lastFetched: Date.now() });
   },
 
   invalidate: () => set({ lastFetched: null }),

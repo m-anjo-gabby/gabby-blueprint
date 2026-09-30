@@ -10,6 +10,7 @@ import {
   RecordCallJoinResult,
 } from '@gabby/types/liveSessionRoom';
 import { GetSessionCallLogPresenceResult } from '@gabby/types/session';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -58,7 +59,7 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: session, error: sessionError } = await supabase
@@ -127,7 +128,7 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasActiveLiveSessionTicket(supabase, user.id))) {
@@ -202,7 +203,7 @@ export async function getSessionCallLogPresenceCore(sessionIds: string[]): Promi
     }
 
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: rows, error } = await supabase
@@ -236,7 +237,7 @@ export async function recordSessionCallJoinCore(sessionId: string, zoomSessionId
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase.rpc('record_session_call_join', {
@@ -266,7 +267,7 @@ export async function recordSessionCallLeaveCore(callLogId: string): Promise<{ s
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false };
 
     const { error } = await supabase.rpc('record_session_call_leave', { p_call_log_id: callLogId });
@@ -299,7 +300,7 @@ export async function recordSessionChatMessageCore(sessionId: string, message: s
     if (!trimmed) return { success: false };
 
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false };
 
     const { data: session, error: sessionError } = await supabase

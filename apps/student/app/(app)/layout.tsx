@@ -9,6 +9,7 @@ import { checkPendingAgreements } from '@/actions/termAction';
 import ScrollRestorer from '@/components/common/ScrollRestorer';
 import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
 import { PopupHost } from '@/components/popups/PopupHost';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 /**
  * 生徒用 統合アプリケーションレイアウト
@@ -25,7 +26,7 @@ export default async function StudentAppLayout({
 }) {
   // --- 1. 認証チェック ---
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect('/login');

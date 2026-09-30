@@ -3,6 +3,7 @@
 import { createServerClient } from "@gabby/lib/supabase/server";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('student');
 
@@ -48,8 +49,8 @@ export async function getUserTrainingPerformanceAction(yearMonth: string): Promi
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     const { data, error } = await supabase.rpc('get_user_training_performance', {
       _year_month: yearMonth
@@ -101,8 +102,8 @@ export async function getMyTrainingLifetimeStats(): Promise<TrainingLifetimeStat
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     const { data, error } = await supabase
       .from('student_m_training_lifetime_stats')

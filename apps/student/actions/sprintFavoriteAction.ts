@@ -8,6 +8,7 @@ import type { ContentMetadata } from "@gabby/types/content";
 import { FAVORITE_SPRINT_QUESTION_COLUMNS, type FavoriteSprintQuestionFields, type FavoriteSprintQuestionItem } from "@gabby/types/sprint";
 import { toggleFavoriteRow } from "@/lib/favoriteToggle";
 import { FAVORITE_LIMIT, type FavoriteToggleResult } from "@/constants/favorites";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('student');
 
@@ -31,7 +32,7 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -94,7 +95,7 @@ export async function getFavoriteSprintQuestionIds(questionIds: string[]): Promi
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return [];
 
     const { data, error } = await supabase

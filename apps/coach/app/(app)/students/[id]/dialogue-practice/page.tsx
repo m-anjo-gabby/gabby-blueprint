@@ -1,9 +1,8 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { getStudentOverview } from '@/actions/studentAction';
 import { getAvailableDialogueContents, getStudentDialogueAssignments } from '@/actions/dialogueAction';
 import { DialoguePracticeManager } from './_components/DialoguePracticeManager';
+import { StudentChildPageHeader } from '../../_components/StudentsSkeletons';
 
 export default async function DialoguePracticePage({
   params,
@@ -24,18 +23,7 @@ export default async function DialoguePracticePage({
 
   return (
     <div className="space-y-6">
-      <div className="max-w-3xl">
-        <Link
-          href={`/students/${id}`}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors mb-2"
-        >
-          <ArrowLeft size={14} />
-          Back to Overview
-        </Link>
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight">
-          Dialogue Practice — {overview.profile.user_name}
-        </h1>
-      </div>
+      <StudentChildPageHeader studentId={id} title="Dialogue Practice" studentName={overview.profile.user_name} className="max-w-3xl" />
 
       <div className="max-w-3xl mx-auto">
         <DialoguePracticeManager

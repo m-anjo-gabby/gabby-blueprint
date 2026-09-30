@@ -5,6 +5,7 @@ import { getCompanyLogoUrl } from '@gabby/lib/monthlyReport/getCompanyLogoUrl';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { PayNoticeDocument } from '@/lib/pdf/PayNoticeDocument';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 // このRoute Handlerはcookieベースの認証(createServerClient)に依存しているが、その呼び出しが
 // getCoachMonthlyReportCore内部に隠れているため、Next.jsの自動動的判定に検出されず
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }

@@ -1,9 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  addMonths,
-  subMonths,
   startOfMonth,
   endOfMonth,
   startOfWeek,
@@ -14,16 +12,17 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getMySessions } from '@/actions/sessionAction';
-import { getMyCalendarEvents } from '@/actions/calendarEventAction';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
+import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { SessionListItem, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
+import { SessionListItem } from '@gabby/types/session';
 import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import { getSessionStatusBadge } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from './SessionActionDialog';
 import { DayDetailDrawer } from './DayDetailDrawer';
+import { useHighlightedDate } from './CalendarWorkspace';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_VISIBLE_CHIPS = 2;
@@ -45,45 +44,33 @@ function isItemPast(item: CalendarItem): boolean {
   return new Date(cutoff) < new Date();
 }
 
+const EMPTY_SESSIONS: SessionListItem[] = [];
+const EMPTY_EVENTS: CalendarEventItem[] = [];
+
 interface CalendarBoardProps {
-  /** 併設のPending Requestsパネルでホバーされたリクエストに対応する日付 (YYYY-MM-DD) */
-  highlightedDate?: string | null;
-  /** 値が変わるたびに当月データを再取得する（Pending Requests承認によるセッション変化をカレンダーに反映するため） */
-  reloadToken?: number;
+  /** 表示する月（YYYY-MM）。URL の ?month= で持ち、月の切り替えはページ遷移で行う */
+  month: string;
+  /** サーバーで取得した月のセッション・イベント。null は読み込み中（日付の枠だけを描き、予定は出さない） */
+  initialSessions: SessionListItem[] | null;
+  initialEvents: CalendarEventItem[] | null;
 }
 
-export function CalendarBoard({ highlightedDate, reloadToken }: CalendarBoardProps = {}) {
+/**
+ * 月表示のカレンダー。月のデータはサーバーで取得して渡す（ブラウザからの後追い取得はしない）。
+ * 読み込み中も同じ大きさの日付の枠を描き、月の切り替えで高さが変わらないようにする。
+ */
+export function CalendarBoard({ month, initialSessions, initialEvents }: CalendarBoardProps) {
   const timezone = useTimezone();
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
-  const [sessions, setSessions] = useState<SessionListItem[]>([]);
-  const [events, setEvents] = useState<CalendarEventItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const highlightedDate = useHighlightedDate();
+  const isLoading = initialSessions === null || initialEvents === null;
+  const [year, monthNo] = month.split('-').map(Number);
+  const currentMonth = new Date(year, monthNo - 1, 1);
+  const monthNavigator = useMonthNavigator({ targetMonth: month, basePath: '/calendar' });
+  // 画面内の操作（キャンセル・参加表明）は即時に反映し、サーバーから新しいデータが届いたら置き換える
+  const [sessions, setSessions] = useServerSyncedState(initialSessions ?? EMPTY_SESSIONS);
+  const [events, setEvents] = useServerSyncedState(initialEvents ?? EMPTY_EVENTS);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
-
-  const loadMonth = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const rangeStart = startOfMonth(currentMonth);
-      const rangeEnd = endOfMonth(currentMonth);
-      rangeEnd.setDate(rangeEnd.getDate() + 1);
-      const [sessionData, eventData] = await Promise.all([
-        getMySessions(rangeStart.toISOString(), rangeEnd.toISOString()),
-        getMyCalendarEvents(rangeStart.toISOString(), rangeEnd.toISOString()),
-      ]);
-      // キャンセル済み・振替元・ライセンス無効化による自動キャンセルはカレンダーに出さない
-      // （振替後の新しいコマや、別の生徒の予約が同じ枠に入るケースがありノイズになるため）
-      setSessions(sessionData.filter((s) => !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status)));
-      setEvents(eventData);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentMonth]);
-
-  useEffect(() => {
-    loadMonth();
-    // reloadTokenは値そのものに意味はなく、変化を検知して再取得するためだけのトリガー
-  }, [loadMonth, reloadToken]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();
@@ -105,11 +92,10 @@ export function CalendarBoard({ highlightedDate, reloadToken }: CalendarBoardPro
     return map;
   }, [sessions, events, timezone]);
 
-  const calendarDays = useMemo(() => {
-    const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
-    const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 });
-    return eachDayOfInterval({ start, end });
-  }, [currentMonth]);
+  const calendarDays = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 }),
+    end: endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 }),
+  });
 
   // コーチのタイムゾーンでの「今日」（ブラウザのローカル時刻ではなく、コーチ本人のタイムゾーン基準で判定する）
   const todayKey = toIsoDateInZone(new Date(), timezone);
@@ -130,16 +116,21 @@ export function CalendarBoard({ highlightedDate, reloadToken }: CalendarBoardPro
         <div className="flex items-center justify-between mb-4">
           <button
             type="button"
-            onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
+            onClick={() => monthNavigator.handleMonthChange('prev')}
+            disabled={monthNavigator.isPending}
             className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
             aria-label="Previous month"
           >
             <ChevronLeft size={18} />
           </button>
-          <p className="text-sm font-black text-slate-800">{format(currentMonth, 'MMMM yyyy')}</p>
+          <p className="flex items-center gap-1.5 text-sm font-black text-slate-800">
+            {format(currentMonth, 'MMMM yyyy')}
+            {monthNavigator.isPending && <Loader2 size={14} className="animate-spin text-slate-400" aria-label="Loading" />}
+          </p>
           <button
             type="button"
-            onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
+            onClick={() => monthNavigator.handleMonthChange('next')}
+            disabled={monthNavigator.isPending}
             className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
             aria-label="Next month"
           >
@@ -153,68 +144,63 @@ export function CalendarBoard({ highlightedDate, reloadToken }: CalendarBoardPro
           ))}
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-10 text-slate-400">
-            <Loader2 size={18} className="animate-spin" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day) => {
-              const key = format(day, 'yyyy-MM-dd');
-              const dayItems = itemsByDate.get(key) ?? [];
-              const isSelected = key === selectedDate;
-              const isHighlighted = !isSelected && key === highlightedDate;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setSelectedDate(key)}
-                  className={cn(
-                    'min-h-16 sm:min-h-19 rounded-lg flex flex-col items-stretch p-1 gap-0.5 text-left transition-colors relative',
-                    !isSameMonth(day, currentMonth) && 'opacity-40',
-                    isSelected ? 'bg-brand-50 ring-2 ring-brand-500' : 'hover:bg-slate-100',
-                    isHighlighted && 'bg-amber-50 ring-2 ring-amber-400'
-                  )}
-                >
-                  <div className="flex justify-center px-0.5">
-                    <span
-                      className={cn(
-                        'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
-                        key === todayKey
-                          ? 'bg-brand text-white'
-                          : isSameMonth(day, currentMonth) && key >= todayKey
-                            ? 'text-slate-700'
-                            : 'text-slate-400'
-                      )}
-                    >
-                      {day.getDate()}
-                    </span>
-                  </div>
-                  <div className="space-y-0.5 min-w-0">
-                    {dayItems.slice(0, MAX_VISIBLE_CHIPS).map((item) => {
-                      const chip = getChipInfo(item);
-                      return (
-                        <span
-                          key={getCalendarItemKey(item)}
-                          className={cn(
-                            'block text-[8px] font-bold px-1 py-0.5 rounded border truncate leading-tight',
-                            chip.className,
-                            isItemPast(item) && 'grayscale opacity-60'
-                          )}
-                        >
-                          {chip.label}
-                        </span>
-                      );
-                    })}
-                    {dayItems.length > MAX_VISIBLE_CHIPS && (
-                      <span className="block text-[8px] font-bold text-slate-400 px-1">+{dayItems.length - MAX_VISIBLE_CHIPS} more</span>
+        <div className="grid grid-cols-7 gap-1" aria-busy={isLoading}>
+          {calendarDays.map((day) => {
+            const key = format(day, 'yyyy-MM-dd');
+            const dayItems = itemsByDate.get(key) ?? [];
+            const isSelected = key === selectedDate;
+            const isHighlighted = !isSelected && key === highlightedDate;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSelectedDate(key)}
+                disabled={isLoading}
+                className={cn(
+                  'min-h-16 sm:min-h-19 rounded-lg flex flex-col items-stretch p-1 gap-0.5 text-left transition-colors relative',
+                  !isSameMonth(day, currentMonth) && 'opacity-40',
+                  isSelected ? 'bg-brand-50 ring-2 ring-brand-500' : 'hover:bg-slate-100',
+                  isHighlighted && 'bg-amber-50 ring-2 ring-amber-400'
+                )}
+              >
+                <div className="flex justify-center px-0.5">
+                  <span
+                    className={cn(
+                      'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
+                      key === todayKey
+                        ? 'bg-brand text-white'
+                        : isSameMonth(day, currentMonth) && key >= todayKey
+                          ? 'text-slate-700'
+                          : 'text-slate-400'
                     )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+                  >
+                    {day.getDate()}
+                  </span>
+                </div>
+                <div className="space-y-0.5 min-w-0">
+                  {dayItems.slice(0, MAX_VISIBLE_CHIPS).map((item) => {
+                    const chip = getChipInfo(item);
+                    return (
+                      <span
+                        key={getCalendarItemKey(item)}
+                        className={cn(
+                          'block text-[8px] font-bold px-1 py-0.5 rounded border truncate leading-tight',
+                          chip.className,
+                          isItemPast(item) && 'grayscale opacity-60'
+                        )}
+                      >
+                        {chip.label}
+                      </span>
+                    );
+                  })}
+                  {dayItems.length > MAX_VISIBLE_CHIPS && (
+                    <span className="block text-[8px] font-bold text-slate-400 px-1">+{dayItems.length - MAX_VISIBLE_CHIPS} more</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <DayDetailDrawer

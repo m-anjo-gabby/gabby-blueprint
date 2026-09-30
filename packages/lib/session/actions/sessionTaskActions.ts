@@ -11,6 +11,7 @@ import {
   SESSION_STATUS,
   UnfinalizedSessionTask,
 } from '@gabby/types/session';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -29,7 +30,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const nowIso = new Date().toISOString();

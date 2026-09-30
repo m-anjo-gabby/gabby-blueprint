@@ -6,6 +6,7 @@ import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { toggleFavoriteRow } from "@/lib/favoriteToggle";
 import { FAVORITE_LIMIT, type FavoriteToggleResult } from "@/constants/favorites";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('student');
 
@@ -16,8 +17,8 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     const { data, error } = await supabase
       .from('com_m_word')
@@ -108,7 +109,7 @@ export async function getFavoriteCount(): Promise<number> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return 0;
 
     const { count, error } = await supabase
@@ -136,7 +137,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
   try {
     const supabase = await createServerClient();
     
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -232,8 +233,8 @@ export async function getUserWordHistoryAction(yearMonth: string): Promise<{ suc
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // 月の開始日と終了日を計算 (UTCベースでクエリ)
     const [year, month] = yearMonth.split('-').map(Number);

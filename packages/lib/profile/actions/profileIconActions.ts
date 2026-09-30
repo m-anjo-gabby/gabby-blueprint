@@ -12,6 +12,7 @@ import {
   UploadProfileIconResult,
   RemoveProfileIconResult,
 } from '@gabby/types/profile';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -32,7 +33,7 @@ export async function uploadProfileIconCore(formData: FormData): Promise<UploadP
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const file = formData.get('file') as File | null;
@@ -107,7 +108,7 @@ export async function removeProfileIconCore(): Promise<RemoveProfileIconResult> 
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: currentRow } = await supabase

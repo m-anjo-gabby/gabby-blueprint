@@ -10,6 +10,8 @@ interface RequestsState {
   pendingCount: number;
 
   fetchRequests: (force?: boolean) => Promise<void>;
+  /** 取得済みの未処理依頼を反映する（fetchRequests と、サーバーで取得した初期値の流し込みで共有する） */
+  applyRequests: (requests: CoachIncomingRequestItem[]) => void;
   /** サイドバーの未処理件数バッジ用。次回のfetchRequestsで再取得させるためキャッシュを無効化する */
   invalidate: () => void;
 }
@@ -30,11 +32,14 @@ export const useRequestsStore = create<RequestsState>((set, get) => ({
     set({ isLoading: true });
     try {
       // status=pendingのみを取得する軽量クエリ（全履歴を取得しない）
-      const requests = await getPendingIncomingRequestsForCoach();
-      set({ requests, pendingCount: requests.length, lastFetched: Date.now() });
+      get().applyRequests(await getPendingIncomingRequestsForCoach());
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  applyRequests: (requests) => {
+    set({ requests, pendingCount: requests.length, lastFetched: Date.now() });
   },
 
   invalidate: () => set({ lastFetched: null }),

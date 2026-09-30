@@ -51,6 +51,7 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
+| 読み込み中（画面遷移直後） | 見出し（戻るリンク・タイトル・説明文）とタブ・区分の見出しは本物、本文を同じ幅・並びの骨組みで表示 | `matching-requests/loading.tsx` |
 | Pendingが空 | 「No pending requests.」 | 保留中のリクエストが1件も無い場合 |
 | Historyの各タブが空 | 「No matching request history yet.」/「No booking request history yet.」/「No reschedule proposal history yet.」 | そのタブの履歴が1件も無い場合 |
 | Pendingでの承認・却下 | 対象カードの表示がその場で更新され、一覧から消える（Pendingから外れる） | Approve/Reject/Book this time/Decline allのいずれかを実行した場合。サイドバーのリクエスト件数バッジも合わせて再取得される |

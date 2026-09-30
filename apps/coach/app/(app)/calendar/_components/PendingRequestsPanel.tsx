@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { MatchingRequestCard } from '@/components/requests/MatchingRequestCard';
 import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
 import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';
@@ -13,6 +14,28 @@ interface PendingRequestsPanelProps {
   onDateHover?: (date: string | null) => void;
   /** 承認によりセッションが新規作成・変更された時に呼ばれる（併設カレンダーの再取得トリガー用） */
   onSessionsChanged?: () => void;
+}
+
+const PANEL_CLASS = 'bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col max-h-[70vh] lg:max-h-none lg:h-full';
+
+/** 読み込み中の骨組み（見出し・History リンクは本物、件数と依頼カードを骨組み） */
+export function PendingRequestsPanelSkeleton() {
+  return (
+    <div className={PANEL_CLASS}>
+      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100 shrink-0">
+        <h2 className="text-xs font-black text-brand-500 uppercase tracking-widest">Pending Requests</h2>
+        <Link href="/matching-requests" className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-700 shrink-0">
+          History
+          <ArrowRight size={12} />
+        </Link>
+      </div>
+      <div aria-hidden className="p-4 space-y-3">
+        {Array.from({ length: 2 }, (_, i) => (
+          <Skeleton key={i} className="h-28 w-full rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function PendingRequestsPanel({ initialRequests, onDateHover, onSessionsChanged }: PendingRequestsPanelProps) {
@@ -54,7 +77,7 @@ export function PendingRequestsPanel({ initialRequests, onDateHover, onSessionsC
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col max-h-[70vh] lg:max-h-none lg:h-full">
+    <div className={PANEL_CLASS}>
       <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100 shrink-0">
         <h2 className="text-xs font-black text-brand-500 uppercase tracking-widest">Pending Requests ({pending.length})</h2>
         <Link href="/matching-requests" className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-700 shrink-0">

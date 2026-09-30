@@ -9,6 +9,7 @@ import {
   HOMEWORK_ATTACHMENT_MAX_SIZE,
   PendingHomeworkAttachment,
 } from '@gabby/types/sessionHomework';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -39,7 +40,7 @@ export async function uploadSessionHomeworkAttachment(
     }
 
     const serverSupabase = await createServerClient();
-    const { data: { user } } = await serverSupabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, message: 'Unauthorized' };
 
     const { data: session, error: sessionError } = await serverSupabase

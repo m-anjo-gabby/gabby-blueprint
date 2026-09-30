@@ -20,6 +20,7 @@ import {
 } from '@gabby/types/lessonSprint';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 type SupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -84,7 +85,7 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -133,7 +134,7 @@ export async function getLessonSprintQuestionsCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: fetchedData, error } = await supabase
@@ -194,7 +195,7 @@ export async function createLessonSprintResultCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, input.student_id))) {
@@ -305,7 +306,7 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -343,7 +344,7 @@ export async function getLessonSprintHistoryPageCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     let query = supabase
@@ -380,7 +381,7 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: record, error: recordError } = await supabase
@@ -437,7 +438,7 @@ export async function updateLessonSprintSessionNoteCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase

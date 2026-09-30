@@ -6,6 +6,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { USER_TYPES } from '@gabby/types/user';
 import { CHAT_MESSAGE_TYPES, ChatAttachmentRecord, ChatMessage, SendChatMessagePayload } from '@gabby/types/chat';
 import { getCurrentUserWithType } from './roomActions';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -40,7 +41,7 @@ export async function sendChatMessage(
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const message = payload.message.trim();
@@ -120,7 +121,7 @@ export async function getChatMessages(params: {
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, data: [], hasMore: false, error: 'Unauthorized' };
 
     // 論理削除済みメッセージも「削除されたことが分かる」形で表示するため除外しない（本文はマスクして返す）
@@ -201,7 +202,7 @@ export async function markAsRead(params: {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     // 既読位置は前にしか進めない（古いタブ等から古い位置で上書きされると、相手に見せる「既読」が戻ってしまうため）

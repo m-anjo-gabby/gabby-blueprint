@@ -1,4 +1,3 @@
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
 import Header from '@/components/common/Header';
@@ -7,6 +6,9 @@ import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { UserAppMetadata } from '@gabby/lib/stores/useUserStore';
 import { GlobalNoticePopup } from '@/components/common/GlobalNoticePopup';
+import { ShellDataLoader } from '@/components/common/ShellDataLoader';
+import { loadCoachShellData } from '@/lib/shellData';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 /**
  * コーチ用 統合アプリケーションレイアウト
@@ -17,17 +19,21 @@ export default async function CoachAppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect('/login');
   }
 
+  // ヘッダー・サイドバーの未読・件数はサーバーで並列に取得し、await せず Promise のまま渡す
+  // （画面の表示を待たせず、ブラウザからのサーバーアクションの往復も発生させない）
+  const shellData = loadCoachShellData();
+
   return (
     <>
       {/* Zustandへのデータ流し込みとAuth監視 */}
       <UserStoreInitializer user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }} />
+      <ShellDataLoader data={shellData} />
 
       {/* ヘッダーエリア / サイドメニュー / メインエリアの3ペイン構成 */}
       <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
