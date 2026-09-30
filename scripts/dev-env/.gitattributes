@@ -1,0 +1,2 @@
+# setup.cmd is run by cmd.exe on a fresh PC; keep CRLF regardless of core.autocrlf
+*.cmd text eol=crlf
