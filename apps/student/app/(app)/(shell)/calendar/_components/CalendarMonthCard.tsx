@@ -46,6 +46,8 @@ interface CalendarMonthCardProps {
   onSelectDate: (date: string) => void;
   onPrev: () => void;
   onNext: () => void;
+  /** 月の切り替え中（前月・翌月の矢印を押せなくする） */
+  isPending?: boolean;
 }
 
 /**
@@ -53,7 +55,7 @@ interface CalendarMonthCardProps {
  * 読み込み中も日付の枠は同じ大きさで描き、月切替や画面遷移で高さが変わらないようにする
  * （画面遷移中の CalendarSkeleton と共有する）。
  */
-export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onSelectDate, onPrev, onNext }: CalendarMonthCardProps) {
+export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onSelectDate, onPrev, onNext, isPending = false }: CalendarMonthCardProps) {
   const isLoading = itemsByDate === null;
   const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
   const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 });
@@ -65,7 +67,8 @@ export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onS
         <button
           type="button"
           onClick={onPrev}
-          className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted"
+          disabled={isPending}
+          className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted disabled:pointer-events-none disabled:opacity-40"
           aria-label="前の月"
         >
           <ChevronLeft size={18} />
@@ -74,7 +77,8 @@ export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onS
         <button
           type="button"
           onClick={onNext}
-          className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted"
+          disabled={isPending}
+          className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted disabled:pointer-events-none disabled:opacity-40"
           aria-label="次の月"
         >
           <ChevronRight size={18} />

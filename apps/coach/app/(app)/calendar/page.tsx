@@ -6,8 +6,7 @@ import { CalendarPageHeader } from './_components/CalendarSkeleton';
 import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
 import { getMyProfile } from '@/actions/coachProfileAction';
 import { toIsoMonthInZone } from '@gabby/lib/date/date';
-
-const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+import { isMonthParam } from '@gabby/lib/calendar/monthGridRange';
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const [{ month: requestedMonth }, requests, profile] = await Promise.all([
@@ -17,7 +16,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   ]);
   // 表示月は ?month= で持つ（無い・不正な場合はコーチのタイムゾーンでの今月）
   const month =
-    requestedMonth && MONTH_PATTERN.test(requestedMonth)
+    isMonthParam(requestedMonth)
       ? requestedMonth
       : toIsoMonthInZone(new Date(), profile?.timezone || 'Asia/Tokyo');
 

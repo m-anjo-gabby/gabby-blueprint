@@ -1,7 +1,7 @@
 'use client';
 
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
-import { useUrlMonth } from '../../_components/useUrlMonth';
+import { useUrlMonth } from '@/lib/useUrlMonth';
 import { TrainingPerformance } from './TrainingPerformance';
 
 /**

@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { getMySessions } from '@/actions/sessionAction';
-import { getMyCalendarEvents } from '@/actions/calendarEventAction';
-import { getMyBookableTickets } from '@/actions/matchingAction';
+import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
+import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { SessionListItem, SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
+import { SessionListItem } from '@gabby/types/session';
 import { CalendarEventItem } from '@gabby/types/calendarEvent';
 import type { CalendarItem } from '@gabby/types/calendarItem';
 import { BookableTicketSlot } from '@gabby/types/matching';
@@ -16,47 +15,40 @@ import { DayDetailDrawer } from './DayDetailDrawer';
 import { BookMakeupSessionDialog } from './BookMakeupSessionDialog';
 import { CalendarMonthCard } from './CalendarMonthCard';
 
-export function CalendarBoard() {
+const EMPTY_SESSIONS: SessionListItem[] = [];
+const EMPTY_EVENTS: CalendarEventItem[] = [];
+const EMPTY_SLOTS: BookableTicketSlot[] = [];
+
+interface CalendarBoardProps {
+  /** 表示する月（YYYY-MM）。URL の ?month= で持ち、月の切り替えはページ遷移で行う */
+  month: string;
+  /** サーバーで取得した月のセッション・イベント。null は読み込み中（日付の枠だけを描き、予定は出さない） */
+  initialSessions: SessionListItem[] | null;
+  initialEvents: CalendarEventItem[] | null;
+  /** 振替の予約リクエストができるチケットの枠（読み込み中は null） */
+  bookableSlots: BookableTicketSlot[] | null;
+}
+
+/**
+ * 月表示のカレンダーと、日付の詳細・キャンセル・振替リクエストの操作。
+ * 月のデータはサーバーで取得して渡す（ブラウザからの後追い取得はしない）。読み込み中も同じ大きさの日付の枠を描き、
+ * 月の切り替えで高さが変わらないようにする（page.tsx で月ごとの Suspense の fallback と、loading.tsx で共有する）。
+ */
+export function CalendarBoard({ month, initialSessions, initialEvents, bookableSlots: serverSlots }: CalendarBoardProps) {
   const timezone = useTimezone();
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
-  const [sessions, setSessions] = useState<SessionListItem[]>([]);
-  const [events, setEvents] = useState<CalendarEventItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const [, startRefresh] = useTransition();
+  const isLoading = initialSessions === null || initialEvents === null;
+  const [year, monthNo] = month.split('-').map(Number);
+  const currentMonth = new Date(year, monthNo - 1, 1);
+  const monthNavigator = useMonthNavigator({ targetMonth: month, basePath: '/calendar' });
+  // 画面内の操作（キャンセル・参加表明）は即時に反映し、サーバーから新しいデータが届いたら置き換える
+  const [sessions, setSessions] = useServerSyncedState(initialSessions ?? EMPTY_SESSIONS);
+  const [events, setEvents] = useServerSyncedState(initialEvents ?? EMPTY_EVENTS);
+  const bookableSlots = serverSlots ?? EMPTY_SLOTS;
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
-  const [bookableSlots, setBookableSlots] = useState<BookableTicketSlot[]>([]);
   const [bookMakeupDate, setBookMakeupDate] = useState<string | null>(null);
-
-  const loadMonth = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const rangeStart = startOfMonth(currentMonth);
-      const rangeEnd = endOfMonth(currentMonth);
-      rangeEnd.setDate(rangeEnd.getDate() + 1);
-      const [sessionData, eventData] = await Promise.all([
-        getMySessions(rangeStart.toISOString(), rangeEnd.toISOString()),
-        getMyCalendarEvents(rangeStart.toISOString(), rangeEnd.toISOString()),
-      ]);
-      // キャンセル済み・振替元・ライセンス無効化による自動キャンセルはカレンダーに出さない
-      // （振替後の新しいコマや、別の生徒の予約が同じ枠に入るケースがありノイズになるため）
-      setSessions(sessionData.filter((s) => !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status)));
-      setEvents(eventData);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentMonth]);
-
-  const loadBookableSlots = useCallback(async () => {
-    setBookableSlots(await getMyBookableTickets());
-  }, []);
-
-  useEffect(() => {
-    loadMonth();
-  }, [loadMonth]);
-
-  useEffect(() => {
-    loadBookableSlots();
-  }, [loadBookableSlots]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();
@@ -95,8 +87,9 @@ export function CalendarBoard() {
         itemsByDate={isLoading ? null : itemsByDate}
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
-        onPrev={() => setCurrentMonth((m) => subMonths(m, 1))}
-        onNext={() => setCurrentMonth((m) => addMonths(m, 1))}
+        onPrev={() => monthNavigator.handleMonthChange('prev')}
+        onNext={() => monthNavigator.handleMonthChange('next')}
+        isPending={monthNavigator.isPending}
       />
 
       <DayDetailDrawer
@@ -117,10 +110,8 @@ export function CalendarBoard() {
         slots={bookableSlots}
         initialDate={bookMakeupDate}
         onClose={() => setBookMakeupDate(null)}
-        onRequested={() => {
-          loadMonth();
-          loadBookableSlots();
-        }}
+        // リクエスト後はサーバーで月のデータ・予約できる枠を取り直す
+        onRequested={() => startRefresh(() => router.refresh())}
       />
     </div>
   );

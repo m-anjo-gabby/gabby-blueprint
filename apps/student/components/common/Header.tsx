@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
@@ -41,14 +41,13 @@ export default function Header() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [terms, setTerms] = useState<TermDocument[]>([]);
 
-  // 参照モード用に最新の規約セットを取得
-  useEffect(() => {
-    const fetchLatestTerms = async () => {
-      const data = await getLatestTerms();
-      setTerms(data);
-    };
-    fetchLatestTerms();
-  }, []);
+  // 参照モード用の最新の規約セットは、規約を開いた時に取得する（開くまでは不要。取得中はダイアログが読み込み中を表示する）。
+  // 画面の表示時に取得すると、全画面で表示のたびにブラウザからのサーバーアクションが1往復増えるため
+  const openTermsModal = async () => {
+    setShowTermsModal(true);
+    if (terms.length > 0) return;
+    setTerms(await getLatestTerms());
+  };
 
   const handleSignOut = async () => {
     setIsSigningOut(true); // オーバーレイを表示
@@ -145,7 +144,7 @@ export default function Header() {
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault();
-                  setShowTermsModal(true);
+                  void openTermsModal();
                 }}
                 className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-slate-50"
               >

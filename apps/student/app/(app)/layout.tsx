@@ -11,6 +11,7 @@ import { PopupHost } from '@/components/popups/PopupHost';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
 import { ShellNavProvider } from '@/components/shell/ShellNavContext';
+import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
 import type { ShellNavContext } from '@/constants/navigation';
 
 /**
@@ -48,6 +49,9 @@ export default async function StudentAppLayout({
     hasLiveSessionContract: contracts.length > 0,
     isMonitor: roles.includes('monitor'),
   };
+  // ヘッダー・ナビの未読・件数はサーバーで並列に取得し、await せず Promise のまま渡す
+  // （画面の表示を待たせず、ブラウザからのサーバーアクションの往復も発生させない）
+  const shellData = loadCommonShellData({ includeChat: navContext.hasLiveSession });
 
   // 💡 user_type/ライセンスに基づく詳細なアクセス制御は apps/student/proxy.ts (Middleware) で
   // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
@@ -64,7 +68,9 @@ export default async function StudentAppLayout({
       <ColorVowelLookupProvider>
         {/* デザイン基盤: 全体共通の背景色やフォントを適用 */}
         <div className="min-h-screen bg-canvas text-ink">
-          <ShellNavProvider value={navContext}>{children}</ShellNavProvider>
+          <ShellNavProvider value={navContext} shellData={shellData}>
+            {children}
+          </ShellNavProvider>
         </div>
       </ColorVowelLookupProvider>
 

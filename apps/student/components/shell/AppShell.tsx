@@ -5,6 +5,7 @@ import Header from '@/components/common/Header';
 import { cn } from '@/lib/utils';
 import { getVisibleNavItems, isMobileFocusPath } from '@/constants/navigation';
 import { useShellNavContext } from './ShellNavContext';
+import { ShellDataLoader } from './ShellDataLoader';
 import { SideNav } from './SideNav';
 import { BottomTabBar } from './BottomTabBar';
 import { useShellNavBadges } from './useShellNavBadges';
@@ -29,6 +30,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex h-dvh bg-canvas font-sans text-ink selection:bg-brand-100">
+      <ShellDataLoader />
       <SideNav items={items} badges={badges} pathname={pathname} />
 
       <div className="flex min-w-0 flex-1 flex-col">

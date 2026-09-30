@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
 import { SprintResultActionsSkeleton, SprintResultBodySkeleton } from '@/components/training/sprint-result/SprintResultSkeleton';
-import { useUrlMonth } from '../../../_components/useUrlMonth';
+import { useUrlMonth } from '@/lib/useUrlMonth';
 import { SprintHistoryView } from './SprintHistoryView';
 
 const HISTORY_PATH = '/training/sprint/history';
