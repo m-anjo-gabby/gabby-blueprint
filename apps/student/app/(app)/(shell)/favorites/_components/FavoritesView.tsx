@@ -3,6 +3,8 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { PillTabs, type PillTabItem } from '@/components/shell/PillTabs';
 import { FavoriteKindSection } from './FavoriteKindSection';
@@ -21,6 +23,8 @@ import {
 
 interface FavoritesViewProps {
   initialLists: FavoriteLists;
+  /** サーバー描画ごとのID（キャッシュ済みの画面の再利用を検知して取り直すために使う） */
+  renderId: string;
 }
 
 /**
@@ -29,11 +33,13 @@ interface FavoritesViewProps {
  * 切り替えは history.replaceState で行い、サーバーへの再取得や履歴の積み上げをしない。
  * 音声は一覧で1つのプレイヤーを共有する（FavoriteAudioProvider）。
  */
-export function FavoritesView({ initialLists }: FavoritesViewProps) {
+export function FavoritesView({ initialLists, renderId }: FavoritesViewProps) {
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
-  const [lists, setLists] = useState(initialLists);
+  const [lists, setLists] = useServerSyncedState(initialLists);
+  // 「戻る・進む」等でキャッシュ済みの画面が再利用された場合は、最新のデータに取り直す
+  useRefreshOnRestoredRender(renderId);
 
   // 種別の指定が無い場合は、お気に入りが登録されている最初の種別を開く
   const [defaultKind] = useState<FavoriteKindId>(
@@ -84,7 +90,7 @@ export function FavoritesView({ initialLists }: FavoritesViewProps) {
       return next;
     });
     showToast(getFavoriteToggleErrorMessage(result), 'error');
-  }, [lists, showConfirm, showToast]);
+  }, [lists, setLists, showConfirm, showToast]);
 
   return (
     <FavoriteAudioProvider>

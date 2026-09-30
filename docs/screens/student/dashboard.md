@@ -67,7 +67,7 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
-| 読み込み中 | 今日やること・今週のトレーニングの位置にスケルトンを表示。挨拶は「ようこそ」。「続きから」は再開情報の取得完了後に表示する | 初回描画直後（時刻の確定前） |
+| 読み込み中 | 今日やること・今週のトレーニングの位置にスケルトンを表示。挨拶は「ようこそ」。「続きから」は再開情報もサーバーで取得するため、骨組みの後にほかのカードと同時に表示する | 初回描画直後（時刻の確定前） |
 | ブックマーク削除確認 | 「ブックマークを削除？」の確認ダイアログ | 続きからカードの削除アイコンをタップした時 |
 
 ## アプリシェル（共通ナビゲーション）
@@ -121,6 +121,8 @@
 - 指標・教材種別のアイコンと分類色: `packages/lib/content/ui.ts`（`getTrainingMetricConfig` / `getContentTypeConfig`）
 - データ取得: `apps/student/app/(app)/(shell)/dashboard/_lib/fetchHomeData.ts`
   （`getMyUpcomingSessions`, `getMyDialogueAssignments`, `getUserTrainingPerformanceAction`, `getMyTrainingLifetimeStats`, `getTimezoneList`）。
-  再開情報はクライアントストア `useResumeStore`（`getLatestResumeContent` / `clearResumeContent`）
+  再開情報（`getLatestResumeContent`）も同じくサーバーで取得し、削除は `clearResumeContent` の後に画面内の状態から外す。
+  画面を開くたびに取得するため、単語帳トレーニングでブックマークした直後も最新の再開情報が表示される（クライアントキャッシュは持たない）。
+  「戻る・進む」でキャッシュ済みの画面が再利用された場合は `useRefreshOnRestoredRender` で取り直す
 - ポップアップの表示制御: `apps/student/components/popups/PopupHost.tsx`（排他・順番・表示画面）、
   `apps/student/components/popups/useAutoPopups.tsx`（自動表示ポップアップの登録簿）

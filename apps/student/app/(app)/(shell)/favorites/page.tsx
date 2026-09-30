@@ -1,6 +1,7 @@
 import { getFavoriteContents } from '@/actions/contentAction';
 import { getFavoritePhrases } from '@/actions/wordAction';
 import { getFavoriteSprintQuestions } from '@/actions/sprintFavoriteAction';
+import { createRenderId } from '@gabby/lib/navigation/renderId';
 import { FavoritesView } from './_components/FavoritesView';
 import type { FavoriteLists } from './_components/favoriteKinds';
 
@@ -12,5 +13,5 @@ export default async function FavoritesPage() {
   ]);
   const lists: FavoriteLists = { contents, phrases, sprintQuestions };
 
-  return <FavoritesView initialLists={lists} />;
+  return <FavoritesView initialLists={lists} renderId={createRenderId()} />;
 }

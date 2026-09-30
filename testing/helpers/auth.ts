@@ -45,7 +45,11 @@ export async function signInAsRole(email: string, password: string): Promise<Sup
   return client;
 }
 
-/** signInAsRole で取得したクライアントをサインアウトする（後始末用）。 */
+/**
+ * signInAsRole で取得したクライアントをサインアウトする（後始末用）。
+ * scope: 'local' で、このクライアントのセッションだけを終了する。既定（global）だと同じユーザーの全セッション
+ * （E2Eのログイン状態・ブラウザで確認中のセッション）までログアウトされる（TEST-JUDGEMENT-GUIDE.md KJ-2026-0930-02）。
+ */
 export async function signOutRole(client: SupabaseClient): Promise<void> {
-  await client.auth.signOut();
+  await client.auth.signOut({ scope: "local" });
 }

@@ -11,7 +11,6 @@ import { logClientEvent } from '@gabby/lib/logger/actions';
 import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
 import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
 import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
-import { useResumeStore } from '@/stores/useResumeStore';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { WordResumeMetadata } from '@gabby/types/training';
 import { getFeedbackConfig } from '@gabby/lib';
@@ -295,7 +294,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       // 💡 ブックマークして終了時は、即座に進捗の溜まりを同期
       await syncProgressNow();
 
-      await useResumeStore.getState().fetchResume(true);
       showToast("ブックマークしました", "success");
       router.push('/dashboard');
     } catch (e) {

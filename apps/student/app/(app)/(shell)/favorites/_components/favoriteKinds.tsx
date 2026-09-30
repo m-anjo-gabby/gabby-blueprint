@@ -8,7 +8,6 @@ import { formatSprintLevelLabel } from '@gabby/lib';
 import { toggleContentFavorite } from '@/actions/contentAction';
 import { toggleFavorite } from '@/actions/wordAction';
 import { toggleSprintQuestionFavorite } from '@/actions/sprintFavoriteAction';
-import { useContentStore } from '@/stores/useContentStore';
 import type { FavoriteToggleResult } from '@/constants/favorites';
 import { ContentFavoriteCard } from './ContentFavoriteCard';
 import { PhraseFavoriteCard } from './PhraseFavoriteCard';
@@ -85,12 +84,7 @@ export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteIt
         getOption: (c) => ({ id: String(c.content_type), label: getContentTypeConfig(c.content_type).label, order: c.content_type }),
       },
     ],
-    remove: async (c) => {
-      const result = await toggleContentFavorite(c.content_id, false);
-      // 教材一覧のキャッシュ（☆の状態）も合わせる
-      if (result.ok) useContentStore.getState().updateFavoriteStatus(c.content_id, false);
-      return result;
-    },
+    remove: (c) => toggleContentFavorite(c.content_id, false),
     renderItem: (c, onRemove) => <ContentFavoriteCard content={c} onRemove={onRemove} />,
   },
   phrases: {

@@ -6,13 +6,15 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getHourInZone } from '@gabby/lib/date/date';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import type { SessionListItem } from '@gabby/types/session';
 import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
+import type { ResumeContentResponse } from '@gabby/types/training';
 import type { TrainingLifetimeStats } from '@/actions/performanceAction';
-import { useContentStore } from '@/stores/useContentStore';
-import { useResumeStore } from '@/stores/useResumeStore';
+import { clearResumeContent } from '@/actions/contentAction';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { resolveTodayFocus } from '../_lib/todayFocus';
@@ -35,6 +37,10 @@ interface HomeViewProps {
   lifetimeStats: TrainingLifetimeStats | null;
   /** タイムゾーンマスタの表示名（IANA名 → 日本語名） */
   timezoneNames: Record<string, string>;
+  /** 再開情報（ブックマーク）。無い場合・参照先の教材が見えない場合は null */
+  resume: ResumeContentResponse | null;
+  /** サーバー描画ごとのID（キャッシュ済みの画面の再利用を検知して取り直すために使う） */
+  renderId: string;
 }
 
 const getGreeting = (hour: number) => {
@@ -48,7 +54,7 @@ const getGreeting = (hour: number) => {
  * 「今日やること」を1つだけ主役に据え、残りの情報は補助カードとして並べる
  * （モバイル=1列、PC(lg以上)=3列グリッド。1〜2行目は主役・予定・実績・メニュー、3行目は「続きから」と課題）。
  */
-export function HomeView({ nextSession, assignments, activities, lifetimeStats, timezoneNames }: HomeViewProps) {
+export function HomeView({ nextSession, assignments, activities, lifetimeStats, timezoneNames, resume: serverResume, renderId }: HomeViewProps) {
   const nowMs = useNow();
   const timezone = useTimezone();
   const { showToast } = useToast();
@@ -56,15 +62,14 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
   const userName = useUserStore((state) => state.user?.user_name);
   const settingTimezone = useUserStore((state) => state.user?.timezone ?? null);
   const fetchNotices = useNoticeStore((state) => state.fetchNotices);
-  const fetchAllContents = useContentStore((state) => state.fetchAllContents);
-  const { resumeData, fetchResume, clearResume } = useResumeStore();
+  const [resume, setResume] = useServerSyncedState(serverResume);
+  // 「戻る・進む」等でキャッシュ済みの画面が再利用された場合は、最新のデータに取り直す
+  useRefreshOnRestoredRender(renderId);
 
   useEffect(() => {
-    // 教材一覧はライブラリ遷移時の表示を速めるための先読み、お知らせは通知センター用
-    fetchAllContents();
+    // お知らせは通知センター用
     fetchNotices();
-    fetchResume();
-  }, [fetchAllContents, fetchNotices, fetchResume]);
+  }, [fetchNotices]);
 
   const handleClearResume = async () => {
     const ok = await showConfirm('ブックマークを削除？', 'この教材のブックマークを削除します。よろしいですか？', {
@@ -72,7 +77,8 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
     });
     if (!ok) return;
     try {
-      await clearResume();
+      await clearResumeContent();
+      setResume(null);
       showToast('再開情報を削除しました', 'success');
     } catch (error) {
       showToast('削除に失敗しました', 'error');
@@ -80,8 +86,6 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
     }
   };
 
-  // 参照先の教材が不可視・削除済みのブックマークは表示しない
-  const resume = resumeData?.com_m_contents ? resumeData : null;
   const pendingAssignments = assignments.filter((a) => !a.is_set_completed);
   const focus = nowMs !== null ? resolveTodayFocus({ nextSession, assignments: pendingAssignments, nowMs }) : null;
 

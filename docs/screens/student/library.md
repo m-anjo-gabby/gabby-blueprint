@@ -33,10 +33,14 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
-| 読み込み中 | スケルトン（グレーのプレースホルダー）を3件分表示 | 教材一覧の初回取得中 |
+| 読み込み中 | シェル共通の骨組み（スケルトン） | 画面遷移直後、サーバーで教材を取得している間（`(shell)/loading.tsx`） |
 
 ## 補足（設計上の注意点）
 
+- **データの鮮度**: 画面を開くたびにサーバーで取得し、画面をまたぐクライアントキャッシュは持たない。そのため管理側の更新
+  （教材の追加・非公開・利用権・ダイアログの割当）や他画面でのお気に入り変更は、次に開いた時に反映される。ブラウザの
+  「戻る・進む」でキャッシュ済みの画面が再利用された場合も、表示後に裏で取り直して最新に差し替える
+  （`packages/lib/hooks/useRefreshOnRestoredRender.ts`。サーバー描画ごとの `renderId` で再利用を判定）。
 - ダイアログ（`content_type=3`）は、他種別のようなcom_m_contents単体のRLS可視範囲ではなく、
   自身への割当（`com_t_dialogue_assignment`）を起点に取得している。コーチが割り当てていない
   ダイアログ教材は、たとえRLS上アクセス可能でもこの一覧には出ない
@@ -47,7 +51,7 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/(shell)/library/page.tsx`
+- `apps/student/app/(app)/(shell)/library/page.tsx`（サーバーで取得）、`_components/LibraryView.tsx`（検索・絞り込み・☆）
 - 共通カード: `apps/student/components/common/ContentCard.tsx`
 - 種別タブ（横スクロールのピル）: `apps/student/components/shell/PillTabs.tsx`（お気に入り画面と共通）
 - 教材種別・タブ定義: `packages/types/content.ts`（`CONTENT_TYPES`, `LIBRALY_TABS`）
@@ -56,4 +60,4 @@
 - 関連アクション: `getAllContent`, `toggleContentFavorite`（`apps/student/actions/contentAction.ts`）、
   `getMyDialogueAssignments`（`apps/student/actions/dialogueAction.ts` → Core実装は
   `packages/lib/coachStudent/actions/dialogueActions.ts`の`getMyDialogueAssignmentsCore`）
-- 状態管理: `apps/student/stores/useContentStore.ts`
+- 画面内の状態: `packages/lib/hooks/useServerSyncedState.ts`（サーバーから受け取った一覧を☆で即時更新し、取り直したら置き換える）
