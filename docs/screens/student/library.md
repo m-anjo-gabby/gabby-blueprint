@@ -49,6 +49,10 @@
   `getFavoriteContents` で絞り込み）を再利用しているため、
   ダイアログの「割当済みのみ」ルールはお気に入り側にも自動的に及ぶ。
 
+## 関連する業務フロー仕様書
+
+- [お気に入り](../../../testing/e2e/specs/favorites/student-favorites.md) — 教材の☆によるお気に入り登録を含む、お気に入りの登録・絞り込み・解除・上限・表示条件
+
 ## 実装参照（エンジニア向け）
 
 - `apps/student/app/(app)/(shell)/library/page.tsx`（サーバーで取得）、`_components/LibraryView.tsx`（検索・絞り込み・☆）
