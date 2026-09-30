@@ -56,7 +56,7 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
  * 指定生徒が保有するライブセッションチケット付き契約の一覧（現在有効・過去満了分の両方）を
  * 取得する（アドミン向け。コーチ側のgetStudentLiveSessionContractsCoreと同じ形だが、
  * 担当関係の確認は行わない＝アドミンは常に全件参照可能）。
- * plan_name/total_sessions（com_m_contractに非正規化済み）・used_sessions（チケット側）を
+ * contract_name/plan_name/total_sessions（com_m_contractに非正規化済み）・used_sessions（チケット側）を
  * 追加で持たせ、「対象の選択」セクションのプラン情報表示に使う。
  */
 export async function getStudentLiveSessionContractsForAdmin(studentId: string): Promise<AdminContractSummary[]> {
@@ -82,7 +82,7 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
         .in('license_id', tickets.map((t) => t.license_id)),
       supabase
         .from('com_m_contract')
-        .select('contract_id, plan_name')
+        .select('contract_id, contract_name, plan_name')
         .in('contract_id', tickets.map((t) => t.contract_id)),
     ]);
 
@@ -96,7 +96,7 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
     }
 
     const licenseById = new Map((licenses ?? []).map((l) => [l.license_id, l]));
-    const planNameByContractId = new Map((contracts ?? []).map((c) => [c.contract_id, c.plan_name]));
+    const contractById = new Map((contracts ?? []).map((c) => [c.contract_id, c]));
     const now = new Date();
 
     return tickets
@@ -111,7 +111,8 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
           end_date: license.end_date,
           is_current: isCurrent,
           weekly_frequency: t.weekly_frequency,
-          plan_name: planNameByContractId.get(t.contract_id) ?? '(不明なプラン)',
+          contract_name: contractById.get(t.contract_id)?.contract_name ?? '(不明な契約)',
+          plan_name: contractById.get(t.contract_id)?.plan_name ?? '(不明なプラン)',
           total_sessions: t.total_sessions,
           used_sessions: t.used_sessions,
         };

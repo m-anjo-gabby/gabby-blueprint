@@ -493,7 +493,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                           <FormLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('initialLicenseLabel')}</FormLabel>
                           {isConfirming ? (
                             <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                              {availableContracts.find(c => c.contract_id === field.value)?.plan_name || t('noLicenseAssigned')}
+                              {availableContracts.find(c => c.contract_id === field.value)?.contract_name || t('noLicenseAssigned')}
                             </div>
                           ) : (
                             <Select
@@ -511,7 +511,7 @@ export function UserFormDialog({ mode = 'create', initialData }: UserFormDialogP
                               <SelectContent>
                                 {availableContracts.map((c) => (
                                   <SelectItem key={c.contract_id} value={c.contract_id}>
-                                    {c.plan_name} {t('remainingLicenses', { count: c.remaining_licenses })}
+                                    {t('contractWithPlan', { contract: c.contract_name, plan: c.plan_name })} {t('remainingLicenses', { count: c.remaining_licenses })}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

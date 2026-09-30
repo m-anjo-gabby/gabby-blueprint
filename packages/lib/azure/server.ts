@@ -1,6 +1,8 @@
 /**
  * サーバーサイド専用: Azure Speech Tokenを取得する共通関数
  */
+import 'server-only';
+
 export async function getAzureSpeechToken() {
   const region = process.env.AZURE_SPEECH_REGION;
   const key = process.env.AZURE_SPEECH_SERVICE_KEY;

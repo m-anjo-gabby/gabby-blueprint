@@ -73,6 +73,7 @@ export async function grantAppLicense(fixture: AuthFixture, userId: string): Pro
       client_id: fixture.clientId,
       plan_id: plan.plan_id,
       plan_name: plan.plan_name,
+      contract_name: `【QAテスト】認証E2E（${fixture.tag}）${userId.slice(0, 8)}`,
       plan_name_en: plan.plan_name_en,
       contract_type: plan.contract_type,
       weekly_frequency: plan.weekly_frequency,

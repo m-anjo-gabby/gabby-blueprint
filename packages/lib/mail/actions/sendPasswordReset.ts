@@ -1,41 +1,16 @@
-import * as React from 'react';
-import { renderToString } from 'react-dom/server.edge';
+import 'server-only';
 import { sendCore } from '../core';
-import {
-  PASSWORD_RESET_SUBJECTS,
-  PasswordResetEmailTemplate,
-  type PasswordResetMailLanguage,
-} from '../templates/PasswordResetEmailTemplate';
+import { renderPasswordResetEmail } from '../render';
+import type { PasswordResetMailLanguage } from '../templates/PasswordResetEmailTemplate';
 import { createLogger } from '../../logger';
 
 const logger = createLogger('mail');
-
-/**
- * 再設定リンクの有効期限（分）。Supabase の Auth 設定「Email OTP Expiration」（supabase/config.toml の otp_expiry）と
- * 合わせること（dev・本番とも 1800秒＝30分）。メール本文の期限表記に使う。
- */
-export const PASSWORD_RESET_LINK_TTL_MINUTES = 30;
 
 interface SendPasswordResetParams {
   to: string;
   resetUrl: string;
   /** メールの言語（student: ja / coach: en / admin: bilingual） */
   language: PasswordResetMailLanguage;
-}
-
-/** パスワード再設定メールの件名・本文を組み立てる（送信はしない。文面の検証にも使う） */
-export function renderPasswordResetEmail({
-  resetUrl,
-  language,
-}: Pick<SendPasswordResetParams, 'resetUrl' | 'language'>): { subject: string; html: string } {
-  const html = renderToString(
-    React.createElement(PasswordResetEmailTemplate, {
-      resetUrl,
-      language,
-      expiresInMinutes: PASSWORD_RESET_LINK_TTL_MINUTES,
-    })
-  );
-  return { subject: PASSWORD_RESET_SUBJECTS[language], html };
 }
 
 /**

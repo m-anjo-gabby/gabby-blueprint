@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renderPasswordResetEmail } from "@gabby/lib/mail/actions/sendPasswordReset";
+import { renderPasswordResetEmail } from "@gabby/lib/mail/render";
 
 /**
  * パスワード再設定メールの文面（送信はしない。送信処理と同じ組み立て関数で検証する）

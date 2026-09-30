@@ -169,3 +169,50 @@ ALTER TABLE public.com_m_contract DROP CONSTRAINT IF EXISTS chk_contract_dialogu
 ALTER TABLE public.com_m_contract ADD CONSTRAINT chk_contract_dialogue_requires_coach CHECK (
     NOT has_dialogue_practice OR contract_type = 2
 );
+
+---------------------------------------------
+-- 追加パッチ: 契約名（アドミン管理用）の追加 (2026-09-30)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+-- 適用後は view/vw_contract_details.sql（DROP→CREATE）と view/vw_user_list.sql の再実行が必要。
+---------------------------------------------
+-- 【背景】
+-- これまでは plan_name を契約の識別名として兼用していたため、「顧客A 上期」のような
+-- 管理上の名前を付けると、そのまま生徒・コーチ画面にプラン名として表示されてしまっていた。
+-- 生徒・コーチに見せる商品名（plan_name / plan_name_en）と、アドミンが契約を区別するための
+-- 管理名（contract_name）を分ける。contract_name はアドミン画面でのみ表示する。
+-- ※ RLS上は顧客側ユーザー・担当コーチも com_m_contract の行を参照できるため、
+--    contract_name には社外秘の情報を書かない運用とする。
+ALTER TABLE public.com_m_contract
+  ADD COLUMN IF NOT EXISTS contract_name text;
+
+-- 既存契約は「{顧客名} {開始年月(JST)}〜 {プラン名}」で埋める。
+-- 同じ顧客で同じ名前になる契約（同月開始・同プラン）は、2件目以降に「 (2)」等の連番を付けて
+-- 後続の一意制約に違反しないようにする。
+WITH named AS (
+  SELECT
+    c.contract_id,
+    cl.client_name || ' ' || to_char(c.start_date AT TIME ZONE 'Asia/Tokyo', 'YYYY/MM') || '〜 ' || c.plan_name AS base_name,
+    c.client_id
+  FROM public.com_m_contract c
+  JOIN public.com_m_client cl ON cl.client_id = c.client_id
+  WHERE c.contract_name IS NULL
+), numbered AS (
+  SELECT
+    contract_id,
+    base_name,
+    ROW_NUMBER() OVER (PARTITION BY client_id, base_name ORDER BY contract_id) AS seq
+  FROM named
+)
+UPDATE public.com_m_contract c
+SET contract_name = CASE WHEN n.seq = 1 THEN n.base_name ELSE n.base_name || ' (' || n.seq || ')' END
+FROM numbered n
+WHERE c.contract_id = n.contract_id;
+
+ALTER TABLE public.com_m_contract ALTER COLUMN contract_name SET NOT NULL;
+
+-- 同じ顧客内で契約名を一意にする（ライセンス割当時の契約選択・削除確認で契約を取り違えないため）
+CREATE UNIQUE INDEX IF NOT EXISTS uq_contract_client_contract_name
+  ON public.com_m_contract (client_id, contract_name);
+
+COMMENT ON COLUMN public.com_m_contract.contract_name IS '契約名（アドミン管理用。例: 顧客A 2026年度上期）。生徒・コーチには表示しない。顧客内で一意';
+COMMENT ON COLUMN public.com_m_contract.plan_name IS 'プラン名称（表示・制御用。生徒アプリ等に表示される商品名）';

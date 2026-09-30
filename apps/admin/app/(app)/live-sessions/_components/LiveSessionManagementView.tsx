@@ -307,7 +307,8 @@ export function LiveSessionManagementView({ clients }: Props) {
                 </select>
                 {selectedContract && (
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5 space-y-1 min-h-13">
-                    <p className="text-xs font-bold text-slate-700">{selectedContract.plan_name}</p>
+                    <p className="text-xs font-bold text-slate-700">{selectedContract.contract_name}</p>
+                    <p className="text-[11px] text-slate-500">{selectedContract.plan_name}</p>
                     <div className="flex items-center gap-3 text-[11px] text-slate-500">
                       <span>{t('weeklyFrequency', { count: selectedContract.weekly_frequency })}</span>
                     </div>

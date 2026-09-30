@@ -75,6 +75,7 @@ export interface UserRecord extends UserBase {
   license_start_date: string | null;
   license_end_date: string | null;
   plan_name: string | null;
+  contract_name: string | null; // アドミン管理用の契約名
   license_state: 'none' | 'active' | 'future' | 'expired' | 'mail_failed' | 'expired_invite' | 'inviting';
 
   // 招待メール関連

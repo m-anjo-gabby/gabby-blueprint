@@ -336,7 +336,7 @@ export function UserBulkImportDialog() {
                   {contracts.length > 0 ? (
                     contracts.map(c => (
                       <SelectItem key={c.contract_id} value={c.contract_id} className="text-xs">
-                        {t('planWithRemaining', { plan: c.plan_name, count: c.remaining_licenses })}
+                        {t('planWithRemaining', { contract: c.contract_name, plan: c.plan_name, count: c.remaining_licenses })}
                       </SelectItem>
                     ))
                   ) : (

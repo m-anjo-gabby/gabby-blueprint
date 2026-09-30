@@ -333,6 +333,7 @@ console.log("\n--- 7. reject_matching_request 権限チェック・通知 ---");
       .insert({
         client_id: client.client_id,
         plan_name: STANDARD_PLAN.plan_name,
+        contract_name: `${STANDARD_PLAN.plan_name} ${crypto.randomUUID().slice(0, 8)}`,
         plan_name_en: STANDARD_PLAN.plan_name_en,
         plan_id: STANDARD_PLAN.plan_id,
         max_licenses: 1,

@@ -1,4 +1,5 @@
 // packages/lib/mail/core.ts
+import 'server-only';
 import { Resend } from 'resend';
 
 // APIキーがない（開発初期や未設定環境）場合はnullにしておき、関数内で安全にガード

@@ -470,3 +470,199 @@ BEGIN
 END $$;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】契約名（アドミン管理用）の追加
+-- 追加日: 2026-09-30
+--
+-- 【内容】
+--   生徒・コーチに表示するプラン名（plan_name）と、アドミンが契約を区別するための
+--   契約名（contract_name）を分ける。
+--
+--   1. com_m_contract に contract_name 列を追加（NOT NULL・顧客内で一意）
+--      - 既存契約は「{顧客名} {開始年月}〜 {プラン名}」で埋める（重複時は連番を付与）。
+--   2. vw_contract_details を再作成（SELECT c.* のため列追加後は DROP → CREATE が必要）
+--   3. private.vw_user_list の末尾に contract_name を追加
+--
+-- 対応ファイル: DDL/table/com_m_contract.sql（末尾の追加パッチ節）
+--               DDL/view/vw_contract_details.sql / DDL/view/vw_user_list.sql
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 1. com_m_contract: contract_name列の追加
+---------------------------------------------
+ALTER TABLE public.com_m_contract
+  ADD COLUMN IF NOT EXISTS contract_name text;
+
+-- 既存契約は「{顧客名} {開始年月(JST)}〜 {プラン名}」で埋める。
+-- 同じ顧客で同じ名前になる契約（同月開始・同プラン）は、2件目以降に「 (2)」等の連番を付けて
+-- 後続の一意制約に違反しないようにする。
+WITH named AS (
+  SELECT
+    c.contract_id,
+    cl.client_name || ' ' || to_char(c.start_date AT TIME ZONE 'Asia/Tokyo', 'YYYY/MM') || '〜 ' || c.plan_name AS base_name,
+    c.client_id
+  FROM public.com_m_contract c
+  JOIN public.com_m_client cl ON cl.client_id = c.client_id
+  WHERE c.contract_name IS NULL
+), numbered AS (
+  SELECT
+    contract_id,
+    base_name,
+    ROW_NUMBER() OVER (PARTITION BY client_id, base_name ORDER BY contract_id) AS seq
+  FROM named
+)
+UPDATE public.com_m_contract c
+SET contract_name = CASE WHEN n.seq = 1 THEN n.base_name ELSE n.base_name || ' (' || n.seq || ')' END
+FROM numbered n
+WHERE c.contract_id = n.contract_id;
+
+ALTER TABLE public.com_m_contract ALTER COLUMN contract_name SET NOT NULL;
+
+-- 同じ顧客内で契約名を一意にする（ライセンス割当時の契約選択・削除確認で契約を取り違えないため）
+CREATE UNIQUE INDEX IF NOT EXISTS uq_contract_client_contract_name
+  ON public.com_m_contract (client_id, contract_name);
+
+COMMENT ON COLUMN public.com_m_contract.contract_name IS '契約名（アドミン管理用。例: 顧客A 2026年度上期）。生徒・コーチには表示しない。顧客内で一意';
+COMMENT ON COLUMN public.com_m_contract.plan_name IS 'プラン名称（表示・制御用。生徒アプリ等に表示される商品名）';
+
+---------------------------------------------
+-- 2. vw_contract_details の再作成
+---------------------------------------------
+DROP VIEW IF EXISTS public.vw_contract_details;
+CREATE VIEW public.vw_contract_details AS
+SELECT
+    c.*,
+    cl.client_name,
+    COALESCE(stats.total_assigned_count, 0) AS current_assigned_count,
+    -- 終了済み契約は「終了時点の有効数」、稼働中は「現在の有効数」を返す
+    COALESCE(stats.active_snapshot_count, 0) AS current_active_count,
+    c.max_licenses - COALESCE(stats.total_assigned_count, 0) AS remaining_licenses
+FROM
+    public.com_m_contract c
+JOIN
+    public.com_m_client cl ON c.client_id = cl.client_id
+LEFT JOIN (
+    SELECT
+        contract_id,
+        COUNT(license_id) AS total_assigned_count,
+        -- ステータス1 かつ「現在その期間内」のものだけを有効数としてカウントする
+        COUNT(CASE WHEN status = 1 AND NOW() BETWEEN start_date AND end_date THEN 1 END) AS active_snapshot_count
+    FROM
+        public.com_t_user_license
+    GROUP BY
+        contract_id
+) stats ON c.contract_id = stats.contract_id;
+
+COMMENT ON VIEW public.vw_contract_details IS '統計情報・顧客名を含む契約詳細ビュー';
+
+-- RLS設定：ビューの定義を維持しつつ、RLSを透過させる設定
+ALTER VIEW public.vw_contract_details SET (security_invoker = on);
+
+---------------------------------------------
+-- 3. private.vw_user_list に contract_name を追加
+---------------------------------------------
+CREATE OR REPLACE VIEW private.vw_user_list 
+WITH (security_invoker = false) -- 定義者権限を維持
+AS
+-- =============================================================
+-- ① 本登録済みアクティブユーザー
+-- =============================================================
+SELECT 
+  u.id,                     -- auth.users の UUID
+  u.user_id,                -- com_m_user の BIGSERIAL
+  u.user_name,
+  u.user_type,
+  u.client_id,
+  c.client_name,
+  au.email,
+  au.last_sign_in_at,
+  au.confirmed_at,
+  r.roles,                  -- ロール情報の集約配列
+  l.contract_id,
+  l.license_id,
+  l.status AS license_status,
+  l.start_date AS license_start_date,
+  l.end_date AS license_end_date,
+  con.plan_name,
+  NULL AS mail_sent_at,
+  NULL AS last_mail_error,
+  CASE 
+    WHEN l.license_id IS NULL THEN 'none'
+    WHEN l.start_date > NOW() THEN 'future'
+    WHEN l.end_date < NOW() THEN 'expired'
+    ELSE 'active'
+  END AS license_state,
+  u.insert_date,            -- ソート等に使用する登録日時
+  -- 2026-09-30追加: アドミン管理用の契約名（CREATE OR REPLACE で列を足すため末尾に置く）
+  con.contract_name
+FROM 
+  public.com_m_user u
+  INNER JOIN auth.users au ON u.id = au.id
+  LEFT JOIN public.com_m_client c ON u.client_id = c.client_id
+  LEFT JOIN LATERAL (
+    SELECT array_agg(role_id) AS roles
+    FROM public.com_t_user_role
+    WHERE user_id = u.id
+  ) r ON true
+  LEFT JOIN LATERAL (
+    SELECT * FROM public.com_t_user_license 
+    WHERE user_id = u.id 
+    ORDER BY 
+      (status = 1 AND NOW() BETWEEN start_date AND end_date) DESC,
+      (status = 1 AND start_date > NOW()) DESC,
+      end_date DESC
+    LIMIT 1
+  ) l ON true
+  LEFT JOIN public.com_m_contract con ON l.contract_id = con.contract_id
+
+UNION ALL
+
+-- =============================================================
+-- ② 招待中・承認待ちユーザー (com_t_invitation からマージ)
+-- =============================================================
+SELECT 
+  i.id AS id,                  -- 招待レコードのUUID（フロントの仮キーとして利用）
+  NULL AS user_id,             -- まだ本登録がないため採番IDは NULL
+  i.user_name,
+  i.user_type,
+  i.client_id,
+  c.client_name,
+  i.email,
+  NULL AS last_sign_in_at,     -- ログイン前のため NULL
+  NULL AS confirmed_at,        -- メール承認前のため NULL
+  i.roles AS roles,            -- 招待時に設定したロールの配列をそのまま適用
+  NULL AS contract_id,
+  NULL AS license_id,
+  NULL AS license_status,
+  NULL AS license_start_date,
+  NULL AS license_end_date,
+  NULL AS plan_name,
+  i.mail_sent_at,
+  i.last_mail_error,
+  -- 💡 フロントエンドが「招待状態」を識別するためのステータスを生成
+  CASE 
+    -- メール送信失敗を最優先で表示
+    WHEN i.last_mail_error IS NOT NULL THEN 'mail_failed'
+    WHEN i.expires_at < NOW() THEN 'expired_invite' -- 招待の有効期限切れ(7日経過)
+    ELSE 'inviting'                                 -- 招待中（リンク有効期間内）
+  END AS license_state,
+  i.insert_date,               -- 招待日時を登録日時としてマージ
+  NULL AS contract_name
+FROM 
+  public.com_t_invitation i
+  LEFT JOIN public.com_m_client c ON i.client_id = c.client_id
+WHERE 
+  i.accepted_at IS NULL        -- 本登録が完了していない（仮発行状態）のものだけを抽出
+;
+
+COMMENT ON VIEW private.vw_user_list IS 'ユーザー管理用一覧ビュー (本登録＆招待中ユーザー統合版)';
+
+-- 🔒 セキュリティ権限の再設定
+REVOKE ALL ON private.vw_user_list FROM anon, authenticated;
+GRANT USAGE ON SCHEMA private TO service_role;
+GRANT SELECT ON private.vw_user_list TO service_role;
+
+COMMIT;

@@ -1,3 +1,4 @@
+import 'server-only';
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';

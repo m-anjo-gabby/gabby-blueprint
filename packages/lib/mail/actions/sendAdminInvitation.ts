@@ -1,8 +1,7 @@
 // packages/lib/mail/actions/sendAdminInvitation.ts
-import * as React from 'react';
-import { renderToString } from 'react-dom/server.edge'; // App RouterのRSCで安全に動く軽量エクスポート
+import 'server-only';
 import { sendCore } from '../core';
-import { ADMIN_INVITATION_SUBJECT, AdminInviteEmailTemplate } from '../templates/AdminInviteEmailTemplate';
+import { renderAdminInvitationEmail } from '../render';
 import { createLogger } from '../../logger'; // プロジェクト共通のロガー
 
 const logger = createLogger('mail');
@@ -13,16 +12,6 @@ interface SendAdminInvitationParams {
   userName: string;
   inviteUrl: string;
   expiresDays?: number;
-}
-
-/** 管理者向け招待メール（日英併記）の件名・本文を組み立てる（送信はしない。文面の検証にも使う） */
-export function renderAdminInvitationEmail({
-  userName,
-  inviteUrl,
-  expiresDays = 3,
-}: Omit<SendAdminInvitationParams, 'to'>): { subject: string; html: string } {
-  const html = renderToString(React.createElement(AdminInviteEmailTemplate, { userName, inviteUrl, expiresDays }));
-  return { subject: ADMIN_INVITATION_SUBJECT, html };
 }
 
 /**

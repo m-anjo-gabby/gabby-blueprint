@@ -1,5 +1,6 @@
 // packages/lib/ai/providers/google.ts
 
+import 'server-only';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
 export const DEFAULT_CHAT_MODEL = 'gemini-flash-lite-latest';

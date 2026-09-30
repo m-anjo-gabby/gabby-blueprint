@@ -31,14 +31,18 @@ export function createColumns(t: TableT, locale: string): ColumnDef<ContractDeta
     },
   },
   {
-    accessorKey: 'plan_name',
+    // 契約名（アドミン管理用）を主表示にし、生徒・コーチに表示されるプラン名を補足で出す
+    accessorKey: 'contract_name',
     header: t('planHeader'),
     cell: ({ row }) => {
       const contract = row.original;
       return (
         <div className="flex flex-col gap-1">
-          <span className="font-medium text-slate-700">
-            {row.getValue('plan_name')}
+          <span className="font-medium text-slate-900">
+            {contract.contract_name}
+          </span>
+          <span className="text-[11px] text-slate-500">
+            {contract.plan_name}
           </span>
           {contract.contract_type === 2 && (
             <div className="flex flex-wrap gap-1">

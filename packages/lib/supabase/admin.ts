@@ -1,3 +1,4 @@
+import 'server-only';
 import { createClient } from "@supabase/supabase-js";
 
 // --- 共通の環境変数 ---

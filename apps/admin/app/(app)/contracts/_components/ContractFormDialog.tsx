@@ -28,6 +28,7 @@ type FormT = ReturnType<typeof useTranslations<'contracts.formDialog'>>;
 function createContractSchema(t: FormT) {
   return z.object({
     client_id: z.string().min(1, t('errors.clientRequired')),
+    contract_name: z.string().trim().min(1, t('errors.contractNameRequired')).max(100, t('errors.contractNameTooLong')),
     plan_id: z.string().min(1, t('errors.planRequired')),
     plan_name: z.string().min(1, t('errors.planNameRequired')),
     plan_name_en: z.string().min(1, t('errors.planNameEnRequired')),
@@ -62,6 +63,7 @@ type ContractFormOutput = z.output<ReturnType<typeof createContractSchema>>
 
 const DEFAULT_VALUES: ContractFormInput = {
   client_id: '',
+  contract_name: '',
   plan_id: '',
   plan_name: '',
   plan_name_en: '',
@@ -109,6 +111,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
     if (!data || mode === 'create') return DEFAULT_VALUES
     return {
       client_id: data.client_id ?? '',
+      contract_name: data.contract_name ?? '',
       plan_id: data.plan_id,
       plan_name: data.plan_name ?? '',
       plan_name_en: data.plan_name_en ?? '',
@@ -133,6 +136,23 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
   const isLivePlan = selectedPlan?.contract_type === 2
 
   /**
+   * 新規登録時、顧客・プラン・開始日から契約名の初期値「{顧客名} {開始年月}〜 {プラン名}」を
+   * 組み立てて入力する。利用者が契約名を書き換えた後（isDirty）は上書きしない。
+   */
+  const suggestContractName = useCallback(() => {
+    if (mode !== 'create' || form.getFieldState('contract_name').isDirty) return
+    const { client_id, plan_name, start_date } = form.getValues()
+    const clientName = clients.find((c) => c.client_id === client_id)?.client_name
+    if (!clientName || !plan_name || !start_date) return
+    form.setValue('contract_name', t('contractNameSuggestion', {
+      client: clientName,
+      // "yyyy-MM-dd" をそのまま new Date() に渡すとUTCとして解釈されるため、文字列から年月を取る
+      start: start_date.slice(0, 7).replace('-', '/'),
+      plan: plan_name,
+    }))
+  }, [mode, form, clients, t])
+
+  /**
    * プラン選択時に、プラン名・週回数・チケット数・ダイアログプラクティス提供有無を
    * マスタ値で初期セットする（この後、契約ごとに個別調整可能）。
    * あわせて、開始日=本日・終了日=本日からプランの標準契約期間(period_months)分先、
@@ -151,7 +171,8 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
     const today = new Date()
     form.setValue('start_date', format(today, 'yyyy-MM-dd'))
     form.setValue('end_date', format(addMonths(today, plan.period_months), 'yyyy-MM-dd'))
-  }, [form, plans])
+    suggestContractName()
+  }, [form, plans, suggestContractName])
 
   /**
    * ダイアログ状態管理
@@ -254,7 +275,10 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                       <SearchableSelect
                         options={clients.map(c => ({ value: c.client_id, label: c.client_name }))}
                         value={field.value as string}
-                        onChange={field.onChange}
+                        onChange={(value) => {
+                          field.onChange(value)
+                          suggestContractName()
+                        }}
                         placeholder={t('clientPlaceholder')}
                         searchPlaceholder={t('clientSearchPlaceholder')}
                         // 編集モード時は顧客変更不可
@@ -293,6 +317,30 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                       ))}
                     </SelectContent>
                   </Select>
+                )}
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* --- 契約名（アドミン管理用。生徒・コーチには表示しない） --- */}
+            <FormField control={form.control} name="contract_name" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('contractNameLabel')}</FormLabel>
+                {isConfirming ? (
+                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value as string}</div>
+                ) : (
+                  <>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={(field.value as string) ?? ''}
+                        placeholder={t('contractNamePlaceholder')}
+                        maxLength={100}
+                        className="bg-white rounded-xl border-slate-200"
+                      />
+                    </FormControl>
+                    <p className="text-[11px] text-slate-400">{t('contractNameHint')}</p>
+                  </>
                 )}
                 <FormMessage />
               </FormItem>
@@ -407,6 +455,9 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                 </FormItem>
               )} />
             </div>
+            {!isConfirming && (
+              <p className="-mt-2 text-[11px] text-slate-400">{t('planNameHint')}</p>
+            )}
 
             <FormField control={form.control} name="max_licenses" render={({ field }) => (
               <FormItem>
@@ -436,7 +487,18 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value as string}</div>
                   ) : (
-                    <FormControl><Input type="date" {...field} value={(field.value as string) ?? ''} className="bg-white rounded-xl border-slate-200" /></FormControl>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={(field.value as string) ?? ''}
+                        onChange={(e) => {
+                          field.onChange(e)
+                          suggestContractName()
+                        }}
+                        className="bg-white rounded-xl border-slate-200"
+                      />
+                    </FormControl>
                   )}
                   <FormMessage />
                 </FormItem>

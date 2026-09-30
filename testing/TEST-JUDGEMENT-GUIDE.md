@@ -865,3 +865,17 @@
     使い捨てデータの後始末が漏れた疑いがあれば、`authFixtures.leftovers.ts` で残骸を確認する。
   - ログイン画面の入力欄は制御コンポーネントのため、WebKit ではハイドレーション前の入力が消える（KJ-2026-0928-02 と同じ）。
     `form[data-ready='true']` を待ってから入力する。
+
+### KJ-2026-0930-01 'server-only' を付けた共通モジュールは、Node で動くテスト（tsx・Playwright）から import できない
+
+- **該当シナリオ**: `packages/lib` のサーバー専用モジュール（`supabase/admin.ts`・`auth/core.ts`・`mail/core.ts`・`mail/actions/*` 等）に
+  `import 'server-only'` を付けた際、テスト側の依存箇所を洗い出した
+- **事象**: `server-only` は Next.js のサーバー（react-server 条件）以外で読み込むと例外を投げる。`testing/helpers/auth.ts` の
+  `createAdminClient`（`@gabby/lib/supabase/admin` を動的 import）と、メール文面のユニットテスト（`mail/actions/*` を import）が対象だった。
+  `tsx --conditions=react-server` で回避すると、今度は `react-dom/server.edge` が RSC 用の実装に切り替わり `renderToString` が使えない。
+- **判断基準への反映**:
+  - テストから `@gabby/lib` のサーバー専用モジュールを import しない。service_role のクライアントは `testing/helpers/auth.ts` の
+    `createAdminClient`（テスト側で自前生成）を使う。
+  - メールの文面は `@gabby/lib/mail/render`（組み立てのみ・秘密情報なし）を import して検証する。新しいメールの文面を検証する場合も、
+    組み立て関数を `mail/render.ts` に置き、送信処理（`mail/actions/*`）はそれを呼ぶ形にする。
+  - `packages/lib` に秘密情報・`next/headers` を使うモジュールを追加するときは `import 'server-only'` を付ける（`'use server'` のファイルは不要）。

@@ -111,11 +111,11 @@ export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
     },
   },
   {
-    accessorKey: "plan_name",
+    accessorKey: "contract_name",
     header: t('license'),
     cell: ({ row }) => {
       const user = row.original;
-      const { license_state, plan_name, license_end_date, user_type } = user;
+      const { license_state, contract_name, license_end_date, user_type } = user;
 
       // 生徒(user_type === '1')のみを編集対象とする
       const isStudent = user_type === '1';
@@ -143,7 +143,7 @@ export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
                     license_state === 'active' ? 'text-slate-700 group-hover/lic:text-brand' :
                     license_state === 'future' ? 'text-blue-600' : 'text-rose-500'
                   }`}>
-                    {plan_name}
+                    {contract_name}
                   </div>
                   {license_state === 'future' && <span className="text-[9px] text-blue-400 font-bold">{t('licenseFuture')}</span>}
                   {license_state === 'expired' && <span className="text-[9px] text-rose-400 font-bold">{t('licenseExpired')}</span>}

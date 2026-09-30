@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renderAdminInvitationEmail } from "@gabby/lib/mail/actions/sendAdminInvitation";
+import { renderAdminInvitationEmail } from "@gabby/lib/mail/render";
 
 /**
  * 管理者向け招待メールの文面（日英併記。送信はしない。送信処理と同じ組み立て関数で検証する）

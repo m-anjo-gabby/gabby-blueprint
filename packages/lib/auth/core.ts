@@ -5,6 +5,7 @@
  * エンドポイントになり、ポータルごとの利用者チェック等を迂回されるため。
  * ブラウザから呼ぶ入口は、各アプリの *AuthAction.ts（createPortalAuthActions）だけにする。
  */
+import 'server-only';
 import { createServerClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { User } from '@supabase/supabase-js';

@@ -1,3 +1,4 @@
+import 'server-only';
 import jwt from 'jsonwebtoken';
 import type { LiveSessionRoomRole } from '@gabby/types/liveSessionRoom';
 
