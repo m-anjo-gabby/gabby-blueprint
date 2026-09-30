@@ -1,5 +1,6 @@
 import { CountBadge, ShellPageHeader } from '@/components/shell/ShellPage';
 import { Skeleton } from '@/components/ui/skeleton';
+import { RouteSkeleton } from '@/components/shell/RouteLoading';
 
 const SKELETON_COUNT = 4;
 
@@ -35,5 +36,15 @@ export function NoticeListSkeleton() {
         <NoticeCardSkeleton key={i} />
       ))}
     </div>
+  );
+}
+
+/** 画面遷移中の骨組み（loading.tsx・ShellRouteSkeleton 用） */
+export function NoticeRouteSkeleton() {
+  return (
+    <RouteSkeleton>
+      <NoticePageHeader count={null} />
+      <NoticeListSkeleton />
+    </RouteSkeleton>
   );
 }

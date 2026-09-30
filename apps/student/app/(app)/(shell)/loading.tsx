@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/shell/RouteLoading';
+import { ShellRouteSkeleton } from '@/components/shell/ShellRouteSkeleton';
 
 export default function Loading() {
-  return <RouteLoading frame="medium" />;
+  return <ShellRouteSkeleton />;
 }

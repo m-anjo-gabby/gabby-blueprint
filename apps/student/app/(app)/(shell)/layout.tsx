@@ -1,8 +1,5 @@
 // apps/student/app/(app)/(shell)/layout.tsx
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getMyLiveSessionTickets } from '@/actions/matchingAction';
 import { AppShell } from '@/components/shell/AppShell';
-import type { ShellNavContext } from '@/constants/navigation';
 
 /**
  * アプリシェル レイアウト（常設ナビゲーション層）
@@ -13,16 +10,10 @@ import type { ShellNavContext } from '@/constants/navigation';
  * - (app) 直下（training / live-room/[sessionId] 等）: 没入（フォーカス）画面。
  *   ナビを出さず、学習・セッションに集中させる。
  *
- * タブの表示可否はサーバー側で解決し、クライアントでのちらつき（後から出現）を防ぐ。
+ * タブの表示可否は (app)/layout.tsx でサーバー側で解決して ShellNavProvider で渡し、クライアントでのちらつき
+ * （後から出現）を防ぐ。ここでは待たずに描くため、ページを直接開いた直後も (app)/loading.tsx の
+ * シェル付きの骨組みから同じナビのまま本番へ切り替わる。
  */
-export default async function ShellLayout({ children }: { children: React.ReactNode }) {
-  const [user, tickets] = await Promise.all([getAuthUser(), getMyLiveSessionTickets()]);
-
-  const roles = (user?.app_metadata?.roles as string[] | undefined) ?? [];
-  const navContext: ShellNavContext = {
-    hasLiveSession: tickets.length > 0,
-    isMonitor: roles.includes('monitor'),
-  };
-
-  return <AppShell navContext={navContext}>{children}</AppShell>;
+export default function ShellLayout({ children }: { children: React.ReactNode }) {
+  return <AppShell>{children}</AppShell>;
 }

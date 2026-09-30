@@ -88,3 +88,18 @@ const MOBILE_FOCUS_PATH_PATTERNS: RegExp[] = [/^\/chat\/[^/]+/];
 
 export const isMobileFocusPath = (pathname: string): boolean =>
   MOBILE_FOCUS_PATH_PATTERNS.some((pattern) => pattern.test(pathname));
+
+/**
+ * シェルの外に置く没入画面（ドリル実施・結果、ライブ通話）のパス。
+ * app/(app) 直下の没入画面のルートと一致させる（(shell) 配下の同じ接頭辞の画面と区別するため個別に判定する）。
+ * ページを直接開いた直後の (app)/loading.tsx が、没入画面ならスピナー、シェルの画面ならシェル付きの骨組みを出し分けるのに使う。
+ */
+const IMMERSIVE_PATH_PATTERNS: RegExp[] = [
+  /^\/live-room\/(?!sessions\/)[^/]+$/,
+  /^\/training\/sprint\/play(\/|$)/,
+  /^\/training\/sprint\/result\/[^/]+$/,
+  /^\/training\/word\/(?!history(\/|$))[^/]+$/,
+];
+
+export const isImmersivePath = (pathname: string): boolean =>
+  IMMERSIVE_PATH_PATTERNS.some((pattern) => pattern.test(pathname));

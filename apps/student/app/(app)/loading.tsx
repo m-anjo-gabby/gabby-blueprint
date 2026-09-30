@@ -1,5 +1,5 @@
-import { ImmersiveLoading } from '@/components/shell/RouteLoading';
+import { AppRouteLoading } from '@/components/shell/ShellRouteSkeleton';
 
 export default function Loading() {
-  return <ImmersiveLoading />;
+  return <AppRouteLoading />;
 }

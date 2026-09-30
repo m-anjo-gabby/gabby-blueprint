@@ -1,11 +1,5 @@
-import { RouteSkeleton } from '@/components/shell/RouteLoading';
-import { NoticeListSkeleton, NoticePageHeader } from './_components/NoticeSkeleton';
+import { NoticeRouteSkeleton } from './_components/NoticeSkeleton';
 
 export default function Loading() {
-  return (
-    <RouteSkeleton>
-      <NoticePageHeader count={null} />
-      <NoticeListSkeleton />
-    </RouteSkeleton>
-  );
+  return <NoticeRouteSkeleton />;
 }

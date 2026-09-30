@@ -65,7 +65,11 @@ interface ContentFrameProps {
   fill?: boolean;
 }
 
-/** アプリシェル内の画面の共通枠（スクロールはシェルの <main> に任せる） */
+/**
+ * アプリシェル内の画面の共通枠（スクロールはシェルの <main> に任せる）。
+ * 表示時のアニメーション（フェード・スライド）は付けない。読み込み中の骨組み（外側の loading.tsx）の枠から
+ * 画面の layout.tsx の枠へ置き換わるたびに再生され、骨組み→本番の切り替えがちらついて見えるため。
+ */
 export function ContentFrame({ children, width = 'narrow', fill = false }: ContentFrameProps) {
   if (fill) {
     return (
@@ -76,7 +80,7 @@ export function ContentFrame({ children, width = 'narrow', fill = false }: Conte
   }
   return (
     <div className="flex justify-center px-4 sm:px-6 py-4 sm:py-8">
-      <div className={cn('relative w-full animate-in fade-in slide-in-from-bottom-2 duration-700', CONTENT_WIDTH_CLASS[width])}>
+      <div className={cn('relative w-full', CONTENT_WIDTH_CLASS[width])}>
         {children}
       </div>
     </div>

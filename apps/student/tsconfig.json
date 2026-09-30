@@ -23,10 +23,18 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
-      "@gabby/lib": ["../../packages/lib/index.ts"],
-      "@gabby/lib/*": ["../../packages/lib/*"],
-      "@gabby/types/*": ["../../packages/types/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@gabby/lib": [
+        "../../packages/lib/index.ts"
+      ],
+      "@gabby/lib/*": [
+        "../../packages/lib/*"
+      ],
+      "@gabby/types/*": [
+        "../../packages/types/*"
+      ]
     }
   },
   "include": [
@@ -35,7 +43,9 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "../../packages/types/*.d.ts"
+    "../../packages/types/*.d.ts",
+    ".next-measure/types/**/*.ts",
+    ".next-measure/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

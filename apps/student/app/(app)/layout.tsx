@@ -1,5 +1,4 @@
 // app/(app)/layout.tsx
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
 import ToastContainer from '@gabby/lib/components/common/ToastContainer';
@@ -10,6 +9,9 @@ import ScrollRestorer from '@/components/common/ScrollRestorer';
 import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
 import { PopupHost } from '@/components/popups/PopupHost';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getMyLiveSessionTickets } from '@/actions/matchingAction';
+import { ShellNavProvider } from '@/components/shell/ShellNavContext';
+import type { ShellNavContext } from '@/constants/navigation';
 
 /**
  * 生徒用 統合アプリケーションレイアウト
@@ -25,7 +27,6 @@ export default async function StudentAppLayout({
   children: React.ReactNode;
 }) {
   // --- 1. 認証チェック ---
-  const supabase = await createServerClient();
   const user = await getAuthUser();
 
   if (!user) {
@@ -39,7 +40,10 @@ export default async function StudentAppLayout({
   // --- 2. 規約同意チェック ---
   // ログイン後の全ページで共通して、最新規約への同意状況を確認します。
   // 未同意がある場合は TermsAgreementModal が表示され、操作をロックします。
-  const pendingTerms = await checkPendingAgreements(user.id);
+  // 規約の同意状況と、シェルのナビ項目の表示可否（ライブセッション付き契約の有無）を並列に取得する
+  const [pendingTerms, tickets] = await Promise.all([checkPendingAgreements(user.id), getMyLiveSessionTickets()]);
+  const roles = (user.app_metadata?.roles as string[] | undefined) ?? [];
+  const navContext: ShellNavContext = { hasLiveSession: tickets.length > 0, isMonitor: roles.includes('monitor') };
 
   // 💡 user_type/ライセンスに基づく詳細なアクセス制御は apps/student/proxy.ts (Middleware) で
   // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
@@ -56,7 +60,7 @@ export default async function StudentAppLayout({
       <ColorVowelLookupProvider>
         {/* デザイン基盤: 全体共通の背景色やフォントを適用 */}
         <div className="min-h-screen bg-canvas text-ink">
-          {children}
+          <ShellNavProvider value={navContext}>{children}</ShellNavProvider>
         </div>
       </ColorVowelLookupProvider>
 

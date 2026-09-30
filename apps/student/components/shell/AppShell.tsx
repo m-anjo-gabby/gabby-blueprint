@@ -3,13 +3,13 @@
 import { usePathname } from 'next/navigation';
 import Header from '@/components/common/Header';
 import { cn } from '@/lib/utils';
-import { getVisibleNavItems, isMobileFocusPath, type ShellNavContext } from '@/constants/navigation';
+import { getVisibleNavItems, isMobileFocusPath } from '@/constants/navigation';
+import { useShellNavContext } from './ShellNavContext';
 import { SideNav } from './SideNav';
 import { BottomTabBar } from './BottomTabBar';
 import { useShellNavBadges } from './useShellNavBadges';
 
 interface AppShellProps {
-  navContext: ShellNavContext;
   children: React.ReactNode;
 }
 
@@ -17,9 +17,11 @@ interface AppShellProps {
  * 常設ナビゲーション付きのアプリ枠。
  * PC(md以上)は左サイドバー、モバイルはボトムタブを表示し、どちらも同じ項目定義を使う。
  * スクロールは <main> 内で完結させ、タブバー・ヘッダーは常に画面内に固定する。
+ * ナビ項目の表示可否は (app)/layout.tsx から ShellNavProvider で受け取る。
  */
-export function AppShell({ navContext, children }: AppShellProps) {
+export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const navContext = useShellNavContext();
   const items = getVisibleNavItems(navContext);
   const badges = useShellNavBadges(navContext, pathname);
   // チャットルーム等の作業画面では、モバイルのヘッダー・ボトムタブを隠して縦幅を作業領域に回す
