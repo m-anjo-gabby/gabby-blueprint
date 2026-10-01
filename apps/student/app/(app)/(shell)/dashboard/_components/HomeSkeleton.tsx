@@ -1,11 +1,15 @@
+'use client';
+
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { useShellNavContext } from '@/components/shell/ShellNavContext';
 import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { WEEKDAY_LABELS } from '../_lib/weeklyActivity';
 import { HOME_LAYOUT, HeroBackdrop, HomeCard } from './HomeCard';
 import { LIFETIME_ITEMS, LIFETIME_LAYOUT, LifetimeBlock } from './LifetimeStatsCard';
-import { TrainingMenuCard } from './TrainingMenuCard';
+import { LiveSessionCardSkeleton } from './LiveSessionCard';
+import { PlanCardSkeleton } from './PlanCard';
 
 /*
  * ホーム画面の骨組み。各カードの見出し・曜日などデータに依存しない部分は本物を描き、数値や文言だけを骨組みにする。
@@ -115,10 +119,11 @@ export function LifetimeStatsCardSkeleton({ className }: { className?: string })
 
 /**
  * ホーム画面の読み込み中表示（loading.tsx 用）。
- * 次回のセッションの有無はデータが届くまで分からないため、最も多い「次回のセッションなし」の並び
- * （1行目: 今日やること＋今週 / 2行目: 歩み2列分＋メニュー）で描く。
+ * 1行目: 今日やること＋今週 / 2行目: ライブセッション（ライブセッション付きの契約がある場合だけ） / 3行目: 歩み2列分＋ご契約プラン。
+ * ライブセッションの有無はシェルのナビと同じ判定（ShellNavProvider）で、外側の読み込み中から本番と同じ並びにする。
  */
 export function HomeSkeleton() {
+  const { hasLiveSession } = useShellNavContext();
   return (
     <RouteSkeleton className={HOME_LAYOUT.page}>
       <HomeHeaderSkeleton />
@@ -127,8 +132,13 @@ export function HomeSkeleton() {
           <TodayFocusCardSkeleton />
         </div>
         <WeeklyActivityCardSkeleton />
-        <LifetimeStatsCardSkeleton className="lg:col-span-2" />
-        <TrainingMenuCard />
+        {hasLiveSession && (
+          <div className={HOME_LAYOUT.fullRow}>
+            <LiveSessionCardSkeleton />
+          </div>
+        )}
+        <LifetimeStatsCardSkeleton className={HOME_LAYOUT.wide} />
+        <PlanCardSkeleton hasLiveSession={hasLiveSession} />
       </div>
     </RouteSkeleton>
   );

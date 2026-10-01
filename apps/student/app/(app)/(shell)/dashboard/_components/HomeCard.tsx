@@ -22,6 +22,10 @@ export const HOME_LAYOUT = {
   grid: 'grid grid-cols-1 gap-4 lg:grid-cols-3',
   /** 主役カード「今日やること」の区画 */
   focus: 'lg:col-span-2',
+  /** 2列分のカード（ご契約プランと並ぶ「これまでの歩み」） */
+  wide: 'lg:col-span-2',
+  /** 1行を占めるカード（ライブセッション、ご契約プランが無い場合の「これまでの歩み」） */
+  fullRow: 'lg:col-span-3',
 } as const;
 
 /** ホーム画面の各カードの共通枠（見出し＋本文）。グリッドの行の高さに合わせて伸びる */

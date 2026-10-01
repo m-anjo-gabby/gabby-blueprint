@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 import { ContentFrame, type ContentWidth } from './PageFrames';
 import { AppShell } from './AppShell';
 import { ImmersiveLoading, RouteLoading } from './RouteLoading';
-import { isImmersivePath } from '@/constants/navigation';
+import { isImmersivePath, isTrainingSectionPath } from '@/constants/navigation';
+import { TrainingSectionNav } from './TrainingSectionNav';
 import { SHELL_CONTENT_WIDTH } from '@/constants/shellLayout';
 import { HomeSkeleton } from '@/app/(app)/(shell)/dashboard/_components/HomeSkeleton';
 import { LibrarySkeleton } from '@/app/(app)/(shell)/library/_components/LibrarySkeleton';
@@ -66,7 +67,8 @@ function resolveShellSkeleton(pathname: string): { width: ContentWidth; skeleton
  * 画面を追加したら resolveShellSkeleton にも加える。
  */
 export function ShellRouteSkeleton() {
-  const resolved = resolveShellSkeleton(usePathname());
+  const pathname = usePathname();
+  const resolved = resolveShellSkeleton(pathname);
   if (resolved === 'chat') {
     return (
       <ContentFrame width="full" fill>
@@ -75,7 +77,12 @@ export function ShellRouteSkeleton() {
     );
   }
   if (!resolved) return <RouteLoading frame="medium" />;
-  return <ContentFrame width={resolved.width}>{resolved.skeleton}</ContentFrame>;
+  return (
+    <ContentFrame width={resolved.width}>
+      {isTrainingSectionPath(pathname) && <TrainingSectionNav />}
+      {resolved.skeleton}
+    </ContentFrame>
+  );
 }
 
 /**

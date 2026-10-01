@@ -16,7 +16,7 @@ import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton }
 import { replaceSearchParams } from './favoriteUrl';
 
 /** 画面の見出し（読み込み中の FavoritesSkeleton と共有する） */
-export const FAVORITES_HEADER = { title: 'お気に入り', back: { history: '/dashboard' } } as const;
+export const FAVORITES_HEADER = { title: 'お気に入り' } as const;
 
 /** 一覧のグリッド（読み込み中の FavoritesSkeleton と共有する） */
 export const getFavoriteGridClass = (columns: 1 | 2) => cn('grid gap-4', columns === 2 && 'lg:grid-cols-2');

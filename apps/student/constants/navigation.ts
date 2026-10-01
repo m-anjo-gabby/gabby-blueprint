@@ -79,6 +79,19 @@ export const SHELL_NAV_ITEMS: ShellNavItem[] = [
   },
 ];
 
+/**
+ * トレーニングタブの中の切り替え（教材・お気に入り・トレーニング記録）。
+ * タブの遷移先（教材）以外の画面にもホームを経由せず行き来できるよう、3画面の上部に共通で表示する。
+ */
+export const TRAINING_SECTION_ITEMS = [
+  { href: '/library', label: '教材' },
+  { href: '/favorites', label: 'お気に入り' },
+  { href: '/training/performance', label: 'トレーニング記録' },
+] as const;
+
+export const isTrainingSectionPath = (pathname: string): boolean =>
+  TRAINING_SECTION_ITEMS.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`));
+
 export const getVisibleNavItems = (ctx: ShellNavContext): ShellNavItem[] =>
   SHELL_NAV_ITEMS.filter((item) => item.isVisible(ctx));
 

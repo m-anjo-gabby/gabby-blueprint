@@ -4,16 +4,11 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
 import { getResumePath } from '@gabby/lib/navigation/student-path';
-import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
-import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { cn } from '@/lib/utils';
 import type { TodayFocus } from '../_lib/todayFocus';
 import { HeroBackdrop, ProgressBar } from './HomeCard';
 
 interface TodayFocusCardProps {
   focus: TodayFocus;
-  nowMs: number;
-  timezone: string;
   /** 再開情報（ブックマーク）の削除。主役が「続きから」の時だけ使う */
   onClearResume?: () => void;
 }
@@ -23,36 +18,12 @@ interface FocusView {
   title: string;
   description?: string;
   progressPercent?: number;
-  note?: string;
   primary: { label: string; href: string };
   secondary?: { label: string; href: string };
 }
 
-const EARLY_JOIN_MINUTES = Math.round(LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000);
-
-const formatTime = (iso: string, timeZone: string) =>
-  new Intl.DateTimeFormat('ja-JP', { timeZone, hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
-
-/** 開始日時を「今日 20:00〜20:30」のように表す（表示対象は24時間以内のため今日/明日のみ） */
-const formatSessionTime = (startIso: string, endIso: string, nowMs: number, timeZone: string) => {
-  const dayLabel = toIsoDateInZone(startIso, timeZone) === toIsoDateInZone(nowMs, timeZone) ? '今日' : '明日';
-  return `${dayLabel} ${formatTime(startIso, timeZone)}〜${formatTime(endIso, timeZone)}`;
-};
-
-function toFocusView(focus: TodayFocus, nowMs: number, timeZone: string): FocusView {
+function toFocusView(focus: TodayFocus): FocusView {
   switch (focus.kind) {
-    case 'session': {
-      const { session, canJoin } = focus;
-      return {
-        eyebrow: canJoin ? 'ライブセッションの時間です' : 'まもなくライブセッション',
-        title: `${session.counterpart_name} コーチとのセッション`,
-        description: formatSessionTime(session.start_datetime, session.end_datetime, nowMs, timeZone),
-        note: canJoin ? undefined : `開始${EARLY_JOIN_MINUTES}分前から入室できます`,
-        primary: canJoin
-          ? { label: '入室する', href: `/live-room/${session.session_id}` }
-          : { label: '予定を確認する', href: '/live-room' },
-      };
-    }
     case 'assignment': {
       const { assignment } = focus;
       return {
@@ -90,10 +61,10 @@ function toFocusView(focus: TodayFocus, nowMs: number, timeZone: string): FocusV
 
 /**
  * ホームの主役カード「今日やること」。
- * 状況に応じた行動を1つだけ提示し、ブランドのグラデーション面で特別感を出す。
+ * 自主トレーニングで次に取り組むことを1つだけ提示し、ブランドのグラデーション面で特別感を出す。
  */
-export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayFocusCardProps) {
-  const view = toFocusView(focus, nowMs, timezone);
+export function TodayFocusCard({ focus, onClearResume }: TodayFocusCardProps) {
+  const view = toFocusView(focus);
 
   return (
     <section className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 text-white shadow-md shadow-brand/15">
@@ -128,7 +99,6 @@ export function TodayFocusCard({ focus, nowMs, timezone, onClearResume }: TodayF
             {view.secondary.label}
           </Link>
         )}
-        {view.note && <p className={cn('text-xs text-white/75', !view.secondary && 'sm:ml-1')}>{view.note}</p>}
         {focus.kind === 'resume' && onClearResume && (
           <button
             type="button"

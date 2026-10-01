@@ -1,6 +1,9 @@
 import { MessagesSquare, UserRound, Video, type LucideIcon } from 'lucide-react';
 import { SUPPORT_EMAIL, buildSupportMailto } from '@gabby/lib/contact';
 
+/** コーポレートサイトの料金ページ（個人向け）。ライブセッションの紹介と、ホームの契約終了の案内で使う */
+export const PRICE_PAGE_URL = 'https://gabbyacademy.com/price';
+
 /**
  * ライブセッション紹介（アップセル）画面の表示内容。
  * ライブセッション付き契約を持たない利用者が「ライブセッション」タブを開いた際に表示する。
@@ -104,7 +107,7 @@ export const LIVE_SESSION_INTRO: LiveSessionIntroContent = {
         {
           // コーポレートサイトの料金ページは個人向けのため、対象を明示する
           label: '個人向けプラン・料金を見る',
-          href: 'https://gabbyacademy.com/price',
+          href: PRICE_PAGE_URL,
           external: true,
           variant: 'primary',
         },
