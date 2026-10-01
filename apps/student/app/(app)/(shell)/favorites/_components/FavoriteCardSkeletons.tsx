@@ -3,7 +3,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 /*
  * お気に入りの種別ごとのカードの骨組み（FAVORITE_KINDS の renderSkeleton から使う）。
  * 各カードと同じ枠・余白・行の高さで描く。カードの構成を変えたら合わせて直す。
- * 教材のカードは教材一覧と共通のため ContentCardSkeleton を使う。
  */
 
 /** 出典の行（text-xs）と削除ボタンの骨組み（フレーズ・スプリント問題で共通） */

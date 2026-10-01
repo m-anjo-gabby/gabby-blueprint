@@ -10,7 +10,7 @@ import { PillTabs } from '@/components/shell/PillTabs';
 import { Button } from '@/components/ui/button';
 import { FavoriteKindSection } from './FavoriteKindSection';
 import { FavoriteAudioProvider } from './FavoriteAudioProvider';
-import { replaceSearchParams } from './favoriteUrl';
+import { replaceSearchParams } from '@/lib/replaceSearchParams';
 import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
 import {
   FAVORITE_KINDS,

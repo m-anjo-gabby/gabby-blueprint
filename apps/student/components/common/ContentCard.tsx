@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, ArrowRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Star, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { ContentItem } from "@gabby/types/content";
 import { motion } from "framer-motion";
 import { getContentTypeConfig, getCefrStyle } from "@gabby/lib/content/ui";
@@ -14,14 +14,12 @@ interface ContentCardProps {
   content: ContentItem;
   onToggleFavorite: (id: string, current: boolean) => void;
   onStart: (content: ContentItem) => void; // 🔄 常に新規のため第2引数のフラグは不要に
-  actionMode?: 'dashboard' | 'library' | 'favorite';
 }
 
 export const ContentCard = ({ 
   content, 
   onToggleFavorite, 
   onStart,
-  actionMode = 'library'
 }: ContentCardProps) => {
   const clampLines = 3; 
 
@@ -84,21 +82,15 @@ export const ContentCard = ({
               e.stopPropagation();
               onToggleFavorite(content.content_id, content.is_favorite || false);
             }}
-            aria-label={actionMode === 'favorite' ? 'お気に入りから削除' : content.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+            aria-label={content.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
             className={cn(
               "shrink-0 rounded-full p-2 transition-all active:scale-75",
-              actionMode === 'favorite'
-                ? "text-ink-subtle hover:bg-rose-50 hover:text-rose-500"
-                : content.is_favorite
-                  ? "bg-amber-50 text-amber-500"
-                  : "text-ink-subtle hover:bg-canvas"
+              content.is_favorite
+                ? "bg-amber-50 text-amber-500"
+                : "text-ink-subtle hover:bg-canvas"
             )}
           >
-            {actionMode === 'favorite' ? (
-              <Trash2 size={18} />
-            ) : (
-              <Star size={18} fill={content.is_favorite ? "currentColor" : "none"} />
-            )}
+            <Star size={18} fill={content.is_favorite ? "currentColor" : "none"} />
           </button>
         </div>
 

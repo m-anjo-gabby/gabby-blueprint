@@ -13,7 +13,7 @@ import { FAVORITE_LIMIT } from '@/constants/favorites';
 import type { FavoriteKindDef } from './favoriteKinds';
 import { ALL_OPTION, getDownstreamFilterIds, resolveFavoriteFilters } from './favoriteFilters';
 import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton } from './FavoriteFilterControls';
-import { replaceSearchParams } from './favoriteUrl';
+import { replaceSearchParams } from '@/lib/replaceSearchParams';
 
 /** 画面の見出し（読み込み中の FavoritesSkeleton と共有する） */
 export const FAVORITES_HEADER = { title: 'お気に入り', titleHidden: true } as const;

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, X, BookOpen } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Search, X, BookOpen, Star } from 'lucide-react';
 import { ShellPageHeader, CountBadge } from '@/components/shell/ShellPage';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -11,6 +11,7 @@ import { ContentCard } from '@/components/common/ContentCard';
 import { PillTabs } from '@/components/shell/PillTabs';
 import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
+import { FavoriteOnlyToggle } from './FavoriteOnlyToggle';
 
 // Actions & Hooks
 import { toggleContentFavorite } from '@/actions/contentAction';
@@ -20,10 +21,15 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
 import { getTrainingPath } from '@gabby/lib/navigation/student-path';
+import { replaceSearchParams } from '@/lib/replaceSearchParams';
 import { buildTypeTabs } from '../_lib/typeTabs';
 
 /** 種別タブと件数の行（読み込み中の LibrarySkeleton と共有する） */
 export const LIBRARY_FILTER_ROW_CLASS = 'flex items-center gap-3';
+
+/** 「お気に入りだけ表示」の URL のクエリ（ホーム等から絞り込んだ状態で開けるよう、URL で持つ） */
+export const FAVORITE_ONLY_PARAM = 'favorite';
+export const isFavoriteOnly = (params: { get(name: string): string | null }) => params.get(FAVORITE_ONLY_PARAM) === '1';
 
 interface LibraryViewProps {
   /** サーバーで取得した教材一覧（開くたびに取得するため、他画面での変更や管理側の更新も反映される） */
@@ -33,11 +39,13 @@ interface LibraryViewProps {
 }
 
 /**
- * 教材一覧の本体（検索・種別の絞り込み・お気に入りの切り替え）。
+ * 教材一覧の本体（検索・種別・お気に入りの絞り込み、お気に入りの切り替え）。
+ * お気に入りの教材は専用の画面を持たず、ここで「お気に入り」の絞り込みとして表示する。
  * データは page.tsx がサーバーで取得して渡し、画面内の変更（☆）はこの画面の状態だけを書き換える。
  */
 export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const [allContents, setAllContents] = useServerSyncedState(initialContents);
   // 「戻る・進む」等でキャッシュ済みの画面が再利用された場合は、最新のデータに取り直す
@@ -51,18 +59,31 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
   const [selectedType, setSelectedType] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('All');
+  // 検索・種別と違いURLで持つ（トレーニングから戻った時も残し、ホーム等から絞り込んだ状態で開けるようにする）
+  const favoriteOnly = isFavoriteOnly(searchParams);
+  const setFavoriteOnly = (next: boolean) => {
+    replaceSearchParams(searchParams, (params) => {
+      if (next) params.set(FAVORITE_ONLY_PARAM, '1');
+      else params.delete(FAVORITE_ONLY_PARAM);
+    });
+  };
 
-  const typeTabs = useMemo(() => buildTypeTabs(allContents), [allContents]);
+  // 種別タブの件数は、お気に入りで絞り込み中はお気に入りの中での件数にする
+  const scopedContents = useMemo(
+    () => (favoriteOnly ? allContents.filter((c) => c.is_favorite) : allContents),
+    [allContents, favoriteOnly]
+  );
+  const typeTabs = useMemo(() => buildTypeTabs(scopedContents), [scopedContents]);
 
   // --- Logic: フィルタリングロジック ---
   const filteredList = useMemo(() => {
-    return allContents.filter(c => {
+    return scopedContents.filter(c => {
       const matchesSearch = c.content_name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesType = selectedType === 'All' || String(c.content_type) === selectedType;
       const matchesTag = selectedTag === 'All' || c.display_tags.some(t => t.tag_name === selectedTag);
       return matchesSearch && matchesType && matchesTag;
     });
-  }, [allContents, searchQuery, selectedType, selectedTag]);
+  }, [scopedContents, searchQuery, selectedType, selectedTag]);
 
   /**
    * お気に入り切り替えハンドラー（楽観的に☆を切り替え、失敗したら戻す）。
@@ -111,11 +132,13 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
               className="pl-11 h-12 bg-surface border-line shadow-none rounded-control text-base sm:text-sm focus-visible:ring-brand/15 focus-visible:border-brand-200 transition-all"
             />
           </div>
-          {(searchQuery || selectedType !== 'All' || selectedTag !== 'All') && (
+          <FavoriteOnlyToggle pressed={favoriteOnly} onPressedChange={setFavoriteOnly} />
+          {(searchQuery || selectedType !== 'All' || selectedTag !== 'All' || favoriteOnly) && (
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => { setSearchQuery(''); setSelectedType('All'); setSelectedTag('All'); }} 
+              aria-label="条件をクリア"
+              onClick={() => { setSearchQuery(''); setSelectedType('All'); setSelectedTag('All'); setFavoriteOnly(false); }} 
               className="rounded-control text-ink-muted hover:bg-surface hover:text-ink"
             >
               <X size={20} />
@@ -153,7 +176,6 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
                     content={content}
                     onToggleFavorite={handleToggleFavorite}
                     onStart={(c) => router.push(getTrainingPath(c))}
-                    actionMode='library'
                   />
                 </motion.div>
               ))}
@@ -164,10 +186,31 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-32 text-ink-subtle space-y-4"
             >
-              <div className="p-6 bg-surface rounded-full border border-line">
-                <BookOpen size={48} strokeWidth={1} className="text-ink-subtle" />
-              </div>
-              <p className="text-sm font-semibold text-ink-muted">条件に合う教材が見つかりません</p>
+              {favoriteOnly && scopedContents.length === 0 ? (
+                <>
+                  <div className="p-6 bg-surface rounded-full border border-line">
+                    <Star size={48} strokeWidth={1} className="text-ink-subtle" />
+                  </div>
+                  <div className="space-y-1 text-center">
+                    <p className="text-sm font-semibold text-ink-muted">お気に入りの教材はまだありません</p>
+                    <p className="text-sm text-ink-muted">教材カードの☆から登録できます</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setFavoriteOnly(false)}
+                    className="h-10 rounded-control text-sm font-semibold text-brand hover:bg-brand-soft"
+                  >
+                    すべての教材を見る
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="p-6 bg-surface rounded-full border border-line">
+                    <BookOpen size={48} strokeWidth={1} className="text-ink-subtle" />
+                  </div>
+                  <p className="text-sm font-semibold text-ink-muted">条件に合う教材が見つかりません</p>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

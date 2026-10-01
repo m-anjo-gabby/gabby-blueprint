@@ -159,9 +159,6 @@ export interface ContentItem extends Omit<ContentRecord, 'metadata'> {
   assignment_id?: string;
 }
 
-// お気に入りリスト用も共通の型を使用（一貫性を保つため）
-export type FavoriteContentItem = ContentItem;
-
 /**
  * ライブラリ画面のタブ定義を CONTENT_TYPES から動的に生成
  * Object.values を使うことで、定義が増えても自動で反映

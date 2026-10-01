@@ -1,17 +1,12 @@
 import type { ReactNode } from 'react';
-import { BookOpen, MessageSquareQuote, Zap, type LucideIcon } from 'lucide-react';
-import type { FavoriteContentItem } from '@gabby/types/content';
+import { MessageSquareQuote, Zap, type LucideIcon } from 'lucide-react';
 import type { FavoritePhraseItem } from '@gabby/types/word';
 import { QUESTION_TYPES, type FavoriteSprintQuestionItem, type SprintQuestionType } from '@gabby/types/sprint';
-import { getContentTypeConfig } from '@gabby/lib/content/ui';
 import { formatSprintLevelLabel } from '@gabby/lib';
-import { toggleContentFavorite } from '@/actions/contentAction';
 import { toggleFavorite } from '@/actions/wordAction';
 import { toggleSprintQuestionFavorite } from '@/actions/sprintFavoriteAction';
 import type { FavoriteToggleResult } from '@/constants/favorites';
-import { ContentCardSkeleton } from '@/components/common/ContentCardSkeleton';
 import type { PillTabItem } from '@/components/shell/PillTabs';
-import { ContentFavoriteCard } from './ContentFavoriteCard';
 import { PhraseFavoriteCardSkeleton, SprintQuestionFavoriteCardSkeleton } from './FavoriteCardSkeletons';
 import { PhraseFavoriteCard } from './PhraseFavoriteCard';
 import { SprintQuestionFavoriteCard } from './SprintQuestionFavoriteCard';
@@ -21,9 +16,10 @@ import type { FavoriteFilterDef } from './favoriteFilters';
  * お気に入りの種別ごとの項目の型。
  * 種別を追加するときは、ここに1行足し、FAVORITE_KINDS に定義を、page.tsx に取得処理を加える
  * （足りない箇所は型エラーで分かる）。
+ * 教材のお気に入りはこの画面では扱わない（教材一覧の「お気に入り」の絞り込みで表示する）。
+ * ここに並ぶのは、教材の中の一部分を音声で聞き直して復習するもの。
  */
 export interface FavoriteItemMap {
-  contents: FavoriteContentItem;
   phrases: FavoritePhraseItem;
   sprintQuestions: FavoriteSprintQuestionItem;
 }
@@ -73,29 +69,6 @@ function contentFilter<T>(getContent: (item: T) => { id: string; name: string } 
 }
 
 export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteItemMap[K]> } = {
-  contents: {
-    label: '教材',
-    icon: BookOpen,
-    noun: '教材',
-    searchPlaceholder: '教材名で検索',
-    emptyHint: '教材一覧のカードの☆から登録できます',
-    emptyAction: { label: '教材一覧を見る', href: '/library' },
-    columns: 2,
-    getKey: (c) => c.content_id,
-    getSearchText: (c) => c.content_name,
-    filters: [
-      {
-        id: 'type',
-        label: '種別',
-        allLabel: 'すべての種別',
-        getOption: (c) => ({ id: String(c.content_type), label: getContentTypeConfig(c.content_type).label, order: c.content_type }),
-      },
-    ],
-    remove: (c) => toggleContentFavorite(c.content_id, false),
-    renderItem: (c, onRemove) => <ContentFavoriteCard content={c} onRemove={onRemove} />,
-    renderSkeleton: () => <ContentCardSkeleton />,
-    skeletonCount: 4,
-  },
   phrases: {
     label: 'フレーズ',
     icon: MessageSquareQuote,

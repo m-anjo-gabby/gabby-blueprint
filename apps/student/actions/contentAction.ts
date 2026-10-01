@@ -1,7 +1,7 @@
 "use server";
 
 import { createServerClient } from "@gabby/lib/supabase/server";
-import { ContentItem, ContentRecord, ContentTagSummary, FavoriteContentItem } from "@gabby/types/content";
+import { ContentItem, ContentRecord, ContentTagSummary } from "@gabby/types/content";
 import { ResumeContentResponse, ResumeMetadata } from "@gabby/types/training";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
@@ -89,14 +89,6 @@ export async function getAllContent(): Promise<ContentItem[]> {
     logger.error("content:get_all_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
     return [];
   }
-}
-
-// お気に入りコンテンツを取得
-// 教材一覧と同じ取得処理（アクセス権・ダイアログの割当判定）を通したうえでお気に入りだけを返す。
-// お気に入りテーブルから直接引くと、割当の外れたダイアログや assignment_id の無い行が混ざるため
-export async function getFavoriteContents(): Promise<FavoriteContentItem[]> {
-  const contents = await getAllContent();
-  return contents.filter((c) => c.is_favorite);
 }
 
 /**
