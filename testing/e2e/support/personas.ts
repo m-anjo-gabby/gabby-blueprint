@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * E2Eで使う固定アカウント（testing/FIXTURES.md「固定アカウント一覧」の一部）。
+ * E2Eで使う固定アカウント（testing/FIXTURES.md「状態ペルソナ一覧」の一部）。
  * 固定アカウントは閲覧系のテストにのみ使う（e2e/CONVENTIONS.md 3章）。
  */
 export const PERSONAS = {
