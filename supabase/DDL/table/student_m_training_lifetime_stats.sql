@@ -11,6 +11,7 @@ CREATE TABLE public.student_m_training_lifetime_stats (
   user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE PRIMARY KEY,
   total_active_days INT NOT NULL DEFAULT 0,
   current_streak_days INT NOT NULL DEFAULT 0,
+  first_training_date DATE,
   last_training_date DATE,
   total_words INT NOT NULL DEFAULT 0,
   total_phrases INT NOT NULL DEFAULT 0,
@@ -25,6 +26,7 @@ COMMENT ON TABLE public.student_m_training_lifetime_stats IS '学習実績サマ
 COMMENT ON COLUMN public.student_m_training_lifetime_stats.user_id IS 'ユーザーID (com_m_user.id)';
 COMMENT ON COLUMN public.student_m_training_lifetime_stats.total_active_days IS '通算学習日数（単語ドリル・スプリントいずれかを実施したユニーク日数の累計）';
 COMMENT ON COLUMN public.student_m_training_lifetime_stats.current_streak_days IS '連続学習日数（最終トレーニング日から連続して学習している日数。1日でも空くと1にリセット）';
+COMMENT ON COLUMN public.student_m_training_lifetime_stats.first_training_date IS '初回トレーニング実施日（ユーザーのタイムゾーン基準のローカル日付。生徒ホームの「これまでの歩み」の開始日）';
 COMMENT ON COLUMN public.student_m_training_lifetime_stats.last_training_date IS '最終トレーニング実施日（ユーザーのタイムゾーン基準のローカル日付）';
 COMMENT ON COLUMN public.student_m_training_lifetime_stats.total_words IS '通算学習単語数（単語ドリル）';
 COMMENT ON COLUMN public.student_m_training_lifetime_stats.total_phrases IS '通算学習フレーズ数（単語ドリル）';

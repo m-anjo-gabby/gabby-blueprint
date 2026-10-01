@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { WEEKDAY_LABELS } from '../_lib/weeklyActivity';
 import { HOME_LAYOUT, HeroBackdrop, HomeCard } from './HomeCard';
+import { LIFETIME_ITEMS, LIFETIME_LAYOUT, LifetimeBlock } from './LifetimeStatsCard';
 import { TrainingMenuCard } from './TrainingMenuCard';
 
 /*
@@ -78,15 +79,34 @@ export function WeeklyActivityCardSkeleton() {
   );
 }
 
-/** 「これまでの歩み」の骨組み（1列の時は横長3行、2列分の時は3段の3マス。各マスは節目の行を含む高さ） */
+/** 「これまでの歩み」の骨組み（項目の枠・見出しは本物、数値・節目の段階表示・案内文だけを同じ高さの骨組みにする） */
 export function LifetimeStatsCardSkeleton({ className }: { className?: string }) {
+  const { activeDays, assessments } = LIFETIME_ITEMS;
   return (
     <HomeCard title="これまでの歩み" className={className}>
       <div className="@container">
-        <div className="grid gap-2 @md:grid-cols-3">
-          {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-21.5 rounded-control @md:h-35.5" />
-          ))}
+        <div className={LIFETIME_LAYOUT.grid}>
+          <LifetimeBlock {...activeDays} className={LIFETIME_LAYOUT.main}>
+            <div className="mt-3 flex h-9 items-center">
+              <Skeleton className="h-7 w-20" />
+            </div>
+            <Skeleton className="mt-4 h-9.5 w-full" />
+            <div className="mt-3 flex h-4 items-center">
+              <Skeleton className="h-3 w-36" />
+            </div>
+          </LifetimeBlock>
+          <LifetimeBlock {...assessments} className={LIFETIME_LAYOUT.sub}>
+            <div className="mt-3 flex h-9 items-center">
+              <Skeleton className="h-7 w-20" />
+            </div>
+            <p className="text-xs text-ink-muted">{assessments.caption}</p>
+            <div className="mt-auto space-y-1.5 pt-4">
+              <Skeleton className="h-1 w-full" />
+              <div className="flex h-4 items-center">
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+          </LifetimeBlock>
         </div>
       </div>
     </HomeCard>

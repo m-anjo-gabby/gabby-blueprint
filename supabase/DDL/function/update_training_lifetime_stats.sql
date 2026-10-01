@@ -18,12 +18,12 @@ CREATE OR REPLACE FUNCTION public.update_training_lifetime_stats(
 RETURNS VOID AS $$
 BEGIN
   INSERT INTO public.student_m_training_lifetime_stats (
-    user_id, total_active_days, current_streak_days, last_training_date,
+    user_id, total_active_days, current_streak_days, first_training_date, last_training_date,
     total_words, total_phrases, total_assessments,
     total_sprint_sessions, total_sprint_answers
   )
   VALUES (
-    p_user_id, 1, 1, p_training_date,
+    p_user_id, 1, 1, p_training_date, p_training_date,
     p_word_delta, p_phrase_delta, p_assessment_delta,
     p_sprint_session_delta, p_sprint_answer_delta
   )
@@ -45,6 +45,8 @@ BEGIN
         THEN student_m_training_lifetime_stats.current_streak_days + 1
       ELSE 1
     END,
+    -- 初回日は最も古い日付を保持する（NULLの行は LEAST が NULL を無視するため今回の日付になる）
+    first_training_date = LEAST(student_m_training_lifetime_stats.first_training_date, p_training_date),
     last_training_date = GREATEST(student_m_training_lifetime_stats.last_training_date, p_training_date),
     -- 通算カウンタ系は呼び出し順序に依存しない単純加算のため、日付の前後に関わらず常に加算する
     total_words = student_m_training_lifetime_stats.total_words + p_word_delta,

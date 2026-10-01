@@ -950,3 +950,102 @@ REVOKE EXECUTE ON FUNCTION public.get_monitor_user_list(DATE, DATE, BOOLEAN) FRO
 GRANT EXECUTE ON FUNCTION public.get_monitor_user_list(DATE, DATE, BOOLEAN) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】学習実績サマリーに初回トレーニング日を追加
+-- 追加日: 2026-10-01
+--
+-- 【内容】
+--   生徒ホームの「これまでの歩み」に学習の開始日（初回トレーニング日）を表示するため、
+--   student_m_training_lifetime_stats に first_training_date を追加する。
+--   insert_date は初期バックフィル（20260823リリース）の実行日時になっている既存ユーザーがいるため使えない。
+--   以降の更新は update_training_lifetime_stats() が担い、既存ユーザーは学習履歴の最古日で埋める。
+--   バックフィルは履歴から再計算するため、再実行しても冪等。
+--
+-- 対応ファイル: DDL/table/student_m_training_lifetime_stats.sql,
+--               DDL/function/update_training_lifetime_stats.sql
+-- =========================================================================
+
+BEGIN;
+
+ALTER TABLE public.student_m_training_lifetime_stats
+  ADD COLUMN IF NOT EXISTS first_training_date DATE;
+
+COMMENT ON COLUMN public.student_m_training_lifetime_stats.first_training_date IS '初回トレーニング実施日（ユーザーのタイムゾーン基準のローカル日付。生徒ホームの「これまでの歩み」の開始日）';
+
+CREATE OR REPLACE FUNCTION public.update_training_lifetime_stats(
+  p_user_id UUID,
+  p_training_date DATE,
+  p_word_delta INT DEFAULT 0,
+  p_phrase_delta INT DEFAULT 0,
+  p_assessment_delta INT DEFAULT 0,
+  p_sprint_session_delta INT DEFAULT 0,
+  p_sprint_answer_delta INT DEFAULT 0
+)
+RETURNS VOID AS $$
+BEGIN
+  INSERT INTO public.student_m_training_lifetime_stats (
+    user_id, total_active_days, current_streak_days, first_training_date, last_training_date,
+    total_words, total_phrases, total_assessments,
+    total_sprint_sessions, total_sprint_answers
+  )
+  VALUES (
+    p_user_id, 1, 1, p_training_date, p_training_date,
+    p_word_delta, p_phrase_delta, p_assessment_delta,
+    p_sprint_session_delta, p_sprint_answer_delta
+  )
+  ON CONFLICT (user_id) DO UPDATE SET
+    -- 日付起点の項目は、過去日付での呼び出し（クロックずれ等の異常系）を無視して安全側に倒す
+    total_active_days = CASE
+      WHEN p_training_date < student_m_training_lifetime_stats.last_training_date
+        THEN student_m_training_lifetime_stats.total_active_days
+      WHEN student_m_training_lifetime_stats.last_training_date = p_training_date
+        THEN student_m_training_lifetime_stats.total_active_days
+      ELSE student_m_training_lifetime_stats.total_active_days + 1
+    END,
+    current_streak_days = CASE
+      WHEN p_training_date < student_m_training_lifetime_stats.last_training_date
+        THEN student_m_training_lifetime_stats.current_streak_days
+      WHEN student_m_training_lifetime_stats.last_training_date = p_training_date
+        THEN student_m_training_lifetime_stats.current_streak_days
+      WHEN student_m_training_lifetime_stats.last_training_date = p_training_date - 1
+        THEN student_m_training_lifetime_stats.current_streak_days + 1
+      ELSE 1
+    END,
+    -- 初回日は最も古い日付を保持する（NULLの行は LEAST が NULL を無視するため今回の日付になる）
+    first_training_date = LEAST(student_m_training_lifetime_stats.first_training_date, p_training_date),
+    last_training_date = GREATEST(student_m_training_lifetime_stats.last_training_date, p_training_date),
+    -- 通算カウンタ系は呼び出し順序に依存しない単純加算のため、日付の前後に関わらず常に加算する
+    total_words = student_m_training_lifetime_stats.total_words + p_word_delta,
+    total_phrases = student_m_training_lifetime_stats.total_phrases + p_phrase_delta,
+    total_assessments = student_m_training_lifetime_stats.total_assessments + p_assessment_delta,
+    total_sprint_sessions = student_m_training_lifetime_stats.total_sprint_sessions + p_sprint_session_delta,
+    total_sprint_answers = student_m_training_lifetime_stats.total_sprint_answers + p_sprint_answer_delta,
+    update_date = NOW();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 呼び出し元の内部関数群からのみ呼び出される内部関数のため、
+-- authenticated を含め、外部からの直接実行権限は付与しない
+REVOKE EXECUTE ON FUNCTION public.update_training_lifetime_stats(UUID, DATE, INT, INT, INT, INT, INT) FROM PUBLIC, anon, authenticated;
+
+-- 既存ユーザーの初回トレーニング日を学習履歴（単語ドリル・スプリントドリル・スプリントセッション）の最古日で埋める
+WITH first_dates AS (
+  SELECT user_id, MIN(d) AS first_training_date
+  FROM (
+    SELECT user_id, training_date AS d FROM public.self_t_word_summary
+    UNION ALL
+    SELECT user_id, training_date AS d FROM public.self_t_sprint_summary
+    UNION ALL
+    SELECT s.user_id, (s.insert_date AT TIME ZONE COALESCE(u.timezone, 'Asia/Tokyo'))::date AS d
+    FROM public.self_t_sprint s
+    JOIN public.com_m_user u ON u.id = s.user_id
+  ) dates
+  GROUP BY user_id
+)
+UPDATE public.student_m_training_lifetime_stats ls
+SET first_training_date = fd.first_training_date
+FROM first_dates fd
+WHERE ls.user_id = fd.user_id;
+
+COMMIT;

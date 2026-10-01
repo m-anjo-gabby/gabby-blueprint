@@ -86,6 +86,8 @@ export interface TrainingLifetimeStats {
   total_active_days: number;
   /** 最終実施日時点の連続日数。表示時は last_training_date から途切れていないかを判定すること */
   current_streak_days: number;
+  /** 初回トレーニング日（利用者のタイムゾーン基準のローカル日付 YYYY-MM-DD） */
+  first_training_date: string | null;
   /** 利用者のタイムゾーン基準のローカル日付（YYYY-MM-DD） */
   last_training_date: string | null;
   total_words: number;
@@ -107,7 +109,7 @@ export async function getMyTrainingLifetimeStats(): Promise<TrainingLifetimeStat
 
     const { data, error } = await supabase
       .from('student_m_training_lifetime_stats')
-      .select('total_active_days, current_streak_days, last_training_date, total_words, total_phrases, total_assessments')
+      .select('total_active_days, current_streak_days, first_training_date, last_training_date, total_words, total_phrases, total_assessments')
       .eq('user_id', user.id)
       .maybeSingle();
 

@@ -19,7 +19,6 @@ export function getMonthKeysCoveringThisWeek(nowMs: number): string[] {
 export interface TrainingActivity {
   /** 日付文字列（利用者のローカル日付）またはタイムスタンプ */
   date: string;
-  phrases: number;
   assessments: number;
 }
 
@@ -27,11 +26,11 @@ export interface TrainingActivity {
 export function collectActivities(performances: UserTrainingPerformanceResponse[]): TrainingActivity[] {
   // RPCの戻り値で配列が欠ける場合があるため（実績画面と同様に）空配列で補う
   return performances.flatMap((p) => [
-    ...(p?.words ?? []).map((w) => ({ date: w.training_date, phrases: w.phrase_count, assessments: w.assessment_count })),
+    ...(p?.words ?? []).map((w) => ({ date: w.training_date, assessments: w.assessment_count })),
     ...(p?.sprint_sessions ?? [])
       .filter((s) => Boolean(s.insert_date))
-      .map((s) => ({ date: s.insert_date, phrases: 0, assessments: s.assessment_count || 0 })),
-    ...(p?.sprint_drills ?? []).map((d) => ({ date: d.training_date, phrases: 0, assessments: d.assessment_count })),
+      .map((s) => ({ date: s.insert_date, assessments: s.assessment_count || 0 })),
+    ...(p?.sprint_drills ?? []).map((d) => ({ date: d.training_date, assessments: d.assessment_count })),
   ]);
 }
 
@@ -46,7 +45,7 @@ export interface WeekDay {
 const toLocalIsoDate = (date: string, timeZone: string): string =>
   DATE_ONLY_PATTERN.test(date) ? date : toIsoDateInZone(date, timeZone);
 
-/** 利用者のタイムゾーンでの今週(月〜日)の各日と、実施日数・今週の発話回数・フレーズ数を算出する */
+/** 利用者のタイムゾーンでの今週(月〜日)の各日と、実施日数・今週の発話回数を算出する */
 export function buildCurrentWeek(activities: TrainingActivity[], timeZone: string, nowMs: number) {
   const localActivities = activities.map((a) => ({ ...a, isoDate: toLocalIsoDate(a.date, timeZone) }));
   const activeDates = new Set(localActivities.map((a) => a.isoDate));
@@ -70,9 +69,8 @@ export function buildCurrentWeek(activities: TrainingActivity[], timeZone: strin
   const weekEnd = days[days.length - 1].isoDate;
   const weekActivities = localActivities.filter((a) => a.isoDate >= weekStart && a.isoDate <= weekEnd);
   const assessmentCount = weekActivities.reduce((sum, a) => sum + a.assessments, 0);
-  const phraseCount = weekActivities.reduce((sum, a) => sum + a.phrases, 0);
 
-  return { days, activeCount: days.filter((d) => d.isActive).length, assessmentCount, phraseCount };
+  return { days, activeCount: days.filter((d) => d.isActive).length, assessmentCount };
 }
 
 /**

@@ -43,7 +43,7 @@ export function WeeklyActivityCard({ days, activeCount, assessmentCount, streakD
                   ? 'bg-brand text-white'
                   : day.isFuture
                     ? 'border border-dashed border-line text-transparent'
-                    : 'bg-slate-100 text-transparent',
+                    : 'bg-canvas text-transparent',
                 day.isToday && 'ring-2 ring-brand-200 ring-offset-2'
               )}
               aria-label={`${day.label}曜日${day.isActive ? '：トレーニング済み' : ''}`}

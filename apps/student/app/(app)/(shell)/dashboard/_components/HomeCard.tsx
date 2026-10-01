@@ -46,7 +46,7 @@ export function HomeCard({ title, action, className, children }: HomeCardProps) 
 }
 
 const PROGRESS_TONES = {
-  brand: { track: 'h-1.5 bg-slate-100', bar: 'bg-brand' },
+  brand: { track: 'h-1.5 bg-canvas', bar: 'bg-brand' },
   /** ブランドのグラデーション面の上 */
   light: { track: 'h-1.5 bg-white/25', bar: 'bg-white' },
   /** 淡い下地（canvas）の上に置く補助的な進捗（節目までの進み具合等） */

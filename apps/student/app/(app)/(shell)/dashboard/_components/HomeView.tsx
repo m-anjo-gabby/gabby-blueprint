@@ -148,7 +148,7 @@ export function HomeView({ nextSession, assignments, activities, lifetimeStats, 
             例: アプリのみ契約 = 歩み2＋メニュー1、ライブ契約 = 今週1＋歩み1＋メニュー1 */}
         <LifetimeStatsCard
           stats={lifetimeStats}
-          weekGains={week && { activeDays: week.activeCount, assessments: week.assessmentCount, phrases: week.phraseCount }}
+          weekGains={week && { activeDays: week.activeCount, assessments: week.assessmentCount }}
           className={showNextSession ? undefined : 'lg:col-span-2'}
         />
 
