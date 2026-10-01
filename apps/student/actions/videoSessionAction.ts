@@ -1,6 +1,7 @@
 'use server';
 
 import {
+  checkStudentLiveSessionJoinableCore,
   getStudentLiveSessionRoomAccessCore,
   recordSessionCallJoinCore,
   recordSessionCallLeaveCore,
@@ -35,6 +36,22 @@ export async function getMyLiveSessionRoomAccess(
     return { success: false, message: LIVE_SESSION_ROOM_ERROR_MESSAGES_JA[result.errorCode] };
   }
   return { success: true, access: result.access };
+}
+
+/**
+ * 入室ボタンの押下時に、今入室できるかをサーバーの時刻で確かめる（ブラウザの判定で「まだ早い」となった時だけ呼ぶ）。
+ * まだ早い場合は入室できるようになる時刻を返し、画面側でその場に案内する。
+ */
+export async function checkLiveSessionJoinable(
+  sessionId: string
+): Promise<{ status: 'joinable' } | { status: 'too_early'; availableAt: string } | { status: 'error'; message: string }> {
+  const result = await checkStudentLiveSessionJoinableCore(sessionId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:check_live_session_joinable_failed', result.errorCode, ctx);
+    return { status: 'error', message: LIVE_SESSION_ROOM_ERROR_MESSAGES_JA[result.errorCode] };
+  }
+  return result.joinable ? { status: 'joinable' } : { status: 'too_early', availableAt: result.availableAt };
 }
 
 /**

@@ -68,6 +68,8 @@ export interface LiveSessionTicketSummary {
 export interface LiveSessionContractSummary {
   ticket_id: string;
   license_id: string;
+  /** 生徒に見せるプラン名（com_m_contract.plan_name。管理用の契約名 contract_name は使わない） */
+  plan_name: string;
   start_date: string; // ライセンス開始日
   end_date: string;   // ライセンス終了日
   /** status=1(有効)かつ現在日時が期間内であればtrue */

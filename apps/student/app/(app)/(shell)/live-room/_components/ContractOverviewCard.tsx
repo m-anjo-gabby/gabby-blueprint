@@ -51,21 +51,20 @@ interface Props {
   adjustingCount: number;
 }
 
-/** 契約の状況（回数の内訳バーと、コマごとの担当コーチ・曜日時刻） */
+/** 契約の状況（プラン名・期間・週の回数、回数の内訳バーと、コマごとの担当コーチ・曜日時刻） */
 export function ContractOverviewCard({ contract, overview, timezone, adjustingCount }: Props) {
   return (
     <div>
-      <ShellSectionTitle
-        aside={
-          <span className="text-xs text-ink-muted tabular-nums">
-            {formatContractDate(contract.start_date, timezone)}〜{formatContractDate(contract.end_date, timezone)}・週{overview.weekly_frequency}回
-          </span>
-        }
-      >
-        {contract.is_current ? '契約の状況' : '契約の実績'}
-      </ShellSectionTitle>
+      <ShellSectionTitle>{contract.is_current ? '契約の状況' : '契約の実績'}</ShellSectionTitle>
       <section className="rounded-card border border-line bg-surface p-5 sm:p-6 shadow-xs">
-        <p className="flex items-baseline gap-2 font-bold text-ink tabular-nums">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line pb-4">
+          <p className="min-w-0 text-base font-bold text-ink">{contract.plan_name}</p>
+          <p className="text-xs text-ink-muted tabular-nums">
+            {formatContractDate(contract.start_date, timezone)}〜{formatContractDate(contract.end_date, timezone)}・週{overview.weekly_frequency}回
+          </p>
+        </div>
+
+        <p className="mt-4 flex items-baseline gap-2 font-bold text-ink tabular-nums">
           <span className="text-sm text-ink-muted">実施済み</span>
           <span className="text-2xl">{overview.completed_count}</span>
           <span className="text-sm text-ink-muted">/ {overview.total_sessions}回</span>

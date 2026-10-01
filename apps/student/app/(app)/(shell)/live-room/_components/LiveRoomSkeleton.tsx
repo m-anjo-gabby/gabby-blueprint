@@ -54,14 +54,25 @@ function LiveSessionHubSkeleton() {
               <Skeleton className="size-7 rounded-full" />
               <Skeleton className="h-3.5 w-28" />
             </div>
-            <Skeleton className="mt-5 h-10 w-full rounded-control sm:w-56" />
+            <Skeleton className="mt-5 h-10 w-full rounded-control sm:w-40" />
+            <div className="mt-2 flex h-4 items-center">
+              <Skeleton className="h-3 w-40" />
+            </div>
           </div>
         </div>
 
         <div>
           <ShellSectionTitle>契約の状況</ShellSectionTitle>
           <div aria-hidden className={CARD_CLASS}>
-            <div className="flex h-8 items-center">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line pb-4">
+              <div className="flex h-6 items-center">
+                <Skeleton className="h-4.5 w-36" />
+              </div>
+              <div className="flex h-4 items-center">
+                <Skeleton className="h-3 w-44" />
+              </div>
+            </div>
+            <div className="mt-4 flex h-8 items-center">
               <Skeleton className="h-5 w-40" />
             </div>
             <Skeleton className="mt-4 h-2.5 w-full rounded-full" />

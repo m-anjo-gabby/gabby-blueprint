@@ -1,16 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, ChevronRight, CircleAlert, Video } from 'lucide-react';
-import { useNow } from '@gabby/lib/hooks/useNow';
+import { ChevronRight, CircleAlert } from 'lucide-react';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import type { SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CoachAvatar } from '@/components/session/CoachAvatar';
-import { formatSessionSlot, formatTimeUntil } from '@/lib/sessionFormat';
+import { JoinSessionButton } from '@/components/session/JoinSessionButton';
+import { formatSessionSlot } from '@/lib/sessionFormat';
 import { SessionBreakdown } from '@/app/(app)/(shell)/live-room/_components/SessionBreakdown';
 import { HomeCard } from './HomeCard';
 
@@ -43,7 +41,6 @@ const LIVE_LAYOUT = {
 } as const;
 
 function NextSessionBlock({ session }: { session: SessionListItem | null }) {
-  const nowMs = useNow();
   const timezone = useTimezone();
 
   if (!session) {
@@ -56,19 +53,10 @@ function NextSessionBlock({ session }: { session: SessionListItem | null }) {
   }
 
   const slot = formatSessionSlot(session.start_datetime, session.end_datetime, timezone);
-  const canJoin = nowMs !== null && nowMs >= new Date(session.start_datetime).getTime() - LIVE_SESSION_EARLY_JOIN_BEFORE_MS;
-  const untilStart = nowMs !== null ? formatTimeUntil(session.start_datetime, nowMs) : null;
 
   return (
     <section className={LIVE_LAYOUT.block}>
-      <div className="flex items-center justify-between gap-2">
-        <h3 className={LIVE_LAYOUT.blockTitle}>次回のセッション</h3>
-        {untilStart && !canJoin && (
-          <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[11px] font-semibold text-brand-strong">
-            開始まで{untilStart}
-          </span>
-        )}
-      </div>
+      <h3 className={LIVE_LAYOUT.blockTitle}>次回のセッション</h3>
       <p className="mt-2 flex flex-wrap items-baseline gap-x-2 font-bold text-ink tabular-nums">
         <span className="text-lg">{slot.date}</span>
         <span className="text-base">{slot.time}</span>
@@ -77,15 +65,7 @@ function NextSessionBlock({ session }: { session: SessionListItem | null }) {
         <CoachAvatar iconPath={session.counterpart_icon_path} size={28} />
         <p className="truncate text-sm text-ink-muted">{session.counterpart_name} コーチ</p>
       </div>
-      {canJoin && (
-        <Button asChild className="mt-4 w-full sm:w-auto">
-          <Link href={`/live-room/${session.session_id}`}>
-            <Video size={16} />
-            入室する
-            <ArrowRight size={14} />
-          </Link>
-        </Button>
-      )}
+      <JoinSessionButton sessionId={session.session_id} startDatetime={session.start_datetime} className="mt-4" />
     </section>
   );
 }
@@ -93,7 +73,7 @@ function NextSessionBlock({ session }: { session: SessionListItem | null }) {
 /**
  * ホームのライブセッション（ライブセッション付きの契約がある生徒だけ）。
  * 対応が必要なこと（コーチ未選択・未予約・振替候補）を先頭に出し、次回のセッションと契約の回数の内訳を並べる。
- * 「今日やること」は自主トレーニングに限るため、入室もこのカードから行う。詳細・操作はライブセッション管理に任せる。
+ * 「今日やること」は自主トレーニングに限るため、入室もこのカードから行う（入室ボタンは常に押せる状態で、押した時に判定する）。詳細・操作はライブセッション管理に任せる。
  */
 export function LiveSessionCard({ nextSession, overview, isCurrent, adjustingCount, actions }: LiveSessionCardProps) {
   return (

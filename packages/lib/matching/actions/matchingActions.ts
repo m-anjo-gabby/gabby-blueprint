@@ -122,7 +122,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
 
     const { data: licenses, error: licenseError } = await supabase
       .from('com_t_user_license')
-      .select('license_id, status, start_date, end_date')
+      .select('license_id, status, start_date, end_date, com_m_contract!inner(plan_name)')
       .in('license_id', tickets.map((t) => t.license_id));
 
     if (licenseError) {
@@ -142,6 +142,8 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
         return {
           ticket_id: t.ticket_id,
           license_id: t.license_id,
+          // 多対一の結合のため実体は1件のオブジェクト（型生成なしのクライアントでは配列として推論される）
+          plan_name: ([] as { plan_name: string }[]).concat(license.com_m_contract)[0]?.plan_name ?? '',
           start_date: license.start_date,
           end_date: license.end_date,
           is_current: isCurrent,

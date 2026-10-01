@@ -5,6 +5,7 @@ import { getLogContext } from '../../logger/context';
 import { generateVideoSdkSignature } from '../../zoom/signature';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../constants';
 import {
+  CheckLiveSessionJoinableResult,
   GetLiveSessionRoomAccessResult,
   LIVE_SESSION_ROOM_ROLE,
   RecordCallJoinResult,
@@ -185,6 +186,43 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
     };
   } catch (err) {
     logger.error('liveSessionRoom:student_access_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中生徒が、指定の個別レッスンセッションに今入室できるかをサーバーの時刻で判定する（入室ボタンの押下時用）。
+ * 端末の時計が遅れていると、ブラウザ側の判定では「まだ早い」となる場合があるため、その時だけ呼び出して確かめる。
+ * 署名は発行しない（入室画面の getStudentLiveSessionRoomAccessCore が改めて全条件を検証してから発行する）。
+ */
+export async function checkStudentLiveSessionJoinableCore(sessionId: string): Promise<CheckLiveSessionJoinableResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: session, error } = await supabase
+      .from('com_t_session')
+      .select('student_id, start_datetime')
+      .eq('session_id', sessionId)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('liveSessionRoom:student_joinable_lookup_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!session || session.student_id !== user.id) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+    if (isTooEarlyToJoin(session.start_datetime)) {
+      const availableAt = new Date(new Date(session.start_datetime).getTime() - LIVE_SESSION_EARLY_JOIN_BEFORE_MS).toISOString();
+      return { success: true, joinable: false, availableAt };
+    }
+    return { success: true, joinable: true };
+  } catch (err) {
+    logger.error('liveSessionRoom:student_joinable_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
