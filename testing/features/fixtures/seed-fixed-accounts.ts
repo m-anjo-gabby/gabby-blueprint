@@ -22,6 +22,7 @@ import { loadTestEnv, resolveTestEnvFromArgs } from "../../helpers/env.ts";
 import { createAdminClient, signInAsRole } from "../../helpers/auth.ts";
 import { assertReleaseApplied } from "../../helpers/preflight.ts";
 import { currentTermIndex, termOf, type Term } from "../../helpers/fixture-terms.ts";
+import { createFixtureKit } from "../../helpers/fixture-accounts.ts";
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
@@ -55,128 +56,10 @@ const NEXT = CUR + 1;
 console.log(`当期: ${termOf(CUR).label} / 前期: ${termOf(PREV).label} / 次期: ${termOf(NEXT).label}`);
 
 // ---------------------------------------------------------------------------
-// マスタ系（顧客・ユーザー・ロール・Availability）
+// マスタ系・契約・ライセンス（testing/helpers/fixture-accounts.ts）
 // ---------------------------------------------------------------------------
-async function ensureClient(name: string): Promise<string> {
-  const { data: existing } = await admin.from("com_m_client").select("client_id").eq("client_name", name).maybeSingle();
-  if (existing) return existing.client_id as string;
-  const { data, error } = await admin.from("com_m_client").insert({ client_name: name, client_type: 1, industry_type: 1 }).select("client_id").single();
-  if (error) throw error;
-  return data.client_id as string;
-}
-
-async function findAuthUserByEmail(email: string): Promise<string | undefined> {
-  for (let page = 1; page <= 50; page++) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
-    if (error) throw error;
-    const found = data.users.find((u) => u.email === email);
-    if (found) return found.id;
-    if (data.users.length < 200) break;
-  }
-  return undefined;
-}
-
-async function ensureUser(params: { email: string; userType: "0" | "1" | "2"; userName: string; clientId: string | null; timezone?: string }): Promise<string> {
-  let userId = await findAuthUserByEmail(params.email);
-  if (!userId) {
-    const { data, error } = await admin.auth.admin.createUser({ email: params.email, password: PASSWORD, email_confirm: true });
-    if (error) throw error;
-    userId = data.user.id;
-  }
-  const { error } = await admin
-    .from("com_m_user")
-    .update({ client_id: params.clientId, user_type: params.userType, user_name: params.userName, ...(params.timezone ? { timezone: params.timezone } : {}) })
-    .eq("id", userId);
-  if (error) throw error;
-  return userId;
-}
-
-async function ensureRole(userId: string, roleId: string): Promise<void> {
-  const { data } = await admin.from("com_t_user_role").select("role_id").eq("user_id", userId).eq("role_id", roleId).maybeSingle();
-  if (data) return;
-  const { error } = await admin.from("com_t_user_role").insert({ user_id: userId, role_id: roleId });
-  if (error) throw error;
-}
-
-/** コーチプロフィール（生徒の「専属コーチを探す」の対象）。createUserにuser_typeを渡さないため handle_new_user では作られない */
-async function ensureCoachProfile(coachId: string): Promise<void> {
-  const { data } = await admin.from("com_m_coach_profile").select("user_id").eq("user_id", coachId).maybeSingle();
-  if (data) return;
-  const { error } = await admin.from("com_m_coach_profile").insert({ user_id: coachId, coach_since: new Date().toISOString().slice(0, 8) + "01" });
-  if (error) throw error;
-}
-
-async function ensureCoachAvailability(coachId: string, days: number[], start: string, end: string): Promise<void> {
-  const { data: existing } = await admin.from("com_m_coach_availability").select("availability_id").eq("coach_id", coachId).limit(1);
-  if (existing && existing.length > 0) return;
-  const { error } = await admin.from("com_m_coach_availability").insert(days.map((dow) => ({ coach_id: coachId, day_of_week: dow, start_time: start, end_time: end })));
-  if (error) throw error;
-}
-
-// ---------------------------------------------------------------------------
-// 契約・ライセンス（タームごと。noteで識別して冪等にする）
-// ---------------------------------------------------------------------------
-type PlanCode = "BLUEPRINT_ONLY" | "LIVE_WEEKLY1_3M";
-
-async function ensureContract(clientId: string, planCode: PlanCode, term: Term, maxLicenses: number): Promise<string> {
-  const note = `【QA固定】${planCode} ${term.label}`;
-  const { data: existing } = await admin.from("com_m_contract").select("contract_id").eq("client_id", clientId).eq("note", note).maybeSingle();
-  if (existing) return existing.contract_id as string;
-
-  const { data: plan, error: planErr } = await admin.from("com_m_contract_plan").select("*").eq("plan_code", planCode).single();
-  if (planErr) throw planErr;
-  const { data, error } = await admin
-    .from("com_m_contract")
-    .insert({
-      client_id: clientId,
-      plan_id: plan.plan_id,
-      plan_name: plan.plan_name,
-      contract_name: note,
-      plan_name_en: plan.plan_name_en,
-      contract_type: plan.contract_type,
-      weekly_frequency: plan.weekly_frequency,
-      total_sessions: plan.total_sessions,
-      has_dialogue_practice: plan.has_dialogue_practice,
-      max_licenses: maxLicenses,
-      start_date: term.startIso,
-      end_date: term.endIso,
-      status: 1,
-      note,
-    })
-    .select("contract_id")
-    .single();
-  if (error) throw error;
-  return data.contract_id as string;
-}
-
-/** 戻り値: 作成/既存のlicense_id。期間の重なる別の有効ライセンスがある場合はundefined（スキップ）。 */
-async function ensureLicense(userId: string, contractId: string, term: Term, status: 0 | 1): Promise<string | undefined> {
-  const { data: existing } = await admin.from("com_t_user_license").select("license_id").eq("user_id", userId).eq("contract_id", contractId).maybeSingle();
-  if (existing) return existing.license_id as string;
-
-  if (status === 1) {
-    const { data: overlap } = await admin
-      .from("com_t_user_license")
-      .select("license_id, start_date, end_date")
-      .eq("user_id", userId)
-      .eq("status", 1)
-      .lte("start_date", term.endIso)
-      .gte("end_date", term.startIso)
-      .limit(1);
-    if (overlap && overlap.length > 0) {
-      console.log(`  ⚠ ${term.label}と期間の重なる有効ライセンスが既にあるためスキップ:`, overlap[0]);
-      return undefined;
-    }
-  }
-
-  const { data, error } = await admin
-    .from("com_t_user_license")
-    .insert({ contract_id: contractId, user_id: userId, status, start_date: term.startIso, end_date: term.endIso, note: "【QA固定】" })
-    .select("license_id")
-    .single();
-  if (error) throw error;
-  return data.license_id as string;
-}
+const { ensureClient, findAuthUserByEmail, ensureUser, ensureRole, ensureCoachProfile, ensureCoachAvailability, ensureContract, ensureLicense, ensureContentAccess, ensureGenericSprintAccess } =
+  createFixtureKit(admin, PASSWORD);
 
 // ---------------------------------------------------------------------------
 // 学習履歴（生徒モニタリング画面の「過去分」検証用）
@@ -210,34 +93,6 @@ async function pickHistoryContents(clientId: string): Promise<HistoryContents> {
     return data.content_id as string;
   };
   return { wordContentId: await pick(0), sprintContentId: await pick(2) };
-}
-
-/** 顧客に限定公開(1)教材のアクセス権（com_m_contents_access）を付与する（付与済みなら何もしない） */
-async function ensureContentAccess(clientId: string, contentId: string, notes: string): Promise<void> {
-  const { data: access } = await admin.from("com_m_contents_access").select("access_id").eq("client_id", clientId).eq("content_id", contentId).eq("delete_flg", "0").maybeSingle();
-  if (access) return;
-  const { error } = await admin.from("com_m_contents_access").insert({ client_id: clientId, content_id: contentId, notes });
-  if (error) throw error;
-}
-
-/**
- * 汎用スプリント（教材設定 metadata.sprint.sprint_type='0'、例: Gabby NLT）のアクセス権を固定テナントに付与する。
- * 問題種別×レベルを持つのは汎用スプリントだけのため、レベルに関わる画面（お気に入りのレベル絞り込み等）の
- * 検証に使う。限定公開(1)の場合だけ付与し、環境に汎用スプリントが無い場合は何もしない。
- */
-async function ensureGenericSprintAccess(clientId: string): Promise<void> {
-  const { data, error } = await admin
-    .from("com_m_contents")
-    .select("content_id, content_name, content_scope")
-    .eq("content_type", 2)
-    .eq("delete_flg", "0")
-    .eq("metadata->sprint->>sprint_type", "0");
-  if (error) throw error;
-  for (const content of data ?? []) {
-    if (content.content_scope !== 1) continue;
-    await ensureContentAccess(clientId, content.content_id as string, "【QA固定】汎用スプリントの検証用");
-    console.log(`汎用スプリントのアクセス権: ${content.content_name}`);
-  }
 }
 
 /** 対象月の10日(JST)に、単語ドリル・スプリント・スプリントドリルの実績を1件ずつ作る。実行日より未来の月は作らない。 */
@@ -326,7 +181,7 @@ async function ensureLiveMatch(studentId: string, coachId: string, clientId: str
 // ---------------------------------------------------------------------------
 const clientId = await ensureClient(FIXED_CLIENT_NAME);
 const contents = await pickHistoryContents(clientId);
-await ensureGenericSprintAccess(clientId);
+for (const c of await ensureGenericSprintAccess(clientId, "【QA固定】汎用スプリントの検証用")) console.log(`汎用スプリント: ${c.contentName}`);
 
 const adminUserId = await findAuthUserByEmail(ADMIN_EMAIL);
 if (!adminUserId) {
