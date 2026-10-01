@@ -146,6 +146,21 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
     return data.license_id as string;
   }
 
+  /** ライブ契約のライセンスに対するセッションチケット（ライセンスごとに1件。回数はプランから取る） */
+  async function ensureSessionTicket(licenseId: string, contractId: string, userId: string, planCode: PlanCode): Promise<string> {
+    const { data: existing } = await admin.from("com_t_user_session_ticket").select("ticket_id").eq("license_id", licenseId).maybeSingle();
+    if (existing) return existing.ticket_id as string;
+    const { data: plan, error: planErr } = await admin.from("com_m_contract_plan").select("weekly_frequency, total_sessions").eq("plan_code", planCode).single();
+    if (planErr) throw planErr;
+    const { data, error } = await admin
+      .from("com_t_user_session_ticket")
+      .insert({ license_id: licenseId, contract_id: contractId, user_id: userId, weekly_frequency: plan.weekly_frequency, total_sessions: plan.total_sessions, used_sessions: 0 })
+      .select("ticket_id")
+      .single();
+    if (error) throw error;
+    return data.ticket_id as string;
+  }
+
   /** 顧客に限定公開(1)教材のアクセス権（com_m_contents_access）を付与する（付与済みなら何もしない） */
   async function ensureContentAccess(clientId: string, contentId: string, notes: string): Promise<void> {
     const { data: access } = await admin.from("com_m_contents_access").select("access_id").eq("client_id", clientId).eq("content_id", contentId).eq("delete_flg", "0").maybeSingle();
@@ -204,6 +219,7 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
     ensureCoachAvailability,
     ensureContract,
     ensureLicense,
+    ensureSessionTicket,
     ensureContentAccess,
     ensureGenericSprintAccess,
     ensureLatestTermsAgreed,

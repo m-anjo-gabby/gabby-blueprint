@@ -1,7 +1,8 @@
 /**
- * testing/FIXTURES.md「利用者ペルソナ」を投入する冪等スクリプト（第1段階: アプリのみ契約の生徒）。
+ * testing/FIXTURES.md「利用者ペルソナ」を投入する冪等スクリプト。
  * 実際の利用者に近い量・ばらつきの学習履歴（単語帳・スプリント）・お気に入り・到達レベルを作る。
- * ライブ契約の生徒（P04・P05・P09）とコーチは第2段階で追加する。
+ * ライブ契約の生徒（P04・P05・P09）は、コーチ3名とのセッション履歴（分担・コーチ交代・キャンセルを含む）、
+ * ダイアログ課題、チャットも作る（ライブまわりの処理は user-personas-live.ts）。
  *
  * 使い方:
  *   pnpm exec tsx testing/features/fixtures/seed-user-personas.ts --env=dev
@@ -10,13 +11,17 @@
  *   学習履歴は HISTORY_START（JST）から実行日の前日までを、ペルソナID×日付を種にした疑似乱数で作る。
  *   同じ日付には何度実行しても同じデータができるため、再実行すると「前回から昨日まで」の不足分が足され、
  *   日次サマリーは決まった値に戻る（手動操作でずれた値も戻る）。スプリントの実施記録は開始日時で重複を判定する。
- *   到達レベルは進捗行が無いときだけ作る（レベルの推移はトリガーが記録した履歴の日時を過去へ付け替える）。
+ *   到達レベルは過去日付の履歴が無いときだけ作る（レベルの推移はトリガーが記録した履歴の日時を過去へ付け替える）。
+ *   ライブのセッションは「スケジュール×開始日時」で重複を判定し、終了時刻を過ぎた回は再実行時に完了にする。
+ *   チャットはメッセージが無いルームにだけ投入する。
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadTestEnv, resolveTestEnvFromArgs } from "../../helpers/env.ts";
 import { createAdminClient } from "../../helpers/auth.ts";
 import { currentTermIndex, termOf } from "../../helpers/fixture-terms.ts";
 import { createFixtureKit, type ClientType } from "../../helpers/fixture-accounts.ts";
+import { createChatKit, type ChatMessageSeed } from "../../helpers/fixture-chat.ts";
+import { createLiveKit, type LiveCoach, type LiveScheduleSeed } from "./user-personas-live.ts";
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
@@ -28,6 +33,8 @@ if (!PASSWORD_ENV) {
 
 const admin: SupabaseClient = await createAdminClient();
 const kit = createFixtureKit(admin, PASSWORD_ENV);
+const live = createLiveKit(admin, PASSWORD_ENV);
+const chat = createChatKit(admin);
 
 /** 学習履歴の起点（JST）。「投入時点で3か月前から継続している」状態を作るための固定日 */
 const HISTORY_START = "2026-07-01";
@@ -118,10 +125,63 @@ interface StudentPersona {
   scoreBase: number;
   /** ライセンスを当期の途中（初回投入日）から始める（新規ペルソナ用） */
   startsOnSeedDate?: boolean;
+  /** ライブ契約（省略時はアプリのみ契約） */
+  live?: LivePersona;
 }
+
+type CoachKey = "C1" | "C2" | "C3";
+type LivePlanCode = "LIVE_WEEKLY1_3M" | "LIVE_WEEKLY2_3M";
+
+interface CoachPersona {
+  id: string;
+  seq: string;
+  name: string;
+  timezone: string;
+  /** 週次の対応可能時間帯（コーチのローカル時刻） */
+  availability: { days: number[]; start: string; end: string }[];
+}
+
+interface LiveSlotPersona {
+  slotNo: number;
+  coach: CoachKey;
+  /** コーチのローカル時刻基準（0=日曜 … 6=土曜） */
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  /** 担当した期間（コーチのローカル日付）。コーチ交代の前後で同じ枠を分ける */
+  from?: string;
+  until?: string;
+}
+
+interface LivePersona {
+  plan: LivePlanCode;
+  slots: LiveSlotPersona[];
+  /** キャンセルした回（コーチのローカル日付） */
+  cancellations?: { coach: CoachKey; date: string; by: "student" | "coach"; reason: string }[];
+}
+
+/** プランの1枠あたりのセッション数（3か月契約の total_sessions を週あたりの回数で割った数） */
+const SESSIONS_PER_SLOT = 12;
 
 const BEGINNER: Levels = { speed: 1, structure: 1, builders: 1, mastery: 1 };
 const INTERMEDIATE: Levels = { speed: 4, structure: 3, builders: 2, mastery: 2 };
+const ADVANCED: Levels = { speed: 7, structure: 6, builders: 4, mastery: 3 };
+
+const COACHES: Record<CoachKey, CoachPersona> = {
+  C1: {
+    id: "COACH-01", seq: "01", name: "QAペルソナCOACH-01 Emily Carter（カナダ）", timezone: "America/Vancouver",
+    availability: [{ days: [1, 2], start: "15:00:00", end: "18:00:00" }],
+  },
+  C2: {
+    id: "COACH-02", seq: "02", name: "QAペルソナCOACH-02 Michael Brooks（アメリカ）", timezone: "America/New_York",
+    availability: [{ days: [2], start: "18:00:00", end: "20:00:00" }, { days: [4], start: "08:00:00", end: "10:00:00" }],
+  },
+  C3: {
+    id: "COACH-03", seq: "03", name: "QAペルソナCOACH-03 佐藤 美咲（日本）", timezone: "Asia/Tokyo",
+    availability: [{ days: [4], start: "19:00:00", end: "21:00:00" }, { days: [6], start: "10:00:00", end: "12:00:00" }],
+  },
+};
+const COACH_TENANT_NAME = "【QA固定】ペルソナ コーチ";
 
 const STUDENTS: StudentPersona[] = [
   {
@@ -140,6 +200,31 @@ const STUDENTS: StudentPersona[] = [
     slots: [[9, 11.5]], favorites: "none", levels: BEGINNER, scoreBase: 58,
   },
   {
+    // レッスン（木曜19:00 JST、日本人コーチ）の前の火・水にまとめて学習する
+    id: "P04", seq: "04", name: "QAペルソナP04（レッスン中心・中級）", tenant: "B",
+    schedule: { kind: "weekdays", days: [2, 3] }, daily: { words: 10, phrases: 20, sprints: 5 },
+    slots: [[20, 22.5]], favorites: "few", levels: INTERMEDIATE, scoreBase: 72,
+    live: {
+      plan: "LIVE_WEEKLY1_3M",
+      slots: [{ slotNo: 1, coach: "C3", dayOfWeek: 4, startTime: "19:00:00", endTime: "19:30:00" }],
+      cancellations: [{ coach: "C3", date: "2026-08-13", by: "student", reason: "お盆休みで帰省するため" }],
+    },
+  },
+  {
+    // 週2回（火曜朝 07:00 JST＝カナダのコーチ、木曜夜 21:00 JST＝アメリカのコーチ）で分担
+    id: "P05", seq: "05", name: "QAペルソナP05（熱心・上級・ビジネス英語）", tenant: "B",
+    schedule: { kind: "daily" }, daily: { words: 15, phrases: 40, sprints: 10 },
+    slots: [[6, 7.5], [21.5, 23.5]], favorites: "many", levels: ADVANCED, scoreBase: 82,
+    live: {
+      plan: "LIVE_WEEKLY2_3M",
+      slots: [
+        { slotNo: 1, coach: "C1", dayOfWeek: 1, startTime: "15:00:00", endTime: "15:30:00" },
+        { slotNo: 2, coach: "C2", dayOfWeek: 4, startTime: "08:00:00", endTime: "08:30:00" },
+      ],
+      cancellations: [{ coach: "C2", date: "2026-09-17", by: "coach", reason: "Family emergency. Sorry for the short notice." }],
+    },
+  },
+  {
     id: "P06", seq: "06", name: "QAペルソナP06（始めたばかり）", tenant: "A",
     schedule: { kind: "none" }, daily: { words: 0, phrases: 0, sprints: 0 },
     slots: [], favorites: "none", scoreBase: 0, startsOnSeedDate: true,
@@ -153,6 +238,19 @@ const STUDENTS: StudentPersona[] = [
     id: "P08", seq: "08", name: "QAペルソナP08（研修担当・モニター）", tenant: "B", roles: ["monitor"],
     schedule: { kind: "weekdays", days: [2, 4] }, daily: { words: 5, phrases: 10, sprints: 3 },
     slots: [[12, 13]], favorites: "none", levels: { speed: 3, structure: 3, builders: 2, mastery: 2 }, scoreBase: 70,
+  },
+  {
+    // 水曜朝 07:30 JST のレッスン。2026-08-12 からカナダのコーチ→アメリカのコーチへ交代
+    id: "P09", seq: "09", name: "QAペルソナP09（コーチ交代あり・初級）", tenant: "A",
+    schedule: { kind: "rest1to2" }, daily: { words: 5, phrases: 15, sprints: 3 },
+    slots: [[7, 8.5], [19, 21]], favorites: "few", levels: BEGINNER, scoreBase: 60,
+    live: {
+      plan: "LIVE_WEEKLY1_3M",
+      slots: [
+        { slotNo: 1, coach: "C1", dayOfWeek: 2, startTime: "15:30:00", endTime: "16:00:00", until: "2026-08-11" },
+        { slotNo: 1, coach: "C2", dayOfWeek: 2, startTime: "18:30:00", endTime: "19:00:00", from: "2026-08-12" },
+      ],
+    },
   },
   {
     id: "P10", seq: "10", name: "QAペルソナP10 Alexander Maximilian Vandenberg-Yamamoto（伸び盛り・個人契約）", tenant: "individual",
@@ -630,9 +728,93 @@ async function ensureLevels(p: StudentPersona, userId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// チャット（ライブ契約の生徒×担当コーチ。日時は JST）
+// ---------------------------------------------------------------------------
+type ChatScript = { from: string; date: string; hour: number; text: string }[];
+
+interface ChatRoomSeed {
+  student: string;
+  coach: string;
+  script: ChatScript;
+  /** 生徒側で未読にする末尾の件数 */
+  unreadForStudent?: number;
+}
+
+async function seedPersonaChats(ids: Record<string, string>): Promise<void> {
+  const rooms: ChatRoomSeed[] = [
+    {
+      // 日本人コーチとの日本語のやり取り
+      student: "P04", coach: "C3", unreadForStudent: 1,
+      script: [
+        { from: "C3", date: "2026-05-28", hour: 10, text: "はじめまして、コーチの佐藤です。木曜19時のレッスンでご一緒します。よろしくお願いします！" },
+        { from: "P04", date: "2026-05-28", hour: 21.5, text: "よろしくお願いします。会議で発言できるようになりたいです。" },
+        { from: "C3", date: "2026-06-05", hour: 9, text: "初回お疲れさまでした。今週は \"I'd like to add that...\" を使って、意見を付け足す練習をしてみましょう。" },
+        { from: "P04", date: "2026-08-10", hour: 20, text: "13日はお盆で帰省するため、レッスンをお休みします。" },
+        { from: "C3", date: "2026-08-10", hour: 22, text: "承知しました。良いお休みを！翌週また続きから進めましょう。" },
+        { from: "P04", date: "2026-09-24", hour: 21, text: "今日のレッスンで教わった言い回し、さっそく会議で使えました！" },
+        { from: "C3", date: "2026-09-25", hour: 8, text: "素晴らしいですね！次回はプレゼンの締めくくりの表現を扱います。" },
+      ],
+    },
+    {
+      student: "P05", coach: "C1",
+      script: [
+        { from: "C1", date: "2026-05-29", hour: 8, text: "Hi! I'm Emily, your coach for the Tuesday morning sessions. Looking forward to working with you!" },
+        { from: "P05", date: "2026-05-29", hour: 22, text: "Nice to meet you, Emily. I'd like to focus on negotiation and giving bad news politely." },
+        { from: "C1", date: "2026-07-06", hour: 23, text: "I've assigned a new dialogue: \"Delivering Bad News\". Please review session 1 before Tuesday." },
+        { from: "P05", date: "2026-07-07", hour: 6.5, text: "Got it. I've gone through the slides." },
+        { from: "C1", date: "2026-09-29", hour: 8, text: "Great progress today! Your softening phrases sounded very natural." },
+      ],
+    },
+    {
+      student: "P05", coach: "C2", unreadForStudent: 2,
+      script: [
+        { from: "C2", date: "2026-05-29", hour: 21, text: "Hi there! I'm Michael. I'll be your Thursday evening coach. See you soon!" },
+        { from: "P05", date: "2026-05-29", hour: 22.5, text: "Thanks, Michael. See you on Thursday!" },
+        { from: "C2", date: "2026-09-15", hour: 22, text: "I'm really sorry, but I have to cancel this Thursday's session due to a family emergency." },
+        { from: "P05", date: "2026-09-15", hour: 23, text: "No problem at all. I hope everything is okay." },
+        { from: "C2", date: "2026-09-30", hour: 22, text: "Thanks for your patience. For tomorrow, please prepare a short pitch about your company's strengths." },
+        { from: "C2", date: "2026-09-30", hour: 22.1, text: "We'll use the \"Explaining Competitive Advantages\" dialogue." },
+      ],
+    },
+    {
+      // 交代前のコーチ（2026-08-11 まで）
+      student: "P09", coach: "C1",
+      script: [
+        { from: "C1", date: "2026-05-29", hour: 9, text: "Hello! I'm Emily. Let's enjoy learning English together every Wednesday morning!" },
+        { from: "P09", date: "2026-05-29", hour: 20, text: "よろしくお願いします。英語は初心者なので、ゆっくり話してもらえると助かります。" },
+        { from: "C1", date: "2026-08-05", hour: 9, text: "I have some news: from next week, Michael will be your coach. It was a pleasure working with you!" },
+        { from: "P09", date: "2026-08-05", hour: 20, text: "Thank you for everything, Emily!" },
+      ],
+    },
+    {
+      // 交代後のコーチ（2026-08-12 から）
+      student: "P09", coach: "C2", unreadForStudent: 1,
+      script: [
+        { from: "C2", date: "2026-08-12", hour: 9, text: "Hi! I'm Michael, your new coach. Emily told me about your goals. Let's keep going!" },
+        { from: "P09", date: "2026-08-12", hour: 20.5, text: "Nice to meet you, Michael. よろしくお願いします。" },
+        { from: "C2", date: "2026-09-23", hour: 9, text: "Nice work today! Try to use \"Could you...?\" when you ask for something this week." },
+      ],
+    },
+  ];
+
+  for (const room of rooms) {
+    const studentId = ids[room.student];
+    const coachId = ids[room.coach];
+    const roomId = await chat.ensureOneOnOneRoom(studentId, coachId);
+    const messages: ChatMessageSeed[] = room.script.map((m) => ({ from: ids[m.from], text: m.text, at: jstAt(m.date, m.hour) }));
+    const chatIds = await chat.seedMessages(roomId, messages);
+    if (chatIds) {
+      await chat.setLastRead(roomId, coachId, chatIds[chatIds.length - 1]);
+      await chat.setLastRead(roomId, studentId, chatIds[chatIds.length - 1 - (room.unreadForStudent ?? 0)]);
+    }
+    console.log(`チャット ${room.student}×${room.coach}: ${chatIds ? `${chatIds.length}件投入` : "投入済み"}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 実行
 // ---------------------------------------------------------------------------
-console.log(`\n=== 利用者ペルソナ投入（第1段階）: env=${env} / 学習履歴 ${HISTORY_START}〜${addDays(TODAY, -1)} ===`);
+console.log(`\n=== 利用者ペルソナ投入: env=${env} / 学習履歴 ${HISTORY_START}〜${addDays(TODAY, -1)} ===`);
 
 const CUR = currentTermIndex(new Date());
 const terms = [termOf(CUR - 1), termOf(CUR)];
@@ -644,21 +826,96 @@ for (const key of Object.keys(TENANTS) as TenantKey[]) {
 }
 const phraseIdsByTenant = new Map<TenantKey, string[]>();
 
+// --- コーチ ------------------------------------------------------------------
+const coachClientId = await kit.ensureClient(COACH_TENANT_NAME, 1);
+const coachUsers = {} as Record<CoachKey, LiveCoach>;
+for (const key of Object.keys(COACHES) as CoachKey[]) {
+  const c = COACHES[key];
+  const email = `qa-p-coach-${c.seq}@gabby-qa-test.example`;
+  const id = await kit.ensureUser({ email, userType: "2", userName: c.name, clientId: coachClientId, timezone: c.timezone });
+  await kit.ensureCoachProfile(id);
+  await live.ensureAvailabilities(id, c.availability);
+  coachUsers[key] = { id, email, timezone: c.timezone };
+  console.log(`- ${email} ${c.name}`);
+}
+
+/** コーチのローカル日付で、期間内の曜日 dow の回数（上限 cap） */
+function countWeekdays(from: string, to: string, dow: number, cap: number): number {
+  let n = 0;
+  for (let d = addDays(from, (dow - dayOfWeek(from) + 7) % 7); d <= to && n < cap; d = addDays(d, 7)) n++;
+  return n;
+}
+
+/** ライブ契約: タームごとに契約・ライセンス・チケット、枠ごとにスケジュールとセッションを作り、過去の回を完了にする */
+async function ensureLive(p: StudentPersona, userId: string, clientId: string): Promise<{ created: number; completed: number }> {
+  const liveCfg = p.live;
+  if (!liveCfg) return { created: 0, completed: 0 };
+  let created = 0;
+  let completed = 0;
+  for (const term of terms) {
+    const contractId = await kit.ensureContract(clientId, liveCfg.plan, term, 10);
+    const licenseId = await kit.ensureLicense(userId, contractId, term, 1);
+    if (!licenseId) continue;
+    const ticketId = await kit.ensureSessionTicket(licenseId, contractId, userId, liveCfg.plan);
+    const termStart = jstDateOf(new Date(term.startIso));
+    const termEnd = jstDateOf(new Date(term.endIso));
+
+    // 同じ枠番号の担当（交代前→交代後）で、1枠あたりのセッション数を分け合う
+    const usedBySlot = new Map<number, number>();
+    for (const slot of liveCfg.slots) {
+      const startDate = slot.from && slot.from > termStart ? slot.from : termStart;
+      const endDate = slot.until && slot.until < termEnd ? slot.until : termEnd;
+      if (startDate > endDate) continue;
+      const used = usedBySlot.get(slot.slotNo) ?? 0;
+      const target = slot.until && slot.until < termEnd
+        ? countWeekdays(startDate, endDate, slot.dayOfWeek, SESSIONS_PER_SLOT - used)
+        : SESSIONS_PER_SLOT - used;
+      usedBySlot.set(slot.slotNo, used + target);
+      if (target <= 0) continue;
+
+      const seed: LiveScheduleSeed = {
+        ticketId,
+        studentId: userId,
+        coach: coachUsers[slot.coach],
+        slotNo: slot.slotNo,
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        startDate,
+        endDate,
+        targetSessions: target,
+        terminated: Boolean(slot.until && slot.until < termEnd),
+        cancellations: (liveCfg.cancellations ?? []).filter((c) => c.coach === slot.coach),
+      };
+      const scheduleId = await live.ensureSchedule(seed);
+      created += await live.ensureSessions(seed, scheduleId);
+    }
+    completed += await live.completePastSessions(ticketId, Object.values(coachUsers));
+  }
+  return { created, completed };
+}
+
+// --- 生徒 ------------------------------------------------------------------
+const studentIds = {} as Record<string, string>;
 const summary: Record<string, unknown>[] = [];
 for (const p of STUDENTS) {
   const contents = tenantContents.get(p.tenant);
   if (!contents) throw new Error(`顧客が未作成です: ${p.tenant}`);
   const email = `qa-p-student-${p.seq}@gabby-qa-test.example`;
   const userId = await kit.ensureUser({ email, userType: "1", userName: p.name, clientId: contents.clientId, timezone: "Asia/Tokyo" });
+  studentIds[p.id] = userId;
   for (const role of p.roles ?? []) await kit.ensureRole(userId, role);
   await kit.ensureLatestTermsAgreed(userId);
 
-  // ライセンス: 前期・当期（新規ペルソナは初回投入日から当期末まで）
-  for (const term of p.startsOnSeedDate ? [termOf(CUR)] : terms) {
-    const contractId = await kit.ensureContract(contents.clientId, "BLUEPRINT_ONLY", term, 10);
-    const period = p.startsOnSeedDate ? { startIso: jstAt(TODAY, 0).toISOString(), endIso: term.endIso, label: `${term.label}（${TODAY}開始）` } : term;
-    await kit.ensureLicense(userId, contractId, period, 1);
+  // ライセンス: 前期・当期（ライブ契約は ensureLive で作る。新規ペルソナは初回投入日から当期末まで）
+  if (!p.live) {
+    for (const term of p.startsOnSeedDate ? [termOf(CUR)] : terms) {
+      const contractId = await kit.ensureContract(contents.clientId, "BLUEPRINT_ONLY", term, 10);
+      const period = p.startsOnSeedDate ? { startIso: jstAt(TODAY, 0).toISOString(), endIso: term.endIso, label: `${term.label}（${TODAY}開始）` } : term;
+      await kit.ensureLicense(userId, contractId, period, 1);
+    }
   }
+  const liveResult = await ensureLive(p, userId, contents.clientId);
 
   await ensureLevels(p, userId);
   const generated = await generateHistory(p, contents);
@@ -674,14 +931,38 @@ for (const p of STUDENTS) {
 
   summary.push({
     id: p.id,
-    email,
     学習日数: new Set(generated.sessionTimes.map((t) => jstDateOf(t))).size,
-    単語帳サマリー: generated.wordDays.length,
-    スプリント: `${generated.sprintRuns.length}回（今回追加 ${insertedRuns}）`,
+    スプリント: `${generated.sprintRuns.length}回（追加 ${insertedRuns}）`,
     お気に入り登録数: favorites,
+    ライブ: p.live ? `セッション作成 ${liveResult.created} / 完了 ${liveResult.completed}` : "-",
   });
   console.log(`- ${email} ${p.name}`);
 }
+
+// --- ダイアログ課題（P05: ビジネス英語プロ） ---------------------------------
+{
+  const studentId = studentIds.P05;
+  const julyAug = await live.completedSessionDates(studentId, coachUsers.C1.id, "2026-07-06", "2026-08-31");
+  const first = await live.ensureDialogueAssignment({
+    studentId,
+    coachId: coachUsers.C1.id,
+    contentNames: ["B2 Delivering Bad News", "B1-B2 Asking for and Receiving Direct Feedback"],
+    assignedDate: "2026-07-06",
+    completedDates: julyAug.slice(0, 6),
+  });
+  const sept = await live.completedSessionDates(studentId, coachUsers.C2.id, "2026-09-01", TODAY);
+  const second = await live.ensureDialogueAssignment({
+    studentId,
+    coachId: coachUsers.C2.id,
+    contentNames: ["Set B: Explaining Competitive Advantages", "B2 Describing Graphs and Charts"],
+    assignedDate: "2026-09-01",
+    completedDates: sept.slice(0, 2),
+  });
+  console.log(`ダイアログ課題（P05）: ${first ?? "教材なし"} / ${second ?? "教材なし"}`);
+}
+
+// --- チャット ----------------------------------------------------------------
+await seedPersonaChats({ ...studentIds, ...Object.fromEntries((Object.keys(coachUsers) as CoachKey[]).map((k) => [k, coachUsers[k].id])) });
 
 console.log("\n=== 投入完了 ===");
 console.table(summary);

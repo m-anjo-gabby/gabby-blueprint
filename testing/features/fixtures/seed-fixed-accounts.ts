@@ -58,7 +58,7 @@ console.log(`当期: ${termOf(CUR).label} / 前期: ${termOf(PREV).label} / 次�
 // ---------------------------------------------------------------------------
 // マスタ系・契約・ライセンス（testing/helpers/fixture-accounts.ts）
 // ---------------------------------------------------------------------------
-const { ensureClient, findAuthUserByEmail, ensureUser, ensureRole, ensureCoachProfile, ensureCoachAvailability, ensureContract, ensureLicense, ensureContentAccess, ensureGenericSprintAccess } =
+const { ensureClient, findAuthUserByEmail, ensureUser, ensureRole, ensureCoachProfile, ensureCoachAvailability, ensureContract, ensureLicense, ensureSessionTicket, ensureContentAccess, ensureGenericSprintAccess } =
   createFixtureKit(admin, PASSWORD);
 
 // ---------------------------------------------------------------------------
@@ -147,25 +147,15 @@ async function ensureLiveMatch(studentId: string, coachId: string, clientId: str
   const licenseId = await ensureLicense(studentId, contractId, term, 1);
   if (!licenseId) return;
 
-  const { data: plan } = await admin.from("com_m_contract_plan").select("weekly_frequency, total_sessions").eq("plan_code", "LIVE_WEEKLY1_3M").single();
-  let { data: ticket } = await admin.from("com_t_user_session_ticket").select("ticket_id").eq("license_id", licenseId).maybeSingle();
-  if (!ticket) {
-    const { data, error } = await admin
-      .from("com_t_user_session_ticket")
-      .insert({ license_id: licenseId, contract_id: contractId, user_id: studentId, weekly_frequency: plan?.weekly_frequency, total_sessions: plan?.total_sessions, used_sessions: 0 })
-      .select("ticket_id")
-      .single();
-    if (error) throw error;
-    ticket = data;
-  }
+  const ticketId = await ensureSessionTicket(licenseId, contractId, studentId, "LIVE_WEEKLY1_3M");
 
-  const { data: schedule } = await admin.from("com_m_lesson_schedule").select("schedule_id").eq("ticket_id", ticket.ticket_id).limit(1);
+  const { data: schedule } = await admin.from("com_m_lesson_schedule").select("schedule_id").eq("ticket_id", ticketId).limit(1);
   if (schedule && schedule.length > 0) return;
 
   // コーチのAvailability（月・水・金 18:00〜22:00 バンクーバー）に沿う月曜18:00枠でマッチング成立させる
   const adminClient = await signInAsRole(ADMIN_EMAIL, PASSWORD);
   const { data: scheduleId, error } = await adminClient.rpc("admin_match_student_with_coach", {
-    p_ticket_id: ticket.ticket_id,
+    p_ticket_id: ticketId,
     p_coach_id: coachId,
     p_slot_no: 1,
     p_day_of_week: 1,
