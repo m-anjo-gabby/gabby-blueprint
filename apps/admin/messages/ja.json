@@ -26,7 +26,20 @@
       "allClients": "すべての顧客",
       "searchPlaceholder": "顧客名で検索...",
       "emptyMessage": "見つかりませんでした。"
-    }
+    },
+    "monthPicker": {
+      "prevYear": "前年",
+      "nextYear": "翌年",
+      "yearLabel": "{year}年",
+      "months": {
+        "m1": "1月", "m2": "2月", "m3": "3月", "m4": "4月",
+        "m5": "5月", "m6": "6月", "m7": "7月", "m8": "8月",
+        "m9": "9月", "m10": "10月", "m11": "11月", "m12": "12月"
+      }
+    },
+    "monthLabel": "{year}年{month}月",
+    "prevMonth": "前月",
+    "nextMonth": "翌月"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -40,7 +53,9 @@
     "notice": "お知らせ管理",
     "calendarEvents": "カレンダーイベント管理",
     "monthlyReports": "月次コーチングレポート",
+    "trainingReports": "トレーニングレポート",
     "paymentSettings": "支払い設定",
+    "companyProfiles": "会社情報",
     "chat": "チャット",
     "systemSettings": "システム設定",
     "support": "サポート",
@@ -343,28 +358,13 @@
   "paymentSettings": {
     "fetchFailed": "設定データの取得に失敗しました。DDL/DMLが反映されているかご確認ください。",
     "title": "支払い設定",
-    "subtitle": "コーチ向け月次支払通知書・請求書(INVOICE)(PDF)に使用する会社情報・セッション単価を管理します。",
-    "companyInfoTitle": "会社情報",
-    "companyInfoDesc": "コーチ向け月次支払通知書・請求書(INVOICE)(いずれもPDF)に印字されます。コーチとの業務委託契約主体（バンクーバー法人）の情報を設定してください。",
-    "companyNameLabel": "会社名",
-    "addressLabel": "住所",
-    "taxRegistrationLabel": "税務登録番号（任意）",
-    "taxRegistrationPlaceholder": "例: カナダGST/HST登録番号（未登録の場合は空欄）",
-    "taxRegistrationHint": "設定した場合のみ請求書(INVOICE)に印字されます。記載要否は税務専門家にご確認ください。",
-    "saveCompany": "会社情報を保存",
-    "logoLabel": "会社ロゴ",
-    "logoAlt": "会社ロゴ",
-    "logoNotSet": "未設定",
-    "uploadingLogo": "アップロード中...",
-    "changeLogo": "ロゴ画像を変更",
+    "subtitle": "コーチ向け月次支払通知書・請求書(INVOICE)(PDF)の支払額に使用するセッション単価を管理します。発行元の会社情報は「システム設定 > 会社情報」で管理します。",
     "sessionRateTitle": "セッション単価",
     "sessionRateDesc": "全コーチ共通の単価です。月次支払通知書の支払額は「単価 × 月間総セッション数」で算出されます（単価自体は通知書には表示しません）。承認済み月は承認時点の単価で固定されるため、ここでの変更は未承認の月にのみ影響します。",
     "rateAmountLabel": "単価",
     "currencyCodeLabel": "通貨コード",
     "saveRate": "単価を保存",
-    "toastCompanyUpdated": "会社情報を更新しました",
-    "toastRateUpdated": "セッション単価を更新しました",
-    "toastLogoUpdated": "ロゴ画像を更新しました"
+    "toastRateUpdated": "セッション単価を更新しました"
   },
   "notification": {
     "title": "通知",
@@ -786,16 +786,6 @@
     "coachSelector": {
       "prevMonth": "前月",
       "nextMonth": "翌月"
-    },
-    "monthPicker": {
-      "prevYear": "前年",
-      "nextYear": "翌年",
-      "yearLabel": "{year}年",
-      "months": {
-        "m1": "1月", "m2": "2月", "m3": "3月", "m4": "4月",
-        "m5": "5月", "m6": "6月", "m7": "7月", "m8": "8月",
-        "m9": "9月", "m10": "10月", "m11": "11月", "m12": "12月"
-      }
     },
     "monthLabel": "{year}年{month}月",
     "grid": {
@@ -1991,5 +1981,76 @@
         }
       }
     }
+  },
+  "companyProfiles": {
+    "title": "会社情報",
+    "subtitle": "書面（PDF）の発行元として印字する会社情報を、法人ごとに管理します。",
+    "fetchFailed": "会社情報の取得に失敗しました。DDL/DMLが反映されているかご確認ください。",
+    "companies": {
+      "GABBY_JP": {
+        "title": "日本法人",
+        "usage": "顧客・生徒との契約主体です。生徒向けトレーニングレポートの発行元として印字されます。"
+      },
+      "GVT_CA": {
+        "title": "バンクーバー法人",
+        "usage": "コーチとの業務委託契約主体です。コーチ向け月次支払通知書・請求書(INVOICE)の発行元として印字されます。"
+      }
+    },
+    "companyNameLabel": "会社名（英語）",
+    "companyNameJaLabel": "会社名（日本語・任意）",
+    "companyNameJaPlaceholder": "例: 株式会社ギャビーアカデミー",
+    "companyNameJaHint": "設定した場合、日本語の書面（トレーニングレポート）で英語の社名と併記します。",
+    "addressLabel": "住所",
+    "addressHint": "改行した位置で、書面上も改行して印字されます。",
+    "taxRegistrationLabel": "税務登録番号（任意）",
+    "taxRegistrationPlaceholderJp": "例: 適格請求書発行事業者の登録番号（T+13桁）",
+    "taxRegistrationPlaceholderCa": "例: カナダGST/HST登録番号（未登録の場合は空欄）",
+    "taxRegistrationHint": "現在は請求書(INVOICE)にのみ、設定した場合に印字されます。記載要否は税務専門家にご確認ください。",
+    "save": "保存",
+    "logoLabel": "会社ロゴ",
+    "logoAlt": "会社ロゴ",
+    "logoNotSet": "未設定",
+    "changeLogo": "ロゴ画像を変更",
+    "toastUpdated": "会社情報を更新しました",
+    "toastLogoUpdated": "ロゴ画像を更新しました",
+    "errors": {
+      "forbidden": "この操作を行う権限がありません。",
+      "invalidCompany": "対象の法人が正しくありません。",
+      "required": "会社名（英語）と住所は必須です。",
+      "updateFailed": "会社情報の更新に失敗しました。",
+      "logoRequired": "ロゴ画像ファイルを選択してください。",
+      "logoUploadFailed": "ロゴ画像のアップロードに失敗しました。",
+      "logoPathFailed": "ロゴ画像は保存されましたが、パスの更新に失敗しました。"
+    }
+  },
+  "trainingReports": {
+    "title": "トレーニングレポート",
+    "subtitle": "生徒の契約期間（ライセンス）ごとのトレーニングレポート(PDF)を作成します。満了月を選ぶと、その月に期間が終わるライセンスを契約ごとに表示します。",
+    "draftNote": "現在はドラフト版（運営確認用）です。PDFのコーチのコメントは、下書きも「下書き」と表示して載せます。",
+    "fetchFailed": "一覧の取得に失敗しました。DDL/DMLが反映されているかご確認ください。",
+    "empty": "この月に満了するライセンスはありません。",
+    "contractSummary": "{client} ・ {plan} ・ この月に満了 {count}名",
+    "bulkButton": "契約の全員分をZIPで作成",
+    "bulkHint": "満了月を問わず、この契約のライセンス保持者全員分のPDFが1人1ファイルで入ります。",
+    "columns": {
+      "student": "生徒",
+      "period": "期間",
+      "status": "状態",
+      "comment": "コーチのコメント",
+      "report": "レポート"
+    },
+    "licenseStatus": {
+      "active": "有効",
+      "stopped": "停止",
+      "expired": "満了"
+    },
+    "comment": {
+      "notApplicable": "対象外",
+      "none": "未記入",
+      "draft": "下書き {count}件",
+      "finalized": "確定 {count}件"
+    },
+    "pdfButton": "PDF",
+    "downloadFailed": "レポートの作成に失敗しました。時間をおいて再度お試しください。"
   }
 }

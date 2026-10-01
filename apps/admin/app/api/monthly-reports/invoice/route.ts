@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { getAdminCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
-import { getCompanyLogoUrl } from '@gabby/lib/monthlyReport/getCompanyLogoUrl';
+import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
+import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
 import { buildInvoiceNumber } from '@gabby/lib/monthlyReport/buildInvoiceNumber';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { USER_TYPES } from '@gabby/types/user';
@@ -44,8 +46,8 @@ export async function GET(request: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const [{ data: companyProfile }, { data: coachUser }] = await Promise.all([
-    admin.from('com_m_company_profile').select('company_name, address, logo_path, tax_registration_number').maybeSingle(),
+  const [companyProfile, { data: coachUser }] = await Promise.all([
+    fetchCompanyProfile(DOCUMENT_ISSUER.coachInvoice),
     admin.from('com_m_user').select('user_name').eq('id', coachId).maybeSingle(),
   ]);
 

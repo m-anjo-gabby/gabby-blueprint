@@ -26,7 +26,20 @@
       "allClients": "All clients",
       "searchPlaceholder": "Search by client name...",
       "emptyMessage": "No results found."
-    }
+    },
+    "monthPicker": {
+      "prevYear": "Previous year",
+      "nextYear": "Next year",
+      "yearLabel": "{year}",
+      "months": {
+        "m1": "Jan", "m2": "Feb", "m3": "Mar", "m4": "Apr",
+        "m5": "May", "m6": "Jun", "m7": "Jul", "m8": "Aug",
+        "m9": "Sep", "m10": "Oct", "m11": "Nov", "m12": "Dec"
+      }
+    },
+    "monthLabel": "{month} {year}",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -40,7 +53,9 @@
     "notice": "Notices",
     "calendarEvents": "Calendar Events",
     "monthlyReports": "Monthly Coaching Reports",
+    "trainingReports": "Training Reports",
     "paymentSettings": "Payment Settings",
+    "companyProfiles": "Company Profiles",
     "chat": "Chat",
     "systemSettings": "System Settings",
     "support": "Support",
@@ -343,28 +358,13 @@
   "paymentSettings": {
     "fetchFailed": "Failed to load settings data. Please check whether the DDL/DML has been applied.",
     "title": "Payment Settings",
-    "subtitle": "Manage the company information and session pay rate used on coach monthly payment notices and invoices (PDF).",
-    "companyInfoTitle": "Company Information",
-    "companyInfoDesc": "Printed on coach monthly payment notices and invoices (both PDF). Please set the information for the contracting entity (Vancouver corporation) that engages the coaches.",
-    "companyNameLabel": "Company name",
-    "addressLabel": "Address",
-    "taxRegistrationLabel": "Tax registration number (optional)",
-    "taxRegistrationPlaceholder": "e.g. Canadian GST/HST registration number (leave blank if not registered)",
-    "taxRegistrationHint": "Printed on the invoice only if set. Please check with a tax professional on whether it's required.",
-    "saveCompany": "Save company information",
-    "logoLabel": "Company logo",
-    "logoAlt": "Company logo",
-    "logoNotSet": "Not set",
-    "uploadingLogo": "Uploading...",
-    "changeLogo": "Change logo",
+    "subtitle": "Manage the session pay rate used to calculate the amount on coach monthly payment notices and invoices (PDF). The issuer's company information is managed under System Settings > Company Profiles.",
     "sessionRateTitle": "Session Pay Rate",
     "sessionRateDesc": "A single rate shared by all coaches. The monthly payment amount is calculated as \"rate × total monthly sessions\" (the rate itself is not shown on the notice). Approved months are locked to the rate at the time of approval, so changes here only affect unapproved months.",
     "rateAmountLabel": "Rate",
     "currencyCodeLabel": "Currency code",
     "saveRate": "Save rate",
-    "toastCompanyUpdated": "Company information updated",
-    "toastRateUpdated": "Session pay rate updated",
-    "toastLogoUpdated": "Logo image updated"
+    "toastRateUpdated": "Session pay rate updated"
   },
   "notification": {
     "title": "Notifications",
@@ -786,16 +786,6 @@
     "coachSelector": {
       "prevMonth": "Previous month",
       "nextMonth": "Next month"
-    },
-    "monthPicker": {
-      "prevYear": "Previous year",
-      "nextYear": "Next year",
-      "yearLabel": "{year}",
-      "months": {
-        "m1": "Jan", "m2": "Feb", "m3": "Mar", "m4": "Apr",
-        "m5": "May", "m6": "Jun", "m7": "Jul", "m8": "Aug",
-        "m9": "Sep", "m10": "Oct", "m11": "Nov", "m12": "Dec"
-      }
     },
     "monthLabel": "{month} {year}",
     "grid": {
@@ -1991,5 +1981,76 @@
         }
       }
     }
+  },
+  "companyProfiles": {
+    "title": "Company Profiles",
+    "subtitle": "Manage, per legal entity, the company information printed as the issuer of documents (PDF).",
+    "fetchFailed": "Failed to load company information. Please check whether the DDL/DML has been applied.",
+    "companies": {
+      "GABBY_JP": {
+        "title": "Japan entity",
+        "usage": "The contracting entity for clients and students. Printed as the issuer of student training reports."
+      },
+      "GVT_CA": {
+        "title": "Vancouver entity",
+        "usage": "The contracting entity that engages the coaches. Printed as the issuer of coach monthly payment notices and invoices."
+      }
+    },
+    "companyNameLabel": "Company name (English)",
+    "companyNameJaLabel": "Company name (Japanese, optional)",
+    "companyNameJaPlaceholder": "e.g. 株式会社ギャビーアカデミー",
+    "companyNameJaHint": "If set, shown alongside the English name on Japanese documents (training reports).",
+    "addressLabel": "Address",
+    "addressHint": "Line breaks are kept as-is on the documents.",
+    "taxRegistrationLabel": "Tax registration number (optional)",
+    "taxRegistrationPlaceholderJp": "e.g. Qualified invoice issuer number (T + 13 digits)",
+    "taxRegistrationPlaceholderCa": "e.g. Canadian GST/HST registration number (leave blank if not registered)",
+    "taxRegistrationHint": "Currently printed only on invoices, and only if set. Please check with a tax professional on whether it's required.",
+    "save": "Save",
+    "logoLabel": "Company logo",
+    "logoAlt": "Company logo",
+    "logoNotSet": "Not set",
+    "changeLogo": "Change logo",
+    "toastUpdated": "Company information updated",
+    "toastLogoUpdated": "Logo image updated",
+    "errors": {
+      "forbidden": "You do not have permission to perform this action.",
+      "invalidCompany": "Invalid legal entity.",
+      "required": "Company name (English) and address are required.",
+      "updateFailed": "Failed to update company information.",
+      "logoRequired": "Please select a logo image file.",
+      "logoUploadFailed": "Failed to upload the logo image.",
+      "logoPathFailed": "The logo image was saved, but updating its path failed."
+    }
+  },
+  "trainingReports": {
+    "title": "Training Reports",
+    "subtitle": "Create training reports (PDF) for each student's contract term (license). Choose a month to list, by contract, the licenses whose term ends in that month.",
+    "draftNote": "This is currently a draft version for internal review. Coach comments still in draft are included in the PDF and marked as drafts.",
+    "fetchFailed": "Failed to load the list. Please check whether the DDL/DML has been applied.",
+    "empty": "No licenses end in this month.",
+    "contractSummary": "{client} · {plan} · {count} ending this month",
+    "bulkButton": "Create ZIP for whole contract",
+    "bulkHint": "Contains one PDF per student for every license holder in this contract, regardless of end month.",
+    "columns": {
+      "student": "Student",
+      "period": "Term",
+      "status": "Status",
+      "comment": "Coach comments",
+      "report": "Report"
+    },
+    "licenseStatus": {
+      "active": "Active",
+      "stopped": "Stopped",
+      "expired": "Expired"
+    },
+    "comment": {
+      "notApplicable": "N/A",
+      "none": "None",
+      "draft": "{count} draft",
+      "finalized": "{count} finalized"
+    },
+    "pdfButton": "PDF",
+    "downloadFailed": "Failed to create the report. Please try again later."
   }
 }

@@ -4,7 +4,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AdminCoachSummary } from '@gabby/types/adminLiveSession';
-import { MonthPickerPopover } from './MonthPickerPopover';
+import { MonthPickerPopover } from '@/components/common/MonthPickerPopover';
 
 function shiftMonth(yearMonth: string, delta: number): string {
   const [year, month] = yearMonth.split('-').map(Number);
@@ -22,7 +22,7 @@ export function CoachMonthSelector({
   currentMonth: string;
 }) {
   const t = useTranslations('monthlyReports');
-  const tMonths = useTranslations('monthlyReports.monthPicker.months');
+  const tMonths = useTranslations('common.monthPicker.months');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

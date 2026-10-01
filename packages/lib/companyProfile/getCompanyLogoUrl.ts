@@ -1,4 +1,4 @@
-import { COMPANY_LOGO_BUCKET } from '@gabby/types/monthlyReport';
+import { COMPANY_LOGO_BUCKET } from '@gabby/types/companyProfile';
 
 /**
  * com_m_company_profile.logo_path (Storageパス) から公開URLを組み立てる。

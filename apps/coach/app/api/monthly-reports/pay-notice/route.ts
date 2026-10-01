@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { getCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
-import { getCompanyLogoUrl } from '@gabby/lib/monthlyReport/getCompanyLogoUrl';
+import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
+import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
 import { createServerClient } from '@gabby/lib/supabase/server';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { PayNoticeDocument } from '@/lib/pdf/PayNoticeDocument';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
@@ -40,13 +41,9 @@ export async function GET(request: NextRequest) {
   }
   const { data: coachUser } = await supabase.from('com_m_user').select('user_name').eq('id', user.id).maybeSingle();
 
-  // com_m_company_profileはRLSで管理者のみ参照可能なため、ここではサーバー側の信頼済み
-  // コードとしてcreateAdminClient()(service_role)経由で読む（コーチ自身に直接SELECT権限は与えない）。
-  const admin = createAdminClient();
-  const { data: companyProfile } = await admin
-    .from('com_m_company_profile')
-    .select('company_name, address, logo_path')
-    .maybeSingle();
+  // com_m_company_profileはRLSで管理者のみ参照可能なため、fetchCompanyProfileがサーバー側で
+  // service_role経由で読む（コーチ自身に直接SELECT権限は与えない）。発行元はバンクーバー法人。
+  const companyProfile = await fetchCompanyProfile(DOCUMENT_ISSUER.coachPayNotice);
 
   const approval = result.report.approval;
   // 単価自体は書面に表示しない（今後コーチ別に単価が変わり得るため）が、支払額の算出には

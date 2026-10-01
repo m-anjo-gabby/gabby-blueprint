@@ -1049,3 +1049,426 @@ FROM first_dates fd
 WHERE ls.user_id = fd.user_id;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】会社情報の法人ごと化（日本法人の追加）
+-- 追加日: 2026-10-01
+--
+-- 【内容】
+--   生徒向けトレーニングレポートを日本法人名義で発行するため、com_m_company_profile の
+--   シングルトン運用（1行のみ）をやめ、法人コード(company_code)で法人ごとに1行を持つ。
+--   既存行はバンクーバー法人(GVT_CA)とし、日本法人(GABBY_JP)の行を追加する。
+--   日本法人の行は既に存在する場合は上書きしない（アドミン画面で編集済みの内容を守るため）。
+--
+-- 【注意】旧アプリの支払通知書・請求書PDFは会社情報を条件なしで1行取得しているため、
+--   本セクション適用後は旧アプリでPDFが作れなくなる。アプリのデプロイと同時に適用すること。
+--
+-- 対応ファイル: DDL/table/com_m_company_profile.sql, DML/com_m_company_profile.sql
+-- =========================================================================
+
+BEGIN;
+
+ALTER TABLE public.com_m_company_profile
+  ADD COLUMN IF NOT EXISTS company_code text,
+  ADD COLUMN IF NOT EXISTS company_name_ja text DEFAULT NULL;
+
+UPDATE public.com_m_company_profile
+SET company_code = 'GVT_CA'
+WHERE company_profile_id = '00000000-0000-0000-0000-000000000001' AND company_code IS NULL;
+
+ALTER TABLE public.com_m_company_profile ALTER COLUMN company_code SET NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_company_profile_code ON public.com_m_company_profile (company_code);
+
+COMMENT ON TABLE public.com_m_company_profile IS '会社情報マスタ（法人ごとに1行。書面の発行元として使用。コーチ向け支払通知書・請求書=GVT_CA、生徒向けトレーニングレポート=GABBY_JP）';
+COMMENT ON COLUMN public.com_m_company_profile.company_code IS '法人コード（GVT_CA: バンクーバー法人 / GABBY_JP: 日本法人）。一意';
+COMMENT ON COLUMN public.com_m_company_profile.company_name IS '会社名（英語。例: Gabby Academy Co., Ltd.）';
+COMMENT ON COLUMN public.com_m_company_profile.company_name_ja IS '会社名（日本語。例: 株式会社ギャビーアカデミー）。日本法人の書面で英語名と併記する。任意';
+
+INSERT INTO public.com_m_company_profile (company_profile_id, company_code, company_name, company_name_ja, address, logo_path, tax_registration_number)
+VALUES (
+  '00000000-0000-0000-0000-000000000002',
+  'GABBY_JP',
+  'Gabby Academy Co., Ltd.',
+  '株式会社ギャビーアカデミー',
+  '〒101-0041' || E'\n' || '東京都千代田区神田須田町2-25 GYB秋葉原2F',
+  'logo-01.png',
+  NULL
+)
+ON CONFLICT (company_profile_id) DO NOTHING;
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】スプリント到達レベルの変更履歴
+-- 追加日: 2026-10-01
+--
+-- 【内容】
+--   トレーニングレポートに契約期間の開始時点・終了時点のレベルを載せるため、
+--   student_m_sprint_progress のレベル変更をトリガーで履歴テーブルに記録する。
+--   管理者による引き下げは「誤った引き上げの修正」として扱い、修正後より高い直近の記録を取り消す。
+--   既存の生徒は、本セクション適用時点のレベルを起点として記録する（適用前の時点のレベルは不明扱い）。
+--   起点の記録は、履歴が無い生徒だけを対象にするため、再実行しても重複しない。
+--
+-- 対応ファイル: DDL/table/student_t_sprint_level_history.sql,
+--               DDL/function/record_sprint_level_history.sql, DDL/function/get_sprint_level_as_of.sql
+-- =========================================================================
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.student_t_sprint_level_history (
+    history_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    question_type smallint NOT NULL, -- 0:Speed 4:Structure 5:Builders 6:Mastery（packages/types/sprint.ts の SprintQuestionType）
+    old_level smallint,               -- 変更前のレベル（起点の行はNULL）
+    new_level smallint NOT NULL,
+    change_kind smallint NOT NULL,    -- 0:起点 1:引き上げ 2:修正（管理者による引き下げ）
+    effective_at timestamp with time zone NOT NULL, -- このレベルになったとみなす日時（修正の行は取り消した行の日時）
+    changed_by uuid,                  -- 操作したユーザー（コーチはauth.uid()。管理者画面はservice_role経由のためNULL）
+    voided_at timestamp with time zone,              -- 管理者の修正で取り消された日時（取り消されていなければNULL）
+    voided_by_history_id bigint REFERENCES public.student_t_sprint_level_history(history_id),
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_sprint_level_history_question_type CHECK (question_type IN (0, 4, 5, 6)),
+    CONSTRAINT chk_sprint_level_history_change_kind CHECK (change_kind IN (0, 1, 2))
+);
+
+COMMENT ON TABLE public.student_t_sprint_level_history IS 'スプリント到達レベルの変更履歴（問題種別ごと。任意の時点のレベル算出に使う。管理者の修正で誤った引き上げは取消済みにする）';
+COMMENT ON COLUMN public.student_t_sprint_level_history.history_id IS '履歴ID（同じeffective_atの行の前後関係にも使う）';
+COMMENT ON COLUMN public.student_t_sprint_level_history.user_id IS '生徒のユーザID';
+COMMENT ON COLUMN public.student_t_sprint_level_history.question_type IS '問題種別 0:Speed 4:Structure 5:Builders 6:Mastery';
+COMMENT ON COLUMN public.student_t_sprint_level_history.old_level IS '変更前のレベル（起点の行はNULL）';
+COMMENT ON COLUMN public.student_t_sprint_level_history.new_level IS '変更後のレベル';
+COMMENT ON COLUMN public.student_t_sprint_level_history.change_kind IS '記録の種類 0:起点 1:引き上げ 2:修正（管理者による引き下げ）';
+COMMENT ON COLUMN public.student_t_sprint_level_history.effective_at IS 'このレベルになったとみなす日時。引き上げ・起点は操作日時、修正は取り消した行のうち最も古い行の日時';
+COMMENT ON COLUMN public.student_t_sprint_level_history.changed_by IS '操作したユーザーID（コーチ操作はauth.uid()。管理者画面・システム処理はNULL）';
+COMMENT ON COLUMN public.student_t_sprint_level_history.voided_at IS '管理者の修正で取り消された日時（取消済みの行はレベルの算出に使わない）';
+COMMENT ON COLUMN public.student_t_sprint_level_history.voided_by_history_id IS 'この行を取り消した修正の行のhistory_id';
+COMMENT ON COLUMN public.student_t_sprint_level_history.insert_date IS '記録日時';
+
+CREATE INDEX IF NOT EXISTS idx_sprint_level_history_lookup
+  ON public.student_t_sprint_level_history (user_id, question_type, effective_at DESC, history_id DESC)
+  WHERE voided_at IS NULL;
+
+---------------------------------------------
+-- 行レベルセキュリティ (RLS)
+---------------------------------------------
+ALTER TABLE public.student_t_sprint_level_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can view sprint level history" ON public.student_t_sprint_level_history;
+CREATE POLICY "Admins can view sprint level history" ON public.student_t_sprint_level_history
+FOR SELECT TO authenticated
+USING (public.get_jwt_user_type() = '0');
+
+-- 問題種別1つ分の変更を履歴に追記する（トリガー専用の内部関数）
+CREATE OR REPLACE FUNCTION public.append_sprint_level_history(
+    p_user_id uuid,
+    p_question_type smallint,
+    p_old_level smallint,
+    p_new_level smallint,
+    p_changed_by uuid
+)
+RETURNS void AS $$
+DECLARE
+    v_row record;
+    v_void_ids bigint[] := '{}';
+    v_effective_at timestamp with time zone;
+    v_history_id bigint;
+BEGIN
+    IF p_old_level IS NOT DISTINCT FROM p_new_level THEN
+        RETURN;
+    END IF;
+
+    -- 起点（進捗行の作成時）・引き上げ
+    IF p_old_level IS NULL OR p_new_level > p_old_level THEN
+        INSERT INTO public.student_t_sprint_level_history
+            (user_id, question_type, old_level, new_level, change_kind, effective_at, changed_by)
+        VALUES
+            (p_user_id, p_question_type, p_old_level, p_new_level,
+             CASE WHEN p_old_level IS NULL THEN 0 ELSE 1 END, NOW(), p_changed_by);
+        RETURN;
+    END IF;
+
+    -- 引き下げ（管理者による修正）: 直近から遡り、修正後のレベルより高い値の行を取り消し対象にする
+    FOR v_row IN
+        SELECT history_id, new_level, effective_at
+        FROM public.student_t_sprint_level_history
+        WHERE user_id = p_user_id AND question_type = p_question_type AND voided_at IS NULL
+        ORDER BY effective_at DESC, history_id DESC
+    LOOP
+        EXIT WHEN v_row.new_level <= p_new_level;
+        v_void_ids := v_void_ids || v_row.history_id;
+        v_effective_at := v_row.effective_at;
+    END LOOP;
+
+    INSERT INTO public.student_t_sprint_level_history
+        (user_id, question_type, old_level, new_level, change_kind, effective_at, changed_by)
+    VALUES
+        (p_user_id, p_question_type, p_old_level, p_new_level, 2, COALESCE(v_effective_at, NOW()), p_changed_by)
+    RETURNING history_id INTO v_history_id;
+
+    IF cardinality(v_void_ids) > 0 THEN
+        UPDATE public.student_t_sprint_level_history
+        SET voided_at = NOW(), voided_by_history_id = v_history_id
+        WHERE history_id = ANY(v_void_ids);
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.append_sprint_level_history(uuid, smallint, smallint, smallint, uuid) FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.record_sprint_level_history()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_changed_by uuid := auth.uid();
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        PERFORM public.append_sprint_level_history(NEW.user_id, 0::smallint, NULL, NEW.level_speed, v_changed_by);
+        PERFORM public.append_sprint_level_history(NEW.user_id, 4::smallint, NULL, NEW.level_structure, v_changed_by);
+        PERFORM public.append_sprint_level_history(NEW.user_id, 5::smallint, NULL, NEW.level_builders, v_changed_by);
+        PERFORM public.append_sprint_level_history(NEW.user_id, 6::smallint, NULL, NEW.level_mastery, v_changed_by);
+    ELSE
+        PERFORM public.append_sprint_level_history(NEW.user_id, 0::smallint, OLD.level_speed, NEW.level_speed, v_changed_by);
+        PERFORM public.append_sprint_level_history(NEW.user_id, 4::smallint, OLD.level_structure, NEW.level_structure, v_changed_by);
+        PERFORM public.append_sprint_level_history(NEW.user_id, 5::smallint, OLD.level_builders, NEW.level_builders, v_changed_by);
+        PERFORM public.append_sprint_level_history(NEW.user_id, 6::smallint, OLD.level_mastery, NEW.level_mastery, v_changed_by);
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS on_sprint_progress_change_record_level_history ON public.student_m_sprint_progress;
+CREATE TRIGGER on_sprint_progress_change_record_level_history
+AFTER INSERT OR UPDATE OF level_speed, level_structure, level_builders, level_mastery ON public.student_m_sprint_progress
+FOR EACH ROW EXECUTE PROCEDURE public.record_sprint_level_history();
+
+-- トリガー専用のためAPI(RPC)経由での不正実行を完全に防御
+REVOKE EXECUTE ON FUNCTION public.record_sprint_level_history() FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.get_sprint_level_as_of(
+    p_user_id uuid,
+    p_question_type smallint,
+    p_at timestamp with time zone
+)
+RETURNS smallint AS $$
+    SELECT h.new_level
+    FROM public.student_t_sprint_level_history h
+    WHERE h.user_id = p_user_id
+      AND h.question_type = p_question_type
+      AND h.voided_at IS NULL
+      AND h.effective_at <= p_at
+    ORDER BY h.effective_at DESC, h.history_id DESC
+    LIMIT 1;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_sprint_level_as_of(uuid, smallint, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_sprint_level_as_of(uuid, smallint, timestamp with time zone) TO service_role;
+
+-- 既存の生徒の起点（適用時点のレベル）を記録する
+INSERT INTO public.student_t_sprint_level_history (user_id, question_type, old_level, new_level, change_kind, effective_at)
+SELECT p.user_id, v.question_type, NULL, v.level, 0, NOW()
+FROM public.student_m_sprint_progress p
+CROSS JOIN LATERAL (VALUES
+  (0::smallint, p.level_speed),
+  (4::smallint, p.level_structure),
+  (5::smallint, p.level_builders),
+  (6::smallint, p.level_mastery)
+) AS v(question_type, level)
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.student_t_sprint_level_history h WHERE h.user_id = p.user_id
+);
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】トレーニングレポート（ドラフト）の集計RPC
+-- 追加日: 2026-10-01
+--
+-- 【内容】
+--   アドミンの「サポート > トレーニングレポート」画面で、満了月ごとのライセンス一覧を表示し、
+--   ライセンスごとにレポート(PDF)を作るための集計関数を追加する（service_roleのみ実行可）。
+--   前提: 本ファイルの「スプリント到達レベルの変更履歴」セクションが適用済みであること。
+--
+-- 対応ファイル: DDL/function/get_training_report_targets.sql, DDL/function/get_training_report_data.sql
+-- =========================================================================
+
+BEGIN;
+
+DROP FUNCTION IF EXISTS public.get_training_report_targets(timestamp with time zone, timestamp with time zone);
+
+CREATE OR REPLACE FUNCTION public.get_training_report_targets(
+    p_from timestamp with time zone,
+    p_to timestamp with time zone
+)
+RETURNS TABLE (
+    license_id uuid,
+    license_status smallint,
+    start_date timestamp with time zone,
+    end_date timestamp with time zone,
+    student_id uuid,
+    student_name text,
+    contract_id uuid,
+    contract_name text,
+    plan_name text,
+    client_name text,
+    has_live_session boolean,
+    finalized_comment_count integer,
+    draft_comment_count integer
+) AS $$
+    SELECT
+        l.license_id,
+        l.status,
+        l.start_date,
+        l.end_date,
+        l.user_id,
+        u.user_name,
+        c.contract_id,
+        c.contract_name,
+        c.plan_name,
+        cl.client_name,
+        t.ticket_id IS NOT NULL,
+        COALESCE(rc.finalized_count, 0),
+        COALESCE(rc.draft_count, 0)
+    FROM public.com_t_user_license l
+    JOIN public.com_m_user u ON u.id = l.user_id
+    JOIN public.com_m_contract c ON c.contract_id = l.contract_id
+    JOIN public.com_m_client cl ON cl.client_id = c.client_id
+    LEFT JOIN public.com_t_user_session_ticket t ON t.license_id = l.license_id
+    LEFT JOIN LATERAL (
+        SELECT
+            COUNT(*) FILTER (WHERE r.status = 2)::integer AS finalized_count,
+            COUNT(*) FILTER (WHERE r.status = 1)::integer AS draft_count
+        FROM public.com_t_contract_training_report r
+        WHERE r.ticket_id = t.ticket_id
+    ) rc ON true
+    WHERE l.end_date >= p_from AND l.end_date < p_to
+    ORDER BY cl.client_name, c.contract_name, u.user_name;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_training_report_targets(timestamp with time zone, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_training_report_targets(timestamp with time zone, timestamp with time zone) TO service_role;
+
+DROP FUNCTION IF EXISTS public.get_training_report_data(uuid[]);
+
+CREATE OR REPLACE FUNCTION public.get_training_report_data(p_license_ids uuid[])
+RETURNS jsonb AS $$
+    WITH lic AS (
+        SELECT
+            l.license_id, l.user_id, l.status, l.start_date, l.end_date,
+            (l.start_date AT TIME ZONE 'Asia/Tokyo')::date AS from_date,
+            (l.end_date AT TIME ZONE 'Asia/Tokyo')::date AS to_date,
+            LEAST(l.end_date, NOW()) AS level_end_at,
+            u.user_name,
+            c.contract_id, c.contract_name, c.plan_name, cl.client_name,
+            t.ticket_id, t.total_sessions
+        FROM public.com_t_user_license l
+        JOIN public.com_m_user u ON u.id = l.user_id
+        JOIN public.com_m_contract c ON c.contract_id = l.contract_id
+        JOIN public.com_m_client cl ON cl.client_id = c.client_id
+        LEFT JOIN public.com_t_user_session_ticket t ON t.license_id = l.license_id
+        WHERE l.license_id = ANY(p_license_ids)
+    ),
+    daily AS (
+        SELECT
+            lic.license_id,
+            d.training_date,
+            SUM(d.words)::integer AS words,
+            SUM(d.phrases)::integer AS phrases,
+            SUM(d.sprint_questions)::integer AS sprint_questions,
+            SUM(d.assessments)::integer AS assessments
+        FROM lic
+        CROSS JOIN LATERAL (
+            SELECT w.training_date, w.word_count AS words, w.phrase_count AS phrases,
+                   0 AS sprint_questions, w.assessment_count AS assessments
+            FROM public.self_t_word_summary w
+            WHERE w.user_id = lic.user_id AND w.training_date BETWEEN lic.from_date AND lic.to_date
+            UNION ALL
+            SELECT s.training_date, 0, 0, s.question_count, s.assessment_count
+            FROM public.self_t_sprint_summary s
+            WHERE s.user_id = lic.user_id AND s.training_date BETWEEN lic.from_date AND lic.to_date
+        ) d
+        GROUP BY lic.license_id, d.training_date
+    )
+    SELECT COALESCE(jsonb_agg(
+        jsonb_build_object(
+            'license_id', lic.license_id,
+            'license_status', lic.status,
+            'start_date', lic.start_date,
+            'end_date', lic.end_date,
+            'student_id', lic.user_id,
+            'student_name', lic.user_name,
+            'contract_id', lic.contract_id,
+            'contract_name', lic.contract_name,
+            'plan_name', lic.plan_name,
+            'client_name', lic.client_name,
+            'levels_start', jsonb_build_object(
+                '0', public.get_sprint_level_as_of(lic.user_id, 0::smallint, lic.start_date),
+                '4', public.get_sprint_level_as_of(lic.user_id, 4::smallint, lic.start_date),
+                '5', public.get_sprint_level_as_of(lic.user_id, 5::smallint, lic.start_date),
+                '6', public.get_sprint_level_as_of(lic.user_id, 6::smallint, lic.start_date)
+            ),
+            'levels_end', jsonb_build_object(
+                '0', public.get_sprint_level_as_of(lic.user_id, 0::smallint, lic.level_end_at),
+                '4', public.get_sprint_level_as_of(lic.user_id, 4::smallint, lic.level_end_at),
+                '5', public.get_sprint_level_as_of(lic.user_id, 5::smallint, lic.level_end_at),
+                '6', public.get_sprint_level_as_of(lic.user_id, 6::smallint, lic.level_end_at)
+            ),
+            'activity', (
+                SELECT jsonb_build_object(
+                    'active_days', COUNT(*)::integer,
+                    'words', COALESCE(SUM(daily.words), 0)::integer,
+                    'phrases', COALESCE(SUM(daily.phrases), 0)::integer,
+                    'sprint_questions', COALESCE(SUM(daily.sprint_questions), 0)::integer,
+                    'assessments', COALESCE(SUM(daily.assessments), 0)::integer
+                )
+                FROM daily WHERE daily.license_id = lic.license_id
+            ),
+            'monthly', (
+                SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                    'month', m.month,
+                    'active_days', m.active_days,
+                    'words', m.words,
+                    'phrases', m.phrases,
+                    'sprint_questions', m.sprint_questions
+                ) ORDER BY m.month), '[]'::jsonb)
+                FROM (
+                    SELECT to_char(daily.training_date, 'YYYY-MM') AS month,
+                           COUNT(*)::integer AS active_days,
+                           SUM(daily.words)::integer AS words,
+                           SUM(daily.phrases)::integer AS phrases,
+                           SUM(daily.sprint_questions)::integer AS sprint_questions
+                    FROM daily WHERE daily.license_id = lic.license_id
+                    GROUP BY 1
+                ) m
+            ),
+            'live', CASE WHEN lic.ticket_id IS NULL THEN NULL ELSE (
+                SELECT jsonb_build_object(
+                    'total_sessions', lic.total_sessions,
+                    'completed', COUNT(*) FILTER (WHERE s.status = 2 AND s.completion_result IN (1, 2))::integer,
+                    'no_show', COUNT(*) FILTER (WHERE s.status = 2 AND s.completion_result = 3)::integer,
+                    'late_cancel', COUNT(*) FILTER (WHERE s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded IS FALSE)::integer
+                )
+                FROM public.com_t_session s
+                WHERE s.ticket_id = lic.ticket_id
+            ) END,
+            'comments', (
+                SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                    'coach_name', cu.user_name,
+                    'status', r.status,
+                    'comment_text', r.comment_text,
+                    'finalized_at', r.finalized_at
+                ) ORDER BY r.insert_date), '[]'::jsonb)
+                FROM public.com_t_contract_training_report r
+                JOIN public.com_m_user cu ON cu.id = r.coach_id
+                WHERE r.ticket_id = lic.ticket_id
+            )
+        )
+        ORDER BY lic.user_name
+    ), '[]'::jsonb)
+    FROM lic;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_training_report_data(uuid[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_training_report_data(uuid[]) TO service_role;
+
+COMMIT;

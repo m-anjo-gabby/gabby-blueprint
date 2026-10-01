@@ -82,7 +82,7 @@
 | [live-sessions.md](admin/live-sessions.md) | `/live-sessions` | セッションの代理キャンセル/予約/マッチング/コーチ交代 | ✅ |
 | [monthly-reports.md](admin/monthly-reports.md) | `/monthly-reports` | コーチ稼働実績の承認・承認取消 | ✅ |
 | [notification.md](admin/notification.md) | `/notification` | 通知一覧 | ✅ |
-| [payment-settings.md](admin/payment-settings.md) | `/payment-settings` | 会社情報・セッション単価設定 | ✅ |
+| [payment-settings.md](admin/payment-settings.md) | `/payment-settings` | セッション単価設定（会社情報は `/company-profiles` へ移設・未文書化） | ✅ |
 | [profile.md](admin/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
 | [profile-password.md](admin/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |
 | [timezones.md](admin/timezones.md) | `/timezones` | タイムゾーンマスタ管理 | ✅ |

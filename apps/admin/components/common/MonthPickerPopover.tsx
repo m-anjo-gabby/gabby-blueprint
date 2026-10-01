@@ -16,8 +16,8 @@ export function MonthPickerPopover({
   onSelect: (yearMonth: string) => void;
   children: React.ReactNode;
 }) {
-  const t = useTranslations('monthlyReports.monthPicker');
-  const tMonths = useTranslations('monthlyReports.monthPicker.months');
+  const t = useTranslations('common.monthPicker');
+  const tMonths = useTranslations('common.monthPicker.months');
   const [open, setOpen] = useState(false);
   const [selectedYear, selectedMonth] = currentMonth.split('-').map(Number);
   const [viewYear, setViewYear] = useState(selectedYear);
