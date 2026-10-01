@@ -19,6 +19,12 @@ export type ShellPageBack = string | { history: string };
 
 interface ShellPageHeaderProps {
   title: string;
+  /**
+   * 見出しを画面読み上げ用だけにし、見た目には出さない。
+   * 上位の見出しとタブ（例: TrainingSectionNav の「トレーニング」）で画面名が分かる画面で、
+   * 選択中のタブと同じ見出しを重ねて出さないために使う（description・aside・back は表示しない）
+   */
+  titleHidden?: boolean;
   description?: React.ReactNode;
   back?: ShellPageBack;
   /** 見出し右側に置く要素（件数バッジ・操作ボタンなど） */
@@ -29,6 +35,9 @@ interface ShellPageHeaderProps {
    */
   children?: React.ReactNode;
 }
+
+/** 画面の見出しの文字（TrainingSectionNav の「トレーニング」も同じ見た目にする） */
+export const PAGE_TITLE_CLASS = 'min-w-0 flex-1 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl';
 
 const BACK_BUTTON_CLASS =
   '-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-surface hover:text-ink active:scale-95 transition-all';
@@ -61,17 +70,21 @@ function BackButton({ back }: { back: ShellPageBack }) {
  * 画面の枠は各 layout.tsx の ContentFrame が担い、スクロールはシェルの <main> に任せる
  * （画面内に「スマホ型の浮いたパネル」を作らない）。
  */
-export function ShellPageHeader({ title, description, back, aside, children }: ShellPageHeaderProps) {
+export function ShellPageHeader({ title, titleHidden, description, back, aside, children }: ShellPageHeaderProps) {
   return (
     <>
-      <header className="space-y-1.5 pb-4 sm:pb-5">
-        <div className="flex items-center gap-2">
-          {back && <BackButton back={back} />}
-          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">{title}</h1>
-          {aside}
-        </div>
-        {description && <p className="text-sm leading-relaxed text-ink-muted">{description}</p>}
-      </header>
+      {titleHidden ? (
+        <h1 className="sr-only">{title}</h1>
+      ) : (
+        <header className="space-y-1.5 pb-4 sm:pb-5">
+          <div className="flex items-center gap-2">
+            {back && <BackButton back={back} />}
+            <h1 className={PAGE_TITLE_CLASS}>{title}</h1>
+            {aside}
+          </div>
+          {description && <p className="text-sm leading-relaxed text-ink-muted">{description}</p>}
+        </header>
+      )}
 
       {children && (
         // ContentFrame の左右余白を打ち消して背景を端まで敷き、スクロール中の一覧を隠す

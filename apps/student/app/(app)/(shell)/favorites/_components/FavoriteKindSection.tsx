@@ -16,7 +16,7 @@ import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton }
 import { replaceSearchParams } from './favoriteUrl';
 
 /** 画面の見出し（読み込み中の FavoritesSkeleton と共有する） */
-export const FAVORITES_HEADER = { title: 'お気に入り' } as const;
+export const FAVORITES_HEADER = { title: 'お気に入り', titleHidden: true } as const;
 
 /** 一覧のグリッド（読み込み中の FavoritesSkeleton と共有する） */
 export const getFavoriteGridClass = (columns: 1 | 2) => cn('grid gap-4', columns === 2 && 'lg:grid-cols-2');
@@ -29,6 +29,8 @@ interface FavoriteKindSectionProps<T> {
   items: T[];
   /** 種別切り替えのピル（固定ツールバーの先頭に置く） */
   pills: ReactNode;
+  /** この種別が0件の時に空の表示に出す、登録のある他の種別への切り替え（無ければ null） */
+  otherKindLinks: ReactNode;
   onRemove: (item: T) => void;
 }
 
@@ -37,7 +39,7 @@ interface FavoriteKindSectionProps<T> {
  * 絞り込みの状態は URL のクエリ（絞り込みID=値）で持ち、トレーニングから戻った時も条件を残す。
  * 検索語は入力途中の値のため URL には載せない。
  */
-export function FavoriteKindSection<T>({ def, items, pills, onRemove }: FavoriteKindSectionProps<T>) {
+export function FavoriteKindSection<T>({ def, items, pills, otherKindLinks, onRemove }: FavoriteKindSectionProps<T>) {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState('');
 
@@ -127,6 +129,7 @@ export function FavoriteKindSection<T>({ def, items, pills, onRemove }: Favorite
               <Link href={def.emptyAction.href}>{def.emptyAction.label}</Link>
             </Button>
           )}
+          {otherKindLinks && <div className="mt-1 flex flex-wrap justify-center gap-1">{otherKindLinks}</div>}
         </EmptyState>
       ) : filtered.length === 0 ? (
         <EmptyState icon={<SearchX size={28} className="text-ink-subtle" />} title={`条件に合う${def.noun}が見つかりません`}>

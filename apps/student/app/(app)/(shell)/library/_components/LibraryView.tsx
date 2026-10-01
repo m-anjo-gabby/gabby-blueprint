@@ -22,6 +22,9 @@ import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestore
 import { getTrainingPath } from '@gabby/lib/navigation/student-path';
 import { buildTypeTabs } from '../_lib/typeTabs';
 
+/** 種別タブと件数の行（読み込み中の LibrarySkeleton と共有する） */
+export const LIBRARY_FILTER_ROW_CLASS = 'flex items-center gap-3';
+
 interface LibraryViewProps {
   /** サーバーで取得した教材一覧（開くたびに取得するため、他画面での変更や管理側の更新も反映される） */
   initialContents: ContentItem[];
@@ -94,7 +97,7 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
   return (
     <>
       {/* 1. ヘッダーエリア（検索・種別タブはスクロールしても上部に固定） */}
-      <ShellPageHeader title="教材" aside={<CountBadge count={filteredList.length} />}>
+      <ShellPageHeader title="教材" titleHidden>
 
         {/* 検索バー */}
         <div className="flex gap-2">
@@ -120,8 +123,14 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
           )}
         </div>
 
-        {/* カテゴリタブ：教材種別の増加を見込み、固定グリッドではなく横スクロールpillで表現 */}
-        <PillTabs items={typeTabs} value={selectedType} onValueChange={setSelectedType} aria-label="教材種別" />
+        {/* カテゴリタブ：教材種別の増加を見込み、固定グリッドではなく横スクロールpillで表現。
+            件数は絞り込みで変わるため、絞り込みの横に置く */}
+        <div className={LIBRARY_FILTER_ROW_CLASS}>
+          <div className="min-w-0 flex-1">
+            <PillTabs items={typeTabs} value={selectedType} onValueChange={setSelectedType} aria-label="教材種別" />
+          </div>
+          <CountBadge count={filteredList.length} />
+        </div>
       </ShellPageHeader>
 
       {/* 2. リストエリア（PCは2列） */}

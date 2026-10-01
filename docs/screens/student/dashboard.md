@@ -91,7 +91,7 @@
 
 トレーニングタブの教材（`/library`）・お気に入り（`/favorites`）・トレーニング記録（`/training/performance`）の3画面は、
 上部に共通の切り替え（下線のリンクタブ「教材｜お気に入り｜トレーニング記録」、`components/shell/TrainingSectionNav.tsx`、
-項目は `constants/navigation.ts` の `TRAINING_SECTION_ITEMS`）を表示し、ホームを経由せずに行き来できる。各画面の `layout.tsx` と外側の読み込み中表示（`ShellRouteSkeleton`）に置く。
+項目は `constants/navigation.ts` の `TRAINING_SECTION_ITEMS`）を表示し、ホームを経由せずに行き来できる。切り替えの上に見出し「トレーニング」（ナビの項目名と同じ）を出し、各画面の見出し（教材等）は選択中の切り替えと重なるため読み上げ用だけにする（`ShellPageHeader` の `titleHidden`）。各画面の `layout.tsx` と外側の読み込み中表示（`ShellRouteSkeleton`）に置く。
 | ライブセッション（モバイル表記「ライブ」） | ライブセッション付き契約が1件でもある場合（過去の契約を含む。履歴を見られるようにするため）。アプリのみの契約の生徒には出さない（紹介画面はホームのご契約プランから開く） | `/live-room` | `/live-room`, `/calendar`, `/coach-matching` |
 | チャット | ライブセッション付き契約の有効なチケットを1件以上保持している場合 | `/chat` | `/chat` |
 | モニター | `monitor`ロールを保持している場合 | `/monitor` | `/monitor` |

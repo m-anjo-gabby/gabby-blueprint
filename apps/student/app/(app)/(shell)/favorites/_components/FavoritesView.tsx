@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { PillTabs } from '@/components/shell/PillTabs';
+import { Button } from '@/components/ui/button';
 import { FavoriteKindSection } from './FavoriteKindSection';
 import { FavoriteAudioProvider } from './FavoriteAudioProvider';
 import { replaceSearchParams } from './favoriteUrl';
@@ -42,11 +43,10 @@ export function FavoritesView({ initialLists, renderId }: FavoritesViewProps) {
   // 「戻る・進む」等でキャッシュ済みの画面が再利用された場合は、最新のデータに取り直す
   useRefreshOnRestoredRender(renderId);
 
-  // 種別の指定が無い場合は、お気に入りが登録されている最初の種別を開く
-  const [defaultKind] = useState<FavoriteKindId>(
-    () => FAVORITE_KIND_IDS.find((id) => initialLists[id].length > 0) ?? FAVORITE_KIND_IDS[0]
-  );
-  const kind = parseFavoriteKind(searchParams.get('kind')) ?? defaultKind;
+  // 種別の指定が無い場合は先頭の種別（教材）を開く。登録のある種別へ自動で切り替えると、
+  // 読み込み中の骨組み（データが届くまで既定の種別が分からないため先頭の種別で描く）から選択が移ってちらつくため、
+  // 選択中の種別が0件の時は空の表示から登録のある種別へ案内する
+  const kind = parseFavoriteKind(searchParams.get('kind')) ?? FAVORITE_KIND_IDS[0];
 
   // 種別ごとに絞り込みの項目が違うため、切り替えたら前の種別の絞り込み条件は外す
   const handleKindChange = (next: FavoriteKindId) => {
@@ -54,6 +54,18 @@ export function FavoritesView({ initialLists, renderId }: FavoritesViewProps) {
   };
 
   const pills = useMemo(() => buildKindPills(lists), [lists]);
+
+  const otherKindLinks = FAVORITE_KIND_IDS.filter((id) => id !== kind && lists[id].length > 0).map((id) => (
+    <Button
+      key={id}
+      type="button"
+      variant="ghost"
+      onClick={() => handleKindChange(id)}
+      className="h-10 rounded-control text-sm font-semibold text-brand hover:bg-brand-soft"
+    >
+      {`${FAVORITE_KINDS[id].label}を見る（${lists[id].length}件）`}
+    </Button>
+  ));
 
   const handleRemove = useCallback(async <K extends FavoriteKindId>(kindId: K, item: FavoriteItemMap[K]) => {
     const def: FavoriteKindDef<FavoriteItemMap[K]> = FAVORITE_KINDS[kindId];
@@ -91,6 +103,7 @@ export function FavoritesView({ initialLists, renderId }: FavoritesViewProps) {
         kind,
         lists[kind],
         <PillTabs items={pills} value={kind} onValueChange={handleKindChange} aria-label="お気に入りの種別" />,
+        otherKindLinks.length > 0 ? otherKindLinks : null,
         handleRemove
       )}
     </FavoriteAudioProvider>
@@ -102,6 +115,7 @@ function renderSection<K extends FavoriteKindId>(
   kind: K,
   items: FavoriteItemMap[K][],
   pills: ReactNode,
+  otherKindLinks: ReactNode,
   onRemove: (kind: K, item: FavoriteItemMap[K]) => void
 ) {
   const def: FavoriteKindDef<FavoriteItemMap[K]> = FAVORITE_KINDS[kind];
@@ -112,6 +126,7 @@ function renderSection<K extends FavoriteKindId>(
       def={def}
       items={items}
       pills={pills}
+      otherKindLinks={otherKindLinks}
       onRemove={(item) => onRemove(kind, item)}
     />
   );

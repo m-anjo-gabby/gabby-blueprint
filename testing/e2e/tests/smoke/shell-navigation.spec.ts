@@ -30,7 +30,11 @@ test.describe("ライブセッション契約の生徒", () => {
   test("トレーニング記録はナビ付きの画面として表示され、トレーニングタブがアクティブになる", async ({ page }) => {
     await page.goto("/training/performance");
 
-    await expect(page.getByRole("heading", { level: 1, name: "トレーニング記録" })).toBeVisible();
+    // 画面名は「トレーニング」の見出しと切り替えタブで示す（各画面の h1 は読み上げ用で見た目には出さない）
+    await expect(page.getByRole("heading", { level: 1, name: "トレーニング記録" })).toBeAttached();
+    await expect(
+      page.getByRole("navigation", { name: "トレーニング" }).getByRole("link", { name: "トレーニング記録" })
+    ).toHaveAttribute("aria-current", "page");
     await expect(navTab(page, "トレーニング")).toHaveAttribute("aria-current", "page");
   });
 });
