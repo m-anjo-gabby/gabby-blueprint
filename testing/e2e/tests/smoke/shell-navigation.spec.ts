@@ -38,18 +38,22 @@ test.describe("ライブセッション契約の生徒", () => {
 test.describe("アプリのみ契約・モニターロールの生徒", () => {
   test.use({ storageState: storageStatePath("monitorStudent") });
 
-  test("チャットタブは出ず、モニタータブが表示される", async ({ page }) => {
+  test("ライブセッション・チャットのタブは出ず、モニタータブが表示される", async ({ page }) => {
     await page.goto("/dashboard");
 
-    await expect(navTab(page, "ライブ")).toBeVisible();
+    await expect(navTab(page, "ホーム")).toBeVisible();
     await expect(navTab(page, "モニター")).toBeVisible();
+    await expect(navTab(page, "ライブ")).toHaveCount(0);
     await expect(navTab(page, "チャット")).toHaveCount(0);
   });
 
-  test("ライブセッションタブではアップセルの紹介画面が表示され、法人・個人の申し込み案内が併記される", async ({ page }) => {
-    await page.goto("/live-room");
+  test("紹介画面（/live-room）には法人・個人の申し込み案内が併記され、戻るでホームへ戻る", async ({ page }) => {
+    // 紹介画面への導線は契約終了の2週間前の案内だけに出る（ホームに常時は出さない）
+    await page.goto("/dashboard");
+    await expect(page.getByRole("heading", { name: "ご契約プラン" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "ライブセッション付きプランについて" })).toHaveCount(0);
 
-    await expect(navTab(page, "ライブ")).toHaveAttribute("aria-current", "page");
+    await page.goto("/live-room");
     await expect(page.getByRole("link", { name: "サポート窓口にメールで相談する" })).toHaveAttribute(
       "href",
       /^mailto:support@gabbyacademy\.com\?subject=/
@@ -58,6 +62,9 @@ test.describe("アプリのみ契約・モニターロールの生徒", () => {
       "href",
       "https://gabbyacademy.com/price"
     );
+
+    await page.getByRole("link", { name: "戻る" }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 
   test("モニタータブからモニタリングダッシュボードを開ける", async ({ page }) => {

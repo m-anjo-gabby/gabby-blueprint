@@ -24,7 +24,7 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const navContext = useShellNavContext();
   const items = getVisibleNavItems(navContext);
-  const badges = useShellNavBadges(navContext, pathname);
+  const badges = useShellNavBadges(navContext);
   // チャットルーム等の作業画面では、モバイルのヘッダー・ボトムタブを隠して縦幅を作業領域に回す
   const isMobileFocus = isMobileFocusPath(pathname);
 

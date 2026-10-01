@@ -11,7 +11,7 @@ export interface ShellNavContext {
   hasLiveSession: boolean;
   /**
    * 過去の契約を含め、ライブセッション付き契約が1件でもあるか。
-   * false の生徒はライブ画面がアップセル導線になるため、読み込み中の骨組みの出し分けに使う（ナビ項目の判定には使わない）
+   * ライブセッションタブの表示条件（過去の契約の履歴を見られるようにする）と、読み込み中の骨組みの出し分けに使う
    */
   hasLiveSessionContract: boolean;
   /** モニター（顧客担当者）ロールを保持しているか */
@@ -52,14 +52,15 @@ export const SHELL_NAV_ITEMS: ShellNavItem[] = [
     isVisible: () => true,
   },
   {
-    // アプリのみの契約者にもアップセル導線として表示する（/live-room 側で紹介画面に切り替え）
+    // ライブセッション付き契約が1件でもある（過去の契約を含む）生徒だけに表示する。
+    // アプリのみの契約者へのプランの紹介は、ホームの「ご契約プラン」の終了の案内の導線だけにする（法人契約が中心で、常時の訴求は効果が小さいため）
     id: 'live',
     label: 'ライブセッション',
     shortLabel: 'ライブ',
     href: '/live-room',
     icon: Video,
     matchPaths: ['/live-room', '/calendar', '/coach-matching'],
-    isVisible: () => true,
+    isVisible: (ctx) => ctx.hasLiveSessionContract,
   },
   {
     id: 'chat',

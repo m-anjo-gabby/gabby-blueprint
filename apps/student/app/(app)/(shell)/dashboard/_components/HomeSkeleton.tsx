@@ -138,7 +138,7 @@ export function HomeSkeleton() {
           </div>
         )}
         <LifetimeStatsCardSkeleton className={HOME_LAYOUT.wide} />
-        <PlanCardSkeleton hasLiveSession={hasLiveSession} />
+        <PlanCardSkeleton />
       </div>
     </RouteSkeleton>
   );

@@ -1,73 +1,77 @@
 import Link from 'next/link';
 import { ArrowRight, ExternalLink, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { LIVE_SESSION_INTRO, type LiveSessionIntroAction, type LiveSessionIntroAudience } from '@/constants/liveSessionIntro';
 
 /**
  * ライブセッション紹介（アップセル）画面。
- * ライブセッション付き契約を持たない利用者向けに、ライブセッションタブ内でのみ表示する
- * （ホーム等へのバナー常設はせず、高級感を損なわない控えめな訴求にとどめる）。
+ * ライブセッション付き契約を持たない利用者向け。シェルのタブは出さず、ホームの「ご契約プラン」の終了の案内（終了の14日前から）の導線からだけ開くため、
+ * 戻る先はホームに固定する（バナー常設はせず、高級感を損なわない控えめな訴求にとどめる）。
  */
 export function LiveSessionIntro() {
   const { eyebrow, title, lead, features, steps, audienceHeading, audiences } = LIVE_SESSION_INTRO;
 
   return (
-    <div className="overflow-hidden rounded-panel border border-line bg-surface shadow-xs">
-      <div>
-        {/* ヒーロー: ブランドのグラデーション面（ホームの「今日やること」と共通） */}
-        <section className="relative overflow-hidden bg-brand-hero px-6 sm:px-10 pt-10 pb-12 text-white">
-          <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-          <p className="relative text-xs font-semibold text-brand-100">{eyebrow}</p>
-          <h1 className="relative mt-3 whitespace-pre-line text-2xl sm:text-3xl font-bold leading-snug tracking-tight">
-            {title}
-          </h1>
-          <p className="relative mt-4 text-sm leading-relaxed text-white/85">{lead}</p>
-        </section>
+    <>
+      <ShellPageHeader title="ライブセッション" back="/dashboard" />
+      <div className="overflow-hidden rounded-panel border border-line bg-surface shadow-xs">
+        <div>
+          {/* ヒーロー: ブランドのグラデーション面（ホームの「今日やること」と共通） */}
+          <section className="relative overflow-hidden bg-brand-hero px-6 sm:px-10 pt-10 pb-12 text-white">
+            <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+            <p className="relative text-xs font-semibold text-brand-100">{eyebrow}</p>
+            <h2 className="relative mt-3 whitespace-pre-line text-2xl sm:text-3xl font-bold leading-snug tracking-tight">
+              {title}
+            </h2>
+            <p className="relative mt-4 text-sm leading-relaxed text-white/85">{lead}</p>
+          </section>
 
-        <div className="px-6 sm:px-10 py-8 space-y-10">
-          {/* 特長 */}
-          <section className="space-y-5">
-            {features.map((feature) => (
-              <div key={feature.title} className="flex gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-strong">
-                  <feature.icon size={20} />
+          <div className="px-6 sm:px-10 py-8 space-y-10">
+            {/* 特長 */}
+            <section className="space-y-5">
+              {features.map((feature) => (
+                <div key={feature.title} className="flex gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-strong">
+                    <feature.icon size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="text-base font-bold text-ink">{feature.title}</h2>
+                    <p className="text-sm leading-relaxed text-ink-soft">{feature.description}</p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <h2 className="text-base font-bold text-ink">{feature.title}</h2>
-                  <p className="text-sm leading-relaxed text-ink-soft">{feature.description}</p>
-                </div>
+              ))}
+            </section>
+
+            {/* ご利用の流れ */}
+            <section className="space-y-4">
+              <h2 className="text-sm font-bold text-ink">ご利用の流れ</h2>
+              <ol className="grid grid-cols-3 gap-2">
+                {steps.map((step, index) => (
+                  <li key={step.title} className="rounded-control border border-line/60 bg-slate-50/70 px-2 py-3 sm:p-3 text-center">
+                    <span className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+                      {index + 1}
+                    </span>
+                    <p className="mt-2 text-[13px] sm:text-sm font-bold text-ink [word-break:auto-phrase]">{step.title}</p>
+                    <p className="mt-1 text-[11px] leading-snug text-ink-muted [word-break:auto-phrase]">{step.description}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            {/* 導線: 契約形態（法人／個人）ごとに併記する */}
+            <section className="space-y-4">
+              <h2 className="text-sm font-bold text-ink">{audienceHeading}</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {audiences.map((audience) => (
+                  <IntroAudienceCard key={audience.id} audience={audience} />
+                ))}
               </div>
-            ))}
-          </section>
-
-          {/* ご利用の流れ */}
-          <section className="space-y-4">
-            <h2 className="text-sm font-bold text-ink">ご利用の流れ</h2>
-            <ol className="grid grid-cols-3 gap-2">
-              {steps.map((step, index) => (
-                <li key={step.title} className="rounded-control border border-line/60 bg-slate-50/70 px-2 py-3 sm:p-3 text-center">
-                  <span className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
-                    {index + 1}
-                  </span>
-                  <p className="mt-2 text-[13px] sm:text-sm font-bold text-ink [word-break:auto-phrase]">{step.title}</p>
-                  <p className="mt-1 text-[11px] leading-snug text-ink-muted [word-break:auto-phrase]">{step.description}</p>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          {/* 導線: 契約形態（法人／個人）ごとに併記する */}
-          <section className="space-y-4">
-            <h2 className="text-sm font-bold text-ink">{audienceHeading}</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {audiences.map((audience) => (
-                <IntroAudienceCard key={audience.id} audience={audience} />
-              ))}
-            </div>
-          </section>
+            </section>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
