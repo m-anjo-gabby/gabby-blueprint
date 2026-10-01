@@ -1,5 +1,4 @@
 // app/(app)/layout.tsx
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
 import ToastContainer from '@gabby/lib/components/common/ToastContainer';
@@ -8,7 +7,12 @@ import { TermsAgreementModal } from "@/components/common/TermsAgreementModal";
 import { checkPendingAgreements } from '@/actions/termAction';
 import ScrollRestorer from '@/components/common/ScrollRestorer';
 import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
-import { GlobalNoticePopup } from '@/components/common/GlobalNoticePopup';
+import { PopupHost } from '@/components/popups/PopupHost';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
+import { ShellNavProvider } from '@/components/shell/ShellNavContext';
+import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
+import type { ShellNavContext } from '@/constants/navigation';
 
 /**
  * 生徒用 統合アプリケーションレイアウト
@@ -24,8 +28,7 @@ export default async function StudentAppLayout({
   children: React.ReactNode;
 }) {
   // --- 1. 認証チェック ---
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect('/login');
@@ -38,7 +41,17 @@ export default async function StudentAppLayout({
   // --- 2. 規約同意チェック ---
   // ログイン後の全ページで共通して、最新規約への同意状況を確認します。
   // 未同意がある場合は TermsAgreementModal が表示され、操作をロックします。
-  const pendingTerms = await checkPendingAgreements(user.id);
+  // 規約の同意状況と、シェルのナビ項目の表示可否（ライブセッション付き契約の有無）を並列に取得する
+  const [pendingTerms, contracts] = await Promise.all([checkPendingAgreements(user.id), getMyLiveSessionContractsCached()]);
+  const roles = (user.app_metadata?.roles as string[] | undefined) ?? [];
+  const navContext: ShellNavContext = {
+    hasLiveSession: contracts.some((c) => c.is_active),
+    hasLiveSessionContract: contracts.length > 0,
+    isMonitor: roles.includes('monitor'),
+  };
+  // ヘッダー・ナビの未読・件数はサーバーで並列に取得し、await せず Promise のまま渡す
+  // （画面の表示を待たせず、ブラウザからのサーバーアクションの往復も発生させない）
+  const shellData = loadCommonShellData({ includeChat: navContext.hasLiveSession });
 
   // 💡 user_type/ライセンスに基づく詳細なアクセス制御は apps/student/proxy.ts (Middleware) で
   // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
@@ -54,8 +67,10 @@ export default async function StudentAppLayout({
       {/* Color Vowel辞書 Provider: 単語タップで辞書検索ツールチップおよびダイアログをグローバル表示 */}
       <ColorVowelLookupProvider>
         {/* デザイン基盤: 全体共通の背景色やフォントを適用 */}
-        <div className="min-h-screen bg-[#f5f5f7] text-slate-900">
-          {children}
+        <div className="min-h-screen bg-canvas text-ink">
+          <ShellNavProvider value={navContext} shellData={shellData}>
+            {children}
+          </ShellNavProvider>
         </div>
       </ColorVowelLookupProvider>
 
@@ -73,7 +88,8 @@ export default async function StudentAppLayout({
       {/* 通知・ダイアログ系 UI: 全てのコンテンツの上にオーバーレイされるように配置 */}
       <ToastContainer />
       <ConfirmContainer />
-      <GlobalNoticePopup />
+      {/* ポップアップ（お知らせ等）: 規約が未同意の間は一切表示しない */}
+      <PopupHost hasPendingGate={pendingTerms.length > 0} />
     </>
   );
 }

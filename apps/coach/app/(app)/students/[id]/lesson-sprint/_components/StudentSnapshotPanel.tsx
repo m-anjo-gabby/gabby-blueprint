@@ -49,13 +49,13 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
                   key={type.value}
                   className={cn(
                     'flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs',
-                    isCurrentSelection ? 'bg-indigo-50 border border-indigo-100' : 'border border-transparent'
+                    isCurrentSelection ? 'bg-brand-50 border border-brand-100' : 'border border-transparent'
                   )}
                 >
-                  <span className={cn('font-semibold', isCurrentSelection ? 'text-indigo-700' : 'text-slate-500')}>
+                  <span className={cn('font-semibold', isCurrentSelection ? 'text-brand-strong' : 'text-slate-500')}>
                     {type.label}
                   </span>
-                  <span className={cn('font-bold tabular-nums', isCurrentSelection ? 'text-indigo-700' : 'text-slate-700')}>
+                  <span className={cn('font-bold tabular-nums', isCurrentSelection ? 'text-brand-strong' : 'text-slate-700')}>
                     {levelLabel}
                   </span>
                 </div>
@@ -79,7 +79,7 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
                   <li key={item.lesson_sprint_id} className="px-3 py-2 rounded-xl border border-slate-100 bg-slate-50/60">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-slate-700 truncate">{resolveCoachContentName(item)}</span>
-                      <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 rounded-full px-2 py-0.5 shrink-0">
+                      <span className="text-[11px] font-black text-brand bg-brand-50 rounded-full px-2 py-0.5 shrink-0">
                         {item.average_score !== null ? `${item.average_score}/5` : '—'}
                       </span>
                     </div>

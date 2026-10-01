@@ -168,7 +168,7 @@ export function ContractLicenseDialog({ contract, children }: Props) {
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-lg">
               {isAddMode ? t('titleAdd') : t('titleList')}
-              <Badge className="bg-indigo-500 hover:bg-indigo-500 text-white font-mono border-none px-2 py-0.5">
+              <Badge className="bg-brand-500 hover:bg-brand-500 text-white font-mono border-none px-2 py-0.5">
                 {assignedUsers.length} / {contract.max_licenses}
               </Badge>
             </div>
@@ -178,7 +178,7 @@ export function ContractLicenseDialog({ contract, children }: Props) {
         <div className="p-6 bg-white">
           {/* ローディング表示 (初回一覧読み込み時のみ) */}
           {loading && !isAddMode && assignedUsers.length === 0 ? (
-            <div className="flex justify-center p-12"><Loader2 className="animate-spin text-indigo-500" /></div>
+            <div className="flex justify-center p-12"><Loader2 className="animate-spin text-brand-500" /></div>
           ) : isAddMode ? (
             /* --- 追加モード UI --- */
             <div className="space-y-4">
@@ -188,7 +188,7 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                   variant="ghost" 
                   size="sm" 
                   onClick={() => setIsAddMode(false)} 
-                  className="h-8 text-slate-500 hover:text-indigo-600 p-0 font-bold transition-colors"
+                  className="h-8 text-slate-500 hover:text-brand p-0 font-bold transition-colors"
                 >
                   <ArrowLeft size={16} className="mr-1" /> {t('back')}
                 </Button>
@@ -218,10 +218,10 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                     {unassignedUsers.map((user) => (
                       <div
                         key={user.id}
-                        className="flex items-center justify-between p-3 border border-slate-100 rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-all bg-slate-50/50 group"
+                        className="flex items-center justify-between p-3 border border-slate-100 rounded-2xl hover:border-brand-200 hover:bg-brand-50/30 transition-all bg-slate-50/50 group"
                       >
                         <div className="min-w-0 flex-1 overflow-hidden pr-2">
-                          <p className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-900 transition-colors">
+                          <p className="text-sm font-bold text-slate-800 truncate group-hover:text-brand-900 transition-colors">
                             {user.user_name}
                           </p>
                           <p className="text-[11px] text-slate-400 truncate font-medium">
@@ -237,7 +237,7 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                             h-8 px-4 rounded-xl font-bold transition-all active:scale-95 shrink-0
                             ${isLicenseFull
                               ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                              : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100'
+                              : 'bg-brand hover:bg-brand-strong text-white shadow-md shadow-brand-100'
                             }
                           `}
                         >
@@ -293,7 +293,7 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                             <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
                           </div>
                           {contract.contract_type === 2 && user.ticket && (
-                            <Badge className="shrink-0 bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-50 text-[10px] font-mono font-bold">
+                            <Badge className="shrink-0 bg-brand-50 text-brand border-brand-100 hover:bg-brand-50 text-[10px] font-mono font-bold">
                               {t('ticketUsage', { used: user.ticket.used_sessions, total: user.ticket.total_sessions })}
                             </Badge>
                           )}

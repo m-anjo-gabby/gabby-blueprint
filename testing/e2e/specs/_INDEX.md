@@ -12,6 +12,9 @@
 | [booking/individual-booking-and-reschedule.md](booking/individual-booking-and-reschedule.md) | 個別予約リクエスト・振替候補提案（承認制の日時提案フロー） | 生徒, コーチ | `create_session_booking_request`, `approve_slot_proposal`, `reject_slot_proposal`, `withdraw_session_booking_request`, `cancel_session` |
 | [monitoring/student-monitor-dashboard.md](monitoring/student-monitor-dashboard.md) | モニターロールを持つ生徒による、同一契約先受講生の横断モニタリング（アクセス制御と対象生徒抽出） | 生徒（モニターロール保有/非保有） | `get_monitor_user_list`, `get_monitor_word_history`, `get_monitor_sprint_history`, `get_monitor_sprint_drill_history` |
 | [admin/live-session-management.md](admin/live-session-management.md) | アドミンによるライブセッション代理操作（キャンセル・予約・直接マッチング・コーチ交代・コマ単位のセッション数個別調整） | アドミン | `cancel_session`, `admin_book_session_direct`, `admin_match_student_with_coach`, `release_lesson_schedule_slot`, `admin_adjust_schedule_target_sessions`, `fn_schedule_shortfall` |
+| [auth/password-reset-and-invite.md](auth/password-reset-and-invite.md) | パスワード再設定（リンク確認・使用済み・ログイン中の直接表示）・招待からの本登録・ログイン画面の案内。再設定メールの文面と受信（Resend） | 未ログインの利用者（全ロール）, 招待された利用者 | なし（Supabase Auth） |
+| [chat/chat-messaging.md](chat/chat-messaging.md) | チャットのやり取り（2ペイン・未読・1対1の既読・添付の貼り付け/ドロップ・直接リンク） | 生徒, コーチ, アドミン | `fn_ensure_one_on_one_chat_room`（トリガー `notify_chat_new_message`） |
+| [favorites/student-favorites.md](favorites/student-favorites.md) | 生徒のお気に入り（教材・フレーズ・スプリント問題の登録・検索/連動絞り込み・解除・1人種別ごと1,000件の上限・非公開教材の非表示・戻る/進むでの取り直し） | 生徒 | なし（トリガー `fn_check_favorite_limit`） |
 
 ## 未着手ドメイン（ファイルが無い＝仕様書はまだ存在しない）
 

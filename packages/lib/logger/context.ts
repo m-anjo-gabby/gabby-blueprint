@@ -1,3 +1,4 @@
+import 'server-only';
 import { headers } from 'next/headers';
 import type { LogEvent } from './index';
 import { IMPERSONATION_REQUEST_HEADER_ID, IMPERSONATION_REQUEST_HEADER_ADMIN_ID } from '../impersonation';

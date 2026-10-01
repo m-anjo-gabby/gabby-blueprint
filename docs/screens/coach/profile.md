@@ -41,6 +41,7 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
+| 読み込み中（画面遷移直後） | 見出し（戻るリンク・タイトル・説明文）とタブ・区分の見出しは本物、本文を同じ幅・並びの骨組みで表示 | `profile/loading.tsx（パスワード変更とパスで出し分け）` |
 | プロフィール取得失敗 | 「Failed to load your profile information.」 | プロフィール情報の取得に失敗した場合 |
 | 保存中 | 「Save Public Profile」ボタンがローディング表示になる | Public Coach Profileの保存処理中 |
 

@@ -193,6 +193,7 @@ async function createContractLicenseTicket(params: { userId: string; plan: Plan;
     .insert({
       client_id: clientId,
       plan_name: params.plan.plan_name,
+      contract_name: `${params.plan.plan_name} ${crypto.randomUUID().slice(0, 8)}`,
       plan_name_en: params.plan.plan_name_en,
       plan_id: params.plan.plan_id,
       max_licenses: 1,

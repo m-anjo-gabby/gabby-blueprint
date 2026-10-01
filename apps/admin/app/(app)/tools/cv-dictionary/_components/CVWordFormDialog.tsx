@@ -32,6 +32,7 @@ function createEntrySchema(t: FormT) {
     stress_vowel_spelling:    z.string().optional(),
     cv_id:                    z.string().optional(),
     phonetic_spelling:        z.string().optional(),
+    lemma:                    z.string().optional(),
   });
 }
 
@@ -77,6 +78,7 @@ export function CVWordFormDialog({
         stress_vowel_spelling: '',
         cv_id: '',
         phonetic_spelling: '',
+        lemma: '',
       };
     }
     return {
@@ -88,6 +90,7 @@ export function CVWordFormDialog({
       stress_vowel_spelling: data.stress_vowel_spelling ?? '',
       cv_id: data.cv_id ?? '',
       phonetic_spelling: data.phonetic_spelling ?? '',
+      lemma: data.lemma ?? '',
     };
   };
 
@@ -110,6 +113,7 @@ export function CVWordFormDialog({
         stress_vowel_spelling: values.stress_vowel_spelling || null,
         cv_id: values.cv_id || null,
         phonetic_spelling: values.phonetic_spelling || null,
+        lemma: values.lemma?.trim() || null,
       });
 
       if (result.success) {
@@ -135,11 +139,11 @@ export function CVWordFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="gap-1.5 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none shrink-0 h-8 text-xs">
+          <Button className="gap-1.5 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none shrink-0 h-8 text-xs">
             <PlusCircle size={14} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-brand hover:bg-brand-50">
             <Edit size={14} />
           </Button>
         )}
@@ -153,9 +157,9 @@ export function CVWordFormDialog({
             {isConfirming ? (
               <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
+              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
             ) : (
-              <><Languages size={18} className="text-indigo-400" /> {t('editTitle')}</>
+              <><Languages size={18} className="text-brand-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -290,6 +294,20 @@ export function CVWordFormDialog({
                 ) : (
                   <FormControl>
                     <Input {...field} placeholder="/ˈtɑːrɡɪt/" className="rounded-xl border-slate-200 font-mono" />
+                  </FormControl>
+                )}
+              </FormItem>
+            )} />
+
+            {/* 原形（語形変化した見出し語のみ） */}
+            <FormField control={form.control} name="lemma" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lemma</FormLabel>
+                {isConfirming ? (
+                  <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100 font-mono">{field.value || '—'}</div>
+                ) : (
+                  <FormControl>
+                    <Input {...field} placeholder="launch" className="rounded-xl border-slate-200 font-mono" />
                   </FormControl>
                 )}
               </FormItem>

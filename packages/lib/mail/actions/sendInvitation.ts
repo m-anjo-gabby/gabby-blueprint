@@ -1,4 +1,5 @@
 // packages/lib/mail/actions/sendInvitation.ts
+import 'server-only';
 import * as React from 'react';
 import { renderToString } from 'react-dom/server.edge'; // App RouterのRSCで安全に動く軽量エクスポート
 import { sendCore } from '../core';
@@ -11,7 +12,7 @@ interface SendInvitationParams {
   to: string;
   userName: string;
   inviteUrl: string;
-  expiresDays?: number; // 外部（Admin画面など）から可変対応。デフォルトは7
+  expiresDays?: number; // 外部（Admin画面など）から可変対応。デフォルトは3
 }
 
 /**

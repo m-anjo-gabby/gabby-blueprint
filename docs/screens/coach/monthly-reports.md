@@ -41,10 +41,12 @@
 |---|---|---|
 | データ取得エラー | エラーメッセージ帯（rose色） | レポート取得に失敗した場合 |
 | 対象生徒なし | 「No students with an active contract this month.」 | その月に有効な契約を持つ担当生徒がいない場合 |
+| 読み込み中 | 見出しと月選択はそのまま、サマリー・グリッドの位置に表の骨組みを表示 | 初回表示時、および月を切り替えた時（月ごとに `key` を変えた `Suspense`） |
 
 ## 実装参照（エンジニア向け）
 
 - `apps/coach/app/(app)/monthly-reports/page.tsx`
+- `apps/coach/app/(app)/monthly-reports/_components/MonthlyReportSection.tsx`（レポートの取得と本体表示）
 - `apps/coach/app/(app)/monthly-reports/_components/MonthSelector.tsx`
 - `apps/coach/app/(app)/monthly-reports/_components/MonthPickerPopover.tsx`
 - `apps/coach/app/(app)/monthly-reports/_components/SummaryCard.tsx`

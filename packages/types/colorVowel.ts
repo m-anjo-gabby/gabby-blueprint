@@ -132,6 +132,7 @@ export interface ColorVowelDictionaryRow {
   stress_vowel_spelling: string | null;
   cv_id: string | null;
   phonetic_spelling: string | null;
+  lemma: string | null; // 原形（見出し語が原形そのものの場合は null）
   audio_path: string | null;
   tts_ssml: string | null;
   tts_ssml_mode: 'auto' | 'manual' | null;
@@ -156,6 +157,7 @@ export interface ColorVowelDicResult {
   primaryStressSyllable: number;
   stressVowelSpelling: string;
   phoneticSpelling: string | null;
+  lemma: string | null;
   wordAudioUrl: string | null;
   vowel: {
     cvId: string;

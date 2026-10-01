@@ -4,7 +4,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AdminCoachSummary } from '@gabby/types/adminLiveSession';
-import { MonthPickerPopover } from './MonthPickerPopover';
+import { MonthPickerPopover } from '@/components/common/MonthPickerPopover';
 
 function shiftMonth(yearMonth: string, delta: number): string {
   const [year, month] = yearMonth.split('-').map(Number);
@@ -22,7 +22,7 @@ export function CoachMonthSelector({
   currentMonth: string;
 }) {
   const t = useTranslations('monthlyReports');
-  const tMonths = useTranslations('monthlyReports.monthPicker.months');
+  const tMonths = useTranslations('common.monthPicker.months');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -40,7 +40,7 @@ export function CoachMonthSelector({
       <select
         value={currentCoachId}
         onChange={(e) => updateParams({ coachId: e.target.value })}
-        className="px-3 py-2 border rounded-md text-sm text-slate-700 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+        className="px-3 py-2 border rounded-md text-sm text-slate-700 bg-white shadow-sm focus:ring-2 focus:ring-brand-500 outline-none"
       >
         {coaches.map((c) => (
           <option key={c.id} value={c.id}>

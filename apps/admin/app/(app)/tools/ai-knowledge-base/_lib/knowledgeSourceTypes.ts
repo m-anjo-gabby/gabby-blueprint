@@ -16,7 +16,7 @@ type SourceTypeT = ReturnType<typeof useTranslations<'tools.aiKnowledgeBase.sour
  */
 export function getKnowledgeSourceTypeOptions(t: SourceTypeT): readonly KnowledgeSourceTypeOption[] {
   return [
-    { value: 'help', label: t('help'), icon: BookOpenCheck, badgeClassName: 'bg-indigo-50 text-indigo-600' },
+    { value: 'help', label: t('help'), icon: BookOpenCheck, badgeClassName: 'bg-brand-50 text-brand' },
     { value: 'coach', label: t('coach'), icon: GraduationCap, badgeClassName: 'bg-emerald-50 text-emerald-600' },
     { value: 'roleplay', label: t('roleplay'), icon: Drama, badgeClassName: 'bg-amber-50 text-amber-600' },
   ] as const;

@@ -3,6 +3,8 @@ import {
   createSupabaseProxy,
   redirectAndClearSession,
   redirectTo,
+  redirectToLogin,
+  redirectAfterLogin,
   isDefaultPublicRoute,
   logPageView,
 } from '@gabby/lib/proxy-base';
@@ -73,7 +75,8 @@ export async function proxy(req: NextRequest) {
   if (!user) {
     if (!isPublicRoute) {
       // 認可が必要なページへの未ログインアクセスは記録に値する（必要に応じてinfoログを追加可能）
-      return redirectTo(req, loginPath);
+      // 元の画面を ?next= に付け、ログイン後に戻す（メール内のリンク等）
+      return redirectToLogin(req, loginPath);
     }
     return res;
   }
@@ -107,7 +110,8 @@ export async function proxy(req: NextRequest) {
 
   // C. ログイン済みでのルート/ログインページアクセス
   if (pathname === '/' || pathname === loginPath) {
-    return redirectTo(req, dashboardPath);
+    // ?next= に戻り先があればそこへ（ログイン済みでメール内のリンクからログイン画面を経由した場合等）
+    return redirectAfterLogin(req, loginPath, dashboardPath);
   }
 
   // --- C-1. モニター画面の認可チェック ---

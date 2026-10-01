@@ -200,15 +200,15 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
 
             {/* 4. Advice Area: 改善のヒント */}
             {analysis.issues && analysis.issues.length > 0 && (
-              <div className="w-full bg-indigo-50/50 p-4 rounded-[24px] border border-indigo-100/50">
+              <div className="w-full bg-brand-50/50 p-4 rounded-[24px] border border-brand-100/50">
                 <div className="flex items-center gap-2 mb-3">
-                  <Lightbulb size={14} className="text-indigo-500" />
-                  <p className="text-[10px] font-black uppercase text-indigo-500 tracking-wider">{adviceTitle}</p>
+                  <Lightbulb size={14} className="text-brand-500" />
+                  <p className="text-[10px] font-black uppercase text-brand-500 tracking-wider">{adviceTitle}</p>
                 </div>
                 <ul className="space-y-2">
                   {analysis.issues.map((issue, i) => (
                     <li key={i} className="flex items-start gap-2 text-[11px] font-medium text-slate-600 leading-relaxed">
-                      <div className="w-1 h-1 rounded-full bg-indigo-300 mt-1.5 shrink-0" />
+                      <div className="w-1 h-1 rounded-full bg-brand-300 mt-1.5 shrink-0" />
                       {issue}
                     </li>
                   ))}

@@ -118,7 +118,7 @@ export function VideoUploader({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-strong transition-colors disabled:opacity-50"
         >
           {isUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
           {isUploading ? labels.uploadingLabel : labels.uploadLabel}

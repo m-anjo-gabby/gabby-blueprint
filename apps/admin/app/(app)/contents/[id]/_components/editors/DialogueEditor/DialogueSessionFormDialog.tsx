@@ -104,11 +104,11 @@ export function DialogueSessionFormDialog({ mode, contentId, initialData, nextSe
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 rounded-xl gap-2 shadow-md">
+          <Button className="bg-brand hover:bg-brand-strong text-white font-bold h-10 rounded-xl gap-2 shadow-md">
             <PlusCircle size={18} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand transition-all">
             <Edit size={16} />
           </Button>
         )}
@@ -116,7 +116,7 @@ export function DialogueSessionFormDialog({ mode, contentId, initialData, nextSe
       <DialogContent className="max-w-lg p-0 overflow-hidden border-none shadow-2xl rounded-3xl focus:outline-none">
         <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 font-black">
-            <MessagesSquare className="text-indigo-400" size={20} />
+            <MessagesSquare className="text-brand-400" size={20} />
             {mode === 'create' ? t('createTitle') : t('editTitle')}
           </DialogTitle>
         </DialogHeader>
@@ -132,8 +132,8 @@ export function DialogueSessionFormDialog({ mode, contentId, initialData, nextSe
             )} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-3 p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100">
-                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest block">{t('coachSlidesSectionLabel')}</span>
+              <div className="space-y-3 p-4 bg-brand-50/30 rounded-2xl border border-brand-100">
+                <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest block">{t('coachSlidesSectionLabel')}</span>
                 <FormField control={form.control} name="coach_slides_title" render={({ field }) => (
                   <FormItem>
                     <FormControl><Input {...field} placeholder={t('titlePlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>

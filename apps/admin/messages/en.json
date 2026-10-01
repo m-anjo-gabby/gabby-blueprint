@@ -26,7 +26,20 @@
       "allClients": "All clients",
       "searchPlaceholder": "Search by client name...",
       "emptyMessage": "No results found."
-    }
+    },
+    "monthPicker": {
+      "prevYear": "Previous year",
+      "nextYear": "Next year",
+      "yearLabel": "{year}",
+      "months": {
+        "m1": "Jan", "m2": "Feb", "m3": "Mar", "m4": "Apr",
+        "m5": "May", "m6": "Jun", "m7": "Jul", "m8": "Aug",
+        "m9": "Sep", "m10": "Oct", "m11": "Nov", "m12": "Dec"
+      }
+    },
+    "monthLabel": "{month} {year}",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -40,7 +53,9 @@
     "notice": "Notices",
     "calendarEvents": "Calendar Events",
     "monthlyReports": "Monthly Coaching Reports",
+    "trainingReports": "Training Reports",
     "paymentSettings": "Payment Settings",
+    "companyProfiles": "Company Profiles",
     "chat": "Chat",
     "systemSettings": "System Settings",
     "support": "Support",
@@ -59,7 +74,77 @@
     "submitting": "Signing in...",
     "invalidLinkTitle": "This link is invalid",
     "invalidLinkBody": "This reset link has already been used or has expired. Would you like to send another reset email?",
-    "copyright": "© {year} Gabby All rights reserved."
+    "linkErrorNotice": "We couldn't verify the link. Please try again or contact your administrator."
+  },
+  "authErrors": {
+    "missing_credentials": "Please enter your email address and password.",
+    "account_locked": "Your account is temporarily locked. Please try again later.",
+    "account_locked_now": "Too many failed attempts. Your account has been locked for 30 minutes.",
+    "invalid_credentials": "Incorrect email address or password.",
+    "license_not_found": "No valid license was found. Please contact your administrator.",
+    "portal_forbidden": "You do not have permission. Please sign in from the student site.",
+    "signout_failed": "An error occurred while signing out.",
+    "missing_email": "Please enter your email address.",
+    "password_too_short": "Password must be at least 8 characters long.",
+    "password_needs_alnum": "Password must contain both letters and numbers.",
+    "password_same_as_old": "Your new password must be different from your current password.",
+    "password_leaked": "This password has appeared in a data breach and cannot be used. Please choose another one.",
+    "password_weak": "This password is too simple or easy to guess. Please choose a stronger password.",
+    "session_invalid": "Your session is invalid or has expired. Please sign out, sign in again, and retry.",
+    "password_update_failed": "Failed to update your password.",
+    "session_timeout": "Your session has timed out. Please sign in again.",
+    "current_password_incorrect": "Your current password is incorrect.",
+    "reset_link_required": "We couldn't verify your reset link. Please request a new reset email.",
+    "invitation_invalid": "This invitation link is invalid or has already been used.",
+    "invitation_expired": "This invitation link has expired. Please ask your administrator to send a new one.",
+    "account_create_failed": "Failed to create your account.",
+    "unexpected": "An unexpected error occurred. Please try again later."
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "description": "Enter the email address registered to your admin account and we'll send you a link to reset your password.",
+    "emailLabel": "Email address",
+    "submit": "Send reset link",
+    "submitting": "Sending...",
+    "sentTitle": "Check your email",
+    "sentBody": "If an account exists for that email address, we've sent a password reset link. Check your inbox and follow the link to reset your password. If it doesn't arrive, please make sure the address is correct.",
+    "backToLogin": "Back to sign in"
+  },
+  "updatePassword": {
+    "verifying": "Verifying...",
+    "guideTitle": "Reset your password",
+    "guideBody": "You've arrived from a verification link. Press the button below to start setting a new password.",
+    "guideAction": "Continue",
+    "formTitle": "Set a new password",
+    "formDescription": "Enter the new password you will use to sign in to the admin console.",
+    "submit": "Update password & sign in",
+    "submitting": "Updating...",
+    "successTitle": "Password updated",
+    "successBody": "Taking you to the dashboard shortly. Use your new password the next time you sign in.",
+    "successAction": "Go to dashboard",
+    "invalidTitle": "We couldn't verify your reset link",
+    "invalidBody": "Your password reset link has expired or could not be verified. Please request a new reset email.",
+    "invalidAction": "Request a new reset link",
+    "backToLogin": "Back to sign in",
+    "networkError": "A network error occurred. Please try again later."
+  },
+  "invite": {
+    "verifying": "Verifying your invitation...",
+    "formTitle": "Admin account setup",
+    "formDescription": "{name} ({email}) — please set a password to sign in to the admin console.",
+    "fallbackName": "Admin",
+    "submit": "Activate account",
+    "submitting": "Activating...",
+    "expiredTitle": "Invitation link expired",
+    "invalidTitle": "We couldn't verify your invitation",
+    "backToLogin": "Back to sign in"
+  },
+  "passwordFields": {
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "requirement": "At least 8 characters, including both letters and numbers",
+    "match": "Passwords match",
+    "mismatch": "Passwords do not match"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -138,6 +223,7 @@
       "noAssignableLicense": "No licenses available to assign",
       "selectLicensePlaceholder": "Select a license",
       "remainingLicenses": "(remaining: {count})",
+      "contractWithPlan": "{contract} ({plan})",
       "adminRoleSectionTitle": "Admin role settings",
       "permissionSectionTitle": "Permissions & attributes",
       "noRolesSet": "No roles set",
@@ -175,10 +261,11 @@
       "invalidated": "Invalidated",
       "ended": "Ended",
       "noHistory": "No license history",
-      "planLabel": "Contract plan",
+      "planLabel": "Contract",
       "notEditable": "(cannot be changed)",
-      "selectPlanPlaceholder": "Select a contract plan",
+      "selectPlanPlaceholder": "Select a contract",
       "remaining": "(remaining: {count})",
+      "contractWithPlan": "{contract} ({plan})",
       "noAssignablePlans": "No contract plans available to assign",
       "contractPeriod": "Contract period: {start} – {end}",
       "editPeriodHint": "As an individual accommodation, you may extend beyond the contract period. Please record the reason in the notes field.",
@@ -241,7 +328,7 @@
       "licenseLabel": "Initial license assignment",
       "noContracts": "No active contracts available (assignment required)",
       "selectLicensePlaceholder": "Select a license",
-      "planWithRemaining": "{plan} ({count} remaining)",
+      "planWithRemaining": "{contract} ({plan}, {count} remaining)",
       "selectClientFirst": "Please select a client first",
       "dropzoneTitle": "Drop a CSV file here or click to select",
       "dropzoneHint": "Only .csv or .tsv files are supported",
@@ -271,28 +358,13 @@
   "paymentSettings": {
     "fetchFailed": "Failed to load settings data. Please check whether the DDL/DML has been applied.",
     "title": "Payment Settings",
-    "subtitle": "Manage the company information and session pay rate used on coach monthly payment notices and invoices (PDF).",
-    "companyInfoTitle": "Company Information",
-    "companyInfoDesc": "Printed on coach monthly payment notices and invoices (both PDF). Please set the information for the contracting entity (Vancouver corporation) that engages the coaches.",
-    "companyNameLabel": "Company name",
-    "addressLabel": "Address",
-    "taxRegistrationLabel": "Tax registration number (optional)",
-    "taxRegistrationPlaceholder": "e.g. Canadian GST/HST registration number (leave blank if not registered)",
-    "taxRegistrationHint": "Printed on the invoice only if set. Please check with a tax professional on whether it's required.",
-    "saveCompany": "Save company information",
-    "logoLabel": "Company logo",
-    "logoAlt": "Company logo",
-    "logoNotSet": "Not set",
-    "uploadingLogo": "Uploading...",
-    "changeLogo": "Change logo",
+    "subtitle": "Manage the session pay rate used to calculate the amount on coach monthly payment notices and invoices (PDF). The issuer's company information is managed under System Settings > Company Profiles.",
     "sessionRateTitle": "Session Pay Rate",
     "sessionRateDesc": "A single rate shared by all coaches. The monthly payment amount is calculated as \"rate × total monthly sessions\" (the rate itself is not shown on the notice). Approved months are locked to the rate at the time of approval, so changes here only affect unapproved months.",
     "rateAmountLabel": "Rate",
     "currencyCodeLabel": "Currency code",
     "saveRate": "Save rate",
-    "toastCompanyUpdated": "Company information updated",
-    "toastRateUpdated": "Session pay rate updated",
-    "toastLogoUpdated": "Logo image updated"
+    "toastRateUpdated": "Session pay rate updated"
   },
   "notification": {
     "title": "Notifications",
@@ -333,14 +405,6 @@
     "password": {
       "title": "Change Password",
       "currentPasswordLabel": "Current password",
-      "newPasswordLabel": "New password",
-      "confirmPasswordLabel": "New password (confirm)",
-      "errorTooShort": "New password must be at least 8 characters.",
-      "errorComplexity": "Password must contain both letters and numbers.",
-      "errorMismatchSubmit": "The new passwords do not match.",
-      "strengthHint": "Include both letters and numbers",
-      "matchSuccess": "Passwords match",
-      "matchFail": "Passwords do not match",
       "toastUpdateFailed": "Failed to update password.",
       "toastUpdateSuccess": "Password updated successfully",
       "submitLabel": "Update password",
@@ -723,16 +787,6 @@
       "prevMonth": "Previous month",
       "nextMonth": "Next month"
     },
-    "monthPicker": {
-      "prevYear": "Previous year",
-      "nextYear": "Next year",
-      "yearLabel": "{year}",
-      "months": {
-        "m1": "Jan", "m2": "Feb", "m3": "Mar", "m4": "Apr",
-        "m5": "May", "m6": "Jun", "m7": "Jul", "m8": "Aug",
-        "m9": "Sep", "m10": "Oct", "m11": "Nov", "m12": "Dec"
-      }
-    },
     "monthLabel": "{month} {year}",
     "grid": {
       "studentColumn": "Student",
@@ -1003,12 +1057,20 @@
       "removeAriaLabel": "Remove {name}"
     },
     "page": {
-      "title": "Chat",
-      "subtitle": "1-on-1 or group chats with coaches and students. Only admins can create new rooms."
+      "selectRoomTitle": "Select a chat room",
+      "selectRoomHint": "Choose a room from the list to show its messages here.",
+      "roomUnavailableTitle": "This chat room is not available",
+      "roomUnavailableHint": "The room may not exist or may have been deleted. Please open it again from the list.",
+      "title": "Chat"
     },
     "roomList": {
+      "searchPlaceholder": "Search by name or message",
+      "clearSearch": "Clear search",
+      "filterAll": "All",
+      "filterUnread": "Unread",
+      "noMatchingRooms": "No matching chat rooms",
       "myChatsTab": "My chats",
-      "allRoomsTab": "All chat rooms (review)",
+      "allRoomsTab": "All rooms (review)",
       "clientFilterPlaceholder": "Filter by client",
       "noRoomsFiltered": "No chat rooms found for this client",
       "noRooms": "There are no chat rooms",
@@ -1024,10 +1086,16 @@
     },
     "messageContent": {
       "deletedMessage": "This message was deleted",
-      "attachmentFetchFailed": "Failed to fetch the attachment"
+      "attachmentFetchFailed": "Failed to fetch the attachment",
+      "openImage": "View image",
+      "openOriginalImage": "Open original",
+      "closeImage": "Close"
     },
     "messageInput": {
-      "placeholder": "Type a message (Shift+Enter for a new line)",
+      "attachFile": "Attach a file",
+      "sendMessage": "Send",
+      "dropToAttach": "Drop files here to attach",
+      "placeholder": "Type a message",
       "removeTooltip": "Remove",
       "toastSendFailed": "Failed to send the message",
       "toastFileSizeError": "{name}: files must be 10MB or smaller",
@@ -1058,8 +1126,6 @@
       "label": "Participants (multiple)"
     },
     "manageParticipantsDialog": {
-      "button": "Manage participants",
-      "title": "Manage Participants",
       "currentMembersLabel": "Current participants ({count})",
       "minMembersError": "A group must have at least {min} participants",
       "deleteTooltip": "Remove",
@@ -1074,7 +1140,20 @@
       "toastAddFailed": "Failed to add the participant",
       "toastRemoveFailed": "Failed to remove the participant"
     },
+    "roomDetails": {
+      "title": "Room info",
+      "roomTypeLabel": "Type",
+      "roomTypeOneOnOne": "1-on-1",
+      "roomTypeGroup": "Group",
+      "createdAtLabel": "Created",
+      "membersLabel": "Participants ({count})"
+    },
     "timeline": {
+      "unreadDivider": "New messages",
+      "readReceipt": "Seen",
+      "jumpToLatest": "Jump to latest",
+      "newMessages": "{count, plural, one {# new message} other {# new messages}}",
+      "detailsButton": "Room info",
       "backAriaLabel": "Back to chat list",
       "reviewModeBadge": "Review mode",
       "viewOnlyNotice": "You are not a member of this room, so you can only view it (you cannot send messages)",
@@ -1099,7 +1178,7 @@
     "table": {
       "clientHeader": "Client",
       "clientUnlinked": "Not linked",
-      "planHeader": "Plan",
+      "planHeader": "Contract / Plan",
       "liveBadge": "Live {weekly}x/week, {total} total",
       "dialoguePracticeBadge": "Dialogue Practice",
       "licenseUsageHeader": "License Usage",
@@ -1115,7 +1194,7 @@
       "statusActive": "Active"
     },
     "dataTable": {
-      "searchPlaceholder": "Search contracts by client name...",
+      "searchPlaceholder": "Search by client or contract name...",
       "searchButton": "Search",
       "totalCount": "<styled>{count}</styled> total",
       "noData": "No matching contract information found."
@@ -1145,6 +1224,11 @@
       "ticketHint": "* Tickets are issued individually when a license is assigned to a student, and expire when the contract period ends (no carryover)",
       "planNameJaLabel": "Plan name (Japanese)",
       "planNameEnLabel": "Plan name (English)",
+      "planNameHint": "The plan name is also shown to students and coaches",
+      "contractNameLabel": "Contract name (internal)",
+      "contractNamePlaceholder": "e.g. Client A FY2026 H1",
+      "contractNameHint": "Used to tell contracts apart in the admin app. Not shown to students or coaches",
+      "contractNameSuggestion": "{client} {start}– {plan}",
       "maxLicensesLabel": "Maximum licenses",
       "startDateLabel": "Start date",
       "endDateLabel": "End date",
@@ -1168,6 +1252,8 @@
         "planRequired": "Please select a plan",
         "planNameRequired": "Plan name (Japanese) is required",
         "planNameEnRequired": "Plan name (English) is required",
+        "contractNameRequired": "Contract name is required",
+        "contractNameTooLong": "Contract name must be 100 characters or fewer",
         "maxLicensesInvalid": "Please enter a number of 1 or more",
         "startDateRequired": "Start date is required",
         "endDateRequired": "End date is required",
@@ -1207,7 +1293,7 @@
       "disabledTooltip": "Cannot delete because licenses are assigned",
       "deleteTooltip": "Delete contract",
       "confirmTitle": "Confirm Contract Deletion",
-      "confirmBody": "This will delete \"{client} / {plan}\". This action cannot be undone. Please confirm this is a test or mistaken entry before proceeding.",
+      "confirmBody": "This will delete the contract \"{name}\" ({client}). This action cannot be undone. Please confirm this is a test or mistaken entry before proceeding.",
       "cancel": "Cancel",
       "deleting": "Deleting...",
       "deleteButton": "Delete",
@@ -1222,7 +1308,7 @@
       "purgeItemLicenses": "assigned licenses",
       "purgeItemHistory": "license assignment/removal history",
       "purgeItemTickets": "live session ticket issuance/usage history",
-      "purgeWarning": " linked to \"{client} / {plan}\". Never use this on a production contract. To proceed, enter the plan name.",
+      "purgeWarning": " linked to the contract \"{name}\". Never use this on a production contract. To proceed, enter the contract name.",
       "purgeInputHint": "To confirm, please type \"{name}\"",
       "purgeConfirmButton": "Permanently delete",
       "toastDeleted": "Contract deleted",
@@ -1434,30 +1520,51 @@
         "button": "Bulk register",
         "titleComplete": "Import Complete",
         "titleNormal": "CV Dictionary Bulk Register",
-        "subtitle": "TSV / CSV format. Required columns: word_en, part_of_speech, word_ja",
+        "subtitle": "TSV / CSV format. Required columns: word_en, part_of_speech, word_ja, syllables, primary_stress_syllable, stress_vowel_spelling, cv_id",
         "downloadSample": "Download sample",
         "missingHeaders": "Missing required columns: {headers}",
         "layoutErrorTitle": "File Structure Error",
         "dropzoneTitle": "Drop a TSV / CSV file here",
         "dropzoneHint": "or click to select a file",
+        "analyzing": "Checking against existing dictionary data...",
         "rowErrorPrefix": "[Line {line}]: ",
-        "errorWordEnEmpty": "word_en is empty",
-        "errorPosEmpty": "part_of_speech is empty",
-        "errorWordJaEmpty": "word_ja is empty",
-        "errorStressInvalid": "primary_stress_syllable contains a non-numeric value",
-        "toastImported": "{count} entries processed",
+        "errors": {
+          "wordEnEmpty": "word_en is empty",
+          "posEmpty": "part_of_speech is empty",
+          "posInvalid": "part_of_speech is not a valid value (NOUN / VERB / ADJ / ADV / PRON / PREP / CONJ / ART / INT / UNKNOWN)",
+          "wordJaEmpty": "word_ja is empty",
+          "syllablesEmpty": "syllables is empty",
+          "stressEmpty": "primary_stress_syllable is empty",
+          "stressInvalid": "primary_stress_syllable must be an integer of 1 or more",
+          "stressOutOfRange": "primary_stress_syllable exceeds the number of syllables",
+          "vowelSpellingEmpty": "stress_vowel_spelling is empty",
+          "vowelSpellingMismatch": "stress_vowel_spelling is not contained in the stressed syllable",
+          "cvIdEmpty": "cv_id is empty",
+          "cvIdInvalid": "cv_id is not a valid value",
+          "lemmaInvalid": "lemma contains invalid characters (letters, digits, apostrophes and hyphens only)",
+          "duplicateConflict": "Same word and part of speech as line {line} but with different content (keep only one)"
+        },
+        "toastImported": "Registered {inserted} new and updated {updated} entries ({skipped} skipped)",
+        "toastFetchKeysFailed": "Failed to fetch existing dictionary data",
         "toastSaveFailed": "An error occurred while saving",
         "toastSystemError": "A system error occurred",
         "errorsOnlyLabel": "Showing rows with errors only",
         "emptyCell": "(empty)",
         "readyTitle": "Ready for Import!",
         "readyBody": "{count} rows of data were loaded successfully.",
-        "readyHint": "Existing data will be upserted (overwritten).",
+        "duplicateHint": "{count} identical duplicate rows in the file will be excluded.",
+        "mode": {
+          "insertOnly": "New only",
+          "overwrite": "Overwrite existing"
+        },
+        "modeHint": {
+          "insertOnly": "Registers {newCount} new entries. {existingCount} existing entries are skipped and left unchanged.",
+          "overwrite": "Registers {newCount} new entries and overwrites {existingCount} existing entries. Entries with generated audio will be marked as needing regeneration."
+        },
         "reset": "Reset",
         "close": "Close",
         "cancel": "Cancel",
-        "startImport": "Start import",
-        "errorCountSuffix": "{count}"
+        "startImport": "Import {count} entries"
       },
       "ttsBulkDialog": {
         "subtitle": "Bulk audio generation for all CV dictionary entries",
@@ -1874,5 +1981,76 @@
         }
       }
     }
+  },
+  "companyProfiles": {
+    "title": "Company Profiles",
+    "subtitle": "Manage, per legal entity, the company information printed as the issuer of documents (PDF).",
+    "fetchFailed": "Failed to load company information. Please check whether the DDL/DML has been applied.",
+    "companies": {
+      "GABBY_JP": {
+        "title": "Japan entity",
+        "usage": "The contracting entity for clients and students. Printed as the issuer of student training reports."
+      },
+      "GVT_CA": {
+        "title": "Vancouver entity",
+        "usage": "The contracting entity that engages the coaches. Printed as the issuer of coach monthly payment notices and invoices."
+      }
+    },
+    "companyNameLabel": "Company name (English)",
+    "companyNameJaLabel": "Company name (Japanese, optional)",
+    "companyNameJaPlaceholder": "e.g. 株式会社ギャビーアカデミー",
+    "companyNameJaHint": "If set, shown alongside the English name on Japanese documents (training reports).",
+    "addressLabel": "Address",
+    "addressHint": "Line breaks are kept as-is on the documents.",
+    "taxRegistrationLabel": "Tax registration number (optional)",
+    "taxRegistrationPlaceholderJp": "e.g. Qualified invoice issuer number (T + 13 digits)",
+    "taxRegistrationPlaceholderCa": "e.g. Canadian GST/HST registration number (leave blank if not registered)",
+    "taxRegistrationHint": "Currently printed only on invoices, and only if set. Please check with a tax professional on whether it's required.",
+    "save": "Save",
+    "logoLabel": "Company logo",
+    "logoAlt": "Company logo",
+    "logoNotSet": "Not set",
+    "changeLogo": "Change logo",
+    "toastUpdated": "Company information updated",
+    "toastLogoUpdated": "Logo image updated",
+    "errors": {
+      "forbidden": "You do not have permission to perform this action.",
+      "invalidCompany": "Invalid legal entity.",
+      "required": "Company name (English) and address are required.",
+      "updateFailed": "Failed to update company information.",
+      "logoRequired": "Please select a logo image file.",
+      "logoUploadFailed": "Failed to upload the logo image.",
+      "logoPathFailed": "The logo image was saved, but updating its path failed."
+    }
+  },
+  "trainingReports": {
+    "title": "Training Reports",
+    "subtitle": "Create training reports (PDF) for each student's contract term (license). Choose a month to list, by contract, the licenses whose term ends in that month.",
+    "draftNote": "This is currently a draft version for internal review. Coach comments still in draft are included in the PDF and marked as drafts.",
+    "fetchFailed": "Failed to load the list. Please check whether the DDL/DML has been applied.",
+    "empty": "No licenses end in this month.",
+    "contractSummary": "{client} · {plan} · {count} ending this month",
+    "bulkButton": "Create ZIP for whole contract",
+    "bulkHint": "Contains one PDF per student for every license holder in this contract, regardless of end month.",
+    "columns": {
+      "student": "Student",
+      "period": "Term",
+      "status": "Status",
+      "comment": "Coach comments",
+      "report": "Report"
+    },
+    "licenseStatus": {
+      "active": "Active",
+      "stopped": "Stopped",
+      "expired": "Expired"
+    },
+    "comment": {
+      "notApplicable": "N/A",
+      "none": "None",
+      "draft": "{count} draft",
+      "finalized": "{count} finalized"
+    },
+    "pdfButton": "PDF",
+    "downloadFailed": "Failed to create the report. Please try again later."
   }
 }

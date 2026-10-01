@@ -1,0 +1,70 @@
+import type { AuthLabels } from '@gabby/lib/components/auth/types';
+import { AUTH_ERROR_MESSAGES_JA } from '@gabby/lib/auth/errors';
+
+/** 認証画面（ログイン・パスワード忘れ・再設定・招待）の文言 */
+export const AUTH_LABELS: AuthLabels = {
+  login: {
+    subtitle: '登録済みアカウントでログインしてください',
+    emailLabel: 'メールアドレス',
+    emailPlaceholder: 'account@example.com',
+    passwordLabel: 'パスワード',
+    forgotPassword: 'パスワードをお忘れですか？',
+    submit: 'ログイン',
+    submitting: '認証中...',
+    invalidLinkTitle: 'リンクが無効です',
+    invalidLinkBody: 'このリセットリンクは既に使用済みか、有効期限が切れています。再度リセットメールを送信しますか？',
+    linkErrorNotice: 'リンクを確認できませんでした。もう一度お試しいただくか、管理者にお問い合わせください。',
+  },
+  forgotPassword: {
+    title: 'パスワードの再設定',
+    description: '登録済みのメールアドレスを入力してください。パスワード再設定用のリンクをお送りします。',
+    emailLabel: 'メールアドレス',
+    emailPlaceholder: 'account@example.com',
+    submit: '送信する',
+    submitting: '送信中...',
+    sentTitle: 'メールを確認してください',
+    sentBody:
+      '入力したメールアドレスが登録されている場合は、パスワード再設定用のメールをお送りしました。受信トレイを確認し、記載されたリンクからパスワードを更新してください。届かない場合は、メールアドレスに誤りがないかご確認ください。',
+    backToLogin: 'ログイン画面に戻る',
+  },
+  updatePassword: {
+    verifying: '確認しています...',
+    guideTitle: 'パスワードの再設定',
+    guideBody: 'ご本人確認用のリンクからアクセスされました。ボタンを押して、新しいパスワードの設定を始めてください。',
+    guideAction: '手続きを開始する',
+    formTitle: '新しいパスワードの設定',
+    formDescription: 'ログインに使う新しいパスワードを入力してください。',
+    submit: 'パスワードを更新してログイン',
+    submitting: '更新中...',
+    successTitle: 'パスワードを更新しました',
+    successBody: 'まもなくホームへ移動します。次回からは新しいパスワードでログインしてください。',
+    successAction: 'ホームへ',
+    invalidTitle: '再設定リンクを確認できませんでした',
+    invalidBody:
+      '再設定リンクの有効期限が切れているか、正しく確認できませんでした。お手数ですが、再設定メールの送信からやり直してください。',
+    invalidAction: '再設定メールを送信する',
+    backToLogin: 'ログイン画面に戻る',
+    networkError: '通信エラーが発生しました。時間をおいて再度お試しください。',
+  },
+  invite: {
+    verifying: '招待を確認しています...',
+    formTitle: 'アカウント初期設定',
+    formDescription: ({ name, email }) => `${name} 様（${email}）ログインに使用するパスワードを設定してください。`,
+    fallbackName: '会員',
+    submit: '本登録を完了する',
+    submitting: '登録中...',
+    expiredTitle: '招待リンクの期限切れ',
+    invalidTitle: '招待リンクを確認できませんでした',
+    backToLogin: 'ログイン画面に戻る',
+    unexpected: AUTH_ERROR_MESSAGES_JA.unexpected,
+  },
+  passwordFields: {
+    newPassword: '新しいパスワード',
+    confirmPassword: '新しいパスワード（確認用）',
+    requirement: '8文字以上で、英字と数字を両方含めてください',
+    tooShort: AUTH_ERROR_MESSAGES_JA.password_too_short,
+    needsAlnum: AUTH_ERROR_MESSAGES_JA.password_needs_alnum,
+    match: 'パスワードが一致しました',
+    mismatch: 'パスワードが一致していません',
+  },
+};

@@ -4,6 +4,7 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { NotificationItem } from '@gabby/types/notification';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -19,7 +20,7 @@ export async function getNotificationsAction(): Promise<{
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, data: [], error: 'Unauthorized' };
 
     const { data, error } = await supabase
@@ -47,7 +48,7 @@ export async function getUnreadNotificationCountAction(): Promise<number> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return 0;
 
     const { count, error } = await supabase
@@ -77,7 +78,7 @@ export async function markNotificationAsReadAction(notificationId: string): Prom
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const { error } = await supabase
@@ -108,7 +109,7 @@ export async function markAllNotificationsAsReadAction(): Promise<{
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const { error } = await supabase

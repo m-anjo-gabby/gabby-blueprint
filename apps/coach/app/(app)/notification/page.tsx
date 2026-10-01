@@ -1,21 +1,22 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, BellOff } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { BellOff } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
 import { NotificationItem } from '@gabby/types/notification';
 import { NotificationCard } from './_components/NotificationCard';
+import { InboxListSkeleton, InboxPageLayout } from '@/components/common/InboxPageParts';
 
 export default function NotificationPage() {
   const { notifications, isLoading, fetchNotifications, markAsRead } = useNotificationStore();
   const router = useRouter();
 
-  // Always fetch the latest data on mount
-  useEffect(() => {
-    fetchNotifications(true);
-  }, [fetchNotifications]);
+  // Always fetch the latest data on mount, and show the skeleton until that fetch completes
+  // (never flash a stale list left in the store, or an empty state before the first fetch)
+  const isReady = useFetchOnMount(fetchNotifications, isLoading);
 
   const handleOpen = useCallback((notification: NotificationItem) => {
     if (!notification.is_read) {
@@ -27,67 +28,34 @@ export default function NotificationPage() {
   }, [markAsRead, router]);
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">Notifications</h1>
-          <p className="text-[13px] text-slate-500 mt-1">
-            Your training and messaging activity.
+    <InboxPageLayout page="notification" count={isReady ? notifications.length : null}>
+      {!isReady ? (
+        <InboxListSkeleton />
+      ) : notifications.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-slate-200"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
+            <BellOff size={22} />
+          </div>
+          <p className="text-sm font-bold text-slate-500">No notifications yet</p>
+          <p className="text-[11px] text-slate-400 mt-1.5">
+            You&apos;ll see training and messaging activity here.
           </p>
+        </motion.div>
+      ) : (
+        <div className="space-y-3 pb-6">
+          {notifications.map(notification => (
+            <NotificationCard
+              key={notification.notification_id}
+              notification={notification}
+              onOpen={handleOpen}
+            />
+          ))}
         </div>
-        <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 flex items-center gap-1.5 shrink-0">
-          <Bell size={10} />
-          {notifications.length} <span className="opacity-60 ml-0.5">Items</span>
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 max-w-2xl">
-        <AnimatePresence mode="wait">
-          {isLoading ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-3"
-            >
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-16 w-full rounded-2xl bg-slate-100 animate-pulse" />
-              ))}
-            </motion.div>
-          ) : notifications.length === 0 ? (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-slate-200"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
-                <BellOff size={22} />
-              </div>
-              <p className="text-sm font-bold text-slate-500">No notifications yet</p>
-              <p className="text-[11px] text-slate-400 mt-1.5">
-                You&apos;ll see training and messaging activity here.
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-3 pb-6"
-            >
-              {notifications.map(notification => (
-                <NotificationCard
-                  key={notification.notification_id}
-                  notification={notification}
-                  onOpen={handleOpen}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
+      )}
+    </InboxPageLayout>
   );
 }

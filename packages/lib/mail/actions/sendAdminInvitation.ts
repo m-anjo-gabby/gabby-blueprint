@@ -1,14 +1,14 @@
 // packages/lib/mail/actions/sendAdminInvitation.ts
-import * as React from 'react';
-import { renderToString } from 'react-dom/server.edge'; // App RouterのRSCで安全に動く軽量エクスポート
+import 'server-only';
 import { sendCore } from '../core';
-import { AdminInviteEmailTemplate } from '../templates/AdminInviteEmailTemplate';
+import { renderAdminInvitationEmail } from '../render';
 import { createLogger } from '../../logger'; // プロジェクト共通のロガー
 
 const logger = createLogger('mail');
 
 interface SendAdminInvitationParams {
   to: string;
+  /** 招待時の氏名。空ならテンプレート側の既定の宛名（管理者様 / Dear Administrator） */
   userName: string;
   inviteUrl: string;
   expiresDays?: number;
@@ -24,15 +24,8 @@ export async function sendAdminInvitationEmail({
   expiresDays = 3
 }: SendAdminInvitationParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const payload = { userName, inviteUrl, expiresDays };
-
-    const html = renderToString(React.createElement(AdminInviteEmailTemplate, payload));
-
-    const data = await sendCore({
-      to,
-      subject: '【Gabby Blueprint】管理者アカウント招待のご案内',
-      html,
-    });
+    const { subject, html } = renderAdminInvitationEmail({ userName, inviteUrl, expiresDays });
+    const data = await sendCore({ to, subject, html });
 
     logger.info('mail:send_admin_invitation_success', `管理者招待メールを送信しました: ${to}`, { messageId: data?.id });
     return { success: true };

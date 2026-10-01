@@ -1,7 +1,7 @@
-import * as React from 'react';
-import { renderToString } from 'react-dom/server.edge';
+import 'server-only';
 import { sendCore } from '../core';
-import { PasswordResetEmailTemplate } from '../templates/PasswordResetEmailTemplate';
+import { renderPasswordResetEmail } from '../render';
+import type { PasswordResetMailLanguage } from '../templates/PasswordResetEmailTemplate';
 import { createLogger } from '../../logger';
 
 const logger = createLogger('mail');
@@ -9,7 +9,8 @@ const logger = createLogger('mail');
 interface SendPasswordResetParams {
   to: string;
   resetUrl: string;
-  expiresText?: string;
+  /** メールの言語（student: ja / coach: en / admin: bilingual） */
+  language: PasswordResetMailLanguage;
 }
 
 /**
@@ -18,20 +19,13 @@ interface SendPasswordResetParams {
 export async function sendPasswordResetEmail({
   to,
   resetUrl,
-  expiresText = '30分間'
+  language,
 }: SendPasswordResetParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const html = renderToString(
-      React.createElement(PasswordResetEmailTemplate, { resetUrl, expiresText })
-    );
+    const { subject, html } = renderPasswordResetEmail({ resetUrl, language });
+    const data = await sendCore({ to, subject, html });
 
-    const data = await sendCore({
-      to,
-      subject: '【Gabby Blueprint】パスワード再設定手続きのご案内',
-      html,
-    });
-
-    logger.info('mail:send_password_reset_success', `パスワードリセットメールを送信しました: ${to}`, { messageId: data?.id });
+    logger.info('mail:send_password_reset_success', `パスワードリセットメールを送信しました: ${to}`, { messageId: data?.id, language });
     return { success: true };
   } catch (err) {
     logger.error('mail:send_password_reset_failed', err instanceof Error ? err.message : 'Unknown error', { to });

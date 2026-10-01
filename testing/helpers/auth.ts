@@ -6,12 +6,19 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * SECURITY DEFINER関数（本人 or admin 認可判定を含むRPC）の実行には
  * 絶対に使わない（auth.uid()がNULLになり認可分岐を誤って通過するため。CLAUDE.md 6章参照）。
  *
- * @gabby/lib/supabase/admin はモジュール評価時に process.env を読むため、
- * loadTestEnv() 実行前に静的importされないよう動的importで遅延読み込みする。
+ * @gabby/lib/supabase/admin は 'server-only'（Next.js のサーバー内でしか読み込めない）のため、
+ * テスト（Node で実行）では同じ設定のクライアントをここで作る。
  */
 export async function createAdminClient(): Promise<SupabaseClient> {
-  const { createAdminClient: createLibAdminClient } = await import("@gabby/lib/supabase/admin");
-  return createLibAdminClient();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未ロードです。先に loadTestEnv() を呼んでください。");
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 /**
@@ -38,7 +45,11 @@ export async function signInAsRole(email: string, password: string): Promise<Sup
   return client;
 }
 
-/** signInAsRole で取得したクライアントをサインアウトする（後始末用）。 */
+/**
+ * signInAsRole で取得したクライアントをサインアウトする（後始末用）。
+ * scope: 'local' で、このクライアントのセッションだけを終了する。既定（global）だと同じユーザーの全セッション
+ * （E2Eのログイン状態・ブラウザで確認中のセッション）までログアウトされる（TEST-JUDGEMENT-GUIDE.md KJ-2026-0930-02）。
+ */
 export async function signOutRole(client: SupabaseClient): Promise<void> {
-  await client.auth.signOut();
+  await client.auth.signOut({ scope: "local" });
 }

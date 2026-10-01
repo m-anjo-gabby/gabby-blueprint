@@ -16,6 +16,7 @@ import {
   RevokeCoachMonthlyReportApprovalResult,
 } from '@gabby/types/monthlyReport';
 import { SESSION_STATUS, COMPLETION_RESULT, CANCEL_CATEGORY, SessionStatus, CompletionResult, CancelCategory } from '@gabby/types/session';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -188,7 +189,7 @@ export async function getCoachMonthlyReportCore(reportMonth: string): Promise<Ge
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     return await buildMonthlyReport(supabase, user.id, reportMonth);

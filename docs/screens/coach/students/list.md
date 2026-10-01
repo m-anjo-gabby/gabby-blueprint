@@ -33,6 +33,7 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
+| 読み込み中（画面遷移直後） | 見出しと「Active Students」の区分見出しは本物、生徒カード（3列）を骨組みで表示 | `students/loading.tsx`（生徒配下の画面を表示中のパスで出し分け） |
 | 生徒が1人もいない | 「No students assigned yet」「Students will appear here once a matching request is approved.」 | 現在・過去含めて担当生徒が0人の場合 |
 | Active Studentsが0件（Pastはいる） | 「No active students right now.」 | 現在担当中の生徒がおらず、過去の担当生徒のみいる場合 |
 

@@ -46,7 +46,7 @@ export function MatchingRequestsView({
   return (
     <div className="space-y-8">
       <section className="space-y-3">
-        <h2 className="text-xs font-black text-indigo-500 uppercase tracking-widest">Pending ({pending.length})</h2>
+        <h2 className="text-xs font-black text-brand-500 uppercase tracking-widest">Pending ({pending.length})</h2>
         {pending.length === 0 ? (
           <p className="text-sm text-slate-400">No pending requests.</p>
         ) : (

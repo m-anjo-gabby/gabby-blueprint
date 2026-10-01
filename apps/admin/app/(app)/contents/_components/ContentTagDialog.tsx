@@ -106,7 +106,7 @@ export function ContentTagDialog({ content }: Props) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-5 w-5 p-0 text-indigo-500 bg-indigo-50/50 border border-indigo-100 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 rounded-full transition-all duration-200 shadow-sm ml-1"
+              className="h-5 w-5 p-0 text-brand-500 bg-brand-50/50 border border-brand-100 hover:text-white hover:bg-brand hover:border-brand rounded-full transition-all duration-200 shadow-sm ml-1"
               title={t('editTagsTitle')}
             >
               <Plus size={12} strokeWidth={3} />
@@ -117,7 +117,7 @@ export function ContentTagDialog({ content }: Props) {
           <Button
             variant="outline"
             size="sm"
-            className="h-7 px-2 text-[10px] border-dashed border-slate-300 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 rounded-lg transition-all group/btn"
+            className="h-7 px-2 text-[10px] border-dashed border-slate-300 text-slate-400 hover:text-brand hover:border-brand-200 hover:bg-brand-50 rounded-lg transition-all group/btn"
           >
             <TagIcon size={10} className="mr-1.5" />
             <span className="font-bold mr-1.5">{t('unsetLabel')}</span>
@@ -125,7 +125,7 @@ export function ContentTagDialog({ content }: Props) {
             <Plus 
               size={12} 
               strokeWidth={3} 
-              className="text-indigo-400 group-hover/btn:text-indigo-600 transition-colors" 
+              className="text-brand-400 group-hover/btn:text-brand transition-colors" 
             />
           </Button>
         )}
@@ -134,14 +134,14 @@ export function ContentTagDialog({ content }: Props) {
       <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="flex items-center gap-2 text-lg">
-            <Hash className="text-indigo-400" size={20} />
+            <Hash className="text-brand-400" size={20} />
             {isAddMode ? t('addModeTitle') : t('listModeTitle')}
           </DialogTitle>
         </DialogHeader>
 
         <div className="p-6 bg-white min-h-[400px]">
           {loading && assignedTags.length === 0 ? (
-            <div className="flex justify-center p-12"><Loader2 className="animate-spin text-indigo-500" /></div>
+            <div className="flex justify-center p-12"><Loader2 className="animate-spin text-brand-500" /></div>
           ) : isAddMode ? (
             /* --- 追加モード：マスタから選択 --- */
             <div className="space-y-4">
@@ -149,7 +149,7 @@ export function ContentTagDialog({ content }: Props) {
                 variant="ghost" 
                 size="sm" 
                 onClick={() => setIsAddMode(false)} 
-                className="h-8 text-slate-500 hover:text-indigo-600 p-0 font-bold"
+                className="h-8 text-slate-500 hover:text-brand p-0 font-bold"
               >
                 <ArrowLeft size={16} className="mr-1" /> {t('backButton')}
               </Button>
@@ -172,7 +172,7 @@ export function ContentTagDialog({ content }: Props) {
                     {unassignedTags.map(tag => (
                       <div
                         key={tag.tag_id}
-                        className="flex items-center justify-between p-3 border rounded-xl hover:border-indigo-200 transition-colors bg-slate-50/50 group"
+                        className="flex items-center justify-between p-3 border rounded-xl hover:border-brand-200 transition-colors bg-slate-50/50 group"
                       >
                         <div>
                           <p className="text-sm font-bold text-slate-800">{tag.tag_name}</p>
@@ -184,7 +184,7 @@ export function ContentTagDialog({ content }: Props) {
                           size="sm"
                           onClick={() => handleAdd(tag.tag_id)}
                           disabled={loading}
-                          className="bg-indigo-600 hover:bg-indigo-700 h-8 rounded-lg shadow-sm font-bold"
+                          className="bg-brand hover:bg-brand-strong h-8 rounded-lg shadow-sm font-bold"
                         >
                           {t('addButtonLabel')}
                         </Button>
@@ -213,12 +213,12 @@ export function ContentTagDialog({ content }: Props) {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {assignedTags.map(tag => (
-                      <div key={tag.tag_id} className="flex items-center gap-1.5 pl-3 pr-1 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 group transition-all">
+                      <div key={tag.tag_id} className="flex items-center gap-1.5 pl-3 pr-1 py-1 bg-brand-50 text-brand-strong rounded-full border border-brand-100 group transition-all">
                         <span className="text-xs font-bold">{tag.tag_name}</span>
                         <button 
                           onClick={() => handleRemove(tag.tag_id)}
                           disabled={loading}
-                          className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-indigo-200 text-indigo-400 hover:text-indigo-700 transition-colors"
+                          className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-brand-200 text-brand-400 hover:text-brand-strong transition-colors"
                         >
                           <X size={12} />
                         </button>

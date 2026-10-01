@@ -6,6 +6,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { USER_TYPES } from '@gabby/types/user';
 import { CHAT_MESSAGE_TYPES, ChatAttachmentRecord, ChatMessage, SendChatMessagePayload } from '@gabby/types/chat';
 import { getCurrentUserWithType } from './roomActions';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -40,7 +41,7 @@ export async function sendChatMessage(
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const message = payload.message.trim();
@@ -120,7 +121,7 @@ export async function getChatMessages(params: {
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, data: [], hasMore: false, error: 'Unauthorized' };
 
     // 論理削除済みメッセージも「削除されたことが分かる」形で表示するため除外しない（本文はマスクして返す）
@@ -201,8 +202,29 @@ export async function markAsRead(params: {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
+
+    // 既読位置は前にしか進めない（古いタブ等から古い位置で上書きされると、相手に見せる「既読」が戻ってしまうため）
+    const { data: membership } = await supabase
+      .from('com_t_chat_room_user')
+      .select('last_read_chat_id')
+      .eq('room_id', params.roomId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const currentReadId = membership?.last_read_chat_id as string | null | undefined;
+    if (currentReadId && currentReadId !== params.chatId) {
+      const { data: chats } = await supabase
+        .from('com_t_chat')
+        .select('chat_id, created_at')
+        .in('chat_id', [currentReadId, params.chatId]);
+      const createdAt = new Map((chats ?? []).map((c) => [c.chat_id as string, c.created_at as string]));
+      const currentAt = createdAt.get(currentReadId);
+      const nextAt = createdAt.get(params.chatId);
+      if (currentAt && nextAt && nextAt <= currentAt) {
+        return { success: true };
+      }
+    }
 
     const { error } = await supabase
       .from('com_t_chat_room_user')

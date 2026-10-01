@@ -9,6 +9,7 @@ import {
   CHAT_ATTACHMENT_MAX_SIZE,
   PendingChatAttachment,
 } from '@gabby/types/chat';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -39,7 +40,7 @@ export async function uploadChatAttachment(
 
     // ルーム参加権限の確認（RLS: is_chat_room_member）
     const serverSupabase = await createServerClient();
-    const { data: { user } } = await serverSupabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, message: 'Unauthorized' };
 
     const { data: membership, error: membershipError } = await serverSupabase

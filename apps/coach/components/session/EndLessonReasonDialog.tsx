@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -66,8 +65,7 @@ export function EndLessonReasonDialog({ open, onClose, onSubmit }: Props) {
           <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isSubmitting || !reason.trim()}>
-            {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+          <Button pending={isSubmitting} type="button" onClick={handleSubmit} disabled={isSubmitting || !reason.trim()}>
             Submit
           </Button>
         </DialogFooter>

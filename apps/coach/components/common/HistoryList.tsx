@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface HistoryListProps<T> {
@@ -47,8 +46,7 @@ export function HistoryList<T>({ initialItems, initialCursor, pageSize, fetchPag
         <div key={getKey(item)}>{renderItem(item, index, items)}</div>
       ))}
       {cursor && (
-        <Button type="button" variant="outline" className="w-full" onClick={handleShowMore} disabled={isLoading}>
-          {isLoading && <Loader2 size={14} className="animate-spin" />}
+        <Button pending={isLoading} type="button" variant="outline" className="w-full" onClick={handleShowMore} disabled={isLoading}>
           Show more
         </Button>
       )}

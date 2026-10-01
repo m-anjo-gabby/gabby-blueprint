@@ -10,12 +10,12 @@
 
 ## この画面に来る経路
 
-- ダッシュボード（`/dashboard`）の戻る矢印から遷移する。カレンダーはダッシュボードの子画面という
-  位置づけで、独立したナビゲーション項目としては存在しない。
+- [ライブセッション・ホーム](./live-room/hub.md)（`/live-room`）の「カレンダー」ボタンから遷移する。
+  独立したナビゲーション項目としては存在せず、アプリシェルでは「ライブセッション」タブがアクティブになる。
 
 ## 画面の構成
 
-1. **ヘッダー** — 画面タイトル、説明文、ダッシュボードへ戻るボタン
+1. **ヘッダー** — 画面タイトル、説明文、ライブセッション・ホームへ戻るボタン
 2. **月間カレンダー** — 月送りボタン、曜日ヘッダー、日付セル（各日にその日の予定を最大2件まで
    チップ表示し、3件以上ある場合は「他n件」とまとめる）
 3. **日別詳細（日付をタップすると下から開くドロワー）** — 選択した日の予定一覧。未消化枠が
@@ -27,7 +27,7 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 月送り矢印（前月・次月） | 常時表示 | 該当月のカレンダーを再取得して表示し直す |
+| 月送り矢印（前月・次月） | 常時表示（切り替え中は押せない） | 表示月をURLの `?month=YYYY-MM` に反映してページ遷移し、該当月のセッション・イベントをサーバーで取得して表示し直す（前後の週のセルも含めて予定を表示する）。振替リクエストの送信後もサーバーで取り直す |
 | 日付セルのチップ | その日に個別セッションまたはカレンダーイベント（グループセッション／メンテナンス告知）がある場合 | 過去の予定はグレーアウト表示になる。3件以上ある日は「他n件」に集約される |
 | 日付セルのクリック | 常時 | その日の日別詳細ドロワーを開く |
 | 「この日で未予約のセッションをリクエストする」ボタン | 未消化のチケット枠が1つ以上ある場合のみ、日別詳細ドロワー内に表示 | 予約リクエストダイアログを開く（希望日は選択した日で初期化される） |
@@ -66,9 +66,12 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
-| 読み込み中 | カレンダー部分にスピナーを表示 | 月を切り替えた直後、データ取得中 |
+| 読み込み中 | 見出しと月の日付の枠は表示したまま、予定のチップだけを出さない（日付は選べない）。画面遷移直後は `calendar/loading.tsx` が同じ見た目を出す | 画面を開いた直後・月を切り替えた直後、データ取得中（データはサーバーで取得し、ブラウザからの後追い取得はしない） |
 | 日別詳細が空 | 「この日の予定はありません」 | 選択した日に予定が1件も無い場合 |
 | キャンセル済み等のセッションは非表示 | カレンダー上にチップが出ない | キャンセル済み・振替元・ライセンス無効化による自動キャンセルのセッションは、同じ枠に別の予約が入ることがあり紛らわしいため、意図的にカレンダーから除外される |
+
+
+E2E: `testing/e2e/tests/smoke/calendar-month.spec.ts`（`?month=` での表示月の指定・月送り・不正な値は今月）。
 
 ## 関連する業務フロー仕様書
 
@@ -77,10 +80,10 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/calendar/page.tsx`
-- `apps/student/app/(app)/calendar/_components/CalendarBoard.tsx`
-- `apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`
-- `apps/student/app/(app)/calendar/_components/SessionActionDialog.tsx`
+- `apps/student/app/(app)/(shell)/calendar/page.tsx`
+- `apps/student/app/(app)/(shell)/calendar/_components/CalendarBoard.tsx`
+- `apps/student/app/(app)/(shell)/calendar/_components/DayDetailDrawer.tsx`
+- `apps/student/app/(app)/(shell)/calendar/_components/SessionActionDialog.tsx`
   （実体は `packages/lib/components/common/SessionActionDialog.tsx` の薄いアダプタ）
-- `apps/student/app/(app)/calendar/_components/BookMakeupSessionDialog.tsx`
+- `apps/student/app/(app)/(shell)/calendar/_components/BookMakeupSessionDialog.tsx`
 - 関連RPC: `create_session_booking_request`, `cancel_session`, `check_session_conflict`

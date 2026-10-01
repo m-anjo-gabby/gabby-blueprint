@@ -1,10 +1,9 @@
+import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { getCoachesForMonthlyReport, getCoachMonthlyReportForAdmin } from '@/actions/adminMonthlyReportAction';
+import { getCoachesForMonthlyReport } from '@/actions/adminMonthlyReportAction';
+import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
 import { CoachMonthSelector } from './_components/CoachMonthSelector';
-import { ApprovalControlBar } from './_components/ApprovalControlBar';
-import { MonthlyReportGrid } from './_components/MonthlyReportGrid';
-import { ExportCsvButton } from './_components/ExportCsvButton';
-import { InvoiceDownloadButton } from './_components/InvoiceDownloadButton';
+import { MonthlyReportSection } from './_components/MonthlyReportSection';
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -16,13 +15,14 @@ export default async function AdminMonthlyReportsPage({
 }: {
   searchParams: Promise<{ coachId?: string; month?: string }>;
 }) {
-  const t = await getTranslations('monthlyReports.page');
-  const params = await searchParams;
-  const coaches = await getCoachesForMonthlyReport();
+  const [t, tCommon, params, coaches] = await Promise.all([
+    getTranslations('monthlyReports.page'),
+    getTranslations('common'),
+    searchParams,
+    getCoachesForMonthlyReport(),
+  ]);
   const coachId = params.coachId || coaches[0]?.id || '';
   const yearMonth = params.month || currentYearMonth();
-
-  const result = coachId ? await getCoachMonthlyReportForAdmin(coachId, yearMonth) : null;
   const coachName = coaches.find((c) => c.id === coachId)?.user_name ?? '';
 
   return (
@@ -40,31 +40,15 @@ export default async function AdminMonthlyReportsPage({
         <div className="rounded-lg border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400">
           {t('noCoaches')}
         </div>
-      ) : !result?.success ? (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {result?.message}
-        </div>
       ) : (
-        <>
-          <ApprovalControlBar
-            coachId={coachId}
-            reportMonth={yearMonth}
-            grandTotal={result.report.grand_total}
-            completedCount={result.report.completed_count}
-            lateCancelCount={result.report.late_cancel_count}
-            noShowCount={result.report.no_show_count}
-            unresolvedCount={result.report.unresolved_count}
-            coachTimezone={result.report.coach_timezone}
-            approval={result.report.approval}
-          />
-          <div className="flex justify-end gap-2">
-            {result.report.approval?.status === 2 && (
-              <InvoiceDownloadButton coachId={coachId} reportMonth={result.report.report_month} />
-            )}
-            <ExportCsvButton report={result.report} coachName={coachName} />
-          </div>
-          <MonthlyReportGrid report={result.report} />
-        </>
+        // 検索条件（URLのクエリ）の変更では loading.tsx が表示されないため、
+        // コーチ・月ごとに key を変えて、切り替えのたびにこの区画へ骨組みを表示する
+        <Suspense
+          key={`${coachId}:${yearMonth}`}
+          fallback={<PageSkeleton label={tCommon('loading')} variant="table" header={false} />}
+        >
+          <MonthlyReportSection coachId={coachId} yearMonth={yearMonth} coachName={coachName} />
+        </Suspense>
       )}
     </div>
   );

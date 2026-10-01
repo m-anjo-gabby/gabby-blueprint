@@ -133,6 +133,7 @@
 | Dialogue Practiceカードの割当セット行が0件 | 「All assigned sets are completed」 | 割当は1件以上あるが、いずれも全セッション完了済みの場合 |
 | Coach Notesカードが空 | 「No notes yet」 | メモが1件も無い場合 |
 | Training Reportsカードが空 | 「No contracts yet」 | 契約が1件も無い場合 |
+| 読み込み中（遷移直後） | 戻るリンクと各カードの見出し（アイコン・タイトル）は本物、生徒名・契約・スプリントの進捗と各カードの中身を骨組みで表示（`students/loading.tsx` 等の骨組みを表示中のパスで出し分け）。その後ヘッダーを表示し、各カードは取得が終わった順に骨組みから置き換わる（各カードの取得はヘッダー用の取得と同時に開始する） | 生徒一覧・ダッシュボード等からの遷移直後 |
 | 生徒が見つからない/担当関係が無い | 404ページ | 指定した生徒IDに対して自分が一度も担当関係を持ったことが無い場合 |
 
 過去に担当していた生徒（現在は担当関係が終了、`is_active=false`）についても、この概要画面
@@ -147,6 +148,7 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/coach/app/(app)/students/[id]/page.tsx`
+- `apps/coach/app/(app)/students/[id]/_components/OverviewSections.tsx`（カード単位のデータ取得。page.tsx が各カードを `Suspense` で包む）
 - `apps/coach/app/(app)/students/[id]/_components/StudentOverviewHeader.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/SprintProgressRadar.tsx`
 - `apps/coach/app/(app)/students/[id]/_components/StageLevelDialog.tsx`

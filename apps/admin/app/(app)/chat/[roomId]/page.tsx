@@ -2,7 +2,7 @@
 import { notFound } from "next/navigation";
 import { getChatMessages } from "@gabby/lib/chat/actions/messageActions";
 import { getChatRoomDetail } from "@gabby/lib/chat/actions/roomActions";
-import { ChatTimeline } from "../_components/ChatTimeline";
+import { AdminChatRoom } from "../_components/AdminChatRoom";
 
 export default async function ChatRoomPage({
   params,
@@ -19,18 +19,12 @@ export default async function ChatRoomPage({
     notFound();
   }
 
-  const { room, members, isMember } = roomDetail.data;
-
   return (
-    <div className="h-full flex flex-col">
-      <ChatTimeline
-        roomId={roomId}
-        room={room}
-        initialMessages={initialMessages.success ? initialMessages.data : []}
-        initialHasMore={initialMessages.success ? initialMessages.hasMore : false}
-        isMember={isMember}
-        members={members}
-      />
-    </div>
+    <AdminChatRoom
+      roomId={roomId}
+      {...roomDetail.data}
+      initialMessages={initialMessages.success ? initialMessages.data : []}
+      initialHasMore={initialMessages.success ? initialMessages.hasMore : false}
+    />
   );
 }

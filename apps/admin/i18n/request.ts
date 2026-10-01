@@ -4,7 +4,8 @@ import { getRequestConfig } from 'next-intl/server';
 
 export const SUPPORTED_LOCALES = ['ja', 'en'] as const;
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
-export const DEFAULT_LOCALE: AppLocale = 'ja';
+// 言語切替の Cookie が無い場合（初回アクセス・ログイン前など）は、日本人・英語ネイティブ双方が読める英語で表示する
+export const DEFAULT_LOCALE: AppLocale = 'en';
 export const LOCALE_COOKIE_NAME = 'NEXT_LOCALE';
 
 export function resolveLocale(raw: string | undefined): AppLocale {

@@ -133,7 +133,7 @@ function HomeworkCreateForm({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-brand-50 text-brand shrink-0">
           <BookOpen size={13} />
         </span>
         <p className="text-xs font-bold text-slate-700">New Homework</p>
@@ -205,12 +205,9 @@ function HomeworkCreateForm({
 
       <div className="flex items-center justify-between gap-2">
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-        <Button type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()}>
-          {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
-        </Button>
+        <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
 
-        <Button type="button" disabled={!text.trim() || busy} onClick={handlePost} className="gap-1.5">
-          {isPosting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+        <Button pending={isPosting} icon={<Send size={16} />} type="button" disabled={!text.trim() || busy} onClick={handlePost} className="gap-1.5">
           Post Homework
         </Button>
       </div>
@@ -301,7 +298,7 @@ function PostedHomework({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-brand-50 text-brand shrink-0">
               <BookOpen size={13} />
             </span>
             <p className="text-xs font-bold text-slate-700">Instructions</p>
@@ -321,13 +318,13 @@ function PostedHomework({
       <div className="space-y-3 pt-3 border-t border-slate-100">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-brand-50 text-brand shrink-0">
               <ListTodo size={13} />
             </span>
             <p className="text-xs font-bold text-slate-700">Checklist</p>
           </div>
           {checklist.length > 0 && (
-            <span className="text-[11px] font-black text-indigo-600 tabular-nums shrink-0">
+            <span className="text-[11px] font-black text-brand tabular-nums shrink-0">
               {doneCount}/{checklist.length} done
             </span>
           )}
@@ -390,9 +387,7 @@ function PostedHomework({
 
         <div className="flex items-center gap-2">
           <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-          <Button type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()}>
-            {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
-          </Button>
+          <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
 
           <Textarea
             value={commentText}
@@ -402,9 +397,7 @@ function PostedHomework({
             disabled={busy}
           />
 
-          <Button type="button" size="icon" disabled={(!commentText.trim() && pendingAttachments.length === 0) || busy} onClick={handleSendComment}>
-            {isSendingComment ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-          </Button>
+          <Button pending={isSendingComment} icon={<Send size={16} />} type="button" size="icon" disabled={(!commentText.trim() && pendingAttachments.length === 0) || busy} onClick={handleSendComment} />
         </div>
       </div>
 
@@ -467,7 +460,7 @@ function HomeworkAttachmentView({ attachment }: { attachment: SessionHomeworkAtt
   }
 
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-indigo-600 underline underline-offset-2">
+    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-brand underline underline-offset-2">
       <FileText size={16} className="shrink-0" />
       <span className="truncate">{attachment.file_name}</span>
       <span className="text-[10px] opacity-70 shrink-0">{formatFileSize(attachment.file_size)}</span>

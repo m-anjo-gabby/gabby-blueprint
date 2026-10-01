@@ -1,0 +1,49 @@
+﻿id	status	category	word_en	part_of_speech	syllables	primary_stress_syllable	stress_vowel_spelling	cv_id	phonetic_spelling	question	decision_note	decided_by	decided_date	registered_date	source
+CVR-0001	pending	発音の揺れ	across	PREP	a-cross	2	o	auburn_dog	/əˈkrɔːs/	米国では /əˈkrɑːs/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0002	pending	R音化母音	awareness	NOUN	a-ware-ness	2	a	red_pepper	/əˈwɛrnəs/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
+CVR-0003	pending	R音化母音	carefully	ADV	care-ful-ly	1	a	red_pepper	/ˈkɛrfəli/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
+CVR-0004	pending	R音化母音	clear	ADJ	clear	1	ea	green_tea	/klɪr/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full
+CVR-0005	pending	R音化母音	clearly	ADV	clear-ly	1	ea	green_tea	/ˈklɪrli/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full
+CVR-0006	pending	R音化母音	compare	VERB	com-pare	2	a	red_pepper	/kəmˈpɛr/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
+CVR-0007	pending	発音の揺れ	cost	NOUN	cost	1	o	auburn_dog	/kɔːst/	米国では /kɑːst/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0008	pending	発音の揺れ	costs	NOUN	costs	1	o	auburn_dog	/kɔːsts/	米国では /kɑːsts/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0009	pending	発音の揺れ	data	NOUN	da-ta	1	a	gray_day	/ˈdeɪtə/	米国では /ˈdætə/（black_cat）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0010	pending	アクセント位置の揺れ	details	NOUN	de-tails	1	e	green_tea	/ˈdiːteɪlz/	米国では /dɪˈteɪlz/（2音節目にアクセント・gray_day）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0011	pending	R音化母音	during	PREP	dur-ing	1	u	wooden_hook	/ˈdʊrɪŋ/	R音化母音 /ʊr/ の cv_id 要確認（wooden_hook / blue_moon）				2026-09-25	cv_dict_work_20260925_full
+CVR-0012	pending	アクセント位置の揺れ	employee	NOUN	em-ploy-ee	3	ee	green_tea	/ɪmˌplɔɪˈiː/	/ɪmˈplɔɪiː/（2音節目にアクセント・turquoise_toy）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0013	pending	アクセント位置の揺れ	employees	NOUN	em-ploy-ees	3	ee	green_tea	/ɪmˌplɔɪˈiːz/	/ɪmˈplɔɪiːz/（2音節目にアクセント・turquoise_toy）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0014	pending	R音化母音	ensure	VERB	en-sure	2	u	wooden_hook	/ɪnˈʃʊr/	R音化母音 /ʊr/ の cv_id 要確認（/ɪnˈʃɔːr/ なら orange_door）				2026-09-25	cv_dict_work_20260925_full
+CVR-0015	pending	R音化母音	ensures	VERB	en-sures	2	u	wooden_hook	/ɪnˈʃʊrz/	R音化母音 /ʊr/ の cv_id 要確認（/ɪnˈʃɔːrz/ なら orange_door）				2026-09-25	cv_dict_work_20260925_full
+CVR-0016	pending	R音化母音	experience	NOUN	ex-pe-ri-ence	2	e	green_tea	/ɪkˈspɪriəns/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full
+CVR-0017	pending	アクセント位置の揺れ	finance	NOUN	fi-nance	1	i	white_tie	/ˈfaɪnæns/	/fəˈnæns/（2音節目にアクセント・black_cat）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0018	pending	発音の揺れ	foster	VERB	fos-ter	1	o	olive_sock	/ˈfɑːstər/	米国では /ˈfɔːstər/（auburn_dog）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0019	pending	アクセント位置の揺れ	inquiries	NOUN	in-quir-ies	2	i	white_tie	/ɪnˈkwaɪəriz/	/ˈɪŋkwəriz/（1音節目にアクセント・silver_pin）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0020	pending	発音の揺れ	launch	VERB	launch	1	au	auburn_dog	/lɔːntʃ/	米国では /lɑːntʃ/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0021	pending	発音の揺れ	launched	VERB	launched	1	au	auburn_dog	/lɔːntʃt/	米国では /lɑːntʃt/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0022	pending	発音の揺れ	loss	NOUN	loss	1	o	auburn_dog	/lɔːs/	米国では /lɑːs/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0023	pending	発音の揺れ	losses	NOUN	loss-es	1	o	auburn_dog	/ˈlɔːsɪz/	米国では /ˈlɑːsɪz/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0024	pending	R音化母音	material	NOUN	ma-te-ri-al	2	e	green_tea	/məˈtɪriəl/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full
+CVR-0025	pending	R音化母音	materials	NOUN	ma-te-ri-als	2	e	green_tea	/məˈtɪriəlz/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full
+CVR-0026	pending	発音の揺れ	offer	VERB	of-fer	1	o	auburn_dog	/ˈɔːfər/	米国では /ˈɑːfər/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0027	pending	発音の揺れ	offer	NOUN	of-fer	1	o	auburn_dog	/ˈɔːfər/	米国では /ˈɑːfər/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0028	pending	発音の揺れ	offers	VERB	of-fers	1	o	auburn_dog	/ˈɔːfərz/	米国では /ˈɑːfərz/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0029	pending	発音の揺れ	office	NOUN	of-fice	1	o	auburn_dog	/ˈɔːfɪs/	米国では /ˈɑːfɪs/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0030	pending	発音の揺れ	officer	NOUN	of-fi-cer	1	o	auburn_dog	/ˈɔːfɪsər/	米国では /ˈɑːfɪsər/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0031	pending	発音の揺れ	often	ADV	of-ten	1	o	auburn_dog	/ˈɔːfən/	米国では /ˈɑːfən/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0032	pending	その他	read	VERB	read	1	ea	green_tea	/riːd/	過去形・過去分詞は /rɛd/（red_pepper）。例文には過去形の用法もある				2026-09-25	cv_dict_work_20260925_full
+CVR-0033	pending	R音化母音	repair	VERB	re-pair	2	ai	red_pepper	/rɪˈpɛr/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
+CVR-0034	pending	発音の揺れ	routes	NOUN	routes	1	ou	blue_moon	/ruːts/	米国では /raʊts/（brown_cow）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0035	pending	R音化母音	secure	VERB	se-cure	2	u	wooden_hook	/sɪˈkjʊr/	R音化母音 /ʊr/ の cv_id 要確認（wooden_hook / blue_moon）				2026-09-25	cv_dict_work_20260925_full
+CVR-0036	pending	R音化母音	securing	VERB	se-cur-ing	2	u	wooden_hook	/sɪˈkjʊrɪŋ/	R音化母音 /ʊr/ の cv_id 要確認（wooden_hook / blue_moon）				2026-09-25	cv_dict_work_20260925_full
+CVR-0037	pending	R音化母音	share	NOUN	share	1	a	red_pepper	/ʃɛr/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
+CVR-0038	pending	R音化母音	shareholder	NOUN	share-hold-er	1	a	red_pepper	/ˈʃɛrhoʊldər/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
+CVR-0039	pending	発音の揺れ	software	NOUN	soft-ware	1	o	auburn_dog	/ˈsɔːftwɛr/	米国では /ˈsɑːftwɛr/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0040	pending	R音化母音	steering	NOUN	steer-ing	1	ee	green_tea	/ˈstɪrɪŋ/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full
+CVR-0041	pending	発音の揺れ	strong	ADJ	strong	1	o	auburn_dog	/strɔːŋ/	米国では /strɑːŋ/（olive_sock）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0042	pending	R音化母音	their	PRON	their	1	ei	red_pepper	/ðɛr/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
+CVR-0043	pending	R音化母音	there	ADV	there	1	e	red_pepper	/ðɛr/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
+CVR-0044	pending	アクセント位置の揺れ	upload	VERB	up-load	1	u	cup_of_mustard	/ˈʌploʊd/	/ʌpˈloʊd/（2音節目にアクセント・rose_boat）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0045	pending	発音の揺れ	want	VERB	want	1	a	olive_sock	/wɑːnt/	/wʌnt/（cup_of_mustard）も一般的				2026-09-25	cv_dict_work_20260925_full
+CVR-0046	pending	R音化母音	where	ADV	where	1	e	red_pepper	/wɛr/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
+CVR-0047	pending	R音化母音	year	NOUN	year	1	ea	green_tea	/jɪr/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full
+CVR-0048	pending	R音化母音	year's	NOUN	year's	1	ea	green_tea	/jɪrz/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full

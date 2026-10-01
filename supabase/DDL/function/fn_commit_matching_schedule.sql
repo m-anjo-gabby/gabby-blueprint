@@ -22,6 +22,10 @@
 -- p_min_start_datetimeはfn_generate_sessions_for_schedule()にそのまま渡すのみで、
 -- 「アドミンかどうかで下限を変えるか」の判断自体は呼び出し元(approve_matching_request/
 -- admin_match_student_with_coach)の責務のままとする。
+--
+-- 【チャットルーム開設・挨拶メッセージ (2026-09-28追加)】
+-- 成立のたびにfn_send_matching_greeting()で生徒×コーチの1対1チャットルームを用意し（開設済みなら
+-- それを使う）、コーチから生徒へ挨拶メッセージを送る。成立処理と同じトランザクションで行う。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_commit_matching_schedule(
     p_request_id uuid,
@@ -69,7 +73,8 @@ BEGIN
         + CASE WHEN p_slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
 
     -- 同一コーチ×同一曜日への成立処理を直列化し、重複チェックのレース条件を防ぐ
-    -- （本関数内で取得するロックは常にこの1本のみのため、デッドロックの起こりようがない）
+    -- （この後にfn_send_matching_greeting()内で生徒×コーチのロックを取るが、そちらの後に
+    -- 別のロックを取る処理は無いため、デッドロックは起こらない）
     PERFORM pg_advisory_xact_lock(hashtextextended(p_coach_id::text || ':' || p_day_of_week::text, 0));
 
     IF public.check_coach_schedule_conflict(
@@ -94,6 +99,8 @@ BEGIN
     RETURNING schedule_id INTO v_schedule_id;
 
     PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id, p_min_start_datetime);
+
+    PERFORM public.fn_send_matching_greeting(v_schedule_id);
 
     RETURN v_schedule_id;
 END;

@@ -25,7 +25,7 @@ export function TodaysLessonPanel({ studentId, upcomingSession }: Props) {
 
   return (
     <div className="space-y-2">
-      <h2 className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-indigo-600">
+      <h2 className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-brand">
         <CalendarClock size={12} />
         Next Live Session
       </h2>
@@ -33,14 +33,14 @@ export function TodaysLessonPanel({ studentId, upcomingSession }: Props) {
         <div className="flex flex-wrap items-center gap-3">
           {/* 日時をハブ画面よりさらに強調表示し、直後にハブへの導線を隣接させる
               （誤ったセッションを開いてしまうことを防ぐため、視認性を優先） */}
-          <div className="rounded-xl bg-white/70 border border-indigo-100 px-4 py-2.5">
+          <div className="rounded-xl bg-white/70 border border-brand-100 px-4 py-2.5">
             <p className="text-lg font-black text-slate-800 tracking-tight">
               {formatDateTimeEn(upcomingSession.start_datetime, timezone)}
             </p>
           </div>
           <Link
             href={`/students/${studentId}/sessions/${upcomingSession.session_id}`}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-indigo-200"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-brand hover:bg-brand-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-brand-200"
           >
             Open Session
             <ArrowRight size={14} />

@@ -26,7 +26,20 @@
       "allClients": "すべての顧客",
       "searchPlaceholder": "顧客名で検索...",
       "emptyMessage": "見つかりませんでした。"
-    }
+    },
+    "monthPicker": {
+      "prevYear": "前年",
+      "nextYear": "翌年",
+      "yearLabel": "{year}年",
+      "months": {
+        "m1": "1月", "m2": "2月", "m3": "3月", "m4": "4月",
+        "m5": "5月", "m6": "6月", "m7": "7月", "m8": "8月",
+        "m9": "9月", "m10": "10月", "m11": "11月", "m12": "12月"
+      }
+    },
+    "monthLabel": "{year}年{month}月",
+    "prevMonth": "前月",
+    "nextMonth": "翌月"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -40,7 +53,9 @@
     "notice": "お知らせ管理",
     "calendarEvents": "カレンダーイベント管理",
     "monthlyReports": "月次コーチングレポート",
+    "trainingReports": "トレーニングレポート",
     "paymentSettings": "支払い設定",
+    "companyProfiles": "会社情報",
     "chat": "チャット",
     "systemSettings": "システム設定",
     "support": "サポート",
@@ -59,7 +74,77 @@
     "submitting": "認証中...",
     "invalidLinkTitle": "リンクが無効です",
     "invalidLinkBody": "このリセットリンクは既に使用済みか、有効期限が切れています。再度リセットメールを送信しますか？",
-    "copyright": "© {year} Gabby All rights reserved."
+    "linkErrorNotice": "リンクを確認できませんでした。もう一度お試しいただくか、管理者にお問い合わせください。"
+  },
+  "authErrors": {
+    "missing_credentials": "メールアドレスとパスワードを入力してください。",
+    "account_locked": "アカウントが一時的にロックされています。しばらく時間をおいてお試しください。",
+    "account_locked_now": "パスワードを連続して間違えたため、アカウントが30分間ロックされました。",
+    "invalid_credentials": "認証情報が正しくありません。",
+    "license_not_found": "有効なライセンスが見つかりません。管理者にお問い合わせください。",
+    "portal_forbidden": "権限がありません。生徒用サイトからログインしてください。",
+    "signout_failed": "ログアウト中にエラーが発生しました。",
+    "missing_email": "メールアドレスを入力してください。",
+    "password_too_short": "パスワードは8文字以上で入力してください。",
+    "password_needs_alnum": "パスワードには英字と数字を両方含めてください。",
+    "password_same_as_old": "新しいパスワードは現在と同じものは使用できません。",
+    "password_leaked": "このパスワードは過去にデータ漏洩の被害に遭った可能性があるため使用できません。他のパスワードを指定してください。",
+    "password_weak": "このパスワードは単純すぎるか推測されやすいため使用できません。より複雑なパスワードを設定してください。",
+    "session_invalid": "認証セッションが無効、または期限が切れています。一度ログアウトして再度ログインしてからお試しください。",
+    "password_update_failed": "パスワードの更新に失敗しました。",
+    "session_timeout": "セッションがタイムアウトしました。再度ログインしてください。",
+    "current_password_incorrect": "現在のパスワードが正しくありません。",
+    "reset_link_required": "再設定リンクを確認できませんでした。お手数ですが、再設定メールの送信からやり直してください。",
+    "invitation_invalid": "この招待リンクは無効か、すでに本登録が完了しています。",
+    "invitation_expired": "招待リンクの有効期限が切れています。管理者に再送を依頼してください。",
+    "account_create_failed": "アカウントの作成に失敗しました。",
+    "unexpected": "予期せぬエラーが発生しました。時間をおいて再度お試しください。"
+  },
+  "forgotPassword": {
+    "title": "パスワードの再設定",
+    "description": "管理アカウントに登録したメールアドレスを入力してください。パスワード再設定用のリンクをお送りします。",
+    "emailLabel": "メールアドレス",
+    "submit": "送信する",
+    "submitting": "送信中...",
+    "sentTitle": "メールを確認してください",
+    "sentBody": "入力したメールアドレスが登録されている場合は、パスワード再設定用のメールをお送りしました。受信トレイを確認し、記載されたリンクからパスワードを更新してください。届かない場合は、メールアドレスに誤りがないかご確認ください。",
+    "backToLogin": "ログイン画面に戻る"
+  },
+  "updatePassword": {
+    "verifying": "確認しています...",
+    "guideTitle": "パスワードの再設定",
+    "guideBody": "ご本人確認用のリンクからアクセスされました。ボタンを押して、新しいパスワードの設定を始めてください。",
+    "guideAction": "手続きを開始する",
+    "formTitle": "新しいパスワードの設定",
+    "formDescription": "管理画面へのログインに使う新しいパスワードを入力してください。",
+    "submit": "パスワードを更新してログイン",
+    "submitting": "更新中...",
+    "successTitle": "パスワードを更新しました",
+    "successBody": "まもなくダッシュボードへ移動します。次回からは新しいパスワードでログインしてください。",
+    "successAction": "ダッシュボードへ",
+    "invalidTitle": "再設定リンクを確認できませんでした",
+    "invalidBody": "再設定リンクの有効期限が切れているか、正しく確認できませんでした。お手数ですが、再設定メールの送信からやり直してください。",
+    "invalidAction": "再設定メールを送信する",
+    "backToLogin": "ログイン画面に戻る",
+    "networkError": "通信エラーが発生しました。時間をおいて再度お試しください。"
+  },
+  "invite": {
+    "verifying": "招待を確認しています...",
+    "formTitle": "管理アカウント初期設定",
+    "formDescription": "{name} 様（{email}）管理画面へのログインに使用するパスワードを設定してください。",
+    "fallbackName": "管理者",
+    "submit": "アカウントを有効化する",
+    "submitting": "登録中...",
+    "expiredTitle": "招待リンクの期限切れ",
+    "invalidTitle": "招待リンクを確認できませんでした",
+    "backToLogin": "ログイン画面に戻る"
+  },
+  "passwordFields": {
+    "newPassword": "新しいパスワード",
+    "confirmPassword": "新しいパスワード（確認用）",
+    "requirement": "8文字以上で、英字と数字を両方含めてください",
+    "match": "パスワードが一致しました",
+    "mismatch": "パスワードが一致していません"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -138,6 +223,7 @@
       "noAssignableLicense": "割当可能なライセンスがありません",
       "selectLicensePlaceholder": "ライセンスを選択してください",
       "remainingLicenses": "(残:{count})",
+      "contractWithPlan": "{contract}（{plan}）",
       "adminRoleSectionTitle": "管理者ロール設定",
       "permissionSectionTitle": "権限・属性設定",
       "noRolesSet": "ロール設定なし",
@@ -175,10 +261,11 @@
       "invalidated": "無効化済み",
       "ended": "終了",
       "noHistory": "ライセンスの履歴はありません",
-      "planLabel": "契約プラン",
+      "planLabel": "契約",
       "notEditable": "(変更不可)",
-      "selectPlanPlaceholder": "契約プランを選択",
+      "selectPlanPlaceholder": "契約を選択",
       "remaining": "(残:{count})",
+      "contractWithPlan": "{contract}（{plan}）",
       "noAssignablePlans": "割当可能な契約プランがありません",
       "contractPeriod": "契約期間: {start} ～ {end}",
       "editPeriodHint": "個別対応として、契約期間を超える延長も可能です。変更理由は備考欄に記録してください。",
@@ -241,7 +328,7 @@
       "licenseLabel": "初期ライセンス割当",
       "noContracts": "有効な契約がありません（割当必須）",
       "selectLicensePlaceholder": "ライセンスを選択してください",
-      "planWithRemaining": "{plan}（残 {count}枠）",
+      "planWithRemaining": "{contract}（{plan}・残 {count}枠）",
       "selectClientFirst": "先に顧客を選択してください",
       "dropzoneTitle": "CSVファイルをドロップするかクリックして選択",
       "dropzoneHint": ".csv または .tsv 形式のみ対応",
@@ -271,28 +358,13 @@
   "paymentSettings": {
     "fetchFailed": "設定データの取得に失敗しました。DDL/DMLが反映されているかご確認ください。",
     "title": "支払い設定",
-    "subtitle": "コーチ向け月次支払通知書・請求書(INVOICE)(PDF)に使用する会社情報・セッション単価を管理します。",
-    "companyInfoTitle": "会社情報",
-    "companyInfoDesc": "コーチ向け月次支払通知書・請求書(INVOICE)(いずれもPDF)に印字されます。コーチとの業務委託契約主体（バンクーバー法人）の情報を設定してください。",
-    "companyNameLabel": "会社名",
-    "addressLabel": "住所",
-    "taxRegistrationLabel": "税務登録番号（任意）",
-    "taxRegistrationPlaceholder": "例: カナダGST/HST登録番号（未登録の場合は空欄）",
-    "taxRegistrationHint": "設定した場合のみ請求書(INVOICE)に印字されます。記載要否は税務専門家にご確認ください。",
-    "saveCompany": "会社情報を保存",
-    "logoLabel": "会社ロゴ",
-    "logoAlt": "会社ロゴ",
-    "logoNotSet": "未設定",
-    "uploadingLogo": "アップロード中...",
-    "changeLogo": "ロゴ画像を変更",
+    "subtitle": "コーチ向け月次支払通知書・請求書(INVOICE)(PDF)の支払額に使用するセッション単価を管理します。発行元の会社情報は「システム設定 > 会社情報」で管理します。",
     "sessionRateTitle": "セッション単価",
     "sessionRateDesc": "全コーチ共通の単価です。月次支払通知書の支払額は「単価 × 月間総セッション数」で算出されます（単価自体は通知書には表示しません）。承認済み月は承認時点の単価で固定されるため、ここでの変更は未承認の月にのみ影響します。",
     "rateAmountLabel": "単価",
     "currencyCodeLabel": "通貨コード",
     "saveRate": "単価を保存",
-    "toastCompanyUpdated": "会社情報を更新しました",
-    "toastRateUpdated": "セッション単価を更新しました",
-    "toastLogoUpdated": "ロゴ画像を更新しました"
+    "toastRateUpdated": "セッション単価を更新しました"
   },
   "notification": {
     "title": "通知",
@@ -333,14 +405,6 @@
     "password": {
       "title": "パスワード変更",
       "currentPasswordLabel": "現在のパスワード",
-      "newPasswordLabel": "新しいパスワード",
-      "confirmPasswordLabel": "新しいパスワード（確認用）",
-      "errorTooShort": "新しいパスワードは8文字以上で入力してください。",
-      "errorComplexity": "パスワードには英字と数字を両方含めてください。",
-      "errorMismatchSubmit": "新しいパスワードが一致していません。",
-      "strengthHint": "英字と数字を両方含めてください",
-      "matchSuccess": "パスワードが一致しました",
-      "matchFail": "パスワードが一致していません",
       "toastUpdateFailed": "パスワードの更新に失敗しました。",
       "toastUpdateSuccess": "パスワードを正常に更新しました",
       "submitLabel": "パスワードを更新",
@@ -723,16 +787,6 @@
       "prevMonth": "前月",
       "nextMonth": "翌月"
     },
-    "monthPicker": {
-      "prevYear": "前年",
-      "nextYear": "翌年",
-      "yearLabel": "{year}年",
-      "months": {
-        "m1": "1月", "m2": "2月", "m3": "3月", "m4": "4月",
-        "m5": "5月", "m6": "6月", "m7": "7月", "m8": "8月",
-        "m9": "9月", "m10": "10月", "m11": "11月", "m12": "12月"
-      }
-    },
     "monthLabel": "{year}年{month}月",
     "grid": {
       "studentColumn": "生徒",
@@ -1003,12 +1057,20 @@
       "removeAriaLabel": "{name}を削除"
     },
     "page": {
-      "title": "チャット",
-      "subtitle": "コーチ・生徒との1対1チャット、またはグループチャットです。ルームの新規作成はAdminのみ行えます。"
+      "selectRoomTitle": "チャットを選択してください",
+      "selectRoomHint": "左の一覧からルームを選ぶと、ここにメッセージが表示されます。",
+      "roomUnavailableTitle": "このチャットルームは表示できません",
+      "roomUnavailableHint": "ルームが存在しないか、削除された可能性があります。一覧から開き直してください。",
+      "title": "チャット"
     },
     "roomList": {
+      "searchPlaceholder": "名前・メッセージを検索",
+      "clearSearch": "検索をクリア",
+      "filterAll": "すべて",
+      "filterUnread": "未読",
+      "noMatchingRooms": "該当するチャットルームがありません",
       "myChatsTab": "自分のチャット",
-      "allRoomsTab": "全チャットルーム（査閲）",
+      "allRoomsTab": "全ルーム（査閲）",
       "clientFilterPlaceholder": "顧客で絞り込み",
       "noRoomsFiltered": "該当する顧客のチャットルームがありません",
       "noRooms": "チャットルームがありません",
@@ -1024,10 +1086,16 @@
     },
     "messageContent": {
       "deletedMessage": "このメッセージは削除されました",
-      "attachmentFetchFailed": "添付ファイルの取得に失敗しました"
+      "attachmentFetchFailed": "添付ファイルの取得に失敗しました",
+      "openImage": "画像を拡大表示",
+      "openOriginalImage": "元の画像を開く",
+      "closeImage": "閉じる"
     },
     "messageInput": {
-      "placeholder": "メッセージを入力（Shift+Enterで改行）",
+      "attachFile": "ファイルを添付",
+      "sendMessage": "送信",
+      "dropToAttach": "ここにドロップして添付",
+      "placeholder": "メッセージを入力",
       "removeTooltip": "削除",
       "toastSendFailed": "メッセージの送信に失敗しました",
       "toastFileSizeError": "{name}: ファイルサイズは10MBまでです",
@@ -1058,8 +1126,6 @@
       "label": "参加者（複数選択可）"
     },
     "manageParticipantsDialog": {
-      "button": "参加者を管理",
-      "title": "参加者を管理",
       "currentMembersLabel": "現在の参加者（{count}名）",
       "minMembersError": "グループの参加者は最低{min}名必要です",
       "deleteTooltip": "削除する",
@@ -1074,7 +1140,20 @@
       "toastAddFailed": "参加者の追加に失敗しました",
       "toastRemoveFailed": "参加者の削除に失敗しました"
     },
+    "roomDetails": {
+      "title": "ルーム情報",
+      "roomTypeLabel": "種別",
+      "roomTypeOneOnOne": "1対1",
+      "roomTypeGroup": "グループ",
+      "createdAtLabel": "作成日",
+      "membersLabel": "参加者（{count}名）"
+    },
     "timeline": {
+      "unreadDivider": "ここから未読",
+      "readReceipt": "既読",
+      "jumpToLatest": "最新のメッセージへ",
+      "newMessages": "新着メッセージ {count}件",
+      "detailsButton": "ルーム情報",
       "backAriaLabel": "チャット一覧へ戻る",
       "reviewModeBadge": "査閲モード",
       "viewOnlyNotice": "このルームの参加者ではないため、閲覧のみ可能です（発言はできません）",
@@ -1099,7 +1178,7 @@
     "table": {
       "clientHeader": "顧客名",
       "clientUnlinked": "未紐付け",
-      "planHeader": "プラン",
+      "planHeader": "契約名 / プラン",
       "liveBadge": "ライブ週{weekly}回・全{total}回",
       "dialoguePracticeBadge": "ダイアログプラクティス",
       "licenseUsageHeader": "ライセンス利用状況",
@@ -1115,7 +1194,7 @@
       "statusActive": "稼働中"
     },
     "dataTable": {
-      "searchPlaceholder": "顧客名で契約を検索...",
+      "searchPlaceholder": "顧客名・契約名で契約を検索...",
       "searchButton": "検索",
       "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "一致する契約情報が見つかりませんでした。"
@@ -1145,6 +1224,11 @@
       "ticketHint": "※ チケットは生徒への割当（ライセンス発行）時に個別に発行され、契約期間満了で失効します（繰越なし）",
       "planNameJaLabel": "プラン名（日本語）",
       "planNameEnLabel": "プラン名（英語）",
+      "planNameHint": "プラン名は生徒・コーチの画面にも表示されます",
+      "contractNameLabel": "契約名（管理用）",
+      "contractNamePlaceholder": "例: 顧客A 2026年度上期",
+      "contractNameHint": "アドミン画面で契約を区別するための名前です。生徒・コーチには表示されません",
+      "contractNameSuggestion": "{client} {start}〜 {plan}",
       "maxLicensesLabel": "上限ライセンス数",
       "startDateLabel": "開始日",
       "endDateLabel": "終了日",
@@ -1168,6 +1252,8 @@
         "planRequired": "プランを選択してください",
         "planNameRequired": "プラン名（日本語）は必須です",
         "planNameEnRequired": "プラン名（英語）は必須です",
+        "contractNameRequired": "契約名は必須です",
+        "contractNameTooLong": "契約名は100文字以内で入力してください",
         "maxLicensesInvalid": "1以上の数値を入力してください",
         "startDateRequired": "開始日は必須です",
         "endDateRequired": "終了日は必須です",
@@ -1207,7 +1293,7 @@
       "disabledTooltip": "ライセンスが割り当てられているため削除できません",
       "deleteTooltip": "契約を削除",
       "confirmTitle": "契約削除の確認",
-      "confirmBody": "「{client} / {plan}」を削除します。この操作は取り消せません。テスト登録や誤入力の契約であることを確認の上、実行してください。",
+      "confirmBody": "契約「{name}」（{client}）を削除します。この操作は取り消せません。テスト登録や誤入力の契約であることを確認の上、実行してください。",
       "cancel": "キャンセル",
       "deleting": "削除中...",
       "deleteButton": "削除する",
@@ -1216,13 +1302,13 @@
       "close": "閉じる",
       "purgeButton": "履歴ごと完全に削除する",
       "purgeConfirmTitle": "完全削除の最終確認",
-      "purgeConfirmIntro": "「{client} / {plan}」に紐づく以下を",
+      "purgeConfirmIntro": "契約「{name}」に紐づく以下を",
       "purgeDeleteAll": "全て復元不能に削除",
       "purgeItemContract": "契約情報本体",
       "purgeItemLicenses": "割り当て済みライセンス",
       "purgeItemHistory": "ライセンス割当・解除の履歴",
       "purgeItemTickets": "ライブセッションチケットの発行・消化履歴",
-      "purgeWarning": "実運用契約には絶対に使用しないでください。続行するにはプラン名を入力してください。",
+      "purgeWarning": "実運用契約には絶対に使用しないでください。続行するには契約名を入力してください。",
       "purgeInputHint": "確認のため「{name}」と入力してください",
       "purgeConfirmButton": "完全に削除する",
       "toastDeleted": "契約を削除しました",
@@ -1434,30 +1520,51 @@
         "button": "一括登録",
         "titleComplete": "インポート完了",
         "titleNormal": "CV辞書 一括登録",
-        "subtitle": "TSV / CSV 形式。必須列: word_en, part_of_speech, word_ja",
+        "subtitle": "TSV / CSV 形式。必須列: word_en, part_of_speech, word_ja, syllables, primary_stress_syllable, stress_vowel_spelling, cv_id",
         "downloadSample": "サンプルDL",
         "missingHeaders": "必須列が不足しています: {headers}",
         "layoutErrorTitle": "ファイル構造のエラー",
         "dropzoneTitle": "TSV / CSV ファイルをここにドロップ",
         "dropzoneHint": "またはクリックしてファイルを選択",
+        "analyzing": "既存の辞書データと照合しています...",
         "rowErrorPrefix": "[{line}行目]: ",
-        "errorWordEnEmpty": "word_en が空です",
-        "errorPosEmpty": "part_of_speech が空です",
-        "errorWordJaEmpty": "word_ja が空です",
-        "errorStressInvalid": "primary_stress_syllable に数値以外が含まれています",
-        "toastImported": "{count}件を処理しました",
+        "errors": {
+          "wordEnEmpty": "word_en が空です",
+          "posEmpty": "part_of_speech が空です",
+          "posInvalid": "part_of_speech が定義外の値です（NOUN / VERB / ADJ / ADV / PRON / PREP / CONJ / ART / INT / UNKNOWN）",
+          "wordJaEmpty": "word_ja が空です",
+          "syllablesEmpty": "syllables が空です",
+          "stressEmpty": "primary_stress_syllable が空です",
+          "stressInvalid": "primary_stress_syllable は1以上の整数を入力してください",
+          "stressOutOfRange": "primary_stress_syllable が音節数を超えています",
+          "vowelSpellingEmpty": "stress_vowel_spelling が空です",
+          "vowelSpellingMismatch": "stress_vowel_spelling がアクセント音節に含まれていません",
+          "cvIdEmpty": "cv_id が空です",
+          "cvIdInvalid": "cv_id が定義外の値です",
+          "lemmaInvalid": "lemma（原形）に使えない文字が含まれています（英数字・アポストロフィ・ハイフンのみ）",
+          "duplicateConflict": "{line}行目と同じ英単語・品詞で内容が異なります（どちらか一方に統一してください）"
+        },
+        "toastImported": "新規 {inserted}件・更新 {updated}件を登録しました（スキップ {skipped}件）",
+        "toastFetchKeysFailed": "既存辞書データの取得に失敗しました",
         "toastSaveFailed": "保存中にエラーが発生しました",
         "toastSystemError": "システムエラーが発生しました",
         "errorsOnlyLabel": "エラーのある行のみ表示",
         "emptyCell": "(空)",
         "readyTitle": "Ready for Import!",
         "readyBody": "{count}件のデータが正常に読み込まれました。",
-        "readyHint": "既存データはUpsert（上書き）されます。",
+        "duplicateHint": "ファイル内で同一内容の重複 {count}件は除外します。",
+        "mode": {
+          "insertOnly": "新規のみ登録",
+          "overwrite": "既存も上書き"
+        },
+        "modeHint": {
+          "insertOnly": "新規 {newCount}件を登録します。登録済みの {existingCount}件はスキップされ、既存データは変更されません。",
+          "overwrite": "新規 {newCount}件を登録し、登録済みの {existingCount}件を上書きします。音声生成済みのエントリは「要更新」になります。"
+        },
         "reset": "リセット",
         "close": "閉じる",
         "cancel": "キャンセル",
-        "startImport": "インポートを開始",
-        "errorCountSuffix": "{count}件"
+        "startImport": "{count}件をインポート"
       },
       "ttsBulkDialog": {
         "subtitle": "CV辞書 全エントリの一括音声生成",
@@ -1874,5 +1981,76 @@
         }
       }
     }
+  },
+  "companyProfiles": {
+    "title": "会社情報",
+    "subtitle": "書面（PDF）の発行元として印字する会社情報を、法人ごとに管理します。",
+    "fetchFailed": "会社情報の取得に失敗しました。DDL/DMLが反映されているかご確認ください。",
+    "companies": {
+      "GABBY_JP": {
+        "title": "日本法人",
+        "usage": "顧客・生徒との契約主体です。生徒向けトレーニングレポートの発行元として印字されます。"
+      },
+      "GVT_CA": {
+        "title": "バンクーバー法人",
+        "usage": "コーチとの業務委託契約主体です。コーチ向け月次支払通知書・請求書(INVOICE)の発行元として印字されます。"
+      }
+    },
+    "companyNameLabel": "会社名（英語）",
+    "companyNameJaLabel": "会社名（日本語・任意）",
+    "companyNameJaPlaceholder": "例: 株式会社ギャビーアカデミー",
+    "companyNameJaHint": "設定した場合、日本語の書面（トレーニングレポート）で英語の社名と併記します。",
+    "addressLabel": "住所",
+    "addressHint": "改行した位置で、書面上も改行して印字されます。",
+    "taxRegistrationLabel": "税務登録番号（任意）",
+    "taxRegistrationPlaceholderJp": "例: 適格請求書発行事業者の登録番号（T+13桁）",
+    "taxRegistrationPlaceholderCa": "例: カナダGST/HST登録番号（未登録の場合は空欄）",
+    "taxRegistrationHint": "現在は請求書(INVOICE)にのみ、設定した場合に印字されます。記載要否は税務専門家にご確認ください。",
+    "save": "保存",
+    "logoLabel": "会社ロゴ",
+    "logoAlt": "会社ロゴ",
+    "logoNotSet": "未設定",
+    "changeLogo": "ロゴ画像を変更",
+    "toastUpdated": "会社情報を更新しました",
+    "toastLogoUpdated": "ロゴ画像を更新しました",
+    "errors": {
+      "forbidden": "この操作を行う権限がありません。",
+      "invalidCompany": "対象の法人が正しくありません。",
+      "required": "会社名（英語）と住所は必須です。",
+      "updateFailed": "会社情報の更新に失敗しました。",
+      "logoRequired": "ロゴ画像ファイルを選択してください。",
+      "logoUploadFailed": "ロゴ画像のアップロードに失敗しました。",
+      "logoPathFailed": "ロゴ画像は保存されましたが、パスの更新に失敗しました。"
+    }
+  },
+  "trainingReports": {
+    "title": "トレーニングレポート",
+    "subtitle": "生徒の契約期間（ライセンス）ごとのトレーニングレポート(PDF)を作成します。満了月を選ぶと、その月に期間が終わるライセンスを契約ごとに表示します。",
+    "draftNote": "現在はドラフト版（運営確認用）です。PDFのコーチのコメントは、下書きも「下書き」と表示して載せます。",
+    "fetchFailed": "一覧の取得に失敗しました。DDL/DMLが反映されているかご確認ください。",
+    "empty": "この月に満了するライセンスはありません。",
+    "contractSummary": "{client} ・ {plan} ・ この月に満了 {count}名",
+    "bulkButton": "契約の全員分をZIPで作成",
+    "bulkHint": "満了月を問わず、この契約のライセンス保持者全員分のPDFが1人1ファイルで入ります。",
+    "columns": {
+      "student": "生徒",
+      "period": "期間",
+      "status": "状態",
+      "comment": "コーチのコメント",
+      "report": "レポート"
+    },
+    "licenseStatus": {
+      "active": "有効",
+      "stopped": "停止",
+      "expired": "満了"
+    },
+    "comment": {
+      "notApplicable": "対象外",
+      "none": "未記入",
+      "draft": "下書き {count}件",
+      "finalized": "確定 {count}件"
+    },
+    "pdfButton": "PDF",
+    "downloadFailed": "レポートの作成に失敗しました。時間をおいて再度お試しください。"
   }
 }

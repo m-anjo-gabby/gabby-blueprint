@@ -137,7 +137,7 @@ export function CVWordList() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
           <Input
             placeholder="Search words..."
-            className="pl-9 h-9 bg-white border-slate-200 text-sm rounded-xl focus-visible:ring-indigo-500"
+            className="pl-9 h-9 bg-white border-slate-200 text-sm rounded-xl focus-visible:ring-brand-500"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -162,7 +162,7 @@ export function CVWordList() {
                   onClick={() => handleSelect(word)}
                   className={cn(
                     'group relative flex flex-col p-3 px-4 cursor-pointer transition-all hover:bg-slate-50 border-l-4',
-                    isSelected ? 'bg-indigo-50/50 border-indigo-500' : 'border-transparent'
+                    isSelected ? 'bg-brand-50/50 border-brand-500' : 'border-transparent'
                   )}
                 >
                   {/* 英単語 */}

@@ -28,13 +28,13 @@ const NOTIFICATION_ICONS = { Sparkles, Flame, MessageCircle } as const;
 type CenterTab = 'notice' | 'notification';
 
 const UnreadDot = () => (
-  <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1" />
+  <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />
 );
 
 function TabCountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="ml-1 inline-flex items-center justify-center min-w-[15px] h-[15px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black leading-none">
+    <span className="ml-1 inline-flex items-center justify-center min-w-[15px] h-[15px] px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold leading-none">
       {count > 99 ? '99+' : count}
     </span>
   );
@@ -105,7 +105,7 @@ export function NotificationCenterDropdown() {
           aria-label="通知センター"
           className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-100 active:scale-90 transition-all outline-none"
         >
-          <Bell size={18} className="text-slate-500" />
+          <Bell size={18} className="text-ink-muted" />
           <AnimatePresence>
             {totalUnreadCount > 0 && (
               <motion.span
@@ -113,7 +113,7 @@ export function NotificationCenterDropdown() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0 }}
-                className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black leading-none shadow-sm"
+                className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold leading-none shadow-sm"
               >
                 {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
               </motion.span>
@@ -125,7 +125,7 @@ export function NotificationCenterDropdown() {
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className="z-[200] w-80 sm:w-96 p-0 bg-white rounded-[24px] shadow-2xl border-slate-100 overflow-hidden outline-none"
+        className="z-[200] w-80 sm:w-96 p-0 bg-white rounded-card shadow-2xl border-line/70 overflow-hidden outline-none"
       >
         <motion.div
           initial={{ opacity: 0, y: -8, scale: 0.96 }}
@@ -134,21 +134,21 @@ export function NotificationCenterDropdown() {
         >
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as CenterTab)}>
             {/* ─── ヘッダー ──────────────────────────────────── */}
-            <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-50">
-              <Bell size={14} className="text-slate-500 shrink-0" />
-              <span className="text-xs font-black text-slate-800 tracking-tight shrink-0">
+            <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-line/50">
+              <Bell size={14} className="text-ink-muted shrink-0" />
+              <span className="text-xs font-bold text-ink tracking-tight shrink-0">
                 通知センター
               </span>
               <TabsList className="ml-auto h-8 p-0.5 bg-slate-100 rounded-full">
                 <TabsTrigger
                   value="notice"
-                  className="text-[10px] font-black rounded-full px-2.5 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800 text-slate-500"
+                  className="text-[11px] font-bold rounded-full px-2.5 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-ink text-ink-muted"
                 >
                   お知らせ<TabCountBadge count={noticeUnreadCount} />
                 </TabsTrigger>
                 <TabsTrigger
                   value="notification"
-                  className="text-[10px] font-black rounded-full px-2.5 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800 text-slate-500"
+                  className="text-[11px] font-bold rounded-full px-2.5 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-ink text-ink-muted"
                 >
                   通知<TabCountBadge count={notificationUnreadCount} />
                 </TabsTrigger>
@@ -161,7 +161,7 @@ export function NotificationCenterDropdown() {
                 <div className="flex justify-end px-4 pt-2 pb-1">
                   <button
                     onClick={handleMarkAllNoticesAsRead}
-                    className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                    className="text-[11px] font-bold text-ink-subtle hover:text-brand transition-colors"
                   >
                     すべて既読にする
                   </button>
@@ -177,13 +177,10 @@ export function NotificationCenterDropdown() {
                   </div>
                 ) : previewNotices.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-3">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-ink-subtle mb-3">
                       <BellOff size={18} />
                     </div>
-                    <p className="text-xs font-bold text-slate-400">お知らせはありません</p>
-                    <p className="text-[10px] text-slate-300 mt-1 font-black uppercase tracking-wider">
-                      No notifications
-                    </p>
+                    <p className="text-xs font-bold text-ink-subtle">お知らせはありません</p>
                   </div>
                 ) : (
                   <div className="p-2 space-y-1">
@@ -197,7 +194,7 @@ export function NotificationCenterDropdown() {
                           }}
                           className={cn(
                             'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
-                            !notice.is_read && 'bg-indigo-50/50'
+                            !notice.is_read && 'bg-brand-soft/50'
                           )}
                         >
                           <div className="mt-1">
@@ -212,7 +209,7 @@ export function NotificationCenterDropdown() {
                             <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                               <span
                                 className={cn(
-                                  'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
+                                  'text-[11px] font-bold uppercase px-1.5 py-0.5 rounded-md border',
                                   NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
                                 )}
                               >
@@ -221,7 +218,7 @@ export function NotificationCenterDropdown() {
                               {notice.is_important && (
                                 <span
                                   className={cn(
-                                    'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
+                                    'text-[11px] font-bold uppercase px-1.5 py-0.5 rounded-md border',
                                     NOTICE_IMPORTANT_BADGE.badgeClass
                                   )}
                                 >
@@ -232,14 +229,14 @@ export function NotificationCenterDropdown() {
 
                             <p
                               className={cn(
-                                'text-xs font-bold text-slate-700 truncate leading-snug',
-                                !notice.is_read && 'text-slate-900 font-black'
+                                'text-xs font-bold text-ink-soft truncate leading-snug',
+                                !notice.is_read && 'text-ink font-bold'
                               )}
                             >
                               {notice.title}
                             </p>
 
-                            <p className="text-[10px] text-slate-400 mt-1 font-bold">
+                            <p className="text-[11px] text-ink-subtle mt-1 font-bold">
                               {formatZonedDate(notice.published_at, timezone)}
                             </p>
                           </div>
@@ -257,7 +254,7 @@ export function NotificationCenterDropdown() {
                 <div className="flex justify-end px-4 pt-2 pb-1">
                   <button
                     onClick={() => markAllAsRead()}
-                    className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                    className="text-[11px] font-bold text-ink-subtle hover:text-brand transition-colors"
                   >
                     すべて既読にする
                   </button>
@@ -273,10 +270,10 @@ export function NotificationCenterDropdown() {
                   </div>
                 ) : previewNotifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-3">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-ink-subtle mb-3">
                       <BellOff size={18} />
                     </div>
-                    <p className="text-xs font-bold text-slate-400">通知はありません</p>
+                    <p className="text-xs font-bold text-ink-subtle">通知はありません</p>
                   </div>
                 ) : (
                   <div className="p-2 space-y-1">
@@ -300,7 +297,7 @@ export function NotificationCenterDropdown() {
                             }}
                             className={cn(
                               'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
-                              !notification.is_read && 'bg-indigo-50/50'
+                              !notification.is_read && 'bg-brand-soft/50'
                             )}
                           >
                             <div className="mt-1">
@@ -314,7 +311,7 @@ export function NotificationCenterDropdown() {
                             <div
                               className={cn(
                                 'flex items-center justify-center w-8 h-8 rounded-xl border shrink-0',
-                                meta?.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100'
+                                meta?.badgeClass ?? 'bg-slate-50 text-ink-muted border-line/70'
                               )}
                             >
                               <Icon size={14} />
@@ -323,16 +320,16 @@ export function NotificationCenterDropdown() {
                             <div className="flex-1 min-w-0">
                               <p
                                 className={cn(
-                                  'text-xs font-bold text-slate-700 truncate leading-snug',
-                                  !notification.is_read && 'text-slate-900 font-black'
+                                  'text-xs font-bold text-ink-soft truncate leading-snug',
+                                  !notification.is_read && 'text-ink font-bold'
                                 )}
                               >
                                 {text.title}
                               </p>
-                              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-snug">
+                              <p className="text-[11px] text-ink-muted mt-0.5 line-clamp-2 leading-snug">
                                 {text.body}
                               </p>
-                              <p className="text-[10px] text-slate-400 mt-1 font-bold">
+                              <p className="text-[11px] text-ink-subtle mt-1 font-bold">
                                 {formatZonedDate(notification.occurred_at, timezone)}
                               </p>
                             </div>
@@ -347,11 +344,11 @@ export function NotificationCenterDropdown() {
           </Tabs>
 
           {/* ─── フッター（アクティブタブに応じて遷移先を切替） ──── */}
-          <div className="px-4 pb-4 pt-2 border-t border-slate-50">
+          <div className="px-4 pb-4 pt-2 border-t border-line/50">
             <DropdownMenuItem asChild className="p-0 border-none outline-none">
               <Link
                 href={activeTab === 'notice' ? '/notice' : '/notification'}
-                className="flex items-center justify-center w-full h-10 !bg-indigo-600 hover:!bg-indigo-700 !text-white focus:!text-white focus:!bg-indigo-700 data-[highlighted]:!bg-indigo-700 data-[highlighted]:!text-white rounded-xl text-[11px] font-black uppercase tracking-wider shadow-sm transition-all outline-none cursor-pointer"
+                className="flex items-center justify-center w-full h-10 !bg-brand hover:!bg-brand-strong !text-white focus:!text-white focus:!bg-brand-strong data-[highlighted]:!bg-brand-strong data-[highlighted]:!text-white rounded-xl text-[11px] font-bold uppercase shadow-sm transition-all outline-none cursor-pointer"
               >
                 すべて見る →
               </Link>

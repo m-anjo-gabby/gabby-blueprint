@@ -181,7 +181,7 @@ export function LicenseFormDialog({ user, children }: Props) {
                       <div key={l.license_id} className={`p-4 border border-slate-100 rounded-xl flex justify-between items-center ${isInactive ? 'bg-slate-50 opacity-60' : 'bg-white shadow-sm'}`}>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-xs font-black">{l.plan_name}</p>
+                            <p className="text-xs font-black">{l.contract_name}</p>
                             {l.is_removed ? (
                               <span className="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">{t('removed')}</span>
                             ) : isInvalidated ? (
@@ -232,7 +232,7 @@ export function LicenseFormDialog({ user, children }: Props) {
                       // ライセンス自身の契約もavailableContractsから外れるため、Select用の
                       // 分岐をそのまま使うと常に「割当可能な契約プランがありません」になってしまう）
                       <div className="h-12 w-full rounded-xl border border-slate-200 flex items-center px-4 text-xs font-bold text-slate-600 bg-slate-50">
-                        {editingLicense.plan_name}
+                        {editingLicense.contract_name}
                       </div>
                     ) : availableContracts.length > 0 ? (
                       <Select
@@ -245,7 +245,7 @@ export function LicenseFormDialog({ user, children }: Props) {
                         <SelectContent>
                           {availableContracts.map((c) => (
                             <SelectItem key={c.contract_id} value={c.contract_id}>
-                              {c.plan_name} {t('remaining', { count: c.remaining_licenses })}
+                              {t('contractWithPlan', { contract: c.contract_name, plan: c.plan_name })} {t('remaining', { count: c.remaining_licenses })}
                             </SelectItem>
                           ))}
                         </SelectContent>

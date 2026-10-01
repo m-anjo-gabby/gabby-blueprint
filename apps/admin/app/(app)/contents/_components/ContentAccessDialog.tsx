@@ -90,11 +90,11 @@ export function ContentAccessDialog({ content, children }: Props) {
 
         <div className="p-6 bg-white min-h-[400px]">
           {loading && assignedClients.length === 0 ? (
-            <div className="flex justify-center p-20"><Loader2 className="animate-spin text-indigo-500" /></div>
+            <div className="flex justify-center p-20"><Loader2 className="animate-spin text-brand-500" /></div>
           ) : isAddMode ? (
             /* --- 追加モード --- */
             <div className="space-y-4">
-              <Button variant="ghost" size="sm" onClick={() => setIsAddMode(false)} className="h-8 text-slate-500 p-0 font-bold hover:bg-transparent hover:text-indigo-600">
+              <Button variant="ghost" size="sm" onClick={() => setIsAddMode(false)} className="h-8 text-slate-500 p-0 font-bold hover:bg-transparent hover:text-brand">
                 <ArrowLeft size={16} className="mr-1" /> {t('backButton')}
               </Button>
               <ScrollArea className="h-[350px] pr-4">
@@ -106,9 +106,9 @@ export function ContentAccessDialog({ content, children }: Props) {
                 ) : (
                   <div className="space-y-2">
                     {unassignedClients.map(client => (
-                      <div key={client.client_id} className="flex items-center justify-between p-3 border rounded-2xl bg-slate-50/30 group hover:border-indigo-200 transition-colors">
+                      <div key={client.client_id} className="flex items-center justify-between p-3 border rounded-2xl bg-slate-50/30 group hover:border-brand-200 transition-colors">
                         <span className="text-sm font-bold text-slate-700">{client.client_name}</span>
-                        <Button size="sm" onClick={() => handleAdd(client.client_id)} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 h-8 rounded-xl font-bold">{t('addButtonLabel')}</Button>
+                        <Button size="sm" onClick={() => handleAdd(client.client_id)} disabled={loading} className="bg-brand hover:bg-brand-strong h-8 rounded-xl font-bold">{t('addButtonLabel')}</Button>
                       </div>
                     ))}
                   </div>
@@ -137,12 +137,12 @@ export function ContentAccessDialog({ content, children }: Props) {
                 ) : (
                   <div className="space-y-2">
                     {assignedClients.map(client => (
-                      <div key={client.client_id} className="flex items-center justify-between p-3 border border-indigo-100 rounded-2xl bg-indigo-50/30 group">
+                      <div key={client.client_id} className="flex items-center justify-between p-3 border border-brand-100 rounded-2xl bg-brand-50/30 group">
                         <div className="flex items-center gap-2">
-                          <Building2 size={16} className="text-indigo-400" />
-                          <span className="text-sm font-bold text-indigo-900">{client.client_name}</span>
+                          <Building2 size={16} className="text-brand-400" />
+                          <span className="text-sm font-bold text-brand-900">{client.client_name}</span>
                         </div>
-                        <button onClick={() => handleRemove(client.client_id)} disabled={loading} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-rose-100 text-indigo-300 hover:text-rose-600 transition-all">
+                        <button onClick={() => handleRemove(client.client_id)} disabled={loading} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-rose-100 text-brand-300 hover:text-rose-600 transition-all">
                           <X size={14} />
                         </button>
                       </div>

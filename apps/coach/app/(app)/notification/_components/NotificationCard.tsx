@@ -26,12 +26,10 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
       className={cn(
         'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all',
         !notification.is_read
-          ? 'border-indigo-200 shadow-indigo-100/60'
+          ? 'border-brand-200 shadow-brand-100/60'
           : 'border-slate-100'
       )}
     >
@@ -41,7 +39,7 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
       >
         <div className="mt-1 shrink-0">
           {!notification.is_read ? (
-            <span className="inline-block w-2 h-2 rounded-full bg-indigo-500" />
+            <span className="inline-block w-2 h-2 rounded-full bg-brand-500" />
           ) : (
             <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />
           )}

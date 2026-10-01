@@ -78,7 +78,7 @@ export default function Error({ error }: ErrorProps) {
               onClick={handleBackToDashboard}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 min-h-[52px] shadow-lg shadow-slate-900/10 hover:shadow-xl hover:shadow-slate-900/20"
             >
-              <LayoutDashboard size={18} className="text-indigo-400" />
+              <LayoutDashboard size={18} className="text-brand-400" />
               Back to Dashboard
             </button>
           </div>

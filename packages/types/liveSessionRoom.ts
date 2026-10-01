@@ -34,6 +34,15 @@ export type GetLiveSessionRoomAccessResult =
   | { success: true; access: LiveSessionRoomAccess }
   | { success: false; errorCode: LiveSessionRoomErrorCode };
 
+/**
+ * 入室ボタンを押した時の入室可否の確認結果（サーバーの時刻で判定する）。
+ * 入室できる場合も、最終的な判定は入室画面のアクセス情報の取得（Zoom の署名の発行前）で改めて行う。
+ */
+export type CheckLiveSessionJoinableResult =
+  | { success: true; joinable: true }
+  | { success: true; joinable: false; /** 入室できるようになる時刻（ISO） */ availableAt: string }
+  | { success: false; errorCode: LiveSessionRoomErrorCode };
+
 /** 通話 入室記録RPC(record_session_call_join)の結果 */
 export type RecordCallJoinResult =
   | { success: true; callLogId: string }

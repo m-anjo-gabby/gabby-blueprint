@@ -143,10 +143,10 @@ async function findOverlappingLicense(
   startUtc: string,
   endUtc: string,
   excludeLicenseId?: string
-): Promise<{ start_date: string; end_date: string; plan_name: string } | null> {
+): Promise<{ start_date: string; end_date: string; contract_name: string } | null> {
   let query = supabase
     .from('com_t_user_license')
-    .select('license_id, start_date, end_date, com_m_contract(plan_name)')
+    .select('license_id, start_date, end_date, com_m_contract(contract_name)')
     .eq('user_id', userId)
     .lte('start_date', endUtc)
     .gte('end_date', startUtc)
@@ -162,18 +162,22 @@ async function findOverlappingLicense(
   const row = data[0] as unknown as {
     start_date: string;
     end_date: string;
-    com_m_contract: { plan_name: string } | null;
+    com_m_contract: { contract_name: string } | null;
   };
   return {
     start_date: row.start_date,
     end_date: row.end_date,
-    plan_name: row.com_m_contract?.plan_name || '不明なプラン',
+    contract_name: row.com_m_contract?.contract_name || '不明な契約',
   };
 }
 
-function buildOverlapMessage(overlap: { start_date: string; end_date: string; plan_name: string }): string {
-  return `このユーザーは既に期間が重なるライセンス「${overlap.plan_name}」（${formatToJstDate(overlap.start_date)}〜${formatToJstDate(overlap.end_date)}）を保有しているため割当できません`;
+function buildOverlapMessage(overlap: { start_date: string; end_date: string; contract_name: string }): string {
+  return `このユーザーは既に期間が重なるライセンス「${overlap.contract_name}」（${formatToJstDate(overlap.start_date)}〜${formatToJstDate(overlap.end_date)}）を保有しているため割当できません`;
 }
+
+// com_m_contract (client_id, contract_name) の一意制約違反
+const UNIQUE_VIOLATION = '23505';
+const DUPLICATE_CONTRACT_NAME_MESSAGE = 'この顧客には同じ契約名の契約が既に存在します。別の契約名を入力してください';
 
 /**
  * 契約プランマスタの一覧取得（契約登録フォームの選択肢・プランマスタ管理画面の両方で使用）
@@ -298,7 +302,10 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
       .select('*', { count: 'exact' });
 
     if (searchQuery) {
-      query = query.ilike('client_name', `%${searchQuery}%`);
+      // 顧客名・契約名のどちらかに部分一致（PostgRESTのor条件は値をダブルクォートで囲み、
+      // 入力中の , ( ) " \ が条件の区切りとして解釈されないようにする）
+      const pattern = `"%${searchQuery.replace(/[\\"]/g, '\\$&')}%"`;
+      query = query.or(`client_name.ilike.${pattern},contract_name.ilike.${pattern}`);
     }
 
     if (clientId) {
@@ -346,7 +353,7 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
       .eq('status', 1)
       .gte('end_date', new Date().toISOString())
       .gt('remaining_licenses', 0)
-      .order('plan_name', { ascending: true });
+      .order('contract_name', { ascending: true });
 
     if (error || !contracts) {
       logger.error('contract:get_active_contracts_failed', error?.message || 'No contracts found', { ...ctx, payload: { clientId, userId } });
@@ -388,12 +395,14 @@ function formatContracts(contracts: any[]) {
  * 契約情報の作成
  * contract_typeは選択されたプラン(plan_id)に完全に従属する構造的な属性のため、
  * クライアントからは受け取らずプランマスタから取得する（コーチ有無を変えたい場合は
- * 別プランを選び直す運用とする）。plan_name/plan_name_en/weekly_frequency/
+ * 別プランを選び直す運用とする）。contract_name はアドミン管理用の契約名（顧客内で一意）。
+ * plan_name/plan_name_en/weekly_frequency/
  * total_sessions/has_dialogue_practiceはプラン選択時にクライアント側でマスタ値を
  * コピーした上で個別調整できる値のため、送信された値をそのまま保存する。
  */
 export async function createContract(params: {
   client_id: string;
+  contract_name: string;
   plan_id: string;
   plan_name: string;
   plan_name_en: string;
@@ -428,6 +437,7 @@ export async function createContract(params: {
       .insert([
         {
           client_id: params.client_id,
+          contract_name: params.contract_name.trim(),
           plan_id: params.plan_id,
           plan_name: params.plan_name,
           plan_name_en: params.plan_name_en,
@@ -446,6 +456,7 @@ export async function createContract(params: {
 
     if (error) {
       logger.error('contract:create_contract_failed', error.message, { ...ctx, payload: params });
+      if (error.code === UNIQUE_VIOLATION) return { success: false, message: DUPLICATE_CONTRACT_NAME_MESSAGE };
       return { success: false, message: error.message };
     }
 
@@ -470,6 +481,7 @@ export async function updateContract(
   contractId: string,
   params: {
     client_id: string;
+    contract_name: string;
     plan_id: string;
     plan_name: string;
     plan_name_en: string;
@@ -530,6 +542,7 @@ export async function updateContract(
       .from('com_m_contract')
       .update({
         client_id: params.client_id,
+        contract_name: params.contract_name.trim(),
         plan_id: params.plan_id,
         plan_name: params.plan_name,
         plan_name_en: params.plan_name_en,
@@ -549,6 +562,7 @@ export async function updateContract(
 
     if (error) {
       logger.error('contract:update_contract_failed', error.message, { ...ctx, payload: { contractId, ...params } });
+      if (error.code === UNIQUE_VIOLATION) return { success: false, message: DUPLICATE_CONTRACT_NAME_MESSAGE };
       return { success: false, message: error.message };
     }
 
@@ -1136,7 +1150,7 @@ export async function getLicenseTimeline(userId: string) {
       .from('com_t_user_license')
       .select(`
         *,
-        com_m_contract (plan_name)
+        com_m_contract (contract_name, plan_name)
       `)
       .eq('user_id', userId)
       .order('start_date', { ascending: false });
@@ -1158,7 +1172,7 @@ export async function getLicenseTimeline(userId: string) {
         end_date,
         note,
         performed_at,
-        com_m_contract (plan_name)
+        com_m_contract (contract_name, plan_name)
       `)
       .eq('user_id', userId)
       .eq('action', 'removed')
@@ -1173,6 +1187,7 @@ export async function getLicenseTimeline(userId: string) {
       is_removed: false,
       start_date: formatToJstDate(l.start_date),
       end_date: formatToJstDate(l.end_date),
+      contract_name: (l as any).com_m_contract?.contract_name || '不明な契約',
       plan_name: (l as any).com_m_contract?.plan_name || '不明なプラン'
     }));
 
@@ -1185,6 +1200,7 @@ export async function getLicenseTimeline(userId: string) {
       removed_at: h.performed_at,
       start_date: formatToJstDate(h.start_date),
       end_date: formatToJstDate(h.end_date),
+      contract_name: (h as any).com_m_contract?.contract_name || '不明な契約',
       plan_name: (h as any).com_m_contract?.plan_name || '不明なプラン'
     }));
 

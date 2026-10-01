@@ -22,9 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Section } from '@/components/common/Section';
 import { ImmersiveShell } from '@/components/common/ImmersiveShell';
 import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
-import { withLiveSessionParam, buildLiveSessionHubHref } from '@/lib/liveSession/context';
-import { LessonSprintHistoryRow } from '../../../_components/LessonSprintHistoryRow';
-import { DialoguePracticeCard } from '../../../_components/DialoguePracticeCard';
+import { withLiveSessionParam } from '@/lib/liveSession/context';
 import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
@@ -35,21 +33,20 @@ import { SessionActionDialog, type SessionActionTarget } from '../../../../../ca
 import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { SESSION_STATUS, type SessionListItem, type SessionResultSummary } from '@gabby/types/session';
-import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
-import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
-import type { SelfTrainingWeekSummary } from '@gabby/types/coachStudent';
-import type { DialogueAssignmentSummary, DialogueContentSummary } from '@gabby/types/dialogue';
 
 interface Props {
   studentId: string;
   session: SessionResultSummary;
-  /** 直近の宿題（このセッション自身の投稿を除く。「前回の宿題」を通話前に振り返るためのもの） */
-  recentHomework: SessionHomeworkEntry[];
-  /** 直近のLive Sprint実施（このセッション自身の実施分を除く） */
-  recentSprints: LessonSprintHistoryListItem[];
-  selfTrainingSummary: SelfTrainingWeekSummary;
-  dialogueAssignments: DialogueAssignmentSummary[];
-  dialogueContents: DialogueContentSummary[];
+  /*
+   * 以下の区画は page.tsx がサーバー側で個別に <Suspense> で包んで渡す（HubSections.tsx）。
+   * 通話開始・終了の操作（Session Info）をこれらの取得を待たずに表示するため。
+   */
+  /** Training区画のDialogue Practiceカード */
+  dialoguePractice: React.ReactNode;
+  /** 「前回までの状況」（前回のLive Sprint・前回の宿題） */
+  prep: React.ReactNode;
+  /** 直近の自主トレ状況 */
+  selfTraining: React.ReactNode;
 }
 
 /**
@@ -82,11 +79,9 @@ interface Props {
 export function SessionHub({
   studentId,
   session,
-  recentHomework,
-  recentSprints,
-  selfTrainingSummary,
-  dialogueAssignments,
-  dialogueContents,
+  dialoguePractice,
+  prep,
+  selfTraining,
 }: Props) {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
@@ -205,7 +200,7 @@ export function SessionHub({
               </div>
 
               {isActionable && hasCallEndedElsewhere && (
-                <div className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">
+                <div className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-strong">
                   <PhoneOff size={13} className="shrink-0" />
                   The call ended in the other tab. Press End Session below to record the outcome.
                 </div>
@@ -239,7 +234,7 @@ export function SessionHub({
                         rel="noopener noreferrer"
                         title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
                         onClick={handleStartLiveSessionClick}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-indigo-200"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-brand hover:bg-brand-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-brand-200"
                       >
                         <Video size={14} />
                         Start Live Session
@@ -271,6 +266,7 @@ export function SessionHub({
                               viewer_role: 'coach',
                               counterpart_id: studentId,
                               counterpart_name: session.counterpart_name,
+                              counterpart_icon_path: session.counterpart_icon_path,
                               counterpart_timezone: timezone,
                               rescheduled_from: null,
                               cancel_reason: null,
@@ -305,7 +301,7 @@ export function SessionHub({
                   <p className="text-xs text-slate-500">This lesson has already been finalized.</p>
                   <Link
                     href={`/students/${studentId}/sessions/${session.session_id}/result`}
-                    className="shrink-0 text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                    className="shrink-0 text-xs font-bold text-brand hover:text-brand-500 transition-colors"
                   >
                     View Session Result
                   </Link>
@@ -337,93 +333,17 @@ export function SessionHub({
                 </CardContent>
               </Card>
   
-              <DialoguePracticeCard
-                studentId={studentId}
-                assignments={dialogueAssignments}
-                availableContents={dialogueContents}
-                liveSessionId={session.session_id}
-              />
+              {dialoguePractice}
             </div>
           </Section>
         )}
   
         <Section label="Prep" icon={History}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="rounded-2xl border-slate-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold text-slate-800">Last Live Sprint</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-2">
-                {recentSprints.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No previous Live Sprint on record.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {recentSprints.map((entry) => (
-                      <li key={entry.lesson_sprint_id}>
-                        <LessonSprintHistoryRow
-                          studentId={studentId}
-                          record={entry}
-                          backHref={buildLiveSessionHubHref(studentId, session.session_id)}
-                          backLabel="Back to Session Hub"
-                          liveSessionId={session.session_id}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-  
-            <Card className="rounded-2xl border-slate-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold text-slate-800">Last Homework</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-2">
-                {recentHomework.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No homework posted yet.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {recentHomework.map((entry) => (
-                      <li key={entry.homework_id} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
-                        <p className="text-[10px] font-bold text-slate-400">{formatDateTimeEn(entry.insert_date, timezone)}</p>
-                        {entry.homework_text && (
-                          <p className="text-xs text-slate-700 mt-0.5 line-clamp-2 whitespace-pre-wrap wrap-break-word">{entry.homework_text}</p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          {prep}
         </Section>
   
         <Section label="Self-Training" icon={TrendingUp}>
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-800">Last {selfTrainingSummary.days} Days</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              {selfTrainingSummary.total_questions === 0 ? (
-                <p className="text-xs text-slate-400 italic">No self-training activity in the last {selfTrainingSummary.days} days.</p>
-              ) : (
-                <div className="flex items-center gap-6">
-                  <div>
-                    <p className="text-xl font-black text-slate-800">{selfTrainingSummary.active_days}<span className="text-xs font-semibold text-slate-400">/{selfTrainingSummary.days} days</span></p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-slate-800">{selfTrainingSummary.total_questions}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Questions</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-slate-800">{selfTrainingSummary.total_assessments}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Speaking Assessments</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {selfTraining}
         </Section>
       </div>
       </div>

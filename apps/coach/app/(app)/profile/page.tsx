@@ -2,6 +2,7 @@
 import { getMyProfile, getTimezoneList, getMyCoachProfile, getCountryList } from '@/actions/coachProfileAction';
 import { USER_TYPES } from '@gabby/types/user';
 import { ProfileView } from './_components/ProfileView';
+import { ProfilePageHeader } from '@/components/common/ToolPageSkeletons';
 
 const USER_TYPE_LABELS_EN: Record<string, string> = {
   [USER_TYPES.ADMIN]: 'Administrator',
@@ -28,12 +29,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight">Profile Settings</h1>
-        <p className="text-[13px] text-slate-500 mt-1">
-          Review your account information and manage your public coach profile.
-        </p>
-      </div>
+      <ProfilePageHeader />
 
       <div className="max-w-330">
         <ProfileView

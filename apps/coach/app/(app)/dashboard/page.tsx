@@ -1,11 +1,11 @@
-import { CalendarClock } from 'lucide-react';
+import { Suspense } from 'react';
 import { getMyProfile } from '@/actions/coachProfileAction';
 import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
-import { Section } from '@/components/common/Section';
 import DashboardHeader from './_components/DashboardHeader';
+import { DashboardLayout } from './_components/DashboardLayout';
 import AttentionStrip from './_components/AttentionStrip';
-import TodaysSessionsPanel from './_components/TodaysSessionsPanel';
-import SessionTasksPanel from './_components/SessionTasksPanel';
+import TodaysSessionsPanel, { TodaysSessionsPanelSkeleton } from './_components/TodaysSessionsPanel';
+import SessionTasksPanel, { SessionTasksPanelSkeleton } from './_components/SessionTasksPanel';
 
 function getGreeting(timeZone: string): string {
   const hour = Number(
@@ -28,18 +28,21 @@ export default async function Page() {
   const pendingRequestCount = pendingRequests.length;
   const dateLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: timezone }).format(new Date());
 
+  // 区画ごとに取得・表示する（重い区画の取得を待たずに、先に画面の枠と見出しを出す）
   return (
-    <div className="space-y-8">
-      <DashboardHeader greeting={getGreeting(timezone)} firstName={firstName} dateLabel={dateLabel} />
-
-      <AttentionStrip pendingRequestCount={pendingRequestCount} />
-
-      <Section label="Sessions" icon={CalendarClock}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <TodaysSessionsPanel />
+    <DashboardLayout
+      header={<DashboardHeader greeting={getGreeting(timezone)} firstName={firstName} dateLabel={dateLabel} />}
+      attention={<AttentionStrip pendingRequestCount={pendingRequestCount} />}
+      todaysSessions={
+        <Suspense fallback={<TodaysSessionsPanelSkeleton />}>
+          <TodaysSessionsPanel timezone={timezone} />
+        </Suspense>
+      }
+      sessionTasks={
+        <Suspense fallback={<SessionTasksPanelSkeleton />}>
           <SessionTasksPanel />
-        </div>
-      </Section>
-    </div>
+        </Suspense>
+      }
+    />
   );
 }

@@ -38,7 +38,7 @@ export function WordEditor({ contentId, selectedWordId }: WordEditorProps) {
         </ResizablePanel>
 
         {/* 境界線 */}
-        <ResizableHandle withHandle className="w-1.5 bg-slate-200 hover:bg-indigo-300 transition-colors" />
+        <ResizableHandle withHandle className="w-1.5 bg-slate-200 hover:bg-brand-300 transition-colors" />
 
         {/* 右ペイン：フレーズ詳細 */}
         <ResizablePanel 

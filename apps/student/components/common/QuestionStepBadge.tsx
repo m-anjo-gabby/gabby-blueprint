@@ -22,12 +22,12 @@ export const QuestionStepBadge: React.FC<QuestionStepBadgeProps> = ({
 }) => (
   <div
     className={cn(
-      'flex items-center bg-indigo-600 rounded-[14px] shadow-sm overflow-hidden border border-indigo-600',
+      'flex items-center bg-brand rounded-[14px] shadow-sm overflow-hidden border border-brand',
       className,
     )}
   >
     <div className="flex items-center gap-2.5 px-3 py-1.5">
-      <span className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.2em] leading-none whitespace-nowrap">
+      <span className="text-[10px] font-black text-brand-200 uppercase tracking-[0.2em] leading-none whitespace-nowrap">
         Question
       </span>
       <span className="text-sm font-black text-white font-mono leading-none whitespace-nowrap">
@@ -36,7 +36,7 @@ export const QuestionStepBadge: React.FC<QuestionStepBadgeProps> = ({
     </div>
 
     {rightSlot && (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-indigo-600 self-stretch">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-l border-brand self-stretch">
         {rightSlot}
       </div>
     )}
@@ -54,7 +54,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ current, total }) 
     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none whitespace-nowrap">
       Step
     </span>
-    <span className="text-xs font-bold text-indigo-600 font-mono leading-none whitespace-nowrap">
+    <span className="text-xs font-bold text-brand font-mono leading-none whitespace-nowrap">
       {current} <span className="text-slate-300 mx-0.5">/</span> {total}
     </span>
   </>

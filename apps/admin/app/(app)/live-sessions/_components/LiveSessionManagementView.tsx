@@ -240,7 +240,7 @@ export function LiveSessionManagementView({ clients }: Props) {
       <Card className="rounded-2xl border-slate-200 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-            <Users size={14} className="text-indigo-500" />
+            <Users size={14} className="text-brand-500" />
             {t('cardTitleSelect')}
           </CardTitle>
         </CardHeader>
@@ -307,7 +307,8 @@ export function LiveSessionManagementView({ clients }: Props) {
                 </select>
                 {selectedContract && (
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5 space-y-1 min-h-13">
-                    <p className="text-xs font-bold text-slate-700">{selectedContract.plan_name}</p>
+                    <p className="text-xs font-bold text-slate-700">{selectedContract.contract_name}</p>
+                    <p className="text-[11px] text-slate-500">{selectedContract.plan_name}</p>
                     <div className="flex items-center gap-3 text-[11px] text-slate-500">
                       <span>{t('weeklyFrequency', { count: selectedContract.weekly_frequency })}</span>
                     </div>
@@ -323,7 +324,7 @@ export function LiveSessionManagementView({ clients }: Props) {
         <Card className="rounded-2xl border-slate-200 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              <Video size={14} className="text-indigo-500" />
+              <Video size={14} className="text-brand-500" />
               {t('reservationCardTitle')}
               {isPastContract && (
                 <Badge variant="outline" className="bg-slate-100 text-slate-500 border-slate-200 text-[10px] font-bold">
@@ -388,7 +389,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                                       type="button"
                                       size="sm"
                                       variant="outline"
-                                      className="text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                                      className="text-brand-strong border-brand-200 hover:bg-brand-50"
                                       onClick={() => setBookTarget(slot)}
                                     >
                                       <CalendarClock size={13} />
@@ -471,7 +472,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                               type="button"
                               size="sm"
                               variant="outline"
-                              className="text-indigo-700 border-indigo-200 hover:bg-indigo-50 shrink-0"
+                              className="text-brand-strong border-brand-200 hover:bg-brand-50 shrink-0"
                               onClick={() => openMatchDialog(slotNo)}
                             >
                               <UserPlus size={13} />

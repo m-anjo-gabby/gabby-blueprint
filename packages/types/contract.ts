@@ -14,6 +14,9 @@ export type ContractType = 1 | 2;
 export interface ContractDetail {
   contract_id: string;
   client_id: string;
+  // アドミン管理用の契約名（顧客内で一意）。生徒・コーチには表示しない
+  contract_name: string;
+  // 生徒・コーチに表示する商品名
   plan_name: string;
   plan_name_en: string;
   max_licenses: number;

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { Skeleton } from '@/components/ui/skeleton';
 import { UserPlus, MessageCircle, Bell, ChevronRight, type LucideIcon } from 'lucide-react';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
@@ -17,36 +17,61 @@ interface Tile {
   href: string;
   icon: LucideIcon;
   label: string;
-  count: number;
+  /** null は読み込み中（件数の位置に骨組みを出す） */
+  count: number | null;
 }
 
-function AttentionTile({ tile, idx }: { tile: Tile; idx: number }) {
+// 骨組みから本番へはその場で置き換えるため、フェードインはさせない
+function AttentionTile({ tile }: { tile: Tile }) {
   const Icon = tile.icon;
-  const hasCount = tile.count > 0;
+  const hasCount = tile.count !== null && tile.count > 0;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: idx * 0.05, ease: 'easeOut' }}
-    >
+    <div>
       <Link
         href={tile.href}
-        className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all"
+        className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-brand-200 hover:shadow-md transition-all"
       >
-        <div className={`p-2.5 rounded-xl border shrink-0 ${hasCount ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+        <div className={`p-2.5 rounded-xl border shrink-0 ${hasCount ? 'bg-brand-50 text-brand border-brand-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
           <Icon size={18} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-bold text-slate-400 truncate">{tile.label}</p>
-          <p className={`text-lg font-black tabular-nums ${hasCount ? 'text-slate-900' : 'text-slate-300'}`}>
-            {tile.count}
-          </p>
+          {tile.count === null ? (
+            <div className="flex h-7 items-center">
+              <Skeleton className="h-4 w-6" />
+            </div>
+          ) : (
+            <p className={`text-lg font-black tabular-nums ${hasCount ? 'text-slate-900' : 'text-slate-300'}`}>
+              {tile.count}
+            </p>
+          )}
         </div>
         <ChevronRight size={16} className="text-slate-300 shrink-0" />
       </Link>
-    </motion.div>
+    </div>
   );
+}
+
+const buildTiles = (counts: { requests: number | null; chat: number | null; updates: number | null }): Tile[] => [
+  { key: 'requests', href: '/calendar', icon: UserPlus, label: 'Requests', count: counts.requests },
+  { key: 'chat', href: '/chat', icon: MessageCircle, label: 'Unread Messages', count: counts.chat },
+  { key: 'updates', href: '/notification', icon: Bell, label: 'Updates', count: counts.updates },
+];
+
+function AttentionTiles({ tiles }: { tiles: Tile[] }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {tiles.map((tile) => (
+        <AttentionTile key={tile.key} tile={tile} />
+      ))}
+    </div>
+  );
+}
+
+/** 読み込み中の骨組み（見出し・アイコンは本物、件数だけ骨組み。loading.tsx で使う） */
+export function AttentionStripSkeleton() {
+  return <AttentionTiles tiles={buildTiles({ requests: null, chat: null, updates: null })} />;
 }
 
 export default function AttentionStrip({ pendingRequestCount }: Props) {
@@ -63,17 +88,6 @@ export default function AttentionStrip({ pendingRequestCount }: Props) {
     fetchNotifications();
   }, [fetchChatRooms, fetchNotices, fetchNotifications]);
 
-  const tiles: Tile[] = [
-    { key: 'requests', href: '/calendar', icon: UserPlus, label: 'Requests', count: pendingRequestCount },
-    { key: 'chat', href: '/chat', icon: MessageCircle, label: 'Unread Messages', count: totalUnreadChat },
-    { key: 'updates', href: '/notification', icon: Bell, label: 'Updates', count: noticeUnread + notificationUnread },
-  ];
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {tiles.map((tile, idx) => (
-        <AttentionTile key={tile.key} tile={tile} idx={idx} />
-      ))}
-    </div>
-  );
+  const tiles = buildTiles({ requests: pendingRequestCount, chat: totalUnreadChat, updates: noticeUnread + notificationUnread });
+  return <AttentionTiles tiles={tiles} />;
 }

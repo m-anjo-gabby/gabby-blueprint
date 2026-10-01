@@ -33,7 +33,7 @@ export default async function TTSDesignerPage() {
       {/* --- Page Header --- */}
       <header className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20 text-white">
+          <div className="p-2.5 bg-brand rounded-xl shadow-lg shadow-brand/20 text-white">
             <Speech size={28} strokeWidth={2.5} />
           </div>
           <div>
@@ -50,7 +50,7 @@ export default async function TTSDesignerPage() {
       {/* --- Generator Section (Input & Controls) --- */}
       <section className="relative group">
         <div className="flex items-center gap-2 mb-4 px-1">
-          <Sparkles size={16} className="text-indigo-500" />
+          <Sparkles size={16} className="text-brand-500" />
           <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
             Design New Audio
           </h2>
@@ -89,7 +89,7 @@ export default async function TTSDesignerPage() {
       <div className="pt-8 border-t border-slate-200">
         <p className="text-[11px] text-slate-400 leading-relaxed">
           <strong className="text-slate-500">Pro Tip:</strong> All generated files are stored in the 
-          <code className="mx-1 px-1.5 py-0.5 bg-slate-100 text-indigo-600 rounded">audio/designer/</code> 
+          <code className="mx-1 px-1.5 py-0.5 bg-slate-100 text-brand rounded">audio/designer/</code> 
           folder. Deleting a record here will also permanently delete the physical MP3 file from storage.
         </p>
       </div>

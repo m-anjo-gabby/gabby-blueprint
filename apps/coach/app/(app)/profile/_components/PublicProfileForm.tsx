@@ -1,6 +1,6 @@
 'use client';
 
-import { GraduationCap, Briefcase, MessageSquare, Loader2 } from 'lucide-react';
+import { GraduationCap, Briefcase, MessageSquare } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -189,8 +189,7 @@ export function PublicProfileForm({
         </ProfileFieldGroup>
 
         <div className="flex justify-end pt-2">
-          <Button type="button" onClick={onSave} disabled={isSaving}>
-            {isSaving && <Loader2 size={14} className="animate-spin" />}
+          <Button pending={isSaving} type="button" onClick={onSave} disabled={isSaving}>
             Save Public Profile
           </Button>
         </div>

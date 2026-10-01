@@ -33,6 +33,7 @@ if (!PASSWORD_ENV) {
 const PASSWORD: string = PASSWORD_ENV;
 
 const FIXED_CLIENT_NAME = "【QA固定】E2E/データ主体共通アカウント";
+const POPUP_CLIENT_NAME = "【QA固定】ポップアップ検証";
 const ADMIN_EMAIL = "qa-admin@gabby-qa-test.example";
 
 const admin = await createAdminClient();
@@ -97,6 +98,14 @@ async function ensureRole(userId: string, roleId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** コーチプロフィール（生徒の「専属コーチを探す」の対象）。createUserにuser_typeを渡さないため handle_new_user では作られない */
+async function ensureCoachProfile(coachId: string): Promise<void> {
+  const { data } = await admin.from("com_m_coach_profile").select("user_id").eq("user_id", coachId).maybeSingle();
+  if (data) return;
+  const { error } = await admin.from("com_m_coach_profile").insert({ user_id: coachId, coach_since: new Date().toISOString().slice(0, 8) + "01" });
+  if (error) throw error;
+}
+
 async function ensureCoachAvailability(coachId: string, days: number[], start: string, end: string): Promise<void> {
   const { data: existing } = await admin.from("com_m_coach_availability").select("availability_id").eq("coach_id", coachId).limit(1);
   if (existing && existing.length > 0) return;
@@ -122,6 +131,7 @@ async function ensureContract(clientId: string, planCode: PlanCode, term: Term, 
       client_id: clientId,
       plan_id: plan.plan_id,
       plan_name: plan.plan_name,
+      contract_name: note,
       plan_name_en: plan.plan_name_en,
       contract_type: plan.contract_type,
       weekly_frequency: plan.weekly_frequency,
@@ -195,15 +205,39 @@ async function pickHistoryContents(clientId: string): Promise<HistoryContents> {
       .single();
     if (error) throw new Error(`content_type=${contentType}の公開中教材が見つかりません: ${error.message}`);
     if (data.content_scope === 1) {
-      const { data: access } = await admin.from("com_m_contents_access").select("access_id").eq("client_id", clientId).eq("content_id", data.content_id).eq("delete_flg", "0").maybeSingle();
-      if (!access) {
-        const { error: accessErr } = await admin.from("com_m_contents_access").insert({ client_id: clientId, content_id: data.content_id, notes: "【QA固定】学習履歴フィクスチャ用" });
-        if (accessErr) throw accessErr;
-      }
+      await ensureContentAccess(clientId, data.content_id as string, "【QA固定】学習履歴フィクスチャ用");
     }
     return data.content_id as string;
   };
   return { wordContentId: await pick(0), sprintContentId: await pick(2) };
+}
+
+/** 顧客に限定公開(1)教材のアクセス権（com_m_contents_access）を付与する（付与済みなら何もしない） */
+async function ensureContentAccess(clientId: string, contentId: string, notes: string): Promise<void> {
+  const { data: access } = await admin.from("com_m_contents_access").select("access_id").eq("client_id", clientId).eq("content_id", contentId).eq("delete_flg", "0").maybeSingle();
+  if (access) return;
+  const { error } = await admin.from("com_m_contents_access").insert({ client_id: clientId, content_id: contentId, notes });
+  if (error) throw error;
+}
+
+/**
+ * 汎用スプリント（教材設定 metadata.sprint.sprint_type='0'、例: Gabby NLT）のアクセス権を固定テナントに付与する。
+ * 問題種別×レベルを持つのは汎用スプリントだけのため、レベルに関わる画面（お気に入りのレベル絞り込み等）の
+ * 検証に使う。限定公開(1)の場合だけ付与し、環境に汎用スプリントが無い場合は何もしない。
+ */
+async function ensureGenericSprintAccess(clientId: string): Promise<void> {
+  const { data, error } = await admin
+    .from("com_m_contents")
+    .select("content_id, content_name, content_scope")
+    .eq("content_type", 2)
+    .eq("delete_flg", "0")
+    .eq("metadata->sprint->>sprint_type", "0");
+  if (error) throw error;
+  for (const content of data ?? []) {
+    if (content.content_scope !== 1) continue;
+    await ensureContentAccess(clientId, content.content_id as string, "【QA固定】汎用スプリントの検証用");
+    console.log(`汎用スプリントのアクセス権: ${content.content_name}`);
+  }
 }
 
 /** 対象月の10日(JST)に、単語ドリル・スプリント・スプリントドリルの実績を1件ずつ作る。実行日より未来の月は作らない。 */
@@ -292,6 +326,7 @@ async function ensureLiveMatch(studentId: string, coachId: string, clientId: str
 // ---------------------------------------------------------------------------
 const clientId = await ensureClient(FIXED_CLIENT_NAME);
 const contents = await pickHistoryContents(clientId);
+await ensureGenericSprintAccess(clientId);
 
 const adminUserId = await findAuthUserByEmail(ADMIN_EMAIL);
 if (!adminUserId) {
@@ -300,8 +335,15 @@ if (!adminUserId) {
 
 const coachCa = await ensureUser({ email: "qa-coach-ca-01@gabby-qa-test.example", userType: "2", userName: "QAコーチCA01", clientId, timezone: "America/Vancouver" });
 const coachUs = await ensureUser({ email: "qa-coach-us-01@gabby-qa-test.example", userType: "2", userName: "QAコーチUS01", clientId, timezone: "America/New_York" });
+await ensureCoachProfile(coachCa);
 await ensureCoachAvailability(coachCa, [1, 3, 5], "18:00:00", "22:00:00");
+await ensureCoachProfile(coachUs);
 await ensureCoachAvailability(coachUs, [2, 4], "10:00:00", "16:00:00");
+// デモコーチ（通常の生徒の「専属コーチを探す」には出ず、デモの生徒にだけ出る）
+const coachDemo = await ensureUser({ email: "qa-coach-demo-01@gabby-qa-test.example", userType: "2", userName: "QAコーチDEMO01（デモ）", clientId, timezone: "Asia/Tokyo" });
+await ensureRole(coachDemo, "demo_user");
+await ensureCoachProfile(coachDemo);
+await ensureCoachAvailability(coachDemo, [6], "10:00:00", "12:00:00");
 
 const appContract = async (term: Term) => ensureContract(clientId, "BLUEPRINT_ONLY", term, 10);
 
@@ -347,5 +389,18 @@ for (const p of personas) {
   if (p.historyWithoutLicense) await ensureTermHistory(userId, termOf(CUR), contents);
 }
 
+// 自動ポップアップ（規約同意・お知らせ等）の検証用。テストがお知らせをテナント限定で配信・削除するため、
+// 他の固定アカウントに影響しないよう専用テナントに所属させる
+const popupClientId = await ensureClient(POPUP_CLIENT_NAME);
+const popupStudent = await ensureUser({
+  email: "qa-student-07@gabby-qa-test.example",
+  userType: "1",
+  userName: "QA生徒07（ポップアップ検証）",
+  clientId: popupClientId,
+});
+await ensureLicense(popupStudent, await ensureContract(popupClientId, "BLUEPRINT_ONLY", termOf(CUR), 1), termOf(CUR), 1);
+studentIds["07"] = popupStudent;
+console.log("- qa-student-07@gabby-qa-test.example QA生徒07（ポップアップ検証）");
+
 console.log("\n=== 投入完了 ===");
-console.log({ clientId, coachCa, coachUs, students: studentIds });
+console.log({ clientId, popupClientId, coachCa, coachUs, coachDemo, students: studentIds });

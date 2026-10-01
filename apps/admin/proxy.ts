@@ -4,6 +4,8 @@ import {
   createSupabaseProxy,
   redirectAndClearSession,
   redirectTo,
+  redirectToLogin,
+  redirectAfterLogin,
   isDefaultPublicRoute,
   logPageView,
 } from '@gabby/lib/proxy-base';
@@ -27,7 +29,7 @@ export async function proxy(req: NextRequest) {
 
   // --- A. 未ログインの場合 ---
   if (!user) {
-    if (!isPublicRoute) return redirectTo(req, loginPath);
+    if (!isPublicRoute) return redirectToLogin(req, loginPath);
     return res;
   }
 
@@ -49,7 +51,8 @@ export async function proxy(req: NextRequest) {
 
   // 2. ルート/ログインページアクセス
   if (pathname === '/' || pathname === loginPath) {
-    return redirectTo(req, dashboardPath);
+    // ?next= に戻り先があればそこへ（ログイン済みでメール内のリンクからログイン画面を経由した場合等）
+    return redirectAfterLogin(req, loginPath, dashboardPath);
   }
 
   // 3. 詳細認可ガード（パス単位の権限チェック）

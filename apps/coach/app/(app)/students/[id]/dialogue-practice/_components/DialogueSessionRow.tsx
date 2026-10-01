@@ -94,7 +94,7 @@ export function DialogueSessionRow({ assignmentId, session, onProgressChange, on
               target="_blank"
               rel="noopener noreferrer"
               onClick={onSlidesOpen}
-              className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium"
+              className="inline-flex items-center gap-1 text-brand hover:text-brand-strong font-medium"
             >
               <ExternalLink size={11} />
               Coach Materials
@@ -106,7 +106,7 @@ export function DialogueSessionRow({ assignmentId, session, onProgressChange, on
               target="_blank"
               rel="noopener noreferrer"
               onClick={onSlidesOpen}
-              className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium"
+              className="inline-flex items-center gap-1 text-brand hover:text-brand-strong font-medium"
             >
               <ExternalLink size={11} />
               Student Materials

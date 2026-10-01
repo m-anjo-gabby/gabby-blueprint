@@ -34,7 +34,7 @@ type Stage = 'confirm' | 'blocked_by_history' | 'confirm_purge'
  *
  * 通常削除がDB制約（割当履歴の残存）で拒否された場合のみ、検証用契約の後片付け目的で
  * 「履歴含めて完全に削除する」エスカレーションを提示する。誤操作防止のため、
- * 対象のプラン名を入力させてから実行させる。
+ * 対象の契約名を入力させてから実行させる。
  */
 export function DeleteContractDialog({ contract }: Props) {
   const t = useTranslations('contracts.deleteDialog')
@@ -46,7 +46,7 @@ export function DeleteContractDialog({ contract }: Props) {
   const router = useRouter()
 
   const hasAssignments = contract.current_assigned_count > 0
-  const isConfirmTextValid = confirmText === contract.plan_name
+  const isConfirmTextValid = confirmText === contract.contract_name
 
   const resetAndClose = () => {
     setOpen(false)
@@ -116,7 +116,7 @@ export function DeleteContractDialog({ contract }: Props) {
             <div className="text-center space-y-2">
               <AlertDialogTitle className="text-xl font-black text-slate-800">{t('confirmTitle')}</AlertDialogTitle>
               <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
-                {t('confirmBody', { client: contract.client_name ?? '', plan: contract.plan_name })}
+                {t('confirmBody', { client: contract.client_name ?? '', name: contract.contract_name })}
               </AlertDialogDescription>
             </div>
           </AlertDialogHeader>
@@ -176,21 +176,21 @@ export function DeleteContractDialog({ contract }: Props) {
             <div className="text-center space-y-2">
               <AlertDialogTitle className="text-xl font-black text-slate-800">{t('purgeConfirmTitle')}</AlertDialogTitle>
               <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed text-left">
-                {t('purgeConfirmIntro')}<span className="font-bold text-rose-600">{t('purgeDeleteAll')}</span>
+                {t('purgeConfirmIntro', { name: contract.contract_name })}<span className="font-bold text-rose-600">{t('purgeDeleteAll')}</span>
                 <ul className="list-disc list-inside mt-2 space-y-0.5">
                   <li>{t('purgeItemContract')}</li>
                   <li>{t('purgeItemLicenses')}</li>
                   <li>{t('purgeItemHistory')}</li>
                   <li>{t('purgeItemTickets')}</li>
                 </ul>
-                <p className="mt-2">{t('purgeWarning', { client: contract.client_name ?? '', plan: contract.plan_name })}</p>
+                <p className="mt-2">{t('purgeWarning', { name: contract.contract_name })}</p>
               </AlertDialogDescription>
             </div>
           </AlertDialogHeader>
 
           <div className="space-y-1.5 mt-2">
             <p className="text-[10px] font-bold text-slate-400">
-              {t('purgeInputHint', { name: contract.plan_name })}
+              {t('purgeInputHint', { name: contract.contract_name })}
             </p>
             <Input
               value={confirmText}

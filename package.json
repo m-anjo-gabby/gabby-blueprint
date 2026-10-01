@@ -12,7 +12,8 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "clean": "turbo clean && rimraf node_modules"
+    "clean": "turbo clean && rimraf node_modules",
+    "env:export": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-env/export.ps1"
   },
   "devDependencies": {
     "prettier": "^3.4.0",

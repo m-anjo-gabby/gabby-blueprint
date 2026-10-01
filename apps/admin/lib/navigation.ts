@@ -2,7 +2,7 @@
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
   Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, CalendarRange, Video, DollarSign,
-  Settings, LifeBuoy,
+  Settings, LifeBuoy, FileChartColumn, Landmark,
 } from 'lucide-react';
 
 // ============================================================
@@ -102,6 +102,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
         icon: CalendarRange,
         requiredRoles: ['admin'],
       },
+      {
+        label: 'trainingReports',
+        href: '/training-reports',
+        icon: FileChartColumn,
+        requiredRoles: ['admin'],
+      },
     ],
   },
   {
@@ -126,6 +132,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
         label: 'paymentSettings',
         href: '/payment-settings',
         icon: DollarSign,
+        requiredRoles: ['admin'],
+      },
+      {
+        label: 'companyProfiles',
+        href: '/company-profiles',
+        icon: Landmark,
         requiredRoles: ['admin'],
       },
     ],

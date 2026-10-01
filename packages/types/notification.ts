@@ -129,14 +129,14 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
   (payload: Record<string, unknown>) => NotificationText
 > = {
   TRAINING_FIRST: () => ({
-    title: '学習スタート！',
-    body: '初めてのトレーニングを実施しました。この調子で続けましょう。',
+    title: 'トレーニングを開始しました',
+    body: '最初のトレーニングを記録しました。これまでの歩みはホームで確認できます。',
   }),
   TRAINING_STREAK: (payload) => {
     const days = Number(payload.days ?? 0);
     return {
-      title: `連続${days}日達成！`,
-      body: `${days}日連続でトレーニングを実施しました。素晴らしいペースです。`,
+      title: `${days}日連続のトレーニング`,
+      body: `${days}日続けてトレーニングを実施しました。継続の記録はホームで確認できます。`,
     };
   },
   CHAT_NEW_MESSAGE: (payload) => ({

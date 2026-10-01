@@ -1,4 +1,3 @@
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
 import Header from '@/components/common/Header';
@@ -6,6 +5,7 @@ import Sidebar from '@/components/common/Sidebar';
 import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { UserAppMetadata } from '@gabby/lib/stores/useUserStore';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 /**
  * 管理者用 統合アプリケーションレイアウト
@@ -18,8 +18,7 @@ export default async function AdminAppLayout({
   children: React.ReactNode;
 }) {
   // --- 旧 AppLogicLayout のロジック ---
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect('/login');

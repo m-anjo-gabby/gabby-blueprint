@@ -183,6 +183,31 @@ export interface SprintQuestion {
   update_date: string;
 }
 
+/** お気に入り一覧で使う問題の列（一覧の転送量を抑えるため、TTSの調整データ等は取得しない） */
+export const FAVORITE_SPRINT_QUESTION_COLUMNS = [
+  'question_id', 'content_id', 'question_type', 'difficulty_level',
+  'statement_en', 'statement_ja', 'statement_voice',
+  'question_en', 'question_ja', 'question_voice',
+  'answer_sentence_yes_en', 'answer_sentence_yes_ja', 'answer_sentence_yes_voice',
+  'answer_sentence_no_en', 'answer_sentence_no_ja', 'answer_sentence_no_voice',
+] as const;
+
+export type FavoriteSprintQuestionFields = Pick<SprintQuestion, (typeof FAVORITE_SPRINT_QUESTION_COLUMNS)[number]>;
+
+/**
+ * お気に入り一覧用のスプリント問題（生徒アプリ）
+ * 表示・再生に必要な列に、登録日時と出典の教材名・コース名（例: "UG Speed Lv.1"）を付加したもの
+ */
+export interface FavoriteSprintQuestionItem extends FavoriteSprintQuestionFields {
+  favorite_id: string;
+  /** お気に入りに登録した日時 */
+  favorited_at: string;
+  content_name: string;
+  sprint_title: string;
+  /** 出典の教材がレベル分けを持つか（汎用スプリントは true、レベル固定のコーパススプリントは false） */
+  has_level: boolean;
+}
+
 export interface SprintQuestionResponse {
   success: boolean;
   data: SprintQuestion[] | null;

@@ -65,11 +65,11 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
 
       {/* 1. 上段：ナビゲーション・レイヤー（戻る・進む） */}
       <div className="flex items-center justify-between w-full gap-2 h-14 z-10">        
-        <div className={cn("flex-1 h-full bg-white border-indigo-100 overflow-hidden", unitBase)}>
+        <div className={cn("flex-1 h-full bg-white border-brand-100 overflow-hidden", unitBase)}>
           <button 
             onClick={onPrev} 
             disabled={isInteractionDisabled || isFirstStep} 
-            className={cn("w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r text-slate-400 hover:bg-slate-50 border-indigo-50 disabled:opacity-20")}
+            className={cn("w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r text-slate-400 hover:bg-slate-50 border-brand-50 disabled:opacity-20")}
           >
             <ArrowLeft size={18} strokeWidth={3} />
           </button>
@@ -81,7 +81,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
               "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40",
               isLastStep 
                 ? "bg-emerald-500 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]" 
-                : "bg-indigo-600 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
+                : "bg-brand text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
             )}
           >
             <span className="text-[10px] font-black uppercase tracking-[0.15em]">
@@ -96,7 +96,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
           disabled={!isStarted || isManualPlaying}
           className={cn(
             sideBtnBase, 
-            isAutoPlaying ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" : "hover:bg-indigo-50 hover:text-indigo-600"
+            isAutoPlaying ? "bg-brand text-white border-brand shadow-lg shadow-brand-100" : "hover:bg-brand-50 hover:text-brand"
           )}
         >
           <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-slate-400")} />
@@ -125,7 +125,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
             onClick={onPlayAudio}
             disabled={isInteractionDisabled}
             className={cn("flex-1 h-full flex items-center justify-center transition-all cursor-pointer rounded-r-2xl",
-              isManualPlaying ? "bg-indigo-50 text-indigo-600" : "text-slate-600 hover:text-indigo-600"
+              isManualPlaying ? "bg-brand-50 text-brand" : "text-slate-600 hover:text-brand"
             )}
           >
             {isManualPlaying ? (

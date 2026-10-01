@@ -23,7 +23,7 @@ function cellClassFor(sessions: MonthlyReportSession[]): string {
   if (sessions.some((s) => s.is_attention)) {
     return 'bg-rose-100 text-rose-700 font-bold cursor-pointer hover:bg-rose-200';
   }
-  return 'bg-indigo-50 text-indigo-700 font-semibold';
+  return 'bg-brand-50 text-brand-strong font-semibold';
 }
 
 export function MonthlyReportGrid({ report }: { report: CoachMonthlyReport }) {
