@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { SprintQuestion, SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
+import { SprintQuestion, SprintQuestionType, SprintAnswerType, QUESTION_TYPES, type SprintAvailableLevels } from "@gabby/types/sprint";
 import { MetadataSprint } from "@gabby/types/content";
 import { AnalysisResult, FeedbackConfig } from "@gabby/types/speechAssessment";
-import { resolveSprintHasLevel } from "@gabby/lib";
+import { resolveSprintHasLevel, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from "@gabby/lib";
 
 export type SprintUiView = 'loading' | 'selecting' | 'gesture_needed' | 'error' | 'drill' | 'sprint' | 'no_content';
 
@@ -31,6 +31,8 @@ interface SprintState {
 
   contentMetadata: MetadataSprint | null;
   contentName: string | null;
+  /** 教材の「問題が存在する種別×レベル」。null は未取得・取得失敗（絞り込まない） */
+  availableLevels: SprintAvailableLevels | null;
 
   // 事前設定〜セッション中を通した唯一の設定ソース（SprintSelect/page.tsxが編集し、プレイヤーは参照専用）
   config: {
@@ -72,7 +74,9 @@ interface SprintState {
   setConfig: (config: Partial<SprintConfigInput>) => void;
   startSession: (params: { questions: SprintQuestion[]; mode: 'drill' | 'sprint'; config: SprintConfigInput; resumeId?: string }) => void;
   clearSessionProgress: () => void;
-  setContentMetadata: (metadata: MetadataSprint | null) => void;
+  setContentMetadata: (metadata: MetadataSprint | null, availableLevels?: SprintAvailableLevels | null) => void;
+  /** 開始時に問題が0件だったレベルを、選択肢から外す（画面を開いた後に問題が移動・削除された場合等） */
+  markLevelUnavailable: (type: SprintQuestionType, level: number) => void;
   setContentName: (name: string | null) => void;
 
   initSprint: (questions: SprintQuestion[], mode: 'drill' | 'sprint', startIndex?: number) => void;
@@ -125,6 +129,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   },
   contentMetadata: null,
   contentName: null,
+  availableLevels: null,
   session: initialSession,
   drill: {
     isRevealed: false,
@@ -138,43 +143,46 @@ export const useSprintStore = create<SprintState>((set, get) => ({
 
   setUiView: (view) => set((state) => ({ ui: { ...state.ui, view } })),
 
-  setContentMetadata: (metadata) => set((state) => {
+  setContentMetadata: (metadata, availableLevels = null) => set((state) => {
     let nextType = state.config.questionType;
     let nextLevel = state.config.level;
 
     const isCorpus = metadata?.sprint_type === '1';
     const hasLevel = resolveSprintHasLevel(metadata);
 
-    if (isCorpus && metadata?.supported_types) {
+    // 教材の対応種別（コーパスのみ）かつ問題が1件以上ある種別だけを選択可能とする
+    const isTypeUsable = (type: SprintQuestionType) => {
+      if (!hasSprintQuestionsForType(availableLevels, type)) return false;
+      if (!isCorpus || !metadata?.supported_types) return true;
       const support = metadata.supported_types;
-      const isSupported = (
-        (nextType === '0' && support.speed) ||
-        (nextType === '4' && support.structure) ||
-        (nextType === '5' && support.builders) ||
-        (nextType === '6' && support.mastery)
+      return (
+        (type === '0' && support.speed) ||
+        (type === '4' && support.structure) ||
+        (type === '5' && support.builders) ||
+        (type === '6' && support.mastery)
       );
+    };
 
-      if (!isSupported) {
-        const availableTypes = Object.values(QUESTION_TYPES).filter(t => {
-          if (t.value === '0') return support.speed;
-          if (t.value === '4') return support.structure;
-          if (t.value === '5') return support.builders;
-          if (t.value === '6') return support.mastery;
-          return false;
-        });
-        if (availableTypes.length > 0) {
-          nextType = availableTypes[0].value;
-          nextLevel = hasLevel ? String(QUESTION_TYPES[nextType]?.minLevel ?? '0') : '1';
-        }
+    if (!nextType || !isTypeUsable(nextType)) {
+      const firstUsable = Object.values(QUESTION_TYPES)
+        .sort((a, b) => a.seq_no - b.seq_no)
+        .find((t) => isTypeUsable(t.value));
+      if (firstUsable) {
+        nextType = firstUsable.value;
+        nextLevel = String(pickSprintLevel(nextType, { hasLevel, availableLevels }));
       }
     }
 
     if (!hasLevel) {
       nextLevel = '1';
+    } else if (nextType && !isSprintLevelAvailable(availableLevels, nextType, Number(nextLevel))) {
+      // 問題の無いレベル（前回の設定・URL指定等）は、問題のあるレベルに寄せる。到達レベルによる鍵は選択画面で補正する
+      nextLevel = String(pickSprintLevel(nextType, { hasLevel, availableLevels, preferred: Number(nextLevel) }));
     }
 
     return {
       contentMetadata: metadata,
+      availableLevels,
       config: {
         ...state.config,
         questionType: nextType,
@@ -183,6 +191,13 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     };
   }),
   setContentName: (name) => set({ contentName: name }),
+
+  markLevelUnavailable: (type, level) => set((state) => {
+    // 未取得（null）の場合は他の種別・レベルの有無が分からないため、絞り込まない
+    if (!state.availableLevels) return {};
+    const levels = (state.availableLevels[type] ?? []).filter((lv) => lv !== level);
+    return { availableLevels: { ...state.availableLevels, [type]: levels } };
+  }),
 
   setConfig: (inputConfig) => set((state) => ({
     config: {

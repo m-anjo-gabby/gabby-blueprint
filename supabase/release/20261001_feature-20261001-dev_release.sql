@@ -36,3 +36,45 @@ FOR SELECT TO authenticated
 USING (user_id = auth.uid());
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】スプリント教材の問題が存在する種別×レベルの一覧取得
+-- 追加日: 2026-10-02
+--
+-- 【内容】
+--   生徒の自主トレの選択画面・コーチのLive Sprintの設定画面で、問題の無い種別・レベルを
+--   選べないようにするため、教材ごとの「問題が存在する種別×レベル」を返す関数と、
+--   それを索引だけで集計するためのインデックスを追加する。
+--
+--   1. com_m_sprint_questions に idx_sprint_questions_content_level を追加
+--   2. get_sprint_available_levels(uuid[]) を新規作成（SECURITY INVOKER）
+--
+-- 対応ファイル: DDL/table/com_m_sprint_questions.sql, DDL/function/get_sprint_available_levels.sql
+-- 【注意】アプリ側が 2 を呼ぶため、アプリのデプロイより先に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+CREATE INDEX IF NOT EXISTS idx_sprint_questions_content_level
+ON public.com_m_sprint_questions (content_id, question_type, difficulty_level)
+WHERE delete_flg = '0';
+
+DROP FUNCTION IF EXISTS public.get_sprint_available_levels(uuid[]);
+
+CREATE OR REPLACE FUNCTION public.get_sprint_available_levels(p_content_ids uuid[])
+RETURNS TABLE (
+    content_id uuid,
+    question_type text,
+    difficulty_level smallint
+) AS $$
+    SELECT DISTINCT q.content_id, q.question_type, q.difficulty_level
+    FROM public.com_m_sprint_questions q
+    WHERE q.content_id = ANY(p_content_ids)
+      AND q.delete_flg = '0'
+    ORDER BY q.content_id, q.question_type, q.difficulty_level;
+$$ LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_sprint_available_levels(uuid[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_sprint_available_levels(uuid[]) TO authenticated, service_role;
+
+COMMIT;

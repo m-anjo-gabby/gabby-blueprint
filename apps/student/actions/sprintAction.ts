@@ -1,7 +1,8 @@
 'use server';
 
 import { createServerClient } from "@gabby/lib/supabase/server";
-import { SprintQuestion, SprintQuestionResponse, SprintQuestionType } from "@gabby/types/sprint";
+import { SprintQuestion, SprintQuestionResponse, SprintQuestionType, type SprintAvailableLevels } from "@gabby/types/sprint";
+import { fetchSprintAvailableLevels } from "@gabby/lib/sprint/availableLevels";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { resolveSprintHasLevel, isSprintLevelSelectable } from "@gabby/lib";
@@ -157,7 +158,7 @@ export async function getSprintQuestionsAction(
 
     if (rawRows.length === 0) {
       logger.info("sprint:fetch_empty", "No questions found at all for this content/type/level", ctx);
-      return { success: true, data: [] };
+      return { success: false, data: null, errorCode: 'no_questions' };
     }
 
     let finalData: SprintQuestion[] = [];
@@ -631,15 +632,23 @@ export async function getContentAction(contentId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data, error } = await supabase
-      .from("com_m_contents")
-      .select("*")
-      .eq("content_id", contentId)
-      .eq("delete_flg", "0")
-      .single();
+    // 選択画面で問題の無い種別・レベルを選べないよう、「問題が存在する種別×レベル」も同じ往復で返す
+    const [{ data, error }, levelsByContent] = await Promise.all([
+      supabase
+        .from("com_m_contents")
+        .select("*")
+        .eq("content_id", contentId)
+        .eq("delete_flg", "0")
+        .single(),
+      fetchSprintAvailableLevels(supabase, [contentId]),
+    ]);
 
     if (error) throw error;
-    return { success: true, data };
+    if (!levelsByContent) {
+      logger.warn("sprint:get_available_levels_failed", "Failed to fetch available levels; levels are not filtered", ctx);
+    }
+    const availableLevels: SprintAvailableLevels | null = levelsByContent ? (levelsByContent.get(contentId) ?? {}) : null;
+    return { success: true, data, availableLevels };
   } catch (error: any) {
     logger.error("sprint:get_content_failed", error.message, ctx);
     return { success: false, error: error.message };

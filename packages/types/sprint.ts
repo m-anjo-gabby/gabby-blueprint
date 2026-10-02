@@ -212,6 +212,15 @@ export interface SprintQuestionResponse {
   success: boolean;
   data: SprintQuestion[] | null;
   error?: string;
-  /** 'level_locked': 生徒のレベル管理上、まだ選べないレベルが指定された */
-  errorCode?: 'level_locked';
+  /**
+   * 'level_locked': 生徒のレベル管理上、まだ選べないレベルが指定された
+   * 'no_questions': 指定した種別・レベルに問題が無い
+   */
+  errorCode?: 'level_locked' | 'no_questions';
 }
+
+/**
+ * 教材ごとの「問題が存在するレベル」を種別ごとに並べたもの（昇順）。
+ * 問題が1件も無い種別はキー自体が無い。取得できなかった場合は呼び出し側で null（＝絞り込まない）として扱う。
+ */
+export type SprintAvailableLevels = Partial<Record<SprintQuestionType, number[]>>;

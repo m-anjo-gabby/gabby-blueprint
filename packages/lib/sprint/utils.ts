@@ -1,4 +1,4 @@
-import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
+import { QUESTION_TYPES, SprintQuestionType, type SprintAvailableLevels } from '@gabby/types/sprint';
 import type { MetadataSprint } from '@gabby/types/content';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 
@@ -30,6 +30,57 @@ export const isSprintLevelSelectable = (
   if (progress?.level_managed === false) return true;
   const clearedLevel = progress?.[meta.dbKey as keyof typeof progress];
   return level <= meta.minLevel || level <= (typeof clearedLevel === 'number' ? clearedLevel : 0) + 1;
+};
+
+/**
+ * 指定した種別に問題が1件でもあるか。availableLevels が null（未取得・取得失敗）の場合は絞り込まず true。
+ */
+export const hasSprintQuestionsForType = (
+  availableLevels: SprintAvailableLevels | null | undefined,
+  type: SprintQuestionType
+): boolean => {
+  if (!availableLevels) return true;
+  return (availableLevels[type]?.length ?? 0) > 0;
+};
+
+/**
+ * 指定した種別・レベルに問題があるか。availableLevels が null（未取得・取得失敗）の場合は絞り込まず true。
+ */
+export const isSprintLevelAvailable = (
+  availableLevels: SprintAvailableLevels | null | undefined,
+  type: SprintQuestionType,
+  level: number
+): boolean => {
+  if (!availableLevels) return true;
+  return availableLevels[type]?.includes(level) ?? false;
+};
+
+/**
+ * 種別を選んだときに選択するレベルを決める共通ヘルパー（生徒の選択画面・コーチのLive Sprint設定画面で共有）。
+ * - レベルの無い教材は常に1
+ * - preferred（前回の設定等）が「問題あり かつ 選択可」ならそれを維持
+ * - それ以外は「問題あり かつ 選択可」の最も低いレベル
+ * - 該当が無ければ（すべて未到達等）、問題のある最も低いレベル → 種別の最小レベルの順にフォールバック
+ */
+export const pickSprintLevel = (
+  type: SprintQuestionType,
+  options: {
+    hasLevel: boolean;
+    availableLevels: SprintAvailableLevels | null | undefined;
+    isSelectable?: (level: number) => boolean;
+    preferred?: number | null;
+  }
+): number => {
+  if (!options.hasLevel) return 1;
+  const meta = QUESTION_TYPES[type];
+  const isSelectable = options.isSelectable ?? (() => true);
+  const candidates: number[] = [];
+  for (let lv = meta.minLevel; lv <= meta.maxLevel; lv++) {
+    if (isSprintLevelAvailable(options.availableLevels, type, lv) && isSelectable(lv)) candidates.push(lv);
+  }
+  if (options.preferred != null && candidates.includes(options.preferred)) return options.preferred;
+  if (candidates.length > 0) return candidates[0];
+  return options.availableLevels?.[type]?.[0] ?? meta.minLevel;
 };
 
 // getFeedbackConfig / getScoreTier は packages/lib/assessment/feedbackConfig.ts に一元化。
