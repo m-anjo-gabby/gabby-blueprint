@@ -276,6 +276,9 @@ const TENANTS: Record<TenantKey, { name: string; clientType: ClientType; withLim
 /** 法人Bに付与する限定公開教材から除く教材（実在の顧客専用のコーパス等） */
 const EXCLUDED_LIMITED_CONTENT = /holdings|コーパス|corpus|demo/i;
 
+/** 共通公開の単語帳が無い環境（staging）で、代わりに全ペルソナ顧客へ付与する限定公開の単語帳 */
+const FALLBACK_WORD_CONTENT = /^Pharmaceuticals$/;
+
 // ---------------------------------------------------------------------------
 // 教材
 // ---------------------------------------------------------------------------
@@ -302,6 +305,21 @@ async function setupTenant(key: TenantKey): Promise<TenantContents> {
   if (error) throw error;
   const wordContentIds = (common ?? []).map((c) => c.content_id as string);
 
+  if (wordContentIds.length === 0) {
+    const { data: fallback, error: fallbackErr } = await admin
+      .from("com_m_contents")
+      .select("content_id, content_name")
+      .eq("content_type", 0)
+      .eq("content_scope", 1)
+      .eq("delete_flg", "0");
+    if (fallbackErr) throw fallbackErr;
+    for (const c of fallback ?? []) {
+      if (!FALLBACK_WORD_CONTENT.test(c.content_name as string)) continue;
+      await kit.ensureContentAccess(clientId, c.content_id as string, ACCESS_NOTE);
+      wordContentIds.push(c.content_id as string);
+    }
+  }
+
   if (tenant.withLimitedContents) {
     // 単語帳(0)・ダイアログ(3)の限定公開教材を付与する（実在顧客専用のものは除く）
     const { data: limited, error: limitedErr } = await admin
@@ -319,7 +337,7 @@ async function setupTenant(key: TenantKey): Promise<TenantContents> {
     }
   }
   if (wordContentIds.length === 0) throw new Error(`${tenant.name}: 利用できる単語帳がありません。`);
-  return { clientId, wordContentIds, sprintContentId: generic[0].contentId };
+  return { clientId, wordContentIds: [...new Set(wordContentIds)], sprintContentId: generic[0].contentId };
 }
 
 interface PoolQuestion {
