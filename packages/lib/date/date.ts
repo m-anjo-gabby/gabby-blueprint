@@ -288,16 +288,18 @@ export interface FirstLiveSessionOccurrence {
  * targetTimeZoneでの表示用に変換する。
  * 単純に暦日で「翌日」を加算すると、タイムゾーン差によっては実際には数時間しか
  * 先でないケースがあるため、必ず now+24時間（絶対時刻）を下限として判定する。
+ * notBefore を渡すと、それより前の回も対象外にする（開始前の契約で申請する場合の契約開始日時）。
  */
 export const getFirstLiveSessionOccurrence = (
   dayOfWeek: number,
   startTime: string,
   sourceTimeZone: string,
   targetTimeZone: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  notBefore?: Date
 ): FirstLiveSessionOccurrence => {
   const time = startTime.slice(0, 5);
-  const threshold = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const threshold = new Date(Math.max(now.getTime() + 24 * 60 * 60 * 1000, notBefore?.getTime() ?? 0));
 
   const thresholdDateStr = toIsoDateInZone(threshold, sourceTimeZone);
   const thresholdDow = new Date(`${thresholdDateStr}T00:00:00Z`).getUTCDay();

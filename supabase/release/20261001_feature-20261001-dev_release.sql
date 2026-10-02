@@ -78,3 +78,114 @@ REVOKE EXECUTE ON FUNCTION public.get_sprint_available_levels(uuid[]) FROM PUBLI
 GRANT EXECUTE ON FUNCTION public.get_sprint_available_levels(uuid[]) TO authenticated, service_role;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】マッチングで作るセッションをライセンス期間内に収める
+-- 追加日: 2026-10-03
+--
+-- 【内容】
+--   fn_generate_sessions_for_schedule を更新する。各回の開始・終了日時をライセンスの開始・終了日時と
+--   直接比べ、契約開始の直前の回（例: NYのコーチの火曜9:00と、水曜0:00 JST開始の契約）と
+--   契約終了の直後の回を作らない。シグネチャは変更しない。
+--
+-- 対応ファイル: DDL/function/fn_generate_sessions_for_schedule.sql
+-- 検証: testing/features/branches/feature-20261001-dev/matching-license-boundary-verify.ts
+-- 【注意】既に作成済みのセッションは変更しない（ライブセッションは本番未提供のため移行は不要）。
+-- =========================================================================
+
+BEGIN;
+
+DROP FUNCTION IF EXISTS public.fn_generate_sessions_for_schedule(uuid);
+
+CREATE OR REPLACE FUNCTION public.fn_generate_sessions_for_schedule(
+    p_schedule_id uuid,
+    p_min_start_datetime timestamptz DEFAULT NULL
+)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_coach_tz text;
+    v_cursor_date date;
+    v_start_ts timestamptz;
+    v_end_ts timestamptz;
+    v_generated_count integer := 0;
+    v_license_start timestamptz;
+    v_license_end timestamptz;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    -- com_m_user.timezoneはライブ参照しない（上記【タイムゾーン変換】コメント参照）
+    v_coach_tz := v_schedule.coach_timezone;
+
+    -- 予約できる範囲（ライセンスの開始・終了日時。上記【ライセンス期間の境目】参照）
+    SELECT l.start_date, l.end_date INTO v_license_start, v_license_end
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE t.ticket_id = v_schedule.ticket_id;
+
+    -- start_date以降で最初にday_of_weekと一致する日付を求める
+    v_cursor_date := v_schedule.start_date
+        + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
+
+    WHILE v_cursor_date <= v_schedule.end_date AND v_generated_count < v_schedule.target_sessions LOOP
+        v_start_ts := (v_cursor_date + v_schedule.start_time) AT TIME ZONE v_coach_tz;
+        v_end_ts := (v_cursor_date + v_schedule.end_time) AT TIME ZONE v_coach_tz;
+
+        -- ライセンスの終了を過ぎる回に達したら打ち切る（以降の回も全て終了後）
+        IF v_end_ts > v_license_end THEN
+            EXIT;
+        END IF;
+
+        -- ライセンスの開始前の回はスキップする（カウントしない）
+        IF v_start_ts < v_license_start THEN
+            v_cursor_date := v_cursor_date + 7;
+            CONTINUE;
+        END IF;
+
+        -- 24時間ルールの下限を下回る回は欠番としてスキップする（上記コメント参照）
+        IF p_min_start_datetime IS NOT NULL AND v_start_ts < p_min_start_datetime THEN
+            v_cursor_date := v_cursor_date + 7;
+            CONTINUE;
+        END IF;
+
+        -- 当該日・当該コーチのBLOCK例外（時間帯重複）が無いことを確認
+        IF NOT EXISTS (
+            SELECT 1 FROM public.com_t_coach_availability_exception e
+            WHERE e.coach_id = v_schedule.coach_id
+              AND e.exception_date = v_cursor_date
+              AND e.exception_type = 'BLOCK'
+              AND e.start_time < v_schedule.end_time
+              AND e.end_time > v_schedule.start_time
+        ) THEN
+            INSERT INTO public.com_t_session (
+                schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status
+            ) VALUES (
+                v_schedule.schedule_id, v_schedule.ticket_id, v_schedule.student_id, v_schedule.coach_id,
+                v_start_ts, v_end_ts, 1
+            )
+            ON CONFLICT (schedule_id, start_datetime) WHERE status = 1 DO NOTHING;
+
+            IF FOUND THEN
+                v_generated_count := v_generated_count + 1;
+            END IF;
+        END IF;
+
+        v_cursor_date := v_cursor_date + 7;
+    END LOOP;
+
+    RETURN v_generated_count;
+END;
+$$;
+
+-- 内部処理専用（approve_matching_request/admin_match_student_with_coach経由以外での
+-- 直接実行は想定しない）
+REVOKE EXECUTE ON FUNCTION public.fn_generate_sessions_for_schedule(uuid, timestamptz) FROM PUBLIC, anon, authenticated;
+
+COMMIT;

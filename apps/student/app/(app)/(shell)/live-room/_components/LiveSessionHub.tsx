@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronRight, Ticket, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LiveContractSelect, formatContractPeriod } from '@/components/session/LiveContractSelect';
 import { CountBadge, ShellSectionTitle } from '@/components/shell/ShellPage';
 import { LiveRoomPageHeader } from './LiveRoomSkeleton';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -19,7 +19,7 @@ import {
   SESSION_RESULT_STATUSES,
   isSelfInitiatedCancel,
 } from '@gabby/types/session';
-import { BookableTicketSlot, LiveSessionContractSummary, LiveSessionOverview } from '@gabby/types/matching';
+import { BookableTicketSlot, LiveSessionContractSummary, LiveSessionOverview, NextContractMatching } from '@gabby/types/matching';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
 import { RescheduleProposalCard } from './RescheduleProposalCard';
@@ -32,15 +32,6 @@ import { PreviousSessionLink, PreviousSessionSummary } from './PreviousSessionLi
 // 履歴に出すのは、結果画面へ進める実施済みと、生徒・コーチ本人起因のキャンセルのみ
 // （ライセンス無効化・コーチ交代等の運用都合のキャンセルは表示しない。isSelfInitiatedCancel参照）
 const RESULT_LINKABLE_STATUSES = new Set<number>(SESSION_RESULT_STATUSES);
-
-function formatContractDate(iso: string, timezone: string): string {
-  return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: timezone }).format(new Date(iso));
-}
-
-function formatContractLabel(contract: LiveSessionContractSummary, timezone: string): string {
-  const period = `${formatContractDate(contract.start_date, timezone)}〜${formatContractDate(contract.end_date, timezone)}`;
-  return contract.is_current ? `現在の契約：${period}` : period;
-}
 
 /** 「対応が必要」欄の1行（アイコン・説明・操作ボタン） */
 function ActionNotice({
@@ -74,6 +65,8 @@ interface Props {
   contracts: LiveSessionContractSummary[];
   selectedContract: LiveSessionContractSummary;
   overview: LiveSessionOverview | null;
+  /** 現在の契約を表示中のときの、次の契約（継続用）の専属コーチの選択状況 */
+  nextContractMatching: NextContractMatching | null;
   previousSession: PreviousSessionSummary | null;
   upcomingSessions: SessionListItem[];
   pastSessions: SessionListItem[];
@@ -91,6 +84,7 @@ export function LiveSessionHub({
   contracts,
   selectedContract,
   overview,
+  nextContractMatching,
   previousSession,
   upcomingSessions,
   pastSessions,
@@ -115,9 +109,13 @@ export function LiveSessionHub({
   // 未予約の回のうち、予約リクエスト・振替候補の回答待ちになっている分は「調整中」として差し引く
   const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length : 0;
   const unbookedCount = isCurrent && overview ? Math.max(overview.unbooked_count - adjustingCount, 0) : 0;
-  const unmatchedSlotCount = isCurrent && overview ? overview.slots.filter((s) => s.status === 'unmatched').length : 0;
+  // 専属コーチの未選択は、表示中の契約が有効（現在の契約、または開始前の契約）なら案内する
+  const unmatchedSlotCount = selectedContract.is_active && overview ? overview.slots.filter((s) => s.status === 'unmatched').length : 0;
+  // 現在の契約の選択が済んでいれば、次の契約（継続用）の選択を促す
+  const nextUnmatched = isCurrent && unmatchedSlotCount === 0 && nextContractMatching && nextContractMatching.unmatchedCount > 0 ? nextContractMatching : null;
   const showBookingNotice = unbookedCount > 0 && bookableSlots.length > 0;
-  const actionCount = isCurrent ? proposalGroups.length + (unmatchedSlotCount > 0 ? 1 : 0) + (showBookingNotice ? 1 : 0) : 0;
+  const actionCount =
+    (isCurrent ? proposalGroups.length + (showBookingNotice ? 1 : 0) : 0) + (unmatchedSlotCount > 0 ? 1 : 0) + (nextUnmatched ? 1 : 0);
   const hasActions = actionCount > 0;
 
   const handleContractChange = (ticketId: string) => {
@@ -145,19 +143,7 @@ export function LiveSessionHub({
 
       {contracts.length > 1 && (
         <div className="mb-5">
-          <Select value={selectedContract.ticket_id} onValueChange={handleContractChange}>
-            <SelectTrigger className="h-10 w-full rounded-control border-line bg-surface text-sm sm:w-80" aria-label="表示する契約">
-              {/* 選択肢はポータル内にあり開くまで描画されないため、選択中の表示は明示的に渡す */}
-              <SelectValue>{formatContractLabel(selectedContract, timezone)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {contracts.map((c) => (
-                <SelectItem key={c.ticket_id} value={c.ticket_id}>
-                  {formatContractLabel(c, timezone)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <LiveContractSelect contracts={contracts} selectedTicketId={selectedContract.ticket_id} onChange={handleContractChange} />
         </div>
       )}
 
@@ -189,7 +175,26 @@ export function LiveSessionHub({
                   description={`コーチを選ぶと、そのコマのセッション（${overview.unassigned_count}回分）が毎週の日時で自動的に予約されます。`}
                   action={
                     <Button asChild className="w-full sm:w-auto">
-                      <Link href="/coach-matching">
+                      <Link href={`/coach-matching?contract=${selectedContract.ticket_id}`}>
+                        コーチを選ぶ
+                        <ChevronRight size={16} />
+                      </Link>
+                    </Button>
+                  }
+                />
+              )}
+              {nextUnmatched && (
+                <ActionNotice
+                  icon={Users}
+                  title={
+                    nextUnmatched.slotCount > 1
+                      ? `次の契約の週${nextUnmatched.slotCount}回のうち${nextUnmatched.unmatchedCount}コマの専属コーチが未選択です`
+                      : '次の契約の専属コーチが未選択です'
+                  }
+                  description={`次の契約（${formatContractPeriod(nextUnmatched.contract, timezone)}）も、コーチを選ぶとその期間のセッションが毎週の日時で自動的に予約されます。`}
+                  action={
+                    <Button asChild className="w-full sm:w-auto">
+                      <Link href={`/coach-matching?contract=${nextUnmatched.contract.ticket_id}`}>
                         コーチを選ぶ
                         <ChevronRight size={16} />
                       </Link>

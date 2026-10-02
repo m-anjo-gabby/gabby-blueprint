@@ -33,9 +33,12 @@ export interface MatchingRequestRecord {
   update_date: string;
 }
 
-/** コーチ側の受信リクエスト一覧表示用（生徒名を結合） */
+/** コーチ側の受信リクエスト一覧表示用（生徒名・申請した契約の期間を結合） */
 export interface IncomingMatchingRequestItem extends MatchingRequestRecord {
   student_name: string;
+  /** 申請した契約（チケットのライセンス）の開始・終了日時。初回の予定日を契約期間内で求めるために使う */
+  license_start_date: string | null;
+  license_end_date: string | null;
 }
 
 /** 生徒側の自分のリクエスト一覧表示用（コーチ名を結合） */
@@ -76,6 +79,15 @@ export interface LiveSessionContractSummary {
   is_current: boolean;
   /** status=1(有効)かつ終了日前であればtrue（開始前の契約も含む。有効なチケットの判定と同じ条件） */
   is_active: boolean;
+}
+
+/** 現在の契約と並ぶ次の契約（継続用）の、専属コーチの選択状況（未選択のコマがある場合の案内用） */
+export interface NextContractMatching {
+  contract: LiveSessionContractSummary;
+  /** 週あたりのコマ数 */
+  slotCount: number;
+  /** 専属コーチが未選択（申請前・否認後）のコマ数。承認待ちは含まない */
+  unmatchedCount: number;
 }
 
 /**

@@ -9,6 +9,8 @@ import { loadTestEnv } from "./helpers/env.ts";
  * - 接続先は dev のみ（apps/student/.env.local を使うローカル dev サーバー）。
  * - student の dev サーバー（`dev:ssl`、https://localhost:3000）が既に起動していればそれを使う。
  *   起動していなければ Playwright が起動し、テスト終了時に停止する。
+ * - admin の dev サーバー（`dev:ssl`、https://localhost:3001）も同じ扱い。アドミンの画面操作を含むテスト
+ *   （ジャーニー）だけが使う（e2e/support/adminApp.ts）。
  *   ※ Next.js 16 は同一アプリの dev サーバーを二重起動できない（.next/dev/lock）ため、別ポートでの
  *     E2E専用サーバーは立てない。
  * - 出力はトークン・ノイズを抑えるため最小限（line reporter、dev サーバーの標準出力は捨てる）。
@@ -19,6 +21,7 @@ loadTestEnv("dev");
 const TESTING_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TESTING_DIR, "..");
 const BASE_URL = process.env.E2E_BASE_URL ?? "https://localhost:3000";
+const ADMIN_BASE_URL = process.env.E2E_ADMIN_BASE_URL ?? "https://localhost:3001";
 const ARTIFACTS_DIR = path.join(TESTING_DIR, "e2e/.artifacts");
 const ANDROID_ENABLED = process.env.E2E_ANDROID === "1";
 
@@ -47,17 +50,20 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "off",
   },
-  webServer: {
-    command: "pnpm --filter gabby-blueprint-student run dev:ssl",
+  webServer: [
+    { app: "student", url: BASE_URL },
+    { app: "admin", url: ADMIN_BASE_URL },
+  ].map(({ app, url }) => ({
+    command: `pnpm --filter gabby-blueprint-${app} run dev:ssl`,
     cwd: REPO_ROOT,
-    url: `${BASE_URL}/login`,
+    url: `${url}/login`,
     ignoreHTTPSErrors: true,
     reuseExistingServer: !process.env.CI,
     // 初回コンパイルに時間がかかるため長めに取る
     timeout: 180_000,
-    stdout: "ignore",
-    stderr: "pipe",
-  },
+    stdout: "ignore" as const,
+    stderr: "pipe" as const,
+  })),
   projects: [
     { name: "setup", testMatch: /.*\.setup\.ts/ },
     {

@@ -1,0 +1,34 @@
+{
+  "scenario": "matching-license-boundary",
+  "env": "dev",
+  "tag": "mlb02",
+  "executedAt": "2026-10-02T16:02:48.620Z",
+  "gitCommit": "5e2dd254",
+  "gitBranch": "feature/20261001-dev",
+  "totalChecks": 4,
+  "passed": 4,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "A: 契約開始（水曜0:00 JST）より前の回が作られない",
+      "ok": true,
+      "detail": "契約開始 2026-10-21 00:00 JST / 初回 2026-10-27 22:00 JST / 開始前の回 0件"
+    },
+    {
+      "name": "A: 回数分（12回）が契約期間内に作られる",
+      "ok": true,
+      "detail": "12回"
+    },
+    {
+      "name": "B: 契約終了（火曜23:59 JST）より後の回が作られない",
+      "ok": true,
+      "detail": "契約終了 2026-11-10 23:59 JST / 最終回 2026-11-04 10:00 JST / 終了後の回 0件"
+    },
+    {
+      "name": "B: 契約期間内の回は作られる（1回以上）",
+      "ok": true,
+      "detail": "2回"
+    }
+  ]
+}

@@ -33,6 +33,8 @@
 2. パスワード忘れ: メールアドレスを送信すると、登録の有無に関わらず完了画面になる。登録済みなら再設定メールが届く（学習者向けは日本語・件名
    「【Gabby Blueprint】パスワード再設定手続きのご案内」・有効期限「30分間」）。
 3. 招待: 招待リンクを開くと氏名・メールアドレス入りのフォームが出る → パスワードを設定すると本登録（アカウント作成・招待を使用済みに）し、そのままログインする。
+   招待に契約が付いていれば、契約期間いっぱいのライセンスを発行する。発行に付随する記録（ダイアログプラクティス提供有無のコピー・割当履歴・
+   ライブ付き契約のチケットと発行履歴）は、契約管理からの割当と同じ共通処理（`packages/lib/license/issue.ts`）で作る。
 
 ## 異常系・バリデーション一覧
 
@@ -52,7 +54,7 @@
 ## 関連RPC・テーブル
 
 - RPC: なし（Supabase Auth の `generateLink` / `verifyOtp` / `updateUser`、`get_user_lock_status_by_email` はログイン時のみ）
-- テーブル: `com_t_invitation`、`com_m_user`、`com_m_client`（使い捨て顧客）
+- テーブル: `com_t_invitation`、`com_m_user`、`com_m_client`（使い捨て顧客）、本登録時のライセンス発行: `com_t_user_license`・`com_t_user_license_history`・`com_t_user_session_ticket`・`com_t_user_session_ticket_history`
 - 実装参照: `packages/lib/auth/core.ts`・`portalActions.ts`・`recovery.ts`・`callback.ts`、`packages/lib/components/auth/`、
   `packages/lib/mail/actions/sendPasswordReset.ts`
 - 用語: [_GLOSSARY.md](../_GLOSSARY.md)
@@ -69,6 +71,7 @@
 | 未登録アドレスのパスワード忘れ | `password-reset.spec.ts` | 中 | 異常系5 |
 | パスワード忘れから届いたメールのリンクで再設定を始める | `password-reset.spec.ts` | 中 | 正常系2。`RESEND_TEST_READ_API_KEY` 未設定ならスキップ。desktop のみ（実際に送信する） |
 | 招待から本登録（同じリンクは再利用不可） | `invite.spec.ts` | 高 | 正常系3、異常系6・8 |
+| ライブ付き契約の招待から本登録（チケット・履歴・ダイアログプラクティスが付く） | `invite.spec.ts` | 高 | 正常系3。プラン `LIVE_WEEKLY2_3M` の使い捨て契約（`createDisposableContract`） |
 | 期限切れ・存在しない招待 | `invite.spec.ts` | 中 | 異常系6・7 |
 | ログイン失敗・リンクエラーの案内・外部への next | `login-notice.spec.ts` | 中 | 異常系9・10 |
 

@@ -31,12 +31,14 @@ import { CoachAvailabilityCalendar, AvailabilityCell } from './CoachAvailability
 interface RequestDialogProps {
   coach: CoachBrowseItem | null;
   ticketId: string;
+  /** 契約（ライセンス）の開始日時。開始前の契約で申請する場合、初回の予定日はこれ以降になる */
+  contractStartDate: string;
   unmatchedSlots: SlotStatusItem[];
   onClose: () => void;
   onRequested: (slotNo: number, patch: Partial<SlotStatusItem>) => void;
 }
 
-export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequested }: RequestDialogProps) {
+export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlots, onClose, onRequested }: RequestDialogProps) {
   const studentTimezone = useTimezone();
   const [selectedSlotNo, setSelectedSlotNo] = useState<number | null>(unmatchedSlots[0]?.slot_no ?? null);
   const [selectedCell, setSelectedCell] = useState<AvailabilityCell | null>(null);
@@ -96,7 +98,7 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
 
   const slotNo = selectedSlotNo ?? unmatchedSlots[0]?.slot_no ?? null;
 
-  // 初回ライブセッション予定日: 当日を除き、現在時刻から実時間で24時間以上先となる直近の指定曜日・時刻
+  // 初回ライブセッション予定日: 当日を除き、現在時刻から実時間で24時間以上先、かつ契約の開始日時以降となる直近の指定曜日・時刻
   // （タイムゾーン差により「翌日」が数時間後になるケースを避けるため、暦日ではなく絶対時刻で判定する）
   const firstSession = useMemo(() => {
     if (!coach || !selectedCell) return null;
@@ -104,9 +106,11 @@ export function RequestDialog({ coach, ticketId, unmatchedSlots, onClose, onRequ
       selectedCell.sourceDay,
       selectedCell.sourceStartTime,
       coach.timezone,
-      studentTimezone
+      studentTimezone,
+      undefined,
+      new Date(contractStartDate)
     );
-  }, [coach, selectedCell, studentTimezone]);
+  }, [coach, selectedCell, studentTimezone, contractStartDate]);
 
   const handleSubmit = async () => {
     if (!coach || !selectedCell || !slotNo) return;

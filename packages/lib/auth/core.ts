@@ -12,6 +12,7 @@ import { User } from '@supabase/supabase-js';
 import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
+import { issueInitialLicense, resolvePerformedBy } from '../license/issue';
 import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
 import type { PasswordResetMailLanguage } from '../mail/templates/PasswordResetEmailTemplate';
 import { getPasswordStrengthErrorCode } from './validation';
@@ -490,7 +491,7 @@ export type VerifyInvitationResponse =
   | { valid: true; invitation: InvitationSummary }
   | { valid: false; errorCode: AuthErrorCode; error: string };
 
-const INVITATION_COLUMNS = 'id, email, user_name, expires_at, user_type, client_id, contract_id, roles';
+const INVITATION_COLUMNS = 'id, email, user_name, expires_at, user_type, client_id, contract_id, roles, invited_by';
 
 /** 未使用・期限内の招待を取得する（サーバー内部用。全項目を返す） */
 async function findActiveInvitation(token: string) {
@@ -595,28 +596,16 @@ export async function acceptInvitationCore(token: string, password: string): Pro
       }
     }
 
-    // 5. 招待時に指定されたライセンスがあれば有効化
+    // 5. 招待時に指定されたライセンスがあれば有効化（契約期間いっぱい。契約管理からの割当と同じく
+    //    履歴・ライブのチケットも作る。履歴の実行者は招待したアドミン）
     if (inviteRecord.contract_id) {
-      // 契約期間を取得
-      const { data: contract } = await supabase
-        .from('com_m_contract')
-        .select('start_date, end_date')
-        .eq('contract_id', inviteRecord.contract_id)
-        .single();
-
-      if (contract) {
-        const { error: licenseError } = await supabase
-          .from('com_t_user_license')
-          .insert({
-            user_id: newUserId,
-            contract_id: inviteRecord.contract_id,
-            start_date: contract.start_date,
-            end_date: contract.end_date,
-            status: 1
-          });
-        if (licenseError) {
-          logger.error('auth:accept_invite_license_insert_failed', licenseError.message, { ...ctx, userId: newUserId });
-        }
+      const licenseResult = await issueInitialLicense(supabase, {
+        contractId: inviteRecord.contract_id,
+        userId: newUserId,
+        performedBy: resolvePerformedBy(inviteRecord.invited_by ?? undefined),
+      }, ctx);
+      if (!licenseResult.success) {
+        logger.error('auth:accept_invite_license_insert_failed', licenseResult.message, { ...ctx, userId: newUserId });
       }
     }
 

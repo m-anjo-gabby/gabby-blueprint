@@ -32,7 +32,7 @@ export default async function DashboardPage() {
       liveSection={
         liveContract && (
           <Suspense fallback={<LiveSessionCardSkeleton />}>
-            <LiveSessionSection contract={liveContract} />
+            <LiveSessionSection contract={liveContract} contracts={liveContracts} />
           </Suspense>
         )
       }
