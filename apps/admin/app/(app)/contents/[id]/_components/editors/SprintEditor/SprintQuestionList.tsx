@@ -28,15 +28,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { SprintTTSDialog } from './SprintTTSDialog';
+import { SprintLevelMoveDialog } from './SprintLevelMoveDialog';
 
 interface SprintQuestionListProps {
   questions: SprintQuestion[];
   type: SprintQuestionType;
   onUpdate: () => void;
   contentId: string;
+  /** レベル概念を持つ教材か（false の教材はレベル移動を出さない） */
+  hasLevel: boolean;
 }
 
-export function SprintQuestionList({ questions, type, onUpdate, contentId }: SprintQuestionListProps) {
+export function SprintQuestionList({ questions, type, onUpdate, contentId, hasLevel }: SprintQuestionListProps) {
   const t = useTranslations('contents.editor.sprint.questionList');
   const { showToast } = useToast();
   const { play, isPlaying } = usePlayAudioSpeech();
@@ -134,6 +137,17 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                     <div className="flex items-center justify-between mb-4">
                       <Badge className="bg-slate-900 text-white font-mono rounded-lg h-6 px-2.5">GROUP: {group.groupId.slice(0,8)}</Badge>
                       
+                      <div className="flex items-center gap-1">
+                      {/* グループ単位のレベル移動 */}
+                      {hasLevel && (
+                        <SprintLevelMoveDialog
+                          contentId={contentId}
+                          type={type}
+                          currentLevel={group.items[0].difficulty_level}
+                          questionIds={group.items.map((q) => q.question_id)}
+                          onSuccess={onUpdate}
+                        />
+                      )}
                       {/* このグループに問題を追加するボタン */}
                       <SprintQuestionFormDialog 
                         mode="create" 
@@ -145,6 +159,7 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                         onSuccess={onUpdate} 
                         contentId={contentId}
                       />
+                      </div>
                     </div>
                     {isMastery && group.items[0]?.statement_en && (
                       <div className="border-l-4 border-slate-300 pl-4 py-1">
@@ -256,6 +271,15 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                         </div>
                         <div className="flex flex-col gap-2 shrink-0">
                           <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} contentId={contentId} />
+                          {hasLevel && (
+                            <SprintLevelMoveDialog
+                              contentId={contentId}
+                              type={type}
+                              currentLevel={q.difficulty_level}
+                              questionIds={[q.question_id]}
+                              onSuccess={onUpdate}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>

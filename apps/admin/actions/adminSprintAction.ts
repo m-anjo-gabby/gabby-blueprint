@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdminClient } from "@gabby/lib/supabase/admin";
-import { SprintQuestion, SprintQuestionType } from "@gabby/types/sprint";
+import { QUESTION_TYPES, SprintQuestion, SprintQuestionType } from "@gabby/types/sprint";
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -221,6 +221,91 @@ export async function saveSprintAudio(
   } catch (err: any) {
     logger.error('sprint:save_audio_failed', err.message, { ...ctx, questionId, section });
     return { success: false, message: err.message };
+  }
+}
+
+/**
+ * スプリント問題（Speedは1問、それ以外はグループ単位）を別のレベルへ移動する。
+ * 移動元はすべて同じ教材・種別・レベルであることを確認する。Speedは移動先の末尾に並ぶよう出題順を振り直し、
+ * グループ（Structure/Builders/Mastery）はグループ内の出題順をそのまま保つ。
+ * 音声ファイルの保存場所（level{n}ディレクトリ）は問題データに記録されたパスで参照するため移動しない。
+ */
+export async function moveSprintQuestionsLevel(
+  contentId: string,
+  type: SprintQuestionType,
+  questionIds: string[],
+  toLevel: number
+) {
+  const ctx = await getLogContext();
+  try {
+    const meta = QUESTION_TYPES[type];
+    if (!meta || !Number.isInteger(toLevel) || toLevel < meta.minLevel || toLevel > meta.maxLevel) {
+      return { success: false, message: 'Invalid level' };
+    }
+    if (questionIds.length === 0) {
+      return { success: false, message: 'No questions selected' };
+    }
+
+    const supabase = await createAdminClient();
+
+    const { data: sources, error: fetchError } = await supabase
+      .from('com_m_sprint_questions')
+      .select('question_id, difficulty_level, seq_no')
+      .in('question_id', questionIds)
+      .eq('content_id', contentId)
+      .eq('question_type', type)
+      .eq('delete_flg', '0');
+
+    if (fetchError) throw fetchError;
+    const fromLevels = new Set((sources ?? []).map((q) => q.difficulty_level));
+    if (!sources || sources.length !== questionIds.length || fromLevels.size !== 1) {
+      return { success: false, message: 'Questions not found' };
+    }
+    if (fromLevels.has(toLevel)) {
+      return { success: false, message: 'Same level' };
+    }
+
+    const now = new Date().toISOString();
+
+    if (type === '0') {
+      const { data: last, error: lastError } = await supabase
+        .from('com_m_sprint_questions')
+        .select('seq_no')
+        .eq('content_id', contentId)
+        .eq('question_type', type)
+        .eq('difficulty_level', toLevel)
+        .eq('delete_flg', '0')
+        .order('seq_no', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lastError) throw lastError;
+
+      const ordered = [...sources].sort((a, b) => a.seq_no - b.seq_no);
+      for (const [idx, q] of ordered.entries()) {
+        const { error } = await supabase
+          .from('com_m_sprint_questions')
+          .update({ difficulty_level: toLevel, seq_no: (last?.seq_no ?? 0) + idx + 1, update_date: now })
+          .eq('question_id', q.question_id);
+        if (error) throw error;
+      }
+    } else {
+      const { error } = await supabase
+        .from('com_m_sprint_questions')
+        .update({ difficulty_level: toLevel, update_date: now })
+        .in('question_id', questionIds);
+      if (error) throw error;
+    }
+
+    logger.info('sprint:move_level_success', `Moved ${questionIds.length} questions to level ${toLevel}`, {
+      ...ctx,
+      payload: { contentId, type, fromLevel: [...fromLevels][0], toLevel, questionIds },
+    });
+    revalidatePath('/contents/[id]', 'layout');
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('sprint:move_level_failed', message, { ...ctx, payload: { contentId, type, questionIds, toLevel } });
+    return { success: false, message };
   }
 }
 

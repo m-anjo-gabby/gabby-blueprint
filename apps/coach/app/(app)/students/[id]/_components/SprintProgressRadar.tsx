@@ -80,6 +80,14 @@ export function SprintProgressRadar({ studentId, progress: initialProgress }: Pr
             <span className="inline-flex self-center text-[11px] font-black text-brand bg-brand-50 border border-brand-100 rounded-full px-2.5 py-0.5">
               Stage {progress.stage}
             </span>
+            {!progress.level_managed && (
+              <span
+                className="self-center text-[11px] font-semibold text-slate-500"
+                title="Level management is off for this student. They can select any level in self-training."
+              >
+                All levels unlocked
+              </span>
+            )}
             <div className="space-y-1">
               {data.map((datum) => (
                 <div key={datum.type} className="flex items-baseline justify-between gap-3 text-xs">

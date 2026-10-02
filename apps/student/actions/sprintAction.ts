@@ -4,7 +4,7 @@ import { createServerClient } from "@gabby/lib/supabase/server";
 import { SprintQuestion, SprintQuestionResponse, SprintQuestionType } from "@gabby/types/sprint";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
-import { resolveSprintHasLevel } from "@gabby/lib";
+import { resolveSprintHasLevel, isSprintLevelSelectable } from "@gabby/lib";
 import type { ContentMetadata } from "@gabby/types/content";
 import type { AnalysisResult } from "@gabby/types/speechAssessment";
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
@@ -125,6 +125,23 @@ export async function getSprintQuestionsAction(
     const safeContentId = String(content_id).trim();
     const safeType = String(question_type).trim();
     const safeLevel = Number(difficulty_level);
+
+    // 選択画面の鍵表示と同じ判定をサーバーでも行う（URLの level 指定等で選択画面を経由しない場合も含む）
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
+    const { data: progress, error: progressError } = await supabase
+      .from("student_m_sprint_progress")
+      .select("level_speed, level_structure, level_builders, level_mastery, level_managed")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (progressError) throw progressError;
+    if (!isSprintLevelSelectable(safeType as SprintQuestionType, safeLevel, progress)) {
+      logger.info("sprint:fetch_level_locked", "Requested level is not selectable for this student", {
+        ...ctx,
+        payload: { question_type: safeType, difficulty_level: safeLevel }
+      });
+      return { success: false, data: null, errorCode: 'level_locked' };
+    }
 
     const { data: fetchedData, error } = await supabase
       .from("com_m_sprint_questions")

@@ -21,6 +21,8 @@ export interface StudentSprintProgress {
   level_structure: number;
   level_builders: number;
   level_mastery: number;
+  /** スプリントのレベル管理（true=到達レベル+1まで選択可 / false=全レベル選択可） */
+  level_managed: boolean;
 }
 
 /** ダッシュボード・生徒一覧向けの担当生徒サマリー */

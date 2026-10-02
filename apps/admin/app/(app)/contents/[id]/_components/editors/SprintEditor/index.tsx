@@ -203,7 +203,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
             <span className="text-sm font-medium italic">Loading questions...</span>
           </div>
         ) : (
-          <SprintQuestionList questions={questions} type={selectedType} onUpdate={fetchQuestions} contentId={contentId} />
+          <SprintQuestionList questions={questions} type={selectedType} onUpdate={fetchQuestions} contentId={contentId} hasLevel={hasLevel} />
         )}
       </div>
     </div>

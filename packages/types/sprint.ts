@@ -212,4 +212,6 @@ export interface SprintQuestionResponse {
   success: boolean;
   data: SprintQuestion[] | null;
   error?: string;
+  /** 'level_locked': 生徒のレベル管理上、まだ選べないレベルが指定された */
+  errorCode?: 'level_locked';
 }

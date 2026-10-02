@@ -6,12 +6,13 @@ import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, C
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, DEFAULT_SPRINT_TIME_KEY, type SprintQuestionType, type SprintAnswerType, type SprintConfig } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, setAudioSessionPlayAndRecord } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, isSprintLevelSelectable, setAudioSessionPlayAndRecord } from '@gabby/lib';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSprintStore } from '@/stores/useSprintStore';
+import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 import { getSprintProgressAction } from '@/actions/sprintAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
@@ -30,7 +31,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
 
   const { config, contentMetadata, contentName, setConfig } = useSprintStore();
 
-  const [userProgress, setUserProgress] = useState<any>(null);
+  const [userProgress, setUserProgress] = useState<StudentSprintProgress | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isMicHelpOpen, setIsMicHelpOpen] = useState(false);
   const [isHelpAccordionOpen, setIsHelpAccordionOpen] = useState(false);
@@ -146,11 +147,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const levelItems = useMemo(() => {
     const meta = QUESTION_TYPES[selectedType];
     if (!meta) return [];
-    const clearedLevel = userProgress?.[meta.dbKey] ?? 0;
-    const maxAllowed = clearedLevel + 1;
     const items = [];
     for (let i = meta.minLevel; i <= meta.maxLevel; i++) {
-      items.push({ value: String(i), label: i === 0 ? 'Basic' : `Lv ${i}`, isLocked: i > meta.minLevel && i > maxAllowed });
+      items.push({ value: String(i), label: i === 0 ? 'Basic' : `Lv ${i}`, isLocked: !isSprintLevelSelectable(selectedType, i, userProgress) });
     }
     return items;
   }, [selectedType, userProgress]);

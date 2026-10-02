@@ -76,6 +76,9 @@
 
 ## ステージ・レベル管理ダイアログ（生徒のみ）
 
+- 上部の「レベル管理する」スイッチ（`student_m_sprint_progress.level_managed`、既定オン）: オンの生徒は
+  自主トレのスプリントで到達レベルの次のレベルまで選択でき、オフの生徒は全レベルを選択できる
+  （コーチが付かない契約向け）。切り替えても到達レベル・ステージは変わらず、履歴にも記録されない
 - 「問題種別ごと」タブ: トレーニングの問題種別（複数）ごとに現在のレベルを表示し、選択式で
   個別に変更・保存できる（コーチの誤操作補正等を想定）
 - 「ステージ」タブ: 現在のステージを表示し、目標ステージを選択する
@@ -133,7 +136,7 @@
   `getLicenseTimeline`, `assignLicenseToUser`, `updateUserLicense`, `invalidateUserLicense`,
   `bulkAssignLicenses`）
 - `apps/admin/actions/adminStudentProgressAction.ts`（`getStudentSprintProgress`,
-  `updateStudentSprintLevel`, `setStudentSprintStage`）
+  `updateStudentSprintLevel`, `setStudentSprintStage`, `setStudentSprintLevelManaged`）
 - `apps/admin/actions/adminImpersonationAction.ts`（`startImpersonation`。監査ログ:
   `com_t_admin_impersonation_log`）
 - 対象テーブル: `com_m_user`

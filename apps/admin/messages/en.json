@@ -313,7 +313,12 @@
       "forceDown": "Lower stage",
       "noChange": "No change",
       "toastLevelChanged": "Changed {label} to {level}",
-      "toastStageChanged": "Changed stage to Stage {stage}"
+      "toastStageChanged": "Changed stage to Stage {stage}",
+      "levelManagedLabel": "Manage levels",
+      "levelManagedOn": "The student can select up to one level above their current level.",
+      "levelManagedOff": "The student can select any level (for contracts without a coach).",
+      "toastLevelManagedOn": "Turned level management on",
+      "toastLevelManagedOff": "Turned level management off"
     },
     "bulkImport": {
       "button": "Bulk import",
@@ -1886,6 +1891,19 @@
           "deleteDialogHint": "This action cannot be undone.",
           "cancelButton": "Cancel",
           "deleteConfirmButton": "Delete"
+        },
+        "levelMoveDialog": {
+          "triggerTitle": "Change level",
+          "title": "Change level",
+          "descriptionSingle": "Move this question to another level.",
+          "descriptionGroup": "Move all {count} questions in this group to another level.",
+          "currentLabel": "Current: {level}",
+          "selectPlaceholder": "Move to",
+          "bulkImportNote": "Running a bulk import (replace) on the destination level will also delete the moved questions.",
+          "cancelButton": "Cancel",
+          "submitButton": "Move",
+          "toastMoved": "Moved to {level}",
+          "toastError": "Failed to move"
         },
         "questionFormDialog": {
           "cueLabel": "Instruction / Cue",

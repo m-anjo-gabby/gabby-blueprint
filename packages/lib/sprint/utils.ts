@@ -1,5 +1,6 @@
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import type { MetadataSprint } from '@gabby/types/content';
+import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 
 /**
  * 教材メタデータから「レベル概念を持つか」を判定する共通ヘルパー。
@@ -11,6 +12,24 @@ import type { MetadataSprint } from '@gabby/types/content';
 export const resolveSprintHasLevel = (metadata: Pick<MetadataSprint, 'sprint_type' | 'has_level'> | null | undefined): boolean => {
   const isCorpus = metadata?.sprint_type === '1';
   return isCorpus ? metadata?.has_level ?? true : true;
+};
+
+/**
+ * 生徒が自主トレで選べるレベルかを判定する共通ヘルパー（選択画面の鍵表示とサーバー側の検証で共有）。
+ * レベル管理あり（level_managed=true）の生徒は「到達レベル＋1」まで（最小レベルは常に可）、
+ * レベル管理なしの生徒は全レベルを選択できる。進捗行が無い場合はレベル管理あり・到達レベル0として扱う。
+ */
+export const isSprintLevelSelectable = (
+  type: SprintQuestionType,
+  level: number,
+  progress: Partial<Pick<StudentSprintProgress, 'level_speed' | 'level_structure' | 'level_builders' | 'level_mastery' | 'level_managed'>> | null | undefined
+): boolean => {
+  const meta = QUESTION_TYPES[type];
+  if (!meta) return false;
+  if (level < meta.minLevel || level > meta.maxLevel) return false;
+  if (progress?.level_managed === false) return true;
+  const clearedLevel = progress?.[meta.dbKey as keyof typeof progress];
+  return level <= meta.minLevel || level <= (typeof clearedLevel === 'number' ? clearedLevel : 0) + 1;
 };
 
 // getFeedbackConfig / getScoreTier は packages/lib/assessment/feedbackConfig.ts に一元化。

@@ -202,6 +202,10 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       });
 
       setUiView(selectedConfig.mode);
+    } else if (response.errorCode === 'level_locked') {
+      // まだ選べないレベル（URLの level 指定・レベル管理の再開等）は、最小レベルにして選択画面へ戻す
+      setConfig({ questionType, level: String(QUESTION_TYPES[questionType].minLevel) });
+      setUiView('selecting');
     } else {
       setUiView('error');
     }

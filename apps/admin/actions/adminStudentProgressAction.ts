@@ -11,6 +11,8 @@ import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 
 const logger = createLogger('admin');
 
+const PROGRESS_COLUMNS = 'stage, level_speed, level_structure, level_builders, level_mastery, level_managed';
+
 type StudentProgressActionResult =
   | { success: true; progress: StudentSprintProgress }
   | { success: false; message: string };
@@ -39,7 +41,7 @@ async function fetchProgress(
 ): Promise<StudentSprintProgress> {
   const { data } = await supabase
     .from('student_m_sprint_progress')
-    .select('stage, level_speed, level_structure, level_builders, level_mastery')
+    .select(PROGRESS_COLUMNS)
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -49,6 +51,7 @@ async function fetchProgress(
     level_structure: data?.level_structure ?? 0,
     level_builders: data?.level_builders ?? 0,
     level_mastery: data?.level_mastery ?? 0,
+    level_managed: data?.level_managed ?? true,
   };
 }
 
@@ -87,7 +90,7 @@ export async function updateStudentSprintLevel(
       .from('student_m_sprint_progress')
       .update({ [meta.dbKey]: newLevel, stage: newStage, update_date: new Date().toISOString() })
       .eq('user_id', userId)
-      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .select(PROGRESS_COLUMNS)
       .single();
 
     if (error || !data) {
@@ -144,7 +147,7 @@ export async function setStudentSprintStage(
       .from('student_m_sprint_progress')
       .update({ ...toProgressColumns(newLevels), stage: newStage, update_date: new Date().toISOString() })
       .eq('user_id', userId)
-      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .select(PROGRESS_COLUMNS)
       .single();
 
     if (error || !data) {
@@ -163,6 +166,45 @@ export async function setStudentSprintStage(
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
     logger.error('admin:set_student_stage_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, message: 'システムエラーが発生しました。' };
+  }
+}
+
+/**
+ * 指定生徒のスプリントのレベル管理の有無を切り替える（管理者向け）。
+ * false にすると、生徒は到達レベルに関係なく全レベルを選択できる（到達レベル自体は変更しない）。
+ */
+export async function setStudentSprintLevelManaged(
+  userId: string,
+  levelManaged: boolean
+): Promise<StudentProgressActionResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('student_m_sprint_progress')
+      .update({ level_managed: levelManaged, update_date: new Date().toISOString() })
+      .eq('user_id', userId)
+      .select(PROGRESS_COLUMNS)
+      .single();
+
+    if (error || !data) {
+      logger.error('admin:set_student_level_managed_failed', error?.message ?? 'No row updated', {
+        ...ctx,
+        payload: { userId, levelManaged },
+      });
+      return { success: false, message: 'レベル管理の設定に失敗しました。' };
+    }
+
+    revalidatePath('/users');
+    logger.info('admin:set_student_level_managed_success', 'Student sprint level management updated', {
+      ...ctx,
+      payload: { userId, levelManaged },
+    });
+    return { success: true, progress: data as StudentSprintProgress };
+  } catch (err) {
+    logger.error('admin:set_student_level_managed_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, message: 'システムエラーが発生しました。' };
   }
 }

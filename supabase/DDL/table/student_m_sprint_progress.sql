@@ -81,3 +81,28 @@ FOR UPDATE TO authenticated USING (
         WHERE r.student_id = student_m_sprint_progress.user_id AND r.coach_id = auth.uid()
     )
 );
+
+---------------------------------------------
+-- 追加パッチ: レベル管理の有無 (level_managed) と本人の権限の参照限定 (2026-10-02)
+-- 既存環境に対しては、このパッチのみをrun.mjs（supabase/release/）で適用してください。
+---------------------------------------------
+-- 【背景】
+-- コーチのいない契約（アプリのみ）の生徒は到達レベルが上がらず、上位レベルの教材を選べない。
+-- アドミンのユーザー管理で生徒ごとに「レベル管理しない」を選べるようにし、その生徒は
+-- スプリントの全レベルを選択可能とする（true=到達レベル＋1まで選択可 / false=全レベル選択可）。
+--
+-- 【本人の権限】
+-- 生徒アプリは本テーブルを参照するだけで、作成は handle_new_user()（SECURITY DEFINER）、
+-- 更新はコーチ（担当関係のUPDATEポリシー）と管理者（service_role）が行う。
+-- 本人に FOR ALL を許していると、生徒が自分の到達レベルや level_managed を書き換えられるため、
+-- 本人の権限を SELECT のみに限定する。
+ALTER TABLE public.student_m_sprint_progress
+  ADD COLUMN IF NOT EXISTS level_managed BOOLEAN NOT NULL DEFAULT true;
+
+COMMENT ON COLUMN public.student_m_sprint_progress.level_managed IS 'スプリントのレベル管理 (true:到達レベル+1まで選択可, false:全レベル選択可)';
+
+DROP POLICY IF EXISTS "Users can manage their own sprint progress" ON public.student_m_sprint_progress;
+DROP POLICY IF EXISTS "Users can view their own sprint progress" ON public.student_m_sprint_progress;
+CREATE POLICY "Users can view their own sprint progress" ON public.student_m_sprint_progress
+FOR SELECT TO authenticated
+USING (user_id = auth.uid());

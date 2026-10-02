@@ -98,6 +98,11 @@
   Answer(No)の区分があり、各区分ごとに個別に音声を生成・確認できる（生成済/未生成バッジ、
   再生ボタン、TTS設定ダイアログ）。
 - 編集・削除は各設問単位。削除は確認ダイアログを経て取り消せない操作として実行される。
+- レベルの変更（教材がレベルを持つ場合のみ）: Speedは各設問の、それ以外はグループのカード上部の
+  「レベルを変更」ボタンから、移動先のレベルを選んで移動する（グループは設問をまとめて移動し、
+  一部だけを別レベルに分けることはできない）。Speedは移動先の末尾に並ぶよう出題順を振り直す。
+  音声はそのまま使える（移し直し不要）。移動先のレベルで一括登録（洗い替え）を行うと、
+  移動した問題も削除される
 - 問題登録ダイアログでは、グループ内に複数の設問をまとめて追加・編集できる
   （Question・Answer(Yes)は必須、その他は種別により任意）。
 
@@ -143,7 +148,7 @@
   `TTSDialog.tsx`, `TTSBulkDialog.tsx`, `WordBulkImportDialog.tsx`）
 - `apps/admin/app/(app)/contents/[id]/_components/editors/SprintEditor/`
   （`index.tsx`, `SprintQuestionList.tsx`, `SprintQuestionFormDialog.tsx`, `SprintTTSDialog.tsx`,
-  `SprintTTSBulkDialog.tsx`, `SprintBulkImportDialog.tsx`）
+  `SprintTTSBulkDialog.tsx`, `SprintBulkImportDialog.tsx`, `SprintLevelMoveDialog.tsx`）
 - `apps/admin/app/(app)/contents/[id]/_components/editors/DialogueEditor/`
   （`index.tsx`, `DialogueSessionList.tsx`, `DialogueSessionFormDialog.tsx`）
 - `apps/admin/actions/adminDialogueAction.ts`
@@ -154,7 +159,7 @@
   `getPhrasesByWordId`, `upsertPhrase`, `deletePhrase`, `bulkUpsertWordsAndPhrases`）
 - `apps/admin/actions/adminPhraseAction.ts`（`getPhrasesByContentId`）
 - `apps/admin/actions/adminSprintAction.ts`（`getSprintQuestionsByFilter`, `bulkUpsertSprintQuestions`,
-  `deleteSprintQuestion`, `saveSprintAudio`）
+  `deleteSprintQuestion`, `saveSprintAudio`, `moveSprintQuestionsLevel`）
 - `apps/admin/hooks/useSaveAzureSpeech.ts`（Azure TTS生成〜Storage保存〜DB更新の一連処理）
 - `packages/lib/azure/ssml.ts`（SSML生成ロジック）
 - `packages/types/word.ts`, `packages/types/sprint.ts`（`WORD_STATUS`, `PHRASE_TYPES`,
