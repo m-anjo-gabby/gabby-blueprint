@@ -236,7 +236,7 @@ export function loadAudioBuffer(url: string, opts: { decodeTimeoutMs?: number } 
  */
 export async function playAudioClip(
   buffer: AudioBuffer,
-  opts: { ownerId: number; playbackRate?: number; startDelayMs?: number; onStart?: () => void },
+  opts: { ownerId: number; playbackRate?: number; onStart?: () => void },
 ): Promise<void> {
   const context = await ensureAudioRunning();
   if (!context || context.state === 'closed') return;
@@ -267,8 +267,7 @@ export async function playAudioClip(
     opts.onStart?.();
 
     try {
-      const delaySeconds = (opts.startDelayMs ?? 0) / 1000;
-      source.start(delaySeconds > 0 ? context.currentTime + delaySeconds : 0);
+      source.start(0);
     } catch (err) {
       console.error('AudioSource start error:', err);
       if (activeClip === clip) activeClip = null;

@@ -62,7 +62,9 @@
 
 - カードに問題文（基本文・質問文/指示文）が表示され、音声が自動再生される。カードをタップすると
   解答が表示される（Reveal）
-- 発話評価ONの場合、マイクボタンで発話を録音・評価できる。評価後は解答音声が再生される
+- 発話評価ONの場合、マイクボタンで発話を録音・評価できる（チャイムが鳴り終わってから認識を開始する）。
+  停止ボタンでその時点の評価で確定し、評価後は解答音声が再生される。発話中にカードを切り替えた場合は、
+  評価を出さずに中断する
 - 自動再生モードをONにすると、音声再生→思考時間→解答表示→次のカードへ、を自動で繰り返す
   （手動操作は自動再生停止まで一部制限される）
 - 再生速度（0.75倍〜等）をポップオーバーから変更できる
@@ -121,6 +123,9 @@
   `getContentAction`, `getSprintProgressAction`, `createSprintScoreAction`）
 - `packages/types/sprint.ts`（`QUESTION_TYPES`: UG Speed/UG Builders/UG Structure/UG Mastery、
   `SPRINT_TIME_OPTIONS`: 60/90/120/150秒）
-- `packages/lib/hooks/useWebSpeech.ts`（Web Speech APIによる発話認識・評価）
-- `packages/lib/hooks/usePlayAudioSpeech.ts`, `useSprintAudio.ts`（音声再生・チャイム）
+- `packages/lib/audio/react/useSpeakingPlayer.ts`（単語帳と共通の再生→発話プレイヤー。`runTurn` で基本文→質問文→チャイム→発話評価、中断は AbortSignal）
+- `packages/lib/sprint/prompts.ts`（発話前に再生する音声の並び）
+- `packages/lib/audio/core/`（`audioRuntime.ts`: アプリ全体で1つの AudioContext、`audioSession.ts`: iOSのオーディオセッション、
+  `speechAssessment.ts`: 発話評価、`recognizer/`: 認識方式（Web Speech API・テスト用 fake））
+- `packages/lib/audio/react/useSpeakingSession.ts`（表示中に発話セッションを借りる）
 - `packages/lib/hooks/useSprintPlaybackFlow.ts`, `useMicPermission.ts`, `useExitConfirmFlow.ts`

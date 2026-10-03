@@ -39,7 +39,7 @@
 | 自動再生トグル | 操作パネルに常時表示 | ONの場合、確認ダイアログの上で自動再生を開始し、音声再生→一定時間待機→次のフレーズへ、を自動で繰り返す |
 | 再生速度変更 | 操作パネルに常時表示 | ポップオーバーから再生速度を選択する |
 | 「Listen」ボタン | 操作パネルに常時表示 | 現在のフレーズの音声を再生する |
-| 「Practice」ボタン（マイク） | 操作パネルに常時表示 | タップで発話認識・評価を開始し、もう一度タップ（Stop）で終了する。評価結果は発話フィードバックモーダルで表示される |
+| 「Practice」ボタン（マイク） | 操作パネルに常時表示 | タップでチャイムを鳴らし、鳴り終わってから発話認識・評価を開始する。もう一度タップ（Stop）でその時点の評価で確定する。評価結果は発話フィードバックモーダルで表示される。発話中にフレーズを切り替えた場合は評価を出さずに中断する |
 | 単語インデックスの並び替えタブ（By Rank / A-Z） | ドロワー内に常時表示 | 単語の表示順を出題順・アルファベット順で切り替える |
 | 単語インデックスの項目タップ | ドロワー内、各単語 | その単語の先頭フレーズへジャンプし、ドロワーを閉じる |
 
@@ -75,5 +75,6 @@
 - `apps/student/stores/useWordDrillStore.ts`（Zustandによる学習状態の一元管理）
 - `apps/student/actions/wordAction.ts`（`getWordData`, `toggleFavorite`, `reportWordProgress`）
 - `apps/student/actions/contentAction.ts`（`getLatestResumeContent`, `saveResumeContent`）
-- `packages/lib/hooks/useWebSpeech.ts`（Web Speech APIによる発話認識・評価）
-- `packages/lib/hooks/usePlayAudioSpeech.ts`（音声再生・プリロード）
+- `packages/lib/audio/react/useSpeakingPlayer.ts`（スプリントと共通の再生→発話プレイヤー。音声再生・プリロード・発話評価）
+- `packages/lib/audio/core/`（`audioRuntime.ts`: アプリ全体で1つの AudioContext、`audioSession.ts`: iOSのオーディオセッション、
+  `speechAssessment.ts`: 発話評価、`recognizer/`: 認識方式（Web Speech API・テスト用 fake））

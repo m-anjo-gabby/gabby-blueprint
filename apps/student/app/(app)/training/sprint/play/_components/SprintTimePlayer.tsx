@@ -138,7 +138,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     timeLeft,
     unlock: unlockAudioContext,
     resumeStatus,
-  } = useSpeakingPlayer({ startDelayMs: 150, urlResolution: 'concat' });
+  } = useSpeakingPlayer({ urlResolution: 'concat' });
 
   // マイク権限の監視（SprintTimePlayer ではテスト機能は使わず、micStatus のみ参照）
   const { micStatus } = useMicPermission();

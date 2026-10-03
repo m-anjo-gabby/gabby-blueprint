@@ -79,11 +79,6 @@ export function acquireSpeakingSession(): () => void {
   };
 }
 
-/** 発話セッションを借りている画面があるか */
-export function isSpeakingSessionActive(): boolean {
-  return speakingLeases > 0;
-}
-
 /**
  * 再生モード（playback）を要求する。発話セッション中に一度マイクを使った後は無視する（経路を切り替えない）。
  */

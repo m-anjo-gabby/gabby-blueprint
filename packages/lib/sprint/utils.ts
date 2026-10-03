@@ -1,7 +1,6 @@
 import { QUESTION_TYPES, SprintQuestionType, type SprintAvailableLevels } from '@gabby/types/sprint';
 import type { MetadataSprint } from '@gabby/types/content';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
-import { requestPlaybackSession, requestPlayAndRecordSession } from '../audio/core/audioSession';
 
 /**
  * 教材メタデータから「レベル概念を持つか」を判定する共通ヘルパー。
@@ -125,20 +124,4 @@ export const formatSprintLevelLabel = (type: SprintQuestionType | string, level:
  */
 export const cleanAnswerWords = (text: string): string[] => {
   return text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").split(" ").filter(Boolean);
-};
-
-/**
- * iOS WebKit用のオーディオセッションを再生モード（playback）に戻すよう要求する。
- * 切り替えは audio/core/audioSession が一元管理し、発話セッション中（没入画面の表示中）は無視される。
- */
-export const setAudioSessionPlayback = () => {
-  requestPlaybackSession();
-};
-
-/**
- * iOS WebKit用のオーディオセッションを録音再生モード（play-and-record）に切り替える
- * （マイク許可の確認等、発話セッション外での一時的な用途）。
- */
-export const setAudioSessionPlayAndRecord = () => {
-  requestPlayAndRecordSession();
 };

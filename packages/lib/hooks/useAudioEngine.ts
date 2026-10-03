@@ -21,7 +21,7 @@ import { cancelSpeech } from '../speech/synthesis';
 export type { AudioResumeStatus };
 
 /**
- * `useSprintAudio` / `usePlayAudioSpeech` の共通基盤。
+ * 音声再生の共通基盤（`usePlayAudioSpeech` / `audio/react/useSpeakingPlayer` が使う）。
  *
  * AudioContext・デコード済み音声・チャイム・再生中のクリップ・音声再開の状態は
  * アプリ全体で1つの `audio/core/audioRuntime` が持ち、このフックはその窓口に徹する
@@ -29,10 +29,6 @@ export type { AudioResumeStatus };
  * iOS のオーディオセッションの切り替えは `audio/core/audioSession` だけが行う。
  */
 export interface AudioEngineOptions {
-  /** マウント/アンマウント時に連動して停止させる音声認識の停止関数（useSprintAudio用途） */
-  stopListening?: () => void;
-  /** 再生開始までのディレイ（ms） */
-  startDelayMs?: number;
   /** decodeAudioDataにタイムアウトを設けるか（ms）。未指定はタイムアウトなし */
   decodeTimeoutMs?: number;
   /** チャイム再生前に、再生中のトラックを停止するか */
@@ -73,8 +69,6 @@ export interface UseAudioEngineReturn {
 
 export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
   const {
-    stopListening,
-    startDelayMs = 0,
     decodeTimeoutMs,
     stopBeforeChime = false,
     urlResolution,
@@ -88,22 +82,16 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
   // play/stop のたびに進める世代番号。取得・デコードの待ち中に停止や別の再生があったかを判定する
   const playTokenRef = useRef(0);
   const supabaseRef = useRef(urlResolution === 'sdk' ? createBrowserClient() : null);
-  const stopListeningRef = useRef(stopListening);
-  useEffect(() => {
-    stopListeningRef.current = stopListening;
-  }, [stopListening]);
 
   // ─── マウント時の初期化 / アンマウント時のクリーンアップ ────────────────
   // AudioContext は共有のため閉じない。このフックが鳴らしているクリップだけを止める。
   useEffect(() => {
     requestPlaybackSession();
-    stopListeningRef.current?.();
     cancelSpeech();
     prepareChime();
 
     return () => {
       requestPlaybackSession();
-      stopListeningRef.current?.();
       cancelSpeech();
       playTokenRef.current += 1;
       stopAudioClip(ownerId);
@@ -135,7 +123,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
 
     if (skip) return;
 
-    // 同一idの再タップ（restart指定なし）はトグル停止扱い。idが未指定の呼び出し（useSprintAudio経由）は
+    // 同一idの再タップ（restart指定なし）はトグル停止扱い。idが未指定の呼び出し（スプリントの問題音声等）は
     // このトグル判定自体を行わず、常に新規再生として扱う。
     if (id !== undefined && currentPlayingIdRef.current === id && !restart) {
       stop();
@@ -175,7 +163,6 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     await playAudioClip(buffer, {
       ownerId,
       playbackRate,
-      startDelayMs,
       onStart: () => {
         if (id !== undefined) setIsPlaying(id);
       },
@@ -185,7 +172,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
       currentPlayingIdRef.current = null;
       if (id !== undefined) setIsPlaying(null);
     }
-  }, [ownerId, resolveUrl, stop, startDelayMs, decodeTimeoutMs]);
+  }, [ownerId, resolveUrl, stop, decodeTimeoutMs]);
 
   const playChime = useCallback(async (): Promise<void> => {
     if (stopBeforeChime) stop();

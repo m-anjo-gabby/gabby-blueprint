@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
-import { setAudioSessionPlayback } from '@gabby/lib';
 import type { SprintQuestion } from '@gabby/types/sprint';
 import type { SprintResultScore } from './types';
 
@@ -66,8 +65,6 @@ export function useSprintResultPlayback(
 
   useEffect(() => {
     isMountedRef.current = true;
-    // 前の画面でマイクが使われていた場合、確実にスピーカー出力へ戻す
-    setAudioSessionPlayback();
 
     return () => {
       isMountedRef.current = false;

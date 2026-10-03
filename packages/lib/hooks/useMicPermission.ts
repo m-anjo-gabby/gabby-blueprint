@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '../sprint/utils';
 import { unlockAudio } from '../audio/core/audioRuntime';
+import { requestPlaybackSession, requestPlayAndRecordSession } from '../audio/core/audioSession';
+import { getSpeechRecognizer, type RecognitionHandle } from '../audio/core/recognizer';
 import { primeSpeechSynthesis } from '../speech/synthesis';
 
 export type MicStatus = 'checking' | 'granted' | 'denied' | 'prompt';
@@ -18,8 +19,10 @@ export interface UseMicPermissionReturn {
   requestMicPermission: () => Promise<boolean>;
 }
 
-// iOSのオーディオ出力をタップの同期区間で有効化する（共有の AudioContext をアンロックし、音声合成も起こしておく）。
-// 以前はここで使い捨ての AudioContext を作っていたが、AudioContext はアプリ全体で1つにしたため共有のものを使う。
+/** マイクテストで何も聞き取れなかった場合に失敗とするまでの時間 */
+const MIC_TEST_TIMEOUT_MS = 8000;
+
+// iOSのオーディオ出力をタップの同期区間で有効化する（共有の AudioContext をアンロックし、音声合成も起こしておく）
 const warmupAudioSession = () => {
   void unlockAudio();
   primeSpeechSynthesis();
@@ -34,19 +37,19 @@ const warmupAudioSession = () => {
  *
  * ## iOS Safari 対応
  * - `navigator.permissions.query` が例外を吐くブラウザでは 'prompt' にフォールバック
- * - マイクテスト開始時に `setAudioSessionPlayAndRecord()` へ切り替え
- * - 終了時に `setAudioSessionPlayback()` へ復元して受話器モードを防止
+ * - マイクを使う前（テスト開始・getUserMedia の前）に録音再生モードへ切り替え、終了時に再生モードへ戻す
+ *   （切り替えは audio/core/audioSession が一元管理する）
+ * - マイクテストの認識は、発話評価と同じ認識方式（audio/core/recognizer）を使う
  */
 export function useMicPermission(): UseMicPermissionReturn {
   const [micStatus, setMicStatus] = useState<MicStatus>('checking');
   const [isTestingMic, setIsTestingMic] = useState(false);
-  const isTestingMicRef = useRef(false); // 🚀 onend ハンドラー内で非同期に最新状態を参照するためのRef
   const [testTranscript, setTestTranscript] = useState('');
   const [micTestSuccess, setMicTestSuccess] = useState(false);
   const [micTestError, setMicTestError] = useState(false);
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const testTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const recognitionRef = useRef<RecognitionHandle | null>(null);
+  const testTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ─── マイクテスト停止 ────────────────────────────────────────────
   const stopMicTest = useCallback((success?: boolean, error?: boolean) => {
@@ -54,21 +57,14 @@ export function useMicPermission(): UseMicPermissionReturn {
       clearTimeout(testTimeoutRef.current);
       testTimeoutRef.current = null;
     }
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (_) {
-        // すでに停止している場合のエラー回避
-      }
-      recognitionRef.current = null;
-    }
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
     setIsTestingMic(false);
-    isTestingMicRef.current = false;
     if (success !== undefined) setMicTestSuccess(success);
     if (error !== undefined) setMicTestError(error);
 
     // iOS WebKit: 終了時に playback（スピーカー出力）に戻す
-    setAudioSessionPlayback();
+    requestPlaybackSession();
   }, []);
 
   // ─── マイクテスト開始 ────────────────────────────────────────────
@@ -77,14 +73,10 @@ export function useMicPermission(): UseMicPermissionReturn {
 
     // 🚀 マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
     warmupAudioSession();
+    requestPlayAndRecordSession();
 
-    // iOS WebKit: 録音再生モードに切り替え（レシーバーモード防止）
-    setAudioSessionPlayAndRecord();
-
-    const SpeechRecognitionClass =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognitionClass) {
+    const recognizer = getSpeechRecognizer();
+    if (!recognizer.isSupported()) {
       setMicTestSuccess(false);
       setMicTestError(true);
       return;
@@ -94,65 +86,27 @@ export function useMicPermission(): UseMicPermissionReturn {
     setMicTestSuccess(false);
     setMicTestError(false);
     setIsTestingMic(true);
-    isTestingMicRef.current = true;
 
-    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const recognition = new SpeechRecognitionClass() as SpeechRecognition;
-    recognition.lang = 'en-US';
-    recognition.interimResults = true;
-    recognition.continuous = isMobile ? false : true; // 🚀 モバイルでは単発認識にして安定化
-
-    recognition.onstart = () => {
+    recognitionRef.current = recognizer.start({ lang: 'en-US' }, {
       // 認識開始 = マイクが許可されている
-      setMicStatus('granted');
-    };
-
-    recognition.onend = () => {
-      // 🚀 テスト中（タイムアウト前）であれば、onend から自動再起動して声を拾い続ける
-      if (isTestingMicRef.current) {
-        try {
-          recognition.start();
-        } catch (_) {}
-      }
-    };
-
-    recognition.onresult = (event: any) => {
-      let currentText = '';
-      for (let i = 0; i < event.results.length; i++) {
-        currentText += event.results[i][0].transcript;
-      }
-      setTestTranscript(currentText);
-
-      // 何か発話が検知できたら即座に成功判定
-      if (currentText.trim().length > 0) {
-        stopMicTest(true, false);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      console.warn('Mic test error:', event.error);
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        setMicStatus('denied');
+      onStart: () => setMicStatus('granted'),
+      onTranscript: (text) => {
+        setTestTranscript(text);
+        // 何か発話が検知できたら即座に成功判定
+        if (text.trim().length > 0) stopMicTest(true, false);
+      },
+      onError: (code) => {
+        console.warn('Mic test error:', code);
+        if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'start-failed') {
+          setMicStatus('denied');
+        }
         stopMicTest(false, true);
-      } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        stopMicTest(false, true);
-      }
-    };
+      },
+    });
 
-    recognitionRef.current = recognition;
-    try {
-      recognition.start();
-    } catch (e) {
-      console.error('Mic recognition start failed:', e);
-      setMicStatus('denied');
-      stopMicTest(false, true);
-      return;
-    }
-
-    // 8秒のタイムアウト
     testTimeoutRef.current = setTimeout(() => {
       stopMicTest(false, true);
-    }, 8000);
+    }, MIC_TEST_TIMEOUT_MS);
   }, [stopMicTest]);
 
   // ─── 権限チェック ────────────────────────────────────────────────
@@ -170,7 +124,7 @@ export function useMicPermission(): UseMicPermissionReturn {
             setMicStatus(permissionStatus.state as MicStatus);
           };
           return;
-        } catch (_) {
+        } catch {
           // Safari 等で query が例外を吐いた場合はフォールバックへ
         }
       }
@@ -178,7 +132,7 @@ export function useMicPermission(): UseMicPermissionReturn {
       // permissions.query が使えない（Safari 等）では
       // マウント時に getUserMedia を呼ぶとブラウザに拒否されるため 'prompt' に設定
       setMicStatus('prompt');
-    } catch (_) {
+    } catch {
       setMicStatus('prompt');
     }
   }, []);
@@ -198,13 +152,9 @@ export function useMicPermission(): UseMicPermissionReturn {
   useEffect(() => {
     return () => {
       if (testTimeoutRef.current) clearTimeout(testTimeoutRef.current);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (_) {}
-        recognitionRef.current = null;
-      }
-      setAudioSessionPlayback();
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      requestPlaybackSession();
     };
   }, []);
 
@@ -215,7 +165,7 @@ export function useMicPermission(): UseMicPermissionReturn {
 
       // iOS WebKit: セッションが playback のままだと getUserMedia が許可ダイアログを出さずに拒否されるため、
       // getUserMedia より前に録音再生モードへ切り替える（同期処理のため、タップの同期区間は崩れない）
-      setAudioSessionPlayAndRecord();
+      requestPlayAndRecordSession();
 
       // 🚀 【最重要】iOS Safariの User Gesture Policy を完全にクリアするため、
       // ユーザータップ同期コールスタック内（あらゆる await の前）で getUserMedia を実行する。
@@ -227,7 +177,7 @@ export function useMicPermission(): UseMicPermissionReturn {
       const stream = await streamPromise;
       stream.getTracks().forEach((track) => track.stop());
       setMicStatus('granted');
-      // 🚀 本番への play-and-record 状態引き継ぎのため、ここでの playback への切り戻しを廃止
+      // 🚀 本番への play-and-record 状態引き継ぎのため、ここでの playback への切り戻しは行わない
       return true;
     } catch (err: unknown) {
       const name = err instanceof Error ? err.name : '';
@@ -236,7 +186,7 @@ export function useMicPermission(): UseMicPermissionReturn {
       } else {
         setMicStatus('prompt');
       }
-      setAudioSessionPlayback();
+      requestPlaybackSession();
       return false;
     }
   }, []);

@@ -87,7 +87,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     changePlaybackRate,
     unlock: unlockAudioContext,
     resumeStatus,
-  } = useSpeakingPlayer({ startDelayMs: 150, urlResolution: 'concat' });
+  } = useSpeakingPlayer({ urlResolution: 'concat' });
 
   const currentQuestion = questions?.[currentIndex];
 

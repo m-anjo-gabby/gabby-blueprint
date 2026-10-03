@@ -7,7 +7,6 @@ import { useAudioEngine } from './useAudioEngine';
 /**
  * 音声再生およびダウンロードを管理するカスタムフック。
  * 内部的には `useAudioEngine` の薄いラッパーであり、以下の挙動を維持している:
- * - 再生は即時開始（iOS向けディレイなし）
  * - AudioContext・音声再開の状態はアプリ全体で共有（useAudioEngine / audio/core/audioRuntime 参照）
  * - decodeAudioDataに1秒のタイムアウトを設ける
  * - チャイム再生前に既存トラックを停止する
@@ -15,7 +14,6 @@ import { useAudioEngine } from './useAudioEngine';
  */
 export function usePlayAudioSpeech() {
   const engine = useAudioEngine({
-    startDelayMs: 0,
     decodeTimeoutMs: 1000,
     stopBeforeChime: true,
     urlResolution: 'sdk',

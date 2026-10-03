@@ -2,8 +2,8 @@ import type { RecognitionCallbacks, RecognitionHandle, RecognitionStartOptions, 
 
 /**
  * E2E・動作確認用の認識方式（マイクを使わない）。
- * NEXT_PUBLIC_SPEECH_RECOGNIZER=fake でビルド・起動した場合だけ使われる（本番では使われない）。
- * 文字起こしは window.__gabbyFakeSpeech.transcript（テストから addInitScript 等で設定）、
+ * 使われる条件は recognizer/index.ts の getSpeechRecognizer を参照（本番ビルドでは利用者が切り替えられない）。
+ * テストは addInitScript 等で window.__gabbyFakeSpeech を設定する。文字起こしは transcript、
  * 未設定なら参照文をそのまま返す（＝満点の発話）。
  */
 interface FakeSpeechConfig {
@@ -12,9 +12,18 @@ interface FakeSpeechConfig {
   delayMs?: number;
 }
 
+function readRawConfig(): FakeSpeechConfig | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return (window as unknown as { __gabbyFakeSpeech?: FakeSpeechConfig }).__gabbyFakeSpeech;
+}
+
 function readConfig(): FakeSpeechConfig {
-  if (typeof window === 'undefined') return {};
-  return (window as unknown as { __gabbyFakeSpeech?: FakeSpeechConfig }).__gabbyFakeSpeech ?? {};
+  return readRawConfig() ?? {};
+}
+
+/** テストが fake の認識を要求しているか（window.__gabbyFakeSpeech が設定されているか） */
+export function isFakeSpeechRequested(): boolean {
+  return readRawConfig() !== undefined;
 }
 
 export const fakeSpeechRecognizer: SpeechRecognizerEngine = {

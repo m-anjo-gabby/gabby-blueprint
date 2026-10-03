@@ -47,7 +47,7 @@ export interface RunTurnOptions<K extends string> extends PlayPromptsOptions<K> 
  * - 発話の終わらせ方は2つ: finishListening()（その時点の評価で確定）と、中断（結果なし）。
  * - 発話の順番は「チャイムが鳴り終わってから認識を開始」で統一する（旧スピーキングテスト S172 と同じ）。
  */
-export function useSpeakingPlayer(engineOptions: Omit<AudioEngineOptions, 'stopListening'>) {
+export function useSpeakingPlayer(engineOptions: AudioEngineOptions) {
   const engine = useAudioEngine(engineOptions);
   const { play: enginePlay, stop: engineStop, playChime, setLiveRate } = engine;
 
