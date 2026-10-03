@@ -1,11 +1,11 @@
 // apps\student\app\(app)\training\sprint\result\[id]\_components\SprintResult.tsx
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { SPRINT_FLOW_TIMING } from '@gabby/types/sprint';
-import { ChevronLeft, FastForward, Home } from 'lucide-react';
+import { ChevronLeft, Home } from 'lucide-react';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
@@ -13,9 +13,8 @@ import { ImmersivePanel } from '@/components/shell/PageFrames';
 import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
 import { SprintResultQuestionList } from '@/components/training/sprint-result/SprintResultQuestionList';
 import {
-  SprintPlayAllButton,
+  SprintResultActions,
   SprintResultSummary,
-  SprintRetryLink,
   getSprintSelectHref,
 } from '@/components/training/sprint-result/SprintResultSummary';
 import type { SprintResultData } from '@/components/training/sprint-result/types';
@@ -32,13 +31,11 @@ const NAV_BUTTON_CLASS =
  * （選択画面の「戻る」で結果画面に戻ってループしないようにする）。
  * 履歴から振り返る場合はシェル側の結果画面（/training/sprint/history/[id]）を使う。
  * 実施の終了から移動してきた場合（`?autoplay=1`）は、「全て再生」を自動で始める。
+ * 操作ボタンは履歴側と同じ部品（SprintResultActions）を、ナビの無い没入画面なので親指で押しやすい下部に置く。
  */
 export function SprintResult({ scoreData, questions, courseTitle, favoriteQuestionIds }: SprintResultData) {
   const timezone = useTimezone();
-  // フッターの主役ボタン。まず「全て再生」から始まり、再生完了/停止で「リトライ」に切り替わる
-  const [footerShowsRetry, setFooterShowsRetry] = useState(false);
-  const showRetry = useCallback(() => setFooterShowsRetry(true), []);
-  const playback = useSprintResultPlayback(scoreData, questions, { onPlayAllSettled: showRetry });
+  const playback = useSprintResultPlayback(scoreData, questions);
   const selectHref = getSprintSelectHref(scoreData);
 
   // 実施の終了から移動してきた場合は「全て再生」を自動で始める（同じページ内の移動のため音声はアンロック済み）。
@@ -87,25 +84,9 @@ export function SprintResult({ scoreData, questions, courseTitle, favoriteQuesti
         />
       </div>
 
-      {/* フッター：状況に応じて役割が切り替わる単一ボタン */}
+      {/* フッター：履歴側と同じ操作ボタン（全て再生／停止・リトライ） */}
       <div className="shrink-0 border-t border-line bg-surface p-5 sm:p-6">
-        {footerShowsRetry ? (
-          <SprintRetryLink scoreData={scoreData} />
-        ) : (
-          // まず全て再生から。発話評価の「スキップする」と同じ視覚パターンで、再生せずすぐリトライする逃げ道を用意する
-          <div className="flex flex-col items-center gap-2">
-            <SprintPlayAllButton playback={playback} primary />
-            <Link
-              href={selectHref}
-              replace
-              className="flex items-center justify-center gap-1.5 rounded-control px-6 py-1.5 text-ink-subtle transition-all hover:text-brand active:scale-[0.98]"
-              title="再生せずにすぐリトライする"
-            >
-              <FastForward size={12} strokeWidth={2.5} />
-              <span className="text-xs font-bold">スプリントをリトライ</span>
-            </Link>
-          </div>
-        )}
+        <SprintResultActions scoreData={scoreData} playback={playback} />
       </div>
 
       <AudioResumeBanner status={playback.resumeStatus} onResume={() => { playback.unlockAudioContext(); }} />

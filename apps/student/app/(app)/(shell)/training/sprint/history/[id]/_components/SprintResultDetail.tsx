@@ -6,11 +6,7 @@ import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
 import { SprintResultQuestionList } from '@/components/training/sprint-result/SprintResultQuestionList';
-import {
-  SprintPlayAllButton,
-  SprintResultSummary,
-  SprintRetryLink,
-} from '@/components/training/sprint-result/SprintResultSummary';
+import { SprintResultActions, SprintResultSummary } from '@/components/training/sprint-result/SprintResultSummary';
 import type { SprintResultData } from '@/components/training/sprint-result/types';
 
 /**
@@ -33,10 +29,7 @@ export function SprintResultDetail({ scoreData, questions, courseTitle, favorite
         description={formatZonedDate(scoreData.created_at, timezone)}
         back={`/training/sprint/history?${historyParams.toString()}`}
       >
-        <div className="grid grid-cols-2 gap-3">
-          <SprintPlayAllButton playback={playback} />
-          <SprintRetryLink scoreData={scoreData} label="リトライ" />
-        </div>
+        <SprintResultActions scoreData={scoreData} playback={playback} />
       </ShellPageHeader>
 
       <SprintResultSummary scoreData={scoreData} courseTitle={courseTitle} className="mb-4" />

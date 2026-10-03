@@ -30,19 +30,13 @@ function getAnswerAudio(q: SprintQuestion, scoreData: SprintResultScore) {
   return { id: isNo ? sprintAudioId.no(q.question_id) : sprintAudioId.yes(q.question_id), voice };
 }
 
-interface Options {
-  /** 「全て再生」が完了または停止されたとき */
-  onPlayAllSettled?: () => void;
-}
-
 /**
  * スプリント結果画面の音声再生（個別・問題ごと・全て再生）。
  * 実施直後の没入画面と、履歴から開くシェル画面で共通に使う。
  */
 export function useSprintResultPlayback(
   scoreData: SprintResultScore,
-  questions: SprintQuestion[],
-  { onPlayAllSettled }: Options = {}
+  questions: SprintQuestion[]
 ) {
   const { play, stop, isPlaying: playingAudioId, unlockAudioContext, resumeStatus } = usePlayAudioSpeech();
 
@@ -50,12 +44,6 @@ export function useSprintResultPlayback(
   const [playbackMode, setPlaybackMode] = useState<SprintPlaybackMode>(null);
   const playbackTokenRef = useRef(0);
   const isMountedRef = useRef(true);
-  const onPlayAllSettledRef = useRef(onPlayAllSettled);
-
-  useEffect(() => {
-    onPlayAllSettledRef.current = onPlayAllSettled;
-  }, [onPlayAllSettled]);
-
   const stopAllAudio = useCallback(() => {
     stop();
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -157,7 +145,6 @@ export function useSprintResultPlayback(
       setPlaybackMode(null);
       stopAllAudio();
       setFocusedQuestionId(null);
-      onPlayAllSettledRef.current?.();
       return;
     }
 
@@ -177,7 +164,6 @@ export function useSprintResultPlayback(
       if (isMountedRef.current && playbackTokenRef.current === token) {
         setPlaybackMode(null);
         setFocusedQuestionId(null);
-        onPlayAllSettledRef.current?.();
       }
     }
   }, [playbackMode, questions, stopAllAudio, playQuestionSequence]);
