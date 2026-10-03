@@ -53,6 +53,13 @@
 -- 同様、欠番として扱いfn_schedule_shortfall()のshortfallに反映させる。end_dateを超えた
 -- 延長はしない、という既存方針を踏襲）。アドミン代理マッチング(admin_match_student_with_coach)
 -- はこのルールの対象外のため、NULL（デフォルト、下限なし）のまま呼び出す。
+--
+-- 【ライセンス期間の境目 (2026-10-03)】
+-- start_date/end_date はライセンスの開始・終了日時を日付にした値（DBはUTCのため、JSTの0:00開始は
+-- UTCでは前日）で、各回の日付はコーチの現地日付として扱う。このため境目で「契約開始の直前の回」
+-- 「契約終了の直後の回」が作られ得た（例: NYのコーチの火曜9:00は、水曜0:00 JST開始の契約の前）。
+-- 各回の開始・終了日時をライセンスの開始・終了日時と直接比べ、開始前の回はスキップ（カウントしない）、
+-- 終了を過ぎる回に達したら打ち切る。全ての呼び出し元（承認・アドミン代理・目標数の調整）に効く。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.fn_generate_sessions_for_schedule(uuid);
 
@@ -72,6 +79,8 @@ DECLARE
     v_start_ts timestamptz;
     v_end_ts timestamptz;
     v_generated_count integer := 0;
+    v_license_start timestamptz;
+    v_license_end timestamptz;
 BEGIN
     SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
     IF NOT FOUND THEN
@@ -81,6 +90,12 @@ BEGIN
     -- com_m_user.timezoneはライブ参照しない（上記【タイムゾーン変換】コメント参照）
     v_coach_tz := v_schedule.coach_timezone;
 
+    -- 予約できる範囲（ライセンスの開始・終了日時。上記【ライセンス期間の境目】参照）
+    SELECT l.start_date, l.end_date INTO v_license_start, v_license_end
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE t.ticket_id = v_schedule.ticket_id;
+
     -- start_date以降で最初にday_of_weekと一致する日付を求める
     v_cursor_date := v_schedule.start_date
         + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
@@ -88,6 +103,17 @@ BEGIN
     WHILE v_cursor_date <= v_schedule.end_date AND v_generated_count < v_schedule.target_sessions LOOP
         v_start_ts := (v_cursor_date + v_schedule.start_time) AT TIME ZONE v_coach_tz;
         v_end_ts := (v_cursor_date + v_schedule.end_time) AT TIME ZONE v_coach_tz;
+
+        -- ライセンスの終了を過ぎる回に達したら打ち切る（以降の回も全て終了後）
+        IF v_end_ts > v_license_end THEN
+            EXIT;
+        END IF;
+
+        -- ライセンスの開始前の回はスキップする（カウントしない）
+        IF v_start_ts < v_license_start THEN
+            v_cursor_date := v_cursor_date + 7;
+            CONTINUE;
+        END IF;
 
         -- 24時間ルールの下限を下回る回は欠番としてスキップする（上記コメント参照）
         IF p_min_start_datetime IS NOT NULL AND v_start_ts < p_min_start_datetime THEN

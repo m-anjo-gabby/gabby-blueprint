@@ -15,6 +15,7 @@ import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { issueInitialLicense, resolvePerformedBy } from '@gabby/lib/license/issue';
 import { sendInvitationEmail } from "@gabby/lib/mail/actions/sendInvitation"; // 独自メール配信用ユーティリティ（生徒向け）
 import { sendAdminInvitationEmail } from "@gabby/lib/mail/actions/sendAdminInvitation"; // 管理者向け招待メール
 import { sendCoachInvitationEmail } from "@gabby/lib/mail/actions/sendCoachInvitation"; // コーチ向け招待メール（英文）
@@ -328,27 +329,16 @@ export async function createUserDirect(
     }
 
     // 初期ライセンスの割当（生徒など、契約が指定された場合のみ）
+    // 契約管理からの割当と同じく、履歴・ライブのチケットも作る（@gabby/lib/license/issue）
     if (contract_id && contract_id !== 'none') {
-      const { data: contract } = await supabase
-        .from('com_m_contract')
-        .select('start_date, end_date')
-        .eq('contract_id', contract_id)
-        .single();
-
-      if (contract) {
-        const { error: licenseError } = await supabase
-          .from('com_t_user_license')
-          .insert({
-            user_id: userId,
-            contract_id,
-            start_date: contract.start_date,
-            end_date: contract.end_date,
-            status: 1
-          });
-        if (licenseError) {
-          partialFailures.push('license_insert');
-          logger.error('user:create_user_direct_license_insert_failed', licenseError.message, { ...ctx, payload: { userId, contract_id } });
-        }
+      const licenseResult = await issueInitialLicense(supabase, {
+        contractId: contract_id,
+        userId,
+        performedBy: resolvePerformedBy(ctx.userId),
+      }, ctx);
+      if (!licenseResult.success) {
+        partialFailures.push('license_insert');
+        logger.error('user:create_user_direct_license_insert_failed', licenseResult.message, { ...ctx, payload: { userId, contract_id } });
       }
     }
 

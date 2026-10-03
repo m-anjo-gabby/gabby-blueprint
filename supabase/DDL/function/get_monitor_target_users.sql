@@ -12,7 +12,7 @@
 --   2. デモユーザーではない（com_t_user_role.role_id = 'demo_user' を持たない）
 --   3. _include_monitor = FALSE の場合、モニターロール（role_id = 'monitor'）を持たない
 --   4. status = 1（有効）のライセンスを持ち、そのライセンス期間が対象期間
---      [_start_date, _end_date] と重なっている
+--      [_start_date, _end_date]（集計期間のタイムゾーン public.reporting_timezone() ＝日本時間の日付）と重なっている
 --      （停止・満了ステータスのライセンスは、日付が重なっていても対象外）
 --
 -- 1受講生が対象期間と重なる有効ライセンスを複数持つ場合（通常運用では想定していないが、
@@ -51,8 +51,9 @@ AS $$
     INNER JOIN public.com_t_user_license l
       ON l.user_id = u.id
      AND l.status = 1 -- 💡 有効なライセンスのみを対象とする（停止・満了は日付が重なっていても除外）
-     AND l.start_date < (_end_date + 1)::timestamptz -- 対象期間の終了日いっぱいまでを含める
-     AND l.end_date >= _start_date::timestamptz
+     -- 対象期間の日付は集計期間のタイムゾーン（日本時間）の暦日。終了日いっぱいまでを含める
+     AND l.start_date < ((_end_date + 1)::timestamp AT TIME ZONE public.reporting_timezone())
+     AND l.end_date >= (_start_date::timestamp AT TIME ZONE public.reporting_timezone())
     LEFT JOIN public.com_m_contract con ON con.contract_id = l.contract_id
     WHERE u.client_id = _client_id
       AND u.user_type ~ '1'
@@ -73,7 +74,8 @@ AS $$
     ORDER BY
       u.id,
       -- 対象期間内での重なりが最大のライセンスを代表として採用
-      LEAST(l.end_date, (_end_date + 1)::timestamptz) - GREATEST(l.start_date, _start_date::timestamptz) DESC,
+      LEAST(l.end_date, (_end_date + 1)::timestamp AT TIME ZONE public.reporting_timezone())
+        - GREATEST(l.start_date, _start_date::timestamp AT TIME ZONE public.reporting_timezone()) DESC,
       l.end_date DESC;
 $$;
 

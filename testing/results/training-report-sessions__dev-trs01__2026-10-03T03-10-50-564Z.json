@@ -1,0 +1,44 @@
+{
+  "scenario": "training-report-sessions",
+  "env": "dev",
+  "tag": "trs01",
+  "executedAt": "2026-10-03T03:10:50.564Z",
+  "gitCommit": "b236d959",
+  "gitBranch": "feature/20261001-dev",
+  "totalChecks": 6,
+  "passed": 6,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "生徒J: 学習日数にセッションだけの日（9/1・9/20）を含める",
+      "ok": true,
+      "detail": "active_days=3"
+    },
+    {
+      "name": "生徒J: スプリント問題数＝ドリルの問題数＋期間内のセッションの回答数（10+7+4+2）",
+      "ok": true,
+      "detail": "sprint_questions=23"
+    },
+    {
+      "name": "生徒J: 発話評価にセッションの発話を含める（1+2+3）",
+      "ok": true,
+      "detail": "assessments=6"
+    },
+    {
+      "name": "生徒J: 単語帳の数は変わらない",
+      "ok": true,
+      "detail": "words=5 phrases=8"
+    },
+    {
+      "name": "生徒J: 月別は9月だけ（期間外の10/1 JST の回は入らない）",
+      "ok": true,
+      "detail": "[{\"month\":\"2026-09\",\"words\":5,\"phrases\":8,\"active_days\":3,\"sprint_questions\":23}]"
+    },
+    {
+      "name": "生徒N: 生徒のタイムゾーンで9/30の回（UTCでは10/1）は期間内",
+      "ok": true,
+      "detail": "{\"words\":0,\"phrases\":0,\"active_days\":1,\"assessments\":0,\"sprint_questions\":6}"
+    }
+  ]
+}

@@ -1,13 +1,29 @@
 import { UserX } from 'lucide-react';
 import { getMyLiveSessionTickets, getMySlotStatus, getCoachBrowseList, getCountryList } from '@/actions/matchingAction';
+import { getMyLiveSessionContractsCached, pickLiveSessionContract } from '@/lib/liveSessionContracts';
 import { CoachMatchingView } from './_components/CoachMatchingView';
 import { CoachMatchingPageHeader } from './_components/CoachMatchingSkeleton';
 
-export default async function CoachMatchingPage() {
-  const tickets = await getMyLiveSessionTickets();
+export default async function CoachMatchingPage({ searchParams }: { searchParams: Promise<{ contract?: string }> }) {
+  const { contract: requestedTicketId } = await searchParams;
 
-  // ライブセッション付き契約は生徒1人につき同時に1件が前提のため、先頭の1件のみを対象とする
-  const ticket = tickets[0];
+  // マッチングは契約（チケット）ごと。申請できるのは有効な契約（終了日前。開始前の次の契約を含む）で、
+  // 現在の契約と次の契約を両方持つ場合は切り替えて申請する（既定は現在の契約）
+  // 枠の状況は選んだ契約に依存するため、契約の取得直後に開始し、コーチ一覧等の取得と並行させる
+  const selectionPromise = Promise.all([getMyLiveSessionContractsCached(), getMyLiveSessionTickets()]).then(([contracts, tickets]) => {
+    const activeContracts = contracts.filter((c) => c.is_active);
+    const selected = pickLiveSessionContract(activeContracts, requestedTicketId);
+    const ticket = selected ? tickets.find((t) => t.ticket_id === selected.ticket_id) : undefined;
+    return { activeContracts, ticket };
+  });
+  const slotsPromise = selectionPromise.then(({ ticket }) => (ticket ? getMySlotStatus(ticket.ticket_id) : []));
+
+  const [{ activeContracts, ticket }, slots, coaches, countries] = await Promise.all([
+    selectionPromise,
+    slotsPromise,
+    getCoachBrowseList(),
+    getCountryList(),
+  ]);
 
   if (!ticket) {
     return (
@@ -24,11 +40,15 @@ export default async function CoachMatchingPage() {
     );
   }
 
-  const [slots, coaches, countries] = await Promise.all([
-    getMySlotStatus(ticket.ticket_id),
-    getCoachBrowseList(),
-    getCountryList(),
-  ]);
-
-  return <CoachMatchingView ticket={ticket} initialSlots={slots} coaches={coaches} countries={countries} />;
+  return (
+    <CoachMatchingView
+      // 契約を切り替えたら枠の状態・絞り込みを引き継がない
+      key={ticket.ticket_id}
+      ticket={ticket}
+      contracts={activeContracts}
+      initialSlots={slots}
+      coaches={coaches}
+      countries={countries}
+    />
+  );
 }

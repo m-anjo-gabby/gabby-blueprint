@@ -313,7 +313,12 @@
       "forceDown": "ステージを引き下げる",
       "noChange": "変更なし",
       "toastLevelChanged": "{label} を {level} に変更しました",
-      "toastStageChanged": "ステージを Stage {stage} に変更しました"
+      "toastStageChanged": "ステージを Stage {stage} に変更しました",
+      "levelManagedLabel": "レベル管理する",
+      "levelManagedOn": "生徒は到達レベルの次のレベルまで選択できます。",
+      "levelManagedOff": "生徒はすべてのレベルを選択できます（コーチが付かない契約向け）。",
+      "toastLevelManagedOn": "レベル管理をオンにしました",
+      "toastLevelManagedOff": "レベル管理をオフにしました"
     },
     "bulkImport": {
       "button": "一括登録",
@@ -1886,6 +1891,19 @@
           "deleteDialogHint": "この操作は取り消せません。",
           "cancelButton": "キャンセル",
           "deleteConfirmButton": "削除する"
+        },
+        "levelMoveDialog": {
+          "triggerTitle": "レベルを変更",
+          "title": "レベルを変更",
+          "descriptionSingle": "この問題を別のレベルへ移動します。",
+          "descriptionGroup": "このグループの問題 {count} 件をまとめて別のレベルへ移動します。",
+          "currentLabel": "現在: {level}",
+          "selectPlaceholder": "移動先",
+          "bulkImportNote": "移動先のレベルで一括登録（洗い替え）を行うと、移動した問題も削除されます。",
+          "cancelButton": "キャンセル",
+          "submitButton": "移動する",
+          "toastMoved": "{level} へ移動しました",
+          "toastError": "移動に失敗しました"
         },
         "questionFormDialog": {
           "cueLabel": "指示 / Cue",

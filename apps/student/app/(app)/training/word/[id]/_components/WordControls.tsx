@@ -97,6 +97,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
         {/* ブックマーク・保存ボタン */}
         <button
           onClick={onSaveResume}
+          aria-label="ブックマークして終了"
           disabled={isAutoPlaying || isPlaying}
           className={cn(sideBtnBase, "hover:bg-brand-50 hover:text-brand text-slate-400")}
         >
@@ -108,6 +109,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
           {/* 戻るボタン */}
           <button 
             onClick={onPrev} 
+            aria-label="前へ"
             disabled={isInteractionDisabled || isFirstStep} 
             className={cn(splitLeftBase, "text-slate-400 hover:bg-slate-50 border-brand-50")}
           >
@@ -135,6 +137,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
         {/* 自動再生トグル */}
         <button
           onClick={onToggleAutoPlay}
+          aria-label="自動再生"
           disabled={isManualPlaying}
           className={cn(
             sideBtnBase,

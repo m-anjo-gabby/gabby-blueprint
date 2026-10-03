@@ -51,6 +51,8 @@
   ロール（ユーザー種別に応じて選べるロールが変わる。共通ロールは種別を問わず選択可）、
   新規登録・生徒の場合は初期ライセンス（有効な契約から選択。生徒には必須）、即時作成の場合は
   パスワード・パスワード確認
+- 初期ライセンスは契約期間いっぱいで発行する。招待の場合は生徒が本登録した時点、即時作成の場合はその場で発行する（CSV一括登録も同じ）。
+  ライブセッション付き契約ならチケットも発行し、割当履歴・ダイアログプラクティス提供有無の扱いもライセンス管理ダイアログ・契約管理からの割当と同じ
 - ユーザー種別を変更すると、その種別で選択不可になったロールは自動的に選択解除される
 - 招待中（未登録）のユーザーを編集する場合、氏名・メールアドレス・所属顧客・種別・ロールは変更
   できず、代わりに「招待メールを再送する」ボタンのみ表示される
@@ -76,6 +78,9 @@
 
 ## ステージ・レベル管理ダイアログ（生徒のみ）
 
+- 上部の「レベル管理する」スイッチ（`student_m_sprint_progress.level_managed`。初期値は生徒の作成・本登録時の初期ライセンスの契約で決まり、ライブセッション付き契約はオン、アプリのみ契約はオフ。契約の種類が後から変わった場合はここで切り替える）: オンの生徒は
+  自主トレのスプリントで到達レベルの次のレベルまで選択でき、オフの生徒は全レベルを選択できる
+  （コーチが付かない契約向け）。切り替えても到達レベル・ステージは変わらず、履歴にも記録されない
 - 「問題種別ごと」タブ: トレーニングの問題種別（複数）ごとに現在のレベルを表示し、選択式で
   個別に変更・保存できる（コーチの誤操作補正等を想定）
 - 「ステージ」タブ: 現在のステージを表示し、目標ステージを選択する
@@ -133,8 +138,9 @@
   `getLicenseTimeline`, `assignLicenseToUser`, `updateUserLicense`, `invalidateUserLicense`,
   `bulkAssignLicenses`）
 - `apps/admin/actions/adminStudentProgressAction.ts`（`getStudentSprintProgress`,
-  `updateStudentSprintLevel`, `setStudentSprintStage`）
+  `updateStudentSprintLevel`, `setStudentSprintStage`, `setStudentSprintLevelManaged`）
 - `apps/admin/actions/adminImpersonationAction.ts`（`startImpersonation`。監査ログ:
   `com_t_admin_impersonation_log`）
 - 対象テーブル: `com_m_user`
+- ライセンス発行に付随する記録（割当履歴・ライブのチケット）: `packages/lib/license/issue.ts`（全経路で共通）
 - `apps/admin/actions/adminClientAction.ts`（`getClientsFilter`。顧客フィルタの選択肢取得）

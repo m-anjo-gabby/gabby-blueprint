@@ -6,12 +6,14 @@ import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, C
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, DEFAULT_SPRINT_TIME_KEY, type SprintQuestionType, type SprintAnswerType, type SprintConfig } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, setAudioSessionPlayAndRecord } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, isSprintLevelSelectable, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel, setAudioSessionPlayAndRecord } from '@gabby/lib';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSprintStore } from '@/stores/useSprintStore';
+import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 import { getSprintProgressAction } from '@/actions/sprintAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
@@ -28,9 +30,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const router = useRouter();
   const { showConfirm } = useConfirm();
 
-  const { config, contentMetadata, contentName, setConfig } = useSprintStore();
+  const { showToast } = useToast();
 
-  const [userProgress, setUserProgress] = useState<any>(null);
+  const { config, contentMetadata, contentName, availableLevels, setConfig } = useSprintStore();
+
+  // undefined = 取得中 / null = 進捗行なし・取得失敗（到達レベル0・レベル管理ありとして扱う）
+  const [userProgress, setUserProgress] = useState<StudentSprintProgress | null | undefined>(undefined);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isMicHelpOpen, setIsMicHelpOpen] = useState(false);
   const [isHelpAccordionOpen, setIsHelpAccordionOpen] = useState(false);
@@ -88,7 +93,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   }, [mode, isAssessmentMode, micStatus, isHelpAccordionOpen, updateMainScrollState]);
 
   useEffect(() => {
-    if (!isSettingsOpen || userProgress === null) return;
+    if (!isSettingsOpen || userProgress === undefined) return;
     const viewport = drawerScrollWrapRef.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
     if (!viewport) return;
     updateDrawerScrollState();
@@ -99,9 +104,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   useEffect(() => {
     const fetchProgress = async () => {
       const progRes = await getSprintProgressAction();
-      if (progRes.success) {
-        setUserProgress(progRes.data);
-      }
+      setUserProgress(progRes.success ? (progRes.data as StudentSprintProgress | null) : null);
     };
     fetchProgress();
   }, []);
@@ -110,11 +113,12 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const hasLevel = resolveSprintHasLevel(contentMetadata);
 
   useEffect(() => {
-    if (!isSettingsOpen || userProgress === null) return;
+    if (!isSettingsOpen || userProgress === undefined) return;
     updateDrawerScrollState();
   }, [isSettingsOpen, userProgress, mode, selectedType, hasLevel, updateDrawerScrollState]);
 
   const isTypeSupported = useCallback((typeId: SprintQuestionType) => {
+    if (!hasSprintQuestionsForType(availableLevels, typeId)) return false;
     if (!isCorpus || !contentMetadata?.supported_types) return true;
     const support = contentMetadata.supported_types;
     if (typeId === '0') return support.speed;
@@ -122,14 +126,25 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
     if (typeId === '5') return support.builders;
     if (typeId === '6') return support.mastery;
     return false;
-  }, [isCorpus, contentMetadata]);
+  }, [isCorpus, contentMetadata, availableLevels]);
+
+  const pickLevel = useCallback((typeId: SprintQuestionType, preferred?: number) => pickSprintLevel(typeId, {
+    hasLevel,
+    availableLevels,
+    isSelectable: (lv) => isSprintLevelSelectable(typeId, lv, userProgress),
+    preferred,
+  }), [hasLevel, availableLevels, userProgress]);
 
   const handleTypeChange = (typeId: SprintQuestionType) => {
-    setConfig({
-      questionType: typeId,
-      level: hasLevel ? String(QUESTION_TYPES[typeId]?.minLevel ?? '0') : '1'
-    });
+    setConfig({ questionType: typeId, level: String(pickLevel(typeId)) });
   };
+
+  // 前回の設定・URL指定のレベルが「問題なし」または「未到達」の場合は、選べるレベルに補正する（到達レベルの取得後）
+  useEffect(() => {
+    if (userProgress === undefined) return;
+    const picked = String(pickLevel(selectedType, Number(selectedLevel)));
+    if (picked !== selectedLevel) setConfig({ level: picked });
+  }, [userProgress, pickLevel, selectedType, selectedLevel, setConfig]);
 
   const handleLevelChange = (level: string) => { setConfig({ level }); };
   const handleTimeLimitChange = (time: number) => { setConfig({ timeLimitSec: time }); };
@@ -146,14 +161,14 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const levelItems = useMemo(() => {
     const meta = QUESTION_TYPES[selectedType];
     if (!meta) return [];
-    const clearedLevel = userProgress?.[meta.dbKey] ?? 0;
-    const maxAllowed = clearedLevel + 1;
     const items = [];
     for (let i = meta.minLevel; i <= meta.maxLevel; i++) {
-      items.push({ value: String(i), label: i === 0 ? 'Basic' : `Lv ${i}`, isLocked: i > meta.minLevel && i > maxAllowed });
+      // 問題の無いレベルは出さない（コーパス教材は特定のレベルにしか問題が無いことがある）
+      if (!isSprintLevelAvailable(availableLevels, selectedType, i)) continue;
+      items.push({ value: String(i), label: i === 0 ? 'Basic' : `Lv ${i}`, isLocked: !isSprintLevelSelectable(selectedType, i, userProgress) });
     }
     return items;
-  }, [selectedType, userProgress]);
+  }, [selectedType, userProgress, availableLevels]);
 
   const handleWarmupAndRequestMic = async () => {
     setIsPreparing(true);
@@ -178,6 +193,13 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   };
 
   const handleStartSubmit = async (answerType: SprintAnswerType = '0') => {
+    // 選べない種別・レベルのまま開始しない（すべて未到達の種別等）
+    const isLevelUsable = !hasLevel || userProgress === undefined || levelItems.some((item) => item.value === selectedLevel && !item.isLocked);
+    if (!isTypeSupported(selectedType) || !isLevelUsable) {
+      showToast('選択中の種別・レベルでは開始できません。種別・レベルを変更してください。', 'error');
+      setIsSettingsOpen(true);
+      return;
+    }
     setIsPreparing(true);
     setConfig({ answerType });
 
@@ -635,7 +657,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
 
             <div ref={drawerScrollWrapRef} className="flex-1 relative min-h-0 overflow-hidden border-t border-slate-50 mt-6" data-vaul-no-drag>
               {/* 🚀 改修: ユーザー状況ロード中（null時）のガタつき（レイアウトシフト）を完全に抑制する美しいスケルトンをマッピング */}
-              {userProgress === null ? (
+              {userProgress === undefined ? (
                 <div className="px-8 py-6 space-y-6 animate-pulse">
                   <div className="space-y-2">
                     <div className="h-3 bg-slate-100 rounded w-1/4" />

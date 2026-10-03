@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { RotateCcw, Users, X } from 'lucide-react';
 import { CoachCard, CoachSlotRelation } from './CoachCard';
@@ -12,16 +13,20 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { CoachBrowseItem, SlotStatusItem } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { CountryMaster } from '@gabby/types/country';
-import { LiveSessionTicketSummary } from '@gabby/types/matching';
+import { LiveSessionContractSummary, LiveSessionTicketSummary } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
 import { ShellSectionTitle } from '@/components/shell/ShellPage';
 import { CoachMatchingPageHeader } from './CoachMatchingSkeleton';
 import { Button } from '@/components/ui/button';
+import { LiveContractSelect } from '@/components/session/LiveContractSelect';
+import { cn } from '@/lib/utils';
 
 interface CoachMatchingViewProps {
   ticket: LiveSessionTicketSummary;
+  /** 申請できる契約（有効な契約。現在の契約と次の契約）。2件以上なら切替を出す */
+  contracts: LiveSessionContractSummary[];
   initialSlots: SlotStatusItem[];
   coaches: CoachBrowseItem[];
   countries: CountryMaster[];
@@ -37,8 +42,15 @@ function formatTimeRange(startTime: string, endTime: string): string {
   return `${startTime.slice(0, 5)} - ${endTime.slice(0, 5)}`;
 }
 
-export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: CoachMatchingViewProps) {
+export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, countries }: CoachMatchingViewProps) {
   const studentTimezone = useTimezone();
+  const router = useRouter();
+  const [isSwitching, startSwitch] = useTransition();
+  // 契約の切替はURLの ?contract= で行う（クエリだけの遷移では loading.tsx が出ないため、切替中は中身を薄くする）
+  const contractStartDate = contracts.find((c) => c.ticket_id === ticket.ticket_id)?.start_date ?? new Date().toISOString();
+  const handleContractChange = (ticketId: string) => {
+    startSwitch(() => router.replace(`/coach-matching?contract=${ticketId}`, { scroll: false }));
+  };
   const [slots, setSlots] = useState<SlotStatusItem[]>(initialSlots);
   const [cancellingSlotNo, setCancellingSlotNo] = useState<number | null>(null);
   const [isCancelling, startCancelTransition] = useTransition();
@@ -155,8 +167,14 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
     <>
       <CoachMatchingPageHeader weeklyFrequency={ticket.weekly_frequency} />
 
+      {contracts.length > 1 && (
+        <div className="mb-5">
+          <LiveContractSelect contracts={contracts} selectedTicketId={ticket.ticket_id} onChange={handleContractChange} />
+        </div>
+      )}
+
       {/* 2. コンテンツエリア（スクロール） */}
-      <div className="space-y-6">
+      <div className={cn('space-y-6 transition-opacity', isSwitching && 'pointer-events-none opacity-60')} aria-busy={isSwitching}>
         <section>
           <ShellSectionTitle>セッション枠の状況</ShellSectionTitle>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -299,6 +317,7 @@ export function CoachMatchingView({ ticket, initialSlots, coaches, countries }: 
       <RequestDialog
         coach={requestTarget}
         ticketId={ticket.ticket_id}
+        contractStartDate={contractStartDate}
         unmatchedSlots={unmatchedSlots}
         onClose={() => setRequestTarget(null)}
         onRequested={handleSlotUpdate}

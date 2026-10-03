@@ -43,14 +43,15 @@
 
 ## 3. 固定アカウントの並列実行時の扱い
 
-[`../FIXTURES.md`](../FIXTURES.md)の固定アカウントは複数のテストワーカーから同時に
-使われる可能性があるため、以下を守る。
+アカウントの選び方は [`../FIXTURES.md`](../FIXTURES.md)「アカウントの種類と使い分け」に従う。
+固定アカウントは複数のテストワーカーから同時に使われる可能性があるため、E2E では特に以下を守る。
 
 - 固定アカウントを使うテストは、状態を変更しない操作（閲覧・表示確認）に限定する
-- 状態を変更する操作（予約、キャンセル、承認等）を検証したい場合は、都度シードしたアカウント
-  （`testing/CONVENTIONS.md`の命名規則）を使う
-- 上記に反してどうしても固定アカウントで状態変更操作を検証する必要がある場合は、該当テストを
-  `test.describe.serial`等で直列化し、他のテストと並列実行させない
+- 状態を変更する操作（予約、キャンセル、承認、お気に入り登録等）は、テストごとに作成・削除する使い捨てのアカウント・データで検証する
+  （例: `e2e/support/chatFixtures.ts`、`e2e/support/authFixtures.ts`）
+- 利用者ペルソナ（`qa-p-*`）は表示崩れ・エラーが無いことの確認だけに使い、件数・値を判定しない
+- どうしても固定アカウントで状態変更操作を検証する場合は、`test.describe.serial`等で直列化し、
+  作成・変更した行をテストの最後に元に戻す（例: `e2e/support/popupFixtures.ts`）
 
 ## 4. テストケース優先度の運用上の意味
 
@@ -90,6 +91,8 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   共通の操作・ロケーター: `testing/e2e/support/`（`studentApp.ts` の `test` / `expect` / `mainNav` / `navTab` を使う）。
 - 接続先は dev のみ。student の `dev:ssl`（https://localhost:3000）が起動中なら再利用し、未起動なら Playwright が起動・停止する
   （Next.js 16 は同一アプリの dev サーバーを二重起動できないため。`KJ-2026-0926-02`）。
+  admin の `dev:ssl`（https://localhost:3001）も同じ扱いで、アドミンの画面操作を含むジャーニー（`tests/journeys/`）だけが使う。
+  admin は別のブラウザコンテキストで開き、`support/adminApp.ts` の `openAdminContext`（`qa-admin` でログイン・表示言語を日本語に固定）を使う。
 - ログインはペルソナごとに `auth.setup.ts` で1回だけ行い、ログイン状態を `testing/e2e/.auth/`（git管理外）に保存して各テストで使い回す。
   ペルソナは `testing/e2e/support/personas.ts` に定義する（`FIXTURES.md` の固定アカウント）。
 - 固定アカウントは「最新規約に同意済み」を前提とし、未同意ならログイン準備で画面操作により同意する。

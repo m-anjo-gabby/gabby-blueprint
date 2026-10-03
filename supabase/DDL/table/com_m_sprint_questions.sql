@@ -107,6 +107,13 @@ CREATE INDEX idx_sprint_questions_corpus_lookup
 ON public.com_m_sprint_questions (content_id, seq_no)
 WHERE delete_flg = '0' AND sprint_type = 1;
 
+-- 教材ごとの問題取得（content_id＋種別＋レベル）と、問題が存在する種別×レベルの集計
+-- （function/get_sprint_available_levels.sql）用 (2026-10-02 追加)
+-- ※ コーパス教材の問題にも sprint_type='0' が入っているため、上の corpus_lookup は実際には使われない
+CREATE INDEX IF NOT EXISTS idx_sprint_questions_content_level
+ON public.com_m_sprint_questions (content_id, question_type, difficulty_level)
+WHERE delete_flg = '0';
+
 ---------------------------------------------
 -- 行レベルセキュリティ (RLS)
 ---------------------------------------------

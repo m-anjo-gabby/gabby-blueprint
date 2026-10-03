@@ -6,114 +6,14 @@ import { formatToJstDate, getUtcRangeFromJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import {
+  ISSUED_LICENSE_COLUMNS,
+  recordIssuedLicenses,
+  recordLicenseHistory,
+  resolvePerformedBy,
+} from '@gabby/lib/license/issue';
 
 const logger = createLogger('admin');
-
-// x-user-id ヘッダーが取得できない特殊な文脈（'system'）ではUUID型カラムへの挿入に失敗するため、
-// 有効なUUID形式の場合のみ history テーブルの performed_by に設定する
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function resolvePerformedBy(userId?: string): string | null {
-  return userId && UUID_PATTERN.test(userId) ? userId : null;
-}
-
-interface LicenseHistoryEntry {
-  license_id: string;
-  contract_id: string;
-  user_id: string;
-  action: 'assigned' | 'updated' | 'removed';
-  status: number;
-  start_date: string;
-  end_date: string;
-  has_dialogue_practice: boolean;
-  note?: string | null;
-  performed_by: string | null;
-}
-
-/**
- * ライセンスの割当/更新/解除の履歴を記録する（追記専用・失敗しても主処理は継続させる）
- */
-async function recordLicenseHistory(
-  supabase: ReturnType<typeof createAdminClient>,
-  entry: LicenseHistoryEntry,
-  ctx: Awaited<ReturnType<typeof getLogContext>>
-) {
-  const { error } = await supabase.from('com_t_user_license_history').insert(entry);
-  if (error) {
-    // 履歴記録の失敗で本処理（割当/更新/解除）自体を失敗させない。ログにのみ残す。
-    logger.error('contract:license_history_record_failed', error.message, { ...ctx, payload: entry });
-  }
-}
-
-interface TicketHistoryEntry {
-  ticket_id: string;
-  contract_id: string;
-  user_id: string;
-  action: 'granted' | 'consumed' | 'restored' | 'removed';
-  sessions_delta: number;
-  used_sessions_after: number;
-  total_sessions: number;
-  note?: string | null;
-  performed_by: string | null;
-}
-
-/**
- * ライブセッションチケットの発行/消化/復元/解除の履歴を記録する（追記専用・失敗しても主処理は継続させる）
- */
-async function recordTicketHistory(
-  supabase: ReturnType<typeof createAdminClient>,
-  entry: TicketHistoryEntry,
-  ctx: Awaited<ReturnType<typeof getLogContext>>
-) {
-  const { error } = await supabase.from('com_t_user_session_ticket_history').insert(entry);
-  if (error) {
-    logger.error('contract:ticket_history_record_failed', error.message, { ...ctx, payload: entry });
-  }
-}
-
-/**
- * ライブセッションチケットを1件発行する（ライセンス割当に付随して呼び出す）。
- * チケット発行自体の失敗はライセンス割当を失敗させない（ログにのみ残す）。
- */
-async function grantSessionTicket(
-  supabase: ReturnType<typeof createAdminClient>,
-  params: {
-    license_id: string;
-    contract_id: string;
-    user_id: string;
-    weekly_frequency: number;
-    total_sessions: number;
-    performed_by: string | null;
-  },
-  ctx: Awaited<ReturnType<typeof getLogContext>>
-) {
-  const { data: ticket, error } = await supabase
-    .from('com_t_user_session_ticket')
-    .insert({
-      license_id: params.license_id,
-      contract_id: params.contract_id,
-      user_id: params.user_id,
-      weekly_frequency: params.weekly_frequency,
-      total_sessions: params.total_sessions,
-    })
-    .select('ticket_id, used_sessions, total_sessions')
-    .single();
-
-  if (error || !ticket) {
-    logger.error('contract:grant_session_ticket_failed', error?.message || 'Ticket insert failed', { ...ctx, payload: params });
-    return;
-  }
-
-  await recordTicketHistory(supabase, {
-    ticket_id: ticket.ticket_id,
-    contract_id: params.contract_id,
-    user_id: params.user_id,
-    action: 'granted',
-    sessions_delta: ticket.total_sessions,
-    used_sessions_after: ticket.used_sessions,
-    total_sessions: ticket.total_sessions,
-    performed_by: params.performed_by,
-  }, ctx);
-}
 
 /**
  * ライセンス期間が契約期間内に収まっているかを検証する
@@ -804,7 +704,7 @@ export async function assignLicenseToUser(
         end_date: endUtc,
         has_dialogue_practice: contract.has_dialogue_practice,
       })
-      .select('license_id, status, start_date, end_date, note')
+      .select(ISSUED_LICENSE_COLUMNS)
       .single();
 
     if (error) {
@@ -816,30 +716,12 @@ export async function assignLicenseToUser(
       return { success: false, message: error.message };
     }
 
-    await recordLicenseHistory(supabase, {
-      license_id: inserted.license_id,
-      contract_id: contractId,
-      user_id: userId,
-      action: 'assigned',
-      status: inserted.status,
-      start_date: inserted.start_date,
-      end_date: inserted.end_date,
-      has_dialogue_practice: contract.has_dialogue_practice,
-      note: inserted.note,
-      performed_by: resolvePerformedBy(ctx.userId),
+    await recordIssuedLicenses(supabase, {
+      contractId,
+      contract,
+      rows: [inserted],
+      performedBy: resolvePerformedBy(ctx.userId),
     }, ctx);
-
-    // ライブセッション付き契約の場合、ライセンスに1:1で紐づくチケットを発行する
-    if (contract.contract_type === 2 && contract.weekly_frequency && contract.total_sessions) {
-      await grantSessionTicket(supabase, {
-        license_id: inserted.license_id,
-        contract_id: contractId,
-        user_id: userId,
-        weekly_frequency: contract.weekly_frequency,
-        total_sessions: contract.total_sessions,
-        performed_by: resolvePerformedBy(ctx.userId),
-      }, ctx);
-    }
 
     logger.info('contract:assign_license_success', `License assigned to user`, {
       ...ctx,
@@ -1080,7 +962,7 @@ export async function bulkAssignLicenses(
     const { data, error } = await supabase
       .from('com_t_user_license')
       .insert(insertData)
-      .select('license_id, user_id, status, start_date, end_date, note');
+      .select(ISSUED_LICENSE_COLUMNS);
 
     if (error) {
       // 排他制約(DB側の最終防衛線)違反。同時操作によるレースで期間が重なった場合のみ発生し得る
@@ -1092,31 +974,12 @@ export async function bulkAssignLicenses(
       return { success: false, message: error.message, errorCount: userIds.length };
     }
 
-    const performedBy = resolvePerformedBy(ctx.userId);
-    await Promise.all((data || []).map(row => recordLicenseHistory(supabase, {
-      license_id: row.license_id,
-      contract_id: contractId,
-      user_id: row.user_id,
-      action: 'assigned',
-      status: row.status,
-      start_date: row.start_date,
-      end_date: row.end_date,
-      has_dialogue_practice: contract.has_dialogue_practice,
-      note: row.note,
-      performed_by: performedBy,
-    }, ctx)));
-
-    // ライブセッション付き契約の場合、割当済みの各ライセンスにチケットを発行する
-    if (contract.contract_type === 2 && contract.weekly_frequency && contract.total_sessions) {
-      await Promise.all((data || []).map(row => grantSessionTicket(supabase, {
-        license_id: row.license_id,
-        contract_id: contractId,
-        user_id: row.user_id,
-        weekly_frequency: contract.weekly_frequency,
-        total_sessions: contract.total_sessions,
-        performed_by: performedBy,
-      }, ctx)));
-    }
+    await recordIssuedLicenses(supabase, {
+      contractId,
+      contract,
+      rows: data || [],
+      performedBy: resolvePerformedBy(ctx.userId),
+    }, ctx);
 
     logger.info('contract:bulk_assign_licenses_success', `Bulk licenses assigned`, {
       ...ctx,

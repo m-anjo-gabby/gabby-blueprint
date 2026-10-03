@@ -3,6 +3,7 @@ import {
   DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
+  createDisposableContract,
   createInvitation,
   trackUserByEmail,
   type AuthFixture,
@@ -51,6 +52,35 @@ test("招待リンクからパスワードを設定して本登録できる（�
   await page.goto(`/auth/invite?token=${token}`);
   await expect(page.getByRole("heading", { name: "招待リンクを確認できませんでした" })).toBeVisible();
   await expect(page.getByText("この招待リンクは無効か、すでに本登録が完了しています。")).toBeVisible();
+});
+
+test("ライブ付き契約の招待から本登録すると、契約管理からの割当と同じくチケット・履歴付きのライセンスが付く", async ({ page }) => {
+  // ダイアログプラクティス提供ありのライブプラン（ジャーニー: e2e/journeys/new-customer-onboarding.md 手順5）
+  const { contractId } = await createDisposableContract(fixture!, { planCode: "LIVE_WEEKLY2_3M", label: "live" });
+  const email = `${fixture!.tag}-live@${DISPOSABLE_EMAIL_DOMAIN}`;
+  const token = await createInvitation(fixture!, { email, userName: `E2Eライブ（${fixture!.tag}）`, expiresAt: new Date(Date.now() + 3 * DAY_MS), contractId });
+
+  await page.goto(`/auth/invite?token=${token}`);
+  await page.getByLabel("新しいパスワード", { exact: true }).fill(PASSWORD);
+  await page.getByLabel("新しいパスワード（確認用）").fill(PASSWORD);
+  await page.getByRole("button", { name: "本登録を完了する" }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+
+  const userId = await trackUserByEmail(fixture!, email);
+  expect(userId).not.toBeNull();
+  const { admin } = fixture!;
+  const { data: license } = await admin
+    .from("com_t_user_license").select("license_id, has_dialogue_practice").eq("user_id", userId!).eq("contract_id", contractId).single();
+  expect(license?.has_dialogue_practice).toBe(true);
+  const { data: tickets } = await admin
+    .from("com_t_user_session_ticket").select("weekly_frequency, total_sessions, used_sessions").eq("license_id", license!.license_id);
+  expect(tickets).toEqual([{ weekly_frequency: 2, total_sessions: 24, used_sessions: 0 }]);
+  const { count: licenseHistory } = await admin
+    .from("com_t_user_license_history").select("license_id", { count: "exact", head: true }).eq("license_id", license!.license_id).eq("action", "assigned");
+  expect(licenseHistory).toBe(1);
+  const { count: ticketHistory } = await admin
+    .from("com_t_user_session_ticket_history").select("ticket_id", { count: "exact", head: true }).eq("user_id", userId!).eq("action", "granted");
+  expect(ticketHistory).toBe(1);
 });
 
 test("有効期限を過ぎた招待リンクは期限切れと表示される", async ({ page }) => {

@@ -6,6 +6,7 @@ import { SprintSelect } from "./_components/SprintSelect";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
 import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
+import { useToast } from "@gabby/lib/hooks/useToast";
 import { useSprintStore } from "@/stores/useSprintStore";
 import { AlertCircle, Volume2, BookOpen } from "lucide-react";
 import Link from "next/link";
@@ -34,7 +35,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   // 📦 状態管理（Zustandストアへ一元化、ローカルuseStateは排除）
   // ────────────────────────────────────────────────────────────
-  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress, setContentMetadata, setContentName } = useSprintStore();
+  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress, setContentMetadata, setContentName, markLevelUnavailable } = useSprintStore();
+  const { showToast } = useToast();
 
   // ────────────────────────────────────────────────────────────
   // 🧭 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）
@@ -112,7 +114,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       if (fallbackContentId) {
         const contentRes = await getContentAction(fallbackContentId);
         if (contentRes && contentRes.success && contentRes.data) {
-          setContentMetadata(contentRes.data.metadata?.sprint || null);
+          setContentMetadata(contentRes.data.metadata?.sprint || null, contentRes.availableLevels ?? null);
           setContentName(contentRes.data.content_name || null);
         } else {
           setContentMetadata(null);
@@ -202,6 +204,17 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       });
 
       setUiView(selectedConfig.mode);
+    } else if (response.errorCode === 'level_locked') {
+      // まだ選べないレベル（URLの level 指定・レベル管理の再開等）は、選択画面へ戻す（レベルは選択画面が選べるものに補正する）
+      showToast('このレベルはまだ選択できません。別のレベルを選択してください。', 'error');
+      setConfig({ questionType });
+      setUiView('selecting');
+    } else if (response.errorCode === 'no_questions') {
+      // 問題の無いレベル（画面を開いた後に問題が移動・削除された等）は選択肢から外して選択画面へ戻す
+      markLevelUnavailable(questionType, difficultyLevel);
+      showToast('このレベルには問題がありません。別のレベルを選択してください。', 'error');
+      setConfig({ questionType });
+      setUiView('selecting');
     } else {
       setUiView('error');
     }

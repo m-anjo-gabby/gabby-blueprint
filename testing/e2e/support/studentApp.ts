@@ -59,10 +59,24 @@ export async function agreeToPendingTerms(page: Page): Promise<boolean> {
   return true;
 }
 
+/** 使い捨ての新しい生徒でログインし、必ず出る規約同意を済ませる（同意の保存が終わる＝モーダルが閉じるまで待つ） */
+export async function loginAsNewStudent(page: Page, email: string, password: string): Promise<void> {
+  await page.goto("/login");
+  await page.locator("input[name=email]").fill(email);
+  await page.locator("input[name=password]").fill(password);
+  await page.locator("input[name=password]").press("Enter");
+  await page.waitForURL("**/dashboard");
+  const termsDialog = page.getByRole("dialog", { name: "利用規約への同意" });
+  await expect(termsDialog).toBeVisible();
+  await agreeToPendingTerms(page);
+  await expect(termsDialog).toHaveCount(0);
+}
+
 /** studentアプリ用の test。お知らせポップアップの自動クローズを全テストに適用する */
 export const test = base.extend({
   page: async ({ page }, use) => {
     await autoCloseNoticePopup(page);
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright のフィクスチャの use（React のフックではない）
     await use(page);
   },
 });

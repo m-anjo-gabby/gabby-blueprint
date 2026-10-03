@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * E2Eで使う固定アカウント（testing/FIXTURES.md「固定アカウント一覧」の一部）。
+ * E2Eで使う固定アカウント（testing/FIXTURES.md「状態ペルソナ一覧」の一部）。
  * 固定アカウントは閲覧系のテストにのみ使う（e2e/CONVENTIONS.md 3章）。
  */
 export const PERSONAS = {
@@ -12,6 +12,10 @@ export const PERSONAS = {
   monitorStudent: { email: "qa-student-02@gabby-qa-test.example" },
   /** ポップアップ検証用（専用テナント所属）。規約同意・お知らせの状態をテストが都度作り直す */
   popupStudent: { email: "qa-student-07@gabby-qa-test.example" },
+  /** 利用者ペルソナ P01（アプリのみ・毎日学習）。表示崩れ・エラーが無いことの確認だけに使う */
+  dailyLearner: { email: "qa-p-student-01@gabby-qa-test.example" },
+  /** 利用者ペルソナ P03（アプリのみ・土日だけ学習。連続日数が途切れる） */
+  weekendLearner: { email: "qa-p-student-03@gabby-qa-test.example" },
 } as const;
 
 export type PersonaKey = keyof typeof PERSONAS;

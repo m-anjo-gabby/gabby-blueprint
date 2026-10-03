@@ -1,6 +1,7 @@
 'use server';
 
 import { createServerClient } from '../../supabase/server';
+import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
@@ -781,16 +782,38 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
   }
 }
 
-/** insert_dateで取得した行にstudent_nameを結合する（コーチ宛マッチングリクエスト系クエリの共通処理） */
-async function attachStudentNames(
+/**
+ * insert_dateで取得した行に、生徒名と申請した契約の期間を結合する（コーチ宛マッチングリクエスト系クエリの共通処理）。
+ * 契約の期間は、担当になる前のコーチはRLSで読めないため管理者権限で取得する。対象は、コーチがRLSで読めた
+ * 自分宛のリクエストのチケットに限り、返すのは開始・終了日時だけ。
+ */
+async function attachRequestDetails(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
-  requests: Omit<IncomingMatchingRequestItem, 'student_name'>[]
+  requests: Omit<IncomingMatchingRequestItem, 'student_name' | 'license_start_date' | 'license_end_date'>[]
 ): Promise<IncomingMatchingRequestItem[]> {
   if (requests.length === 0) return [];
   const studentIds = Array.from(new Set(requests.map((r) => r.student_id)));
-  const { data: students } = await supabase.from('com_m_user').select('id, user_name').in('id', studentIds);
+  const ticketIds = Array.from(new Set(requests.map((r) => r.ticket_id)));
+  const [{ data: students }, { data: tickets }] = await Promise.all([
+    supabase.from('com_m_user').select('id, user_name').in('id', studentIds),
+    createAdminClient()
+      .from('com_t_user_session_ticket')
+      .select('ticket_id, com_t_user_license!inner(start_date, end_date)')
+      .in('ticket_id', ticketIds),
+  ]);
   const studentNameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
-  return requests.map((r) => ({ ...r, student_name: studentNameById.get(r.student_id) ?? '(Unknown)' }));
+  const periodByTicketId = new Map(
+    (tickets ?? []).map((t) => {
+      const license = Array.isArray(t.com_t_user_license) ? t.com_t_user_license[0] : t.com_t_user_license;
+      return [t.ticket_id as string, license as { start_date: string; end_date: string } | undefined];
+    })
+  );
+  return requests.map((r) => ({
+    ...r,
+    student_name: studentNameById.get(r.student_id) ?? '(Unknown)',
+    license_start_date: periodByTicketId.get(r.ticket_id)?.start_date ?? null,
+    license_end_date: periodByTicketId.get(r.ticket_id)?.end_date ?? null,
+  }));
 }
 
 /**
@@ -821,7 +844,7 @@ export async function getPendingIncomingRequestsAsCoachCore(): Promise<
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return { success: true, requests: await attachStudentNames(supabase, requests ?? []) };
+    return { success: true, requests: await attachRequestDetails(supabase, requests ?? []) };
   } catch (err) {
     logger.error('matching:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
@@ -866,7 +889,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
     const page = (rows ?? []).slice(0, limit);
     const nextCursor = hasMore ? (page[page.length - 1]?.insert_date ?? null) : null;
 
-    return { success: true, items: await attachStudentNames(supabase, page), nextCursor };
+    return { success: true, items: await attachRequestDetails(supabase, page), nextCursor };
   } catch (err) {
     logger.error('matching:get_request_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };

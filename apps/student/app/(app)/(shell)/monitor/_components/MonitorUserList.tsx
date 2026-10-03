@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 import { CheckCircle2, Download, Users } from 'lucide-react';
 import type { MonitorSprintHistoryResponse, MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { formatZonedDate, toIsoDateInZone, toIsoMonthInZone } from '@gabby/lib/date/date';
+import { formatZonedDate } from '@gabby/lib/date/date';
+import { REPORTING_TIMEZONE, currentReportingMonth } from '@gabby/lib/date/reporting';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { Button } from '@/components/ui/button';
@@ -51,9 +51,9 @@ interface MonitorUserListProps {
 
 export function MonitorUserList({ users, wordHistory, sprintHistory, query }: MonitorUserListProps) {
   const { navigate, isPending } = useMonitorNavigation(query);
-  const timezone = useTimezone();
   const targetMonth = query.startDate.slice(0, 7);
-  const thisMonth = toIsoMonthInZone(new Date(), timezone);
+  // 期間・ライセンス期間は集計期間のタイムゾーン（日本時間）で表示する
+  const thisMonth = currentReportingMonth();
 
   const goToMonth = (yearMonth: string) => navigate(getMonthRange(yearMonth));
   const [displayYear, displayMonth] = targetMonth.split('-');
@@ -88,9 +88,9 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
         s.assessments += h.assessment_count;
       })
     );
-    // スプリント（実施日時は timestamptz のため、利用者のタイムゾーンの日付にする）
+    // スプリント（実施した生徒のタイムゾーンでの実施日。RPCで算出済み）
     sprintHistory.sessions.forEach((h) =>
-      record(h.user_id, toIsoDateInZone(h.insert_date, timezone), (s) => {
+      record(h.user_id, h.training_date, (s) => {
         s.sprintSessions += 1;
         s.sprintAnswers += h.total_answered;
         s.assessments += h.total_assessments || 0;
@@ -104,9 +104,9 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
     );
 
     return statsMap;
-  }, [wordHistory, sprintHistory, timezone]);
+  }, [wordHistory, sprintHistory]);
 
-  const formatDate = (value: string | null) => formatZonedDate(value, timezone) || '—';
+  const formatDate = (value: string | null) => formatZonedDate(value, REPORTING_TIMEZONE) || '—';
 
   const handleExportCSV = () => {
     logClientEvent({

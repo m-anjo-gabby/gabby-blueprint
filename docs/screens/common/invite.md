@@ -27,7 +27,7 @@
 
 | 結果 | 表示・挙動 | 発生条件 |
 |---|---|---|
-| 成功 | アカウントを作成し、招待時の内容（所属顧客・ロール・契約があればライセンス）を登録した上で、そのままログインしてダッシュボードへ移る | — |
+| 成功 | アカウントを作成し、招待時の内容（所属顧客・ロール・契約があればライセンス）を登録した上で、そのままログインしてダッシュボードへ移る。ライセンスは契約期間いっぱいで、ライブセッション付き契約ならチケットも発行する（契約管理からの割当と同じ） | — |
 | アカウント作成の失敗 | フォーム下に「アカウントの作成に失敗しました。(<原因>)」 | 同じメールアドレスのアカウントが既にある場合など |
 | ログインの失敗 | フォーム下にログイン画面と同じエラー（例: student で「有効なライセンスが見つかりません。…」） | 本登録後の自動ログインで拒否された場合。アカウントは作成済みのため、以後はログイン画面から利用する |
 | 期限切れ・確認できない | フォーム下に上表の文言 | 入力中に期限が切れた・別の画面で本登録が済んだ場合 |
@@ -50,7 +50,7 @@
 
 - 画面: `packages/lib/components/auth/InviteSetupFlow.tsx`、`NewPasswordFields.tsx`、`AuthLayout.tsx`
   （各アプリの `app/(public)/auth/invite/page.tsx` は文言とアクションを渡すだけ）
-- 処理: `packages/lib/auth/portalActions.ts`（`verifyInvitation` / `acceptInvitation`）、
+- 処理: `packages/lib/auth/portalActions.ts`（`verifyInvitation` / `acceptInvitation`）、ライセンス発行 `packages/lib/license/issue.ts`（`issueInitialLicense`）、
   `packages/lib/auth/core.ts`（`verifyInvitationCore` / `acceptInvitationCore`。画面へは氏名・メールアドレスだけを返す）
 - 招待の作成・再送: `apps/admin/actions/adminUserAction.ts`（有効期限は `INVITATION_EXPIRES_DAYS`）、テーブル `com_t_invitation`
 - 招待メール: `packages/lib/mail/actions/send{Admin,Coach,}Invitation.ts`・`packages/lib/mail/templates/*InviteEmailTemplate.tsx`
