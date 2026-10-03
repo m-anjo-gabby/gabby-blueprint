@@ -123,6 +123,7 @@ export const SPRINT_FLOW_TIMING = {
     resultRedirectBufferMs: 250,      // 結果画面遷移前の安全バッファ
     visualFeedbackHoldGoodMs: 1000,   // excellent/great/goodスコア表示の保持時間
     visualFeedbackHoldPoorMs: 800,    // fair/poorスコア表示の保持時間
+    resultAutoPlayDelayMs: 800,       // 実施直後の結果画面で「全て再生」を自動で始めるまでの間（画面の表示を落ち着かせる）
   },
 } as const;
 

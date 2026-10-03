@@ -16,6 +16,7 @@ import { USES_LOCAL_SERVER } from "../../support/targets.ts";
  * - 単語帳: 発話ボタン → チャイム → 認識 → 評価（表示中のフレーズ）。停止でその時点の評価で確定
  * - スプリント: 問題種別ごとの再生順（Speed: 質問文 / Builders・Structure: 基本文→指示文 / Mastery: 基本文→質問文）
  *   → 発話評価。発話評価OFFでは発話しない。ドリルは発話ボタンで発話する
+ * - 結果画面: スプリントの終了後は「全て再生」が自動で始まる。文の個別再生では問題ごとの再生ボタンが「再生中」にならない
  * - 中断と復旧: 発話中に画面が隠れると発話を止め、戻ると同じ問題を頭からやり直す（表示・非表示は擬似的に切り替える。
  *   iOS 固有の中断（AudioContext が running のまま無音になる等）は再現できないため実機で確認する）
  *
@@ -303,6 +304,31 @@ test.describe("スプリントの発話", () => {
     await expect
       .poll(async () => (await readSpeechLog(page)).filter((e) => e.type === "listen").map((e) => e.text), { timeout: 60_000 })
       .toEqual([listenText, listenText]);
+  });
+
+  test("スプリントの終了後、結果画面で「全て再生」が自動で始まり、文の個別再生では問題の再生ボタンが再生中にならない", async ({ page }) => {
+    test.setTimeout(180_000);
+    await useFakeSpeech(page);
+    const f = await startAsStudent(page);
+    const sprint = await prepareSprintContent(f);
+
+    // 全問に発話で答え終えると、スプリントが終わって結果画面へ移る
+    await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
+    await page.getByRole("button", { name: "スプリントを開始" }).click();
+    await page.waitForURL(/\/training\/sprint\/result\/[0-9a-f-]{36}/, { timeout: 150_000 });
+
+    await test.step("「全て再生」が自動で始まり、自動再生の指定はURLから外れる", async () => {
+      await expect(page.getByRole("button", { name: "停止", exact: true })).toBeVisible({ timeout: 20_000 });
+      await expect(page).toHaveURL(/\/training\/sprint\/result\/[0-9a-f-]{36}$/);
+      await page.getByRole("button", { name: "停止", exact: true }).click();
+    });
+
+    await test.step("文を1つだけ再生しても、問題ごとの再生ボタンは「再生中」にならない", async () => {
+      const card = page.locator('[id^="card-"]').first();
+      await card.getByRole("button", { name: "解答文を再生" }).first().click();
+      await expect(card.getByRole("button", { name: "再生", exact: true })).toBeVisible();
+      await expect(card.getByText("再生中", { exact: true })).toHaveCount(0);
+    });
   });
 
   test("ドリル: 問題の再生後、発話ボタンを押すとチャイムの後に解答文で発話評価され、評価が表示される", async ({ page }) => {

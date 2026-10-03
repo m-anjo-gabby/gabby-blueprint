@@ -1,8 +1,10 @@
 // apps\student\app\(app)\training\sprint\result\[id]\_components\SprintResult.tsx
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { SPRINT_FLOW_TIMING } from '@gabby/types/sprint';
 import { ChevronLeft, FastForward, Home } from 'lucide-react';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
@@ -17,6 +19,7 @@ import {
   getSprintSelectHref,
 } from '@/components/training/sprint-result/SprintResultSummary';
 import type { SprintResultData } from '@/components/training/sprint-result/types';
+import { SPRINT_RESULT_AUTOPLAY_PARAM } from '@/components/training/sprint-result/links';
 
 // 見出しの並び（戻る・見出し・日付）は履歴側の ShellPageHeader と揃える
 const NAV_BUTTON_CLASS =
@@ -28,6 +31,7 @@ const NAV_BUTTON_CLASS =
  * 選択→実施→結果の間は履歴を置き換えて移動し、履歴には入口（教材一覧・ホーム等）だけを残す
  * （選択画面の「戻る」で結果画面に戻ってループしないようにする）。
  * 履歴から振り返る場合はシェル側の結果画面（/training/sprint/history/[id]）を使う。
+ * 実施の終了から移動してきた場合（`?autoplay=1`）は、「全て再生」を自動で始める。
  */
 export function SprintResult({ scoreData, questions, courseTitle, favoriteQuestionIds }: SprintResultData) {
   const timezone = useTimezone();
@@ -36,6 +40,25 @@ export function SprintResult({ scoreData, questions, courseTitle, favoriteQuesti
   const showRetry = useCallback(() => setFooterShowsRetry(true), []);
   const playback = useSprintResultPlayback(scoreData, questions, { onPlayAllSettled: showRetry });
   const selectHref = getSprintSelectHref(scoreData);
+
+  // 実施の終了から移動してきた場合は「全て再生」を自動で始める（同じページ内の移動のため音声はアンロック済み）。
+  // 始めたら指定をURLから外し、再読み込み・戻るで再び自動再生しないようにする
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const shouldAutoPlay = searchParams.get(SPRINT_RESULT_AUTOPLAY_PARAM) === '1';
+  const togglePlayAllRef = useRef(playback.togglePlayAll);
+  useEffect(() => {
+    togglePlayAllRef.current = playback.togglePlayAll;
+  }, [playback.togglePlayAll]);
+  useEffect(() => {
+    if (!shouldAutoPlay) return;
+    const timer = setTimeout(() => {
+      router.replace(pathname, { scroll: false });
+      void togglePlayAllRef.current();
+    }, SPRINT_FLOW_TIMING.sprint.resultAutoPlayDelayMs);
+    return () => clearTimeout(timer);
+  }, [shouldAutoPlay, pathname, router]);
 
   return (
     <ImmersivePanel className="select-none">

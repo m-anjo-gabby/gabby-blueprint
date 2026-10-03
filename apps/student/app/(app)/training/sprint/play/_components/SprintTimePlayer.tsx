@@ -21,6 +21,7 @@ import { useSprintStore } from '@/stores/useSprintStore';
 import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
 import { useSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useSprintTimers';
 import { ExitProcessingOverlay } from './ExitProcessingOverlay';
+import { getSprintResultHref } from '@/components/training/sprint-result/links';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { CircularProgressRing } from '@/components/common/CircularProgressRing';
 import { ImmersivePanel } from '@/components/shell/PageFrames';
@@ -297,7 +298,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
           stopAllAudio();
           resetStore();
           // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
-          const targetUrl = `/training/sprint/result/${res.data.self_sprint_id}`;
+          // 実施の終了から移動するため、結果画面で「全て再生」を自動で始める
+          const targetUrl = getSprintResultHref(res.data.self_sprint_id, { autoplay: true });
           setTimeout(() => {
             // 実施画面を履歴に残さない（ブラウザの戻るで実施途中の画面を再表示させない）
             router.replace(targetUrl);
@@ -323,7 +325,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       resetStore();
       // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
       setTimeout(() => {
-        router.replace(`/training/sprint/result/${resultId}`);
+        router.replace(getSprintResultHref(resultId, { autoplay: true }));
       }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
     }
   }, [resultId, router, stopAllAudio, resetStore, unlockAudioContext]);

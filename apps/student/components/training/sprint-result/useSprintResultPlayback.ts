@@ -116,8 +116,10 @@ export function useSprintResultPlayback(
         await play(voice, audioId, { restart: true });
       }
 
+      // 再生が終わったら注目も外す（外さないと、問題ごとの再生ボタンが「再生中」のまま残る）
       if (isMountedRef.current && playbackTokenRef.current === token) {
         setPlaybackMode(null);
+        setFocusedQuestionId(null);
       }
     },
     [play, playbackMode]
@@ -180,8 +182,12 @@ export function useSprintResultPlayback(
     }
   }, [playbackMode, questions, stopAllAudio, playQuestionSequence]);
 
+  /** 問題ごとの再生（1問分の連続再生・全て再生）の対象。文を1つだけ再生している間は null */
+  const sequenceQuestionId = playbackMode === 'sequence' || playbackMode === 'all' ? focusedQuestionId : null;
+
   return {
     focusedQuestionId,
+    sequenceQuestionId,
     playbackMode,
     playingAudioId,
     playPhrase,
