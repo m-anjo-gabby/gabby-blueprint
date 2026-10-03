@@ -97,10 +97,11 @@ export async function createDisposableContract(
 
 /**
  * 使い捨ての生徒に、アプリのみ契約（BLUEPRINT_ONLY）のライセンスを付ける（ログイン後の画面まで確かめる場合）。
+ * 本登録時の初期ライセンスと同じく、スプリントのレベル管理をオフにする。期間の既定は昨日〜30日後。
  */
-export async function grantAppLicense(fixture: AuthFixture, userId: string): Promise<void> {
+export async function grantAppLicense(fixture: AuthFixture, userId: string, period?: { start: Date; end: Date }): Promise<void> {
   const { admin } = fixture;
-  const { contractId, start, end } = await createDisposableContract(fixture, { planCode: "BLUEPRINT_ONLY", label: userId.slice(0, 8) });
+  const { contractId, start, end } = await createDisposableContract(fixture, { planCode: "BLUEPRINT_ONLY", label: userId.slice(0, 8), ...period });
 
   // ライセンスの追加で auth.users の app_metadata.is_licensed が更新される（トリガー）
   const { error: licenseError } = await admin.from("com_t_user_license").insert({
@@ -111,6 +112,10 @@ export async function grantAppLicense(fixture: AuthFixture, userId: string): Pro
     end_date: end.toISOString(),
   });
   if (licenseError) throw new Error(`ライセンスの付与に失敗しました: ${licenseError.message}`);
+
+  // アプリの初期ライセンス発行（packages/lib/license/issue.ts）と同じく、アプリのみ契約はスプリントのレベル管理をしない
+  const { error: progressError } = await admin.from("student_m_sprint_progress").update({ level_managed: false }).eq("user_id", userId);
+  if (progressError) throw new Error(`レベル管理の設定に失敗しました: ${progressError.message}`);
 }
 
 /**

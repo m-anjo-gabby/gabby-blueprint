@@ -1,6 +1,7 @@
 // apps\student\app\(app)\training\word\history\page.tsx
 import { getUserWordHistoryAction } from "@/actions/wordAction";
 import { WordHistoryView } from "./_components/WordHistoryView";
+import { resolveTargetMonth } from "@/lib/userTimezone";
 
 export const dynamic = 'force-dynamic';
 
@@ -16,10 +17,8 @@ export default async function WordHistoryPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const { month } = resolvedSearchParams;
 
-  // 月指定がない場合は現在の月をデフォルトにする
-  const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const targetMonth = month || currentMonth;
+  // 月指定がない場合は、生徒のタイムゾーンでの今月
+  const targetMonth = await resolveTargetMonth(month);
 
   const res = await getUserWordHistoryAction(targetMonth);
 

@@ -9,6 +9,8 @@ import { resolveSprintHasLevel, isSprintLevelSelectable } from "@gabby/lib";
 import type { ContentMetadata } from "@gabby/types/content";
 import type { AnalysisResult } from "@gabby/types/speechAssessment";
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { toIsoMonthInZone } from '@gabby/lib/date/date';
+import { getMyTimezone } from '@/lib/userTimezone';
 
 const logger = createLogger("student");
 const SPRINT_LIMIT_COUNT = 10;
@@ -418,10 +420,12 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
     const user = await getAuthUser();
     if (!user) throw new Error("Unauthorized");
 
-    // 月の開始日と終了日を計算 (UTCベースでクエリ)
+    // セッションは日時（UTC）で保存されているため、生徒のタイムゾーンでの日付で月を絞る。
+    // どのタイムゾーンでも月の範囲を覆うよう前後1日広げて取得し、生徒のタイムゾーンの月で絞り込む
     const [year, month] = yearMonth.split('-').map(Number);
-    const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
-    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
+    const timezone = await getMyTimezone();
+    const startDate = new Date(Date.UTC(year, month - 1, 0, 0, 0, 0)).toISOString();
+    const endDate = new Date(Date.UTC(year, month, 1, 23, 59, 59, 999)).toISOString();
 
     // 1. スプリントセッション履歴の取得
     const { data: sessionsData, error: sessionsError } = await supabase
@@ -447,6 +451,7 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
       .order("insert_date", { ascending: false });
 
     if (sessionsError) throw sessionsError;
+    const sessionsInMonth = (sessionsData ?? []).filter((s) => toIsoMonthInZone(s.insert_date, timezone) === yearMonth);
 
     // 2. ドリル日次サマリー履歴の取得
     const startDayStr = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -479,14 +484,14 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
 
     logger.info("sprint:get_history_success", "Successfully fetched sprint and drill history", {
       ...ctx,
-      sessionsCount: sessionsData?.length || 0,
+      sessionsCount: sessionsInMonth.length,
       drillsCount: drillsData?.length || 0
     });
 
     return { 
       success: true, 
       data: {
-        sessions: sessionsData || [],
+        sessions: sessionsInMonth,
         drills: drillsData || []
       } 
     };

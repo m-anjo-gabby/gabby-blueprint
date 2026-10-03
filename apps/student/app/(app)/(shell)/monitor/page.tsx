@@ -7,6 +7,7 @@ import { MonitorHeader } from './_components/MonitorHeader';
 import { MonitorUserList } from './_components/MonitorUserList';
 import { MonitorWordHistoryView } from './_components/MonitorWordHistoryView';
 import { MonitorSprintHistoryView } from './_components/MonitorSprintHistoryView';
+import { currentReportingMonth } from '@gabby/lib/date/reporting';
 import { getMonthRange, parseMonitorView, type MonitorQuery } from './_components/monitorQuery';
 
 export const dynamic = 'force-dynamic';
@@ -24,9 +25,8 @@ interface MonitorPageProps {
 export default async function MonitorPage({ searchParams }: MonitorPageProps) {
   const params = await searchParams;
 
-  // 期間の指定が無い場合は当月（月初〜月末）
-  const now = new Date();
-  const thisMonth = getMonthRange(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  // 期間の指定が無い場合は当月（月初〜月末）。期間は集計期間のタイムゾーン（日本時間）で区切る
+  const thisMonth = getMonthRange(currentReportingMonth());
   const query: MonitorQuery & { startDate: string; endDate: string } = {
     view: parseMonitorView(params.view),
     startDate: params.startDate || thisMonth.startDate,

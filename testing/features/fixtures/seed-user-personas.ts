@@ -745,6 +745,17 @@ async function ensureLevels(p: StudentPersona, userId: string): Promise<void> {
   }
 }
 
+/**
+ * レベル管理の有無。アプリと同じく、ライブ契約の生徒だけレベル管理する（アプリのみ契約は全レベルを選べる。
+ * アプリでは初期ライセンスの発行時に packages/lib/license/issue.ts が設定する）。
+ */
+async function ensureLevelManaged(p: StudentPersona, userId: string): Promise<void> {
+  const { error } = await admin
+    .from("student_m_sprint_progress")
+    .upsert({ user_id: userId, level_managed: Boolean(p.live) }, { onConflict: "user_id" });
+  if (error) throw error;
+}
+
 // ---------------------------------------------------------------------------
 // チャット（ライブ契約の生徒×担当コーチ。日時は JST）
 // ---------------------------------------------------------------------------
@@ -936,6 +947,7 @@ for (const p of STUDENTS) {
   const liveResult = await ensureLive(p, userId, contents.clientId);
 
   await ensureLevels(p, userId);
+  await ensureLevelManaged(p, userId);
   const generated = await generateHistory(p, contents);
   await writeWordSummaries(userId, generated.wordDays);
   const insertedRuns = await writeSprints(userId, contents.sprintContentId, generated.sprintRuns);

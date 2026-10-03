@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
-import { toIsoMonthInZone } from '@gabby/lib/date/date';
+import { currentReportingMonth } from '@gabby/lib/date/reporting';
 import { MonthSwitcher } from '@/components/common/MonthSwitcher';
 import { TrainingReportSection } from './_components/TrainingReportSection';
 
@@ -13,8 +13,8 @@ export default async function TrainingReportsPage({ searchParams }: { searchPara
     getTranslations('common'),
     searchParams,
   ]);
-  // 満了月の既定は今月（日本時間）。契約期間は日本時間の日付で管理しているため
-  const yearMonth = params.month && MONTH_PATTERN.test(params.month) ? params.month : toIsoMonthInZone(new Date(), 'Asia/Tokyo');
+  // 満了月の既定は集計期間のタイムゾーン（日本時間）での今月。契約期間は日本時間の日付で管理しているため
+  const yearMonth = params.month && MONTH_PATTERN.test(params.month) ? params.month : currentReportingMonth();
 
   return (
     <div className="space-y-6">

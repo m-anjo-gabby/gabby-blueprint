@@ -6,6 +6,7 @@
  *   - 契約のダイアログプラクティス提供有無をライセンスへコピーする
  *   - ライセンスの割当履歴を残す
  *   - ライブセッション付き契約なら、ライセンスに1:1で紐づくチケットを発行する（発行履歴も残す）
+ *   - 初期ライセンス（ユーザーの即時作成・招待からの本登録）では、契約の種類でスプリントのレベル管理の有無を決める
  *
  * 💡 'use server' は付けない（外部から直接呼べるエンドポイントにしないため）。
  */
@@ -223,5 +224,29 @@ export async function issueInitialLicense(
   }
 
   await recordIssuedLicenses(supabase, { contractId, contract, rows: [inserted], performedBy }, ctx);
+  await applyInitialLevelManagement(supabase, { userId, contractType: contract.contract_type }, ctx);
   return { success: true };
+}
+
+/**
+ * 初期ライセンスの契約からスプリントのレベル管理の有無を決める。
+ * コーチが定期的にレベルを引き上げるライブセッション付き契約だけレベル管理し、コーチのいない契約
+ * （アプリのみ）は全レベルを選べるようにする（実績に応じた自動の引き上げは未実装）。
+ * 後から契約の種類が変わった場合はアドミンがユーザー管理で切り替える。
+ * 失敗してもユーザー作成・本登録は失敗させない（ログにのみ残す）。
+ */
+async function applyInitialLevelManagement(
+  supabase: AdminClient,
+  params: { userId: string; contractType: number },
+  ctx: LogContext
+) {
+  const { error } = await supabase
+    .from('student_m_sprint_progress')
+    .upsert(
+      { user_id: params.userId, level_managed: params.contractType === LIVE_SESSION_CONTRACT_TYPE },
+      { onConflict: 'user_id' }
+    );
+  if (error) {
+    logger.error('license:apply_level_management_failed', error.message, { ...ctx, payload: params });
+  }
 }

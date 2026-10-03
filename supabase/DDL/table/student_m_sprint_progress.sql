@@ -106,3 +106,22 @@ DROP POLICY IF EXISTS "Users can view their own sprint progress" ON public.stude
 CREATE POLICY "Users can view their own sprint progress" ON public.student_m_sprint_progress
 FOR SELECT TO authenticated
 USING (user_id = auth.uid());
+
+---------------------------------------------
+-- 追加パッチ: アプリのみ契約の生徒のレベル管理をオフにする (2026-10-03)
+-- 既存環境に対しては、このパッチのみをrun.mjs（supabase/release/）で適用してください。
+---------------------------------------------
+-- 【背景】
+-- レベル管理はコーチが定期的に引き上げるライブセッション付き契約だけで行う。新しい生徒は
+-- 初期ライセンスの発行時（packages/lib/license/issue.ts）に契約の種類から設定するため、
+-- 列の既定値（true）は変えず、既存の生徒だけをここで一度揃える。
+UPDATE public.student_m_sprint_progress p
+SET level_managed = false
+WHERE p.level_managed
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.com_t_user_license l
+    JOIN public.com_m_contract c ON c.contract_id = l.contract_id
+    WHERE l.user_id = p.user_id
+      AND c.contract_type = 2
+  );

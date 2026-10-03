@@ -3,8 +3,6 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import type { MonitorSprintHistoryResponse, MonitorUser } from '@/actions/monitorAction';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { cn } from '@/lib/utils';
@@ -42,7 +40,6 @@ interface MonitorSprintHistoryViewProps {
 export function MonitorSprintHistoryView({ initialData, users, query }: MonitorSprintHistoryViewProps) {
   const { startDate, endDate, userIds = [], includeMonitor } = query;
   const { navigate, isPending } = useMonitorNavigation(query);
-  const timezone = useTimezone();
   const [page, setPage] = useState(1);
   const monitorIds = useMemo(() => getMonitorAccountIds(users), [users]);
 
@@ -60,11 +57,11 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
       existing.assessmentCount += item.assessmentCount;
     };
 
-    // スプリントは実施日時（timestamptz）のため、利用者のタイムゾーンの日付に変換する
+    // スプリントは実施した生徒のタイムゾーンでの実施日（RPCで算出済み）
     initialData.sessions.forEach((s) =>
       add({
         mode: 'sprint',
-        date: toIsoDateInZone(s.insert_date, timezone),
+        date: s.training_date,
         userId: s.user_id,
         userName: s.com_m_user?.user_name || '未設定',
         contentId: s.content_id,
@@ -101,7 +98,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
       )
     );
     return { groups: byDate, sortedDates: [...byDate.keys()].sort((a, b) => b.localeCompare(a)), totalItems: map.size };
-  }, [initialData, timezone]);
+  }, [initialData]);
 
   const totalPages = Math.ceil(sortedDates.length / MONITOR_DAYS_PER_PAGE);
   const pagedDates = sortedDates.slice((page - 1) * MONITOR_DAYS_PER_PAGE, page * MONITOR_DAYS_PER_PAGE);

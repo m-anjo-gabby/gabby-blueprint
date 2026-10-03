@@ -126,7 +126,8 @@ test("アドミンが受注処理をした顧客の生徒が、招待から最�
     expect(license).toEqual([{ status: 1 }]);
     const { data: progress } = await admin
       .from("student_m_sprint_progress").select("level_speed, level_structure, level_managed").eq("user_id", userId!).single();
-    expect(progress).toEqual({ level_speed: 0, level_structure: 0, level_managed: true });
+    // アプリのみ契約はレベル管理しない（全レベルを選べる）
+    expect(progress).toEqual({ level_speed: 0, level_structure: 0, level_managed: false });
   });
 
   await test.step("初日3: 利用規約に同意する", async () => {

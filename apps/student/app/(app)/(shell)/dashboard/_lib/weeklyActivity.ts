@@ -3,7 +3,6 @@ import type { UserTrainingPerformanceResponse } from '@/actions/performanceActio
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日'];
-const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * 「今週」(利用者のタイムゾーンでの月〜日) を確実に含む年月(YYYY-MM)の一覧を返す。
@@ -42,12 +41,9 @@ export interface WeekDay {
   isActive: boolean;
 }
 
-const toLocalIsoDate = (date: string, timeZone: string): string =>
-  DATE_ONLY_PATTERN.test(date) ? date : toIsoDateInZone(date, timeZone);
-
 /** 利用者のタイムゾーンでの今週(月〜日)の各日と、実施日数・今週の発話回数を算出する */
 export function buildCurrentWeek(activities: TrainingActivity[], timeZone: string, nowMs: number) {
-  const localActivities = activities.map((a) => ({ ...a, isoDate: toLocalIsoDate(a.date, timeZone) }));
+  const localActivities = activities.map((a) => ({ ...a, isoDate: toIsoDateInZone(a.date, timeZone) }));
   const activeDates = new Set(localActivities.map((a) => a.isoDate));
 
   const todayIso = toIsoDateInZone(nowMs, timeZone);

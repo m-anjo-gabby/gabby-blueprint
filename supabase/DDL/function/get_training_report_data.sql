@@ -12,8 +12,11 @@
 --   levels_start / levels_end: 期間の開始時点・終了時点のスプリント到達レベル（問題種別ごと。
 --     記録開始前の時点はNULL）。終了前に作成した場合の終了時点は作成時点とする。
 --   activity / monthly: 期間中の学習量（学習日数・単語・フレーズ・スプリント問題数・発話評価の回数）。
---     日次サマリーの training_date（生徒のタイムゾーンでの日付）を、ライセンス期間の日本時間の
---     日付範囲で絞る（顧客との契約が日本法人のため、期間は日本時間で扱う）。
+--     単語帳・スプリントのドリルは日次サマリーの training_date（記録時点の生徒のタイムゾーンでの日付）、
+--     スプリントのセッション（self_t_sprint）は実施日時を生徒のタイムゾーンでの日付にして数え、
+--     ライセンス期間の日本時間（集計期間のタイムゾーン public.reporting_timezone()）の日付範囲で絞る
+--     （顧客との契約が日本法人のため、期間は日本時間で扱う）。
+--     スプリント問題数はドリルの問題数とセッションの回答数の合計。
 --   live: ライブセッション付き契約の受講状況（Blueprintのみの契約はNULL）。
 --     completed: 実施（正常終了・早期終了）/ no_show: 生徒の欠席 / late_cancel: 生徒の直前キャンセル（返還なし）
 --   comments: コーチからのコメント（下書き・確定の両方。PDF側で下書きを区別して表示する）
@@ -28,10 +31,11 @@ RETURNS jsonb AS $$
     WITH lic AS (
         SELECT
             l.license_id, l.user_id, l.status, l.start_date, l.end_date,
-            (l.start_date AT TIME ZONE 'Asia/Tokyo')::date AS from_date,
-            (l.end_date AT TIME ZONE 'Asia/Tokyo')::date AS to_date,
+            (l.start_date AT TIME ZONE public.reporting_timezone())::date AS from_date,
+            (l.end_date AT TIME ZONE public.reporting_timezone())::date AS to_date,
             LEAST(l.end_date, NOW()) AS level_end_at,
             u.user_name,
+            COALESCE(u.timezone, 'Asia/Tokyo') AS timezone,
             c.contract_id, c.contract_name, c.plan_name, cl.client_name,
             t.ticket_id, t.total_sessions
         FROM public.com_t_user_license l
@@ -59,6 +63,11 @@ RETURNS jsonb AS $$
             SELECT s.training_date, 0, 0, s.question_count, s.assessment_count
             FROM public.self_t_sprint_summary s
             WHERE s.user_id = lic.user_id AND s.training_date BETWEEN lic.from_date AND lic.to_date
+            UNION ALL
+            SELECT (ss.insert_date AT TIME ZONE lic.timezone)::date, 0, 0, ss.total_answered, ss.total_assessments
+            FROM public.self_t_sprint ss
+            WHERE ss.user_id = lic.user_id
+              AND (ss.insert_date AT TIME ZONE lic.timezone)::date BETWEEN lic.from_date AND lic.to_date
         ) d
         GROUP BY lic.license_id, d.training_date
     )

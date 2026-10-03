@@ -1,6 +1,7 @@
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { reportingMonthRange } from '@gabby/lib/date/reporting';
 import { createLogger } from '@gabby/lib/logger';
 import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
 import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
@@ -17,24 +18,13 @@ export async function isAdminRequest(): Promise<boolean> {
   return user?.app_metadata?.user_type === USER_TYPES.ADMIN;
 }
 
-/** "YYYY-MM" の月（日本時間）の始まりと翌月の始まり */
-function jstMonthRange(yearMonth: string): { from: string; to: string } {
-  const [year, month] = yearMonth.split('-').map(Number);
-  const next = new Date(Date.UTC(year, month, 1));
-  const nextYearMonth = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}`;
-  return {
-    from: new Date(`${yearMonth}-01T00:00:00+09:00`).toISOString(),
-    to: new Date(`${nextYearMonth}-01T00:00:00+09:00`).toISOString(),
-  };
-}
-
 /**
- * 満了日が指定月（日本時間）にあるライセンスの一覧。fetchedAt は取得時刻（期限を過ぎたかの判定に使う）
+ * 満了日が指定月（集計期間のタイムゾーン＝日本時間）にあるライセンスの一覧。fetchedAt は取得時刻（期限を過ぎたかの判定に使う）
  */
 export async function fetchTrainingReportTargets(
   yearMonth: string
 ): Promise<{ targets: TrainingReportTarget[]; fetchedAt: number } | null> {
-  const { from, to } = jstMonthRange(yearMonth);
+  const { from, to } = reportingMonthRange(yearMonth);
   const { data, error } = await createAdminClient().rpc('get_training_report_targets', { p_from: from, p_to: to });
   if (error) {
     logger.error('admin:get_training_report_targets_failed', error.message, { payload: { yearMonth } });

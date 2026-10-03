@@ -15,9 +15,19 @@ export const getUtcRangeFromJstDate = (startDateStr: string, endDateStr: string)
   };
 };
 
+/** 日付だけの値（DBの date 型。例: 2026-10-01） */
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * 日付の表示に使うタイムゾーン。日付だけの値は記録した時点のタイムゾーンで確定した暦の日付のため、
+ * タイムゾーンをまたいで変換しない（`new Date('2026-10-01')` はUTCの0時になるため、UTCのまま表示する）。
+ */
+const zoneForDate = (date: Date | string | number, timeZone: string): string =>
+  typeof date === 'string' && DATE_ONLY_PATTERN.test(date) ? 'UTC' : timeZone;
+
 /**
  * 汎用的な日付フォーマッター
- * @param dateString UTCの日時文字列
+ * @param dateString UTCの日時文字列（日付だけの値はそのままの日付で表示する）
  * @param timeZone 表示したいタイムゾーン（デフォルトは Asia/Tokyo）
  */
 export const formatDateByZone = (
@@ -33,7 +43,7 @@ export const formatDateByZone = (
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-      timeZone: timeZone,
+      timeZone: zoneForDate(dateString, timeZone),
     }).format(date).replace(/\//g, '-');
   } catch (e) {
     // 不正なタイムゾーンが渡された場合のフォールバック
@@ -75,11 +85,12 @@ export const formatToJstDateTime = (d?: string | null) => formatDateTimeByZone(d
 
 /**
  * 指定されたタイムゾーンに基づき、日付を ISO 形式 (YYYY-MM-DD) で取得します。
+ * 日付だけの値（DBの date 型）は変換せず、そのままの日付を返します。
  */
 export const toIsoDateInZone = (date: Date | string | number, timeZone: string): string => {
   const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
   if (isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: zoneForDate(date, timeZone), year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 };
 
 export type TimeOfDayCategory = 'morning' | 'day' | 'evening' | 'night';
@@ -117,7 +128,7 @@ export const toIsoMonthInZone = (date: Date | string | number, timeZone: string)
 };
 
 /**
- * 表示用の日付フォーマッター (YYYY/MM/DD)
+ * 表示用の日付フォーマッター (YYYY/MM/DD)。日付だけの値（DBの date 型）はそのままの日付で表示する
  */
 export const formatZonedDate = (date: Date | string | number | null | undefined, timeZone: string): string => {
   if (!date) return '';
@@ -128,7 +139,7 @@ export const formatZonedDate = (date: Date | string | number | null | undefined,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-    timeZone: timeZone || 'Asia/Tokyo',
+    timeZone: zoneForDate(date, timeZone || 'Asia/Tokyo'),
   }).format(d);
 };
 
@@ -208,7 +219,7 @@ function getTimeZoneOffsetMinutes(utcInstant: Date, timeZone: string): number {
 }
 
 /** "YYYY-MM-DDTHH:MM:SS" のウォールクロック時刻を、指定タイムゾーンでの時刻とみなしてUTC Dateへ変換する */
-function zonedWallClockToUtc(wallClock: string, timeZone: string): Date {
+export function zonedWallClockToUtc(wallClock: string, timeZone: string): Date {
   const naiveUtc = new Date(`${wallClock}Z`);
   const offsetMinutes = getTimeZoneOffsetMinutes(naiveUtc, timeZone);
   return new Date(naiveUtc.getTime() - offsetMinutes * 60000);
