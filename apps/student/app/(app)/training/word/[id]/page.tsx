@@ -460,16 +460,6 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       </ImmersivePanel>
 
       <style jsx global>{`
-        :root {
-          --removed-body-scroll-bar-size: 0px !important;
-        }
-        body {
-          padding-right: 0px !important;
-          overflow: hidden !important;
-          position: fixed;
-          width: 100%;
-          height: 100%;
-        }
         .perspective-1000 { perspective: 1000px; }
         .preserve-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }

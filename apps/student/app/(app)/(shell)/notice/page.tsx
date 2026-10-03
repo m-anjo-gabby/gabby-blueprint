@@ -6,6 +6,7 @@ import { BellOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
+import { scrollIntoContainer } from '@/lib/scroll';
 import { NoticeCard } from './_components/NoticeCard';
 import { NoticeListSkeleton, NoticePageHeader } from './_components/NoticeSkeleton';
 
@@ -44,7 +45,7 @@ export default function NoticePage() {
     if (!focusId || !isReady || scrolledRef.current) return;
     const el = document.getElementById(`notice-${focusId}`);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      scrollIntoContainer(el);
       scrolledRef.current = true;
     }
   }, [focusId, isReady, notices]);

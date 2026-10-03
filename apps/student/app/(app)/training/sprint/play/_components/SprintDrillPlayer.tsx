@@ -23,7 +23,7 @@ import { logClientEvent } from '@gabby/lib/logger/actions';
 import { useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackFlow';
 import { useSprintProgressSync } from '../_hooks/useSprintProgressSync';
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
-import { ImmersivePanel } from '@/components/shell/PageFrames';
+import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
@@ -557,7 +557,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         </div>
 
         {/* 🎴 中央：メイン教材カードセクション */}
-        <div className="flex-1 flex items-start justify-center p-6 pt-6 overflow-y-auto" onClick={handleReveal}>
+        <ImmersiveBody className="flex items-start justify-center p-6 pt-6" onClick={handleReveal}>
           <div className="w-full max-w-xl mx-auto">
             <QuestionCard
               key={currentIndex}
@@ -569,7 +569,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
               timeLeft={timeLeft}
             />
           </div>
-        </div>
+        </ImmersiveBody>
 
         {/* 🎮 下部：操作パネル */}
         <div className="px-6 pb-8 shrink-0 relative">

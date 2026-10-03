@@ -88,7 +88,8 @@ export function ShellPageHeader({ title, titleHidden, description, back, aside, 
 
       {children && (
         // ContentFrame の左右余白を打ち消して背景を端まで敷き、スクロール中の一覧を隠す
-        <div className="sticky top-0 z-20 -mx-4 mb-4 space-y-3 bg-canvas/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+        // data-scroll-sticky: 自動スクロール（scrollIntoContainer）で、この段の下を見える範囲として扱う
+        <div data-scroll-sticky className="sticky top-0 z-20 -mx-4 mb-4 space-y-3 bg-canvas/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
           {children}
         </div>
       )}

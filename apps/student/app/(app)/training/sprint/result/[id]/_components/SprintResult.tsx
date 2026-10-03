@@ -9,7 +9,7 @@ import { ChevronLeft, Home } from 'lucide-react';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
-import { ImmersivePanel } from '@/components/shell/PageFrames';
+import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
 import { SprintResultQuestionList } from '@/components/training/sprint-result/SprintResultQuestionList';
 import {
@@ -74,7 +74,7 @@ export function SprintResult({ scoreData, questions, courseTitle, favoriteQuesti
       </header>
 
       {/* 結果サマリーと出題リスト（履歴側と同じくサマリーも一緒にスクロールさせ、リストを広く見せる） */}
-      <div className="flex-1 overflow-y-auto bg-canvas p-5 sm:p-6">
+      <ImmersiveBody className="bg-canvas p-5 sm:p-6">
         <SprintResultSummary scoreData={scoreData} courseTitle={courseTitle} className="mb-4" />
         <SprintResultQuestionList
           scoreData={scoreData}
@@ -82,7 +82,7 @@ export function SprintResult({ scoreData, questions, courseTitle, favoriteQuesti
           playback={playback}
           initialFavoriteIds={favoriteQuestionIds}
         />
-      </div>
+      </ImmersiveBody>
 
       {/* フッター：履歴側と同じ操作ボタン（全て再生／停止・リトライ） */}
       <div className="shrink-0 border-t border-line bg-surface p-5 sm:p-6">

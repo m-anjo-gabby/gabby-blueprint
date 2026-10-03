@@ -24,7 +24,7 @@ import { ExitProcessingOverlay } from './ExitProcessingOverlay';
 import { getSprintResultHref } from '@/components/training/sprint-result/links';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { CircularProgressRing } from '@/components/common/CircularProgressRing';
-import { ImmersivePanel } from '@/components/shell/PageFrames';
+import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import { QuestionStepBadge, StepIndicator } from '@/components/common/QuestionStepBadge';
 
 interface SprintTimePlayerProps {
@@ -661,7 +661,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         </div>
 
         {/* ② メイン垂直フレックスコンテナ */}
-        <div className="flex-1 flex flex-col p-6 overflow-y-auto overscroll-contain">
+        <ImmersiveBody className="flex flex-col p-6">
 
           {/* ②-A: 問題番号・ステップ表示 */}
           <div className="w-full max-w-xl mx-auto flex flex-col gap-6 shrink-0 pb-4">
@@ -943,7 +943,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               </AnimatePresence>
             </div>
           </div>
-        </div>
+        </ImmersiveBody>
 
       <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
 

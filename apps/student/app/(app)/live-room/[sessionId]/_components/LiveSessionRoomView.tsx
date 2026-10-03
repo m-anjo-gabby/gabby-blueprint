@@ -32,7 +32,7 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
-import { ImmersivePanel } from '@/components/shell/PageFrames';
+import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
@@ -204,7 +204,7 @@ export function LiveSessionRoomView({ access }: Props) {
           <p className="text-[13px] text-slate-500">カメラとマイクを確認してから参加してください。</p>
         </header>
 
-        <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center bg-slate-50/50 p-5 sm:p-8 gap-4">
+        <ImmersiveBody className="flex flex-col items-center justify-center bg-slate-50/50 p-5 sm:p-8 gap-4">
           <div className="w-full max-w-md mx-auto flex flex-col items-center gap-4">
           <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 shadow-sm">
             <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
@@ -265,7 +265,7 @@ export function LiveSessionRoomView({ access }: Props) {
             </button>
           </div>
           </div>
-        </div>
+        </ImmersiveBody>
 
         <div className="px-5 py-4 sm:py-5 border-t border-slate-100 shrink-0 bg-white space-y-2">
           {preview.isPreviewing && isCoachPresent && (

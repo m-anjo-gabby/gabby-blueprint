@@ -20,7 +20,7 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { AudioTroubleshootingDialog } from '@/components/help/AudioTroubleshootingDialog';
 import { MicTroubleshootingDialog } from '@/components/help/MicTroubleshootingDialog';
-import { ImmersivePanel } from '@/components/shell/PageFrames';
+import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface SprintSelectProps {
@@ -311,10 +311,10 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
               mainScrollState.top ? "opacity-100" : "opacity-0"
             )}
           />
-          <div
+          <ImmersiveBody
             ref={mainScrollRef}
             onScroll={updateMainScrollState}
-            className="flex-1 min-h-0 overflow-y-scroll px-6 py-4 overscroll-contain stable-gutter"
+            className="overflow-y-scroll px-6 py-4 stable-gutter"
           >
             <div className="w-full max-w-xl mx-auto space-y-4 pt-1 pb-6">
 
@@ -524,7 +524,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
               </div>
 
             </div>
-          </div>
+          </ImmersiveBody>
           {/* 🚀 改修: スクロール下端フェードマスク(残量がある時のみ表示) */}
           <div
             aria-hidden

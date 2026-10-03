@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import type { SprintQuestion } from '@gabby/types/sprint';
+import { scrollIntoContainer } from '@/lib/scroll';
 import type { SprintResultScore } from './types';
 
 /**
@@ -60,10 +61,11 @@ export function useSprintResultPlayback(
     };
   }, [stopAllAudio]);
 
-  // 全て再生中は、再生中の問題カードを画面中央へスクロールする
+  // 全て再生中は、再生中の問題カードを画面中央へスクロールする（スクロール領域だけを動かし、見出し・操作ボタンを見切れさせない）
   useEffect(() => {
     if (!focusedQuestionId || playbackMode !== 'all') return;
-    document.getElementById(`card-${focusedQuestionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const card = document.getElementById(`card-${focusedQuestionId}`);
+    if (card) scrollIntoContainer(card);
   }, [focusedQuestionId, playbackMode]);
 
   /** 1問分（基本文→質問文/指示文→解答文）を順番に再生する。途中で中断された場合（iOS の音声の中断を含む）は false */
