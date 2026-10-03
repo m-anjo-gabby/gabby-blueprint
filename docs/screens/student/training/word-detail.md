@@ -64,6 +64,7 @@
 この画面は単一教材内で完結する学習画面である。
 
 - [お気に入り](../../../../testing/e2e/specs/favorites/student-favorites.md) — カードの☆で登録したフレーズを、お気に入り画面で復習・解除する
+- [発話の流れ](../../../../testing/e2e/specs/training/speaking-flow.md) — 発話ボタン → チャイム → 発話評価（停止での確定・切替での中断）
 月次の学習実績集計は[単語帳の履歴](./word-history.md)・
 [トレーニング記録](./performance.md)を参照。
 

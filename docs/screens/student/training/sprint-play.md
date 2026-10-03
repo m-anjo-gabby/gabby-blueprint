@@ -110,6 +110,8 @@
 [スプリントの履歴](./sprint-history.md)・[トレーニング記録](./performance.md)
 を参照。
 
+- [発話の流れ](../../../../testing/e2e/specs/training/speaking-flow.md) — 問題種別ごとの再生順（Speed: 質問文 / Builders・Structure: 基本文 → 指示文 / Mastery: 基本文 → 質問文）→ チャイム → 発話評価、発話評価OFF、ドリルの発話ボタン
+
 ## 実装参照（エンジニア向け）
 
 - `apps/student/app/(app)/training/sprint/play/page.tsx`

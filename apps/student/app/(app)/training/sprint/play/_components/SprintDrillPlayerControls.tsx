@@ -140,6 +140,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
         <button
           onClick={isRecording ? onStopRecord : onStartRecord}
           disabled={(isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode}
+          aria-label={isRecording ? '発話を止める' : '発話練習'}
           className={cn("h-full rounded-2xl flex items-center justify-center font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative cursor-pointer",
             isRecording ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
             ((isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode) && "opacity-20 disabled:pointer-events-none disabled:cursor-not-allowed"

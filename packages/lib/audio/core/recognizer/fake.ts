@@ -10,6 +10,8 @@ interface FakeSpeechConfig {
   transcript?: string;
   /** 認識開始から文字起こしを返すまでの時間（ms） */
   delayMs?: number;
+  /** 設定されていれば、認識の開始ごとに参照文を記録する（テストで「何を発話評価したか・いつ始まったか」を確かめる） */
+  log?: Array<{ type: string; text?: string }>;
 }
 
 function readRawConfig(): FakeSpeechConfig | undefined {
@@ -34,6 +36,7 @@ export const fakeSpeechRecognizer: SpeechRecognizerEngine = {
   start(options: RecognitionStartOptions, callbacks: RecognitionCallbacks): RecognitionHandle {
     let active = true;
     const config = readConfig();
+    config.log?.push({ type: 'listen', text: options.referenceText });
     const startTimer = setTimeout(() => {
       if (active) callbacks.onStart?.();
     }, 50);
