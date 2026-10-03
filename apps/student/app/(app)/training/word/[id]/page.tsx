@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, use, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
 import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
+import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
 import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
@@ -23,7 +23,6 @@ import { WordControls } from './_components/WordControls';
 import { WordFeedback } from './_components/WordFeedback';
 import { WordIndex } from './_components/WordIndex';
 import { BookOpen, ArrowLeft, AlertCircle } from 'lucide-react';
-import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { PhraseItem } from '@gabby/types/word';
 import { ContentLoading } from '@/components/common/ContentLoading';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
@@ -41,19 +40,22 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   // 音声エンジン・録音・評価ロジック
   // 表示中ずっと発話セッションを借り、最初の発話以降は出力経路を切り替えない
   useSpeakingSession();
-  const { startAssessment, stopListening, isListening, timeLeft } = useWebSpeech();
-  
-  // 統合された音声再生フック（playChime, unlockAudioContextを追加抽出）
+  // 再生・発話（単語帳・スプリント共通のプレイヤー）
   const {
     play,
     preload,
-    playChime,
-    unlockAudioContext,
+    listen,
+    beginFlow,
+    stopAll,
+    finishListening,
+    isListening,
+    timeLeft,
+    unlock: unlockAudioContext,
     isPlaying: isAudioPlaying,
     playbackRate,
     changePlaybackRate,
     resumeStatus,
-  } = usePlayAudioSpeech();
+  } = useSpeakingPlayer({ decodeTimeoutMs: 1000, stopBeforeChime: true, urlResolution: 'sdk' });
 
   // ドリル状態管理（Zustand）
   const { 
@@ -183,7 +185,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    */
   const handleGlobalSpeak = useCallback((phrase: PhraseItem) => {
     if (phrase.audio_path && phrase.tts_status === 1) {
-      play(phrase.audio_path, phrase.phrase_id, {
+      play(phrase.audio_path, {
+        id: phrase.phrase_id,
         restart: true,
         onError: (err) => handleAudioUnavailable(phrase, err instanceof Error ? err.message : String(err)),
       });
@@ -226,7 +229,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 音声認識の開始/停止
    */
   const handleVoiceCheck = async () => {
-    if (isListening) { stopListening(); return; }
+    // 発話中のタップは、その時点の評価で確定する
+    if (isListening) { finishListening(); return; }
     if (!currentWord || !currentPhrase) return;
 
     // iOS WebKit 自動再生ロックの明示的な解除
@@ -235,23 +239,16 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     setFeedback(null);
     setAnalysis(null);
 
-    // suppressAudioSessionSwitch: true を渡してフック間のオーディオ奪い合いを防ぐ
-    startAssessment(
-      currentPhrase.phrase_en, 
-      [currentWord.word_en], 
-      (result) => {
-        setAnalysis(result);
-        setFeedback(getFeedbackConfig(result.score));
-        useWordDrillStore.getState().incrementAssessmentCount();
-      },
-      {
-        suppressAudioSessionSwitch: true,
-        // 🚀 実際にブラウザのマイクが開いた（録音準備完了）タイミングでチャイムを鳴らす
-        onRecognitionStart: () => {
-          playChime();
-        }
-      }
-    );
+    // チャイムが鳴り終わってから認識を開始する。カードを切り替えた場合は中断され、結果は反映しない
+    const result = await listen({
+      targetText: currentPhrase.phrase_en,
+      mainWords: [currentWord.word_en],
+      signal: beginFlow(),
+    });
+    if (!result) return;
+    setAnalysis(result);
+    setFeedback(getFeedbackConfig(result.score));
+    useWordDrillStore.getState().incrementAssessmentCount();
   };
 
   /**
@@ -303,6 +300,13 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       showToast("保存に失敗しました", "error");
     }
   };
+
+  /**
+   * カードの切り替え時は、前のカードの再生・発話を止める（前のカードの評価結果を反映させない）
+   */
+  useEffect(() => {
+    return () => stopAll();
+  }, [wordIdx, phraseIdx, stopAll]);
 
   /**
    * 自動再生：発話トリガー
