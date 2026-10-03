@@ -7,6 +7,7 @@ import { TermsAgreementModal } from "@/components/common/TermsAgreementModal";
 import { checkPendingAgreements } from '@/actions/termAction';
 import ScrollRestorer from '@/components/common/ScrollRestorer';
 import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
+import { AudioDiagnosticsReporter } from '@/components/common/AudioDiagnosticsReporter';
 import { PopupHost } from '@/components/popups/PopupHost';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
@@ -63,6 +64,8 @@ export default async function StudentAppLayout({
       */}
       <UserStoreInitializer user={user} />
       <ScrollRestorer />
+      {/* 音声の中断・復旧の発生状況をログへ送る（表示なし） */}
+      <AudioDiagnosticsReporter />
       
       {/* Color Vowel辞書 Provider: 単語タップで辞書検索ツールチップおよびダイアログをグローバル表示 */}
       <ColorVowelLookupProvider>

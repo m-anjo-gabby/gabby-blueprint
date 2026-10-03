@@ -9,6 +9,7 @@ import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, DEFAULT_SPRINT_TIME_KEY, type Spri
 import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, isSprintLevelSelectable, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from '@gabby/lib';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
+import { unlockAudio } from '@gabby/lib/audio/core/audioRuntime';
 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -190,6 +191,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   };
 
   const handleStartSubmit = async (answerType: SprintAnswerType = '0') => {
+    // 🔊 開始のタップの中で音声をアンロック・復旧する（結果画面での放置等で中断したままでも、1問目から鳴らす）。
+    // iOS はタップの同期区間でしか AudioContext を確実に再開・作り直しできないため、await より前に呼ぶ
+    void unlockAudio();
     // 選べない種別・レベルのまま開始しない（すべて未到達の種別等）
     const isLevelUsable = !hasLevel || userProgress === undefined || levelItems.some((item) => item.value === selectedLevel && !item.isLocked);
     if (!isTypeSupported(selectedType) || !isLevelUsable) {

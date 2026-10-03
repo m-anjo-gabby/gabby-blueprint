@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AnalysisResult } from '@gabby/types/speechAssessment';
 import { useAudioEngine, type AudioEngineOptions, type AudioEnginePlayOptions } from '../../hooks/useAudioEngine';
 import { requestPlayAndRecordSession } from '../core/audioSession';
+import { subscribeAudioLifecycle } from '../core/audioRuntime';
 import { startSpeechAssessment, type SpeechAssessmentHandle } from '../core/speechAssessment';
 import { waitFor, type PlayPromptsResult, type PromptFailure, type SpeakingPrompt, type SpeakingTurnResult } from '../core/flow';
 import { cancelSpeech } from '../../speech/synthesis';
@@ -46,6 +47,9 @@ export interface RunTurnOptions<K extends string> extends PlayPromptsOptions<K> 
  *   新しい流れを始める・stopAll() を呼ぶと、前の流れは待ち・再生・認識のどこにいても止まる。
  * - 発話の終わらせ方は2つ: finishListening()（その時点の評価で確定）と、中断（結果なし）。
  * - 発話の順番は「チャイムが鳴り終わってから認識を開始」で統一する（旧スピーキングテスト S172 と同じ）。
+ * - iOS の中断（画面が隠れた・通話等。audio/core/audioRuntime が検知）では、流れと発話を止めてマイクを放し、
+ *   interruptions を増やす。復旧したら recoveries を増やす。各画面は interruptions で表示を戻し、
+ *   recoveries で中断した問題を頭からやり直す（音声を飛ばして先へ進めない）。
  */
 export function useSpeakingPlayer(engineOptions: AudioEngineOptions) {
   const engine = useAudioEngine(engineOptions);
@@ -55,6 +59,10 @@ export function useSpeakingPlayer(engineOptions: AudioEngineOptions) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const playbackRateRef = useRef(1.0);
+
+  /** 中断・復旧の回数（各画面が effect の依存に使う） */
+  const [interruptions, setInterruptions] = useState(0);
+  const [recoveries, setRecoveries] = useState(0);
 
   const flowRef = useRef<AbortController | null>(null);
   const assessmentRef = useRef<SpeechAssessmentHandle | null>(null);
@@ -107,6 +115,20 @@ export function useSpeakingPlayer(engineOptions: AudioEngineOptions) {
     assessmentRef.current?.abort();
   }, []);
 
+  // iOS の中断・復旧（audioRuntime が画面の表示・非表示、AudioContext の状態、再生位置から判定する）
+  useEffect(() => subscribeAudioLifecycle((event) => {
+    if (event === 'interrupted') {
+      // 流れ・発話を止めてマイクを放す（バックグラウンドでマイクを使ったままにするとオーディオセッションが壊れやすい）
+      flowRef.current?.abort();
+      flowRef.current = null;
+      abortAssessment();
+      cancelSpeech();
+      setInterruptions((n) => n + 1);
+    } else {
+      setRecoveries((n) => n + 1);
+    }
+  }), [abortAssessment]);
+
   const changePlaybackRate = useCallback((rate: number) => {
     setPlaybackRate(rate);
     playbackRateRef.current = rate;
@@ -132,10 +154,11 @@ export function useSpeakingPlayer(engineOptions: AudioEngineOptions) {
         const prompt = prompts[i];
         onPrompt?.(prompt.key);
         if (prompt.text) {
-          const outcome: { failed: boolean; error: unknown } = { failed: false, error: null };
-          await play(prompt.audioPath, { onError: (e) => { outcome.failed = true; outcome.error = e; } });
-          if (signal.aborted) return { aborted: true, failures };
-          if (outcome.failed) {
+          const outcome: { error: unknown } = { error: null };
+          const result = await play(prompt.audioPath, { onError: (e) => { outcome.error = e; } });
+          // 中断（iOS の中断等）は「再生できなかった問題」ではない。流れを止めて復旧を待つ
+          if (signal.aborted || result === 'interrupted') return { aborted: true, failures };
+          if (result === 'failed') {
             const failure = { prompt, error: outcome.error };
             failures.push(failure);
             onPromptError?.(failure);
@@ -226,6 +249,8 @@ export function useSpeakingPlayer(engineOptions: AudioEngineOptions) {
     finishListening,
     isListening,
     timeLeft,
+    interruptions,
+    recoveries,
     playbackRate,
     changePlaybackRate,
     playChime,

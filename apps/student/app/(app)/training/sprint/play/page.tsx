@@ -13,6 +13,7 @@ import Link from "next/link";
 import { ContentLoading } from "@/components/common/ContentLoading";
 import { ImmersiveNotice, noticeActionClass } from "@/components/shell/ImmersiveNotice";
 import { primeSpeechSynthesis } from '@gabby/lib/speech/synthesis';
+import { unlockAudio } from '@gabby/lib/audio/core/audioRuntime';
 
 interface PageProps {
   searchParams: Promise<{
@@ -269,6 +270,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
               audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
               audio.play().catch(() => {});
               primeSpeechSynthesis();
+              // 共有の AudioContext もこのタップの中でアンロック・復旧する（中断中なら作り直す）
+              void unlockAudio();
               
               handleStartSession({
                 mode: config.mode,

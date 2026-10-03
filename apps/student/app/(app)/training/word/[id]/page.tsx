@@ -50,6 +50,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     finishListening,
     isListening,
     timeLeft,
+    interruptions,
     unlock: unlockAudioContext,
     isPlaying: isAudioPlaying,
     playbackRate,
@@ -307,6 +308,14 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     return () => stopAll();
   }, [wordIdx, phraseIdx, stopAll]);
+
+  /**
+   * iOS の中断（画面が隠れた・通話等）では自動再生を止める。
+   * 音声が出ない間に「再生が終わった」とみなされ、聞こえないままフレーズが進むのを防ぐ（再開は利用者の操作で行う）
+   */
+  useEffect(() => {
+    if (interruptions > 0) useWordDrillStore.getState().toggleAutoPlay(false);
+  }, [interruptions]);
 
   /**
    * 自動再生：発話トリガー

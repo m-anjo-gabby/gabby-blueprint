@@ -83,6 +83,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     listen,
     finishListening,
     timeLeft,
+    interruptions,
+    recoveries,
     playbackRate,
     changePlaybackRate,
     unlock: unlockAudioContext,
@@ -166,7 +168,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   }, [contentId, currentQuestion, showToast]);
 
   // 再生速度は useSpeakingPlayer の changePlaybackRate の値が使われる
-  const playSingleTrack = useCallback((text: string, audioPath: string | null): Promise<void> => {
+  const playSingleTrack = useCallback((text: string, audioPath: string | null) => {
     return play(audioPath, {
       skip: exitLoading,
       onError: (err) => handleAudioUnavailable(text, audioPath, err),
@@ -456,9 +458,14 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
-    // ✨ 依存関係を厳密に制限。毎秒変わる state などによる再トリガーを防ぐ。
+    // ✨ 依存関係を厳密に制限。毎秒変わる state などによる再トリガーを防ぐ（recoveries: 中断からの復旧で問題を再生し直す）
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, currentQuestion?.question_id, isStarted, exitLoading]);
+  }, [currentIndex, currentQuestion?.question_id, isStarted, exitLoading, recoveries]);
+
+  // ⏸️ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中・自動再生のタイマー）を戻す
+  useEffect(() => {
+    if (interruptions > 0) stopAllAudio();
+  }, [interruptions, stopAllAudio]);
 
   useEffect(() => {
     // カードが切り替わった場合は、直前の評価結果の記録をクリア

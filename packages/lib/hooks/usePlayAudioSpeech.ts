@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { createBrowserClient } from '../supabase/client';
-import { useAudioEngine } from './useAudioEngine';
+import { useAudioEngine, type AudioPlayOutcome } from './useAudioEngine';
 
 /**
  * 音声再生およびダウンロードを管理するカスタムフック。
@@ -28,7 +28,7 @@ export function usePlayAudioSpeech() {
     path: string | null,
     id: string,
     options?: { restart?: boolean; bucketName?: string; onError?: (error: unknown) => void },
-  ): Promise<void> => {
+  ): Promise<AudioPlayOutcome> => {
     return engine.play(path, {
       id,
       restart: options?.restart,

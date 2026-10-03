@@ -78,17 +78,17 @@ export function useSprintResultPlayback(
     document.getElementById(`card-${focusedQuestionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [focusedQuestionId, playbackMode]);
 
-  /** 1問分（基本文→質問文/指示文→解答文）を順番に再生する。途中で中断された場合は false */
+  /** 1問分（基本文→質問文/指示文→解答文）を順番に再生する。途中で中断された場合（iOS の音声の中断を含む）は false */
   const playQuestionSequence = useCallback(
     async (q: SprintQuestion, isCancelled: () => boolean) => {
       if (scoreData.question_type !== '0' && q.statement_en && q.statement_voice) {
-        await play(q.statement_voice, sprintAudioId.statement(q.question_id), { restart: true });
+        if ((await play(q.statement_voice, sprintAudioId.statement(q.question_id), { restart: true })) === 'interrupted') return false;
         if (isCancelled()) return false;
         await wait(400);
       }
       if (isCancelled()) return false;
       if (q.question_voice) {
-        await play(q.question_voice, sprintAudioId.question(q.question_id), { restart: true });
+        if ((await play(q.question_voice, sprintAudioId.question(q.question_id), { restart: true })) === 'interrupted') return false;
       }
       if (isCancelled()) return false;
       await wait(400);
@@ -96,7 +96,7 @@ export function useSprintResultPlayback(
       if (isCancelled()) return false;
       const answer = getAnswerAudio(q, scoreData);
       if (answer.voice) {
-        await play(answer.voice, answer.id, { restart: true });
+        if ((await play(answer.voice, answer.id, { restart: true })) === 'interrupted') return false;
       }
       return !isCancelled();
     },

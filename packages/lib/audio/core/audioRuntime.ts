@@ -4,26 +4,67 @@
  * - AudioContext はアプリ全体で1つ。画面を離れても閉じず、自動では作り直さない。
  *   以前はフック・画面ごとに AudioContext を作り、閉じないものもあったため、
  *   「スプリント→結果→リトライ」等の繰り返しで iOS の同時保持数の上限に達し、再生できなくなることがあった。
- * - 作り直すのは、利用者のタップ（unlockAudio）の時点で一度動いていたコンテキストが running に戻らない場合だけ
- *   （iOS はタップの同期コールスタック内で作ったコンテキストしか確実にアンロックしないため、作り直しはその場で行う）。
  * - 再生中の音声（クリップ）は常に1つ。新しいクリップを再生すると前のクリップは止まる。
  * - 音声再開の状態（resumeStatus）もここで一元管理し、各画面は subscribe で購読する。
+ *
+ * ## 中断と復旧（iOS の放置・バックグラウンド・通話等）
+ * - 画面が隠れたら、再生を止めて自分から suspend() し、「中断」を通知する（各プレイヤーは流れ・発話を止めてマイクを放す）。
+ *   iOS に止められる前に止めておくと、戻ったときに再開しやすい。
+ * - 画面に戻ったら、まず resume() を試す。動き出し、かつ再生位置（currentTime）が進めば「復旧」を通知する
+ *   （各プレイヤーは中断した問題を頭からやり直す）。だめなら「タップして再開」（needsResume）を出す。
+ * - iOS は状態が running なのに無音（再生位置が進まない）になることがあるため、中断の後は状態だけでなく
+ *   再生位置が進むかで判定する。タップでの再開では、壊れたコンテキストをその場で作り直す
+ *   （iOS はタップの同期コールスタック内で作ったコンテキストしか確実にアンロックしないため）。
+ * - 動いていないコンテキストでは再生を始めず、すぐ「中断」で返す（終わらない待ちで画面の流れが止まらないようにする）。
+ *   再生中も、音声の長さ＋余裕の時間で必ず打ち切る。
+ * - タップしても復旧しなければ 'failed'（再読み込みを案内）。再読み込みした同じ画面でまた失敗した場合は
+ *   'failedAgain'（Safari のタブを閉じて開き直すよう案内）。タブ側の音声処理が壊れていると再読み込みでは直らないため。
  */
 
 /**
  * 'ok': 通常状態。
- * 'needsResume': 一度動いていた AudioContext が running に戻らない（バックグラウンド復帰等）。「タップして音声を再開」を出す。
- * 'failed': タップでの再開でも running に戻らなかった。iOS 側でページの実行状態ごと破棄されている可能性が高く、リロードを促す。
+ * 'needsResume': 中断から自動では復旧できなかった。「タップして音声を再開」を出す。
+ * 'failed': タップでの再開でも復旧しなかった。再読み込みを案内する。
+ * 'failedAgain': 再読み込みした同じ画面でまた復旧しなかった。Safari のタブを閉じて開き直すよう案内する。
  */
-export type AudioResumeStatus = 'ok' | 'needsResume' | 'failed';
+export type AudioResumeStatus = 'ok' | 'needsResume' | 'failed' | 'failedAgain';
+
+/** 'interrupted': 再生・発話を続けられなくなった（流れを止める）。'recovered': 中断から復旧した（中断した所からやり直す） */
+export type AudioLifecycleEvent = 'interrupted' | 'recovered';
+
+/** クリップの終わり方。'interrupted' は音声が出せない・出ていない状態で打ち切ったもの */
+export type PlayClipResult = 'ended' | 'stopped' | 'interrupted';
+
+export interface AudioDiagnosticEvent {
+  event: string;
+  level: 'info' | 'warn';
+  detail: Record<string, unknown>;
+}
 
 const RESUME_TIMEOUT_MS = 500;
+/** 再生位置が進むかを確かめる時間 */
+const HEALTH_CHECK_MS = 300;
+/** クリップの打ち切りタイマーの余裕（音声の長さに足す） */
+const CLIP_WATCHDOG_EXTRA_MS = 2000;
+/** 再読み込み後の「また失敗した」を判定する記録（タブごと・再読み込みでは消えない） */
+const FAILURE_STORAGE_KEY = 'gabby:audio-failed';
+const FAILURE_REPEAT_WINDOW_MS = 30 * 60 * 1000;
 
 let ctx: AudioContext | null = null;
 /** 一度でも running になったか（初回のタップ前の suspended は「要復旧」ではないため区別する） */
 let hasEverRun = false;
+/** 中断の後で、再生位置が進むかをまだ確かめていない（running でも無音のことがあるため） */
+let needsHealthCheck = false;
+/** 画面が隠れたときに自分で suspend した（その statechange を中断として扱わない） */
+let suspendedByUs = false;
+/** 中断を通知したが、まだ復旧を通知していない */
+let interruptionPending = false;
+let hiddenAt: number | null = null;
+let lifecycleInstalled = false;
 let resumeStatus: AudioResumeStatus = 'ok';
 const statusListeners = new Set<() => void>();
+const lifecycleListeners = new Set<(event: AudioLifecycleEvent) => void>();
+let diagnosticsReporter: ((event: AudioDiagnosticEvent) => void) | null = null;
 
 /** デコード済み音声のキャッシュ（AudioBuffer はコンテキストを作り直しても使い回せる）。キー: 公開URL */
 const bufferCache = new Map<string, AudioBuffer>();
@@ -35,8 +76,8 @@ let chimePromise: Promise<AudioBuffer | null> | null = null;
 interface ActiveClip {
   source: AudioBufferSourceNode;
   ownerId: number;
-  /** 再生を終えた扱いにして待っている Promise を解決する（停止・終了・コンテキスト作り直しのいずれでも1回だけ） */
-  finish: () => void;
+  /** 再生を終えた扱いにして待っている Promise を解決する（停止・終了・中断のいずれでも1回だけ） */
+  finish: (result: PlayClipResult) => void;
 }
 let activeClip: ActiveClip | null = null;
 
@@ -61,6 +102,36 @@ function isRunning(state: string): boolean {
   return state === 'running';
 }
 
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+// ─── 記録（発生状況の把握用。送り先はアプリが setAudioDiagnosticsReporter で登録する） ───
+
+/** 中断・復旧の記録の送り先を登録する（アプリで1回） */
+export function setAudioDiagnosticsReporter(reporter: ((event: AudioDiagnosticEvent) => void) | null) {
+  diagnosticsReporter = reporter;
+}
+
+function report(event: string, level: 'info' | 'warn', detail: Record<string, unknown> = {}) {
+  if (!diagnosticsReporter || typeof window === 'undefined') return;
+  try {
+    diagnosticsReporter({
+      event,
+      level,
+      detail: {
+        ...detail,
+        contextState: ctx?.state ?? null,
+        sampleRate: ctx?.sampleRate ?? null,
+        visibility: document.visibilityState,
+        hiddenMs: hiddenAt !== null ? Date.now() - hiddenAt : null,
+        path: window.location.pathname,
+        userAgent: navigator.userAgent,
+      },
+    });
+  } catch { /* 記録の失敗は再生に影響させない */ }
+}
+
+// ─── 音声再開の状態 ─────────────────────────────────────────────
+
 function setResumeStatus(next: AudioResumeStatus) {
   if (resumeStatus === next) return;
   resumeStatus = next;
@@ -76,19 +147,71 @@ export function subscribeAudioResumeStatus(listener: () => void): () => void {
   return () => { statusListeners.delete(listener); };
 }
 
-function markRunningIfSo(context: AudioContext) {
-  if (isRunning(context.state)) {
-    hasEverRun = true;
-    setResumeStatus('ok');
-  }
+/** 中断・復旧の通知を受け取る */
+export function subscribeAudioLifecycle(listener: (event: AudioLifecycleEvent) => void): () => void {
+  lifecycleListeners.add(listener);
+  return () => { lifecycleListeners.delete(listener); };
 }
+
+function emitLifecycle(event: AudioLifecycleEvent) {
+  lifecycleListeners.forEach((listener) => {
+    try { listener(event); } catch (e) { console.warn('Audio lifecycle listener failed:', e); }
+  });
+}
+
+/** 再読み込み後も同じ画面で失敗したか（sessionStorage はタブごとで、再読み込みでは消えない） */
+function markFailed(reason: string) {
+  let repeated = false;
+  try {
+    const raw = window.sessionStorage.getItem(FAILURE_STORAGE_KEY);
+    const previous = raw ? (JSON.parse(raw) as { path?: string; at?: number }) : null;
+    repeated = !!previous && previous.path === window.location.pathname
+      && typeof previous.at === 'number' && Date.now() - previous.at < FAILURE_REPEAT_WINDOW_MS;
+    window.sessionStorage.setItem(FAILURE_STORAGE_KEY, JSON.stringify({ path: window.location.pathname, at: Date.now() }));
+  } catch { /* 保存できない環境では「また失敗」を判定しない */ }
+  setResumeStatus(repeated ? 'failedAgain' : 'failed');
+  report(repeated ? 'audio:recover_failed_again' : 'audio:recover_failed', 'warn', { reason });
+}
+
+function clearFailureMark() {
+  try { window.sessionStorage.removeItem(FAILURE_STORAGE_KEY); } catch { /* no-op */ }
+}
+
+/** 再生・発話を続けられなくなった。再生を止め、各プレイヤーに流れを止めさせる */
+function interrupt(reason: string) {
+  stopActiveClip('interrupted');
+  needsHealthCheck = true;
+  if (!interruptionPending) {
+    interruptionPending = true;
+    emitLifecycle('interrupted');
+  }
+  // 画面が隠れただけの中断はタブの切り替えのたびに起きるため記録しない（戻ったときに直らなければ resume_needed を記録する）
+  if (reason !== 'hidden') report('audio:interrupted', 'info', { reason });
+}
+
+/** 復旧した。状態を戻し、中断していた場合は各プレイヤーにやり直させる */
+function recovered(method: string) {
+  needsHealthCheck = false;
+  hasEverRun = true;
+  clearFailureMark();
+  const wasBroken = resumeStatus !== 'ok';
+  setResumeStatus('ok');
+  if (interruptionPending) {
+    interruptionPending = false;
+    emitLifecycle('recovered');
+  }
+  if (wasBroken || method !== 'auto') report('audio:recovered', 'info', { method });
+}
+
+// ─── AudioContext ──────────────────────────────────────────────
 
 function createContext(): AudioContext | null {
   const AudioContextClass = getAudioContextClass();
   if (!AudioContextClass) return null;
   const created = new AudioContextClass();
-  created.onstatechange = () => markRunningIfSo(created);
+  created.onstatechange = () => handleStateChange(created);
   ctx = created;
+  installLifecycle();
   return created;
 }
 
@@ -99,30 +222,119 @@ export function getAudioContext(): AudioContext | null {
 }
 
 function resumeWithTimeout(context: AudioContext): Promise<void> {
+  suspendedByUs = false;
   return Promise.race([
     context.resume(),
     new Promise<void>((resolve) => setTimeout(resolve, RESUME_TIMEOUT_MS)),
   ]).catch(() => { /* no-op */ });
 }
 
+/** running で、かつ再生位置が進んでいるか（iOS は running なのに無音のことがある） */
+async function isAdvancing(context: AudioContext): Promise<boolean> {
+  if (!isRunning(context.state)) return false;
+  const startedAt = context.currentTime;
+  await wait(HEALTH_CHECK_MS);
+  return isRunning(context.state) && context.currentTime > startedAt;
+}
+
+/** タップによらずに復旧を試す（resume → 再生位置の確認）。作り直しはしない */
+async function tryRecoverWithoutGesture(context: AudioContext, method: string): Promise<boolean> {
+  if (!isRunning(context.state)) await resumeWithTimeout(context);
+  if (context !== ctx) return false;
+  if (await isAdvancing(context)) {
+    recovered(method);
+    return true;
+  }
+  return false;
+}
+
+function handleStateChange(context: AudioContext) {
+  if (context !== ctx) return;
+  if (isRunning(context.state)) {
+    hasEverRun = true;
+    // 通話の終了等で iOS が自動で再開した場合。再生位置が進むことを確かめてから復旧とする
+    if (resumeStatus === 'needsResume' && document.visibilityState === 'visible') {
+      void tryRecoverWithoutGesture(context, 'statechange');
+    }
+    return;
+  }
+  if (context.state === 'closed' || suspendedByUs || !hasEverRun) return;
+  // 画面表示中に止められた（通話・Siri・他のアプリの音声等）
+  interrupt(`statechange:${context.state}`);
+  setResumeStatus('needsResume');
+}
+
+// ─── 画面の表示・非表示 ─────────────────────────────────────────
+
+function handleHidden() {
+  if (hiddenAt === null) hiddenAt = Date.now();
+  const context = ctx;
+  if (!context || !hasEverRun) return;
+  interrupt('hidden');
+  if (isRunning(context.state)) {
+    suspendedByUs = true;
+    context.suspend().catch(() => { /* no-op */ });
+  }
+}
+
+function handleVisible() {
+  const context = ctx;
+  const hiddenMs = hiddenAt !== null ? Date.now() - hiddenAt : null;
+  hiddenAt = null;
+  if (!context || !hasEverRun || !interruptionPending || resumeStatus === 'failed' || resumeStatus === 'failedAgain') return;
+  void tryRecoverWithoutGesture(context, 'auto').then((ok) => {
+    if (ok || context !== ctx) return;
+    setResumeStatus('needsResume');
+    report('audio:resume_needed', 'warn', { reason: 'visible', awayMs: hiddenMs });
+  });
+}
+
+function installLifecycle() {
+  if (lifecycleInstalled || typeof document === 'undefined') return;
+  lifecycleInstalled = true;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') handleHidden();
+    else handleVisible();
+  });
+  window.addEventListener('pagehide', handleHidden);
+  window.addEventListener('pageshow', () => {
+    if (document.visibilityState === 'visible') handleVisible();
+  });
+}
+
 /**
- * 再生・プリロード等、タップ起点とは限らない処理から呼ぶ。resume を試すだけで作り直さない。
- * 一度動いていたのに running に戻らなければ 'needsResume'（タップして再開）にする。
+ * 再生・チャイム等、タップ起点とは限らない処理から呼ぶ。再生に使えるコンテキストを返し、使えなければ null。
+ * resume を試すだけで作り直さない。中断の後は再生位置が進むことも確かめる。
  */
 export async function ensureAudioRunning(): Promise<AudioContext | null> {
   const context = getAudioContext();
   if (!context) return null;
-  if (isRunning(context.state)) {
-    markRunningIfSo(context);
+  if (resumeStatus === 'failed' || resumeStatus === 'failedAgain') return null;
+  if (isRunning(context.state) && !needsHealthCheck) {
+    hasEverRun = true;
     return context;
   }
-  await resumeWithTimeout(context);
-  if (isRunning(context.state)) {
-    markRunningIfSo(context);
-  } else if (hasEverRun) {
-    setResumeStatus('needsResume');
+  if (!hasEverRun) {
+    // まだ一度も動いていない（iOS の自動再生ロック中）。resume を試し、だめなら「タップして再開」を出して流れを止める
+    // （タップでのアンロック後に recovered を通知し、止めた所からやり直させる）
+    await resumeWithTimeout(context);
+    if (isRunning(context.state)) {
+      hasEverRun = true;
+      return context;
+    }
+    if (context === ctx) {
+      interrupt('locked');
+      setResumeStatus('needsResume');
+    }
+    return null;
   }
-  return context;
+  if (await tryRecoverWithoutGesture(context, 'play')) return context;
+  if (context === ctx) {
+    interrupt('not-running-on-play');
+    setResumeStatus('needsResume');
+    report('audio:resume_needed', 'warn', { reason: 'play' });
+  }
+  return null;
 }
 
 /** 1サンプルの無音を鳴らして出力を有効化する（iOS のタップ起点のアンロック用） */
@@ -137,44 +349,54 @@ function playSilentTick(context: AudioContext) {
 }
 
 /**
- * 利用者のタップから呼ぶ。await より前の同期区間で、必要ならその場で AudioContext を作り直す。
- * それでも running にならなければ 'failed'（リロード誘導）にする。
+ * 利用者のタップから呼ぶ。await より前の同期区間で、中断の後なら壊れたコンテキストをその場で作り直す。
+ * それでも復旧しなければ 'failed'（再読み込みを案内）、再読み込み後もなら 'failedAgain' にする。
  */
 export async function unlockAudio(): Promise<void> {
   let context = getAudioContext();
   if (!context) return;
-  if (isRunning(context.state)) {
-    markRunningIfSo(context);
+
+  const isRecovery = hasEverRun && (needsHealthCheck || resumeStatus !== 'ok' || !isRunning(context.state));
+  if (!isRecovery) {
+    if (isRunning(context.state)) {
+      hasEverRun = true;
+      return;
+    }
+    // 初回のアンロック（自動再生ロックの解除）
+    playSilentTick(context);
+    await resumeWithTimeout(context);
+    if (isRunning(context.state)) {
+      hasEverRun = true;
+      // ロック中に再生しようとして止めた流れがあれば、やり直させる
+      if (interruptionPending || resumeStatus !== 'ok') recovered('unlock');
+    }
     return;
   }
 
-  const isRecovery = hasEverRun;
-  if (isRecovery) {
-    // 一度動いていたコンテキストが止まっている（バックグラウンド復帰・通話等による中断）。
-    // iOS では resume が効かないことが多いため、タップの同期区間で作り直す（古いものは必ず閉じ、数を増やさない）。
-    stopActiveClip();
-    const old = context;
-    context = createContext();
-    old.close().catch(() => { /* no-op */ });
-    if (!context) return;
-  }
+  // 一度動いていたコンテキストが中断された（バックグラウンド復帰・通話等）。
+  // iOS では resume が効かない・running でも無音のことが多いため、タップの同期区間で作り直す（古いものは必ず閉じ、数を増やさない）。
+  stopActiveClip('interrupted');
+  const old = context;
+  context = createContext();
+  old.close().catch(() => { /* no-op */ });
+  if (!context) return;
 
   playSilentTick(context);
   await resumeWithTimeout(context);
 
-  if (isRunning(context.state)) {
-    markRunningIfSo(context);
-  } else if (isRecovery) {
-    setResumeStatus('failed');
+  if (context === ctx && (await isAdvancing(context))) {
+    recovered('gesture');
+  } else if (context === ctx) {
+    markFailed('gesture-recreate');
   }
 }
 
-function stopActiveClip() {
+function stopActiveClip(result: PlayClipResult = 'stopped') {
   const clip = activeClip;
   if (!clip) return;
   activeClip = null;
   try { clip.source.stop(); } catch { /* no-op */ }
-  clip.finish();
+  clip.finish(result);
 }
 
 /**
@@ -183,7 +405,7 @@ function stopActiveClip() {
 export function stopAudioClip(ownerId?: number) {
   if (!activeClip) return;
   if (ownerId !== undefined && activeClip.ownerId !== ownerId) return;
-  stopActiveClip();
+  stopActiveClip('stopped');
 }
 
 /** 再生中のクリップの再生速度を変える */
@@ -232,36 +454,40 @@ export function loadAudioBuffer(url: string, opts: { decodeTimeoutMs?: number } 
 
 /**
  * デコード済みの音声をクリップとして再生する。前のクリップは止める。
- * 再生終了・停止・コンテキストの作り直しのいずれでも解決する。
+ * 再生に使えるコンテキストが無ければ再生せず 'interrupted' で返す。
+ * 再生が終わらない（無音のまま止まっている）場合は、音声の長さ＋余裕の時間で 'interrupted' として打ち切る。
  */
 export async function playAudioClip(
   buffer: AudioBuffer,
   opts: { ownerId: number; playbackRate?: number; onStart?: () => void },
-): Promise<void> {
+): Promise<PlayClipResult> {
   const context = await ensureAudioRunning();
-  if (!context || context.state === 'closed') return;
+  if (!context || context.state === 'closed') return 'interrupted';
 
-  stopActiveClip();
+  stopActiveClip('stopped');
 
-  return new Promise<void>((resolve) => {
+  return new Promise<PlayClipResult>((resolve) => {
     const source = context.createBufferSource();
+    const rate = opts.playbackRate ?? 1.0;
     source.buffer = buffer;
-    source.playbackRate.value = opts.playbackRate ?? 1.0;
+    source.playbackRate.value = rate;
     source.connect(context.destination);
 
     let finished = false;
+    let watchdog: ReturnType<typeof setTimeout> | null = null;
     const clip: ActiveClip = {
       source,
       ownerId: opts.ownerId,
-      finish: () => {
+      finish: (result) => {
         if (finished) return;
         finished = true;
-        resolve();
+        if (watchdog) clearTimeout(watchdog);
+        resolve(result);
       },
     };
     source.onended = () => {
       if (activeClip === clip) activeClip = null;
-      clip.finish();
+      clip.finish('ended');
     };
     activeClip = clip;
     opts.onStart?.();
@@ -271,8 +497,18 @@ export async function playAudioClip(
     } catch (err) {
       console.error('AudioSource start error:', err);
       if (activeClip === clip) activeClip = null;
-      clip.finish();
+      clip.finish('interrupted');
+      return;
     }
+
+    // 再生中に速度を下げられても足りるよう、0.5倍速（より遅ければその速度）を想定した長さに余裕を足す
+    const expectedMs = (buffer.duration / Math.min(rate, 0.5)) * 1000;
+    watchdog = setTimeout(() => {
+      if (activeClip !== clip) return;
+      report('audio:clip_watchdog', 'warn', { durationSec: buffer.duration, rate });
+      interrupt('clip-watchdog');
+      setResumeStatus('needsResume');
+    }, expectedMs + CLIP_WATCHDOG_EXTRA_MS);
   });
 }
 

@@ -136,6 +136,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     runTurn,
     finishListening,
     timeLeft,
+    interruptions,
+    recoveries,
     unlock: unlockAudioContext,
     resumeStatus,
   } = useSpeakingPlayer({ urlResolution: 'concat' });
@@ -538,9 +540,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       await runSprintFlow(currentQuestion, signal);
     })();
 
-    // 毎秒変わるステートによる再トリガーを避けるため、問題IDを基準に限定
+    // 毎秒変わるステートによる再トリガーを避けるため、問題IDを基準に限定（recoveries: 中断からの復旧でやり直す）
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving, exitLoading]);
+  }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving, exitLoading, recoveries]);
+
+  // ⏸️ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中）を戻す
+  useEffect(() => {
+    if (interruptions > 0) stopAllAudio();
+  }, [interruptions, stopAllAudio]);
 
   // DOM/オーディオの強制クリーンアップおよびiOSオーディオセッション固定化
   // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要

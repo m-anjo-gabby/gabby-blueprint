@@ -54,8 +54,15 @@ export interface AudioEnginePlayOptions {
   onError?: (error: unknown) => void;
 }
 
+/**
+ * 再生の結果。'ended': 最後まで再生した / 'stopped': 停止・別の音声の再生で止まった / 'skipped': skip 指定で再生しなかった /
+ * 'failed': 音声ファイルが無い・取得やデコードに失敗した（onError も呼ばれる） /
+ * 'interrupted': 音声を出せない状態（iOS の中断等）で再生しなかった・打ち切った（流れを止めて復旧を待つ）
+ */
+export type AudioPlayOutcome = 'ended' | 'stopped' | 'skipped' | 'failed' | 'interrupted';
+
 export interface UseAudioEngineReturn {
-  play: (path: string | null, opts?: AudioEnginePlayOptions) => Promise<void>;
+  play: (path: string | null, opts?: AudioEnginePlayOptions) => Promise<AudioPlayOutcome>;
   playChime: () => Promise<void>;
   stop: () => void;
   unlock: () => Promise<void>;
@@ -118,16 +125,16 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucketName || 'audio'}/${path}`;
   }, [urlResolution]);
 
-  const play = useCallback(async (path: string | null, playOpts: AudioEnginePlayOptions = {}): Promise<void> => {
+  const play = useCallback(async (path: string | null, playOpts: AudioEnginePlayOptions = {}): Promise<AudioPlayOutcome> => {
     const { id, playbackRate = 1.0, restart, skip, bucketName, onError } = playOpts;
 
-    if (skip) return;
+    if (skip) return 'skipped';
 
     // 同一idの再タップ（restart指定なし）はトグル停止扱い。idが未指定の呼び出し（スプリントの問題音声等）は
     // このトグル判定自体を行わず、常に新規再生として扱う。
     if (id !== undefined && currentPlayingIdRef.current === id && !restart) {
       stop();
-      return;
+      return 'stopped';
     }
 
     // 取得・デコード中に前の音声が鳴り続けないよう、先に止める
@@ -138,7 +145,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
       currentPlayingIdRef.current = null;
       setIsPlaying(null);
       onError?.(new Error('No audio path provided'));
-      return;
+      return 'failed';
     }
 
     const playingId = id ?? null;
@@ -154,13 +161,13 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
         setIsPlaying(null);
       }
       onError?.(err);
-      return;
+      return 'failed';
     }
 
     // 取得中に停止・別の音声の再生が行われていたら、この再生は取りやめる
-    if (playTokenRef.current !== token) return;
+    if (playTokenRef.current !== token) return 'stopped';
 
-    await playAudioClip(buffer, {
+    const result = await playAudioClip(buffer, {
       ownerId,
       playbackRate,
       onStart: () => {
@@ -172,6 +179,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
       currentPlayingIdRef.current = null;
       if (id !== undefined) setIsPlaying(null);
     }
+    return result;
   }, [ownerId, resolveUrl, stop, decodeTimeoutMs]);
 
   const playChime = useCallback(async (): Promise<void> => {
