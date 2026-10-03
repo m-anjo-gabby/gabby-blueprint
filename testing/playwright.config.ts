@@ -2,11 +2,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
 import { loadTestEnv } from "./helpers/env.ts";
+import { ADMIN_BASE_URL, E2E_ENV, STUDENT_BASE_URL, USES_LOCAL_SERVER } from "./e2e/support/targets.ts";
 
 /**
  * E2E（Playwright）設定。規約は testing/e2e/CONVENTIONS.md を参照。
  *
- * - 接続先は dev のみ（apps/student/.env.local を使うローカル dev サーバー）。
+ * - 接続先は dev（apps/student/.env.local を使うローカル dev サーバー）。`E2E_ENV=staging` でステージング
+ *   （Vercel のデプロイ済みサイト＋ apps/student/.env.staging のDB。dev サーバーは起動しない）。e2e/support/targets.ts
  * - student の dev サーバー（`dev:ssl`、https://localhost:3000）が既に起動していればそれを使う。
  *   起動していなければ Playwright が起動し、テスト終了時に停止する。
  * - admin の dev サーバー（`dev:ssl`、https://localhost:3001）も同じ扱い。アドミンの画面操作を含むテスト
@@ -16,12 +18,11 @@ import { loadTestEnv } from "./helpers/env.ts";
  * - 出力はトークン・ノイズを抑えるため最小限（line reporter、dev サーバーの標準出力は捨てる）。
  *   詳細な調査が必要な場合は HTML レポート / trace を人が開いて確認する。
  */
-loadTestEnv("dev");
+loadTestEnv(E2E_ENV);
 
 const TESTING_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TESTING_DIR, "..");
-const BASE_URL = process.env.E2E_BASE_URL ?? "https://localhost:3000";
-const ADMIN_BASE_URL = process.env.E2E_ADMIN_BASE_URL ?? "https://localhost:3001";
+const BASE_URL = STUDENT_BASE_URL;
 const ARTIFACTS_DIR = path.join(TESTING_DIR, "e2e/.artifacts");
 const ANDROID_ENABLED = process.env.E2E_ANDROID === "1";
 
@@ -50,7 +51,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "off",
   },
-  webServer: [
+  webServer: !USES_LOCAL_SERVER ? undefined : [
     { app: "student", url: BASE_URL },
     { app: "admin", url: ADMIN_BASE_URL },
   ].map(({ app, url }) => ({

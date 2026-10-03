@@ -159,6 +159,29 @@ export async function grantLiveLicense(
   return { ticketId: ticket.ticket_id };
 }
 
+/**
+ * 使い捨ての顧客の生徒が使える単語帳を1つ用意する。共通公開を優先し、無ければ限定公開の教材（顧客専用の「[…]」で始まる名前を除く）を
+ * 使い捨ての顧客に公開する（環境によって同じ教材の公開範囲が違うため。公開先は cleanupAuthFixture で消える）。
+ */
+export async function prepareWordContent(fixture: AuthFixture): Promise<{ content_id: string; content_name: string }> {
+  const { data, error } = await fixture.admin
+    .from("com_m_contents")
+    .select("content_id, content_name, content_scope")
+    .eq("content_type", 0)
+    .in("content_scope", [0, 1])
+    .eq("delete_flg", "0")
+    .not("content_name", "like", "[%")
+    .order("content_scope")
+    .limit(1)
+    .single();
+  if (error || !data) throw new Error(`単語帳が見つかりません: ${error?.message}`);
+  if (data.content_scope === 1) {
+    const { error: accessError } = await fixture.admin.from("com_m_contents_access").insert({ client_id: fixture.clientId, content_id: data.content_id });
+    if (accessError) throw new Error(`単語帳の公開先の追加に失敗しました: ${accessError.message}`);
+  }
+  return { content_id: data.content_id, content_name: data.content_name };
+}
+
 /** 招待（com_t_invitation）を直接作る。contractId を渡すと、本登録時にその契約の初期ライセンスが付く。戻り値は招待トークン */
 export async function createInvitation(
   fixture: AuthFixture,

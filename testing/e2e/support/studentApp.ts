@@ -8,9 +8,12 @@ import { expect, test as base, type Locator, type Page } from "@playwright/test"
 /** アプリシェルのメインナビ（モバイル=ボトムタブ／PC=サイドナビ。表示中の方だけが取得される） */
 export const mainNav = (page: Page): Locator => page.getByRole("navigation", { name: "メインナビゲーション" });
 
-/** ナビのタブ（リンク）。チャットは未読件数が名前に付くため前方一致で指定する */
+/**
+ * ナビのタブ（リンク）。文字列はラベルの前方一致（PCの「ライブセッション」をモバイル表記の「ライブ」でも指定できる）。
+ * チャットは未読があると件数がラベルの前に付く（例: 「4 チャット」）ため、先頭の件数は読み飛ばす。
+ */
 export const navTab = (page: Page, label: string | RegExp): Locator =>
-  mainNav(page).getByRole("link", { name: typeof label === "string" ? new RegExp(`^${label}`) : label });
+  mainNav(page).getByRole("link", { name: typeof label === "string" ? new RegExp(`^(\\d+\\+? )?${label}`) : label });
 
 /**
  * 重要なお知らせのポップアップ（表示タイミングが非同期で一定しない）を自動で閉じる。

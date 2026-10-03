@@ -7,6 +7,7 @@ import {
   createAuthFixture,
   createDisposableStudent,
   grantAppLicense,
+  prepareWordContent,
   type AuthFixture,
 } from "../../support/authFixtures.ts";
 
@@ -69,16 +70,7 @@ test.describe("使い捨てのアプリのみ契約の生徒", () => {
     test.setTimeout(120_000);
 
     const { f } = await startAsNewStudent(page, "selftr");
-    // 共通公開の単語帳（使い捨ての顧客でも見える）
-    const { data: word, error } = await f.admin
-      .from("com_m_contents")
-      .select("content_id, content_name")
-      .eq("content_type", 0)
-      .eq("content_scope", 0)
-      .eq("delete_flg", "0")
-      .limit(1)
-      .single();
-    if (error || !word) throw new Error(`共通公開の単語帳が見つかりません: ${error?.message}`);
+    const word = await prepareWordContent(f);
 
     await expect(todayFocus(page, "今日のトレーニング")).toBeVisible();
 

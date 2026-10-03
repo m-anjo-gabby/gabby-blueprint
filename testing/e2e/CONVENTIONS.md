@@ -89,10 +89,18 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
 
 - 設定: `testing/playwright.config.ts`。テスト: `testing/e2e/tests/`（`*.setup.ts` はログイン準備、機能ごとにディレクトリを分ける）。
   共通の操作・ロケーター: `testing/e2e/support/`（`studentApp.ts` の `test` / `expect` / `mainNav` / `navTab` を使う）。
-- 接続先は dev のみ。student の `dev:ssl`（https://localhost:3000）が起動中なら再利用し、未起動なら Playwright が起動・停止する
+- 接続先は dev（既定）。student の `dev:ssl`（https://localhost:3000）が起動中なら再利用し、未起動なら Playwright が起動・停止する
   （Next.js 16 は同一アプリの dev サーバーを二重起動できないため。`KJ-2026-0926-02`）。
   admin の `dev:ssl`（https://localhost:3001）も同じ扱いで、アドミンの画面操作を含むジャーニー（`tests/journeys/`）だけが使う。
   admin は別のブラウザコンテキストで開き、`support/adminApp.ts` の `openAdminContext`（`qa-admin` でログイン・表示言語を日本語に固定）を使う。
+- ステージングでの実行（リリース前の確認）: `pnpm --filter @gabby/testing e2e:staging`（`E2E_ENV=staging`）。Vercel のデプロイ済みサイトに接続し、
+  ローカルの dev サーバーは起動しない。DB・固定アカウントは `apps/student/.env.staging`（ステージングの Supabase）を使う。
+  接続先の定義は `e2e/support/targets.ts`（URL は `E2E_BASE_URL` / `E2E_ADMIN_BASE_URL` で上書きできる）。
+  - 生徒: https://blueprint-student-stg.vercel.app/
+  - アドミン: https://blueprint-admin-stg.vercel.app/
+  - コーチ: https://blueprint-coach-stg.vercel.app/（現在の E2E は使わない）
+  - リリースSQLをステージングに適用してから実行する（アプリだけ先にデプロイされると、新しい列・RPCが無く失敗する）。
+  - 使い捨てデータはステージングのDBに作られ、各テストの後始末で消える。
 - ログインはペルソナごとに `auth.setup.ts` で1回だけ行い、ログイン状態を `testing/e2e/.auth/`（git管理外）に保存して各テストで使い回す。
   ペルソナは `testing/e2e/support/personas.ts` に定義する（`FIXTURES.md` の固定アカウント）。
 - 固定アカウントは「最新規約に同意済み」を前提とし、未同意ならログイン準備で画面操作により同意する。
