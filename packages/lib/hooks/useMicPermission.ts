@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '../sprint/utils';
+import { unlockAudio } from '../audio/core/audioRuntime';
+import { primeSpeechSynthesis } from '../speech/synthesis';
 
 export type MicStatus = 'checking' | 'granted' | 'denied' | 'prompt';
 
@@ -16,36 +18,11 @@ export interface UseMicPermissionReturn {
   requestMicPermission: () => Promise<boolean>;
 }
 
-// 無音のダミー音声再生により、iOSのオーディオセッションを強制活性化（アクティベート）させるヘルパー
+// iOSのオーディオ出力をタップの同期区間で有効化する（共有の AudioContext をアンロックし、音声合成も起こしておく）。
+// 以前はここで使い捨ての AudioContext を作っていたが、AudioContext はアプリ全体で1つにしたため共有のものを使う。
 const warmupAudioSession = () => {
-  if (typeof window === 'undefined') return;
-  try {
-    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (AudioContextClass) {
-      const ctx = new AudioContextClass() as AudioContext;
-      // 1サンプルの無音バッファを作成
-      const buffer = ctx.createBuffer(1, 1, 22050);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.start(0);
-
-      if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
-      }
-
-      // 使用後にクローズしてリソースを解放
-      setTimeout(() => {
-        ctx.close().catch(() => {});
-      }, 500);
-    }
-
-    if (window.speechSynthesis) {
-      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-    }
-  } catch (e) {
-    console.warn('Audio session warmup failed via Web Audio API:', e);
-  }
+  void unlockAudio();
+  primeSpeechSynthesis();
 };
 
 /**
@@ -236,15 +213,16 @@ export function useMicPermission(): UseMicPermissionReturn {
     try {
       if (typeof window === 'undefined') return false;
 
+      // iOS WebKit: セッションが playback のままだと getUserMedia が許可ダイアログを出さずに拒否されるため、
+      // getUserMedia より前に録音再生モードへ切り替える（同期処理のため、タップの同期区間は崩れない）
+      setAudioSessionPlayAndRecord();
+
       // 🚀 【最重要】iOS Safariの User Gesture Policy を完全にクリアするため、
-      // ユーザータップ同期コールスタックの最先頭（あらゆる await の前）で getUserMedia を実行する。
+      // ユーザータップ同期コールスタック内（あらゆる await の前）で getUserMedia を実行する。
       const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       // 🚀 マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
       warmupAudioSession();
-      
-      // iOS WebKit: 録音再生モードに切り替え
-      setAudioSessionPlayAndRecord();
 
       const stream = await streamPromise;
       stream.getTracks().forEach((track) => track.stop());

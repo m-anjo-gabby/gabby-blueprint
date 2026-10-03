@@ -7,10 +7,6 @@ import { useAudioEngine, AudioResumeStatus } from './useAudioEngine';
  * `useSprintAudio` の戻り値
  */
 export interface UseSprintAudioReturn {
-  /** チャイムおよびトラック再生用の AudioContext */
-  audioCtxRef: React.RefObject<AudioContext | null>;
-  /** 事前デコード済みチャイム AudioBuffer */
-  chimeBufferRef: React.RefObject<AudioBuffer | null>;
   /**
    * オーディオファイルを再生する Promise。
    * - audioPath が null の場合は即時 resolve（onError が呼ばれる）
@@ -42,9 +38,7 @@ export interface UseSprintAudioReturn {
  * Sprint プレイヤー（Drill/Time）共通のオーディオリソースを管理するフック。
  * 内部的には `useAudioEngine` の薄いラッパーであり、以下の挙動を維持している:
  * - 再生開始を150ms遅延させる（iOSのマイク停止音フェードアウト待ち）
- * - unmount時にAudioContextを明示的にcloseする
- * - suspended/interrupted状態からの復旧はresume→タイムアウト付き再生成の
- *   ハイブリッド戦略で行う（usePlayAudioSpeechと共通。useAudioEngine参照）
+ * - AudioContext・音声再開の状態はアプリ全体で共有（useAudioEngine / audio/core/audioRuntime 参照）
  *
  * @param stopListening useWebSpeech から受け取った stopListening 関数
  */
@@ -52,7 +46,6 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
   const engine = useAudioEngine({
     stopListening,
     startDelayMs: 150,
-    closeOnUnmount: true,
     stopBeforeChime: false,
     urlResolution: 'concat',
   });
@@ -70,8 +63,6 @@ export function useSprintAudio(stopListening: () => void): UseSprintAudioReturn 
   }, [engine]);
 
   return {
-    audioCtxRef: engine.audioCtxRef,
-    chimeBufferRef: engine.chimeBufferRef,
     playTrack,
     playChime: engine.playChime,
     stopTrack: engine.stop,

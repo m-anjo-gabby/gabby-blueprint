@@ -11,6 +11,7 @@ import { getFeedbackConfig, getScoreTier, getSprintTitle, resolveSprintHasLevel,
 import { logClientEvent } from '@gabby/lib/logger/actions';
 import { SprintQuestion, SPRINT_FLOW_TIMING } from "@gabby/types/sprint";
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
+import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
 import { playStatementThenQuestion, useStopAllAudioCore, useFullscreenAudioLifecycle, useFlowGuard } from '@gabby/lib/hooks/useSprintPlaybackFlow';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
@@ -123,6 +124,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   const [isAwaitingRecording, setIsAwaitingRecording] = useState<boolean>(false);
 
   // ────────────── 音声カスタムフック ──────────────
+  // 表示中ずっと発話セッションを借り、最初の発話以降は出力経路を切り替えない
+  useSpeakingSession();
   const { startAssessment, stopListening, timeLeft } = useWebSpeech();
 
   // オーディオリソース（AudioContext / チャイム / 再生Promise）を共通フックで管理

@@ -6,7 +6,7 @@ import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, C
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, DEFAULT_SPRINT_TIME_KEY, type SprintQuestionType, type SprintAnswerType, type SprintConfig } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, isSprintLevelSelectable, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel, setAudioSessionPlayAndRecord } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, isSprintLevelSelectable, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from '@gabby/lib';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 
@@ -173,12 +173,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const handleWarmupAndRequestMic = async () => {
     setIsPreparing(true);
     try {
-      setAudioSessionPlayAndRecord();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      await requestMicPermission();
-    } catch (e) {
-      console.warn("Mic permission denied or failed or cancelled:", e);
+      // requestMicPermission はタップの同期区間の先頭で getUserMedia を呼び、セッション切り替えも内包する
+      const granted = await requestMicPermission();
+      if (granted) return;
       const confirmed = await showConfirm(
         'マイクが許可されていません',
         '発話評価モードをOFFに変更し、脳内回答トレーニングに切り替えますか？',

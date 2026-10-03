@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { analyzePhrase } from '../assessment/native-speech';
 import { AnalysisResult } from '../../types/speechAssessment';
 
-import { NavigatorWithAudioSession, setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '../sprint/utils';
+import { setAudioSessionPlayback, setAudioSessionPlayAndRecord } from '../sprint/utils';
 import { cancelSpeech, getSpeechSynthesis } from '../speech/synthesis';
 
 /**
@@ -213,12 +213,10 @@ export function useWebSpeech() {
     latestResultRef.current = analyzePhrase("", targetPhrase, mainWords);
 
     // iOS WebKit用のオーディオセッション制御:
-    // suppressAudioSessionSwitch が false（デフォルト）の場合のみ切り替える
-    // recognition.start() より前に 'play-and-record' に切り替え、
-    // iOSがマイク入力モードに入るタイミングを制御する
-    if (!suppressAudioSessionSwitchRef.current) {
-      setAudioSessionPlayAndRecord();
-    }
+    // recognition.start() より前に 'play-and-record' に切り替え、iOSがマイク入力モードに入るタイミングを制御する。
+    // 発話セッション中（useSpeakingSession）は、ここで切り替えた後は画面を離れるまで playback に戻さない
+    // （戻すかどうかは audio/core/audioSession が判断する。既に play-and-record なら何もしない）
+    setAudioSessionPlayAndRecord();
 
     setTimeLeft(10);
     intervalRef.current = setInterval(() => {

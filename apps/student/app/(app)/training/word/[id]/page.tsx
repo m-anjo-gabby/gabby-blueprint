@@ -3,6 +3,7 @@
 import { useEffect, useRef, use, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
+import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
 import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
@@ -38,6 +39,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const { showConfirm } = useConfirm();
   
   // 音声エンジン・録音・評価ロジック
+  // 表示中ずっと発話セッションを借り、最初の発話以降は出力経路を切り替えない
+  useSpeakingSession();
   const { startAssessment, stopListening, isListening, timeLeft } = useWebSpeech();
   
   // 統合された音声再生フック（playChime, unlockAudioContextを追加抽出）

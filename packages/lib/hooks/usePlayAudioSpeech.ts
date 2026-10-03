@@ -8,9 +8,7 @@ import { useAudioEngine } from './useAudioEngine';
  * 音声再生およびダウンロードを管理するカスタムフック。
  * 内部的には `useAudioEngine` の薄いラッパーであり、以下の挙動を維持している:
  * - 再生は即時開始（iOS向けディレイなし）
- * - unmount時にAudioContextをcloseしない（iOS WebKitのレシーバー固着バグ対策）
- * - suspended/interrupted状態からはresume→タイムアウト付き再生成の
- *   ハイブリッド戦略で復旧する（useSprintAudioと共通。useAudioEngine参照）
+ * - AudioContext・音声再開の状態はアプリ全体で共有（useAudioEngine / audio/core/audioRuntime 参照）
  * - decodeAudioDataに1秒のタイムアウトを設ける
  * - チャイム再生前に既存トラックを停止する
  * - URL解決には supabase.storage.getPublicUrl を使用する
@@ -18,7 +16,6 @@ import { useAudioEngine } from './useAudioEngine';
 export function usePlayAudioSpeech() {
   const engine = useAudioEngine({
     startDelayMs: 0,
-    closeOnUnmount: false,
     decodeTimeoutMs: 1000,
     stopBeforeChime: true,
     urlResolution: 'sdk',

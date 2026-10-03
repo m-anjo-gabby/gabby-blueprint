@@ -12,11 +12,12 @@ import { ChevronLeft, Square, Loader2 } from 'lucide-react';
 
 import { useSprintStore } from '@/stores/useSprintStore';
 import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
+import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
-import { getFeedbackConfig, getSprintTitle, resolveSprintHasLevel, setAudioSessionPlayback, extractContentWords } from '@gabby/lib';
+import { getFeedbackConfig, getSprintTitle, resolveSprintHasLevel, extractContentWords } from '@gabby/lib';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 import { useSprintAudio } from '@gabby/lib/hooks/useSprintAudio';
 import { playStatementThenQuestion, useStopAllAudioCore, useFullscreenAudioLifecycle, useFlowGuard } from '@gabby/lib/hooks/useSprintPlaybackFlow';
@@ -70,6 +71,8 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
   const { isRevealed, isAutoPlaying, feedback, analysis, evalType: drillEvalType } = drill;
 
   // ────────────── 🔊 音声・発話カスタムフック ──────────────
+  // 表示中ずっと発話セッションを借り、最初の発話以降は出力経路を切り替えない
+  useSpeakingSession();
   const { startAssessment, stopListening, timeLeft } = useWebSpeech();
   const { playbackRate, changePlaybackRate } = usePlayAudioSpeech();
 
@@ -330,9 +333,6 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       targetText,
       contentWords,
       (result) => {
-        // 🚀 iOSでスピーカー出力を即時回復させるため、再生モードに戻す
-        setAudioSessionPlayback();
-
         // 状態更新をアトミックにまとめて反映
         commitDrillRecordingResult(result, getFeedbackConfig(result.score));
         useSprintStore.getState().incrementAssessmentCount();
