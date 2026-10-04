@@ -52,7 +52,7 @@ test.describe("アプリのみ契約・モニターロールの生徒", () => {
   });
 
   test("紹介画面（/live-room）には法人・個人の申し込み案内が併記され、戻るでホームへ戻る", async ({ page }) => {
-    // 紹介画面への導線は契約終了の2週間前の案内だけに出る（ホームに常時は出さない）
+    // ホームには紹介画面への導線を出さない（契約終了の案内からも削除済み）
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "ご契約プラン" })).toBeVisible();
     await expect(page.getByRole("link", { name: "ライブセッション付きプランについて" })).toHaveCount(0);

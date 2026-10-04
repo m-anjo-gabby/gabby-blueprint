@@ -14,7 +14,6 @@ import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import type { ResumeContentResponse } from '@gabby/types/training';
 import type { TrainingLifetimeStats } from '@/actions/performanceAction';
 import type { MyPlan } from '@/actions/dashboardAction';
-import { useShellNavContext } from '@/components/shell/ShellNavContext';
 import { clearResumeContent } from '@/actions/contentAction';
 import { cn } from '@/lib/utils';
 import { resolveTodayFocus } from '../_lib/todayFocus';
@@ -74,7 +73,6 @@ export function HomeView({
   const timezone = useTimezone();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
-  const { hasLiveSession } = useShellNavContext();
   const userName = useUserStore((state) => state.user?.user_name);
   const settingTimezone = useUserStore((state) => state.user?.timezone ?? null);
   const fetchNotices = useNoticeStore((state) => state.fetchNotices);
@@ -159,7 +157,7 @@ export function HomeView({
           weekGains={week && { activeDays: week.activeCount, assessments: week.assessmentCount }}
           className={plans.length > 0 ? HOME_LAYOUT.wide : HOME_LAYOUT.fullRow}
         />
-        {plans.length > 0 && <PlanCard plans={plans} nowMs={nowMs} timezone={timezone} hasLiveSession={hasLiveSession} />}
+        {plans.length > 0 && <PlanCard plans={plans} nowMs={nowMs} timezone={timezone} />}
 
         {/* 4行目: 途中の教材の再開（主役に出ていない場合）とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
         {(showContinue || showAssignments) && (
