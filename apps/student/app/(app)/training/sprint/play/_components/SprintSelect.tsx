@@ -6,9 +6,10 @@ import { Check, Lock, ChevronLeft, Sliders, HelpCircle, Lightbulb, ArrowRight, C
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, DEFAULT_SPRINT_TIME_KEY, type SprintQuestionType, type SprintAnswerType, type SprintConfig } from '@gabby/types/sprint';
-import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, isSprintLevelSelectable, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel, setAudioSessionPlayAndRecord } from '@gabby/lib';
+import { SPRINT_THEMES, SPRINT_NOTES, getSprintTitle, resolveSprintHasLevel, isSprintLevelSelectable, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from '@gabby/lib';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
+import { unlockAudio } from '@gabby/lib/audio/core/audioRuntime';
 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -19,7 +20,7 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { AudioTroubleshootingDialog } from '@/components/help/AudioTroubleshootingDialog';
 import { MicTroubleshootingDialog } from '@/components/help/MicTroubleshootingDialog';
-import { ImmersivePanel } from '@/components/shell/PageFrames';
+import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface SprintSelectProps {
@@ -173,12 +174,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   const handleWarmupAndRequestMic = async () => {
     setIsPreparing(true);
     try {
-      setAudioSessionPlayAndRecord();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      await requestMicPermission();
-    } catch (e) {
-      console.warn("Mic permission denied or failed or cancelled:", e);
+      // requestMicPermission はタップの同期区間の先頭で getUserMedia を呼び、セッション切り替えも内包する
+      const granted = await requestMicPermission();
+      if (granted) return;
       const confirmed = await showConfirm(
         'マイクが許可されていません',
         '発話評価モードをOFFに変更し、脳内回答トレーニングに切り替えますか？',
@@ -193,6 +191,9 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
   };
 
   const handleStartSubmit = async (answerType: SprintAnswerType = '0') => {
+    // 🔊 開始のタップの中で音声をアンロック・復旧する（結果画面での放置等で中断したままでも、1問目から鳴らす）。
+    // iOS はタップの同期区間でしか AudioContext を確実に再開・作り直しできないため、await より前に呼ぶ
+    void unlockAudio();
     // 選べない種別・レベルのまま開始しない（すべて未到達の種別等）
     const isLevelUsable = !hasLevel || userProgress === undefined || levelItems.some((item) => item.value === selectedLevel && !item.isLocked);
     if (!isTypeSupported(selectedType) || !isLevelUsable) {
@@ -310,10 +311,10 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
               mainScrollState.top ? "opacity-100" : "opacity-0"
             )}
           />
-          <div
+          <ImmersiveBody
             ref={mainScrollRef}
             onScroll={updateMainScrollState}
-            className="flex-1 min-h-0 overflow-y-scroll px-6 py-4 overscroll-contain stable-gutter"
+            className="overflow-y-scroll px-6 py-4 stable-gutter"
           >
             <div className="w-full max-w-xl mx-auto space-y-4 pt-1 pb-6">
 
@@ -523,7 +524,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
               </div>
 
             </div>
-          </div>
+          </ImmersiveBody>
           {/* 🚀 改修: スクロール下端フェードマスク(残量がある時のみ表示) */}
           <div
             aria-hidden

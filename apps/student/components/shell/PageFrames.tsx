@@ -6,7 +6,7 @@ interface PanelFrameProps {
 
 /**
  * 没入（フォーカス）画面の共通枠（トレーニング・ライブ通話等、ナビを出さない画面）。
- * 画面全体（h-dvh）を占有し、外側のスクロールは禁止して内部だけをスクロールさせる。
+ * 画面全体（h-dvh）を占有し、外側のスクロールは禁止して内部（ImmersiveBody）だけをスクロールさせる。
  * 中身は `ImmersivePanel` で包む。モバイルでは端末の画面そのものをパネルとみなすため余白を取らない。
  */
 export function PanelFrame({ children }: PanelFrameProps) {
@@ -26,7 +26,7 @@ interface ImmersivePanelProps extends React.HTMLAttributes<HTMLElement> {
  * 没入画面のパネル本体（PanelFrame の直下に1つ置く）。
  * - モバイル: 画面いっぱいに広げる（角丸・枠・影なし）。端末の角丸と二重にならず、余白も使い切る
  * - sm 以上: 幅を絞った角丸パネルとして背景から浮かせ、アプリの画面らしく見せる
- * 中は flex-col なので、ヘッダー・フッターは shrink-0、本文は flex-1 + overflow-y-auto で組む。
+ * 中は flex-col なので、ヘッダー・フッターは shrink-0、スクロールする本文は ImmersiveBody で組む。
  */
 export function ImmersivePanel({ as: Comp = 'div', className, ...props }: ImmersivePanelProps) {
   return (
@@ -36,6 +36,21 @@ export function ImmersivePanel({ as: Comp = 'div', className, ...props }: Immers
         'sm:max-w-2xl sm:rounded-panel sm:border sm:border-line sm:shadow-xl',
         className
       )}
+      {...props}
+    />
+  );
+}
+
+/**
+ * 没入画面の本文（スクロール領域）。ImmersivePanel の直下でヘッダー・フッターの間に置く。
+ * 端までスクロールしてもパネルの外へスクロールを伝えない（土台が動いて見出しが見切れないようにする）。
+ * 自動スクロールは `scrollIntoContainer`（lib/scroll.ts）がこの領域だけを動かす。
+ */
+export function ImmersiveBody({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-scroll-container
+      className={cn('min-h-0 flex-1 overflow-y-auto overscroll-contain', className)}
       {...props}
     />
   );

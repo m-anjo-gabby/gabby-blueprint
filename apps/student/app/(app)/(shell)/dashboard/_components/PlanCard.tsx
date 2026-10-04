@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import { ChevronRight, ExternalLink, Mail } from 'lucide-react';
+import { ExternalLink, Mail } from 'lucide-react';
 import { buildSupportMailto } from '@gabby/lib/contact';
 import { PRICE_PAGE_URL } from '@/constants/liveSessionIntro';
 import type { MyPlan } from '@/actions/dashboardAction';
@@ -18,8 +17,6 @@ interface PlanCardProps {
   /** 現在時刻。確定前（初回表示のハイドレーション時）は null で、残り日数を骨組みにする */
   nowMs: number | null;
   timezone: string;
-  /** ライブセッション付きの契約があるか（無い場合だけ、終了の案内にライブセッション付きプランの紹介への導線を添える） */
-  hasLiveSession: boolean;
 }
 
 const formatDate = (iso: string, timeZone: string) =>
@@ -52,9 +49,8 @@ function PlanRow({ plan, nowMs, timezone }: { plan: MyPlan; nowMs: number | null
 /**
  * 契約の終了が近いときの案内。アプリのみの契約のまま続ける生徒もいるため、特定のプランではなく継続そのものを促す文言にする。
  * 法人契約はご所属先・サポート窓口、個人での継続は料金ページへ案内する（法人契約の終了後に個人で続ける生徒もいる）。
- * アプリのみの契約の生徒には、個人で続ける際の選択肢としてライブセッション付きプランの紹介（/live-room）を1行だけ添える。
  */
-function ExpiryNotice({ endDate, timezone, showLiveIntro }: { endDate: string; timezone: string; showLiveIntro: boolean }) {
+function ExpiryNotice({ endDate, timezone }: { endDate: string; timezone: string }) {
   return (
     <div className="mt-4 rounded-control border border-amber-200 bg-amber-50 p-3">
       <p className="text-sm font-semibold text-amber-800">{formatDate(endDate, timezone)}でご契約が終了します</p>
@@ -79,15 +75,6 @@ function ExpiryNotice({ endDate, timezone, showLiveIntro }: { endDate: string; t
           サポート窓口に相談する
         </a>
       </div>
-      {showLiveIntro && (
-        <Link
-          href="/live-room"
-          className="group mt-3 flex items-center gap-1 border-t border-amber-200 pt-2.5 text-xs font-semibold text-brand-strong"
-        >
-          ライブセッション付きプランについて
-          <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      )}
     </div>
   );
 }
@@ -95,9 +82,8 @@ function ExpiryNotice({ endDate, timezone, showLiveIntro }: { endDate: string; t
 /**
  * ご契約プラン（プラン名・期間・残り日数）。普段は控えめに表示し、すべての契約の終了まで
  * PLAN_EXPIRY_NOTICE_DAYS 日以内（後に続く契約が無い）になったら継続の案内を出す。
- * プランの紹介（アップセル）は常時は出さず、この終了の案内の中だけに置く（法人契約が中心で、常時の訴求は効果が小さいため）。
  */
-export function PlanCard({ plans, nowMs, timezone, hasLiveSession }: PlanCardProps) {
+export function PlanCard({ plans, nowMs, timezone }: PlanCardProps) {
   // 後に続く契約があれば終了の案内は出さないため、最も遅い終了日で判定する
   const lastEndDate = plans.reduce<string | null>((latest, p) => (latest === null || p.end_date > latest ? p.end_date : latest), null);
   const showExpiry = nowMs !== null && lastEndDate !== null && daysUntil(lastEndDate, nowMs) <= PLAN_EXPIRY_NOTICE_DAYS;
@@ -109,7 +95,7 @@ export function PlanCard({ plans, nowMs, timezone, hasLiveSession }: PlanCardPro
           <PlanRow key={plan.license_id} plan={plan} nowMs={nowMs} timezone={timezone} />
         ))}
       </ul>
-      {showExpiry && lastEndDate && <ExpiryNotice endDate={lastEndDate} timezone={timezone} showLiveIntro={!hasLiveSession} />}
+      {showExpiry && lastEndDate && <ExpiryNotice endDate={lastEndDate} timezone={timezone} />}
     </HomeCard>
   );
 }

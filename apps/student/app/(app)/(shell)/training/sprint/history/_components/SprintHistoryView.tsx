@@ -12,6 +12,7 @@ import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { resolveSprintHasLevel } from '@gabby/lib';
 import type { ContentMetadata } from '@gabby/types/content';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { scrollIntoContainer } from '@/lib/scroll';
 import { MonthSwitcher } from '../../../_components/MonthSwitcher';
 import { StatTile } from '../../../_components/StatTile';
 import { HistoryDayListSkeleton, HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
@@ -111,7 +112,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
     const tryScroll = () => {
       const element = document.getElementById(`session-${focusId}`);
       if (element) {
-        element.scrollIntoView({ behavior: 'auto', block: 'center' });
+        scrollIntoContainer(element, { behavior: 'auto' });
         return;
       }
       attempts++;

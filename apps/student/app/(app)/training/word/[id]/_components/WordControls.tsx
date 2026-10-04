@@ -191,6 +191,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
         <button
           onClick={onVoiceCheck}
           disabled={isAutoPlaying || isPlaying}
+          aria-label={isListening ? '発話を止める' : '発話練習'}
           className={cn(
             "h-full rounded-2xl flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative",
             isListening ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",

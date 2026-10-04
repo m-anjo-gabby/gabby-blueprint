@@ -65,9 +65,12 @@ test.describe("スプリント結果画面", () => {
       /^\/training\/sprint\/play\?mode=sprint&sprint_type=\d+&content_id=[0-9a-f-]{36}$/
     );
     await expect(page.getByRole("link", { name: "ホームに戻る" })).toHaveAttribute("href", "/dashboard");
-    // 実施直後はまず「全て再生」を主役にし、リトライは控えめなリンクとして併記する
+    // 操作ボタンは履歴側と同じ（全て再生・リトライ）。没入画面では下部に置く
     await expect(page.getByRole("button", { name: "全て再生" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /スプリントをリトライ/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "リトライ", exact: true })).toHaveAttribute(
+      "href",
+      /^\/training\/sprint\/play\?mode=sprint&/
+    );
   });
 });
 

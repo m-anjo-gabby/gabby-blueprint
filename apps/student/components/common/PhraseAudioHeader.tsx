@@ -83,6 +83,7 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
           type="button"
           onClick={onPlay}
           disabled={playDisabled}
+          aria-label={`${label}を再生`}
           className={cn(
             'w-8 h-8 flex items-center justify-center rounded-full transition-colors cursor-pointer outline-none active:scale-90 disabled:opacity-30 disabled:pointer-events-none shrink-0',
             isLoading ? 'text-brand bg-brand-50' : cn(styles.idle, styles.hover),

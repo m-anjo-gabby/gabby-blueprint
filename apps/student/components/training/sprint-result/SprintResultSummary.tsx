@@ -87,7 +87,7 @@ const ACTION_BUTTON_CLASS =
   'flex h-12 w-full items-center justify-center gap-2 rounded-control text-sm font-bold transition-all active:scale-95';
 
 /** 「全て再生」ボタン（再生中は「停止」） */
-export function SprintPlayAllButton({ playback, primary = false }: { playback: SprintResultPlayback; primary?: boolean }) {
+function SprintPlayAllButton({ playback }: { playback: SprintResultPlayback }) {
   const isPlayingAll = playback.playbackMode === 'all';
   return (
     <button
@@ -97,9 +97,7 @@ export function SprintPlayAllButton({ playback, primary = false }: { playback: S
         ACTION_BUTTON_CLASS,
         isPlayingAll
           ? 'border border-brand-200 bg-brand-soft text-brand'
-          : primary
-            ? 'bg-brand text-white shadow-lg shadow-brand/10 hover:bg-brand-strong'
-            : 'border border-line bg-surface text-ink-soft hover:border-brand-200 hover:text-brand'
+          : 'border border-line bg-surface text-ink-soft hover:border-brand-200 hover:text-brand'
       )}
     >
       {isPlayingAll ? <PlayingBars className="h-3 w-3" /> : <PlayCircle size={16} strokeWidth={2.5} />}
@@ -108,14 +106,8 @@ export function SprintPlayAllButton({ playback, primary = false }: { playback: S
   );
 }
 
-/** リトライボタン（同じ教材・種別でスプリント選択画面を開く）。横幅が狭い配置では `label` で短い表記を渡す */
-export function SprintRetryLink({
-  scoreData,
-  label = 'スプリントをリトライ',
-}: {
-  scoreData: SprintResultScore;
-  label?: string;
-}) {
+/** リトライボタン（同じ教材・種別でスプリント選択画面を開く）。次の行動の主役のためブランド色で塗る */
+function SprintRetryLink({ scoreData }: { scoreData: SprintResultScore }) {
   return (
     <Link
       href={getSprintSelectHref(scoreData)}
@@ -123,8 +115,22 @@ export function SprintRetryLink({
       replace
       className={cn(ACTION_BUTTON_CLASS, 'bg-brand text-white shadow-lg shadow-brand/10 hover:bg-brand-strong')}
     >
-      {label}
+      リトライ
       <ArrowRight size={14} strokeWidth={3} />
     </Link>
+  );
+}
+
+/**
+ * 結果画面の操作ボタン（「全て再生／停止」と「リトライ」を横に並べる）。
+ * 履歴から開く画面（シェル）は見出しの下、実施直後の画面（没入）は下部に置く（置き場所だけが違い、並び・表記・動きは同じ）。
+ * シェルの下部にはモバイルのタブメニューがあるため上に、没入画面はナビが無く親指で押しやすい下に置く。
+ */
+export function SprintResultActions({ scoreData, playback }: { scoreData: SprintResultScore; playback: SprintResultPlayback }) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <SprintPlayAllButton playback={playback} />
+      <SprintRetryLink scoreData={scoreData} />
+    </div>
   );
 }

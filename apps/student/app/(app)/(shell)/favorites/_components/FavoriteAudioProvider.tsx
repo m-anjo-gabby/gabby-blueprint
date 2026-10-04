@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
-import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
+import { useSpeechSynthesis } from '@gabby/lib/speech/useSpeechSynthesis';
 import { cancelSpeech } from '@gabby/lib/speech/synthesis';
 
 interface FavoriteAudio {
@@ -25,7 +25,7 @@ const FavoriteAudioContext = createContext<FavoriteAudio | null>(null);
  */
 export function FavoriteAudioProvider({ children }: { children: ReactNode }) {
   const { play: playFile, stop: stopFile, isPlaying } = usePlayAudioSpeech();
-  const { speak, isSpeaking } = useWebSpeech();
+  const { speak, isSpeaking } = useSpeechSynthesis();
   const [speechId, setSpeechId] = useState<string | null>(null);
 
   const stop = useCallback(() => {

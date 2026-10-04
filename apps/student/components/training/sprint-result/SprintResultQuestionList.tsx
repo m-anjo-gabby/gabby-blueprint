@@ -40,7 +40,9 @@ interface QuestionCardProps {
 }
 
 function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap, onToggleJa, onOpenFeedback, isFavorite, onToggleFavorite }: QuestionCardProps) {
+  // 枠の強調は再生中のカード（文を1つだけ再生している場合も含む）、問題ごとの再生ボタンの「再生中」は1問分の連続再生・全て再生のときだけ
   const isFocused = playback.focusedQuestionId === q.question_id;
+  const isSequencePlaying = playback.sequenceQuestionId === q.question_id;
   const isSkipped = historyItem?.is_skipped ?? false;
   const totalScore = historyItem?.assessment?.total_score;
   // 旧データ（analysis未保存）はタップ不可の通常バッジとして表示する
@@ -91,18 +93,18 @@ function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap
             disabled={playback.playbackMode === 'all'}
             className={cn(
               'group flex h-7 select-none items-center gap-1.5 whitespace-nowrap rounded-full border pl-2.5 pr-3 transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-40',
-              isFocused
+              isSequencePlaying
                 ? 'border-transparent bg-brand text-white shadow-xs'
                 : 'border-line bg-canvas text-ink-muted hover:bg-brand-soft hover:text-brand'
             )}
             title="一連の流れを再生"
           >
-            {isFocused ? (
+            {isSequencePlaying ? (
               <PlayingBars className="h-2.5 w-2.5" />
             ) : (
               <Play size={11} fill="currentColor" className="shrink-0 transition-transform group-hover:scale-110" />
             )}
-            <span className="text-[11px] font-bold">{isFocused ? '再生中' : '再生'}</span>
+            <span className="text-[11px] font-bold">{isSequencePlaying ? '再生中' : '再生'}</span>
           </button>
         </div>
 

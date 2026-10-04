@@ -1,5 +1,5 @@
 import { test, expect, navTab, agreeToPendingTerms } from "../../support/studentApp.ts";
-import { confirmAndSubmit, openAdminContext } from "../../support/adminApp.ts";
+import { confirmAndSubmit, openAdminContext, openDialogBy } from "../../support/adminApp.ts";
 import { cleanupAuthFixture, newTag, trackUserByEmail, type AuthFixture } from "../../support/authFixtures.ts";
 import { resendTestAddress } from "../../support/resendInbox.ts";
 import { createAdminClient } from "../../../helpers/auth.ts";
@@ -50,8 +50,8 @@ test("アドミンが受注処理をした顧客の生徒が、招待から最�
 
   await test.step("受注2: 顧客を登録する", async () => {
     await adminPage.goto("/clients");
-    await adminPage.getByRole("button", { name: "新規登録" }).click();
-    await adminPage.getByRole("dialog").getByLabel("顧客名称").fill(clientName);
+    const dialog = await openDialogBy(adminPage, adminPage.getByRole("button", { name: "新規登録" }));
+    await dialog.getByLabel("顧客名称").fill(clientName);
     await confirmAndSubmit(adminPage, /登録内容を確認する/, "顧客を登録しました");
 
     const { data: client } = await admin.from("com_m_client").select("client_id").eq("client_name", clientName).single();
@@ -60,8 +60,7 @@ test("アドミンが受注処理をした顧客の生徒が、招待から最�
 
   await test.step("受注3: 契約を登録する（アプリのみ）", async () => {
     await adminPage.goto("/contracts");
-    await adminPage.getByRole("button", { name: "新規登録" }).click();
-    const dialog = adminPage.getByRole("dialog");
+    const dialog = await openDialogBy(adminPage, adminPage.getByRole("button", { name: "新規登録" }));
     // 対象顧客の検索式セレクトはラベルと関連付いていないため、先頭の選択欄として扱う
     await dialog.getByRole("combobox").first().click();
     await adminPage.getByPlaceholder("顧客名で検索...").fill(tag);
@@ -78,8 +77,7 @@ test("アドミンが受注処理をした顧客の生徒が、招待から最�
   await test.step("受注4: 汎用スプリントの公開先に顧客を追加する", async () => {
     await adminPage.goto(`/contents?q=${encodeURIComponent(genericSprint.content_name)}`);
     const row = adminPage.getByRole("row").filter({ hasText: genericSprint.content_name });
-    await row.getByText("限定", { exact: true }).click();
-    const dialog = adminPage.getByRole("dialog");
+    const dialog = await openDialogBy(adminPage, row.getByText("限定", { exact: true }));
     await dialog.getByRole("button", { name: "顧客を追加" }).click();
     await dialog.locator("div").filter({ has: adminPage.getByText(clientName, { exact: true }) }).last().getByRole("button", { name: "追加" }).click();
     await expect(adminPage.getByText("アクセス権限を付与しました")).toBeVisible();
@@ -88,8 +86,7 @@ test("アドミンが受注処理をした顧客の生徒が、招待から最�
 
   await test.step("受注5: 生徒をCSV一括登録する（初期ライセンスに契約を選ぶ）", async () => {
     await adminPage.goto("/users");
-    await adminPage.getByRole("button", { name: "一括登録" }).click();
-    const dialog = adminPage.getByRole("dialog");
+    const dialog = await openDialogBy(adminPage, adminPage.getByRole("button", { name: "一括登録" }));
     await dialog.getByRole("combobox").first().click();
     await adminPage.getByPlaceholder("顧客名で検索...").fill(tag);
     await adminPage.getByRole("option", { name: clientName }).click();

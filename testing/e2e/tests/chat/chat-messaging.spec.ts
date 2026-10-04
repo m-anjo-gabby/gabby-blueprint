@@ -209,6 +209,7 @@ test.describe("未ログインで開いたリンク", () => {
     await page.locator("input[name=password]").fill(getPersonaPassword());
     await page.locator("input[name=password]").press("Enter");
     await expect(page).toHaveURL(new RegExp(`${roomPath(fixture.oneOnOneRoomId)}$`));
-    await expect(page.getByText(fixture.coachMessages[2])).toBeVisible();
+    // PCは左の一覧のプレビューにも同じ文面が出るため、ルーム（タイムライン）の中で確かめる
+    await expect(page.locator("section").getByText(fixture.coachMessages[2])).toBeVisible();
   });
 });

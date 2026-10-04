@@ -151,7 +151,8 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      {/* 先頭の希望日(type="date")に自動フォーカスすると、iOS Safariではタップ前に日付ピッカーが開くため止める */}
+      <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>セッションを予約</DialogTitle>
           <DialogDescription>

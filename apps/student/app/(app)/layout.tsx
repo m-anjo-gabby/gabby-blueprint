@@ -5,8 +5,9 @@ import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { TermsAgreementModal } from "@/components/common/TermsAgreementModal";
 import { checkPendingAgreements } from '@/actions/termAction';
-import ScrollRestorer from '@/components/common/ScrollRestorer';
+import { NavigationScrollReset } from '@/components/common/NavigationScrollReset';
 import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
+import { AudioDiagnosticsReporter } from '@/components/common/AudioDiagnosticsReporter';
 import { PopupHost } from '@/components/popups/PopupHost';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
@@ -62,12 +63,17 @@ export default async function StudentAppLayout({
           クライアント側で常にユーザー情報を参照可能にします。
       */}
       <UserStoreInitializer user={user} />
-      <ScrollRestorer />
+      <NavigationScrollReset />
+      {/* 音声の中断・復旧の発生状況をログへ送る（表示なし） */}
+      <AudioDiagnosticsReporter />
       
       {/* Color Vowel辞書 Provider: 単語タップで辞書検索ツールチップおよびダイアログをグローバル表示 */}
       <ColorVowelLookupProvider>
-        {/* デザイン基盤: 全体共通の背景色やフォントを適用 */}
-        <div className="min-h-screen bg-canvas text-ink">
+        {/* デザイン基盤: 全体共通の背景色やフォントを適用。
+            ページ全体はスクロールさせない（スクロールはシェルの <main> と没入画面の本文だけ）。
+            100vh（min-h-screen）は iOS Safari でツールバー分だけ表示領域より高く、ページ全体がずれて
+            自動スクロール等で見出しが見切れるため、表示領域の高さ（dvh）に合わせて固定する */}
+        <div className="h-dvh overflow-hidden bg-canvas text-ink">
           <ShellNavProvider value={navContext} shellData={shellData}>
             {children}
           </ShellNavProvider>

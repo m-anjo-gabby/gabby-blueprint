@@ -173,10 +173,10 @@ const clientId = await ensureClient(FIXED_CLIENT_NAME);
 const contents = await pickHistoryContents(clientId);
 for (const c of await ensureGenericSprintAccess(clientId, "【QA固定】汎用スプリントの検証用")) console.log(`汎用スプリント: ${c.contentName}`);
 
-const adminUserId = await findAuthUserByEmail(ADMIN_EMAIL);
-if (!adminUserId) {
-  await ensureUser({ email: ADMIN_EMAIL, userType: "0", userName: "QAアドミン", clientId: null });
-}
+const adminUserId =
+  (await findAuthUserByEmail(ADMIN_EMAIL)) ?? (await ensureUser({ email: ADMIN_EMAIL, userType: "0", userName: "QAアドミン", clientId: null }));
+// アドミンの画面はロール（admin）で表示可否を決めるため、ロールが無いと顧客管理等を開けない
+await ensureRole(adminUserId, "admin");
 
 const coachCa = await ensureUser({ email: "qa-coach-ca-01@gabby-qa-test.example", userType: "2", userName: "QAコーチCA01", clientId, timezone: "America/Vancouver" });
 const coachUs = await ensureUser({ email: "qa-coach-us-01@gabby-qa-test.example", userType: "2", userName: "QAコーチUS01", clientId, timezone: "America/New_York" });

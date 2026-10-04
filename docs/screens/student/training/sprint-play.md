@@ -62,7 +62,9 @@
 
 - カードに問題文（基本文・質問文/指示文）が表示され、音声が自動再生される。カードをタップすると
   解答が表示される（Reveal）
-- 発話評価ONの場合、マイクボタンで発話を録音・評価できる。評価後は解答音声が再生される
+- 発話評価ONの場合、マイクボタンで発話を録音・評価できる（チャイムが鳴り終わってから認識を開始する）。
+  停止ボタンでその時点の評価で確定し、評価後は解答音声が再生される。発話中にカードを切り替えた場合は、
+  評価を出さずに中断する
 - 自動再生モードをONにすると、音声再生→思考時間→解答表示→次のカードへ、を自動で繰り返す
   （手動操作は自動再生停止まで一部制限される）
 - 再生速度（0.75倍〜等）をポップオーバーから変更できる
@@ -99,6 +101,8 @@
 | 問題データ取得エラー | 「教材データを取得できません」、「ホームに戻る」ボタン | 問題データの取得処理そのものに失敗した場合 |
 | マイクブロック | 「マイクがブロックされています。ブラウザ設定を確認してください。」 | ブラウザのマイク権限が拒否されている場合。発話評価は強制的にOFFになる |
 | 音声再生失敗（個別） | エラートースト「音声を再生できません」（ドリル）／「この問題は音声を再生できないため、スキップしました。」（スプリント） | 問題文・解答音声の再生に失敗した場合 |
+| 音声の中断 | 再生・発話を止め、復旧したら中断した問題を頭からやり直す（次の問題へは進めない）。画面に戻ったときに自動で再開できればそのまま続ける。できなければ「音声が停止しました。タップして再開」 | 画面が隠れた（バックグラウンド・画面ロック・タブ切替）、通話等で音声が止められた、再生が終わらない（iOS で音が出ないまま止まった）場合 |
+| 音声の復旧失敗 | 「セッションが切断されました」と「再読み込み」ボタン。再読み込みした同じ画面でまた失敗した場合は「音声を復旧できませんでした」とタブを閉じて開き直す手順 | 「タップして再開」でも音声が戻らなかった場合（再読み込みでは直らない状態は、タブを閉じて開き直すよう案内する） |
 | 終了確認 | 確認ダイアログ（自動再生中の終了、進行中スプリントの中断など） | 「戻る」操作時、進行中の内容によって確認文言が変わる（スプリントモードは「スコアは記録されません」と明示） |
 
 ## 関連する業務フロー仕様書
@@ -107,6 +111,8 @@
 特に無い。実施結果の確認は[スプリント結果画面](./sprint-result.md)、月次の実績集計は
 [スプリントの履歴](./sprint-history.md)・[トレーニング記録](./performance.md)
 を参照。
+
+- [発話の流れ](../../../../testing/e2e/specs/training/speaking-flow.md) — 問題種別ごとの再生順（Speed: 質問文 / Builders・Structure: 基本文 → 指示文 / Mastery: 基本文 → 質問文）→ チャイム → 発話評価、発話評価OFF、ドリルの発話ボタン
 
 ## 実装参照（エンジニア向け）
 
@@ -121,6 +127,9 @@
   `getContentAction`, `getSprintProgressAction`, `createSprintScoreAction`）
 - `packages/types/sprint.ts`（`QUESTION_TYPES`: UG Speed/UG Builders/UG Structure/UG Mastery、
   `SPRINT_TIME_OPTIONS`: 60/90/120/150秒）
-- `packages/lib/hooks/useWebSpeech.ts`（Web Speech APIによる発話認識・評価）
-- `packages/lib/hooks/usePlayAudioSpeech.ts`, `useSprintAudio.ts`（音声再生・チャイム）
+- `packages/lib/audio/react/useSpeakingPlayer.ts`（単語帳と共通の再生→発話プレイヤー。`runTurn` で基本文→質問文→チャイム→発話評価、中断は AbortSignal）
+- `packages/lib/sprint/prompts.ts`（発話前に再生する音声の並び）
+- `packages/lib/audio/core/`（`audioRuntime.ts`: アプリ全体で1つの AudioContext、`audioSession.ts`: iOSのオーディオセッション、
+  `speechAssessment.ts`: 発話評価、`recognizer/`: 認識方式（Web Speech API・テスト用 fake））
+- `packages/lib/audio/react/useSpeakingSession.ts`（表示中に発話セッションを借りる）
 - `packages/lib/hooks/useSprintPlaybackFlow.ts`, `useMicPermission.ts`, `useExitConfirmFlow.ts`

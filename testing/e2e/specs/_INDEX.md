@@ -16,6 +16,7 @@
 | [chat/chat-messaging.md](chat/chat-messaging.md) | チャットのやり取り（2ペイン・未読・1対1の既読・添付の貼り付け/ドロップ・直接リンク） | 生徒, コーチ, アドミン | `fn_ensure_one_on_one_chat_room`（トリガー `notify_chat_new_message`） |
 | [favorites/student-favorites.md](favorites/student-favorites.md) | 生徒のお気に入り（教材・フレーズ・スプリント問題の登録・検索/連動絞り込み・解除・1人種別ごと1,000件の上限・非公開教材の非表示・戻る/進むでの取り直し） | 生徒 | なし（トリガー `fn_check_favorite_limit`） |
 | [training/training-stats.md](training/training-stats.md) | 自主トレーニングの実績の集計（日次の記録・実施日数・連続日数・通算値・月次・達成の通知。生徒のタイムゾーンでの日付、レポートは日本時間の期間。月の境界・タイムゾーン） | 生徒, 生徒（モニター）, アドミン | `increment_word_summary`, `increment_sprint_summary`, `get_user_training_performance`, `get_training_report_data`（内部 `update_training_lifetime_stats`・トリガー `notify_training_milestone`） |
+| [training/speaking-flow.md](training/speaking-flow.md) | 発話の流れ（単語帳の発話ボタン・スプリントの種別ごとの再生順 → チャイム → 発話評価、発話評価OFF、ドリルの発話ボタン、停止での確定・切替での中断。E2E はテスト用の認識方式で検証） | 生徒 | なし（ブラウザ内の評価） |
 
 ## 未着手ドメイン（ファイルが無い＝仕様書はまだ存在しない）
 

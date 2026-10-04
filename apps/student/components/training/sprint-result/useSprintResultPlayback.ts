@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
-import { setAudioSessionPlayback } from '@gabby/lib';
 import type { SprintQuestion } from '@gabby/types/sprint';
+import { scrollIntoContainer } from '@/lib/scroll';
 import type { SprintResultScore } from './types';
 
 /**
@@ -31,19 +31,13 @@ function getAnswerAudio(q: SprintQuestion, scoreData: SprintResultScore) {
   return { id: isNo ? sprintAudioId.no(q.question_id) : sprintAudioId.yes(q.question_id), voice };
 }
 
-interface Options {
-  /** 「全て再生」が完了または停止されたとき */
-  onPlayAllSettled?: () => void;
-}
-
 /**
  * スプリント結果画面の音声再生（個別・問題ごと・全て再生）。
  * 実施直後の没入画面と、履歴から開くシェル画面で共通に使う。
  */
 export function useSprintResultPlayback(
   scoreData: SprintResultScore,
-  questions: SprintQuestion[],
-  { onPlayAllSettled }: Options = {}
+  questions: SprintQuestion[]
 ) {
   const { play, stop, isPlaying: playingAudioId, unlockAudioContext, resumeStatus } = usePlayAudioSpeech();
 
@@ -51,12 +45,6 @@ export function useSprintResultPlayback(
   const [playbackMode, setPlaybackMode] = useState<SprintPlaybackMode>(null);
   const playbackTokenRef = useRef(0);
   const isMountedRef = useRef(true);
-  const onPlayAllSettledRef = useRef(onPlayAllSettled);
-
-  useEffect(() => {
-    onPlayAllSettledRef.current = onPlayAllSettled;
-  }, [onPlayAllSettled]);
-
   const stopAllAudio = useCallback(() => {
     stop();
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -66,8 +54,6 @@ export function useSprintResultPlayback(
 
   useEffect(() => {
     isMountedRef.current = true;
-    // 前の画面でマイクが使われていた場合、確実にスピーカー出力へ戻す
-    setAudioSessionPlayback();
 
     return () => {
       isMountedRef.current = false;
@@ -75,23 +61,24 @@ export function useSprintResultPlayback(
     };
   }, [stopAllAudio]);
 
-  // 全て再生中は、再生中の問題カードを画面中央へスクロールする
+  // 全て再生中は、再生中の問題カードを画面中央へスクロールする（スクロール領域だけを動かし、見出し・操作ボタンを見切れさせない）
   useEffect(() => {
     if (!focusedQuestionId || playbackMode !== 'all') return;
-    document.getElementById(`card-${focusedQuestionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const card = document.getElementById(`card-${focusedQuestionId}`);
+    if (card) scrollIntoContainer(card);
   }, [focusedQuestionId, playbackMode]);
 
-  /** 1問分（基本文→質問文/指示文→解答文）を順番に再生する。途中で中断された場合は false */
+  /** 1問分（基本文→質問文/指示文→解答文）を順番に再生する。途中で中断された場合（iOS の音声の中断を含む）は false */
   const playQuestionSequence = useCallback(
     async (q: SprintQuestion, isCancelled: () => boolean) => {
       if (scoreData.question_type !== '0' && q.statement_en && q.statement_voice) {
-        await play(q.statement_voice, sprintAudioId.statement(q.question_id), { restart: true });
+        if ((await play(q.statement_voice, sprintAudioId.statement(q.question_id), { restart: true })) === 'interrupted') return false;
         if (isCancelled()) return false;
         await wait(400);
       }
       if (isCancelled()) return false;
       if (q.question_voice) {
-        await play(q.question_voice, sprintAudioId.question(q.question_id), { restart: true });
+        if ((await play(q.question_voice, sprintAudioId.question(q.question_id), { restart: true })) === 'interrupted') return false;
       }
       if (isCancelled()) return false;
       await wait(400);
@@ -99,7 +86,7 @@ export function useSprintResultPlayback(
       if (isCancelled()) return false;
       const answer = getAnswerAudio(q, scoreData);
       if (answer.voice) {
-        await play(answer.voice, answer.id, { restart: true });
+        if ((await play(answer.voice, answer.id, { restart: true })) === 'interrupted') return false;
       }
       return !isCancelled();
     },
@@ -119,8 +106,10 @@ export function useSprintResultPlayback(
         await play(voice, audioId, { restart: true });
       }
 
+      // 再生が終わったら注目も外す（外さないと、問題ごとの再生ボタンが「再生中」のまま残る）
       if (isMountedRef.current && playbackTokenRef.current === token) {
         setPlaybackMode(null);
+        setFocusedQuestionId(null);
       }
     },
     [play, playbackMode]
@@ -158,7 +147,6 @@ export function useSprintResultPlayback(
       setPlaybackMode(null);
       stopAllAudio();
       setFocusedQuestionId(null);
-      onPlayAllSettledRef.current?.();
       return;
     }
 
@@ -178,13 +166,16 @@ export function useSprintResultPlayback(
       if (isMountedRef.current && playbackTokenRef.current === token) {
         setPlaybackMode(null);
         setFocusedQuestionId(null);
-        onPlayAllSettledRef.current?.();
       }
     }
   }, [playbackMode, questions, stopAllAudio, playQuestionSequence]);
 
+  /** 問題ごとの再生（1問分の連続再生・全て再生）の対象。文を1つだけ再生している間は null */
+  const sequenceQuestionId = playbackMode === 'sequence' || playbackMode === 'all' ? focusedQuestionId : null;
+
   return {
     focusedQuestionId,
+    sequenceQuestionId,
     playbackMode,
     playingAudioId,
     playPhrase,

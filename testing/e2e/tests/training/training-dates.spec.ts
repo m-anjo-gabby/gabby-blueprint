@@ -6,6 +6,7 @@ import {
   createAuthFixture,
   createDisposableStudent,
   grantAppLicense,
+  prepareWordContent,
   type AuthFixture,
 } from "../../support/authFixtures.ts";
 
@@ -95,15 +96,7 @@ test("UTCより西のタイムゾーンの生徒でも、単語帳の記録は�
   test.skip(testInfo.project.name !== "desktop", "使い捨てデータを作るため desktop だけで実行する");
 
   const { f, userId } = await startAsStudent(page, "America/New_York");
-  const { data: word, error } = await f.admin
-    .from("com_m_contents")
-    .select("content_id")
-    .eq("content_type", 0)
-    .eq("content_scope", 0)
-    .eq("delete_flg", "0")
-    .limit(1)
-    .single();
-  if (error || !word) throw new Error(`共通公開の単語帳が見つかりません: ${error?.message}`);
+  const word = await prepareWordContent(f);
   const { error: insertError } = await f.admin.from("self_t_word_summary").insert({
     user_id: userId,
     content_id: word.content_id,
