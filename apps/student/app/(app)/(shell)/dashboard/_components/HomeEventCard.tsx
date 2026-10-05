@@ -189,7 +189,7 @@ function EmptyEvents() {
         <CalendarDays size={18} className="mt-0.5 shrink-0 text-ink-subtle" />
         <div>
           <p className="text-sm text-ink">次回の開催は、決まり次第ここでお知らせします。</p>
-          <p className="mt-1 text-xs text-ink-muted">コーチやほかの受講生と英語で話せる、参加無料のセッションです。</p>
+          <p className="mt-1 text-xs text-ink-muted">Gabbyのプロコーチから直接学べる、ご契約中の方限定の無料セッションです。</p>
         </div>
       </div>
     </section>
