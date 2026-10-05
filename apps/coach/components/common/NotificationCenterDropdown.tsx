@@ -21,7 +21,7 @@ import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
 import { NOTIFICATION_TYPES, NotificationType } from '@gabby/types/notification';
-import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@/constants/notification';
+import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@gabby/types/notificationEn';
 
 // Combines Notices (admin-broadcast announcements) and Notifications (system-triggered
 // personal events) behind a single bell. Data sources stay separate; only the entry

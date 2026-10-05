@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { MailButton, NotifyMailFrame, mailTextStyle } from './NotifyMailFrame';
 
 /** リマインダーの言語（student: ja / coach: en） */
 export type ReminderMailLanguage = 'ja' | 'en';
@@ -65,7 +66,6 @@ export function getEventReminderSubject(language: ReminderMailLanguage, lead: Re
   return lead === '1h' ? `【Gabby Blueprint】まもなくグループセッションが始まります（${scheduleLabel}）` : `【Gabby Blueprint】グループセッションのご案内（${scheduleLabel}）`;
 }
 
-const textStyle: React.CSSProperties = { fontSize: '15px', margin: '0 0 16px 0' };
 const labelStyle: React.CSSProperties = { fontSize: '12px', color: '#6b7280', margin: '0 0 2px 0' };
 const valueStyle: React.CSSProperties = { fontSize: '15px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#111827' };
 
@@ -85,92 +85,36 @@ export const EventReminderEmailTemplate: React.FC<EventReminderEmailTemplateProp
   const copy = COPY[language];
 
   return (
-    <div
-      lang={language}
-      style={{
-        fontFamily: "'Helvetica Neue', Arial, sans-serif",
-        backgroundColor: '#f4f5f7',
-        color: '#333333',
-        margin: 0,
-        padding: '0 0 40px 0',
-        width: '100%',
-      }}
+    <NotifyMailFrame
+      language={language}
+      footerReason={copy.footer}
+      settingsText={copy.settings}
+      settingsUrl={settingsUrl}
+      settingsLinkLabel={copy.settingsLink}
     >
-      <div
-        style={{
-          maxWidth: '600px',
-          margin: '40px auto 0 auto',
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        }}
-      >
-        <div style={{ backgroundColor: '#0e3196', padding: '32px', textAlign: 'center' }}>
-          <h1 style={{ color: '#ffffff', margin: 0, fontSize: '24px', fontWeight: 'bold' }}>Gabby Blueprint English</h1>
-        </div>
+      <p style={mailTextStyle}>{copy.greeting(recipientName)}</p>
+      <p style={mailTextStyle}>{copy.lead[lead]}</p>
 
-        <div style={{ padding: '40px 32px', lineHeight: '1.6' }}>
-          <p style={textStyle}>{copy.greeting(recipientName)}</p>
-          <p style={textStyle}>{copy.lead[lead]}</p>
-
-          <div style={{ backgroundColor: '#f3f5fb', borderRadius: '8px', padding: '20px 20px 8px 20px', margin: '24px 0' }}>
-            <p style={labelStyle}>{copy.titleLabel}</p>
-            {seriesTitle && <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 2px 0' }}>{seriesTitle}</p>}
-            <p style={valueStyle}>{title}</p>
-            <p style={labelStyle}>{copy.scheduleLabel}</p>
-            <p style={valueStyle}>{scheduleLabel}</p>
-            {description && (
-              <p style={{ fontSize: '14px', color: '#4b5563', margin: '0 0 12px 0', whiteSpace: 'pre-wrap' }}>{description}</p>
-            )}
-          </div>
-
-          {joinUrl ? (
-            <div style={{ textAlign: 'center', margin: '32px 0' }}>
-              <a
-                href={joinUrl}
-                style={{
-                  backgroundColor: '#0e3196',
-                  color: '#ffffff',
-                  textDecoration: 'none',
-                  padding: '14px 36px',
-                  borderRadius: '6px',
-                  fontWeight: 'bold',
-                  display: 'inline-block',
-                  fontSize: '16px',
-                }}
-              >
-                {copy.join}
-              </a>
-            </div>
-          ) : (
-            <p style={textStyle}>{copy.noJoinUrl}</p>
-          )}
-
-          {detailUrl && (
-            <p style={{ ...textStyle, textAlign: 'center' }}>
-              <a href={detailUrl} style={{ color: '#0e3196' }}>
-                {copy.detail}
-              </a>
-            </p>
-          )}
-
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px', marginTop: '32px', fontSize: '12px', color: '#6b7280' }}>
-            <p style={{ margin: '0 0 8px 0' }}>{copy.footer}</p>
-            <p style={{ margin: 0 }}>
-              {copy.settings}
-              {settingsUrl && (
-                <>
-                  {' '}
-                  <a href={settingsUrl} style={{ color: '#0e3196' }}>
-                    {copy.settingsLink}
-                  </a>
-                </>
-              )}
-            </p>
-          </div>
-        </div>
+      <div style={{ backgroundColor: '#f3f5fb', borderRadius: '8px', padding: '20px 20px 8px 20px', margin: '24px 0' }}>
+        <p style={labelStyle}>{copy.titleLabel}</p>
+        {seriesTitle && <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 2px 0' }}>{seriesTitle}</p>}
+        <p style={valueStyle}>{title}</p>
+        <p style={labelStyle}>{copy.scheduleLabel}</p>
+        <p style={valueStyle}>{scheduleLabel}</p>
+        {description && (
+          <p style={{ fontSize: '14px', color: '#4b5563', margin: '0 0 12px 0', whiteSpace: 'pre-wrap' }}>{description}</p>
+        )}
       </div>
-    </div>
+
+      {joinUrl ? <MailButton href={joinUrl}>{copy.join}</MailButton> : <p style={mailTextStyle}>{copy.noJoinUrl}</p>}
+
+      {detailUrl && (
+        <p style={{ ...mailTextStyle, textAlign: 'center' }}>
+          <a href={detailUrl} style={{ color: '#0e3196' }}>
+            {copy.detail}
+          </a>
+        </p>
+      )}
+    </NotifyMailFrame>
   );
 };

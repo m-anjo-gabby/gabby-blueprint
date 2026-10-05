@@ -20,6 +20,11 @@ import {
   type EventReminderEmailTemplateProps,
   type ReminderMailLanguage,
 } from './templates/EventReminderEmailTemplate';
+import {
+  NotificationEmailTemplate,
+  getNotificationSubject,
+  type NotificationEmailTemplateProps,
+} from './templates/NotificationEmailTemplate';
 
 /**
  * 再設定リンクの有効期限（分）。Supabase の Auth 設定「Email OTP Expiration」（supabase/config.toml の otp_expiry）と
@@ -102,4 +107,10 @@ export function formatReminderSchedule({
 export function renderEventReminderEmail(props: EventReminderEmailTemplateProps): RenderedEmail {
   const html = renderToString(React.createElement(EventReminderEmailTemplate, props));
   return { subject: getEventReminderSubject(props.language, props.lead, props.scheduleLabel), html };
+}
+
+/** 出来事の通知メール（予約・キャンセル・マッチング・チャット等）の件名・本文を組み立てる */
+export function renderNotificationEmail(props: NotificationEmailTemplateProps): RenderedEmail {
+  const html = renderToString(React.createElement(NotificationEmailTemplate, props));
+  return { subject: getNotificationSubject(props.language, props.title), html };
 }

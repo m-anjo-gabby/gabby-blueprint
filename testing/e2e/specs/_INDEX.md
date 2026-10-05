@@ -17,7 +17,7 @@
 | [favorites/student-favorites.md](favorites/student-favorites.md) | 生徒のお気に入り（教材・フレーズ・スプリント問題の登録・検索/連動絞り込み・解除・1人種別ごと1,000件の上限・非公開教材の非表示・戻る/進むでの取り直し） | 生徒 | なし（トリガー `fn_check_favorite_limit`） |
 | [training/training-stats.md](training/training-stats.md) | 自主トレーニングの実績の集計（日次の記録・実施日数・連続日数・通算値・月次・達成の通知。生徒のタイムゾーンでの日付、レポートは日本時間の期間。月の境界・タイムゾーン） | 生徒, 生徒（モニター）, アドミン | `increment_word_summary`, `increment_sprint_summary`, `get_user_training_performance`, `get_training_report_data`（内部 `update_training_lifetime_stats`・トリガー `notify_training_milestone`） |
 | [training/speaking-flow.md](training/speaking-flow.md) | 発話の流れ（単語帳の発話ボタン・スプリントの種別ごとの再生順 → チャイム → 発話評価、発話評価OFF、ドリルの発話ボタン、停止での確定・切替での中断。E2E はテスト用の認識方式で検証） | 生徒 | なし（ブラウザ内の評価） |
-| [notification/mail-dispatch.md](notification/mail-dispatch.md) | 通知・リマインダーのメール配信（送信待ち・送信処理・区分ごとの配信停止・グループセッションの24時間前/1時間前のリマインダー） | 生徒, コーチ, （システム） | `enqueue_event_reminders`, `claim_mail_outbox`（pg_cron `mail-dispatch-every-5min`） |
+| [notification/mail-dispatch.md](notification/mail-dispatch.md) | 通知・リマインダーのメール配信（送信待ち・送信処理・区分ごとの配信停止・出来事の通知メール〔チャットは未読10分〕・管理者の操作は通知しない・グループセッションの24時間前/1時間前のリマインダー） | 生徒, コーチ, （システム） | `enqueue_event_reminders`, `claim_mail_outbox`, `fn_notify`（トリガー `enqueue_notification_mail`・pg_cron `mail-dispatch-every-5min`） |
 
 ## 未着手ドメイン（ファイルが無い＝仕様書はまだ存在しない）
 

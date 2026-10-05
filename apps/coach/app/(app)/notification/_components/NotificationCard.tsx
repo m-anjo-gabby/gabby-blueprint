@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { NotificationItem, NOTIFICATION_TYPES, NotificationType } from '@gabby/types/notification';
-import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@/constants/notification';
+import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@gabby/types/notificationEn';
 
 const NOTIFICATION_ICONS = { Sparkles, Flame, MessageCircle } as const;
 

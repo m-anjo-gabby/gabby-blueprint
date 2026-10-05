@@ -1,11 +1,10 @@
-import { NotificationType, NotificationText } from '@gabby/types/notification';
+import type { NotificationType, NotificationText } from './notification';
 
 /**
- * English notification message builders for the Coach portal.
- * Structural metadata (icon/badgeClass) still comes from the shared NOTIFICATION_TYPES;
- * only the display text is overridden here (same pattern as constants/notice.ts).
- * Coach notifications are currently CHAT_NEW_MESSAGE only, but all types are covered
- * for type-safety and to be ready if other notification types ever surface to coaches.
+ * 通知の英語の表示テキスト（コーチ向け。コーチアプリの通知センターと、コーチ宛ての通知メールで共有する）。
+ * 日本語（生徒・アドミン）は notification.ts の NOTIFICATION_MESSAGE_BUILDERS。
+ * アイコン・バッジ色などの表示メタ情報は notification.ts の NOTIFICATION_TYPES を使う。
+ * 実際にはコーチ宛てに送られない種別も、Record<NotificationType, ...> を満たすために英語の文言を持つ。
  */
 export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
   NotificationType,

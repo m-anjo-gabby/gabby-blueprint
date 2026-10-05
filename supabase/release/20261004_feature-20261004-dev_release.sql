@@ -499,3 +499,278 @@ REVOKE EXECUTE ON FUNCTION public.admin_add_calendar_event_series_sessions(uuid,
 GRANT EXECUTE ON FUNCTION public.admin_add_calendar_event_series_sessions(uuid, jsonb) TO service_role;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】出来事の通知メール（予約・キャンセル・マッチング・チャット等）と、管理者の操作の通知の停止
+-- 追加日: 2026-10-05
+--
+-- 【内容】
+--   1. fn_notify: 呼び出し元が管理者（JWT の user_type='0'）の場合は通知を登録しない
+--      - 管理者が行ったライブセッションの操作（代理キャンセル・直接予約・直接マッチング・代理承認等）は、
+--        アプリ内通知もメールも送らない（運営が個別に連絡する）。シグネチャは変更しない。
+--   2. private.enqueue_notification_mail() とトリガー trg_notification_enqueue_mail（com_t_notification）
+--      - 通知の登録をきっかけに、生徒・コーチ宛ての通知メールを送信待ちに積む（チャットは未読が10分続いたら）
+--   3. 送信処理の呼び出しの見直し（DDL/function/invoke_mail_dispatch.sql を再適用）
+--      - すぐ送るメールが積まれたら、処理の確定後に送信処理を呼ぶ（トリガー trg_mail_outbox_dispatch。1つの処理で1回）
+--      - 5分ごとのジョブは、送る時刻が来た送信待ちがある時だけ送信処理を呼ぶ（invoke_mail_dispatch_if_due）
+--
+-- 対応ファイル: DDL/function/fn_notify.sql, DDL/function/enqueue_notification_mail.sql, DDL/function/invoke_mail_dispatch.sql
+-- 【注意】第2セクション（メール基盤）の後に適用すること。アプリ（admin の送信処理・生徒/コーチのメール通知の設定）の
+--   デプロイの前後は問わないが、送信処理（NOTIFICATION / CHAT_UNREAD の組み立て）が無い間に積まれた行は、
+--   送信処理が「不明な種別」として送らない（SKIPPED）ため、アプリのデプロイ後に適用するのが望ましい。
+-- =========================================================================
+
+BEGIN;
+
+
+---------------------------------------------
+-- 通知INSERT共通ヘルパー関数 (2026-09-15 追加)
+---------------------------------------------
+-- 【背景】
+-- ライブセッション関連のRPC群が、それぞれ独自に
+--   INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+--   VALUES (...);
+-- を約15箇所で直接記述しており、com_t_notificationのカラム構成を知っている箇所が
+-- 分散していた。本関数に集約し、呼び出し元は「誰に・何を・どこへのリンクで」のみを
+-- 意識すればよいようにする。内部処理専用（authenticatedへの直接公開は不要。
+-- 任意のuser_idへ通知を送れてしまうため、SECURITY DEFINER関数経由以外での実行は許さない）。
+--
+-- 【管理者の操作は通知しない (2026-10-05)】
+-- 管理者が行ったライブセッションの操作（代理キャンセル・直接予約・直接マッチング・代理承認等）は、
+-- 生徒・コーチへ通知しない（運営が個別に連絡する）。呼び出し元の JWT が管理者（user_type='0'）の場合は登録しない。
+-- 通知メール（enqueue_notification_mail）は通知の登録をきっかけに作るため、通知が無ければメールも送られない。
+-- 本関数を使うのはライブセッション関連の RPC だけで、チャット・月次レポートの通知は別の経路（影響しない）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notify(
+    p_user_id uuid,
+    p_notification_type text,
+    p_payload jsonb,
+    p_link_path text
+)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    SELECT p_user_id, p_notification_type, p_payload, p_link_path
+    WHERE public.get_jwt_user_type() IS DISTINCT FROM '0';
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_notify(uuid, text, jsonb, text) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- enqueue_notification_mail: アプリ内通知（com_t_notification）の登録をきっかけに、通知メールを送信待ちに積む (2026-10-05 追加)
+---------------------------------------------
+-- 【方式】
+-- 予約・キャンセル・マッチング・チャット等の出来事は、すべてアプリ内通知として com_t_notification に登録される
+-- （ライブセッション関連は fn_notify、チャットは notify_chat_new_message、宿題・月次レポートは各RPC）。
+-- 本トリガーで通知の登録と同じトランザクションの中で送信待ち（com_t_mail_outbox）に積むため、
+-- 各RPCを変更せずに、業務データと通知メールの整合が取れる（処理が失敗すればメールも積まれない）。
+-- 積んだメールは、処理の確定後に送信処理を呼んで（on_mail_outbox_inserted）すぐに送る。
+--
+-- 【対象】（値の正本は packages/lib/mail/dispatch/registry.ts の NOTIFICATION_MAIL_TYPES。変更する場合は両方を直す）
+-- 宛先が生徒（user_type='1'）・コーチ（'2'）の通知のうち、下記の種別。管理者宛ては送らない。
+-- 達成の通知（TRAINING_*）と、管理者の操作による通知（*_BY_ADMIN。fn_notify で登録しなくなった）は送らない。
+--   mail_type='NOTIFICATION' … 通知の登録時に1通（dedup_key = notification_id）
+--   mail_type='CHAT_UNREAD'  … チャットの新着。未読になった時点から10分後に送る（送る直前に既読なら送らない）。
+--                              未読のまま続いた発言（同じ通知行の更新）は、同じ1通にまとめる。
+--                              既読になった後の新着は新しい1通（dedup_key = notification_id:未読になった時刻）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION private.enqueue_notification_mail()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_user_type text;
+BEGIN
+    IF NEW.is_read THEN
+        RETURN NULL;
+    END IF;
+    IF NOT (NEW.notification_type = ANY (ARRAY[
+        -- 生徒宛て
+        'SESSION_CANCELLED_BY_COACH',
+        'SESSION_RESCHEDULE_PROPOSED',
+        'SESSION_BOOKING_APPROVED',
+        'SESSION_BOOKING_REJECTED',
+        'MATCHING_APPROVED',
+        'MATCHING_REJECTED',
+        'HOMEWORK_POSTED',
+        -- コーチ宛て
+        'SESSION_CANCELLED_BY_STUDENT',
+        'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT',
+        'SESSION_BOOKED_BY_STUDENT',
+        'SESSION_BOOKING_REQUESTED',
+        'MATCHING_ASSIGNED_TO_COACH',
+        'COACH_REPORT_APPROVED',
+        'COACH_REPORT_APPROVAL_REVOKED',
+        -- 両方
+        'CHAT_NEW_MESSAGE'
+    ])) THEN
+        RETURN NULL;
+    END IF;
+
+    SELECT user_type INTO v_user_type FROM public.com_m_user WHERE id = NEW.user_id AND delete_flg = '0';
+    IF v_user_type IS NULL OR v_user_type NOT IN ('1', '2') THEN
+        RETURN NULL;
+    END IF;
+
+    IF NEW.notification_type = 'CHAT_NEW_MESSAGE' THEN
+        -- 未読になった時（新規・既読からの再未読）だけ積む。未読のまま続く発言は、既に積んだ1通にまとめる
+        IF TG_OP = 'UPDATE' AND NOT OLD.is_read THEN
+            RETURN NULL;
+        END IF;
+        INSERT INTO public.com_t_mail_outbox (user_id, mail_type, category, dedup_key, payload, scheduled_at)
+        VALUES (
+            NEW.user_id,
+            'CHAT_UNREAD',
+            'NOTIFICATION',
+            NEW.notification_id::text || ':' || floor(extract(epoch FROM NEW.occurred_at))::bigint::text,
+            jsonb_build_object('notification_id', NEW.notification_id),
+            NOW() + INTERVAL '10 minutes'
+        )
+        ON CONFLICT (user_id, mail_type, dedup_key) DO NOTHING;
+    ELSIF TG_OP = 'INSERT' THEN
+        INSERT INTO public.com_t_mail_outbox (user_id, mail_type, category, dedup_key, payload)
+        VALUES (
+            NEW.user_id,
+            'NOTIFICATION',
+            'NOTIFICATION',
+            NEW.notification_id::text,
+            jsonb_build_object('notification_id', NEW.notification_id)
+        )
+        ON CONFLICT (user_id, mail_type, dedup_key) DO NOTHING;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.enqueue_notification_mail() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_notification_enqueue_mail ON public.com_t_notification;
+CREATE TRIGGER trg_notification_enqueue_mail
+AFTER INSERT OR UPDATE ON public.com_t_notification
+FOR EACH ROW EXECUTE FUNCTION private.enqueue_notification_mail();
+
+---------------------------------------------
+-- invoke_mail_dispatch: メールの送信処理（admin の /api/cron/mail-dispatch）を呼び出す＋5分ごとのジョブ (2026-10-05 追加)
+---------------------------------------------
+-- 【方式】
+-- 送信処理は Next.js（admin アプリ）の Route Handler で、メールの文面（React のテンプレート）を
+-- 組み立てて Resend で送る。DB から HTTP で呼ぶため pg_net を使う（呼び出しは処理の確定後に行われる）。
+-- 送信処理を呼ぶのは次の2つ（cron のジョブは1つだけで、メールの種類が増えても増やさない）。
+--   1. すぐ送るメールを送信待ちに積んだ時（on_mail_outbox_inserted。通知メール等。1つの処理の中では1回だけ呼ぶ）
+--   2. pg_cron の5分ごとのジョブ: リマインダーの登録（enqueue_event_reminders）の後、送る時刻が来た送信待ち
+--      （チャットの10分後・失敗の再試行・取りこぼし）がある時だけ呼ぶ（invoke_mail_dispatch_if_due）
+--
+-- 【接続先の設定（環境ごとに1回、手作業）】
+-- 送信処理のURLと秘密のキーは Supabase Vault に保存する（リポジトリには置かない）。
+--   SELECT vault.create_secret('https://<admin のURL>/api/cron/mail-dispatch', 'mail_dispatch_url');
+--   SELECT vault.create_secret('<admin の環境変数 CRON_SECRET と同じ値>', 'mail_dispatch_secret');
+-- 変更する場合は vault.update_secret(<id>, '<新しい値>') を使う。
+-- どちらかが未設定の環境（ローカルの admin しか無い dev 等）では呼び出しを行わない
+-- （登録だけ行い、送信は手元から /api/cron/mail-dispatch を呼んで確認する）。
+---------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+CREATE OR REPLACE FUNCTION private.invoke_mail_dispatch()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_url text;
+    v_secret text;
+BEGIN
+    SELECT decrypted_secret INTO v_url FROM vault.decrypted_secrets WHERE name = 'mail_dispatch_url';
+    SELECT decrypted_secret INTO v_secret FROM vault.decrypted_secrets WHERE name = 'mail_dispatch_secret';
+    IF v_url IS NULL OR v_secret IS NULL THEN
+        RETURN;
+    END IF;
+
+    PERFORM net.http_post(
+        url := v_url,
+        headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || v_secret),
+        body := '{}'::jsonb,
+        timeout_milliseconds := 60000
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.invoke_mail_dispatch() FROM PUBLIC, anon, authenticated;
+
+-- 1つのトランザクションの中で送信処理を呼ぶのは1回だけにする（1つの処理で複数の通知が積まれても1回）
+CREATE OR REPLACE FUNCTION private.request_mail_dispatch()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF current_setting('gabby.mail_dispatch_requested', true) = 'on' THEN
+        RETURN;
+    END IF;
+    PERFORM set_config('gabby.mail_dispatch_requested', 'on', true);
+    PERFORM private.invoke_mail_dispatch();
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.request_mail_dispatch() FROM PUBLIC, anon, authenticated;
+
+-- 送る時刻が来た送信待ち（または送信処理が止まって確保されたままの行）がある時だけ、送信処理を呼ぶ（5分ごとのジョブ用）
+CREATE OR REPLACE FUNCTION private.invoke_mail_dispatch_if_due()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_mail_outbox
+        WHERE (status = 'PENDING' AND scheduled_at <= NOW())
+           OR (status = 'SENDING' AND locked_at < NOW() - INTERVAL '10 minutes')
+    ) THEN
+        PERFORM private.request_mail_dispatch();
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.invoke_mail_dispatch_if_due() FROM PUBLIC, anon, authenticated;
+
+-- すぐ送るメール（送る時刻が来ている行）が積まれたら、処理の確定後に送信処理を呼ぶ
+CREATE OR REPLACE FUNCTION private.on_mail_outbox_inserted()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM new_rows WHERE status = 'PENDING' AND scheduled_at <= NOW()) THEN
+        PERFORM private.request_mail_dispatch();
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.on_mail_outbox_inserted() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_mail_outbox_dispatch ON public.com_t_mail_outbox;
+CREATE TRIGGER trg_mail_outbox_dispatch
+AFTER INSERT ON public.com_t_mail_outbox
+REFERENCING NEW TABLE AS new_rows
+FOR EACH STATEMENT EXECUTE FUNCTION private.on_mail_outbox_inserted();
+
+-- 同名ジョブが既に存在する場合は入れ替える（何度再実行しても安全）
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'mail-dispatch-every-5min';
+
+SELECT cron.schedule(
+    'mail-dispatch-every-5min',
+    '*/5 * * * *',
+    $$ SELECT public.enqueue_event_reminders(); SELECT private.invoke_mail_dispatch_if_due(); $$
+);
+
+COMMIT;

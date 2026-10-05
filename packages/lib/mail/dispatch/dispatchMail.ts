@@ -6,6 +6,7 @@ import { sendCore } from '../core';
 import { MAIL_TYPES, type MailType } from './registry';
 import type { MailHandlerRegistry, MailOutboxRow, MailRecipient } from './types';
 import { groupSessionReminderHandler } from './handlers/groupSessionReminder';
+import { notificationHandler } from './handlers/notification';
 
 const logger = createLogger('mail');
 
@@ -19,6 +20,8 @@ const RETRY_BACKOFF_MINUTES = 5;
 /** 種別ごとの組み立て処理（registry.ts の MAIL_TYPES と1対1） */
 const HANDLERS: MailHandlerRegistry = {
   GROUP_SESSION_REMINDER: groupSessionReminderHandler,
+  NOTIFICATION: notificationHandler,
+  CHAT_UNREAD: notificationHandler,
 };
 
 /**
@@ -139,7 +142,8 @@ async function processRow(admin: SupabaseClient, row: MailOutboxRow, nowMs: numb
 }
 
 /**
- * 通知・リマインダーのメールを送る（admin の /api/cron/mail-dispatch から呼ぶ。pg_cron が5分ごとに呼び出す）。
+ * 通知・リマインダーのメールを送る（admin の /api/cron/mail-dispatch から呼ぶ）。
+ * 呼び出し元は、すぐ送るメールが積まれた直後（DB のトリガーから pg_net）と、pg_cron の5分ごとのジョブ（送る時刻が来た行がある時だけ）。
  * 1. リマインダーを送信待ちに登録する（pg_cron でも登録しているが、手元から呼んだ場合も同じ結果になるよう、ここでも行う。重複は一意制約で防ぐ）
  * 2. 送信待ちを確保し（claim_mail_outbox）、1件ずつ配信停止の設定・最新の業務データを確かめて送る
  */

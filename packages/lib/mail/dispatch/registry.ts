@@ -1,3 +1,5 @@
+import type { NotificationType } from '@gabby/types/notification';
+
 /**
  * 通知・リマインダーのメールの区分と種別の定義（正本）。
  * DB（com_t_mail_outbox.mail_type / category、com_t_user_mail_setting.category）はフリーテキストのため、値はここで管理する。
@@ -31,7 +33,37 @@ export type MailCategory = keyof typeof MAIL_CATEGORIES;
 export const MAIL_TYPES = {
   /** グループセッションの24時間前・1時間前（登録: enqueue_event_reminders） */
   GROUP_SESSION_REMINDER: { category: 'REMINDER' },
+  /** 出来事の通知（予約・キャンセル・マッチング等。登録: アプリ内通知のトリガー enqueue_notification_mail。すぐ送る） */
+  NOTIFICATION: { category: 'NOTIFICATION' },
+  /** チャットの新着（登録: 同上。未読が10分続いたら1通） */
+  CHAT_UNREAD: { category: 'NOTIFICATION' },
 } as const satisfies Record<string, { category: MailCategory }>;
+
+/**
+ * 通知メールを送るアプリ内通知の種別（宛先は生徒・コーチのみ）。
+ * DB 側のトリガー（supabase/DDL/function/enqueue_notification_mail.sql）の一覧と同じにする（変更する場合は両方を直す）。
+ * 達成の通知（TRAINING_*）と、管理者の操作による通知（*_BY_ADMIN。fn_notify で登録しない）は含めない。
+ */
+export const NOTIFICATION_MAIL_TYPES = [
+  // 生徒宛て
+  'SESSION_CANCELLED_BY_COACH',
+  'SESSION_RESCHEDULE_PROPOSED',
+  'SESSION_BOOKING_APPROVED',
+  'SESSION_BOOKING_REJECTED',
+  'MATCHING_APPROVED',
+  'MATCHING_REJECTED',
+  'HOMEWORK_POSTED',
+  // コーチ宛て
+  'SESSION_CANCELLED_BY_STUDENT',
+  'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT',
+  'SESSION_BOOKED_BY_STUDENT',
+  'SESSION_BOOKING_REQUESTED',
+  'MATCHING_ASSIGNED_TO_COACH',
+  'COACH_REPORT_APPROVED',
+  'COACH_REPORT_APPROVAL_REVOKED',
+  // 両方（CHAT_UNREAD として送る）
+  'CHAT_NEW_MESSAGE',
+] as const satisfies readonly NotificationType[];
 
 export type MailType = keyof typeof MAIL_TYPES;
 
