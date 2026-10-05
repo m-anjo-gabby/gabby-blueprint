@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -148,8 +147,7 @@ export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClo
           <Button type="button" variant="outline" onClick={reset} disabled={isMatching}>
             {t('close')}
           </Button>
-          <Button type="button" onClick={handleMatch} disabled={isMatching || !coachId || !startTime}>
-            {isMatching && <Loader2 size={14} className="animate-spin" />}
+          <Button pending={isMatching} type="button" onClick={handleMatch} disabled={isMatching || !coachId || !startTime}>
             {t('confirmButton')}
           </Button>
         </DialogFooter>

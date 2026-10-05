@@ -6,10 +6,20 @@
 
 # 画面仕様書 索引
 
+## 3アプリ共通
+
+画面・処理を3アプリで共有しているもの。アプリごとの違い（文言の言語等）は各ファイル内の表に記載する。
+
+| ファイル | パス | 概要 | 状態 |
+|---|---|---|---|
+| [common/password-reset.md](common/password-reset.md) | `/forgot-password`、`/update-password` | パスワード再設定（再設定メールの依頼・リンク確認・新しいパスワードの設定） | ✅ |
+| [common/invite.md](common/invite.md) | `/auth/invite` | 招待メールからの本登録（パスワード設定・自動ログイン。リンクの有効期限は3日） | ✅ |
+
 ## student
 
 | ファイル | パス | 概要 | 状態 |
 |---|---|---|---|
+| [login.md](student/login.md) | `/login` | ログイン（ロック・ライセンス確認、ログイン後に元の画面へ戻る） | ✅ |
 | [calendar.md](student/calendar.md) | `/calendar` | 予定の月表示、セッションキャンセル、未消化枠の予約リクエスト | ✅ |
 | [dashboard.md](student/dashboard.md) | `/dashboard` | ログイン後の起点画面。各機能への導線・次回セッション表示 | ✅ |
 | [chat/list.md](student/chat/list.md) | `/chat` | 参加中チャットルーム一覧（個別/グループ） | ✅ |
@@ -21,25 +31,26 @@
 | [notification.md](student/notification.md) | `/notification` | 通知一覧 | ✅ |
 | [profile.md](student/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
 | [profile-password.md](student/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |
-| [live-room/hub.md](student/live-room/hub.md) | `/live-room` | セッション一覧・キャンセル・予約リクエスト作成・振替応答の起点画面 | ✅ |
+| [live-room/hub.md](student/live-room/hub.md) | `/live-room` | 対応が必要な事項・次回予定・契約の回数内訳・予定・履歴を1本スクロールで表示。キャンセル・予約リクエスト・振替応答の起点画面 | ✅ |
 | [live-room/call-room.md](student/live-room/call-room.md) | `/live-room/[sessionId]` | ビデオ通話画面（Zoom Video SDK） | ✅ |
 | [live-room/session-result.md](student/live-room/session-result.md) | `/live-room/sessions/[sessionId]/result` | セッション結果・宿題・Live Sprint実績 | ✅ |
 | [monitor.md](student/monitor.md) | `/monitor` | 同一契約先ユーザー横断モニタリング | ✅ |
 | [training/dialogue-practice.md](student/training/dialogue-practice.md) | `/training/dialogue/[assignmentId]` | 割当済みダイアログ教材の進捗確認・教材リンク（読み取り専用） | ✅ |
-| [training/performance.md](student/training/performance.md) | `/training/performance` | 月間トレーニング成果ダッシュボード | ✅ |
-| [training/sprint-history.md](student/training/sprint-history.md) | `/training/sprint/history` | スプリント履歴 | ✅ |
+| [training/performance.md](student/training/performance.md) | `/training/performance` | トレーニング記録（月間トレーニング実績・実施カレンダー） | ✅ |
+| [training/sprint-history.md](student/training/sprint-history.md) | `/training/sprint/history` | スプリントの履歴 | ✅ |
 | [training/sprint-play.md](student/training/sprint-play.md) | `/training/sprint/play` | スプリント実施画面 | ✅ |
-| [training/sprint-result.md](student/training/sprint-result.md) | `/training/sprint/result/[id]` | スプリント結果 | ✅ |
-| [training/word-detail.md](student/training/word-detail.md) | `/training/word/[id]` | 単語帳カード学習画面 | ✅ |
-| [training/word-history.md](student/training/word-history.md) | `/training/word/history` | 単語ドリル履歴 | ✅ |
+| [training/sprint-result.md](student/training/sprint-result.md) | `/training/sprint/result/[id]`、`/training/sprint/history/[id]` | スプリント結果（実施直後は没入画面・履歴からはシェル画面）、英文中の単語タップによるColor Vowel辞書 | ✅ |
+| [training/word-detail.md](student/training/word-detail.md) | `/training/word/[id]` | 単語帳カードのトレーニング画面 | ✅ |
+| [training/word-history.md](student/training/word-history.md) | `/training/word/history` | 単語帳の履歴 | ✅ |
 
 ## coach
 
 | ファイル | パス | 概要 | 状態 |
 |---|---|---|---|
+| [login.md](coach/login.md) | `/login` | ログイン（ロック、ログイン後に元の画面へ戻る。要確認事項あり） | ✅ |
 | [dashboard.md](coach/dashboard.md) | `/dashboard` | Attentionタイル・直近セッション・Session Tasks | ✅ |
 | [calendar.md](coach/calendar.md) | `/calendar` | 月間カレンダー＋Pending Requestsパネル | ✅ |
-| [chat/list.md](coach/chat/list.md) | `/chat` | チャットルーム一覧（顧客フィルター） | ✅ |
+| [chat/list.md](coach/chat/list.md) | `/chat` | チャットルーム一覧（2ペイン） | ✅ |
 | [chat/room.md](coach/chat/room.md) | `/chat/[roomId]` | チャット詳細 | ✅ |
 | [availability.md](coach/availability.md) | `/availability` | 週次対応可能時間帯の設定 | ✅ |
 | [matching-requests.md](coach/matching-requests.md) | `/matching-requests` | マッチング申請・予約・振替候補の承認/却下 | ✅ |
@@ -63,6 +74,7 @@
 
 | ファイル | パス | 概要 | 状態 |
 |---|---|---|---|
+| [login.md](admin/login.md) | `/login` | ログイン（表示言語切替・ロック、ログイン後に元の画面へ戻る。要確認事項あり） | ✅ |
 | [dashboard.md](admin/dashboard.md) | `/dashboard` | 5モジュールの件数・要対応件数サマリー | ✅ |
 | [clients.md](admin/clients.md) | `/clients` | 顧客（テナント）マスタ管理（要確認事項あり） | ✅ |
 | [contracts/list.md](admin/contracts/list.md) | `/contracts` | 契約管理（プラン紐付け・ライセンス割当） | ✅ |
@@ -70,7 +82,8 @@
 | [live-sessions.md](admin/live-sessions.md) | `/live-sessions` | セッションの代理キャンセル/予約/マッチング/コーチ交代 | ✅ |
 | [monthly-reports.md](admin/monthly-reports.md) | `/monthly-reports` | コーチ稼働実績の承認・承認取消 | ✅ |
 | [notification.md](admin/notification.md) | `/notification` | 通知一覧 | ✅ |
-| [payment-settings.md](admin/payment-settings.md) | `/payment-settings` | 会社情報・セッション単価設定 | ✅ |
+| [training-reports.md](admin/training-reports.md) | `/training-reports` | トレーニングレポート（満了月ごとのライセンス一覧・生徒ごとのPDF・契約の全員分のZIP。ドラフト版） | ✅ |
+| [payment-settings.md](admin/payment-settings.md) | `/payment-settings` | セッション単価設定（会社情報は `/company-profiles` へ移設・未文書化） | ✅ |
 | [profile.md](admin/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
 | [profile-password.md](admin/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |
 | [timezones.md](admin/timezones.md) | `/timezones` | タイムゾーンマスタ管理 | ✅ |

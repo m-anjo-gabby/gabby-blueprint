@@ -126,7 +126,7 @@ export default function ChatPlayground() {
             <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
               <div
                 className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                  m.role === 'user' ? 'bg-slate-800 text-white' : 'bg-indigo-600 text-white'
+                  m.role === 'user' ? 'bg-slate-800 text-white' : 'bg-brand text-white'
                 }`}
               >
                 {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
@@ -150,7 +150,7 @@ export default function ChatPlayground() {
                       <Badge
                         key={si}
                         variant="outline"
-                        className="text-[10px] px-2 py-0.5 font-bold border-indigo-100 bg-indigo-50 text-indigo-600 gap-1"
+                        className="text-[10px] px-2 py-0.5 font-bold border-brand-100 bg-brand-50 text-brand gap-1"
                       >
                         <BookOpenCheck size={10} /> {source.title}
                       </Badge>
@@ -179,7 +179,7 @@ export default function ChatPlayground() {
           disabled={isLoading}
         />
         <Button
-          className="h-[52px] px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700"
+          className="h-[52px] px-6 rounded-2xl bg-brand hover:bg-brand-strong"
           onClick={handleSend}
           disabled={isLoading || !input.trim()}
         >

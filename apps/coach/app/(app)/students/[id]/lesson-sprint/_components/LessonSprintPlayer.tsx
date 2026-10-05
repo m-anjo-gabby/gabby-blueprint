@@ -181,7 +181,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
             </button>
 
             <div className="flex-1 flex flex-col items-center px-4 min-w-0">
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5 select-none shrink-0">
+              <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-0.5 select-none shrink-0">
                 {contentName || 'Live Sprint'}
               </span>
               <h1 className="text-sm font-black text-slate-800 tracking-tight text-center w-full truncate">
@@ -221,7 +221,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                   isPaused ? 'bg-slate-300' :
                   isCritical ? 'bg-gradient-to-r from-rose-500 to-rose-600' :
                   isWarning ? 'bg-gradient-to-r from-amber-400 to-amber-500' :
-                  'bg-gradient-to-r from-indigo-500 to-indigo-600'
+                  'bg-gradient-to-r from-brand-500 to-brand'
                 )}
                 style={{ width: `${progressPercent}%`, transition: 'width 1s linear' }}
               />
@@ -236,7 +236,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                 size={11}
                 className={cn(
                   isCritical && !isPaused && 'animate-pulse',
-                  isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-indigo-500'
+                  isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-brand-500'
                 )}
                 strokeWidth={3}
               />
@@ -251,7 +251,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
             <div className="flex-1 flex flex-col p-6 overflow-y-auto overscroll-contain">
               <div className="w-full max-w-2xl mx-auto flex flex-col gap-4">
                 <div className="flex items-center gap-1.5 text-xs font-black text-slate-500 uppercase tracking-wider">
-                  <Megaphone size={14} className="text-indigo-500" />
+                  <Megaphone size={14} className="text-brand-500" />
                   {instructionNote.preamble}
                 </div>
 
@@ -272,7 +272,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
               <button
                 type="button"
                 onClick={() => setHasStarted(true)}
-                className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2"
+                className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-brand hover:bg-brand-strong text-white flex items-center justify-center gap-2"
               >
                 Start
                 <ArrowRight size={14} />
@@ -289,8 +289,8 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                 </div>
 
                 {currentQuestion?.statement_en && !isSpeedMode && (
-                  <div className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-4 text-center">
-                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mb-1">Statement</p>
+                  <div className="bg-brand-50/60 border border-brand-100 rounded-2xl p-4 text-center">
+                    <p className="text-[10px] font-black text-brand-500 uppercase tracking-wider mb-1">Statement</p>
                     <p className="text-base font-bold text-slate-800">{currentQuestion.statement_en}</p>
                   </div>
                 )}
@@ -356,7 +356,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                     key="saving-icon"
                     layoutId="lesson-sprint-completion-icon"
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm text-indigo-600"
+                    className="absolute inset-0 bg-brand-50 rounded-2xl flex items-center justify-center border border-brand-100 shadow-sm text-brand"
                   >
                     <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
                   </motion.div>
@@ -365,7 +365,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                     key="done-icon"
                     layoutId="lesson-sprint-completion-icon"
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm text-indigo-600"
+                    className="absolute inset-0 bg-brand-50 rounded-2xl flex items-center justify-center border border-brand-100 shadow-sm text-brand"
                   >
                     <CheckCircle2 className="w-7 h-7" strokeWidth={2.2} />
                   </motion.div>
@@ -385,7 +385,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
             {completionStats && (
               <div className="flex items-center justify-center gap-x-5 py-1 select-none">
                 <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
-                  <ClipboardCheck size={13} strokeWidth={2.5} className="text-indigo-500 shrink-0" />
+                  <ClipboardCheck size={13} strokeWidth={2.5} className="text-brand-500 shrink-0" />
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">Answered</span>
                   <span className="text-sm font-black text-slate-800 font-mono leading-none">{completionStats.answered}</span>
                 </div>
@@ -412,7 +412,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                   e.stopPropagation();
                   handleGoToResult();
                 }}
-                className="w-full h-12 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 group cursor-pointer bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] shadow-md shadow-indigo-600/10 text-white border-none"
+                className="w-full h-12 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 group cursor-pointer bg-brand hover:bg-brand-strong active:scale-[0.98] shadow-md shadow-brand/10 text-white border-none"
               >
                 <span>View Results</span>
                 <ArrowRight size={14} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
@@ -423,7 +423,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                 {resultId && (
                   <motion.div
                     key={resultId}
-                    className="h-full bg-indigo-300 rounded-full"
+                    className="h-full bg-brand-300 rounded-full"
                     initial={{ width: '100%' }}
                     animate={{ width: '0%' }}
                     transition={{ duration: 3.5, ease: 'linear' }}

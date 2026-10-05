@@ -15,6 +15,8 @@ interface NotificationState {
 
   // Actions
   fetchNotifications: (force?: boolean) => Promise<void>;
+  /** 取得済みの通知を反映する（fetchNotifications と、サーバーで取得した初期値の流し込みで共有する） */
+  applyNotifications: (notifications: NotificationItem[]) => void;
   /** Realtimeで新着を検知した際にキャッシュを無効化し、次回参照時に再取得させる */
   invalidate: () => void;
   markAsRead: (notificationId: string) => Promise<void>;
@@ -38,16 +40,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     try {
       const res = await getNotificationsAction();
       if (!res.success) return;
-
-      const notifications = res.data;
-      const unreadCount = notifications.filter((n) => !n.is_read).length;
-
-      set({ notifications, unreadCount, lastFetched: Date.now() });
+      get().applyNotifications(res.data);
     } catch (err) {
       console.error('Notification fetch error:', err);
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  applyNotifications: (notifications) => {
+    set({ notifications, unreadCount: notifications.filter((n) => !n.is_read).length, lastFetched: Date.now() });
   },
 
   invalidate: () => set({ lastFetched: null }),

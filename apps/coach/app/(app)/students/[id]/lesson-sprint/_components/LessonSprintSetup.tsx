@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, SprintQuestionType, SprintAnswerType, SprintQuestion } from '@gabby/types/sprint';
-import { resolveSprintHasLevel, formatSprintLevelLabel, getSprintTitle, resolveCoachContentName } from '@gabby/lib';
+import { resolveSprintHasLevel, formatSprintLevelLabel, getSprintTitle, resolveCoachContentName, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from '@gabby/lib';
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -56,8 +56,11 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
   const sprintMeta = selectedContent?.metadata?.sprint;
   const isCorpus = sprintMeta?.sprint_type === '1';
   const hasLevel = resolveSprintHasLevel(sprintMeta);
+  const availableLevels = selectedContent?.available_levels ?? null;
 
+  // 教材の対応種別（コーパスのみ）かつ問題が1件以上ある種別だけを選択可能とする
   const isTypeSupported = (typeId: SprintQuestionType) => {
+    if (!hasSprintQuestionsForType(availableLevels, typeId)) return false;
     if (!isCorpus || !sprintMeta?.supported_types) return true;
     const support = sprintMeta.supported_types;
     if (typeId === '0') return support.speed;
@@ -67,16 +70,19 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
     return false;
   };
 
-  // 教材切り替え時、選択中の種別がサポート対象外なら最初にサポートされる種別＋レベルへリセットする
+  // 教材切り替え時（初回表示を含む）、選択中の種別が選べなければ最初に選べる種別へ、
+  // レベルに問題が無ければ問題のあるレベルへリセットする
   useEffect(() => {
     if (!selectedContent) return;
     if (!isTypeSupported(questionType)) {
       const firstSupported = sortedTypes.find((t) => isTypeSupported(t.value));
       if (firstSupported) {
         setQuestionType(firstSupported.value);
-        setLevel(hasLevel ? String(firstSupported.minLevel) : '1');
+        setLevel(String(pickSprintLevel(firstSupported.value, { hasLevel, availableLevels })));
         setTimeLimitSec(firstSupported.recommendedTimeSec);
       }
+    } else if (hasLevel && !isSprintLevelAvailable(availableLevels, questionType, Number(level))) {
+      setLevel(String(pickSprintLevel(questionType, { hasLevel, availableLevels, preferred: Number(level) })));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contentId]);
@@ -86,14 +92,16 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
     if (!meta || !hasLevel) return [];
     const items = [];
     for (let i = meta.minLevel; i <= meta.maxLevel; i++) {
+      // 問題の無いレベルは出さない（コーパス教材は特定のレベルにしか問題が無いことがある）
+      if (!isSprintLevelAvailable(availableLevels, questionType, i)) continue;
       items.push({ value: String(i), label: formatSprintLevelLabel(questionType, i) });
     }
     return items;
-  }, [questionType, hasLevel]);
+  }, [questionType, hasLevel, availableLevels]);
 
   const handleTypeChange = (typeId: SprintQuestionType) => {
     setQuestionType(typeId);
-    setLevel(hasLevel ? String(QUESTION_TYPES[typeId]?.minLevel ?? 0) : '1');
+    setLevel(String(pickSprintLevel(typeId, { hasLevel, availableLevels })));
     setTimeLimitSec(QUESTION_TYPES[typeId].recommendedTimeSec);
   };
 
@@ -144,7 +152,7 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
 
             <div className="flex-1 flex flex-col items-center gap-1 px-4 min-w-0">
               <div className="inline-flex items-center max-w-full bg-slate-100/80 px-2.5 py-0.5 rounded-full">
-                <span className="text-xs font-black text-indigo-600 truncate leading-none">
+                <span className="text-xs font-black text-brand truncate leading-none">
                   {selectedContent ? resolveCoachContentName(selectedContent) : 'Select content'}
                 </span>
               </div>
@@ -210,7 +218,7 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
                       onClick={() => handleTypeChange(type.value)}
                       className={cn(
                         "h-12 rounded-xl border text-xs font-black transition-all disabled:opacity-50 flex flex-col items-center justify-center gap-0.5",
-                        isSelected ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                        isSelected ? "bg-brand border-brand text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                       )}
                     >
                       <span>{type.label}</span>
@@ -238,7 +246,7 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
                       onClick={() => setLevel(item.value)}
                       className={cn(
                         "h-10 rounded-xl border text-xs font-black transition-all",
-                        level === item.value ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                        level === item.value ? "bg-brand border-brand text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                       )}
                     >
                       {item.label}
@@ -266,12 +274,12 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
                       onClick={() => setTimeLimitSec(opt.value)}
                       className={cn(
                         "p-3 rounded-xl border text-left transition-all",
-                        timeLimitSec === opt.value ? "bg-indigo-600 border-indigo-600 text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                        timeLimitSec === opt.value ? "bg-brand border-brand text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                       )}
                     >
                       <div className="text-xs font-black">{opt.label}</div>
                       {isRecommended && (
-                        <div className={cn("text-[11px] font-bold", timeLimitSec === opt.value ? "text-amber-300" : "text-indigo-600")}>
+                        <div className={cn("text-[11px] font-bold", timeLimitSec === opt.value ? "text-amber-300" : "text-brand")}>
                           Recommended
                         </div>
                       )}
@@ -294,7 +302,7 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
                 <button
                   onClick={() => handleStart('0')}
                   disabled={isLoading}
-                  className="h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-brand hover:bg-brand-strong text-white flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   {isLoading ? <Loader2 size={16} className="animate-spin" /> : <>Start (YES)<ArrowRight size={14} /></>}
                 </button>
@@ -310,7 +318,7 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
               <button
                 onClick={() => handleStart('0')}
                 disabled={isLoading}
-                className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-brand hover:bg-brand-strong text-white flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {isLoading ? <Loader2 size={16} className="animate-spin" /> : <>Start Live Sprint<ArrowRight size={14} /></>}
               </button>

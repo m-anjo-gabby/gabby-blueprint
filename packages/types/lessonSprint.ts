@@ -1,4 +1,4 @@
-import { SprintAnswerType, SprintQuestion, SprintQuestionType } from './sprint';
+import { SprintAnswerType, SprintAvailableLevels, SprintQuestion, SprintQuestionType } from './sprint';
 import { CoachStudentErrorCode } from './coachStudent';
 import { ContentMetadata } from './content';
 
@@ -22,6 +22,8 @@ export interface LessonSprintContentSummary {
   content_name: string;
   content_name_en: string | null;
   metadata: ContentMetadata;
+  /** 問題が存在する種別×レベル。null は取得失敗（絞り込まない） */
+  available_levels: SprintAvailableLevels | null;
 }
 
 /** Lesson Sprint結果登録用の入力ペイロード */

@@ -3,7 +3,7 @@
 ## 概要
 
 - アプリ: `student`
-- パス: `/live-room/sessions/[sessionId]/result`
+- パス: `/live-room/sessions/[sessionId]/result`（シェル画面。常設ナビを表示する）
 - 対象ロール: 生徒
 - 目的: 実施済みの個別ライブセッションについて、日時・コーチ・入退室ログ、コーチから出された
   宿題とその進捗、セッション中に実施したLive Sprintの実績、通話中チャットの履歴を確認する。
@@ -11,10 +11,12 @@
 ## この画面に来る経路
 
 - [ライブセッション・ホーム画面](./hub.md)の「実施済み」タブのセッション行から遷移する。
+- 宿題・フォローアップコメント投稿時の通知から遷移する。
 
 ## 画面の構成
 
-1. **ヘッダー** — 画面タイトル「セッション結果」、ライブセッション・ホームへ戻るボタン
+1. **ヘッダー** — 画面タイトル「セッション結果」、戻るボタン（直前の画面へ戻る。直接開いた場合は
+   ライブセッション・ホームへ）
 2. **サマリー** — セッション日時、コーチ名・アイコン、入退室ログ（折りたたみ表示）
 3. **宿題** — コーチからの宿題本文・添付ファイル、チェックリスト（生徒が完了状態を操作可能）、
    フォローアップコメント
@@ -37,6 +39,7 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
+| 読み込み中（画面遷移直後） | 見出し・区画見出し（宿題・トレーニング・チャット履歴）は本物、日時・コーチ・各区画の本文を骨組みで表示 | `live-room/loading.tsx`（ハブとパスで出し分け） |
 | 存在しないセッション | 404ページ | 指定した`sessionId`のセッション結果が取得できない場合（他人のセッション、未実施のセッション等） |
 | チェックリスト更新失敗 | エラートースト表示、チェック状態を操作前に戻す | チェックリスト更新のサーバーアクションが失敗した場合 |
 | 添付ファイル読み込み中／失敗 | ローディングアイコン、または「添付ファイルの読み込みに失敗しました」 | 添付ファイルの署名付きURL取得中、または取得に失敗した場合 |
@@ -55,8 +58,8 @@
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/live-room/sessions/[sessionId]/result/page.tsx`
-- `apps/student/app/(app)/live-room/sessions/[sessionId]/result/_components/StudentSessionResult.tsx`
+- `apps/student/app/(app)/(shell)/live-room/sessions/[sessionId]/result/page.tsx`
+- `apps/student/app/(app)/(shell)/live-room/sessions/[sessionId]/result/_components/StudentSessionResult.tsx`
 - `apps/student/actions/sessionAction.ts`（`getSessionResultSummary`）
 - `apps/student/actions/sessionHomeworkAction.ts`（`getSessionHomework`,
   `getSessionHomeworkChecklist`, `updateHomeworkChecklistItemStatus`）

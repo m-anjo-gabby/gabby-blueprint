@@ -1,0 +1,85 @@
+{
+  "scenario": "matching-chat-greeting",
+  "env": "dev",
+  "tag": "mcg01",
+  "executedAt": "2026-09-28T02:23:22.376Z",
+  "gitCommit": "e08e1d4e",
+  "gitBranch": "feature/20260925-dev",
+  "totalChecks": 15,
+  "passed": 15,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "A-1: コーチの承認で生徒A×コーチの1対1ルームが開設される",
+      "ok": true,
+      "detail": "ルーム1件"
+    },
+    {
+      "name": "A-1: コーチから初回の挨拶が1件送られる（生徒名入り）",
+      "ok": true,
+      "detail": "Hi, QAテスト生徒A（mcg01）! Thank you for choosing me as your Gabby Coach! See you in the first live Coaching session."
+    },
+    {
+      "name": "A-1: 参加者の種別はアドミンの手動開設と同じ値（生徒=1 / コーチ=2）",
+      "ok": true,
+      "detail": "{\"f3c1d7b5-0412-492f-91a1-2feefa91429e\":\"2\",\"5e50303b-1feb-46aa-9b34-2efc4a53f297\":\"1\"}"
+    },
+    {
+      "name": "A-1: 生徒Aにチャット新着の通知が届く",
+      "ok": true
+    },
+    {
+      "name": "A-1: 生徒A本人のJWTで挨拶メッセージを閲覧できる",
+      "ok": true
+    },
+    {
+      "name": "A-2: コマ2の承認では新しいルームを作らず同じルームを使う",
+      "ok": true,
+      "detail": "ルーム1件"
+    },
+    {
+      "name": "A-2: 同じ契約の別のコマの文面が送られる",
+      "ok": true,
+      "detail": "Hi, QAテスト生徒A（mcg01）! Thank you for choosing me for another weekly session! See you in the live Coaching session."
+    },
+    {
+      "name": "B-0: アドミンの手動開設（service_role）でルームが開設される",
+      "ok": true
+    },
+    {
+      "name": "B-1: 直接マッチングでは手動開設済みのルームを使う",
+      "ok": true,
+      "detail": "ルーム1件"
+    },
+    {
+      "name": "B-1: 初めての担当なので初回の文面が送られる",
+      "ok": true,
+      "detail": "Hi, QAテスト生徒B（mcg01）! Thank you for choosing me as your Gabby Coach! See you in the first live Coaching session."
+    },
+    {
+      "name": "C-1: 1契約目の直接マッチングでルーム開設＋初回の文面",
+      "ok": true,
+      "detail": "Hi, QAテスト生徒C（mcg01）! Thank you for choosing me as your Gabby Coach! See you in the first live Coaching session."
+    },
+    {
+      "name": "C-2: 更新後の契約の直接マッチングでは同じルームに「継続」の文面",
+      "ok": true,
+      "detail": "Hi, QAテスト生徒C（mcg01）! Thank you for continuing your live Coaching sessions with me! See you in the next session."
+    },
+    {
+      "name": "アドミンの手動開設: 既存ルームがある2人には既存ルームを返す（created=false）",
+      "ok": true
+    },
+    {
+      "name": "生徒のJWTでは fn_ensure_one_on_one_chat_room を呼べない",
+      "ok": true,
+      "detail": "42501"
+    },
+    {
+      "name": "生徒のJWTでは fn_send_matching_greeting を呼べない",
+      "ok": true,
+      "detail": "42501"
+    }
+  ]
+}

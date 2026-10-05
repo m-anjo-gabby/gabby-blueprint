@@ -12,14 +12,14 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
   (payload: Record<string, unknown>) => NotificationText
 > = {
   TRAINING_FIRST: () => ({
-    title: 'Training started!',
+    title: 'Training started',
     body: 'Completed the first training session.',
   }),
   TRAINING_STREAK: (payload) => {
     const days = Number(payload.days ?? 0);
     return {
-      title: `${days}-day streak!`,
-      body: `Trained for ${days} days in a row. Great pace!`,
+      title: `${days}-day streak`,
+      body: `Trained for ${days} days in a row.`,
     };
   },
   CHAT_NEW_MESSAGE: (payload) => ({

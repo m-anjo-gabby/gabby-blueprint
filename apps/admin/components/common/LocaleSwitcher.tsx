@@ -47,7 +47,7 @@ export default function LocaleSwitcher() {
           <DropdownMenuItem
             key={value}
             onClick={() => handleChange(value)}
-            className={`text-xs font-bold cursor-pointer hover:bg-slate-50 ${value === locale ? 'text-indigo-600' : 'text-slate-600'}`}
+            className={`text-xs font-bold cursor-pointer hover:bg-slate-50 ${value === locale ? 'text-brand' : 'text-slate-600'}`}
           >
             {t(`locale.${value === 'ja' ? 'japanese' : 'english'}`)}
           </DropdownMenuItem>

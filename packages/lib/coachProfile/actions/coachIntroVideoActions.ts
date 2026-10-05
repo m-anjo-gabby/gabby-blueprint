@@ -12,6 +12,7 @@ import {
   UploadCoachIntroVideoResult,
   RemoveCoachIntroVideoResult,
 } from '@gabby/types/coachProfile';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -32,7 +33,7 @@ export async function uploadCoachIntroVideoCore(formData: FormData): Promise<Upl
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const file = formData.get('file') as File | null;
@@ -107,7 +108,7 @@ export async function removeCoachIntroVideoCore(): Promise<RemoveCoachIntroVideo
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: currentRow } = await supabase

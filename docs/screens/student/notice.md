@@ -15,7 +15,7 @@
 
 ## 画面の構成
 
-1. **ヘッダー** — 戻るボタン、画面タイトル「Notices」、件数バッジ
+1. **ヘッダー** — 戻るボタン（直前の画面へ戻る。履歴が無い場合はホームへ）、画面タイトル「お知らせ」、件数（「n件」）
 2. **お知らせ一覧** — アコーディオン形式のカード一覧（新しい順）
 
 ## 表示要素・操作
@@ -34,14 +34,14 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
-| 読み込み中 | スケルトンを4件分表示 | お知らせ一覧の取得中（この画面は常に最新を再取得する） |
-| お知らせが1件も無い | 「現在お知らせはありません／No notifications yet」 | 配信対象のお知らせが存在しない場合 |
+| 読み込み中 | 見出しは表示し、件数と一覧（閉じたお知らせカードと同じ形の骨組み4件分）を骨組みで表示。他の画面で取得済みの古い一覧は出さない | 画面遷移直後（`notice/loading.tsx`）と、画面を開いてからの再取得が終わるまで |
+| お知らせが1件も無い | 「現在お知らせはありません／お知らせが届くと、ここに表示されます」 | 配信対象のお知らせが存在しない場合 |
 | プレビュー／保存の読み込み中 | 対象ボタンがスピナー表示になる | 添付ファイルのダウンロードURL取得中 |
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/notice/page.tsx`
-- `apps/student/app/(app)/notice/_components/NoticeCard.tsx`
+- `apps/student/app/(app)/(shell)/notice/page.tsx`
+- `apps/student/app/(app)/(shell)/notice/_components/NoticeCard.tsx`
 - お知らせ種別定義: `packages/types/notice.ts`（`NOTICE_TYPES`, `NOTICE_IMPORTANT_BADGE`）
 - 状態管理: `@gabby/lib/stores/useNoticeStore`（`fetchNotices`, `markAsRead`）
 - 関連アクション: `getNoticeAttachmentUrlAction`（`@gabby/lib/notice/actions/noticeActions`）

@@ -38,8 +38,8 @@ export default async function CVDictionaryPage({ searchParams }: CVDictionaryPag
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {/* ページヘッダー */}
       <div className="px-6 py-4 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
-        <div className="p-2 bg-indigo-50 rounded-xl">
-          <BookOpenText size={20} className="text-indigo-600" />
+        <div className="p-2 bg-brand-50 rounded-xl">
+          <BookOpenText size={20} className="text-brand" />
         </div>
         <div>
           <h1 className="text-base font-black text-slate-800 tracking-tight">ColorVowel Dictionary</h1>
@@ -63,7 +63,7 @@ export default async function CVDictionaryPage({ searchParams }: CVDictionaryPag
           </ResizablePanel>
 
           {/* 境界線 */}
-          <ResizableHandle withHandle className="w-1.5 bg-slate-200 hover:bg-indigo-300 transition-colors" />
+          <ResizableHandle withHandle className="w-1.5 bg-slate-200 hover:bg-brand-300 transition-colors" />
 
           {/* 右ペイン：品詞別エントリ一覧 */}
           <ResizablePanel

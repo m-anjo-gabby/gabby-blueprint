@@ -109,14 +109,14 @@ export function GroupParticipantsPicker({ users, clients, selectedIds, onChange,
             return (
               <span
                 key={id}
-                className="inline-flex items-center gap-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium pl-2.5 pr-1.5 py-1"
+                className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-strong text-xs font-medium pl-2.5 pr-1.5 py-1"
               >
                 {u?.user_name || tCommon('unnamed')}
                 <button
                   type="button"
                   onClick={() => toggle(id)}
                   disabled={disabled}
-                  className="hover:text-indigo-900"
+                  className="hover:text-brand-900"
                   aria-label={tCommon('removeAriaLabel', { name: u?.user_name || tCommon('unnamed') })}
                 >
                   <X size={12} />

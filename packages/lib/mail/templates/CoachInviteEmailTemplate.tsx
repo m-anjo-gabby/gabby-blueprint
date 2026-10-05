@@ -1,5 +1,6 @@
 // packages/lib/mail/templates/CoachInviteEmailTemplate.tsx
 import * as React from 'react';
+import { SUPPORT_EMAIL } from '../../contact';
 
 interface CoachInviteEmailTemplateProps {
   userName: string;
@@ -111,8 +112,8 @@ export const CoachInviteEmailTemplate: React.FC<CoachInviteEmailTemplateProps> =
           <p style={{ margin: '0 0 8px 0', lineHeight: '1.5' }}>
             <strong>Support</strong><br />
             Gabby Blueprint Support Desk:{' '}
-            <a href="mailto:support@gabbyacademy.com" style={{ color: '#9ca3af', textDecoration: 'underline' }}>
-              support@gabbyacademy.com
+            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: '#9ca3af', textDecoration: 'underline' }}>
+              {SUPPORT_EMAIL}
             </a>
           </p>
           <p style={{ marginTop: '16px', marginBottom: '8px' }}>

@@ -31,6 +31,8 @@ import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
+import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
+import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
 interface Props {
@@ -185,7 +187,7 @@ export function LiveSessionRoomView({ access }: Props) {
 
   if (phase === 'preview') {
     return (
-      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
+      <ImmersivePanel>
         <header className="shrink-0 px-5 sm:px-8 pt-6 sm:pt-8 pb-6 border-b border-slate-50 space-y-4">
           <div className="flex items-center gap-3 min-w-0">
             <Link
@@ -202,7 +204,7 @@ export function LiveSessionRoomView({ access }: Props) {
           <p className="text-[13px] text-slate-500">カメラとマイクを確認してから参加してください。</p>
         </header>
 
-        <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center bg-slate-50/50 p-5 sm:p-8 gap-4">
+        <ImmersiveBody className="flex flex-col items-center justify-center bg-slate-50/50 p-5 sm:p-8 gap-4">
           <div className="w-full max-w-md mx-auto flex flex-col items-center gap-4">
           <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 shadow-sm">
             <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
@@ -263,7 +265,7 @@ export function LiveSessionRoomView({ access }: Props) {
             </button>
           </div>
           </div>
-        </div>
+        </ImmersiveBody>
 
         <div className="px-5 py-4 sm:py-5 border-t border-slate-100 shrink-0 bg-white space-y-2">
           {preview.isPreviewing && isCoachPresent && (
@@ -278,27 +280,23 @@ export function LiveSessionRoomView({ access }: Props) {
             <ArrowRight size={14} strokeWidth={3} />
           </button>
         </div>
-      </div>
+      </ImmersivePanel>
     );
   }
 
   if (phase === 'ended') {
     return (
-      <div className="flex flex-col w-full max-w-2xl h-full bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden items-center justify-center gap-4 px-6 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
-          <CheckCircle2 size={22} />
-        </div>
-        <div className="space-y-1">
-          <p className="text-sm font-bold text-slate-900">セッションが終了しました</p>
-          <p className="text-xs text-slate-500 max-w-xs">通話が終了しました。</p>
-        </div>
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-full"
-        >
-          ダッシュボードに戻る
-        </button>
-      </div>
+      <ImmersiveNotice
+        tone="success"
+        icon={<CheckCircle2 size={26} />}
+        title="セッションが終了しました"
+        description="通話が終了しました。"
+        actions={
+          <button type="button" onClick={() => router.push('/dashboard')} className={noticeActionClass()}>
+            ホームに戻る
+          </button>
+        }
+      />
     );
   }
 
@@ -406,7 +404,7 @@ export function LiveSessionRoomView({ access }: Props) {
                   chatMessages.map((msg) => (
                     <div key={msg.id} className={`text-[11px] ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                       <span className="font-bold text-slate-400 mr-1.5">{msg.senderName}</span>
-                      <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-100'}`}>
+                      <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-slate-700 text-slate-100'}`}>
                         {msg.message}
                       </span>
                     </div>
@@ -419,11 +417,11 @@ export function LiveSessionRoomView({ access }: Props) {
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
                   placeholder="メッセージを入力..."
-                  className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-brand-500"
                 />
                 <button
                   onClick={handleSendChat}
-                  className="shrink-0 w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
+                  className="shrink-0 w-8 h-8 rounded-lg bg-brand hover:bg-brand-500 text-white flex items-center justify-center transition-colors"
                 >
                   <Send size={14} />
                 </button>
@@ -445,7 +443,7 @@ export function LiveSessionRoomView({ access }: Props) {
                 chatMessages.map((msg) => (
                   <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                     <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
-                    <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-100'}`}>
+                    <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-slate-800 text-slate-100'}`}>
                       {msg.message}
                     </p>
                   </div>
@@ -458,11 +456,11 @@ export function LiveSessionRoomView({ access }: Props) {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
                 placeholder="メッセージを入力..."
-                className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500"
+                className="flex-1 text-xs bg-slate-800 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-brand-500"
               />
               <button
                 onClick={handleSendChat}
-                className="shrink-0 w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
+                className="shrink-0 w-8 h-8 rounded-lg bg-brand hover:bg-brand-500 text-white flex items-center justify-center transition-colors"
               >
                 <Send size={14} />
               </button>

@@ -118,8 +118,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     if (isRecording) return { text: `発話中...`, color: "text-rose-500 font-extrabold" };
     if (isRevealed) return { text: "解答をCheck", color: "text-slate-400" };
     switch (audioPhase) {
-      case 'statement': return { text: "基本文を再生中...", color: "text-indigo-600" };
-      case 'question': return { text: `${config.phaseLabel}を再生中...`, color: "text-indigo-600" };
+      case 'statement': return { text: "基本文を再生中...", color: "text-brand" };
+      case 'question': return { text: `${config.phaseLabel}を再生中...`, color: "text-brand" };
       case 'thinking':
       case 'answer': 
         // 🚀 改修：ご指定に基づき、評価モードの状態に関わらずメインメッセージは「回答しましょう」で完全統一
@@ -153,7 +153,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     return (
       <div className="flex-1 w-full min-h-[300px] flex items-center justify-center bg-slate-50/50 rounded-[40px] border border-dashed border-slate-200">
         <div className="text-center space-y-2">
-          <div className="w-8 h-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin mx-auto" />
+          <div className="w-8 h-8 rounded-full border-2 border-brand border-t-transparent animate-spin mx-auto" />
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Card...</p>
         </div>
       </div>
@@ -179,8 +179,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           />
 
           {questionType === '0' && (
-            <div className="flex items-center gap-1.5 bg-indigo-50/50 border border-indigo-100/30 rounded-full p-0.5 shadow-2xs select-none">
-              <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest pl-2 pr-1 flex items-center gap-1">
+            <div className="flex items-center gap-1.5 bg-brand-50/50 border border-brand-100/30 rounded-full p-0.5 shadow-2xs select-none">
+              <span className="text-[9px] font-black text-brand-500 uppercase tracking-widest pl-2 pr-1 flex items-center gap-1">
                 <Mic size={10} className="text-rose-500" />
                 発話評価
               </span>
@@ -246,14 +246,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         transition={{ duration: 0.25 }}
                         className={cn(
                           "absolute inset-0",
-                          isCompleted ? "bg-emerald-500" : isRecording && isCurrent ? "bg-rose-500" : "bg-indigo-500"
+                          isCompleted ? "bg-emerald-500" : isRecording && isCurrent ? "bg-rose-500" : "bg-brand-500"
                         )}
                       />
                     </div>
                     <span className={cn(
                       "text-[10px] font-black tracking-tight transition-colors duration-200 whitespace-nowrap",
                       isRecording && isCurrent ? "text-rose-500 font-extrabold" :
-                      isCurrent ? "text-indigo-600 font-extrabold" :
+                      isCurrent ? "text-brand font-extrabold" :
                       isCompleted ? "text-emerald-600" : "text-slate-400"
                     )}>
                       {stepName}
@@ -271,7 +271,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-xs border shrink-0 transition-all duration-300",
               isRecording ? "bg-rose-50 border-rose-200 text-rose-500" :
               isRevealed ? "bg-slate-100 border-slate-200 text-slate-400" :
-              audioPhase === 'statement' || audioPhase === 'question' ? "bg-indigo-50 border-indigo-200 text-indigo-600" :
+              audioPhase === 'statement' || audioPhase === 'question' ? "bg-brand-50 border-brand-200 text-brand" :
               audioPhase === 'answer' || audioPhase === 'thinking' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
             )}>
               {isRecording ? <Mic size={18} /> : (audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed ? <CircleDot size={18} /> : <Headphones size={18} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />}
@@ -303,7 +303,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           {isDrillMode && isRevealed && !isProblemVisible && (
             <button
               onClick={(e) => { e.stopPropagation(); setIsProblemVisible(true); }}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-indigo-600 border border-indigo-100 shadow-sm transition-all text-[10px] font-black uppercase tracking-tight cursor-pointer active:scale-95 ml-auto"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-brand border border-brand-100 shadow-sm transition-all text-[10px] font-black uppercase tracking-tight cursor-pointer active:scale-95 ml-auto"
             >
               <Eye size={13} strokeWidth={2.5} />
               <span>問題を表示</span>
@@ -346,7 +346,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              className="w-full text-left border-l-4 border-indigo-500 pl-3 sm:pl-4 py-0.5 flex flex-col gap-1"
+              className="w-full text-left border-l-4 border-brand-500 pl-3 sm:pl-4 py-0.5 flex flex-col gap-1"
             >
               <PhraseAudioHeader
                 label={config.sectionTitle}
@@ -376,10 +376,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 transition={{ duration: 0.2 }}
                 className="absolute inset-0 w-full h-full flex flex-col items-center justify-center group"
               >
-                <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] border-2 border-dashed border-slate-200 bg-gradient-to-b cursor-pointer from-slate-50/50 to-white/30 group-hover:border-indigo-100 group-hover:from-indigo-50/10 transition-colors duration-300" />
+                <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] border-2 border-dashed border-slate-200 bg-gradient-to-b cursor-pointer from-slate-50/50 to-white/30 group-hover:border-brand-100 group-hover:from-brand-50/10 transition-colors duration-300" />
                 <div className="relative z-10 flex flex-col items-center text-center space-y-3 sm:space-y-4">
                   <div className="space-y-0.5 sm:space-y-1">
-                    <p className="text-[12px] sm:text-[11px] font-black tracking-[0.15em] sm:tracking-[0.2em] text-slate-400 uppercase group-hover:text-indigo-500 transition-colors">タップで解答文を表示します</p>
+                    <p className="text-[12px] sm:text-[11px] font-black tracking-[0.15em] sm:tracking-[0.2em] text-slate-400 uppercase group-hover:text-brand-500 transition-colors">タップで解答文を表示します</p>
                     <p className="text-[10px] sm:text-[10px] font-bold text-slate-300 group-hover:text-slate-400 transition-colors">Listen & Answer</p>
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import { createServerClient } from "@gabby/lib/supabase/server";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { WordSummaryHistoryItem } from "./wordAction"; // Re-use type
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('monitor');
 
@@ -51,6 +52,8 @@ export interface MonitorSprintHistoryItem {
   total_answered: number;
   total_assessments: number;
   insert_date: string;
+  /** 実施した生徒のタイムゾーンでの実施日（YYYY-MM-DD） */
+  training_date: string;
   com_m_contents?: {
     content_name: string;
   } | null;
@@ -101,8 +104,8 @@ export async function getMonitorUserList(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // 💡 _start_date/_end_date は必須。対象期間に有効な契約（status=1かつ期間が重なる）を
     //    持つ生徒のみを対象にする（private.get_monitor_target_users に判定ロジックを集約）
@@ -140,8 +143,8 @@ export async function getMonitorWordHistory(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     const { data, error } = await supabase.rpc('get_monitor_word_history', {
       _start_date: startDate,
@@ -189,20 +192,17 @@ export async function getMonitorSprintHistory(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // 💡 _user_ids パラメータに渡すために、空配列なら null にする
     const queryUserIds = userIds && userIds.length > 0 ? userIds : null;
-
-    // sessions (TIMESTAMP WITH TIME ZONE) に合わせるため、endDate の末尾に 23:59:59.999Z を付与
-    const endTimestamp = `${endDate}T23:59:59.999Z`;
 
     // 💡 sessions と drills の RPC を並行で呼び出し
     const [sessionsRes, drillsRes] = await Promise.all([
       supabase.rpc('get_monitor_sprint_history', {
         _start_date: startDate,
-        _end_date: endTimestamp,
+        _end_date: endDate,
         _user_ids: queryUserIds,
         _include_monitor: includeMonitor
       }),
@@ -229,6 +229,7 @@ export async function getMonitorSprintHistory(
       total_answered: item.total_answered,
       total_assessments: item.total_assessments || 0,
       insert_date: item.insert_date,
+      training_date: item.training_date,
       com_m_contents: item.content_name ? {
         content_name: item.content_name
       } : null,

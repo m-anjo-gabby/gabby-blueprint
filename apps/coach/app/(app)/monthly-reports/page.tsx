@@ -1,7 +1,7 @@
-import { getMyMonthlyReport } from '@/actions/monthlyReportAction';
+import { Suspense } from 'react';
 import { MonthSelector } from './_components/MonthSelector';
-import { SummaryCard } from './_components/SummaryCard';
-import { MonthlyReportGrid } from './_components/MonthlyReportGrid';
+import { MonthlyReportSection } from './_components/MonthlyReportSection';
+import { MonthlyReportTableSkeleton, MonthlyReportsPageHeader } from '@/components/common/ToolPageSkeletons';
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -16,30 +16,16 @@ export default async function MonthlyReportsPage({
   const params = await searchParams;
   const yearMonth = params.month || currentYearMonth();
 
-  const result = await getMyMonthlyReport(yearMonth);
-
   return (
     <div className="space-y-6">
-      <div className="max-w-2xl">
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight">Monthly Report</h1>
-        <p className="text-[13px] text-slate-500 mt-1">
-          Your live session counts by student and day. Cells in amber need a lesson to be finalized;
-          cells in rose contain a late cancellation, no-show, or early-ended session.
-        </p>
-      </div>
+      <MonthlyReportsPageHeader />
 
       <MonthSelector currentMonth={yearMonth} />
 
-      {!result.success ? (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {result.message}
-        </div>
-      ) : (
-        <>
-          <SummaryCard report={result.report} />
-          <MonthlyReportGrid report={result.report} />
-        </>
-      )}
+      {/* Query changes don't trigger loading.tsx, so re-key per month to show the skeleton while switching */}
+      <Suspense key={yearMonth} fallback={<MonthlyReportTableSkeleton />}>
+        <MonthlyReportSection yearMonth={yearMonth} />
+      </Suspense>
     </div>
   );
 }

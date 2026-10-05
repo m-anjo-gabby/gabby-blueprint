@@ -125,6 +125,7 @@ async function ensureRelationship(clientId: string, studentId: string, coachId: 
     .insert({
       client_id: clientId,
       plan_name: plan.plan_name,
+      contract_name: `${plan.plan_name} ${crypto.randomUUID().slice(0, 8)}`,
       plan_name_en: plan.plan_name_en,
       plan_id: plan.plan_id,
       max_licenses: 1,

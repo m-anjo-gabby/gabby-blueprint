@@ -1,6 +1,7 @@
 'use server';
 
 import { createPortalAuthActions } from '@gabby/lib/auth/portalActions';
+import { AUTH_ERROR_MESSAGES_JA } from '@gabby/lib/auth/errors';
 import { USER_TYPES } from '@gabby/types/user';
 
 /**
@@ -8,15 +9,40 @@ import { USER_TYPES } from '@gabby/types/user';
  * 誤って管理者がここからログインした場合は拒否します。
  * ログイン時はライセンスチェックを有効化します。
  */
-const { signIn, signOut, forgotPassword, resetPassword, updatePassword } = createPortalAuthActions({
+const {
+  signIn,
+  signOut,
+  forgotPassword,
+  resetPassword,
+  updatePassword,
+  verifyRecovery,
+  hasRecoverySession,
+  verifyInvitation,
+  acceptInvitation,
+} = createPortalAuthActions({
   appName: 'student',
-  unexpectedErrorMessage: '予期せぬエラーが発生しました',
+  messages: (code) =>
+    code === 'portal_forbidden'
+      ? '管理者アカウントです。管理画面からログインしてください。'
+      : AUTH_ERROR_MESSAGES_JA[code],
   signInOptions: { checkLicense: true },
   signOutMode: 'revalidate',
+  // 再設定メールは日本語
+  resetMailLanguage: 'ja',
   guardUser: (user) =>
     user.app_metadata?.user_type === USER_TYPES.ADMIN
-      ? { ok: false, message: '管理者アカウントです。管理画面からログインしてください。' }
+      ? { ok: false }
       : { ok: true },
 });
 
-export { signIn, signOut, forgotPassword, resetPassword, updatePassword };
+export {
+  signIn,
+  signOut,
+  forgotPassword,
+  resetPassword,
+  updatePassword,
+  verifyRecovery,
+  hasRecoverySession,
+  verifyInvitation,
+  acceptInvitation,
+};

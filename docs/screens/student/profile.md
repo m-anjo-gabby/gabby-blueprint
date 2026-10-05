@@ -5,7 +5,7 @@
 - アプリ: `student`
 - パス: `/profile`
 - 対象ロール: 生徒
-- 目的: プロフィールアイコン画像の変更、氏名・所属の確認、タイムゾーンの変更を行う。
+- 目的: プロフィールアイコン画像の変更、氏名・所属の確認、タイムゾーンの変更を行う。パスワード変更画面への入口も兼ねる。
 
 ## この画面に来る経路
 
@@ -15,6 +15,7 @@
 
 1. **アイコン画像セクション** — 現在のアイコン画像表示、変更・削除
 2. **アカウント情報セクション** — 氏名・所属の表示（編集不可）、タイムゾーン変更
+3. **セキュリティセクション** — パスワード変更画面への導線
 
 ## 表示要素・操作
 
@@ -26,17 +27,19 @@
 | 名前 | 常時表示（編集不可） | — |
 | 所属 | 常時表示（編集不可）。未設定の場合は「-」 | — |
 | タイムゾーン選択 | 常時表示。現在のタイムゾーンでの日時を併せて表示 | 選択を変更すると即座にタイムゾーン設定が更新される |
+| 「パスワードを変更」 | 常時表示 | `/profile/password`へ遷移 |
 
 ## 状態
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
+| 読み込み中（画面遷移直後） | 見出し・区画見出し・項目名・セキュリティ欄は本物、アイコン画像・名前・所属・タイムゾーンを骨組みで表示 | `profile/loading.tsx`（パスワード変更画面とパスで出し分け） |
 | プロフィール取得失敗 | 「プロフィール情報の取得に失敗しました。／時間をおいて再度お試しください。」 | サーバーからのプロフィール取得に失敗した場合。この場合、画面の他の要素は表示されない |
 
 ## 実装参照（エンジニア向け）
 
-- `apps/student/app/(app)/profile/page.tsx`
-- `apps/student/app/(app)/profile/_components/ProfileView.tsx`
+- `apps/student/app/(app)/(shell)/profile/page.tsx`
+- `apps/student/app/(app)/(shell)/profile/_components/ProfileView.tsx`
 - 共通コンポーネント: `packages/lib/components/common/AvatarCropUploader.tsx`
   （円形切り抜き・アップロード）、`packages/lib/components/common/TimezoneSelector.tsx`
 - 関連アクション: `getMyProfile`, `getTimezoneList`, `uploadProfileIcon`, `removeProfileIcon`,

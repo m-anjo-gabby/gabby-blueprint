@@ -99,6 +99,7 @@ export interface SessionListItem {
   viewer_role: SessionViewerRole; // ログイン中ユーザーがこのセッションにおいて生徒/コーチのどちらか
   counterpart_id: string;
   counterpart_name: string;
+  counterpart_icon_path: string | null; // プロフィールアイコン画像のStorageパス（未設定時はnull）
   counterpart_timezone: string;
   rescheduled_from: string | null;
   cancel_reason: string | null;
@@ -175,6 +176,9 @@ export interface SessionRescheduleProposalGroup {
 /** 生徒側で表示する振替候補グループ（コーチ名を結合済み） */
 export interface MyRescheduleProposalGroup extends SessionRescheduleProposalGroup {
   coach_name: string;
+  /** キャンセルされた元セッションの日時（振替候補カードで「元の予定」として表示する） */
+  original_session_start_datetime: string;
+  original_session_end_datetime: string;
 }
 
 /** コーチ側の申請一覧で表示する振替候補グループ（生徒名・元セッション日時を結合済み） */
@@ -223,6 +227,11 @@ export interface SessionBookingRequest {
   status: SessionBookingRequestStatus;
   reject_reason: string | null;
   insert_date: string;
+}
+
+/** 生徒本人の予約リクエスト（「コーチの承認待ち」表示用に宛先コーチ名を結合したもの） */
+export interface MyBookingRequestItem extends SessionBookingRequest {
+  coach_name: string;
 }
 
 /** 予約リクエスト作成(create_session_booking_request RPC)の結果 */

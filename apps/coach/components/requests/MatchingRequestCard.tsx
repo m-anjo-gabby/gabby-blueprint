@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Loader2, Check, X, CalendarClock } from 'lucide-react';
+import { Check, X, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -54,12 +54,16 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
   const isPending = request.status === MATCHING_REQUEST_STATUS.PENDING;
 
   // First live session date: nearest occurrence of the requested day/time that is at least
-  // 24 real hours from now (not just "tomorrow" by calendar date, to stay correct across timezones).
+  // 24 real hours from now (not just "tomorrow" by calendar date, to stay correct across timezones)
+  // and within the student's contract period (a renewal contract may start in the future).
   // Only meaningful while pending — once approved, the actual date is fixed in com_t_session.
   const firstSession = useMemo(() => {
     if (!isPending) return null;
-    return getFirstLiveSessionOccurrence(request.requested_day_of_week, request.requested_start_time, timezone, timezone);
-  }, [isPending, request.requested_day_of_week, request.requested_start_time, timezone]);
+    const notBefore = request.license_start_date ? new Date(request.license_start_date) : undefined;
+    const first = getFirstLiveSessionOccurrence(request.requested_day_of_week, request.requested_start_time, timezone, timezone, undefined, notBefore);
+    if (request.license_end_date && first.instant > new Date(request.license_end_date)) return null;
+    return first;
+  }, [isPending, request.requested_day_of_week, request.requested_start_time, request.license_start_date, request.license_end_date, timezone]);
 
   const handleApprove = async () => {
     const ok = await showConfirm(
@@ -138,8 +142,7 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
 
       {isPending && (
         <div className="flex items-center gap-2 pt-1">
-          <Button type="button" size="sm" onClick={handleApprove} disabled={isApproving || isRejecting}>
-            {isApproving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+          <Button pending={isApproving} icon={<Check size={14} />} type="button" size="sm" onClick={handleApprove} disabled={isApproving || isRejecting}>
             Approve
           </Button>
           <Button
@@ -173,8 +176,7 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
             <Button type="button" variant="outline" onClick={() => setShowRejectDialog(false)} disabled={isRejecting}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleReject} disabled={isRejecting}>
-              {isRejecting && <Loader2 size={14} className="animate-spin" />}
+            <Button pending={isRejecting} type="button" onClick={handleReject} disabled={isRejecting}>
               Reject Request
             </Button>
           </DialogFooter>

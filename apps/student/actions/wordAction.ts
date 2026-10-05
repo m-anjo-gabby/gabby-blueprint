@@ -1,9 +1,12 @@
 "use server";
 
 import { createServerClient } from "@gabby/lib/supabase/server";
-import { FavoritePhraseItem, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@gabby/types/word";
+import { FAVORITE_PHRASE_COLUMNS, FavoritePhraseItem, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@gabby/types/word";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
+import { toggleFavoriteRow } from "@/lib/favoriteToggle";
+import { FAVORITE_LIMIT, type FavoriteToggleResult } from "@/constants/favorites";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('student');
 
@@ -14,8 +17,8 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     const { data, error } = await supabase
       .from('com_m_word')
@@ -93,45 +96,10 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
 }
 
 /**
- * お気に入りの状態を切り替える (Toggle)
+ * フレーズのお気に入り状態を切り替える（上限超過・失敗は戻り値で返す）
  */
-export async function toggleFavorite(phraseId: string, isFavorite: boolean) {
-  const ctx = await getLogContext();
-  try {
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
-
-    let error;
-    if (isFavorite) {
-      // 登録
-      const { error: upsertError } = await supabase
-        .from('com_t_favorite_phrase')
-        .upsert({ user_id: user.id, phrase_id: phraseId });
-      error = upsertError;
-    } else {
-      // 解除
-      const { error: deleteError } = await supabase
-        .from('com_t_favorite_phrase')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('phrase_id', phraseId);
-      error = deleteError;
-    }
-
-    if (error) {
-      logger.error("word:toggle_favorite_failed", error.message, { ...ctx, payload: { phraseId, isFavorite } });
-      throw new Error(`お気に入り操作に失敗しました: ${error.message}`);
-    }
-
-    logger.info("word:toggle_favorite_success", `Phrase favorite ${isFavorite ? 'added' : 'removed'}`, { 
-      ...ctx, 
-      payload: { phraseId, isFavorite } 
-    });
-  } catch (err) {
-    logger.error("word:toggle_favorite_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { phraseId, isFavorite } });
-    throw err;
-  }
+export async function toggleFavorite(phraseId: string, isFavorite: boolean): Promise<FavoriteToggleResult> {
+  return toggleFavoriteRow('phrase', phraseId, isFavorite);
 }
 
 /**
@@ -141,7 +109,7 @@ export async function getFavoriteCount(): Promise<number> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return 0;
 
     const { count, error } = await supabase
@@ -169,7 +137,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
   try {
     const supabase = await createServerClient();
     
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -179,7 +147,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
         phrase_id,
         insert_date,
         com_m_phrase!inner (
-          *,
+          ${FAVORITE_PHRASE_COLUMNS.join(', ')},
           com_m_word!inner (
             word_en,
             com_m_contents!inner (
@@ -191,25 +159,21 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
       `)
       .eq('user_id', user.id)
       .neq('com_m_phrase.com_m_word.com_m_contents.content_scope', 9)
-      .order('insert_date', { ascending: false });
+      .order('insert_date', { ascending: false })
+      .limit(FAVORITE_LIMIT);
 
     if (error) {
       logger.error("word:get_favorite_phrases_failed", error.message, ctx);
       throw new Error(`取得失敗: ${error.message}`);
     }
 
-    return (data as unknown as FavoriteResponse[]).map(item => ({
-      // PhraseRecord の全フィールドをマッピングに含める
-      ...item.com_m_phrase as any, 
+    return (data as unknown as FavoriteResponse[]).map(({ com_m_phrase: { com_m_word, ...phrase }, ...item }) => ({
+      ...phrase,
       favorite_id: item.favorite_id,
-      phrase_id: item.phrase_id,
-      phrase_en: item.com_m_phrase.phrase_en,
-      phrase_ja: item.com_m_phrase.phrase_ja,
-      word_en: item.com_m_phrase.com_m_word.word_en,
-      content_id: item.com_m_phrase.com_m_word.com_m_contents.content_id,
-      content_name: item.com_m_phrase.com_m_word.com_m_contents.content_name,
-      insert_date: item.insert_date, // お気に入り登録日を優先
-      is_favorite: true
+      insert_date: item.insert_date, // お気に入り登録日
+      word_en: com_m_word.word_en,
+      content_id: com_m_word.com_m_contents.content_id,
+      content_name: com_m_word.com_m_contents.content_name,
     }));
   } catch (err) {
     logger.error("word:get_favorite_phrases_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
@@ -269,8 +233,8 @@ export async function getUserWordHistoryAction(yearMonth: string): Promise<{ suc
 
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     // 月の開始日と終了日を計算 (UTCベースでクエリ)
     const [year, month] = yearMonth.split('-').map(Number);

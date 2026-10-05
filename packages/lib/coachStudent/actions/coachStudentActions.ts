@@ -31,6 +31,7 @@ import { SESSION_STATUS, SESSION_RESULT_STATUSES } from '@gabby/types/session';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
 import { clampLevel, computeStage, getForcedLevels } from '../../sprint/stageProgression';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 const MAX_NOTE_LENGTH = 4000;
@@ -180,7 +181,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: relationships, error } = await supabase
@@ -211,7 +212,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
       supabase.from('com_m_user').select('id, user_name, icon_path').in('id', studentIds),
       supabase
         .from('student_m_sprint_progress')
-        .select('user_id, stage, level_speed, level_structure, level_builders, level_mastery')
+        .select('user_id, stage, level_speed, level_structure, level_builders, level_mastery, level_managed')
         .in('user_id', studentIds),
       supabase
         .from('com_m_lesson_schedule')
@@ -251,6 +252,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
         level_structure: p?.level_structure ?? 0,
         level_builders: p?.level_builders ?? 0,
         level_mastery: p?.level_mastery ?? 0,
+        level_managed: p?.level_managed ?? true,
         active_slot_count: slotCountByStudent.get(studentId) ?? 0,
         is_active: isActiveByStudent.get(studentId) ?? false,
         latest_contract: latestContractByStudent?.get(studentId) ?? null,
@@ -281,7 +283,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -298,7 +300,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
       supabase.from('com_m_user').select('id, user_name, icon_path, timezone').eq('id', studentId).maybeSingle(),
       supabase
         .from('student_m_sprint_progress')
-        .select('stage, level_speed, level_structure, level_builders, level_mastery')
+        .select('stage, level_speed, level_structure, level_builders, level_mastery, level_managed')
         .eq('user_id', studentId)
         .maybeSingle(),
       supabase
@@ -350,6 +352,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
           level_structure: progress?.level_structure ?? 0,
           level_builders: progress?.level_builders ?? 0,
           level_mastery: progress?.level_mastery ?? 0,
+          level_managed: progress?.level_managed ?? true,
         },
         active_contract:
           license && contract
@@ -381,7 +384,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -463,7 +466,7 @@ export async function getStudentSessionsByTicketCore(studentId: string, ticketId
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -515,7 +518,7 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: session, error } = await supabase
@@ -611,7 +614,7 @@ export async function getStudentLiveSessionShortfallsCore(studentId: string): Pr
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const result = await fetchOwnScheduleShortfalls(supabase, user.id, studentId, ctx);
@@ -710,7 +713,7 @@ export async function getStudentNotesCore(studentId: string): Promise<GetStudent
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: notes, error } = await supabase
@@ -743,7 +746,7 @@ export async function getSelfTrainingWeekSummaryCore(studentId: string, days = 7
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -786,7 +789,7 @@ export async function addCoachStudentNoteCore(studentId: string, noteText: strin
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const trimmed = noteText.trim();
@@ -839,7 +842,7 @@ export async function getContractTrainingReportsCore(studentId: string): Promise
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -876,7 +879,7 @@ export async function saveContractTrainingReportDraftCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const trimmed = commentText.trim();
@@ -944,7 +947,7 @@ export async function finalizeContractTrainingReportCore(reportId: string): Prom
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -986,7 +989,7 @@ export async function updateStudentSprintLevelCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -995,7 +998,7 @@ export async function updateStudentSprintLevelCore(
 
     const { data: current, error: fetchError } = await supabase
       .from('student_m_sprint_progress')
-      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .select('stage, level_speed, level_structure, level_builders, level_mastery, level_managed')
       .eq('user_id', studentId)
       .maybeSingle();
 
@@ -1010,6 +1013,7 @@ export async function updateStudentSprintLevelCore(
       level_structure: current?.level_structure ?? 0,
       level_builders: current?.level_builders ?? 0,
       level_mastery: current?.level_mastery ?? 0,
+      level_managed: current?.level_managed ?? true,
     };
 
     const typeMeta = QUESTION_TYPES[questionType];
@@ -1028,7 +1032,7 @@ export async function updateStudentSprintLevelCore(
       .from('student_m_sprint_progress')
       .update({ [typeMeta.dbKey]: newLevel, stage: newStage, update_date: new Date().toISOString() })
       .eq('user_id', studentId)
-      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .select('stage, level_speed, level_structure, level_builders, level_mastery, level_managed')
       .single();
 
     if (updateError || !updated) {
@@ -1056,7 +1060,7 @@ export async function forceStageUpStudentCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -1065,7 +1069,7 @@ export async function forceStageUpStudentCore(
 
     const { data: current, error: fetchError } = await supabase
       .from('student_m_sprint_progress')
-      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .select('stage, level_speed, level_structure, level_builders, level_mastery, level_managed')
       .eq('user_id', studentId)
       .maybeSingle();
 
@@ -1080,6 +1084,7 @@ export async function forceStageUpStudentCore(
       level_structure: current?.level_structure ?? 0,
       level_builders: current?.level_builders ?? 0,
       level_mastery: current?.level_mastery ?? 0,
+      level_managed: current?.level_managed ?? true,
     };
 
     // ステージも「上げる」方向のみ許可
@@ -1101,7 +1106,7 @@ export async function forceStageUpStudentCore(
         update_date: new Date().toISOString(),
       })
       .eq('user_id', studentId)
-      .select('stage, level_speed, level_structure, level_builders, level_mastery')
+      .select('stage, level_speed, level_structure, level_builders, level_mastery, level_managed')
       .single();
 
     if (updateError || !updated) {

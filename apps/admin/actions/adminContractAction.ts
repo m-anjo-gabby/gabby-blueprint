@@ -6,114 +6,14 @@ import { formatToJstDate, getUtcRangeFromJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import {
+  ISSUED_LICENSE_COLUMNS,
+  recordIssuedLicenses,
+  recordLicenseHistory,
+  resolvePerformedBy,
+} from '@gabby/lib/license/issue';
 
 const logger = createLogger('admin');
-
-// x-user-id ヘッダーが取得できない特殊な文脈（'system'）ではUUID型カラムへの挿入に失敗するため、
-// 有効なUUID形式の場合のみ history テーブルの performed_by に設定する
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function resolvePerformedBy(userId?: string): string | null {
-  return userId && UUID_PATTERN.test(userId) ? userId : null;
-}
-
-interface LicenseHistoryEntry {
-  license_id: string;
-  contract_id: string;
-  user_id: string;
-  action: 'assigned' | 'updated' | 'removed';
-  status: number;
-  start_date: string;
-  end_date: string;
-  has_dialogue_practice: boolean;
-  note?: string | null;
-  performed_by: string | null;
-}
-
-/**
- * ライセンスの割当/更新/解除の履歴を記録する（追記専用・失敗しても主処理は継続させる）
- */
-async function recordLicenseHistory(
-  supabase: ReturnType<typeof createAdminClient>,
-  entry: LicenseHistoryEntry,
-  ctx: Awaited<ReturnType<typeof getLogContext>>
-) {
-  const { error } = await supabase.from('com_t_user_license_history').insert(entry);
-  if (error) {
-    // 履歴記録の失敗で本処理（割当/更新/解除）自体を失敗させない。ログにのみ残す。
-    logger.error('contract:license_history_record_failed', error.message, { ...ctx, payload: entry });
-  }
-}
-
-interface TicketHistoryEntry {
-  ticket_id: string;
-  contract_id: string;
-  user_id: string;
-  action: 'granted' | 'consumed' | 'restored' | 'removed';
-  sessions_delta: number;
-  used_sessions_after: number;
-  total_sessions: number;
-  note?: string | null;
-  performed_by: string | null;
-}
-
-/**
- * ライブセッションチケットの発行/消化/復元/解除の履歴を記録する（追記専用・失敗しても主処理は継続させる）
- */
-async function recordTicketHistory(
-  supabase: ReturnType<typeof createAdminClient>,
-  entry: TicketHistoryEntry,
-  ctx: Awaited<ReturnType<typeof getLogContext>>
-) {
-  const { error } = await supabase.from('com_t_user_session_ticket_history').insert(entry);
-  if (error) {
-    logger.error('contract:ticket_history_record_failed', error.message, { ...ctx, payload: entry });
-  }
-}
-
-/**
- * ライブセッションチケットを1件発行する（ライセンス割当に付随して呼び出す）。
- * チケット発行自体の失敗はライセンス割当を失敗させない（ログにのみ残す）。
- */
-async function grantSessionTicket(
-  supabase: ReturnType<typeof createAdminClient>,
-  params: {
-    license_id: string;
-    contract_id: string;
-    user_id: string;
-    weekly_frequency: number;
-    total_sessions: number;
-    performed_by: string | null;
-  },
-  ctx: Awaited<ReturnType<typeof getLogContext>>
-) {
-  const { data: ticket, error } = await supabase
-    .from('com_t_user_session_ticket')
-    .insert({
-      license_id: params.license_id,
-      contract_id: params.contract_id,
-      user_id: params.user_id,
-      weekly_frequency: params.weekly_frequency,
-      total_sessions: params.total_sessions,
-    })
-    .select('ticket_id, used_sessions, total_sessions')
-    .single();
-
-  if (error || !ticket) {
-    logger.error('contract:grant_session_ticket_failed', error?.message || 'Ticket insert failed', { ...ctx, payload: params });
-    return;
-  }
-
-  await recordTicketHistory(supabase, {
-    ticket_id: ticket.ticket_id,
-    contract_id: params.contract_id,
-    user_id: params.user_id,
-    action: 'granted',
-    sessions_delta: ticket.total_sessions,
-    used_sessions_after: ticket.used_sessions,
-    total_sessions: ticket.total_sessions,
-    performed_by: params.performed_by,
-  }, ctx);
-}
 
 /**
  * ライセンス期間が契約期間内に収まっているかを検証する
@@ -143,10 +43,10 @@ async function findOverlappingLicense(
   startUtc: string,
   endUtc: string,
   excludeLicenseId?: string
-): Promise<{ start_date: string; end_date: string; plan_name: string } | null> {
+): Promise<{ start_date: string; end_date: string; contract_name: string } | null> {
   let query = supabase
     .from('com_t_user_license')
-    .select('license_id, start_date, end_date, com_m_contract(plan_name)')
+    .select('license_id, start_date, end_date, com_m_contract(contract_name)')
     .eq('user_id', userId)
     .lte('start_date', endUtc)
     .gte('end_date', startUtc)
@@ -162,18 +62,22 @@ async function findOverlappingLicense(
   const row = data[0] as unknown as {
     start_date: string;
     end_date: string;
-    com_m_contract: { plan_name: string } | null;
+    com_m_contract: { contract_name: string } | null;
   };
   return {
     start_date: row.start_date,
     end_date: row.end_date,
-    plan_name: row.com_m_contract?.plan_name || '不明なプラン',
+    contract_name: row.com_m_contract?.contract_name || '不明な契約',
   };
 }
 
-function buildOverlapMessage(overlap: { start_date: string; end_date: string; plan_name: string }): string {
-  return `このユーザーは既に期間が重なるライセンス「${overlap.plan_name}」（${formatToJstDate(overlap.start_date)}〜${formatToJstDate(overlap.end_date)}）を保有しているため割当できません`;
+function buildOverlapMessage(overlap: { start_date: string; end_date: string; contract_name: string }): string {
+  return `このユーザーは既に期間が重なるライセンス「${overlap.contract_name}」（${formatToJstDate(overlap.start_date)}〜${formatToJstDate(overlap.end_date)}）を保有しているため割当できません`;
 }
+
+// com_m_contract (client_id, contract_name) の一意制約違反
+const UNIQUE_VIOLATION = '23505';
+const DUPLICATE_CONTRACT_NAME_MESSAGE = 'この顧客には同じ契約名の契約が既に存在します。別の契約名を入力してください';
 
 /**
  * 契約プランマスタの一覧取得（契約登録フォームの選択肢・プランマスタ管理画面の両方で使用）
@@ -298,7 +202,10 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
       .select('*', { count: 'exact' });
 
     if (searchQuery) {
-      query = query.ilike('client_name', `%${searchQuery}%`);
+      // 顧客名・契約名のどちらかに部分一致（PostgRESTのor条件は値をダブルクォートで囲み、
+      // 入力中の , ( ) " \ が条件の区切りとして解釈されないようにする）
+      const pattern = `"%${searchQuery.replace(/[\\"]/g, '\\$&')}%"`;
+      query = query.or(`client_name.ilike.${pattern},contract_name.ilike.${pattern}`);
     }
 
     if (clientId) {
@@ -346,7 +253,7 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
       .eq('status', 1)
       .gte('end_date', new Date().toISOString())
       .gt('remaining_licenses', 0)
-      .order('plan_name', { ascending: true });
+      .order('contract_name', { ascending: true });
 
     if (error || !contracts) {
       logger.error('contract:get_active_contracts_failed', error?.message || 'No contracts found', { ...ctx, payload: { clientId, userId } });
@@ -388,12 +295,14 @@ function formatContracts(contracts: any[]) {
  * 契約情報の作成
  * contract_typeは選択されたプラン(plan_id)に完全に従属する構造的な属性のため、
  * クライアントからは受け取らずプランマスタから取得する（コーチ有無を変えたい場合は
- * 別プランを選び直す運用とする）。plan_name/plan_name_en/weekly_frequency/
+ * 別プランを選び直す運用とする）。contract_name はアドミン管理用の契約名（顧客内で一意）。
+ * plan_name/plan_name_en/weekly_frequency/
  * total_sessions/has_dialogue_practiceはプラン選択時にクライアント側でマスタ値を
  * コピーした上で個別調整できる値のため、送信された値をそのまま保存する。
  */
 export async function createContract(params: {
   client_id: string;
+  contract_name: string;
   plan_id: string;
   plan_name: string;
   plan_name_en: string;
@@ -428,6 +337,7 @@ export async function createContract(params: {
       .insert([
         {
           client_id: params.client_id,
+          contract_name: params.contract_name.trim(),
           plan_id: params.plan_id,
           plan_name: params.plan_name,
           plan_name_en: params.plan_name_en,
@@ -446,6 +356,7 @@ export async function createContract(params: {
 
     if (error) {
       logger.error('contract:create_contract_failed', error.message, { ...ctx, payload: params });
+      if (error.code === UNIQUE_VIOLATION) return { success: false, message: DUPLICATE_CONTRACT_NAME_MESSAGE };
       return { success: false, message: error.message };
     }
 
@@ -470,6 +381,7 @@ export async function updateContract(
   contractId: string,
   params: {
     client_id: string;
+    contract_name: string;
     plan_id: string;
     plan_name: string;
     plan_name_en: string;
@@ -530,6 +442,7 @@ export async function updateContract(
       .from('com_m_contract')
       .update({
         client_id: params.client_id,
+        contract_name: params.contract_name.trim(),
         plan_id: params.plan_id,
         plan_name: params.plan_name,
         plan_name_en: params.plan_name_en,
@@ -549,6 +462,7 @@ export async function updateContract(
 
     if (error) {
       logger.error('contract:update_contract_failed', error.message, { ...ctx, payload: { contractId, ...params } });
+      if (error.code === UNIQUE_VIOLATION) return { success: false, message: DUPLICATE_CONTRACT_NAME_MESSAGE };
       return { success: false, message: error.message };
     }
 
@@ -790,7 +704,7 @@ export async function assignLicenseToUser(
         end_date: endUtc,
         has_dialogue_practice: contract.has_dialogue_practice,
       })
-      .select('license_id, status, start_date, end_date, note')
+      .select(ISSUED_LICENSE_COLUMNS)
       .single();
 
     if (error) {
@@ -802,30 +716,12 @@ export async function assignLicenseToUser(
       return { success: false, message: error.message };
     }
 
-    await recordLicenseHistory(supabase, {
-      license_id: inserted.license_id,
-      contract_id: contractId,
-      user_id: userId,
-      action: 'assigned',
-      status: inserted.status,
-      start_date: inserted.start_date,
-      end_date: inserted.end_date,
-      has_dialogue_practice: contract.has_dialogue_practice,
-      note: inserted.note,
-      performed_by: resolvePerformedBy(ctx.userId),
+    await recordIssuedLicenses(supabase, {
+      contractId,
+      contract,
+      rows: [inserted],
+      performedBy: resolvePerformedBy(ctx.userId),
     }, ctx);
-
-    // ライブセッション付き契約の場合、ライセンスに1:1で紐づくチケットを発行する
-    if (contract.contract_type === 2 && contract.weekly_frequency && contract.total_sessions) {
-      await grantSessionTicket(supabase, {
-        license_id: inserted.license_id,
-        contract_id: contractId,
-        user_id: userId,
-        weekly_frequency: contract.weekly_frequency,
-        total_sessions: contract.total_sessions,
-        performed_by: resolvePerformedBy(ctx.userId),
-      }, ctx);
-    }
 
     logger.info('contract:assign_license_success', `License assigned to user`, {
       ...ctx,
@@ -1066,7 +962,7 @@ export async function bulkAssignLicenses(
     const { data, error } = await supabase
       .from('com_t_user_license')
       .insert(insertData)
-      .select('license_id, user_id, status, start_date, end_date, note');
+      .select(ISSUED_LICENSE_COLUMNS);
 
     if (error) {
       // 排他制約(DB側の最終防衛線)違反。同時操作によるレースで期間が重なった場合のみ発生し得る
@@ -1078,31 +974,12 @@ export async function bulkAssignLicenses(
       return { success: false, message: error.message, errorCount: userIds.length };
     }
 
-    const performedBy = resolvePerformedBy(ctx.userId);
-    await Promise.all((data || []).map(row => recordLicenseHistory(supabase, {
-      license_id: row.license_id,
-      contract_id: contractId,
-      user_id: row.user_id,
-      action: 'assigned',
-      status: row.status,
-      start_date: row.start_date,
-      end_date: row.end_date,
-      has_dialogue_practice: contract.has_dialogue_practice,
-      note: row.note,
-      performed_by: performedBy,
-    }, ctx)));
-
-    // ライブセッション付き契約の場合、割当済みの各ライセンスにチケットを発行する
-    if (contract.contract_type === 2 && contract.weekly_frequency && contract.total_sessions) {
-      await Promise.all((data || []).map(row => grantSessionTicket(supabase, {
-        license_id: row.license_id,
-        contract_id: contractId,
-        user_id: row.user_id,
-        weekly_frequency: contract.weekly_frequency,
-        total_sessions: contract.total_sessions,
-        performed_by: performedBy,
-      }, ctx)));
-    }
+    await recordIssuedLicenses(supabase, {
+      contractId,
+      contract,
+      rows: data || [],
+      performedBy: resolvePerformedBy(ctx.userId),
+    }, ctx);
 
     logger.info('contract:bulk_assign_licenses_success', `Bulk licenses assigned`, {
       ...ctx,
@@ -1136,7 +1013,7 @@ export async function getLicenseTimeline(userId: string) {
       .from('com_t_user_license')
       .select(`
         *,
-        com_m_contract (plan_name)
+        com_m_contract (contract_name, plan_name)
       `)
       .eq('user_id', userId)
       .order('start_date', { ascending: false });
@@ -1158,7 +1035,7 @@ export async function getLicenseTimeline(userId: string) {
         end_date,
         note,
         performed_at,
-        com_m_contract (plan_name)
+        com_m_contract (contract_name, plan_name)
       `)
       .eq('user_id', userId)
       .eq('action', 'removed')
@@ -1173,6 +1050,7 @@ export async function getLicenseTimeline(userId: string) {
       is_removed: false,
       start_date: formatToJstDate(l.start_date),
       end_date: formatToJstDate(l.end_date),
+      contract_name: (l as any).com_m_contract?.contract_name || '不明な契約',
       plan_name: (l as any).com_m_contract?.plan_name || '不明なプラン'
     }));
 
@@ -1185,6 +1063,7 @@ export async function getLicenseTimeline(userId: string) {
       removed_at: h.performed_at,
       start_date: formatToJstDate(h.start_date),
       end_date: formatToJstDate(h.end_date),
+      contract_name: (h as any).com_m_contract?.contract_name || '不明な契約',
       plan_name: (h as any).com_m_contract?.plan_name || '不明なプラン'
     }));
 

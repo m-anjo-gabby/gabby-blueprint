@@ -123,6 +123,7 @@ export const SPRINT_FLOW_TIMING = {
     resultRedirectBufferMs: 250,      // 結果画面遷移前の安全バッファ
     visualFeedbackHoldGoodMs: 1000,   // excellent/great/goodスコア表示の保持時間
     visualFeedbackHoldPoorMs: 800,    // fair/poorスコア表示の保持時間
+    resultAutoPlayDelayMs: 800,       // 実施直後の結果画面で「全て再生」を自動で始めるまでの間（画面の表示を落ち着かせる）
   },
 } as const;
 
@@ -183,8 +184,44 @@ export interface SprintQuestion {
   update_date: string;
 }
 
+/** お気に入り一覧で使う問題の列（一覧の転送量を抑えるため、TTSの調整データ等は取得しない） */
+export const FAVORITE_SPRINT_QUESTION_COLUMNS = [
+  'question_id', 'content_id', 'question_type', 'difficulty_level',
+  'statement_en', 'statement_ja', 'statement_voice',
+  'question_en', 'question_ja', 'question_voice',
+  'answer_sentence_yes_en', 'answer_sentence_yes_ja', 'answer_sentence_yes_voice',
+  'answer_sentence_no_en', 'answer_sentence_no_ja', 'answer_sentence_no_voice',
+] as const;
+
+export type FavoriteSprintQuestionFields = Pick<SprintQuestion, (typeof FAVORITE_SPRINT_QUESTION_COLUMNS)[number]>;
+
+/**
+ * お気に入り一覧用のスプリント問題（生徒アプリ）
+ * 表示・再生に必要な列に、登録日時と出典の教材名・コース名（例: "UG Speed Lv.1"）を付加したもの
+ */
+export interface FavoriteSprintQuestionItem extends FavoriteSprintQuestionFields {
+  favorite_id: string;
+  /** お気に入りに登録した日時 */
+  favorited_at: string;
+  content_name: string;
+  sprint_title: string;
+  /** 出典の教材がレベル分けを持つか（汎用スプリントは true、レベル固定のコーパススプリントは false） */
+  has_level: boolean;
+}
+
 export interface SprintQuestionResponse {
   success: boolean;
   data: SprintQuestion[] | null;
   error?: string;
+  /**
+   * 'level_locked': 生徒のレベル管理上、まだ選べないレベルが指定された
+   * 'no_questions': 指定した種別・レベルに問題が無い
+   */
+  errorCode?: 'level_locked' | 'no_questions';
 }
+
+/**
+ * 教材ごとの「問題が存在するレベル」を種別ごとに並べたもの（昇順）。
+ * 問題が1件も無い種別はキー自体が無い。取得できなかった場合は呼び出し側で null（＝絞り込まない）として扱う。
+ */
+export type SprintAvailableLevels = Partial<Record<SprintQuestionType, number[]>>;

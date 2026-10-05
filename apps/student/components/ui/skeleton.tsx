@@ -1,15 +1,2 @@
-import { cn } from "@/lib/utils"
-
-function Skeleton({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("animate-pulse rounded-md bg-primary/10", className)}
-      {...props}
-    />
-  )
-}
-
-export { Skeleton }
+// 実体は全アプリ共通の packages/lib/components/common/Skeleton.tsx
+export { Skeleton } from '@gabby/lib/components/common/Skeleton';

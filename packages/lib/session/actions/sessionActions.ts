@@ -26,6 +26,7 @@ import {
   SESSION_STATUS,
   SessionActionErrorCode,
   SessionBookingRequest,
+  MyBookingRequestItem,
   SessionCallLogEntry,
   SessionChatMessageEntry,
   SessionDialogueLogEntry,
@@ -38,6 +39,7 @@ import {
   StaleSessionResolution,
   CancelCategory,
 } from '@gabby/types/session';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -110,9 +112,10 @@ async function toSessionListItems(
 
   const { data: counterparts } = await supabase
     .from('com_m_user')
-    .select('id, user_name, timezone')
+    .select('id, user_name, icon_path, timezone')
     .in('id', Array.from(counterpartIds));
   const nameById = new Map((counterparts ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+  const iconPathById = new Map((counterparts ?? []).map((c) => [c.id, c.icon_path ?? null]));
   const timezoneById = new Map((counterparts ?? []).map((c) => [c.id, c.timezone ?? 'Asia/Tokyo']));
 
   return rows.map((s) => {
@@ -129,6 +132,7 @@ async function toSessionListItems(
       viewer_role: isStudent ? 'student' : 'coach',
       counterpart_id: counterpartId,
       counterpart_name: nameById.get(counterpartId) ?? '(Unknown)',
+      counterpart_icon_path: iconPathById.get(counterpartId) ?? null,
       counterpart_timezone: timezoneById.get(counterpartId) ?? 'Asia/Tokyo',
       rescheduled_from: s.rescheduled_from,
       cancel_reason: s.cancel_reason,
@@ -158,7 +162,7 @@ export async function getMySessionsCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: sessions, error } = await supabase
@@ -193,7 +197,7 @@ export async function getMyUpcomingSessionsCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: sessions, error } = await supabase
@@ -230,7 +234,7 @@ export async function getMyPastSessionsCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     let query = supabase
@@ -272,7 +276,7 @@ export async function cancelSessionCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (proposedSlots && proposedSlots.length > 3) {
@@ -314,7 +318,7 @@ export async function getMyRescheduleProposalsCore(): Promise<GetMyReschedulePro
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -356,10 +360,25 @@ export async function getMyRescheduleProposalGroupsCore(): Promise<
   try {
     const supabase = await createServerClient();
     const coachIds = Array.from(new Set(groups.map((g) => g.coach_id)));
-    const { data: coaches } = await supabase.from('com_m_user').select('id, user_name').in('id', coachIds);
+    const [{ data: coaches }, { data: sessions }] = await Promise.all([
+      supabase.from('com_m_user').select('id, user_name').in('id', coachIds),
+      supabase.from('com_t_session').select('session_id, start_datetime, end_datetime').in('session_id', groups.map((g) => g.session_id)),
+    ]);
     const nameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+    const sessionById = new Map((sessions ?? []).map((s) => [s.session_id, s]));
 
-    return { success: true, groups: groups.map((g) => ({ ...g, coach_name: nameById.get(g.coach_id) ?? '(Unknown)' })) };
+    return {
+      success: true,
+      groups: groups.map((g) => {
+        const original = sessionById.get(g.session_id);
+        return {
+          ...g,
+          coach_name: nameById.get(g.coach_id) ?? '(Unknown)',
+          original_session_start_datetime: original?.start_datetime ?? g.insert_date,
+          original_session_end_datetime: original?.end_datetime ?? g.insert_date,
+        };
+      }),
+    };
   } catch (err) {
     logger.error('session:get_my_reschedule_proposal_groups_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
@@ -401,7 +420,7 @@ export async function getPendingIncomingRescheduleProposalGroupsForCoachCore(): 
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -448,7 +467,7 @@ export async function getRescheduleProposalHistoryPageForCoachCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const fetchLimit = limit * RESCHEDULE_GROUP_FETCH_MULTIPLIER;
@@ -494,7 +513,7 @@ export async function acceptRescheduleProposalCore(proposalId: string): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase.rpc('approve_slot_proposal', { p_proposal_id: proposalId });
@@ -526,7 +545,7 @@ export async function declineRescheduleProposalsCore(sessionId: string): Promise
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: anyProposal, error: lookupError } = await supabase
@@ -577,7 +596,7 @@ export async function checkSessionConflictCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase.rpc('check_session_conflict', {
@@ -617,7 +636,7 @@ export async function createSessionBookingRequestCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase.rpc('create_session_booking_request', {
@@ -650,7 +669,7 @@ export async function approveSessionBookingRequestCore(requestId: string): Promi
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase.rpc('approve_slot_proposal', { p_proposal_id: requestId });
@@ -678,7 +697,7 @@ export async function rejectSessionBookingRequestCore(requestId: string, reason?
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { error } = await supabase.rpc('reject_slot_proposal', {
@@ -708,7 +727,7 @@ export async function withdrawSessionBookingRequestCore(requestId: string): Prom
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { error } = await supabase.rpc('withdraw_session_booking_request', { p_request_id: requestId });
@@ -737,13 +756,13 @@ const BOOKING_REQUEST_ROW_COLUMNS = 'request_id:proposal_id, schedule_id, studen
  * ライブセッションハブで「コーチの承認待ち」として表示するために使う）。
  */
 export async function getMyBookingRequestsCore(): Promise<
-  { success: true; requests: SessionBookingRequest[] } | { success: false; errorCode: SessionActionErrorCode }
+  { success: true; requests: MyBookingRequestItem[] } | { success: false; errorCode: SessionActionErrorCode }
 > {
   const ctx = await getLogContext();
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -759,7 +778,16 @@ export async function getMyBookingRequestsCore(): Promise<
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return { success: true, requests: (data ?? []) as SessionBookingRequest[] };
+    const requests = (data ?? []) as SessionBookingRequest[];
+    if (requests.length === 0) return { success: true, requests: [] };
+
+    const coachIds = Array.from(new Set(requests.map((r) => r.coach_id)));
+    const { data: coaches } = await supabase.from('com_m_user').select('id, user_name').in('id', coachIds);
+    const nameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
+    return {
+      success: true,
+      requests: requests.map((r) => ({ ...r, coach_name: nameById.get(r.coach_id) ?? '(Unknown)' })),
+    };
   } catch (err) {
     logger.error('session:get_my_booking_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
@@ -791,7 +819,7 @@ export async function getPendingIncomingBookingRequestsForCoachCore(): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -829,7 +857,7 @@ export async function getBookingRequestHistoryPageForCoachCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     let query = supabase
@@ -871,7 +899,7 @@ export async function finalizeSessionCore(sessionId: string, reason?: string): P
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase.rpc('finalize_session', {
@@ -913,7 +941,7 @@ export async function resolveStaleSessionCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const trimmed = reason.trim();
@@ -949,7 +977,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: session, error: sessionError } = await supabase

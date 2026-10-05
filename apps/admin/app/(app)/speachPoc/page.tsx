@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 import { useAzureSpeechTest } from "@/hooks/useAzureSpeechTest";
-import { useWebSpeech } from "@gabby/lib/hooks/useWebSpeech";
+import { useSpeechSynthesis } from "@gabby/lib/speech/useSpeechSynthesis";
+import { useSpeakingPlayer } from "@gabby/lib/audio/react/useSpeakingPlayer";
 import { AssessmentWord } from "@gabby/types/azure";
 import { AnalysisResult } from "@gabby/types/speechAssessment"; // AnalysisResultの型をインポート
 
@@ -71,8 +72,9 @@ export default function SpeechPoCPage() {
 
   const { speak: speakAzure, startAssessment, stopAssessment, resetResult, isSpeaking: isAzureSpeaking, isRecording, result, rawResult, timeLeft: timeLeftAzure, recordedAudioUrl } = useAzureSpeechTest();
   
-  // 現在の useWebSpeech (正) をそのまま使用
-  const { speak: speakWebSpeech, startAssessment: startAssessmentWeb, stopListening, isSpeaking: isWebSpeaking, isListening, timeLeft: timeLeftWeb } = useWebSpeech();
+  // 生徒の単語帳・スプリントと同じ読み上げ・発話評価（自作評価）をそのまま使用
+  const { speak: speakWebSpeech, isSpeaking: isWebSpeaking } = useSpeechSynthesis();
+  const { listen, beginFlow, finishListening, isListening, timeLeft: timeLeftWeb } = useSpeakingPlayer({ urlResolution: 'sdk' });
 
   const assessmentData = useMemo(() => {
     if (!rawResult) return null;
@@ -175,13 +177,12 @@ export default function SpeechPoCPage() {
               <button 
                 onClick={() => {
                   if (isListening) {
-                    stopListening();
+                    finishListening();
                   } else {
                     setWebSpeechResult(null);
-                    // useWebSpeechのstartAssessmentを呼び出し、完了時に結果をステートに保存
-                    startAssessmentWeb(evalText, [], (res) => {
-                      setWebSpeechResult(res);
-                    });
+                    // 生徒側と同じ発話評価（チャイムなし）を実行し、完了時に結果をステートに保存
+                    listen({ targetText: evalText, mainWords: [], signal: beginFlow(), chime: false })
+                      .then((res) => { if (res) setWebSpeechResult(res); });
                   }
                 }} 
                 className={`w-full text-white py-2 rounded font-bold text-sm ${isListening ? 'bg-red-600 animate-pulse' : 'bg-slate-600'}`}

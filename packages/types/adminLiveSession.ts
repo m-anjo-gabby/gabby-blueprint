@@ -48,6 +48,7 @@ export interface AdminScheduleSlotSummary {
  * 既に非正規化済みの値のため、追加のDB変更なしで取得できる。
  */
 export interface AdminContractSummary extends StudentLiveSessionContractSummary {
+  contract_name: string;
   plan_name: string;
   total_sessions: number;
   used_sessions: number;

@@ -133,7 +133,7 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
                     className={cn(
                       'h-[22px] border-l border-slate-100 transition-colors disabled:cursor-not-allowed',
                       isHour ? 'border-t border-t-slate-200' : 'border-t border-t-slate-100',
-                      isSelected ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-white hover:bg-indigo-50'
+                      isSelected ? 'bg-brand-500 hover:bg-brand' : 'bg-white hover:bg-brand-50'
                     )}
                   />
                 );

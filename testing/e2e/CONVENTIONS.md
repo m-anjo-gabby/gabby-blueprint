@@ -1,5 +1,5 @@
 <!--
-  Playwright導入前に決めておく技術方針。「今の決め事」のみを保つ（変更履歴は書かない）。
+  E2E（Playwright）の技術方針。「今の決め事」のみを保つ（変更履歴は書かない）。
   実装段階で追加のルールが必要になったら本ファイルに追記する。
   testing/CONVENTIONS.md（データ主体テストの技術規約）と対になる、E2E側の技術規約。
 -->
@@ -25,23 +25,34 @@
 | 機能 | E2Eで検証する範囲 | 対象外・モック化する部分 |
 |---|---|---|
 | Zoom Video SDK（ライブセッション通話） | ルーム入室ボタンの表示・入室操作・退室後の画面遷移等 | 実際の映像/音声の疎通、通話品質 |
-| Resend（メール送信） | メール送信トリガーとなる操作が成功すること（画面上の成功表示・送信履歴の記録） | 実際のメール受信・文面の見た目 |
+| Resend（メール送信） | メール送信トリガーとなる操作が成功すること（画面上の成功表示・送信履歴の記録）。文面（件名・言語・期限・リンク）は送信せずにテンプレートの描画結果で検証する（`testing/unit/`）。受信は Resend のテスト用アドレス宛に送り、送信済みメールを API で読んでリンクを開くまで検証できる（下記） | 実在の宛先への配信、メールソフトでの見た目 |
 | Azure Speech SDK（音声認識・TTS） | 音声入力UIの表示・録音開始/停止操作 | 認識精度・実際の音声合成品質 |
+| 音声認識（Web Speech API。単語帳・スプリントの発話） | 発話の流れ（問題の再生 → チャイム → 認識 → 評価の表示・停止での確定）。テスト用の認識方式（`packages/lib/audio/core/recognizer/fake.ts`）に切り替えて検証する（dev のみ。`KJ-2026-1003-04`） | 実際のマイク入力・認識精度・iOS の音声の聞こえ方（実機で確認する） |
 
 外部サービス呼び出しをモックする方式（APIレイヤーでスタブ化する、テスト用エンドポイントを
 用意する等）は、Playwright導入時に機能ごとに実装方針を決める。本ファイルには
 「どこまで見るか」の境界のみを定義する。
 
+メール（Resend）の検証方法:
+
+- **文面**: 送信処理と同じ組み立て関数（`@gabby/lib/mail/render`。例: `renderPasswordResetEmail`）の結果を `testing/unit/*.test.ts` で検証する
+  （`pnpm --filter @gabby/testing unit`。Playwright のテスト実行環境は JSX を独自形式に変換するため、React のメールテンプレートを描画できない）。
+- **受信**: 宛先を Resend のテスト用アドレス `delivered+<ラベル>@resend.dev`（`support/resendInbox.ts` の `resendTestAddress`）にして
+  画面から送信し、`waitForEmail` で送信済みメールを取得してリンクを開く。読み取りには Full access の API キーが必要で、
+  `testing/.env.local` の `RESEND_TEST_READ_API_KEY` に置く（アプリの `RESEND_API_KEY` は送信専用）。未設定ならテストをスキップする。
+- `@gabby-qa-test.example` 等の実在しない宛先へは送信しない（バウンスで送信元ドメインの評価が下がる）。実際に送信するテストは desktop だけで行う。
+
 ## 3. 固定アカウントの並列実行時の扱い
 
-[`../FIXTURES.md`](../FIXTURES.md)の固定アカウントは複数のテストワーカーから同時に
-使われる可能性があるため、以下を守る。
+アカウントの選び方は [`../FIXTURES.md`](../FIXTURES.md)「アカウントの種類と使い分け」に従う。
+固定アカウントは複数のテストワーカーから同時に使われる可能性があるため、E2E では特に以下を守る。
 
 - 固定アカウントを使うテストは、状態を変更しない操作（閲覧・表示確認）に限定する
-- 状態を変更する操作（予約、キャンセル、承認等）を検証したい場合は、都度シードしたアカウント
-  （`testing/CONVENTIONS.md`の命名規則）を使う
-- 上記に反してどうしても固定アカウントで状態変更操作を検証する必要がある場合は、該当テストを
-  `test.describe.serial`等で直列化し、他のテストと並列実行させない
+- 状態を変更する操作（予約、キャンセル、承認、お気に入り登録等）は、テストごとに作成・削除する使い捨てのアカウント・データで検証する
+  （例: `e2e/support/chatFixtures.ts`、`e2e/support/authFixtures.ts`）
+- 利用者ペルソナ（`qa-p-*`）は表示崩れ・エラーが無いことの確認だけに使い、件数・値を判定しない
+- どうしても固定アカウントで状態変更操作を検証する場合は、`test.describe.serial`等で直列化し、
+  作成・変更した行をテストの最後に元に戻す（例: `e2e/support/popupFixtures.ts`）
 
 ## 4. テストケース優先度の運用上の意味
 
@@ -74,3 +85,50 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
 - `test.only` / `test.describe.only`をコミットに残さない
 - テスト間で状態を共有しない（前のテストの実行結果に依存するテストを書かない。並列実行・
   実行順の入れ替えのどちらでも成立すること）
+
+## 7. 構成と実行方法
+
+- 設定: `testing/playwright.config.ts`。テスト: `testing/e2e/tests/`（`*.setup.ts` はログイン準備、機能ごとにディレクトリを分ける）。
+  共通の操作・ロケーター: `testing/e2e/support/`（`studentApp.ts` の `test` / `expect` / `mainNav` / `navTab` を使う）。
+- 接続先は dev（既定）。student の `dev:ssl`（https://localhost:3000）が起動中なら再利用し、未起動なら Playwright が起動・停止する
+  （Next.js 16 は同一アプリの dev サーバーを二重起動できないため。`KJ-2026-0926-02`）。
+  admin の `dev:ssl`（https://localhost:3001）も同じ扱いで、アドミンの画面操作を含むジャーニー（`tests/journeys/`）だけが使う。
+  admin は別のブラウザコンテキストで開き、`support/adminApp.ts` の `openAdminContext`（`qa-admin` でログイン・表示言語を日本語に固定）を使う。
+- ステージングでの実行（リリース前の確認）: `pnpm --filter @gabby/testing e2e:staging`（`E2E_ENV=staging`）。Vercel のデプロイ済みサイトに接続し、
+  ローカルの dev サーバーは起動しない。DB・固定アカウントは `apps/student/.env.staging`（ステージングの Supabase）を使う。
+  接続先の定義は `e2e/support/targets.ts`（URL は `E2E_BASE_URL` / `E2E_ADMIN_BASE_URL` で上書きできる）。
+  - 生徒: https://blueprint-student-stg.vercel.app/
+  - アドミン: https://blueprint-admin-stg.vercel.app/
+  - コーチ: https://blueprint-coach-stg.vercel.app/（現在の E2E は使わない）
+  - リリースSQLをステージングに適用してから実行する（アプリだけ先にデプロイされると、新しい列・RPCが無く失敗する）。
+  - 使い捨てデータはステージングのDBに作られ、各テストの後始末で消える。
+- ログインはペルソナごとに `auth.setup.ts` で1回だけ行い、ログイン状態を `testing/e2e/.auth/`（git管理外）に保存して各テストで使い回す。
+  ペルソナは `testing/e2e/support/personas.ts` に定義する（`FIXTURES.md` の固定アカウント）。
+- 固定アカウントは「最新規約に同意済み」を前提とし、未同意ならログイン準備で画面操作により同意する。
+  重要なお知らせのポップアップは `studentApp.ts` の `test` が自動で閉じる（DBは変更しない）。
+- プロジェクト: 標準は `desktop`（Chromium、1440×900）と `mobile`（WebKit、iPhone 15 エミュレーション）。
+  `mobile-android`（Chromium、Pixel 7）は実行時間を抑えるため `e2e:android` 指定時のみ有効になる（構成の理由は `FIXTURES.md`）。
+  同じテストがすべてのプロジェクトで動くよう、表示中のナビだけを取得する `mainNav` / `navTab` を使う。
+- 実行: `pnpm --filter @gabby/testing e2e`（全件）。対象を絞る場合は
+  `pnpm --filter @gabby/testing e2e -- <ファイル名の一部> --project=desktop`。
+  Android（Chromium）も含める場合は `pnpm --filter @gabby/testing e2e:android`（`--project=mobile-android` で単独実行も可）。
+  初回・Playwright更新時はブラウザ取得が必要: `pnpm --filter @gabby/testing exec playwright install chromium webkit`。
+  結果レポート（人が見る用）: `pnpm --filter @gabby/testing e2e:report`。成果物は `testing/e2e/.artifacts/`（git管理外）。
+- ブラウザを使わない検証（メールの文面等）は `testing/unit/*.test.ts` に置き、`pnpm --filter @gabby/testing unit`（`tsx --test`）で実行する。
+
+## 8. トークン消費を抑える運用（AIアシスタントが実行する場合）
+
+E2E 実行自体はトークンを消費しない。消費するのは結果・証跡を読むときだけなので、読む量を以下の順で最小化する。
+
+1. **結果は1行形式の要約だけを読む。** 成功時は件数のみ確認し、ログ全体を読まない
+   （例: `playwright test 2>&1 | grep -E "passed|failed|flaky"`）。
+2. **失敗時は失敗したテストだけを再実行し、エラーの要点だけを抽出する**
+   （`--last-failed` と `grep -E "Error:|Expected|Received|Locator:"`）。
+3. **原因調査はまず `error-context.md`（ページ構造のテキスト）を `grep` で部分的に読む。** スクリーンショット（画像）は、
+   見た目そのものの不具合が疑われる場合にだけ開く。開く場合も一覧画像・切り出しにまとめ、枚数を抑える。
+4. **関係するテストだけを実行する**（変更した画面・機能のディレクトリやファイル名で絞り込む。`--project=desktop` 等）。
+5. **再試行（retries）で失敗を隠さない。** 同じ箇所で不安定に落ちる場合は、推測で何度も再実行せず、
+   ロケーター・待ち方を直すか `data-testid` を付ける（1章）。解決した知見は `TEST-JUDGEMENT-GUIDE.md` に記録する。
+6. **見た目の回帰チェックを常用する場合は、画素比較（`toHaveScreenshot`）を Playwright に任せ、AI は差分が出たときだけ画像を見る。**
+   日付・件数など変動する部分はマスクする（導入時に対象画面を決める）。
+

@@ -40,14 +40,15 @@
 |---|---|---|
 | Azure評価結果あり | 「総合スコア: {点数}」のみ表示 | Azureの発音評価が完了した場合。単語単位の詳細（強勢・音素スコア等）は取得はしているが画面には表示されていない |
 | 自作評価結果あり | スコア（0〜100に換算した数値）と講評テキスト | Web Speechベースの自作評価が完了した場合 |
-| 録音タイムアウト | 自動的に録音を終了する | 開始から7秒経過した場合（Azure・自作どちらも共通の設計） |
+| 録音タイムアウト | 自動的に録音を終了する | 開始からAzureは7秒、自作評価は10秒（生徒の発話評価と同じ）経過した場合 |
 
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/speachPoc/page.tsx`（`_components/`ディレクトリは存在せず、単一ファイル
   構成）
 - `apps/admin/hooks/useAzureSpeechTest.ts`（Azure Speech SDKによるTTS・発音評価のロジック）
-- `packages/lib/hooks/useWebSpeech`（ブラウザ標準Web Speech APIによるTTS・自作評価ロジック）
+- `packages/lib/speech/useSpeechSynthesis.ts`（ブラウザ標準の音声合成による読み上げ）
+- `packages/lib/audio/react/useSpeakingPlayer.ts`（生徒の単語帳・スプリントと同じ自作評価。この画面ではチャイムなしで使う）
 
 ## 気づいた点（実装の粗さ）
 

@@ -1,5 +1,6 @@
 // packages/lib/azure/tts.ts
 
+import 'server-only';
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 
 /**

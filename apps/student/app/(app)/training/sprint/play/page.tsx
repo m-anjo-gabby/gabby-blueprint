@@ -6,10 +6,14 @@ import { SprintSelect } from "./_components/SprintSelect";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
 import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
+import { useToast } from "@gabby/lib/hooks/useToast";
 import { useSprintStore } from "@/stores/useSprintStore";
 import { AlertCircle, Volume2, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { ContentLoading } from "@/components/common/ContentLoading";
+import { ImmersiveNotice, noticeActionClass } from "@/components/shell/ImmersiveNotice";
+import { primeSpeechSynthesis } from '@gabby/lib/speech/synthesis';
+import { unlockAudio } from '@gabby/lib/audio/core/audioRuntime';
 
 interface PageProps {
   searchParams: Promise<{
@@ -32,7 +36,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   // 📦 状態管理（Zustandストアへ一元化、ローカルuseStateは排除）
   // ────────────────────────────────────────────────────────────
-  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress, setContentMetadata, setContentName } = useSprintStore();
+  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress, setContentMetadata, setContentName, markLevelUnavailable } = useSprintStore();
+  const { showToast } = useToast();
 
   // ────────────────────────────────────────────────────────────
   // 🧭 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）
@@ -110,7 +115,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       if (fallbackContentId) {
         const contentRes = await getContentAction(fallbackContentId);
         if (contentRes && contentRes.success && contentRes.data) {
-          setContentMetadata(contentRes.data.metadata?.sprint || null);
+          setContentMetadata(contentRes.data.metadata?.sprint || null, contentRes.availableLevels ?? null);
           setContentName(contentRes.data.content_name || null);
         } else {
           setContentMetadata(null);
@@ -200,6 +205,17 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       });
 
       setUiView(selectedConfig.mode);
+    } else if (response.errorCode === 'level_locked') {
+      // まだ選べないレベル（URLの level 指定・レベル管理の再開等）は、選択画面へ戻す（レベルは選択画面が選べるものに補正する）
+      showToast('このレベルはまだ選択できません。別のレベルを選択してください。', 'error');
+      setConfig({ questionType });
+      setUiView('selecting');
+    } else if (response.errorCode === 'no_questions') {
+      // 問題の無いレベル（画面を開いた後に問題が移動・削除された等）は選択肢から外して選択画面へ戻す
+      markLevelUnavailable(questionType, difficultyLevel);
+      showToast('このレベルには問題がありません。別のレベルを選択してください。', 'error');
+      setConfig({ questionType });
+      setUiView('selecting');
     } else {
       setUiView('error');
     }
@@ -221,25 +237,12 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // 0. 教材未割り当て・取得不可時のエンプティステート
   if (ui.view === 'no_content' || !config.contentId) {
     return (
-      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6 z-[100]">
-        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-6">
-          <div className="w-16 h-16 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto text-indigo-600 border border-indigo-100">
-            <BookOpen size={32} strokeWidth={2} />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">No Content Assigned</h2>
-            <p className="text-sm text-slate-500 leading-relaxed px-2">
-              教材データを取得できません。<br />教材一覧からトレーニングする教材を選択してください。
-            </p>
-          </div>
-          <Link 
-            href="/library" 
-            className="inline-flex items-center justify-center gap-2 w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
-          >
-            Go to Library
-          </Link>
-        </div>
-      </div>
+      <ImmersiveNotice
+        icon={<BookOpen size={28} />}
+        title="教材が選択されていません"
+        description={<>教材データを取得できません。<br />教材一覧からトレーニングする教材を選択してください。</>}
+        actions={<Link href="/library" className={noticeActionClass()}>教材一覧へ</Link>}
+      />
     );
   }
 
@@ -255,23 +258,20 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // 2. ジェスチャー待ち画面（直接アクセス時のみ）
   if (ui.view === 'gesture_needed') {
     return (
-      <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
-        <div className="bg-white p-8 rounded-[36px] shadow-2xl border border-slate-100 w-full max-w-sm text-center space-y-6">
-          <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 text-indigo-600 animate-pulse">
-            <Volume2 size={26} strokeWidth={2.5} />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">Ready to Start</h3>
-            <p className="text-xs font-bold text-slate-500 leading-relaxed">
-              セッションを再開します。音声を有効にするために下のボタンを押してください。
-            </p>
-          </div>
+      <ImmersiveNotice
+        icon={<Volume2 size={26} className="animate-pulse" />}
+        title="トレーニングを再開します"
+        description="音声を有効にするため、下のボタンを押してください。"
+        actions={
           <button
+            type="button"
             onClick={() => {
               const audio = new Audio();
               audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
               audio.play().catch(() => {});
-              window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+              primeSpeechSynthesis();
+              // 共有の AudioContext もこのタップの中でアンロック・復旧する（中断中なら作り直す）
+              void unlockAudio();
               
               handleStartSession({
                 mode: config.mode,
@@ -282,30 +282,25 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
                 isAssessmentMode: config.isAssessmentMode
               });
             }}
-            className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+            className={noticeActionClass()}
           >
-            Start Training 🎯
+            トレーニングを開始
           </button>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
   // 4. エラー画面
   if (ui.view === 'error') {
     return (
-      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-md text-center space-y-6">
-          <div className="w-16 h-16 bg-rose-50 rounded-3xl flex items-center justify-center mx-auto text-rose-500">
-            <AlertCircle size={32} strokeWidth={2.5} />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">Data Not Found</h2>
-            <p className="text-sm text-slate-500 leading-relaxed px-2">教材データの取得に失敗しました。もう一度一覧からお試しください。</p>
-          </div>
-          <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest">Go Back</Link>
-        </div>
-      </div>
+      <ImmersiveNotice
+        tone="error"
+        icon={<AlertCircle size={28} />}
+        title="教材データを取得できません"
+        description="教材データの取得に失敗しました。もう一度一覧からお試しください。"
+        actions={<Link href="/dashboard" className={noticeActionClass()}>ホームに戻る</Link>}
+      />
     );
   }
 

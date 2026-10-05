@@ -60,3 +60,20 @@ DROP POLICY IF EXISTS "Users can view active dictionary records" ON public.com_m
 CREATE POLICY "Users can view active dictionary records" ON public.com_m_color_vowel_dictionary
 FOR SELECT TO authenticated 
 USING (status = 'live' AND delete_flg = 0);
+
+---------------------------------------------
+-- 追加パッチ: 原形列(lemma)の追加 (2026-09-25 追加)
+---------------------------------------------
+-- 【背景】
+-- 辞書は生徒がタップした文中の出現形（offers, launched 等）で検索するため、見出し語は
+-- 出現形のまま1行ずつ持つ。その上で、語形変化した行に原形を持たせ、生徒の辞書ポップアップで
+-- 「原形: launch」と表示できるようにする。あわせて、同じ原形を持つ行どうしでColor Vowelの
+-- 判断が食い違っていないかを辞書データ作成時に機械的に検証できるようにする。
+--
+-- 原形と見出し語が同じ行（原形そのもの）はNULLとする。原形の行が辞書に登録されている
+-- ことは必須としない（外部キーは張らない）。
+---------------------------------------------
+ALTER TABLE public.com_m_color_vowel_dictionary
+  ADD COLUMN IF NOT EXISTS lemma TEXT DEFAULT NULL;
+
+COMMENT ON COLUMN public.com_m_color_vowel_dictionary.lemma IS '原形（例: launched → launch）。見出し語が原形そのものの場合はNULL';

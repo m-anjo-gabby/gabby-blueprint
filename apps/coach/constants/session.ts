@@ -10,7 +10,7 @@ export interface SessionStatusBadge {
 const SLATE_BADGE = { className: 'bg-slate-100 text-slate-600 border-slate-200', dotClassName: 'bg-slate-400' };
 
 const COACH_SESSION_STATUS_LABELS: SessionStatusBadgeLabels<SessionStatusBadge> = {
-  scheduled: { label: 'Scheduled', className: 'bg-indigo-50 text-indigo-700 border-indigo-200', dotClassName: 'bg-indigo-500' },
+  scheduled: { label: 'Scheduled', className: 'bg-brand-50 text-brand-strong border-brand-200', dotClassName: 'bg-brand-500' },
   completedNormal: { label: 'Completed', className: 'bg-emerald-50 text-emerald-700 border-emerald-200', dotClassName: 'bg-emerald-500' },
   completedEarlyEnded: { label: 'Ended early', className: 'bg-orange-50 text-orange-700 border-orange-200', dotClassName: 'bg-orange-500' },
   completedNoShow: { label: 'No-show', className: 'bg-amber-50 text-amber-700 border-amber-200', dotClassName: 'bg-amber-500' },

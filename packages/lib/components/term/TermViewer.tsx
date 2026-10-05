@@ -42,7 +42,7 @@ export function TermViewer({
       >
         <div className={cn("px-8 py-10 w-full max-w-full min-w-0 break-words", contentClassName)}>
           {content ? (
-            <article className="prose prose-indigo prose-sm sm:prose-base max-w-none break-words [word-break:break-word]">
+            <article className="prose prose-sm prose-a:text-brand sm:prose-base max-w-none break-words [word-break:break-word]">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -65,7 +65,7 @@ export function TermViewer({
             </article>
           ) : (
             <div className="flex flex-col items-center justify-center py-32 gap-4 text-slate-400">
-              <div className="w-8 h-8 animate-spin border-2 border-indigo-500 border-t-transparent rounded-full" />
+              <div className="w-8 h-8 animate-spin border-2 border-brand-500 border-t-transparent rounded-full" />
               <p className="text-xs font-bold tracking-widest uppercase animate-pulse">
                 {isLoading ? "Fetching Document Content..." : "No Content Available"}
               </p>

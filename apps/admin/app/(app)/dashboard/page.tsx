@@ -1,14 +1,13 @@
-import { createServerClient } from "@gabby/lib/supabase/server";
 import { canAccessPath } from "@/lib/navigation";
 import { getDashboardSummary, type DashboardModuleKey } from "@/actions/adminDashboardAction";
 import { DASHBOARD_MODULE_CONFIG, DASHBOARD_MODULE_ORDER } from "./_components/moduleConfig";
 import DashboardHeader from "./_components/DashboardHeader";
 import ModuleSummaryGrid from "./_components/ModuleSummaryGrid";
 import ModuleCard from "./_components/ModuleCard";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 export default async function Page() {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const roles = (user?.app_metadata?.roles as string[] | undefined) || [];
 
   // サイドバー（lib/navigation.ts）と同じ権限定義を使い、閲覧権限のあるモジュールのみ表示・取得する

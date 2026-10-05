@@ -33,9 +33,12 @@ export interface MatchingRequestRecord {
   update_date: string;
 }
 
-/** コーチ側の受信リクエスト一覧表示用（生徒名を結合） */
+/** コーチ側の受信リクエスト一覧表示用（生徒名・申請した契約の期間を結合） */
 export interface IncomingMatchingRequestItem extends MatchingRequestRecord {
   student_name: string;
+  /** 申請した契約（チケットのライセンス）の開始・終了日時。初回の予定日を契約期間内で求めるために使う */
+  license_start_date: string | null;
+  license_end_date: string | null;
 }
 
 /** 生徒側の自分のリクエスト一覧表示用（コーチ名を結合） */
@@ -68,11 +71,50 @@ export interface LiveSessionTicketSummary {
 export interface LiveSessionContractSummary {
   ticket_id: string;
   license_id: string;
+  /** 生徒に見せるプラン名（com_m_contract.plan_name。管理用の契約名 contract_name は使わない） */
+  plan_name: string;
   start_date: string; // ライセンス開始日
   end_date: string;   // ライセンス終了日
   /** status=1(有効)かつ現在日時が期間内であればtrue */
   is_current: boolean;
+  /** status=1(有効)かつ終了日前であればtrue（開始前の契約も含む。有効なチケットの判定と同じ条件） */
+  is_active: boolean;
 }
+
+/** 現在の契約と並ぶ次の契約（継続用）の、専属コーチの選択状況（未選択のコマがある場合の案内用） */
+export interface NextContractMatching {
+  contract: LiveSessionContractSummary;
+  /** 週あたりのコマ数 */
+  slotCount: number;
+  /** 専属コーチが未選択（申請前・否認後）のコマ数。承認待ちは含まない */
+  unmatchedCount: number;
+}
+
+/**
+ * 契約(チケット)1件分のセッション回数の内訳（ライブセッションハブの「契約の状況」表示用）。
+ * 各回数はcom_t_sessionとfn_schedule_shortfall()から算出し、合計はおおむねtotal_sessionsに一致する
+ * （管理者がコマ別の目標数を個別に引き上げた場合は上回ることがある）。
+ */
+export interface LiveSessionOverview {
+  ticket_id: string;
+  weekly_frequency: number;
+  total_sessions: number;
+  /** 実施済み（status=completed。早期終了・未参加を含む） */
+  completed_count: number;
+  /** 予約済み（status=scheduled） */
+  scheduled_count: number;
+  /** 返還なしのキャンセル（開始12時間未満の生徒キャンセル等。消化済み扱い） */
+  forfeited_count: number;
+  /** コーチ選択済みのコマで、日時が未確定の回数（fn_schedule_shortfallの合計） */
+  unbooked_count: number;
+  /** コーチ未選択（承認待ちを含む）のコマに割り当てられる回数 */
+  unassigned_count: number;
+  slots: SlotStatusItem[];
+}
+
+export type GetMyLiveSessionOverviewResult =
+  | { success: true; overview: LiveSessionOverview }
+  | { success: false; errorCode: MatchingRequestErrorCode };
 
 export type GetMyLiveSessionContractsResult =
   | { success: true; contracts: LiveSessionContractSummary[] }

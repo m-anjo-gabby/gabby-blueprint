@@ -1,14 +1,17 @@
+import 'server-only';
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { generateVideoSdkSignature } from '../../zoom/signature';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../constants';
 import {
+  CheckLiveSessionJoinableResult,
   GetLiveSessionRoomAccessResult,
   LIVE_SESSION_ROOM_ROLE,
   RecordCallJoinResult,
 } from '@gabby/types/liveSessionRoom';
 import { GetSessionCallLogPresenceResult } from '@gabby/types/session';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -57,7 +60,7 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: session, error: sessionError } = await supabase
@@ -126,7 +129,7 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasActiveLiveSessionTicket(supabase, user.id))) {
@@ -188,6 +191,43 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
 }
 
 /**
+ * ログイン中生徒が、指定の個別レッスンセッションに今入室できるかをサーバーの時刻で判定する（入室ボタンの押下時用）。
+ * 端末の時計が遅れていると、ブラウザ側の判定では「まだ早い」となる場合があるため、その時だけ呼び出して確かめる。
+ * 署名は発行しない（入室画面の getStudentLiveSessionRoomAccessCore が改めて全条件を検証してから発行する）。
+ */
+export async function checkStudentLiveSessionJoinableCore(sessionId: string): Promise<CheckLiveSessionJoinableResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: session, error } = await supabase
+      .from('com_t_session')
+      .select('student_id, start_datetime')
+      .eq('session_id', sessionId)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('liveSessionRoom:student_joinable_lookup_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!session || session.student_id !== user.id) {
+      return { success: false, errorCode: 'forbidden' };
+    }
+    if (isTooEarlyToJoin(session.start_datetime)) {
+      const availableAt = new Date(new Date(session.start_datetime).getTime() - LIVE_SESSION_EARLY_JOIN_BEFORE_MS).toISOString();
+      return { success: true, joinable: false, availableAt };
+    }
+    return { success: true, joinable: true };
+  } catch (err) {
+    logger.error('liveSessionRoom:student_joinable_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
  * 指定したsession_id群それぞれについて、コーチ自身の入室ログ(com_t_session_call_log, role='coach')が
  * 1件でも存在するかを一括取得する。ダッシュボード/生徒詳細画面の「レッスン終了」ボタンの活性判定に使用する
  * （1件ずつ問い合わせるN+1を避けるため、対象session_id配列をまとめて1クエリで取得する）。
@@ -201,7 +241,7 @@ export async function getSessionCallLogPresenceCore(sessionIds: string[]): Promi
     }
 
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: rows, error } = await supabase
@@ -235,7 +275,7 @@ export async function recordSessionCallJoinCore(sessionId: string, zoomSessionId
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase.rpc('record_session_call_join', {
@@ -265,7 +305,7 @@ export async function recordSessionCallLeaveCore(callLogId: string): Promise<{ s
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false };
 
     const { error } = await supabase.rpc('record_session_call_leave', { p_call_log_id: callLogId });
@@ -298,7 +338,7 @@ export async function recordSessionChatMessageCore(sessionId: string, message: s
     if (!trimmed) return { success: false };
 
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false };
 
     const { data: session, error: sessionError } = await supabase

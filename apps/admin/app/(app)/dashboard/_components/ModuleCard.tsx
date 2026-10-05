@@ -20,13 +20,13 @@ export default async function ModuleCard({ summary }: Props) {
 
   return (
     <Link href={config.href} className="block h-full group">
-      <Card className="h-full rounded-2xl border-slate-200 shadow-sm transition-all group-hover:shadow-md group-hover:border-indigo-200 group-hover:-translate-y-0.5">
+      <Card className="h-full rounded-2xl border-slate-200 shadow-sm transition-all group-hover:shadow-md group-hover:border-brand-200 group-hover:-translate-y-0.5">
         <CardContent className="p-6">
           <div className="flex items-start justify-between">
             <div className={`p-3 rounded-xl border ${config.accentClass}`}>
               <Icon size={22} />
             </div>
-            <ArrowUpRight size={18} className="text-slate-300 transition-colors group-hover:text-indigo-500" />
+            <ArrowUpRight size={18} className="text-slate-300 transition-colors group-hover:text-brand-500" />
           </div>
 
           <div className="mt-5">

@@ -1,16 +1,5 @@
-import path from 'node:path';
-import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer';
-
-// コーチ名・会社住所等に日本語が含まれる場合の文字化け対策。詳細はapps/coach/lib/pdf/
-// PayNoticeDocument.tsxの同名処理のコメントを参照（本コンポーネントもコーチ向け支払通知書と
-// 同じ理由・同じフォントファイルを使用する）。
-Font.register({
-  family: 'NotoSansJP',
-  fonts: [
-    { src: path.join(process.cwd(), 'lib/pdf/fonts/NotoSansJP-Medium.otf'), fontWeight: 400 },
-    { src: path.join(process.cwd(), 'lib/pdf/fonts/NotoSansJP-Bold.otf'), fontWeight: 700 },
-  ],
-});
+import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
+import { PDF_FONT_FAMILY } from './registerFonts';
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -30,7 +19,7 @@ export interface InvoiceData {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 40, fontSize: 10, fontFamily: 'NotoSansJP', color: '#000000' },
+  page: { padding: 40, fontSize: 10, fontFamily: PDF_FONT_FAMILY, color: '#000000' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   logo: { width: 120 },
   // 会社名・住所各行(いずれも幅の異なる独立したText)を右端で揃えるため、textAlignではなく

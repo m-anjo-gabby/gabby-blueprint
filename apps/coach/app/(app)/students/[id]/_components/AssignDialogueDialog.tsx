@@ -108,7 +108,7 @@ export function AssignDialogueDialog({
                               href={content.session1_coach_slides_link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-0.5 text-indigo-600 hover:text-indigo-700 font-medium"
+                              className="inline-flex items-center gap-0.5 text-brand hover:text-brand-strong font-medium"
                             >
                               <ExternalLink size={10} />
                               Session 1

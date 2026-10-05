@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Save, RotateCcw, Globe } from 'lucide-react';
+import { Save, RotateCcw, Globe } from 'lucide-react';
 import { addAvailability, deleteAvailability } from '@/actions/availabilityAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
@@ -182,8 +182,7 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
             <RotateCcw size={13} />
             Reset
           </Button>
-          <Button type="button" size="sm" onClick={handleSave} disabled={!isDirty || isSaving}>
-            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          <Button pending={isSaving} icon={<Save size={14} />} type="button" size="sm" onClick={handleSave} disabled={!isDirty || isSaving}>
             Save Changes
           </Button>
         </div>
@@ -201,7 +200,7 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
                 .map((r) => (
                   <span
                     key={rangeKey(r.day, r.start_time, r.end_time)}
-                    className="inline-flex items-center gap-1.5 pl-3 pr-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold"
+                    className="inline-flex items-center gap-1.5 pl-3 pr-3 py-1.5 rounded-full bg-brand-50 border border-brand-100 text-brand-strong text-xs font-bold"
                   >
                     {DAY_OF_WEEK_LABEL_EN[day]} {r.start_time} - {r.end_time}
                   </span>

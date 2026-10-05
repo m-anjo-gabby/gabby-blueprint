@@ -452,10 +452,10 @@
 - **該当仕様書**: `testing/e2e/specs/booking/individual-booking-and-reschedule.md`（画面仕様書
   `docs/screens/student/calendar.md`作成のため実装を確認中に発覚）
 - **事象**: 上記E2E仕様書の「関与ロール・画面」表で、生徒のセッションキャンセル操作を
-  `apps/student/app/(app)/live-room/_components/LiveSessionHub.tsx`が担うと記載していたが、
+  `apps/student/app/(app)/(shell)/live-room/_components/LiveSessionHub.tsx`が担うと記載していたが、
   実際にセッションキャンセルのダイアログ（`SessionActionDialog.tsx`、実体は
   `packages/lib/components/common/SessionActionDialog.tsx`）を開く導線は
-  `apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`（カレンダー画面の
+  `apps/student/app/(app)/(shell)/calendar/_components/DayDetailDrawer.tsx`（カレンダー画面の
   日別詳細ドロワー）にあり、ライブルーム画面には無かった。
 - **原因**: `cancelSession(`という文字列でのgrep一致だけを見て「呼び出し箇所がある画面」と
   即断したが、実際には`LiveSessionHub.tsx`は`cancelSession`を呼んでおらず、
@@ -480,8 +480,8 @@
   `docs/screens/student/live-room/hub.md`作成のため実装を確認中に発覚。KJ-2026-0918-01の続報）
 - **事象**: KJ-2026-0918-01でライブルーム画面の役割を「予約リクエストの取り下げ・振替候補への
   応答・過去セッション閲覧」と訂正したが、これも不完全だった。実際には
-  `apps/student/app/(app)/live-room/_components/LiveSessionHub.tsx`はカレンダー画面
-  （`apps/student/app/(app)/calendar/_components/DayDetailDrawer.tsx`等）と同じ
+  `apps/student/app/(app)/(shell)/live-room/_components/LiveSessionHub.tsx`はカレンダー画面
+  （`apps/student/app/(app)/(shell)/calendar/_components/DayDetailDrawer.tsx`等）と同じ
   `SessionActionDialog`（セッションキャンセル＋振替候補提案）・`BookMakeupSessionDialog`
   （個別予約リクエストの新規作成）を直接インポートして使っており、今後の予定カードから
   「キャンセル」、未消化枠バナーから「予約リクエスト作成」も行える。つまりライブルーム画面は
@@ -512,7 +512,7 @@
   クライアント単位でデータを絞り込む）」と記載していた。しかしこの記述は誤りで、実際に
   画面へのアクセス可否を制御しているのは`apps/student/proxy.ts`のミドルウェア
   （`com_t_user_role.role_id='monitor'`を持たないユーザーを`/monitor`アクセス時に
-  `/dashboard`へリダイレクトする処理）と、`apps/student/app/(app)/(main)/dashboard/page.tsx`の
+  `/dashboard`へリダイレクトする処理）と、`apps/student/app/(app)/(shell)/dashboard/page.tsx`の
   `isMonitor`判定（ダッシュボード上の導線の出し分け）の2つである。`get_monitor_user_list`が
   行っているのは同一クライアント内での「表示対象データ」の絞り込みであり、画面そのものへの
   入室可否には関与しない（モニターロールを持たない同一クライアントの生徒がURLを直接叩いた
@@ -705,3 +705,288 @@
     想定外の制約違反・未定義関数エラーが出たら、まずカタログ（`pg_constraint` / `pg_proc` 等）を直接確認する。
   - `--mark-applied=all` は、SQLエディタで全セクションを適用し終えたことを確認した環境でのみ使う。
     記録する前に、各セクションの代表的なオブジェクト（追加した関数・削除した制約等）の有無を確認する。
+
+### KJ-2026-0926-01 規約同意モーダルはハイドレーション後に現れ、表示中は画面全体がロールベースの検索から外れる
+
+- **該当シナリオ**: `testing/e2e/tests/auth.setup.ts`（E2E導入時のログイン準備、dev）
+- **事象**: ログイン準備は成功したのに、スモークテストの一部が「ナビのタブが見つからない」「クリックできる状態にならない」で失敗した。
+  失敗時のページ構造（`error-context.md`）に `dialog "利用規約への同意"` が残っていた。
+- **原因**: 規約モーダル（Radix Dialog）はサーバー側で描画対象になるが、ポータルのため実際の表示はハイドレーション後になる。
+  ダッシュボード本文の表示直後に「モーダルがあるか」を判定したため未表示と誤判定し、同意しないままログイン状態を保存していた。
+  また Radix のモーダル表示中は背後の要素に `aria-hidden` が付くため、`getByRole` でナビが取得できなくなる。
+- **対処**: 判定前に `waitForLoadState("networkidle")` で通信が落ち着くのを待つようにした（固定時間のスリープは使わない）。
+  固定アカウントは「最新規約に同意済み」を前提とし、ログイン準備で利用者と同じ操作（本文を最下部までスクロール→同意）で同意する。
+- **判断基準への反映**:
+  - **「要素が無いこと」を即時の `isVisible()` で判定しない。** クライアント側で後から出る要素（ポータル・非同期取得）は、
+    通信が落ち着くのを待ってから判定する。
+  - ロールベースの検索が急に何も返さなくなったら、まずモーダル（`aria-hidden` を付ける Dialog）が開いていないかを
+    `error-context.md` で確認する。スクリーンショットより文字情報の方が安く・確実に原因が分かる。
+  - 表示タイミングが一定しない割り込み表示（重要なお知らせポップアップ等）は `page.addLocatorHandler` で自動的に閉じる。
+
+### KJ-2026-0926-02 Next.js 16 は同一アプリの dev サーバーを二重起動できない（別ポートでもロックで失敗する）
+
+- **該当シナリオ**: `testing/playwright.config.ts` の `webServer`（E2E導入時、dev）
+- **事象**: E2E専用に student を別ポート（3100）で `next dev` 起動しようとしたところ、
+  `Unable to acquire lock at apps/student/.next/dev/lock` で起動に失敗した。利用者の `pnpm dev:ssl` が起動中だった。
+- **原因**: Next.js 16 は distDir（`.next`）単位で dev サーバーのロックを取るため、ポートを変えても同じアプリは二重起動できない。
+  distDir を分ける方法は、Next.js が `tsconfig.json` の include を自動で書き換えるため採用しなかった。
+- **対処**: E2E は student の `dev:ssl`（https://localhost:3000、自己署名証明書）を対象にし、起動中ならそれを再利用、
+  未起動なら Playwright が起動・停止する構成にした（`reuseExistingServer` + `ignoreHTTPSErrors`）。
+- **判断基準への反映**:
+  - 検証のために dev サーバーを自前で起動しない。E2E は `playwright.config.ts` の `webServer` に起動・停止を任せる
+    （Windows では自前で起動した `next dev` が停止後もポートを掴み続け、利用者の `pnpm dev:ssl` を妨げた事例がある）。
+
+### KJ-2026-0926-03 固定アカウントのシードは日次集計を直接INSERTしており、通算実績（lifetime_stats）と食い違う
+
+- **該当シナリオ**: `testing/features/fixtures/seed-fixed-accounts.ts`（qa-student-01/02 のトレーニング実績、dev）
+- **事象**: ホームの「これまでの積み上げ」で、月次実績にはフレーズ5件×4日があるのに、通算のフレーズ数・単語数が0と表示された。
+  また qa-student-01 と 02 がまったく同じ通算値（発話32回・実施4日）になっていた。
+- **原因**: シードは `self_t_word_summary` を直接INSERTしており、本番の経路（`increment_word_summary` RPC →
+  `update_training_lifetime_stats`）を通らないため、通算の単語数・フレーズ数が加算されない。
+  スプリントはトリガー経由で同期されるため、発話回数と実施日数だけが通算に入る。両アカウントは同一内容でシードしている。
+  画面の取得処理は正しかった（service_role での照会結果と一致）。
+- **判断基準への反映**:
+  - 集計・通算テーブルを表示する画面で値がおかしいときは、画面を疑う前に「そのデータがどの経路で作られたか」を確認する。
+    RPC・トリガーを迂回したシードは、事前集計テーブルと整合しない。
+  - 通算値を検証するテストでは、実績を本番と同じRPC（本人のJWT）で作るか、シード側で通算テーブルも整合させる。
+
+### KJ-2026-0926-04 globals.css を変えても、dev サーバーのキャッシュで古いCSSのまま撮影された
+
+- **該当シナリオ**: デザイントークン変更後の目視確認（Playwright でのスクリーンショット、dev）
+- **事象**: `apps/student/app/globals.css` のブランド色を変更した後の撮影で、画面は旧色のままだった。
+  コンパイル済みCSS（`.next/dev/static/chunks/*globals*.css`）にも旧値が残っていた（TSXの変更は反映されていた）。
+- **原因**: Turbopack の開発用キャッシュが古い `globals.css` の結果を使い続けた。
+  さらに、Playwright が起動した dev サーバーが Windows では停止後も残り、その下の `.next/dev` を削除したため応答が止まった。
+- **判断基準への反映**:
+  - `globals.css`（`@theme` のトークン）を変更して見た目を確認するときは、dev サーバーが動いていないことを確認してから
+    `apps/student/.next/dev` を削除し、撮影し直す。色が変わらない場合は、まずコンパイル済みCSSの値を `grep` で確認する。
+  - 動作中の dev サーバーの `.next` は削除しない。自分が起動した残存プロセスか（起動時刻で判断）を確認してから停止する。
+
+### KJ-2026-0926-05 qa-admin は user_type=admin だが、admin画面のロール（com_m_role）が無く教材管理等に入れない
+
+- **該当シナリオ**: admin 教材一覧（`/contents`）の表示確認（Playwright、dev）
+- **事象**: `qa-admin` でログインはできるが、サイドナビにはダッシュボード・チャットしか出ず、`/contents` に遷移すると
+  ダッシュボードへ戻された（ダッシュボードの「教材管理」カードはロールに関係なく表示される）。
+- **原因**: admin の画面アクセス制御（`apps/admin/proxy.ts` → `lib/navigation.ts` の `canAccessPath`）は
+  `user_type` ではなくロール（`admin` / `content_manager` 等）で判定する。`FIXTURES.md` の「admin(0)」は `user_type` の意味で、
+  ロールの付与は保証されていない。
+- **判断基準への反映**:
+  - admin 画面の E2E で固定アカウントを使う前に、対象画面の `requiredRoles` を持っているかを確認する。
+    リダイレクト先がダッシュボードなら、まずロール不足を疑う（ログイン直後の遷移の競合と見分けるため、`page.goto` 後の URL を出力する）。
+  - admin はログイン後にクライアント側で `/dashboard` へ遷移するため、`waitForURL("**/dashboard")` を待ってから次の画面へ遷移する。
+
+### KJ-2026-0926-06 Playwright の新しいタブは履歴が2件あり、「直前の画面へ戻る」ボタンが about:blank に戻る
+
+- **該当シナリオ**: 生徒のライブセッション結果画面（`/live-room/sessions/[sessionId]/result`）を URL 直接指定で開き、戻るボタンを押す（Playwright、dev）
+- **事象**: 戻るボタンを押しても `/live-room` に遷移せず、`waitForURL` がタイムアウトした。
+  直前に `/live-room` を開いてから遷移した場合は正しく戻れた。
+- **原因**: `ShellPageHeader` の `back={{ history: fallback }}` は `window.history.length > 1` なら `router.back()`、
+  そうでなければ fallback へ遷移する。Playwright の新しいタブは `about:blank` から始まるため、最初の `page.goto` の時点で
+  `history.length` が2になり、`router.back()` で `about:blank` に戻っていた。実ブラウザでメールのリンク等から新しいタブで開いた場合は
+  `history.length` が1になり、fallback へ遷移する。
+- **判断基準への反映**:
+  - `{ history: ... }` 型の戻るボタンは、「直前の画面から遷移して戻る」ケースだけを E2E で確認する。
+    「直接開いた場合の fallback」は Playwright では再現できないため、手動で確認するか、E2E の対象から外す。
+  - 固定アカウント `qa-student-01` には status=完了（`SESSION_RESULT_STATUSES`）のセッションが無いため、ライブセッション・ホーム画面の
+    「履歴」から結果画面を開くテストはスキップされる。結果画面の取得処理はステータスで絞り込まないため、本人の過去セッションの
+    URL を直接開けば、DB を変更せずに表示を確認できる（ID をテストにハードコードしないこと）。
+
+### KJ-2026-0927-01 振替候補を承諾すると、cleanupのセッション削除がcom_t_session_slot_proposalのFKで失敗する
+
+- **該当シナリオ**: 生徒ライブセッション・ホーム刷新の画面確認（`feature-20260925-dev/live-session-hub-redesign-*`、dev）
+- **事象**: 画面から振替候補を承諾した後に cleanup を実行すると、`com_t_session` の削除が
+  `com_t_session_slot_proposal_resulting_session_id_fkey` 違反（23503）で失敗した。
+- **原因**: KJ-2026-0915-01 と同じ `resulting_session_id`（CASCADEなし）が、テーブル統合後は `com_t_session_slot_proposal` にあり、
+  予約リクエストの承認だけでなく**振替候補の承諾**でも設定される。既存の cleanup（`target-sessions-adjustment-cleanup.ts` 等）は
+  承諾操作を伴わないため、この削除ステップを持っていなかった。
+- **判断基準への反映**:
+  - 予約リクエストの承認・振替候補の承諾を（RPC・画面のどちらでも）行うシナリオの cleanup では、`com_t_session` より先に
+    `com_t_session_slot_proposal` を `student_id` で絞って削除する（`live-session-hub-redesign-cleanup.ts` の手順0）。
+  - 既存の cleanup を雛形にする場合は、シナリオで新たに行う操作が作る参照（FK）を DDL の `REFERENCES` で確認してから流用する。
+
+### KJ-2026-0928-01 ログイン画面のエラー文言は、英語表示のアプリ（coach・admin の英語表示）でも日本語で出る
+
+- **該当シナリオ**: ログイン画面の画面仕様書作成（`docs/screens/{student,coach,admin}/login.md`）時のソース確認
+- **事象**: 認証失敗・アカウントロック・入力漏れの文言は、3アプリ共通の `signInCore`（`packages/lib/auth/actions.ts`）が
+  日本語で返し、そのまま表示される。英語が基本の coach アプリ、表示言語を英語にした admin アプリでも日本語になる。
+  admin の「管理者以外のアカウント」「予期しないエラー」の文言も、翻訳カタログではなく `adminAuthAction.ts` の日本語固定。
+  また coach のログイン画面だけ、使用済み・期限切れのパスワード再設定リンクから戻った場合の案内ダイアログが無い。
+- **対応（2026-09-28）**: 共通処理はエラー種別（`errorCode`、`packages/lib/auth/errors.ts`）を返し、文言は各アプリの
+  表示言語で解決する形に改修した（admin: `messages/{ja,en}.json` の `authErrors` / coach: `constants/auth.ts` の英語 /
+  student: 日本語の既定文言）。ログイン・パスワード再設定・パスワード変更が対象。admin は言語の Cookie が無い場合、英語で表示する。
+  ログイン画面の案内（再設定の完了・リンクのエラー・無効な再設定リンク）は共通フック `useLoginNotice` にまとめ、coach にも入れた。
+- **判断基準への反映**:
+  - ログイン失敗系のテストで文言を確認する場合は、そのアプリ・表示言語の文言を期待値にする（各画面仕様書に記載）。
+    admin は、テスト用ブラウザに言語の Cookie（`NEXT_LOCALE`）が無ければ英語になる点に注意する。
+  - 文言ではなく「エラー表示欄が出ること」「パスワード欄が空になること」を主な確認対象にすると、文言の改修に強いテストになる。
+  - エラーの種類で表示先を変える処理（例: パスワード変更で「現在のパスワード誤り」だけ現在のパスワード欄に出す）は、
+    文言の文字列一致ではなく `errorCode` で判定する。文字列一致は表示言語を変えると壊れる。
+
+### KJ-2026-0928-02 ハイドレーション前に入力欄へ fill すると、入力内容が消える（WebKit で顕在化）
+
+- **該当シナリオ**: チャットE2E（`e2e/tests/chat/chat-messaging.spec.ts`）の mobile（WebKit）で、ルームを開いた直後に入力欄へ `fill` した
+- **事象**: 入力したはずの本文が空のままで送信ボタンが押せず、クリックがタイムアウトした。desktop（Chromium）では再現しなかった。
+- **原因**: 入力欄は下書きストア（zustand）の値を表示する制御コンポーネントのため、ハイドレーションが完了すると、それまでにDOMへ入った文字が
+  ストアの値（空）で上書きされる。WebKit はハイドレーションが遅く、Playwright の `fill` の方が先に走っていた（実際の利用者の入力速度では起きない）。
+- **判断基準への反映**:
+  - 制御コンポーネントの入力欄に、画面を開いた直後に入力するテストは、ハイドレーション完了を待ってから入力する。
+    チャットの入力欄は `data-ready="true"`（`useHydrated`）を付けているので、`toHaveAttribute("data-ready", "true")` を待つ。
+  - 同じ現象が他の画面で起きた場合も、固定の `waitForTimeout` ではなく、ハイドレーション後にだけ付く属性を待つ形で解決する。
+
+### KJ-2026-0928-03 再設定リンクで確立したセッションは、Supabase 上は「otp」でしか識別できない
+
+- **該当シナリオ**: パスワード再設定画面（`/update-password`）を再設定リンク経由に限定する改修の事前検証（dev）
+- **事象**: recovery トークンを `verifyOtp` したセッションの JWT の `amr` は `[{"method":"otp"}]` で、`recovery` にはならなかった。
+  マジックリンク（管理者の代理ログイン）も同じ `otp` のため、JWT だけでは「再設定リンクで来たか」を判別できない。
+  また、未登録のメールアドレスで `auth.admin.generateLink({ type: 'recovery' })` を呼ぶと 404（User with this email not found）が返る。
+- **対応**: 再設定リンクの確認をサーバーで行い、確認したセッション（`session_id`）に紐づく署名付き Cookie（`packages/lib/auth/recovery.ts`）で
+  判定する形にした。パスワード忘れは、登録の有無を外部から判別できないよう、未登録でも完了画面を返す。
+- **判断基準への反映**:
+  - 「再設定リンクを経由したか」をテストで確認する場合、JWT の `amr` ではなく画面の挙動（リンク未確認ならフォームが出ない）で判定する。
+  - 再設定の流れをテストする場合は、`generateLink` で得た `hashed_token` を `/auth/callback?token_hash=...&type=recovery` に渡して開く。
+    固定アカウントのパスワードを変えないよう、更新は「現在と同じパスワード」を送り、同一パスワードのエラーが出ることで
+    リンク確認の判定を通過したことを確かめる（更新が成功すると、その端末以外のセッションがすべてログアウトされ、他テストのログイン状態も無効になる）。
+  - パスワード忘れのテストで「未登録アドレスはエラー」を期待しない（常に完了画面になる）。
+
+### KJ-2026-0928-04 メールの自動検証: アプリの Resend キーは送信専用、React のメールは Playwright で描画できない
+
+- **該当シナリオ**: 認証E2E（`e2e/tests/auth/`）で、再設定メールの文面・受信まで自動で確かめようとした
+- **事象**:
+  - アプリの `RESEND_API_KEY` で送信済みメールの一覧（`GET /emails`）を取得すると 401（`restricted_api_key`: 送信専用）。
+  - Playwright のテストから React のメールテンプレートを `renderToString` すると
+    「Objects are not valid as a React child (found: object with keys {__pw_type, …})」で失敗した。Playwright のテスト実行環境が
+    JSX をコンポーネントテスト用の独自形式に変換するため。
+  - 失敗したテストの後始末が漏れ、使い捨てユーザーと顧客が残った（ユーザー検索に `com_m_user.email` を使ったが、この列は無い）。
+- **判断基準への反映**:
+  - メールの受信確認には、読み取り用に Full access の Resend キーを別に発行し `testing/.env.local` の `RESEND_TEST_READ_API_KEY` に置く。
+    宛先は `delivered+<ラベル>@resend.dev`。未設定ならスキップする作りにする（キーの無い環境でもE2E全体は通る）。
+  - メールの文面は、送信処理と同じ組み立て関数を `testing/unit/`（`tsx --test`）で検証する。Playwright では描画しない。
+  - メールアドレスからユーザーを探すときは `auth.admin.listUsers` を使う（`com_m_user` にメールアドレスは無い）。
+    使い捨てデータの後始末が漏れた疑いがあれば、`authFixtures.leftovers.ts` で残骸を確認する。
+  - ログイン画面の入力欄は制御コンポーネントのため、WebKit ではハイドレーション前の入力が消える（KJ-2026-0928-02 と同じ）。
+    `form[data-ready='true']` を待ってから入力する。
+
+### KJ-2026-0930-01 'server-only' を付けた共通モジュールは、Node で動くテスト（tsx・Playwright）から import できない
+
+- **該当シナリオ**: `packages/lib` のサーバー専用モジュール（`supabase/admin.ts`・`auth/core.ts`・`mail/core.ts`・`mail/actions/*` 等）に
+  `import 'server-only'` を付けた際、テスト側の依存箇所を洗い出した
+- **事象**: `server-only` は Next.js のサーバー（react-server 条件）以外で読み込むと例外を投げる。`testing/helpers/auth.ts` の
+  `createAdminClient`（`@gabby/lib/supabase/admin` を動的 import）と、メール文面のユニットテスト（`mail/actions/*` を import）が対象だった。
+  `tsx --conditions=react-server` で回避すると、今度は `react-dom/server.edge` が RSC 用の実装に切り替わり `renderToString` が使えない。
+- **判断基準への反映**:
+  - テストから `@gabby/lib` のサーバー専用モジュールを import しない。service_role のクライアントは `testing/helpers/auth.ts` の
+    `createAdminClient`（テスト側で自前生成）を使う。
+  - メールの文面は `@gabby/lib/mail/render`（組み立てのみ・秘密情報なし）を import して検証する。新しいメールの文面を検証する場合も、
+    組み立て関数を `mail/render.ts` に置き、送信処理（`mail/actions/*`）はそれを呼ぶ形にする。
+  - `packages/lib` に秘密情報・`next/headers` を使うモジュールを追加するときは `import 'server-only'` を付ける（`'use server'` のファイルは不要）。
+
+### KJ-2026-0930-02 スクリプトの後始末の signOut（既定: global）で、同じユーザーのブラウザ・E2Eのログイン状態が切れる
+
+- **該当シナリオ**: お気に入りのE2Eで、画面の外（別端末相当）の変更を再現するため、テスト中に固定アカウント（qa-student-01）の
+  実JWTでデータを書き換えるスクリプト（`signInAsRole` → 操作 → `signOutRole`）を実行した
+- **事象**: スクリプト実行後、同じアカウントでログインしていたPlaywrightのブラウザがログイン画面へ飛ばされた。
+  保存済みのログイン状態（`e2e/.auth/*.json`）も無効になり、後続の本番ビルドでの計測でログインし直しが必要になった。
+- **原因**: supabase-js の `auth.signOut()` の既定は `scope: 'global'` で、そのユーザーの**全セッション**を失効させる。
+- **判断基準への反映**:
+  - `testing/helpers/auth.ts` の `signOutRole` は `scope: 'local'`（そのクライアントのセッションだけ）にした。
+    スクリプト・テストで直接 `auth.signOut()` を呼ぶ場合も `scope: 'local'` を指定する。
+  - 「別端末での変更」を再現するテストは、ブラウザと同じ固定アカウントを使ってよいが、後始末で他のセッションを巻き込まないこと。
+
+### KJ-2026-0930-03 件数がサーバーから最初から表示されるため、「件数が出た＝Realtime の準備完了」とみなせない
+
+- **該当シナリオ**: チャットE2E「ナビの未読バッジ: チャット画面以外でも新着でリアルタイムに増える」。
+  ヘッダー・ナビの未読数・件数を、表示後のブラウザからの取得（サーバーアクション）からサーバーでの取得（流し込み）に変えた後の回帰テスト
+- **事象**: 未読数の表示を待ってからコーチの新着を送ると、未読数が増えないことがあった（desktop・mobile とも再現）。
+  WebSocket の記録では、Realtime（`notification_*`）の購読完了が新着の送信より後になっていた。
+- **原因**: 以前は未読数をブラウザから取得していたため、表示までに数百msかかり、その間に Realtime の購読が完了していた。
+  サーバーから流し込むと未読数は最初から表示されるため、テストが購読の完了より先に新着を送ってしまう。
+  アプリとしても、ページを開いてから購読が完了するまで（約1秒）に届いた新着は、次の新着・再読み込みまで未読数に反映されない
+  （影響が小さく、ブラウザからの取り直しを戻すと表示速度の改善が失われるため、アプリはこのままとした）。
+- **判断基準への反映**:
+  - 新着のリアルタイム反映を確かめるテストは、送信の前に `testing/e2e/support/realtime.ts` の `watchRealtime(page)` →
+    `waitForSubscribed("<チャンネル名の接頭辞>")` で購読の完了を待つ（`watchRealtime` はページを開く前に呼ぶ）。
+  - 「画面に値が出た」ことを、裏側の非同期処理（Realtime・後追いの取得）の完了の合図に使わない。
+
+
+### KJ-2026-0930-04 ビューに列を足すと、そのビューを戻り値にしている RPC（RETURNS SETOF ビュー）が実行時エラーになる
+
+- **該当シナリオ**: 生徒のモニター画面「受講生サマリー」。モニターロールの生徒（Demo01）で、単語ドリル・スプリント履歴には受講生が出るのに、
+  サマリーだけが常に0件（「該当する受講生が見つかりません」）になった
+- **事象**: `get_monitor_user_list` が `structure of query does not match function result type`（返す列20・期待21）で失敗していた。
+  サーバーアクションは失敗時に空配列を返すため、画面はエラーではなく「0件」として表示された。
+- **原因**: アドミン用に `private.vw_user_list` の末尾へ `contract_name` を追加した。`get_monitor_user_list` は
+  `RETURNS SETOF private.vw_user_list` で、SELECT で列を1つずつ並べていたため、ビューの列が増えた時点で列数が合わなくなった。
+  CREATE OR REPLACE VIEW はエラーにならず、関数も再作成されないため、リリース時には気づけない。
+- **判断基準への反映**:
+  - ビューの列を増減したら、`grep -rn "SETOF <スキーマ>.<ビュー名>" supabase/DDL` で戻り値に使っている関数を探し、
+    実際に呼び出して確認する。新しく作る RPC は `RETURNS TABLE (...)` で列を明示し、他画面用のビューの行型に依存させない。
+  - 一覧が0件の不具合は、まず RPC を実際のロールの JWT（クレーム）で直接呼び、エラーが空配列に化けていないかを確かめる。
+
+
+### KJ-2026-1001-01 固定アカウントが使い捨ての顧客に所属していると、一括削除が安全装置で止まる（環境ごとに所属が食い違っていた）
+
+- **該当シナリオ**: `testing/features/fixtures/purge-disposable-qa-data.sql`（dev, 2026-10-01。使い捨てユーザー49名・顧客8件・セッション197件を削除）
+- **事象**: dev の棚卸しで、固定アカウント `qa-admin` が使い捨ての顧客「【QAテスト】ライブセッション検証」に所属していた。
+  このまま一括削除を実行すると、「対象顧客に対象外ユーザーが所属」の安全装置で全体が中止される
+  （所属を無視して顧客を削除できたとしても、固定アカウントの所属先が消える）。staging の `qa-admin` は `FIXTURES.md` のとおり所属なし（`client_id` NULL）だった。
+- **原因**: `qa-admin` は、固定アカウントの規則を作る前のライブセッション検証（初期の `student-1`〜`5` / `coach-a`,`b`）で作られ、
+  そのときの使い捨ての顧客に所属したまま固定アカウントへ転用されていた。staging は後から作ったため、dev とだけ所属が食い違った。
+- **対処**: dev の `qa-admin` の `client_id` を NULL にして staging・`FIXTURES.md` に揃えてから、dry-run（末尾を RAISE EXCEPTION）→本実行の順に削除した。
+- **判断基準への反映**:
+  - 一括削除の前に `inventory-qa-data.ts` で、`qa-` で始まる固定アカウントの所属がすべて `【QA固定】`（`qa-admin` は所属なし）であることを確かめる。
+  - 古い使い捨てアカウントを固定アカウントへ転用しない。固定アカウントは `seed-fixed-accounts.ts` で作り、所属は `【QA固定】` の顧客にする。
+
+### KJ-2026-1003-01 「出ていれば同意する」補助関数は、必ず出るはずのモーダルの確認には使えない（描画前に「出ていない」と判定する）
+
+- **該当シナリオ**: E2E ジャーニー `e2e/tests/journeys/new-customer-first-day.spec.ts`（受注〜生徒の初日、dev, 2026-10-03）
+- **事象**: 招待から本登録した直後の生徒で `agreeToPendingTerms`（`support/studentApp.ts`）が false を返した。スクリーンショットでは規約同意のモーダルが出ていた。
+- **原因**: `agreeToPendingTerms` は通信が落ち着いた時点で表示の有無を1回だけ判定する（固定アカウントのログイン準備用で、出ないことも正常）。
+  本登録直後はホームへの遷移とモーダルの描画が通信の落ち着きより遅れることがあり、描画前に判定していた。
+- **判断基準への反映**:
+  - 「出ること」自体が確認対象のモーダルは、先に `expect(dialog).toBeVisible()` で表示を待ってから操作する。「出ていれば」型の補助関数で代用しない。
+  - 同意した後は、モーダルが閉じる（`toHaveCount(0)`）まで待ってから次の画面へ移る。同意の保存の途中で移動すると、移動先でもモーダルが残り、画面の要素が隠れて（aria-hidden）取得できない（全体実行のときだけ失敗した）。
+  - admin の検索式セレクト（`components/common/SearchableSelect.tsx`）は、契約・一括登録のダイアログでラベルと関連付いておらず名前で取得できない
+    （`getByRole("combobox", { name })` が見つからずテストの制限時間まで待つ）。ダイアログ内の順番（`first()` 等）で取得する。
+
+### KJ-2026-1003-02 担当枠（com_m_lesson_schedule）を直接作ると担当関係も作られ、後始末で消さないと生徒を削除できない
+
+- **該当シナリオ**: E2E `e2e/tests/matching/coach-matching-contracts.spec.ts`（dev, 2026-10-03。現在の契約をマッチング済みにするため、固定コーチ qa-coach-us-01 との担当枠を直接作成）
+- **事象**: テストは成功したが、後始末の後に使い捨ての生徒と顧客が残った。生徒の削除が `com_m_coach_student_relationship_student_id_fkey` で失敗していた（後始末はエラーを確認していなかった）。
+- **原因**: 担当枠の作成時にトリガーで担当関係（`com_m_coach_student_relationship`）が作られる。チケットの削除で担当枠は連鎖削除されるが、担当関係は残る。
+  固定コーチとの担当関係が残ると、「担当生徒なし」が前提の qa-coach-us-01 の判定（担当外コーチとしての権限拒否）も崩れる。
+- **判断基準への反映**:
+  - 担当枠・マッチングを作るテストの後始末では、担当関係を生徒ID（または使い捨てのコーチID）で削除してから生徒を消す（`cleanupAuthFixture` は対応済み）。
+  - テストの後に `authFixtures.leftovers.ts` で残骸が0件であることを確かめる。後始末の削除はエラーを返しても止まらないため、残骸の確認で気づく。
+
+### KJ-2026-1003-03 ステージング（Vercel）で初めて流すと、dev では出なかったテスト側の前提の違いが表に出る
+
+- **該当シナリオ**: E2E 一式をステージングで実行（`e2e:staging`、2026-10-03。初回は 109件成功・8件失敗）
+- **事象と原因**:
+  - アドミンの「新規登録」等を押してもダイアログが開かない: 本番ビルドはサーバーで描いた画面が先に出るため、部品が動き出す前（ハイドレーション前）に押した操作が無視された。
+    ログイン直後に別の画面を開くと、遅れて届いたダッシュボードへの移動に上書きされることもあった。
+  - qa-admin で顧客管理を開けない: ステージングの qa-admin に `admin` ロールが無かった（`seed-fixed-accounts.ts` がロールを付けていなかった。dev は手作業で付与済み）。
+  - ナビのチャットタブが見つからない: 未読があるとリンク名が「4 チャット」と件数が先に付き、「チャット」で始まる指定に一致しなかった（dev の生徒01は未読0だった）。
+  - 同じ文面が2か所に一致: PCではチャットの一覧のプレビューとタイムラインの両方に最新の発言が出る。
+  - 共通公開の単語帳が無い: 同じ教材でも環境によって公開範囲が違う（Pharmaceuticals は dev で共通、ステージングで限定）。
+  - チャットの既読・未読バッジのリアルタイム反映が初回だけ失敗し、再実行では成功した（デプロイ直後の初回アクセスの遅さと考えられる）。
+- **判断基準への反映**:
+  - アドミンでダイアログを開く操作は `openDialogBy`（`support/adminApp.ts`）で、開いたことを確かめて押し直す。ログイン後はダッシュボードの表示まで待つ（`openAdminContext` 対応済み）。
+  - 固定アカウントのロールは投入スクリプトで付ける（手作業で付けると環境ごとに食い違う）。
+  - ナビのタブは `navTab`（先頭の未読件数を読み飛ばす）で取得する。一覧とタイムラインの両方に出る文面は、表示する区画（`section` 等）で絞ってから確かめる。
+  - 教材は公開範囲を決め打ちせず、`prepareWordContent`（`support/authFixtures.ts`）のように使い捨ての顧客に公開してから使う。
+  - ステージングでの失敗は、まず `--last-failed` で再実行し、毎回落ちるもの（前提の違い）と初回だけのもの（デプロイ直後の遅さ）を分ける。
+
+### KJ-2026-1003-04 発話（音声認識）は E2E では実マイクを使えない。テスト用の認識方式に切り替えて流れを通す
+
+- **該当シナリオ**: E2E `e2e/tests/training/speaking-flow.spec.ts`（dev, 2026-10-03。単語帳・スプリントの発話）
+- **事象**: ヘッドレスのブラウザでは Web Speech API の音声認識が使えず（マイク・Google の認識サービスが無い）、発話の流れ（チャイム → 認識 → 評価）を一度も自動で通していなかった。
+  そのため、発話を始めた瞬間に必ず落ちる不具合（初期化前の変数参照）を実機確認まで見つけられなかった。
+- **対応**:
+  - アプリの認識方式を差し替え可能にし（`packages/lib/audio/core/recognizer/`）、本番以外のビルドではテストが `window.__gabbyFakeSpeech` を設定すると fake に切り替わるようにした。
+    fake は参照文（または指定の文字起こし）を返す。`addInitScript` で設定するため、起動中の dev サーバーをそのまま使える（環境変数で切り替える方式だと dev サーバーの再起動が要る）。
+  - ステージング（本番ビルド）では fake に切り替わらないため、発話のテストは dev だけで実行する（`USES_LOCAL_SERVER` でスキップ）。
+  - スプリントは設定画面でマイクの許可確認（getUserMedia）を通すため、偽のマイク（`--use-fake-device-for-media-stream`）と `permissions: ["microphone"]` を使う。
+    ブラウザの起動設定（`launchOptions`）は describe の中では指定できず、ファイルの先頭で指定する。
+- **判断基準への反映**:
+  - 発話の流れを変えたら `speaking-flow.spec.ts` を流してから実機確認に回す（認識精度・実際の音声の聞こえ方は実機で確認する）。
+  - 単語帳の「Practice」ボタンは表示文字が画面幅で隠れるため、`aria-label`（「発話練習」「発話を止める」）で取得する。

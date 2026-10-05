@@ -28,15 +28,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { SprintTTSDialog } from './SprintTTSDialog';
+import { SprintLevelMoveDialog } from './SprintLevelMoveDialog';
 
 interface SprintQuestionListProps {
   questions: SprintQuestion[];
   type: SprintQuestionType;
   onUpdate: () => void;
   contentId: string;
+  /** レベル概念を持つ教材か（false の教材はレベル移動を出さない） */
+  hasLevel: boolean;
 }
 
-export function SprintQuestionList({ questions, type, onUpdate, contentId }: SprintQuestionListProps) {
+export function SprintQuestionList({ questions, type, onUpdate, contentId, hasLevel }: SprintQuestionListProps) {
   const t = useTranslations('contents.editor.sprint.questionList');
   const { showToast } = useToast();
   const { play, isPlaying } = usePlayAudioSpeech();
@@ -92,8 +95,8 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
             className={cn(
               "h-6 w-6 rounded-md transition-colors",
               isPlaying === `${q.question_id}-${section}` 
-                ? "text-indigo-600 bg-indigo-50" 
-                : "text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                ? "text-brand bg-brand-50" 
+                : "text-slate-400 hover:text-brand hover:bg-brand-50"
             )} 
             onClick={() => play(audioPath, `${q.question_id}-${section}`)}
           >
@@ -110,7 +113,7 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
         </Badge>
         
         <SprintTTSDialog question={q} section={section} onUpdate={onUpdate}>
-          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"><Settings2 size={12} /></Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-brand hover:bg-brand-50"><Settings2 size={12} /></Button>
         </SprintTTSDialog>
       </div>
     );
@@ -134,6 +137,17 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                     <div className="flex items-center justify-between mb-4">
                       <Badge className="bg-slate-900 text-white font-mono rounded-lg h-6 px-2.5">GROUP: {group.groupId.slice(0,8)}</Badge>
                       
+                      <div className="flex items-center gap-1">
+                      {/* グループ単位のレベル移動 */}
+                      {hasLevel && (
+                        <SprintLevelMoveDialog
+                          contentId={contentId}
+                          type={type}
+                          currentLevel={group.items[0].difficulty_level}
+                          questionIds={group.items.map((q) => q.question_id)}
+                          onSuccess={onUpdate}
+                        />
+                      )}
                       {/* このグループに問題を追加するボタン */}
                       <SprintQuestionFormDialog 
                         mode="create" 
@@ -145,6 +159,7 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                         onSuccess={onUpdate} 
                         contentId={contentId}
                       />
+                      </div>
                     </div>
                     {isMastery && group.items[0]?.statement_en && (
                       <div className="border-l-4 border-slate-300 pl-4 py-1">
@@ -158,7 +173,7 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                   </div>
                   <div className="divide-y divide-slate-100">
                     {group.items.map((q) => (
-                      <div key={q.question_id} className="p-6 flex gap-5 hover:bg-indigo-50/20 transition-colors">
+                      <div key={q.question_id} className="p-6 flex gap-5 hover:bg-brand-50/20 transition-colors">
                         {/* 左：SEQ */}
                         <div className="flex flex-col items-center shrink-0">
                           <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-400">
@@ -179,10 +194,10 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                             </div>
                           )}
 
-                          <div className="border-l-4 border-indigo-500 pl-4 py-1">
+                          <div className="border-l-4 border-brand-500 pl-4 py-1">
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{questionLabel}</span>
+                                <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest">{questionLabel}</span>
                               </div>
                               {renderAudioControls(q, 'question')}
                             </div>
@@ -209,10 +224,10 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                 /* Speed：現状維持（一問一答の個別カード） */
                 <div className="grid gap-4">
                   {group.items.map((q) => (
-                    <div key={q.question_id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden group hover:border-indigo-300 transition-all duration-300">
+                    <div key={q.question_id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden group hover:border-brand-300 transition-all duration-300">
                       <div className="p-5 flex gap-5">
                         <div className="flex flex-col items-center shrink-0">
-                          <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                          <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-400 group-hover:bg-brand-50 group-hover:text-brand transition-colors">
                             {q.seq_no}
                           </div>
                         </div>
@@ -226,10 +241,10 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                               <p className="text-sm font-bold text-slate-600">{q.statement_en}</p>
                             </div>
                           )}
-                          <div className="border-l-4 border-indigo-500 pl-4 py-1">
+                          <div className="border-l-4 border-brand-500 pl-4 py-1">
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{questionLabel}</span>
+                                <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest">{questionLabel}</span>
                               </div>
                               {renderAudioControls(q, 'question')}
                             </div>
@@ -256,6 +271,15 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId }: Spr
                         </div>
                         <div className="flex flex-col gap-2 shrink-0">
                           <SprintQuestionActionButtons q={q} type={type} onUpdate={onUpdate} handleDelete={handleDelete} contentId={contentId} />
+                          {hasLevel && (
+                            <SprintLevelMoveDialog
+                              contentId={contentId}
+                              type={type}
+                              currentLevel={q.difficulty_level}
+                              questionIds={[q.question_id]}
+                              onSuccess={onUpdate}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>

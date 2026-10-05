@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { Volume2, RefreshCw } from 'lucide-react';
-
-type AudioResumeStatus = 'ok' | 'needsResume' | 'failed';
+import type { AudioResumeStatus } from '@gabby/lib/audio/core/audioRuntime';
 
 interface AudioResumeBannerProps {
   status: AudioResumeStatus;
@@ -14,12 +13,34 @@ interface AudioResumeBannerProps {
  * iOSでバックグラウンド放置後にAudioContextが停止したままになった場合の通知UI。
  * - 'needsResume': 「タップして音声を再開」の軽い導線。タップ自体がユーザー操作の
  *   同期コールスタックとなり、AudioContextの再生成・再開を確実に行えるようにする。
- * - 'failed': 上記の再開操作を試しても回復しなかった状態。iOS側でページのJavaScript実行状態
- *   ごと破棄されている可能性が高く、このセッション内での復旧は見込めないため、
+ * - 'failed': 上記の再開操作を試しても回復しなかった状態。このページの音声の状態が壊れているため、
  *   はっきりと「再読み込みしてください」と案内する。
+ * - 'failedAgain': 再読み込みした同じ画面でもまた回復しなかった状態。Safari のタブ側の音声処理が
+ *   壊れていると再読み込みでは直らないため、タブを閉じて開き直すよう案内する。
  */
 export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, onResume }) => {
   if (status === 'ok') return null;
+
+  if (status === 'failedAgain') {
+    return (
+      <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center z-[130] p-6 animate-in fade-in duration-300">
+        <div role="alertdialog" aria-labelledby="audio-failed-again-title" className="bg-white rounded-[28px] shadow-2xl p-6 max-w-xs w-full text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-500">
+            <Volume2 size={22} strokeWidth={2.5} />
+          </div>
+          <div className="space-y-2">
+            <h3 id="audio-failed-again-title" className="text-sm font-bold text-slate-800 tracking-tight">音声を復旧できませんでした</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">再読み込みでは直らない状態です。お手数ですが、ブラウザのタブを閉じてから、もう一度開いてください。</p>
+            <ol className="text-xs text-slate-600 leading-relaxed text-left list-decimal pl-5 space-y-0.5">
+              <li>タブ一覧を開き、このタブを閉じる</li>
+              <li>新しいタブで Gabby Blueprint を開く</li>
+              <li>改善しない場合は、ブラウザのアプリを終了してから開き直す</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (status === 'failed') {
     return (
@@ -35,7 +56,7 @@ export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, on
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+            className="w-full h-11 rounded-xl bg-brand hover:bg-brand-strong text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
           >
             <RefreshCw size={14} strokeWidth={2.5} />
             <span>再読み込み</span>

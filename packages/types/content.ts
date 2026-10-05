@@ -159,17 +159,22 @@ export interface ContentItem extends Omit<ContentRecord, 'metadata'> {
   assignment_id?: string;
 }
 
-// お気に入りリスト用も共通の型を使用（一貫性を保つため）
-export type FavoriteContentItem = ContentItem;
+/**
+ * ライブラリ画面のタブの並び順（主に使うトレーニングを先に並べる）。
+ * 種別を追加したら、ここにも加える（加え忘れた種別は末尾に並ぶ）
+ */
+const LIBRARY_TAB_ORDER: ContentType[] = [0, 2, 3, 1]; // 単語帳・スプリント・ダイアログ・ビデオ
 
 /**
- * ライブラリ画面のタブ定義を CONTENT_TYPES から動的に生成
- * Object.values を使うことで、定義が増えても自動で反映
+ * ライブラリ画面のタブ定義を CONTENT_TYPES から生成（並びは LIBRARY_TAB_ORDER）
  */
 export const LIBRALY_TABS = [
   { id: 'All', label: 'すべて' },
-  ...Object.values(CONTENT_TYPES).map(type => ({
-    id: String(type.value), // Tabsのvalueはstringが扱いやすいため
-    label: type.label
-  }))
+  ...Object.values(CONTENT_TYPES)
+    .map((type) => ({ type, order: LIBRARY_TAB_ORDER.indexOf(type.value) }))
+    .sort((a, b) => (a.order < 0 ? Infinity : a.order) - (b.order < 0 ? Infinity : b.order))
+    .map(({ type }) => ({
+      id: String(type.value), // Tabsのvalueはstringが扱いやすいため
+      label: type.label
+    }))
 ];

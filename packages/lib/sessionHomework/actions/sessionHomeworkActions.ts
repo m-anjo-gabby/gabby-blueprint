@@ -17,6 +17,7 @@ import {
   SessionHomeworkEntry,
   UpdateHomeworkChecklistItemResult,
 } from '@gabby/types/sessionHomework';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -52,7 +53,7 @@ export async function getSessionHomeworkCore(sessionId: string): Promise<GetSess
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -87,7 +88,7 @@ export async function getRecentSessionHomeworkCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -134,7 +135,7 @@ export async function createSessionHomeworkCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const trimmedText = homeworkText.trim();
@@ -254,7 +255,7 @@ export async function addHomeworkCommentCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const trimmed = commentText.trim();
@@ -337,7 +338,7 @@ export async function getHomeworkChecklistCore(sessionId: string): Promise<GetHo
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: homework, error: homeworkError } = await supabase
@@ -387,7 +388,7 @@ export async function updateHomeworkChecklistItemStatusCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: item, error } = await supabase

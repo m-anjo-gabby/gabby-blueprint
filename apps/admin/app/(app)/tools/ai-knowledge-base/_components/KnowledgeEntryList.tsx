@@ -91,10 +91,10 @@ export function KnowledgeEntryList({ entries, pageCount, totalCount }: Knowledge
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-[240px]">
           <div className="relative flex-1 max-w-sm group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={14} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-500 transition-colors" size={14} />
             <Input
               placeholder={t('searchPlaceholder')}
-              className="pl-9 pr-8 h-9 bg-white border-slate-200 text-sm rounded-xl focus-visible:ring-indigo-500"
+              className="pl-9 pr-8 h-9 bg-white border-slate-200 text-sm rounded-xl focus-visible:ring-brand-500"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearchTrigger(searchValue)}
@@ -141,7 +141,7 @@ export function KnowledgeEntryList({ entries, pageCount, totalCount }: Knowledge
             return (
               <div
                 key={entry.knowledge_id}
-                className="group bg-white rounded-2xl border border-slate-200 p-5 flex items-start gap-4 hover:border-indigo-200 transition-colors"
+                className="group bg-white rounded-2xl border border-slate-200 p-5 flex items-start gap-4 hover:border-brand-200 transition-colors"
               >
                 <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${typeOption?.badgeClassName ?? 'bg-slate-100 text-slate-500'}`}>
                   <Icon size={16} />

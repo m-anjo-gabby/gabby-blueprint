@@ -88,12 +88,13 @@ function renderWordWithStress(
   vowelImageUrl: string
 ) {
   if (!syllables) {
-    return <span className="lowercase">{wordEn}</span>;
+    return <span>{wordEn}</span>;
   }
 
   const parts = syllables.split('-');
   return (
-    <span className="lowercase tracking-wide">
+    // 略語（CEO）・曜日（Friday）等があるため、小文字化せず登録どおりの表記で表示する
+    <span className="tracking-wide">
       {parts.map((part, index) => {
         const isStressed = index + 1 === primaryStressSyllable;
         if (isStressed && stressVowelSpelling) {
@@ -181,7 +182,8 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
 
   const openTooltip = React.useCallback((word: string, rect: DOMRect, wordKey: string) => {
     const cleaned = word.replace(/^[.,!?;:"'()]+|[.,!?;:"'()]+$/g, '').trim();
-    if (!cleaned || cleaned.length <= 1) {
+    // 1文字の単語（a, I）も検索対象。英字を含まないもの（数字のみ等）は対象外
+    if (!/[A-Za-z]/.test(cleaned)) {
       setTooltip(null);
       return;
     }
@@ -383,14 +385,14 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
           className={cn(
-            "sm:max-w-[420px] flex flex-col overflow-hidden rounded-2xl border border-indigo-600/20 dark:border-indigo-950/50 shadow-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 p-0 gap-0 [&>button]:text-indigo-100 hover:[&>button]:text-white [&>button]:focus:ring-indigo-500 [&>button]:focus:ring-offset-indigo-600",
+            "sm:max-w-[420px] flex flex-col overflow-hidden rounded-2xl border border-brand/20 dark:border-brand-deep/50 shadow-2xl bg-gradient-to-r from-brand to-brand-strong p-0 gap-0 [&>button]:text-brand-100 hover:[&>button]:text-white [&>button]:focus:ring-brand-500 [&>button]:focus:ring-offset-brand",
             activeResult ? "h-[520px] sm:h-[70vh] max-h-[90vh]" : "h-auto"
           )}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <DialogHeader className="bg-transparent px-6 pt-5 pb-4 text-white border-none shrink-0 space-y-0">
-            <DialogTitle className="flex items-center gap-2 text-sm font-bold tracking-wider text-indigo-50/90 uppercase">
-              <BookA className="h-5 w-5 text-indigo-100 opacity-95 shrink-0" />
+            <DialogTitle className="flex items-center gap-2 text-sm font-bold tracking-wider text-brand-50/90 uppercase">
+              <BookA className="h-5 w-5 text-brand-100 opacity-95 shrink-0" />
               <span className="tracking-widest font-black text-white">Color Vowel Dictionary</span>
             </DialogTitle>
           </DialogHeader>
@@ -518,6 +520,12 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                         {activeResult.wordJa && (
                           <p className="text-lg font-bold text-foreground tracking-wide leading-snug pt-3 pl-0.5">
                             {activeResult.wordJa}
+                          </p>
+                        )}
+
+                        {activeResult.lemma && (
+                          <p className="text-xs font-bold text-muted-foreground pt-1.5 pl-0.5">
+                            原形: <span className="font-mono text-foreground/80">{activeResult.lemma}</span>
                           </p>
                         )}
                       </div>

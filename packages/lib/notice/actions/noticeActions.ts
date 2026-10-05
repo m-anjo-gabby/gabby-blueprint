@@ -4,6 +4,7 @@ import { createServerClient } from "@gabby/lib/supabase/server";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { NoticeItem } from "@gabby/types/notice";
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -21,7 +22,7 @@ export async function getNoticesAction(): Promise<{
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, data: [], error: 'Unauthorized' };
 
     const { data, error } = await supabase
@@ -59,7 +60,7 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return 0;
 
     // 公開中お知らせの notice_id 一覧
@@ -99,7 +100,7 @@ export async function markNoticeAsReadAction(noticeId: string): Promise<{
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const { error } = await supabase
@@ -139,7 +140,7 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const now = new Date().toISOString();

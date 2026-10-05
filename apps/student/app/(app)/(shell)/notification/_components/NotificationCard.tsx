@@ -1,0 +1,77 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { Sparkles, Flame, MessageCircle, Bell } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { formatZonedDateJapanese } from '@gabby/lib/date/date';
+import { NotificationItem, NOTIFICATION_TYPES, NOTIFICATION_MESSAGE_BUILDERS, NotificationType } from '@gabby/types/notification';
+
+const NOTIFICATION_ICONS = { Sparkles, Flame, MessageCircle } as const;
+
+interface NotificationCardProps {
+  notification: NotificationItem;
+  onOpen: (notification: NotificationItem) => void;
+}
+
+export function NotificationCard({ notification, onOpen }: NotificationCardProps) {
+  const timezone = useTimezone();
+
+  const meta = NOTIFICATION_TYPES[notification.notification_type as NotificationType];
+  const Icon = NOTIFICATION_ICONS[meta?.icon as keyof typeof NOTIFICATION_ICONS] ?? Bell;
+  const text = NOTIFICATION_MESSAGE_BUILDERS[notification.notification_type as NotificationType](
+    notification.payload
+  );
+
+  return (
+    <motion.article
+      className={cn(
+        'bg-white rounded-card border shadow-sm overflow-hidden transition-all',
+        !notification.is_read
+          ? 'border-brand-200 shadow-brand-100/60'
+          : 'border-line/70'
+      )}
+    >
+      <button
+        onClick={() => onOpen(notification)}
+        className="w-full text-left flex items-start gap-3 p-5 hover:bg-slate-50/60 transition-colors"
+      >
+        {/* 未読インジケーター */}
+        <div className="mt-1 shrink-0">
+          {!notification.is_read ? (
+            <span className="inline-block w-2 h-2 rounded-full bg-brand-500" />
+          ) : (
+            <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />
+          )}
+        </div>
+
+        {/* アイコンアバター */}
+        <div
+          className={cn(
+            'flex items-center justify-center w-9 h-9 rounded-xl border shrink-0',
+            meta?.badgeClass ?? 'bg-slate-50 text-ink-muted border-line/70'
+          )}
+        >
+          <Icon size={16} />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className={cn(
+            'text-sm leading-snug truncate',
+            notification.is_read
+              ? 'font-bold text-ink-soft'
+              : 'font-bold text-ink'
+          )}>
+            {text.title}
+          </p>
+          <p className="text-xs text-ink-muted mt-1 leading-relaxed line-clamp-2">
+            {text.body}
+          </p>
+          <p className="text-[11px] text-ink-subtle mt-2 font-bold">
+            {formatZonedDateJapanese(notification.occurred_at, timezone)}
+          </p>
+        </div>
+      </button>
+    </motion.article>
+  );
+}

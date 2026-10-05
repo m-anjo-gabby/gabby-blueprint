@@ -273,7 +273,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild onClick={() => { setIsConfirming(false); setServerError(null); form.reset(getInitialValues(initialData)); }}>
         {mode === 'create' ? (
-          <Button className="gap-2 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none">
+          <Button className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none">
             <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
@@ -295,9 +295,9 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
             {isConfirming ? (
               <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-indigo-400" /> {t('createTitle')}</>
+              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
             ) : (
-              <><Edit size={18} className="text-indigo-400" /> {t('editTitle')}</>
+              <><Edit size={18} className="text-brand-400" /> {t('editTitle')}</>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -386,12 +386,12 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
               {/* --- ダイアログプラクティス選択時のみ表示する特化セクション --- */}
               {currentContentType === '3' && (
-                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80 space-y-4">
+                <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-100/80 space-y-4">
                   <FormField control={form.control} name="dialogue_category" render={({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">{t('dialogueCategoryLabel')}</FormLabel>
+                      <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">{t('dialogueCategoryLabel')}</FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-medium">
+                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-medium">
                           {field.value && field.value !== 'none'
                             ? DIALOGUE_CATEGORIES[Number(field.value) as DialogueCategory]?.label
                             : t('dialogueCategoryUnselected')}
@@ -399,7 +399,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                       ) : (
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500">
+                            <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-brand-500 focus:ring-brand-500">
                               <SelectValue placeholder={t('dialogueCategoryPlaceholder')} />
                             </SelectTrigger>
                           </FormControl>
@@ -422,19 +422,19 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
               {/* --- スプリント選択時のみ表示する特化セクション --- */}
               {currentContentType === '2' && (
-                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80 space-y-4">
+                <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-100/80 space-y-4">
                   {/* スプリント種別 */}
                   <FormField control={form.control} name="sprint_type" render={({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">{t('sprintTypeLabel')}</FormLabel>
+                      <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">{t('sprintTypeLabel')}</FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-medium">
+                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-medium">
                           {field.value && field.value !== 'none' ? SPRINT_TYPES[field.value as keyof typeof SPRINT_TYPES]?.label : t('sprintTypeUnselected')}
                         </div>
                       ) : (
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500">
+                            <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-brand-500 focus:ring-brand-500">
                               <SelectValue placeholder={t('sprintTypePlaceholder')} />
                             </SelectTrigger>
                           </FormControl>
@@ -452,14 +452,14 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
                   {/* コーパススプリント ('1') 選択時のみ、追加の管理項目群を動的に展開 */}
                   {currentSprintType === '1' && (
-                    <div className="pt-2 border-t border-indigo-100/50 space-y-4 animate-in fade-in duration-200">
+                    <div className="pt-2 border-t border-brand-100/50 space-y-4 animate-in fade-in duration-200">
                       
                       {/* テーマ入力 */}
                       <FormField control={form.control} name="sprint_theme" render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">{t('sprintThemeLabel')}</FormLabel>
+                          <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">{t('sprintThemeLabel')}</FormLabel>
                           {isConfirming ? (
-                            <div className="p-3 bg-white rounded-xl text-sm border-2 border-indigo-100 text-slate-700 font-bold whitespace-pre-wrap">{field.value || '-'}</div>
+                            <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-bold whitespace-pre-wrap">{field.value || '-'}</div>
                           ) : (
                             <FormControl>
                               <Textarea {...field} placeholder={t('sprintThemePlaceholder')} className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]" />
@@ -471,9 +471,9 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
                       {/* レベル有無の制御 (Switch) */}
                       <FormField control={form.control} name="sprint_has_level" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-xl border border-indigo-100 bg-white p-3 shadow-sm">
+                        <FormItem className="flex flex-row items-center justify-between rounded-xl border border-brand-100 bg-white p-3 shadow-sm">
                           <div className="space-y-0.5">
-                            <FormLabel className="text-xs font-bold text-indigo-600 uppercase tracking-wider">{t('sprintHasLevelLabel')}</FormLabel>
+                            <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">{t('sprintHasLevelLabel')}</FormLabel>
                             <FormDescription className="text-[11px] text-slate-400">
                               {t('sprintHasLevelDescription')}
                             </FormDescription>
@@ -490,8 +490,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
                       {/* 対応問題種別 (Checkboxグループ) */}
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-indigo-600 uppercase tracking-wider block">{t('sprintSupportLabel')}</label>
-                        <div className="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border border-indigo-100 shadow-sm">
+                        <label className="text-xs font-bold text-brand uppercase tracking-wider block">{t('sprintSupportLabel')}</label>
+                        <div className="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border border-brand-100 shadow-sm">
                           
                           {/* Speed */}
                           <FormField control={form.control} name="sprint_support_speed" render={({ field }) => (

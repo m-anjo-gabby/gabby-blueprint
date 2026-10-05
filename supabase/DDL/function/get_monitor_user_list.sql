@@ -18,16 +18,45 @@
 -- 結果に含めていたため、招待リンクが失効済み（expires_at < NOW()）で二度と本登録されない
 -- 招待までもが、過去・当月・未来のどの対象期間を見ても一覧に出続けてしまっていた。
 
--- 🚨 シグネチャ変更のため、旧シグネチャを明示的に削除してから再作成する
+--
+-- 【2026-09-30 修正】戻り値を SETOF private.vw_user_list から RETURNS TABLE（列を明示）に変更した。
+-- vw_user_list（アドミンのユーザー管理用ビュー）の末尾に contract_name を追加した際、本関数の
+-- SELECT の列数が合わなくなり、実行時エラー（structure of query does not match function result type）
+-- で受講生サマリーが常に0件になっていた。生徒のモニター画面はアドミン用ビューの列構成に
+-- 依存させず、必要な列を本関数で定義する（アドミン専用の契約名も生徒側へ出さない）。
+
+-- 🚨 シグネチャ・戻り値型の変更のため、旧シグネチャを明示的に削除してから再作成する
 DROP FUNCTION IF EXISTS public.get_monitor_user_list(BOOLEAN);
 DROP FUNCTION IF EXISTS public.get_monitor_user_list(BOOLEAN, DATE, DATE);
+DROP FUNCTION IF EXISTS public.get_monitor_user_list(DATE, DATE, BOOLEAN);
 
 CREATE OR REPLACE FUNCTION public.get_monitor_user_list(
     _start_date DATE,
     _end_date DATE,
     _include_monitor BOOLEAN DEFAULT FALSE
 )
-RETURNS SETOF private.vw_user_list
+RETURNS TABLE (
+    id UUID,
+    user_id BIGINT,
+    user_name TEXT,
+    user_type TEXT,
+    client_id UUID,
+    client_name TEXT,
+    email VARCHAR,
+    last_sign_in_at TIMESTAMPTZ,
+    confirmed_at TIMESTAMPTZ,
+    roles TEXT[],
+    contract_id UUID,
+    license_id UUID,
+    license_status SMALLINT,
+    license_start_date TIMESTAMPTZ,
+    license_end_date TIMESTAMPTZ,
+    plan_name TEXT,
+    mail_sent_at TIMESTAMPTZ,
+    last_mail_error TEXT,
+    license_state TEXT,
+    insert_date TIMESTAMPTZ
+)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -77,12 +106,12 @@ BEGIN
       INNER JOIN auth.users au ON u.id = au.id
       LEFT JOIN public.com_m_client c ON u.client_id = c.client_id
       LEFT JOIN LATERAL (
-        SELECT array_agg(role_id) AS roles
-        FROM public.com_t_user_role
-        WHERE user_id = u.id
+        SELECT array_agg(ur.role_id) AS roles
+        FROM public.com_t_user_role ur
+        WHERE ur.user_id = u.id
       ) r ON true
 
-    ORDER BY insert_date DESC;
+    ORDER BY u.insert_date DESC;
 END;
 $$;
 

@@ -50,7 +50,7 @@ export function LessonSprintHistoryRow({ studentId, record, backHref, backLabel,
         </p>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
-        <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1">
+        <span className="text-[11px] font-black text-brand bg-brand-50 border border-brand-100 rounded-full px-2.5 py-1">
           {record.average_score !== null ? `${record.average_score}/5` : '—'}
         </span>
         <ChevronRight size={14} className="text-slate-300" />

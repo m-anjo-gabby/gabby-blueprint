@@ -1,0 +1,189 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import type { SprintQuestion } from '@gabby/types/sprint';
+import { scrollIntoContainer } from '@/lib/scroll';
+import type { SprintResultScore } from './types';
+
+/**
+ * 進行中の再生アクション種別。'all' 実施中は他の再生操作を無効化し、
+ * 'sequence'/'single' 実施中に別の再生操作が来た場合はトークンを進めて即座に中断・切替する。
+ */
+export type SprintPlaybackMode = 'all' | 'sequence' | 'single' | null;
+
+/** 文ごとの音声ID（共通オーディオフックの再生中IDと突き合わせる） */
+export const sprintAudioId = {
+  statement: (questionId: string) => `${questionId}-st`,
+  question: (questionId: string) => `${questionId}-q`,
+  yes: (questionId: string) => `${questionId}-yes`,
+  no: (questionId: string) => `${questionId}-no`,
+  answer: (questionId: string) => `${questionId}-ans`,
+};
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** 実施時の回答タイプ（YES/NO）に応じた解答文の音声 */
+function getAnswerAudio(q: SprintQuestion, scoreData: SprintResultScore) {
+  const isNo = scoreData.answer_type === '1';
+  const voice = isNo ? q.answer_sentence_no_voice : q.answer_sentence_yes_voice;
+  if (scoreData.question_type !== '0') return { id: sprintAudioId.answer(q.question_id), voice };
+  return { id: isNo ? sprintAudioId.no(q.question_id) : sprintAudioId.yes(q.question_id), voice };
+}
+
+/**
+ * スプリント結果画面の音声再生（個別・問題ごと・全て再生）。
+ * 実施直後の没入画面と、履歴から開くシェル画面で共通に使う。
+ */
+export function useSprintResultPlayback(
+  scoreData: SprintResultScore,
+  questions: SprintQuestion[]
+) {
+  const { play, stop, isPlaying: playingAudioId, unlockAudioContext, resumeStatus } = usePlayAudioSpeech();
+
+  const [focusedQuestionId, setFocusedQuestionId] = useState<string | null>(null);
+  const [playbackMode, setPlaybackMode] = useState<SprintPlaybackMode>(null);
+  const playbackTokenRef = useRef(0);
+  const isMountedRef = useRef(true);
+  const stopAllAudio = useCallback(() => {
+    stop();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }, [stop]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      stopAllAudio();
+    };
+  }, [stopAllAudio]);
+
+  // 全て再生中は、再生中の問題カードを画面中央へスクロールする（スクロール領域だけを動かし、見出し・操作ボタンを見切れさせない）
+  useEffect(() => {
+    if (!focusedQuestionId || playbackMode !== 'all') return;
+    const card = document.getElementById(`card-${focusedQuestionId}`);
+    if (card) scrollIntoContainer(card);
+  }, [focusedQuestionId, playbackMode]);
+
+  /** 1問分（基本文→質問文/指示文→解答文）を順番に再生する。途中で中断された場合（iOS の音声の中断を含む）は false */
+  const playQuestionSequence = useCallback(
+    async (q: SprintQuestion, isCancelled: () => boolean) => {
+      if (scoreData.question_type !== '0' && q.statement_en && q.statement_voice) {
+        if ((await play(q.statement_voice, sprintAudioId.statement(q.question_id), { restart: true })) === 'interrupted') return false;
+        if (isCancelled()) return false;
+        await wait(400);
+      }
+      if (isCancelled()) return false;
+      if (q.question_voice) {
+        if ((await play(q.question_voice, sprintAudioId.question(q.question_id), { restart: true })) === 'interrupted') return false;
+      }
+      if (isCancelled()) return false;
+      await wait(400);
+
+      if (isCancelled()) return false;
+      const answer = getAnswerAudio(q, scoreData);
+      if (answer.voice) {
+        if ((await play(answer.voice, answer.id, { restart: true })) === 'interrupted') return false;
+      }
+      return !isCancelled();
+    },
+    [play, scoreData]
+  );
+
+  /** 文を1つだけ再生する（全て再生中は無効） */
+  const playPhrase = useCallback(
+    async (questionId: string, audioId: string, voice: string | null) => {
+      if (!isMountedRef.current || playbackMode === 'all') return;
+
+      const token = ++playbackTokenRef.current;
+      setPlaybackMode('single');
+      setFocusedQuestionId(questionId);
+
+      if (voice) {
+        await play(voice, audioId, { restart: true });
+      }
+
+      // 再生が終わったら注目も外す（外さないと、問題ごとの再生ボタンが「再生中」のまま残る）
+      if (isMountedRef.current && playbackTokenRef.current === token) {
+        setPlaybackMode(null);
+        setFocusedQuestionId(null);
+      }
+    },
+    [play, playbackMode]
+  );
+
+  /** 1問分を続けて再生する（全て再生中は無効） */
+  const playQuestion = useCallback(
+    async (q: SprintQuestion) => {
+      if (playbackMode === 'all') return;
+
+      const token = ++playbackTokenRef.current;
+      setPlaybackMode('sequence');
+      stopAllAudio();
+      if (!isMountedRef.current) return;
+      setFocusedQuestionId(q.question_id);
+
+      try {
+        await playQuestionSequence(q, () => !isMountedRef.current || playbackTokenRef.current !== token);
+      } catch (e) {
+        console.error('Single sequence play error:', e);
+      } finally {
+        if (isMountedRef.current && playbackTokenRef.current === token) {
+          setFocusedQuestionId(null);
+          setPlaybackMode(null);
+        }
+      }
+    },
+    [playbackMode, stopAllAudio, playQuestionSequence]
+  );
+
+  /** 全問題を順番に再生する。再生中に呼ぶと停止する */
+  const togglePlayAll = useCallback(async () => {
+    if (playbackMode === 'all') {
+      playbackTokenRef.current++;
+      setPlaybackMode(null);
+      stopAllAudio();
+      setFocusedQuestionId(null);
+      return;
+    }
+
+    const token = ++playbackTokenRef.current;
+    setPlaybackMode('all');
+    stopAllAudio();
+    const isCancelled = () => !isMountedRef.current || playbackTokenRef.current !== token;
+
+    try {
+      for (const q of questions) {
+        if (isCancelled()) break;
+        setFocusedQuestionId(q.question_id);
+        if (!(await playQuestionSequence(q, isCancelled))) break;
+        await wait(800);
+      }
+    } finally {
+      if (isMountedRef.current && playbackTokenRef.current === token) {
+        setPlaybackMode(null);
+        setFocusedQuestionId(null);
+      }
+    }
+  }, [playbackMode, questions, stopAllAudio, playQuestionSequence]);
+
+  /** 問題ごとの再生（1問分の連続再生・全て再生）の対象。文を1つだけ再生している間は null */
+  const sequenceQuestionId = playbackMode === 'sequence' || playbackMode === 'all' ? focusedQuestionId : null;
+
+  return {
+    focusedQuestionId,
+    sequenceQuestionId,
+    playbackMode,
+    playingAudioId,
+    playPhrase,
+    playQuestion,
+    togglePlayAll,
+    resumeStatus,
+    unlockAudioContext,
+  };
+}
+
+export type SprintResultPlayback = ReturnType<typeof useSprintResultPlayback>;

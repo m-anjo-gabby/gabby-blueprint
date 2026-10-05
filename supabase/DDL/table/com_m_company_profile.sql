@@ -61,3 +61,36 @@ ALTER TABLE public.com_m_company_profile
 
 COMMENT ON TABLE public.com_m_company_profile IS '会社情報マスタ（コーチ向け月次支払通知書・請求書PDFに使用。運用上は常に1行のみ）';
 COMMENT ON COLUMN public.com_m_company_profile.tax_registration_number IS '税務登録番号（例: カナダGST/HST登録番号）。未登録の場合はNULL（任意項目）';
+
+---------------------------------------------
+-- 追加パッチ: 法人ごとの会社情報（シングルトン運用の廃止） (2026-10-01 追加)
+---------------------------------------------
+-- 【背景】
+-- 生徒向けトレーニングレポート(PDF)は、顧客と契約している日本法人(株式会社ギャビーアカデミー)
+-- 名義で発行する。コーチ向け書面（支払通知書・請求書）はコーチと業務委託契約を結ぶ
+-- バンクーバー法人名義のままのため、1行のみのシングルトン運用をやめ、法人ごとに1行を持つ。
+-- どの書面をどの法人名義で発行するかは、アプリ側の定数(packages/types/companyProfile.ts の
+-- DOCUMENT_ISSUER)で決める（書面ごとに行を持つと、同じ法人の情報が複数行に重複するため）。
+--
+-- company_code: 法人を識別するコード（GVT_CA: バンクーバー法人 / GABBY_JP: 日本法人）。一意。
+-- company_name_ja: 日本語の正式社名（日本法人の書面で英語名と併記する。任意）。
+-- 既存のバンクーバー法人の行（固定ID ...0001）はそのまま GVT_CA とし、日本法人の行は
+-- DML(supabase/DML/com_m_company_profile.sql)で固定ID ...0002 として投入する。
+-- 編集はアドミンの「システム設定 > 会社情報」画面から行う（支払い設定画面から移設）。
+---------------------------------------------
+ALTER TABLE public.com_m_company_profile
+  ADD COLUMN IF NOT EXISTS company_code text,
+  ADD COLUMN IF NOT EXISTS company_name_ja text DEFAULT NULL;
+
+UPDATE public.com_m_company_profile
+SET company_code = 'GVT_CA'
+WHERE company_profile_id = '00000000-0000-0000-0000-000000000001' AND company_code IS NULL;
+
+ALTER TABLE public.com_m_company_profile ALTER COLUMN company_code SET NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_company_profile_code ON public.com_m_company_profile (company_code);
+
+COMMENT ON TABLE public.com_m_company_profile IS '会社情報マスタ（法人ごとに1行。書面の発行元として使用。コーチ向け支払通知書・請求書=GVT_CA、生徒向けトレーニングレポート=GABBY_JP）';
+COMMENT ON COLUMN public.com_m_company_profile.company_code IS '法人コード（GVT_CA: バンクーバー法人 / GABBY_JP: 日本法人）。一意';
+COMMENT ON COLUMN public.com_m_company_profile.company_name IS '会社名（英語。例: Gabby Academy Co., Ltd.）';
+COMMENT ON COLUMN public.com_m_company_profile.company_name_ja IS '会社名（日本語。例: 株式会社ギャビーアカデミー）。日本法人の書面で英語名と併記する。任意';

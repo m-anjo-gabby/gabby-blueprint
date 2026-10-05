@@ -10,6 +10,7 @@ import {
   UpdateMyCoachProfileResult,
   UpdateMyCoachZoomSettingsResult,
 } from '@gabby/types/coachProfile';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -23,7 +24,7 @@ export async function getMyCoachProfileCore(): Promise<GetMyCoachProfileResult> 
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -89,7 +90,7 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (
@@ -151,7 +152,7 @@ export async function updateMyCoachZoomSettingsCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const trimmedUrl = values.zoom_meeting_url?.trim() || null;

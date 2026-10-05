@@ -202,7 +202,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
           <div className="p-8 space-y-8 bg-white flex-1 overflow-y-auto">
             {isLoadingData ? (
               <div className="py-12 flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+                <Loader2 className="h-8 w-8 text-brand-500 animate-spin" />
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading phrases...</p>
               </div>
             ) : status === 'idle' ? (
@@ -222,7 +222,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
                   </Tabs>
                   <div className="flex justify-end pt-1">
                      <span className="text-[10px] font-black text-slate-400 italic">
-                      Selected: <span className="text-indigo-600 text-sm">{filteredPhrases.length}</span> / {rawPhrases.length} phrases
+                      Selected: <span className="text-brand text-sm">{filteredPhrases.length}</span> / {rawPhrases.length} phrases
                     </span>
                   </div>
                 </div>
@@ -236,7 +236,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
                       size="sm" 
                       onClick={handlePreview}
                       disabled={isSpeaking}
-                      className="h-8 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 gap-1.5 px-3 rounded-full border border-indigo-100"
+                      className="h-8 text-[10px] font-bold text-brand hover:bg-brand-50 gap-1.5 px-3 rounded-full border border-brand-100"
                     >
                       {isSpeaking ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
                       TEST PREVIEW
@@ -265,7 +265,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-[10px] font-black text-slate-400 uppercase">Speed</span>
-                        <span className="text-[11px] font-black text-indigo-600 font-mono tracking-tighter">{params.rate.toFixed(2)}x</span>
+                        <span className="text-[11px] font-black text-brand font-mono tracking-tighter">{params.rate.toFixed(2)}x</span>
                       </div>
                       <Slider value={[params.rate]} min={0.5} max={1.5} step={0.05} onValueChange={([v]) => setParams(p => ({...p, rate: v}))} />
                     </div>
@@ -273,7 +273,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-[10px] font-black text-slate-400 uppercase">Pitch</span>
-                        <span className="text-[11px] font-black text-indigo-600 font-mono tracking-tighter">
+                        <span className="text-[11px] font-black text-brand font-mono tracking-tighter">
                           {params.pitch > 0 ? `+${params.pitch}` : params.pitch}%
                         </span>
                       </div>
@@ -290,7 +290,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
             ) : (
               /* 進捗表示エリア */
               <div className="py-10 flex flex-col items-center justify-center space-y-6">
-                {status === 'running' && <Loader2 className="h-14 w-14 text-indigo-500 animate-spin" strokeWidth={1.5} />}
+                {status === 'running' && <Loader2 className="h-14 w-14 text-brand-500 animate-spin" strokeWidth={1.5} />}
                 {status === 'completed' && <CheckCircle2 className="h-14 w-14 text-emerald-500" strokeWidth={1.5} />}
                 {status === 'error' && <AlertCircle className="h-14 w-14 text-rose-500" strokeWidth={1.5} />}
                 
@@ -312,7 +312,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
                 {!showConfirm ? (
                   <Button 
                     onClick={() => setShowConfirm(true)} 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 shadow-lg gap-2 rounded-full"
+                    className="w-full bg-brand hover:bg-brand-strong text-white font-black h-12 shadow-lg gap-2 rounded-full"
                     disabled={filteredPhrases.length === 0}
                   >
                     NEXT STEP

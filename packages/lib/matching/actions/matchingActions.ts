@@ -1,6 +1,7 @@
 'use server';
 
 import { createServerClient } from '../../supabase/server';
+import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
@@ -13,6 +14,7 @@ import {
   ApproveMatchingRequestResult,
   GetMyBookableTicketsResult,
   GetMyLiveSessionContractsResult,
+  GetMyLiveSessionOverviewResult,
   RejectMatchingRequestResult,
   IncomingMatchingRequestItem,
   LiveSessionContractSummary,
@@ -21,6 +23,8 @@ import {
   MatchingRequestErrorCode,
   SlotStatusItem,
 } from '@gabby/types/matching';
+import { SESSION_STATUS } from '@gabby/types/session';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -41,7 +45,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: tickets, error: ticketError } = await supabase
@@ -101,7 +105,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: tickets, error: ticketError } = await supabase
@@ -119,7 +123,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
 
     const { data: licenses, error: licenseError } = await supabase
       .from('com_t_user_license')
-      .select('license_id, status, start_date, end_date')
+      .select('license_id, status, start_date, end_date, com_m_contract!inner(plan_name)')
       .in('license_id', tickets.map((t) => t.license_id));
 
     if (licenseError) {
@@ -134,13 +138,17 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
       .map((t) => {
         const license = licenseById.get(t.license_id);
         if (!license) return null;
-        const isCurrent = license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
+        const isActive = license.status === 1 && now <= new Date(license.end_date);
+        const isCurrent = isActive && new Date(license.start_date) <= now;
         return {
           ticket_id: t.ticket_id,
           license_id: t.license_id,
+          // 多対一の結合のため実体は1件のオブジェクト（型生成なしのクライアントでは配列として推論される）
+          plan_name: ([] as { plan_name: string }[]).concat(license.com_m_contract)[0]?.plan_name ?? '',
           start_date: license.start_date,
           end_date: license.end_date,
           is_current: isCurrent,
+          is_active: isActive,
         };
       })
       .filter((c): c is LiveSessionContractSummary => c !== null)
@@ -163,7 +171,7 @@ export async function getMySlotStatusCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: ticket, error: ticketError } = await supabase
@@ -290,6 +298,83 @@ export async function getMySlotStatusCore(
 }
 
 /**
+ * 指定チケット(契約)のセッション回数の内訳と、コマごとのコーチ選択状況を取得する
+ * （生徒向け。ライブセッションハブの「契約の状況」表示用。ポータル共通）。
+ * 未予約数はcreate_session_booking_request RPCの予約可否判定と同じfn_schedule_shortfall()で算出し、
+ * コーチ未選択のコマの回数は承認時(fn_commit_matching_schedule)と同じ均等割りで見積もる。
+ */
+export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<GetMyLiveSessionOverviewResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: ticket, error: ticketError } = await supabase
+      .from('com_t_user_session_ticket')
+      .select('ticket_id, weekly_frequency, total_sessions')
+      .eq('ticket_id', ticketId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (ticketError) {
+      logger.error('matching:get_overview_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!ticket) return { success: false, errorCode: 'not_eligible' };
+
+    const [slotResult, { data: sessions, error: sessionError }, { data: schedules, error: scheduleError }] = await Promise.all([
+      getMySlotStatusCore(ticketId),
+      supabase.from('com_t_session').select('status, ticket_refunded').eq('ticket_id', ticketId),
+      supabase.from('com_m_lesson_schedule').select('schedule_id').eq('ticket_id', ticketId).eq('status', 1),
+    ]);
+
+    if (!slotResult.success) return slotResult;
+    if (sessionError || scheduleError) {
+      logger.error('matching:get_overview_failed', sessionError?.message ?? scheduleError?.message ?? 'unknown', { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const shortfallResults = await Promise.all(
+      (schedules ?? []).map((schedule) =>
+        supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single()
+      )
+    );
+    const unbookedCount = shortfallResults.reduce(
+      (sum, { data }) => sum + ((data as ScheduleShortfallRow | null)?.shortfall ?? 0),
+      0
+    );
+
+    // コーチ未選択のコマは承認時にtotal_sessions/weekly_frequencyを均等割りし、余りをslot_no昇順に配分する
+    const baseTarget = Math.floor(ticket.total_sessions / ticket.weekly_frequency);
+    const remainder = ticket.total_sessions % ticket.weekly_frequency;
+    const unassignedCount = slotResult.slots
+      .filter((slot) => slot.status !== 'matched')
+      .reduce((sum, slot) => sum + baseTarget + (slot.slot_no <= remainder ? 1 : 0), 0);
+
+    const rows = sessions ?? [];
+    return {
+      success: true,
+      overview: {
+        ticket_id: ticket.ticket_id,
+        weekly_frequency: ticket.weekly_frequency,
+        total_sessions: ticket.total_sessions,
+        completed_count: rows.filter((s) => s.status === SESSION_STATUS.COMPLETED).length,
+        scheduled_count: rows.filter((s) => s.status === SESSION_STATUS.SCHEDULED).length,
+        forfeited_count: rows.filter((s) => s.status === SESSION_STATUS.CANCELLED && s.ticket_refunded === false).length,
+        unbooked_count: unbookedCount,
+        unassigned_count: unassignedCount,
+        slots: slotResult.slots,
+      },
+    };
+  } catch (err) {
+    logger.error('matching:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
  * 生徒本人の、未割当チケット(キャンセルによりticket_refunded=trueとなり未消化に戻った枠等)により
  * 再予約可能な定期スケジュール(コマ)の一覧を取得する（生徒向け。ポータル共通）。
  * 週n回契約でコマごとに担当コーチが異なりうるため、コーチ選択はさせず対象コマ(schedule_id)を
@@ -301,7 +386,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: schedules, error: scheduleError } = await supabase
@@ -417,6 +502,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 /**
  * マッチング可能なコーチの一覧を取得する（生徒向け。ポータル共通）
  * zoom_meeting_url等の非公開項目は含めない。
+ * 対象コーチはget_matchable_coach_ids()で決まる（通常の生徒にはデモコーチを含めない）。
  */
 export async function getCoachBrowseListCore(): Promise<
   { success: true; coaches: CoachBrowseItem[] } | { success: false; errorCode: MatchingRequestErrorCode }
@@ -425,12 +511,23 @@ export async function getCoachBrowseListCore(): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data: matchableCoaches, error: matchableError } = await supabase.rpc('get_matchable_coach_ids');
+
+    if (matchableError) {
+      logger.error('matching:get_coach_list_matchable_failed', matchableError.message, ctx);
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!matchableCoaches || matchableCoaches.length === 0) {
+      return { success: true, coaches: [] };
+    }
 
     const { data: profiles, error: profileError } = await supabase
       .from('com_m_coach_profile')
       .select('user_id, country_code, coach_since, education, qualifications, teaching_years, job_experience, introduction, intro_video_path')
+      .in('user_id', matchableCoaches.map((c: { coach_id: string }) => c.coach_id))
       .eq('delete_flg', '0');
 
     if (profileError) {
@@ -528,7 +625,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (
@@ -551,6 +648,20 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!ticket || input.slot_no > ticket.weekly_frequency) {
+      return { success: false, errorCode: 'not_eligible' };
+    }
+
+    // 申請先がこの生徒のマッチング対象コーチか確認（一覧に出ないデモコーチへの直接申請を防ぐ）
+    const { data: matchableCoach, error: matchableError } = await supabase
+      .rpc('get_matchable_coach_ids')
+      .eq('coach_id', input.coach_id)
+      .maybeSingle();
+
+    if (matchableError) {
+      logger.error('matching:create_request_matchable_check_failed', matchableError.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!matchableCoach) {
       return { success: false, errorCode: 'not_eligible' };
     }
 
@@ -643,7 +754,7 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -671,16 +782,38 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
   }
 }
 
-/** insert_dateで取得した行にstudent_nameを結合する（コーチ宛マッチングリクエスト系クエリの共通処理） */
-async function attachStudentNames(
+/**
+ * insert_dateで取得した行に、生徒名と申請した契約の期間を結合する（コーチ宛マッチングリクエスト系クエリの共通処理）。
+ * 契約の期間は、担当になる前のコーチはRLSで読めないため管理者権限で取得する。対象は、コーチがRLSで読めた
+ * 自分宛のリクエストのチケットに限り、返すのは開始・終了日時だけ。
+ */
+async function attachRequestDetails(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
-  requests: Omit<IncomingMatchingRequestItem, 'student_name'>[]
+  requests: Omit<IncomingMatchingRequestItem, 'student_name' | 'license_start_date' | 'license_end_date'>[]
 ): Promise<IncomingMatchingRequestItem[]> {
   if (requests.length === 0) return [];
   const studentIds = Array.from(new Set(requests.map((r) => r.student_id)));
-  const { data: students } = await supabase.from('com_m_user').select('id, user_name').in('id', studentIds);
+  const ticketIds = Array.from(new Set(requests.map((r) => r.ticket_id)));
+  const [{ data: students }, { data: tickets }] = await Promise.all([
+    supabase.from('com_m_user').select('id, user_name').in('id', studentIds),
+    createAdminClient()
+      .from('com_t_user_session_ticket')
+      .select('ticket_id, com_t_user_license!inner(start_date, end_date)')
+      .in('ticket_id', ticketIds),
+  ]);
   const studentNameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
-  return requests.map((r) => ({ ...r, student_name: studentNameById.get(r.student_id) ?? '(Unknown)' }));
+  const periodByTicketId = new Map(
+    (tickets ?? []).map((t) => {
+      const license = Array.isArray(t.com_t_user_license) ? t.com_t_user_license[0] : t.com_t_user_license;
+      return [t.ticket_id as string, license as { start_date: string; end_date: string } | undefined];
+    })
+  );
+  return requests.map((r) => ({
+    ...r,
+    student_name: studentNameById.get(r.student_id) ?? '(Unknown)',
+    license_start_date: periodByTicketId.get(r.ticket_id)?.start_date ?? null,
+    license_end_date: periodByTicketId.get(r.ticket_id)?.end_date ?? null,
+  }));
 }
 
 /**
@@ -696,7 +829,7 @@ export async function getPendingIncomingRequestsAsCoachCore(): Promise<
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: requests, error } = await supabase
@@ -711,7 +844,7 @@ export async function getPendingIncomingRequestsAsCoachCore(): Promise<
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return { success: true, requests: await attachStudentNames(supabase, requests ?? []) };
+    return { success: true, requests: await attachRequestDetails(supabase, requests ?? []) };
   } catch (err) {
     logger.error('matching:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
@@ -735,7 +868,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     let query = supabase
@@ -756,7 +889,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
     const page = (rows ?? []).slice(0, limit);
     const nextCursor = hasMore ? (page[page.length - 1]?.insert_date ?? null) : null;
 
-    return { success: true, items: await attachStudentNames(supabase, page), nextCursor };
+    return { success: true, items: await attachRequestDetails(supabase, page), nextCursor };
   } catch (err) {
     logger.error('matching:get_request_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
@@ -773,7 +906,7 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase.rpc('approve_matching_request', { p_request_id: requestId });
@@ -806,7 +939,7 @@ export async function rejectMatchingRequestCore(requestId: string, reason: strin
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!reason || reason.trim().length === 0) {

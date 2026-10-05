@@ -16,6 +16,7 @@ DECLARE
     _words_json JSONB;
     _sessions_json JSONB;
     _drills_json JSONB;
+    _timezone TEXT;
 BEGIN
     IF _user_id IS NULL THEN
         RAISE EXCEPTION 'Unauthorized';
@@ -24,6 +25,13 @@ BEGIN
     -- 月の開始日と終了日を計算
     _start_date := (_year_month || '-01')::DATE;
     _end_date := (_start_date + INTERVAL '1 month' - INTERVAL '1 day')::DATE;
+
+    -- スプリントセッションは日時（UTC）で保存されているため、生徒のタイムゾーンでの日付で月を絞る
+    -- （日次サマリーの training_date は記録時点のタイムゾーンでの日付で確定済み）
+    SELECT COALESCE(timezone, 'Asia/Tokyo') INTO _timezone
+    FROM public.com_m_user
+    WHERE id = _user_id;
+    _timezone := COALESCE(_timezone, 'Asia/Tokyo');
 
     -- 1. 単語ドリル履歴の取得
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
@@ -50,8 +58,7 @@ BEGIN
     )), '[]'::jsonb) INTO _sessions_json
     FROM public.self_t_sprint s
     WHERE s.user_id = _user_id
-      AND s.insert_date >= _start_date::TIMESTAMP WITH TIME ZONE
-      AND s.insert_date <= (_end_date || ' 23:59:59.999')::TIMESTAMP WITH TIME ZONE;
+      AND (s.insert_date AT TIME ZONE _timezone)::DATE BETWEEN _start_date AND _end_date;
 
     -- 3. スプリントドリル履歴の取得
     SELECT COALESCE(jsonb_agg(jsonb_build_object(

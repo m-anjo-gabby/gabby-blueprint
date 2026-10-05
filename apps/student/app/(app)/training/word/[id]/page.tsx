@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, use, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useWebSpeech } from '@gabby/lib/hooks/useWebSpeech';
+import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
+import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
 import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
 import { logClientEvent } from '@gabby/lib/logger/actions';
 import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
-import { getLatestResumeContent, saveResumeContent } from '@/actions/contentAction';
-import { useResumeStore } from '@/stores/useResumeStore';
-import { usePhraseStore } from '@/stores/usePhraseStore';
+import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
+import { saveResumeContent, takeResumeContent } from '@/actions/contentAction';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { WordResumeMetadata } from '@gabby/types/training';
 import { getFeedbackConfig } from '@gabby/lib';
@@ -23,11 +23,12 @@ import { WordControls } from './_components/WordControls';
 import { WordFeedback } from './_components/WordFeedback';
 import { WordIndex } from './_components/WordIndex';
 import { BookOpen, ArrowLeft, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { PhraseItem } from '@gabby/types/word';
 import { ContentLoading } from '@/components/common/ContentLoading';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
+import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
+import { ImmersivePanel } from '@/components/shell/PageFrames';
+import { cancelSpeech } from '@gabby/lib/speech/synthesis';
 
 export default function WordTrainingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: sectionId } = use(params);
@@ -37,19 +38,25 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const { showConfirm } = useConfirm();
   
   // 音声エンジン・録音・評価ロジック
-  const { startAssessment, stopListening, isListening, timeLeft } = useWebSpeech();
-  
-  // 統合された音声再生フック（playChime, unlockAudioContextを追加抽出）
+  // 表示中ずっと発話セッションを借り、最初の発話以降は出力経路を切り替えない
+  useSpeakingSession();
+  // 再生・発話（単語帳・スプリント共通のプレイヤー）
   const {
     play,
     preload,
-    playChime,
-    unlockAudioContext,
+    listen,
+    beginFlow,
+    stopAll,
+    finishListening,
+    isListening,
+    timeLeft,
+    interruptions,
+    unlock: unlockAudioContext,
     isPlaying: isAudioPlaying,
     playbackRate,
     changePlaybackRate,
     resumeStatus,
-  } = usePlayAudioSpeech();
+  } = useSpeakingPlayer({ decodeTimeoutMs: 1000, stopBeforeChime: true, urlResolution: 'sdk' });
 
   // ドリル状態管理（Zustand）
   const { 
@@ -90,12 +97,12 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         let startP = 0;
         let isResumed = false;
 
-        // クエリパラメータに resume=true がある場合、DBから最終学習位置を取得
+        // クエリパラメータに resume=true がある場合、DBから最終学習位置を取り出す（再開した時点で再開情報は削除される）
         if (searchParams.get('resume') === 'true') {
-          const resume = await getLatestResumeContent();
-          if (resume && resume.content_id === sectionId) {
+          const resumeItemId = await takeResumeContent(sectionId);
+          if (resumeItemId) {
             fetchedWords.some((w, wIdx) => {
-              const pIdx = w.phrases.findIndex(p => p.phrase_id === resume.item_id);
+              const pIdx = w.phrases.findIndex(p => p.phrase_id === resumeItemId);
               if (pIdx !== -1) { 
                 startW = wIdx; 
                 startP = pIdx; 
@@ -179,7 +186,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    */
   const handleGlobalSpeak = useCallback((phrase: PhraseItem) => {
     if (phrase.audio_path && phrase.tts_status === 1) {
-      play(phrase.audio_path, phrase.phrase_id, {
+      play(phrase.audio_path, {
+        id: phrase.phrase_id,
         restart: true,
         onError: (err) => handleAudioUnavailable(phrase, err instanceof Error ? err.message : String(err)),
       });
@@ -192,13 +200,13 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * ナビゲーション：次へ進む
    */
   const handleNext = useCallback(() => {
-    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    cancelSpeech();
     if (isNavigating.current) return;
 
     isNavigating.current = true;
     const { isLast } = nextStep();
     if (isLast) {
-      showToast("全ての学習が完了しました！", "success");
+      showToast("すべてのトレーニングが完了しました！", "success");
     }
     
     // ナビゲーションガードを長めに確保し、再レンダリングに伴うアンマウントの嵐をやり過ごす
@@ -209,7 +217,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * ナビゲーション：前へ戻る
    */
   const handlePrev = useCallback(() => {
-    if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    cancelSpeech();
     if (isNavigating.current) return;
 
     isNavigating.current = true;
@@ -222,7 +230,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 音声認識の開始/停止
    */
   const handleVoiceCheck = async () => {
-    if (isListening) { stopListening(); return; }
+    // 発話中のタップは、その時点の評価で確定する
+    if (isListening) { finishListening(); return; }
     if (!currentWord || !currentPhrase) return;
 
     // iOS WebKit 自動再生ロックの明示的な解除
@@ -231,23 +240,16 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     setFeedback(null);
     setAnalysis(null);
 
-    // suppressAudioSessionSwitch: true を渡してフック間のオーディオ奪い合いを防ぐ
-    startAssessment(
-      currentPhrase.phrase_en, 
-      [currentWord.word_en], 
-      (result) => {
-        setAnalysis(result);
-        setFeedback(getFeedbackConfig(result.score));
-        useWordDrillStore.getState().incrementAssessmentCount();
-      },
-      {
-        suppressAudioSessionSwitch: true,
-        // 🚀 実際にブラウザのマイクが開いた（録音準備完了）タイミングでチャイムを鳴らす
-        onRecognitionStart: () => {
-          playChime();
-        }
-      }
-    );
+    // チャイムが鳴り終わってから認識を開始する。カードを切り替えた場合は中断され、結果は反映しない
+    const result = await listen({
+      targetText: currentPhrase.phrase_en,
+      mainWords: [currentWord.word_en],
+      signal: beginFlow(),
+    });
+    if (!result) return;
+    setAnalysis(result);
+    setFeedback(getFeedbackConfig(result.score));
+    useWordDrillStore.getState().incrementAssessmentCount();
   };
 
   /**
@@ -257,14 +259,14 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     const nextState = !currentState;
     updatePhraseFavorite(phraseId, nextState);
 
-    try {
-      await toggleFavorite(phraseId, nextState);
-      usePhraseStore.getState().clearCache();
-      showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りを解除しました', 'success');
-    } catch (e) {
+    // 登録上限の超過・失敗は戻り値で返る
+    const result = await toggleFavorite(phraseId, nextState).catch(() => FAVORITE_TOGGLE_NETWORK_ERROR);
+    if (!result.ok) {
       updatePhraseFavorite(phraseId, currentState);
-      showToast("更新に失敗しました", "error");
+      showToast(getFavoriteToggleErrorMessage(result), 'error');
+      return;
     }
+    showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りを解除しました', 'success');
   };
 
   /**
@@ -272,7 +274,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    */
   const handleSaveAndExit = async () => {
     if (!currentWord || !currentPhrase) return;
-    const ok = await showConfirm("Bookmark?", "進捗を保存してダッシュボードに戻ります。", { variant: 'warning', isModal: false });
+    const ok = await showConfirm("ブックマークして終了しますか？", "ホームの「続きから」で、この位置から再開できます。", { variant: 'warning', isModal: false });
     if (!ok) return;
 
     const metadata: WordResumeMetadata = {
@@ -293,13 +295,27 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       // 💡 ブックマークして終了時は、即座に進捗の溜まりを同期
       await syncProgressNow();
 
-      await useResumeStore.getState().fetchResume(true);
       showToast("ブックマークしました", "success");
       router.push('/dashboard');
     } catch (e) {
       showToast("保存に失敗しました", "error");
     }
   };
+
+  /**
+   * カードの切り替え時は、前のカードの再生・発話を止める（前のカードの評価結果を反映させない）
+   */
+  useEffect(() => {
+    return () => stopAll();
+  }, [wordIdx, phraseIdx, stopAll]);
+
+  /**
+   * iOS の中断（画面が隠れた・通話等）では自動再生を止める。
+   * 音声が出ない間に「再生が終わった」とみなされ、聞こえないままフレーズが進むのを防ぐ（再開は利用者の操作で行う）
+   */
+  useEffect(() => {
+    if (interruptions > 0) useWordDrillStore.getState().toggleAutoPlay(false);
+  }, [interruptions]);
 
   /**
    * 自動再生：発話トリガー
@@ -313,7 +329,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
     return () => {
       clearTimeout(t);
-      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+      cancelSpeech();
     };
   }, [wordIdx, phraseIdx, isAutoPlaying, isListening, loading, currentPhrase, handleGlobalSpeak]);
 
@@ -386,39 +402,23 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   // 2. エンプティステート：コンテンツが存在しない場合
   if (words.length === 0) return (
-    <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-6">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl w-full max-w-sm text-center"
-      >
-        <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
-          <AlertCircle size={40} className="text-amber-500" />
-        </div>
-        <h2 className="text-xl font-black text-slate-900 mb-2">Unavailable</h2>
-        <p className="text-slate-500 text-[13px] font-medium leading-relaxed mb-8 px-4">
-          この教材は現在ご利用いただけないか、<br/>
-          アクセスする権限がありません。
-        </p>
-        
-        <div className="space-y-3">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-indigo-100"
-          >
-            Go to Dashboard
+    <ImmersiveNotice
+      tone="warning"
+      icon={<AlertCircle size={28} />}
+      title="この教材は利用できません"
+      description="現在ご利用いただけないか、アクセスする権限がありません。"
+      actions={
+        <>
+          <button type="button" onClick={() => router.push('/dashboard')} className={noticeActionClass()}>
+            ホームに戻る
           </button>
-          
-          <button
-            onClick={handleBackToPrevious}
-            className="w-full h-12 bg-transparent text-slate-400 rounded-2xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:opacity-60"
-          >
-            <ArrowLeft size={14} strokeWidth={3} />
-            Back to previous page
+          <button type="button" onClick={handleBackToPrevious} className={noticeActionClass('secondary')}>
+            <ArrowLeft size={14} strokeWidth={2.5} />
+            前の画面に戻る
           </button>
-        </div>
-      </motion.div>
-    </div>
+        </>
+      }
+    />
   );
 
   // 安全装置（words[0]はあるが何らかの理由で現在のインデックスが異常な場合）
@@ -426,9 +426,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   // 3. メイン学習画面
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-50 flex items-center justify-center p-2 overflow-hidden touch-none selection:bg-indigo-100">
-      
-      <main className="bg-white text-slate-900 shadow-2xl border border-slate-100 w-full max-w-2xl h-full max-h-[95vh] rounded-[40px] flex flex-col relative overflow-hidden">
+    <>
+      <ImmersivePanel as="main">
         
         <div className="flex-1 flex flex-col overflow-hidden p-4 pb-0">
           <WordHeader onBack={handleBackToPrevious} />
@@ -458,24 +457,14 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         <WordIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
 
         <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
-      </main>
+      </ImmersivePanel>
 
       <style jsx global>{`
-        :root {
-          --removed-body-scroll-bar-size: 0px !important;
-        }
-        body {
-          padding-right: 0px !important;
-          overflow: hidden !important;
-          position: fixed;
-          width: 100%;
-          height: 100%;
-        }
         .perspective-1000 { perspective: 1000px; }
         .preserve-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
       `}</style>
-    </div>
+    </>
   );
 }

@@ -85,7 +85,7 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
               </Badge>
             ) : (
               <>
-                <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 text-[10px] font-bold">
+                <Badge className="bg-brand-100 text-brand-strong border-brand-200 hover:bg-brand-100 text-[10px] font-bold">
                   {t('liveBadge', { weekly: plan.weekly_frequency ?? 0, total: plan.total_sessions ?? 0 })}
                 </Badge>
                 {plan.has_dialogue_practice && (

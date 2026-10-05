@@ -10,6 +10,7 @@ import {
   AddCoachAvailabilityResult,
   DeleteCoachAvailabilityResult,
 } from '@gabby/types/coachAvailability';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -25,7 +26,7 @@ export async function getMyAvailabilityCore(): Promise<GetCoachAvailabilityResul
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -85,7 +86,7 @@ export async function addAvailabilityCore(values: CoachAvailabilityFormValues): 
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (
@@ -127,7 +128,7 @@ export async function deleteAvailabilityCore(availabilityId: string): Promise<De
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { error } = await supabase

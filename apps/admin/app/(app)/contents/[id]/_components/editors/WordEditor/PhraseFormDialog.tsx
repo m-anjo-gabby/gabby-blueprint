@@ -113,11 +113,11 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {mode === 'create' ? (
-          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-xs gap-1.5 h-8 px-4 border-none shadow-sm">
+          <Button size="sm" className="bg-brand hover:bg-brand-strong text-xs gap-1.5 h-8 px-4 border-none shadow-sm">
             <PlusCircle size={14} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all">
+          <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand rounded-xl transition-all">
             <Edit size={16} />
           </Button>
         )}
@@ -138,7 +138,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
 
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
-            {isConfirming ? <CheckCircle2 size={18} className="text-emerald-400" /> : <MessageSquare size={18} className="text-indigo-400" />}
+            {isConfirming ? <CheckCircle2 size={18} className="text-emerald-400" /> : <MessageSquare size={18} className="text-brand-400" />}
             {isConfirming ? t('confirmTitle') : mode === 'create' ? t('createTitle') : t('editTitle')}
           </DialogTitle>
         </DialogHeader>
@@ -163,7 +163,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
                   </div>
                 ) : (
                   <FormControl>
-                    <Textarea {...field} placeholder={t('phraseEnPlaceholder')} className="rounded-xl border-slate-200 min-h-[80px] resize-none font-medium focus-visible:ring-indigo-500" />
+                    <Textarea {...field} placeholder={t('phraseEnPlaceholder')} className="rounded-xl border-slate-200 min-h-[80px] resize-none font-medium focus-visible:ring-brand-500" />
                   </FormControl>
                 )}
                 <FormMessage />
@@ -180,7 +180,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
                   </div>
                 ) : (
                   <FormControl>
-                    <Input {...field} placeholder={t('phraseJaPlaceholder')} className="rounded-xl border-slate-200 focus-visible:ring-indigo-500" />
+                    <Input {...field} placeholder={t('phraseJaPlaceholder')} className="rounded-xl border-slate-200 focus-visible:ring-brand-500" />
                   </FormControl>
                 )}
                 <FormMessage />
@@ -199,7 +199,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
                   ) : (
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="rounded-xl border-slate-200 h-9 text-xs focus:ring-indigo-500">
+                        <SelectTrigger className="rounded-xl border-slate-200 h-9 text-xs focus:ring-brand-500">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -223,7 +223,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
                     </div>
                   ) : (
                     <FormControl>
-                      <Input {...field} type="number" className="rounded-xl border-slate-200 h-9 text-xs focus-visible:ring-indigo-500" />
+                      <Input {...field} type="number" className="rounded-xl border-slate-200 h-9 text-xs focus-visible:ring-brand-500" />
                     </FormControl>
                   )}
                 </FormItem>
@@ -240,7 +240,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
                   ) : (
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="rounded-xl border-slate-200 h-9 text-xs focus:ring-indigo-500">
+                        <SelectTrigger className="rounded-xl border-slate-200 h-9 text-xs focus:ring-brand-500">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>

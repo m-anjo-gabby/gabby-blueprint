@@ -5,6 +5,7 @@ import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { LIVE_SESSION_END_AFTER_MS } from '../../liveSessionRoom/constants';
 import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './coachStudentActions';
+import { fetchSprintAvailableLevels } from '../../sprint/availableLevels';
 import {
   CreateLessonSprintResultInput,
   CreateLessonSprintResultResponse,
@@ -20,6 +21,7 @@ import {
 } from '@gabby/types/lessonSprint';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 type SupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -84,7 +86,7 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, studentId))) {
@@ -100,20 +102,33 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
       return { success: true, contents: [] };
     }
 
-    const { data, error } = await supabase
-      .from('com_m_contents')
-      .select('content_id, content_name, content_name_en, metadata')
-      .in('content_id', [...availableIds])
-      .eq('content_type', SPRINT_CONTENT_TYPE)
-      .eq('delete_flg', '0')
-      .order('seq_no', { ascending: true });
+    // 設定画面で問題の無い種別・レベルを選べないよう、「問題が存在する種別×レベル」も並列に取得する
+    const [{ data, error }, levelsByContent] = await Promise.all([
+      supabase
+        .from('com_m_contents')
+        .select('content_id, content_name, content_name_en, metadata')
+        .in('content_id', [...availableIds])
+        .eq('content_type', SPRINT_CONTENT_TYPE)
+        .eq('delete_flg', '0')
+        .order('seq_no', { ascending: true }),
+      fetchSprintAvailableLevels(supabase, [...availableIds]),
+    ]);
 
     if (error) {
       logger.error('lessonSprint:get_contents_failed', error.message, { ...ctx, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
+    if (!levelsByContent) {
+      logger.warn('lessonSprint:get_available_levels_failed', 'Failed to fetch available levels; levels are not filtered', { ...ctx, userId: user.id });
+    }
 
-    return { success: true, contents: data ?? [] };
+    return {
+      success: true,
+      contents: (data ?? []).map((c) => ({
+        ...c,
+        available_levels: levelsByContent ? (levelsByContent.get(c.content_id) ?? {}) : null,
+      })),
+    };
   } catch (err) {
     logger.error('lessonSprint:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
@@ -133,7 +148,7 @@ export async function getLessonSprintQuestionsCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: fetchedData, error } = await supabase
@@ -194,7 +209,7 @@ export async function createLessonSprintResultCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     if (!(await hasCoachStudentRelationship(supabase, user.id, input.student_id))) {
@@ -305,7 +320,7 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
@@ -343,7 +358,7 @@ export async function getLessonSprintHistoryPageCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     let query = supabase
@@ -380,7 +395,7 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: record, error: recordError } = await supabase
@@ -437,7 +452,7 @@ export async function updateLessonSprintSessionNoteCore(
 
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase

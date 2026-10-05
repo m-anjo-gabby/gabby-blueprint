@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,8 +92,7 @@ export function AdjustTargetSessionsDialog({ target, onClose, onAdjusted }: Prop
           <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={isSubmitting}>
             {t('close')}
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isSubmitting || !isValueValid || !reason.trim()}>
-            {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+          <Button pending={isSubmitting} type="button" onClick={handleSubmit} disabled={isSubmitting || !isValueValid || !reason.trim()}>
             {t('confirmButton')}
           </Button>
         </DialogFooter>

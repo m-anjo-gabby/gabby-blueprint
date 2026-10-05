@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { getAdminCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
-import { getCompanyLogoUrl } from '@gabby/lib/monthlyReport/getCompanyLogoUrl';
+import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
+import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
 import { buildInvoiceNumber } from '@gabby/lib/monthlyReport/buildInvoiceNumber';
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { USER_TYPES } from '@gabby/types/user';
 import { InvoiceDocument } from '@/lib/pdf/InvoiceDocument';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 // apps/coach/app/api/monthly-reports/pay-notice/route.tsと同じ理由（cookieベース認証への
 // 依存がNext.jsの自動動的判定に検出されず静的キャッシュされる恐れがあるため）で、
@@ -27,8 +29,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'coachId and month query parameters are required' }, { status: 400 });
   }
 
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
@@ -45,8 +46,8 @@ export async function GET(request: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const [{ data: companyProfile }, { data: coachUser }] = await Promise.all([
-    admin.from('com_m_company_profile').select('company_name, address, logo_path, tax_registration_number').maybeSingle(),
+  const [companyProfile, { data: coachUser }] = await Promise.all([
+    fetchCompanyProfile(DOCUMENT_ISSUER.coachInvoice),
     admin.from('com_m_user').select('user_name').eq('id', coachId).maybeSingle(),
   ]);
 

@@ -15,11 +15,13 @@ import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { issueInitialLicense, resolvePerformedBy } from '@gabby/lib/license/issue';
 import { sendInvitationEmail } from "@gabby/lib/mail/actions/sendInvitation"; // 独自メール配信用ユーティリティ（生徒向け）
 import { sendAdminInvitationEmail } from "@gabby/lib/mail/actions/sendAdminInvitation"; // 管理者向け招待メール
 import { sendCoachInvitationEmail } from "@gabby/lib/mail/actions/sendCoachInvitation"; // コーチ向け招待メール（英文）
 import { validatePasswordStrength } from "@gabby/lib/auth/validation"; // パスワード強度の共通バリデーション
 import { randomBytes } from "crypto"; // 暗号トークン生成用
+import { getPortalBaseUrl } from "@gabby/lib/navigation/portalUrl";
 
 const logger = createLogger('admin');
 
@@ -27,14 +29,7 @@ const logger = createLogger('admin');
  * ユーザ種別に応じたリダイレクト先（招待画面のベースURL）を解決する共通ヘルパー
  */
 function getRedirectBase(userType?: string): string {
-  switch (userType) {
-    case USER_TYPES.ADMIN:
-      return process.env.NEXT_PUBLIC_SITE_URL || '';
-    case USER_TYPES.COACH:
-      return process.env.NEXT_PUBLIC_COACH_URL || '';
-    default:
-      return process.env.NEXT_PUBLIC_STUDENT_URL || '';
-  }
+  return getPortalBaseUrl(userType);
 }
 
 /**
@@ -64,12 +59,15 @@ function getInvitationUrl(userType: string | undefined, token: string): string {
   return `${base}/auth/invite?token=${token}`;
 }
 
+/** 招待リンクの有効期限（日数）。新規送信・再送で共通し、メール本文の期限表記にも同じ値を使う */
+const INVITATION_EXPIRES_DAYS = 3;
+
 /**
- * 招待リンクの有効期限（送信から7日間）を一元的に生成するヘルパー
+ * 招待リンクの有効期限（送信から INVITATION_EXPIRES_DAYS 日後）を生成するヘルパー
  */
-function getInvitationExpiry(days: number = 7): Date {
+function getInvitationExpiry(): Date {
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + days);
+  expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRES_DAYS);
   return expiresAt;
 }
 
@@ -158,7 +156,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     }
 
     // 有効期限を 3日間に設定（従来の24時間制限を突破） -> 共通ヘルパーを利用
-    const expiresAt = getInvitationExpiry(3);
+    const expiresAt = getInvitationExpiry();
 
     // 暗号論的に安全なランダムトークンを生成
     const invitationToken = randomBytes(32).toString('hex');
@@ -211,8 +209,10 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     const inviteUrl = getInvitationUrl(user_type, inviteData.token);
     const mailResult = await dispatchInvitationEmail(user_type, {
       to: email,
-      userName: user_name || '会員',
-      inviteUrl: inviteUrl
+      // 氏名が無ければ空で渡し、宛名は各テンプレートの既定（会員様 / Dear Coach / 管理者様）に任せる
+      userName: user_name || '',
+      inviteUrl: inviteUrl,
+      expiresDays: INVITATION_EXPIRES_DAYS,
     });
 
     // メール送信結果をDBに記録
@@ -329,27 +329,16 @@ export async function createUserDirect(
     }
 
     // 初期ライセンスの割当（生徒など、契約が指定された場合のみ）
+    // 契約管理からの割当と同じく、履歴・ライブのチケットも作る（@gabby/lib/license/issue）
     if (contract_id && contract_id !== 'none') {
-      const { data: contract } = await supabase
-        .from('com_m_contract')
-        .select('start_date, end_date')
-        .eq('contract_id', contract_id)
-        .single();
-
-      if (contract) {
-        const { error: licenseError } = await supabase
-          .from('com_t_user_license')
-          .insert({
-            user_id: userId,
-            contract_id,
-            start_date: contract.start_date,
-            end_date: contract.end_date,
-            status: 1
-          });
-        if (licenseError) {
-          partialFailures.push('license_insert');
-          logger.error('user:create_user_direct_license_insert_failed', licenseError.message, { ...ctx, payload: { userId, contract_id } });
-        }
+      const licenseResult = await issueInitialLicense(supabase, {
+        contractId: contract_id,
+        userId,
+        performedBy: resolvePerformedBy(ctx.userId),
+      }, ctx);
+      if (!licenseResult.success) {
+        partialFailures.push('license_insert');
+        logger.error('user:create_user_direct_license_insert_failed', licenseResult.message, { ...ctx, payload: { userId, contract_id } });
       }
     }
 
@@ -403,8 +392,8 @@ export async function resendInvite(email: string, userType?: string) {
       return { success: false, message: '対象の招待データが見つからないか、既に登録が完了しています。' };
     }
 
-    // 💡 改善: 安全性の向上として有効期限を +7日 にリフレッシュし、新しいワンタイムトークンを再生成します -> 💡 共通ヘルパーを利用
-    const newExpiresAt = getInvitationExpiry(7);
+    // 💡 改善: 安全性の向上として有効期限を送信時点から付け直し、新しいワンタイムトークンを再生成します -> 💡 共通ヘルパーを利用
+    const newExpiresAt = getInvitationExpiry();
     const newWeightToken = randomBytes(32).toString('hex');
 
     const { error: updateError } = await supabase
@@ -427,8 +416,9 @@ export async function resendInvite(email: string, userType?: string) {
     const inviteUrl = getInvitationUrl(resolvedUserType, newWeightToken);
     const mailResult = await dispatchInvitationEmail(resolvedUserType, {
       to: email,
-      userName: currentInvite.user_name || '会員',
-      inviteUrl: inviteUrl
+      userName: currentInvite.user_name || '',
+      inviteUrl: inviteUrl,
+      expiresDays: INVITATION_EXPIRES_DAYS,
     });
 
     // 💡 改善: 再送結果をDBに記録（成功時はエラーをクリア）

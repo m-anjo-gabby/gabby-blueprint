@@ -118,7 +118,7 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
                   key={candidate.proposal_id}
                   className={cn(
                     'flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors',
-                    isSelected ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
+                    isSelected ? 'bg-brand-50 border-brand-300' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
                   )}
                   onMouseEnter={() => onDateHover?.(toIsoDateInZone(candidate.proposed_start_datetime, timezone))}
                   onMouseLeave={() => onDateHover?.(null)}
@@ -126,7 +126,7 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
                   <input
                     type="radio"
                     name={`reschedule-proposal-${group.session_id}`}
-                    className="h-3.5 w-3.5 accent-indigo-600"
+                    className="h-3.5 w-3.5 accent-brand"
                     checked={isSelected}
                     disabled={isBusy}
                     onChange={() => setSelectedProposalId(candidate.proposal_id)}

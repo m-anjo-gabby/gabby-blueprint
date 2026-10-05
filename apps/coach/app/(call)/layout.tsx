@@ -1,6 +1,6 @@
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 /**
  * ライブセッション（ビデオ通話）専用レイアウト。
@@ -13,8 +13,7 @@ export default async function CallLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect('/login');

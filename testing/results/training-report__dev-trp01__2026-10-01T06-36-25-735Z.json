@@ -1,0 +1,130 @@
+{
+  "scenario": "training-report",
+  "env": "dev",
+  "tag": "trp01",
+  "executedAt": "2026-10-01T06:36:25.735Z",
+  "gitCommit": "5383b7f7",
+  "gitBranch": "feature/20260925-dev",
+  "totalChecks": 26,
+  "passed": 26,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "会社情報: 日本法人(GABBY_JP)の行がある",
+      "ok": true,
+      "detail": "株式会社ギャビーアカデミー / Gabby Academy Co., Ltd."
+    },
+    {
+      "name": "会社情報: バンクーバー法人(GVT_CA)の行がある",
+      "ok": true,
+      "detail": "Global Vision Technology Vancouver, Inc."
+    },
+    {
+      "name": "会社情報: 同じ法人コードの行は追加できない（一意制約）",
+      "ok": true,
+      "detail": "23505"
+    },
+    {
+      "name": "レベル履歴: 進捗行の作成時に起点(change_kind=0)が記録される",
+      "ok": true,
+      "detail": "起点 Lv0"
+    },
+    {
+      "name": "レベル履歴: コーチの引き上げは change_kind=1・changed_by=コーチで記録される",
+      "ok": true
+    },
+    {
+      "name": "レベル履歴: 修正前は誤操作後の時点のレベルが誤った値",
+      "ok": true
+    },
+    {
+      "name": "レベル履歴: 管理者の引き下げは change_kind=2（修正）・changed_by=NULLで記録される",
+      "ok": true
+    },
+    {
+      "name": "レベル履歴: 修正で誤った引き上げが取消済みになる",
+      "ok": true
+    },
+    {
+      "name": "レベル履歴: 修正の行は取り消した行と同じ日時に遡って記録される",
+      "ok": true
+    },
+    {
+      "name": "レベル履歴: 修正後は誤操作後の時点のレベルも修正後の値になる",
+      "ok": true,
+      "detail": "Lv3"
+    },
+    {
+      "name": "レベル履歴: 正しい引き上げの直後の時点は影響を受けない",
+      "ok": true
+    },
+    {
+      "name": "レベル履歴: 2回目の修正で、修正後より高い直近の記録（引き上げ・前回の修正）がすべて取り消される",
+      "ok": true,
+      "detail": "有効な行: kind0:Lv0, kind2:Lv1"
+    },
+    {
+      "name": "レベル履歴: 最初の引き上げ直後の時点も修正後の値になる",
+      "ok": true
+    },
+    {
+      "name": "レベル履歴: 記録開始前の時点は不明(NULL)",
+      "ok": true
+    },
+    {
+      "name": "一覧: 満了月の一覧に対象ライセンスが出る",
+      "ok": true,
+      "detail": "2026-10"
+    },
+    {
+      "name": "一覧: ライブ付き・コメント下書き1件として出る",
+      "ok": true
+    },
+    {
+      "name": "データ: 1件返る",
+      "ok": true
+    },
+    {
+      "name": "データ: 学習量は期間内の記録だけを合計する",
+      "ok": true,
+      "detail": "{\"words\":16,\"phrases\":4,\"active_days\":2,\"assessments\":6,\"sprint_questions\":20}"
+    },
+    {
+      "name": "データ: 月ごとの集計が学習した月の数だけ並ぶ",
+      "ok": true,
+      "detail": "[{\"month\":\"2026-08\",\"words\":10,\"phrases\":4,\"active_days\":1,\"sprint_questions\":0},{\"month\":\"2026-09\",\"words\":6,\"phrases\":0,\"active_days\":1,\"sprint_questions\":20}]"
+    },
+    {
+      "name": "データ: 開始時点のレベルは記録開始前のため不明(NULL)",
+      "ok": true
+    },
+    {
+      "name": "データ: 終了前に作成した場合は作成時点（修正後）のレベル",
+      "ok": true,
+      "detail": "Lv1"
+    },
+    {
+      "name": "データ: ライブセッションの契約回数が入る",
+      "ok": true
+    },
+    {
+      "name": "データ: コーチのコメント（下書き）が入る",
+      "ok": true
+    },
+    {
+      "name": "権限: コーチのJWTでは get_training_report_data を実行できない",
+      "ok": true,
+      "detail": "42501"
+    },
+    {
+      "name": "権限: 管理者のJWTでは get_training_report_data を実行できない",
+      "ok": true,
+      "detail": "42501"
+    },
+    {
+      "name": "権限: コーチはレベル履歴を参照できない（RLS）",
+      "ok": true
+    }
+  ]
+}

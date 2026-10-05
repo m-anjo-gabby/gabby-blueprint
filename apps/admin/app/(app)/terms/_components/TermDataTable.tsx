@@ -102,7 +102,7 @@ export function TermDataTable({
         const isTerms = type === "TERMS";
         return (
           <div className="flex items-center gap-2 py-1">
-            <div className={`p-1.5 rounded-lg ${isTerms ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
+            <div className={`p-1.5 rounded-lg ${isTerms ? 'bg-brand-50 text-brand' : 'bg-amber-50 text-amber-600'}`}>
               {isTerms ? <ShieldCheck size={14} /> : <FileText size={14} />}
             </div>
             <span className="text-sm font-bold text-slate-900">
@@ -179,7 +179,7 @@ export function TermDataTable({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+              className="h-8 w-8 p-0 text-slate-400 hover:text-brand hover:bg-brand-50 transition-colors"
               asChild
               title={t('editTooltip')}
             >
@@ -276,7 +276,7 @@ export function TermDataTable({
         {isDeleting && (
           <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
             <div className="bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3 border">
-              <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
               <span className="text-sm font-bold text-slate-700">{t('deletingOverlay')}</span>
             </div>
           </div>

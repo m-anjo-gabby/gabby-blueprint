@@ -40,7 +40,7 @@ export function DialogueEditor({ contentId }: DialogueEditorProps) {
     <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden">
       {/* ツールバー */}
       <div className="shrink-0 p-4 px-6 bg-white border-b border-slate-200 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-sm">
-        <Badge variant="outline" className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black">
+        <Badge variant="outline" className="bg-brand-50 text-brand border-brand-100 font-black">
           {t('sessionCount', { count: sessions.length })}
         </Badge>
 

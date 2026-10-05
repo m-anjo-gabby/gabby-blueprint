@@ -41,7 +41,7 @@ export default async function TermEditPage({
         {/* 戻る導線 */}
         <Link
             href="/terms"
-            className="flex items-center text-[13px] text-slate-500 hover:text-indigo-600 transition-colors mb-2 w-fit"
+            className="flex items-center text-[13px] text-slate-500 hover:text-brand transition-colors mb-2 w-fit"
         >
             <ChevronLeft size={14} className="mr-1" />
             {t('backToList')}

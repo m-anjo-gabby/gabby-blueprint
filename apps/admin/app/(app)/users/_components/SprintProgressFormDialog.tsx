@@ -6,12 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { Loader2, Rocket, TriangleAlert } from 'lucide-react';
 import {
   getStudentSprintProgress,
   updateStudentSprintLevel,
   setStudentSprintStage,
+  setStudentSprintLevelManaged,
 } from '@/actions/adminStudentProgressAction';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
@@ -49,6 +51,7 @@ export function SprintProgressFormDialog({ user, children }: Props) {
   const [savingType, setSavingType] = useState<SprintQuestionType | null>(null);
   const [targetStage, setTargetStage] = useState<number | null>(null);
   const [isSavingStage, setIsSavingStage] = useState(false);
+  const [isSavingManaged, setIsSavingManaged] = useState(false);
   const { showToast } = useToast();
 
   const levels = progress ? toStageLevels(progress) : null;
@@ -130,13 +133,28 @@ export function SprintProgressFormDialog({ user, children }: Props) {
     }
   };
 
+  const handleLevelManagedChange = async (levelManaged: boolean) => {
+    setIsSavingManaged(true);
+    try {
+      const result = await setStudentSprintLevelManaged(user.id, levelManaged);
+      if (!result.success) {
+        showToast(result.message, 'error');
+        return;
+      }
+      setProgress(result.progress);
+      showToast(t(levelManaged ? 'toastLevelManagedOn' : 'toastLevelManagedOff'), 'success');
+    } finally {
+      setIsSavingManaged(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-md p-0 shadow-2xl border-none [&>button]:text-white [&>button]:opacity-70 max-h-[90vh] flex flex-col rounded-xl overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
-            <Rocket size={18} className="text-indigo-400" /> {t('title')}
+            <Rocket size={18} className="text-brand-400" /> {t('title')}
           </DialogTitle>
           <p className="text-slate-400 text-[11px] font-bold mt-1">{user.user_name} / {user.client_name}</p>
         </DialogHeader>
@@ -147,6 +165,24 @@ export function SprintProgressFormDialog({ user, children }: Props) {
               <Loader2 size={32} className="animate-spin" />
             </div>
           ) : (
+            <>
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 mb-6">
+              <div>
+                <label htmlFor="sprint-level-managed" className="text-sm font-semibold text-slate-700">
+                  {t('levelManagedLabel')}
+                </label>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {t(progress.level_managed ? 'levelManagedOn' : 'levelManagedOff')}
+                </p>
+              </div>
+              <Switch
+                id="sprint-level-managed"
+                checked={progress.level_managed}
+                onCheckedChange={handleLevelManagedChange}
+                disabled={isSavingManaged}
+                className="mt-0.5"
+              />
+            </div>
             <Tabs defaultValue="levels">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="levels">{t('tabLevels')}</TabsTrigger>
@@ -194,8 +230,8 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                           size="sm"
                           onClick={() => handleLevelSave(type.value)}
                           disabled={savingType !== null || selected === currentLevel}
+                          pending={savingType === type.value}
                         >
-                          {savingType === type.value && <Loader2 size={14} className="animate-spin" />}
                           {tCommon('save')}
                         </Button>
                       </div>
@@ -282,16 +318,17 @@ export function SprintProgressFormDialog({ user, children }: Props) {
                 <Button
                   type="button"
                   onClick={handleStageSave}
-                  disabled={isSavingStage || !stageDiff}
+                  disabled={!stageDiff}
+                  pending={isSavingStage}
                   className="w-full"
                 >
-                  {isSavingStage && <Loader2 size={14} className="animate-spin" />}
                   {stageDiff?.direction === 'up' && t('forceUp')}
                   {stageDiff?.direction === 'down' && t('forceDown')}
                   {!stageDiff && t('noChange')}
                 </Button>
               </TabsContent>
             </Tabs>
+            </>
           )}
         </div>
       </DialogContent>

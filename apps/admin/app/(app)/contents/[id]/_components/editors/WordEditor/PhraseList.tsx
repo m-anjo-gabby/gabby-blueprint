@@ -173,12 +173,12 @@ export function PhraseList({ wordId }: PhraseListProps) {
               {phrases.map((phrase) => (
                 <div 
                   key={phrase.phrase_id} 
-                  className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group hover:border-indigo-300 hover:shadow-md transition-all duration-300"
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group hover:border-brand-300 hover:shadow-md transition-all duration-300"
                 >
                   <div className="p-5 flex gap-5">
                     {/* 左：順序・タイプ表示 */}
                     <div className="flex flex-col items-center shrink-0 pt-1">
-                      <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-500 group-hover:bg-brand-50 group-hover:text-brand transition-colors">
                         {phrase.seq_no}
                       </div>
                       <span className="mt-2 text-[9px] font-black text-slate-300 uppercase tracking-widest">
@@ -212,8 +212,8 @@ export function PhraseList({ wordId }: PhraseListProps) {
                               className={cn(
                                 "h-7 px-2.5 gap-1.5 rounded-lg border transition-all",
                                 isPlaying === phrase.phrase_id 
-                                  ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 shadow-sm" 
-                                  : "text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 border-transparent hover:border-indigo-100"
+                                  ? "bg-brand text-white hover:bg-brand-strong border-brand shadow-sm" 
+                                  : "text-brand-500 hover:text-brand-strong hover:bg-brand-50 border-transparent hover:border-brand-100"
                               )}
                             >
                               {isPlaying === phrase.phrase_id ? (
@@ -232,7 +232,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
                               size="sm"
                               disabled={isDownloading === phrase.phrase_id}
                               onClick={() => handleDownload(phrase)}
-                              className="h-7 w-7 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                              className="h-7 w-7 p-0 text-slate-400 hover:text-brand hover:bg-brand-50 rounded-lg transition-all"
                               title="Download MP3"
                             >
                               {isDownloading === phrase.phrase_id ? (
@@ -253,7 +253,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
 
                       {/* TTS設定ダイアログ */}
                       <TTSDialog phrase={phrase} onUpdate={fetchPhrases}>
-                        <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 rounded-xl transition-all">
+                        <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand hover:border-brand-200 rounded-xl transition-all">
                           <Settings2 size={16} />
                         </Button>
                       </TTSDialog>

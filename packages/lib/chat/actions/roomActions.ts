@@ -16,6 +16,7 @@ import {
   CreateChatRoomPayload,
   RemoveChatRoomMemberPayload,
 } from '@gabby/types/chat';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 // ルーム作成で選択可能なuser_type
 const HUMAN_USER_TYPES: readonly UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
@@ -31,7 +32,7 @@ const logger = createLogger('common');
  */
 export async function getCurrentUserWithType(): Promise<{ id: string; user_type: string } | null> {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -145,41 +146,25 @@ async function createOneOnOneChatRoom(
     return { success: false, error: 'Invalid member combination' };
   }
 
-  const existingRoomId = await findExistingTwoPersonRoom(supabase, memberIdA, memberIdB);
-  if (existingRoomId) {
-    return { success: true, roomId: existingRoomId };
+  // 既存ルームの検索・開設はマッチング成立時の自動開設と共通のRPCに任せる
+  // （判定条件と同時実行の制御は supabase/DDL/function/fn_ensure_one_on_one_chat_room.sql）
+  const { data: ensured, error: ensureError } = await supabase
+    .rpc('fn_ensure_one_on_one_chat_room', { p_user_a: memberIdA, p_user_b: memberIdB })
+    .single<{ room_id: string; created: boolean }>();
+
+  if (ensureError || !ensured) {
+    logger.error('chat:create_room_failed', ensureError?.message || 'Unknown error', { ...ctx, payload });
+    return { success: false, error: ensureError?.message || 'Failed to create chat room' };
   }
 
-  const { data: newRoom, error: roomError } = await supabase
-    .from('com_t_chat_room')
-    .insert({ room_type: CHAT_ROOM_TYPES.ONE_ON_ONE })
-    .select('room_id')
-    .single();
-
-  if (roomError || !newRoom) {
-    logger.error('chat:create_room_failed', roomError?.message || 'Unknown error', { ...ctx, payload });
-    return { success: false, error: roomError?.message || 'Failed to create chat room' };
-  }
-
-  const { error: memberError } = await supabase.from('com_t_chat_room_user').insert([
-    { room_id: newRoom.room_id, user_id: profileA.id, user_type: profileA.user_type },
-    { room_id: newRoom.room_id, user_id: profileB.id, user_type: profileB.user_type },
-  ]);
-
-  if (memberError) {
-    logger.error('chat:create_room_members_failed', memberError.message, {
+  if (ensured.created) {
+    logger.info('chat:create_room_success', `Chat room created: ${ensured.room_id}`, {
       ...ctx,
-      payload: { roomId: newRoom.room_id },
+      payload: { roomId: ensured.room_id },
     });
-    return { success: false, error: memberError.message };
   }
 
-  logger.info('chat:create_room_success', `Chat room created: ${newRoom.room_id}`, {
-    ...ctx,
-    payload: { roomId: newRoom.room_id },
-  });
-
-  return { success: true, roomId: newRoom.room_id };
+  return { success: true, roomId: ensured.room_id };
 }
 
 async function createGroupChatRoom(
@@ -241,49 +226,6 @@ async function createGroupChatRoom(
   });
 
   return { success: true, roomId: newRoom.room_id };
-}
-
-/**
- * memberIdA と memberIdB だけが参加している、クローズされていないルームを探す（重複作成防止）
- */
-async function findExistingTwoPersonRoom(
-  supabase: ReturnType<typeof createAdminClient>,
-  memberIdA: string,
-  memberIdB: string
-): Promise<string | null> {
-  const { data: roomsOfA } = await supabase
-    .from('com_t_chat_room_user')
-    .select('room_id')
-    .eq('user_id', memberIdA)
-    .is('left_at', null);
-
-  const roomIdsOfA = (roomsOfA || []).map((r) => r.room_id);
-  if (roomIdsOfA.length === 0) return null;
-
-  const { data: sharedRooms } = await supabase
-    .from('com_t_chat_room_user')
-    .select('room_id, com_t_chat_room!inner(closed_at)')
-    .eq('user_id', memberIdB)
-    .is('left_at', null)
-    .in('room_id', roomIdsOfA);
-
-  for (const shared of sharedRooms || []) {
-    const room = Array.isArray(shared.com_t_chat_room) ? shared.com_t_chat_room[0] : shared.com_t_chat_room;
-    if (room?.closed_at) continue;
-
-    const { count } = await supabase
-      .from('com_t_chat_room_user')
-      .select('room_id', { count: 'exact', head: true })
-      .eq('room_id', shared.room_id)
-      .is('left_at', null);
-
-    // 将来の1対多対応時はこの「2人部屋」判定を拡張する
-    if (count === 2) {
-      return shared.room_id;
-    }
-  }
-
-  return null;
 }
 
 /**
@@ -573,7 +515,7 @@ export async function getChatRooms(): Promise<{
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, data: [], error: 'Unauthorized' };
 
     const { data: myMemberships, error: memberError } = await supabase
@@ -660,18 +602,29 @@ export async function getAllChatRoomsForAdmin(): Promise<{
 }
 
 /**
- * ルーム詳細（参加者一覧・自分が参加者かどうか）を取得する。
+ * ルーム詳細（参加者一覧・自分が参加者かどうか・既読位置）を取得する。
  * 非参加ルームはRLSにより非Adminからは取得できない（Adminは査閲のため取得可能）。
+ * - viewerUserId: 表示しているユーザー。クライアントのユーザー情報の読み込みを待たずに、
+ *   初回表示から自分/相手の発言を正しく出し分けるために返す（メール等のリンクから直接開いた場合も同じ）
+ * - myLastReadAt: 自分が最後に読んだメッセージの送信時刻（「ここから未読」の位置。参加者でなければ null）
+ * - counterpartLastReadAt: 自分が参加している1対1ルームの相手の既読位置（既読表示用。グループ・査閲では null）
  */
 export async function getChatRoomDetail(roomId: string): Promise<{
   success: boolean;
-  data?: { room: ChatRoom; members: ChatRoomListItem['members']; isMember: boolean };
+  data?: {
+    room: ChatRoom;
+    members: ChatRoomListItem['members'];
+    isMember: boolean;
+    viewerUserId: string;
+    myLastReadAt: string | null;
+    counterpartLastReadAt: string | null;
+  };
   error?: string;
 }> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const { data: room, error: roomError } = await supabase
@@ -686,7 +639,7 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     const { data: members } = await supabase
       .from('com_t_chat_room_user')
-      .select('user_id, user_type, com_m_user(user_name, icon_path, client_id, com_m_client(client_name))')
+      .select('user_id, user_type, last_read_chat_id, com_m_user(user_name, icon_path, client_id, com_m_client(client_name))')
       .eq('room_id', roomId)
       .is('left_at', null);
 
@@ -705,7 +658,31 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     const isMember = memberList.some((m) => m.user_id === user.id);
 
-    return { success: true, data: { room: room as ChatRoom, members: memberList, isMember } };
+    // 既読位置（メッセージID）を送信時刻に置き換える（自分=「ここから未読」、1対1の相手=「既読」表示）
+    const readRows = (members || []) as { user_id: string; last_read_chat_id: string | null }[];
+    const myReadChatId = isMember ? readRows.find((m) => m.user_id === user.id)?.last_read_chat_id ?? null : null;
+    const counterpartReadChatId =
+      isMember && room.room_type === CHAT_ROOM_TYPES.ONE_ON_ONE
+        ? readRows.find((m) => m.user_id !== user.id)?.last_read_chat_id ?? null
+        : null;
+    const readChatIds = [myReadChatId, counterpartReadChatId].filter((id): id is string => !!id);
+    const readAtByChatId = new Map<string, string>();
+    if (readChatIds.length > 0) {
+      const { data: readChats } = await supabase.from('com_t_chat').select('chat_id, created_at').in('chat_id', readChatIds);
+      for (const c of readChats ?? []) readAtByChatId.set(c.chat_id as string, c.created_at as string);
+    }
+
+    return {
+      success: true,
+      data: {
+        room: room as ChatRoom,
+        members: memberList,
+        isMember,
+        viewerUserId: user.id,
+        myLastReadAt: myReadChatId ? readAtByChatId.get(myReadChatId) ?? null : null,
+        counterpartLastReadAt: counterpartReadChatId ? readAtByChatId.get(counterpartReadChatId) ?? null : null,
+      },
+    };
   } catch (err) {
     logger.error('chat:get_room_detail_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,

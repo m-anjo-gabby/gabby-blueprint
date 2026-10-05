@@ -1,12 +1,12 @@
 import { getTranslations } from 'next-intl/server';
-import { getCompanyProfile, getSessionPayRate } from '@/actions/adminPaymentSettingsAction';
+import { getSessionPayRate } from '@/actions/adminPaymentSettingsAction';
 import { PaymentSettingsForm } from './_components/PaymentSettingsForm';
 
 export default async function PaymentSettingsPage() {
   const t = await getTranslations('paymentSettings');
-  const [companyProfile, sessionPayRate] = await Promise.all([getCompanyProfile(), getSessionPayRate()]);
+  const sessionPayRate = await getSessionPayRate();
 
-  if (!companyProfile || !sessionPayRate) {
+  if (!sessionPayRate) {
     return (
       <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
         {t('fetchFailed')}
@@ -23,7 +23,7 @@ export default async function PaymentSettingsPage() {
         </p>
       </div>
 
-      <PaymentSettingsForm initialCompanyProfile={companyProfile} initialSessionPayRate={sessionPayRate} />
+      <PaymentSettingsForm initialSessionPayRate={sessionPayRate} />
     </div>
   );
 }

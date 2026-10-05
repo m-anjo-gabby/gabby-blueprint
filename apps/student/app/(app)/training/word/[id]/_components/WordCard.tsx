@@ -56,15 +56,15 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
 
       {/* 2. Step Badge Section: Headerのレール位置(px-8)と完全に同期 */}
       <div className="w-full shrink-0 flex flex-col items-start mt-4 mb-2 pt-1 px-6"> 
-        <div className="flex items-center h-5 overflow-hidden rounded-md border border-indigo-100 shadow-sm mb-3">
-          <div className="bg-indigo-600 px-2 h-full flex items-center border-r border-white/20">
+        <div className="flex items-center h-5 overflow-hidden rounded-md border border-brand-100 shadow-sm mb-3">
+          <div className="bg-brand px-2 h-full flex items-center border-r border-white/20">
             <span className="text-[9px] font-black text-white uppercase tracking-wider">
               Step {phrase.seq_no}
             </span>
           </div>
           
-          <div className="bg-indigo-50/50 px-2 h-full flex items-center">
-            <span className="text-[9px] font-black text-indigo-600/80 uppercase tracking-tight">
+          <div className="bg-brand-50/50 px-2 h-full flex items-center">
+            <span className="text-[9px] font-black text-brand/80 uppercase tracking-tight">
               {PHRASE_TYPES[phrase.phrase_type as PhraseType]?.label}
             </span>
           </div>
@@ -81,7 +81,7 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
                 initial={false}
                 animate={{ x: i <= phraseIdx ? "0%" : "-100%" }}
                 transition={{ duration: 0.4, ease: "circOut" }}
-                className="absolute inset-0 bg-indigo-500 shadow-[0_0_4px_rgba(99,102,241,0.2)]"
+                className="absolute inset-0 bg-brand-500 shadow-xs shadow-brand-500/20"
               />
             </div>
           ))}
@@ -115,7 +115,7 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
 
               {/* Back: Japanese (英語とのコントラストをつけるためIndigo色を採用) */}
               <div className="absolute inset-0 backface-hidden rotate-y-180 flex items-center justify-center text-center p-6">
-                <p className="text-2xl sm:text-3xl font-black text-indigo-600 leading-[1.15] tracking-tighter antialiased">
+                <p className="text-2xl sm:text-3xl font-black text-brand leading-[1.15] tracking-tighter antialiased">
                   {phrase.phrase_ja}
                 </p>
               </div>

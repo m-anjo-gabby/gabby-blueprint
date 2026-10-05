@@ -81,3 +81,47 @@ FOR UPDATE TO authenticated USING (
         WHERE r.student_id = student_m_sprint_progress.user_id AND r.coach_id = auth.uid()
     )
 );
+
+---------------------------------------------
+-- 追加パッチ: レベル管理の有無 (level_managed) と本人の権限の参照限定 (2026-10-02)
+-- 既存環境に対しては、このパッチのみをrun.mjs（supabase/release/）で適用してください。
+---------------------------------------------
+-- 【背景】
+-- コーチのいない契約（アプリのみ）の生徒は到達レベルが上がらず、上位レベルの教材を選べない。
+-- アドミンのユーザー管理で生徒ごとに「レベル管理しない」を選べるようにし、その生徒は
+-- スプリントの全レベルを選択可能とする（true=到達レベル＋1まで選択可 / false=全レベル選択可）。
+--
+-- 【本人の権限】
+-- 生徒アプリは本テーブルを参照するだけで、作成は handle_new_user()（SECURITY DEFINER）、
+-- 更新はコーチ（担当関係のUPDATEポリシー）と管理者（service_role）が行う。
+-- 本人に FOR ALL を許していると、生徒が自分の到達レベルや level_managed を書き換えられるため、
+-- 本人の権限を SELECT のみに限定する。
+ALTER TABLE public.student_m_sprint_progress
+  ADD COLUMN IF NOT EXISTS level_managed BOOLEAN NOT NULL DEFAULT true;
+
+COMMENT ON COLUMN public.student_m_sprint_progress.level_managed IS 'スプリントのレベル管理 (true:到達レベル+1まで選択可, false:全レベル選択可)';
+
+DROP POLICY IF EXISTS "Users can manage their own sprint progress" ON public.student_m_sprint_progress;
+DROP POLICY IF EXISTS "Users can view their own sprint progress" ON public.student_m_sprint_progress;
+CREATE POLICY "Users can view their own sprint progress" ON public.student_m_sprint_progress
+FOR SELECT TO authenticated
+USING (user_id = auth.uid());
+
+---------------------------------------------
+-- 追加パッチ: アプリのみ契約の生徒のレベル管理をオフにする (2026-10-03)
+-- 既存環境に対しては、このパッチのみをrun.mjs（supabase/release/）で適用してください。
+---------------------------------------------
+-- 【背景】
+-- レベル管理はコーチが定期的に引き上げるライブセッション付き契約だけで行う。新しい生徒は
+-- 初期ライセンスの発行時（packages/lib/license/issue.ts）に契約の種類から設定するため、
+-- 列の既定値（true）は変えず、既存の生徒だけをここで一度揃える。
+UPDATE public.student_m_sprint_progress p
+SET level_managed = false
+WHERE p.level_managed
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.com_t_user_license l
+    JOIN public.com_m_contract c ON c.contract_id = l.contract_id
+    WHERE l.user_id = p.user_id
+      AND c.contract_type = 2
+  );
