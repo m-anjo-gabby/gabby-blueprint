@@ -1083,7 +1083,7 @@
       "noSeries": "No series yet.",
       "sessionCount": "{count, plural, one {# session} other {# sessions}}",
       "noUpcoming": "None scheduled",
-      "openSeries": "Open {title}",
+      "manageSessions": "Manage sessions",
       "backToList": "Back to series",
       "notFound": "Series not found.",
       "deleteButton": "Delete",

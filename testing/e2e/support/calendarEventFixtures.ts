@@ -43,7 +43,7 @@ async function findUserByEmail(admin: SupabaseClient, email: string): Promise<{ 
 /**
  * 指定の生徒の所属テナント宛てに、公開済み・参加確認ありのグループセッションを作る。
  * startOffsetMinutes は現在からの開始までの分（負の値で開催中）。
- * withSeries を指定すると使い捨てのシリーズに入れ、coachEmail を指定するとそのコーチを担当に付ける。
+ * withSeries を指定すると使い捨てのシリーズに入れ（seriesId を指定するとそのシリーズに入れる）、coachEmail を指定するとそのコーチを担当に付ける。
  */
 export async function createGroupSession(
   studentEmail: string,
@@ -51,15 +51,16 @@ export async function createGroupSession(
     startOffsetMinutes,
     label,
     withSeries = false,
+    seriesId: existingSeriesId,
     coachEmail,
-  }: { startOffsetMinutes: number; label: string; withSeries?: boolean; coachEmail?: string }
+  }: { startOffsetMinutes: number; label: string; withSeries?: boolean; seriesId?: string; coachEmail?: string }
 ): Promise<GroupSessionFixture> {
   const admin = await createAdminClient();
   const { clientId } = await findUserByEmail(admin, studentEmail);
 
-  let seriesId: string | null = null;
+  let seriesId: string | null = existingSeriesId ?? null;
   let seriesTitle: string | null = null;
-  if (withSeries) {
+  if (withSeries && !existingSeriesId) {
     seriesTitle = `${E2E_EVENT_TITLE_PREFIX}シリーズ ${label} ${Date.now()}`;
     const { data: series, error: seriesErr } = await admin
       .from("com_m_calendar_event_series")
@@ -103,6 +104,13 @@ export async function createGroupSession(
     if (coachErr) throw new Error(`担当コーチの割当に失敗: ${coachErr.message}`);
   }
   return { admin, calendarEventId, title, locationUrl, seriesId, seriesTitle, coachName };
+}
+
+/** 指定の生徒をグループセッションに参加登録する（画面を通さずに前提を作る場合） */
+export async function joinAsStudent({ admin, calendarEventId }: GroupSessionFixture, studentEmail: string): Promise<void> {
+  const userId = await findUserIdByEmail(admin, studentEmail);
+  const { error } = await admin.from("com_t_calendar_event_participant").insert({ calendar_event_id: calendarEventId, user_id: userId });
+  if (error) throw new Error(`参加登録に失敗: ${error.message}`);
 }
 
 /**

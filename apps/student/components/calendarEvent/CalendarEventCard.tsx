@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, CheckCircle2, Copy, Download, ExternalLink, Megaphone, Paperclip, X } from 'lucide-react';
+import Link from 'next/link';
+import { Check, CheckCircle2, ChevronRight, Copy, Download, ExternalLink, Megaphone, Paperclip, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
@@ -83,13 +84,15 @@ interface CalendarEventCardProps {
   event: CalendarEventItem;
   timezone: string;
   onParticipationChanged: (calendarEventId: string, isJoined: boolean) => void;
+  /** シリーズに属する回で「このシリーズの回をすべて見る」（グループセッションの一覧へ）を出すか（一覧の中で開いた場合は出さない） */
+  showSeriesLink?: boolean;
 }
 
 /**
  * カレンダーイベント（グループセッション・メンテナンス等）の詳細（カレンダーの日の詳細・ホームのイベント詳細で共有する）。
  * 参加確認ありのイベントは、参加登録した人にだけ参加URLを出す。参加登録は終了するまで、取消は開始前まで受け付ける。
  */
-export function CalendarEventCard({ event, timezone, onParticipationChanged }: CalendarEventCardProps) {
+export function CalendarEventCard({ event, timezone, onParticipationChanged, showSeriesLink = true }: CalendarEventCardProps) {
   const [copied, setCopied] = useState(false);
   const [showLink, setShowLink] = useState(false);
   const nowMs = useNow();
@@ -143,6 +146,16 @@ export function CalendarEventCard({ event, timezone, onParticipationChanged }: C
           <p className="text-[11px] font-bold text-ink-subtle">{event.series.title}について</p>
           <p className="mt-0.5 text-xs text-ink-soft whitespace-pre-wrap">{event.series.description}</p>
         </div>
+      )}
+
+      {showSeriesLink && event.series && (
+        <Link
+          href={`/group-sessions?series=${event.series.series_id}`}
+          className="inline-flex items-center gap-0.5 text-xs font-semibold text-brand-strong hover:text-brand-900"
+        >
+          このシリーズの回をすべて見る
+          <ChevronRight size={14} />
+        </Link>
       )}
 
       {!event.rsvp_enabled && event.location_url && (

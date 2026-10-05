@@ -1,24 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { CalendarDays, CheckCircle2, ChevronRight, ExternalLink, UsersRound } from 'lucide-react';
+import { CalendarDays, ChevronRight, ExternalLink, UsersRound } from 'lucide-react';
 import { useNow } from '@gabby/lib/hooks/useNow';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
-import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { getCalendarEventPhase, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { AddToCalendarMenu } from '@/components/calendarEvent/AddToCalendarMenu';
-import { CalendarEventCard } from '@/components/calendarEvent/CalendarEventCard';
+import { EventDetailDrawer } from '@/components/calendarEvent/EventDetailDrawer';
 import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
-import { EventCoachLine, EventSeriesLabel } from '@/components/calendarEvent/EventMeta';
-import { formatTimeUntil } from '@/lib/sessionFormat';
+import {
+  EventCoachLine,
+  EventSeriesLabel,
+  EventTiming,
+  JoinedBadge,
+  formatEventSlot,
+} from '@/components/calendarEvent/EventMeta';
 import { cn } from '@/lib/utils';
 import { HomeCard } from './HomeCard';
 
 const CARD_TITLE = 'グループセッション';
+/** 見出しの補助リンク（シリーズごとの一覧・過去のセッションを見る画面） */
+const CARD_ACTION = { label: '一覧を見る', href: '/group-sessions' };
 
 /** 1件目の詳細の下に一覧で並べる件数 */
 const MAX_OTHER_EVENTS = 2;
@@ -30,50 +35,6 @@ const EVENT_LAYOUT = {
   block: 'rounded-control bg-canvas p-4',
   blockTitle: 'text-xs text-ink-muted',
 } as const;
-
-/** 「10月12日(日)」「20:00〜21:00」（終了時刻が無い場合は「20:00〜」） */
-function formatEventSlot(event: CalendarEventItem, timeZone: string): { date: string; time: string } {
-  const dateFormat = new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' });
-  const timeFormat = new Intl.DateTimeFormat('ja-JP', { timeZone, hour: '2-digit', minute: '2-digit' });
-  const start = new Date(event.start_datetime);
-  return {
-    date: dateFormat.format(start),
-    time: `${timeFormat.format(start)}〜${event.end_datetime ? timeFormat.format(new Date(event.end_datetime)) : ''}`,
-  };
-}
-
-/** 開催までの状況（開催中 / 今日・明日の残り時間）。現在時刻の確定前と、2日以上先は出さない */
-function EventTiming({ event, nowMs, timezone }: { event: CalendarEventItem; nowMs: number | null; timezone: string }) {
-  if (nowMs === null) return null;
-  const phase = getCalendarEventPhase(event, nowMs);
-  if (phase === 'live') {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-strong">
-        <span className="relative flex size-2">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60" />
-          <span className="relative inline-flex size-2 rounded-full bg-brand-500" />
-        </span>
-        開催中
-      </span>
-    );
-  }
-  const eventDate = toIsoDateInZone(event.start_datetime, timezone);
-  const today = toIsoDateInZone(nowMs, timezone);
-  const tomorrow = toIsoDateInZone(nowMs + 24 * 60 * 60 * 1000, timezone);
-  const until = formatTimeUntil(event.start_datetime, nowMs);
-  if (eventDate === today) return <span className="text-xs font-bold text-brand-strong">今日・あと{until}</span>;
-  if (eventDate === tomorrow) return <span className="text-xs font-bold text-brand-strong">明日</span>;
-  return null;
-}
-
-function JoinedBadge() {
-  return (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
-      <CheckCircle2 size={11} />
-      参加予定
-    </span>
-  );
-}
 
 interface FeaturedEventProps {
   event: CalendarEventItem;
@@ -221,7 +182,7 @@ export function HomeEventCard({ events: serverEvents }: { events: CalendarEventI
   };
 
   return (
-    <HomeCard title={CARD_TITLE}>
+    <HomeCard title={CARD_TITLE} action={CARD_ACTION}>
       <div className="@container">
         {featured ? (
           <div className={cn(EVENT_LAYOUT.grid, others.length === 0 && '@2xl:grid-cols-1')}>
@@ -241,20 +202,12 @@ export function HomeEventCard({ events: serverEvents }: { events: CalendarEventI
         )}
       </div>
 
-      <Drawer open={detailEvent !== null} onOpenChange={(open) => !open && setDetailId(null)}>
-        <DrawerContent className="mx-auto max-h-[85vh] max-w-2xl">
-          <DrawerHeader className="text-left">
-            <DrawerTitle className="text-base font-bold text-ink">
-              {detailEvent ? formatEventSlot(detailEvent, timezone).date : ''}
-            </DrawerTitle>
-          </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-6">
-            {detailEvent && (
-              <CalendarEventCard event={detailEvent} timezone={timezone} onParticipationChanged={handleParticipationChanged} />
-            )}
-          </div>
-        </DrawerContent>
-      </Drawer>
+      <EventDetailDrawer
+        event={detailEvent}
+        timezone={timezone}
+        onClose={() => setDetailId(null)}
+        onParticipationChanged={handleParticipationChanged}
+      />
     </HomeCard>
   );
 }
@@ -262,7 +215,7 @@ export function HomeEventCard({ events: serverEvents }: { events: CalendarEventI
 /** グループセッションのカードの骨組み（取得を待つ間。見出しと区画の枠は本物で描く） */
 export function HomeEventCardSkeleton() {
   return (
-    <HomeCard title={CARD_TITLE}>
+    <HomeCard title={CARD_TITLE} action={CARD_ACTION}>
       <section className={EVENT_LAYOUT.featured}>
         <h3 className={EVENT_LAYOUT.blockTitle}>次回の開催</h3>
         <Skeleton className="mt-2.5 h-5 w-48" />

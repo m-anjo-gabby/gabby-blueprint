@@ -215,7 +215,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl max-h-[90vh] flex flex-col [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100">
+      <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl max-h-[90vh] flex flex-col [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100">
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
@@ -236,69 +236,37 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white overflow-y-auto">
-            {/* --- イベント種別 --- */}
-            <FormField
-              control={form.control}
-              name="event_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('eventTypeLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                      {CALENDAR_EVENT_TYPES[field.value].label}
-                    </div>
-                  ) : (
-                    <Select
-                      onValueChange={(value: CalendarEventType) => {
-                        field.onChange(value);
-                        // 参加確認が必須の種別（グループセッション等）に切り替えたら、参加確認を有効にする
-                        if (CALENDAR_EVENT_TYPES[value].rsvpRequired) form.setValue('rsvp_enabled', true);
-                      }}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {EVENT_TYPE_KEYS.map((key) => (
-                          <SelectItem key={key} value={key}>
-                            {CALENDAR_EVENT_TYPES[key].label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* --- シリーズ（グループセッションのみ。単発は「なし」） --- */}
-            {eventType === 'GROUP_SESSION' && (
+            {/* 短い項目は2列に並べる（説明・URL・担当コーチ等は全幅） */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* --- イベント種別 --- */}
               <FormField
                 control={form.control}
-                name="series_id"
+                name="event_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('seriesLabel')}</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('eventTypeLabel')}</FormLabel>
                     {isConfirming ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                        {seriesOptions.find((s) => s.series_id === field.value)?.title ?? t('seriesNone')}
+                        {CALENDAR_EVENT_TYPES[field.value].label}
                       </div>
                     ) : (
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={(value: CalendarEventType) => {
+                          field.onChange(value);
+                          // 参加確認が必須の種別（グループセッション等）に切り替えたら、参加確認を有効にする
+                          if (CALENDAR_EVENT_TYPES[value].rsvpRequired) form.setValue('rsvp_enabled', true);
+                        }}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className="bg-white rounded-xl border-slate-200">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={NO_SERIES}>{t('seriesNone')}</SelectItem>
-                          {seriesOptions.map((s) => (
-                            <SelectItem key={s.series_id} value={s.series_id}>
-                              {s.title}
+                          {EVENT_TYPE_KEYS.map((key) => (
+                            <SelectItem key={key} value={key}>
+                              {CALENDAR_EVENT_TYPES[key].label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -308,7 +276,43 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                   </FormItem>
                 )}
               />
-            )}
+
+              {/* --- シリーズ（グループセッションのみ。単発は「なし」） --- */}
+              {eventType === 'GROUP_SESSION' && (
+                <FormField
+                  control={form.control}
+                  name="series_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('seriesLabel')}</FormLabel>
+                      {isConfirming ? (
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                          {seriesOptions.find((s) => s.series_id === field.value)?.title ?? t('seriesNone')}
+                        </div>
+                      ) : (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={NO_SERIES}>{t('seriesNone')}</SelectItem>
+                            {seriesOptions.map((s) => (
+                              <SelectItem key={s.series_id} value={s.series_id}>
+                                {s.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+            </div>
 
             {/* --- タイトル --- */}
             <FormField
@@ -494,60 +498,29 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
               </div>
             )}
 
-            {/* --- 配信対象 --- */}
-            <FormField
-              control={form.control}
-              name="target_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('targetTypeLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                      {TARGET_TYPE_LABEL[field.value]}
-                    </div>
-                  ) : (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {TARGET_TYPE_KEYS.map((key) => (
-                          <SelectItem key={key} value={key}>
-                            {TARGET_TYPE_LABEL[key]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {targetType === 'CLIENT' && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* --- 配信対象 --- */}
               <FormField
                 control={form.control}
-                name="client_id"
+                name="target_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('targetClientLabel')}</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('targetTypeLabel')}</FormLabel>
                     {isConfirming ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                        {clients.find((c) => c.client_id === field.value)?.client_name ?? field.value}
+                        {TARGET_TYPE_LABEL[field.value]}
                       </div>
                     ) : (
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                            <SelectValue placeholder={t('targetClientPlaceholder')} />
+                            <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {clients.map((c) => (
-                            <SelectItem key={c.client_id} value={c.client_id}>
-                              {c.client_name}
+                          {TARGET_TYPE_KEYS.map((key) => (
+                            <SelectItem key={key} value={key}>
+                              {TARGET_TYPE_LABEL[key]}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -557,7 +530,41 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                   </FormItem>
                 )}
               />
-            )}
+
+              {targetType === 'CLIENT' && (
+                <FormField
+                  control={form.control}
+                  name="client_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('targetClientLabel')}</FormLabel>
+                      {isConfirming ? (
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                          {clients.find((c) => c.client_id === field.value)?.client_name ?? field.value}
+                        </div>
+                      ) : (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                              <SelectValue placeholder={t('targetClientPlaceholder')} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {clients.map((c) => (
+                              <SelectItem key={c.client_id} value={c.client_id}>
+                                {c.client_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+            </div>
 
             {/* --- 担当コーチ（グループセッションのみ） --- */}
             {eventType === 'GROUP_SESSION' && (

@@ -32,6 +32,7 @@ const VALID_STUDENT_ROUTES = [
   '/calendar',
   '/chat',
   '/live-room',
+  '/group-sessions',
 ];
 
 export async function proxy(req: NextRequest) {

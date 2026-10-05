@@ -1083,7 +1083,7 @@
       "noSeries": "シリーズはまだありません。",
       "sessionCount": "{count}回",
       "noUpcoming": "予定なし",
-      "openSeries": "{title}を開く",
+      "manageSessions": "回の管理・詳細",
       "backToList": "シリーズの一覧へ戻る",
       "notFound": "シリーズが見つかりませんでした。",
       "deleteButton": "削除",

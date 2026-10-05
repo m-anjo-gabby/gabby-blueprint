@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
 import { getTranslations } from 'next-intl/server';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { getCalendarEventSeriesList } from '@/actions/adminCalendarEventSeriesAction';
@@ -8,7 +10,7 @@ import { SeriesFormDialog } from './_components/SeriesFormDialog';
 
 /**
  * グループセッションのシリーズ（企画。例: 「10月の発音グループセッション」）の一覧。
- * 行を開くとシリーズの詳細（回の一覧・回をまとめて追加）へ移る。
+ * 行全体（またはタイトル・「回の管理・詳細」ボタン）でシリーズの詳細（回の一覧・回をまとめて追加）へ移る。
  */
 export default async function CalendarEventSeriesPage() {
   const t = await getTranslations('calendarEvents.series');
@@ -39,7 +41,7 @@ export default async function CalendarEventSeriesPage() {
               <TableHead className="text-slate-600 font-bold py-3 px-4 text-xs">{t('titleHeader')}</TableHead>
               <TableHead className="text-slate-600 font-bold py-3 px-4 text-xs">{t('sessionCountHeader')}</TableHead>
               <TableHead className="text-slate-600 font-bold py-3 px-4 text-xs">{t('nextSessionHeader')}</TableHead>
-              <TableHead className="w-10" />
+              <TableHead className="w-px" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -51,9 +53,13 @@ export default async function CalendarEventSeriesPage() {
               </TableRow>
             ) : (
               seriesList.map((series) => (
-                <TableRow key={series.series_id} className="hover:bg-slate-50/40 border-slate-100">
+                // 行全体を押せるよう、タイトルのリンクの当たり判定を行いっぱいに広げる（ボタンはその手前に重ねる）
+                <TableRow key={series.series_id} className="relative cursor-pointer hover:bg-slate-50 border-slate-100">
                   <TableCell className="py-3 px-4">
-                    <Link href={`/calendar-events/series/${series.series_id}`} className="font-bold text-slate-700 hover:text-brand">
+                    <Link
+                      href={`/calendar-events/series/${series.series_id}`}
+                      className="font-bold text-slate-700 hover:text-brand after:absolute after:inset-0"
+                    >
                       {series.title}
                     </Link>
                   </TableCell>
@@ -64,10 +70,10 @@ export default async function CalendarEventSeriesPage() {
                   <TableCell className="py-3 px-4 text-right">
                     <Link
                       href={`/calendar-events/series/${series.series_id}`}
-                      aria-label={t('openSeries', { title: series.title })}
-                      className="inline-flex text-slate-400 hover:text-brand"
+                      className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'relative z-10 h-8 gap-1 whitespace-nowrap')}
                     >
-                      <ChevronRight size={16} />
+                      {t('manageSessions')}
+                      <ChevronRight size={14} />
                     </Link>
                   </TableCell>
                 </TableRow>

@@ -3,7 +3,12 @@
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { CalendarEventCoachOption, CalendarEventItem, CalendarEventMessageItem } from '@gabby/types/calendarEvent';
+import {
+  CalendarEventCoachOption,
+  CalendarEventItem,
+  CalendarEventMessageItem,
+  getCalendarEventPhase,
+} from '@gabby/types/calendarEvent';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { createAdminClient } from '../../supabase/admin';
 
@@ -111,6 +116,62 @@ export async function joinCalendarEventCore(
     return { success: true };
   } catch (err) {
     logger.error('calendarEvent:join_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * シリーズのまだ終わっていない回に、まとめて参加登録する（生徒/コーチ共通。ポータル共通）。
+ * 対象は RLS で閲覧できる（＝自分に配信されている）公開中の回のうち、参加確認があり終了していないもの。
+ * 終了時刻が無い回は開始から CALENDAR_EVENT_DEFAULT_DURATION_MS で終了とみなす。登録済みの回はそのまま（重複しない）。
+ * @returns 新たに参加登録した回のID
+ */
+export async function joinCalendarEventSeriesCore(
+  seriesId: string
+): Promise<{ success: true; joinedIds: string[] } | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const nowMs = Date.now();
+    const { data, error } = await supabase
+      .from('com_m_calendar_event')
+      .select('calendar_event_id, start_datetime, end_datetime, rsvp_enabled, participant:com_t_calendar_event_participant(calendar_event_id)')
+      .eq('series_id', seriesId)
+      .eq('rsvp_enabled', true)
+      .gte('start_datetime', new Date(nowMs - 24 * 60 * 60 * 1000).toISOString());
+    if (error) {
+      logger.error('calendarEvent:join_series_fetch_failed', error.message, { ...ctx, userId: user.id, payload: { seriesId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    const targetIds = (data ?? [])
+      .filter((row) => getCalendarEventPhase(row, nowMs) !== 'ended')
+      .filter((row) => !(Array.isArray(row.participant) && row.participant.length > 0))
+      .map((row) => row.calendar_event_id as string);
+    if (targetIds.length === 0) return { success: true, joinedIds: [] };
+
+    const { error: insertError } = await supabase
+      .from('com_t_calendar_event_participant')
+      .upsert(
+        targetIds.map((calendarEventId) => ({ user_id: user.id, calendar_event_id: calendarEventId })),
+        { onConflict: 'user_id,calendar_event_id' }
+      );
+    if (insertError) {
+      logger.error('calendarEvent:join_series_failed', insertError.message, { ...ctx, userId: user.id, payload: { seriesId } });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    logger.info('calendarEvent:join_series_success', 'Joined calendar event series', {
+      ...ctx,
+      userId: user.id,
+      payload: { seriesId, count: targetIds.length },
+    });
+    return { success: true, joinedIds: targetIds };
+  } catch (err) {
+    logger.error('calendarEvent:join_series_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

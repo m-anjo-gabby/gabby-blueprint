@@ -6,6 +6,7 @@ import {
   cancelCalendarEventParticipationCore,
   getCalendarEventMessagesCore,
   getCalendarEventMessageAttachmentUrlCore,
+  joinCalendarEventSeriesCore,
 } from '@gabby/lib/calendarEvent/actions/calendarEventActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -49,6 +50,45 @@ export async function getHomeCalendarEvents(): Promise<CalendarEventItem[]> {
     (event) =>
       CALENDAR_EVENT_TYPES[event.event_type]?.homeDisplay === 'feature' && getCalendarEventPhase(event, nowMs) !== 'ended'
   );
+}
+
+/** グループセッションの一覧に出す期間（これから: 今日から先の日数 / 過去: さかのぼる日数） */
+const GROUP_SESSION_UPCOMING_DAYS = 120;
+const GROUP_SESSION_PAST_DAYS = 183;
+
+/**
+ * グループセッションの一覧（/group-sessions）。種別の homeDisplay が feature のイベントを、
+ * これから（開催前・開催中。開始順）と、参加登録した過去の回（終了済み。新しい順）に分けて返す。
+ */
+export async function getGroupSessionList(): Promise<{ upcoming: CalendarEventItem[]; past: CalendarEventItem[] }> {
+  const nowMs = Date.now();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const events = await getMyCalendarEvents(
+    new Date(nowMs - GROUP_SESSION_PAST_DAYS * DAY_MS).toISOString(),
+    new Date(nowMs + GROUP_SESSION_UPCOMING_DAYS * DAY_MS).toISOString()
+  );
+  const featured = events.filter((event) => CALENDAR_EVENT_TYPES[event.event_type]?.homeDisplay === 'feature');
+  return {
+    upcoming: featured.filter((event) => getCalendarEventPhase(event, nowMs) !== 'ended'),
+    past: featured
+      .filter((event) => event.is_joined && getCalendarEventPhase(event, nowMs) === 'ended')
+      .sort((a, b) => b.start_datetime.localeCompare(a.start_datetime)),
+  };
+}
+
+/**
+ * シリーズのまだ終わっていない回に、まとめて参加登録する
+ */
+export async function joinCalendarEventSeries(
+  seriesId: string
+): Promise<{ success: true; joinedIds: string[] } | { success: false; message: string }> {
+  const result = await joinCalendarEventSeriesCore(seriesId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:join_calendar_event_series_failed', result.errorCode, ctx);
+    return { success: false, message: CALENDAR_EVENT_ERROR_MESSAGE };
+  }
+  return { success: true, joinedIds: result.joinedIds };
 }
 
 /**

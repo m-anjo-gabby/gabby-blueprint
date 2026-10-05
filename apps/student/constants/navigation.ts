@@ -39,7 +39,8 @@ export const SHELL_NAV_ITEMS: ShellNavItem[] = [
     label: 'ホーム',
     href: '/dashboard',
     icon: Home,
-    matchPaths: ['/dashboard'],
+    // グループセッションの一覧はホームのカードから開くため、ホーム配下として扱う
+    matchPaths: ['/dashboard', '/group-sessions'],
     isVisible: () => true,
   },
   {
