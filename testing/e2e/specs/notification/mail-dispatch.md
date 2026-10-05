@@ -26,7 +26,7 @@
 - 配信設定の行が無い区分は「配信する」（初期値オン）。
 - 送信処理の接続先は環境ごとに Supabase Vault の `mail_dispatch_url` / `mail_dispatch_secret` に置く。未登録の環境（dev）は pg_cron が登録だけを行い、
   送信はテストから送信処理を直接呼んで確かめる（`support/mailDispatch.ts` の `invokeMailDispatch`。秘密のキーは dev では `apps/admin/.env.local` の `CRON_SECRET`）。
-- 送信処理は送信待ち全体を処理する。dev の admin は `MAIL_DISPATCH_RECIPIENT_ALLOWLIST=resend.dev` で送信先を Resend のテスト用アドレスに限定する。
+- 送信処理は送信待ち全体を処理する。dev・staging の admin は `MAIL_DISPATCH_RECIPIENT_ALLOWLIST="resend.dev,gabbyacademy.com,gvtech.co.jp"` で送信先を Resend のテスト用アドレスと開発・運営のドメインに限定する（本番は設定しない）。
   テストの宛先は `delivered+<tag>-<用途>@resend.dev`（`resendTestAddress`）、受信確認には `RESEND_TEST_READ_API_KEY` が要る（[CONVENTIONS.md](../../CONVENTIONS.md) 2章）。
 - テストは使い捨ての顧客・生徒・イベントで行い、終了後に削除する（`support/authFixtures.ts`。送信待ち・配信設定はユーザーの削除で消える）。
 
