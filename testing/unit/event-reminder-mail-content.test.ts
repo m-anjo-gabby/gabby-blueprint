@@ -67,3 +67,9 @@ test("コーチ向け（英語）: 日本語を含まない", () => {
   assert.ok(html.includes("Join the session"));
   assert.doesNotMatch(html, /[ぁ-んァ-ン]/);
 });
+
+test("シリーズに属する回は、セッション名の上にシリーズ名を載せる", () => {
+  const { html } = renderEventReminderEmail({ ...BASE, seriesTitle: "10月の発音グループセッション", language: "ja", lead: "24h" });
+  assert.ok(html.includes("10月の発音グループセッション"));
+  assert.ok(html.indexOf("10月の発音グループセッション") < html.indexOf("英語でおしゃべり会"));
+});

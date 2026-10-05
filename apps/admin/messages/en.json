@@ -920,7 +920,8 @@
   "calendarEvents": {
     "page": {
       "title": "Calendar Event Management",
-      "subtitle": "Manage group sessions, maintenance notices, and other events shown on student and coach calendars"
+      "subtitle": "Manage group sessions, maintenance notices, and other events shown on student and coach calendars",
+      "seriesLink": "Series"
     },
     "coachPicker": {
       "searchPlaceholder": "Search by coach name...",
@@ -989,7 +990,8 @@
       "noData": "No calendar events found.",
       "deleteDialogTitle": "Delete Calendar Event",
       "deleteDialogBody": "Are you sure you want to delete \"<bold>{title}</bold>\"? It will no longer appear on the student/coach calendar after deletion.",
-      "deleteConfirm": "Delete"
+      "deleteConfirm": "Delete",
+      "seriesPrefix": "Series: {title}"
     },
     "formDialog": {
       "createButton": "Add event",
@@ -1048,7 +1050,74 @@
       "toastCreated": "Calendar event registered",
       "toastUpdated": "Calendar event updated",
       "toastGenericFailed": "The operation failed",
-      "toastSystemError": "A system error occurred"
+      "toastSystemError": "A system error occurred",
+      "seriesLabel": "Series",
+      "seriesNone": "None (one-off event)"
+    },
+    "series": {
+      "backToEvents": "Back to calendar events",
+      "listTitle": "Group session series",
+      "listSubtitle": "Manage each program (e.g. \"October pronunciation group sessions\") with its description and sessions together. One-off events can be registered without a series.",
+      "createButton": "New series",
+      "copyButton": "Create from this series",
+      "editButton": "Edit",
+      "createTitle": "Create series",
+      "editTitle": "Edit series",
+      "copyDialogTitle": "Create a new series from this one",
+      "copyTitle": "{title} (copy)",
+      "copyHint": "The title and description are copied. Sessions are not copied, so add them with \"Add sessions\" after creating the series.",
+      "titleLabel": "Series name",
+      "titlePlaceholder": "e.g. October pronunciation group sessions",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Program overview, this month's theme, etc.",
+      "descriptionHint": "Shown to students in the event details, together with each session's description.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "toastSaveFailed": "Could not save the series",
+      "toastCreated": "Series created",
+      "toastUpdated": "Series updated",
+      "titleHeader": "Series name",
+      "sessionCountHeader": "Sessions",
+      "nextSessionHeader": "Next session",
+      "noSeries": "No series yet.",
+      "sessionCount": "{count, plural, one {# session} other {# sessions}}",
+      "noUpcoming": "None scheduled",
+      "openSeries": "Open {title}",
+      "backToList": "Back to series",
+      "notFound": "Series not found.",
+      "deleteButton": "Delete",
+      "deleteDialogTitle": "Delete this series?",
+      "deleteDialogBody": "\"{title}\" will be deleted. Its sessions are not deleted and remain as one-off events.",
+      "deleteConfirm": "Delete",
+      "toastDeleted": "Series deleted",
+      "toastDeleteFailed": "Could not delete the series",
+      "addSessionsButton": "Add sessions",
+      "addSessionsTitle": "Add sessions",
+      "commonSettings": "Settings for all sessions",
+      "locationUrlHint": "The same join URL is set for all sessions. To use different URLs, edit each session after adding them.",
+      "rsvpNote": "RSVP is enabled because these are group sessions (the join URL is shown only to registered participants).",
+      "sessionNumber": "Session {number}",
+      "removeSession": "Remove",
+      "dateLabel": "Date (JST)",
+      "startTimeLabel": "Start time",
+      "endTimeLabel": "End time (optional)",
+      "sessionTitleLabel": "Topic (title)",
+      "sessionTitlePlaceholder": "e.g. Week 1: Final /n/ — clear endings",
+      "sessionDescriptionLabel": "Description (optional)",
+      "sessionDescriptionPlaceholder": "e.g. Lecture in Japanese and English",
+      "appendSession": "Add a session (one week later)",
+      "addSessionsSubmit": "{count, plural, one {Add # session} other {Add # sessions}}",
+      "toastAdded": "{count, plural, one {# session added} other {# sessions added}}",
+      "toastAddFailed": "Could not add the sessions. Please check your input.",
+      "errors": {
+        "titleRequired": "Please enter a series name",
+        "urlInvalid": "Please enter a valid URL",
+        "dateRequired": "Please enter a date",
+        "timeRequired": "Please enter a start time",
+        "sessionTitleRequired": "Please enter a topic",
+        "clientRequired": "Please select a client"
+      }
     }
   },
   "chat": {

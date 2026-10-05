@@ -11,6 +11,8 @@ export interface EventReminderEmailTemplateProps {
   lead: ReminderLead;
   recipientName: string | null;
   title: string;
+  /** シリーズ名（シリーズに属する回のみ。例: 「10月の発音グループセッション」） */
+  seriesTitle?: string | null;
   description: string | null;
   /** 受信者のタイムゾーンで表した開催日時（例: 「10月12日(日) 20:00〜21:00（日本時間）」） */
   scheduleLabel: string;
@@ -73,6 +75,7 @@ export const EventReminderEmailTemplate: React.FC<EventReminderEmailTemplateProp
   lead,
   recipientName,
   title,
+  seriesTitle,
   description,
   scheduleLabel,
   joinUrl,
@@ -113,6 +116,7 @@ export const EventReminderEmailTemplate: React.FC<EventReminderEmailTemplateProp
 
           <div style={{ backgroundColor: '#f3f5fb', borderRadius: '8px', padding: '20px 20px 8px 20px', margin: '24px 0' }}>
             <p style={labelStyle}>{copy.titleLabel}</p>
+            {seriesTitle && <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 2px 0' }}>{seriesTitle}</p>}
             <p style={valueStyle}>{title}</p>
             <p style={labelStyle}>{copy.scheduleLabel}</p>
             <p style={valueStyle}>{scheduleLabel}</p>

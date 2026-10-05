@@ -84,7 +84,7 @@ E2E: `testing/e2e/tests/smoke/calendar-month.spec.ts`（`?month=` での表示�
 - `apps/student/app/(app)/(shell)/calendar/page.tsx`
 - `apps/student/app/(app)/(shell)/calendar/_components/CalendarBoard.tsx`
 - `apps/student/app/(app)/(shell)/calendar/_components/DayDetailDrawer.tsx`
-- イベントの詳細（ホームと共有）: `apps/student/components/calendarEvent/CalendarEventCard.tsx`（参加登録・取消は `useEventParticipation.ts`、カレンダーへの追加は `AddToCalendarMenu.tsx` と `packages/lib/calendarEvent/addToCalendar.ts`）
+- イベントの詳細（ホームと共有）: シリーズ名（タイトルの上）・担当コーチ（「コーチ：…」）・シリーズの説明（「<シリーズ名>について」。各回の説明の下）を表示する。`apps/student/components/calendarEvent/CalendarEventCard.tsx`（参加登録・取消は `useEventParticipation.ts`、カレンダーへの追加は `AddToCalendarMenu.tsx` と `packages/lib/calendarEvent/addToCalendar.ts`）
 - `apps/student/app/(app)/(shell)/calendar/_components/SessionActionDialog.tsx`
   （実体は `packages/lib/components/common/SessionActionDialog.tsx` の薄いアダプタ）
 - `apps/student/app/(app)/(shell)/calendar/_components/BookMakeupSessionDialog.tsx`

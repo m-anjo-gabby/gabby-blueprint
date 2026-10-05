@@ -34,9 +34,11 @@ import {
 
 interface CalendarEventDataTableProps {
   data: CalendarEventItem[];
+  /** シリーズ名を出さない（シリーズの詳細で、同じシリーズの回だけを並べる場合） */
+  hideSeries?: boolean;
 }
 
-export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
+export function CalendarEventDataTable({ data, hideSeries = false }: CalendarEventDataTableProps) {
   const t = useTranslations('calendarEvents.dataTable');
   const tCommon = useTranslations('common');
   const { showToast } = useToast();
@@ -68,7 +70,19 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
       {
         accessorKey: 'title',
         header: t('titleHeader'),
-        cell: ({ row }) => <span className="font-bold text-slate-700">{row.original.title}</span>,
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <span className="font-bold text-slate-700">{row.original.title}</span>
+            {!hideSeries && row.original.series && (
+              <Link
+                href={`/calendar-events/series/${row.original.series.series_id}`}
+                className="block truncate text-xs text-slate-500 hover:text-brand"
+              >
+                {t('seriesPrefix', { title: row.original.series.title })}
+              </Link>
+            )}
+          </div>
+        ),
       },
       {
         accessorKey: 'start_datetime',
@@ -150,7 +164,7 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
         ),
       },
     ],
-    [t, tCommon]
+    [t, tCommon, hideSeries]
   );
 
   const table = useReactTable({

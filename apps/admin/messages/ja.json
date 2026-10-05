@@ -920,7 +920,8 @@
   "calendarEvents": {
     "page": {
       "title": "カレンダーイベント管理",
-      "subtitle": "生徒・コーチのカレンダーに表示するグループセッション・メンテナンス告知等を管理します"
+      "subtitle": "生徒・コーチのカレンダーに表示するグループセッション・メンテナンス告知等を管理します",
+      "seriesLink": "シリーズ管理"
     },
     "coachPicker": {
       "searchPlaceholder": "コーチ名で検索...",
@@ -989,7 +990,8 @@
       "noData": "カレンダーイベントが見つかりませんでした。",
       "deleteDialogTitle": "カレンダーイベントの削除",
       "deleteDialogBody": "「<bold>{title}</bold>」を削除してもよろしいですか？削除後は生徒/コーチのカレンダーから表示されなくなります。",
-      "deleteConfirm": "削除する"
+      "deleteConfirm": "削除する",
+      "seriesPrefix": "シリーズ: {title}"
     },
     "formDialog": {
       "createButton": "新規登録",
@@ -1048,7 +1050,74 @@
       "toastCreated": "カレンダーイベントを登録しました",
       "toastUpdated": "カレンダーイベントを更新しました",
       "toastGenericFailed": "処理に失敗しました",
-      "toastSystemError": "システムエラーが発生しました"
+      "toastSystemError": "システムエラーが発生しました",
+      "seriesLabel": "シリーズ",
+      "seriesNone": "なし（単発のイベント）"
+    },
+    "series": {
+      "backToEvents": "カレンダーイベント管理へ戻る",
+      "listTitle": "グループセッションのシリーズ",
+      "listSubtitle": "「10月の発音グループセッション」のような企画ごとに、説明と複数の回をまとめて管理します。単発のイベントはシリーズに入れずに登録できます。",
+      "createButton": "新規シリーズ",
+      "copyButton": "このシリーズを元に作成",
+      "editButton": "編集",
+      "createTitle": "シリーズの新規作成",
+      "editTitle": "シリーズの編集",
+      "copyDialogTitle": "このシリーズを元に新しいシリーズを作成",
+      "copyTitle": "{title}（コピー）",
+      "copyHint": "タイトルと説明を引き継ぎます。回は引き継がないため、作成後に「回をまとめて追加」で登録してください。",
+      "titleLabel": "シリーズ名",
+      "titlePlaceholder": "例: 10月の発音グループセッション",
+      "descriptionLabel": "説明",
+      "descriptionPlaceholder": "企画の紹介や、その月のテーマなど",
+      "descriptionHint": "生徒のイベント詳細に、各回の説明とあわせて表示されます。",
+      "cancel": "キャンセル",
+      "save": "保存する",
+      "create": "作成する",
+      "toastSaveFailed": "シリーズを保存できませんでした",
+      "toastCreated": "シリーズを作成しました",
+      "toastUpdated": "シリーズを更新しました",
+      "titleHeader": "シリーズ名",
+      "sessionCountHeader": "回数",
+      "nextSessionHeader": "次回の開始",
+      "noSeries": "シリーズはまだありません。",
+      "sessionCount": "{count}回",
+      "noUpcoming": "予定なし",
+      "openSeries": "{title}を開く",
+      "backToList": "シリーズの一覧へ戻る",
+      "notFound": "シリーズが見つかりませんでした。",
+      "deleteButton": "削除",
+      "deleteDialogTitle": "シリーズを削除しますか？",
+      "deleteDialogBody": "「{title}」を削除します。各回は削除されず、単発のイベントとして残ります。",
+      "deleteConfirm": "削除する",
+      "toastDeleted": "シリーズを削除しました",
+      "toastDeleteFailed": "シリーズを削除できませんでした",
+      "addSessionsButton": "回をまとめて追加",
+      "addSessionsTitle": "回をまとめて追加",
+      "commonSettings": "全回に共通する設定",
+      "locationUrlHint": "全回に同じ参加URLを設定します。回ごとに変える場合は、登録後に各回を編集してください。",
+      "rsvpNote": "グループセッションのため、参加確認は有効で登録されます（参加URLは参加登録した人にだけ表示されます）。",
+      "sessionNumber": "{number}回目",
+      "removeSession": "この回を外す",
+      "dateLabel": "日付（日本時間）",
+      "startTimeLabel": "開始時刻",
+      "endTimeLabel": "終了時刻（任意）",
+      "sessionTitleLabel": "内容（タイトル）",
+      "sessionTitlePlaceholder": "例: Week 1: Final /n/ — clear endings",
+      "sessionDescriptionLabel": "説明（任意）",
+      "sessionDescriptionPlaceholder": "例: 語尾の /n/ を母音を足さずにクリアに終える練習（日本語と英語での講義です）",
+      "appendSession": "回を追加（1週間後）",
+      "addSessionsSubmit": "{count}件を登録する",
+      "toastAdded": "{count}件の回を登録しました",
+      "toastAddFailed": "回を登録できませんでした。入力内容を確認してください",
+      "errors": {
+        "titleRequired": "シリーズ名を入力してください",
+        "urlInvalid": "URLの形式で入力してください",
+        "dateRequired": "日付を入力してください",
+        "timeRequired": "開始時刻を入力してください",
+        "sessionTitleRequired": "内容を入力してください",
+        "clientRequired": "対象の顧客を選択してください"
+      }
     }
   },
   "chat": {

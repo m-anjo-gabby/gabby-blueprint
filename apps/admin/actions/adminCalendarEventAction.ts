@@ -31,6 +31,7 @@ export interface CalendarEventFormData {
   rsvp_enabled: boolean;
   is_published: boolean;
   coach_ids: string[]; // 担当コーチ（主にグループセッション用。原則1〜3名だが上限は設けない）
+  series_id?: string | null; // シリーズ（グループセッションのみ。単発は null）
 }
 
 export interface CalendarEventParticipant {
@@ -51,17 +52,18 @@ function jstDateTimeToUtcIso(dateStr: string, timeStr: string): string | null {
 }
 
 /**
- * カレンダーイベント一覧取得
+ * カレンダーイベント一覧取得（seriesId を指定するとそのシリーズの回だけ）
  */
-export async function getCalendarEvents(): Promise<CalendarEventItem[]> {
+export async function getCalendarEvents(options: { seriesId?: string } = {}): Promise<CalendarEventItem[]> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from('com_m_calendar_event')
-      .select('*')
-      .eq('delete_flg', '0')
-      .order('start_datetime', { ascending: false });
+      .select('*, series:com_m_calendar_event_series(series_id, title, description)')
+      .eq('delete_flg', '0');
+    if (options.seriesId) query = query.eq('series_id', options.seriesId);
+    const { data, error } = await query.order('start_datetime', { ascending: false });
 
     if (error) {
       logger.error('calendarEvent:get_calendar_events_failed', error.message, ctx);
@@ -189,6 +191,8 @@ export async function upsertCalendarEvent(
       client_id: formData.target_type === 'CLIENT' ? formData.client_id || null : null,
       // 参加確認が必須の種別（グループセッション等）は、送信内容に関わらず有効にする
       rsvp_enabled: CALENDAR_EVENT_TYPES[formData.event_type]?.rsvpRequired || formData.rsvp_enabled,
+      // シリーズはグループセッションのみ
+      series_id: formData.event_type === 'GROUP_SESSION' ? formData.series_id || null : null,
       is_published: formData.is_published,
       update_date: new Date().toISOString(),
     };

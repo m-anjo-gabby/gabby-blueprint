@@ -63,6 +63,28 @@ export interface CalendarEventCoachOption {
 }
 
 /**
+ * シリーズ（com_m_calendar_event_series）の表示用の情報（各回に結合して返す）
+ */
+export interface CalendarEventSeriesSummary {
+  series_id: string;
+  title: string;
+  description: string | null;
+}
+
+/**
+ * シリーズ（com_m_calendar_event_series）の管理画面用のデータ型
+ */
+export interface CalendarEventSeriesItem extends CalendarEventSeriesSummary {
+  event_type: CalendarEventType;
+  insert_date: string;
+  update_date: string;
+  /** 回の数（論理削除を除く） */
+  session_count: number;
+  /** これから始まる直近の回の開始日時（無ければ null） */
+  next_start_datetime: string | null;
+}
+
+/**
  * カレンダーイベントマスタ（com_m_calendar_event）のデータ型
  */
 export interface CalendarEventItem {
@@ -73,6 +95,8 @@ export interface CalendarEventItem {
   start_datetime: string; // UTC ISO文字列
   end_datetime: string | null; // NULL許容: 終了時刻を持たない告知
   location_url: string | null;
+  /** シリーズID（単発のイベントは null） */
+  series_id: string | null;
   target_type: CalendarEventTargetType;
   client_id: string | null;
   rsvp_enabled: boolean;
@@ -85,8 +109,10 @@ export interface CalendarEventItem {
   // 結合フィールド（コーチ向けクエリでのみ計算。com_t_calendar_event_coachから結合。
   // TRUEの場合、このコーチはRSVP参加者ではなく担当コーチ（主催者側）である）
   is_assigned_coach: boolean;
-  // 結合フィールド（管理画面一覧でのみ計算。com_t_calendar_event_coachから結合）
+  // 結合フィールド（担当コーチ。管理画面一覧と、生徒/コーチ向けの取得で付加する。com_t_calendar_event_coachから結合）
   coaches?: CalendarEventCoachOption[];
+  // 結合フィールド（シリーズ。シリーズに属する回のみ。com_m_calendar_event_seriesから結合）
+  series?: CalendarEventSeriesSummary | null;
 }
 
 /**

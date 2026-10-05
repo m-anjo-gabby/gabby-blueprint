@@ -344,3 +344,158 @@ SELECT cron.schedule(
 );
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】グループセッションのシリーズ
+-- 追加日: 2026-10-05
+--
+-- 【内容】
+--   1. com_m_calendar_event_series（シリーズ＝企画）を新規作成し、com_m_calendar_event に series_id 列を追加
+--      - 単発のイベントは series_id を持たない（既存のイベントはすべて単発のまま）
+--   2. admin_add_calendar_event_series_sessions(uuid, jsonb)（シリーズに複数の回をまとめて登録）を新規作成
+--
+-- 対応ファイル: DDL/table/com_m_calendar_event_series.sql, DDL/function/admin_add_calendar_event_series_sessions.sql
+-- 【注意】アプリ（アドミンのシリーズ管理、生徒・コーチのイベント表示）が series_id 列を参照するため、
+--   アプリのデプロイより先に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+
+---------------------------------------------
+-- DDL: com_m_calendar_event_series (カレンダーイベントのシリーズ) (2026-10-05 追加)
+---------------------------------------------
+-- 【背景】
+-- グループセッションは「10月の発音グループセッション」「10月のビジネス英語ミニセッション」のような企画（シリーズ）ごとに、
+-- 複数の回（com_m_calendar_event）を開催する。シリーズは企画の名前・紹介文（月のテーマ等）を1か所で持ち、各回はシリーズを
+-- 参照する（com_m_calendar_event.series_id）。単発のイベントは series_id を持たない。
+--
+-- 【持つ情報の分担】
+-- シリーズ: 企画のタイトル・説明（表示用。例: 「10月の発音グループセッション」と、その月のテーマの説明）。翌月は新しいシリーズを作る。
+-- 各回: 日時・内容・参加URL・配信対象・公開・参加確認・担当コーチ（従来どおり）。
+-- 生徒の一覧取得・参加登録・リマインダーは各回の行だけで判定するため、シリーズの有無に影響されない。
+-- 回の並び順は開始日時の順（順番の列は持たない）。
+---------------------------------------------
+CREATE TABLE public.com_m_calendar_event_series (
+    series_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type VARCHAR(30) NOT NULL DEFAULT 'GROUP_SESSION',
+    title TEXT NOT NULL,
+    description TEXT,
+    delete_flg TEXT NOT NULL DEFAULT '0',
+    insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_calendar_event_series IS 'カレンダーイベントのシリーズ（グループセッションの企画。各回は com_m_calendar_event.series_id で参照する）';
+COMMENT ON COLUMN public.com_m_calendar_event_series.series_id IS 'シリーズID';
+COMMENT ON COLUMN public.com_m_calendar_event_series.event_type IS 'イベント種別（各回の event_type と同じ値。正本は packages/types/calendarEvent.ts）';
+COMMENT ON COLUMN public.com_m_calendar_event_series.title IS 'シリーズ名（企画名。例: 10月の発音グループセッション）';
+COMMENT ON COLUMN public.com_m_calendar_event_series.description IS 'シリーズの説明（企画の紹介文、任意）';
+COMMENT ON COLUMN public.com_m_calendar_event_series.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_calendar_event_series.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_calendar_event_series.update_date IS '更新日時';
+
+---------------------------------------------
+-- 各回からの参照（com_m_calendar_event.series_id）
+-- シリーズを物理削除した場合、各回は単発のイベントとして残る（ON DELETE SET NULL）。
+---------------------------------------------
+ALTER TABLE public.com_m_calendar_event
+    ADD COLUMN IF NOT EXISTS series_id UUID REFERENCES public.com_m_calendar_event_series(series_id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.com_m_calendar_event.series_id IS 'シリーズID（com_m_calendar_event_series。単発のイベントは NULL）';
+
+CREATE INDEX IF NOT EXISTS idx_calendar_event_series ON public.com_m_calendar_event (series_id) WHERE series_id IS NOT NULL;
+
+---------------------------------------------
+-- 行レベルセキュリティ (RLS)
+---------------------------------------------
+ALTER TABLE public.com_m_calendar_event_series ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admin can manage calendar event series" ON public.com_m_calendar_event_series;
+DROP POLICY IF EXISTS "Users can view series of visible events" ON public.com_m_calendar_event_series;
+
+CREATE POLICY "Admin can manage calendar event series" ON public.com_m_calendar_event_series
+FOR ALL TO authenticated
+USING (public.get_jwt_user_type() = '0')
+WITH CHECK (public.get_jwt_user_type() = '0');
+
+-- 生徒/コーチは、自分に見える回（com_m_calendar_event の RLS で判定）が1件以上あるシリーズだけを閲覧できる
+CREATE POLICY "Users can view series of visible events" ON public.com_m_calendar_event_series
+FOR SELECT TO authenticated USING (
+    delete_flg = '0'
+    AND EXISTS (
+        SELECT 1 FROM public.com_m_calendar_event e
+        WHERE e.series_id = com_m_calendar_event_series.series_id
+    )
+);
+
+---------------------------------------------
+-- admin_add_calendar_event_series_sessions: シリーズに複数の回をまとめて登録する (2026-10-05 追加)
+---------------------------------------------
+-- アドミンのシリーズ詳細「回をまとめて追加」から呼ぶ（admin アプリのサーバーアクション、service_role）。
+-- 各回（com_m_calendar_event）と担当コーチ（com_t_calendar_event_coach）を1つのトランザクションで登録し、
+-- 途中で失敗した場合は1件も登録しない。
+-- 各回の event_type はシリーズと同じにする。参加確認（rsvp_enabled）は呼び出し側で種別の rsvpRequired に従って渡す。
+--
+-- p_sessions: [{ "title", "description", "start_datetime", "end_datetime", "location_url",
+--                "target_type", "client_id", "rsvp_enabled", "is_published", "coach_ids": [uuid, ...] }, ...]
+-- 戻り値: 登録した回のID（登録順）
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.admin_add_calendar_event_series_sessions(uuid, jsonb);
+
+CREATE OR REPLACE FUNCTION public.admin_add_calendar_event_series_sessions(p_series_id uuid, p_sessions jsonb)
+RETURNS SETOF uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_event_type varchar(30);
+    v_session jsonb;
+    v_event_id uuid;
+BEGIN
+    SELECT event_type INTO v_event_type
+    FROM public.com_m_calendar_event_series
+    WHERE series_id = p_series_id AND delete_flg = '0';
+    IF v_event_type IS NULL THEN
+        RAISE EXCEPTION 'series_not_found';
+    END IF;
+    IF jsonb_typeof(p_sessions) <> 'array' OR jsonb_array_length(p_sessions) = 0 THEN
+        RAISE EXCEPTION 'sessions_required';
+    END IF;
+
+    FOR v_session IN SELECT value FROM jsonb_array_elements(p_sessions)
+    LOOP
+        INSERT INTO public.com_m_calendar_event (
+            event_type, series_id, title, description, start_datetime, end_datetime, location_url,
+            target_type, client_id, rsvp_enabled, is_published
+        ) VALUES (
+            v_event_type,
+            p_series_id,
+            v_session->>'title',
+            NULLIF(v_session->>'description', ''),
+            (v_session->>'start_datetime')::timestamptz,
+            NULLIF(v_session->>'end_datetime', '')::timestamptz,
+            NULLIF(v_session->>'location_url', ''),
+            COALESCE(v_session->>'target_type', 'ALL'),
+            NULLIF(v_session->>'client_id', '')::uuid,
+            COALESCE((v_session->>'rsvp_enabled')::boolean, FALSE),
+            COALESCE((v_session->>'is_published')::boolean, FALSE)
+        )
+        RETURNING calendar_event_id INTO v_event_id;
+
+        INSERT INTO public.com_t_calendar_event_coach (calendar_event_id, coach_id)
+        SELECT v_event_id, coach_id::uuid
+        FROM jsonb_array_elements_text(COALESCE(v_session->'coach_ids', '[]'::jsonb)) AS coach_id;
+
+        RETURN NEXT v_event_id;
+    END LOOP;
+
+    UPDATE public.com_m_calendar_event_series SET update_date = NOW() WHERE series_id = p_series_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_add_calendar_event_series_sessions(uuid, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_add_calendar_event_series_sessions(uuid, jsonb) TO service_role;
+
+COMMIT;

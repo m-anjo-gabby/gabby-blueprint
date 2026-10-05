@@ -13,6 +13,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/u
 import { AddToCalendarMenu } from '@/components/calendarEvent/AddToCalendarMenu';
 import { CalendarEventCard } from '@/components/calendarEvent/CalendarEventCard';
 import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
+import { EventCoachLine, EventSeriesLabel } from '@/components/calendarEvent/EventMeta';
 import { formatTimeUntil } from '@/lib/sessionFormat';
 import { cn } from '@/lib/utils';
 import { HomeCard } from './HomeCard';
@@ -98,10 +99,12 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
         <span className="text-lg">{slot.date}</span>
         <span className="text-base">{slot.time}</span>
       </p>
-      <div className="mt-1 flex items-start gap-2">
+      <EventSeriesLabel event={event} className="mt-1" />
+      <div className="mt-0.5 flex items-start gap-2">
         <p className="min-w-0 flex-1 text-sm font-bold text-ink">{event.title}</p>
         {isJoined && <JoinedBadge />}
       </div>
+      <EventCoachLine event={event} className="mt-1" />
       {event.description && <p className="mt-1 line-clamp-2 text-xs text-ink-soft whitespace-pre-line">{event.description}</p>}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -170,6 +173,7 @@ function OtherEvents({ events, timezone, onOpenDetail }: { events: CalendarEvent
                     {slot.date} {slot.time}
                   </p>
                   <p className="truncate text-sm font-semibold text-ink">{event.title}</p>
+                  <EventSeriesLabel event={event} />
                 </div>
                 {event.rsvp_enabled && event.is_joined && <JoinedBadge />}
                 <ChevronRight size={16} className="shrink-0 text-ink-subtle transition-transform group-hover:translate-x-0.5" />

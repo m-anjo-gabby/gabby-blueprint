@@ -5,6 +5,12 @@ import { formatReminderSchedule, renderEventReminderEmail } from '../../render';
 import type { ReminderLead, ReminderMailLanguage } from '../../templates/EventReminderEmailTemplate';
 import type { MailHandler } from '../types';
 
+/** 結合したシリーズ（1件。型の推論上は配列になりうる）のタイトル */
+function pickSeriesTitle(series: unknown): string | null {
+  const row = Array.isArray(series) ? series[0] : series;
+  return row && typeof row === 'object' && 'title' in row && typeof row.title === 'string' ? row.title : null;
+}
+
 function joinUrl(base: string, path: string): string | null {
   return base ? `${base.replace(/\/+$/, '')}${path}` : null;
 }
@@ -21,7 +27,7 @@ export const groupSessionReminderHandler: MailHandler = async ({ admin, row, rec
 
   const { data: event, error } = await admin
     .from('com_m_calendar_event')
-    .select('title, description, start_datetime, end_datetime, location_url, is_published, delete_flg')
+    .select('title, description, start_datetime, end_datetime, location_url, is_published, delete_flg, series:com_m_calendar_event_series(title)')
     .eq('calendar_event_id', calendarEventId)
     .maybeSingle();
   if (error) throw new Error(`event_fetch_failed: ${error.message}`);
@@ -58,6 +64,7 @@ export const groupSessionReminderHandler: MailHandler = async ({ admin, row, rec
     lead,
     recipientName: recipient.userName,
     title: event.title,
+    seriesTitle: pickSeriesTitle(event.series),
     description: event.description,
     scheduleLabel,
     joinUrl: event.location_url,

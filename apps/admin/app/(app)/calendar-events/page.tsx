@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { Layers } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { getCalendarEvents } from '@/actions/adminCalendarEventAction';
 import { CalendarEventDataTable } from './_components/CalendarEventDataTable';
@@ -17,7 +19,15 @@ export default async function CalendarEventsPage() {
             {t('subtitle')}
           </p>
         </div>
-        <CalendarEventFormDialog />
+        <div className="flex items-center gap-2">
+          <Link
+            href="/calendar-events/series"
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 shadow-sm hover:bg-slate-50"
+          >
+            <Layers size={16} /> {t('seriesLink')}
+          </Link>
+          <CalendarEventFormDialog />
+        </div>
       </div>
 
       {/* 一覧テーブル */}

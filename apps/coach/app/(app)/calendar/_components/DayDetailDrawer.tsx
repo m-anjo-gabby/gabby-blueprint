@@ -189,6 +189,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
               </span>
             )}
           </div>
+          {event.series && <p className="text-xs text-slate-500 truncate">{event.series.title}</p>}
           <p className="text-sm font-black text-slate-800">{event.title}</p>
           <p className="text-xs text-slate-500 mt-0.5">
             {event.end_datetime

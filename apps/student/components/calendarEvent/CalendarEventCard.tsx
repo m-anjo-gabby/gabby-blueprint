@@ -16,6 +16,7 @@ import {
 import { getCalendarEventMessages, getCalendarEventMessageAttachmentUrl } from '@/actions/calendarEventAction';
 import { AddToCalendarMenu } from './AddToCalendarMenu';
 import { useEventParticipation } from './useEventParticipation';
+import { EventCoachLine, EventSeriesLabel } from './EventMeta';
 
 function formatAttachmentSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -121,17 +122,27 @@ export function CalendarEventCard({ event, timezone, onParticipationChanged }: C
               </span>
             )}
           </div>
+          <EventSeriesLabel event={event} />
           <p className="text-sm font-bold text-ink">{event.title}</p>
           <p className="text-xs text-ink-muted mt-0.5">
             {event.end_datetime
               ? `${formatEventTimeInZone(event.start_datetime, timezone)} - ${formatEventTimeInZone(event.end_datetime, timezone)}`
               : `${formatEventTimeInZone(event.start_datetime, timezone)}（開始日時のみ）`}
           </p>
+          <EventCoachLine event={event} className="mt-0.5" />
         </div>
       </div>
 
       {event.description && (
         <p className="text-xs text-ink-soft bg-canvas border border-line/70 rounded-lg px-3 py-2 whitespace-pre-wrap">{event.description}</p>
+      )}
+
+      {/* シリーズの説明（企画の紹介・月のテーマ等）。各回の説明の下に添える */}
+      {event.series?.description && (
+        <div className="rounded-lg border border-line/70 px-3 py-2">
+          <p className="text-[11px] font-bold text-ink-subtle">{event.series.title}について</p>
+          <p className="mt-0.5 text-xs text-ink-soft whitespace-pre-wrap">{event.series.description}</p>
+        </div>
       )}
 
       {!event.rsvp_enabled && event.location_url && (

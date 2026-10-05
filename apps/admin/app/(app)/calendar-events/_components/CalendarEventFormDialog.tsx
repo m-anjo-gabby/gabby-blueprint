@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertCalendarEvent, getCoachesFilter, CalendarEventFormData } from '@/actions/adminCalendarEventAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
+import { getCalendarEventSeriesOptions } from '@/actions/adminCalendarEventSeriesAction';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import {
@@ -22,10 +23,12 @@ import {
   CalendarEventType,
   CalendarEventTargetType,
   CalendarEventCoachOption,
+  CalendarEventSeriesSummary,
   CALENDAR_EVENT_TYPES,
 } from '@gabby/types/calendarEvent';
 import { ClientOption } from '@gabby/types/client';
 import { CalendarEventCoachPicker } from './CalendarEventCoachPicker';
+import { todayJstDateStr, utcToJstParts } from '../_lib/jst';
 
 const EVENT_TYPE_KEYS = Object.keys(CALENDAR_EVENT_TYPES) as [CalendarEventType, ...CalendarEventType[]];
 const TARGET_TYPE_KEYS: [CalendarEventTargetType, ...CalendarEventTargetType[]] = ['ALL', 'CLIENT', 'COACH'];
@@ -49,6 +52,7 @@ function createCalendarEventSchema(t: FormT) {
       rsvp_enabled: z.boolean(),
       is_published: z.boolean(),
       coach_ids: z.array(z.string()),
+      series_id: z.string(),
     })
     .refine((v) => !v.has_end || (!!v.end_date && !!v.end_time), {
       message: t('errors.endDateTimeRequired'),
@@ -74,19 +78,8 @@ interface CalendarEventFormDialogProps {
   initialData?: CalendarEventItem;
 }
 
-/** UTCの日時文字列をJST基準の {date, time} 入力値に分解する */
-function utcToJstParts(utcStr: string | null | undefined): { date: string; time: string } {
-  if (!utcStr) return { date: '', time: '' };
-  const d = new Date(utcStr);
-  if (isNaN(d.getTime())) return { date: '', time: '' };
-  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  const iso = jst.toISOString();
-  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
-}
-
-function todayJstDateStr(): string {
-  return new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
+/** シリーズの選択肢の「なし（単発）」（Select は空文字を値にできないため） */
+const NO_SERIES = 'NONE';
 
 const DEFAULT_VALUES: CalendarEventFormValues = {
   event_type: 'GROUP_SESSION',
@@ -104,6 +97,7 @@ const DEFAULT_VALUES: CalendarEventFormValues = {
   rsvp_enabled: CALENDAR_EVENT_TYPES.GROUP_SESSION.rsvpRequired,
   is_published: false,
   coach_ids: [],
+  series_id: NO_SERIES,
 };
 
 /**
@@ -122,11 +116,13 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
   const [serverError, setServerError] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [coaches, setCoaches] = useState<CalendarEventCoachOption[]>([]);
+  const [seriesOptions, setSeriesOptions] = useState<CalendarEventSeriesSummary[]>([]);
   const { showToast } = useToast();
 
   useEffect(() => {
     getClientsFilter().then(setClients);
     getCoachesFilter().then(setCoaches);
+    getCalendarEventSeriesOptions().then(setSeriesOptions);
   }, []);
 
   const getInitialValues = (data?: CalendarEventItem): CalendarEventFormValues => {
@@ -148,6 +144,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
       rsvp_enabled: data.rsvp_enabled,
       is_published: data.is_published,
       coach_ids: (data.coaches ?? []).map((c) => c.coach_id),
+      series_id: data.series_id ?? NO_SERIES,
     };
   };
 
@@ -180,6 +177,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
         rsvp_enabled: values.rsvp_enabled,
         is_published: values.is_published,
         coach_ids: values.event_type === 'GROUP_SESSION' ? values.coach_ids : [],
+        series_id: values.event_type === 'GROUP_SESSION' && values.series_id !== NO_SERIES ? values.series_id : null,
       };
 
       const result = await upsertCalendarEvent(payload);
@@ -276,6 +274,41 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 </FormItem>
               )}
             />
+
+            {/* --- シリーズ（グループセッションのみ。単発は「なし」） --- */}
+            {eventType === 'GROUP_SESSION' && (
+              <FormField
+                control={form.control}
+                name="series_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('seriesLabel')}</FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                        {seriesOptions.find((s) => s.series_id === field.value)?.title ?? t('seriesNone')}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={NO_SERIES}>{t('seriesNone')}</SelectItem>
+                          {seriesOptions.map((s) => (
+                            <SelectItem key={s.series_id} value={s.series_id}>
+                              {s.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* --- タイトル --- */}
             <FormField
