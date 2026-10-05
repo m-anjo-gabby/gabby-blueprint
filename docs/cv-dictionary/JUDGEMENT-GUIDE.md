@@ -9,14 +9,17 @@ ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ�
 
 ## 未決の論点（コンテンツチーム確認待ち）
 
-方針が決まったら、ここから削除して下の事例として記録する。
+未決の論点は [open-policies.json](./open-policies.json) で管理する（確認依頼Excelの「①確認事項（方針）」の元データ）。
+方針が決まったら、そこから削除して下の事例として記録する。
 
-| 論点 | 現在の暫定設定 | 候補 | 台帳の分類 |
-|---|---|---|---|
-| R音化母音 /ɛr/（share, there, where, compare） | `red_pepper` | `red_pepper` / `gray_day` | R音化母音 |
-| R音化母音 /ɪr/（year, clear, experience） | `green_tea` | `green_tea` / `silver_pin` | R音化母音 |
-| R音化母音 /ʊr/（ensure, secure, during） | `wooden_hook` | `wooden_hook` / `blue_moon`（ensure は /ɔːr/ `orange_door` の読みもある） | R音化母音 |
-| 米国発音で /ɔ/ と /ɑ/ の2通りある語（offer, office, cost, launch, strong） | `auburn_dog` | `auburn_dog` / `olive_sock` | 発音の揺れ |
+| 論点（open-policies.json の `key`） | 現在の暫定設定 | 候補 |
+|---|---|---|
+| R音化母音 /ɛr/（`rhotic-er`） | `red_pepper` | `red_pepper` / `gray_day` |
+| R音化母音 /ɪr/（`rhotic-ir`） | `green_tea` | `green_tea` / `silver_pin` |
+| R音化母音 /ʊr/（`rhotic-ur`） | `wooden_hook` | `wooden_hook` / `blue_moon`（ensure は /ɔːr/ `orange_door` の読みもある） |
+| 米国発音で /ɔ/ と /ɑ/ の2通りある語（`cot-caught`） | `auburn_dog` | `auburn_dog` / `olive_sock` |
+| 機能語の発音（`function-word-strong-form`、CVJ-20260925-01） | 強形 | 強形 / 弱形 |
+| 略語の扱い（`abbreviation-letters`、CVJ-20260925-03） | 1文字＝1音節・最後の文字にアクセント | — |
 
 ## 記入フォーマット
 
