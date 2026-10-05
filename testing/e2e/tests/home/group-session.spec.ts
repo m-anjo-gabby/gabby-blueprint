@@ -140,6 +140,8 @@ test.describe("アドミンのイベント登録", () => {
       const editDialog = page.getByRole("dialog");
       await expect(editDialog.getByText(seriesTitle)).toBeVisible();
       await expect(editDialog.getByRole("link", { name: "シリーズで管理" })).toBeVisible();
+      // ダイアログは先頭から表示する（担当コーチの選択欄の自動スクロールで下にずれない。CalendarEventCoachPicker）
+      expect(await editDialog.locator("form").evaluate((form) => form.scrollTop)).toBe(0);
       await page.keyboard.press("Escape");
 
       const { data: series } = await admin.from("com_m_calendar_event_series").select("series_id").eq("title", seriesTitle).single();
