@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatReminderSchedule, renderEventReminderEmail } from "@gabby/lib/mail/render";
+import { formatReminderSchedule, renderEventReminderEmail, renderLiveSessionReminderEmail } from "@gabby/lib/mail/render";
 
 /**
  * グループセッションのリマインダーメールの文面（送信はしない。送信処理と同じ組み立て関数で検証する）
@@ -72,4 +72,55 @@ test("シリーズに属する回は、セッション名の上にシリーズ�
   const { html } = renderEventReminderEmail({ ...BASE, seriesTitle: "10月の発音グループセッション", language: "ja", lead: "24h" });
   assert.ok(html.includes("10月の発音グループセッション"));
   assert.ok(html.indexOf("10月の発音グループセッション") < html.indexOf("英語でおしゃべり会"));
+});
+
+test("ライブセッション（生徒・日本語）: 1時間前は入室ボタンと入室できる時刻の案内、相手はコーチ", () => {
+  const { subject, html } = renderLiveSessionReminderEmail({
+    language: "ja",
+    lead: "1h",
+    recipientName: "山田",
+    counterpartName: "Suzanne",
+    scheduleLabel: "10月12日(月) 20:00〜20:25（日本時間）",
+    actionUrl: "https://localhost:3000/live-room/s1",
+    settingsUrl: "https://localhost:3000/profile",
+  });
+  assert.equal(subject, "【Gabby Blueprint】まもなくライブセッションが始まります（10月12日(月) 20:00〜20:25（日本時間））");
+  assert.ok(html.includes("コーチ"));
+  assert.ok(html.includes("Suzanne"));
+  assert.ok(html.includes("入室する"));
+  assert.ok(html.includes('href="https://localhost:3000/live-room/s1"'));
+  assert.ok(html.includes("開始5分前から入室できます。"));
+});
+
+test("ライブセッション（生徒・日本語）: 24時間前は確認ボタンとキャンセル・振替の案内", () => {
+  const { subject, html } = renderLiveSessionReminderEmail({
+    language: "ja",
+    lead: "24h",
+    recipientName: "山田",
+    counterpartName: "Suzanne",
+    scheduleLabel: "10月12日(月) 20:00〜20:25（日本時間）",
+    actionUrl: "https://localhost:3000/live-room",
+    settingsUrl: "https://localhost:3000/profile",
+  });
+  assert.equal(subject, "【Gabby Blueprint】ライブセッションのご案内（10月12日(月) 20:00〜20:25（日本時間））");
+  assert.ok(html.includes("ライブセッションを確認する"));
+  assert.ok(html.includes("キャンセル・振替の手続き"));
+  assert.ok(!html.includes("入室できます"));
+});
+
+test("ライブセッション（コーチ・英語）: 相手は生徒、日本語を含まない", () => {
+  const { subject, html } = renderLiveSessionReminderEmail({
+    language: "en",
+    lead: "1h",
+    recipientName: "Suzanne",
+    counterpartName: "Taro Yamada",
+    scheduleLabel: "Mon, Oct 12, 4:00 AM – 4:25 AM (PDT)",
+    actionUrl: "https://localhost:3002/students/x/sessions/s1",
+    settingsUrl: "https://localhost:3002/profile",
+  });
+  assert.equal(subject, "[Gabby Blueprint] Your live session starts soon (Mon, Oct 12, 4:00 AM – 4:25 AM (PDT))");
+  assert.ok(html.includes("Student"));
+  assert.ok(html.includes("Taro Yamada"));
+  assert.ok(html.includes("Open session"));
+  assert.doesNotMatch(html, /[ぁ-んァ-ン]/);
 });

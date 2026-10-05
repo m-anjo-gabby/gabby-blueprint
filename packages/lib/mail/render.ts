@@ -25,6 +25,11 @@ import {
   getNotificationSubject,
   type NotificationEmailTemplateProps,
 } from './templates/NotificationEmailTemplate';
+import {
+  LiveSessionReminderEmailTemplate,
+  getLiveSessionReminderSubject,
+  type LiveSessionReminderEmailTemplateProps,
+} from './templates/LiveSessionReminderEmailTemplate';
 
 /**
  * 再設定リンクの有効期限（分）。Supabase の Auth 設定「Email OTP Expiration」（supabase/config.toml の otp_expiry）と
@@ -113,4 +118,10 @@ export function renderEventReminderEmail(props: EventReminderEmailTemplateProps)
 export function renderNotificationEmail(props: NotificationEmailTemplateProps): RenderedEmail {
   const html = renderToString(React.createElement(NotificationEmailTemplate, props));
   return { subject: getNotificationSubject(props.language, props.title), html };
+}
+
+/** ライブセッションのリマインダー（生徒・コーチ）の件名・本文を組み立てる */
+export function renderLiveSessionReminderEmail(props: LiveSessionReminderEmailTemplateProps): RenderedEmail {
+  const html = renderToString(React.createElement(LiveSessionReminderEmailTemplate, props));
+  return { subject: getLiveSessionReminderSubject(props.language, props.lead, props.scheduleLabel), html };
 }

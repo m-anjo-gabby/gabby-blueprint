@@ -6,7 +6,8 @@
 -- 組み立てて Resend で送る。DB から HTTP で呼ぶため pg_net を使う（呼び出しは処理の確定後に行われる）。
 -- 送信処理を呼ぶのは次の2つ（cron のジョブは1つだけで、メールの種類が増えても増やさない）。
 --   1. すぐ送るメールを送信待ちに積んだ時（on_mail_outbox_inserted。通知メール等。1つの処理の中では1回だけ呼ぶ）
---   2. pg_cron の5分ごとのジョブ: リマインダーの登録（enqueue_event_reminders）の後、送る時刻が来た送信待ち
+--   2. pg_cron の5分ごとのジョブ: 時刻で送るメールの登録（enqueue_scheduled_mails。グループセッション・ライブセッションの
+--      リマインダー）の後、送る時刻が来た送信待ち
 --      （チャットの10分後・失敗の再試行・取りこぼし）がある時だけ呼ぶ（invoke_mail_dispatch_if_due）
 --
 -- 【接続先の設定（環境ごとに1回、手作業）】
@@ -114,5 +115,5 @@ SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'mail-dispatch-every
 SELECT cron.schedule(
     'mail-dispatch-every-5min',
     '*/5 * * * *',
-    $$ SELECT public.enqueue_event_reminders(); SELECT private.invoke_mail_dispatch_if_due(); $$
+    $$ SELECT public.enqueue_scheduled_mails(); SELECT private.invoke_mail_dispatch_if_due(); $$
 );

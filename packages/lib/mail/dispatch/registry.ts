@@ -33,6 +33,8 @@ export type MailCategory = keyof typeof MAIL_CATEGORIES;
 export const MAIL_TYPES = {
   /** グループセッションの24時間前・1時間前（登録: enqueue_event_reminders） */
   GROUP_SESSION_REMINDER: { category: 'REMINDER' },
+  /** ライブセッションの24時間前・1時間前（生徒・コーチ。登録: enqueue_live_session_reminders） */
+  LIVE_SESSION_REMINDER: { category: 'REMINDER' },
   /** 出来事の通知（予約・キャンセル・マッチング等。登録: アプリ内通知のトリガー enqueue_notification_mail。すぐ送る） */
   NOTIFICATION: { category: 'NOTIFICATION' },
   /** チャットの新着（登録: 同上。未読が10分続いたら1通） */

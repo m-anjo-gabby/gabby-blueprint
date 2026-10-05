@@ -774,3 +774,284 @@ SELECT cron.schedule(
 );
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】ライブセッションの開始前（24時間前・1時間前）のリマインダーメール
+-- 追加日: 2026-10-06
+--
+-- 【内容】
+--   1. enqueue_live_session_reminders()（予定のライブセッションの生徒・コーチ宛てのリマインダーを登録）を新規作成
+--   2. enqueue_scheduled_mails()（時刻で送るメールの登録のまとめ役。グループセッション＋ライブセッション）を新規作成
+--   3. pg_cron のジョブ 'mail-dispatch-every-5min' を、enqueue_scheduled_mails を呼ぶ形に入れ替え
+--      （DDL/function/invoke_mail_dispatch.sql を再適用。ジョブは1つのまま）
+--
+-- 対応ファイル: DDL/function/enqueue_live_session_reminders.sql, DDL/function/invoke_mail_dispatch.sql
+-- 【注意】admin の送信処理が enqueue_scheduled_mails を呼ぶため、アプリのデプロイより先に適用すること
+--   （先にアプリだけデプロイすると、送信処理の冒頭の登録が失敗する。送信自体は続く）。
+-- =========================================================================
+
+BEGIN;
+
+
+---------------------------------------------
+-- enqueue_event_reminders: イベント（グループセッション）のリマインダーメールを送信待ちに登録する (2026-10-05 追加)
+---------------------------------------------
+-- 【呼び出し元】
+-- 時刻で送るメールの登録のまとめ役 enqueue_scheduled_mails（enqueue_live_session_reminders.sql）経由で、
+-- pg_cron のジョブ 'mail-dispatch-every-5min'（invoke_mail_dispatch.sql）と送信処理の冒頭から実行する。
+--
+-- 【対象】
+-- 公開中のグループセッションの参加登録者（com_t_calendar_event_participant）と
+-- 担当コーチ（com_t_calendar_event_coach）。同じ人が両方に該当しても1通にする。
+--
+-- 【送る時刻】
+-- 開始の24時間前（'24h'）と1時間前（'1h'）。「期限が来ていて、まだ登録していないもの」を拾うため、
+-- 実行が1回飛んでも次の実行で取りこぼさない。重複は com_t_mail_outbox の一意制約で防ぐ。
+-- ただし期限を大きく過ぎた古い案内は送らない:
+--   24h … 開始の24時間前〜12時間前の間だけ登録（開始の12時間前を切ってから参加登録した人には送らない）
+--   1h  … 開始の1時間前〜開始までの間だけ登録
+-- 開始後・取消・参加取消の確認は、送信処理が送る直前に最新のデータで行う（SKIPPED にする）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.enqueue_event_reminders()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    WITH leads(lead_key, lead_from, lead_to) AS (
+        VALUES
+            ('24h', INTERVAL '24 hours', INTERVAL '12 hours'),
+            ('1h', INTERVAL '1 hour', INTERVAL '0 hours')
+    ),
+    due_events AS (
+        SELECT e.calendar_event_id, l.lead_key
+        FROM public.com_m_calendar_event e
+        JOIN leads l
+          ON NOW() >= e.start_datetime - l.lead_from
+         AND NOW() < e.start_datetime - l.lead_to
+        WHERE e.event_type = 'GROUP_SESSION'
+          AND e.is_published = TRUE
+          AND e.delete_flg = '0'
+    ),
+    recipients AS (
+        SELECT d.calendar_event_id, d.lead_key, p.user_id
+        FROM due_events d
+        JOIN public.com_t_calendar_event_participant p ON p.calendar_event_id = d.calendar_event_id
+        UNION
+        SELECT d.calendar_event_id, d.lead_key, c.coach_id
+        FROM due_events d
+        JOIN public.com_t_calendar_event_coach c ON c.calendar_event_id = d.calendar_event_id
+    )
+    INSERT INTO public.com_t_mail_outbox (user_id, mail_type, category, dedup_key, payload)
+    SELECT r.user_id,
+           'GROUP_SESSION_REMINDER',
+           'REMINDER',
+           r.calendar_event_id::text || ':' || r.lead_key,
+           jsonb_build_object('calendar_event_id', r.calendar_event_id, 'lead', r.lead_key)
+    FROM recipients r
+    JOIN public.com_m_user u ON u.id = r.user_id AND u.delete_flg = '0'
+    ON CONFLICT (user_id, mail_type, dedup_key) DO NOTHING;
+
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    RETURN v_count;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.enqueue_event_reminders() FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- enqueue_live_session_reminders: ライブセッションのリマインダーメールを送信待ちに登録する (2026-10-06 追加)
+-- enqueue_scheduled_mails: 時刻で送るメールの登録のまとめ役（pg_cron の5分ごとのジョブ・送信処理の冒頭から呼ぶ）
+---------------------------------------------
+-- 【対象】
+-- 予定（status=1）のライブセッションの生徒とコーチ。
+--
+-- 【送る時刻】（グループセッション enqueue_event_reminders と同じ）
+-- 開始の24時間前（'24h'）と1時間前（'1h'）。「期限が来ていて、まだ登録していないもの」を拾う。重複は一意制約で防ぐ。
+--   24h … 開始の24時間前〜12時間前の間だけ登録（直前に予約・振替した回には送らない）
+--   1h  … 開始の1時間前〜開始までの間だけ登録
+-- キャンセル・振替（振替後は別のセッション行）・開始済みの確認は、送信処理が送る直前に最新のデータで行う（SKIPPED にする）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.enqueue_live_session_reminders()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    WITH leads(lead_key, lead_from, lead_to) AS (
+        VALUES
+            ('24h', INTERVAL '24 hours', INTERVAL '12 hours'),
+            ('1h', INTERVAL '1 hour', INTERVAL '0 hours')
+    ),
+    due_sessions AS (
+        SELECT s.session_id, s.student_id, s.coach_id, l.lead_key
+        FROM public.com_t_session s
+        JOIN leads l
+          ON NOW() >= s.start_datetime - l.lead_from
+         AND NOW() < s.start_datetime - l.lead_to
+        WHERE s.status = 1
+    ),
+    recipients AS (
+        SELECT session_id, lead_key, student_id AS user_id FROM due_sessions
+        UNION
+        SELECT session_id, lead_key, coach_id FROM due_sessions
+    )
+    INSERT INTO public.com_t_mail_outbox (user_id, mail_type, category, dedup_key, payload)
+    SELECT r.user_id,
+           'LIVE_SESSION_REMINDER',
+           'REMINDER',
+           r.session_id::text || ':' || r.lead_key,
+           jsonb_build_object('session_id', r.session_id, 'lead', r.lead_key)
+    FROM recipients r
+    JOIN public.com_m_user u ON u.id = r.user_id AND u.delete_flg = '0'
+    ON CONFLICT (user_id, mail_type, dedup_key) DO NOTHING;
+
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    RETURN v_count;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.enqueue_live_session_reminders() FROM PUBLIC, anon, authenticated;
+
+-- 時刻で送るメールの登録のまとめ役。時刻で送るメールの種類を増やすときは、ここに登録の関数を足す（cron のジョブは増やさない）
+CREATE OR REPLACE FUNCTION public.enqueue_scheduled_mails()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN public.enqueue_event_reminders() + public.enqueue_live_session_reminders();
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.enqueue_scheduled_mails() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.enqueue_scheduled_mails() TO service_role;
+
+---------------------------------------------
+-- invoke_mail_dispatch: メールの送信処理（admin の /api/cron/mail-dispatch）を呼び出す＋5分ごとのジョブ (2026-10-05 追加)
+---------------------------------------------
+-- 【方式】
+-- 送信処理は Next.js（admin アプリ）の Route Handler で、メールの文面（React のテンプレート）を
+-- 組み立てて Resend で送る。DB から HTTP で呼ぶため pg_net を使う（呼び出しは処理の確定後に行われる）。
+-- 送信処理を呼ぶのは次の2つ（cron のジョブは1つだけで、メールの種類が増えても増やさない）。
+--   1. すぐ送るメールを送信待ちに積んだ時（on_mail_outbox_inserted。通知メール等。1つの処理の中では1回だけ呼ぶ）
+--   2. pg_cron の5分ごとのジョブ: 時刻で送るメールの登録（enqueue_scheduled_mails。グループセッション・ライブセッションの
+--      リマインダー）の後、送る時刻が来た送信待ち
+--      （チャットの10分後・失敗の再試行・取りこぼし）がある時だけ呼ぶ（invoke_mail_dispatch_if_due）
+--
+-- 【接続先の設定（環境ごとに1回、手作業）】
+-- 送信処理のURLと秘密のキーは Supabase Vault に保存する（リポジトリには置かない）。
+--   SELECT vault.create_secret('https://<admin のURL>/api/cron/mail-dispatch', 'mail_dispatch_url');
+--   SELECT vault.create_secret('<admin の環境変数 CRON_SECRET と同じ値>', 'mail_dispatch_secret');
+-- 変更する場合は vault.update_secret(<id>, '<新しい値>') を使う。
+-- どちらかが未設定の環境（ローカルの admin しか無い dev 等）では呼び出しを行わない
+-- （登録だけ行い、送信は手元から /api/cron/mail-dispatch を呼んで確認する）。
+---------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+CREATE OR REPLACE FUNCTION private.invoke_mail_dispatch()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_url text;
+    v_secret text;
+BEGIN
+    SELECT decrypted_secret INTO v_url FROM vault.decrypted_secrets WHERE name = 'mail_dispatch_url';
+    SELECT decrypted_secret INTO v_secret FROM vault.decrypted_secrets WHERE name = 'mail_dispatch_secret';
+    IF v_url IS NULL OR v_secret IS NULL THEN
+        RETURN;
+    END IF;
+
+    PERFORM net.http_post(
+        url := v_url,
+        headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || v_secret),
+        body := '{}'::jsonb,
+        timeout_milliseconds := 60000
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.invoke_mail_dispatch() FROM PUBLIC, anon, authenticated;
+
+-- 1つのトランザクションの中で送信処理を呼ぶのは1回だけにする（1つの処理で複数の通知が積まれても1回）
+CREATE OR REPLACE FUNCTION private.request_mail_dispatch()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF current_setting('gabby.mail_dispatch_requested', true) = 'on' THEN
+        RETURN;
+    END IF;
+    PERFORM set_config('gabby.mail_dispatch_requested', 'on', true);
+    PERFORM private.invoke_mail_dispatch();
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.request_mail_dispatch() FROM PUBLIC, anon, authenticated;
+
+-- 送る時刻が来た送信待ち（または送信処理が止まって確保されたままの行）がある時だけ、送信処理を呼ぶ（5分ごとのジョブ用）
+CREATE OR REPLACE FUNCTION private.invoke_mail_dispatch_if_due()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_mail_outbox
+        WHERE (status = 'PENDING' AND scheduled_at <= NOW())
+           OR (status = 'SENDING' AND locked_at < NOW() - INTERVAL '10 minutes')
+    ) THEN
+        PERFORM private.request_mail_dispatch();
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.invoke_mail_dispatch_if_due() FROM PUBLIC, anon, authenticated;
+
+-- すぐ送るメール（送る時刻が来ている行）が積まれたら、処理の確定後に送信処理を呼ぶ
+CREATE OR REPLACE FUNCTION private.on_mail_outbox_inserted()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM new_rows WHERE status = 'PENDING' AND scheduled_at <= NOW()) THEN
+        PERFORM private.request_mail_dispatch();
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.on_mail_outbox_inserted() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_mail_outbox_dispatch ON public.com_t_mail_outbox;
+CREATE TRIGGER trg_mail_outbox_dispatch
+AFTER INSERT ON public.com_t_mail_outbox
+REFERENCING NEW TABLE AS new_rows
+FOR EACH STATEMENT EXECUTE FUNCTION private.on_mail_outbox_inserted();
+
+-- 同名ジョブが既に存在する場合は入れ替える（何度再実行しても安全）
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'mail-dispatch-every-5min';
+
+SELECT cron.schedule(
+    'mail-dispatch-every-5min',
+    '*/5 * * * *',
+    $$ SELECT public.enqueue_scheduled_mails(); SELECT private.invoke_mail_dispatch_if_due(); $$
+);
+
+COMMIT;

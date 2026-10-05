@@ -3,6 +3,7 @@ import {
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  grantLiveLicense,
   type AuthFixture,
 } from "../../support/authFixtures.ts";
 import { cronSecret, invokeMailDispatch } from "../../support/mailDispatch.ts";
@@ -21,12 +22,21 @@ test.describe.configure({ mode: "serial" });
 
 let fixture: AuthFixture | undefined;
 const eventIds: string[] = [];
+let liveFixture: AuthFixture | undefined;
+let liveSessionIds: string[] = [];
 
 test.afterAll(async () => {
   if (fixture && eventIds.length > 0) {
     await fixture.admin.from("com_m_calendar_event").delete().in("calendar_event_id", eventIds);
   }
   await cleanupAuthFixture(fixture);
+  if (liveFixture) {
+    // コーチは固定アカウントのため、その送信待ち（送らなかった行）を消す。
+    // セッションはチケットを直接参照しているため、契約・チケットの削除（cleanupAuthFixture）より先に消す
+    for (const id of liveSessionIds) await liveFixture.admin.from("com_t_mail_outbox").delete().like("dedup_key", `${id}:%`);
+    if (liveSessionIds.length > 0) await liveFixture.admin.from("com_t_session").delete().in("session_id", liveSessionIds);
+  }
+  await cleanupAuthFixture(liveFixture);
 });
 
 async function createEvent(f: AuthFixture, title: string, startOffsetMinutes: number, participantIds: string[]): Promise<string> {
@@ -119,4 +129,84 @@ test("1時間前・24時間前のリマインダーを送り、配信停止の�
   const again = await invokeMailDispatch();
   expect(again.status()).toBe(200);
   expect(await outboxRows(fixture, studentA)).toHaveLength(1);
+});
+
+test("ライブセッションの1時間前のリマインダーを生徒・コーチに積み、生徒に届く。キャンセル済みの回には送らない", async ({}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "メール送信は desktop のみ");
+  test.skip(!resendReadApiKey() || !cronSecret(), "RESEND_TEST_READ_API_KEY または CRON_SECRET が未設定");
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  liveFixture = await createAuthFixture("mail");
+  const f = liveFixture;
+  const email = resendTestAddress(`${f.tag}-live`);
+  const studentId = await createDisposableStudent(f, { email, password: getPersonaPassword(), userName: "E2Eライブ" });
+  const { ticketId } = await grantLiveLicense(f, studentId, {
+    planCode: "LIVE_WEEKLY1_3M",
+    label: "live",
+    start: new Date(Date.now() - DAY_MS),
+    end: new Date(Date.now() + 30 * DAY_MS),
+  });
+  const { data: coach } = await f.admin.from("com_m_user").select("id, user_name").eq("user_name", "QAコーチUS01").single();
+  const { data: schedule, error: scheduleError } = await f.admin
+    .from("com_m_lesson_schedule")
+    .insert({
+      ticket_id: ticketId,
+      student_id: studentId,
+      coach_id: coach!.id,
+      slot_no: 1,
+      day_of_week: 0,
+      start_time: "03:00",
+      end_time: "03:25",
+      coach_timezone: "America/New_York",
+      start_date: new Date().toISOString().slice(0, 10),
+      end_date: new Date(Date.now() + 30 * DAY_MS).toISOString().slice(0, 10),
+      target_sessions: 12,
+    })
+    .select("schedule_id")
+    .single();
+  if (scheduleError || !schedule) throw new Error(`担当枠の作成に失敗: ${scheduleError?.message}`);
+
+  // 50分後に始まる回（1時間前の期限内）と、キャンセル済みの回（55分後）
+  const createSession = async (startOffsetMinutes: number, status: number) => {
+    const start = new Date(Math.floor((Date.now() + startOffsetMinutes * 60 * 1000) / 60000) * 60000);
+    const { data, error } = await f.admin
+      .from("com_t_session")
+      .insert({
+        schedule_id: schedule.schedule_id,
+        ticket_id: ticketId,
+        student_id: studentId,
+        coach_id: coach!.id,
+        start_datetime: start.toISOString(),
+        end_datetime: new Date(start.getTime() + 25 * 60 * 1000).toISOString(),
+        status,
+      })
+      .select("session_id")
+      .single();
+    if (error || !data) throw new Error(`セッションの作成に失敗: ${error?.message}`);
+    liveSessionIds.push(data.session_id as string);
+    return data.session_id as string;
+  };
+  const sessionId = await createSession(50, 1);
+  const cancelledId = await createSession(55, 3);
+
+  const since = new Date();
+  expect((await invokeMailDispatch()).status()).toBe(200);
+
+  const rowsOf = async (userId: string) =>
+    (await outboxRows(f, userId)).filter((r) => r.dedup_key.startsWith(sessionId) || r.dedup_key.startsWith(cancelledId));
+  // 生徒: 予定の回の1時間前だけ（キャンセル済みの回は積まない）
+  expect((await rowsOf(studentId)).map((r) => [r.dedup_key, r.status])).toEqual([[`${sessionId}:1h`, "SENT"]]);
+  // コーチ: 組み立てまで進み、固定アカウント（予約済みドメイン）のため送らない
+  const { data: coachRows } = await f.admin
+    .from("com_t_mail_outbox")
+    .select("dedup_key, status, last_error")
+    .eq("user_id", coach!.id)
+    .eq("dedup_key", `${sessionId}:1h`);
+  expect(coachRows?.map((r) => [r.status, r.last_error])).toEqual([["SKIPPED", "undeliverable_address"]]);
+
+  const mail = await waitForEmail({ to: email, since });
+  expect(mail.subject).toMatch(/^【Gabby Blueprint】まもなくライブセッションが始まります/);
+  expect(mail.html).toContain(coach!.user_name as string);
+  expect(mail.html).toContain(`/live-room/${sessionId}`);
+  expect(mail.html).toContain("入室する");
 });

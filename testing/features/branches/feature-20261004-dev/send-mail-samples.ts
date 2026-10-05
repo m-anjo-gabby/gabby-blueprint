@@ -11,7 +11,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
-import { formatReminderSchedule, renderEventReminderEmail, renderNotificationEmail } from "@gabby/lib/mail/render";
+import {
+  formatReminderSchedule,
+  renderEventReminderEmail,
+  renderLiveSessionReminderEmail,
+  renderNotificationEmail,
+} from "@gabby/lib/mail/render";
 import { NOTIFICATION_MESSAGE_BUILDERS, type NotificationType } from "@gabby/types/notification";
 import { NOTIFICATION_MESSAGE_BUILDERS_EN } from "@gabby/types/notificationEn";
 
@@ -139,6 +144,29 @@ reminder("student-REMINDER-24h-series", "ja", "24h", { seriesTitle: "10月の発
 reminder("student-REMINDER-1h-single-nourl", "ja", "1h", { joinUrl: null, timeZone: "Asia/Tokyo" });
 reminder("coach-REMINDER-24h-series", "en", "24h", { seriesTitle: "October Pronunciation Group Sessions", timeZone: "America/Vancouver" });
 reminder("coach-REMINDER-1h", "en", "1h", { timeZone: "America/Vancouver" });
+
+// ---- ライブセッションのリマインダー（24時間前・1時間前 × 生徒/コーチ） ----
+const liveEnd = new Date(start.getTime() + 25 * 60 * 1000);
+const liveReminder = (label: string, language: "ja" | "en", lead: "24h" | "1h", timeZone: string) => {
+  const isStudent = language === "ja";
+  const actionPath = isStudent ? (lead === "1h" ? "/live-room/sample" : "/live-room") : "/students/sample/sessions/sample";
+  samples.push({
+    label,
+    ...renderLiveSessionReminderEmail({
+      language,
+      lead,
+      recipientName: isStudent ? "山田 太郎" : "Suzanne",
+      counterpartName: isStudent ? "Suzanne" : "Taro Yamada",
+      scheduleLabel: formatReminderSchedule({ startIso: start.toISOString(), endIso: liveEnd.toISOString(), timeZone, language }),
+      actionUrl: `${isStudent ? STUDENT_URL : COACH_URL}${actionPath}`,
+      settingsUrl: `${isStudent ? STUDENT_URL : COACH_URL}/profile`,
+    }),
+  });
+};
+liveReminder("student-LIVE-24h", "ja", "24h", "Asia/Tokyo");
+liveReminder("student-LIVE-1h", "ja", "1h", "Asia/Tokyo");
+liveReminder("coach-LIVE-24h", "en", "24h", "America/Vancouver");
+liveReminder("coach-LIVE-1h", "en", "1h", "America/Vancouver");
 
 // ---- 送信（Resend の送信レートに収めるため1件ずつ間隔を空ける） ----
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

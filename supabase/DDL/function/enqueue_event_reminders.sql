@@ -2,7 +2,8 @@
 -- enqueue_event_reminders: イベント（グループセッション）のリマインダーメールを送信待ちに登録する (2026-10-05 追加)
 ---------------------------------------------
 -- 【呼び出し元】
--- pg_cron のジョブ 'mail-dispatch-every-5min'（invoke_mail_dispatch.sql）から5分ごとに実行する。
+-- 時刻で送るメールの登録のまとめ役 enqueue_scheduled_mails（enqueue_live_session_reminders.sql）経由で、
+-- pg_cron のジョブ 'mail-dispatch-every-5min'（invoke_mail_dispatch.sql）と送信処理の冒頭から実行する。
 --
 -- 【対象】
 -- 公開中のグループセッションの参加登録者（com_t_calendar_event_participant）と
