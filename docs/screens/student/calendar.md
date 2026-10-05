@@ -32,9 +32,10 @@
 | 日付セルのクリック | 常時 | その日の日別詳細ドロワーを開く |
 | 「この日で未予約のセッションをリクエストする」ボタン | 未消化のチケット枠が1つ以上ある場合のみ、日別詳細ドロワー内に表示 | 予約リクエストダイアログを開く（希望日は選択した日で初期化される） |
 | 個別セッションカードの「キャンセル」ボタン | 実施予定（scheduled）かつ開始前の個別セッションのみ表示 | セッションキャンセルダイアログを開く |
-| グループセッションの「参加する」ボタン | 参加登録可能（RSVP対象）なイベントで、未参加・開催前の場合 | 参加登録され、「参加済み」ラベルの表示に切り替わる |
+| グループセッションの「参加予定にする」ボタン | 参加登録可能（RSVP対象）なイベントで、未参加・終了前（開催中を含む。終了時刻が無いイベントは開始から1時間）の場合。下に「参加予定にすると、参加用のリンクが表示されます。」を添える | 参加登録され、「参加予定」ラベルと参加用の操作の表示に切り替わる |
 | グループセッションの「キャンセル」ボタン | 参加登録済み・開催前の場合 | 確認ダイアログの上で、参加登録を取り消す |
-| 「参加リンクを開く」/「リンクを表示」 | 参加用URLが設定されているイベント | リンクを新しいタブで開く、またはURLを表示してクリップボードにコピーできる |
+| 「参加する」/「リンクを表示」 | 参加確認ありのイベントは参加登録済み・終了前の場合だけ（未登録の生徒には参加URLを出さない）。参加確認なしのイベントは参加URLがあれば「参加リンクを開く」を常に表示。参加登録済みで参加URLが未設定の場合は「参加用のリンクは決まり次第ここに表示されます。」 | リンクを新しいタブで開く、またはURLを表示してクリップボードにコピーできる |
+| 「カレンダーに追加」 | 参加登録済み・終了前の場合 | メニューから「Google カレンダー」（予定作成画面を新しいタブで開く）または「その他のカレンダー（.ics）」（.ics ファイルをダウンロード）を選ぶ。予定の説明欄にイベントの説明と参加URLを入れる |
 | アナウンスの添付ファイル | イベントに紐づくお知らせメッセージに添付がある場合 | ダウンロード用のURLを取得して新しいタブで開く |
 
 ## セッションキャンセルダイアログ
@@ -83,6 +84,7 @@ E2E: `testing/e2e/tests/smoke/calendar-month.spec.ts`（`?month=` での表示�
 - `apps/student/app/(app)/(shell)/calendar/page.tsx`
 - `apps/student/app/(app)/(shell)/calendar/_components/CalendarBoard.tsx`
 - `apps/student/app/(app)/(shell)/calendar/_components/DayDetailDrawer.tsx`
+- イベントの詳細（ホームと共有）: `apps/student/components/calendarEvent/CalendarEventCard.tsx`（参加登録・取消は `useEventParticipation.ts`、カレンダーへの追加は `AddToCalendarMenu.tsx` と `packages/lib/calendarEvent/addToCalendar.ts`）
 - `apps/student/app/(app)/(shell)/calendar/_components/SessionActionDialog.tsx`
   （実体は `packages/lib/components/common/SessionActionDialog.tsx` の薄いアダプタ）
 - `apps/student/app/(app)/(shell)/calendar/_components/BookMakeupSessionDialog.tsx`

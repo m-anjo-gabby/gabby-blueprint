@@ -24,7 +24,8 @@ export async function proxy(req: NextRequest) {
   // 公開ルートの判定
   const isPublicRoute = isDefaultPublicRoute(pathname, {
     extraExactPaths: ['/forgot-password', '/update-password'],
-    extraPrefixes: ['/auth'],
+    // /api/cron はメールの送信処理（pg_cron から呼ぶ）。ログインの代わりに CRON_SECRET で保護する
+    extraPrefixes: ['/auth', '/api/cron'],
   });
 
   // --- A. 未ログインの場合 ---

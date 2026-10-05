@@ -9,7 +9,12 @@ import {
 } from '@gabby/lib/calendarEvent/actions/calendarEventActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { CalendarEventItem, CalendarEventMessageItem } from '@gabby/types/calendarEvent';
+import {
+  CALENDAR_EVENT_TYPES,
+  CalendarEventItem,
+  CalendarEventMessageItem,
+  getCalendarEventPhase,
+} from '@gabby/types/calendarEvent';
 
 const logger = createLogger('student');
 
@@ -26,6 +31,24 @@ export async function getMyCalendarEvents(startIso: string, endIso: string): Pro
     return [];
   }
   return result.events;
+}
+
+/** ホームに出すイベントの期間（今日から先の日数） */
+const HOME_EVENT_RANGE_DAYS = 30;
+
+/**
+ * ホームに出すカレンダーイベント（種別の homeDisplay が feature のもの）を、開催中・開催前に限って開始順に取得する。
+ * 開催中のイベントも出すため、取得の起点は終了時刻を持たないイベントの既定の長さより前にする。
+ */
+export async function getHomeCalendarEvents(): Promise<CalendarEventItem[]> {
+  const nowMs = Date.now();
+  const startIso = new Date(nowMs - 24 * 60 * 60 * 1000).toISOString();
+  const endIso = new Date(nowMs + HOME_EVENT_RANGE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const events = await getMyCalendarEvents(startIso, endIso);
+  return events.filter(
+    (event) =>
+      CALENDAR_EVENT_TYPES[event.event_type]?.homeDisplay === 'feature' && getCalendarEventPhase(event, nowMs) !== 'ended'
+  );
 }
 
 /**

@@ -1012,6 +1012,7 @@
       "locationUrlHint": "主にグループセッションのZoom URL等を想定しています。",
       "rsvpLabel": "参加確認を有効にする",
       "rsvpHint": "オンの場合、生徒/コーチがこのイベントに参加登録・キャンセルできるようになります。",
+      "rsvpRequiredHint": "グループセッションは参加確認が必須です。参加登録した生徒/コーチにだけ参加URLが表示されます。",
       "rsvpEnabled": "有効",
       "rsvpDisabled": "無効",
       "targetTypeLabel": "配信対象",

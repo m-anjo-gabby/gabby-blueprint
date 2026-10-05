@@ -990,3 +990,13 @@
 - **判断基準への反映**:
   - 発話の流れを変えたら `speaking-flow.spec.ts` を流してから実機確認に回す（認識精度・実際の音声の聞こえ方は実機で確認する）。
   - 単語帳の「Practice」ボタンは表示文字が画面幅で隠れるため、`aria-label`（「発話練習」「発話を止める」）で取得する。
+
+### KJ-2026-1005-01 `pnpm --filter @gabby/testing e2e -- <ファイル名>` では絞り込みが効かず、全件（全プロジェクト）が走る
+
+- **該当シナリオ**: E2E `e2e/tests/home/group-session.spec.ts`（dev, 2026-10-05）
+- **事象**: 追加したテストだけを desktop で流すつもりで `pnpm --filter @gabby/testing e2e -- group-session --project=desktop` を実行したところ、
+  20分以上経っても終わらず、mobile を含む全テスト（メール送信を伴う認証のテスト等）が走っていた。
+- **原因**: pnpm がスクリプトの引数の `--` をそのまま渡すため、Playwright が `--` 以降を位置引数として扱い、ファイル名の絞り込み・`--project` が効かなかった。
+- **対処**: `pnpm --filter @gabby/testing exec playwright test <ファイル名の一部> --project=desktop` で実行する（`e2e/CONVENTIONS.md` 7章を修正）。
+  途中で止めた場合は、Playwright の本体（`cli.js test`）とワーカーの node プロセスが残るため止め、使い捨てデータの残骸（`authFixtures.leftovers.ts`）を確認する。
+- **判断基準への反映**: 絞り込んで実行したつもりのテストは、最初の要約行の件数（「N passed」）が想定どおりかを確かめる。想定より長く終わらない場合は、全件が走っていないかを疑う。

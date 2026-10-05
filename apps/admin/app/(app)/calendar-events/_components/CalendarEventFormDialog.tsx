@@ -100,7 +100,8 @@ const DEFAULT_VALUES: CalendarEventFormValues = {
   location_url: '',
   target_type: 'ALL',
   client_id: '',
-  rsvp_enabled: false,
+  // 既定の種別（グループセッション）は参加確認が必須
+  rsvp_enabled: CALENDAR_EVENT_TYPES.GROUP_SESSION.rsvpRequired,
   is_published: false,
   coach_ids: [],
 };
@@ -159,6 +160,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
   const hasEnd = form.watch('has_end');
   const targetType = form.watch('target_type');
   const eventType = form.watch('event_type');
+  const rsvpRequired = CALENDAR_EVENT_TYPES[eventType].rsvpRequired;
 
   const onSubmit = async (values: CalendarEventFormValues) => {
     setServerError(null);
@@ -248,7 +250,14 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                       {CALENDAR_EVENT_TYPES[field.value].label}
                     </div>
                   ) : (
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      onValueChange={(value: CalendarEventType) => {
+                        field.onChange(value);
+                        // 参加確認が必須の種別（グループセッション等）に切り替えたら、参加確認を有効にする
+                        if (CALENDAR_EVENT_TYPES[value].rsvpRequired) form.setValue('rsvp_enabled', true);
+                      }}
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger className="bg-white rounded-xl border-slate-200">
                           <SelectValue />
@@ -433,11 +442,11 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                     <div>
                       <FormLabel className="text-xs font-bold text-slate-600">{t('rsvpLabel')}</FormLabel>
                       <FormDescription className="text-[11px] text-slate-400">
-                        {t('rsvpHint')}
+                        {rsvpRequired ? t('rsvpRequiredHint') : t('rsvpHint')}
                       </FormDescription>
                     </div>
                     <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <Switch checked={field.value} onCheckedChange={field.onChange} disabled={rsvpRequired} />
                     </FormControl>
                   </FormItem>
                 )}

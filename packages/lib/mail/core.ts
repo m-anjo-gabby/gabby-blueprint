@@ -9,19 +9,27 @@ interface SendCoreParams {
   to: string;
   subject: string;
   html: string;
+  /**
+   * 送信元の種類。auth=アカウント関連（招待・パスワード再設定）/ notify=通知・リマインダー。
+   * 通知の送信元を分けておくと、通知の大量送信で評価が下がってもアカウント関連のメールの到達に影響しにくい。
+   */
+  sender?: 'auth' | 'notify';
 }
+
+const DEFAULT_FROM_AUTH = 'Gabby Academy <noreply@mail.gabbyacademy.com>';
 
 /**
  * 🛠️ メール送信の共通基盤（コア）関数
  * html のみを Resend に渡すことで、プレーンテキスト版は Resend 側で自動生成されます。
  */
-export async function sendCore({ to, subject, html }: SendCoreParams) {
+export async function sendCore({ to, subject, html, sender = 'auth' }: SendCoreParams) {
   if (!resend) {
     throw new Error('mail:core: RESEND_API_KEY が環境変数に定義されていません。');
   }
 
   // 送信元アドレス（先ほどの環境変数名に同期）
-  const from = process.env.MAIL_FROM_AUTH || 'Gabby Academy <noreply@mail.gabbyacademy.com>';
+  const fromAuth = process.env.MAIL_FROM_AUTH || DEFAULT_FROM_AUTH;
+  const from = sender === 'notify' ? process.env.MAIL_FROM_NOTIFY || fromAuth : fromAuth;
 
   const { data, error } = await resend.emails.send({
     from,

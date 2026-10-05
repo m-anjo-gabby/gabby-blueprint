@@ -21,6 +21,8 @@ import { getCoachProfileCompleteness } from '../_lib/profileCompleteness';
 import { AccountSummaryCard } from './AccountSummaryCard';
 import { PublicProfileForm } from './PublicProfileForm';
 import { LivePreviewPanel } from './LivePreviewPanel';
+import { MailSettingsCard } from './MailSettingsCard';
+import type { MailSettings } from '@gabby/lib/mail/settingsActions';
 
 interface ProfileViewProps {
   userName: string;
@@ -31,6 +33,8 @@ interface ProfileViewProps {
   timezones: TimezoneMaster[];
   initialCoachProfile: CoachProfileRecord | null;
   countries: CountryMaster[];
+  /** Email notification settings (null if they could not be loaded) */
+  mailSettings: MailSettings | null;
 }
 
 const EMPTY_COACH_PROFILE_FORM: CoachProfileFormValues = {
@@ -76,6 +80,7 @@ export function ProfileView({
   timezones,
   initialCoachProfile,
   countries,
+  mailSettings,
 }: ProfileViewProps) {
   const [iconPath, setIconPath] = useState(initialIconPath);
   const [timezone, setTimezone] = useState(initialTimezone);
@@ -207,6 +212,8 @@ export function ProfileView({
         timezones={timezones}
         onTimezoneChange={handleTimezoneChange}
       />
+
+      <MailSettingsCard initialSettings={mailSettings} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
         <PublicProfileForm

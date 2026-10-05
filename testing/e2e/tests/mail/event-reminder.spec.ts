@@ -1,0 +1,122 @@
+import { expect, test } from "@playwright/test";
+import {
+  cleanupAuthFixture,
+  createAuthFixture,
+  createDisposableStudent,
+  type AuthFixture,
+} from "../../support/authFixtures.ts";
+import { cronSecret, invokeMailDispatch } from "../../support/mailDispatch.ts";
+import { getPersonaPassword } from "../../support/personas.ts";
+import { resendReadApiKey, resendTestAddress, waitForEmail } from "../../support/resendInbox.ts";
+
+/**
+ * グループセッションのリマインダーメール（docs/screens/student/dashboard.md「グループセッション」、
+ * 送信処理: packages/lib/mail/dispatch/）。pg_cron の代わりに送信処理（admin の /api/cron/mail-dispatch）を呼び、
+ * 送信待ち（com_t_mail_outbox）の状態と、Resend のテスト用アドレスに届いたメールを確かめる。
+ * 文面の細部は testing/unit/event-reminder-mail-content.test.ts で検証する。
+ * 使い捨ての顧客・生徒・イベントを作り、テストの最後に削除する（送信待ち・配信設定はユーザーの削除で消える）。
+ */
+
+test.describe.configure({ mode: "serial" });
+
+let fixture: AuthFixture | undefined;
+const eventIds: string[] = [];
+
+test.afterAll(async () => {
+  if (fixture && eventIds.length > 0) {
+    await fixture.admin.from("com_m_calendar_event").delete().in("calendar_event_id", eventIds);
+  }
+  await cleanupAuthFixture(fixture);
+});
+
+async function createEvent(f: AuthFixture, title: string, startOffsetMinutes: number, participantIds: string[]): Promise<string> {
+  const start = new Date(Date.now() + startOffsetMinutes * 60 * 1000);
+  const { data, error } = await f.admin
+    .from("com_m_calendar_event")
+    .insert({
+      event_type: "GROUP_SESSION",
+      title,
+      start_datetime: start.toISOString(),
+      end_datetime: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+      location_url: `https://example.com/e2e-reminder/${f.tag}`,
+      target_type: "CLIENT",
+      client_id: f.clientId,
+      rsvp_enabled: true,
+      is_published: true,
+    })
+    .select("calendar_event_id")
+    .single();
+  if (error || !data) throw new Error(`イベントの作成に失敗: ${error?.message}`);
+  const id = data.calendar_event_id as string;
+  eventIds.push(id);
+  const { error: pErr } = await f.admin
+    .from("com_t_calendar_event_participant")
+    .insert(participantIds.map((userId) => ({ calendar_event_id: id, user_id: userId })));
+  if (pErr) throw new Error(`参加登録に失敗: ${pErr.message}`);
+  return id;
+}
+
+async function outboxRows(f: AuthFixture, userId: string) {
+  const { data, error } = await f.admin
+    .from("com_t_mail_outbox")
+    .select("dedup_key, status, last_error, provider_message_id")
+    .eq("user_id", userId)
+    .order("dedup_key");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+test("秘密のキーが無い呼び出しは拒否する", async () => {
+  const response = await invokeMailDispatch(null);
+  expect(response.status()).toBe(401);
+});
+
+test("1時間前・24時間前のリマインダーを送り、配信停止の人と期限外の予定には送らない", async ({}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "メール送信は desktop のみ");
+  test.skip(!resendReadApiKey() || !cronSecret(), "RESEND_TEST_READ_API_KEY または CRON_SECRET が未設定");
+
+  fixture = await createAuthFixture("mail");
+  const password = getPersonaPassword();
+  const emailA = resendTestAddress(`${fixture.tag}-remind`);
+  const emailB = resendTestAddress(`${fixture.tag}-optout`);
+  const studentA = await createDisposableStudent(fixture, { email: emailA, password, userName: "E2Eリマインド" });
+  const studentB = await createDisposableStudent(fixture, { email: emailB, password });
+  // B はリマインダーのメールを停止している
+  const { error: settingErr } = await fixture.admin
+    .from("com_t_user_mail_setting")
+    .insert({ user_id: studentB, category: "REMINDER", enabled: false });
+  if (settingErr) throw new Error(settingErr.message);
+
+  const soonTitle = `【E2E】リマインダー 1時間前 ${fixture.tag}`;
+  const soonId = await createEvent(fixture, soonTitle, 50, [studentA, studentB]); // 1時間前の期限内
+  const tomorrowId = await createEvent(fixture, `【E2E】リマインダー 24時間前 ${fixture.tag}`, 20 * 60, [studentB]); // 24時間前の期限内
+  await createEvent(fixture, `【E2E】リマインダー 期限外 ${fixture.tag}`, 5 * 60, [studentA]); // 24時間前の期限（開始の12時間前まで）を過ぎ、1時間前はまだ
+
+  const since = new Date();
+  const response = await invokeMailDispatch();
+  expect(response.status()).toBe(200);
+
+  // A: 1時間前だけを送る（期限外の予定は登録しない）
+  const rowsA = await outboxRows(fixture, studentA);
+  expect(rowsA.map((r) => [r.dedup_key, r.status])).toEqual([[`${soonId}:1h`, "SENT"]]);
+  expect(rowsA[0].provider_message_id).toBeTruthy();
+  // B: 配信停止のため送らない（登録はされ、理由が残る）
+  const rowsB = await outboxRows(fixture, studentB);
+  expect(rowsB.map((r) => [r.dedup_key, r.status, r.last_error])).toEqual(
+    [
+      [`${soonId}:1h`, "SKIPPED", "opted_out"],
+      [`${tomorrowId}:24h`, "SKIPPED", "opted_out"],
+    ].sort((a, b) => a[0].localeCompare(b[0]))
+  );
+
+  const mail = await waitForEmail({ to: emailA, since });
+  expect(mail.subject).toMatch(/^【Gabby Blueprint】まもなくグループセッションが始まります/);
+  expect(mail.html).toContain(soonTitle);
+  expect(mail.html).toContain(`https://example.com/e2e-reminder/${fixture.tag}`);
+  expect(mail.html).toContain("E2Eリマインド さん");
+
+  // 再度呼んでも同じリマインダーは送らない
+  const again = await invokeMailDispatch();
+  expect(again.status()).toBe(200);
+  expect(await outboxRows(fixture, studentA)).toHaveLength(1);
+});

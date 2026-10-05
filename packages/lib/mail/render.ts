@@ -14,6 +14,12 @@ import {
   PasswordResetEmailTemplate,
   type PasswordResetMailLanguage,
 } from './templates/PasswordResetEmailTemplate';
+import {
+  EventReminderEmailTemplate,
+  getEventReminderSubject,
+  type EventReminderEmailTemplateProps,
+  type ReminderMailLanguage,
+} from './templates/EventReminderEmailTemplate';
 
 /**
  * 再設定リンクの有効期限（分）。Supabase の Auth 設定「Email OTP Expiration」（supabase/config.toml の otp_expiry）と
@@ -58,4 +64,42 @@ export function renderAdminInvitationEmail({
 }): RenderedEmail {
   const html = renderToString(React.createElement(AdminInviteEmailTemplate, { userName, inviteUrl, expiresDays }));
   return { subject: ADMIN_INVITATION_SUBJECT, html };
+}
+
+/**
+ * リマインダーに載せる開催日時を、受信者のタイムゾーンで組み立てる。
+ * 例: ja「10月12日(日) 20:00〜21:00（日本時間）」/ en「Sun, Oct 12, 8:00 PM – 9:00 PM (GMT+9)」
+ * 終了時刻が無い場合は開始時刻だけ（「20:00〜」）。
+ */
+export function formatReminderSchedule({
+  startIso,
+  endIso,
+  timeZone,
+  language,
+}: {
+  startIso: string;
+  endIso: string | null;
+  timeZone: string;
+  language: ReminderMailLanguage;
+}): string {
+  const start = new Date(startIso);
+  const end = endIso ? new Date(endIso) : null;
+  if (language === 'ja') {
+    const date = new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(start);
+    const time = new Intl.DateTimeFormat('ja-JP', { timeZone, hour: '2-digit', minute: '2-digit' });
+    const zone = timeZone === 'Asia/Tokyo' ? '日本時間' : timeZone;
+    return `${date} ${time.format(start)}〜${end ? time.format(end) : ''}（${zone}）`;
+  }
+  const date = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' }).format(start);
+  const time = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit' });
+  const zone =
+    new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' }).formatToParts(start).find((p) => p.type === 'timeZoneName')
+      ?.value ?? timeZone;
+  return `${date}, ${time.format(start)}${end ? ` – ${time.format(end)}` : ''} (${zone})`;
+}
+
+/** グループセッションのリマインダーの件名・本文を組み立てる */
+export function renderEventReminderEmail(props: EventReminderEmailTemplateProps): RenderedEmail {
+  const html = renderToString(React.createElement(EventReminderEmailTemplate, props));
+  return { subject: getEventReminderSubject(props.language, props.lead, props.scheduleLabel), html };
 }

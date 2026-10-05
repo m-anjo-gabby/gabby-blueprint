@@ -8,19 +8,46 @@
 
 // イベント種別。DB(event_type)はフリーテキストのため、正本はこの定数オブジェクト。
 // 今後イベント種別が増える場合はこの定数にエントリを追加するだけでよい。
+//   homeDisplay: 生徒ホームでの見せ方（feature: 参加を促すカードに出す / none: ホームには出さない）
+//   rsvpRequired: 参加登録を必須にする（参加URLは参加登録した人だけに表示する。アドミンの登録時に強制する）
 export const CALENDAR_EVENT_TYPES = {
   GROUP_SESSION: {
     label: 'グループセッション',
     badgeClass: 'bg-teal-50 text-teal-700 border-teal-100',
     dotClassName: 'bg-teal-500',
+    homeDisplay: 'feature',
+    rsvpRequired: true,
   },
   MAINTENANCE: {
     label: 'メンテナンス',
     badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
     dotClassName: 'bg-slate-400',
+    homeDisplay: 'none',
+    rsvpRequired: false,
   },
-} as const;
+} as const satisfies Record<
+  string,
+  { label: string; badgeClass: string; dotClassName: string; homeDisplay: 'feature' | 'none'; rsvpRequired: boolean }
+>;
 export type CalendarEventType = keyof typeof CALENDAR_EVENT_TYPES;
+
+/** 終了時刻を持たないイベントの、開催中とみなす長さ（参加の受付・「開催中」の表示に使う） */
+export const CALENDAR_EVENT_DEFAULT_DURATION_MS = 60 * 60 * 1000;
+
+/** イベントの開催状況（開催前 / 開催中 / 終了） */
+export type CalendarEventPhase = 'upcoming' | 'live' | 'ended';
+
+/** イベントの開催状況を判定する（終了時刻が無い場合は開始から CALENDAR_EVENT_DEFAULT_DURATION_MS で終了とみなす） */
+export function getCalendarEventPhase(
+  event: Pick<CalendarEventItem, 'start_datetime' | 'end_datetime'>,
+  nowMs: number
+): CalendarEventPhase {
+  const startMs = new Date(event.start_datetime).getTime();
+  const endMs = event.end_datetime ? new Date(event.end_datetime).getTime() : startMs + CALENDAR_EVENT_DEFAULT_DURATION_MS;
+  if (nowMs < startMs) return 'upcoming';
+  if (nowMs < endMs) return 'live';
+  return 'ended';
+}
 
 // 配信対象タイプ (ALL: 生徒全体 / CLIENT: 顧客単位 / COACH: コーチ全体)
 export type CalendarEventTargetType = 'ALL' | 'CLIENT' | 'COACH';

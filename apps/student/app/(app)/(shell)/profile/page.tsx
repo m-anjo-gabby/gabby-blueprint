@@ -1,10 +1,11 @@
 // apps/student/app/(app)/(shell)/profile/page.tsx
 import { getMyProfile, getTimezoneList } from '@/actions/studentProfileAction';
+import { getMyMailSettings } from '@/actions/mailSettingAction';
 import { ProfileView } from './_components/ProfileView';
 import { ProfilePageHeader } from './_components/ProfileParts';
 
 export default async function ProfilePage() {
-  const [profile, timezones] = await Promise.all([getMyProfile(), getTimezoneList()]);
+  const [profile, timezones, mailSettings] = await Promise.all([getMyProfile(), getTimezoneList(), getMyMailSettings()]);
 
   if (!profile) {
     return (
@@ -25,6 +26,7 @@ export default async function ProfilePage() {
         initialIconPath={profile.icon_path}
         initialTimezone={profile.timezone}
         timezones={timezones}
+        mailSettings={mailSettings}
       />
     </div>
   );

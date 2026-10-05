@@ -41,6 +41,10 @@
   画面から送信し、`waitForEmail` で送信済みメールを取得してリンクを開く。読み取りには Full access の API キーが必要で、
   `testing/.env.local` の `RESEND_TEST_READ_API_KEY` に置く（アプリの `RESEND_API_KEY` は送信専用）。未設定ならテストをスキップする。
 - `@gabby-qa-test.example` 等の実在しない宛先へは送信しない（バウンスで送信元ドメインの評価が下がる）。実際に送信するテストは desktop だけで行う。
+- 通知・リマインダーのメール（送信待ち `com_t_mail_outbox` を通るもの）は、pg_cron の代わりに送信処理（admin の `/api/cron/mail-dispatch`）を
+  `support/mailDispatch.ts` の `invokeMailDispatch` で呼んで送る（秘密のキーは `CRON_SECRET`、dev は `apps/admin/.env.local` から読む）。
+  送信処理は送信待ち全体を処理するため、dev の admin は `MAIL_DISPATCH_RECIPIENT_ALLOWLIST=resend.dev` で送信先を Resend のテスト用アドレスに限定する
+  （固定アカウント等の `.example` 宛ては送らずに SKIPPED になる）。例: `tests/mail/event-reminder.spec.ts`。
 
 ## 3. 固定アカウントの並列実行時の扱い
 
@@ -110,7 +114,8 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   `mobile-android`（Chromium、Pixel 7）は実行時間を抑えるため `e2e:android` 指定時のみ有効になる（構成の理由は `FIXTURES.md`）。
   同じテストがすべてのプロジェクトで動くよう、表示中のナビだけを取得する `mainNav` / `navTab` を使う。
 - 実行: `pnpm --filter @gabby/testing e2e`（全件）。対象を絞る場合は
-  `pnpm --filter @gabby/testing e2e -- <ファイル名の一部> --project=desktop`。
+  `pnpm --filter @gabby/testing exec playwright test <ファイル名の一部> --project=desktop`
+  （`pnpm ... e2e -- <ファイル名>` の形は `--` がそのまま Playwright に渡って絞り込みが効かず、全件が走る。`KJ-2026-1005-01`）。
   Android（Chromium）も含める場合は `pnpm --filter @gabby/testing e2e:android`（`--project=mobile-android` で単独実行も可）。
   初回・Playwright更新時はブラウザ取得が必要: `pnpm --filter @gabby/testing exec playwright install chromium webkit`。
   結果レポート（人が見る用）: `pnpm --filter @gabby/testing e2e:report`。成果物は `testing/e2e/.artifacts/`（git管理外）。

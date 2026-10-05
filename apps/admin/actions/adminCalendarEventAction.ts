@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
+  CALENDAR_EVENT_TYPES,
   CalendarEventItem,
   CalendarEventType,
   CalendarEventTargetType,
@@ -186,7 +187,8 @@ export async function upsertCalendarEvent(
       location_url: formData.location_url || null,
       target_type: formData.target_type,
       client_id: formData.target_type === 'CLIENT' ? formData.client_id || null : null,
-      rsvp_enabled: formData.rsvp_enabled,
+      // 参加確認が必須の種別（グループセッション等）は、送信内容に関わらず有効にする
+      rsvp_enabled: CALENDAR_EVENT_TYPES[formData.event_type]?.rsvpRequired || formData.rsvp_enabled,
       is_published: formData.is_published,
       update_date: new Date().toISOString(),
     };

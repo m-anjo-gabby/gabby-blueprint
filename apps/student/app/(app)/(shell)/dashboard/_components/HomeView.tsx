@@ -42,6 +42,8 @@ interface HomeViewProps {
   plans: MyPlan[];
   /** ライブセッションの区画（サーバー側で Suspense に包んで渡す。ライブセッション付きの契約が無い場合は null） */
   liveSection: React.ReactNode;
+  /** グループセッションの区画（サーバー側で Suspense に包んで渡す。全プランで出す） */
+  eventSection: React.ReactNode;
   /** サーバー描画ごとのID（キャッシュ済みの画面の再利用を検知して取り直すために使う） */
   renderId: string;
 }
@@ -54,9 +56,9 @@ const getGreeting = (hour: number) => {
 
 /**
  * ホーム画面。
- * 1行目に自主トレーニングの「今日やること」（主役）と今週のトレーニング、2行目にライブセッション（契約がある場合だけ）、
+ * 1行目に自主トレーニングの「今日やること」（主役）と今週のトレーニング、2行目に「これからの予定」（ライブセッション（契約がある場合だけ）とグループセッション）、
  * 3行目にこれまでの歩みとご契約プラン、4行目に主役に出ていない「続きから」と課題を並べる（モバイル=1列、PC(lg以上)=3列グリッド）。
- * プランによる違いは2行目の有無だけにする。トレーニングの各画面への入口はシェルのトレーニングタブ（TrainingSectionNav）が受け持つ。
+ * プランによる違いは2行目のライブセッションの有無だけにする。トレーニングの各画面への入口はシェルのトレーニングタブ（TrainingSectionNav）が受け持つ。
  * 現在時刻の確定前（初回表示のハイドレーション時）は、時刻に依存する部分を loading.tsx と同じ骨組みで描く。
  */
 export function HomeView({
@@ -67,6 +69,7 @@ export function HomeView({
   resume: serverResume,
   plans,
   liveSection,
+  eventSection,
   renderId,
 }: HomeViewProps) {
   const nowMs = useNow();
@@ -148,8 +151,9 @@ export function HomeView({
           <WeeklyActivityCardSkeleton />
         )}
 
-        {/* 2行目: ライブセッション（ライブセッション付きの契約がある場合だけ） */}
-        {liveSection && <div className={HOME_LAYOUT.fullRow}>{liveSection}</div>}
+        {/* 2行目: これからの予定。ライブセッション（契約がある場合だけ、2列分）とグループセッション。ライブセッションが無ければグループセッションを1行に広げる */}
+        {liveSection && <div className={HOME_LAYOUT.wide}>{liveSection}</div>}
+        <div className={liveSection ? undefined : HOME_LAYOUT.fullRow}>{eventSection}</div>
 
         {/* 3行目: これまでの歩み（2列分）とご契約プラン。契約が取得できない場合は歩みを1行に広げる */}
         <LifetimeStatsCard

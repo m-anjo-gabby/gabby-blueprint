@@ -1012,6 +1012,7 @@
       "locationUrlHint": "Typically used for the Zoom URL of a group session.",
       "rsvpLabel": "Enable RSVP",
       "rsvpHint": "When on, students/coaches can register or cancel their participation in this event.",
+      "rsvpRequiredHint": "RSVP is required for group sessions. The join URL is shown only to students/coaches who have registered.",
       "rsvpEnabled": "Enabled",
       "rsvpDisabled": "Disabled",
       "targetTypeLabel": "Target audience",
