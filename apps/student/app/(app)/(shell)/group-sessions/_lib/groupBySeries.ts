@@ -25,7 +25,7 @@ export function groupBySeries(events: CalendarEventItem[]): { groups: SeriesGrou
   return { groups: [...groups.values()], singles };
 }
 
-/** シリーズの「全回に参加予定にする」の対象（参加確認があり、終了しておらず、まだ参加登録していない回） */
+/** シリーズの「すべて参加予定にする」の対象（参加確認があり、終了しておらず、まだ参加登録していない回） */
 export function getJoinableSessions(sessions: CalendarEventItem[], nowMs: number | null): CalendarEventItem[] {
   return sessions.filter(
     (s) => s.rsvp_enabled && !s.is_joined && (nowMs === null || getCalendarEventPhase(s, nowMs) !== 'ended')

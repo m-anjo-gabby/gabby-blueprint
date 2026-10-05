@@ -1052,7 +1052,8 @@
       "toastGenericFailed": "The operation failed",
       "toastSystemError": "A system error occurred",
       "seriesLabel": "Series",
-      "seriesNone": "None (one-off event)"
+      "seriesManageLink": "Manage in series",
+      "seriesReadonlyHint": "Add sessions or change the series from the series page."
     },
     "series": {
       "backToEvents": "Back to calendar events",

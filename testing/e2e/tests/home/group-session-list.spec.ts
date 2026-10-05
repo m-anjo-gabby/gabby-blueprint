@@ -9,7 +9,7 @@ import { expect, test } from "../../support/studentApp.ts";
 
 /**
  * グループセッションの一覧（/group-sessions。入口は docs/screens/student/dashboard.md「グループセッション」）。
- * シリーズごとのカード・全回に参加予定にする・参加登録した過去のセッションを確かめる。
+ * シリーズごとのカード・すべて参加予定にする・参加登録した過去のセッションを確かめる。
  * 参加登録は状態を変えるため、使い捨てのシリーズ・回（所属テナント限定の配信）を作って desktop でだけ検証する。
  */
 
@@ -23,7 +23,7 @@ test.afterEach(async () => {
   fixtures = [];
 });
 
-test("シリーズの回を一覧し、全回に参加予定にできる。参加登録した過去の回は「過去のセッション」に出る", async ({ page }, testInfo) => {
+test("シリーズの回を一覧し、すべて参加予定にできる。参加登録した過去の回は「過去のセッション」に出る", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "参加登録の状態を変えるため desktop のみ");
   const email = PERSONAS.monitorStudent.email;
   const first = await createGroupSession(email, { startOffsetMinutes: 2 * DAY_MINUTES, label: "一覧 1回目", withSeries: true });
@@ -49,8 +49,8 @@ test("シリーズの回を一覧し、全回に参加予定にできる。参�
   // 終了した回は「これから」には出さない
   await expect(seriesCard.getByText(past.title)).toHaveCount(0);
 
-  await seriesCard.getByRole("button", { name: "全回に参加予定にする（残り2回）" }).click();
-  await expect(seriesCard.getByText("全回に参加予定です")).toBeVisible();
+  await seriesCard.getByRole("button", { name: "すべて参加予定にする（2回）" }).click();
+  await expect(seriesCard.getByText("すべての回が参加予定です")).toBeVisible();
   await expect(seriesCard.getByRole("link", { name: "参加する" })).toHaveCount(2);
 
   const { count } = await first.admin

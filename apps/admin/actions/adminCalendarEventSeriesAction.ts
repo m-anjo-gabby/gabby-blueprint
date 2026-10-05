@@ -76,22 +76,6 @@ export async function getCalendarEventSeriesList(): Promise<CalendarEventSeriesI
   });
 }
 
-/** シリーズの選択肢（イベントの登録・編集用。軽量） */
-export async function getCalendarEventSeriesOptions(): Promise<CalendarEventSeriesSummary[]> {
-  const ctx = await getLogContext();
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('com_m_calendar_event_series')
-    .select('series_id, title, description')
-    .eq('delete_flg', '0')
-    .order('insert_date', { ascending: false });
-  if (error) {
-    logger.error('calendarEventSeries:get_options_failed', error.message, ctx);
-    return [];
-  }
-  return data ?? [];
-}
-
 /**
  * シリーズの詳細（シリーズと、属する回を開始日時の順に）
  */

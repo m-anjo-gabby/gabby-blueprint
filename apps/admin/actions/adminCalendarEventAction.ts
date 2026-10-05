@@ -31,7 +31,6 @@ export interface CalendarEventFormData {
   rsvp_enabled: boolean;
   is_published: boolean;
   coach_ids: string[]; // 担当コーチ（主にグループセッション用。原則1〜3名だが上限は設けない）
-  series_id?: string | null; // シリーズ（グループセッションのみ。単発は null）
 }
 
 export interface CalendarEventParticipant {
@@ -164,6 +163,7 @@ async function syncCalendarEventCoaches(calendarEventId: string, coachIds: strin
 
 /**
  * カレンダーイベントの新規作成/更新
+ * シリーズ（series_id）はここでは変更しない（シリーズの回はシリーズ管理の「回をまとめて追加」で作る。新規作成は単発のイベント）。
  * calendar_event_idの有無で insert / update を明示的に分岐する
  * （timezoneのような人間可読な自然キーを持たないため upsert() は使わない）
  */
@@ -191,8 +191,6 @@ export async function upsertCalendarEvent(
       client_id: formData.target_type === 'CLIENT' ? formData.client_id || null : null,
       // 参加確認が必須の種別（グループセッション等）は、送信内容に関わらず有効にする
       rsvp_enabled: CALENDAR_EVENT_TYPES[formData.event_type]?.rsvpRequired || formData.rsvp_enabled,
-      // シリーズはグループセッションのみ
-      series_id: formData.event_type === 'GROUP_SESSION' ? formData.series_id || null : null,
       is_published: formData.is_published,
       update_date: new Date().toISOString(),
     };

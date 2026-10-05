@@ -17,7 +17,7 @@ interface EventDetailDrawerProps {
 
 /**
  * イベントの詳細をボトムシートで開く（ホームのカード・グループセッションの一覧から使う）。
- * 中身はカレンダーの日の詳細と同じ CalendarEventCard（説明・アナウンス・参加登録/取消・カレンダーに追加）。
+ * 中身はカレンダーの日の詳細と同じ CalendarEventCard（説明・アナウンス・参加登録/取消・お使いのカレンダーに追加）。
  */
 export function EventDetailDrawer({ event, timezone, onClose, onParticipationChanged, showSeriesLink }: EventDetailDrawerProps) {
   return (

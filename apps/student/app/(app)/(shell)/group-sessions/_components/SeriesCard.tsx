@@ -65,7 +65,7 @@ interface SeriesCardProps {
   /** シリーズ名（単発のイベントのまとまりは「その他のイベント」） */
   title: string;
   description: string | null;
-  /** シリーズID（単発のイベントのまとまりは null。「全回に参加予定にする」を出さない） */
+  /** シリーズID（単発のイベントのまとまりは null。「すべて参加予定にする」を出さない） */
   seriesId: string | null;
   sessions: CalendarEventItem[];
   nowMs: number | null;
@@ -81,8 +81,8 @@ interface SeriesCardProps {
 const DESCRIPTION_CLAMP = 'line-clamp-3';
 
 /**
- * シリーズのカード（シリーズ名・説明・回の一覧）。まだ終わっていない未登録の回があれば「全回に参加予定にする」を出す。
- * 全回の取り消しは置かない（取り消しは回ごとに詳細から行う）。
+ * シリーズのカード（シリーズ名・説明・回の一覧）。まだ終わっていない未登録の回があれば「すべて参加予定にする」を出す。
+ * まとめての取り消しは置かない（取り消しは回ごとに詳細から行う）。
  */
 export function SeriesCard({
   title,
@@ -144,12 +144,12 @@ export function SeriesCard({
         <div className="mt-3">
           {joinable.length > 0 ? (
             <Button type="button" size="sm" pending={isJoiningAll} icon={<ListChecks />} onClick={handleJoinAll}>
-              全回に参加予定にする（残り{joinable.length}回）
+              すべて参加予定にする（{joinable.length}回）
             </Button>
           ) : (
             <p className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
               <CheckCircle2 size={14} />
-              全回に参加予定です
+              すべての回が参加予定です
             </p>
           )}
         </div>

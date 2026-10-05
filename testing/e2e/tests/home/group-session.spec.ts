@@ -52,7 +52,7 @@ test.describe("アプリのみ契約の生徒", () => {
 
     await card.getByRole("button", { name: "参加予定にする" }).click();
     await expect(card.getByRole("link", { name: "参加する" })).toHaveAttribute("href", locationUrl);
-    await expect(card.getByRole("button", { name: "カレンダーに追加" })).toBeVisible();
+    await expect(card.getByRole("button", { name: "お使いのカレンダーに追加" })).toBeVisible();
     await expect(card.getByText("参加予定", { exact: true })).toBeVisible();
 
     const { count: joined } = await admin
@@ -134,6 +134,13 @@ test.describe("アドミンのイベント登録", () => {
 
       await expect(page.getByRole("cell", { name: "E2E Week 1" })).toBeVisible();
       await expect(page.getByRole("cell", { name: "E2E Week 2" })).toBeVisible();
+
+      // シリーズの回の編集では、シリーズを変えられない（読み取り専用の表示と「シリーズで管理」）
+      await page.getByRole("row", { name: /E2E Week 1/ }).getByRole("button", { name: "編集" }).click();
+      const editDialog = page.getByRole("dialog");
+      await expect(editDialog.getByText(seriesTitle)).toBeVisible();
+      await expect(editDialog.getByRole("link", { name: "シリーズで管理" })).toBeVisible();
+      await page.keyboard.press("Escape");
 
       const { data: series } = await admin.from("com_m_calendar_event_series").select("series_id").eq("title", seriesTitle).single();
       const { data: sessions } = await admin

@@ -1052,7 +1052,8 @@
       "toastGenericFailed": "処理に失敗しました",
       "toastSystemError": "システムエラーが発生しました",
       "seriesLabel": "シリーズ",
-      "seriesNone": "なし（単発のイベント）"
+      "seriesManageLink": "シリーズで管理",
+      "seriesReadonlyHint": "シリーズの回の追加・シリーズの変更は、シリーズ管理で行います。"
     },
     "series": {
       "backToEvents": "カレンダーイベント管理へ戻る",

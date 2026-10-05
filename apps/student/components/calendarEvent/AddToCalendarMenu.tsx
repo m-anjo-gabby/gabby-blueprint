@@ -12,7 +12,8 @@ interface AddToCalendarMenuProps {
 }
 
 /**
- * イベントを自分のカレンダーに追加するメニュー（Google カレンダー / .ics ファイル）。
+ * イベントを利用者が普段使っているカレンダー（Google カレンダー / iPhone・Outlook 等）に追加するメニュー。
+ * アプリ内のカレンダー（ライブセッションのカレンダー画面）と区別するため「お使いのカレンダー」と呼ぶ。
  * 参加URLは参加登録済みの場合だけ予定の説明欄に含める。
  */
 export function AddToCalendarMenu({ event, className }: AddToCalendarMenuProps) {
@@ -22,7 +23,7 @@ export function AddToCalendarMenu({ event, className }: AddToCalendarMenuProps) 
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button type="button" size="sm" variant="outline" icon={<CalendarPlus />} className={className}>
-          カレンダーに追加
+          お使いのカレンダーに追加
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
@@ -32,7 +33,7 @@ export function AddToCalendarMenu({ event, className }: AddToCalendarMenuProps) 
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => downloadIcsFile(event, { locationUrl })}>
-          その他のカレンダー（.ics）
+          iPhone・Outlook など（.ics ファイル）
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

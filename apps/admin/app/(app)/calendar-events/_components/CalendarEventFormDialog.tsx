@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertCalendarEvent, getCoachesFilter, CalendarEventFormData } from '@/actions/adminCalendarEventAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
-import { getCalendarEventSeriesOptions } from '@/actions/adminCalendarEventSeriesAction';
+import Link from 'next/link';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import {
@@ -23,7 +23,6 @@ import {
   CalendarEventType,
   CalendarEventTargetType,
   CalendarEventCoachOption,
-  CalendarEventSeriesSummary,
   CALENDAR_EVENT_TYPES,
 } from '@gabby/types/calendarEvent';
 import { ClientOption } from '@gabby/types/client';
@@ -52,7 +51,6 @@ function createCalendarEventSchema(t: FormT) {
       rsvp_enabled: z.boolean(),
       is_published: z.boolean(),
       coach_ids: z.array(z.string()),
-      series_id: z.string(),
     })
     .refine((v) => !v.has_end || (!!v.end_date && !!v.end_time), {
       message: t('errors.endDateTimeRequired'),
@@ -78,9 +76,6 @@ interface CalendarEventFormDialogProps {
   initialData?: CalendarEventItem;
 }
 
-/** シリーズの選択肢の「なし（単発）」（Select は空文字を値にできないため） */
-const NO_SERIES = 'NONE';
-
 const DEFAULT_VALUES: CalendarEventFormValues = {
   event_type: 'GROUP_SESSION',
   title: '',
@@ -97,7 +92,6 @@ const DEFAULT_VALUES: CalendarEventFormValues = {
   rsvp_enabled: CALENDAR_EVENT_TYPES.GROUP_SESSION.rsvpRequired,
   is_published: false,
   coach_ids: [],
-  series_id: NO_SERIES,
 };
 
 /**
@@ -116,13 +110,11 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
   const [serverError, setServerError] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [coaches, setCoaches] = useState<CalendarEventCoachOption[]>([]);
-  const [seriesOptions, setSeriesOptions] = useState<CalendarEventSeriesSummary[]>([]);
   const { showToast } = useToast();
 
   useEffect(() => {
     getClientsFilter().then(setClients);
     getCoachesFilter().then(setCoaches);
-    getCalendarEventSeriesOptions().then(setSeriesOptions);
   }, []);
 
   const getInitialValues = (data?: CalendarEventItem): CalendarEventFormValues => {
@@ -144,7 +136,6 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
       rsvp_enabled: data.rsvp_enabled,
       is_published: data.is_published,
       coach_ids: (data.coaches ?? []).map((c) => c.coach_id),
-      series_id: data.series_id ?? NO_SERIES,
     };
   };
 
@@ -177,7 +168,6 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
         rsvp_enabled: values.rsvp_enabled,
         is_published: values.is_published,
         coach_ids: values.event_type === 'GROUP_SESSION' ? values.coach_ids : [],
-        series_id: values.event_type === 'GROUP_SESSION' && values.series_id !== NO_SERIES ? values.series_id : null,
       };
 
       const result = await upsertCalendarEvent(payload);
@@ -245,7 +235,8 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('eventTypeLabel')}</FormLabel>
-                    {isConfirming ? (
+                    {/* シリーズの回はグループセッションのまま（種別を変えられない） */}
+                    {isConfirming || initialData?.series ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                         {CALENDAR_EVENT_TYPES[field.value].label}
                       </div>
@@ -277,41 +268,22 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
                 )}
               />
 
-              {/* --- シリーズ（グループセッションのみ。単発は「なし」） --- */}
-              {eventType === 'GROUP_SESSION' && (
-                <FormField
-                  control={form.control}
-                  name="series_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('seriesLabel')}</FormLabel>
-                      {isConfirming ? (
-                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                          {seriesOptions.find((s) => s.series_id === field.value)?.title ?? t('seriesNone')}
-                        </div>
-                      ) : (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value={NO_SERIES}>{t('seriesNone')}</SelectItem>
-                            {seriesOptions.map((s) => (
-                              <SelectItem key={s.series_id} value={s.series_id}>
-                                {s.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* --- シリーズ（シリーズの回だけ。シリーズの付け外しはシリーズ管理で行い、ここでは変更できない） --- */}
+              {initialData?.series && (
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('seriesLabel')}</p>
+                  <div className="flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                    <span className="min-w-0 truncate">{initialData.series.title}</span>
+                    <Link
+                      href={`/calendar-events/series/${initialData.series.series_id}`}
+                      className="shrink-0 text-xs font-bold text-brand hover:text-brand-strong"
+                    >
+                      {t('seriesManageLink')}
+                    </Link>
+                  </div>
+                  <p className="text-[11px] text-slate-400">{t('seriesReadonlyHint')}</p>
+                </div>
               )}
-
             </div>
 
             {/* --- タイトル --- */}
