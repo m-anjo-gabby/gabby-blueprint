@@ -3,8 +3,13 @@ import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
 import { REPORTING_TIMEZONE } from '../../date/reporting';
 import { sendCore } from '../core';
-import { renderMailDailyReportEmail } from '../render';
-import { countMailDailyReportIssues, type MailDailyReportItem, type MailDailyReportProps } from '../templates/MailDailyReportTemplate';
+import { renderMail } from '../render';
+import {
+  buildMailDailyReport,
+  countMailDailyReportIssues,
+  type MailDailyReportItem,
+  type MailDailyReportProps,
+} from '../templates/MailDailyReportTemplate';
 import { checkMailConfig } from './policy';
 
 const logger = createLogger('mail');
@@ -108,7 +113,7 @@ export async function sendMailDailyReport(nowMs = Date.now()): Promise<MailDaily
   const issues = countMailDailyReportIssues(props);
 
   // 1日1回のジョブから呼ぶため、重複防止キーは付けない（同じ日に手動で再実行した場合は、その時点の内容で送る）
-  const rendered = renderMailDailyReportEmail(props);
+  const rendered = renderMail(buildMailDailyReport(props));
   for (const to of recipients) {
     await sendCore({ to, ...rendered, sender: 'notify', kind: 'ops_daily_report' });
   }

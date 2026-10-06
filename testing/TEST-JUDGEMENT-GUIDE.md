@@ -876,8 +876,9 @@
 - **判断基準への反映**:
   - テストから `@gabby/lib` のサーバー専用モジュールを import しない。service_role のクライアントは `testing/helpers/auth.ts` の
     `createAdminClient`（テスト側で自前生成）を使う。
-  - メールの文面は `@gabby/lib/mail/render`（組み立てのみ・秘密情報なし）を import して検証する。新しいメールの文面を検証する場合も、
-    組み立て関数を `mail/render.ts` に置き、送信処理（`mail/actions/*`）はそれを呼ぶ形にする。
+  - メールの文面は `@gabby/lib/mail/templates/`（件名と中身を返す `build〜Mail`）と `@gabby/lib/mail/render` の `renderMail`
+    （組み立てのみ・秘密情報なし）を import して検証する。新しいメールも文面はテンプレートに置き、送信処理（`mail/actions/*`・
+    `mail/dispatch/handlers/*`）はそれを呼ぶ形にする。
   - `packages/lib` に秘密情報・`next/headers` を使うモジュールを追加するときは `import 'server-only'` を付ける（`'use server'` のファイルは不要）。
 
 ### KJ-2026-0930-02 スクリプトの後始末の signOut（既定: global）で、同じユーザーのブラウザ・E2Eのログイン状態が切れる
@@ -1026,3 +1027,14 @@
   （後始末の失敗は警告だけでテストは成功するため、気づきにくい）。
 - **対処**: テストの後始末で、セッション（と固定アカウント宛ての送信待ち）を `cleanupAuthFixture` より先に削除する。残骸は `authFixtures.leftovers.ts --delete` の前にセッションを消してから片付けた。
 - **判断基準への反映**: 使い捨てのデータにセッション・担当枠などを直接作ったテストは、追加・変更した後に `authFixtures.leftovers.ts` で残骸が0件かを確かめる。
+
+### KJ-2026-1006-02 メール基盤のリファクタは、送信の組み立て処理（handlers）を偽のクライアントで全パターン実行し、前後の出力を比べる
+
+- **該当シナリオ**: 通知・メールの共通化（テンプレートが件名と中身を返す形への変更・招待メールの送信の統合・通知の表示の共通化）（dev, 2026-10-06）
+- **事象**: 文面の単体テスト（`testing/unit/*-mail-content.test.ts`）はテンプレートを直接呼ぶため、送信処理の組み立て（`mail/dispatch/handlers/*`。
+  送らない判定・リンク・チャットの文言等）の変化は検出できない。handlers は `import 'server-only'` のため、そのままでは Node から読み込めない（KJ-2026-0930-01）。
+- **対処**: 一時的なスクリプトで、`node:module` の `register` の resolve フックで `server-only` だけを空のモジュールに差し替えて
+  （`--conditions=react-server` と違い `react-dom/server.edge` は通常の実装のまま）、`from().select().eq().maybeSingle()` に答える偽の Supabase クライアントで
+  各 handler を種別・言語・リンクの有無・送らない条件の組み合わせ（308通り）で実行し、件名・HTML・テキスト・skip 理由を JSON に書き出して変更の前後で完全一致を確かめた。DB には接続しない。
+- **判断基準への反映**: 文面・送信の判定を変えない整理（リファクタ）では、この前後比較で「出力が1文字も変わらない」ことを完了条件にする。
+  比較用のスクリプトは使い捨て（リポジトリに残さない）。文面を意図して変える変更では使わず、単体テストの期待値を更新する。

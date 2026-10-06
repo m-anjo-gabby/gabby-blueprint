@@ -45,8 +45,8 @@
 --   |                       |                                   | 未設定・"off" は送らない（緊急停止にも使う。招待・パスワード再設定は対象外）
 --   | admin                 | MAIL_DISPATCH_RECIPIENT_ALLOWLIST | staging のみ "resend.dev,gabbyacademy.com,gvtech.co.jp"（MAIL_DISPATCH_MODE=allowlist の送信先。本番は設定しない）
 --   | admin                 | RESEND_WEBHOOK_SECRET             | Resend の Webhook の Signing Secret（whsec_...。STEP 5 で表示される値。環境ごとに別）
---   | admin                 | MAIL_OPS_ALERT_TO                 | 運営向けのメール配信の日次の要約の宛先（カンマ区切り。問題があった日だけ 09:00 JST に送る。
---   |                       |                                   | 未設定なら送らない。staging は運営の社内アドレス、または設定しない）
+--   | admin                 | MAIL_OPS_ALERT_TO                 | 運営向けのメール配信の日次の要約の宛先（カンマ区切り。毎日 09:00 JST に送る。
+--   |                       |                                   | 問題が無い日も「異常なし」で送り、届くこと自体を送信処理の生存確認にする。未設定なら送らない。staging は運営の社内アドレス、または設定しない）
 --   | admin・student・coach | MAIL_UNSUBSCRIBE_SECRET           | 3アプリで同じ値（十分に長いランダムな文字列）。ログイン不要の配信停止リンクの署名鍵。
 --   |                       |                                   | 未設定でもメールは送られるが、配信停止リンク・List-Unsubscribe ヘッダーが付かない
 --   | （任意）admin・student・coach | MAIL_LOGO_URL             | 通常は設定しない（メールのロゴは本番の https://blueprint.gabbyacademy.com/mail-logo.png）。

@@ -1,9 +1,11 @@
 import 'server-only';
 import { USER_TYPES } from '@gabby/types/user';
 import { SESSION_STATUS } from '@gabby/types/session';
-import { formatReminderSchedule, renderLiveSessionReminderEmail } from '../../render';
-import type { ReminderLead } from '../../templates/EventReminderEmailTemplate';
+import { renderMail } from '../../render';
+import { buildLiveSessionReminderMail } from '../../templates/LiveSessionReminderEmailTemplate';
+import { formatReminderSchedule, toReminderLead } from '../../templates/reminder';
 import type { MailHandler } from '../types';
+import { readText } from './payload';
 
 /**
  * ライブセッションのリマインダー（LIVE_SESSION_REMINDER、登録: enqueue_live_session_reminders）。
@@ -13,8 +15,7 @@ import type { MailHandler } from '../types';
  * ライブセッション画面の入室ボタンは、早い場合に入室できる時刻を案内する）、コーチはセッションハブ。
  */
 export const liveSessionReminderHandler: MailHandler = async ({ admin, row, recipient, nowMs, links }) => {
-  const sessionId = typeof row.payload.session_id === 'string' ? row.payload.session_id : null;
-  const lead: ReminderLead = row.payload.lead === '1h' ? '1h' : '24h';
+  const sessionId = readText(row.payload, 'session_id');
   if (!sessionId) return { skip: 'invalid_payload' };
 
   const { data: session, error } = await admin
@@ -35,21 +36,21 @@ export const liveSessionReminderHandler: MailHandler = async ({ admin, row, reci
 
   const { language } = recipient;
   const coachHubPath = `/students/${session.student_id}/sessions/${sessionId}`;
-  const actionPath = isStudent ? '/live-room' : coachHubPath;
 
-  return renderLiveSessionReminderEmail({
-    language,
-    lead,
-    recipientName: recipient.userName,
-    counterpartName: counterpart?.user_name ?? null,
-    scheduleLabel: formatReminderSchedule({
-      startIso: session.start_datetime,
-      endIso: session.end_datetime,
-      timeZone: recipient.timezone,
+  return renderMail(
+    buildLiveSessionReminderMail({
       language,
-    }),
-    actionUrl: links.portal(actionPath),
-    settingsUrl: links.settingsUrl,
-    unsubscribeUrl: links.unsubscribeUrl,
-  });
+      lead: toReminderLead(row.payload.lead),
+      recipientName: recipient.userName,
+      counterpartName: counterpart?.user_name ?? null,
+      scheduleLabel: formatReminderSchedule({
+        startIso: session.start_datetime,
+        endIso: session.end_datetime,
+        timeZone: recipient.timezone,
+        language,
+      }),
+      actionUrl: links.portal(isStudent ? '/live-room' : coachHubPath),
+      links,
+    })
+  );
 };

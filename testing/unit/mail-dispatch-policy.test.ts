@@ -147,8 +147,8 @@ test("設定の状況: 送信の範囲が off・許可リストが空・鍵の�
 });
 
 test("日次の要約: 問題が無い日も「異常なし」で送る（届くこと自体が送信処理の生存確認）", async () => {
-  const { countMailDailyReportIssues, getMailDailyReportSubject } = await import("@gabby/lib/mail/templates/MailDailyReportTemplate");
-  const { renderMailDailyReportEmail } = await import("@gabby/lib/mail/render");
+  const { countMailDailyReportIssues, buildMailDailyReport } = await import("@gabby/lib/mail/templates/MailDailyReportTemplate");
+  const { renderMail } = await import("@gabby/lib/mail/render");
   const props = {
     periodLabel: "10/05 09:00 〜 10/06 09:00（日本時間 / JST）",
     sentCount: 12,
@@ -159,18 +159,18 @@ test("日次の要約: 問題が無い日も「異常なし」で送る（届く
     config: checkMailConfig(OK_CONFIG),
   };
   assert.equal(countMailDailyReportIssues(props), 0);
-  assert.equal(getMailDailyReportSubject(props), "【Gabby Blueprint】メール配信の日次報告 異常なし / Daily email report: no issues");
-  const { text } = renderMailDailyReportEmail(props);
+  assert.equal(buildMailDailyReport(props).subject, "【Gabby Blueprint】メール配信の日次報告 異常なし / Daily email report: no issues");
+  const { text } = renderMail(buildMailDailyReport(props));
   assert.ok(text.includes("メール配信に問題はありませんでした。"));
   assert.ok(text.includes("12"));
   assert.ok(!text.includes("要確認 / Check"));
 });
 
 test("日次の要約: 件名は要確認の件数の合計（設定の不備を含む）、明細は上限を超えた分を件数で示す", async () => {
-  const { countMailDailyReportIssues, getMailDailyReportSubject, MAIL_DAILY_REPORT_ITEM_LIMIT } = await import(
+  const { countMailDailyReportIssues, buildMailDailyReport, MAIL_DAILY_REPORT_ITEM_LIMIT } = await import(
     "@gabby/lib/mail/templates/MailDailyReportTemplate"
   );
-  const { renderMailDailyReportEmail } = await import("@gabby/lib/mail/render");
+  const { renderMail } = await import("@gabby/lib/mail/render");
   const item = { at: "10/06 08:00", label: "不達 / Bounced  password_reset", recipient: "taro@gabbyacademy.com", detail: "Permanent" };
   const props = {
     periodLabel: "10/05 09:00 〜 10/06 09:00（日本時間 / JST）",
@@ -184,8 +184,8 @@ test("日次の要約: 件名は要確認の件数の合計（設定の不備を
   };
   const total = MAIL_DAILY_REPORT_ITEM_LIMIT + 3 + 2 + 1;
   assert.equal(countMailDailyReportIssues(props), total);
-  assert.equal(getMailDailyReportSubject(props), `【Gabby Blueprint】メール配信の要確認 ${total}件 / Email delivery issues: ${total}`);
-  const { html, text } = renderMailDailyReportEmail(props);
+  assert.equal(buildMailDailyReport(props).subject, `【Gabby Blueprint】メール配信の要確認 ${total}件 / Email delivery issues: ${total}`);
+  const { html, text } = renderMail(buildMailDailyReport(props));
   assert.ok(html.includes("taro@gabbyacademy.com"));
   assert.ok(text.includes("ほか 3件 / and 3 more"));
   assert.ok(text.includes("送る時刻を30分以上過ぎた送信待ちが 2件"));

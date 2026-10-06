@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, BellOff, Sparkles, Flame, MessageCircle } from 'lucide-react';
+import { Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
@@ -19,12 +19,10 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
-import { NOTIFICATION_TYPES, NOTIFICATION_MESSAGE_BUILDERS, NotificationType } from '@gabby/types/notification';
+import { getNotificationDisplay } from '@gabby/lib/notification/display';
 
 // お知らせ(告知)と通知(個人イベント)を1つの通知センターに統合したベル。
 // データソースは別ストアのまま、UIの入口とタブ切替のみ統合する。
-const NOTIFICATION_ICONS = { Sparkles, Flame, MessageCircle } as const;
-
 type CenterTab = 'notice' | 'notification';
 
 const UnreadDot = () => (
@@ -278,11 +276,8 @@ export function NotificationCenterDropdown() {
                 ) : (
                   <div className="p-2 space-y-1">
                     {previewNotifications.map((notification) => {
-                      const meta = NOTIFICATION_TYPES[notification.notification_type as NotificationType];
-                      const Icon = NOTIFICATION_ICONS[meta?.icon as keyof typeof NOTIFICATION_ICONS] ?? Bell;
-                      const text = NOTIFICATION_MESSAGE_BUILDERS[notification.notification_type as NotificationType](
-                        notification.payload
-                      );
+                      const display = getNotificationDisplay(notification, 'ja');
+                      const Icon = display.icon ?? Bell;
 
                       return (
                         <DropdownMenuItem
@@ -311,7 +306,7 @@ export function NotificationCenterDropdown() {
                             <div
                               className={cn(
                                 'flex items-center justify-center w-8 h-8 rounded-xl border shrink-0',
-                                meta?.badgeClass ?? 'bg-slate-50 text-ink-muted border-line/70'
+                                display.badgeClass ?? 'bg-slate-50 text-ink-muted border-line/70'
                               )}
                             >
                               <Icon size={14} />
@@ -324,10 +319,10 @@ export function NotificationCenterDropdown() {
                                   !notification.is_read && 'text-ink font-bold'
                                 )}
                               >
-                                {text.title}
+                                {display.title}
                               </p>
                               <p className="text-[11px] text-ink-muted mt-0.5 line-clamp-2 leading-snug">
-                                {text.body}
+                                {display.body}
                               </p>
                               <p className="text-[11px] text-ink-subtle mt-1 font-bold">
                                 {formatZonedDate(notification.occurred_at, timezone)}

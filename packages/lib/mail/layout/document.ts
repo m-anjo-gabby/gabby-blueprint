@@ -6,8 +6,11 @@
  * テキスト版は、HTML を表示しない・テキストで読む設定のメールソフト（企業のメール環境に多い）向け。
  */
 
-/** HTML の lang（bilingual は日本語→英語の併記。テキスト版の見出し記号にも使う） */
-export type MailLanguage = 'ja' | 'en' | 'bilingual';
+/** 1つの言語（生徒: ja / コーチ: en） */
+export type MailLocale = 'ja' | 'en';
+
+/** メールの言語。bilingual は日本語→英語の併記（HTML の lang・テキスト版の見出し記号にも使う） */
+export type MailLanguage = MailLocale | 'bilingual';
 
 export type MailBlock =
   /** 段落。改行はそのまま表示する */
@@ -25,7 +28,7 @@ export type MailBlock =
   /** 注意の囲み（有効期限等） */
   | { kind: 'notice'; items: { title?: string; text: string; sub?: string }[] }
   /** 言語ごとのまとまり（日英併記用）。2つ目以降は区切り線を付ける */
-  | { kind: 'section'; lang: 'ja' | 'en'; blocks: MailBlock[] };
+  | { kind: 'section'; lang: MailLocale; blocks: MailBlock[] };
 
 /** フッターの1行。link があれば行末にリンクを付ける */
 export interface MailFooterLine {
@@ -42,6 +45,17 @@ export interface MailDocument {
   blocks: MailBlock[];
   /** フッター（配信理由・配信停止・問い合わせ先）。会社名・著作権表示は全メール共通で付く */
   footer: MailFooterLine[];
+}
+
+/** 1通のメール（件名と中身）。各テンプレートはこれを返し、render.ts の renderMail で HTML 版・テキスト版にする */
+export interface MailContent {
+  subject: string;
+  doc: MailDocument;
+}
+
+/** 件名（先頭にサービス名を付ける。日本語・併記は【】、英語は []） */
+export function mailSubject(language: MailLanguage, text: string): string {
+  return language === 'en' ? `[Gabby Blueprint] ${text}` : `【Gabby Blueprint】${text}`;
 }
 
 export const MAIL_COMPANY = {
@@ -62,11 +76,11 @@ export function toPreheader(text: string, max = 90): string {
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 }
 
-function labelLine(label: string, lang: 'ja' | 'en'): string {
+function labelLine(label: string, lang: MailLocale): string {
   return lang === 'ja' ? `【${label}】` : `[${label}]`;
 }
 
-function renderBlocksText(blocks: MailBlock[], lang: 'ja' | 'en'): string[] {
+function renderBlocksText(blocks: MailBlock[], lang: MailLocale): string[] {
   const parts: string[] = [];
   blocks.forEach((block) => {
     switch (block.kind) {

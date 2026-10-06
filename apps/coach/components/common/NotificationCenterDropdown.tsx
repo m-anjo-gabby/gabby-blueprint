@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, BellOff, Sparkles, Flame, MessageCircle } from 'lucide-react';
+import { Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
@@ -19,15 +19,12 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
+import { getNotificationDisplay } from '@gabby/lib/notification/display';
 import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
-import { NOTIFICATION_TYPES, NotificationType } from '@gabby/types/notification';
-import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@gabby/types/notificationEn';
 
 // Combines Notices (admin-broadcast announcements) and Notifications (system-triggered
 // personal events) behind a single bell. Data sources stay separate; only the entry
 // point and tab switching are unified.
-const NOTIFICATION_ICONS = { Sparkles, Flame, MessageCircle } as const;
-
 type CenterTab = 'notice' | 'notification';
 
 const UnreadDot = () => (
@@ -285,11 +282,8 @@ export function NotificationCenterDropdown() {
                 ) : (
                   <div className="p-2 space-y-1">
                     {previewNotifications.map((notification) => {
-                      const meta = NOTIFICATION_TYPES[notification.notification_type as NotificationType];
-                      const Icon = NOTIFICATION_ICONS[meta?.icon as keyof typeof NOTIFICATION_ICONS] ?? Bell;
-                      const text = NOTIFICATION_MESSAGE_BUILDERS_EN[notification.notification_type as NotificationType](
-                        notification.payload
-                      );
+                      const display = getNotificationDisplay(notification, 'en');
+                      const Icon = display.icon ?? Bell;
 
                       return (
                         <DropdownMenuItem
@@ -318,7 +312,7 @@ export function NotificationCenterDropdown() {
                             <div
                               className={cn(
                                 'flex items-center justify-center w-8 h-8 rounded-xl border shrink-0',
-                                meta?.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100'
+                                display.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100'
                               )}
                             >
                               <Icon size={14} />
@@ -331,10 +325,10 @@ export function NotificationCenterDropdown() {
                                   !notification.is_read && 'text-slate-900 font-black'
                                 )}
                               >
-                                {text.title}
+                                {display.title}
                               </p>
                               <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-snug">
-                                {text.body}
+                                {display.body}
                               </p>
                               <p className="text-[10px] text-slate-400 mt-1 font-bold">
                                 {formatDateEn(notification.occurred_at, timezone)}

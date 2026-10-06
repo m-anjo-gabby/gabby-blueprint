@@ -8,17 +8,14 @@ import {
   BulkUser, 
   BulkImportResponse, 
   BulkImportResultDetail, 
-  RoleDefinition,
-  USER_TYPES
+  RoleDefinition
 } from "@gabby/types/user";
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { issueInitialLicense, resolvePerformedBy } from '@gabby/lib/license/issue';
-import { sendInvitationEmail } from "@gabby/lib/mail/actions/sendInvitation"; // 独自メール配信用ユーティリティ（生徒向け）
-import { sendAdminInvitationEmail } from "@gabby/lib/mail/actions/sendAdminInvitation"; // 管理者向け招待メール
-import { sendCoachInvitationEmail } from "@gabby/lib/mail/actions/sendCoachInvitation"; // コーチ向け招待メール（英文）
+import { INVITATION_EXPIRES_DAYS, sendInvitationEmail } from "@gabby/lib/mail/actions/sendAccountMail"; // 招待メール（ユーザー種別ごとのテンプレート・文言で送り分け）
 import { validatePasswordStrength } from "@gabby/lib/auth/validation"; // パスワード強度の共通バリデーション
 import { randomBytes } from "crypto"; // 暗号トークン生成用
 import { getPortalBaseUrl } from "@gabby/lib/navigation/portalUrl";
@@ -33,34 +30,12 @@ function getRedirectBase(userType?: string): string {
 }
 
 /**
- * ユーザ種別に応じて、適切なテンプレート・文言の招待メールを送り分ける共通ヘルパー
- */
-function dispatchInvitationEmail(userType: string | undefined, params: {
-  to: string;
-  userName: string;
-  inviteUrl: string;
-  expiresDays?: number;
-}): Promise<{ success: boolean; error?: string }> {
-  switch (userType) {
-    case USER_TYPES.ADMIN:
-      return sendAdminInvitationEmail(params);
-    case USER_TYPES.COACH:
-      return sendCoachInvitationEmail(params);
-    default:
-      return sendInvitationEmail(params);
-  }
-}
-
-/**
  * トークン付きの最終的な招待リダイレクトURLを生成する共通ヘルパー
  */
 function getInvitationUrl(userType: string | undefined, token: string): string {
   const base = getRedirectBase(userType);
   return `${base}/auth/invite?token=${token}`;
 }
-
-/** 招待リンクの有効期限（日数）。新規送信・再送で共通し、メール本文の期限表記にも同じ値を使う */
-const INVITATION_EXPIRES_DAYS = 3;
 
 /**
  * 招待リンクの有効期限（送信から INVITATION_EXPIRES_DAYS 日後）を生成するヘルパー
@@ -207,8 +182,9 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
 
     // 独自メール送信処理を実行 (Resend) -> 共通ヘルパーを利用してURLを解決・種別ごとのテンプレートを送り分け
     const inviteUrl = getInvitationUrl(user_type, inviteData.token);
-    const mailResult = await dispatchInvitationEmail(user_type, {
+    const mailResult = await sendInvitationEmail({
       to: email,
+      userType: user_type,
       // 氏名が無ければ空で渡し、宛名は各テンプレートの既定（会員様 / Dear Coach / 管理者様）に任せる
       userName: user_name || '',
       inviteUrl: inviteUrl,
@@ -414,8 +390,9 @@ export async function resendInvite(email: string, userType?: string) {
     // 💡 考慮点: 引数の userType が省略されて渡された場合でも、DBから取得した一貫性のある currentInvite.user_type をフォールバックとして優先適用
     const resolvedUserType = userType || currentInvite.user_type;
     const inviteUrl = getInvitationUrl(resolvedUserType, newWeightToken);
-    const mailResult = await dispatchInvitationEmail(resolvedUserType, {
+    const mailResult = await sendInvitationEmail({
       to: email,
+      userType: resolvedUserType,
       userName: currentInvite.user_name || '',
       inviteUrl: inviteUrl,
       expiresDays: INVITATION_EXPIRES_DAYS,

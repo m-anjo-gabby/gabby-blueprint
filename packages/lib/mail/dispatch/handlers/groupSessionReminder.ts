@@ -1,8 +1,10 @@
 import 'server-only';
 import { USER_TYPES } from '@gabby/types/user';
-import { formatReminderSchedule, renderEventReminderEmail } from '../../render';
-import type { ReminderLead } from '../../templates/EventReminderEmailTemplate';
+import { renderMail } from '../../render';
+import { buildEventReminderMail } from '../../templates/EventReminderEmailTemplate';
+import { formatReminderSchedule, toReminderLead } from '../../templates/reminder';
 import type { MailHandler } from '../types';
+import { readText } from './payload';
 
 /** 結合したシリーズ（1件。型の推論上は配列になりうる）のタイトル */
 function pickSeriesTitle(series: unknown): string | null {
@@ -16,8 +18,7 @@ function pickSeriesTitle(series: unknown): string | null {
  * 日時の変更があっても最新の日時で送る。生徒には日本語、コーチには英語で送る。
  */
 export const groupSessionReminderHandler: MailHandler = async ({ admin, row, recipient, nowMs, links }) => {
-  const calendarEventId = typeof row.payload.calendar_event_id === 'string' ? row.payload.calendar_event_id : null;
-  const lead: ReminderLead = row.payload.lead === '1h' ? '1h' : '24h';
+  const calendarEventId = readText(row.payload, 'calendar_event_id');
   if (!calendarEventId) return { skip: 'invalid_payload' };
 
   const { data: event, error } = await admin
@@ -46,25 +47,25 @@ export const groupSessionReminderHandler: MailHandler = async ({ admin, row, rec
 
   const isCoach = recipient.userType === USER_TYPES.COACH;
   const { language } = recipient;
-  const scheduleLabel = formatReminderSchedule({
-    startIso: event.start_datetime,
-    endIso: event.end_datetime,
-    timeZone: recipient.timezone,
-    language,
-  });
 
-  return renderEventReminderEmail({
-    language,
-    lead,
-    recipientName: recipient.userName,
-    title: event.title,
-    seriesTitle: pickSeriesTitle(event.series),
-    description: event.description,
-    scheduleLabel,
-    joinUrl: event.location_url,
-    // 生徒はグループセッションの一覧、コーチはカレンダーで詳細を確認する
-    detailUrl: links.portal(isCoach ? '/calendar' : '/group-sessions'),
-    settingsUrl: links.settingsUrl,
-    unsubscribeUrl: links.unsubscribeUrl,
-  });
+  return renderMail(
+    buildEventReminderMail({
+      language,
+      lead: toReminderLead(row.payload.lead),
+      recipientName: recipient.userName,
+      title: event.title,
+      seriesTitle: pickSeriesTitle(event.series),
+      description: event.description,
+      scheduleLabel: formatReminderSchedule({
+        startIso: event.start_datetime,
+        endIso: event.end_datetime,
+        timeZone: recipient.timezone,
+        language,
+      }),
+      joinUrl: event.location_url,
+      // 生徒はグループセッションの一覧、コーチはカレンダーで詳細を確認する
+      detailUrl: links.portal(isCoach ? '/calendar' : '/group-sessions'),
+      links,
+    })
+  );
 };

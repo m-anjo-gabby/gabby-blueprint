@@ -2,6 +2,8 @@
  * 送信処理の判定（送信の範囲・失敗の扱い・期限切れ）。
  * 秘密情報や DB を参照しない純粋な判定だけを置き、文面の検証と同じく testing/unit から確かめられるようにする。
  */
+import { USER_TYPES } from '@gabby/types/user';
+import type { MailLocale } from '../layout/document';
 
 /**
  * 送信の範囲（環境変数 MAIL_DISPATCH_MODE）。
@@ -80,17 +82,13 @@ export function isExpired(insertedAtIso: string, expiresAfterHours: number | und
   return nowMs - new Date(insertedAtIso).getTime() > expiresAfterHours * 60 * 60 * 1000;
 }
 
-/** 宛先の言語（通知・リマインダーのメールの文面） */
-export type MailRecipientLanguage = 'ja' | 'en';
-
 /**
- * 宛先のユーザー種別から言語を決める（生徒: 日本語 / コーチ: 英語）。
+ * 宛先のユーザー種別から、通知・リマインダーのメールの文面の言語を決める（生徒: 日本語 / コーチ: 英語）。
  * 管理者には通知・リマインダーのメールを送らない（null。送信処理が SKIPPED にする）。
- * 値は @gabby/types/user の USER_TYPES（生徒 '1' / コーチ '2'）。
  */
-export function resolveRecipientLanguage(userType: string): MailRecipientLanguage | null {
-  if (userType === '1') return 'ja';
-  if (userType === '2') return 'en';
+export function resolveRecipientLanguage(userType: string): MailLocale | null {
+  if (userType === USER_TYPES.STUDENT) return 'ja';
+  if (userType === USER_TYPES.COACH) return 'en';
   return null;
 }
 

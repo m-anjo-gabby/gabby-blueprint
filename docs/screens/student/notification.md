@@ -39,5 +39,6 @@
 - `apps/student/app/(app)/(shell)/notification/page.tsx`
 - `apps/student/app/(app)/(shell)/notification/_components/NotificationCard.tsx`
 - 通知種別・文言組み立て定義: `packages/types/notification.ts`
-  （`NOTIFICATION_TYPES`, `NOTIFICATION_MESSAGE_BUILDERS`）
+  （`NOTIFICATION_TYPES`, `NOTIFICATION_MESSAGE_BUILDERS`）。表示は `packages/lib/notification/display.ts` の
+  `getNotificationDisplay`（3アプリ共通。知らない種別は汎用の文言）
 - 状態管理: `@gabby/lib/stores/useNotificationStore`（`fetchNotifications`, `markAsRead`）

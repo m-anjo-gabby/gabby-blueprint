@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { MailLocale } from '../layout/document';
 import type { RenderedEmail } from '../render';
-import type { MailRecipientLanguage } from './policy';
+import type { NotifyMailLinks } from '../templates/notifyMail';
 import type { MailType } from './registry';
 
 /** com_t_mail_outbox の行（送信処理が確保したもの） */
@@ -26,20 +27,19 @@ export interface MailRecipient {
   /** ライセンスの有無（auth.users の app_metadata.is_licensed。生徒だけが持つ） */
   isLicensed: boolean;
   /** 文面の言語（生徒: 日本語 / コーチ: 英語。管理者は送信処理が送らない。policy.ts の resolveRecipientLanguage） */
-  language: MailRecipientLanguage;
+  language: MailLocale;
 }
 
-/** 宛先のポータルへのリンク（送信処理が宛先・区分から組み立てて渡す。ポータルの URL・鍵が未設定の環境では null） */
-export interface MailLinks {
+/**
+ * 宛先のポータルへのリンク（送信処理が宛先・区分から組み立てて渡す。ポータルの URL・鍵が未設定の環境では null）。
+ * 設定画面・配信停止の URL（NotifyMailLinks）は、そのままテンプレートの links に渡す。
+ */
+export interface MailLinks extends NotifyMailLinks {
   /** 宛先のポータルの画面の URL（例: portal('/live-room')） */
   portal: (path: string) => string | null;
-  /** メールの配信設定の画面（プロフィール） */
-  settingsUrl: string | null;
-  /** ログイン不要の配信停止の URL（この行の区分）。本文のフッターに載せる */
-  unsubscribeUrl: string | null;
 }
 
-/** 種別ごとの組み立て結果。送る必要が無くなった場合は skip に理由を入れる */
+/** 種別ごとの組み立て結果（templates/ の build〜Mail の結果を renderMail したもの）。送る必要が無くなった場合は skip に理由を入れる */
 export type MailBuildResult = { skip: string } | RenderedEmail;
 
 /**

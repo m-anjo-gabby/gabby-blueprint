@@ -1,11 +1,9 @@
-import { toPreheader, type MailBlock, type MailDocument } from '../layout/document';
-import { notifyFooter } from '../layout/footers';
-
-/** 通知メールの言語（student: ja / coach: en） */
-export type NotificationMailLanguage = 'ja' | 'en';
+import { toPreheader, type MailBlock, type MailContent, type MailLocale } from '../layout/document';
+import { buildNotifyMail, type NotifyMailLinks } from './notifyMail';
 
 export interface NotificationEmailTemplateProps {
-  language: NotificationMailLanguage;
+  /** 生徒: ja / コーチ: en */
+  language: MailLocale;
   recipientName: string | null;
   /** 通知のタイトル（アプリ内通知と同じ） */
   title: string;
@@ -15,35 +13,25 @@ export interface NotificationEmailTemplateProps {
   quoted?: boolean;
   /** アプリの該当画面のURL（宛先のポータル。無ければボタンを出さない） */
   actionUrl: string | null;
-  /** メール通知の設定画面のURL（宛先のポータル） */
-  settingsUrl: string | null;
-  /** ログイン不要の配信停止のURL（無ければ案内を出さない） */
-  unsubscribeUrl?: string | null;
+  links: NotifyMailLinks;
 }
 
 const COPY = {
   ja: {
-    greeting: (name: string | null) => (name ? `${name} さん` : 'Gabby Blueprint English をご利用の皆さま'),
     action: 'アプリで確認する',
-    footer: 'このメールは、Gabby Blueprint English のお知らせとしてお送りしています。',
-    settings: '通知のメールは、プロフィールの「メール通知」で停止できます（アプリ内の通知は引き続き届きます）。',
-    settingsLink: 'メール通知の設定',
+    reason: 'このメールは、Gabby Blueprint English のお知らせとしてお送りしています。',
+    chatTitle: (sender: string | null) => `${sender ? `${sender}さんから` : ''}新しいメッセージが届いています`,
+    chatNoPreview: 'チャットを開いてご確認ください。',
   },
   en: {
-    greeting: (name: string | null) => (name ? `Hi ${name},` : 'Hello,'),
     action: 'Open in the app',
-    footer: 'You are receiving this email as a notification from Gabby Blueprint English.',
-    settings: 'You can turn off notification emails under "Email notifications" in your profile (in-app notifications will still be delivered).',
-    settingsLink: 'Email notification settings',
+    reason: 'You are receiving this email as a notification from Gabby Blueprint English.',
+    chatTitle: (sender: string | null) => `New message${sender ? ` from ${sender}` : ''}`,
+    chatNoPreview: 'Open the chat to read it.',
   },
 } as const;
 
-/** 件名（言語ごと。通知のタイトルをそのまま使う） */
-export function getNotificationSubject(language: NotificationMailLanguage, title: string): string {
-  return language === 'en' ? `[Gabby Blueprint] ${title}` : `【Gabby Blueprint】${title}`;
-}
-
-/** 出来事の通知（予約・キャンセル・マッチング・チャット等）。アプリ内通知と同じ内容に、アプリへのボタンを添える */
+/** 出来事の通知（予約・キャンセル・マッチング等）。アプリ内通知と同じ内容に、アプリへのボタンを添える。件名は通知のタイトル */
 export function buildNotificationMail({
   language,
   recipientName,
@@ -51,28 +39,37 @@ export function buildNotificationMail({
   body,
   quoted = false,
   actionUrl,
-  settingsUrl,
-  unsubscribeUrl,
-}: NotificationEmailTemplateProps): MailDocument {
-  const copy = COPY[language];
-  const blocks: MailBlock[] = [
-    { kind: 'paragraph', text: copy.greeting(recipientName) },
-    { kind: 'title', text: title },
-    quoted ? { kind: 'quote', text: body } : { kind: 'paragraph', text: body },
-  ];
-  if (actionUrl) blocks.push({ kind: 'button', label: copy.action, href: actionUrl });
+  links,
+}: NotificationEmailTemplateProps): MailContent {
+  const blocks: MailBlock[] = [{ kind: 'title', text: title }, quoted ? { kind: 'quote', text: body } : { kind: 'paragraph', text: body }];
+  if (actionUrl) blocks.push({ kind: 'button', label: COPY[language].action, href: actionUrl });
 
-  return {
+  return buildNotifyMail({
     language,
+    category: 'NOTIFICATION',
+    subject: title,
     preheader: toPreheader(body),
+    recipientName,
     blocks,
-    footer: notifyFooter({
-      language,
-      reason: copy.footer,
-      settingsText: copy.settings,
-      settingsUrl,
-      settingsLabel: copy.settingsLink,
-      unsubscribeUrl,
-    }),
-  };
+    reason: COPY[language].reason,
+    links,
+  });
+}
+
+/** チャットの新着（未読が続いた場合の1通）。メッセージの冒頭を引用で載せる（無ければチャットを開く案内） */
+export function buildChatUnreadMail({
+  senderName,
+  preview,
+  ...rest
+}: Omit<NotificationEmailTemplateProps, 'title' | 'body' | 'quoted'> & {
+  senderName: string | null;
+  preview: string | null;
+}): MailContent {
+  const copy = COPY[rest.language];
+  return buildNotificationMail({
+    ...rest,
+    title: copy.chatTitle(senderName),
+    body: preview ?? copy.chatNoPreview,
+    quoted: !!preview,
+  });
 }

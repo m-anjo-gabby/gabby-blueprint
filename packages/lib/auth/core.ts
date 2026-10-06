@@ -13,8 +13,8 @@ import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
 import { issueInitialLicense, resolvePerformedBy } from '../license/issue';
-import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
-import type { PasswordResetMailLanguage } from '../mail/templates/PasswordResetEmailTemplate';
+import { sendPasswordResetEmail } from '../mail/actions/sendAccountMail';
+import type { MailLanguage } from '../mail/layout/document';
 import { getPasswordStrengthErrorCode } from './validation';
 import { AUTH_ERROR_MESSAGES_JA, formatAuthErrorMessage, type AuthErrorCode } from './errors';
 import { clearRecoveryMarker, hasValidRecoveryMarker, setRecoveryMarker } from './recovery';
@@ -250,7 +250,7 @@ export async function signOutCore(): Promise<AuthResponse> {
  */
 export async function forgotPasswordCore(
   formData: FormData,
-  options: { mailLanguage: PasswordResetMailLanguage }
+  options: { mailLanguage: MailLanguage }
 ): Promise<AuthResponse> {
   const email = formData.get('email') as string;
 

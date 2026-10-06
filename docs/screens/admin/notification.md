@@ -39,4 +39,5 @@
   student/coach/adminの3アプリで共通利用）
 - 通知種別・表示テキストの定義: `packages/types/notification.ts`
   （`NOTIFICATION_TYPES`, `NOTIFICATION_MESSAGE_BUILDERS`。どの種別が実際に届くかは、各業務機能側の
-  通知発行処理に依存する）
+  通知発行処理に依存する）。表示時は `packages/lib/notification/display.ts` の `getNotificationDisplay`
+  （アイコン・バッジ色・文言。知らない種別は汎用の文言）を使う（student/coach/admin 共通）

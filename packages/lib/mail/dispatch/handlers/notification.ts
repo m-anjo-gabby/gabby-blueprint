@@ -1,9 +1,11 @@
 import 'server-only';
-import { NOTIFICATION_MESSAGE_BUILDERS, type NotificationType } from '@gabby/types/notification';
-import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@gabby/types/notificationEn';
-import { renderNotificationEmail } from '../../render';
+import type { NotificationType } from '@gabby/types/notification';
+import { getNotificationText } from '@gabby/types/notificationText';
+import { renderMail } from '../../render';
+import { buildChatUnreadMail, buildNotificationMail } from '../../templates/NotificationEmailTemplate';
 import { NOTIFICATION_MAIL_TYPES } from '../registry';
 import type { MailHandler } from '../types';
+import { readText } from './payload';
 
 function isMailTarget(type: string): type is NotificationType {
   return (NOTIFICATION_MAIL_TYPES as readonly string[]).includes(type);
@@ -15,7 +17,7 @@ function isMailTarget(type: string): type is NotificationType {
  * チャットの新着（CHAT_UNREAD）は、送る時点で既読になっていれば送らない。
  */
 export const notificationHandler: MailHandler = async ({ admin, row, recipient, links }) => {
-  const notificationId = typeof row.payload.notification_id === 'string' ? row.payload.notification_id : null;
+  const notificationId = readText(row.payload, 'notification_id');
   if (!notificationId) return { skip: 'invalid_payload' };
 
   const { data: notification, error } = await admin
@@ -30,36 +32,30 @@ export const notificationHandler: MailHandler = async ({ admin, row, recipient, 
   const { language } = recipient;
   const payload = (notification.payload ?? {}) as Record<string, unknown>;
   const actionUrl = notification.link_path ? links.portal(notification.link_path) : null;
-  const { settingsUrl, unsubscribeUrl } = links;
 
   if (row.mail_type === 'CHAT_UNREAD') {
     if (notification.is_read) return { skip: 'already_read' };
-    const sender = typeof payload.sender_name === 'string' && payload.sender_name ? payload.sender_name : null;
-    const preview = typeof payload.preview === 'string' && payload.preview ? payload.preview : null;
-    return renderNotificationEmail({
-      language,
-      recipientName: recipient.userName,
-      title:
-        language === 'ja'
-          ? `${sender ? `${sender}さんから` : ''}新しいメッセージが届いています`
-          : `New message${sender ? ` from ${sender}` : ''}`,
-      body: preview ?? (language === 'ja' ? 'チャットを開いてご確認ください。' : 'Open the chat to read it.'),
-      quoted: !!preview,
-      actionUrl,
-      settingsUrl,
-      unsubscribeUrl,
-    });
+    return renderMail(
+      buildChatUnreadMail({
+        language,
+        recipientName: recipient.userName,
+        senderName: readText(payload, 'sender_name'),
+        preview: readText(payload, 'preview'),
+        actionUrl,
+        links,
+      })
+    );
   }
 
-  const builders = language === 'ja' ? NOTIFICATION_MESSAGE_BUILDERS : NOTIFICATION_MESSAGE_BUILDERS_EN;
-  const text = builders[notification.notification_type](payload);
-  return renderNotificationEmail({
-    language,
-    recipientName: recipient.userName,
-    title: text.title,
-    body: text.body,
-    actionUrl,
-    settingsUrl,
-    unsubscribeUrl,
-  });
+  const text = getNotificationText(notification.notification_type, payload, language);
+  return renderMail(
+    buildNotificationMail({
+      language,
+      recipientName: recipient.userName,
+      title: text.title,
+      body: text.body,
+      actionUrl,
+      links,
+    })
+  );
 };

@@ -12,17 +12,15 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import dotenv from "dotenv";
-import {
-  formatReminderSchedule,
-  renderAdminInvitationEmail,
-  renderCoachInvitationEmail,
-  renderEventReminderEmail,
-  renderLiveSessionReminderEmail,
-  renderNotificationEmail,
-  renderPasswordResetEmail,
-  renderStudentInvitationEmail,
-  type RenderedEmail,
-} from "@gabby/lib/mail/render";
+import { renderMail, type RenderedEmail } from "@gabby/lib/mail/render";
+import { buildAdminInviteMail } from "@gabby/lib/mail/templates/AdminInviteEmailTemplate";
+import { buildCoachInviteMail } from "@gabby/lib/mail/templates/CoachInviteEmailTemplate";
+import { buildEventReminderMail } from "@gabby/lib/mail/templates/EventReminderEmailTemplate";
+import { buildStudentInviteMail } from "@gabby/lib/mail/templates/InviteEmailTemplate";
+import { buildLiveSessionReminderMail } from "@gabby/lib/mail/templates/LiveSessionReminderEmailTemplate";
+import { buildChatUnreadMail, buildNotificationMail } from "@gabby/lib/mail/templates/NotificationEmailTemplate";
+import { buildPasswordResetMail } from "@gabby/lib/mail/templates/PasswordResetEmailTemplate";
+import { formatReminderSchedule } from "@gabby/lib/mail/templates/reminder";
 import { getMailLogoUrl } from "@gabby/lib/mail/assets/logo";
 import { buildUnsubscribeUrl, unsubscribeHeaders } from "@gabby/lib/mail/unsubscribe/token";
 import { NOTIFICATION_MESSAGE_BUILDERS, type NotificationType } from "@gabby/types/notification";
@@ -53,12 +51,12 @@ const COACH_UNSUB = { NOTIFICATION: sampleUnsubscribeUrl(COACH_URL, "NOTIFICATIO
 
 // ---- アカウント関連（招待・パスワード再設定。送信待ちを通らず、配信停止の対象外） ----
 const INVITE_URL = `${STUDENT_URL}/auth/callback?token_hash=sample-token&type=invite&next=/update-password`;
-samples.push({ label: "auth-student-INVITE", ...renderStudentInvitationEmail({ userName: "山田 太郎", inviteUrl: INVITE_URL }) });
-samples.push({ label: "auth-coach-INVITE", ...renderCoachInvitationEmail({ userName: "Suzanne", inviteUrl: INVITE_URL.replace(STUDENT_URL, COACH_URL) }) });
-samples.push({ label: "auth-admin-INVITE", ...renderAdminInvitationEmail({ userName: "山田 太郎", inviteUrl: INVITE_URL.replace(STUDENT_URL, "https://localhost:3001") }) });
-samples.push({ label: "auth-student-RESET", ...renderPasswordResetEmail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "ja" }) });
-samples.push({ label: "auth-coach-RESET", ...renderPasswordResetEmail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "en" }) });
-samples.push({ label: "auth-admin-RESET", ...renderPasswordResetEmail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "bilingual" }) });
+samples.push({ label: "auth-student-INVITE", ...renderMail(buildStudentInviteMail({ userName: "山田 太郎", inviteUrl: INVITE_URL, expiresDays: 3 })) });
+samples.push({ label: "auth-coach-INVITE", ...renderMail(buildCoachInviteMail({ userName: "Suzanne", inviteUrl: INVITE_URL.replace(STUDENT_URL, COACH_URL), expiresDays: 3 })) });
+samples.push({ label: "auth-admin-INVITE", ...renderMail(buildAdminInviteMail({ userName: "山田 太郎", inviteUrl: INVITE_URL.replace(STUDENT_URL, "https://localhost:3001"), expiresDays: 3 })) });
+samples.push({ label: "auth-student-RESET", ...renderMail(buildPasswordResetMail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "ja" })) });
+samples.push({ label: "auth-coach-RESET", ...renderMail(buildPasswordResetMail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "en" })) });
+samples.push({ label: "auth-admin-RESET", ...renderMail(buildPasswordResetMail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "bilingual" })) });
 
 // ---- 出来事の通知（アプリ内通知と同じ文言。生徒は日本語、コーチは英語） ----
 const STUDENT_TYPES: [NotificationType, Record<string, unknown>, string][] = [
@@ -84,15 +82,14 @@ for (const [type, payload, linkPath] of STUDENT_TYPES) {
   const text = NOTIFICATION_MESSAGE_BUILDERS[type](payload);
   samples.push({
     label: `student-${type}`,
-    ...renderNotificationEmail({
+    ...renderMail(buildNotificationMail({
       language: "ja",
       recipientName: "山田 太郎",
       title: text.title,
       body: text.body,
       actionUrl: `${STUDENT_URL}${linkPath}`,
-      settingsUrl: `${STUDENT_URL}/profile`,
-      unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
-    }),
+      links: { settingsUrl: `${STUDENT_URL}/profile`, unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION },
+    })),
     unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
   });
 }
@@ -100,15 +97,14 @@ for (const [type, payload, linkPath] of COACH_TYPES) {
   const text = NOTIFICATION_MESSAGE_BUILDERS_EN[type](payload);
   samples.push({
     label: `coach-${type}`,
-    ...renderNotificationEmail({
+    ...renderMail(buildNotificationMail({
       language: "en",
       recipientName: "Suzanne",
       title: text.title,
       body: text.body,
       actionUrl: `${COACH_URL}${linkPath}`,
-      settingsUrl: `${COACH_URL}/profile`,
-      unsubscribeUrl: COACH_UNSUB.NOTIFICATION,
-    }),
+      links: { settingsUrl: `${COACH_URL}/profile`, unsubscribeUrl: COACH_UNSUB.NOTIFICATION },
+    })),
     unsubscribeUrl: COACH_UNSUB.NOTIFICATION,
   });
 }
@@ -116,30 +112,26 @@ for (const [type, payload, linkPath] of COACH_TYPES) {
 // ---- チャットの新着（未読が10分続いたら） ----
 samples.push({
   label: "student-CHAT_UNREAD",
-  ...renderNotificationEmail({
+  ...renderMail(buildChatUnreadMail({
     language: "ja",
     recipientName: "山田 太郎",
-    title: "Suzanneさんから新しいメッセージが届いています",
-    body: "Hi Taro! Great job today. Don't forget to review the phrases before our next session.",
-    quoted: true,
+    senderName: "Suzanne",
+    preview: "Hi Taro! Great job today. Don't forget to review the phrases before our next session.",
     actionUrl: `${STUDENT_URL}/chat/sample`,
-    settingsUrl: `${STUDENT_URL}/profile`,
-    unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
-  }),
+    links: { settingsUrl: `${STUDENT_URL}/profile`, unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION },
+  })),
   unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
 });
 samples.push({
   label: "coach-CHAT_UNREAD",
-  ...renderNotificationEmail({
+  ...renderMail(buildChatUnreadMail({
     language: "en",
     recipientName: "Suzanne",
-    title: "New message from Taro Yamada",
-    body: "明日のセッション、5分ほど遅れるかもしれません。よろしくお願いします。",
-    quoted: true,
+    senderName: "Taro Yamada",
+    preview: "明日のセッション、5分ほど遅れるかもしれません。よろしくお願いします。",
     actionUrl: `${COACH_URL}/chat/sample`,
-    settingsUrl: `${COACH_URL}/profile`,
-    unsubscribeUrl: COACH_UNSUB.NOTIFICATION,
-  }),
+    links: { settingsUrl: `${COACH_URL}/profile`, unsubscribeUrl: COACH_UNSUB.NOTIFICATION },
+  })),
   unsubscribeUrl: COACH_UNSUB.NOTIFICATION,
 });
 
@@ -159,7 +151,7 @@ const reminder = (
   samples.push({
     label,
     unsubscribeUrl,
-    ...renderEventReminderEmail({
+    ...renderMail(buildEventReminderMail({
       language,
       lead,
       recipientName: language === "ja" ? "山田 太郎" : "Suzanne",
@@ -169,9 +161,8 @@ const reminder = (
       scheduleLabel: formatReminderSchedule({ startIso: start.toISOString(), endIso: end.toISOString(), timeZone: options.timeZone, language }),
       joinUrl: options.joinUrl === undefined ? "https://zoom.us/j/0000000000" : options.joinUrl,
       detailUrl: `${portal}${language === "ja" ? "/group-sessions" : "/calendar"}`,
-      settingsUrl: `${portal}/profile`,
-      unsubscribeUrl,
-    }),
+      links: { settingsUrl: `${portal}/profile`, unsubscribeUrl },
+    })),
   });
 };
 reminder("student-REMINDER-24h-series", "ja", "24h", { seriesTitle: "10月の発音グループセッション", timeZone: "Asia/Tokyo" });
@@ -188,16 +179,15 @@ const liveReminder = (label: string, language: "ja" | "en", lead: "24h" | "1h", 
   samples.push({
     label,
     unsubscribeUrl,
-    ...renderLiveSessionReminderEmail({
+    ...renderMail(buildLiveSessionReminderMail({
       language,
       lead,
       recipientName: isStudent ? "山田 太郎" : "Suzanne",
       counterpartName: isStudent ? "Suzanne" : "Taro Yamada",
       scheduleLabel: formatReminderSchedule({ startIso: start.toISOString(), endIso: liveEnd.toISOString(), timeZone, language }),
       actionUrl: `${isStudent ? STUDENT_URL : COACH_URL}${actionPath}`,
-      settingsUrl: `${isStudent ? STUDENT_URL : COACH_URL}/profile`,
-      unsubscribeUrl,
-    }),
+      links: { settingsUrl: `${isStudent ? STUDENT_URL : COACH_URL}/profile`, unsubscribeUrl },
+    })),
   });
 };
 liveReminder("student-LIVE-24h", "ja", "24h", "Asia/Tokyo");

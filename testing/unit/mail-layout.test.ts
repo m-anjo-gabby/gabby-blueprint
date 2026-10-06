@@ -1,15 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  renderAdminInvitationEmail,
-  renderCoachInvitationEmail,
-  renderEventReminderEmail,
-  renderLiveSessionReminderEmail,
-  renderNotificationEmail,
-  renderPasswordResetEmail,
-  renderStudentInvitationEmail,
-  type RenderedEmail,
-} from "@gabby/lib/mail/render";
+import { renderMail, type RenderedEmail } from "@gabby/lib/mail/render";
+import { buildAdminInviteMail } from "@gabby/lib/mail/templates/AdminInviteEmailTemplate";
+import { buildCoachInviteMail } from "@gabby/lib/mail/templates/CoachInviteEmailTemplate";
+import { buildEventReminderMail } from "@gabby/lib/mail/templates/EventReminderEmailTemplate";
+import { buildStudentInviteMail } from "@gabby/lib/mail/templates/InviteEmailTemplate";
+import { buildLiveSessionReminderMail } from "@gabby/lib/mail/templates/LiveSessionReminderEmailTemplate";
+import { buildNotificationMail } from "@gabby/lib/mail/templates/NotificationEmailTemplate";
+import { buildPasswordResetMail } from "@gabby/lib/mail/templates/PasswordResetEmailTemplate";
 import { DEFAULT_MAIL_LOGO_URL } from "@gabby/lib/mail/assets/logo";
 import { buildUnsubscribeUrl, unsubscribeHeaders, verifyUnsubscribeToken } from "@gabby/lib/mail/unsubscribe/token";
 
@@ -22,20 +20,21 @@ import { buildUnsubscribeUrl, unsubscribeHeaders, verifyUnsubscribeToken } from 
 const INVITE_URL = "https://localhost:3000/auth/invite?token=e2e-token";
 const ACTION_URL = "https://localhost:3000/live-room";
 const UNSUBSCRIBE_URL = "https://localhost:3000/mail/unsubscribe?u=user-1&c=NOTIFICATION&t=sig";
+const NO_LINKS = { settingsUrl: null, unsubscribeUrl: null };
 
 const ALL: [string, RenderedEmail][] = [
-  ["パスワード再設定（日本語）", renderPasswordResetEmail({ resetUrl: INVITE_URL, language: "ja" })],
-  ["パスワード再設定（併記）", renderPasswordResetEmail({ resetUrl: INVITE_URL, language: "bilingual" })],
-  ["管理者招待", renderAdminInvitationEmail({ userName: "山田", inviteUrl: INVITE_URL })],
-  ["コーチ招待", renderCoachInvitationEmail({ userName: "Alex", inviteUrl: INVITE_URL })],
-  ["生徒招待", renderStudentInvitationEmail({ userName: "山田", inviteUrl: INVITE_URL })],
+  ["パスワード再設定（日本語）", renderMail(buildPasswordResetMail({ resetUrl: INVITE_URL, language: "ja" }))],
+  ["パスワード再設定（併記）", renderMail(buildPasswordResetMail({ resetUrl: INVITE_URL, language: "bilingual" }))],
+  ["管理者招待", renderMail(buildAdminInviteMail({ userName: "山田", inviteUrl: INVITE_URL, expiresDays: 3 }))],
+  ["コーチ招待", renderMail(buildCoachInviteMail({ userName: "Alex", inviteUrl: INVITE_URL, expiresDays: 3 }))],
+  ["生徒招待", renderMail(buildStudentInviteMail({ userName: "山田", inviteUrl: INVITE_URL, expiresDays: 3 }))],
   [
     "通知",
-    renderNotificationEmail({ language: "ja", recipientName: "山田", title: "予約が承認されました", body: "本文", actionUrl: ACTION_URL, settingsUrl: null }),
+    renderMail(buildNotificationMail({ language: "ja", recipientName: "山田", title: "予約が承認されました", body: "本文", actionUrl: ACTION_URL, links: NO_LINKS })),
   ],
   [
     "グループセッションのリマインダー",
-    renderEventReminderEmail({
+    renderMail(buildEventReminderMail({
       language: "en",
       lead: "24h",
       recipientName: "Alex",
@@ -44,20 +43,20 @@ const ALL: [string, RenderedEmail][] = [
       scheduleLabel: "Mon, Oct 12",
       joinUrl: ACTION_URL,
       detailUrl: null,
-      settingsUrl: null,
-    }),
+      links: NO_LINKS,
+    })),
   ],
   [
     "ライブセッションのリマインダー",
-    renderLiveSessionReminderEmail({
+    renderMail(buildLiveSessionReminderMail({
       language: "ja",
       lead: "1h",
       recipientName: "山田",
       counterpartName: "Suzanne",
       scheduleLabel: "10月12日(月) 20:00〜",
       actionUrl: ACTION_URL,
-      settingsUrl: null,
-    }),
+      links: NO_LINKS,
+    })),
   ],
 ];
 
@@ -84,7 +83,7 @@ test("全メール: テキスト版は HTML のタグを含まず、ボタンの
 });
 
 test("日英併記: テキスト版も日本語→英語の順で、言語の間に区切り線", () => {
-  const { text } = renderPasswordResetEmail({ resetUrl: INVITE_URL, language: "bilingual" });
+  const { text } = renderMail(buildPasswordResetMail({ resetUrl: INVITE_URL, language: "bilingual" }));
   const divider = text.indexOf("------------------------------");
   assert.ok(divider > 0);
   assert.ok(text.indexOf("いつも Gabby Blueprint English") < divider);
@@ -93,15 +92,15 @@ test("日英併記: テキスト版も日本語→英語の順で、言語の間
 });
 
 test("受信一覧の要約（プレビュー文）: 本文の先頭に非表示で入れる", () => {
-  const { html } = renderLiveSessionReminderEmail({
+  const { html } = renderMail(buildLiveSessionReminderMail({
     language: "ja",
     lead: "24h",
     recipientName: "山田",
     counterpartName: "Suzanne",
     scheduleLabel: "10月12日(月) 20:00〜20:25（日本時間）",
     actionUrl: ACTION_URL,
-    settingsUrl: null,
-  });
+    links: NO_LINKS,
+  }));
   const body = html.slice(html.indexOf("<body"));
   assert.match(body, /^<body[^>]*><div style="display:none;[^"]*">10月12日\(月\) 20:00〜20:25（日本時間） Suzanne<\/div>/);
 });
@@ -113,14 +112,14 @@ test("通知・リマインダー: 配信停止の URL があればフッター�
     title: "予約が承認されました",
     body: "本文",
     actionUrl: ACTION_URL,
-    settingsUrl: "https://localhost:3000/profile",
   } as const;
-  const withLink = renderNotificationEmail({ ...base, unsubscribeUrl: UNSUBSCRIBE_URL });
+  const settingsUrl = "https://localhost:3000/profile";
+  const withLink = renderMail(buildNotificationMail({ ...base, links: { settingsUrl, unsubscribeUrl: UNSUBSCRIBE_URL } }));
   assert.ok(withLink.html.includes(`href="${UNSUBSCRIBE_URL.replace(/&/g, "&amp;")}"`));
   assert.ok(withLink.html.includes("この種類のメールを停止する"));
   assert.ok(withLink.text.includes(`この種類のメールを停止する: ${UNSUBSCRIBE_URL}`));
 
-  const without = renderNotificationEmail(base);
+  const without = renderMail(buildNotificationMail({ ...base, links: { settingsUrl, unsubscribeUrl: null } }));
   assert.ok(!without.html.includes("この種類のメールを停止する"));
   assert.ok(without.text.includes("メール通知の設定: https://localhost:3000/profile"));
 });

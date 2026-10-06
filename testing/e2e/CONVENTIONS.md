@@ -35,7 +35,7 @@
 
 メール（Resend）の検証方法:
 
-- **文面**: 送信処理と同じ組み立て関数（`@gabby/lib/mail/render`。例: `renderPasswordResetEmail`）の結果を `testing/unit/*.test.ts` で検証する
+- **文面**: 送信処理と同じ組み立て関数（`@gabby/lib/mail/templates/` の `build〜Mail` を `@gabby/lib/mail/render` の `renderMail` で HTML・テキストにする。例: `renderMail(buildPasswordResetMail(...))`）の結果を `testing/unit/*.test.ts` で検証する
   （`pnpm --filter @gabby/testing unit`。Playwright のテスト実行環境は JSX を独自形式に変換するため、React のメールテンプレートを描画できない）。
 - **受信**: 宛先を Resend のテスト用アドレス `delivered+<ラベル>@resend.dev`（`support/resendInbox.ts` の `resendTestAddress`）にして
   画面から送信し、`waitForEmail` で送信済みメールを取得してリンクを開く。読み取りには Full access の API キーが必要で、

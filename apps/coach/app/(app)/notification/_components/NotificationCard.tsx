@@ -1,14 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Sparkles, Flame, MessageCircle, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { NotificationItem, NOTIFICATION_TYPES, NotificationType } from '@gabby/types/notification';
-import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@gabby/types/notificationEn';
-
-const NOTIFICATION_ICONS = { Sparkles, Flame, MessageCircle } as const;
+import { NotificationItem } from '@gabby/types/notification';
+import { getNotificationDisplay } from '@gabby/lib/notification/display';
 
 interface NotificationCardProps {
   notification: NotificationItem;
@@ -18,11 +16,8 @@ interface NotificationCardProps {
 export function NotificationCard({ notification, onOpen }: NotificationCardProps) {
   const timezone = useTimezone();
 
-  const meta = NOTIFICATION_TYPES[notification.notification_type as NotificationType];
-  const Icon = NOTIFICATION_ICONS[meta?.icon as keyof typeof NOTIFICATION_ICONS] ?? Bell;
-  const text = NOTIFICATION_MESSAGE_BUILDERS_EN[notification.notification_type as NotificationType](
-    notification.payload
-  );
+  const display = getNotificationDisplay(notification, 'en');
+  const Icon = display.icon ?? Bell;
 
   return (
     <motion.article
@@ -48,7 +43,7 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
         <div
           className={cn(
             'flex items-center justify-center w-9 h-9 rounded-xl border shrink-0',
-            meta?.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100'
+            display.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100'
           )}
         >
           <Icon size={16} />
@@ -61,10 +56,10 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
               ? 'font-bold text-slate-600'
               : 'font-black text-slate-900'
           )}>
-            {text.title}
+            {display.title}
           </p>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">
-            {text.body}
+            {display.body}
           </p>
           <p className="text-[10px] text-slate-400 mt-2 font-bold">
             {formatDateEn(notification.occurred_at, timezone)}

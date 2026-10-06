@@ -6,7 +6,7 @@ import { createLogger } from '../../logger';
 import { MailSendError, sendCore } from '../core';
 import { getPortalBaseUrl } from '../../navigation/portalUrl';
 import { buildUnsubscribeUrl, getUnsubscribeSecret, unsubscribeHeaders } from '../unsubscribe/token';
-import { MAIL_TYPES, type MailType } from './registry';
+import { MAIL_TYPES, type MailCategory, type MailType } from './registry';
 import type { MailHandlerRegistry, MailLinks, MailOutboxRow, MailRecipient } from './types';
 import {
   classifySendError,
@@ -98,7 +98,7 @@ async function loadRecipient(admin: SupabaseClient, userId: string): Promise<Omi
   };
 }
 
-async function isCategoryEnabled(admin: SupabaseClient, userId: string, category: string): Promise<boolean> {
+async function isCategoryEnabled(admin: SupabaseClient, userId: string, category: MailCategory): Promise<boolean> {
   const { data, error } = await admin
     .from('com_t_user_mail_setting')
     .select('enabled')
@@ -111,7 +111,7 @@ async function isCategoryEnabled(admin: SupabaseClient, userId: string, category
 }
 
 /** 宛先のポータルへのリンク（組み立て処理に渡す。ポータルの URL が未設定の環境では null） */
-function buildLinks(recipient: MailRecipient, category: string): MailLinks {
+function buildLinks(recipient: MailRecipient, category: MailCategory): MailLinks {
   const base = getPortalBaseUrl(recipient.userType).replace(/\/+$/, '');
   const portal = (path: string) => (base ? `${base}${path.startsWith('/') ? path : `/${path}`}` : null);
   return {
@@ -136,7 +136,8 @@ async function processRow(
   try {
     if (!(row.mail_type in MAIL_TYPES)) return await skip('unknown_mail_type');
     const mailType = row.mail_type as MailType;
-    const typeConfig: { category: string; expiresAfterHours?: number } = MAIL_TYPES[mailType];
+    // 区分は種別の定義（registry.ts）を正とする（送信待ちの行の category は登録時の控え）
+    const typeConfig: { category: MailCategory; expiresAfterHours?: number } = MAIL_TYPES[mailType];
     if (isExpired(row.insert_date, typeConfig.expiresAfterHours, nowMs)) return await skip('expired');
 
     const loaded = await loadRecipient(admin, row.user_id);
@@ -146,10 +147,10 @@ async function processRow(
     // 管理者には通知・リマインダーのメールを送らない（文面は生徒: 日本語 / コーチ: 英語）
     const language = resolveRecipientLanguage(loaded.userType);
     if (!language) return await skip('unsupported_recipient');
-    if (!(await isCategoryEnabled(admin, row.user_id, row.category))) return await skip('opted_out');
+    if (!(await isCategoryEnabled(admin, row.user_id, typeConfig.category))) return await skip('opted_out');
 
     const recipient: MailRecipient = { ...loaded, language };
-    const links = buildLinks(recipient, row.category);
+    const links = buildLinks(recipient, typeConfig.category);
     const built = await HANDLERS[mailType]({ admin, row, recipient, nowMs, links });
     if ('skip' in built) return await skip(built.skip);
     if (isUndeliverableAddress(recipient.email)) return await skip('undeliverable_address');

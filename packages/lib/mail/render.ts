@@ -1,50 +1,16 @@
 // packages/lib/mail/render.ts
 /**
- * メールの件名・本文の組み立て（送信はしない）
+ * メールの HTML 版・テキスト版の組み立て（送信はしない）
  *
+ * 各メールの件名・中身は templates/ の build〜Mail が MailContent として返し、ここで HTML 版・テキスト版にする。
  * 💡 送信処理（actions/*、core.ts）は 'server-only' でサーバー専用にしているため、
  * 文面の検証（testing/unit/*.test.ts、Node で実行）から読み込めるよう、組み立て処理だけをここに分けている。
  * API キー等の秘密情報を参照する処理はこのファイルに置かないこと。
  */
 import * as React from 'react';
 import { renderToString } from 'react-dom/server.edge'; // App RouterのRSCで安全に動く軽量エクスポート
-import { renderMailText, type MailDocument } from './layout/document';
+import { renderMailText, type MailContent } from './layout/document';
 import { MailLayout } from './layout/MailLayout';
-import { ADMIN_INVITATION_SUBJECT, buildAdminInviteMail } from './templates/AdminInviteEmailTemplate';
-import { COACH_INVITATION_SUBJECT, buildCoachInviteMail } from './templates/CoachInviteEmailTemplate';
-import { STUDENT_INVITATION_SUBJECT, buildStudentInviteMail } from './templates/InviteEmailTemplate';
-import {
-  PASSWORD_RESET_SUBJECTS,
-  buildPasswordResetMail,
-  type PasswordResetMailLanguage,
-} from './templates/PasswordResetEmailTemplate';
-import {
-  buildEventReminderMail,
-  getEventReminderSubject,
-  type EventReminderEmailTemplateProps,
-  type ReminderMailLanguage,
-} from './templates/EventReminderEmailTemplate';
-import {
-  buildNotificationMail,
-  getNotificationSubject,
-  type NotificationEmailTemplateProps,
-} from './templates/NotificationEmailTemplate';
-import {
-  buildMailDailyReport,
-  getMailDailyReportSubject,
-  type MailDailyReportProps,
-} from './templates/MailDailyReportTemplate';
-import {
-  buildLiveSessionReminderMail,
-  getLiveSessionReminderSubject,
-  type LiveSessionReminderEmailTemplateProps,
-} from './templates/LiveSessionReminderEmailTemplate';
-
-/**
- * 再設定リンクの有効期限（分）。Supabase の Auth 設定「Email OTP Expiration」（supabase/config.toml の otp_expiry）と
- * 合わせること（dev・本番とも 1800秒＝30分）。メール本文の期限表記に使う。
- */
-export const PASSWORD_RESET_LINK_TTL_MINUTES = 30;
 
 export interface RenderedEmail {
   subject: string;
@@ -54,118 +20,8 @@ export interface RenderedEmail {
   text: string;
 }
 
-/** 中身の定義から HTML 版・テキスト版を作る */
-export function renderMailDocument(subject: string, doc: MailDocument): RenderedEmail {
+/** 件名・中身から HTML 版・テキスト版を作る */
+export function renderMail({ subject, doc }: MailContent): RenderedEmail {
   const html = `<!DOCTYPE html>${renderToString(React.createElement(MailLayout, { doc }))}`;
   return { subject, html, text: renderMailText(doc) };
-}
-
-/** パスワード再設定メールの件名・本文を組み立てる */
-export function renderPasswordResetEmail({
-  resetUrl,
-  language,
-}: {
-  resetUrl: string;
-  /** メールの言語（student: ja / coach: en / admin: bilingual） */
-  language: PasswordResetMailLanguage;
-}): RenderedEmail {
-  return renderMailDocument(
-    PASSWORD_RESET_SUBJECTS[language],
-    buildPasswordResetMail({ resetUrl, language, expiresInMinutes: PASSWORD_RESET_LINK_TTL_MINUTES })
-  );
-}
-
-/** 管理者向け招待メール（日英併記）の件名・本文を組み立てる */
-export function renderAdminInvitationEmail({
-  userName,
-  inviteUrl,
-  expiresDays = 3,
-}: {
-  /** 招待時の氏名。空ならテンプレート側の既定の宛名（管理者様 / Dear Administrator） */
-  userName: string;
-  inviteUrl: string;
-  expiresDays?: number;
-}): RenderedEmail {
-  return renderMailDocument(ADMIN_INVITATION_SUBJECT, buildAdminInviteMail({ userName, inviteUrl, expiresDays }));
-}
-
-/** コーチ向け招待メール（英語）の件名・本文を組み立てる */
-export function renderCoachInvitationEmail({
-  userName,
-  inviteUrl,
-  expiresDays = 3,
-}: {
-  userName: string;
-  inviteUrl: string;
-  expiresDays?: number;
-}): RenderedEmail {
-  return renderMailDocument(COACH_INVITATION_SUBJECT, buildCoachInviteMail({ userName, inviteUrl, expiresDays }));
-}
-
-/** 生徒向け招待メール（日本語）の件名・本文を組み立てる */
-export function renderStudentInvitationEmail({
-  userName,
-  inviteUrl,
-  expiresDays = 3,
-}: {
-  userName: string;
-  inviteUrl: string;
-  expiresDays?: number;
-}): RenderedEmail {
-  return renderMailDocument(STUDENT_INVITATION_SUBJECT, buildStudentInviteMail({ userName, inviteUrl, expiresDays }));
-}
-
-/**
- * リマインダーに載せる開催日時を、受信者のタイムゾーンで組み立てる。
- * 例: ja「10月12日(日) 20:00〜21:00（日本時間）」/ en「Sun, Oct 12, 8:00 PM – 9:00 PM (GMT+9)」
- * 終了時刻が無い場合は開始時刻だけ（「20:00〜」）。
- */
-export function formatReminderSchedule({
-  startIso,
-  endIso,
-  timeZone,
-  language,
-}: {
-  startIso: string;
-  endIso: string | null;
-  timeZone: string;
-  language: ReminderMailLanguage;
-}): string {
-  const start = new Date(startIso);
-  const end = endIso ? new Date(endIso) : null;
-  if (language === 'ja') {
-    const date = new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(start);
-    const time = new Intl.DateTimeFormat('ja-JP', { timeZone, hour: '2-digit', minute: '2-digit' });
-    const zone = timeZone === 'Asia/Tokyo' ? '日本時間' : timeZone;
-    return `${date} ${time.format(start)}〜${end ? time.format(end) : ''}（${zone}）`;
-  }
-  const date = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' }).format(start);
-  const time = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit' });
-  const zone =
-    new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' }).formatToParts(start).find((p) => p.type === 'timeZoneName')
-      ?.value ?? timeZone;
-  return `${date}, ${time.format(start)}${end ? ` – ${time.format(end)}` : ''} (${zone})`;
-}
-
-/** グループセッションのリマインダーの件名・本文を組み立てる */
-export function renderEventReminderEmail(props: EventReminderEmailTemplateProps): RenderedEmail {
-  return renderMailDocument(getEventReminderSubject(props.language, props.lead, props.scheduleLabel), buildEventReminderMail(props));
-}
-
-/** 出来事の通知メール（予約・キャンセル・マッチング・チャット等）の件名・本文を組み立てる */
-export function renderNotificationEmail(props: NotificationEmailTemplateProps): RenderedEmail {
-  return renderMailDocument(getNotificationSubject(props.language, props.title), buildNotificationMail(props));
-}
-
-/** ライブセッションのリマインダー（生徒・コーチ）の件名・本文を組み立てる */
-export function renderLiveSessionReminderEmail(props: LiveSessionReminderEmailTemplateProps): RenderedEmail {
-  return renderMailDocument(
-    getLiveSessionReminderSubject(props.language, props.lead, props.scheduleLabel),
-    buildLiveSessionReminderMail(props)
-  );
-}
-
-/** 運営向けのメール配信の日次の要約（日英併記）の件名・本文を組み立てる */
-export function renderMailDailyReportEmail(props: MailDailyReportProps): RenderedEmail {
-  return renderMailDocument(getMailDailyReportSubject(props), buildMailDailyReport(props));
 }

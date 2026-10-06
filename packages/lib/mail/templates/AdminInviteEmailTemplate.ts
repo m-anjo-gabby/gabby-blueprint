@@ -1,4 +1,4 @@
-import type { MailDocument } from '../layout/document';
+import { mailSubject, type MailContent, type MailLocale } from '../layout/document';
 import { supportFooter } from '../layout/footers';
 
 /**
@@ -12,8 +12,7 @@ export interface AdminInviteEmailTemplateProps {
   expiresDays: number;
 }
 
-type Lang = 'ja' | 'en';
-const LANGS: Lang[] = ['ja', 'en'];
+const LANGS: MailLocale[] = ['ja', 'en'];
 
 const COPY = {
   ja: {
@@ -40,35 +39,35 @@ const COPY = {
   },
 } as const;
 
-/** 件名（日英併記） */
-export const ADMIN_INVITATION_SUBJECT = '【Gabby Blueprint】管理者アカウント招待のご案内 / Invitation to the Admin Console';
-
-export function buildAdminInviteMail({ userName, inviteUrl, expiresDays }: AdminInviteEmailTemplateProps): MailDocument {
+export function buildAdminInviteMail({ userName, inviteUrl, expiresDays }: AdminInviteEmailTemplateProps): MailContent {
   return {
-    language: 'bilingual',
-    preheader: LANGS.map((lang) => COPY[lang].button).join(' / '),
-    headerLabel: '管理画面 / Admin Console',
-    blocks: [
-      ...LANGS.map((lang) => ({
-        kind: 'section' as const,
-        lang,
-        blocks: [
-          { kind: 'paragraph' as const, text: COPY[lang].greeting(userName), strong: true },
-          { kind: 'paragraph' as const, text: COPY[lang].intro },
-          { kind: 'paragraph' as const, text: COPY[lang].action },
-        ],
-      })),
-      {
-        kind: 'button',
-        label: LANGS.map((lang) => COPY[lang].button).join(' / '),
-        href: inviteUrl,
-        fallback: LANGS.map((lang) => COPY[lang].fallback),
-      },
-      {
-        kind: 'notice',
-        items: LANGS.map((lang) => ({ title: COPY[lang].expiryTitle, text: COPY[lang].expiry(expiresDays), sub: COPY[lang].caution })),
-      },
-    ],
-    footer: supportFooter(LANGS),
+    subject: mailSubject('bilingual', '管理者アカウント招待のご案内 / Invitation to the Admin Console'),
+    doc: {
+      language: 'bilingual',
+      preheader: LANGS.map((lang) => COPY[lang].button).join(' / '),
+      headerLabel: '管理画面 / Admin Console',
+      blocks: [
+        ...LANGS.map((lang) => ({
+          kind: 'section' as const,
+          lang,
+          blocks: [
+            { kind: 'paragraph' as const, text: COPY[lang].greeting(userName), strong: true },
+            { kind: 'paragraph' as const, text: COPY[lang].intro },
+            { kind: 'paragraph' as const, text: COPY[lang].action },
+          ],
+        })),
+        {
+          kind: 'button',
+          label: LANGS.map((lang) => COPY[lang].button).join(' / '),
+          href: inviteUrl,
+          fallback: LANGS.map((lang) => COPY[lang].fallback),
+        },
+        {
+          kind: 'notice',
+          items: LANGS.map((lang) => ({ title: COPY[lang].expiryTitle, text: COPY[lang].expiry(expiresDays), sub: COPY[lang].caution })),
+        },
+      ],
+      footer: supportFooter(LANGS),
+    },
   };
 }

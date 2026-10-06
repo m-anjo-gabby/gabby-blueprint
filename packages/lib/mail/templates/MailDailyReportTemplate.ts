@@ -1,4 +1,4 @@
-import type { MailBlock, MailDocument } from '../layout/document';
+import { mailSubject, type MailBlock, type MailContent } from '../layout/document';
 import type { MailConfigCheck } from '../dispatch/policy';
 
 /**
@@ -45,11 +45,11 @@ export function countMailDailyReportIssues({ failed, deliveryProblems, overdueCo
   return failed.length + deliveryProblems.length + overdueCount + config.filter((check) => !check.ok).length;
 }
 
-export function getMailDailyReportSubject(props: MailDailyReportProps): string {
-  const total = countMailDailyReportIssues(props);
-  return total > 0
-    ? `【Gabby Blueprint】メール配信の要確認 ${total}件 / Email delivery issues: ${total}`
-    : '【Gabby Blueprint】メール配信の日次報告 異常なし / Daily email report: no issues';
+function dailyReportSubject(total: number): string {
+  return mailSubject(
+    'bilingual',
+    total > 0 ? `メール配信の要確認 ${total}件 / Email delivery issues: ${total}` : 'メール配信の日次報告 異常なし / Daily email report: no issues'
+  );
 }
 
 function itemsBlocks(title: string, items: MailDailyReportItem[]): MailBlock[] {
@@ -66,9 +66,10 @@ function itemsBlocks(title: string, items: MailDailyReportItem[]): MailBlock[] {
   ];
 }
 
-export function buildMailDailyReport(props: MailDailyReportProps): MailDocument {
+export function buildMailDailyReport(props: MailDailyReportProps): MailContent {
   const { periodLabel, sentCount, skippedCount, failed, deliveryProblems, overdueCount, config } = props;
-  const hasIssues = countMailDailyReportIssues(props) > 0;
+  const issueCount = countMailDailyReportIssues(props);
+  const hasIssues = issueCount > 0;
   const configIssues = config.filter((check) => !check.ok);
   const blocks: MailBlock[] = [
     {
@@ -125,16 +126,19 @@ export function buildMailDailyReport(props: MailDailyReportProps): MailDocument 
   );
 
   return {
-    language: 'bilingual',
-    preheader: hasIssues
-      ? `送信失敗 ${failed.length} / 不達・報告 ${deliveryProblems.length} / 滞留 ${overdueCount} / 設定 ${configIssues.length}`
-      : `異常なし / 送信 ${sentCount}`,
-    headerLabel: '運営 / Operations',
-    blocks,
-    footer: [
-      {
-        text: 'このメールは毎日、運営のアドレス（MAIL_OPS_ALERT_TO）へお送りしています。届かない日は、メールの送信処理が止まっている可能性があります。 / Sent to the operations address every day. If it does not arrive, the email dispatch may be down.',
-      },
-    ],
+    subject: dailyReportSubject(issueCount),
+    doc: {
+      language: 'bilingual',
+      preheader: hasIssues
+        ? `送信失敗 ${failed.length} / 不達・報告 ${deliveryProblems.length} / 滞留 ${overdueCount} / 設定 ${configIssues.length}`
+        : `異常なし / 送信 ${sentCount}`,
+      headerLabel: '運営 / Operations',
+      blocks,
+      footer: [
+        {
+          text: 'このメールは毎日、運営のアドレス（MAIL_OPS_ALERT_TO）へお送りしています。届かない日は、メールの送信処理が止まっている可能性があります。 / Sent to the operations address every day. If it does not arrive, the email dispatch may be down.',
+        },
+      ],
+    },
   };
 }

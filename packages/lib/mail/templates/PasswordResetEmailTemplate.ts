@@ -1,19 +1,19 @@
-import type { MailDocument } from '../layout/document';
+import { mailSubject, type MailContent, type MailLanguage, type MailLocale } from '../layout/document';
 import { supportFooter } from '../layout/footers';
 
-/** 再設定メールの言語。bilingual は日本語・英語の併記（admin 向け） */
-export type PasswordResetMailLanguage = 'ja' | 'en' | 'bilingual';
+/**
+ * 再設定リンクの有効期限（分）。Supabase の Auth 設定「Email OTP Expiration」（supabase/config.toml の otp_expiry）と
+ * 合わせること（dev・本番とも 1800秒＝30分）。メール本文の期限表記に使う。
+ */
+export const PASSWORD_RESET_LINK_TTL_MINUTES = 30;
 
 export interface PasswordResetEmailTemplateProps {
   resetUrl: string;
-  language: PasswordResetMailLanguage;
-  /** 再設定リンクの有効期限（分） */
-  expiresInMinutes: number;
+  /** メールの言語（student: ja / coach: en / admin: bilingual＝日本語・英語の併記） */
+  language: MailLanguage;
 }
 
-type Lang = 'ja' | 'en';
-
-function formatExpiry(lang: Lang, minutes: number): string {
+function formatExpiry(lang: MailLocale, minutes: number): string {
   if (minutes % 60 === 0) {
     const hours = minutes / 60;
     return lang === 'ja' ? `${hours}時間` : `${hours} hour${hours === 1 ? '' : 's'}`;
@@ -45,43 +45,46 @@ const COPY = {
 } as const;
 
 /** 件名（言語ごと） */
-export const PASSWORD_RESET_SUBJECTS: Record<PasswordResetMailLanguage, string> = {
-  ja: '【Gabby Blueprint】パスワード再設定手続きのご案内',
-  en: '[Gabby Blueprint] Reset your password',
-  bilingual: '【Gabby Blueprint】パスワード再設定のご案内 / Reset your password',
+const SUBJECTS: Record<MailLanguage, string> = {
+  ja: 'パスワード再設定手続きのご案内',
+  en: 'Reset your password',
+  bilingual: 'パスワード再設定のご案内 / Reset your password',
 };
 
 /** パスワード再設定（併記の場合は日本語→英語の順） */
-export function buildPasswordResetMail({ resetUrl, language, expiresInMinutes }: PasswordResetEmailTemplateProps): MailDocument {
-  const langs: Lang[] = language === 'bilingual' ? ['ja', 'en'] : [language];
+export function buildPasswordResetMail({ resetUrl, language }: PasswordResetEmailTemplateProps): MailContent {
+  const langs: MailLocale[] = language === 'bilingual' ? ['ja', 'en'] : [language];
 
   return {
-    language,
-    preheader: langs.map((lang) => COPY[lang].request).join(' / '),
-    blocks: [
-      ...langs.map((lang) => ({
-        kind: 'section' as const,
-        lang,
-        blocks: [
-          { kind: 'paragraph' as const, text: COPY[lang].thanks },
-          { kind: 'paragraph' as const, text: COPY[lang].request },
-        ],
-      })),
-      {
-        kind: 'button',
-        label: langs.map((lang) => COPY[lang].button).join(' / '),
-        href: resetUrl,
-        fallback: langs.map((lang) => COPY[lang].fallback),
-      },
-      {
-        kind: 'notice',
-        items: langs.map((lang) => ({
-          title: COPY[lang].expiryTitle,
-          text: COPY[lang].expiry(formatExpiry(lang, expiresInMinutes)),
-          sub: COPY[lang].ignore,
+    subject: mailSubject(language, SUBJECTS[language]),
+    doc: {
+      language,
+      preheader: langs.map((lang) => COPY[lang].request).join(' / '),
+      blocks: [
+        ...langs.map((lang) => ({
+          kind: 'section' as const,
+          lang,
+          blocks: [
+            { kind: 'paragraph' as const, text: COPY[lang].thanks },
+            { kind: 'paragraph' as const, text: COPY[lang].request },
+          ],
         })),
-      },
-    ],
-    footer: supportFooter(langs),
+        {
+          kind: 'button',
+          label: langs.map((lang) => COPY[lang].button).join(' / '),
+          href: resetUrl,
+          fallback: langs.map((lang) => COPY[lang].fallback),
+        },
+        {
+          kind: 'notice',
+          items: langs.map((lang) => ({
+            title: COPY[lang].expiryTitle,
+            text: COPY[lang].expiry(formatExpiry(lang, PASSWORD_RESET_LINK_TTL_MINUTES)),
+            sub: COPY[lang].ignore,
+          })),
+        },
+      ],
+      footer: supportFooter(langs),
+    },
   };
 }
