@@ -17,6 +17,18 @@
 --   supabase/release/README.md の手順に従い run.mjs で適用してください。
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
 --   途中でエラーが発生した場合は自動的に何も反映されません（ロールバック相当）。
+--
+-- 【アプリの環境変数（Vercel。staging・prod それぞれで設定し、再デプロイする）】
+--   このリリースで追加・変更する環境変数の一覧（このスクリプトでは設定されない。手作業）。
+--   | アプリ                | 変数                              | 値・備考
+--   | admin                 | CRON_SECRET                       | 十分に長いランダムな文字列。Vault の mail_dispatch_secret と同じ値（下記「メール基盤」セクションの a・b）
+--   | admin                 | MAIL_FROM_NOTIFY                  | 通知・リマインダーの送信元（例: Gabby Blueprint <notify@mail.gabbyacademy.com>）
+--   | admin                 | MAIL_DISPATCH_RECIPIENT_ALLOWLIST | staging のみ "resend.dev,gabbyacademy.com,gvtech.co.jp"（本番は設定しない）
+--   | admin・student・coach | MAIL_UNSUBSCRIBE_SECRET           | 3アプリで同じ値（十分に長いランダムな文字列）。ログイン不要の配信停止リンクの署名鍵。
+--   |                       |                                   | 未設定でもメールは送られるが、配信停止リンク・List-Unsubscribe ヘッダーが付かない
+--   | （任意）admin・student・coach | MAIL_LOGO_URL             | 通常は設定しない（メールのロゴは本番の https://blueprint.gabbyacademy.com/mail-logo.png）。
+--   |                       |                                   | 本番に未反映の画像で staging を確認する場合だけ https://<student の staging>/mail-logo.png
+--   メールのロゴは生徒アプリの public/mail-logo.png のため、本番の生徒アプリをデプロイするまで、どの環境のメールでもロゴは表示されない。
 -- =========================================================================
 
 BEGIN;
@@ -49,6 +61,7 @@ COMMIT;
 -- 【適用後の手作業（staging・prod。送信処理を呼ぶ環境ごとに1回）】
 --   a. admin アプリ（Vercel）の環境変数に CRON_SECRET（十分に長いランダムな文字列）と
 --      MAIL_FROM_NOTIFY（例: Gabby Blueprint <notify@mail.gabbyacademy.com>）を設定して再デプロイする
+--      （他の環境変数を含む一覧は、ファイル冒頭の【アプリの環境変数】）
 --   b. SQL エディタで Vault に送信処理のURLと秘密のキーを登録する（a の CRON_SECRET と同じ値）
 --        SELECT vault.create_secret('https://<admin のURL>/api/cron/mail-dispatch', 'mail_dispatch_url');
 --        SELECT vault.create_secret('<CRON_SECRET>', 'mail_dispatch_secret');
